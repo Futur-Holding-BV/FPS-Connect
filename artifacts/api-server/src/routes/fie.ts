@@ -14,13 +14,13 @@ import {
   opdrachtenTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
+import { eq, ne, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
 import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
 import { logger } from "../lib/logger";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
 
@@ -223,11 +223,14 @@ function mapAkPost(r: typeof fieAkPostenTable.$inferSelect, werkgeverNaam?: stri
   };
 }
 
-// GET /fie/begrotingen
+// GET /fie/begrotingen — scenario's (SCENARIO_01) horen hier bewust NIET in:
+// zij zijn wat-als-kopieën, geen begrotingen, en mogen nergens als werkvoorraad
+// of begrotingslijst verschijnen. Eigen lijst: GET /fie/scenarios.
 router.get("/fie/begrotingen", lezen, async (_req: Request, res: Response) => {
   const rows = await db
     .select()
     .from(fieJaarbegrotingenTable)
+    .where(ne(fieJaarbegrotingenTable.status, "scenario"))
     .orderBy(desc(fieJaarbegrotingenTable.boekjaar));
   res.json(rows.map(mapBegroting));
 });
@@ -350,6 +353,11 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
     if (!GELDIGE_STATUSSEN.includes(s as typeof GELDIGE_STATUSSEN[number])) {
       res.status(400).json({ error: `status moet een van ${GELDIGE_STATUSSEN.join(", ")} zijn` }); return;
     }
+    // SCENARIO_01: een scenario kan nooit een echte begroting worden (en zeker
+    // niet 'actief') — en een echte begroting kan niet stilletjes scenario worden.
+    if (existing.status === "scenario" && s !== existing.status) {
+      res.status(422).json({ error: "Een scenario kan geen begroting worden. Maak desgewenst een nieuwe begroting aan met dezelfde uitgangspunten." }); return;
+    }
     updateData.status = s;
   }
   if (omzet_doel !== undefined) {
@@ -394,6 +402,161 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
     .where(eq(fieJaarbegrotingenTable.id, id))
     .returning();
   res.json(mapBegroting(updated));
+});
+
+// ─── SCENARIO_01 — Wat-als-scenario's ────────────────────────────────────────
+
+/**
+ * Valideert het aannames-object voor een scenario. Harde regel §4: een
+ * capaciteitswijziging (aantal_monteurs opgegeven) zonder bezettingsaanname
+ * bestaat niet — zonder die vraag rekent het gereedschap voor dat een monteur
+ * erbij het AK-percentage altijd verlaagt, en dat is precies wat er in 2024
+ * misging. Retourneert de genormaliseerde JSON-string of een foutmelding.
+ */
+export function valideerScenarioAannames(v: unknown): { ok: true; json: string } | { ok: false; fout: string } {
+  const b = (v ?? {}) as Record<string, unknown>;
+  const num = (x: unknown, naam: string, max: number): number | null => {
+    if (x === undefined || x === null) return null;
+    const n = Number(x);
+    if (!isFinite(n) || n < 0 || n > max) throw new Error(`${naam} moet een getal tussen 0 en ${max} zijn`);
+    return Math.round(n * 100) / 100;
+  };
+  try {
+    const aantalMonteurs = num(b["aantal_monteurs"], "aantal_monteurs", 500);
+    const bezetting = num(b["bezettingsgraad_pct"], "bezettingsgraad_pct", 100);
+    if (aantalMonteurs != null && bezetting == null) {
+      return { ok: false, fout: "Bij een wijziging van het aantal monteurs is de bezettingsgraad een verplichte aanname. Zonder die vraag lijkt extra capaciteit altijd gunstig — dat klopt alleen als de uren ook verkocht worden." };
+    }
+    const json = JSON.stringify({
+      aantal_monteurs: aantalMonteurs,
+      uren_per_monteur: num(b["uren_per_monteur"], "uren_per_monteur", 3000),
+      bezettingsgraad_pct: bezetting,
+      uurtarief: num(b["uurtarief"], "uurtarief", 10_000),
+      loonkosten_per_monteur: num(b["loonkosten_per_monteur"], "loonkosten_per_monteur", 1_000_000),
+      variabele_kosten_pct: num(b["variabele_kosten_pct"], "variabele_kosten_pct", 100),
+      toelichting: b["toelichting"] != null ? String(b["toelichting"]).slice(0, 1000) : null,
+    });
+    return { ok: true, json };
+  } catch (e) {
+    return { ok: false, fout: e instanceof Error ? e.message : "Ongeldige aannames" };
+  }
+}
+
+function mapScenario(r: typeof fieJaarbegrotingenTable.$inferSelect) {
+  let aannames: unknown = null;
+  if (r.scenarioAannames) {
+    try { aannames = JSON.parse(r.scenarioAannames) as unknown; } catch { aannames = null; }
+  }
+  return { ...mapBegroting(r), scenario_naam: r.scenarioNaam ?? null, scenario_van_id: r.scenarioVanId ?? null, aannames };
+}
+
+// GET /fie/scenarios
+router.get("/fie/scenarios", lezen, async (_req: Request, res: Response) => {
+  const rows = await db
+    .select()
+    .from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.status, "scenario"))
+    .orderBy(desc(fieJaarbegrotingenTable.id));
+  res.json(rows.map(mapScenario));
+});
+
+// POST /fie/begrotingen/:id/scenario — kopieert begroting + AK-posten als scenario.
+// De basisbegroting wordt nooit aangeraakt.
+router.post("/fie/begrotingen/:id/scenario", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const basisId = validId(res, req.params["id"]);
+  if (basisId === null) return;
+  const body = req.body as Record<string, unknown>;
+
+  const naam = typeof body["naam"] === "string" ? body["naam"].trim().slice(0, 200) : "";
+  if (!naam) { res.status(400).json({ error: "naam is verplicht" }); return; }
+
+  const aannamesR = valideerScenarioAannames(body["aannames"]);
+  if (!aannamesR.ok) { res.status(422).json({ error: aannamesR.fout }); return; }
+
+  const [basis] = await db.select().from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.id, basisId)).limit(1);
+  if (!basis) { res.status(404).json({ error: "Basisbegroting niet gevonden" }); return; }
+  if (basis.status === "scenario") {
+    res.status(422).json({ error: "Een scenario kan niet vanaf een ander scenario worden gemaakt — vertrek altijd vanaf een echte begroting." }); return;
+  }
+
+  const scenario = await db.transaction(async (tx) => {
+    const [rij] = await tx.insert(fieJaarbegrotingenTable).values({
+      boekjaar: basis.boekjaar,
+      status: "scenario",
+      omzetDoel: basis.omzetDoel,
+      directeKostenDoel: basis.directeKostenDoel,
+      doelMargePct: basis.doelMargePct,
+      akPerProductiefUur: basis.akPerProductiefUur,
+      productieveUrenDoel: basis.productieveUrenDoel,
+      verdeelsleutel: basis.verdeelsleutel,
+      opmerkingen: basis.opmerkingen,
+      scenarioVanId: basis.id,
+      scenarioNaam: naam,
+      scenarioAannames: aannamesR.json,
+    }).returning();
+    const posten = await tx.select().from(fieAkPostenTable)
+      .where(eq(fieAkPostenTable.begrotingId, basis.id));
+    if (posten.length > 0) {
+      await tx.insert(fieAkPostenTable).values(posten.map((p) => ({
+        begrotingId: rij!.id,
+        werkgeverId: p.werkgeverId,
+        categorie: p.categorie,
+        omschrijving: p.omschrijving,
+        bedragJaarbasis: p.bedragJaarbasis,
+        actief: p.actief,
+      })));
+    }
+    return rij!;
+  });
+  res.status(201).json(mapScenario(scenario));
+});
+
+// PATCH /fie/scenarios/:id — naam/aannames wijzigen (alleen op scenario's).
+router.patch("/fie/scenarios/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+  const body = req.body as Record<string, unknown>;
+
+  const [bestaand] = await db.select().from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.id, id)).limit(1);
+  if (!bestaand || bestaand.status !== "scenario") { res.status(404).json({ error: "Scenario niet gevonden" }); return; }
+
+  const updateData: Partial<typeof fieJaarbegrotingenTable.$inferInsert> = { bijgewerktOp: new Date() };
+  if (body["naam"] !== undefined) {
+    const naam = typeof body["naam"] === "string" ? body["naam"].trim().slice(0, 200) : "";
+    if (!naam) { res.status(400).json({ error: "naam mag niet leeg zijn" }); return; }
+    updateData.scenarioNaam = naam;
+  }
+  if (body["aannames"] !== undefined) {
+    const r = valideerScenarioAannames(body["aannames"]);
+    if (!r.ok) { res.status(422).json({ error: r.fout }); return; }
+    updateData.scenarioAannames = r.json;
+  }
+  const [updated] = await db.update(fieJaarbegrotingenTable).set(updateData)
+    .where(eq(fieJaarbegrotingenTable.id, id)).returning();
+  res.json(mapScenario(updated!));
+});
+
+// DELETE /fie/scenarios/:id — alleen scenario's zijn verwijderbaar (AK-kopieën cascaden mee).
+router.delete("/fie/scenarios/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+  const [bestaand] = await db.select().from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.id, id)).limit(1);
+  if (!bestaand || bestaand.status !== "scenario") { res.status(404).json({ error: "Scenario niet gevonden" }); return; }
+  await db.delete(fieJaarbegrotingenTable).where(eq(fieJaarbegrotingenTable.id, id));
+  res.status(204).end();
+});
+
+// GET /fie/begrotingen/:id/doorrekening — werkt voor scenario's én echte
+// begrotingen (de actieve begroting is de eerste vergelijkingskolom).
+router.get("/fie/begrotingen/:id/doorrekening", lezen, async (req: Request, res: Response): Promise<void> => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+  const resultaat = await berekenScenarioDoorrekening(id);
+  if (!resultaat) { res.status(404).json({ error: "Begroting niet gevonden" }); return; }
+  res.json(resultaat);
 });
 
 // ─── AK-posten ────────────────────────────────────────────────────────────────

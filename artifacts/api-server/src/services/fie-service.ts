@@ -19,7 +19,7 @@ import {
 import { logger } from "../lib/logger";
 import { berekenLiquiditeitSignalen } from "./liquiditeit-service";
 import { medewerkersTable } from "@workspace/db/schema";
-import { eq, and, desc, gte, lt, inArray, isNull } from "drizzle-orm";
+import { eq, and, desc, gte, lt, ne, inArray, isNull } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -199,9 +199,12 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     ))
     .limit(1);
 
+  // Scenario's (SCENARIO_01) zijn wat-als-kopieën en mogen nooit als
+  // (fallback-)begroting voor de live calculatiecontext dienen.
   const [fallbackBegroting] = activeBegroting ? [] : await db
     .select()
     .from(fieJaarbegrotingenTable)
+    .where(ne(fieJaarbegrotingenTable.status, "scenario"))
     .orderBy(desc(fieJaarbegrotingenTable.boekjaar))
     .limit(1);
 
@@ -461,6 +464,237 @@ export async function berekenDoelmarge(begrotingId: number): Promise<FieDoelmarg
     akPerUurBerekend,
     effectiefAkPerUur,
     verdeelsleutel: begroting.verdeelsleutel,
+  };
+}
+
+// ─── SCENARIO_01 — Wat-als-doorrekening op een (scenario-)begroting ──────────
+//
+// Een scenario is een kopie van de jaarbegroting (status 'scenario') met
+// expliciete aannames. De doorrekening hergebruikt berekenDoelmarge (zelfde
+// AK-som, zelfde normen) — er is bewust GEEN tweede rekenmodel. Harde regels:
+//  - capaciteitswijziging zonder bezettingsaanname bestaat niet (route dwingt af);
+//  - de uitkomst wordt bij meerdere bezettingsniveaus getoond, nooit als één getal;
+//  - het AK-percentage wordt over de productie berekend (verkochte uren × tarief);
+//  - elke gebruikte waarde vermeldt zijn bron (ingevoerd / afgeleid / standaard).
+
+export const SCENARIO_BEZETTINGSNIVEAUS = [60, 70, 80, 90] as const;
+/** Productieve uren per monteur per jaar — zelfde afleiding als berekenCapaciteit (40 u/wk × 45,5 wk). */
+export const SCENARIO_UREN_PER_MONTEUR_STANDAARD = 1820;
+
+export interface FieScenarioAannames {
+  aantalMonteurs: number | null;
+  urenPerMonteur: number | null;
+  bezettingsgraadPct: number | null;
+  uurtarief: number | null;
+  loonkostenPerMonteur: number | null;
+  variabeleKostenPct: number | null;
+  toelichting: string | null;
+}
+
+export function parseScenarioAannames(tekst: string | null): FieScenarioAannames {
+  const leeg: FieScenarioAannames = {
+    aantalMonteurs: null, urenPerMonteur: null, bezettingsgraadPct: null,
+    uurtarief: null, loonkostenPerMonteur: null, variabeleKostenPct: null, toelichting: null,
+  };
+  if (!tekst) return leeg;
+  try {
+    const j = JSON.parse(tekst) as Record<string, unknown>;
+    const num = (v: unknown): number | null => {
+      const n = Number(v);
+      return v == null || !isFinite(n) ? null : n;
+    };
+    return {
+      aantalMonteurs: num(j["aantal_monteurs"]),
+      urenPerMonteur: num(j["uren_per_monteur"]),
+      bezettingsgraadPct: num(j["bezettingsgraad_pct"]),
+      uurtarief: num(j["uurtarief"]),
+      loonkostenPerMonteur: num(j["loonkosten_per_monteur"]),
+      variabeleKostenPct: num(j["variabele_kosten_pct"]),
+      toelichting: j["toelichting"] != null ? String(j["toelichting"]).slice(0, 1000) : null,
+    };
+  } catch {
+    return leeg;
+  }
+}
+
+export interface FieScenarioNiveau {
+  bezetting_pct: number;
+  verkochte_uren: number;
+  productie: number;               // verkochte uren × uurtarief
+  variabele_kosten: number;
+  dekkingsbijdrage: number;        // productie − variabele kosten
+  loonkosten_monteurs: number;
+  totaal_ak: number;
+  ak_pct_productie: number | null; // AK / productie ×100 (harde regel §3.1a)
+  ak_per_verkocht_uur: number | null;
+  bedrijfsresultaat: number;       // dekking − monteursloon − AK
+}
+
+export interface FieScenarioAanname {
+  label: string;
+  waarde: string;
+  bron: "ingevoerd" | "afgeleid uit begroting" | "standaard";
+}
+
+export interface FieScenarioDoorrekening {
+  begroting_id: number;
+  boekjaar: number;
+  status: string;
+  naam: string | null;
+  basis_id: number | null;
+  totaal_ak: number;
+  beschikbare_uren: number | null;
+  niveaus: FieScenarioNiveau[];
+  omslagpunt_pct: number | null;
+  omslagpunt_toelichting: string | null;
+  aannames: FieScenarioAanname[];
+  meldingen: string[];
+}
+
+/**
+ * Rekent een begroting of scenario door bij meerdere bezettingsniveaus.
+ * Werkt voor elke begroting (ook de actieve, als vergelijkingskolom); een
+ * scenario levert daarnaast het omslagpunt t.o.v. zijn basisbegroting.
+ */
+export async function berekenScenarioDoorrekening(begrotingId: number): Promise<FieScenarioDoorrekening | null> {
+  const [begroting] = await db
+    .select()
+    .from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.id, begrotingId))
+    .limit(1);
+  if (!begroting) return null;
+
+  const doelmarge = await berekenDoelmarge(begrotingId);
+  const totaalAk = doelmarge?.totaalAkPosten ?? 0;
+  const aan = parseScenarioAannames(begroting.scenarioAannames ?? null);
+
+  const aannames: FieScenarioAanname[] = [];
+  const meldingen: string[] = [];
+  const euro = (n: number) => `€ ${Math.round(n).toLocaleString("nl-NL")}`;
+
+  // ── Capaciteit ──────────────────────────────────────────────────────────────
+  const urenPerMonteur = aan.urenPerMonteur ?? SCENARIO_UREN_PER_MONTEUR_STANDAARD;
+  let beschikbareUren: number | null = null;
+  if (aan.aantalMonteurs != null) {
+    beschikbareUren = aan.aantalMonteurs * urenPerMonteur;
+    aannames.push({ label: "Aantal monteurs", waarde: String(aan.aantalMonteurs), bron: "ingevoerd" });
+    aannames.push({
+      label: "Productieve uren per monteur", waarde: `${urenPerMonteur} uur/jaar`,
+      bron: aan.urenPerMonteur != null ? "ingevoerd" : "standaard",
+    });
+  } else if (begroting.productieveUrenDoel && begroting.productieveUrenDoel > 0) {
+    beschikbareUren = begroting.productieveUrenDoel;
+    aannames.push({ label: "Beschikbare productieve uren", waarde: `${beschikbareUren} uur`, bron: "afgeleid uit begroting" });
+  } else {
+    meldingen.push("Geen aantal monteurs opgegeven en geen productieve-urendoel in de begroting — er valt niets door te rekenen.");
+  }
+
+  // ── Uurtarief ───────────────────────────────────────────────────────────────
+  let uurtarief: number | null = aan.uurtarief;
+  if (uurtarief != null) {
+    aannames.push({ label: "Uurtarief", waarde: `€ ${uurtarief.toLocaleString("nl-NL")}`, bron: "ingevoerd" });
+  } else if (begroting.omzetDoel && begroting.productieveUrenDoel && begroting.productieveUrenDoel > 0) {
+    uurtarief = rnd2(begroting.omzetDoel / begroting.productieveUrenDoel);
+    aannames.push({ label: "Uurtarief", waarde: `€ ${uurtarief.toLocaleString("nl-NL")} (omzetdoel / urendoel)`, bron: "afgeleid uit begroting" });
+  } else {
+    meldingen.push("Geen uurtarief opgegeven en niet af te leiden uit de begroting (omzetdoel + urendoel ontbreken).");
+  }
+
+  // ── Monteursloon (vaste kosten die doorlopen bij lage bezetting) ────────────
+  let loonkostenTotaal = 0;
+  if (aan.aantalMonteurs != null) {
+    if (aan.loonkostenPerMonteur != null) {
+      loonkostenTotaal = aan.aantalMonteurs * aan.loonkostenPerMonteur;
+      aannames.push({ label: "Loonkosten per monteur", waarde: `${euro(aan.loonkostenPerMonteur)}/jaar`, bron: "ingevoerd" });
+    } else {
+      meldingen.push("Loonkosten per monteur niet opgegeven — het bedrijfsresultaat is exclusief monteursloon en dus te rooskleurig.");
+    }
+  }
+
+  // ── Variabele kosten (materiaal/onderaanneming, % van de productie) ─────────
+  let variabelePct: number | null = aan.variabeleKostenPct;
+  if (variabelePct != null) {
+    aannames.push({ label: "Variabele kosten", waarde: `${variabelePct}% van de productie`, bron: "ingevoerd" });
+  } else if (
+    aan.aantalMonteurs != null && aan.loonkostenPerMonteur != null &&
+    begroting.omzetDoel && begroting.omzetDoel > 0 && begroting.directeKostenDoel != null
+  ) {
+    variabelePct = rnd2(Math.max(0, ((begroting.directeKostenDoel - loonkostenTotaal) / begroting.omzetDoel) * 100));
+    aannames.push({ label: "Variabele kosten", waarde: `${variabelePct}% van de productie (directe kosten minus monteursloon)`, bron: "afgeleid uit begroting" });
+  } else if (begroting.omzetDoel && begroting.omzetDoel > 0 && begroting.directeKostenDoel != null && aan.aantalMonteurs == null) {
+    variabelePct = rnd2((begroting.directeKostenDoel / begroting.omzetDoel) * 100);
+    aannames.push({ label: "Variabele kosten", waarde: `${variabelePct}% van de productie (directe kosten / omzetdoel; incl. loon)`, bron: "afgeleid uit begroting" });
+  } else {
+    variabelePct = 0;
+    meldingen.push("Variabele kosten niet opgegeven en niet af te leiden — gerekend met 0%, de dekkingsbijdrage is daardoor te hoog.");
+    aannames.push({ label: "Variabele kosten", waarde: "0% van de productie", bron: "standaard" });
+  }
+
+  if (aan.bezettingsgraadPct != null) {
+    aannames.push({ label: "Bezettingsgraad (eigen aanname)", waarde: `${aan.bezettingsgraadPct}%`, bron: "ingevoerd" });
+  }
+  aannames.push({ label: "Totaal AK-posten", waarde: euro(totaalAk), bron: "afgeleid uit begroting" });
+  if (aan.toelichting) aannames.push({ label: "Toelichting", waarde: aan.toelichting, bron: "ingevoerd" });
+
+  // ── Niveaus ─────────────────────────────────────────────────────────────────
+  const niveauPcts = [...SCENARIO_BEZETTINGSNIVEAUS.map(Number)];
+  if (aan.bezettingsgraadPct != null && !niveauPcts.includes(aan.bezettingsgraadPct)) {
+    niveauPcts.push(aan.bezettingsgraadPct);
+    niveauPcts.sort((a, b) => a - b);
+  }
+
+  const niveaus: FieScenarioNiveau[] = [];
+  if (beschikbareUren != null && uurtarief != null) {
+    for (const bez of niveauPcts) {
+      const verkochteUren = rnd2(beschikbareUren * bez / 100);
+      const productie = rnd2(verkochteUren * uurtarief);
+      const variabeleKosten = rnd2(productie * (variabelePct ?? 0) / 100);
+      const dekking = rnd2(productie - variabeleKosten);
+      const resultaat = rnd2(dekking - loonkostenTotaal - totaalAk);
+      niveaus.push({
+        bezetting_pct: bez,
+        verkochte_uren: verkochteUren,
+        productie,
+        variabele_kosten: variabeleKosten,
+        dekkingsbijdrage: dekking,
+        loonkosten_monteurs: rnd2(loonkostenTotaal),
+        totaal_ak: totaalAk,
+        ak_pct_productie: productie > 0 ? rnd2(totaalAk / productie * 100) : null,
+        ak_per_verkocht_uur: verkochteUren > 0 ? rnd2(totaalAk / verkochteUren) : null,
+        bedrijfsresultaat: resultaat,
+      });
+    }
+  }
+
+  // ── Omslagpunt: bij welke bezetting verdient een extra monteur zichzelf terug ─
+  // Delta t.o.v. de basisbegroting: extra monteur = vaste loonkosten erbij, en
+  // per verkocht uur een dekkingsbijdrage van uurtarief × (1 − variabele kosten).
+  let omslagpuntPct: number | null = null;
+  let omslagpuntToelichting: string | null = null;
+  if (aan.aantalMonteurs != null && aan.loonkostenPerMonteur != null && uurtarief != null) {
+    const dekkingPerUur = uurtarief * (1 - (variabelePct ?? 0) / 100);
+    if (dekkingPerUur > 0 && urenPerMonteur > 0) {
+      const bez = (aan.loonkostenPerMonteur / (urenPerMonteur * dekkingPerUur)) * 100;
+      omslagpuntPct = rnd2(bez);
+      omslagpuntToelichting = bez <= 100
+        ? `Een monteur (${euro(aan.loonkostenPerMonteur)}/jaar) betaalt zichzelf terug vanaf ${Math.round(bez)}% bezetting: ${Math.round(urenPerMonteur * bez / 100)} verkochte uren × ${euro(dekkingPerUur)} dekkingsbijdrage per uur.`
+        : `Een monteur betaalt zichzelf bij dit uurtarief en deze variabele kosten NIET terug binnen 100% bezetting (omslagpunt: ${Math.round(bez)}%).`;
+    }
+  }
+
+  return {
+    begroting_id: begroting.id,
+    boekjaar: begroting.boekjaar,
+    status: begroting.status,
+    naam: begroting.scenarioNaam ?? null,
+    basis_id: begroting.scenarioVanId ?? null,
+    totaal_ak: totaalAk,
+    beschikbare_uren: beschikbareUren,
+    niveaus,
+    omslagpunt_pct: omslagpuntPct,
+    omslagpunt_toelichting: omslagpuntToelichting,
+    aannames,
+    meldingen,
   };
 }
 

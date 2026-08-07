@@ -8,10 +8,13 @@ import { werkgeversTable } from "./hrm";
 // ─── Jaarbegroting ───────────────────────────────────────────────────────────
 // Één actieve begroting per boekjaar. Bevat de bedrijfsdoelen en AK-normen
 // die de FIE gebruikt om per calculatie advies te geven.
+// SCENARIO_01: status 'scenario' = wat-als-kopie van een begroting. Een scenario
+// raakt nooit de echte begroting, telt nergens mee (prognose, AK-dashboard,
+// calculatiecontext) en kan nooit naar 'actief' worden gezet.
 export const fieJaarbegrotingenTable = pgTable("fie_jaarbegrotingen", {
   id: serial("id").primaryKey(),
   boekjaar: integer("boekjaar").notNull(),
-  status: text("status").notNull().default("concept"), // concept | actief | gesloten
+  status: text("status").notNull().default("concept"), // concept | actief | gesloten | scenario
   omzetDoel: real("omzet_doel"),                       // gewenste omzet in euro
   directeKostenDoel: real("directe_kosten_doel"),      // verwachte directe kosten
   doelMargePct: real("doel_marge_pct").notNull().default(15), // gewenste nettomarge %
@@ -19,6 +22,9 @@ export const fieJaarbegrotingenTable = pgTable("fie_jaarbegrotingen", {
   productieveUrenDoel: integer("productieve_uren_doel"), // verwachte productieve uren
   verdeelsleutel: text("verdeelsleutel").notNull().default("uren"), // uren | omzet
   opmerkingen: text("opmerkingen"),
+  scenarioVanId: integer("scenario_van_id"),        // basisbegroting waarvan gekopieerd (FK, set null)
+  scenarioNaam: text("scenario_naam"),              // korte naam van het scenario
+  scenarioAannames: text("scenario_aannames"),      // JSON: expliciete aannames (monteurs, bezetting, ...)
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

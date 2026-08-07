@@ -112,6 +112,7 @@ INDEX|fie_ak_adviezen|fie_ak_adviezen_status_bedrag_idx
 INDEX|fie_ak_posten|fie_ak_posten_pkey
 INDEX|fie_capaciteit_snapshots|fie_capaciteit_snapshots_pkey
 INDEX|fie_jaarbegrotingen|fie_jaarbegrotingen_pkey
+INDEX|fie_jaarbegrotingen|fie_jaarbegrotingen_status_idx
 INDEX|fie_jaarrealisaties|fie_jaarrealisaties_boekjaar_geheel_uniek
 INDEX|fie_jaarrealisaties|fie_jaarrealisaties_boekjaar_werkgever_uniek
 INDEX|fie_jaarrealisaties|fie_jaarrealisaties_pkey
@@ -1501,6 +1502,9 @@ KOLOM|fie_jaarbegrotingen|id|integer|NO|nextval('fie_jaarbegrotingen_id_seq'::re
 KOLOM|fie_jaarbegrotingen|omzet_doel|real|YES|
 KOLOM|fie_jaarbegrotingen|opmerkingen|text|YES|
 KOLOM|fie_jaarbegrotingen|productieve_uren_doel|integer|YES|
+KOLOM|fie_jaarbegrotingen|scenario_aannames|text|YES|
+KOLOM|fie_jaarbegrotingen|scenario_naam|text|YES|
+KOLOM|fie_jaarbegrotingen|scenario_van_id|integer|YES|
 KOLOM|fie_jaarbegrotingen|status|text|NO|'concept'::text
 KOLOM|fie_jaarbegrotingen|verdeelsleutel|text|NO|'uren'::text
 KOLOM|fie_jaarrealisaties|aangemaakt_op|timestamp without time zone|NO|now()

@@ -22905,6 +22905,115 @@ paths:
         "404":
           description: Niet gevonden
 
+  /fie/scenarios:
+    get:
+      operationId: listFieScenarios
+      tags: [fie]
+      summary: Wat-als-scenario's ophalen (SCENARIO_01)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieScenario"
+
+  /fie/begrotingen/{id}/scenario:
+    post:
+      operationId: createFieScenario
+      tags: [fie]
+      summary: Scenario aanmaken als kopie van een begroting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieScenarioInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieScenario"
+        "404":
+          description: Basisbegroting niet gevonden
+        "422":
+          description: Capaciteitswijziging zonder bezettingsaanname
+
+  /fie/scenarios/{id}:
+    patch:
+      operationId: updateFieScenario
+      tags: [fie]
+      summary: Scenario bijwerken (naam/aannames)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieScenarioPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieScenario"
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Capaciteitswijziging zonder bezettingsaanname
+    delete:
+      operationId: deleteFieScenario
+      tags: [fie]
+      summary: Scenario verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /fie/begrotingen/{id}/doorrekening:
+    get:
+      operationId: getFieDoorrekening
+      tags: [fie]
+      summary: Doorrekening bij meerdere bezettingsniveaus (scenario of begroting)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieScenarioDoorrekening"
+        "404":
+          description: Niet gevonden
+
   /fie/begrotingen/{id}/ak-posten:
     get:
       operationId: listFieAkPosten
@@ -43448,6 +43557,90 @@ components:
         productieve_uren_doel:     { type: ["integer", "null"] }
         verdeelsleutel:            { type: string }
         opmerkingen:               { type: ["string", "null"] }
+
+    FieScenario:
+      allOf:
+        - $ref: "#/components/schemas/FieJaarbegroting"
+        - type: object
+          properties:
+            scenario_naam:    { type: ["string", "null"] }
+            scenario_van_id:  { type: ["integer", "null"] }
+            aannames:
+              $ref: "#/components/schemas/FieScenarioAannames"
+
+    FieScenarioAannames:
+      type: object
+      properties:
+        aantal_monteurs:        { type: number, nullable: true }
+        uren_per_monteur:       { type: number, nullable: true }
+        bezettingsgraad_pct:    { type: number, nullable: true }
+        uurtarief:              { type: number, nullable: true }
+        loonkosten_per_monteur: { type: number, nullable: true }
+        variabele_kosten_pct:   { type: number, nullable: true }
+        toelichting:            { type: string, nullable: true }
+
+    FieScenarioInput:
+      type: object
+      required: [naam]
+      properties:
+        naam: { type: string }
+        aannames:
+          $ref: "#/components/schemas/FieScenarioAannames"
+
+    FieScenarioPatch:
+      type: object
+      properties:
+        naam: { type: string }
+        aannames:
+          $ref: "#/components/schemas/FieScenarioAannames"
+
+    FieScenarioNiveau:
+      type: object
+      required: [bezetting_pct, verkochte_uren, productie, variabele_kosten, dekkingsbijdrage, loonkosten_monteurs, totaal_ak, bedrijfsresultaat]
+      properties:
+        bezetting_pct:       { type: number }
+        verkochte_uren:      { type: number }
+        productie:           { type: number }
+        variabele_kosten:    { type: number }
+        dekkingsbijdrage:    { type: number }
+        loonkosten_monteurs: { type: number }
+        totaal_ak:           { type: number }
+        ak_pct_productie:    { type: number, nullable: true }
+        ak_per_verkocht_uur: { type: number, nullable: true }
+        bedrijfsresultaat:   { type: number }
+
+    FieScenarioAannameRegel:
+      type: object
+      required: [label, waarde, bron]
+      properties:
+        label:  { type: string }
+        waarde: { type: string }
+        bron:   { type: string }
+
+    FieScenarioDoorrekening:
+      type: object
+      required: [begroting_id, boekjaar, status, totaal_ak, niveaus, aannames, meldingen]
+      properties:
+        begroting_id:    { type: integer }
+        boekjaar:        { type: integer }
+        status:          { type: string }
+        naam:            { type: string, nullable: true }
+        basis_id:        { type: integer, nullable: true }
+        totaal_ak:       { type: number }
+        beschikbare_uren: { type: number, nullable: true }
+        niveaus:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieScenarioNiveau"
+        omslagpunt_pct:  { type: number, nullable: true }
+        omslagpunt_toelichting: { type: string, nullable: true }
+        aannames:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieScenarioAannameRegel"
+        meldingen:
+          type: array
+          items: { type: string }
 
     FieJaarrealisatie:
       type: object

@@ -28467,6 +28467,157 @@ export const UpdateFieBegrotingResponse = zod.object({
 
 
 /**
+ * @summary Wat-als-scenario's ophalen (SCENARIO_01)
+ */
+export const ListFieScenariosResponseItem = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "scenario_naam": zod.string().nullish(),
+  "scenario_van_id": zod.number().nullish(),
+  "aannames": zod.object({
+  "aantal_monteurs": zod.number().nullish(),
+  "uren_per_monteur": zod.number().nullish(),
+  "bezettingsgraad_pct": zod.number().nullish(),
+  "uurtarief": zod.number().nullish(),
+  "loonkosten_per_monteur": zod.number().nullish(),
+  "variabele_kosten_pct": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+}).optional()
+}))
+export const ListFieScenariosResponse = zod.array(ListFieScenariosResponseItem)
+
+
+/**
+ * @summary Scenario aanmaken als kopie van een begroting
+ */
+export const CreateFieScenarioParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateFieScenarioBody = zod.object({
+  "naam": zod.string(),
+  "aannames": zod.object({
+  "aantal_monteurs": zod.number().nullish(),
+  "uren_per_monteur": zod.number().nullish(),
+  "bezettingsgraad_pct": zod.number().nullish(),
+  "uurtarief": zod.number().nullish(),
+  "loonkosten_per_monteur": zod.number().nullish(),
+  "variabele_kosten_pct": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+}).optional()
+})
+
+export const CreateFieScenarioResponse = zod.void()
+
+
+/**
+ * @summary Scenario bijwerken (naam/aannames)
+ */
+export const UpdateFieScenarioParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFieScenarioBody = zod.object({
+  "naam": zod.string().optional(),
+  "aannames": zod.object({
+  "aantal_monteurs": zod.number().nullish(),
+  "uren_per_monteur": zod.number().nullish(),
+  "bezettingsgraad_pct": zod.number().nullish(),
+  "uurtarief": zod.number().nullish(),
+  "loonkosten_per_monteur": zod.number().nullish(),
+  "variabele_kosten_pct": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+}).optional()
+})
+
+export const UpdateFieScenarioResponse = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "scenario_naam": zod.string().nullish(),
+  "scenario_van_id": zod.number().nullish(),
+  "aannames": zod.object({
+  "aantal_monteurs": zod.number().nullish(),
+  "uren_per_monteur": zod.number().nullish(),
+  "bezettingsgraad_pct": zod.number().nullish(),
+  "uurtarief": zod.number().nullish(),
+  "loonkosten_per_monteur": zod.number().nullish(),
+  "variabele_kosten_pct": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+}).optional()
+}))
+
+
+/**
+ * @summary Scenario verwijderen
+ */
+export const DeleteFieScenarioParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFieScenarioResponse = zod.void()
+
+
+/**
+ * @summary Doorrekening bij meerdere bezettingsniveaus (scenario of begroting)
+ */
+export const GetFieDoorrekeningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFieDoorrekeningResponse = zod.object({
+  "begroting_id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "naam": zod.string().nullish(),
+  "basis_id": zod.number().nullish(),
+  "totaal_ak": zod.number(),
+  "beschikbare_uren": zod.number().nullish(),
+  "niveaus": zod.array(zod.object({
+  "bezetting_pct": zod.number(),
+  "verkochte_uren": zod.number(),
+  "productie": zod.number(),
+  "variabele_kosten": zod.number(),
+  "dekkingsbijdrage": zod.number(),
+  "loonkosten_monteurs": zod.number(),
+  "totaal_ak": zod.number(),
+  "ak_pct_productie": zod.number().nullish(),
+  "ak_per_verkocht_uur": zod.number().nullish(),
+  "bedrijfsresultaat": zod.number()
+})),
+  "omslagpunt_pct": zod.number().nullish(),
+  "omslagpunt_toelichting": zod.string().nullish(),
+  "aannames": zod.array(zod.object({
+  "label": zod.string(),
+  "waarde": zod.string(),
+  "bron": zod.string()
+})),
+  "meldingen": zod.array(zod.string())
+})
+
+
+/**
  * @summary AK-posten ophalen voor een jaarbegroting
  */
 export const ListFieAkPostenParams = zod.object({

@@ -13304,6 +13304,68 @@ export interface FieJaarbegrotingUpdate {
   opmerkingen?: string | null;
 }
 
+export interface FieScenarioAannames {
+  aantal_monteurs?: number | null;
+  uren_per_monteur?: number | null;
+  bezettingsgraad_pct?: number | null;
+  uurtarief?: number | null;
+  loonkosten_per_monteur?: number | null;
+  variabele_kosten_pct?: number | null;
+  toelichting?: string | null;
+}
+
+export type FieScenario = FieJaarbegroting & ({
+  /** @nullable */
+  scenario_naam?: string | null;
+  /** @nullable */
+  scenario_van_id?: number | null;
+  aannames?: FieScenarioAannames;
+});
+
+export interface FieScenarioInput {
+  naam: string;
+  aannames?: FieScenarioAannames;
+}
+
+export interface FieScenarioPatch {
+  naam?: string;
+  aannames?: FieScenarioAannames;
+}
+
+export interface FieScenarioNiveau {
+  bezetting_pct: number;
+  verkochte_uren: number;
+  productie: number;
+  variabele_kosten: number;
+  dekkingsbijdrage: number;
+  loonkosten_monteurs: number;
+  totaal_ak: number;
+  ak_pct_productie?: number | null;
+  ak_per_verkocht_uur?: number | null;
+  bedrijfsresultaat: number;
+}
+
+export interface FieScenarioAannameRegel {
+  label: string;
+  waarde: string;
+  bron: string;
+}
+
+export interface FieScenarioDoorrekening {
+  begroting_id: number;
+  boekjaar: number;
+  status: string;
+  naam?: string | null;
+  basis_id?: number | null;
+  totaal_ak: number;
+  beschikbare_uren?: number | null;
+  niveaus: FieScenarioNiveau[];
+  omslagpunt_pct?: number | null;
+  omslagpunt_toelichting?: string | null;
+  aannames: FieScenarioAannameRegel[];
+  meldingen: string[];
+}
+
 export interface FieJaarrealisatie {
   id: number;
   boekjaar: number;

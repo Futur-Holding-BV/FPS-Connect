@@ -31,7 +31,7 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
-  TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet,
+  TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -900,6 +900,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/financieel/algemene-kosten">
                               <TrendingUp />
                               <span>Algemene kosten</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {heeftNiveau("financieel", 2) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/financieel/scenarios"}>
+                            <Link href="/financieel/scenarios">
+                              <GitCompareArrows />
+                              <span>Wat-als-scenario's</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

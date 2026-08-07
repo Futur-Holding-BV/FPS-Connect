@@ -148,3 +148,4 @@
 - [Calculatie-AI eigen cijfers](calculatie-eigen-cijfers.md) — analyse toetst aan eigen data (mediaan, ≥5 waarnemingen, expliciet bij geen match); vaste %-normen verboden in prompt; gpt-5 heeft ruim tokenbudget nodig.
 - [AK-dashboard eigen cijfers](ak-eigen-cijfers.md) — AK% altijd over productie (omzet+OHW uit fie_jaarrealisaties); adviezen max 10 open, nooit vanzelf weg, wegzetten=reden; loonkosten zonder vervolgstap.
 - [Inkoop/werkbegroting-AI eigen cijfers](inkoop-eigen-cijfers.md) — inkoopprijs_verwacht nooit van AI (jaarprijslijst>mediaan≥3>onbekend); leveranciers=opsomming; nacalc alleen afgesloten; bronnen fail-closed.
+- [FIE wat-als-scenario's](fie-scenarios.md) — scenario = begrotingskopie status `scenario`; elke lezer van fie_jaarbegrotingen moet ne(status,scenario) filteren; geen tweede rekenmodel naast berekenDoelmarge.

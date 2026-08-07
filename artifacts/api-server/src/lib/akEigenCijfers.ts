@@ -95,14 +95,15 @@ export interface AkSignaal {
 export async function bouwJaarReeks(): Promise<JaarReeksRij[]> {
   const [realisaties, begrotingen, posten, werkgevers] = await Promise.all([
     db.select().from(fieJaarrealisatiesTable),
-    db.select().from(fieJaarbegrotingenTable),
+    db.select().from(fieJaarbegrotingenTable).where(ne(fieJaarbegrotingenTable.status, "scenario")),
     db.select({
       boekjaar: fieJaarbegrotingenTable.boekjaar,
       werkgeverId: fieAkPostenTable.werkgeverId,
       bedrag: fieAkPostenTable.bedragJaarbasis,
     }).from(fieAkPostenTable)
       .innerJoin(fieJaarbegrotingenTable, eq(fieAkPostenTable.begrotingId, fieJaarbegrotingenTable.id))
-      .where(eq(fieAkPostenTable.actief, true)),
+      // Scenario's (SCENARIO_01) zijn wat-als-kopieën en tellen NOOIT mee.
+      .where(and(eq(fieAkPostenTable.actief, true), ne(fieJaarbegrotingenTable.status, "scenario"))),
     db.select({ id: werkgeversTable.id, naam: werkgeversTable.naam }).from(werkgeversTable),
   ]);
   const werkgeverNaam = new Map<number, string>(werkgevers.map((w) => [w.id, w.naam]));
@@ -173,7 +174,7 @@ export async function bouwLopendJaar(nu: Date): Promise<LopendJaar> {
     (nu.getTime() - jaarStart.getTime()) / (jaarEind.getTime() - jaarStart.getTime())));
 
   const [begroting] = await db.select().from(fieJaarbegrotingenTable)
-    .where(eq(fieJaarbegrotingenTable.boekjaar, boekjaar));
+    .where(and(eq(fieJaarbegrotingenTable.boekjaar, boekjaar), ne(fieJaarbegrotingenTable.status, "scenario")));
   const posten = begroting
     ? await db.select({ bedrag: fieAkPostenTable.bedragJaarbasis }).from(fieAkPostenTable)
         .where(and(eq(fieAkPostenTable.begrotingId, begroting.id), eq(fieAkPostenTable.actief, true)))
@@ -221,7 +222,8 @@ export async function bouwPostOntwikkeling(): Promise<AkPostOntwikkeling[]> {
       bedrag: fieAkPostenTable.bedragJaarbasis,
     }).from(fieAkPostenTable)
       .innerJoin(fieJaarbegrotingenTable, eq(fieAkPostenTable.begrotingId, fieJaarbegrotingenTable.id))
-      .where(eq(fieAkPostenTable.actief, true)),
+      // Scenario's (SCENARIO_01) tellen nooit mee in de postontwikkeling.
+      .where(and(eq(fieAkPostenTable.actief, true), ne(fieJaarbegrotingenTable.status, "scenario"))),
     db.select({ id: werkgeversTable.id, naam: werkgeversTable.naam }).from(werkgeversTable),
   ]);
   const werkgeverNaam = new Map<number, string>(werkgevers.map((w) => [w.id, w.naam]));

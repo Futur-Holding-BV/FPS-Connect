@@ -285,6 +285,10 @@ import type {
   FieLeermomentPatch,
   FieNacalculatieOverzicht,
   FieObservatiesResponse,
+  FieScenario,
+  FieScenarioDoorrekening,
+  FieScenarioInput,
+  FieScenarioPatch,
   FinancieelBesparingskansen,
   FinancieelBewaakResultaat,
   FinancieelContract,
@@ -79935,6 +79939,372 @@ export const useUpdateFieBegroting = <TError = ErrorType<void>,
       > => {
       return useMutation(getUpdateFieBegrotingMutationOptions(options));
     }
+
+export const getListFieScenariosUrl = () => {
+
+
+
+
+  return `/api/fie/scenarios`
+}
+
+/**
+ * @summary Wat-als-scenario's ophalen (SCENARIO_01)
+ */
+export const listFieScenarios = async ( options?: RequestInit): Promise<FieScenario[]> => {
+
+  return customFetch<FieScenario[]>(getListFieScenariosUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieScenariosQueryKey = () => {
+    return [
+    `/api/fie/scenarios`
+    ] as const;
+    }
+
+
+export const getListFieScenariosQueryOptions = <TData = Awaited<ReturnType<typeof listFieScenarios>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieScenariosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieScenarios>>> = ({ signal }) => listFieScenarios({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieScenarios>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieScenariosQueryResult = NonNullable<Awaited<ReturnType<typeof listFieScenarios>>>
+export type ListFieScenariosQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Wat-als-scenario's ophalen (SCENARIO_01)
+ */
+
+export function useListFieScenarios<TData = Awaited<ReturnType<typeof listFieScenarios>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieScenariosQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFieScenarioUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}/scenario`
+}
+
+/**
+ * @summary Scenario aanmaken als kopie van een begroting
+ */
+export const createFieScenario = async (id: number,
+    fieScenarioInput: FieScenarioInput, options?: RequestInit): Promise<FieScenario> => {
+
+  return customFetch<FieScenario>(getCreateFieScenarioUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieScenarioInput)
+  }
+);}
+
+
+
+
+export const getCreateFieScenarioMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieScenario>>, TError,{id: number;data: BodyType<FieScenarioInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFieScenario>>, TError,{id: number;data: BodyType<FieScenarioInput>}, TContext> => {
+
+const mutationKey = ['createFieScenario'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFieScenario>>, {id: number;data: BodyType<FieScenarioInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createFieScenario(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFieScenarioMutationResult = NonNullable<Awaited<ReturnType<typeof createFieScenario>>>
+    export type CreateFieScenarioMutationBody = BodyType<FieScenarioInput>
+    export type CreateFieScenarioMutationError = ErrorType<void>
+
+    /**
+ * @summary Scenario aanmaken als kopie van een begroting
+ */
+export const useCreateFieScenario = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieScenario>>, TError,{id: number;data: BodyType<FieScenarioInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFieScenario>>,
+        TError,
+        {id: number;data: BodyType<FieScenarioInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFieScenarioMutationOptions(options));
+    }
+
+export const getUpdateFieScenarioUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/scenarios/${id}`
+}
+
+/**
+ * @summary Scenario bijwerken (naam/aannames)
+ */
+export const updateFieScenario = async (id: number,
+    fieScenarioPatch: FieScenarioPatch, options?: RequestInit): Promise<FieScenario> => {
+
+  return customFetch<FieScenario>(getUpdateFieScenarioUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieScenarioPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFieScenarioMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieScenario>>, TError,{id: number;data: BodyType<FieScenarioPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFieScenario>>, TError,{id: number;data: BodyType<FieScenarioPatch>}, TContext> => {
+
+const mutationKey = ['updateFieScenario'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFieScenario>>, {id: number;data: BodyType<FieScenarioPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFieScenario(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFieScenarioMutationResult = NonNullable<Awaited<ReturnType<typeof updateFieScenario>>>
+    export type UpdateFieScenarioMutationBody = BodyType<FieScenarioPatch>
+    export type UpdateFieScenarioMutationError = ErrorType<void>
+
+    /**
+ * @summary Scenario bijwerken (naam/aannames)
+ */
+export const useUpdateFieScenario = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieScenario>>, TError,{id: number;data: BodyType<FieScenarioPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFieScenario>>,
+        TError,
+        {id: number;data: BodyType<FieScenarioPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFieScenarioMutationOptions(options));
+    }
+
+export const getDeleteFieScenarioUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/scenarios/${id}`
+}
+
+/**
+ * @summary Scenario verwijderen
+ */
+export const deleteFieScenario = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFieScenarioUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFieScenarioMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieScenario>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFieScenario>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFieScenario'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFieScenario>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFieScenario(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFieScenarioMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFieScenario>>>
+
+    export type DeleteFieScenarioMutationError = ErrorType<void>
+
+    /**
+ * @summary Scenario verwijderen
+ */
+export const useDeleteFieScenario = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieScenario>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFieScenario>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFieScenarioMutationOptions(options));
+    }
+
+export const getGetFieDoorrekeningUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}/doorrekening`
+}
+
+/**
+ * @summary Doorrekening bij meerdere bezettingsniveaus (scenario of begroting)
+ */
+export const getFieDoorrekening = async (id: number, options?: RequestInit): Promise<FieScenarioDoorrekening> => {
+
+  return customFetch<FieScenarioDoorrekening>(getGetFieDoorrekeningUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieDoorrekeningQueryKey = (id: number,) => {
+    return [
+    `/api/fie/begrotingen/${id}/doorrekening`
+    ] as const;
+    }
+
+
+export const getGetFieDoorrekeningQueryOptions = <TData = Awaited<ReturnType<typeof getFieDoorrekening>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieDoorrekening>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieDoorrekeningQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieDoorrekening>>> = ({ signal }) => getFieDoorrekening(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieDoorrekening>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieDoorrekeningQueryResult = NonNullable<Awaited<ReturnType<typeof getFieDoorrekening>>>
+export type GetFieDoorrekeningQueryError = ErrorType<void>
+
+
+/**
+ * @summary Doorrekening bij meerdere bezettingsniveaus (scenario of begroting)
+ */
+
+export function useGetFieDoorrekening<TData = Awaited<ReturnType<typeof getFieDoorrekening>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieDoorrekening>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieDoorrekeningQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListFieAkPostenUrl = (id: number,) => {
 
