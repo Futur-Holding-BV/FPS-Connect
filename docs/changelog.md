@@ -2527,6 +2527,20 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Opdracht per offerte:** migratie 0006 voegt een unieke index op `opdrachten.offerte_id` toe; twee gelijktijdige "maak opdracht"-verzoeken kunnen niet langer allebei een opdracht aanmaken (race → nette 409).
 
 
+## 2026-08-07 — Onboarding-wizard standaard AAN in de productie-build
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** de onboarding-wizard is volledig getest; de feature-flag `VITE_FEATURE_WIZARD_ONBOARDING` stond nog bewust uit in de productie-build, waardoor de "Onboarden"-knop in HRM verborgen bleef (taak: activeer de wizard op productie).
+
+**Wijzigingen:**
+- `deploy/Dockerfile.caddy` — nieuwe build-arg `VITE_FEATURE_WIZARD_ONBOARDING` (default `true`), als ENV doorgegeven zodat Vite hem in de webbundel bakt.
+- `deploy/docker-compose.production.yml` — build-arg doorgegeven aan de caddy-service (`${VITE_FEATURE_WIZARD_ONBOARDING:-true}`), overschrijfbaar via `.env.production`.
+- `deploy/ENV_PRODUCTION.example` — gedocumenteerd onder "Feature flags" incl. de noot dat wijzigen een frontend-rebuild vereist.
+
+**Verificatie:** `docker compose config` resolvet de build-arg naar `"true"`; de flag-logica (`=== "true"` opt-in) is ongewijzigd. Effect op productie na eerstvolgende deploy (`docker compose build caddy` + up); zichtbaarheid van de knop, vooringevulde userId en duplicaat-bewaking zijn in ontwikkeling reeds aangetoond (dev draait met dezelfde flag). Uitrol naar de VPS gebeurt bewust niet vanuit deze omgeving.
+
+---
 ## 2026-08-07 — Facturen: één ingang afgedwongen (mailstroom), legacy-intakes gesloten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (restrictie, geen nieuwe pipeline)

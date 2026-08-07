@@ -66,6 +66,11 @@ MINIO_ROOT_PASSWORD=CHANGEME
 PRIVATE_OBJECT_DIR=private
 PUBLIC_OBJECT_SEARCH_PATHS=public
 
+# ── Feature flags (build-time; Vite bakt ze in de webbundel) ─────────────────
+# Onboarding-wizard in HRM (standaard AAN sinds augustus 2026).
+# Wijzigen vereist een nieuwe frontend-build (docker compose build caddy).
+VITE_FEATURE_WIZARD_ONBOARDING=true
+
 # ── AVG / dataretentie ────────────────────────────────────────────────────────
 # Bewaarperiode activiteitslog in dagen (standaard 365)
 AVG_ACTIVITEIT_BEWAARDAGEN=365
