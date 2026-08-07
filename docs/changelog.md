@@ -3,7 +3,7 @@
 - **Uitvoering:** volledig gebouwd en met 22 automatische checks bewezen; code-review-punten verwerkt (transactionele kopie met row-lock, doorrekenbaarheid afgedwongen bij aanmaken) | **Kwaliteit:** hoog | **Risico:** laag (een scenario is een kopie; begroting, prognose en adviezen worden nooit geraakt)
 
 **Nieuw: pagina "Wat-als-scenario's"** (`/financieel/scenarios`, Financieel-hoofdstuk, niveau 2):
-- **Scenario = kopie van de actieve begroting** (status `scenario`, migratie 0008) inclusief alle AK-posten. Draaiknoppen: aantal monteurs, bezettingsgraad, uurtarief, loonkosten per monteur, variabele kosten, uren per monteur; AK-posten weghalen/wijzigen kan op de kopie zonder de echte begroting te raken.
+- **Scenario = kopie van de actieve begroting** (status `scenario`, migratie 0008) inclusief alle AK-posten. Draaiknoppen: aantal monteurs, bezettingsgraad, uurtarief, loonkosten per monteur, variabele kosten, uren per monteur; AK-posten weghalen/wijzigen kan direct op de scenariokolom (aan/uit-schakelaar) zonder de echte begroting te raken.
 - **Bezettingsgraad én loonkosten per monteur zijn verplicht bij elke capaciteitswijziging** (server geeft 422 met uitleg) — de les van 2024: zonder die vragen lijkt extra capaciteit altijd gunstig en bestaat er geen omslagpunt. Een scenario dat niet doorrekenbaar is (geen uurtarief opgeefbaar of afleidbaar) wordt geweigerd in plaats van stil aangemaakt.
 - **Uitkomst altijd bij 4 bezettingsniveaus (60/70/80/90%)** plus de eigen aanname, nooit als één getal; per niveau productie, dekkingsbijdrage, AK% (altijd over de productie) en bedrijfsresultaat.
 - **Omslagpunt:** "een monteur betaalt zichzelf terug vanaf X% bezetting", met de berekening erbij; onhaalbaar boven 100% wordt expliciet benoemd.

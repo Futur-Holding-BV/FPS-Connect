@@ -14,6 +14,10 @@ import {
   useCreateFieScenario,
   useDeleteFieScenario,
   useGetFieDoorrekening,
+  getGetFieDoorrekeningQueryKey,
+  useListFieAkPosten,
+  getListFieAkPostenQueryKey,
+  useUpdateFieAkPost,
   type FieScenario,
   type FieScenarioDoorrekening,
 } from "@workspace/api-client-react";
@@ -37,6 +41,43 @@ function bronBadge(bron: string) {
   if (bron === "ingevoerd") return <Badge variant="outline" className="text-[10px]">ingevoerd</Badge>;
   if (bron === "standaard") return <Badge variant="secondary" className="text-[10px]">standaard</Badge>;
   return <Badge variant="secondary" className="text-[10px] text-muted-foreground">uit begroting</Badge>;
+}
+
+// AK-posten van de scenario-kopie aan/uit zetten — dit raakt uitsluitend de
+// kopie; de posten van de echte begroting blijven onaangeroerd.
+function ScenarioAkPosten({ begrotingId }: { begrotingId: number }) {
+  const queryClient = useQueryClient();
+  const posten = useListFieAkPosten(begrotingId);
+  const bijwerken = useUpdateFieAkPost({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListFieAkPostenQueryKey(begrotingId) });
+        void queryClient.invalidateQueries({ queryKey: getGetFieDoorrekeningQueryKey(begrotingId) });
+      },
+    },
+  });
+  const lijst = posten.data ?? [];
+  if (lijst.length === 0) return null;
+  return (
+    <div className="space-y-1 pt-1 border-t">
+      <p className="text-xs font-medium text-muted-foreground">AK-posten in dit scenario (aan/uit)</p>
+      {lijst.map((p) => (
+        <label key={p.id} className="flex items-center justify-between gap-2 text-xs cursor-pointer">
+          <span className={`flex items-center gap-1.5 ${p.actief ? "" : "line-through text-muted-foreground"}`}>
+            <input
+              type="checkbox"
+              checked={p.actief}
+              disabled={bijwerken.isPending}
+              onChange={() => bijwerken.mutate({ id: p.id, data: { actief: !p.actief } })}
+              data-testid={`schakel-akpost-${p.id}`}
+            />
+            {p.omschrijving}
+          </span>
+          <span>{euro(p.bedrag_jaarbasis)}</span>
+        </label>
+      ))}
+    </div>
+  );
 }
 
 function DoorrekeningKolom({ begrotingId, titel, isBasis, onVerwijder }: {
@@ -116,6 +157,7 @@ function DoorrekeningKolom({ begrotingId, titel, isBasis, onVerwijder }: {
                 </div>
               ))}
             </div>
+            {!isBasis && <ScenarioAkPosten begrotingId={begrotingId} />}
           </>
         )}
       </CardContent>
