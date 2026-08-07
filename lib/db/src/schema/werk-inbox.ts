@@ -12,6 +12,9 @@ export const werkInboxTokensTable = pgTable("werk_inbox_tokens", {
   refreshTokenEnc: text("refresh_token_enc").notNull(),
   verlooptOp:      timestamp("verloopt_op").notNull(),
   scope:           text("scope").notNull().default("Mail.Read offline_access"),
+  // AANVRAAG_01: verwerk ook de persoonlijke mailbox als aanvraag-ingang
+  // (klanten mailen René vaak rechtstreeks).
+  aanvraagIntakePersoonlijk: boolean("aanvraag_intake_persoonlijk").notNull().default(false),
   aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [
@@ -28,6 +31,8 @@ export const werkInboxMailboxenTable = pgTable("werk_inbox_mailboxen", {
   actief:       boolean("actief").notNull().default(true),
   // FACTUUR_02: mails in deze mailbox gaan automatisch de factuurstroom in.
   isFactuurmailbox: boolean("is_factuurmailbox").notNull().default(false),
+  // AANVRAAG_01: mails in deze mailbox gaan automatisch de aanvraagstroom in.
+  isAanvraagmailbox: boolean("is_aanvraagmailbox").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
   unique("werk_inbox_mailboxen_gebruiker_adres_uq").on(t.gebruikerId, t.emailAdres),
@@ -51,6 +56,8 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
   conversationId:      text("conversation_id"),
   // FACTUUR_02: wanneer de factuurpijplijn deze mail heeft verwerkt (dedupe).
   factuurVerwerktOp:   timestamp("factuur_verwerkt_op"),
+  // AANVRAAG_01: wanneer de aanvraagpijplijn deze mail heeft verwerkt (dedupe).
+  aanvraagVerwerktOp:  timestamp("aanvraag_verwerkt_op"),
   isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
   verwerktOp:          timestamp("verwerkt_op"),
   afgehandeldOp:       timestamp("afgehandeld_op"),

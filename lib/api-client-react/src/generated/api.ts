@@ -20,10 +20,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AanvraagAccepterenInput,
+  AanvraagAfwijzenInput,
+  AanvraagAntwoordInput,
   AanvraagInput,
+  AanvraagIntakeInstellingen,
+  AanvraagIntakeInstellingenInput,
   AanvraagPlanning,
   AanvraagPlanningPatch,
   AanvraagResultaat,
+  AanvraagVoorstel,
   Abonnement,
   AbonnementInput,
   AbonnementUpdate,
@@ -462,6 +468,7 @@ import type {
   LeverancierPrestatie,
   LeverancierPrestatieInput,
   LiquiditeitDashboard,
+  ListAanvraagVoorstellenParams,
   ListActieveDocumentStudioModellen200,
   ListAiAanroepenParams,
   ListAiVoorstellenParams,
@@ -773,7 +780,6 @@ import type {
   Project,
   ProjectBegroting,
   ProjectBegrotingInput,
-  ProjectInput,
   ProjectPatchInput,
   PubliceerInput,
   Rapport,
@@ -23256,6 +23262,450 @@ export function useListCrmContactpersonenAll<TData = Awaited<ReturnType<typeof l
 
 
 
+
+export const getListAanvraagVoorstellenUrl = (params?: ListAanvraagVoorstellenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/aanvragen/voorstellen?${stringifiedParams}` : `/api/aanvragen/voorstellen`
+}
+
+/**
+ * @summary Aanvraagvoorstellen ophalen (AI-voorstellen uit de mailstroom)
+ */
+export const listAanvraagVoorstellen = async (params?: ListAanvraagVoorstellenParams, options?: RequestInit): Promise<AanvraagVoorstel[]> => {
+
+  return customFetch<AanvraagVoorstel[]>(getListAanvraagVoorstellenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAanvraagVoorstellenQueryKey = (params?: ListAanvraagVoorstellenParams,) => {
+    return [
+    `/api/aanvragen/voorstellen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAanvraagVoorstellenQueryOptions = <TData = Awaited<ReturnType<typeof listAanvraagVoorstellen>>, TError = ErrorType<unknown>>(params?: ListAanvraagVoorstellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAanvraagVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAanvraagVoorstellenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAanvraagVoorstellen>>> = ({ signal }) => listAanvraagVoorstellen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAanvraagVoorstellen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAanvraagVoorstellenQueryResult = NonNullable<Awaited<ReturnType<typeof listAanvraagVoorstellen>>>
+export type ListAanvraagVoorstellenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aanvraagvoorstellen ophalen (AI-voorstellen uit de mailstroom)
+ */
+
+export function useListAanvraagVoorstellen<TData = Awaited<ReturnType<typeof listAanvraagVoorstellen>>, TError = ErrorType<unknown>>(
+ params?: ListAanvraagVoorstellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAanvraagVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAanvraagVoorstellenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAccepteerAanvraagVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/aanvragen/voorstellen/${id}/accepteren`
+}
+
+/**
+ * @summary Voorstel accorderen en projectkans vastleggen
+ */
+export const accepteerAanvraagVoorstel = async (id: number,
+    aanvraagAccepterenInput: AanvraagAccepterenInput, options?: RequestInit): Promise<AanvraagVoorstel> => {
+
+  return customFetch<AanvraagVoorstel>(getAccepteerAanvraagVoorstelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagAccepterenInput)
+  }
+);}
+
+
+
+
+export const getAccepteerAanvraagVoorstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>, TError,{id: number;data: BodyType<AanvraagAccepterenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>, TError,{id: number;data: BodyType<AanvraagAccepterenInput>}, TContext> => {
+
+const mutationKey = ['accepteerAanvraagVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>, {id: number;data: BodyType<AanvraagAccepterenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  accepteerAanvraagVoorstel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AccepteerAanvraagVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>>
+    export type AccepteerAanvraagVoorstelMutationBody = BodyType<AanvraagAccepterenInput>
+    export type AccepteerAanvraagVoorstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorstel accorderen en projectkans vastleggen
+ */
+export const useAccepteerAanvraagVoorstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>, TError,{id: number;data: BodyType<AanvraagAccepterenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof accepteerAanvraagVoorstel>>,
+        TError,
+        {id: number;data: BodyType<AanvraagAccepterenInput>},
+        TContext
+      > => {
+      return useMutation(getAccepteerAanvraagVoorstelMutationOptions(options));
+    }
+
+export const getWijsAanvraagVoorstelAfUrl = (id: number,) => {
+
+
+
+
+  return `/api/aanvragen/voorstellen/${id}/afwijzen`
+}
+
+/**
+ * @summary Voorstel afwijzen (geen aanvraag / niet relevant)
+ */
+export const wijsAanvraagVoorstelAf = async (id: number,
+    aanvraagAfwijzenInput?: AanvraagAfwijzenInput, options?: RequestInit): Promise<AanvraagVoorstel> => {
+
+  return customFetch<AanvraagVoorstel>(getWijsAanvraagVoorstelAfUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagAfwijzenInput)
+  }
+);}
+
+
+
+
+export const getWijsAanvraagVoorstelAfMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>, TError,{id: number;data?: BodyType<AanvraagAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>, TError,{id: number;data?: BodyType<AanvraagAfwijzenInput>}, TContext> => {
+
+const mutationKey = ['wijsAanvraagVoorstelAf'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>, {id: number;data?: BodyType<AanvraagAfwijzenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  wijsAanvraagVoorstelAf(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WijsAanvraagVoorstelAfMutationResult = NonNullable<Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>>
+    export type WijsAanvraagVoorstelAfMutationBody = BodyType<AanvraagAfwijzenInput> | undefined
+    export type WijsAanvraagVoorstelAfMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorstel afwijzen (geen aanvraag / niet relevant)
+ */
+export const useWijsAanvraagVoorstelAf = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>, TError,{id: number;data?: BodyType<AanvraagAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof wijsAanvraagVoorstelAf>>,
+        TError,
+        {id: number;data?: BodyType<AanvraagAfwijzenInput>},
+        TContext
+      > => {
+      return useMutation(getWijsAanvraagVoorstelAfMutationOptions(options));
+    }
+
+export const getVerstuurAanvraagAntwoordUrl = (id: number,) => {
+
+
+
+
+  return `/api/aanvragen/voorstellen/${id}/verstuur-antwoord`
+}
+
+/**
+ * @summary Conceptantwoord (na eventuele bewerking) versturen als reply op de bronmail
+ */
+export const verstuurAanvraagAntwoord = async (id: number,
+    aanvraagAntwoordInput: AanvraagAntwoordInput, options?: RequestInit): Promise<AanvraagVoorstel> => {
+
+  return customFetch<AanvraagVoorstel>(getVerstuurAanvraagAntwoordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagAntwoordInput)
+  }
+);}
+
+
+
+
+export const getVerstuurAanvraagAntwoordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>, TError,{id: number;data: BodyType<AanvraagAntwoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>, TError,{id: number;data: BodyType<AanvraagAntwoordInput>}, TContext> => {
+
+const mutationKey = ['verstuurAanvraagAntwoord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>, {id: number;data: BodyType<AanvraagAntwoordInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verstuurAanvraagAntwoord(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerstuurAanvraagAntwoordMutationResult = NonNullable<Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>>
+    export type VerstuurAanvraagAntwoordMutationBody = BodyType<AanvraagAntwoordInput>
+    export type VerstuurAanvraagAntwoordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Conceptantwoord (na eventuele bewerking) versturen als reply op de bronmail
+ */
+export const useVerstuurAanvraagAntwoord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>, TError,{id: number;data: BodyType<AanvraagAntwoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verstuurAanvraagAntwoord>>,
+        TError,
+        {id: number;data: BodyType<AanvraagAntwoordInput>},
+        TContext
+      > => {
+      return useMutation(getVerstuurAanvraagAntwoordMutationOptions(options));
+    }
+
+export const getGetAanvraagIntakeInstellingenUrl = () => {
+
+
+
+
+  return `/api/aanvragen/intake-instellingen`
+}
+
+/**
+ * @summary Instellingen voor de aanvraag-intake van de ingelogde gebruiker
+ */
+export const getAanvraagIntakeInstellingen = async ( options?: RequestInit): Promise<AanvraagIntakeInstellingen> => {
+
+  return customFetch<AanvraagIntakeInstellingen>(getGetAanvraagIntakeInstellingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAanvraagIntakeInstellingenQueryKey = () => {
+    return [
+    `/api/aanvragen/intake-instellingen`
+    ] as const;
+    }
+
+
+export const getGetAanvraagIntakeInstellingenQueryOptions = <TData = Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAanvraagIntakeInstellingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>> = ({ signal }) => getAanvraagIntakeInstellingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAanvraagIntakeInstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>>
+export type GetAanvraagIntakeInstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Instellingen voor de aanvraag-intake van de ingelogde gebruiker
+ */
+
+export function useGetAanvraagIntakeInstellingen<TData = Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAanvraagIntakeInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAanvraagIntakeInstellingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateAanvraagIntakeInstellingenUrl = () => {
+
+
+
+
+  return `/api/aanvragen/intake-instellingen`
+}
+
+/**
+ * @summary Persoonlijke mailbox aan/uit als aanvraag-ingang
+ */
+export const updateAanvraagIntakeInstellingen = async (aanvraagIntakeInstellingenInput: AanvraagIntakeInstellingenInput, options?: RequestInit): Promise<AanvraagIntakeInstellingen> => {
+
+  return customFetch<AanvraagIntakeInstellingen>(getUpdateAanvraagIntakeInstellingenUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagIntakeInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateAanvraagIntakeInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>, TError,{data: BodyType<AanvraagIntakeInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>, TError,{data: BodyType<AanvraagIntakeInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateAanvraagIntakeInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>, {data: BodyType<AanvraagIntakeInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAanvraagIntakeInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAanvraagIntakeInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>>
+    export type UpdateAanvraagIntakeInstellingenMutationBody = BodyType<AanvraagIntakeInstellingenInput>
+    export type UpdateAanvraagIntakeInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persoonlijke mailbox aan/uit als aanvraag-ingang
+ */
+export const useUpdateAanvraagIntakeInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>, TError,{data: BodyType<AanvraagIntakeInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAanvraagIntakeInstellingen>>,
+        TError,
+        {data: BodyType<AanvraagIntakeInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAanvraagIntakeInstellingenMutationOptions(options));
+    }
 
 export const getListCrmProjectkansenUrl = (params?: ListCrmProjectkansenParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -55206,76 +55656,6 @@ export function useListProjecten<TData = Awaited<ReturnType<typeof listProjecten
 
 
 
-
-export const getCreateProjectUrl = () => {
-
-
-
-
-  return `/api/projecten`
-}
-
-/**
- * @summary Nieuw project aanmaken
- */
-export const createProject = async (projectInput: ProjectInput, options?: RequestInit): Promise<Project> => {
-
-  return customFetch<Project>(getCreateProjectUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(projectInput)
-  }
-);}
-
-
-
-
-export const getCreateProjectMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext> => {
-
-const mutationKey = ['createProject'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProject>>, {data: BodyType<ProjectInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createProject(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateProjectMutationResult = NonNullable<Awaited<ReturnType<typeof createProject>>>
-    export type CreateProjectMutationBody = BodyType<ProjectInput>
-    export type CreateProjectMutationError = ErrorType<unknown>
-
-    /**
- * @summary Nieuw project aanmaken
- */
-export const useCreateProject = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createProject>>,
-        TError,
-        {data: BodyType<ProjectInput>},
-        TContext
-      > => {
-      return useMutation(getCreateProjectMutationOptions(options));
-    }
 
 export const getGetProjectUrl = (id: number,) => {
 

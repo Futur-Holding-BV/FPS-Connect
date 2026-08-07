@@ -106,6 +106,8 @@ export const offertesTable = pgTable("offertes", {
   portaalStatus: text("portaal_status").notNull().default("concept"),
   verzendType: text("verzend_type").notNull().default("ondertekening"),
   autoProjectId: integer("auto_project_id").references(() => projectenTable.id, { onDelete: "set null" }),
+  // AANVRAAG_01: uit welke projectkans (aanvraag) deze offerte is voortgekomen.
+  projectkansId: integer("projectkans_id"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

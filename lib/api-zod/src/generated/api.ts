@@ -7299,6 +7299,8 @@ export const GetInfoInstellingenResponse = zod.object({
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
+  "aanvraag_reactietermijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal.'),
+  "aanvraag_oppak_termijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish(),
   "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
@@ -7318,7 +7320,9 @@ export const UpdateInfoInstellingenBody = zod.object({
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
-  "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.')
+  "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.'),
+  "aanvraag_reactietermijn_uren": zod.number().optional(),
+  "aanvraag_oppak_termijn_uren": zod.number().optional()
 })
 
 export const UpdateInfoInstellingenResponse = zod.object({
@@ -7333,6 +7337,8 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
+  "aanvraag_reactietermijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal.'),
+  "aanvraag_oppak_termijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish(),
   "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
@@ -7395,6 +7401,11 @@ export const ListCrmKlantenResponseItem = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -7490,6 +7501,11 @@ export const GetCrmKlantResponse = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -7578,6 +7594,11 @@ export const UpdateCrmKlantResponse = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -8041,6 +8062,11 @@ export const GetCrmDashboardResponse = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional()
@@ -8076,6 +8102,186 @@ export const ListCrmContactpersonenAllResponse = zod.array(ListCrmContactpersone
 
 
 /**
+ * @summary Aanvraagvoorstellen ophalen (AI-voorstellen uit de mailstroom)
+ */
+export const ListAanvraagVoorstellenQueryParams = zod.object({
+  "status": zod.coerce.string().optional()
+})
+
+export const ListAanvraagVoorstellenResponseItem = zod.object({
+  "id": zod.number(),
+  "mail_message_id": zod.string(),
+  "mailbox_adres": zod.string(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_email": zod.string(),
+  "onderwerp": zod.string(),
+  "binnengekomen_op": zod.string(),
+  "voorstel_type": zod.string().describe('nieuwe_aanvraag of meerwerk'),
+  "status": zod.string().describe('open, geaccepteerd of afgewezen'),
+  "ai_voorstel": zod.record(zod.string(), zod.unknown()).nullish(),
+  "concept_antwoord": zod.string().nullish(),
+  "concept_vorm": zod.string().describe('bevestiging of bevestiging_met_vraag'),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string().optional(),
+  "url": zod.string().optional()
+})).optional(),
+  "antwoord_verstuurd_op": zod.string().nullish(),
+  "projectkans_id": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeel_notitie": zod.string().nullish()
+})
+export const ListAanvraagVoorstellenResponse = zod.array(ListAanvraagVoorstellenResponseItem)
+
+
+/**
+ * @summary Voorstel accorderen en projectkans vastleggen
+ */
+export const AccepteerAanvraagVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AccepteerAanvraagVoorstelBody = zod.object({
+  "titel": zod.string(),
+  "klant_id": zod.number().optional(),
+  "nieuwe_klant": zod.object({
+  "naam": zod.string(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional()
+}).optional(),
+  "gebouw_id": zod.number().optional(),
+  "nieuw_gebouw": zod.object({
+  "naam": zod.string(),
+  "adres": zod.string(),
+  "stad": zod.string().optional()
+}).optional(),
+  "bv": zod.string().optional(),
+  "voorstel_type": zod.string().optional(),
+  "gerelateerd_project_id": zod.number().optional()
+})
+
+export const AccepteerAanvraagVoorstelResponse = zod.object({
+  "id": zod.number(),
+  "mail_message_id": zod.string(),
+  "mailbox_adres": zod.string(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_email": zod.string(),
+  "onderwerp": zod.string(),
+  "binnengekomen_op": zod.string(),
+  "voorstel_type": zod.string().describe('nieuwe_aanvraag of meerwerk'),
+  "status": zod.string().describe('open, geaccepteerd of afgewezen'),
+  "ai_voorstel": zod.record(zod.string(), zod.unknown()).nullish(),
+  "concept_antwoord": zod.string().nullish(),
+  "concept_vorm": zod.string().describe('bevestiging of bevestiging_met_vraag'),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string().optional(),
+  "url": zod.string().optional()
+})).optional(),
+  "antwoord_verstuurd_op": zod.string().nullish(),
+  "projectkans_id": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeel_notitie": zod.string().nullish()
+})
+
+
+/**
+ * @summary Voorstel afwijzen (geen aanvraag / niet relevant)
+ */
+export const WijsAanvraagVoorstelAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WijsAanvraagVoorstelAfBody = zod.object({
+  "notitie": zod.string().optional()
+})
+
+export const WijsAanvraagVoorstelAfResponse = zod.object({
+  "id": zod.number(),
+  "mail_message_id": zod.string(),
+  "mailbox_adres": zod.string(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_email": zod.string(),
+  "onderwerp": zod.string(),
+  "binnengekomen_op": zod.string(),
+  "voorstel_type": zod.string().describe('nieuwe_aanvraag of meerwerk'),
+  "status": zod.string().describe('open, geaccepteerd of afgewezen'),
+  "ai_voorstel": zod.record(zod.string(), zod.unknown()).nullish(),
+  "concept_antwoord": zod.string().nullish(),
+  "concept_vorm": zod.string().describe('bevestiging of bevestiging_met_vraag'),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string().optional(),
+  "url": zod.string().optional()
+})).optional(),
+  "antwoord_verstuurd_op": zod.string().nullish(),
+  "projectkans_id": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeel_notitie": zod.string().nullish()
+})
+
+
+/**
+ * @summary Conceptantwoord (na eventuele bewerking) versturen als reply op de bronmail
+ */
+export const VerstuurAanvraagAntwoordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerstuurAanvraagAntwoordBody = zod.object({
+  "tekst": zod.string()
+})
+
+export const VerstuurAanvraagAntwoordResponse = zod.object({
+  "id": zod.number(),
+  "mail_message_id": zod.string(),
+  "mailbox_adres": zod.string(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_email": zod.string(),
+  "onderwerp": zod.string(),
+  "binnengekomen_op": zod.string(),
+  "voorstel_type": zod.string().describe('nieuwe_aanvraag of meerwerk'),
+  "status": zod.string().describe('open, geaccepteerd of afgewezen'),
+  "ai_voorstel": zod.record(zod.string(), zod.unknown()).nullish(),
+  "concept_antwoord": zod.string().nullish(),
+  "concept_vorm": zod.string().describe('bevestiging of bevestiging_met_vraag'),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string().optional(),
+  "url": zod.string().optional()
+})).optional(),
+  "antwoord_verstuurd_op": zod.string().nullish(),
+  "projectkans_id": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeel_notitie": zod.string().nullish()
+})
+
+
+/**
+ * @summary Instellingen voor de aanvraag-intake van de ingelogde gebruiker
+ */
+export const GetAanvraagIntakeInstellingenResponse = zod.object({
+  "mail_gekoppeld": zod.boolean(),
+  "persoonlijk_adres": zod.string().nullish(),
+  "persoonlijke_intake": zod.boolean()
+})
+
+
+/**
+ * @summary Persoonlijke mailbox aan/uit als aanvraag-ingang
+ */
+export const UpdateAanvraagIntakeInstellingenBody = zod.object({
+  "persoonlijke_intake": zod.boolean()
+})
+
+export const UpdateAanvraagIntakeInstellingenResponse = zod.object({
+  "mail_gekoppeld": zod.boolean(),
+  "persoonlijk_adres": zod.string().nullish(),
+  "persoonlijke_intake": zod.boolean()
+})
+
+
+/**
  * @summary Projectkansen ophalen
  */
 export const ListCrmProjectkansenQueryParams = zod.object({
@@ -8099,6 +8305,11 @@ export const ListCrmProjectkansenResponseItem = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8149,6 +8360,11 @@ export const GetCrmProjectkansResponse = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8192,6 +8408,11 @@ export const UpdateCrmProjectkansResponse = zod.object({
   "volgende_actie": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "binnengekomen_op": zod.string().nullish(),
+  "beantwoord_op": zod.string().nullish(),
+  "bedrijf_bv": zod.string().nullish(),
+  "gerelateerd_project_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12857,6 +13078,7 @@ export const DeleteVoorwaardenSetResponse = zod.void()
  */
 export const ListOffertesResponseItem = zod.object({
   "id": zod.number(),
+  "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
@@ -12946,6 +13168,7 @@ export const CreateOfferteBody = zod.object({
   "bedrag_incl_btw": zod.number().optional(),
   "status": zod.string().optional(),
   "calculatie_id": zod.number().nullish(),
+  "projectkans_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
   "toon_aantal": zod.boolean().optional(),
   "toon_eenheid": zod.boolean().optional(),
@@ -12981,6 +13204,7 @@ export const GetOfferteParams = zod.object({
 
 export const GetOfferteResponse = zod.object({
   "id": zod.number(),
+  "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
@@ -13073,6 +13297,7 @@ export const UpdateOfferteBody = zod.object({
   "bedrag_incl_btw": zod.number().optional(),
   "status": zod.string().optional(),
   "calculatie_id": zod.number().nullish(),
+  "projectkans_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
   "toon_aantal": zod.boolean().optional(),
   "toon_eenheid": zod.boolean().optional(),
@@ -13098,6 +13323,7 @@ export const UpdateOfferteBody = zod.object({
 
 export const UpdateOfferteResponse = zod.object({
   "id": zod.number(),
+  "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
@@ -19582,24 +19808,6 @@ export const ListProjectenResponseItem = zod.object({
   "bijgewerkt_op": zod.coerce.date()
 })
 export const ListProjectenResponse = zod.array(ListProjectenResponseItem)
-
-
-/**
- * @summary Nieuw project aanmaken
- */
-export const CreateProjectBody = zod.object({
-  "naam": zod.string(),
-  "werknummer": zod.string().nullish(),
-  "status": zod.string().nullish(),
-  "werkmaatschappij": zod.string().nullish(),
-  "omschrijving": zod.string().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "start_datum": zod.string().nullish(),
-  "eind_datum": zod.string().nullish()
-})
-
-export const CreateProjectResponse = zod.void()
 
 
 /**

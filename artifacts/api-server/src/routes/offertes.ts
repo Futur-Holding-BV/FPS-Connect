@@ -340,6 +340,7 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     status: o.status,
     portaal_status: o.portaalStatus,
     auto_project_id: o.autoProjectId ?? null,
+    projectkans_id: o.projectkansId ?? null,
     begroting_weergave: o.begrotingWeergave ?? null,
     presentatie_niveau: o.presentatieNiveau ?? 3,
     klant_type: o.klantType ?? null,
@@ -435,7 +436,7 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
 
 router.post("/offertes", schrijven, async (req, res): Promise<void> => {
   try {
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, projectkans_id } = req.body;
     if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
     const [o] = await db
       .insert(offertesTable)
@@ -461,6 +462,7 @@ router.post("/offertes", schrijven, async (req, res): Promise<void> => {
         btwPercentage: btw_percentage ?? 21,
         bedragInclBtw: bedrag_incl_btw ?? 0,
         status: status || "concept",
+        projectkansId: projectkans_id ?? null,
         aangemaaktDoorId: req.session.userId ?? null,
       })
       .returning();

@@ -33,6 +33,16 @@ export interface CrmProjectkans {
   ai_samenvatting?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  bron_mail_message_id?: string | null;
+  /** @nullable */
+  binnengekomen_op?: string | null;
+  /** @nullable */
+  beantwoord_op?: string | null;
+  /** @nullable */
+  bedrijf_bv?: string | null;
+  /** @nullable */
+  gerelateerd_project_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

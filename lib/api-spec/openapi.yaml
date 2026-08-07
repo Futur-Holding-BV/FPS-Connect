@@ -6719,6 +6719,131 @@ paths:
                 items:
                   $ref: "#/components/schemas/CrmContactpersoon"
 
+  /aanvragen/voorstellen:
+    get:
+      operationId: listAanvraagVoorstellen
+      summary: Aanvraagvoorstellen ophalen (AI-voorstellen uit de mailstroom)
+      tags: [aanvragen]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AanvraagVoorstel'
+
+  /aanvragen/voorstellen/{id}/accepteren:
+    post:
+      operationId: accepteerAanvraagVoorstel
+      summary: Voorstel accorderen en projectkans vastleggen
+      tags: [aanvragen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AanvraagAccepterenInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AanvraagVoorstel'
+
+  /aanvragen/voorstellen/{id}/afwijzen:
+    post:
+      operationId: wijsAanvraagVoorstelAf
+      summary: Voorstel afwijzen (geen aanvraag / niet relevant)
+      tags: [aanvragen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AanvraagAfwijzenInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AanvraagVoorstel'
+
+  /aanvragen/voorstellen/{id}/verstuur-antwoord:
+    post:
+      operationId: verstuurAanvraagAntwoord
+      summary: Conceptantwoord (na eventuele bewerking) versturen als reply op de bronmail
+      tags: [aanvragen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AanvraagAntwoordInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AanvraagVoorstel'
+
+  /aanvragen/intake-instellingen:
+    get:
+      operationId: getAanvraagIntakeInstellingen
+      summary: Instellingen voor de aanvraag-intake van de ingelogde gebruiker
+      tags: [aanvragen]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AanvraagIntakeInstellingen'
+    patch:
+      operationId: updateAanvraagIntakeInstellingen
+      summary: Persoonlijke mailbox aan/uit als aanvraag-ingang
+      tags: [aanvragen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AanvraagIntakeInstellingenInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AanvraagIntakeInstellingen'
+
   /crm/projectkansen:
     get:
       operationId: listCrmProjectkansen
@@ -16046,24 +16171,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Project'
-    post:
-      operationId: createProject
-      summary: Nieuw project aanmaken
-      tags: [projecten]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProjectInput'
-      responses:
-        '201':
-          description: Aangemaakt
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Project'
-
   /projecten/{id}:
     get:
       operationId: getProject
@@ -25685,6 +25792,126 @@ components:
           items:
             $ref: "#/components/schemas/CrmProjectkans"
 
+    AanvraagVoorstel:
+      type: object
+      required: [id, mail_message_id, mailbox_adres, afzender_email, onderwerp, binnengekomen_op, voorstel_type, status, concept_vorm]
+      properties:
+        id:
+          type: integer
+        mail_message_id:
+          type: string
+        mailbox_adres:
+          type: string
+        afzender_naam:
+          type: ["string", "null"]
+        afzender_email:
+          type: string
+        onderwerp:
+          type: string
+        binnengekomen_op:
+          type: string
+        voorstel_type:
+          type: string
+          description: nieuwe_aanvraag of meerwerk
+        status:
+          type: string
+          description: open, geaccepteerd of afgewezen
+        ai_voorstel:
+          type: ["object", "null"]
+          additionalProperties: true
+        concept_antwoord:
+          type: ["string", "null"]
+        concept_vorm:
+          type: string
+          description: bevestiging of bevestiging_met_vraag
+        bijlagen:
+          type: array
+          items:
+            type: object
+            properties:
+              naam:
+                type: string
+              url:
+                type: string
+        antwoord_verstuurd_op:
+          type: ["string", "null"]
+        projectkans_id:
+          type: ["integer", "null"]
+        beoordeeld_door_naam:
+          type: ["string", "null"]
+        beoordeeld_op:
+          type: ["string", "null"]
+        beoordeel_notitie:
+          type: ["string", "null"]
+
+    AanvraagAccepterenInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        klant_id:
+          type: integer
+        nieuwe_klant:
+          type: object
+          required: [naam]
+          properties:
+            naam:
+              type: string
+            email:
+              type: string
+            telefoon:
+              type: string
+        gebouw_id:
+          type: integer
+        nieuw_gebouw:
+          type: object
+          required: [naam, adres]
+          properties:
+            naam:
+              type: string
+            adres:
+              type: string
+            stad:
+              type: string
+        bv:
+          type: string
+        voorstel_type:
+          type: string
+        gerelateerd_project_id:
+          type: integer
+
+    AanvraagAfwijzenInput:
+      type: object
+      properties:
+        notitie:
+          type: string
+
+    AanvraagAntwoordInput:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+
+    AanvraagIntakeInstellingen:
+      type: object
+      required: [mail_gekoppeld, persoonlijke_intake]
+      properties:
+        mail_gekoppeld:
+          type: boolean
+        persoonlijk_adres:
+          type: ["string", "null"]
+        persoonlijke_intake:
+          type: boolean
+
+    AanvraagIntakeInstellingenInput:
+      type: object
+      required: [persoonlijke_intake]
+      properties:
+        persoonlijke_intake:
+          type: boolean
+
     CrmProjectkans:
       type: object
       required: [id, klant_id, titel, fase, aangemaakt_op, bijgewerkt_op]
@@ -25719,6 +25946,16 @@ components:
           type: ["string", "null"]
         opmerkingen:
           type: ["string", "null"]
+        bron_mail_message_id:
+          type: ["string", "null"]
+        binnengekomen_op:
+          type: ["string", "null"]
+        beantwoord_op:
+          type: ["string", "null"]
+        bedrijf_bv:
+          type: ["string", "null"]
+        gerelateerd_project_id:
+          type: ["integer", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -29382,6 +29619,12 @@ components:
         ai_maandelijkse_export_email:
           type: ["string", "null"]
           description: E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.
+        aanvraag_reactietermijn_uren:
+          type: integer
+          description: Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal.
+        aanvraag_oppak_termijn_uren:
+          type: integer
+          description: Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -29418,6 +29661,10 @@ components:
         ai_maandelijkse_export_email:
           type: ["string", "null"]
           description: E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.
+        aanvraag_reactietermijn_uren:
+          type: integer
+        aanvraag_oppak_termijn_uren:
+          type: integer
 
     AiDrempelStatus:
       type: object
@@ -32286,6 +32533,8 @@ components:
       properties:
         id:
           type: integer
+        projectkans_id:
+          type: ["integer", "null"]
         offertenummer:
           type: ["string", "null"]
         titel:
@@ -32437,6 +32686,8 @@ components:
         status:
           type: string
         calculatie_id:
+          type: ["integer", "null"]
+        projectkans_id:
           type: ["integer", "null"]
         begroting_weergave:
           type: ["object", "null"]

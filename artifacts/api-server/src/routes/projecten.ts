@@ -79,50 +79,9 @@ router.get("/projecten", requireAuth, async (req, res): Promise<void> => {
   ));
 });
 
-// ── POST /projecten ───────────────────────────────────────────────────────────
-
-router.post("/projecten", requireAuth, async (req, res): Promise<void> => {
-  const {
-    naam, werknummer, status, werkmaatschappij, omschrijving,
-    crm_klant_id, gebouw_id, start_datum, eind_datum,
-  } = req.body as {
-    naam: string;
-    werknummer?: string;
-    status?: string;
-    werkmaatschappij?: string;
-    omschrijving?: string;
-    crm_klant_id?: number;
-    gebouw_id?: number;
-    start_datum?: string;
-    eind_datum?: string;
-  };
-
-  if (!naam) {
-    res.status(400).json({ fout: "naam is verplicht" });
-    return;
-  }
-
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
-
-  const [nieuw] = await db
-    .insert(projectenTable)
-    .values({
-      naam,
-      werknummer:       werknummer       ?? null,
-      status:           status           ?? "concept",
-      werkmaatschappij: werkmaatschappij ?? null,
-      omschrijving:     omschrijving     ?? null,
-      crmKlantId:       crm_klant_id     ?? null,
-      gebouwId:         gebouw_id        ?? null,
-      startDatum:       start_datum      ?? null,
-      eindDatum:        eind_datum       ?? null,
-      aangemaaktDoorId: gebruikerId,
-    })
-    .returning();
-
-  const volledig = await projectMetNamen(nieuw.id);
-  res.status(201).json(volledig);
-});
+// AANVRAAG_01 §7: POST /projecten is bewust verwijderd. Een project ontstaat
+// uitsluitend bij ondertekening van een offerte (routes/portaal.ts) — nooit
+// handmatig of vanuit de aanvraagstroom.
 
 // ── GET /projecten/:id ────────────────────────────────────────────────────────
 

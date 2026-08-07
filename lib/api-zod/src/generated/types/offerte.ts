@@ -12,6 +12,8 @@ import type { OfferteVervolgOpties } from './offerteVervolgOpties';
 export interface Offerte {
   id: number;
   /** @nullable */
+  projectkans_id?: number | null;
+  /** @nullable */
   offertenummer?: string | null;
   titel: string;
   /** @nullable */

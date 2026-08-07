@@ -87,6 +87,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   aiMaandelijkseExportDag: integer("ai_maandelijkse_export_dag"), // 1-28, null = uit
   aiMaandelijkseExportEmail: text("ai_maandelijkse_export_email"),
   aiMaandelijkseExportLaatstVerzondenMaand: text("ai_maandelijkse_export_laatst_verzonden_maand"), // 'JJJJ-MM'
+  // AANVRAAG_01 — instelbare reactietijdgrenzen (bedrijfskeuze, nooit in code vastleggen).
+  aanvraagReactietermijnUren: integer("aanvraag_reactietermijn_uren").notNull().default(24),
+  aanvraagOppakTermijnUren: integer("aanvraag_oppak_termijn_uren").notNull().default(72),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

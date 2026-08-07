@@ -89,6 +89,12 @@ const mapProjectkans = (c: typeof crmCommercieelTable.$inferSelect) => ({
   volgende_actie: c.volgendeActie,
   ai_samenvatting: c.aiSamenvatting,
   opmerkingen: c.opmerkingen,
+  // AANVRAAG_01: herkomst + reactietijdbewaking
+  bron_mail_message_id: c.bronMailMessageId,
+  binnengekomen_op: c.binnengekomenOp ? iso(c.binnengekomenOp) : null,
+  beantwoord_op: c.beantwoordOp ? iso(c.beantwoordOp) : null,
+  bedrijf_bv: c.bedrijfBv,
+  gerelateerd_project_id: c.gerelateerdProjectId,
   aangemaakt_op: iso(c.aangemaaktOp),
   bijgewerkt_op: iso(c.bijgewerktOp),
 });

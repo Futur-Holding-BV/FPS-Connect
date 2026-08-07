@@ -44,14 +44,17 @@ export async function maakSignaal(input: {
   omschrijving: string;
   factuurId?: number | null;
   mailMessageId?: string | null;
+  projectkansId?: number | null;
 }): Promise<void> {
-  // Dubbele open signalen van hetzelfde type voor dezelfde factuur voorkomen
-  if (input.factuurId) {
+  // Dubbele open signalen van hetzelfde type voor dezelfde factuur/projectkans voorkomen
+  if (input.factuurId || input.projectkansId) {
     const bestaand = await db.select({ id: factuurSignalenTable.id })
       .from(factuurSignalenTable)
       .where(and(
         eq(factuurSignalenTable.type, input.type),
-        eq(factuurSignalenTable.factuurId, input.factuurId),
+        input.factuurId
+          ? eq(factuurSignalenTable.factuurId, input.factuurId)
+          : eq(factuurSignalenTable.projectkansId, input.projectkansId!),
         eq(factuurSignalenTable.status, "open"),
       ))
       .limit(1);
@@ -62,6 +65,7 @@ export async function maakSignaal(input: {
     omschrijving: input.omschrijving,
     factuurId: input.factuurId ?? null,
     mailMessageId: input.mailMessageId ?? null,
+    projectkansId: input.projectkansId ?? null,
   });
 }
 
@@ -596,7 +600,20 @@ export function startFactuurstroomAchtergrond(): void {
           logger.warn({ err, gebruikerId: e.gebruikerId }, "factuurstroom: achtergrond-sync mislukt");
         }
       }
+      // AANVRAAG_01: zelfde lus — aanvraagmailboxen verwerken + reactietijdbewaking (geen tweede mechanisme).
+      const { verwerkAanvraagmails, draaiAanvraagBewaking } = await import("./aanvraagstroomService");
+      const aanvraagEigenaren = await db.selectDistinct({ gebruikerId: werkInboxMailboxenTable.gebruikerId })
+        .from(werkInboxMailboxenTable)
+        .where(and(eq(werkInboxMailboxenTable.isAanvraagmailbox, true), eq(werkInboxMailboxenTable.actief, true)));
+      for (const e of aanvraagEigenaren) {
+        try {
+          await verwerkAanvraagmails(e.gebruikerId);
+        } catch (err) {
+          logger.warn({ err, gebruikerId: e.gebruikerId }, "aanvraagstroom: achtergrond-verwerking mislukt");
+        }
+      }
       await draaiFactuurstroomBewaking();
+      await draaiAanvraagBewaking();
     } catch (err) {
       logger.error({ err }, "factuurstroom: achtergrondlus fout");
     } finally {

@@ -34,6 +34,7 @@ import {
 } from "../services/werkInboxGraph";
 import { logger } from "../lib/logger";
 import { verwerkFactuurmails } from "../services/factuurstroomService";
+import { verwerkAanvraagmails } from "../services/aanvraagstroomService";
 
 const router = Router();
 
@@ -173,13 +174,14 @@ router.post("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void
 router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id = Number(req.params["id"]);
-  const { label, actief, volgorde, isFactuurmailbox } = req.body as { label?: string; actief?: boolean; volgorde?: number; isFactuurmailbox?: boolean };
+  const { label, actief, volgorde, isFactuurmailbox, isAanvraagmailbox } = req.body as { label?: string; actief?: boolean; volgorde?: number; isFactuurmailbox?: boolean; isAanvraagmailbox?: boolean };
   const [rij] = await db.update(werkInboxMailboxenTable)
     .set({
       ...(label !== undefined && { label }),
       ...(actief !== undefined && { actief }),
       ...(volgorde !== undefined && { volgorde }),
       ...(isFactuurmailbox !== undefined && { isFactuurmailbox }),
+      ...(isAanvraagmailbox !== undefined && { isAanvraagmailbox }),
     })
     .where(and(eq(werkInboxMailboxenTable.id, id), eq(werkInboxMailboxenTable.gebruikerId, uid)))
     .returning();
@@ -203,6 +205,8 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => 
     // FACTUUR_02 §1: de factuurpijplijn draait automatisch mee met elke sync —
     // niemand hoeft per mail op "analyseer" te klikken.
     verwerkFactuurmails(uid).catch((err) => req.log.error({ err }, "factuurstroom: pijplijn na sync mislukt"));
+    // AANVRAAG_01: de aanvraagpijplijn draait automatisch mee — zelfde intake-mechanisme.
+    verwerkAanvraagmails(uid).catch((err) => req.log.error({ err }, "aanvraagstroom: pijplijn na sync mislukt"));
     res.json(resultaat);
   } catch (err) {
     if (err instanceof GeenToegang) {

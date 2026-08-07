@@ -1074,6 +1074,16 @@ export interface CrmProjectkans {
   ai_samenvatting?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  bron_mail_message_id?: string | null;
+  /** @nullable */
+  binnengekomen_op?: string | null;
+  /** @nullable */
+  beantwoord_op?: string | null;
+  /** @nullable */
+  bedrijf_bv?: string | null;
+  /** @nullable */
+  gerelateerd_project_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -1291,6 +1301,90 @@ export interface CrmDashboard {
   concurrenten_getraceerd?: number;
   volgende_acties?: CrmDashboardVolgendeActiesItem[];
   open_kansen_top?: CrmProjectkans[];
+}
+
+/**
+ * @nullable
+ */
+export type AanvraagVoorstelAiVoorstel = { [key: string]: unknown } | null;
+
+export type AanvraagVoorstelBijlagenItem = {
+  naam?: string;
+  url?: string;
+};
+
+export interface AanvraagVoorstel {
+  id: number;
+  mail_message_id: string;
+  mailbox_adres: string;
+  /** @nullable */
+  afzender_naam?: string | null;
+  afzender_email: string;
+  onderwerp: string;
+  binnengekomen_op: string;
+  /** nieuwe_aanvraag of meerwerk */
+  voorstel_type: string;
+  /** open, geaccepteerd of afgewezen */
+  status: string;
+  /** @nullable */
+  ai_voorstel?: AanvraagVoorstelAiVoorstel;
+  /** @nullable */
+  concept_antwoord?: string | null;
+  /** bevestiging of bevestiging_met_vraag */
+  concept_vorm: string;
+  bijlagen?: AanvraagVoorstelBijlagenItem[];
+  /** @nullable */
+  antwoord_verstuurd_op?: string | null;
+  /** @nullable */
+  projectkans_id?: number | null;
+  /** @nullable */
+  beoordeeld_door_naam?: string | null;
+  /** @nullable */
+  beoordeeld_op?: string | null;
+  /** @nullable */
+  beoordeel_notitie?: string | null;
+}
+
+export type AanvraagAccepterenInputNieuweKlant = {
+  naam: string;
+  email?: string;
+  telefoon?: string;
+};
+
+export type AanvraagAccepterenInputNieuwGebouw = {
+  naam: string;
+  adres: string;
+  stad?: string;
+};
+
+export interface AanvraagAccepterenInput {
+  titel: string;
+  klant_id?: number;
+  nieuwe_klant?: AanvraagAccepterenInputNieuweKlant;
+  gebouw_id?: number;
+  nieuw_gebouw?: AanvraagAccepterenInputNieuwGebouw;
+  bv?: string;
+  voorstel_type?: string;
+  gerelateerd_project_id?: number;
+}
+
+export interface AanvraagAfwijzenInput {
+  notitie?: string;
+}
+
+export interface AanvraagAntwoordInput {
+  tekst: string;
+}
+
+export interface AanvraagIntakeInstellingen {
+  mail_gekoppeld: boolean;
+  /** @nullable */
+  persoonlijk_adres?: string | null;
+  persoonlijke_intake: boolean;
+}
+
+export interface AanvraagIntakeInstellingenInput {
+  persoonlijke_intake: boolean;
 }
 
 export interface CrmProjectkansInput {
@@ -4019,6 +4113,10 @@ export interface AppInstellingen {
      * @nullable
      */
   ai_maandelijkse_export_email?: string | null;
+  /** Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal. */
+  aanvraag_reactietermijn_uren?: number;
+  /** Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal. */
+  aanvraag_oppak_termijn_uren?: number;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
@@ -4054,6 +4152,8 @@ export interface AppInstellingenInput {
      * @nullable
      */
   ai_maandelijkse_export_email?: string | null;
+  aanvraag_reactietermijn_uren?: number;
+  aanvraag_oppak_termijn_uren?: number;
 }
 
 export interface AiDrempelStatus {
@@ -6144,6 +6244,8 @@ export type OfferteVervolgOpties = { [key: string]: unknown } | null;
 export interface Offerte {
   id: number;
   /** @nullable */
+  projectkans_id?: number | null;
+  /** @nullable */
   offertenummer?: string | null;
   titel: string;
   /** @nullable */
@@ -6293,6 +6395,8 @@ export interface OfferteInput {
   status?: string;
   /** @nullable */
   calculatie_id?: number | null;
+  /** @nullable */
+  projectkans_id?: number | null;
   /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
   /** @nullable */
@@ -14505,6 +14609,10 @@ export type InstallatieUitvoeren201 = {
 
 export type ListCrmContactpersonenAllParams = {
 q?: string;
+};
+
+export type ListAanvraagVoorstellenParams = {
+status?: string;
 };
 
 export type ListCrmProjectkansenParams = {

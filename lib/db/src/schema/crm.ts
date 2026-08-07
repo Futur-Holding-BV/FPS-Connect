@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -114,9 +114,55 @@ export const crmCommercieelTable = pgTable("crm_commercieel", {
   volgendeActie: text("volgende_actie"),
   aiSamenvatting: text("ai_samenvatting"),
   opmerkingen: text("opmerkingen"),
+  // AANVRAAG_01 — herkomst en reactietijdbewaking van een per mail binnengekomen aanvraag.
+  bronMailMessageId: text("bron_mail_message_id"),
+  binnengekomenOp: timestamp("binnengekomen_op"),
+  beantwoordOp: timestamp("beantwoord_op"),
+  bedrijfBv: text("bedrijf_bv"),
+  // Meerwerk: verwijzing naar de lopende opdracht (proces 2) waar deze aanvraag bij hoort.
+  gerelateerdProjectId: integer("gerelateerd_project_id"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// ─── AANVRAAG_01: AI-voorstellen voor binnengekomen prijsaanvragen ────────────
+// De AI stelt voor (nieuwe aanvraag of meerwerk); pas na menselijke goedkeuring
+// wordt er een projectkans vastgelegd — nooit vanzelf.
+export const AANVRAAG_VOORSTEL_TYPES = ["nieuwe_aanvraag", "meerwerk"] as const;
+export type AanvraagVoorstelType = typeof AANVRAAG_VOORSTEL_TYPES[number];
+export const AANVRAAG_VOORSTEL_STATUSSEN = ["open", "geaccepteerd", "afgewezen"] as const;
+export type AanvraagVoorstelStatus = typeof AANVRAAG_VOORSTEL_STATUSSEN[number];
+
+export const aanvraagVoorstellenTable = pgTable("aanvraag_voorstellen", {
+  id: serial("id").primaryKey(),
+  gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  mailMessageId: text("mail_message_id").notNull(),
+  mailboxAdres: text("mailbox_adres").notNull(),
+  isPersoonlijk: boolean("is_persoonlijk").notNull().default(false),
+  afzenderNaam: text("afzender_naam"),
+  afzenderEmail: text("afzender_email").notNull().default(""),
+  onderwerp: text("onderwerp").notNull().default(""),
+  binnengekomenOp: timestamp("binnengekomen_op").notNull(),
+  voorstelType: text("voorstel_type").notNull().default("nieuwe_aanvraag"),
+  status: text("status").notNull().default("open"),
+  // AI-voorstel: titel, klant, gebouw, BV, overwogen project + reden, ontbrekende stukken, samenvatting.
+  aiVoorstel: jsonb("ai_voorstel"),
+  conceptAntwoord: text("concept_antwoord"),
+  conceptVorm: text("concept_vorm").notNull().default("bevestiging"),
+  // Bijlagen uit de bronmail, opgeslagen in object storage: [{ naam, url }]
+  bijlagen: jsonb("bijlagen"),
+  antwoordVerstuurdOp: timestamp("antwoord_verstuurd_op"),
+  projectkansId: integer("projectkans_id").references(() => crmCommercieelTable.id, { onDelete: "set null" }),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldOp: timestamp("beoordeeld_op"),
+  beoordeelNotitie: text("beoordeel_notitie"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => [
+  unique("aanvraag_voorstellen_mail_uq").on(t.mailMessageId),
+]);
+
+export type AanvraagVoorstel = typeof aanvraagVoorstellenTable.$inferSelect;
 
 export const crmFinancieelTable = pgTable("crm_financieel", {
   id: serial("id").primaryKey(),

@@ -31,4 +31,6 @@ export interface AppInstellingenInput {
      * @nullable
      */
   ai_maandelijkse_export_email?: string | null;
+  aanvraag_reactietermijn_uren?: number;
+  aanvraag_oppak_termijn_uren?: number;
 }

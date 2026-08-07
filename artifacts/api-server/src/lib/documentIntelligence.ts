@@ -986,5 +986,91 @@ export async function analyseerFactuurVoorStroom(input: {
   }
 }
 
+// ── AANVRAAG_01: prijsaanvraag-extractie voor de aanvraagstroom ───────────────
+// Hoort bewust hiér (de ene documentherkenner) — hergebruikt de bestaande
+// categorie "aanvraag"; er komt geen tweede herkenner.
+
+export interface AanvraagStroomVelden {
+  titel: string | null;              // korte werktitel afgeleid uit de aanvraag
+  klant_naam: string | null;         // organisatienaam van de aanvrager
+  contact_naam: string | null;
+  gebouw_naam: string | null;        // naam/aanduiding van het pand
+  gebouw_adres: string | null;
+  gebouw_stad: string | null;
+  bv: string | null;                 // FPS Bouw | FPS Brandpreventie | FPS Onderhoud
+  werknummer_verwijzing: string | null; // werk-/projectnummer dat in de mail genoemd wordt
+  ontbrekende_stukken: string[];     // wat er aantoonbaar ontbreekt om te kunnen calculeren
+  samenvatting: string | null;
+  onzekere_velden: string[];
+}
+
+export interface AanvraagStroomAnalyse {
+  ok: boolean;
+  is_aanvraag: boolean;
+  velden: AanvraagStroomVelden | null;
+  fout: string | null;
+}
+
+const AANVRAAG_STROOM_PROMPT = `Je leest een e-mail (met eventuele bijlagetekst) gericht aan een Nederlands bouw-/brandpreventiebedrijf (FPS: FPS Bouw, FPS Brandpreventie, FPS Onderhoud).
+Bepaal of dit een prijsaanvraag is: een offerteaanvraag, RFQ, bestek of verzoek om werk uit te voeren/te calculeren. Een factuur, nieuwsbrief, bevestiging of interne mail is GEEN aanvraag.
+Geef uitsluitend JSON met exact deze sleutels:
+{"is_aanvraag":bool,"titel":string|null,"klant_naam":string|null,"contact_naam":string|null,"gebouw_naam":string|null,"gebouw_adres":string|null,"gebouw_stad":string|null,"bv":"FPS Bouw"|"FPS Brandpreventie"|"FPS Onderhoud"|null,"werknummer_verwijzing":string|null,"ontbrekende_stukken":[string],"samenvatting":string|null,"onzekere_velden":[string]}
+Regels:
+- titel: korte Nederlandse werktitel (bv. "Brandwerende doorvoeringen Zorgcentrum De Linde").
+- bv: alleen invullen als het uit het ontvangende mailadres of de inhoud blijkt; anders null.
+- werknummer_verwijzing: alleen een werk-/project-/opdrachtnummer dat LETTERLIJK in de tekst staat; nooit verzinnen.
+- ontbrekende_stukken: alleen dingen die aantoonbaar nodig zijn om te calculeren en aantoonbaar ontbreken (bv. plattegronden, bestek, aantallen). Verzin nooit een ontbrekend stuk. Twijfel = leeg laten.
+- Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden. Verzin nooit gegevens.`;
+
+export async function analyseerAanvraagVoorStroom(input: {
+  mailOnderwerp: string;
+  mailAfzender: string;
+  mailTekst: string;
+  bijlageTeksten?: Array<{ naam: string; tekst: string }>;
+}): Promise<AanvraagStroomAnalyse> {
+  if (!heeftGateway()) {
+    return { ok: false, is_aanvraag: false, velden: null, fout: "AI-gateway niet beschikbaar" };
+  }
+  let tekst = `Onderwerp: ${input.mailOnderwerp}\nAfzender: ${input.mailAfzender}\n\nMailtekst:\n${input.mailTekst.slice(0, 8000)}`;
+  for (const b of input.bijlageTeksten ?? []) {
+    tekst += `\n\nBijlage "${b.naam}":\n${b.tekst.slice(0, 4000)}`;
+  }
+  const resultaat = await aiGateway.chat(
+    "fast",
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 800,
+      messages: [{ role: "system", content: AANVRAAG_STROOM_PROMPT }, { role: "user", content: tekst }],
+    },
+    undefined,
+    { module: "crm", functie: "aanvraagstroom_extractie" },
+  );
+  if (!resultaat.ok) {
+    return { ok: false, is_aanvraag: false, velden: null, fout: resultaat.fout };
+  }
+  try {
+    const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
+    const s = (k: string): string | null => (typeof json[k] === "string" && (json[k] as string).trim() !== "" ? (json[k] as string).trim() : null);
+    const lijst = (k: string): string[] => (Array.isArray(json[k]) ? (json[k] as unknown[]).filter((v): v is string => typeof v === "string") : []);
+    const bvRuw = s("bv");
+    const velden: AanvraagStroomVelden = {
+      titel: s("titel"),
+      klant_naam: s("klant_naam"),
+      contact_naam: s("contact_naam"),
+      gebouw_naam: s("gebouw_naam"),
+      gebouw_adres: s("gebouw_adres"),
+      gebouw_stad: s("gebouw_stad"),
+      bv: bvRuw && ["FPS Bouw", "FPS Brandpreventie", "FPS Onderhoud"].includes(bvRuw) ? bvRuw : null,
+      werknummer_verwijzing: s("werknummer_verwijzing"),
+      ontbrekende_stukken: lijst("ontbrekende_stukken"),
+      samenvatting: s("samenvatting"),
+      onzekere_velden: lijst("onzekere_velden"),
+    };
+    return { ok: true, is_aanvraag: json["is_aanvraag"] === true, velden, fout: null };
+  } catch {
+    return { ok: false, is_aanvraag: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };
+  }
+}
+
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).
 export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, bevatGeconsolideerd, CATEGORIE_MODULE };

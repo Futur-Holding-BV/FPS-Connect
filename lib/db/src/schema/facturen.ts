@@ -218,6 +218,9 @@ export const FACTUUR_SIGNAAL_TYPES = [
   "rekeningnummer_gewijzigd", // 7. fraude-indicator — mag nooit stil afgehandeld worden
   "loondeel_onzeker",      // 8. loondeel niet gevonden/onwaarschijnlijk bij uitzendbureau
   "onbekende_leverancier", // 9. nog niet in crm_klanten, of type onbepaald
+  // AANVRAAG_01 — reactietijdbewaking van prijsaanvragen (zelfde mechanisme, geen tweede dashboard)
+  "aanvraag_antwoord_te_laat",  // conceptantwoord nog niet verstuurd binnen de instelbare termijn
+  "aanvraag_niet_opgepakt",     // projectkans staat na de instelbare termijn nog in fase 'signaal'
 ] as const;
 export type FactuurSignaalType = typeof FACTUUR_SIGNAAL_TYPES[number];
 
@@ -227,6 +230,8 @@ export const factuurSignalenTable = pgTable("factuur_signalen", {
   type: text("type").notNull(), // FactuurSignaalType
   factuurId: integer("factuur_id").references(() => facturenTable.id, { onDelete: "cascade" }),
   mailMessageId: text("mail_message_id"),
+  // AANVRAAG_01: signaal kan ook bij een projectkans horen (geen FK — cross-domein, bewust los).
+  projectkansId: integer("projectkans_id"),
   omschrijving: text("omschrijving").notNull(), // gewone taal, voor het dashboard
   status: text("status").notNull().default("open"), // open | afgehandeld
   afgehandeldDoor: integer("afgehandeld_door").references(() => gebruikersTable.id, { onDelete: "set null" }),

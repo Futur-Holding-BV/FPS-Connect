@@ -39,6 +39,8 @@ export interface OfferteInput {
   /** @nullable */
   calculatie_id?: number | null;
   /** @nullable */
+  projectkans_id?: number | null;
+  /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
   /** @nullable */
   presentatie_niveau?: number | null;

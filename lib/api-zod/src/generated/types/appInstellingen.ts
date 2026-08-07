@@ -37,6 +37,10 @@ export interface AppInstellingen {
      * @nullable
      */
   ai_maandelijkse_export_email?: string | null;
+  /** Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal. */
+  aanvraag_reactietermijn_uren?: number;
+  /** Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal. */
+  aanvraag_oppak_termijn_uren?: number;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
