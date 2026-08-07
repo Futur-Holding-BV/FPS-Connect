@@ -991,6 +991,7 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 **Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
 
 ---
+
 ## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -1886,7 +1887,6 @@ Volledig architectuurplan opgesteld voor de uitvoeringsmodule inclusief AI-integ
 
 **Niet gewijzigd:** mobile-app (buiten scope), DB-schema (reeds aanwezig), bezetting-logica in backend (reeds aanwezig).
 
-
 ## 2026-07-13 — Governance & Approval Engine: audit beleidswijzigingen, tijdlijn, offerte-koppeling + documenten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints gewijzigd)
@@ -2485,6 +2485,21 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - API (`routes/avg.ts`): CRUD-handlers achter `requireBevoegdheid("systeem",1)`; camelCase→snake_case-mapping; PATCH stuurt `bijgewerktOp`; eerste GET zaait 3 standaardverwerkers (OpenAI, Google Maps, Microsoft 365) bij een leeg register
 - Frontend (`beheer/avg.tsx`): nieuwe tab "Verwerkersregister" met kaartlijst, toevoegen/bewerken-dialoog, verwijderbevestiging en CSV-export (BOM + quote-escaping)
 
+
+## 2026-07-28 — Geautomatiseerde tests: brute-force-bescherming auth-routes blijvend bewezen (taak #785)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen tests, geen productiecode gewijzigd)
+
+**Aanleiding:** de strikte rate-limiting op de auth-routes (zie entry hieronder) was alleen handmatig met curl bewezen; een toekomstige refactor kon de bescherming stilzwijgend breken (bv. de eerder gevonden sleutelrotatie-bypass via body-invoer op de 2FA-routes).
+
+**Wijziging:** nieuw `artifacts/api-server/src/__tests__/auth-rate-limit.test.ts` (vitest, in-process Express met echte express-rate-limit middleware; DB/bcrypt/otplib gemockt). Dekt:
+- 6e opeenvolgende mislukte loginpoging → 429 (pogingen 1–5 → 401)
+- 6 pogingen op `/auth/2fa/verify` met telkens een ánder e-mailveld in de body → poging 6 geeft 429 (sleutelrotatie werkt niet; sleutel = sessie-`pendingUserId`)
+- Succesvolle logins verbruiken het budget niet (`skipSuccessfulRequests`): na 6 geslaagde logins zijn nog steeds 5 mislukte pogingen toegestaan
+- `DELETE /auth/e2e-rate-reset` wist alle limiter-stores (login én wachtwoord) en geeft 404 in productie
+- `wachtwoord-vergeten` en `wachtwoord-reset` hebben elk een eigen 3/uur-budget
+
+**Bewijs:** 7 nieuwe tests groen; volledige api-server-suite 233 tests groen; typecheck schoon.
 ## 7 augustus 2026 — Technische schuld: back-up-alarm, auth/AI-limieten, centrale foutafhandelaar (SCHULD_01 punten 83, 24, 25, 21, 36)
 - **Punt 83 — back-up-alarm:** een mislukte of verdacht kleine back-up (<50KB of <50% van de vorige) maakt nu een blokkerende melding aan voor alle hoofdbeheerders. Bewezen via sabotagescript (`verificatie-backup-alarm.ts`). Restore eenmalig bewezen: meest recente productieback-up foutloos teruggezet in een proefdatabase (298 tabellen, rijaantallen identiek aan live).
 - **Punt 24 — login-bescherming:** de bestaande rate-limiters logden blokkades niet; elke geblokkeerde poging staat nu in het log (ip, e-mail, welke limiter). Bewezen: 6e foute inlogpoging → 429 + logregel.
