@@ -2640,6 +2640,19 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - Reviewfixes: jaarprijslijst-match nu exact (case-insensitief, ambigu = geen override), `totaleBesparing` herberekend uit regels i.p.v. AI-schatting, blok E telt alleen afgesloten nacalculaties, prijsbron "inkoophistorie" toegevoegd aan verdeling en frontend-typering.
 
 
+## 2026-08-07 — SCHEMA_02: laatste schemadrift dev↔prod opgelost — drift-check draait volledig schoon
+
+- **Uitvoering:** volledig, inclusief bewijs op productie | **Kwaliteit:** hoog | **Risico:** zeer laag (alleen default-expressie + idempotente index)
+
+**Aanleiding (taak 798):** de drift-check rapporteerde 14 bekende verschillen tussen dev en prod. Live vergelijking van de productiedatabase leerde dat de 13 timestamp-with/without-time-zone-verschillen inmiddels niet meer bestaan; wat resteerde was het default-verschil `fie_leermomenten.correctie_factor` (dev `1.0`, prod `1`) plus de unieke index `facturen_mailstroom_bijlage_uniek` die live op beide omgevingen bestond maar niet in de migratieketen/verwachting was vastgelegd.
+
+**Wijzigingen:**
+- `lib/db/src/migrations/0007_schemadrift-dev-prod-gelijk.sql` — normaliseert de default naar `1.0` (conform Drizzle-schema; bestaande data ongemoeid) en legt de mailstroom-index idempotent vast in de keten.
+- `lib/db/schema-verwachting.txt` — bijgewerkt via `schema-drift-check.mjs --update` (4494 objecten).
+
+**Bewijs:**
+- Dev: migratie 0007 uitgevoerd en geregistreerd; drift-check meldt "Geen drift".
+- Prod: migratie via de migratieketen-conventie toegepast en geregistreerd in `schema_migraties` met dezelfde checksum als het repo-bestand (`89f26f85…`); volledige schema-dump van prod is regel-voor-regel identiek aan `schema-verwachting.txt` — geen drift.
 ## 2026-08-07 — FACTUUR_02: facturen komen automatisch bij de juiste inkoper terecht
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen routeringslookup, geen schemawijziging)
