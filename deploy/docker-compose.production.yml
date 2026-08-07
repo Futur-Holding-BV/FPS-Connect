@@ -135,6 +135,7 @@ services:
       dockerfile: deploy/Dockerfile.caddy
       args:
         GIT_COMMIT: ${GIT_COMMIT:-onbekend}
+        VITE_FEATURE_WIZARD_ONBOARDING: ${VITE_FEATURE_WIZARD_ONBOARDING:-true}
         BUILD_TIJD: ${BUILD_TIJD:-}
     restart: always
     ports:

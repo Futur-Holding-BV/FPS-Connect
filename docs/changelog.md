@@ -1,3 +1,16 @@
+## 2026-08-07 — Wizard-onboarding geactiveerd in productie; drieledige keuze vervallen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** besluit dat de geconsolideerde onboardingflow (Personeel → Medewerkers → Onboarden) de enige route is voor medewerkerprofiel-aanmaak; medewerkerprofielen worden niet vanuit gebruikersbeheer aangemaakt.
+
+**Wijzigingen:**
+- `deploy/Dockerfile.caddy`, `deploy/docker-compose.production.yml`, `deploy/ENV_PRODUCTION.example` — build-arg `VITE_FEATURE_WIZARD_ONBOARDING` (default `true`) toegevoegd zodat de onboarding-wizard in de productie-webbundel actief is.
+- `artifacts/firevault/src/pages/gebruikers/index.tsx` — de drieledige keuze bij gebruikersaanmaak (2026-07-28) is volledig teruggedraaid: gebruikersbeheer maakt alleen accounts aan; dossiers lopen uitsluitend via de geconsolideerde HRM-flow. Bijbehorende e2e-suite `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` verwijderd.
+- De flag-gating van de "Onboarden"-knop in HRM (2026-07-28) blijft staan en toont de knop nu doordat de flag aan staat.
+
+---
+
 ## 2026-07-28 — Onboarden-knop verborgen zolang wizard-flag uit staat
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -11,6 +24,8 @@
 ---
 
 ## 2026-07-28 — Drieledige keuze bij gebruikersaanmaak voor interne profielen
+
+> **VERVALLEN (2026-08-07):** teruggedraaid — strijdig met de definitieve geconsolideerde onboardingflow (geen medewerkerprofiel-aanmaak vanuit gebruikersbeheer). Zie entry 2026-08-07.
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 

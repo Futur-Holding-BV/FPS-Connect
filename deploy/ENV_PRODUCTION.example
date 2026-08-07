@@ -25,6 +25,10 @@ OPENAI_API_KEY=sk-...
 # AI-features in/uitschakelen (true/false)
 CONNECT_AI_ENABLED=true
 
+# ── Frontend feature-flags (build-time, ingebakken in de webbundel) ──────────
+# Onboarding-wizard onder /personeel/onboarden (default aan sinds 2026-08-07)
+VITE_FEATURE_WIZARD_ONBOARDING=true
+
 # ── Google Maps ───────────────────────────────────────────────────────────────
 GOOGLE_MAPS_API_KEY=AIza...
 
