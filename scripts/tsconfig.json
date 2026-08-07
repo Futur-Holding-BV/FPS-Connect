@@ -5,5 +5,12 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Deze bewijsscripts importeren api-server-bronbestanden (buiten rootDir) en
+  // draaien uitsluitend via tsx. Structurele ontkoppeling (gedeeld workspace-
+  // package of verhuizing naar het api-package) is een aparte opruimtaak.
+  "exclude": [
+    "src/bewijs-financieel-ak.ts",
+    "src/bewijs-scenario-doorrekening.ts"
+  ]
 }
