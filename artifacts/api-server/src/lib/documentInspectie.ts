@@ -128,6 +128,10 @@ export function inspecteerDocument(input: {
     tekstlaagKwaliteit: kwaliteit,
     isPixelBased,
     vereistVisueleAnalyse: isPixelBased,
-    visuelePrioriteitPaginas: isPixelBased ? [1] : [],
+    // DOCUMENT_01 §3.5: bij een pixel-based document zonder per-pagina-tekst
+    // renderen we de eerste pagina's (tot 5), niet alleen pagina 1.
+    visuelePrioriteitPaginas: isPixelBased && mime === "application/pdf"
+      ? Array.from({ length: Math.min(paginaAantal ?? 1, 5) }, (_, i) => i + 1)
+      : isPixelBased ? [1] : [],
   };
 }

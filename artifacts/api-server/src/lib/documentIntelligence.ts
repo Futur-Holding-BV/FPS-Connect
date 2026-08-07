@@ -16,7 +16,7 @@
 import { db, werkgeversTable, documentStudioModellenTable, documentClassificatieCorrectiesTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { aiGateway, heeftGateway } from "./aiGateway";
-import { renderPdfPagina, renderPdfPaginas, haalPdfTekst, resizeAfbeelding } from "./pdfVisie";
+import { renderPdfPagina, renderPdfPaginas, haalPdfTekst, resizeAfbeelding, VISION_RENDER_DPI, VISION_MAX_PIXELS, VISION_JPEG_KWALITEIT } from "./pdfVisie";
 import { extraheerPdfTekst } from "./pdfTekst";
 import { inspecteerDocument } from "./documentInspectie";
 import { logger } from "./logger";
@@ -371,14 +371,16 @@ async function aiContentAnalyse(
     : "";
   const bericht = [`Bestandsnaam: ${bestandsnaam}`, `MIME-type: ${mime}`, tekstInfo, toelichtingInfo, werkmaatschappijInfo, studioInfo, correctieInfo].filter(Boolean).join("\n");
 
+  // DOCUMENT_01: detail "high" — met "low" werd elk beeld teruggebracht naar
+  // ±512×512 px, waardoor bodytekst onleesbaar was en scans op "Unknown" strandden.
   type ContentBlock =
     | { type: "text"; text: string }
-    | { type: "image_url"; image_url: { url: string; detail: "low" } };
+    | { type: "image_url"; image_url: { url: string; detail: "high" } };
   const content: ContentBlock[] = [{ type: "text", text: bericht }];
   for (const afb of afbeeldingen) {
     content.push({
       type: "image_url",
-      image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "low" },
+      image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "high" },
     });
   }
 
@@ -614,14 +616,16 @@ export async function classificeerDocument(input: {
   let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
   if (input.buffer && inspectie.vereistVisueleAnalyse) {
     if (mime === "application/pdf" && inspectie.visuelePrioriteitPaginas.length > 0) {
-      // Multi-pagina vision: render de prioriteitspagina's (max 3)
-      const teRenderen = inspectie.visuelePrioriteitPaginas.slice(0, 3);
+      // Multi-pagina vision: render de prioriteitspagina's (max 5, DOCUMENT_01 §3.5)
+      const teRenderen = inspectie.visuelePrioriteitPaginas.slice(0, 5);
+      const totaal = inspectie.paginaAantal ?? teRenderen.length;
       try {
         afbeeldingen = await renderPdfPaginas(input.buffer, teRenderen);
         bewijs.push({
           stap: "vision_multi_pagina",
           resultaat: `${afbeeldingen.length} pagina('s) gerenderd`,
-          detail: `pagina's ${teRenderen.join(", ")} omgezet naar afbeelding (pixel-based PDF of tekst ontbreekt)`,
+          detail: `pagina's ${teRenderen.join(", ")} op ${VISION_RENDER_DPI} DPI, max ${VISION_MAX_PIXELS}px, JPEG ${VISION_JPEG_KWALITEIT}, detail=high`
+            + (totaal > 5 ? ` — LET OP: document heeft ${totaal} pagina's, alleen de eerste 5 prioriteitspagina's zijn aangeboden` : ""),
         });
       } catch (err) {
         logger.warn({ err }, "documentIntelligence: multi-pagina vision mislukt");
@@ -635,7 +639,7 @@ export async function classificeerDocument(input: {
         bewijs.push({
           stap: "vision_afbeelding",
           resultaat: "beeld gerenderd",
-          detail: "afbeeldingsbestand omgezet naar AI-vision invoer",
+          detail: `afbeeldingsbestand omgezet naar AI-vision invoer (max ${VISION_MAX_PIXELS}px, JPEG ${VISION_JPEG_KWALITEIT}, detail=high)`,
         });
       } else {
         bewijs.push({ stap: "vision_afbeelding", resultaat: "niet toegepast", detail: inspectie.isPixelBased ? "pixel-based maar rendering niet beschikbaar" : "tekst aanwezig, geen vision nodig" });
@@ -910,9 +914,11 @@ export async function analyseerFactuurVoorStroom(input: {
     return { ok: false, is_factuur: false, velden: null, fout: "AI-gateway niet beschikbaar" };
   }
   let tekst: string | null = null;
+  let paginaAantal: number | null = null;
   try {
     const extractie = await extraheerTekst(input.buffer, input.mime, input.bestandsnaam);
     tekst = extractie.tekst;
+    paginaAantal = extractie.paginaAantal;
   } catch {
     tekst = null;
   }
@@ -922,22 +928,24 @@ export async function analyseerFactuurVoorStroom(input: {
   if (tekst && tekst.trim().length > 80) {
     content.push({ type: "text", text: `${context}\n\nFactuurtekst:\n${tekst.slice(0, 12000)}` });
   } else if (input.mime === "application/pdf") {
-    // Scan zonder tekstlaag → vision op de eerste pagina's
+    // Scan zonder tekstlaag → vision op de eerste pagina's (max 5, DOCUMENT_01 §3.5:
+    // een specificatie op pagina twee of verder moet volledig gelezen worden)
     try {
-      const paginas = await renderPdfPaginas(input.buffer, [1, 2]);
+      const aantal = Math.min(Math.max(paginaAantal ?? 2, 1), 5);
+      const paginas = await renderPdfPaginas(input.buffer, Array.from({ length: aantal }, (_, i) => i + 1));
       if (paginas.length === 0) {
         return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare tekst en rendering mislukt" };
       }
       content.push({ type: "text", text: context });
       for (const p of paginas) {
-        content.push({ type: "image_url", image_url: { url: `data:image/png;base64,${p.base64}` } });
+        content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${p.base64}`, detail: "high" } });
       }
     } catch {
       return { ok: false, is_factuur: false, velden: null, fout: "PDF-rendering niet beschikbaar" };
     }
   } else if (input.mime.startsWith("image/")) {
     content.push({ type: "text", text: context });
-    content.push({ type: "image_url", image_url: { url: `data:${input.mime};base64,${input.buffer.toString("base64")}` } });
+    content.push({ type: "image_url", image_url: { url: `data:${input.mime};base64,${input.buffer.toString("base64")}`, detail: "high" } });
   } else {
     return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare inhoud gevonden" };
   }

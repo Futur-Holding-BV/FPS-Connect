@@ -1,3 +1,22 @@
+## 2026-08-07 — DOCUMENT_01: documentherkenning betrouwbaar — het beeld dat de AI krijgt is nu leesbaar
+
+- **Uitvoering:** technische fix volledig; acceptatie met tien echte documenten wacht op aanlevering | **Kwaliteit:** hoog | **Risico:** laag (instellingen + modelkeuze, geen tweede herkenner)
+
+**Aanleiding:** gescande documenten werden als "Unknown" geclassificeerd. Gemeten oorzaak: het beeld dat de AI kreeg was onleesbaar — 120 DPI → verkleind naar 800 px → JPEG 75 → en vervolgens `detail: "low"` waardoor alles alsnog naar ±512×512 px werd teruggebracht. Bodytekst was daarin nog geen vijf pixels hoog.
+
+**Wijzigingen:**
+- `artifacts/api-server/src/lib/pdfVisie.ts` — renderen op **220 DPI** (was 120), bovengrens **2000 px lange zijde** zonder vergroten (was 800 px breed), **JPEG-kwaliteit 85** (was 75); instellingen als constanten die ook in het bewijsspoor vermeld worden.
+- `artifacts/api-server/src/lib/documentIntelligence.ts` — **`detail: "high"`** (was "low", de zwaarste van de vier verkleiningen); classificatie rendert nu **tot 5 prioriteitspagina's** (was 3) en meldt in het bewijsspoor expliciet wanneer een document méér dan 5 pagina's heeft; factuurstroom-extractie leest **tot 5 pagina's** (was 2, dus een specificatie op pagina 2+ wordt meegenomen) en geeft correcte MIME + detail=high mee.
+- `artifacts/api-server/src/lib/documentInspectie.ts` — pixel-based PDF zonder per-pagina-tekst rendert nu de eerste pagina's (tot 5) i.p.v. alleen pagina 1.
+- `artifacts/api-server/src/lib/aiGateway.ts` — twee blokkades weggenomen die élke vision-extractie lieten falen: (1) gpt-5-modellen kregen `max_tokens`/`temperature` mee, wat chat-completions weigeren → gateway vertaalt nu naar `max_completion_tokens` met ruimer budget; (2) vision-slot van gpt-5 naar **gpt-4o** — gpt-5 had met detail=high minuten nodig en liep tegen de 60s-timeout.
+- `scripts/src/nulmeting-documentherkenning.ts` — nieuw: draait de herkenner over een map echte documenten en schrijft de acceptatietabel (`docs/nulmeting-documentherkenning.md`) met per document categorie, uitgelezen factuurvelden, bewijsspoor en AI-kosten.
+
+**Niets gokken — gecontroleerd:** bij een onleesbaar of niet-factuurdocument blijven alle velden leeg ("niet gevonden"), er wordt niets uit de bestandsnaam overgenomen als gegevenswaarde (bewezen met een scan zonder tekstlaag: `is_factuur=false`, alle velden null). Het bewijsspoor blijft en vermeldt nu de renderinstellingen.
+
+**Kosten (gemeten, dev):** classificatie van een 2-pagina-scan ≈ €0,011; volledige factuurextractie (gpt-4o, 2 pagina's, detail=high) ≈ €0,019 — samen ≈ €0,03 per gescand document; bij 5 pagina's naar schatting €0,07. Dat was voorheen vrijwel gratis maar onbruikbaar.
+
+**Nog open (acceptatie §5):** de nulmeting met tien échte documenten (gescande facturen, uitzendbureaufactuur met G-verdeling, meerpagina-factuur, de FPS Brandpreventie-storings-PDF, twee prijsaanvragen, één niet-factuur). Documenten in `attached_assets/nulmeting/` plaatsen en het script draaien.
+
 ## 2026-08-07 — AANVRAAG_01: prijsaanvraag per mail — van mail tot projectkans met bewaakte reactietijd
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe automatische mailpipeline)

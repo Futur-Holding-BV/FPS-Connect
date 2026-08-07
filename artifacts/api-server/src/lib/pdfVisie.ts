@@ -8,6 +8,13 @@ import path from "node:path";
 import { logger } from "./logger";
 import { extraheerPdfTekst } from "./pdfTekst";
 
+// DOCUMENT_01: instellingen voor leesbare vision-invoer. Een A4 op 220 DPI is
+// ±1870 px breed en blijft dus onder de bovengrens van 2000 px (nooit vergroten).
+// Deze constanten worden ook in het bewijsspoor vermeld.
+export const VISION_RENDER_DPI = 220;
+export const VISION_MAX_PIXELS = 2000; // lange zijde
+export const VISION_JPEG_KWALITEIT = 85;
+
 export async function renderPdfPagina(buffer: Buffer, paginaNummer = 1): Promise<string | null> {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const tmpIn     = path.join(tmpdir(), `fps_in_${id}.pdf`);
@@ -19,7 +26,7 @@ export async function renderPdfPagina(buffer: Buffer, paginaNummer = 1): Promise
     await new Promise<void>((resolve, reject) => {
       execFile(
         "pdftoppm",
-        ["-jpeg", "-f", String(paginaNummer), "-l", String(paginaNummer), "-r", "120", tmpIn, tmpPrefix],
+        ["-jpeg", "-f", String(paginaNummer), "-l", String(paginaNummer), "-r", String(VISION_RENDER_DPI), tmpIn, tmpPrefix],
         { timeout: 15_000 },
         (err) => { if (err) reject(err); else resolve(); },
       );
@@ -38,8 +45,8 @@ export async function renderPdfPagina(buffer: Buffer, paginaNummer = 1): Promise
 
     const sharp = (await import("sharp")).default;
     return (await sharp(imgBuffer)
-      .resize({ width: 800, withoutEnlargement: true })
-      .jpeg({ quality: 75 })
+      .resize({ width: VISION_MAX_PIXELS, height: VISION_MAX_PIXELS, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: VISION_JPEG_KWALITEIT })
       .toBuffer()).toString("base64");
   } catch (err) {
     logger.warn({ err, paginaNummer }, "pdfVisie: PDF→afbeelding mislukt, doorgaan zonder vision");
@@ -78,8 +85,8 @@ export async function resizeAfbeelding(buffer: Buffer): Promise<string | null> {
   try {
     const sharp = (await import("sharp")).default;
     return (await sharp(buffer)
-      .resize({ width: 800, withoutEnlargement: true })
-      .jpeg({ quality: 75 })
+      .resize({ width: VISION_MAX_PIXELS, height: VISION_MAX_PIXELS, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: VISION_JPEG_KWALITEIT })
       .toBuffer()).toString("base64");
   } catch (err) {
     logger.warn({ err }, "pdfVisie: afbeelding resize mislukt");

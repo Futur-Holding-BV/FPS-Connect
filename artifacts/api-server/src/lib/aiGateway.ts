@@ -39,7 +39,9 @@ const MODEL_REGISTRY: Record<ModelSlot, string> = {
   default:   "gpt-4o",
   fast:      "gpt-4o-mini",
   reasoning: "gpt-5",
-  vision:    "gpt-5",
+  // DOCUMENT_01: vision op gpt-4o — gpt-5 heeft met detail=high minuten nodig
+  // (reasoning) en liep tegen de 60s-timeout; gpt-4o leest scans snel en goed.
+  vision:    "gpt-4o",
   embedding: "text-embedding-3-small",
 };
 
@@ -336,6 +338,17 @@ class AiGatewayService {
     // ─────────────────────────────────────────────────────────────────────────
 
     const model = MODEL_REGISTRY[slot];
+    // gpt-5-modellen accepteren geen max_tokens/temperature (chat-completions):
+    // vertaal naar max_completion_tokens met ruimer budget (reasoning-tokens delen
+    // hetzelfde budget). Zonder deze vertaling faalt elke vision-aanroep met 400.
+    if (model.startsWith("gpt-5")) {
+      const p = params as Record<string, unknown>;
+      if (typeof p.max_tokens === "number") {
+        p.max_completion_tokens = Math.max((p.max_tokens as number) * 4, 4000);
+        delete p.max_tokens;
+      }
+      delete p.temperature;
+    }
     const promptHash = extractSystemPromptHash(params);
     const contextJson = bouwContextJson(logCtx);
     let pogingen = 0;
