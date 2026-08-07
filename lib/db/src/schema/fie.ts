@@ -38,6 +38,49 @@ export const fieAkPostenTable = pgTable("fie_ak_posten", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// ─── Jaarrealisaties (FINANCIEEL_AI_01) ──────────────────────────────────────
+// Gerealiseerde cijfers per boekjaar × werkmaatschappij, uit de jaarrekening.
+// De begroting kijkt vooruit; dit is wat er werkelijk gebeurde. werkgever_id
+// null = geheel (geconsolideerd). Productie = omzet_gefactureerd + ohw_mutatie
+// — het AK-percentage wordt ALTIJD over productie berekend (harde regel §3.1a):
+// gefactureerde omzet alleen zegt vooral wanneer er is gefactureerd.
+export const fieJaarrealisatiesTable = pgTable("fie_jaarrealisaties", {
+  id: serial("id").primaryKey(),
+  boekjaar: integer("boekjaar").notNull(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  omzetGefactureerd: real("omzet_gefactureerd"),   // euro, uit jaarrekening
+  ohwMutatie: real("ohw_mutatie"),                 // mutatie onderhanden projecten (+/-)
+  personeelskostenTotaal: real("personeelskosten_totaal"), // totaalblok jaarrekening (productief + indirect)
+  bron: text("bron").notNull().default("jaarrekening"),    // jaarrekening | handmatig
+  opmerkingen: text("opmerkingen"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// ─── AK-adviezen (FINANCIEEL_AI_01) ──────────────────────────────────────────
+// Kritische meekijk-adviezen op AK-posten. Levenscyclus als een controller,
+// niet als een meldingenlijst: een advies verdwijnt NOOIT vanzelf — het blijft
+// open tot het is afgehandeld of bewust weggezet mét reden. Maximaal 10 open
+// tegelijk (afgedwongen bij genereren), gerangschikt op bedrag.
+export const fieAkAdviezenTable = pgTable("fie_ak_adviezen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  categorie: text("categorie").notNull().default("overig"),
+  titel: text("titel").notNull(),
+  advies: text("advies").notNull(),                // de vraag/het advies, mét cijfers en bron
+  vervolgstap: text("vervolgstap"),                // concrete actie (bv. "offerte opvragen")
+  bedrag: real("bedrag").notNull().default(0),     // euro-impact waarop gerangschikt wordt
+  cijfers: text("cijfers"),                        // JSON: de deterministische onderbouwing
+  bronVermelding: text("bron_vermelding"),         // waar de cijfers vandaan komen
+  dedupSleutel: text("dedup_sleutel").notNull(),   // voorkomt duplicaten bij hergenereren
+  status: text("status").notNull().default("open"), // open | afgehandeld | weggezet
+  afhandelReden: text("afhandel_reden"),           // verplicht bij weggezet
+  afgehandeldDoorId: integer("afgehandeld_door_id"),
+  afgehandeldOp: timestamp("afgehandeld_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 // ─── Capaciteitssnapsots ─────────────────────────────────────────────────────
 // Momentopname van de productieve capaciteit per boekjaar en werkgever.
 // Wordt gebruikt om ak_per_productief_uur af te leiden uit totale AK-kosten.

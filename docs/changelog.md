@@ -1,3 +1,23 @@
+## 2026-08-07 — FINANCIEEL_AI_01: AI kijkt kritisch mee op algemene kosten en bedrijfsresultaat
+
+- **Uitvoering:** volledig gebouwd en met 21 automatische checks bewezen; acceptatie met échte jaarcijfers wacht op invoer (zie nulbevinding) | **Kwaliteit:** hoog | **Risico:** laag (alleen tonen en vragen, niets wordt automatisch bijgesteld)
+
+**Nieuw: dashboard "Algemene kosten"** (`/financieel/algemene-kosten`, Financieel-hoofdstuk, niveau 2):
+- **AK-verhouding per boekjaar × werkmaatschappij** — het percentage wordt áltijd over de **productie** berekend (gefactureerde omzet + mutatie onderhanden projecten), het omzetpercentage staat ernaast maar is nooit de maatstaf. Ontbrekende jaren worden benoemd, nooit ingevuld.
+- **Jaarcijfers invoeren:** nieuwe tabel `fie_jaarrealisaties` (migratie 0007) — gerealiseerde omzet, OHW-mutatie en personeelskosten per boekjaar en werkmaatschappij, upsert dus geen duplicaten. De begroting kijkt vooruit; dit is wat er werkelijk gebeurde.
+- **Lopend jaar tegenover begroting:** omzetkoers uit de eigen verkoopfacturen; als het feitelijke AK-percentage hoger uitkomt dan begroot wordt dat getoond — bijstellen blijft een directiebeslissing, nooit een automatisme.
+- **Posten op aandeel en ontwikkeling** over de jaren, gerangschikt op bedrag.
+- **Adviezen als een controller, niet als meldingenlijst** (`fie_ak_adviezen`): deterministisch gemeten signalen (post steeg ≥10 procentpunt harder dan de productie, minimaal twee jaren cijfers verplicht); de AI (gpt-4o) formuleert ze uitsluitend als **vraag** ("is de dekking gewijzigd?"), bij AI-storing valt de meettekst zelf in. Maximaal 10 open, gerangschikt op bedrag, een advies verdwijnt nooit vanzelf: afhandelen of bewust wegzetten mét verplichte reden (anders 422). Elk advies noemt bedrag, jaren en bron.
+- **Verzekeringen:** getoetst aan de **werkelijke premie uit de eigen polis** (`org_verzekeringen`, omgerekend naar jaarbasis) — niet aan modelkennis-bandbreedtes.
+- **Loonkosten:** alleen de cijfermatige constatering, zonder vervolgstap — server-side afgedwongen, ook als de AI er één zou verzinnen.
+
+**Bevindingen (gemeld vóór de bouw, besluit René: aparte realisatie-invoer):**
+1. `fie_jaarbegrotingen` was puur vooruitkijkend en kende geen werkmaatschappij → aparte tabel `fie_jaarrealisaties`.
+2. Connect bevat bewust geen salarisbedragen; indirecte loonkosten kunnen alleen als handmatige AK-post ("personeel_indirect") worden ingevoerd. Zolang die ontbreekt meldt het dashboard expliciet dat elk percentage exclusief indirecte loonkosten is. De urenverhouding productief/indirect wordt als onderbouwing getoond.
+3. `org_verzekeringen` heeft geen premiehistorie — de ontwikkeling komt uit de AK-posten per jaar, de polis levert de actuele werkelijke premie.
+
+**Bewijs:** `scripts/src/bewijs-financieel-ak.ts` — 21/21 groen: productie-noemer exact, één-jaars post geeft géén signaal, verzekeringssignaal noemt de polispremie en vraagt naar de dekking, loonkosten zonder vervolgstap, dedup + terugkeer na afhandeling, begroting aantoonbaar niet bijgesteld. **Nulbevinding:** dev en prod bevatten nog geen jaarcijfers vanaf 2023 — het acceptatiebewijs met echte cijfers volgt zodra de jaren zijn ingevoerd via "Jaarcijfers invoeren".
+
 ## 2026-08-07 — DOCUMENT_01: documentherkenning betrouwbaar — het beeld dat de AI krijgt is nu leesbaar
 
 - **Uitvoering:** technische fix volledig; acceptatie met tien echte documenten wacht op aanlevering | **Kwaliteit:** hoog | **Risico:** laag (instellingen + modelkeuze, geen tweede herkenner)

@@ -28786,6 +28786,174 @@ export const HerberekeenNacalculatieVoorOpdrachtResponse = zod.object({
 
 
 /**
+ * @summary Jaarrealisaties ophalen (boekjaar × werkmaatschappij)
+ */
+export const ListFieRealisatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "omzet_gefactureerd": zod.number().nullish(),
+  "ohw_mutatie": zod.number().nullish(),
+  "productie": zod.number().nullish(),
+  "personeelskosten_totaal": zod.number().nullish(),
+  "bron": zod.string(),
+  "opmerkingen": zod.string().nullish()
+})
+export const ListFieRealisatiesResponse = zod.array(ListFieRealisatiesResponseItem)
+
+
+/**
+ * @summary Jaarrealisatie invoeren of bijwerken (upsert op boekjaar+werkmaatschappij)
+ */
+export const UpsertFieRealisatieBody = zod.object({
+  "boekjaar": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "omzet_gefactureerd": zod.number().nullish(),
+  "ohw_mutatie": zod.number().nullish(),
+  "personeelskosten_totaal": zod.number().nullish(),
+  "bron": zod.string().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpsertFieRealisatieResponse = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "omzet_gefactureerd": zod.number().nullish(),
+  "ohw_mutatie": zod.number().nullish(),
+  "productie": zod.number().nullish(),
+  "personeelskosten_totaal": zod.number().nullish(),
+  "bron": zod.string(),
+  "opmerkingen": zod.string().nullish()
+})
+
+
+/**
+ * @summary Jaarrealisatie verwijderen
+ */
+export const DeleteFieRealisatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFieRealisatieResponse = zod.void()
+
+
+/**
+ * @summary AK-dashboard (reeks, lopend jaar, posten, adviezen, bevindingen)
+ */
+export const GetFieAkDashboardResponse = zod.object({
+  "reeks": zod.array(zod.object({
+  "boekjaar": zod.number(),
+  "werkgeverId": zod.number().nullish(),
+  "werkgeverNaam": zod.string().optional(),
+  "akTotaal": zod.number().nullish(),
+  "omzetGefactureerd": zod.number().nullish(),
+  "ohwMutatie": zod.number().nullish(),
+  "productie": zod.number().nullish(),
+  "pctVanProductie": zod.number().nullish(),
+  "pctVanOmzet": zod.number().nullish(),
+  "ontbreekt": zod.string().nullish()
+})),
+  "lopend_jaar": zod.object({
+  "boekjaar": zod.number(),
+  "omzetDoel": zod.number().nullish(),
+  "omzetTotNu": zod.number(),
+  "jaarFractie": zod.number(),
+  "omzetKoers": zod.number().nullish(),
+  "akBegroot": zod.number().nullish(),
+  "pctBegroot": zod.number().nullish(),
+  "pctBijKoers": zod.number().nullish(),
+  "toelichting": zod.string()
+}),
+  "posten": zod.array(zod.object({
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string(),
+  "per_jaar": zod.array(zod.object({
+  "boekjaar": zod.number(),
+  "bedrag": zod.number()
+})).optional(),
+  "huidig_bedrag": zod.number(),
+  "aandeel_pct": zod.number().nullish(),
+  "stijging_pct": zod.number().nullish(),
+  "is_loonkosten": zod.boolean().optional()
+})),
+  "adviezen": zod.array(zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "advies": zod.string(),
+  "vervolgstap": zod.string().nullish(),
+  "bedrag": zod.number(),
+  "cijfers": zod.unknown().nullish(),
+  "bron_vermelding": zod.string().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "afhandel_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})),
+  "bevindingen": zod.array(zod.string()),
+  "uren_splitsing": zod.object({
+  "productief": zod.number(),
+  "indirect": zod.number(),
+  "dekkend": zod.boolean()
+}).optional()
+})
+
+
+/**
+ * @summary AK-adviezen genereren uit eigen cijfers (max 10 open)
+ */
+export const GenereerFieAkAdviezenResponse = zod.object({
+  "aangemaakt": zod.array(zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "advies": zod.string(),
+  "vervolgstap": zod.string().nullish(),
+  "bedrag": zod.number(),
+  "cijfers": zod.unknown().nullish(),
+  "bron_vermelding": zod.string().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "afhandel_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})),
+  "kandidaten_totaal": zod.number(),
+  "wachtend": zod.number()
+})
+
+
+/**
+ * @summary AK-advies afhandelen of bewust wegzetten (mét reden)
+ */
+export const UpdateFieAkAdviesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFieAkAdviesBody = zod.object({
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "afhandel_reden": zod.string().nullish()
+})
+
+export const UpdateFieAkAdviesResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "advies": zod.string(),
+  "vervolgstap": zod.string().nullish(),
+  "bedrag": zod.number(),
+  "cijfers": zod.unknown().nullish(),
+  "bron_vermelding": zod.string().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "afhandel_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})
+
+
+/**
  * @summary Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
  */
 export const UpdateFieLeermomentParams = zod.object({

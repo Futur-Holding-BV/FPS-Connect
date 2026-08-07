@@ -23219,6 +23219,112 @@ paths:
                   herberekend:
                     type: boolean
 
+  /fie/realisaties:
+    get:
+      operationId: listFieRealisaties
+      tags: [fie]
+      summary: Jaarrealisaties ophalen (boekjaar × werkmaatschappij)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieJaarrealisatie"
+    post:
+      operationId: upsertFieRealisatie
+      tags: [fie]
+      summary: Jaarrealisatie invoeren of bijwerken (upsert op boekjaar+werkmaatschappij)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieJaarrealisatieInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarrealisatie"
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarrealisatie"
+
+  /fie/realisaties/{id}:
+    delete:
+      operationId: deleteFieRealisatie
+      tags: [fie]
+      summary: Jaarrealisatie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /fie/ak-dashboard:
+    get:
+      operationId: getFieAkDashboard
+      tags: [fie]
+      summary: AK-dashboard (reeks, lopend jaar, posten, adviezen, bevindingen)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieAkDashboard"
+
+  /fie/ak-adviezen/genereer:
+    post:
+      operationId: genereerFieAkAdviezen
+      tags: [fie]
+      summary: AK-adviezen genereren uit eigen cijfers (max 10 open)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieAkAdviezenGenereerResultaat"
+
+  /fie/ak-adviezen/{id}:
+    patch:
+      operationId: updateFieAkAdvies
+      tags: [fie]
+      summary: AK-advies afhandelen of bewust wegzetten (mét reden)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieAkAdviesPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieAkAdvies"
+        "422":
+          description: Wegzetten vereist een reden
+
   /fie/leermomenten/{id}:
     patch:
       operationId: updateFieLeermoment
@@ -43342,6 +43448,147 @@ components:
         productieve_uren_doel:     { type: ["integer", "null"] }
         verdeelsleutel:            { type: string }
         opmerkingen:               { type: ["string", "null"] }
+
+    FieJaarrealisatie:
+      type: object
+      required: [id, boekjaar, bron]
+      properties:
+        id: { type: integer }
+        boekjaar: { type: integer }
+        werkgever_id: { type: integer, nullable: true }
+        omzet_gefactureerd: { type: number, nullable: true }
+        ohw_mutatie: { type: number, nullable: true }
+        productie: { type: number, nullable: true }
+        personeelskosten_totaal: { type: number, nullable: true }
+        bron: { type: string }
+        opmerkingen: { type: string, nullable: true }
+
+    FieJaarrealisatieInput:
+      type: object
+      required: [boekjaar]
+      properties:
+        boekjaar: { type: integer }
+        werkgever_id: { type: integer, nullable: true }
+        omzet_gefactureerd: { type: number, nullable: true }
+        ohw_mutatie: { type: number, nullable: true }
+        personeelskosten_totaal: { type: number, nullable: true }
+        bron: { type: string }
+        opmerkingen: { type: string, nullable: true }
+
+    FieAkReeksRij:
+      type: object
+      required: [boekjaar, werkgever_naam]
+      properties:
+        boekjaar: { type: integer }
+        werkgeverId: { type: integer, nullable: true }
+        werkgeverNaam: { type: string }
+        akTotaal: { type: number, nullable: true }
+        omzetGefactureerd: { type: number, nullable: true }
+        ohwMutatie: { type: number, nullable: true }
+        productie: { type: number, nullable: true }
+        pctVanProductie: { type: number, nullable: true }
+        pctVanOmzet: { type: number, nullable: true }
+        ontbreekt: { type: string, nullable: true }
+
+    FieAkAdvies:
+      type: object
+      required: [id, categorie, titel, advies, bedrag, status]
+      properties:
+        id: { type: integer }
+        werkgever_id: { type: integer, nullable: true }
+        categorie: { type: string }
+        titel: { type: string }
+        advies: { type: string }
+        vervolgstap: { type: string, nullable: true }
+        bedrag: { type: number }
+        cijfers: { nullable: true }
+        bron_vermelding: { type: string, nullable: true }
+        status: { type: string, enum: [open, afgehandeld, weggezet] }
+        afhandel_reden: { type: string, nullable: true }
+        aangemaakt_op: { type: string, nullable: true }
+
+    FieAkAdviesPatch:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [open, afgehandeld, weggezet] }
+        afhandel_reden: { type: string, nullable: true }
+
+    FieAkDashboardPost:
+      type: object
+      required: [categorie, omschrijving, werkgever_naam, huidig_bedrag]
+      properties:
+        categorie: { type: string }
+        omschrijving: { type: string }
+        werkgever_id: { type: integer, nullable: true }
+        werkgever_naam: { type: string }
+        per_jaar:
+          type: array
+          items:
+            type: object
+            required: [boekjaar, bedrag]
+            properties:
+              boekjaar: { type: integer }
+              bedrag: { type: number }
+        huidig_bedrag: { type: number }
+        aandeel_pct: { type: number, nullable: true }
+        stijging_pct: { type: number, nullable: true }
+        is_loonkosten: { type: boolean }
+
+    FieAkLopendJaar:
+      type: object
+      required: [boekjaar, omzetTotNu, jaarFractie, toelichting]
+      properties:
+        boekjaar: { type: integer }
+        omzetDoel: { type: number, nullable: true }
+        omzetTotNu: { type: number }
+        jaarFractie: { type: number }
+        omzetKoers: { type: number, nullable: true }
+        akBegroot: { type: number, nullable: true }
+        pctBegroot: { type: number, nullable: true }
+        pctBijKoers: { type: number, nullable: true }
+        toelichting: { type: string }
+
+    FieAkDashboard:
+      type: object
+      required: [reeks, lopend_jaar, posten, adviezen, bevindingen]
+      properties:
+        reeks:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieAkReeksRij"
+        lopend_jaar:
+          $ref: "#/components/schemas/FieAkLopendJaar"
+        posten:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieAkDashboardPost"
+        adviezen:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieAkAdvies"
+        bevindingen:
+          type: array
+          items:
+            type: string
+        uren_splitsing:
+          type: object
+          required: [productief, indirect, dekkend]
+          properties:
+            productief: { type: number }
+            indirect: { type: number }
+            dekkend: { type: boolean }
+
+    FieAkAdviezenGenereerResultaat:
+      type: object
+      required: [aangemaakt, kandidaten_totaal, wachtend]
+      properties:
+        aangemaakt:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieAkAdvies"
+        kandidaten_totaal: { type: integer }
+        wachtend: { type: integer }
 
     FieAkPost:
       type: object

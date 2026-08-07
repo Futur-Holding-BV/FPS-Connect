@@ -264,6 +264,10 @@ import type {
   FeedbackInput,
   Feestdag,
   FeestdagInput,
+  FieAkAdvies,
+  FieAkAdviesPatch,
+  FieAkAdviezenGenereerResultaat,
+  FieAkDashboard,
   FieAkPost,
   FieAkPostInput,
   FieAkPostUpdate,
@@ -275,6 +279,8 @@ import type {
   FieJaarbegrotingInput,
   FieJaarbegrotingUpdate,
   FieJaarprognose,
+  FieJaarrealisatie,
+  FieJaarrealisatieInput,
   FieLeermoment,
   FieLeermomentPatch,
   FieNacalculatieOverzicht,
@@ -81046,6 +81052,441 @@ export const useHerberekeenNacalculatieVoorOpdracht = <TError = ErrorType<unknow
         TContext
       > => {
       return useMutation(getHerberekeenNacalculatieVoorOpdrachtMutationOptions(options));
+    }
+
+export const getListFieRealisatiesUrl = () => {
+
+
+
+
+  return `/api/fie/realisaties`
+}
+
+/**
+ * @summary Jaarrealisaties ophalen (boekjaar × werkmaatschappij)
+ */
+export const listFieRealisaties = async ( options?: RequestInit): Promise<FieJaarrealisatie[]> => {
+
+  return customFetch<FieJaarrealisatie[]>(getListFieRealisatiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieRealisatiesQueryKey = () => {
+    return [
+    `/api/fie/realisaties`
+    ] as const;
+    }
+
+
+export const getListFieRealisatiesQueryOptions = <TData = Awaited<ReturnType<typeof listFieRealisaties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieRealisaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieRealisatiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieRealisaties>>> = ({ signal }) => listFieRealisaties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieRealisaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieRealisatiesQueryResult = NonNullable<Awaited<ReturnType<typeof listFieRealisaties>>>
+export type ListFieRealisatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarrealisaties ophalen (boekjaar × werkmaatschappij)
+ */
+
+export function useListFieRealisaties<TData = Awaited<ReturnType<typeof listFieRealisaties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieRealisaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieRealisatiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertFieRealisatieUrl = () => {
+
+
+
+
+  return `/api/fie/realisaties`
+}
+
+/**
+ * @summary Jaarrealisatie invoeren of bijwerken (upsert op boekjaar+werkmaatschappij)
+ */
+export const upsertFieRealisatie = async (fieJaarrealisatieInput: FieJaarrealisatieInput, options?: RequestInit): Promise<FieJaarrealisatie> => {
+
+  return customFetch<FieJaarrealisatie>(getUpsertFieRealisatieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieJaarrealisatieInput)
+  }
+);}
+
+
+
+
+export const getUpsertFieRealisatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFieRealisatie>>, TError,{data: BodyType<FieJaarrealisatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertFieRealisatie>>, TError,{data: BodyType<FieJaarrealisatieInput>}, TContext> => {
+
+const mutationKey = ['upsertFieRealisatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertFieRealisatie>>, {data: BodyType<FieJaarrealisatieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  upsertFieRealisatie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertFieRealisatieMutationResult = NonNullable<Awaited<ReturnType<typeof upsertFieRealisatie>>>
+    export type UpsertFieRealisatieMutationBody = BodyType<FieJaarrealisatieInput>
+    export type UpsertFieRealisatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarrealisatie invoeren of bijwerken (upsert op boekjaar+werkmaatschappij)
+ */
+export const useUpsertFieRealisatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFieRealisatie>>, TError,{data: BodyType<FieJaarrealisatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertFieRealisatie>>,
+        TError,
+        {data: BodyType<FieJaarrealisatieInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertFieRealisatieMutationOptions(options));
+    }
+
+export const getDeleteFieRealisatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/realisaties/${id}`
+}
+
+/**
+ * @summary Jaarrealisatie verwijderen
+ */
+export const deleteFieRealisatie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFieRealisatieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFieRealisatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieRealisatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFieRealisatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFieRealisatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFieRealisatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFieRealisatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFieRealisatieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFieRealisatie>>>
+
+    export type DeleteFieRealisatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarrealisatie verwijderen
+ */
+export const useDeleteFieRealisatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieRealisatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFieRealisatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFieRealisatieMutationOptions(options));
+    }
+
+export const getGetFieAkDashboardUrl = () => {
+
+
+
+
+  return `/api/fie/ak-dashboard`
+}
+
+/**
+ * @summary AK-dashboard (reeks, lopend jaar, posten, adviezen, bevindingen)
+ */
+export const getFieAkDashboard = async ( options?: RequestInit): Promise<FieAkDashboard> => {
+
+  return customFetch<FieAkDashboard>(getGetFieAkDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieAkDashboardQueryKey = () => {
+    return [
+    `/api/fie/ak-dashboard`
+    ] as const;
+    }
+
+
+export const getGetFieAkDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getFieAkDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieAkDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieAkDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieAkDashboard>>> = ({ signal }) => getFieAkDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieAkDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieAkDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getFieAkDashboard>>>
+export type GetFieAkDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AK-dashboard (reeks, lopend jaar, posten, adviezen, bevindingen)
+ */
+
+export function useGetFieAkDashboard<TData = Awaited<ReturnType<typeof getFieAkDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieAkDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieAkDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenereerFieAkAdviezenUrl = () => {
+
+
+
+
+  return `/api/fie/ak-adviezen/genereer`
+}
+
+/**
+ * @summary AK-adviezen genereren uit eigen cijfers (max 10 open)
+ */
+export const genereerFieAkAdviezen = async ( options?: RequestInit): Promise<FieAkAdviezenGenereerResultaat> => {
+
+  return customFetch<FieAkAdviezenGenereerResultaat>(getGenereerFieAkAdviezenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerFieAkAdviezenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerFieAkAdviezen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerFieAkAdviezen>>, TError,void, TContext> => {
+
+const mutationKey = ['genereerFieAkAdviezen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerFieAkAdviezen>>, void> = () => {
+
+
+          return  genereerFieAkAdviezen(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerFieAkAdviezenMutationResult = NonNullable<Awaited<ReturnType<typeof genereerFieAkAdviezen>>>
+
+    export type GenereerFieAkAdviezenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AK-adviezen genereren uit eigen cijfers (max 10 open)
+ */
+export const useGenereerFieAkAdviezen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerFieAkAdviezen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerFieAkAdviezen>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenereerFieAkAdviezenMutationOptions(options));
+    }
+
+export const getUpdateFieAkAdviesUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/ak-adviezen/${id}`
+}
+
+/**
+ * @summary AK-advies afhandelen of bewust wegzetten (mét reden)
+ */
+export const updateFieAkAdvies = async (id: number,
+    fieAkAdviesPatch: FieAkAdviesPatch, options?: RequestInit): Promise<FieAkAdvies> => {
+
+  return customFetch<FieAkAdvies>(getUpdateFieAkAdviesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieAkAdviesPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFieAkAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieAkAdvies>>, TError,{id: number;data: BodyType<FieAkAdviesPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFieAkAdvies>>, TError,{id: number;data: BodyType<FieAkAdviesPatch>}, TContext> => {
+
+const mutationKey = ['updateFieAkAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFieAkAdvies>>, {id: number;data: BodyType<FieAkAdviesPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFieAkAdvies(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFieAkAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof updateFieAkAdvies>>>
+    export type UpdateFieAkAdviesMutationBody = BodyType<FieAkAdviesPatch>
+    export type UpdateFieAkAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary AK-advies afhandelen of bewust wegzetten (mét reden)
+ */
+export const useUpdateFieAkAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieAkAdvies>>, TError,{id: number;data: BodyType<FieAkAdviesPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFieAkAdvies>>,
+        TError,
+        {id: number;data: BodyType<FieAkAdviesPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFieAkAdviesMutationOptions(options));
     }
 
 export const getUpdateFieLeermomentUrl = (id: number,) => {

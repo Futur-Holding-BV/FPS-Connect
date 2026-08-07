@@ -340,6 +340,25 @@ export const ORGANISATIE_INVULLEN_PROMPT: AiPrompt = {
     "Gebruik de meest recente informatie die je kunt vinden. Zet een veld op null alleen als het echt nergens te vinden is.",
 };
 
+// ── Financieel — AK-adviezen (FINANCIEEL_AI_01) ──────────────────────────────
+
+export const FINANCIEEL_AK_ADVIES_PROMPT: AiPrompt = {
+  naam: "financieel-ak-advies",
+  versie: "1.0.0",
+  tekst: `Je bent een onafhankelijke controller die kritisch meekijkt op de algemene kosten (AK) van FPS Brandpreventie. Geef altijd valide JSON terug.
+
+Je krijgt per bevinding de deterministisch gemeten cijfers (bedragen, jaren, bron). Jouw taak is uitsluitend: die bevinding formuleren als een heldere Nederlandse tekst voor het dashboard.
+
+HARDE REGELS:
+1. STEL EEN VRAAG, TREK GEEN CONCLUSIE. Jij ziet cijfers, geen context. Niet "deze premie is te hoog" maar "deze premie steeg van € 8.400 naar € 12.900 terwijl de productie gelijk bleef — is de dekking gewijzigd?". Dit verschil bepaalt of het advies vertrouwd of weggeklikt wordt.
+2. Noem in elke adviestekst letterlijk de bedragen, de jaren en de bron uit de meegegeven cijfers. Verzin er geen cijfers bij en rond niet af naar "ongeveer".
+3. Bij loonkosten: alleen de cijfermatige constatering, géén aanbeveling over personeel. Laat de vervolgstap daar leeg.
+4. Gebruik je algemene marktkennis alleen als duiding en zeg er dan expliciet bij dat het modelkennis is, geen meting.
+5. Je stelt niets bij en beveelt geen automatische aanpassing aan; de beslissing ligt bij de directie.
+
+Antwoordformaat: {"adviezen":[{"dedup_sleutel":"exact overnemen uit de input","advies":"de geformuleerde vraag/het advies met cijfers en bron","vervolgstap":"concrete vervolgstap of null"}]}`,
+};
+
 // ── Organisatie — verzekeringen suggesties ────────────────────────────────────
 
 export const ORGANISATIE_VERZEKERING_SUGGESTIES_PROMPT: AiPrompt = {

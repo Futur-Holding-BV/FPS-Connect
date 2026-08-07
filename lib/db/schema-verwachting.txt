@@ -72,8 +72,6 @@ INDEX|declaratie_beleid|declaratie_beleid_pkey
 INDEX|declaraties|declaraties_pkey
 INDEX|document_classificatie_correcties|dcc_wm_datum_idx
 INDEX|document_classificatie_correcties|document_classificatie_correcties_pkey
-INDEX|documenten|documenten_groep_id_revisie_nummer_unique
-INDEX|documenten|documenten_pkey
 INDEX|document_goedkeuringen|document_goedkeuringen_pkey
 INDEX|document_koppelingen|document_koppelingen_document_id_doel_type_doel_id_unique
 INDEX|document_koppelingen|document_koppelingen_doel_idx
@@ -83,12 +81,15 @@ INDEX|document_studio_modellen|document_studio_modellen_actief_uniek
 INDEX|document_studio_modellen|document_studio_modellen_pkey
 INDEX|document_toepassingen|document_toepassingen_document_id_label_id_unique
 INDEX|document_toepassingen|document_toepassingen_pkey
+INDEX|documenten|documenten_groep_id_revisie_nummer_unique
+INDEX|documenten|documenten_pkey
 INDEX|dossier_documenten|dossier_documenten_pkey
 INDEX|dossiers|dossiers_pkey
 INDEX|eenheidsprijzen|eenheidsprijzen_code_unique
 INDEX|eenheidsprijzen|eenheidsprijzen_pkey
 INDEX|fabrikanten|fabrikanten_naam_unique
 INDEX|fabrikanten|fabrikanten_pkey
+INDEX|facturen|facturen_mailstroom_bijlage_uniek
 INDEX|facturen|facturen_pkey
 INDEX|factuur_correspondentie|factuur_correspondentie_pkey
 INDEX|factuur_herinneringen|factuur_herinneringen_pkey
@@ -105,22 +106,28 @@ INDEX|factuur_termijnen|factuur_termijnen_pkey
 INDEX|factuur_tijdlijn|factuur_tijdlijn_pkey
 INDEX|feedback|feedback_pkey
 INDEX|feestdagen|feestdagen_pkey
+INDEX|fie_ak_adviezen|fie_ak_adviezen_dedup_open_uniek
+INDEX|fie_ak_adviezen|fie_ak_adviezen_pkey
+INDEX|fie_ak_adviezen|fie_ak_adviezen_status_bedrag_idx
 INDEX|fie_ak_posten|fie_ak_posten_pkey
 INDEX|fie_capaciteit_snapshots|fie_capaciteit_snapshots_pkey
 INDEX|fie_jaarbegrotingen|fie_jaarbegrotingen_pkey
+INDEX|fie_jaarrealisaties|fie_jaarrealisaties_boekjaar_geheel_uniek
+INDEX|fie_jaarrealisaties|fie_jaarrealisaties_boekjaar_werkgever_uniek
+INDEX|fie_jaarrealisaties|fie_jaarrealisaties_pkey
 INDEX|fie_leermomenten|fie_leermomenten_pkey
 INDEX|fie_leermomenten|fie_leermomenten_werktype_unique
 INDEX|fie_nacalculaties|fie_nacalculaties_pkey
 INDEX|fie_observaties|fie_observaties_pkey
-INDEX|financiele_contracten|financiele_contracten_pkey
 INDEX|financiele_contract_kosten|financiele_contract_kosten_pkey
 INDEX|financiele_contract_kosten|uniek_contract_jaar
 INDEX|financiele_contract_signaleringen|financiele_contract_signaleringen_pkey
 INDEX|financiele_contract_signaleringen|uniek_contract_signalering_dedupe
-INDEX|financiele_documenten|financiele_documenten_entiteit_jaar_idx
-INDEX|financiele_documenten|financiele_documenten_pkey
+INDEX|financiele_contracten|financiele_contracten_pkey
 INDEX|financiele_document_log|financiele_document_log_document_idx
 INDEX|financiele_document_log|financiele_document_log_pkey
+INDEX|financiele_documenten|financiele_documenten_entiteit_jaar_idx
+INDEX|financiele_documenten|financiele_documenten_pkey
 INDEX|financiele_kerncijfers|financiele_kerncijfers_document_idx
 INDEX|financiele_kerncijfers|financiele_kerncijfers_meerjaren_idx
 INDEX|financiele_kerncijfers|financiele_kerncijfers_pkey
@@ -137,23 +144,27 @@ INDEX|gebouw_email_bijlagen|gebouw_email_bijlagen_pkey
 INDEX|gebouw_email_samenvattingen|gebouw_email_samenvattingen_gebouw_id_unique
 INDEX|gebouw_email_samenvattingen|gebouw_email_samenvattingen_pkey
 INDEX|gebouw_emails|gebouw_emails_pkey
-INDEX|gebouwen|gebouwen_pkey
-INDEX|gebouwen|gebouwen_projectnummer_unique
-INDEX|gebouwen|gebouwen_werknummer_unique
 INDEX|gebouw_partijen|gebouw_partijen_pkey
 INDEX|gebouw_publicaties|gebouw_publicaties_pkey
 INDEX|gebouw_toewijzingen|gebouw_toewijzingen_pkey
+INDEX|gebouwen|gebouwen_pkey
+INDEX|gebouwen|gebouwen_projectnummer_unique
+INDEX|gebouwen|gebouwen_werknummer_unique
 INDEX|gebruiker_profielen|gebruiker_profielen_gebruiker_id_profiel_id_unique
 INDEX|gebruiker_profielen|gebruiker_profielen_pkey
 INDEX|gebruiker_profielen|gp_gebruiker_idx
 INDEX|gebruiker_profielen|gp_profiel_idx
+INDEX|gebruikers_meldingen|gebruikers_meldingen_pkey
 INDEX|gebruikers|gebruikers_email_unique
 INDEX|gebruikers|gebruikers_pkey
 INDEX|gebruikers|gebruikers_uitnodiging_token_unique
-INDEX|gebruikers_meldingen|gebruikers_meldingen_pkey
 INDEX|gereedschap_meldingen|gereedschap_meldingen_pkey
 INDEX|gereedschappen|gereedschappen_pkey
 INDEX|gereedschappen|gereedschappen_volgnummer_unique
+INDEX|go_live_adviezen|go_live_adviezen_pkey
+INDEX|go_live_fasen|go_live_fasen_pkey
+INDEX|go_live_fasen|go_live_fasen_sleutel_unique
+INDEX|go_live_lessen|go_live_lessen_pkey
 INDEX|goedkeuring_aanvragen|goedkeuring_aanvragen_documenttype_idx
 INDEX|goedkeuring_aanvragen|goedkeuring_aanvragen_object_idx
 INDEX|goedkeuring_aanvragen|goedkeuring_aanvragen_pkey
@@ -164,10 +175,6 @@ INDEX|goedkeuring_escalaties|goedkeuring_escalaties_aanvraag_idx
 INDEX|goedkeuring_escalaties|goedkeuring_escalaties_pkey
 INDEX|goedkeuring_stappen|goedkeuring_stappen_aanvraag_idx
 INDEX|goedkeuring_stappen|goedkeuring_stappen_pkey
-INDEX|go_live_adviezen|go_live_adviezen_pkey
-INDEX|go_live_fasen|go_live_fasen_pkey
-INDEX|go_live_fasen|go_live_fasen_sleutel_unique
-INDEX|go_live_lessen|go_live_lessen_pkey
 INDEX|governance_checks|governance_checks_pkey
 INDEX|governance_wachtrij|governance_wachtrij_pkey
 INDEX|helpdesk_tickets|helpdesk_tickets_pkey
@@ -177,10 +184,10 @@ INDEX|hrm_onboarding_taken|hrm_onboarding_taken_pkey
 INDEX|import_logs|import_logs_pkey
 INDEX|inbox_audit_log|inbox_audit_log_pkey
 INDEX|inbox_items|inbox_items_pkey
-INDEX|inkoopbonnen|inkoopbonnen_pkey
 INDEX|inkoopbon_regels|inkoopbon_regels_pkey
-INDEX|inkoopplannen|inkoopplannen_pkey
+INDEX|inkoopbonnen|inkoopbonnen_pkey
 INDEX|inkoopplan_regels|inkoopplan_regels_pkey
+INDEX|inkoopplannen|inkoopplannen_pkey
 INDEX|inspectie_bevindingen|inspectie_bevindingen_pkey
 INDEX|inspecties|inspecties_gebouw_type_idx
 INDEX|inspecties|inspecties_pkey
@@ -201,8 +208,8 @@ INDEX|magazijn_inkooporder_regels|magazijn_inkooporder_regels_pkey
 INDEX|magazijn_inkooporders|magazijn_inkooporders_pkey
 INDEX|magazijn_instellingen|magazijn_instellingen_pkey
 INDEX|magazijn_locaties|magazijn_locaties_pkey
-INDEX|magazijn_picklijsten|magazijn_picklijsten_pkey
 INDEX|magazijn_picklijst_regels|magazijn_picklijst_regels_pkey
+INDEX|magazijn_picklijsten|magazijn_picklijsten_pkey
 INDEX|magazijn_snoozes|magazijn_snoozes_artikel_id_unique
 INDEX|magazijn_snoozes|magazijn_snoozes_pkey
 INDEX|magazijn_stellingscans|magazijn_stellingscans_pkey
@@ -247,20 +254,20 @@ INDEX|offerte_portaal_tokens|offerte_portaal_tokens_token_unique
 INDEX|offerte_regels|offerte_regels_pkey
 INDEX|offerte_secties|offerte_secties_pkey
 INDEX|offerte_sjablonen|offerte_sjablonen_pkey
-INDEX|offertes|offertes_pkey
-INDEX|offertes|uq_offertes_auto_project_id
 INDEX|offerte_tracking|idx_offerte_tracking_offerte
 INDEX|offerte_tracking|offerte_tracking_pkey
 INDEX|offerte_uitgangspunten|offerte_uitgangspunten_pkey
 INDEX|offerte_versies|offerte_versies_pkey
 INDEX|offerte_voorwaarden_sets|offerte_voorwaarden_sets_pkey
 INDEX|offerte_vragen|offerte_vragen_pkey
+INDEX|offertes|offertes_pkey
+INDEX|offertes|uq_offertes_auto_project_id
 INDEX|onderaannemer_orders|onderaannemer_orders_pkey
 INDEX|onderhanden_werk_overrides|onderhanden_werk_overrides_pkey
-INDEX|onderhoud|onderhoud_gebouw_status_deadline_idx
-INDEX|onderhoud|onderhoud_pkey
 INDEX|onderhoudscontracten|onderhoudscontracten_contractnummer_unique
 INDEX|onderhoudscontracten|onderhoudscontracten_pkey
+INDEX|onderhoud|onderhoud_gebouw_status_deadline_idx
+INDEX|onderhoud|onderhoud_pkey
 INDEX|opdrachten|opdrachten_offerte_id_uniek
 INDEX|opdrachten|opdrachten_pkey
 INDEX|opdrachtgever_voorkeuren|opdrachtgever_voorkeuren_klant_id_unique
@@ -297,10 +304,10 @@ INDEX|regie_voorwaarden|regie_voorwaarden_pkey
 INDEX|release_update_notes|release_update_notes_pkey
 INDEX|reserveringen|reserveringen_pkey
 INDEX|salaris_audit_ext|salaris_audit_ext_pkey
+INDEX|salaris_mutaties|salaris_mutaties_pkey
 INDEX|salarisbatches|salarisbatches_pkey
 INDEX|salarisbestanden|salarisbestanden_pkey
 INDEX|salarisdocument_audit|salarisdocument_audit_pkey
-INDEX|salaris_mutaties|salaris_mutaties_pkey
 INDEX|scab_mail_bijlagen|scab_mail_bijlagen_pkey
 INDEX|scab_mails|scab_mails_pkey
 INDEX|scheidingen|scheidingen_pkey
@@ -329,24 +336,24 @@ INDEX|toolbox_maand_opdrachten|toolbox_maand_opdrachten_pkey
 INDEX|toolbox_maand_status|toolbox_maand_status_pkey
 INDEX|uitvoerder_berichten|uitvoerder_berichten_pkey
 INDEX|uitvoerder_sessies|uitvoerder_sessies_pkey
-INDEX|uitvoeringsplannen|uitvoeringsplannen_pkey
 INDEX|uitvoeringsplan_taken|uitvoeringsplan_taken_pkey
+INDEX|uitvoeringsplannen|uitvoeringsplannen_pkey
 INDEX|uren_registraties|uren_registraties_pkey
 INDEX|veiligheid_incidenten|veiligheid_incidenten_pkey
 INDEX|veiligheid_lmras|veiligheid_lmras_pkey
 INDEX|veiligheid_meldingen_acties|veiligheid_meldingen_acties_pkey
 INDEX|veiligheid_meldingen|veiligheid_meldingen_pkey
-INDEX|veiligheidsmiddelen|veiligheidsmiddelen_pkey
-INDEX|veiligheidsmiddel_inspecties|veiligheidsmiddel_inspecties_pkey
 INDEX|veiligheid_toolbox_afrondingen|veiligheid_toolbox_afrondingen_pkey
-INDEX|veiligheid_toolboxen|veiligheid_toolboxen_pkey
 INDEX|veiligheid_toolbox_vragen|veiligheid_toolbox_vragen_pkey
+INDEX|veiligheid_toolboxen|veiligheid_toolboxen_pkey
+INDEX|veiligheidsmiddel_inspecties|veiligheidsmiddel_inspecties_pkey
+INDEX|veiligheidsmiddelen|veiligheidsmiddelen_pkey
 INDEX|verdiepingen|verdiepingen_pkey
 INDEX|verlof_aanvraag_log|verlof_aanvraag_log_pkey
-INDEX|verlofaanvragen|verlofaanvragen_pkey
 INDEX|verlof_correcties|verlof_correcties_pkey
 INDEX|verlof_instellingen|verlof_instellingen_pkey
 INDEX|verlof_saldi|verlof_saldi_pkey
+INDEX|verlofaanvragen|verlofaanvragen_pkey
 INDEX|verlofsoorten|verlofsoorten_pkey
 INDEX|vge_effectiviteitslog|idx_vge_log_visual_spot_stap
 INDEX|vge_effectiviteitslog|vge_effectiviteitslog_pkey
@@ -354,12 +361,12 @@ INDEX|voertuigen|voertuigen_pkey
 INDEX|voorraad_mutaties|voorraad_mutaties_pkey
 INDEX|voorraad|voorraad_artikel_locatie
 INDEX|voorraad|voorraad_pkey
-INDEX|voorzieningen|voorzieningen_gebouw_idx
-INDEX|voorzieningen|voorzieningen_objectnummer_unique
-INDEX|voorzieningen|voorzieningen_pkey
 INDEX|voorziening_labels|voorziening_labels_pkey
 INDEX|voorziening_labels|voorziening_labels_voorziening_id_label_id_unique
 INDEX|voorziening_types|voorziening_types_pkey
+INDEX|voorzieningen|voorzieningen_gebouw_idx
+INDEX|voorzieningen|voorzieningen_objectnummer_unique
+INDEX|voorzieningen|voorzieningen_pkey
 INDEX|wachtwoord_reset_tokens|wachtwoord_reset_tokens_pkey
 INDEX|wachtwoord_reset_tokens|wachtwoord_reset_tokens_token_unique
 INDEX|wachtwoord_reset_tokens|wrt_token_idx
@@ -371,12 +378,6 @@ INDEX|wagenpark_onderhoud|wagenpark_onderhoud_pkey
 INDEX|wagenpark_ritten|wagenpark_ritten_pkey
 INDEX|wagenpark_sync_log|wagenpark_sync_log_pkey
 INDEX|week_staten|week_staten_pkey
-INDEX|werkbegroting_adviezen|werkbegroting_adviezen_pkey
-INDEX|werkbegroting_regels|werkbegroting_regels_pkey
-INDEX|werkbonnen|werkbonnen_pkey
-INDEX|werkbonnen|werkbonnen_werkbonnummer_unique
-INDEX|werkgevers|werkgevers_naam_unique
-INDEX|werkgevers|werkgevers_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_message_idx
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_uq
@@ -392,6 +393,12 @@ INDEX|werk_inbox_notities|werk_inbox_notities_message_idx
 INDEX|werk_inbox_notities|werk_inbox_notities_pkey
 INDEX|werk_inbox_tokens|werk_inbox_tokens_gebruiker_uq
 INDEX|werk_inbox_tokens|werk_inbox_tokens_pkey
+INDEX|werkbegroting_adviezen|werkbegroting_adviezen_pkey
+INDEX|werkbegroting_regels|werkbegroting_regels_pkey
+INDEX|werkbonnen|werkbonnen_pkey
+INDEX|werkbonnen|werkbonnen_werkbonnummer_unique
+INDEX|werkgevers|werkgevers_naam_unique
+INDEX|werkgevers|werkgevers_pkey
 INDEX|workflow_cards|workflow_cards_pkey
 INDEX|workflow_definities|workflow_definities_pkey
 INDEX|workflow_lanes|workflow_lanes_pkey
@@ -406,8 +413,8 @@ KOLOM|aanvraag_planningen|afzender_naam|text|YES|
 KOLOM|aanvraag_planningen|ai_opname|text|YES|
 KOLOM|aanvraag_planningen|ai_plattegronden|text|YES|
 KOLOM|aanvraag_planningen|ai_responstermijn|text|YES|
-KOLOM|aanvraag_planningen|antwoorden_ontvangen_op|timestamp without time zone|YES|
 KOLOM|aanvraag_planningen|antwoord_token|text|NO|
+KOLOM|aanvraag_planningen|antwoorden_ontvangen_op|timestamp without time zone|YES|
 KOLOM|aanvraag_planningen|bevestiging_verzond_op|timestamp without time zone|YES|
 KOLOM|aanvraag_planningen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|aanvraag_planningen|extra_opmerking|text|YES|
@@ -417,18 +424,18 @@ KOLOM|aanvraag_planningen|inbox_item_id|integer|YES|
 KOLOM|aanvraag_planningen|melding_verzond_op|timestamp without time zone|YES|
 KOLOM|aanvraag_planningen|offerte_id|integer|YES|
 KOLOM|aanvraag_planningen|opname_nodig|text|YES|
-KOLOM|aanvraag_planningen|plattegronden_status|text|YES|
 KOLOM|aanvraag_planningen|pl_bijgewerkt_op|timestamp without time zone|YES|
 KOLOM|aanvraag_planningen|pl_notitie|text|YES|
 KOLOM|aanvraag_planningen|pl_planning_datum|text|YES|
+KOLOM|aanvraag_planningen|plattegronden_status|text|YES|
 KOLOM|aanvraag_voorstellen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|aanvraag_voorstellen|afzender_email|text|NO|''::text
 KOLOM|aanvraag_voorstellen|afzender_naam|text|YES|
 KOLOM|aanvraag_voorstellen|ai_voorstel|jsonb|YES|
 KOLOM|aanvraag_voorstellen|antwoord_verstuurd_op|timestamp without time zone|YES|
+KOLOM|aanvraag_voorstellen|beoordeel_notitie|text|YES|
 KOLOM|aanvraag_voorstellen|beoordeeld_door_id|integer|YES|
 KOLOM|aanvraag_voorstellen|beoordeeld_op|timestamp without time zone|YES|
-KOLOM|aanvraag_voorstellen|beoordeel_notitie|text|YES|
 KOLOM|aanvraag_voorstellen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|aanvraag_voorstellen|bijlagen|jsonb|YES|
 KOLOM|aanvraag_voorstellen|binnengekomen_op|timestamp without time zone|NO|
@@ -437,8 +444,8 @@ KOLOM|aanvraag_voorstellen|concept_vorm|text|NO|'bevestiging'::text
 KOLOM|aanvraag_voorstellen|gebruiker_id|integer|NO|
 KOLOM|aanvraag_voorstellen|id|integer|NO|nextval('aanvraag_voorstellen_id_seq'::regclass)
 KOLOM|aanvraag_voorstellen|is_persoonlijk|boolean|NO|false
-KOLOM|aanvraag_voorstellen|mailbox_adres|text|NO|
 KOLOM|aanvraag_voorstellen|mail_message_id|text|NO|
+KOLOM|aanvraag_voorstellen|mailbox_adres|text|NO|
 KOLOM|aanvraag_voorstellen|onderwerp|text|NO|''::text
 KOLOM|aanvraag_voorstellen|projectkans_id|integer|YES|
 KOLOM|aanvraag_voorstellen|status|text|NO|'open'::text
@@ -777,9 +784,9 @@ KOLOM|brandstof_importen|bestandsnaam|text|NO|
 KOLOM|brandstof_importen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|brandstof_importen|brontype|text|NO|
 KOLOM|brandstof_importen|factuur_nummer|text|YES|
-KOLOM|brandstof_importen|geladen|boolean|NO|false
 KOLOM|brandstof_importen|geladen_door_id|integer|YES|
 KOLOM|brandstof_importen|geladen_op|timestamp without time zone|YES|
+KOLOM|brandstof_importen|geladen|boolean|NO|false
 KOLOM|brandstof_importen|id|integer|NO|nextval('brandstof_importen_id_seq'::regclass)
 KOLOM|brandstof_importen|leverancier|text|NO|'mkb_brandstof'::text
 KOLOM|brandstof_importen|periode_tot|timestamp without time zone|YES|
@@ -812,8 +819,8 @@ KOLOM|bruikleen_overeenkomsten|bijgewerkt_op|timestamp without time zone|NO|now(
 KOLOM|bruikleen_overeenkomsten|bruikleen_voorwaarden|text|YES|
 KOLOM|bruikleen_overeenkomsten|datum_inname|text|YES|
 KOLOM|bruikleen_overeenkomsten|datum_uitgifte|text|NO|
-KOLOM|bruikleen_overeenkomsten|definitief|boolean|NO|false
 KOLOM|bruikleen_overeenkomsten|definitief_op|timestamp without time zone|YES|
+KOLOM|bruikleen_overeenkomsten|definitief|boolean|NO|false
 KOLOM|bruikleen_overeenkomsten|gereedschap_id|integer|NO|
 KOLOM|bruikleen_overeenkomsten|handtekening_medewerker_url|text|YES|
 KOLOM|bruikleen_overeenkomsten|handtekening_uitgever_url|text|YES|
@@ -941,8 +948,8 @@ KOLOM|cqo_runs|aantal_verbeterpunten|integer|YES|
 KOLOM|cqo_runs|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|cqo_runs|blokkering_reden|text|YES|
 KOLOM|cqo_runs|categorie_scores|jsonb|YES|
-KOLOM|cqo_runs|gestart_door|integer|NO|
 KOLOM|cqo_runs|gestart_door_naam|text|NO|
+KOLOM|cqo_runs|gestart_door|integer|NO|
 KOLOM|cqo_runs|gestart_op|timestamp without time zone|NO|now()
 KOLOM|cqo_runs|id|integer|NO|nextval('cqo_runs_id_seq'::regclass)
 KOLOM|cqo_runs|release_geblokkeerd|boolean|NO|false
@@ -976,8 +983,8 @@ KOLOM|crm_commercieel|fase|text|NO|'signaal'::text
 KOLOM|crm_commercieel|gebouw_id|integer|YES|
 KOLOM|crm_commercieel|gerelateerd_project_id|integer|YES|
 KOLOM|crm_commercieel|id|integer|NO|nextval('crm_commercieel_id_seq'::regclass)
-KOLOM|crm_commercieel|kans|integer|YES|50
 KOLOM|crm_commercieel|kans_type|text|YES|'offerte'::text
+KOLOM|crm_commercieel|kans|integer|YES|50
 KOLOM|crm_commercieel|klant_id|integer|NO|
 KOLOM|crm_commercieel|opmerkingen|text|YES|
 KOLOM|crm_commercieel|titel|text|NO|
@@ -1060,9 +1067,9 @@ KOLOM|crm_klanten|website|text|YES|
 KOLOM|crm_marktintelligentie|aangemaakt_door|integer|YES|
 KOLOM|crm_marktintelligentie|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|crm_marktintelligentie|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|crm_marktintelligentie|bron|text|YES|
 KOLOM|crm_marktintelligentie|bron_type|text|NO|'handmatig'::text
 KOLOM|crm_marktintelligentie|bron_url|text|YES|
+KOLOM|crm_marktintelligentie|bron|text|YES|
 KOLOM|crm_marktintelligentie|concurrent_id|integer|YES|
 KOLOM|crm_marktintelligentie|datum|text|YES|
 KOLOM|crm_marktintelligentie|id|integer|NO|nextval('crm_marktintelligentie_id_seq'::regclass)
@@ -1088,8 +1095,8 @@ KOLOM|crm_relatievoorstellen|ai_toelichting|text|YES|
 KOLOM|crm_relatievoorstellen|beoordeeld_door_id|integer|YES|
 KOLOM|crm_relatievoorstellen|beoordeeld_op|timestamp without time zone|YES|
 KOLOM|crm_relatievoorstellen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|crm_relatievoorstellen|bron|text|YES|
 KOLOM|crm_relatievoorstellen|bron_url|text|YES|
+KOLOM|crm_relatievoorstellen|bron|text|YES|
 KOLOM|crm_relatievoorstellen|functie|text|YES|
 KOLOM|crm_relatievoorstellen|id|integer|NO|nextval('crm_relatievoorstellen_id_seq'::regclass)
 KOLOM|crm_relatievoorstellen|naam|text|YES|
@@ -1144,29 +1151,6 @@ KOLOM|document_classificatie_correcties|gecorrigeerde_categorie|text|NO|
 KOLOM|document_classificatie_correcties|id|integer|NO|nextval('document_classificatie_correcties_id_seq'::regclass)
 KOLOM|document_classificatie_correcties|originele_categorie|text|NO|
 KOLOM|document_classificatie_correcties|werkmaatschappij|text|YES|
-KOLOM|documenten|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|documenten|ai_geanalyseerd|boolean|NO|false
-KOLOM|documenten|ai_metadata|jsonb|YES|
-KOLOM|documenten|bestandsgrootte|integer|YES|
-KOLOM|documenten|bestands_hash|text|YES|
-KOLOM|documenten|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|documenten|datum|text|YES|
-KOLOM|documenten|documenttype|text|NO|'testrapport'::text
-KOLOM|documenten|en_norm|text|YES|
-KOLOM|documenten|fabrikant|text|YES|
-KOLOM|documenten|gearchiveerd|boolean|NO|false
-KOLOM|documenten|geldig_tot|date|YES|
-KOLOM|documenten|getest_voor|text|YES|
-KOLOM|documenten|goedkeuring_status|text|NO|'goedgekeurd'::text
-KOLOM|documenten|groep_id|text|NO|(gen_random_uuid())::text
-KOLOM|documenten|id|integer|NO|nextval('documenten_id_seq'::regclass)
-KOLOM|documenten|naam|text|NO|
-KOLOM|documenten|pdf_url|text|YES|
-KOLOM|documenten|product|text|YES|
-KOLOM|documenten|rapportnummer|text|YES|
-KOLOM|documenten|revisie_nummer|integer|NO|1
-KOLOM|documenten|revisie|text|YES|
-KOLOM|documenten|status|text|NO|'actueel'::text
 KOLOM|document_goedkeuringen|actie|text|NO|
 KOLOM|document_goedkeuringen|document_id|integer|NO|
 KOLOM|document_goedkeuringen|door_id|integer|YES|
@@ -1204,6 +1188,29 @@ KOLOM|document_studio_modellen|werkgever_id|integer|NO|
 KOLOM|document_toepassingen|document_id|integer|NO|
 KOLOM|document_toepassingen|id|integer|NO|nextval('document_toepassingen_id_seq'::regclass)
 KOLOM|document_toepassingen|label_id|integer|NO|
+KOLOM|documenten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|documenten|ai_geanalyseerd|boolean|NO|false
+KOLOM|documenten|ai_metadata|jsonb|YES|
+KOLOM|documenten|bestands_hash|text|YES|
+KOLOM|documenten|bestandsgrootte|integer|YES|
+KOLOM|documenten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|documenten|datum|text|YES|
+KOLOM|documenten|documenttype|text|NO|'testrapport'::text
+KOLOM|documenten|en_norm|text|YES|
+KOLOM|documenten|fabrikant|text|YES|
+KOLOM|documenten|gearchiveerd|boolean|NO|false
+KOLOM|documenten|geldig_tot|date|YES|
+KOLOM|documenten|getest_voor|text|YES|
+KOLOM|documenten|goedkeuring_status|text|NO|'goedgekeurd'::text
+KOLOM|documenten|groep_id|text|NO|(gen_random_uuid())::text
+KOLOM|documenten|id|integer|NO|nextval('documenten_id_seq'::regclass)
+KOLOM|documenten|naam|text|NO|
+KOLOM|documenten|pdf_url|text|YES|
+KOLOM|documenten|product|text|YES|
+KOLOM|documenten|rapportnummer|text|YES|
+KOLOM|documenten|revisie_nummer|integer|NO|1
+KOLOM|documenten|revisie|text|YES|
+KOLOM|documenten|status|text|NO|'actueel'::text
 KOLOM|dossier_documenten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|dossier_documenten|bestand_url|text|YES|
 KOLOM|dossier_documenten|bevroren_op|timestamp without time zone|YES|
@@ -1280,8 +1287,8 @@ KOLOM|facturen|bedrag_excl_btw|numeric|YES|
 KOLOM|facturen|bedrag_incl_btw|numeric|YES|
 KOLOM|facturen|beoordelaar_id|integer|YES|
 KOLOM|facturen|bestandsnaam|text|YES|
-KOLOM|facturen|betaaldatum|text|YES|
 KOLOM|facturen|betaald_op|timestamp without time zone|YES|
+KOLOM|facturen|betaaldatum|text|YES|
 KOLOM|facturen|betaalstatus|text|YES|
 KOLOM|facturen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|facturen|blokkering_reden|text|YES|
@@ -1294,13 +1301,13 @@ KOLOM|facturen|conversation_id|text|YES|
 KOLOM|facturen|dagboek|text|YES|
 KOLOM|facturen|factuurdatum|text|YES|
 KOLOM|facturen|factuurnummer|text|YES|
-KOLOM|facturen|geaccordeerd|boolean|NO|false
-KOLOM|facturen|geaccordeerd_door|integer|YES|
-KOLOM|facturen|geaccordeerd_op|timestamp without time zone|YES|
-KOLOM|facturen|geblokkeerd|boolean|NO|false
-KOLOM|facturen|gebouw_id|integer|YES|
 KOLOM|facturen|g_rekening_bedrag|numeric|YES|
 KOLOM|facturen|g_rekening_van_toepassing|boolean|NO|false
+KOLOM|facturen|geaccordeerd_door|integer|YES|
+KOLOM|facturen|geaccordeerd_op|timestamp without time zone|YES|
+KOLOM|facturen|geaccordeerd|boolean|NO|false
+KOLOM|facturen|geblokkeerd|boolean|NO|false
+KOLOM|facturen|gebouw_id|integer|YES|
 KOLOM|facturen|grootboekrekening|text|YES|
 KOLOM|facturen|herexport_door|integer|YES|
 KOLOM|facturen|herexport_op|timestamp without time zone|YES|
@@ -1329,8 +1336,8 @@ KOLOM|facturen|project_id|integer|YES|
 KOLOM|facturen|relatie_adres|text|YES|
 KOLOM|facturen|relatie_code|text|YES|
 KOLOM|facturen|relatienaam|text|YES|
-KOLOM|facturen|status|text|NO|'ontvangen'::text
 KOLOM|facturen|status_voor_afwijzing|text|YES|
+KOLOM|facturen|status|text|NO|'ontvangen'::text
 KOLOM|facturen|subtype|text|YES|
 KOLOM|facturen|tenaamstelling_bv|text|YES|
 KOLOM|facturen|terugkoppeling_op|timestamp without time zone|YES|
@@ -1382,9 +1389,9 @@ KOLOM|factuur_import_log|message_id|text|NO|
 KOLOM|factuur_import_log|onderwerp|text|YES|
 KOLOM|factuur_import_log|status|text|NO|'verwerkt'::text
 KOLOM|factuur_opmerkingen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|factuur_opmerkingen|afgehandeld|boolean|NO|false
 KOLOM|factuur_opmerkingen|afgehandeld_door|integer|YES|
 KOLOM|factuur_opmerkingen|afgehandeld_op|timestamp without time zone|YES|
+KOLOM|factuur_opmerkingen|afgehandeld|boolean|NO|false
 KOLOM|factuur_opmerkingen|factuur_id|integer|NO|
 KOLOM|factuur_opmerkingen|gebruiker_id|integer|YES|
 KOLOM|factuur_opmerkingen|id|integer|NO|nextval('factuur_opmerkingen_id_seq'::regclass)
@@ -1451,6 +1458,22 @@ KOLOM|feestdagen|id|integer|NO|nextval('feestdagen_id_seq'::regclass)
 KOLOM|feestdagen|jaar|integer|NO|
 KOLOM|feestdagen|naam|text|NO|
 KOLOM|feestdagen|werkgever_id|integer|YES|
+KOLOM|fie_ak_adviezen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|fie_ak_adviezen|advies|text|NO|
+KOLOM|fie_ak_adviezen|afgehandeld_door_id|integer|YES|
+KOLOM|fie_ak_adviezen|afgehandeld_op|timestamp without time zone|YES|
+KOLOM|fie_ak_adviezen|afhandel_reden|text|YES|
+KOLOM|fie_ak_adviezen|bedrag|real|NO|0
+KOLOM|fie_ak_adviezen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|fie_ak_adviezen|bron_vermelding|text|YES|
+KOLOM|fie_ak_adviezen|categorie|text|NO|'overig'::text
+KOLOM|fie_ak_adviezen|cijfers|text|YES|
+KOLOM|fie_ak_adviezen|dedup_sleutel|text|NO|
+KOLOM|fie_ak_adviezen|id|integer|NO|nextval('fie_ak_adviezen_id_seq'::regclass)
+KOLOM|fie_ak_adviezen|status|text|NO|'open'::text
+KOLOM|fie_ak_adviezen|titel|text|NO|
+KOLOM|fie_ak_adviezen|vervolgstap|text|YES|
+KOLOM|fie_ak_adviezen|werkgever_id|integer|YES|
 KOLOM|fie_ak_posten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|fie_ak_posten|actief|boolean|NO|true
 KOLOM|fie_ak_posten|bedrag_jaarbasis|real|NO|0
@@ -1480,10 +1503,20 @@ KOLOM|fie_jaarbegrotingen|opmerkingen|text|YES|
 KOLOM|fie_jaarbegrotingen|productieve_uren_doel|integer|YES|
 KOLOM|fie_jaarbegrotingen|status|text|NO|'concept'::text
 KOLOM|fie_jaarbegrotingen|verdeelsleutel|text|NO|'uren'::text
+KOLOM|fie_jaarrealisaties|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|fie_jaarrealisaties|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|fie_jaarrealisaties|boekjaar|integer|NO|
+KOLOM|fie_jaarrealisaties|bron|text|NO|'jaarrekening'::text
+KOLOM|fie_jaarrealisaties|id|integer|NO|nextval('fie_jaarrealisaties_id_seq'::regclass)
+KOLOM|fie_jaarrealisaties|ohw_mutatie|real|YES|
+KOLOM|fie_jaarrealisaties|omzet_gefactureerd|real|YES|
+KOLOM|fie_jaarrealisaties|opmerkingen|text|YES|
+KOLOM|fie_jaarrealisaties|personeelskosten_totaal|real|YES|
+KOLOM|fie_jaarrealisaties|werkgever_id|integer|YES|
 KOLOM|fie_leermomenten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|fie_leermomenten|afwijking_pct_arbeid|real|NO|0
 KOLOM|fie_leermomenten|afwijking_pct_materiaal|real|NO|0
-KOLOM|fie_leermomenten|correctie_factor|real|NO|1
+KOLOM|fie_leermomenten|correctie_factor|real|NO|1.0
 KOLOM|fie_leermomenten|gebaseerd_op_n_projecten|integer|NO|0
 KOLOM|fie_leermomenten|id|integer|NO|nextval('fie_leermomenten_id_seq'::regclass)
 KOLOM|fie_leermomenten|laatste_update|timestamp without time zone|NO|now()
@@ -1518,6 +1551,28 @@ KOLOM|fie_observaties|id|integer|NO|nextval('fie_observaties_id_seq'::regclass)
 KOLOM|fie_observaties|omschrijving|text|NO|
 KOLOM|fie_observaties|type|text|NO|
 KOLOM|fie_observaties|waarde|real|YES|
+KOLOM|financiele_contract_kosten|aangemaakt_door_id|integer|YES|
+KOLOM|financiele_contract_kosten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|financiele_contract_kosten|bedrag|real|NO|
+KOLOM|financiele_contract_kosten|bron|text|NO|'handmatig'::text
+KOLOM|financiele_contract_kosten|contract_id|integer|NO|
+KOLOM|financiele_contract_kosten|document_id|integer|YES|
+KOLOM|financiele_contract_kosten|id|integer|NO|nextval('financiele_contract_kosten_id_seq'::regclass)
+KOLOM|financiele_contract_kosten|jaar|integer|NO|
+KOLOM|financiele_contract_kosten|notitie|text|YES|
+KOLOM|financiele_contract_signaleringen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|financiele_contract_signaleringen|ai_advies|text|YES|
+KOLOM|financiele_contract_signaleringen|bedrag|real|YES|
+KOLOM|financiele_contract_signaleringen|boodschap|text|NO|
+KOLOM|financiele_contract_signaleringen|contract_id|integer|NO|
+KOLOM|financiele_contract_signaleringen|dedupe_sleutel|text|NO|
+KOLOM|financiele_contract_signaleringen|ernst|text|NO|'info'::text
+KOLOM|financiele_contract_signaleringen|gezien_door_id|integer|YES|
+KOLOM|financiele_contract_signaleringen|gezien_op|timestamp without time zone|YES|
+KOLOM|financiele_contract_signaleringen|id|integer|NO|nextval('financiele_contract_signaleringen_id_seq'::regclass)
+KOLOM|financiele_contract_signaleringen|status|text|NO|'nieuw'::text
+KOLOM|financiele_contract_signaleringen|type|text|NO|
+KOLOM|financiele_contract_signaleringen|zekerheid|text|YES|
 KOLOM|financiele_contracten|aangemaakt_door_id|integer|YES|
 KOLOM|financiele_contracten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|financiele_contracten|aantal_in_gebruik|integer|YES|
@@ -1546,32 +1601,16 @@ KOLOM|financiele_contracten|opzegtermijn_maanden|integer|YES|
 KOLOM|financiele_contracten|status|text|NO|'actief'::text
 KOLOM|financiele_contracten|verlengingsduur_maanden|integer|YES|
 KOLOM|financiele_contracten|werkgever_id|integer|YES|
-KOLOM|financiele_contract_kosten|aangemaakt_door_id|integer|YES|
-KOLOM|financiele_contract_kosten|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|financiele_contract_kosten|bedrag|real|NO|
-KOLOM|financiele_contract_kosten|bron|text|NO|'handmatig'::text
-KOLOM|financiele_contract_kosten|contract_id|integer|NO|
-KOLOM|financiele_contract_kosten|document_id|integer|YES|
-KOLOM|financiele_contract_kosten|id|integer|NO|nextval('financiele_contract_kosten_id_seq'::regclass)
-KOLOM|financiele_contract_kosten|jaar|integer|NO|
-KOLOM|financiele_contract_kosten|notitie|text|YES|
-KOLOM|financiele_contract_signaleringen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|financiele_contract_signaleringen|ai_advies|text|YES|
-KOLOM|financiele_contract_signaleringen|bedrag|real|YES|
-KOLOM|financiele_contract_signaleringen|boodschap|text|NO|
-KOLOM|financiele_contract_signaleringen|contract_id|integer|NO|
-KOLOM|financiele_contract_signaleringen|dedupe_sleutel|text|NO|
-KOLOM|financiele_contract_signaleringen|ernst|text|NO|'info'::text
-KOLOM|financiele_contract_signaleringen|gezien_door_id|integer|YES|
-KOLOM|financiele_contract_signaleringen|gezien_op|timestamp without time zone|YES|
-KOLOM|financiele_contract_signaleringen|id|integer|NO|nextval('financiele_contract_signaleringen_id_seq'::regclass)
-KOLOM|financiele_contract_signaleringen|status|text|NO|'nieuw'::text
-KOLOM|financiele_contract_signaleringen|type|text|NO|
-KOLOM|financiele_contract_signaleringen|zekerheid|text|YES|
+KOLOM|financiele_document_log|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|financiele_document_log|actie|text|NO|
+KOLOM|financiele_document_log|details|text|YES|
+KOLOM|financiele_document_log|document_id|integer|YES|
+KOLOM|financiele_document_log|gebruiker_id|integer|YES|
+KOLOM|financiele_document_log|id|integer|NO|nextval('financiele_document_log_id_seq'::regclass)
 KOLOM|financiele_documenten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|financiele_documenten|ai_bewijs|jsonb|YES|
-KOLOM|financiele_documenten|bestandsgrootte|integer|YES|
 KOLOM|financiele_documenten|bestands_hash|text|YES|
+KOLOM|financiele_documenten|bestandsgrootte|integer|YES|
 KOLOM|financiele_documenten|bestandsnaam|text|NO|
 KOLOM|financiele_documenten|bestandspad|text|NO|
 KOLOM|financiele_documenten|betrouwbaarheid_score|integer|NO|0
@@ -1597,12 +1636,6 @@ KOLOM|financiele_documenten|opslaglocatie|text|NO|
 KOLOM|financiele_documenten|subtype|text|NO|'enkelvoudig'::text
 KOLOM|financiele_documenten|titel|text|NO|
 KOLOM|financiele_documenten|vervangt_document_id|integer|YES|
-KOLOM|financiele_document_log|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|financiele_document_log|actie|text|NO|
-KOLOM|financiele_document_log|details|text|YES|
-KOLOM|financiele_document_log|document_id|integer|YES|
-KOLOM|financiele_document_log|gebruiker_id|integer|YES|
-KOLOM|financiele_document_log|id|integer|NO|nextval('financiele_document_log_id_seq'::regclass)
 KOLOM|financiele_kerncijfers|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|financiele_kerncijfers|beoordeeld_door|integer|YES|
 KOLOM|financiele_kerncijfers|beoordeeld_op|timestamp without time zone|YES|
@@ -1688,15 +1721,6 @@ KOLOM|gebouw_email_bijlagen|email_id|integer|NO|
 KOLOM|gebouw_email_bijlagen|grootte|integer|YES|
 KOLOM|gebouw_email_bijlagen|id|integer|NO|nextval('gebouw_email_bijlagen_id_seq'::regclass)
 KOLOM|gebouw_email_bijlagen|object_pad|text|YES|
-KOLOM|gebouw_emails|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|gebouw_emails|afzender|text|YES|
-KOLOM|gebouw_emails|ai_actiepunten|text|YES|
-KOLOM|gebouw_emails|ai_contactinfo|text|YES|
-KOLOM|gebouw_emails|ai_naw|text|YES|
-KOLOM|gebouw_emails|ai_omschrijving|text|YES|
-KOLOM|gebouw_emails|ai_relevant|boolean|YES|
-KOLOM|gebouw_emails|ai_relevant_reden|text|YES|
-KOLOM|gebouw_emails|ai_tekeningen|text|YES|
 KOLOM|gebouw_email_samenvattingen|aantal_emails|integer|NO|0
 KOLOM|gebouw_email_samenvattingen|actiepunten|text|YES|
 KOLOM|gebouw_email_samenvattingen|afspraken|text|YES|
@@ -1713,6 +1737,15 @@ KOLOM|gebouw_email_samenvattingen|opdrachtgever|text|YES|
 KOLOM|gebouw_email_samenvattingen|opdrachtomschrijving|text|YES|
 KOLOM|gebouw_email_samenvattingen|risicos|text|YES|
 KOLOM|gebouw_email_samenvattingen|tekeningen|text|YES|
+KOLOM|gebouw_emails|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|gebouw_emails|afzender|text|YES|
+KOLOM|gebouw_emails|ai_actiepunten|text|YES|
+KOLOM|gebouw_emails|ai_contactinfo|text|YES|
+KOLOM|gebouw_emails|ai_naw|text|YES|
+KOLOM|gebouw_emails|ai_omschrijving|text|YES|
+KOLOM|gebouw_emails|ai_relevant_reden|text|YES|
+KOLOM|gebouw_emails|ai_relevant|boolean|YES|
+KOLOM|gebouw_emails|ai_tekeningen|text|YES|
 KOLOM|gebouw_emails|bestandsnaam|text|NO|
 KOLOM|gebouw_emails|datum|text|YES|
 KOLOM|gebouw_emails|gebouw_id|integer|NO|
@@ -1722,32 +1755,6 @@ KOLOM|gebouw_emails|object_pad|text|YES|
 KOLOM|gebouw_emails|onderwerp|text|YES|
 KOLOM|gebouw_emails|ontvanger|text|YES|
 KOLOM|gebouw_emails|status|text|NO|'in_behandeling'::text
-KOLOM|gebouwen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|gebouwen|aantal_verdiepingen|integer|YES|
-KOLOM|gebouwen|adres|text|NO|
-KOLOM|gebouwen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|gebouwen|breedte|real|YES|
-KOLOM|gebouwen|diepte|real|YES|
-KOLOM|gebouwen|galerij_upload_toegestaan|boolean|NO|false
-KOLOM|gebouwen|gearchiveerd|boolean|NO|false
-KOLOM|gebouwen|gearchiveerd_op|timestamp without time zone|YES|
-KOLOM|gebouwen|gebouw_type|text|YES|
-KOLOM|gebouwen|gereed_door|text|YES|
-KOLOM|gebouwen|gereed_op|timestamp without time zone|YES|
-KOLOM|gebouwen|hoogte|real|YES|
-KOLOM|gebouwen|id|integer|NO|nextval('gebouwen_id_seq'::regclass)
-KOLOM|gebouwen|klant_id|integer|YES|
-KOLOM|gebouwen|latitude|real|YES|
-KOLOM|gebouwen|longitude|real|YES|
-KOLOM|gebouwen|naam|text|NO|
-KOLOM|gebouwen|omschrijving|text|YES|
-KOLOM|gebouwen|oppervlakte|real|YES|
-KOLOM|gebouwen|postcode|text|YES|
-KOLOM|gebouwen|projectnummer|text|YES|
-KOLOM|gebouwen|project_status|text|YES|
-KOLOM|gebouwen|stad|text|YES|
-KOLOM|gebouwen|werkgever_id|integer|YES|
-KOLOM|gebouwen|werknummer|text|YES|
 KOLOM|gebouw_partijen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebouw_partijen|adres|text|YES|
 KOLOM|gebouw_partijen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -1777,29 +1784,36 @@ KOLOM|gebouw_toewijzingen|gebouw_id|integer|NO|
 KOLOM|gebouw_toewijzingen|gebruiker_id|integer|NO|
 KOLOM|gebouw_toewijzingen|id|integer|NO|nextval('gebouw_toewijzingen_id_seq'::regclass)
 KOLOM|gebouw_toewijzingen|project_rol|text|YES|
+KOLOM|gebouwen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|gebouwen|aantal_verdiepingen|integer|YES|
+KOLOM|gebouwen|adres|text|NO|
+KOLOM|gebouwen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|gebouwen|breedte|real|YES|
+KOLOM|gebouwen|diepte|real|YES|
+KOLOM|gebouwen|galerij_upload_toegestaan|boolean|NO|false
+KOLOM|gebouwen|gearchiveerd_op|timestamp without time zone|YES|
+KOLOM|gebouwen|gearchiveerd|boolean|NO|false
+KOLOM|gebouwen|gebouw_type|text|YES|
+KOLOM|gebouwen|gereed_door|text|YES|
+KOLOM|gebouwen|gereed_op|timestamp without time zone|YES|
+KOLOM|gebouwen|hoogte|real|YES|
+KOLOM|gebouwen|id|integer|NO|nextval('gebouwen_id_seq'::regclass)
+KOLOM|gebouwen|klant_id|integer|YES|
+KOLOM|gebouwen|latitude|real|YES|
+KOLOM|gebouwen|longitude|real|YES|
+KOLOM|gebouwen|naam|text|NO|
+KOLOM|gebouwen|omschrijving|text|YES|
+KOLOM|gebouwen|oppervlakte|real|YES|
+KOLOM|gebouwen|postcode|text|YES|
+KOLOM|gebouwen|project_status|text|YES|
+KOLOM|gebouwen|projectnummer|text|YES|
+KOLOM|gebouwen|stad|text|YES|
+KOLOM|gebouwen|werkgever_id|integer|YES|
+KOLOM|gebouwen|werknummer|text|YES|
 KOLOM|gebruiker_profielen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruiker_profielen|gebruiker_id|integer|NO|
 KOLOM|gebruiker_profielen|id|integer|NO|nextval('gebruiker_profielen_id_seq'::regclass)
 KOLOM|gebruiker_profielen|profiel_id|integer|NO|
-KOLOM|gebruikers|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|gebruikers|actief|boolean|NO|true
-KOLOM|gebruikers|avatar_url|text|YES|
-KOLOM|gebruikers|bedrijfskleuren|text|YES|
-KOLOM|gebruikers|bedrijfslogo_url|text|YES|
-KOLOM|gebruikers|bedrijf|text|YES|
-KOLOM|gebruikers|bedrijf_uitzendbureau|text|YES|
-KOLOM|gebruikers|bevoegdheden|jsonb|NO|'{}'::jsonb
-KOLOM|gebruikers|dienstverband|text|NO|'intern'::text
-KOLOM|gebruikers|email|text|NO|
-KOLOM|gebruikers|functietitels|ARRAY|NO|'{}'::text[]
-KOLOM|gebruikers|geanonimiseerd|text|YES|
-KOLOM|gebruikers|gearchiveerd|boolean|NO|false
-KOLOM|gebruikers|gedeactiveerd_op|timestamp without time zone|YES|
-KOLOM|gebruikers|herkomst_automatisch|boolean|NO|false
-KOLOM|gebruikers|herkomst_profiel_id|integer|YES|
-KOLOM|gebruikers|id|integer|NO|nextval('gebruikers_id_seq'::regclass)
-KOLOM|gebruikers|is_hoofdtester|boolean|NO|false
-KOLOM|gebruikers|laatst_online|timestamp without time zone|YES|
 KOLOM|gebruikers_meldingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruikers_meldingen|ai_classificatie|text|YES|
 KOLOM|gebruikers_meldingen|ai_reactie|text|YES|
@@ -1816,10 +1830,29 @@ KOLOM|gebruikers_meldingen|omschrijving|text|NO|
 KOLOM|gebruikers_meldingen|pagina|text|YES|
 KOLOM|gebruikers_meldingen|screenshot_data|text|YES|
 KOLOM|gebruikers_meldingen|status|text|NO|'nieuw'::text
-KOLOM|gebruikers_meldingen|tech_context|text|YES|
 KOLOM|gebruikers_meldingen|tech_context_toestemming|boolean|NO|false
+KOLOM|gebruikers_meldingen|tech_context|text|YES|
 KOLOM|gebruikers_meldingen|type|text|NO|
 KOLOM|gebruikers_meldingen|urgentie|text|NO|'normaal'::text
+KOLOM|gebruikers|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|gebruikers|actief|boolean|NO|true
+KOLOM|gebruikers|avatar_url|text|YES|
+KOLOM|gebruikers|bedrijf_uitzendbureau|text|YES|
+KOLOM|gebruikers|bedrijfskleuren|text|YES|
+KOLOM|gebruikers|bedrijfslogo_url|text|YES|
+KOLOM|gebruikers|bedrijf|text|YES|
+KOLOM|gebruikers|bevoegdheden|jsonb|NO|'{}'::jsonb
+KOLOM|gebruikers|dienstverband|text|NO|'intern'::text
+KOLOM|gebruikers|email|text|NO|
+KOLOM|gebruikers|functietitels|ARRAY|NO|'{}'::text[]
+KOLOM|gebruikers|geanonimiseerd|text|YES|
+KOLOM|gebruikers|gearchiveerd|boolean|NO|false
+KOLOM|gebruikers|gedeactiveerd_op|timestamp without time zone|YES|
+KOLOM|gebruikers|herkomst_automatisch|boolean|NO|false
+KOLOM|gebruikers|herkomst_profiel_id|integer|YES|
+KOLOM|gebruikers|id|integer|NO|nextval('gebruikers_id_seq'::regclass)
+KOLOM|gebruikers|is_hoofdtester|boolean|NO|false
+KOLOM|gebruikers|laatst_online|timestamp without time zone|YES|
 KOLOM|gebruikers|mislukte_pogingen|integer|NO|0
 KOLOM|gebruikers|moet_wachtwoord_wijzigen|boolean|NO|false
 KOLOM|gebruikers|naam|text|NO|
@@ -1866,8 +1899,8 @@ KOLOM|gereedschappen|gegraveerd_nummer|text|YES|
 KOLOM|gereedschappen|huidige_medewerker_id|integer|YES|
 KOLOM|gereedschappen|id|integer|NO|nextval('gereedschappen_id_seq'::regclass)
 KOLOM|gereedschappen|keuring_norm|text|YES|
-KOLOM|gereedschappen|keuringsplichtig|boolean|NO|false
 KOLOM|gereedschappen|keuring_verval_datum|timestamp without time zone|YES|
+KOLOM|gereedschappen|keuringsplichtig|boolean|NO|false
 KOLOM|gereedschappen|koffer_inbegrepen|boolean|NO|false
 KOLOM|gereedschappen|laatste_keuring|text|YES|
 KOLOM|gereedschappen|lader_inbegrepen|boolean|NO|false
@@ -1882,6 +1915,39 @@ KOLOM|gereedschappen|status|text|NO|'Beschikbaar'::text
 KOLOM|gereedschappen|type|text|YES|
 KOLOM|gereedschappen|volgende_keuring|text|YES|
 KOLOM|gereedschappen|volgnummer|text|NO|
+KOLOM|go_live_adviezen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|go_live_adviezen|afhankelijkheden|ARRAY|NO|'{}'::text[]
+KOLOM|go_live_adviezen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|go_live_adviezen|context_json|jsonb|YES|
+KOLOM|go_live_adviezen|id|integer|NO|nextval('go_live_adviezen_id_seq'::regclass)
+KOLOM|go_live_adviezen|impact|text|YES|
+KOLOM|go_live_adviezen|inhoud|text|NO|
+KOLOM|go_live_adviezen|reden|text|YES|
+KOLOM|go_live_adviezen|risico|text|YES|
+KOLOM|go_live_adviezen|status|text|NO|'open'::text
+KOLOM|go_live_adviezen|tijdwinst_uur|integer|YES|
+KOLOM|go_live_adviezen|titel|text|NO|
+KOLOM|go_live_fasen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|go_live_fasen|afhankelijkheden|ARRAY|NO|'{}'::text[]
+KOLOM|go_live_fasen|beschrijving|text|YES|
+KOLOM|go_live_fasen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|go_live_fasen|doel|text|YES|
+KOLOM|go_live_fasen|geschatte_uren|integer|YES|
+KOLOM|go_live_fasen|id|integer|NO|nextval('go_live_fasen_id_seq'::regclass)
+KOLOM|go_live_fasen|naam|text|NO|
+KOLOM|go_live_fasen|opmerkingen|text|YES|
+KOLOM|go_live_fasen|risico|text|YES|
+KOLOM|go_live_fasen|sleutel|text|NO|
+KOLOM|go_live_fasen|status|text|NO|'open'::text
+KOLOM|go_live_fasen|verantwoordelijke|text|YES|
+KOLOM|go_live_fasen|volgorde|integer|NO|0
+KOLOM|go_live_fasen|voortgang_pct|integer|NO|0
+KOLOM|go_live_lessen|aantal_keer|integer|NO|1
+KOLOM|go_live_lessen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|go_live_lessen|fase_sleutel|text|NO|
+KOLOM|go_live_lessen|id|integer|NO|nextval('go_live_lessen_id_seq'::regclass)
+KOLOM|go_live_lessen|omschrijving|text|NO|
+KOLOM|go_live_lessen|tijd_koste_uur|integer|YES|
 KOLOM|goedkeuring_aanvragen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|goedkeuring_aanvragen|afgehandeld_op|timestamp without time zone|YES|
 KOLOM|goedkeuring_aanvragen|afwijzing_reden|text|YES|
@@ -1938,39 +2004,6 @@ KOLOM|goedkeuring_stappen|gebruiker_id|integer|YES|
 KOLOM|goedkeuring_stappen|gebruiker_naam|text|YES|
 KOLOM|goedkeuring_stappen|id|integer|NO|nextval('goedkeuring_stappen_id_seq'::regclass)
 KOLOM|goedkeuring_stappen|reden|text|YES|
-KOLOM|go_live_adviezen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|go_live_adviezen|afhankelijkheden|ARRAY|NO|'{}'::text[]
-KOLOM|go_live_adviezen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|go_live_adviezen|context_json|jsonb|YES|
-KOLOM|go_live_adviezen|id|integer|NO|nextval('go_live_adviezen_id_seq'::regclass)
-KOLOM|go_live_adviezen|impact|text|YES|
-KOLOM|go_live_adviezen|inhoud|text|NO|
-KOLOM|go_live_adviezen|reden|text|YES|
-KOLOM|go_live_adviezen|risico|text|YES|
-KOLOM|go_live_adviezen|status|text|NO|'open'::text
-KOLOM|go_live_adviezen|tijdwinst_uur|integer|YES|
-KOLOM|go_live_adviezen|titel|text|NO|
-KOLOM|go_live_fasen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|go_live_fasen|afhankelijkheden|ARRAY|NO|'{}'::text[]
-KOLOM|go_live_fasen|beschrijving|text|YES|
-KOLOM|go_live_fasen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|go_live_fasen|doel|text|YES|
-KOLOM|go_live_fasen|geschatte_uren|integer|YES|
-KOLOM|go_live_fasen|id|integer|NO|nextval('go_live_fasen_id_seq'::regclass)
-KOLOM|go_live_fasen|naam|text|NO|
-KOLOM|go_live_fasen|opmerkingen|text|YES|
-KOLOM|go_live_fasen|risico|text|YES|
-KOLOM|go_live_fasen|sleutel|text|NO|
-KOLOM|go_live_fasen|status|text|NO|'open'::text
-KOLOM|go_live_fasen|verantwoordelijke|text|YES|
-KOLOM|go_live_fasen|volgorde|integer|NO|0
-KOLOM|go_live_fasen|voortgang_pct|integer|NO|0
-KOLOM|go_live_lessen|aantal_keer|integer|NO|1
-KOLOM|go_live_lessen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|go_live_lessen|fase_sleutel|text|NO|
-KOLOM|go_live_lessen|id|integer|NO|nextval('go_live_lessen_id_seq'::regclass)
-KOLOM|go_live_lessen|omschrijving|text|NO|
-KOLOM|go_live_lessen|tijd_koste_uur|integer|YES|
 KOLOM|governance_checks|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|governance_checks|afhandeling|text|NO|'automatisch'::text
 KOLOM|governance_checks|entiteit|text|YES|
@@ -2110,6 +2143,17 @@ KOLOM|inbox_items|snagstream_rapporttype|text|YES|
 KOLOM|inbox_items|snagstream_status|text|YES|
 KOLOM|inbox_items|status|text|NO|'nieuw'::text
 KOLOM|inbox_items|verplaatst_op|timestamp without time zone|YES|
+KOLOM|inkoopbon_regels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|inkoopbon_regels|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|inkoopbon_regels|eenheid|text|NO|'st'::text
+KOLOM|inkoopbon_regels|hoeveelheid|real|NO|0
+KOLOM|inkoopbon_regels|id|integer|NO|nextval('inkoopbon_regels_id_seq'::regclass)
+KOLOM|inkoopbon_regels|inkoopbon_id|integer|NO|
+KOLOM|inkoopbon_regels|inkoopplan_regel_id|integer|YES|
+KOLOM|inkoopbon_regels|omschrijving|text|NO|
+KOLOM|inkoopbon_regels|prijs|real|YES|
+KOLOM|inkoopbon_regels|totaal|real|YES|
+KOLOM|inkoopbon_regels|volgorde|integer|NO|0
 KOLOM|inkoopbonnen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|inkoopbonnen|ai_motivatie|text|YES|
 KOLOM|inkoopbonnen|ai_suggestie|boolean|NO|false
@@ -2128,31 +2172,6 @@ KOLOM|inkoopbonnen|status|text|NO|'concept'::text
 KOLOM|inkoopbonnen|totaal_bedrag|real|YES|
 KOLOM|inkoopbonnen|verzonden_naar|text|YES|
 KOLOM|inkoopbonnen|verzonden_op|timestamp without time zone|YES|
-KOLOM|inkoopbon_regels|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|inkoopbon_regels|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|inkoopbon_regels|eenheid|text|NO|'st'::text
-KOLOM|inkoopbon_regels|hoeveelheid|real|NO|0
-KOLOM|inkoopbon_regels|id|integer|NO|nextval('inkoopbon_regels_id_seq'::regclass)
-KOLOM|inkoopbon_regels|inkoopbon_id|integer|NO|
-KOLOM|inkoopbon_regels|inkoopplan_regel_id|integer|YES|
-KOLOM|inkoopbon_regels|omschrijving|text|NO|
-KOLOM|inkoopbon_regels|prijs|real|YES|
-KOLOM|inkoopbon_regels|totaal|real|YES|
-KOLOM|inkoopbon_regels|volgorde|integer|NO|0
-KOLOM|inkoopplannen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|inkoopplannen|ai_adviezen|jsonb|YES|
-KOLOM|inkoopplannen|ai_adviezen_op|timestamp without time zone|YES|
-KOLOM|inkoopplannen|ai_gegenereerd|boolean|NO|false
-KOLOM|inkoopplannen|ai_gegenereerd_op|timestamp without time zone|YES|
-KOLOM|inkoopplannen|ai_samenvatting|text|YES|
-KOLOM|inkoopplannen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|inkoopplannen|id|integer|NO|nextval('inkoopplannen_id_seq'::regclass)
-KOLOM|inkoopplannen|opdracht_id|integer|NO|
-KOLOM|inkoopplannen|opmerkingen|text|YES|
-KOLOM|inkoopplannen|status|text|NO|'concept'::text
-KOLOM|inkoopplannen|totale_besparing|real|YES|
-KOLOM|inkoopplannen|vastgesteld_door_id|integer|YES|
-KOLOM|inkoopplannen|vastgesteld_op|timestamp without time zone|YES|
 KOLOM|inkoopplan_regels|aanbevolen_leverancier|text|YES|
 KOLOM|inkoopplan_regels|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|inkoopplan_regels|ai_motivatie|text|YES|
@@ -2167,8 +2186,8 @@ KOLOM|inkoopplan_regels|gewenste_leverdatum|text|YES|
 KOLOM|inkoopplan_regels|hoeveelheid|real|NO|0
 KOLOM|inkoopplan_regels|id|integer|NO|nextval('inkoopplan_regels_id_seq'::regclass)
 KOLOM|inkoopplan_regels|inkoopplan_id|integer|NO|
-KOLOM|inkoopplan_regels|inkoopprijs|real|YES|
 KOLOM|inkoopplan_regels|inkoopprijs_verwacht|real|YES|
+KOLOM|inkoopplan_regels|inkoopprijs|real|YES|
 KOLOM|inkoopplan_regels|leverancier|text|YES|
 KOLOM|inkoopplan_regels|levertijd_weken|integer|YES|
 KOLOM|inkoopplan_regels|omschrijving|text|NO|
@@ -2179,6 +2198,20 @@ KOLOM|inkoopplan_regels|status|text|NO|'open'::text
 KOLOM|inkoopplan_regels|type|text|NO|'standaard'::text
 KOLOM|inkoopplan_regels|volgorde|integer|NO|0
 KOLOM|inkoopplan_regels|werkbegroting_regel_id|integer|YES|
+KOLOM|inkoopplannen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|inkoopplannen|ai_adviezen_op|timestamp without time zone|YES|
+KOLOM|inkoopplannen|ai_adviezen|jsonb|YES|
+KOLOM|inkoopplannen|ai_gegenereerd_op|timestamp without time zone|YES|
+KOLOM|inkoopplannen|ai_gegenereerd|boolean|NO|false
+KOLOM|inkoopplannen|ai_samenvatting|text|YES|
+KOLOM|inkoopplannen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|inkoopplannen|id|integer|NO|nextval('inkoopplannen_id_seq'::regclass)
+KOLOM|inkoopplannen|opdracht_id|integer|NO|
+KOLOM|inkoopplannen|opmerkingen|text|YES|
+KOLOM|inkoopplannen|status|text|NO|'concept'::text
+KOLOM|inkoopplannen|totale_besparing|real|YES|
+KOLOM|inkoopplannen|vastgesteld_door_id|integer|YES|
+KOLOM|inkoopplannen|vastgesteld_op|timestamp without time zone|YES|
 KOLOM|inspectie_bevindingen|aanbeveling|text|YES|
 KOLOM|inspectie_bevindingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|inspectie_bevindingen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -2232,8 +2265,8 @@ KOLOM|kantoor_releases|status|text|NO|'concept'::text
 KOLOM|kantoor_releases|tests_geslaagd|boolean|YES|
 KOLOM|kantoor_releases|versienummer|text|NO|
 KOLOM|kantoor_releases|vorige_versie_id|integer|YES|
-KOLOM|kantoor_releases|vrijgegeven_door|integer|YES|
 KOLOM|kantoor_releases|vrijgegeven_door_naam|text|YES|
+KOLOM|kantoor_releases|vrijgegeven_door|integer|YES|
 KOLOM|kantoor_releases|vrijgegeven_op|timestamp with time zone|YES|
 KOLOM|label_applicaties|id|integer|NO|nextval('label_applicaties_id_seq'::regclass)
 KOLOM|label_applicaties|label_id|integer|NO|
@@ -2298,14 +2331,14 @@ KOLOM|leveranciers|code|text|YES|
 KOLOM|leveranciers|contact_email|text|YES|
 KOLOM|leveranciers|contact_functie|text|YES|
 KOLOM|leveranciers|contact_mobiel|text|YES|
-KOLOM|leveranciers|contactpersoon|text|YES|
 KOLOM|leveranciers|contact_telefoon|text|YES|
+KOLOM|leveranciers|contactpersoon|text|YES|
 KOLOM|leveranciers|email|text|YES|
 KOLOM|leveranciers|factuur_categorie|text|YES|
-KOLOM|leveranciers|geschikt_voor_spoed|boolean|NO|false
 KOLOM|leveranciers|g_rekening_iban|text|YES|
 KOLOM|leveranciers|g_rekening_percentage|real|YES|
 KOLOM|leveranciers|g_rekening_van_toepassing|boolean|NO|false
+KOLOM|leveranciers|geschikt_voor_spoed|boolean|NO|false
 KOLOM|leveranciers|grootboekrekening|text|YES|
 KOLOM|leveranciers|heeft_raamovereenkomst|boolean|NO|false
 KOLOM|leveranciers|huisnummer|text|YES|
@@ -2327,8 +2360,8 @@ KOLOM|leveranciers|productcategorieen|text|YES|
 KOLOM|leveranciers|provincie|text|YES|
 KOLOM|leveranciers|relatiecode|text|YES|
 KOLOM|leveranciers|stad|text|YES|
-KOLOM|leveranciers|telefoon|text|YES|
 KOLOM|leveranciers|t_nam_van|text|YES|
+KOLOM|leveranciers|telefoon|text|YES|
 KOLOM|leveranciers|website|text|YES|
 KOLOM|login_pogingen|email|text|NO|
 KOLOM|login_pogingen|gebruiker_id|integer|YES|
@@ -2401,6 +2434,14 @@ KOLOM|magazijn_locaties|naam|text|NO|
 KOLOM|magazijn_locaties|omschrijving|text|YES|
 KOLOM|magazijn_locaties|parent_id|integer|YES|
 KOLOM|magazijn_locaties|type|text|NO|'rek'::text
+KOLOM|magazijn_picklijst_regels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|magazijn_picklijst_regels|artikel_id|integer|NO|
+KOLOM|magazijn_picklijst_regels|gepickt_hoeveelheid|real|NO|0
+KOLOM|magazijn_picklijst_regels|gevraagd_hoeveelheid|real|NO|
+KOLOM|magazijn_picklijst_regels|id|integer|NO|nextval('magazijn_picklijst_regels_id_seq'::regclass)
+KOLOM|magazijn_picklijst_regels|locatie_id|integer|YES|
+KOLOM|magazijn_picklijst_regels|picklijst_id|integer|NO|
+KOLOM|magazijn_picklijst_regels|status|text|NO|'open'::text
 KOLOM|magazijn_picklijsten|aangemaakt_door_id|integer|YES|
 KOLOM|magazijn_picklijsten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|magazijn_picklijsten|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -2412,14 +2453,6 @@ KOLOM|magazijn_picklijsten|opdracht_titel|text|YES|
 KOLOM|magazijn_picklijsten|status|text|NO|'concept'::text
 KOLOM|magazijn_picklijsten|verwerkt_door_id|integer|YES|
 KOLOM|magazijn_picklijsten|verwerkt_op|timestamp without time zone|YES|
-KOLOM|magazijn_picklijst_regels|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|magazijn_picklijst_regels|artikel_id|integer|NO|
-KOLOM|magazijn_picklijst_regels|gepickt_hoeveelheid|real|NO|0
-KOLOM|magazijn_picklijst_regels|gevraagd_hoeveelheid|real|NO|
-KOLOM|magazijn_picklijst_regels|id|integer|NO|nextval('magazijn_picklijst_regels_id_seq'::regclass)
-KOLOM|magazijn_picklijst_regels|locatie_id|integer|YES|
-KOLOM|magazijn_picklijst_regels|picklijst_id|integer|NO|
-KOLOM|magazijn_picklijst_regels|status|text|NO|'open'::text
 KOLOM|magazijn_snoozes|aangemaakt_door_id|integer|YES|
 KOLOM|magazijn_snoozes|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|magazijn_snoozes|artikel_id|integer|NO|
@@ -2456,8 +2489,8 @@ KOLOM|materiaal_aanvragen|ai_logboek_json|jsonb|YES|
 KOLOM|materiaal_aanvragen|ai_prijs_indicatie|text|YES|
 KOLOM|materiaal_aanvragen|ai_scope_check|text|YES|
 KOLOM|materiaal_aanvragen|ai_scope_toelichting|text|YES|
-KOLOM|materiaal_aanvragen|behandeld_door_id|integer|YES|
 KOLOM|materiaal_aanvragen|behandel_notitie|text|YES|
+KOLOM|materiaal_aanvragen|behandeld_door_id|integer|YES|
 KOLOM|materiaal_aanvragen|bijgewerkt_op|timestamp with time zone|NO|now()
 KOLOM|materiaal_aanvragen|foto_pad|text|YES|
 KOLOM|materiaal_aanvragen|id|integer|NO|nextval('materiaal_aanvragen_id_seq'::regclass)
@@ -2534,8 +2567,8 @@ KOLOM|medewerkers|noodcontact_naam|text|YES|
 KOLOM|medewerkers|noodcontact_telefoon|text|YES|
 KOLOM|medewerkers|opmerkingen|text|YES|
 KOLOM|medewerkers|postcode|text|YES|
-KOLOM|medewerkers|rijbewijs|text|YES|
 KOLOM|medewerkers|rijbewijs_vervaldatum|text|YES|
+KOLOM|medewerkers|rijbewijs|text|YES|
 KOLOM|medewerkers|telefoon|text|YES|
 KOLOM|medewerkers|uit_dienst_per|text|YES|
 KOLOM|medewerkers|uitzendbureau_id|integer|YES|
@@ -2817,19 +2850,6 @@ KOLOM|offerte_regels|uitgangspunten|text|YES|
 KOLOM|offerte_regels|volgorde|integer|NO|0
 KOLOM|offerte_regels|voorziening_id|integer|YES|
 KOLOM|offerte_regels|weergave_override|text|YES|
-KOLOM|offertes|aangemaakt_door_id|integer|YES|
-KOLOM|offertes|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|offertes|auto_project_id|integer|YES|
-KOLOM|offertes|bedrag_excl_btw|real|NO|0
-KOLOM|offertes|bedrag_incl_btw|real|NO|0
-KOLOM|offertes|begroting_weergave|jsonb|YES|
-KOLOM|offertes|behandeld_door_id|integer|YES|
-KOLOM|offertes|betaalwijze|text|YES|
-KOLOM|offertes|betalingstermijn_dagen|integer|NO|30
-KOLOM|offertes|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|offertes|btw_percentage|real|NO|21
-KOLOM|offertes|calculatie_id|integer|YES|
-KOLOM|offertes|datum|text|YES|
 KOLOM|offerte_secties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|offerte_secties|actief|boolean|NO|true
 KOLOM|offerte_secties|ai_gegenereerd|boolean|NO|false
@@ -2841,10 +2861,6 @@ KOLOM|offerte_secties|offerte_id|integer|NO|
 KOLOM|offerte_secties|sectie_type|text|NO|'vrij'::text
 KOLOM|offerte_secties|titel|text|NO|''::text
 KOLOM|offerte_secties|volgorde|integer|NO|0
-KOLOM|offertes|factuur_schema|jsonb|YES|
-KOLOM|offertes|gebouw_id|integer|YES|
-KOLOM|offertes|geldigheid_dagen|integer|NO|30
-KOLOM|offertes|id|integer|NO|nextval('offertes_id_seq'::regclass)
 KOLOM|offerte_sjablonen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|offerte_sjablonen|actief|boolean|NO|true
 KOLOM|offerte_sjablonen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -2853,27 +2869,6 @@ KOLOM|offerte_sjablonen|id|integer|NO|nextval('offerte_sjablonen_id_seq'::regcla
 KOLOM|offerte_sjablonen|naam|text|NO|
 KOLOM|offerte_sjablonen|omschrijving|text|YES|
 KOLOM|offerte_sjablonen|werkmaatschappij|text|NO|'FPS Bouw'::text
-KOLOM|offertes|klant_id|integer|YES|
-KOLOM|offertes|klant_type|text|YES|
-KOLOM|offertes|kleurthema|text|YES|'fps-oranje'::text
-KOLOM|offertes|offertenummer|text|YES|
-KOLOM|offertes|ons_kenmerk|text|YES|
-KOLOM|offertes|opdrachtgever|text|YES|
-KOLOM|offertes|portaal_status|text|NO|'concept'::text
-KOLOM|offertes|presentatie_niveau|integer|YES|3
-KOLOM|offertes|projectkans_id|integer|YES|
-KOLOM|offertes|sjabloon_id|integer|YES|
-KOLOM|offertes|status|text|NO|'concept'::text
-KOLOM|offertes|studio_model_id|integer|YES|
-KOLOM|offertes|titel|text|NO|
-KOLOM|offertes|uw_brief_van|text|YES|
-KOLOM|offertes|uw_kenmerk|text|YES|
-KOLOM|offertes|vervolg_opties|jsonb|YES|
-KOLOM|offertes|vervolg_tekst|text|YES|
-KOLOM|offertes|verzend_type|text|NO|'ondertekening'::text
-KOLOM|offertes|voorwaarden_set_id|integer|YES|
-KOLOM|offertes|voorwaarden_snapshot|text|YES|
-KOLOM|offertes|voorwaarden|text|YES|
 KOLOM|offerte_tracking|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|offerte_tracking|event|text|NO|
 KOLOM|offerte_tracking|id|integer|NO|nextval('offerte_tracking_id_seq'::regclass)
@@ -2913,6 +2908,44 @@ KOLOM|offerte_vragen|id|integer|NO|nextval('offerte_vragen_id_seq'::regclass)
 KOLOM|offerte_vragen|offerte_id|integer|NO|
 KOLOM|offerte_vragen|type|text|YES|
 KOLOM|offerte_vragen|vraag|text|NO|
+KOLOM|offertes|aangemaakt_door_id|integer|YES|
+KOLOM|offertes|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|offertes|auto_project_id|integer|YES|
+KOLOM|offertes|bedrag_excl_btw|real|NO|0
+KOLOM|offertes|bedrag_incl_btw|real|NO|0
+KOLOM|offertes|begroting_weergave|jsonb|YES|
+KOLOM|offertes|behandeld_door_id|integer|YES|
+KOLOM|offertes|betaalwijze|text|YES|
+KOLOM|offertes|betalingstermijn_dagen|integer|NO|30
+KOLOM|offertes|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|offertes|btw_percentage|real|NO|21
+KOLOM|offertes|calculatie_id|integer|YES|
+KOLOM|offertes|datum|text|YES|
+KOLOM|offertes|factuur_schema|jsonb|YES|
+KOLOM|offertes|gebouw_id|integer|YES|
+KOLOM|offertes|geldigheid_dagen|integer|NO|30
+KOLOM|offertes|id|integer|NO|nextval('offertes_id_seq'::regclass)
+KOLOM|offertes|klant_id|integer|YES|
+KOLOM|offertes|klant_type|text|YES|
+KOLOM|offertes|kleurthema|text|YES|'fps-oranje'::text
+KOLOM|offertes|offertenummer|text|YES|
+KOLOM|offertes|ons_kenmerk|text|YES|
+KOLOM|offertes|opdrachtgever|text|YES|
+KOLOM|offertes|portaal_status|text|NO|'concept'::text
+KOLOM|offertes|presentatie_niveau|integer|YES|3
+KOLOM|offertes|projectkans_id|integer|YES|
+KOLOM|offertes|sjabloon_id|integer|YES|
+KOLOM|offertes|status|text|NO|'concept'::text
+KOLOM|offertes|studio_model_id|integer|YES|
+KOLOM|offertes|titel|text|NO|
+KOLOM|offertes|uw_brief_van|text|YES|
+KOLOM|offertes|uw_kenmerk|text|YES|
+KOLOM|offertes|vervolg_opties|jsonb|YES|
+KOLOM|offertes|vervolg_tekst|text|YES|
+KOLOM|offertes|verzend_type|text|NO|'ondertekening'::text
+KOLOM|offertes|voorwaarden_set_id|integer|YES|
+KOLOM|offertes|voorwaarden_snapshot|text|YES|
+KOLOM|offertes|voorwaarden|text|YES|
 KOLOM|onderaannemer_orders|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|onderaannemer_orders|bedrag_excl_btw|real|YES|
 KOLOM|onderaannemer_orders|bedrijf|text|YES|
@@ -2935,14 +2968,6 @@ KOLOM|onderhanden_werk_overrides|opdracht_id|integer|NO|
 KOLOM|onderhanden_werk_overrides|opmerkingen|text|YES|
 KOLOM|onderhanden_werk_overrides|percentage_gereed|real|YES|
 KOLOM|onderhanden_werk_overrides|waarderingsmethode|text|NO|'percentage_gereed'::text
-KOLOM|onderhoud|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|onderhoud|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|onderhoud|deadline|text|YES|
-KOLOM|onderhoud|gebouw_id|integer|YES|
-KOLOM|onderhoud|id|integer|NO|nextval('onderhoud_id_seq'::regclass)
-KOLOM|onderhoud|omschrijving|text|YES|
-KOLOM|onderhoud|prioriteit|text|NO|'normaal'::text
-KOLOM|onderhoud|resultaat|text|YES|
 KOLOM|onderhoudscontracten|aangemaakt_door_id|integer|YES|
 KOLOM|onderhoudscontracten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|onderhoudscontracten|automatische_verlenging|boolean|NO|false
@@ -2968,6 +2993,14 @@ KOLOM|onderhoudscontracten|onderhouds_frequentie|text|NO|'jaarlijks'::text
 KOLOM|onderhoudscontracten|opdrachtgever|text|YES|
 KOLOM|onderhoudscontracten|opzegtermijn_maanden|integer|YES|
 KOLOM|onderhoudscontracten|status|text|NO|'concept'::text
+KOLOM|onderhoud|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|onderhoud|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|onderhoud|deadline|text|YES|
+KOLOM|onderhoud|gebouw_id|integer|YES|
+KOLOM|onderhoud|id|integer|NO|nextval('onderhoud_id_seq'::regclass)
+KOLOM|onderhoud|omschrijving|text|YES|
+KOLOM|onderhoud|prioriteit|text|NO|'normaal'::text
+KOLOM|onderhoud|resultaat|text|YES|
 KOLOM|onderhoud|status|text|NO|'open'::text
 KOLOM|onderhoud|titel|text|NO|
 KOLOM|onderhoud|toegewezen_aan_id|integer|YES|
@@ -3024,8 +3057,8 @@ KOLOM|opleverrapporten|bevroren_op|timestamp without time zone|YES|
 KOLOM|opleverrapporten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|opleverrapporten|bijlagen_ids|jsonb|NO|'[]'::jsonb
 KOLOM|opleverrapporten|certificaat_garantie_maanden|integer|NO|12
-KOLOM|opleverrapporten|certificaat_geaccordeerd|boolean|NO|false
 KOLOM|opleverrapporten|certificaat_geaccordeerd_op|timestamp without time zone|YES|
+KOLOM|opleverrapporten|certificaat_geaccordeerd|boolean|NO|false
 KOLOM|opleverrapporten|gebouw_id|integer|NO|
 KOLOM|opleverrapporten|id|integer|NO|nextval('opleverrapporten_id_seq'::regclass)
 KOLOM|opleverrapporten|klant_reactie_op|timestamp without time zone|YES|
@@ -3211,15 +3244,15 @@ KOLOM|planning_items|locaties|text|YES|
 KOLOM|planning_items|medewerker_id|integer|YES|
 KOLOM|planning_items|notities|text|YES|
 KOLOM|planning_items|omschrijving|text|YES|
+KOLOM|planning_items|op_gesloten_dag|boolean|NO|false
 KOLOM|planning_items|opdracht_id|integer|YES|
 KOLOM|planning_items|opdracht_type|text|YES|
-KOLOM|planning_items|op_gesloten_dag|boolean|NO|false
 KOLOM|planning_items|project_id|integer|YES|
 KOLOM|planning_items|project_naam|text|YES|
 KOLOM|planning_items|status|text|NO|'concept'::text
 KOLOM|planning_items|tijd_eind|text|YES|
-KOLOM|planning_items|tijdsloten|text|YES|
 KOLOM|planning_items|tijd_start|text|YES|
+KOLOM|planning_items|tijdsloten|text|YES|
 KOLOM|planning_items|titel|text|NO|
 KOLOM|planning_items|type|text|NO|'intern'::text
 KOLOM|planning_items|uitvoering_status|text|NO|'gepland'::text
@@ -3254,8 +3287,8 @@ KOLOM|profielen|naam|text|NO|
 KOLOM|profielen|systeem|boolean|NO|false
 KOLOM|project_begrotingen|aangemaakt_door_id|integer|YES|
 KOLOM|project_begrotingen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|project_begrotingen|ai_analyse|jsonb|YES|
 KOLOM|project_begrotingen|ai_analyse_op|timestamp without time zone|YES|
+KOLOM|project_begrotingen|ai_analyse|jsonb|YES|
 KOLOM|project_begrotingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|project_begrotingen|calculatie_id|integer|YES|
 KOLOM|project_begrotingen|gebouw_id|integer|YES|
@@ -3375,6 +3408,31 @@ KOLOM|salaris_audit_ext|id|integer|NO|nextval('salaris_audit_ext_id_seq'::regcla
 KOLOM|salaris_audit_ext|medewerker_id|integer|YES|
 KOLOM|salaris_audit_ext|tijdstip|timestamp without time zone|NO|now()
 KOLOM|salaris_audit_ext|werkmaatschappij|text|YES|
+KOLOM|salaris_mutaties|aangemaakt_door_id|integer|YES|
+KOLOM|salaris_mutaties|aangemaakt_door_naam|text|YES|
+KOLOM|salaris_mutaties|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|salaris_mutaties|akkoord|boolean|YES|
+KOLOM|salaris_mutaties|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|salaris_mutaties|bijlage_grootte|integer|YES|
+KOLOM|salaris_mutaties|bijlage_naam|text|YES|
+KOLOM|salaris_mutaties|bijlage_object_path|text|YES|
+KOLOM|salaris_mutaties|bron|text|NO|'handmatig'::text
+KOLOM|salaris_mutaties|gecontroleerd_door_id|integer|YES|
+KOLOM|salaris_mutaties|gecontroleerd_door_naam|text|YES|
+KOLOM|salaris_mutaties|gecontroleerd_op|timestamp without time zone|YES|
+KOLOM|salaris_mutaties|gecontroleerd|boolean|NO|false
+KOLOM|salaris_mutaties|id|integer|NO|nextval('salaris_mutaties_id_seq'::regclass)
+KOLOM|salaris_mutaties|ingangsdatum|text|YES|
+KOLOM|salaris_mutaties|medewerker_id|integer|YES|
+KOLOM|salaris_mutaties|medewerker_naam|text|YES|
+KOLOM|salaris_mutaties|notities|text|YES|
+KOLOM|salaris_mutaties|omschrijving|text|YES|
+KOLOM|salaris_mutaties|periode_jaar|integer|NO|
+KOLOM|salaris_mutaties|periode_maand|integer|NO|
+KOLOM|salaris_mutaties|status|text|NO|'concept'::text
+KOLOM|salaris_mutaties|type|text|NO|
+KOLOM|salaris_mutaties|werkgever_id|integer|YES|
+KOLOM|salaris_mutaties|werkmaatschappij|text|NO|
 KOLOM|salarisbatches|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|salarisbatches|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|salarisbatches|controle_nodig|integer|NO|0
@@ -3421,31 +3479,6 @@ KOLOM|salarisdocument_audit|id|integer|NO|nextval('salarisdocument_audit_id_seq'
 KOLOM|salarisdocument_audit|medewerker_id|integer|YES|
 KOLOM|salarisdocument_audit|sepa_id|integer|YES|
 KOLOM|salarisdocument_audit|tijdstip|timestamp without time zone|NO|now()
-KOLOM|salaris_mutaties|aangemaakt_door_id|integer|YES|
-KOLOM|salaris_mutaties|aangemaakt_door_naam|text|YES|
-KOLOM|salaris_mutaties|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|salaris_mutaties|akkoord|boolean|YES|
-KOLOM|salaris_mutaties|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|salaris_mutaties|bijlage_grootte|integer|YES|
-KOLOM|salaris_mutaties|bijlage_naam|text|YES|
-KOLOM|salaris_mutaties|bijlage_object_path|text|YES|
-KOLOM|salaris_mutaties|bron|text|NO|'handmatig'::text
-KOLOM|salaris_mutaties|gecontroleerd|boolean|NO|false
-KOLOM|salaris_mutaties|gecontroleerd_door_id|integer|YES|
-KOLOM|salaris_mutaties|gecontroleerd_door_naam|text|YES|
-KOLOM|salaris_mutaties|gecontroleerd_op|timestamp without time zone|YES|
-KOLOM|salaris_mutaties|id|integer|NO|nextval('salaris_mutaties_id_seq'::regclass)
-KOLOM|salaris_mutaties|ingangsdatum|text|YES|
-KOLOM|salaris_mutaties|medewerker_id|integer|YES|
-KOLOM|salaris_mutaties|medewerker_naam|text|YES|
-KOLOM|salaris_mutaties|notities|text|YES|
-KOLOM|salaris_mutaties|omschrijving|text|YES|
-KOLOM|salaris_mutaties|periode_jaar|integer|NO|
-KOLOM|salaris_mutaties|periode_maand|integer|NO|
-KOLOM|salaris_mutaties|status|text|NO|'concept'::text
-KOLOM|salaris_mutaties|type|text|NO|
-KOLOM|salaris_mutaties|werkgever_id|integer|YES|
-KOLOM|salaris_mutaties|werkmaatschappij|text|NO|
 KOLOM|scab_mail_bijlagen|aangemaakt_door_id|integer|YES|
 KOLOM|scab_mail_bijlagen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|scab_mail_bijlagen|bestandsgrootte|integer|YES|
@@ -3516,8 +3549,8 @@ KOLOM|security_intake_scans|gebruiker_id|integer|YES|
 KOLOM|security_intake_scans|gebruiker_naam|text|YES|
 KOLOM|security_intake_scans|id|integer|NO|nextval('security_intake_scans_id_seq'::regclass)
 KOLOM|security_intake_scans|in_quarantaine|boolean|NO|false
-KOLOM|security_intake_scans|links_geanalyseerd|jsonb|YES|
 KOLOM|security_intake_scans|link_status|text|NO|'niet_gescand'::text
+KOLOM|security_intake_scans|links_geanalyseerd|jsonb|YES|
 KOLOM|security_intake_scans|mime_status|text|NO|'niet_gescand'::text
 KOLOM|security_intake_scans|mime_type_claim|text|YES|
 KOLOM|security_intake_scans|mime_type_werkelijk|text|YES|
@@ -3549,8 +3582,8 @@ KOLOM|security_scan_runs|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|security_scan_runs|base_url|text|YES|
 KOLOM|security_scan_runs|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|security_scan_runs|geslaagd|integer|YES|0
-KOLOM|security_scan_runs|gestart_door|integer|YES|
 KOLOM|security_scan_runs|gestart_door_naam|text|YES|
+KOLOM|security_scan_runs|gestart_door|integer|YES|
 KOLOM|security_scan_runs|gestart_op|timestamp without time zone|NO|now()
 KOLOM|security_scan_runs|id|integer|NO|nextval('security_scan_runs_id_seq'::regclass)
 KOLOM|security_scan_runs|kritiek_mislukt|integer|YES|0
@@ -3558,9 +3591,9 @@ KOLOM|security_scan_runs|mislukt|integer|YES|0
 KOLOM|security_scan_runs|overgeslagen|integer|YES|0
 KOLOM|security_scan_runs|release_blokkede_reden|text|YES|
 KOLOM|security_scan_runs|release_geblokkeerd|boolean|YES|false
-KOLOM|security_scan_runs|release_goedgekeurd|boolean|YES|
 KOLOM|security_scan_runs|release_goedgekeurd_door|text|YES|
 KOLOM|security_scan_runs|release_goedgekeurd_op|timestamp without time zone|YES|
+KOLOM|security_scan_runs|release_goedgekeurd|boolean|YES|
 KOLOM|security_scan_runs|release_opmerking|text|YES|
 KOLOM|security_scan_runs|samenvatting|jsonb|YES|
 KOLOM|security_scan_runs|score_ai_beveiliging|real|YES|
@@ -3718,10 +3751,10 @@ KOLOM|toolbox_berichten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|toolbox_berichten|bijlagen|jsonb|NO|'[]'::jsonb
 KOLOM|toolbox_berichten|doelgroep_gebruiker_id|integer|YES|
 KOLOM|toolbox_berichten|doelgroep|text|NO|'iedereen'::text
-KOLOM|toolbox_berichten|gearchiveerd|boolean|NO|false
 KOLOM|toolbox_berichten|gearchiveerd_op|timestamp without time zone|YES|
-KOLOM|toolbox_berichten|gepubliceerd|boolean|NO|false
+KOLOM|toolbox_berichten|gearchiveerd|boolean|NO|false
 KOLOM|toolbox_berichten|gepubliceerd_op|timestamp without time zone|YES|
+KOLOM|toolbox_berichten|gepubliceerd|boolean|NO|false
 KOLOM|toolbox_berichten|id|integer|NO|nextval('toolbox_berichten_id_seq'::regclass)
 KOLOM|toolbox_berichten|inhoud|text|NO|
 KOLOM|toolbox_berichten|is_belangrijk|boolean|YES|
@@ -3757,20 +3790,6 @@ KOLOM|uitvoerder_sessies|monteur_id|integer|NO|
 KOLOM|uitvoerder_sessies|opdracht_id|integer|YES|
 KOLOM|uitvoerder_sessies|status|text|NO|'actief'::text
 KOLOM|uitvoerder_sessies|werkdag_id|integer|YES|
-KOLOM|uitvoeringsplannen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|uitvoeringsplannen|ai_gegenereerd|boolean|NO|false
-KOLOM|uitvoeringsplannen|ai_gegenereerd_op|timestamp without time zone|YES|
-KOLOM|uitvoeringsplannen|ai_samenvatting|text|YES|
-KOLOM|uitvoeringsplannen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|uitvoeringsplannen|einddatum|text|YES|
-KOLOM|uitvoeringsplannen|id|integer|NO|nextval('uitvoeringsplannen_id_seq'::regclass)
-KOLOM|uitvoeringsplannen|opdracht_id|integer|NO|
-KOLOM|uitvoeringsplannen|opmerkingen|text|YES|
-KOLOM|uitvoeringsplannen|startdatum|text|YES|
-KOLOM|uitvoeringsplannen|status|text|NO|'concept'::text
-KOLOM|uitvoeringsplannen|totaal_weken|integer|YES|
-KOLOM|uitvoeringsplannen|vastgesteld_door_id|integer|YES|
-KOLOM|uitvoeringsplannen|vastgesteld_op|timestamp without time zone|YES|
 KOLOM|uitvoeringsplan_taken|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|uitvoeringsplan_taken|afhankelijk_van_ids|text|YES|
 KOLOM|uitvoeringsplan_taken|ai_gegenereerd|boolean|NO|true
@@ -3787,6 +3806,20 @@ KOLOM|uitvoeringsplan_taken|opmerkingen|text|YES|
 KOLOM|uitvoeringsplan_taken|uitvoeringsplan_id|integer|NO|
 KOLOM|uitvoeringsplan_taken|urenbegroting|real|YES|
 KOLOM|uitvoeringsplan_taken|volgorde|integer|NO|0
+KOLOM|uitvoeringsplannen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|uitvoeringsplannen|ai_gegenereerd_op|timestamp without time zone|YES|
+KOLOM|uitvoeringsplannen|ai_gegenereerd|boolean|NO|false
+KOLOM|uitvoeringsplannen|ai_samenvatting|text|YES|
+KOLOM|uitvoeringsplannen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|uitvoeringsplannen|einddatum|text|YES|
+KOLOM|uitvoeringsplannen|id|integer|NO|nextval('uitvoeringsplannen_id_seq'::regclass)
+KOLOM|uitvoeringsplannen|opdracht_id|integer|NO|
+KOLOM|uitvoeringsplannen|opmerkingen|text|YES|
+KOLOM|uitvoeringsplannen|startdatum|text|YES|
+KOLOM|uitvoeringsplannen|status|text|NO|'concept'::text
+KOLOM|uitvoeringsplannen|totaal_weken|integer|YES|
+KOLOM|uitvoeringsplannen|vastgesteld_door_id|integer|YES|
+KOLOM|uitvoeringsplannen|vastgesteld_op|timestamp without time zone|YES|
 KOLOM|uren_registraties|aangemaakt_door_id|integer|YES|
 KOLOM|uren_registraties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|uren_registraties|afgewezen|boolean|NO|false
@@ -3862,7 +3895,6 @@ KOLOM|veiligheid_lmras|project_naam|text|YES|
 KOLOM|veiligheid_lmras|risicos|jsonb|NO|'[]'::jsonb
 KOLOM|veiligheid_lmras|veilig_voor_aanvang|boolean|NO|true
 KOLOM|veiligheid_lmras|werkzaamheden|text|NO|
-KOLOM|veiligheid_meldingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_meldingen_acties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_meldingen_acties|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_meldingen_acties|deadline|text|YES|
@@ -3872,6 +3904,7 @@ KOLOM|veiligheid_meldingen_acties|id|integer|NO|nextval('veiligheid_meldingen_ac
 KOLOM|veiligheid_meldingen_acties|melding_id|integer|NO|
 KOLOM|veiligheid_meldingen_acties|omschrijving|text|NO|
 KOLOM|veiligheid_meldingen_acties|status|text|NO|'open'::text
+KOLOM|veiligheid_meldingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_meldingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_meldingen|foto_paden|jsonb|NO|'[]'::jsonb
 KOLOM|veiligheid_meldingen|gebouw_id|integer|YES|
@@ -3885,38 +3918,6 @@ KOLOM|veiligheid_meldingen|project_naam|text|YES|
 KOLOM|veiligheid_meldingen|status|text|NO|'open'::text
 KOLOM|veiligheid_meldingen|toegewezen_aan_id|integer|YES|
 KOLOM|veiligheid_meldingen|type|text|NO|'onveilige_situatie'::text
-KOLOM|veiligheidsmiddelen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|veiligheidsmiddelen|aanschaf_datum|text|YES|
-KOLOM|veiligheidsmiddelen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|veiligheidsmiddelen|eigenaar_id|integer|YES|
-KOLOM|veiligheidsmiddelen|eigenaar_naam|text|YES|
-KOLOM|veiligheidsmiddelen|foto_paden|jsonb|NO|'[]'::jsonb
-KOLOM|veiligheidsmiddelen|handleiding_pad|text|YES|
-KOLOM|veiligheidsmiddelen|id|integer|NO|nextval('veiligheidsmiddelen_id_seq'::regclass)
-KOLOM|veiligheidsmiddelen|keurings_interval_maanden|integer|YES|
-KOLOM|veiligheidsmiddelen|locatie|text|YES|
-KOLOM|veiligheidsmiddelen|merk|text|YES|
-KOLOM|veiligheidsmiddelen|model|text|YES|
-KOLOM|veiligheidsmiddelen|naam|text|NO|
-KOLOM|veiligheidsmiddelen|opmerkingen|text|YES|
-KOLOM|veiligheidsmiddelen|qr_code|text|YES|
-KOLOM|veiligheidsmiddelen|serienummer|text|YES|
-KOLOM|veiligheidsmiddelen|status|text|NO|'actief'::text
-KOLOM|veiligheidsmiddelen|type|text|NO|
-KOLOM|veiligheidsmiddelen|vervangings_datum|text|YES|
-KOLOM|veiligheidsmiddel_inspecties|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|veiligheidsmiddel_inspecties|ai_aanbeveling|text|YES|
-KOLOM|veiligheidsmiddel_inspecties|ai_beoordeling|text|YES|
-KOLOM|veiligheidsmiddel_inspecties|ai_keur_nodig|boolean|NO|false
-KOLOM|veiligheidsmiddel_inspecties|beoordeeld_door_id|integer|YES|
-KOLOM|veiligheidsmiddel_inspecties|beoordeeld_door_naam|text|YES|
-KOLOM|veiligheidsmiddel_inspecties|bevindingen|text|YES|
-KOLOM|veiligheidsmiddel_inspecties|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|veiligheidsmiddel_inspecties|datum|text|NO|
-KOLOM|veiligheidsmiddel_inspecties|formele_status|text|NO|'in_behandeling'::text
-KOLOM|veiligheidsmiddel_inspecties|foto_paden|jsonb|NO|'[]'::jsonb
-KOLOM|veiligheidsmiddel_inspecties|id|integer|NO|nextval('veiligheidsmiddel_inspecties_id_seq'::regclass)
-KOLOM|veiligheidsmiddel_inspecties|middel_id|integer|NO|
 KOLOM|veiligheid_toolbox_afrondingen|bevestigd_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_toolbox_afrondingen|gebruiker_id|integer|NO|
 KOLOM|veiligheid_toolbox_afrondingen|geldig_tot|timestamp without time zone|YES|
@@ -3925,6 +3926,12 @@ KOLOM|veiligheid_toolbox_afrondingen|id|integer|NO|nextval('veiligheid_toolbox_a
 KOLOM|veiligheid_toolbox_afrondingen|max_score|integer|NO|
 KOLOM|veiligheid_toolbox_afrondingen|score|integer|NO|
 KOLOM|veiligheid_toolbox_afrondingen|toolbox_id|integer|NO|
+KOLOM|veiligheid_toolbox_vragen|id|integer|NO|nextval('veiligheid_toolbox_vragen_id_seq'::regclass)
+KOLOM|veiligheid_toolbox_vragen|opties|jsonb|NO|'[]'::jsonb
+KOLOM|veiligheid_toolbox_vragen|toolbox_id|integer|NO|
+KOLOM|veiligheid_toolbox_vragen|uitleg|text|YES|
+KOLOM|veiligheid_toolbox_vragen|volgorde|integer|NO|0
+KOLOM|veiligheid_toolbox_vragen|vraag|text|NO|
 KOLOM|veiligheid_toolboxen|aangemaakt_door_id|integer|YES|
 KOLOM|veiligheid_toolboxen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|veiligheid_toolboxen|afbeeldingen|jsonb|NO|'[]'::jsonb
@@ -3953,12 +3960,38 @@ KOLOM|veiligheid_toolboxen|titel|text|NO|
 KOLOM|veiligheid_toolboxen|verplicht|boolean|NO|false
 KOLOM|veiligheid_toolboxen|video_url|text|YES|
 KOLOM|veiligheid_toolboxen|zoekwoorden|jsonb|NO|'[]'::jsonb
-KOLOM|veiligheid_toolbox_vragen|id|integer|NO|nextval('veiligheid_toolbox_vragen_id_seq'::regclass)
-KOLOM|veiligheid_toolbox_vragen|opties|jsonb|NO|'[]'::jsonb
-KOLOM|veiligheid_toolbox_vragen|toolbox_id|integer|NO|
-KOLOM|veiligheid_toolbox_vragen|uitleg|text|YES|
-KOLOM|veiligheid_toolbox_vragen|volgorde|integer|NO|0
-KOLOM|veiligheid_toolbox_vragen|vraag|text|NO|
+KOLOM|veiligheidsmiddel_inspecties|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|veiligheidsmiddel_inspecties|ai_aanbeveling|text|YES|
+KOLOM|veiligheidsmiddel_inspecties|ai_beoordeling|text|YES|
+KOLOM|veiligheidsmiddel_inspecties|ai_keur_nodig|boolean|NO|false
+KOLOM|veiligheidsmiddel_inspecties|beoordeeld_door_id|integer|YES|
+KOLOM|veiligheidsmiddel_inspecties|beoordeeld_door_naam|text|YES|
+KOLOM|veiligheidsmiddel_inspecties|bevindingen|text|YES|
+KOLOM|veiligheidsmiddel_inspecties|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|veiligheidsmiddel_inspecties|datum|text|NO|
+KOLOM|veiligheidsmiddel_inspecties|formele_status|text|NO|'in_behandeling'::text
+KOLOM|veiligheidsmiddel_inspecties|foto_paden|jsonb|NO|'[]'::jsonb
+KOLOM|veiligheidsmiddel_inspecties|id|integer|NO|nextval('veiligheidsmiddel_inspecties_id_seq'::regclass)
+KOLOM|veiligheidsmiddel_inspecties|middel_id|integer|NO|
+KOLOM|veiligheidsmiddelen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|veiligheidsmiddelen|aanschaf_datum|text|YES|
+KOLOM|veiligheidsmiddelen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|veiligheidsmiddelen|eigenaar_id|integer|YES|
+KOLOM|veiligheidsmiddelen|eigenaar_naam|text|YES|
+KOLOM|veiligheidsmiddelen|foto_paden|jsonb|NO|'[]'::jsonb
+KOLOM|veiligheidsmiddelen|handleiding_pad|text|YES|
+KOLOM|veiligheidsmiddelen|id|integer|NO|nextval('veiligheidsmiddelen_id_seq'::regclass)
+KOLOM|veiligheidsmiddelen|keurings_interval_maanden|integer|YES|
+KOLOM|veiligheidsmiddelen|locatie|text|YES|
+KOLOM|veiligheidsmiddelen|merk|text|YES|
+KOLOM|veiligheidsmiddelen|model|text|YES|
+KOLOM|veiligheidsmiddelen|naam|text|NO|
+KOLOM|veiligheidsmiddelen|opmerkingen|text|YES|
+KOLOM|veiligheidsmiddelen|qr_code|text|YES|
+KOLOM|veiligheidsmiddelen|serienummer|text|YES|
+KOLOM|veiligheidsmiddelen|status|text|NO|'actief'::text
+KOLOM|veiligheidsmiddelen|type|text|NO|
+KOLOM|veiligheidsmiddelen|vervangings_datum|text|YES|
 KOLOM|verdiepingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|verdiepingen|breedte|real|YES|
 KOLOM|verdiepingen|gebouw_id|integer|NO|
@@ -3979,20 +4012,6 @@ KOLOM|verlof_aanvraag_log|opmerking|text|YES|
 KOLOM|verlof_aanvraag_log|oud_status|text|YES|
 KOLOM|verlof_aanvraag_log|uitgevoerd_door_id|integer|YES|
 KOLOM|verlof_aanvraag_log|verlofaanvraag_id|integer|NO|
-KOLOM|verlofaanvragen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|verlofaanvragen|aantal_uren|real|NO|0
-KOLOM|verlofaanvragen|beoordeeld_door_id|integer|YES|
-KOLOM|verlofaanvragen|beoordeeld_op|timestamp without time zone|YES|
-KOLOM|verlofaanvragen|bezetting_overschreden|boolean|NO|false
-KOLOM|verlofaanvragen|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|verlofaanvragen|eind_datum|text|NO|
-KOLOM|verlofaanvragen|id|integer|NO|nextval('verlofaanvragen_id_seq'::regclass)
-KOLOM|verlofaanvragen|medewerker_id|integer|NO|
-KOLOM|verlofaanvragen|opmerking|text|YES|
-KOLOM|verlofaanvragen|reden|text|YES|
-KOLOM|verlofaanvragen|start_datum|text|NO|
-KOLOM|verlofaanvragen|status|text|NO|'aangevraagd'::text
-KOLOM|verlofaanvragen|verlofsoort_id|integer|NO|
 KOLOM|verlof_correcties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|verlof_correcties|delta_uren|real|NO|
 KOLOM|verlof_correcties|id|integer|NO|nextval('verlof_correcties_id_seq'::regclass)
@@ -4023,6 +4042,20 @@ KOLOM|verlof_saldi|opgenomen_uren|real|NO|0
 KOLOM|verlof_saldi|saldo_uren|real|NO|0
 KOLOM|verlof_saldi|verlofsoort_id|integer|NO|
 KOLOM|verlof_saldi|vervalt_op|text|YES|
+KOLOM|verlofaanvragen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|verlofaanvragen|aantal_uren|real|NO|0
+KOLOM|verlofaanvragen|beoordeeld_door_id|integer|YES|
+KOLOM|verlofaanvragen|beoordeeld_op|timestamp without time zone|YES|
+KOLOM|verlofaanvragen|bezetting_overschreden|boolean|NO|false
+KOLOM|verlofaanvragen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|verlofaanvragen|eind_datum|text|NO|
+KOLOM|verlofaanvragen|id|integer|NO|nextval('verlofaanvragen_id_seq'::regclass)
+KOLOM|verlofaanvragen|medewerker_id|integer|NO|
+KOLOM|verlofaanvragen|opmerking|text|YES|
+KOLOM|verlofaanvragen|reden|text|YES|
+KOLOM|verlofaanvragen|start_datum|text|NO|
+KOLOM|verlofaanvragen|status|text|NO|'aangevraagd'::text
+KOLOM|verlofaanvragen|verlofsoort_id|integer|NO|
 KOLOM|verlofsoorten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|verlofsoorten|actief|boolean|NO|true
 KOLOM|verlofsoorten|betaald|boolean|NO|true
@@ -4069,8 +4102,8 @@ KOLOM|voertuigen|km_stand|integer|NO|0
 KOLOM|voertuigen|lease_eind_datum|timestamp without time zone|YES|
 KOLOM|voertuigen|lease_km_jaarlijks|integer|YES|
 KOLOM|voertuigen|leasemaatschappij|text|YES|
-KOLOM|voertuigen|llaatste_onderhoud_datum|timestamp without time zone|YES|
 KOLOM|voertuigen|llaatst_onderhoud_km|integer|YES|
+KOLOM|voertuigen|llaatste_onderhoud_datum|timestamp without time zone|YES|
 KOLOM|voertuigen|merk|text|NO|
 KOLOM|voertuigen|onderhouds_interval_dag|integer|YES|
 KOLOM|voertuigen|onderhouds_interval_km|integer|YES|
@@ -4082,13 +4115,6 @@ KOLOM|voertuigen|verzekeraar_naam|text|YES|
 KOLOM|voertuigen|verzekering_polisnr|text|YES|
 KOLOM|voertuigen|verzekering_verval_dat|timestamp without time zone|YES|
 KOLOM|voertuigen|werkgever_id|integer|YES|
-KOLOM|voorraad|artikel_id|integer|NO|
-KOLOM|voorraad|besteld|real|NO|0
-KOLOM|voorraad|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|voorraad|gereserveerd|real|NO|0
-KOLOM|voorraad|hoeveelheid|real|NO|0
-KOLOM|voorraad|id|integer|NO|nextval('voorraad_id_seq'::regclass)
-KOLOM|voorraad|locatie_id|integer|YES|
 KOLOM|voorraad_mutaties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voorraad_mutaties|accountview_export_op|timestamp without time zone|YES|
 KOLOM|voorraad_mutaties|artikel_id|integer|NO|
@@ -4102,6 +4128,21 @@ KOLOM|voorraad_mutaties|opdracht_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_type|text|YES|
 KOLOM|voorraad_mutaties|type|text|NO|
+KOLOM|voorraad|artikel_id|integer|NO|
+KOLOM|voorraad|besteld|real|NO|0
+KOLOM|voorraad|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|voorraad|gereserveerd|real|NO|0
+KOLOM|voorraad|hoeveelheid|real|NO|0
+KOLOM|voorraad|id|integer|NO|nextval('voorraad_id_seq'::regclass)
+KOLOM|voorraad|locatie_id|integer|YES|
+KOLOM|voorziening_labels|id|integer|NO|nextval('voorziening_labels_id_seq'::regclass)
+KOLOM|voorziening_labels|label_id|integer|NO|
+KOLOM|voorziening_labels|voorziening_id|integer|NO|
+KOLOM|voorziening_types|actief|boolean|NO|true
+KOLOM|voorziening_types|categorie|text|NO|
+KOLOM|voorziening_types|code|text|NO|
+KOLOM|voorziening_types|naam|text|NO|
+KOLOM|voorziening_types|volgorde|integer|NO|0
 KOLOM|voorzieningen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voorzieningen|ai_te_controleren|boolean|NO|false
 KOLOM|voorzieningen|ai_voorstel_id|integer|YES|
@@ -4110,8 +4151,8 @@ KOLOM|voorzieningen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|voorzieningen|classificatie|text|NO|'60'::text
 KOLOM|voorzieningen|cluster_id|integer|YES|
 KOLOM|voorzieningen|controleur_id|integer|YES|
-KOLOM|voorzieningen|gearchiveerd|boolean|NO|false
 KOLOM|voorzieningen|gearchiveerd_op|timestamp without time zone|YES|
+KOLOM|voorzieningen|gearchiveerd|boolean|NO|false
 KOLOM|voorzieningen|gebouw_id|integer|NO|
 KOLOM|voorzieningen|huisnummer|text|YES|
 KOLOM|voorzieningen|id|integer|NO|nextval('voorzieningen_id_seq'::regclass)
@@ -4134,14 +4175,6 @@ KOLOM|voorzieningen|volgende_inspectie|text|YES|
 KOLOM|voorzieningen|wand_of_plafond|text|YES|
 KOLOM|voorzieningen|wbdbo|text|YES|
 KOLOM|voorzieningen|wrd|text|YES|
-KOLOM|voorziening_labels|id|integer|NO|nextval('voorziening_labels_id_seq'::regclass)
-KOLOM|voorziening_labels|label_id|integer|NO|
-KOLOM|voorziening_labels|voorziening_id|integer|NO|
-KOLOM|voorziening_types|actief|boolean|NO|true
-KOLOM|voorziening_types|categorie|text|NO|
-KOLOM|voorziening_types|code|text|NO|
-KOLOM|voorziening_types|naam|text|NO|
-KOLOM|voorziening_types|volgorde|integer|NO|0
 KOLOM|wachtwoord_reset_tokens|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|wachtwoord_reset_tokens|gebruiker_id|integer|NO|
 KOLOM|wachtwoord_reset_tokens|gebruikt_op|timestamp without time zone|YES|
@@ -4260,10 +4293,65 @@ KOLOM|week_staten|medewerker_id|integer|NO|
 KOLOM|week_staten|notities|text|YES|
 KOLOM|week_staten|status|text|NO|'concept'::text
 KOLOM|week_staten|totaal_uren|real|YES|
-KOLOM|week_staten|vergrendeld|boolean|NO|false
 KOLOM|week_staten|vergrendeld_door_id|integer|YES|
 KOLOM|week_staten|vergrendeld_op|timestamp without time zone|YES|
+KOLOM|week_staten|vergrendeld|boolean|NO|false
 KOLOM|week_staten|week_nummer|integer|NO|
+KOLOM|werk_inbox_koppelingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_koppelingen|entity_id|integer|NO|
+KOLOM|werk_inbox_koppelingen|entity_label|text|YES|
+KOLOM|werk_inbox_koppelingen|entity_type|text|NO|
+KOLOM|werk_inbox_koppelingen|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_koppelingen|id|integer|NO|nextval('werk_inbox_koppelingen_id_seq'::regclass)
+KOLOM|werk_inbox_koppelingen|message_id|text|NO|
+KOLOM|werk_inbox_mailboxen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_mailboxen|actief|boolean|NO|true
+KOLOM|werk_inbox_mailboxen|email_adres|text|NO|
+KOLOM|werk_inbox_mailboxen|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_mailboxen|id|integer|NO|nextval('werk_inbox_mailboxen_id_seq'::regclass)
+KOLOM|werk_inbox_mailboxen|is_aanvraagmailbox|boolean|NO|false
+KOLOM|werk_inbox_mailboxen|is_factuurmailbox|boolean|NO|false
+KOLOM|werk_inbox_mailboxen|label|text|YES|
+KOLOM|werk_inbox_mailboxen|volgorde|integer|NO|0
+KOLOM|werk_inbox_mails|aanvraag_verwerkt_op|timestamp without time zone|YES|
+KOLOM|werk_inbox_mails|actie_vereist_reden|text|YES|
+KOLOM|werk_inbox_mails|actie_vereist|boolean|NO|false
+KOLOM|werk_inbox_mails|afgehandeld_op|timestamp without time zone|YES|
+KOLOM|werk_inbox_mails|afzender_email|text|NO|''::text
+KOLOM|werk_inbox_mails|afzender_naam|text|YES|
+KOLOM|werk_inbox_mails|ai_logboek_json|text|YES|
+KOLOM|werk_inbox_mails|ai_voorstel_json|text|YES|
+KOLOM|werk_inbox_mails|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_mails|conversation_id|text|YES|
+KOLOM|werk_inbox_mails|factuur_verwerkt_op|timestamp without time zone|YES|
+KOLOM|werk_inbox_mails|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_mails|gesynchroniseerd_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_mails|heeft_bijlage|boolean|NO|false
+KOLOM|werk_inbox_mails|id|integer|NO|nextval('werk_inbox_mails_id_seq'::regclass)
+KOLOM|werk_inbox_mails|is_gelezen_ms|boolean|NO|false
+KOLOM|werk_inbox_mails|mailbox_adres|text|NO|
+KOLOM|werk_inbox_mails|message_id|text|NO|
+KOLOM|werk_inbox_mails|onderwerp|text|NO|''::text
+KOLOM|werk_inbox_mails|ontvangen_op|timestamp without time zone|NO|
+KOLOM|werk_inbox_mails|relatie_categorie_ai|text|YES|
+KOLOM|werk_inbox_mails|snippet|text|YES|
+KOLOM|werk_inbox_mails|verwerkt_op|timestamp without time zone|YES|
+KOLOM|werk_inbox_notities|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_notities|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_notities|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_notities|id|integer|NO|nextval('werk_inbox_notities_id_seq'::regclass)
+KOLOM|werk_inbox_notities|message_id|text|NO|
+KOLOM|werk_inbox_notities|tekst|text|NO|
+KOLOM|werk_inbox_tokens|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_tokens|aanvraag_intake_persoonlijk|boolean|NO|false
+KOLOM|werk_inbox_tokens|access_token_enc|text|NO|
+KOLOM|werk_inbox_tokens|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_tokens|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_tokens|id|integer|NO|nextval('werk_inbox_tokens_id_seq'::regclass)
+KOLOM|werk_inbox_tokens|microsoft_email|text|NO|
+KOLOM|werk_inbox_tokens|refresh_token_enc|text|NO|
+KOLOM|werk_inbox_tokens|scope|text|NO|'Mail.Read offline_access'::text
+KOLOM|werk_inbox_tokens|verloopt_op|timestamp without time zone|NO|
 KOLOM|werkbegroting_adviezen|aangemaakt_op|timestamp with time zone|NO|now()
 KOLOM|werkbegroting_adviezen|begroting_id|integer|NO|
 KOLOM|werkbegroting_adviezen|bijgewerkt_op|timestamp with time zone|NO|now()
@@ -4343,61 +4431,6 @@ KOLOM|werkgevers|telefoon|text|YES|
 KOLOM|werkgevers|voettekst_positie|text|YES|
 KOLOM|werkgevers|voettekst|text|YES|
 KOLOM|werkgevers|website|text|YES|
-KOLOM|werk_inbox_koppelingen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_koppelingen|entity_id|integer|NO|
-KOLOM|werk_inbox_koppelingen|entity_label|text|YES|
-KOLOM|werk_inbox_koppelingen|entity_type|text|NO|
-KOLOM|werk_inbox_koppelingen|gebruiker_id|integer|NO|
-KOLOM|werk_inbox_koppelingen|id|integer|NO|nextval('werk_inbox_koppelingen_id_seq'::regclass)
-KOLOM|werk_inbox_koppelingen|message_id|text|NO|
-KOLOM|werk_inbox_mailboxen|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_mailboxen|actief|boolean|NO|true
-KOLOM|werk_inbox_mailboxen|email_adres|text|NO|
-KOLOM|werk_inbox_mailboxen|gebruiker_id|integer|NO|
-KOLOM|werk_inbox_mailboxen|id|integer|NO|nextval('werk_inbox_mailboxen_id_seq'::regclass)
-KOLOM|werk_inbox_mailboxen|is_aanvraagmailbox|boolean|NO|false
-KOLOM|werk_inbox_mailboxen|is_factuurmailbox|boolean|NO|false
-KOLOM|werk_inbox_mailboxen|label|text|YES|
-KOLOM|werk_inbox_mailboxen|volgorde|integer|NO|0
-KOLOM|werk_inbox_mails|aanvraag_verwerkt_op|timestamp without time zone|YES|
-KOLOM|werk_inbox_mails|actie_vereist|boolean|NO|false
-KOLOM|werk_inbox_mails|actie_vereist_reden|text|YES|
-KOLOM|werk_inbox_mails|afgehandeld_op|timestamp without time zone|YES|
-KOLOM|werk_inbox_mails|afzender_email|text|NO|''::text
-KOLOM|werk_inbox_mails|afzender_naam|text|YES|
-KOLOM|werk_inbox_mails|ai_logboek_json|text|YES|
-KOLOM|werk_inbox_mails|ai_voorstel_json|text|YES|
-KOLOM|werk_inbox_mails|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_mails|conversation_id|text|YES|
-KOLOM|werk_inbox_mails|factuur_verwerkt_op|timestamp without time zone|YES|
-KOLOM|werk_inbox_mails|gebruiker_id|integer|NO|
-KOLOM|werk_inbox_mails|gesynchroniseerd_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_mails|heeft_bijlage|boolean|NO|false
-KOLOM|werk_inbox_mails|id|integer|NO|nextval('werk_inbox_mails_id_seq'::regclass)
-KOLOM|werk_inbox_mails|is_gelezen_ms|boolean|NO|false
-KOLOM|werk_inbox_mails|mailbox_adres|text|NO|
-KOLOM|werk_inbox_mails|message_id|text|NO|
-KOLOM|werk_inbox_mails|onderwerp|text|NO|''::text
-KOLOM|werk_inbox_mails|ontvangen_op|timestamp without time zone|NO|
-KOLOM|werk_inbox_mails|relatie_categorie_ai|text|YES|
-KOLOM|werk_inbox_mails|snippet|text|YES|
-KOLOM|werk_inbox_mails|verwerkt_op|timestamp without time zone|YES|
-KOLOM|werk_inbox_notities|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_notities|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_notities|gebruiker_id|integer|NO|
-KOLOM|werk_inbox_notities|id|integer|NO|nextval('werk_inbox_notities_id_seq'::regclass)
-KOLOM|werk_inbox_notities|message_id|text|NO|
-KOLOM|werk_inbox_notities|tekst|text|NO|
-KOLOM|werk_inbox_tokens|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_tokens|aanvraag_intake_persoonlijk|boolean|NO|false
-KOLOM|werk_inbox_tokens|access_token_enc|text|NO|
-KOLOM|werk_inbox_tokens|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|werk_inbox_tokens|gebruiker_id|integer|NO|
-KOLOM|werk_inbox_tokens|id|integer|NO|nextval('werk_inbox_tokens_id_seq'::regclass)
-KOLOM|werk_inbox_tokens|microsoft_email|text|NO|
-KOLOM|werk_inbox_tokens|refresh_token_enc|text|NO|
-KOLOM|werk_inbox_tokens|scope|text|NO|'Mail.Read offline_access'::text
-KOLOM|werk_inbox_tokens|verloopt_op|timestamp without time zone|NO|
 KOLOM|workflow_cards|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|workflow_cards|actief|boolean|NO|true
 KOLOM|workflow_cards|ai_acties|ARRAY|NO|'{}'::text[]

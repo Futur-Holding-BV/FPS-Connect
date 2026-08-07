@@ -6,14 +6,20 @@ import {
   db,
   fieJaarbegrotingenTable,
   fieAkPostenTable,
+  fieAkAdviezenTable,
   fieCapaciteitSnapshotsTable,
+  fieJaarrealisatiesTable,
   fieLeerMomentenTable,
   fieNacalculatiesTable,
   opdrachtenTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
+import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
+import { logger } from "../lib/logger";
 import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
@@ -780,6 +786,233 @@ router.delete("/fie/leermomenten/:id", schrijven, async (req: Request, res: Resp
   if (id === null) return;
   await db.delete(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.id, id));
   res.status(204).send();
+});
+
+// ═══ FINANCIEEL_AI_01 — jaarrealisaties, AK-dashboard en AK-adviezen ═════════
+
+// ── Jaarrealisaties (boekjaar × werkmaatschappij) ────────────────────────────
+
+router.get("/fie/realisaties", lezen, async (_req: Request, res: Response): Promise<void> => {
+  const rijen = await db.select().from(fieJaarrealisatiesTable)
+    .orderBy(desc(fieJaarrealisatiesTable.boekjaar));
+  res.json(rijen.map(mapRealisatie));
+});
+
+router.post("/fie/realisaties", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const b = req.body as Record<string, unknown>;
+  const boekjaar = parseId(b["boekjaar"]);
+  if (boekjaar === null || boekjaar < 2000 || boekjaar > 2100) {
+    res.status(400).json({ error: "Ongeldig boekjaar" });
+    return;
+  }
+  const werkgeverId = b["werkgever_id"] == null ? null : parseId(b["werkgever_id"]);
+  const waarden = {
+    boekjaar,
+    werkgeverId,
+    omzetGefactureerd: b["omzet_gefactureerd"] == null ? null : Number(b["omzet_gefactureerd"]),
+    ohwMutatie: b["ohw_mutatie"] == null ? null : Number(b["ohw_mutatie"]),
+    personeelskostenTotaal: b["personeelskosten_totaal"] == null ? null : Number(b["personeelskosten_totaal"]),
+    bron: typeof b["bron"] === "string" ? b["bron"] : "jaarrekening",
+    opmerkingen: typeof b["opmerkingen"] === "string" ? b["opmerkingen"].slice(0, 2000) : null,
+    bijgewerktOp: new Date(),
+  };
+  // Upsert op (boekjaar, werkgever): realisatie wordt bijgewerkt, niet gedupliceerd.
+  const bestaande = await db.select().from(fieJaarrealisatiesTable)
+    .where(eq(fieJaarrealisatiesTable.boekjaar, boekjaar));
+  const bestaand = bestaande.find((r) => (r.werkgeverId ?? null) === werkgeverId);
+  if (bestaand) {
+    const [rij] = await db.update(fieJaarrealisatiesTable).set(waarden)
+      .where(eq(fieJaarrealisatiesTable.id, bestaand.id)).returning();
+    res.json(mapRealisatie(rij!));
+    return;
+  }
+  const [rij] = await db.insert(fieJaarrealisatiesTable).values(waarden).returning();
+  res.status(201).json(mapRealisatie(rij!));
+});
+
+router.delete("/fie/realisaties/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = parseId(req.params["id"]);
+  if (id === null) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  await db.delete(fieJaarrealisatiesTable).where(eq(fieJaarrealisatiesTable.id, id));
+  res.status(204).send();
+});
+
+function mapRealisatie(r: typeof fieJaarrealisatiesTable.$inferSelect): Record<string, unknown> {
+  return {
+    id: r.id,
+    boekjaar: r.boekjaar,
+    werkgever_id: r.werkgeverId ?? null,
+    omzet_gefactureerd: r.omzetGefactureerd ?? null,
+    ohw_mutatie: r.ohwMutatie ?? null,
+    productie: r.omzetGefactureerd != null ? r.omzetGefactureerd + (r.ohwMutatie ?? 0) : null,
+    personeelskosten_totaal: r.personeelskostenTotaal ?? null,
+    bron: r.bron,
+    opmerkingen: r.opmerkingen ?? null,
+  };
+}
+
+// ── AK-dashboard ─────────────────────────────────────────────────────────────
+
+router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const reeks = await bouwJaarReeks();
+    const [lopendJaar, posten, adviezen] = await Promise.all([
+      bouwLopendJaar(new Date()),
+      bouwPostOntwikkeling(),
+      db.select().from(fieAkAdviezenTable)
+        .where(inArray(fieAkAdviezenTable.status, ["open", "weggezet"]))
+        .orderBy(desc(fieAkAdviezenTable.bedrag)),
+    ]);
+    // Loonkosten-dekking (§3.1b): zonder indirecte-loonkosten-post is elk percentage een schatting.
+    const heeftLoonkostenPost = posten.some((p) => p.isLoonkosten);
+    const urenSplitsing = await bouwUrenSplitsing(new Date().getFullYear());
+    res.json({
+      reeks,
+      lopend_jaar: lopendJaar,
+      posten: posten.map((p) => ({
+        categorie: p.categorie,
+        omschrijving: p.omschrijving,
+        werkgever_id: p.werkgeverId,
+        werkgever_naam: p.werkgeverNaam,
+        per_jaar: p.perJaar,
+        huidig_bedrag: p.huidigBedrag,
+        aandeel_pct: p.aandeelPct,
+        stijging_pct: p.stijgingPct,
+        is_loonkosten: p.isLoonkosten,
+      })),
+      adviezen: adviezen.map(mapAdvies),
+      bevindingen: [
+        ...(heeftLoonkostenPost ? [] : [
+          "Er is geen AK-post 'indirecte loonkosten' ingevoerd. Personeelskosten uit de jaarrekening bevatten óók productieve uren en zijn geen AK — zonder deze post is elk AK-percentage exclusief indirecte loonkosten en dus een onderschatting.",
+        ]),
+        ...(urenSplitsing.dekkend ? [] : [
+          `De urenregistratie van ${new Date().getFullYear()} bevat nog geen uren; de splitsing productief/indirect kan niet worden onderbouwd.`,
+        ]),
+      ],
+      uren_splitsing: urenSplitsing,
+    });
+  } catch (err) {
+    logger.error({ err }, "ak-dashboard fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+function mapAdvies(a: typeof fieAkAdviezenTable.$inferSelect): Record<string, unknown> {
+  return {
+    id: a.id,
+    werkgever_id: a.werkgeverId ?? null,
+    categorie: a.categorie,
+    titel: a.titel,
+    advies: a.advies,
+    vervolgstap: a.vervolgstap ?? null,
+    bedrag: a.bedrag,
+    cijfers: a.cijfers ? JSON.parse(a.cijfers) as unknown : null,
+    bron_vermelding: a.bronVermelding ?? null,
+    status: a.status,
+    afhandel_reden: a.afhandelReden ?? null,
+    aangemaakt_op: a.aangemaaktOp?.toISOString() ?? null,
+  };
+}
+
+// ── AK-adviezen genereren ────────────────────────────────────────────────────
+// Deterministische signalen bepalen WAT er gemeld wordt; de AI formuleert het
+// hooguit als vraag. Max 10 open tegelijk (§4.2) — de zwaarste eerst, de rest
+// wacht tot er ruimte is. Een advies verdwijnt nooit vanzelf.
+
+router.post("/fie/ak-adviezen/genereer", schrijven, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const reeks = await bouwJaarReeks();
+    const posten = await bouwPostOntwikkeling();
+    const kandidaten = await bouwSignaalKandidaten(reeks, posten);
+
+    const openAdviezen = await db.select().from(fieAkAdviezenTable)
+      .where(inArray(fieAkAdviezenTable.status, ["open", "weggezet"]));
+    const bestaandeSleutels = new Set(openAdviezen.map((a) => a.dedupSleutel));
+    const ruimte = Math.max(0, MAX_OPEN_ADVIEZEN - openAdviezen.filter((a) => a.status === "open").length);
+    const nieuwe = kandidaten.filter((k) => !bestaandeSleutels.has(k.dedupSleutel)).slice(0, ruimte);
+
+    // AI herformuleert de kern als vraag; bij falen valt de deterministische
+    // kerntekst zelf in — het advies mag niet afhangen van de AI.
+    const teksten = new Map<string, { advies: string; vervolgstap: string | null }>();
+    if (heeftGateway() && nieuwe.length > 0) {
+      try {
+        const resultaat = await aiGateway.chat("default", {
+          messages: [
+            { role: "system", content: FINANCIEEL_AK_ADVIES_PROMPT.tekst },
+            { role: "user", content: `Formuleer per bevinding een adviestekst.\n\n${nieuwe.map((k) => `dedup_sleutel: ${k.dedupSleutel}\nsoort: ${k.soort}\nmeting: ${k.kern}\nbron: ${k.bron}\nvoorgestelde vervolgstap: ${k.vervolgstap ?? "geen (loonkosten: alleen constateren)"}`).join("\n\n")}` },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 2500,
+        }, undefined, { module: "financieel", functie: "ak-adviezen", gebruikerId: req.session.userId ?? null });
+        if (resultaat.ok) {
+          const parsed = JSON.parse(resultaat.inhoud) as { adviezen?: Array<{ dedup_sleutel?: string; advies?: string; vervolgstap?: string | null }> };
+          for (const a of parsed.adviezen ?? []) {
+            if (a.dedup_sleutel && a.advies) teksten.set(a.dedup_sleutel, { advies: a.advies, vervolgstap: a.vervolgstap ?? null });
+          }
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AK-advies AI-formulering mislukt — deterministische tekst gebruikt");
+      }
+    }
+
+    const aangemaakt: (typeof fieAkAdviezenTable.$inferSelect)[] = [];
+    for (const k of nieuwe) {
+      const ai = teksten.get(k.dedupSleutel);
+      // Loonkosten (§3.4): vervolgstap blijft altijd leeg, ook als de AI er één verzint.
+      const vervolgstap = k.soort === "loonkosten_constatering" ? null : (ai?.vervolgstap ?? k.vervolgstap);
+      const [rij] = await db.insert(fieAkAdviezenTable).values({
+        werkgeverId: k.werkgeverId,
+        categorie: k.categorie,
+        titel: k.titel,
+        advies: ai?.advies ?? `${k.kern} (Bron: ${k.bron}.)`,
+        vervolgstap,
+        bedrag: k.bedrag,
+        cijfers: JSON.stringify(k.cijfers),
+        bronVermelding: k.bron,
+        dedupSleutel: k.dedupSleutel,
+        status: "open",
+      }).onConflictDoNothing().returning();
+      if (rij) aangemaakt.push(rij);
+    }
+
+    res.json({
+      aangemaakt: aangemaakt.map(mapAdvies),
+      kandidaten_totaal: kandidaten.length,
+      wachtend: Math.max(0, kandidaten.filter((k) => !bestaandeSleutels.has(k.dedupSleutel)).length - nieuwe.length),
+    });
+  } catch (err) {
+    logger.error({ err }, "ak-adviezen genereren fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── AK-advies afhandelen / bewust wegzetten ──────────────────────────────────
+
+router.patch("/fie/ak-adviezen/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = parseId(req.params["id"]);
+  if (id === null) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const b = req.body as Record<string, unknown>;
+  const status = String(b["status"] ?? "");
+  if (!["open", "afgehandeld", "weggezet"].includes(status)) {
+    res.status(400).json({ error: "Ongeldige status" });
+    return;
+  }
+  const reden = typeof b["afhandel_reden"] === "string" ? b["afhandel_reden"].trim().slice(0, 1000) : "";
+  // Bewust wegzetten vereist een reden (§4.2) — dat is het verschil tussen
+  // een controller en een meldingenlijst.
+  if (status === "weggezet" && reden.length === 0) {
+    res.status(422).json({ error: "Wegzetten vereist een reden" });
+    return;
+  }
+  const [rij] = await db.update(fieAkAdviezenTable).set({
+    status,
+    afhandelReden: status === "open" ? null : (reden || null),
+    afgehandeldDoorId: status === "open" ? null : (req.session.userId ?? null),
+    afgehandeldOp: status === "open" ? null : new Date(),
+    bijgewerktOp: new Date(),
+  }).where(eq(fieAkAdviezenTable.id, id)).returning();
+  if (!rij) { res.status(404).json({ error: "Advies niet gevonden" }); return; }
+  res.json(mapAdvies(rij));
 });
 
 export default router;

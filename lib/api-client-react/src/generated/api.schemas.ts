@@ -13304,6 +13304,129 @@ export interface FieJaarbegrotingUpdate {
   opmerkingen?: string | null;
 }
 
+export interface FieJaarrealisatie {
+  id: number;
+  boekjaar: number;
+  werkgever_id?: number | null;
+  omzet_gefactureerd?: number | null;
+  ohw_mutatie?: number | null;
+  productie?: number | null;
+  personeelskosten_totaal?: number | null;
+  bron: string;
+  opmerkingen?: string | null;
+}
+
+export interface FieJaarrealisatieInput {
+  boekjaar: number;
+  werkgever_id?: number | null;
+  omzet_gefactureerd?: number | null;
+  ohw_mutatie?: number | null;
+  personeelskosten_totaal?: number | null;
+  bron?: string;
+  opmerkingen?: string | null;
+}
+
+export interface FieAkReeksRij {
+  boekjaar: number;
+  werkgeverId?: number | null;
+  werkgeverNaam?: string;
+  akTotaal?: number | null;
+  omzetGefactureerd?: number | null;
+  ohwMutatie?: number | null;
+  productie?: number | null;
+  pctVanProductie?: number | null;
+  pctVanOmzet?: number | null;
+  ontbreekt?: string | null;
+}
+
+export type FieAkAdviesStatus = typeof FieAkAdviesStatus[keyof typeof FieAkAdviesStatus];
+
+
+export const FieAkAdviesStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+  weggezet: 'weggezet',
+} as const;
+
+export interface FieAkAdvies {
+  id: number;
+  werkgever_id?: number | null;
+  categorie: string;
+  titel: string;
+  advies: string;
+  vervolgstap?: string | null;
+  bedrag: number;
+  cijfers?: unknown | null;
+  bron_vermelding?: string | null;
+  status: FieAkAdviesStatus;
+  afhandel_reden?: string | null;
+  aangemaakt_op?: string | null;
+}
+
+export type FieAkAdviesPatchStatus = typeof FieAkAdviesPatchStatus[keyof typeof FieAkAdviesPatchStatus];
+
+
+export const FieAkAdviesPatchStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+  weggezet: 'weggezet',
+} as const;
+
+export interface FieAkAdviesPatch {
+  status: FieAkAdviesPatchStatus;
+  afhandel_reden?: string | null;
+}
+
+export type FieAkDashboardPostPerJaarItem = {
+  boekjaar: number;
+  bedrag: number;
+};
+
+export interface FieAkDashboardPost {
+  categorie: string;
+  omschrijving: string;
+  werkgever_id?: number | null;
+  werkgever_naam: string;
+  per_jaar?: FieAkDashboardPostPerJaarItem[];
+  huidig_bedrag: number;
+  aandeel_pct?: number | null;
+  stijging_pct?: number | null;
+  is_loonkosten?: boolean;
+}
+
+export interface FieAkLopendJaar {
+  boekjaar: number;
+  omzetDoel?: number | null;
+  omzetTotNu: number;
+  jaarFractie: number;
+  omzetKoers?: number | null;
+  akBegroot?: number | null;
+  pctBegroot?: number | null;
+  pctBijKoers?: number | null;
+  toelichting: string;
+}
+
+export type FieAkDashboardUrenSplitsing = {
+  productief: number;
+  indirect: number;
+  dekkend: boolean;
+};
+
+export interface FieAkDashboard {
+  reeks: FieAkReeksRij[];
+  lopend_jaar: FieAkLopendJaar;
+  posten: FieAkDashboardPost[];
+  adviezen: FieAkAdvies[];
+  bevindingen: string[];
+  uren_splitsing?: FieAkDashboardUrenSplitsing;
+}
+
+export interface FieAkAdviezenGenereerResultaat {
+  aangemaakt: FieAkAdvies[];
+  kandidaten_totaal: number;
+  wachtend: number;
+}
+
 export interface FieAkPostInput {
   /** @nullable */
   werkgever_id?: number | null;
