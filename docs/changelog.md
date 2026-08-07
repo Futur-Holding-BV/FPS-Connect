@@ -2639,6 +2639,18 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - Nulbevinding: er is nog géén inkoopbon-, factuur- of nacalculatiedata (dev én prod) — acceptatie op echte inkoopplannen volgt zodra die data bestaat.
 - Reviewfixes: jaarprijslijst-match nu exact (case-insensitief, ambigu = geen override), `totaleBesparing` herberekend uit regels i.p.v. AI-schatting, blok E telt alleen afgesloten nacalculaties, prijsbron "inkoophistorie" toegevoegd aan verdeling en frontend-typering.
 
+
+## 2026-08-07 — FACTUUR_02: facturen komen automatisch bij de juiste inkoper terecht
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen routeringslookup, geen schemawijziging)
+
+**Aanleiding:** uit het pijplijnbewijs (Task 793) bleek dat de inkoperroute vrijwel nooit kon matchen: `routeerNaVerwerking` zocht inkoopbonnen op `inkoopbonnen.leverancier_id == crm_klanten.id`, maar die FK verwijst naar de oude `leveranciers`-tabel. Alleen bij toevallig gelijke id's werd een inkoper gevonden; elke andere factuur viel terug op de directie en belastte René onnodig.
+
+**Wijzigingen:**
+- `artifacts/api-server/src/services/factuurstroomService.ts` — de inkoper wordt nu gevonden via een naam-brug: crm_klanten.naam ↔ leveranciers.naam ↔ inkoopbonnen.leverancier (tekstveld), met dezelfde bedrijfsnaam-normalisatie (bv/vof/nv-suffix) als de CRM-koppeling (`normaliseerBedrijfsnaam`, nu gedeeld). Alleen exacte genormaliseerde naammatches tellen — nooit gokken. Geen schemawijziging nodig (bewust: apply-additive/drizzle-push zijn bevroren). Tevens ontbrekende import `stuurPushNaarGebruiker` hersteld die de typecheck blokkeerde.
+- `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` — bewijst nu de inkoperroute end-to-end (was bewust directieroute): seedt een leveranciers-rij + opdracht + goedgekeurde inkoopbon, borgt dat crm_klanten-id en leveranciers-id verschillen (anders zou het bewijs op id-toeval kunnen leunen) en eist `wacht_op_inkoper` met de juiste inkoper-id. Cleanup ruimt alle nieuwe seeds op in `finally`.
+
+**Bewijs:** verificatiescript gedraaid — ALLE STAPPEN GESLAAGD; factuur kwam via de naam-brug op `wacht_op_inkoper` met de goedkeurder van de inkoopbon als inkoper; dedupe en §8-heropening blijven werken.
 ## 2026-08-07 — Indirecte loonkosten: dekking per boekjaar afgedwongen (taak 803)
 
 - **Uitvoering:** gebouwd en bewezen (24/24 checks) | **Kwaliteit:** hoog | **Risico:** laag (alleen strengere bevinding, geen berekening gewijzigd)

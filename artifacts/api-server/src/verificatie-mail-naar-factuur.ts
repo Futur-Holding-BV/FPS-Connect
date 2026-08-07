@@ -5,8 +5,9 @@
 //   - verwerkFactuurmails: claim/dedupe op werk_inbox_mails
 //   - bijlage → analyseerFactuurVoorStroom (echte AI-extractie via de gateway)
 //   - PDF-opslag in object storage, factuurrij + AI-voorstel + tijdlijn
-//   - leverancier→CRM-koppeling en routering (inkoper via inkoopbon, anders
-//     directie; bij onzekerheid controle door administratie)
+//   - leverancier→CRM-koppeling en routering: inkoper via inkoopbon (over de
+//     naam-brug leveranciers↔crm_klanten), anders directie; bij onzekerheid
+//     controle door administratie
 //   - §8: leveranciersreactie in dezelfde mailthread (conversationId) heropent
 //     een afgewezen factuur
 //
@@ -25,6 +26,9 @@ import {
   factuurCorrespondentieTable,
   crmKlantenTable,
   gebruikersTable,
+  leveranciersTable,
+  opdrachtenTable,
+  inkoopbonnenTable,
   werkInboxMailboxenTable,
   werkInboxMailsTable,
   werkInboxKoppelingenTable,
@@ -90,6 +94,9 @@ async function maakFactuurPdf(): Promise<Buffer> {
 // ── Seeds & cleanup ──────────────────────────────────────────────────────────
 
 let leverancierId = 0;
+let oudeLeverancierId = 0;
+let opdrachtId = 0;
+let inkoopbonId = 0;
 let mailboxId = 0;
 let seedGebruikerId = 0;
 const seedMessageIds: string[] = [];
@@ -135,6 +142,9 @@ async function cleanup(): Promise<void> {
     ));
   }
   if (mailboxId) await db.delete(werkInboxMailboxenTable).where(eq(werkInboxMailboxenTable.id, mailboxId));
+  if (inkoopbonId) await db.delete(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, inkoopbonId));
+  if (opdrachtId) await db.delete(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId));
+  if (oudeLeverancierId) await db.delete(leveranciersTable).where(eq(leveranciersTable.id, oudeLeverancierId));
   if (leverancierId) await db.delete(crmKlantenTable).where(eq(crmKlantenTable.id, leverancierId));
 }
 
@@ -154,11 +164,38 @@ async function main(): Promise<void> {
       .returning({ id: crmKlantenTable.id });
     leverancierId = lev.id;
 
-    // NB: de inkoperroute (via inkoopbonnen.goedgekeurd_door_id) is hier niet
-    // afdwingbaar: inkoopbonnen.leverancier_id verwijst naar de oude
-    // `leveranciers`-tabel, terwijl de routering met crm_klanten-id's zoekt.
-    // Zonder toevallig gelijke id's valt de routering dus terug op de directie
-    // — dat pad bewijzen we hier; de id-mismatch is als apart punt gemeld.
+    // Inkoperroute-seeds: de routering vindt de inkoper via de naam-brug
+    // (crm_klanten.naam ↔ leveranciers.naam ↔ inkoopbonnen.leverancier) — de
+    // id's van beide tabellen verschillen hier bewust, zodat de brug bewezen
+    // wordt en niet een toevallige id-gelijkheid.
+    const [oudeLev] = await db.insert(leveranciersTable)
+      .values({ naam: LEVERANCIER_NAAM, bron: "handmatig" })
+      .returning({ id: leveranciersTable.id });
+    oudeLeverancierId = oudeLev.id;
+    if (oudeLeverancierId === leverancierId) {
+      // Toevallig gelijke id's zouden het bewijs waardeloos maken (dan zou de
+      // oude id-koppeling óók matchen) — schuif de leveranciers-sequence op.
+      const [tweede] = await db.insert(leveranciersTable)
+        .values({ naam: LEVERANCIER_NAAM, bron: "handmatig" })
+        .returning({ id: leveranciersTable.id });
+      await db.delete(leveranciersTable).where(eq(leveranciersTable.id, oudeLeverancierId));
+      oudeLeverancierId = tweede.id;
+    }
+
+    const [opdr] = await db.insert(opdrachtenTable)
+      .values({ titel: `${MARK} opdracht inkoperroute` })
+      .returning({ id: opdrachtenTable.id });
+    opdrachtId = opdr.id;
+
+    const [bon] = await db.insert(inkoopbonnenTable).values({
+      opdrachtId,
+      leverancier: LEVERANCIER_NAAM,
+      leverancierId: oudeLeverancierId,
+      status: "goedgekeurd",
+      goedgekeurdDoorId: uid,
+      goedgekeurdOp: new Date(),
+    }).returning({ id: inkoopbonnenTable.id });
+    inkoopbonId = bon.id;
 
     const [mb] = await db.insert(werkInboxMailboxenTable).values({
       gebruikerId: uid,
@@ -211,12 +248,15 @@ async function main(): Promise<void> {
     eis(factuur.pdfUrl != null && factuur.pdfUrl.includes("/api/storage/files"), "stap 2 PDF-opslag", String(factuur.pdfUrl));
 
     // Deterministisch routeringsbewijs: de PDF is bewust volledig en eenduidig,
-    // dus de AI mag géén onzekere velden melden en de factuur MOET (zonder
-    // bekende inkoper) op de directieroute uitkomen. Elk ander resultaat = FAIL.
+    // dus de AI mag géén onzekere velden melden. Er is een goedgekeurde
+    // inkoopbon voor deze leverancier geseed, dus de factuur MOET op de
+    // inkoperroute uitkomen (niet directie). Elk ander resultaat = FAIL.
     const onzeker = (factuur.onzekereVelden as string[] | null) ?? [];
-    eis(factuur.status === "wacht_op_goedkeuring", "stap 2 directieroute",
-      `status=${factuur.status}, onzekere velden: [${onzeker.join(", ")}] (verwacht wacht_op_goedkeuring zonder onzekerheden)`);
-    console.log(`Stap 2: factuur #${factuur.id} → directieroute (geen inkoper bekend, ter goedkeuring)`);
+    eis(factuur.status === "wacht_op_inkoper", "stap 2 inkoperroute",
+      `status=${factuur.status}, onzekere velden: [${onzeker.join(", ")}] (verwacht wacht_op_inkoper via inkoopbon)`);
+    eis(factuur.inkoperId === uid, "stap 2 inkoper-id",
+      `inkoperId=${factuur.inkoperId}, verwacht ${uid} (goedkeurder van de geseedde inkoopbon)`);
+    console.log(`Stap 2: factuur #${factuur.id} → inkoperroute (inkoper via inkoopbon-naam-brug, wacht op bevestiging)`);
 
     const tijdlijn1 = await db.select().from(factuurTijdlijnTable)
       .where(eq(factuurTijdlijnTable.factuurId, factuur.id));
