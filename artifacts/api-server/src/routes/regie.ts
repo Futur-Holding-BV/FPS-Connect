@@ -294,34 +294,39 @@ router.put("/regie/voorwaarden/:opdrachtId", requireAuth, schrijven, async (req,
     bijgewerktOp: new Date(),
   };
 
-  let [existing] = await db.select().from(regieVoorwaardenTable).where(eq(regieVoorwaardenTable.opdrachtId, opdrachtId));
+  // Voorwaarden + tarieven in één transactie (schuldpunt 13): anders kunnen de
+  // oude tarieven al verwijderd zijn terwijl de nieuwe insert faalt.
+  const voorwaardenId = await db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(regieVoorwaardenTable).where(eq(regieVoorwaardenTable.opdrachtId, opdrachtId));
 
-  let voorwaardenId: number;
-  if (existing) {
-    await db.update(regieVoorwaardenTable).set(velden).where(eq(regieVoorwaardenTable.id, existing.id));
-    voorwaardenId = existing.id;
-  } else {
-    const [created] = await db.insert(regieVoorwaardenTable).values({
-      opdrachtId,
-      aangemaaktDoorId: req.session.userId ?? null,
-      ...velden,
-    }).returning();
-    voorwaardenId = created.id;
-  }
-
-  // Tarieven vervangen
-  if (Array.isArray(tarievenInput)) {
-    await db.delete(regieTarievenTable).where(eq(regieTarievenTable.voorwaardenId, voorwaardenId));
-    if (tarievenInput.length > 0) {
-      await db.insert(regieTarievenTable).values(
-        tarievenInput.map(t => ({
-          voorwaardenId,
-          functiegroep: t.functiegroep,
-          uurtarief: t.uurtarief,
-        }))
-      );
+    let id: number;
+    if (existing) {
+      await tx.update(regieVoorwaardenTable).set(velden).where(eq(regieVoorwaardenTable.id, existing.id));
+      id = existing.id;
+    } else {
+      const [created] = await tx.insert(regieVoorwaardenTable).values({
+        opdrachtId,
+        aangemaaktDoorId: req.session.userId ?? null,
+        ...velden,
+      }).returning();
+      id = created.id;
     }
-  }
+
+    // Tarieven vervangen
+    if (Array.isArray(tarievenInput)) {
+      await tx.delete(regieTarievenTable).where(eq(regieTarievenTable.voorwaardenId, id));
+      if (tarievenInput.length > 0) {
+        await tx.insert(regieTarievenTable).values(
+          tarievenInput.map(t => ({
+            voorwaardenId: id,
+            functiegroep: t.functiegroep,
+            uurtarief: t.uurtarief,
+          }))
+        );
+      }
+    }
+    return id;
+  });
 
   const [v] = await db.select().from(regieVoorwaardenTable).where(eq(regieVoorwaardenTable.id, voorwaardenId));
   const tarieven = await db.select().from(regieTarievenTable).where(eq(regieTarievenTable.voorwaardenId, voorwaardenId));

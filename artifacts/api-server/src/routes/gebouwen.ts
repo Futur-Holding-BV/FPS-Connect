@@ -217,26 +217,39 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res): Promise<void> =>
       mijnSpotRijen.map((r) => [r.gebouwId, r.mijnLaatsteSpotOp]),
     );
 
-    const result = await Promise.all(
-      gebouwen.map(async (g) => {
-        const [stats] = await db
-          .select({
-            count: count(),
-            laatsteSpotOp: sql<Date | null>`max(${voorzieningenTable.aangemaaktOp})`,
-          })
-          .from(voorzieningenTable)
-          .where(eq(voorzieningenTable.gebouwId, g.id));
-        return gebouwRij(
-          g,
-          Number(stats?.count ?? 0),
-          await klantNaam(g.klantId),
-          partijenPerGebouw.get(g.id) ?? [],
-          stats?.laatsteSpotOp ?? null,
-          werkgeverNamen.get(g.werkgeverId ?? -1) ?? null,
-          mijnLaatsteSpotPerGebouw.get(g.id) ?? null,
-        );
-      }),
-    );
+    // Schuldpunt 45: geen N+1 meer — spotstatistieken en klantnamen in twee
+    // vaste queries i.p.v. twee queries per gebouw.
+    const statsRijen = await db
+      .select({
+        gebouwId: voorzieningenTable.gebouwId,
+        count: count(),
+        laatsteSpotOp: sql<Date | null>`max(${voorzieningenTable.aangemaaktOp})`,
+      })
+      .from(voorzieningenTable)
+      .groupBy(voorzieningenTable.gebouwId);
+    const statsPerGebouw = new Map(statsRijen.map((r) => [r.gebouwId, r]));
+
+    const klantIds = [...new Set(gebouwen.map((g) => g.klantId).filter((id): id is number => id != null))];
+    const klantRijen = klantIds.length
+      ? await db
+          .select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+          .from(gebruikersTable)
+          .where(inArray(gebruikersTable.id, klantIds))
+      : [];
+    const klantNamen = new Map(klantRijen.map((k) => [k.id, k.naam]));
+
+    const result = gebouwen.map((g) => {
+      const stats = statsPerGebouw.get(g.id);
+      return gebouwRij(
+        g,
+        Number(stats?.count ?? 0),
+        g.klantId != null ? klantNamen.get(g.klantId) ?? null : null,
+        partijenPerGebouw.get(g.id) ?? [],
+        stats?.laatsteSpotOp ?? null,
+        werkgeverNamen.get(g.werkgeverId ?? -1) ?? null,
+        mijnLaatsteSpotPerGebouw.get(g.id) ?? null,
+      );
+    });
 
     res.json(result);
   } catch (err) {

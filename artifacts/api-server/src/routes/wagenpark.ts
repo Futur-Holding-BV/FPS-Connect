@@ -500,41 +500,47 @@ router.post("/sync", beheer, async (req, res): Promise<void> => {
       for (const v of voertuigen) {
         if (!v.providerVoertuigId) continue;
         try {
+          // Providerdata eerst ophalen (buiten de transactie: netwerk-I/O),
+          // daarna km-stand + ritten per voertuig atomair wegschrijven
+          // (schuldpunt 13): anders kan de km-stand bijgewerkt zijn terwijl
+          // de rittenimport halverwege stukloopt.
           const data = await provider.haalVoertuigDataOp(v.providerVoertuigId);
-          if (data?.kmStand !== undefined) {
-            await db.update(voertuigenTable).set({
-              kmStand:      data.kmStand,
-              kmStandDatum: data.kmStandDatum ?? new Date(),
-              bijgewerktOp: new Date(),
-            }).where(eq(voertuigenTable.id, v.id));
-            aantalBijgewerkt++;
-          }
-
-          // Ritten importeren (afgelopen 24 uur)
           const gisteren = new Date(Date.now() - 86_400_000);
           const nu       = new Date();
           const ritten   = await provider.haalRittenOp(v.providerVoertuigId, gisteren, nu);
-          for (const rit of ritten) {
-            // Geen dubbele imports
-            const bestaand = await db
-              .select({ id: wagenparkRittenTable.id })
-              .from(wagenparkRittenTable)
-              .where(eq(wagenparkRittenTable.providerRitId, rit.externalRitId));
-            if (bestaand.length > 0) continue;
 
-            await db.insert(wagenparkRittenTable).values({
-              voertuigId:      v.id,
-              startDatum:      rit.startDatum,
-              eindDatum:       rit.eindDatum,
-              kmStart:         rit.kmStart ?? null,
-              kmEind:          rit.kmEind ?? null,
-              afstandKm:       rit.afstandKm ?? null,
-              vertrekAdres:    rit.vertrekAdres ?? null,
-              bestemmingAdres: rit.bestemmingAdres ?? null,
-              providerRitId:   rit.externalRitId,
-              bron:            provider.naam,
-            });
-          }
+          await db.transaction(async (tx) => {
+            if (data?.kmStand !== undefined) {
+              await tx.update(voertuigenTable).set({
+                kmStand:      data.kmStand,
+                kmStandDatum: data.kmStandDatum ?? new Date(),
+                bijgewerktOp: new Date(),
+              }).where(eq(voertuigenTable.id, v.id));
+              aantalBijgewerkt++;
+            }
+
+            for (const rit of ritten) {
+              // Geen dubbele imports
+              const bestaand = await tx
+                .select({ id: wagenparkRittenTable.id })
+                .from(wagenparkRittenTable)
+                .where(eq(wagenparkRittenTable.providerRitId, rit.externalRitId));
+              if (bestaand.length > 0) continue;
+
+              await tx.insert(wagenparkRittenTable).values({
+                voertuigId:      v.id,
+                startDatum:      rit.startDatum,
+                eindDatum:       rit.eindDatum,
+                kmStart:         rit.kmStart ?? null,
+                kmEind:          rit.kmEind ?? null,
+                afstandKm:       rit.afstandKm ?? null,
+                vertrekAdres:    rit.vertrekAdres ?? null,
+                bestemmingAdres: rit.bestemmingAdres ?? null,
+                providerRitId:   rit.externalRitId,
+                bron:            provider.naam,
+              });
+            }
+          });
         } catch (err) {
           aantalFouten++;
           fouten.push(`Voertuig ${v.kenteken}: ${veiligeFoutmelding(err).slice(0, 100)}`);

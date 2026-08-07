@@ -2502,3 +2502,7 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Punt 15:** `POST /offertes/:id/maak-opdracht` zet opdracht, werkbegroting, regels en totalen nu in één transactie; een fout halverwege laat geen halve opdracht meer achter.
 - **Punt 16:** verlofgoedkeuring bleek al atomair via de WorkflowEngine (status + saldo met row-lock + auditlog in één transactie); nu aantoonbaar gemaakt.
 - **Bewijs:** `scripts/src/bewijs-transacties-15-16.ts` — faalpad met geforceerde DB-fout (rollback aangetoond) + happypad, beide groen op dev.
+
+## 7 augustus 2026 — SCHULD_01 punten 13 en 45
+- **Punt 13:** inventarisatie leverde 8 échte multi-table routes zonder transactie op (niet 15): regie-voorwaarden, brandstof-import (3×), veiligheid-toolboxen (3×), wagenpark-sync. Alle 8 draaien nu in één `db.transaction()`; bij een fout halverwege blijft er niets half achter. Bewijs via geforceerde DB-fout op toolbox-aanmaken (rollback aangetoond).
+- **Punt 45:** `GET /gebouwen` deed per gebouw losse queries voor spotstatistieken en klantnaam; nu twee vaste queries voor de hele lijst. Met 102 gebouwen: mediaan 43,3 → 31,9 ms, aantal queries per verzoek van ~209 naar 7.

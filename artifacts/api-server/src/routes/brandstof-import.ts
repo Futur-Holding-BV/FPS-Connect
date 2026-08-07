@@ -505,7 +505,10 @@ router.post("/", schrijven, upload.single("bestand"), async (req, res): Promise<
   const aantalOntkoppeld  = gekoppeldeRegels.filter(r => r.koppelingStatus === "niet_gevonden").length;
   const status = aantalOnzeker > 0 ? "wacht_op_controle" : "verwerkt";
 
-  const [importRecord] = await db.insert(brandstofImportenTable).values({
+  // Importheader + regels in één transactie (schuldpunt 13): anders blijft er
+  // bij een fout in de bulk-regelinsert een lege importheader achter.
+  const importRecord = await db.transaction(async (tx) => {
+  const [importRecord] = await tx.insert(brandstofImportenTable).values({
     bestandsnaam,
     brontype,
     leverancier:       "mkb_brandstof",
@@ -525,7 +528,7 @@ router.post("/", schrijven, upload.single("bestand"), async (req, res): Promise<
 
   // Sla regels op
   if (gekoppeldeRegels.length) {
-    await db.insert(brandstofRegelsTable).values(
+    await tx.insert(brandstofRegelsTable).values(
       gekoppeldeRegels.map(gr => ({
         importId:        importRecord.id,
         datum:           gr.rr.datum ? parseDatumNl(gr.rr.datum) ?? null : null,
@@ -545,6 +548,9 @@ router.post("/", schrijven, upload.single("bestand"), async (req, res): Promise<
       })),
     );
   }
+
+  return importRecord;
+  });
 
   res.status(201).json(mapImport(importRecord));
 });
@@ -623,29 +629,37 @@ router.patch("/:id/regels/:regelId", schrijven, async (req, res): Promise<void> 
     update.koppelingStatus = voertuig_id ? "handmatig" : "niet_gevonden";
   }
 
-  const [bijgewerkt] = await db
+  // Regelupdate + hertelling batchtotalen in één transactie (schuldpunt 13):
+  // anders kan de regel aangepast zijn terwijl de batchstatus oud blijft.
+  const bijgewerkt = await db.transaction(async (tx) => {
+  const [bijgewerkt] = await tx
     .update(brandstofRegelsTable)
     .set(update)
     .where(and(eq(brandstofRegelsTable.id, regelId), eq(brandstofRegelsTable.importId, importId)))
     .returning();
 
-  if (!bijgewerkt) { res.status(404).json({ error: "Regel niet gevonden" }); return; }
+  if (!bijgewerkt) return null;
 
   // Hertellen voor de importbatch
-  const alleRegels = await db.select().from(brandstofRegelsTable).where(eq(brandstofRegelsTable.importId, importId));
+  const alleRegels = await tx.select().from(brandstofRegelsTable).where(eq(brandstofRegelsTable.importId, importId));
   const aantalGekoppeld   = alleRegels.filter(r => r.koppelingStatus === "automatisch").length;
   const aantalOnzeker     = alleRegels.filter(r => r.koppelingStatus === "onzeker").length;
   const aantalOntkoppeld  = alleRegels.filter(r => r.koppelingStatus === "niet_gevonden").length;
   const handmatig         = alleRegels.filter(r => r.koppelingStatus === "handmatig").length;
   const nieuweStatus = aantalOnzeker > 0 ? "wacht_op_controle" : (aantalGekoppeld + handmatig === alleRegels.length ? "geaccordeerd" : "verwerkt");
 
-  await db.update(brandstofImportenTable).set({
+  await tx.update(brandstofImportenTable).set({
     aantalGekoppeld,
     aantalOnzeker,
     aantalOntkoppeld,
     status: nieuweStatus,
     bijgewerktOp: new Date(),
   }).where(eq(brandstofImportenTable.id, importId));
+
+  return bijgewerkt;
+  });
+
+  if (!bijgewerkt) { res.status(404).json({ error: "Regel niet gevonden" }); return; }
 
   const voertuigen = bijgewerkt.voertuigId
     ? await db.select({ id: voertuigenTable.id, kenteken: voertuigenTable.kenteken })
@@ -685,9 +699,13 @@ router.post("/:id/laden", schrijven, async (req, res): Promise<void> => {
   let aantalGeladen = 0;
   const aantalOvergeslagen = regels.length - teVerwerken.length;
 
+  // Kostenregels + regelmarkeringen + importstatus in één transactie
+  // (schuldpunt 13): anders blijft de import bij een fout halverwege half
+  // geladen achter (deel van de kosten geboekt, import niet gemarkeerd).
+  await db.transaction(async (tx) => {
   for (const r of teVerwerken) {
     if (!r.voertuigId) continue;
-    await db.insert(wagenparkKostenTable).values({
+    await tx.insert(wagenparkKostenTable).values({
       voertuigId:    r.voertuigId,
       categorie:     "brandstof",
       bedrag:        r.bedragInclBtw ?? r.bedragExBtw ?? 0,
@@ -697,17 +715,18 @@ router.post("/:id/laden", schrijven, async (req, res): Promise<void> => {
       kmStand:       r.kmStand ?? undefined,
       aangemaaktDoorId: req.session?.["userId"] ?? null,
     });
-    await db.update(brandstofRegelsTable).set({ kostenId: -1 }).where(eq(brandstofRegelsTable.id, r.id));
+    await tx.update(brandstofRegelsTable).set({ kostenId: -1 }).where(eq(brandstofRegelsTable.id, r.id));
     aantalGeladen++;
   }
 
-  await db.update(brandstofImportenTable).set({
+  await tx.update(brandstofImportenTable).set({
     geladen:      true,
     geladenOp:    new Date(),
     geladenDoorId: req.session?.["userId"] ?? null,
     status:       "geaccordeerd",
     bijgewerktOp: new Date(),
   }).where(eq(brandstofImportenTable.id, id));
+  });
 
   res.json({ aantalGeladen, aantalOvergeslagen });
 });

@@ -200,7 +200,10 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
       return void res.status(400).json({ error: "Titel verplicht" });
     }
 
-    const [toolbox] = await db
+    // Toolbox + vragen in één transactie (schuldpunt 13): anders blijft er bij
+    // een fout in de vragen-insert een toolbox zonder vragen achter.
+    const toolbox = await db.transaction(async (tx) => {
+    const [toolbox] = await tx
       .insert(veiligheidToolboxenTable)
       .values({
         titel: rest.titel.trim(),
@@ -221,7 +224,7 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
       .returning();
 
     if (Array.isArray(vragenInput) && vragenInput.length > 0) {
-      await db.insert(veiligheidToolboxVragenTable).values(
+      await tx.insert(veiligheidToolboxVragenTable).values(
         vragenInput.map((v: any, i: number) => ({
           toolboxId: toolbox.id,
           volgorde: i,
@@ -231,6 +234,8 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
         }))
       );
     }
+    return toolbox;
+    });
 
     res.status(201).json(mapToolbox(toolbox as unknown as Record<string, unknown>));
   } catch (err) {
@@ -316,18 +321,22 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (
     if (rest.video_url !== undefined) update.videoUrl = rest.video_url;
     if (rest.tags !== undefined) update.tags = rest.tags;
 
-    const [updated] = await db
+    // Metadata-update + vragen vervangen in één transactie (schuldpunt 13):
+    // anders kunnen de oude vragen al verwijderd zijn terwijl de nieuwe
+    // insert faalt (toolbox zonder vragen).
+    const updated = await db.transaction(async (tx) => {
+    const [updated] = await tx
       .update(veiligheidToolboxenTable)
       .set(update)
       .where(eq(veiligheidToolboxenTable.id, id))
       .returning();
 
-    if (!updated) return void res.status(404).json({ error: "Niet gevonden" });
+    if (!updated) return null;
 
     if (Array.isArray(vragenInput)) {
-      await db.delete(veiligheidToolboxVragenTable).where(eq(veiligheidToolboxVragenTable.toolboxId, id));
+      await tx.delete(veiligheidToolboxVragenTable).where(eq(veiligheidToolboxVragenTable.toolboxId, id));
       if (vragenInput.length > 0) {
-        await db.insert(veiligheidToolboxVragenTable).values(
+        await tx.insert(veiligheidToolboxVragenTable).values(
           vragenInput.map((v: any, i: number) => ({
             toolboxId: id,
             volgorde: i,
@@ -338,6 +347,10 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (
         );
       }
     }
+    return updated;
+    });
+
+    if (!updated) return void res.status(404).json({ error: "Niet gevonden" });
 
     const vragen = await db
       .select()
@@ -442,7 +455,11 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
       logger.warn({ raw }, "AI JSON parse mislukt voor toolbox analyse");
     }
 
-    const [updated] = await db
+    // AI-resultaat + vragen vervangen in één transactie (schuldpunt 13):
+    // anders kunnen de oude vragen verwijderd zijn terwijl de nieuwe insert
+    // faalt (toolbox met AI-metadata maar zonder vragen).
+    const updated = await db.transaction(async (tx) => {
+    const [updated] = await tx
       .update(veiligheidToolboxenTable)
       .set({
         aiSamenvatting: analyse.samenvatting ?? null,
@@ -460,8 +477,8 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
       .returning();
 
     if (Array.isArray(analyse.vragen) && analyse.vragen.length > 0) {
-      await db.delete(veiligheidToolboxVragenTable).where(eq(veiligheidToolboxVragenTable.toolboxId, id));
-      await db.insert(veiligheidToolboxVragenTable).values(
+      await tx.delete(veiligheidToolboxVragenTable).where(eq(veiligheidToolboxVragenTable.toolboxId, id));
+      await tx.insert(veiligheidToolboxVragenTable).values(
         analyse.vragen.map((v: any, i: number) => ({
           toolboxId: id,
           volgorde: i,
@@ -471,6 +488,8 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
         }))
       );
     }
+    return updated;
+    });
 
     const vragen = await db
       .select()

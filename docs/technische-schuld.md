@@ -24,7 +24,7 @@
 | 10 | Geen index op `uren.medewerker_id` + `week_start` | 3 | 3 | 1 | P2 |
 | 11 | Geen index op `werkbonnen.opdracht_id` + `status` | 3 | 3 | 1 | P2 |
 | 12 | Geen index op `fotos.voorziening_id` (N+1-fotoqueries) | 4 | 3 | 1 | P2 |
-| 13 | 15 routes schrijven naar meerdere tabellen zonder `db.transaction()` — gedeeltelijke writes mogelijk | 5 | 4 | 20 | P1 |
+| 13 | Multi-table routes zonder transactie — opgelost 7 aug 2026. Inventarisatie: geen 15 maar 8 échte gevallen (regie-voorwaarden PUT; brandstof-import upload/regel-PATCH/laden; veiligheid-toolbox POST/PATCH/ai-analyse; wagenpark-sync per voertuig). Alle 8 onder `db.transaction()` gebracht. Steekproef-gedragsbewijs: geforceerde vragen-insert-fout op toolbox-create → 500 zonder achtergebleven toolbox-rij; happypad 201 | 5 | 4 | 0 | ✅ |
 | 14 | Dossier-bevriezing niet atomair — opgelost: draait in `db.transaction()` (geverifieerd 7 aug 2026) | 5 | 5 | 0 | ✅ |
 | 15 | maak-opdracht in transactie — opgelost 7 aug 2026: opdracht + werkbegroting + regels + totalen in één db.transaction. Bewijs: scripts/src/bewijs-transacties-15-16.ts (geforceerde begroting-fout → 500 zonder halve opdracht-rij; daarna happypad 201) | 4 | 4 | 0 | ✅ |
 | 16 | verlofgoedkeuring saldo-transactie — was al gedekt: WorkflowEngine draait status+saldo (row-lock)+auditlog in één transactie. Gedragsbewijs 7 aug 2026 via scripts/src/bewijs-transacties-15-16.ts (geforceerde saldo-fout → status blijft 'aangevraagd'; happypad saldo 40→32 + logregel) | 4 | 4 | 0 | ✅ |
@@ -77,7 +77,7 @@
 
 | # | Item | Impact | Risico | Uren | Prio |
 |---|------|--------|--------|------|------|
-| 45 | N+1 in `GET /gebouwen`: per gebouw 3 losse queries (klant, partijen, spotcount) | 5 | 4 | 6 | P1 |
+| 45 | N+1 in `GET /gebouwen` — opgelost 7 aug 2026: spotstats (count+laatste spot) via één GROUP BY-query en klantnamen via één inArray-query i.p.v. 2 queries per gebouw (partijen waren al gebatcht). Meting dev met 102 gebouwen: mediaan 43,3 ms → 31,9 ms (−26%), querytal per verzoek van ~209 naar 7 | 5 | 4 | 0 | ✅ |
 | 46 | N+1 in `GET /documenten`: per document 2 queries (koppelingen + versies) | 4 | 3 | 4 | P2 |
 | 47 | N+1 in `GET /medewerkers`: per medewerker 3 queries (functies, opleidingen, verlof) | 4 | 3 | 4 | P2 |
 | 48 | N+1 in spotlijst: per spot `getLabelsVoorVoorziening()` (1 query) | 4 | 3 | 4 | P2 |
