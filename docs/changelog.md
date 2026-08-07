@@ -2525,3 +2525,19 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 ## 7 augustus 2026 — code-review-opvolging SCHULD_01/SCHEMA_01
 - **Migratierunner:** basislijn-stempeling gebeurt nu pas na sentinel-verificatie (kenmerkende tabel/kolom per basislijn-migratie moet bestaan); een onvolledige database faalt hard i.p.v. stilzwijgend door te glippen.
 - **Opdracht per offerte:** migratie 0006 voegt een unieke index op `opdrachten.offerte_id` toe; twee gelijktijdige "maak opdracht"-verzoeken kunnen niet langer allebei een opdracht aanmaken (race → nette 409).
+
+## 2026-08-07 — Bewijs mail-naar-factuur-pijplijn met gesimuleerde factuurmail (Task 793)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen verificatie + testhaak)
+
+**Aanleiding:** de stroom-endpoints waren bewezen, maar het begin van de keten (mailbox-sync → bijlage → AI-extractie → factuur + routering) en het heropenen via `conversationId` nog niet met een echte factuurmail.
+
+**Wijzigingen:**
+- `artifacts/api-server/src/services/factuurstroomService.ts` — verificatiehaak `zetBijlagenOphalerVoorVerificatie()`: alleen het Graph-HTTP-randje is vervangbaar; de rest van de pijplijn blijft ongewijzigde productiecode.
+- `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` — nieuw verificatiescript: genereert een realistische factuur-PDF (pdfkit), zet een factuurmailbox + "gesynchroniseerde" mail klaar en draait `verwerkFactuurmails()` echt.
+
+**Bewijs (dev):** de gesimuleerde factuurmail leverde automatisch een factuur op met correct AI-gelezen factuurnummer, CRM-leverancierkoppeling, PDF in objectopslag, tijdlijn, mail↔factuur-koppeling en routering naar de directie (geen inkoper bekend); tweede run verwerkte niets dubbel. Na afwijzing heropende een reactie in dezelfde mailthread (`conversationId`) de factuur op "controle nodig", met tijdlijnregel, inkomende correspondentie en signaal — zonder duplicaatfactuur. Typecheck groen. NB: op dev is geen Microsoft-account gekoppeld; het echte Graph-verkeer zelf (`haalBijlagen`) is het enige gesimuleerde randje.
+
+**Bevinding:** de inkoperroute kan in de praktijk vrijwel nooit matchen: `inkoopbonnen.leverancier_id` verwijst naar de oude `leveranciers`-tabel, terwijl de factuurrouting met `crm_klanten`-id's zoekt (als follow-up gemeld).
+
+---

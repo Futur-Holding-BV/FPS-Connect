@@ -12,4 +12,4 @@ description: Ontwerpregels van de automatische factuurstroom (mail → goedgekeu
 - Mail-claim (`factuur_verwerkt_op`) wordt bij een verwerkingsfout TERUGGEGEVEN zodat de volgende run opnieuw probeert; anders laat een tijdelijke Graph/AI-fout de mail permanent liggen.
 - Leverancier alleen koppelen bij exact één match — nooit gokken; anders signaal `onbekende_leverancier`.
 - Bekende restpunten (review): legacy-intakes (handmatige upload, oude mailbox-sync, legacy accorderen) bestaan nog naast de stroom; geen DB-idempotentie op mail+bijlage-identiteit; niet-transactionele verwerking. Betalen/SEPA = FACTUUR_03.
-- Verificatie: `scripts/src/verificatie-factuurstroom.ts` (seeded facturen + HTTP, ruimt zelf op).
+- Verificatie: endpoints via `scripts/src/verificatie-factuurstroom.ts`; volledige mail-naar-factuur-pijplijn via `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` (beide ruimen zelf op).

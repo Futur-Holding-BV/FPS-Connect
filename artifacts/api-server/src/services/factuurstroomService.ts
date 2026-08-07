@@ -29,8 +29,11 @@ import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { analyseerFactuurVoorStroom, type FactuurStroomVelden } from "../lib/documentIntelligence";
 import { haalBijlagen } from "./werkInboxGraph";
-import { stuurPushNaarGebruiker } from "../lib/pushService";
 
+// Verificatie-haak: alleen het Graph-HTTP-randje is vervangbaar, zodat het
+// verificatiescript (verificatie-mail-naar-factuur.ts) de volledige pijplijn
+// — claim, AI-extractie, opslag, routering, heropenen — ongewijzigd doorloopt
+// met een gesimuleerde factuurmail. Productiecode raakt dit nooit aan.
 const objectStorage = new ObjectStorageService();
 
 // ── Tijdlijn & signalen (gewone taal, §6/§7) ─────────────────────────────────
@@ -205,7 +208,7 @@ async function verwerkFactuurmail(mail: MailRij, isPersonlijk: boolean): Promise
     return;
   }
 
-  const bijlagen = await haalBijlagen(mail.gebruikerId, mail.mailboxAdres, mail.messageId, isPersonlijk);
+  const bijlagen = await bijlagenOphaler(mail.gebruikerId, mail.mailboxAdres, mail.messageId, isPersonlijk);
   const kandidaten = bijlagen.filter((b) =>
     b.contentType === "application/pdf" || b.contentType.startsWith("image/") || b.name.toLowerCase().endsWith(".pdf"));
 
@@ -627,4 +630,12 @@ export function startFactuurstroomAchtergrond(): void {
   // Eerste run kort na opstart
   setTimeout(() => { void lus(); }, 30 * 1000);
   logger.info("factuurstroom: achtergrondbewaking gestart (elke 15 min)");
+}
+
+type BijlagenOphaler = typeof haalBijlagen;
+
+let bijlagenOphaler: BijlagenOphaler = haalBijlagen;
+
+export function zetBijlagenOphalerVoorVerificatie(fn: BijlagenOphaler | null): void {
+  bijlagenOphaler = fn ?? haalBijlagen;
 }
