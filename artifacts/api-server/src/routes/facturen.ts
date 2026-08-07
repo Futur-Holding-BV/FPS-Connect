@@ -41,7 +41,10 @@ import {
   maakGoedkeuringActor,
 } from "../services/goedkeuring-engine";
 import { leesFactuurUitMetAi } from "../services/factuurUitlezen";
-import { synchroniseerMailboxFacturen } from "../services/factuurImport";
+// FACTUUR_02 §2/§5 — facturen in de mailstroom hebben eigen statussen; de oude
+// accordeer-/goedkeuringspaden mogen die stroom nooit passeren.
+const STROOM_STATUSSEN = new Set(["wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling"]);
+const STROOM_MELDING = "Deze factuur zit in de factuurstroom. Gebruik de stroomacties (inkoper bevestigen, goedkeuren of afwijzen) op de factuurdetailpagina.";
 import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
 import { schrijfTijdlijn, maakAfwijsMailTekst } from "../services/factuurstroomService";
 
@@ -197,10 +200,19 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
     btw_code?: string; grootboekrekening?: string; kostenplaats?: string; project_code?: string;
     pdf_url?: string; bestandsnaam?: string; gebouw_id?: number;
   };
+  // FACTUUR_02 §2 — één ingang: inkoopfacturen komen uitsluitend via de
+  // factuurmailbox binnen. Handmatig aanmaken is beperkt tot verkoopfacturen.
+  if ((body.type ?? "inkoop") !== "verkoop") {
+    res.status(422).json({
+      error: "Inkoopfacturen kunnen alleen via de factuurmailbox binnenkomen",
+      detail: "Handmatig uploaden is beperkt tot verkoopfacturen. Laat de leverancier de factuur naar de factuurmailbox sturen; de factuurstroom pakt hem automatisch op.",
+    });
+    return;
+  }
   const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
   const subtype = body.subtype && TOEGESTANE_SUBTYPES.has(body.subtype) ? body.subtype : null;
   const [rij] = await db.insert(facturenTable).values({
-    type: body.type ?? "inkoop",
+    type: "verkoop",
     subtype,
     factuurnummer: body.factuurnummer ?? null,
     factuurdatum: body.factuurdatum ?? null,
@@ -312,16 +324,16 @@ router.patch("/facturen/import-instellingen", requireBevoegdheid("financieel", 4
 });
 
 // ── POST /facturen/mailbox-sync ───────────────────────────────────────────────
-// Haalt handmatig de financiële postbus op en maakt facturen aan uit bijlagen.
-router.post("/facturen/mailbox-sync", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
-  const resultaat = await synchroniseerMailboxFacturen(req.log);
-  res.status(resultaat.ok ? 200 : 422).json({
-    ok: resultaat.ok,
-    gecontroleerd: resultaat.gecontroleerd,
-    aangemaakt: resultaat.aangemaakt,
-    overgeslagen: resultaat.overgeslagen,
-    mislukt: resultaat.mislukt,
-    melding: resultaat.melding,
+// Legacy-import is uitgeschakeld (FACTUUR_02 §2): facturen komen uitsluitend
+// binnen via de factuurmailbox-stroom (werk-inbox met is_factuurmailbox).
+router.post("/facturen/mailbox-sync", requireBevoegdheid("financieel", 4), async (_req: Request, res: Response): Promise<void> => {
+  res.status(422).json({
+    ok: false,
+    gecontroleerd: 0,
+    aangemaakt: 0,
+    overgeslagen: 0,
+    mislukt: 0,
+    melding: "De oude mailbox-import is vervangen door de factuurstroom. Facturen komen automatisch binnen via de factuurmailbox (werk-inbox); handmatig synchroniseren is niet meer nodig.",
   });
 });
 
@@ -671,6 +683,23 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: R
   const id = paramInt(req.params["id"]);
   const body = req.body as Record<string, unknown>;
 
+  const [bestaand] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!bestaand) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  // FACTUUR_02 §5 — stroomstatussen zijn uitsluitend via de stroomacties te
+  // wijzigen. Via de generieke PATCH mag de status van een stroom-factuur niet
+  // veranderen, en mag geen enkele factuur een stroomstatus krijgen.
+  if ("status" in body && body["status"] !== bestaand.status) {
+    if (STROOM_STATUSSEN.has(bestaand.status)) {
+      res.status(409).json({ error: "Factuur zit in de factuurstroom", detail: STROOM_MELDING });
+      return;
+    }
+    if (typeof body["status"] === "string" && STROOM_STATUSSEN.has(body["status"])) {
+      res.status(409).json({ error: "Stroomstatussen kunnen niet handmatig worden gezet", detail: STROOM_MELDING });
+      return;
+    }
+  }
+
   const update: Partial<typeof facturenTable.$inferInsert> = { bijgewerktOp: new Date() };
   if ("subtype" in body) {
     const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
@@ -818,6 +847,7 @@ router.post("/facturen/:id/ter-goedkeuring-indienen", requireBevoegdheid("financ
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
+  if (STROOM_STATUSSEN.has(factuur.status)) { res.status(409).json({ error: "Factuur zit in de factuurstroom", detail: STROOM_MELDING }); return; }
 
   const actor = await maakGoedkeuringActor(req as { session: { userId?: number | null } }, db);
   if (!actor) { res.status(401).json({ error: "Niet ingelogd" }); return; }
@@ -853,6 +883,8 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), asy
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
+  // Stroom-facturen zijn niet via het oude accorderen te passeren (FACTUUR_02 §5).
+  if (STROOM_STATUSSEN.has(factuur.status)) { res.status(409).json({ error: "Factuur zit in de factuurstroom", detail: STROOM_MELDING }); return; }
 
   // Goedkeuringsgate: als er een actieve beleidsregel geldt voor dit factuurtype +
   // bedrag, moet er een goedgekeurde aanvraag bestaan voordat manueel accorderen
@@ -1098,6 +1130,8 @@ router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.status === "verwerkt") { res.status(409).json({ error: "Verwerkte facturen kunnen niet worden afgekeurd" }); return; }
+  // Stroom-facturen worden afgewezen via /afwijzen-stroom (gesloten redenlijst), nooit via dit legacy-pad.
+  if (STROOM_STATUSSEN.has(factuur.status)) { res.status(409).json({ error: "Factuur zit in de factuurstroom", detail: STROOM_MELDING }); return; }
 
   const userId = sessionUserId(req);
   const [updated] = await db.update(facturenTable).set({

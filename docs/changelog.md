@@ -2526,6 +2526,22 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Migratierunner:** basislijn-stempeling gebeurt nu pas na sentinel-verificatie (kenmerkende tabel/kolom per basislijn-migratie moet bestaan); een onvolledige database faalt hard i.p.v. stilzwijgend door te glippen.
 - **Opdracht per offerte:** migratie 0006 voegt een unieke index op `opdrachten.offerte_id` toe; twee gelijktijdige "maak opdracht"-verzoeken kunnen niet langer allebei een opdracht aanmaken (race → nette 409).
 
+
+## 2026-08-07 — Facturen: één ingang afgedwongen (mailstroom), legacy-intakes gesloten
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (restrictie, geen nieuwe pipeline)
+
+**Aanleiding:** FACTUUR_02 eist één ingang (§2): de factuurmailbox. Naast de stroom bestonden nog oudere ingangen: handmatige upload van inkoopfacturen, de legacy mailbox-sync en het oude accorderen-pad dat de stroomstatussen kon passeren. De code-review markeerde dit als zwaarste restpunt.
+
+**Wijzigingen:**
+- `artifacts/api-server/src/routes/facturen.ts` — `POST /facturen` weigert inkoopfacturen (422 met uitleg); alleen verkoopfacturen zijn nog handmatig aan te maken. `POST /facturen/mailbox-sync` is uitgeschakeld (422, verwijst naar de factuurstroom). Stroom-facturen (`wacht_op_inkoper`/`wacht_op_goedkeuring`/`klaar_voor_betaling`) geven 409 op de legacy paden `accorderen`, `ter-goedkeuring-indienen` en `afkeuren`; ook de generieke `PATCH /facturen/:id` kan een stroomstatus niet meer wijzigen of zetten — de inkoperstap en directie-goedkeuring zijn niet meer te omzeilen.
+- `artifacts/api-server/src/services/goedkeuring-engine.ts` — de generieke goedkeuringsmotor weigert stroom-facturen: indienen via `POST /goedkeuring/aanvragen` geeft 409, en het toepassen van een (eerder aangemaakte) goedkeuring óf afwijzing overschrijft een stroom-factuur nooit meer (vangnet op beide statuspaden).
+- `artifacts/api-server/src/services/factuurImport.ts` — verwijderd (legacy importer, nergens meer gebruikt); import-log en -instellingen blijven leesbaar als historie.
+- `artifacts/firevault/src/pages/facturen/index.tsx` — uploaddialoog beperkt tot verkoopfacturen met uitleg dat inkoopfacturen via de factuurmailbox binnenkomen; knoppen en lege staat aangepast.
+
+**Bewijs (dev, `scripts/src/verificatie-factuur-ingang.ts`):** inkoop handmatig → 422 (ook zonder type); verkoop → 201; mailbox-sync → 422 met melding; stroom-facturen → 409 op accorderen/ter-goedkeuring/afkeuren én PATCH-statuswijziging met status onaangetast; PATCH kan geen stroomstatus zetten op een niet-stroom-factuur; generieke goedkeuringsaanvraag op een stroom-factuur → 409; afwijzen van een vooraf bestaande generieke aanvraag laat de stroomstatus intact; niet-stroom accorderen werkt nog (→ klaar_voor_accountview). Bestaande stroom herbewezen met `verificatie-factuurstroom.ts` (alle stappen groen). Typecheck api-server + firevault groen.
+
+---
 ## 2026-08-07 — Bewijs mail-naar-factuur-pijplijn met gesimuleerde factuurmail (Task 793)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen verificatie + testhaak)

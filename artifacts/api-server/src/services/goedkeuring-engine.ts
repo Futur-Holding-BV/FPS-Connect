@@ -66,6 +66,22 @@ const OBJECT_DIRECTE_ACTIE: Record<string, { naarStatus: string; setGeaccordeerd
   prijsafwijking: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
 };
 
+// FACTUUR_02 §5 — facturen in de mailstroom hebben eigen statussen en een eigen,
+// niet te omzeilen keten (inkoper bevestigt → directie keurt via goedkeuren-stroom).
+// De generieke goedkeuringsmotor mag zo'n factuur nooit aannemen of overschrijven.
+const FACTUUR_OBJECT_TYPES = new Set(Object.keys(OBJECT_DIRECTE_ACTIE));
+const FACTUUR_STROOM_STATUSSEN = new Set(["wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling"]);
+
+async function isStroomFactuur(db: Db, objectType: string, objectId: number): Promise<boolean> {
+  if (!FACTUUR_OBJECT_TYPES.has(objectType)) return false;
+  const [rij] = await db
+    .select({ status: facturenTable.status })
+    .from(facturenTable)
+    .where(eq(facturenTable.id, objectId))
+    .limit(1);
+  return rij != null && FACTUUR_STROOM_STATUSSEN.has(rij.status);
+}
+
 // Directe DB-statusovergang na AFWIJZING voor financiële documenten op de facturenTable.
 // Een afgewezen factuur gaat terug naar "controle_nodig" zodat de indiener de
 // afwijzingsreden ziet (GoedkeuringWidget toont de reden), de factuur herstelt
@@ -86,6 +102,16 @@ async function pasObjectStatusAfwijzenToe(
   const afwijzing = OBJECT_DIRECTE_AFWIJZING[aanvraag.objectType];
   if (!afwijzing) return;
   try {
+    // Vangnet: een stroom-factuur mag ook via een afwijzing nooit uit zijn
+    // stroomstatus worden gehaald (FACTUUR_02 §5) — afwijzen gebeurt daar via
+    // /afwijzen-stroom met de gesloten redenlijst.
+    if (await isStroomFactuur(db, aanvraag.objectType, aanvraag.objectId)) {
+      logger.warn(
+        { aanvraagId: aanvraag.id, objectId: aanvraag.objectId },
+        "Afwijzing toegepast op stroom-factuur geweigerd: status blijft van de factuurstroom",
+      );
+      return;
+    }
     await db.update(facturenTable)
       .set({ status: afwijzing.naarStatus, bijgewerktOp: new Date() })
       .where(eq(facturenTable.id, aanvraag.objectId));
@@ -216,6 +242,15 @@ async function pasObjectStatusToe(
   const directeActie = OBJECT_DIRECTE_ACTIE[aanvraag.objectType];
   if (directeActie) {
     try {
+      // Vangnet: een stroom-factuur mag hier nooit overschreven worden, ook niet
+      // via een (oudere) aanvraag die vóór instroom is aangemaakt.
+      if (await isStroomFactuur(db, aanvraag.objectType, aanvraag.objectId)) {
+        logger.warn(
+          { aanvraagId: aanvraag.id, objectId: aanvraag.objectId },
+          "Goedkeuring toegepast op stroom-factuur geweigerd: status blijft van de factuurstroom",
+        );
+        return;
+      }
       const nu = new Date();
       await db.update(facturenTable)
         .set({
@@ -293,7 +328,8 @@ export type GoedkeuringErrorCode =
   | "NIET_TOEGESTAAN"
   | "VIER_OGEN"
   | "AL_AFGEHANDELD"
-  | "ONGELDIGE_STATUS";
+  | "ONGELDIGE_STATUS"
+  | "STROOM_FACTUUR";
 
 export interface GoedkeuringError {
   code: GoedkeuringErrorCode;
@@ -616,6 +652,16 @@ export async function dienIn(
     actor: GoedkeuringActor;
   },
 ): Promise<GoedkeuringResultaat> {
+  // Stroom-facturen doorlopen hun eigen keten en kunnen niet via de generieke
+  // goedkeuringsmotor worden ingediend (FACTUUR_02 §5).
+  if (await isStroomFactuur(db, params.objectType, params.objectId)) {
+    return fout(
+      "STROOM_FACTUUR",
+      "Deze factuur zit in de factuurstroom. Gebruik de stroomacties (inkoper bevestigen, goedkeuren of afwijzen) op de factuurdetailpagina.",
+      409,
+    );
+  }
+
   const bestaand = await haalOpenAanvraag(db, params.objectType, params.objectId);
   if (bestaand) return { ok: true, aanvraag: bestaand };
 

@@ -66,7 +66,7 @@ export default function FacturenPagina() {
   const [tab, setTab] = useState<string>("alle");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bestand, setBestand] = useState<File | null>(null);
-  const [type, setType] = useState("inkoop");
+  const [type] = useState("verkoop");
   const [gebouwId, setGebouwId] = useState("");
   const [uploadBezig, setUploadBezig] = useState(false);
   const [aiBezig, setAiBezig] = useState<number | null>(null);
@@ -135,7 +135,7 @@ export default function FacturenPagina() {
           </Link>
           <Button size="sm" onClick={() => setUploadOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-1.5" />
-            PDF uploaden
+            Verkoopfactuur uploaden
           </Button>
         </div>
       </div>
@@ -181,12 +181,12 @@ export default function FacturenPagina() {
           <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
             <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
             <p className="font-medium">Nog geen facturen</p>
-            <p className="text-xs mt-1">Upload de eerste factuur.</p>
+            <p className="text-xs mt-1">Inkoopfacturen komen automatisch binnen via de factuurmailbox; verkoopfacturen kun je hier uploaden.</p>
           </div>
           <div className="text-center pt-2">
             <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Eerste factuur uploaden
+              Eerste verkoopfactuur uploaden
             </Button>
           </div>
         </div>
@@ -284,20 +284,13 @@ export default function FacturenPagina() {
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Factuur-PDF uploaden</DialogTitle>
+            <DialogTitle>Verkoopfactuur uploaden</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inkoop">Inkoopfactuur</SelectItem>
-                  <SelectItem value="verkoop">Verkoopfactuur</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Inkoopfacturen komen uitsluitend binnen via de factuurmailbox en worden
+              automatisch door de factuurstroom verwerkt. Handmatig uploaden is alleen
+              mogelijk voor verkoopfacturen.
             </div>
             <div>
               <Label>PDF-bestand</Label>

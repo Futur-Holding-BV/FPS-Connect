@@ -11,5 +11,6 @@ description: Ontwerpregels van de automatische factuurstroom (mail → goedgekeu
 - Signalen (`factuur_signalen`, 9 types): `rekeningnummer_gewijzigd` mag nooit stil afgehandeld worden — afhandelen zonder toelichting geeft 422. `maakSignaal` dedupt op open signalen.
 - Mail-claim (`factuur_verwerkt_op`) wordt bij een verwerkingsfout TERUGGEGEVEN zodat de volgende run opnieuw probeert; anders laat een tijdelijke Graph/AI-fout de mail permanent liggen.
 - Leverancier alleen koppelen bij exact één match — nooit gokken; anders signaal `onbekende_leverancier`.
-- Bekende restpunten (review): legacy-intakes (handmatige upload, oude mailbox-sync, legacy accorderen) bestaan nog naast de stroom; geen DB-idempotentie op mail+bijlage-identiteit; niet-transactionele verwerking. Betalen/SEPA = FACTUUR_03.
-- Verificatie: endpoints via `scripts/src/verificatie-factuurstroom.ts`; volledige mail-naar-factuur-pijplijn via `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` (beide ruimen zelf op).
+- Eén-ingang is afgedwongen: handmatig aanmaken alleen voor verkoopfacturen; legacy mailbox-import verwijderd; stroomstatussen zijn uitsluitend via de stroomacties te muteren — generieke paden (PATCH, oud accorderen/afkeuren én de generieke goedkeuringsmotor) weigeren stroom-facturen.
+- **Why:** elk generiek status-schrijfpad is een potentiële omzeiling van de inkoperstap; nieuwe endpoints die factuurstatus schrijven moeten stroom-facturen expliciet weigeren.
+- Verificatie: endpoints/ingangen via `scripts/src/verificatie-factuurstroom.ts` + `scripts/src/verificatie-factuur-ingang.ts`; volledige mail-naar-factuur-pijplijn via `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` (alle ruimen zelf op).
