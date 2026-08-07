@@ -26,6 +26,13 @@ import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
 import {
+  artikelSleutel,
+  bouwInkoopEigenCijfersContext,
+  haalInkoopHistorie,
+  leveranciersOpsomming,
+  MIN_WAARNEMINGEN_INKOOP,
+} from "../lib/inkoopEigenCijfers";
+import {
   checkVereistGoedkeuring,
   haalGoedgekeurdeAanvraag,
   haalOpenAanvraag,
@@ -699,6 +706,15 @@ router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, re
     let aiResultaat: AiInkoopResult | null = null;
     let aiGegenereerd = false;
 
+    // INKOOP_AI_01 — eigen inkoophistorie per artikel (blokken A-D), ook
+    // gebruikt om verwachte prijs en leveranciersopties deterministisch te
+    // vullen (de AI vult die velden niet meer uit algemene kennis).
+    const historie = await haalInkoopHistorie(materiaalRegels);
+    const eigenCijfers = bouwInkoopEigenCijfersContext(
+      materiaalRegels.map((r) => ({ omschrijving: r.omschrijving, eenheid: r.eenheid, calcPrijs: r.tarief })),
+      historie,
+    );
+
     if (heeftGateway() && materiaalRegels.length > 0) {
       // PIM werkvoorbereiding_context toevoegen als aanwezig
       const pimSectie = wvCtx
@@ -726,13 +742,15 @@ ${materiaalRegels.map((r, i) => `${i + 1}. ${r.omschrijving} [werkpakket: ${r.ho
 Opdracht: ${opdracht.titel}
 ${pimSectie}
 
+${eigenCijfers}
+
 Classificeer elk materiaal als:
 - "voorraad": gangbaar materiaal, altijd op voorraad (bijv. schroeven, kabelgoot, kleine onderdelen)
 - "standaard": regulier leveranciersmaterial, 1-2 weken levertijd
 - "project": projectspecifiek, 2-4 weken levertijd (bijv. specifieke branddeuren, damperplaten)
 - "maatwerk": speciaal geproduceerd, >4 weken levertijd (bijv. maatwerkpanelen, niet-standaard manchetten)
 
-Geef realistische inkoopprijzen (iets lager dan de calculatieprijs) en aanbevolen leveranciers voor de Nederlandse markt (bijv. Soudal, Hilti, Rockwool, Enraf, Beele, Pyroplex, etc.).
+Prijzen en leveranciers worden buiten jou om gevuld uit de eigen inkoophistorie en de jaarprijslijst. Jij levert: het type, de levertijdinschatting (benoem in de motivatie of dit een eigen cijfer of een algemene inschatting is) en een motivatie die de eigen cijfers hierboven letterlijk aanhaalt waar ze bestaan. Kies nooit één leverancier; ontbreekt eigen historie, adviseer dan "prijs opvragen".
 
 Let op risico's en aandachtspunten uit de PIM werkvoorbereiding bij het bepalen van levertijden en alternatieven.
 
@@ -800,11 +818,13 @@ Geef je analyse als JSON:
         (r: AiInkoopRegel) => r.omschrijving.toLowerCase().includes(regel.omschrijving.toLowerCase().slice(0, 10))
       ) ?? aiResultaat?.regels?.[i] ?? null;
 
-      // Artikelbron bepalen: bestaat dit artikel in de jaarprijslijst (artikelen)?
-      // Zo ja, dan is de bron "jaarprijslijst" en gebruiken we die vaste inkoopprijs.
-      // Anders blijft het een vrije (AI-geschatte) prijs.
-      let prijsBron = "vrij";
-      let inkoopprijsVerwacht = aiRegel?.inkoopprijs_verwacht ?? null;
+      // Verwachte prijs: uitsluitend gemeten bronnen (INKOOP_AI_01) —
+      // jaarprijslijst > eigen inkoophistorie (mediaan, ≥3 waarnemingen) > ONBEKEND.
+      // De AI-schatting wordt bewust NIET meer gebruikt: een verzonnen marktprijs
+      // is erger dan een leeg veld, want er wordt een besparing tegen afgezet.
+      const artikelHistorie = historie.get(artikelSleutel(regel.omschrijving, regel.eenheid));
+      let prijsBron = "onbekend";
+      let inkoopprijsVerwacht: number | null = null;
       const [artikel] = await db.select({
         naam: artikelenTable.naam,
         inkoopprijs: artikelenTable.inkoopprijs,
@@ -818,10 +838,25 @@ Geef je analyse als JSON:
       if (artikel && artikel.inkoopprijs != null) {
         prijsBron = "jaarprijslijst";
         inkoopprijsVerwacht = artikel.inkoopprijs;
+      } else if (artikelHistorie && artikelHistorie.mediaan != null) {
+        prijsBron = "inkoophistorie";
+        inkoopprijsVerwacht = Math.round(artikelHistorie.mediaan * 100) / 100;
       }
 
-      const besparingPerEenheid = aiRegel?.besparing_per_eenheid ?? null;
-      const besparing = aiRegel?.besparing ?? null;
+      // Besparing is een rekensom, geen AI-mening; zonder verwachte prijs geen besparing.
+      const besparingPerEenheid = inkoopprijsVerwacht != null
+        ? Math.round((regel.tarief - inkoopprijsVerwacht) * 100) / 100
+        : null;
+      const besparing = besparingPerEenheid != null
+        ? Math.round(besparingPerEenheid * regel.hoeveelheid * 100) / 100
+        : null;
+
+      // Leveranciers: opsomming uit eigen historie (de inkoper kiest), nooit een AI-keuze.
+      const leveranciersUitHistorie = artikelHistorie ? leveranciersOpsomming(artikelHistorie) : null;
+
+      const historieToelichting = artikelHistorie && artikelHistorie.mediaan != null
+        ? `Eigen inkoophistorie: mediaan € ${artikelHistorie.mediaan.toFixed(2)} over ${artikelHistorie.aantal} waarnemingen (${artikelHistorie.bronnen}, ${artikelHistorie.periode}).`
+        : `Geen of te weinig eigen inkoophistorie (${artikelHistorie?.aantal ?? 0} waarneming(en), minimaal ${MIN_WAARNEMINGEN_INKOOP}) — verwachte prijs ${prijsBron === "jaarprijslijst" ? "uit jaarprijslijst" : "onbekend"}.`;
 
       planRegels.push({
         inkoopplanId: plan.id,
@@ -830,13 +865,13 @@ Geef je analyse als JSON:
         hoeveelheid: regel.hoeveelheid,
         eenheid: regel.eenheid,
         type: aiRegel?.type ?? "standaard",
-        aanbevolenLeverancier: aiRegel?.aanbevolen_leverancier ?? null,
+        aanbevolenLeverancier: leveranciersUitHistorie,
         calcPrijs: regel.tarief,
         inkoopprijsVerwacht,
         besparingPerEenheid,
         besparing,
         levertijdWeken: aiRegel?.levertijd_weken ?? null,
-        aiMotivatie: aiRegel?.motivatie ?? null,
+        aiMotivatie: [historieToelichting, aiRegel?.motivatie ?? null].filter(Boolean).join(" | "),
         prijsBron,
         status: "open",
         volgorde: i,

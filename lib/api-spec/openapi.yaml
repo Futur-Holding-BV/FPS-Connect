@@ -34116,7 +34116,7 @@ components:
           enum: [calculatie, vrij]
         prijs_bron:
           type: string
-          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+          enum: [onbekend, jaarprijslijst, inkoophistorie, leveranciersofferte, vrij]
           description: "Artikelbron van de gehanteerde prijs"
         prijs_geldig_tot:
           type: ["string", "null"]
@@ -34155,7 +34155,7 @@ components:
           type: string
         prijs_bron:
           type: string
-          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+          enum: [onbekend, jaarprijslijst, inkoophistorie, leveranciersofferte, vrij]
         prijs_geldig_tot:
           type: string
 
@@ -34181,7 +34181,7 @@ components:
           type: string
         prijs_bron:
           type: string
-          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+          enum: [onbekend, jaarprijslijst, inkoophistorie, leveranciersofferte, vrij]
         prijs_geldig_tot:
           type: string
 

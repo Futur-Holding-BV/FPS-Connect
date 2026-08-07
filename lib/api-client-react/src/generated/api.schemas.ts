@@ -7414,6 +7414,7 @@ export type InkoopplanRegelPrijsBron = typeof InkoopplanRegelPrijsBron[keyof typ
 export const InkoopplanRegelPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;
@@ -7476,6 +7477,7 @@ export type InkoopplanRegelPatchPrijsBron = typeof InkoopplanRegelPatchPrijsBron
 export const InkoopplanRegelPatchPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;
@@ -7502,6 +7504,7 @@ export type InkoopplanRegelAanmakenPrijsBron = typeof InkoopplanRegelAanmakenPri
 export const InkoopplanRegelAanmakenPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;

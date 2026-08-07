@@ -30,6 +30,7 @@ import { eq, and, sql, sum, asc, isNull, desc, or, inArray, isNotNull } from "dr
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTING_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
+import { bouwWerkbegrotingEigenCijfersContext } from "../lib/inkoopEigenCijfers";
 import { logger } from "../lib/logger";
 import { berekenEnSlaOpNacalculatie } from "../services/fie-service";
 
@@ -1098,6 +1099,12 @@ router.post("/opdrachten/:id/werkbegroting/senior-adviezen", schrijven, async (r
     const arbeid   = regels.filter(r => r.categorie === "arbeid");
     const materiaal = regels.filter(r => r.categorie === "materiaal");
 
+    // INKOOP_AI_01 — blokken E/F: vergelijkbaar werk werkelijk besteed
+    // (nacalculaties) en normtijden tegenover werkelijk gemeten tijd.
+    const eigenCijfersWb = await bouwWerkbegrotingEigenCijfersContext(
+      regels.map(r => ({ omschrijving: r.omschrijving, eenheid: r.eenheid })),
+    );
+
     interface WbAdviesVoorstel {
       type: string;
       prioriteit: string;
@@ -1120,7 +1127,11 @@ ${arbeid.map(r => `- [${r.hoofdstuk}] ${r.omschrijving}: ${r.hoeveelheid} ${r.ee
 MATERIAAL (${materiaal.length} regels, totaal €${begroting.totaalMateriaalBedrag ?? 0}):
 ${materiaal.map(r => `- [${r.hoofdstuk}] ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join("\n")}
 
+${eigenCijfersWb}
+
 Controleer minimaal:
+- de begrote uren en materiaalkosten tegenover wat vergelijkbaar werk werkelijk kostte (blokken hierboven — noem de cijfers letterlijk; ontbreekt eigen historie, benoem dat)
+- normtijden die structureel afwijken van werkelijk gemeten tijd (die fout werkt door in elke calculatie)
 - ontbrekende uitvoeringsposten voor dit type werk
 - arbeid die te laag lijkt (bijv. demonteren + afvoeren ontbreekt)
 - materiaal zonder leverancier of levertijd

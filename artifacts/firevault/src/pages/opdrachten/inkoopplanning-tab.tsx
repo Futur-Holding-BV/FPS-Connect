@@ -57,6 +57,7 @@ const TYPE_LABELS: Record<string, { label: string; kleur: string; omschrijving: 
 
 const PRIJS_BRON_LABELS: Record<string, { label: string; kleur: string }> = {
   jaarprijslijst: { label: "Jaarprijslijst", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
+  inkoophistorie: { label: "Eigen inkoophistorie", kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   leveranciersofferte: { label: "Leveranciersofferte", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
   vrij: { label: "Vrije prijs", kleur: "bg-amber-50 text-amber-800 border-amber-200" },
   onbekend: { label: "Bron onbekend", kleur: "bg-slate-50 text-slate-500 border-slate-200" },
@@ -297,6 +298,7 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="jaarprijslijst">Jaarprijslijst</SelectItem>
+                  <SelectItem value="inkoophistorie">Eigen inkoophistorie</SelectItem>
                   <SelectItem value="leveranciersofferte">Leveranciersofferte</SelectItem>
                   <SelectItem value="vrij">Vrije prijs</SelectItem>
                   <SelectItem value="onbekend">Bron onbekend</SelectItem>

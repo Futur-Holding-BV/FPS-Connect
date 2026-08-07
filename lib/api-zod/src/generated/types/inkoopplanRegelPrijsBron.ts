@@ -15,6 +15,7 @@ export type InkoopplanRegelPrijsBron = typeof InkoopplanRegelPrijsBron[keyof typ
 export const InkoopplanRegelPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;

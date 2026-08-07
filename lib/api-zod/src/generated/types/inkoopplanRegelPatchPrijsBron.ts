@@ -12,6 +12,7 @@ export type InkoopplanRegelPatchPrijsBron = typeof InkoopplanRegelPatchPrijsBron
 export const InkoopplanRegelPatchPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;

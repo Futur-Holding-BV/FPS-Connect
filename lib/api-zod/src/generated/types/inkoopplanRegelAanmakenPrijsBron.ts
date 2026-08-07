@@ -12,6 +12,7 @@ export type InkoopplanRegelAanmakenPrijsBron = typeof InkoopplanRegelAanmakenPri
 export const InkoopplanRegelAanmakenPrijsBron = {
   onbekend: 'onbekend',
   jaarprijslijst: 'jaarprijslijst',
+  inkoophistorie: 'inkoophistorie',
   leveranciersofferte: 'leveranciersofferte',
   vrij: 'vrij',
 } as const;

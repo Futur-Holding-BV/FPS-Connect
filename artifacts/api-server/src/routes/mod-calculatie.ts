@@ -28,6 +28,7 @@ import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
 import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
+import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -1652,10 +1653,20 @@ router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrij
       item.toelichting ? `- Toelichting: ${item.toelichting}` : null,
     ].filter((l) => l !== null).join("\n");
 
+    // INKOOP_AI_01 — eigen prijshistorie meegeven zodat de offerteaanvraag om
+    // een gerichte prijs kan vragen in plaats van blanco.
+    const mailArtikelen = item.eenheid
+      ? [{ omschrijving: item.omschrijving, eenheid: item.eenheid, calcPrijs: null }]
+      : [];
+    const mailHistorie = mailArtikelen.length > 0 ? await haalInkoopHistorie(mailArtikelen) : new Map();
+    const mailEigenCijfers = mailArtikelen.length > 0
+      ? "\n\n" + bouwInkoopEigenCijfersContext(mailArtikelen, mailHistorie)
+      : "";
+
     const antwoord = await aiGateway.chat("default", {
       messages: [
         { role: "system", content: CALCULATIE_INKOOP_MAIL_PROMPT.tekst },
-        { role: "user", content: inkoopMailContext },
+        { role: "user", content: inkoopMailContext + mailEigenCijfers },
       ],
       max_completion_tokens: 600,
     });

@@ -2592,3 +2592,12 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - Bewijs: `scripts/src/bewijs-calculatie-eigen-cijfers.ts` (11/11 groen, incl. determinisme, uitsluiting verkoop-/afgekeurde facturen en fail-closed bij ambigue bibliotheekmatch) en vóór/ná-vergelijking in `docs/calculatie-ai-voor-na.md`.
 - Nulbevinding: dev én prod bevatten nog géén eenheidsprijzen/calculatiehistorie/factuurregels — acceptatie op echte calculaties volgt zodra die data er is.
 - Los meegefixt: ontbrekende import `stuurPushNaarGebruiker` in factuurstroomService (typecheck-breker uit merge).
+
+## 7 augustus 2026 — INKOOP_AI_01: inkoop en werkbegroting op eigen cijfers
+- Inkoopplanning vult `inkoopprijs_verwacht` niet langer met een AI-schatting maar deterministisch: jaarprijslijst → eigen inkoopmediaan (≥3 waarnemingen uit bestelde/geleverde bonnen + verwerkte/betaalde inkoopfacturen) → onbekend. Nieuwe prijsbron "inkoophistorie" (badge in de UI).
+- `aanbevolen_leverancier` is een opsomming van leveranciers uit de eigen historie mét hun prijs; de AI kiest nooit meer één leverancier. Besparing is een rekensom, geen AI-mening.
+- Prijsstijgingen bij dezelfde leverancier en inkoopmediaan-boven-calculatieprijs (signaal richting calculatiekant) worden expliciet gesignaleerd.
+- Werkbegroting-senioradvies toetst nu aan nacalculaties per werktype (mediaan, ≥3 afgeronde opdrachten) en aan normtijd-vs-werkelijk-gemeten-uren (≥15% afwijking); adviezen blijven in `werkbegroting_adviezen`.
+- `INKOOP_PROMPT` van één zin naar uitgewerkte prompt v2.0.0; offerteaanvraag-mail vraagt gericht om een prijs in de orde van de eigen historie.
+- Bewijs: `scripts/src/bewijs-inkoop-eigen-cijfers.ts` (11/11 groen) en vóór/ná-vergelijking in `docs/inkoop-ai-voor-na.md`.
+- Nulbevinding: er is nog géén inkoopbon-, factuur- of nacalculatiedata (dev én prod) — acceptatie op echte inkoopplannen volgt zodra die data bestaat.
