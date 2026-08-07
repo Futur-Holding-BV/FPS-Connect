@@ -2638,3 +2638,11 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - Bewijs: `scripts/src/bewijs-inkoop-eigen-cijfers.ts` (11/11 groen) en vóór/ná-vergelijking in `docs/inkoop-ai-voor-na.md`.
 - Nulbevinding: er is nog géén inkoopbon-, factuur- of nacalculatiedata (dev én prod) — acceptatie op echte inkoopplannen volgt zodra die data bestaat.
 - Reviewfixes: jaarprijslijst-match nu exact (case-insensitief, ambigu = geen override), `totaleBesparing` herberekend uit regels i.p.v. AI-schatting, blok E telt alleen afgesloten nacalculaties, prijsbron "inkoophistorie" toegevoegd aan verdeling en frontend-typering.
+
+## 2026-08-07 — Indirecte loonkosten: dekking per boekjaar afgedwongen (taak 803)
+
+- **Uitvoering:** gebouwd en bewezen (24/24 checks) | **Kwaliteit:** hoog | **Risico:** laag (alleen strengere bevinding, geen berekening gewijzigd)
+- De bevinding "geen AK-post indirecte loonkosten" kijkt nu **per boekjaar**: elk begrotingsjaar moet een actieve post in categorie `personeel_indirect` hebben. Eén post in één jaar dekt de andere jaren niet meer; de bevinding noemt precies welke boekjaren nog ontbreken. Pas als álle begrotingsjaren gedekt zijn verdwijnt de bevinding (`bepaalLoonkostenDekking` in `akEigenCijfers.ts`, gebruikt door `GET /fie/ak-dashboard`).
+- Loonkosten-signalen blijven een constatering zonder vervolgstap — server-side afgedwongen, ook als de AI er één verzint (ongewijzigd, opnieuw bewezen).
+- **Bewijs:** `scripts/src/bewijs-financieel-ak.ts` uitgebreid (acceptatie 5b) — 24/24 groen: beide jaren gedekt → geen bevinding; post van één jaar verwijderd → precies dat jaar gesignaleerd, dekking niet sluitend.
+- **Restpunt:** de euro-bedragen zelf voert René per boekjaar in uit de jaarrekening via het Bedrijfskompas (categorie "Personeel indirect"); dev/prod bevatten nog geen jaarcijfers (zie acceptatiebewijs-taak met echte cijfers vanaf 2023).

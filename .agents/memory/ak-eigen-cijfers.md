@@ -7,6 +7,7 @@ description: Hoe het AK-dashboard rekent en adviseert — productie-noemer, real
 - AK-percentage ALTIJD over productie = gefactureerde omzet + OHW-mutatie (uit `fie_jaarrealisaties`, per boekjaar × werkmaatschappij, NULL werkgever = geconsolideerd; upsert via POST /fie/realisaties). Omzet-percentage wordt ernaast getoond maar is nooit de maatstaf.
 - Signalen deterministisch in `akEigenCijfers.ts` (post steeg ≥10pp harder dan productie, ≥2 jaren verplicht); AI (slot "default") herformuleert alleen als vraag — bij AI-falen valt de deterministische kerntekst in.
 - Loonkosten-signaal: constatering zonder vervolgstap, server-side afgedwongen (ook als AI er één verzint).
+- Loonkosten-dekking is PER BOEKJAAR (`bepaalLoonkostenDekking`): elk begrotingsjaar moet een actieve personeel_indirect-post hebben; bevinding noemt de ontbrekende jaren; één post in één jaar dekt niets. De euro's zelf voert René handmatig in uit de jaarrekening (Connect kent geen salarissen).
 - Adviezen (`fie_ak_adviezen`): max 10 open, gerangschikt op bedrag, verdwijnen nooit vanzelf; wegzetten vereist reden (422); dedup via partiële unieke index op status open/weggezet — afgehandeld patroon mag terugkomen.
 - Verzekeringstoets gebruikt werkelijke premie uit `org_verzekeringen` (premieJaarbasis o.b.v. frequentie), NIET de modelkennis-bandbreedte-prompt.
 - Lopend jaar: koers alleen tonen; begroting nooit automatisch bijstellen.

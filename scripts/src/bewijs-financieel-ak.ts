@@ -11,12 +11,13 @@ import {
   fieJaarrealisatiesTable,
   orgVerzekeringenTable,
 } from "@workspace/db";
-import { eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like } from "drizzle-orm";
 import {
   bouwJaarReeks,
   bouwLopendJaar,
   bouwPostOntwikkeling,
   bouwSignaalKandidaten,
+  bepaalLoonkostenDekking,
   premieJaarbasis,
   MAX_OPEN_ADVIEZEN,
 } from "../../artifacts/api-server/src/lib/akEigenCijfers";
@@ -98,6 +99,26 @@ async function main(): Promise<void> {
     check("elk signaal noemt bedrag, jaar en bron", signalen.every((s) =>
       s.bedrag > 0 && /\d{4}/.test(s.kern) && s.bron.length > 0 && s.kern.includes("€")));
     check("signalen gerangschikt op bedrag", signalen.every((s, i, a) => i === 0 || a[i - 1]!.bedrag >= s.bedrag));
+
+    // ── 5b: loonkosten-dekking per boekjaar (taak: AK-post personeel_indirect per jaar)
+    console.log("Acceptatie 5b: loonkosten-dekking per boekjaar");
+    const dekkingVol = await bepaalLoonkostenDekking(await bouwPostOntwikkeling());
+    check("beide boekjaren gedekt → geen ontbrekende jaren (J1/J2)",
+      !dekkingVol.jarenZonderLoonkosten.includes(J1) && !dekkingVol.jarenZonderLoonkosten.includes(J2));
+    // verwijder de loonkosten-post van J2 → alleen J2 ontbreekt, dekking niet meer sluitend
+    await db.delete(fieAkPostenTable).where(and(
+      eq(fieAkPostenTable.begrotingId, begrotingIds[1]!),
+      eq(fieAkPostenTable.categorie, "personeel_indirect"),
+    ));
+    const dekkingGat = await bepaalLoonkostenDekking(await bouwPostOntwikkeling());
+    check("ontbrekende post in J2 wordt per boekjaar gesignaleerd",
+      dekkingGat.jarenZonderLoonkosten.includes(J2) && !dekkingGat.jarenZonderLoonkosten.includes(J1));
+    check("één post in één jaar dekt niet alle jaren (dekkend=false)", dekkingGat.dekkend === false);
+    // herstel voor de vervolgstappen
+    await db.insert(fieAkPostenTable).values({
+      begrotingId: begrotingIds[1]!, categorie: "personeel_indirect",
+      omschrijving: `${MARKER} Indirecte loonkosten`, bedragJaarbasis: 240_000,
+    });
 
     // ── 6: adviezen-levenscyclus — max 10 open, dedup, nooit vanzelf weg ────
     console.log("Acceptatie 6: levenscyclus adviezen");

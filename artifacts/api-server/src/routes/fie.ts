@@ -18,7 +18,7 @@ import { eq, ne, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
-import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
+import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, bepaalLoonkostenDekking, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
 import { logger } from "../lib/logger";
 import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, kopieerBegrotingAlsScenario, ScenarioFout, parseScenarioAannames, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
@@ -1006,7 +1006,9 @@ router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Pro
         .orderBy(desc(fieAkAdviezenTable.bedrag)),
     ]);
     // Loonkosten-dekking (§3.1b): zonder indirecte-loonkosten-post is elk percentage een schatting.
-    const heeftLoonkostenPost = posten.some((p) => p.isLoonkosten);
+    // Per boekjaar afdwingen: één post in één jaar dekt de andere jaren niet.
+    const { begrotingsJaren, jarenZonderLoonkosten, dekkend: heeftLoonkostenPost } =
+      await bepaalLoonkostenDekking(posten);
     const urenSplitsing = await bouwUrenSplitsing(new Date().getFullYear());
     res.json({
       reeks,
@@ -1025,7 +1027,9 @@ router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Pro
       adviezen: adviezen.map(mapAdvies),
       bevindingen: [
         ...(heeftLoonkostenPost ? [] : [
-          "Er is geen AK-post 'indirecte loonkosten' ingevoerd. Personeelskosten uit de jaarrekening bevatten óók productieve uren en zijn geen AK — zonder deze post is elk AK-percentage exclusief indirecte loonkosten en dus een onderschatting.",
+          begrotingsJaren.length === 0 || jarenZonderLoonkosten.length === begrotingsJaren.length
+            ? "Er is geen AK-post 'indirecte loonkosten' ingevoerd. Personeelskosten uit de jaarrekening bevatten óók productieve uren en zijn geen AK — zonder deze post is elk AK-percentage exclusief indirecte loonkosten en dus een onderschatting."
+            : `De AK-post 'indirecte loonkosten' ontbreekt voor boekjaar ${jarenZonderLoonkosten.join(", ")}. Zonder deze post is het AK-percentage van die jaren exclusief indirecte loonkosten en dus een onderschatting.`,
         ]),
         ...(urenSplitsing.dekkend ? [] : [
           `De urenregistratie van ${new Date().getFullYear()} bevat nog geen uren; de splitsing productief/indirect kan niet worden onderbouwd.`,

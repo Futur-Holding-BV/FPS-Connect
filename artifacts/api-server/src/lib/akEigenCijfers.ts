@@ -270,8 +270,23 @@ export async function bouwPostOntwikkeling(): Promise<AkPostOntwikkeling[]> {
   return [...perPost.values()].sort((a, b) => b.huidigBedrag - a.huidigBedrag);
 }
 
-// ─── Uren-splitsing productief/indirect (onderbouwing §3.1b) ────────────────
-
+export async function bepaalLoonkostenDekking(posten: AkPostOntwikkeling[]): Promise<{
+  begrotingsJaren: number[];
+  jarenZonderLoonkosten: number[];
+  dekkend: boolean;
+}> {
+  const rijen = await db.select({ boekjaar: fieJaarbegrotingenTable.boekjaar }).from(fieJaarbegrotingenTable);
+  const begrotingsJaren = [...new Set(rijen.map((r) => r.boekjaar))].sort((a, b) => a - b);
+  const loonkostenJaren = new Set(
+    posten.filter((p) => p.isLoonkosten).flatMap((p) => p.perJaar.map((j) => j.boekjaar)),
+  );
+  const jarenZonderLoonkosten = begrotingsJaren.filter((j) => !loonkostenJaren.has(j));
+  return {
+    begrotingsJaren,
+    jarenZonderLoonkosten,
+    dekkend: begrotingsJaren.length > 0 && jarenZonderLoonkosten.length === 0,
+  };
+}
 export async function bouwUrenSplitsing(boekjaar: number): Promise<{ productief: number; indirect: number; dekkend: boolean }> {
   const start = `${boekjaar}-01-01`;
   const eind = `${boekjaar + 1}-01-01`;
