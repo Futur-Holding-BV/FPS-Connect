@@ -26,8 +26,8 @@
 | 12 | Geen index op `fotos.voorziening_id` (N+1-fotoqueries) | 4 | 3 | 1 | P2 |
 | 13 | 15 routes schrijven naar meerdere tabellen zonder `db.transaction()` — gedeeltelijke writes mogelijk | 5 | 4 | 20 | P1 |
 | 14 | Dossier-bevriezing niet atomair — opgelost: draait in `db.transaction()` (geverifieerd 7 aug 2026) | 5 | 5 | 0 | ✅ |
-| 15 | `POST /offertes/:id/opdracht` — status-overgang zonder transactie | 4 | 4 | 2 | P1 |
-| 16 | `POST /verlof-aanvragen/:id/goedkeuren` — saldo-mutatie zonder transactie | 4 | 4 | 2 | P1 |
+| 15 | maak-opdracht in transactie — opgelost 7 aug 2026: opdracht + werkbegroting + regels + totalen in één db.transaction. Bewijs: scripts/src/bewijs-transacties-15-16.ts (geforceerde begroting-fout → 500 zonder halve opdracht-rij; daarna happypad 201) | 4 | 4 | 0 | ✅ |
+| 16 | verlofgoedkeuring saldo-transactie — was al gedekt: WorkflowEngine draait status+saldo (row-lock)+auditlog in één transactie. Gedragsbewijs 7 aug 2026 via scripts/src/bewijs-transacties-15-16.ts (geforceerde saldo-fout → status blijft 'aangevraagd'; happypad saldo 40→32 + logregel) | 4 | 4 | 0 | ✅ |
 | 17 | List-endpoints zonder `LIMIT` — 12 endpoints geven onbeperkt veel rijen terug | 4 | 3 | 8 | P2 |
 | 18 | `GET /activiteiten` geen paginering — bij grote datasets OOM-risico | 4 | 3 | 2 | P2 |
 | 19 | `JSONB`-kolom `bevoegdheden` nooit geïndexeerd als gefilterd | 3 | 2 | 1 | P3 |

@@ -142,8 +142,12 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
       return;
     }
 
+    // Opdracht + werkbegroting + regels in ÉÉN transactie (schuldpunt 15):
+    // een fout halverwege (bv. bij het overzetten van calculatieregels) laat
+    // anders een opdracht zonder werkbegroting achter — gedeeltelijke write.
+    const resultaat = await db.transaction(async (tx) => {
     // Opdracht aanmaken
-    const [opdracht] = await db.insert(opdrachtenTable).values({
+    const [opdracht] = await tx.insert(opdrachtenTable).values({
       offerteId,
       calculatieId: calcId,
       gebouwId: offerte.gebouwId ?? null,
@@ -156,6 +160,7 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
       aangemaaktDoorId: req.session.userId!,
       bijgewerktOp: new Date(),
     }).returning();
+    if (!opdracht) throw new Error("Opdracht-insert gaf geen rij terug");
 
     // Werkbegroting aanmaken (project_begrotingen)
     const begrotingValues: {
@@ -184,14 +189,15 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
       bijgewerktOp: new Date(),
     };
 
-    const [begroting] = await db.insert(projectBegrotingenTable).values(begrotingValues).returning();
+    const [begroting] = await tx.insert(projectBegrotingenTable).values(begrotingValues).returning();
+    if (!begroting) throw new Error("Werkbegroting-insert gaf geen rij terug");
 
     // Calculatieregels overzetten naar werkbegroting (zonder opslagen/winst)
     let totaalArbeidUren = 0;
     let totaalMateriaalBedrag = 0;
 
     if (calcId) {
-      const calcRegels = await db.select().from(modCalcRegelsTable)
+      const calcRegels = await tx.select().from(modCalcRegelsTable)
         .where(eq(modCalcRegelsTable.calculatieId, calcId))
         .orderBy(asc(modCalcRegelsTable.volgorde));
 
@@ -224,11 +230,11 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
         });
 
       if (regelValues.length > 0) {
-        await db.insert(werkbegrotingRegelsTable).values(regelValues);
+        await tx.insert(werkbegrotingRegelsTable).values(regelValues);
       }
 
       // Totalen terugschrijven
-      await db.update(projectBegrotingenTable)
+      await tx.update(projectBegrotingenTable)
         .set({
           hoofdUrenBegroot: totaalArbeidUren,
           totaalArbeidUren,
@@ -237,6 +243,10 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
         })
         .where(eq(projectBegrotingenTable.id, begroting.id));
     }
+
+    return { opdracht, begroting, totaalArbeidUren, totaalMateriaalBedrag };
+    });
+    const { opdracht, begroting, totaalArbeidUren, totaalMateriaalBedrag } = resultaat;
 
     // AI stelt automatisch een werkbegrotinganalyse voor op de achtergrond,
     // zodat de werkvoorbereider bij het openen van de opdracht direct een

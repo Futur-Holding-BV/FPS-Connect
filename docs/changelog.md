@@ -2497,3 +2497,8 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Migratierunner + registratietabel:** `schema_migraties` houdt bij welke migratie wanneer draaide; de runner voert alleen openstaande migraties uit (per stuk in een transactie) en stopt als de database vóórloopt op de code.
 - **`drizzle-kit push` verwijderd uit het deployproces**; drift-check vergelijkt bij elke deploy de hele database met de vastgelegde verwachting en meldt elk verschil in de log.
 - **Testmigratie 0005:** entiteit-index (punt 7) — landde op `compliance_signalen` omdat `documenten` die kolommen niet blijkt te hebben (schulddocument was daar onnauwkeurig).
+
+## 7 augustus 2026 — SCHULD_01 punten 15 en 16 (transacties)
+- **Punt 15:** `POST /offertes/:id/maak-opdracht` zet opdracht, werkbegroting, regels en totalen nu in één transactie; een fout halverwege laat geen halve opdracht meer achter.
+- **Punt 16:** verlofgoedkeuring bleek al atomair via de WorkflowEngine (status + saldo met row-lock + auditlog in één transactie); nu aantoonbaar gemaakt.
+- **Bewijs:** `scripts/src/bewijs-transacties-15-16.ts` — faalpad met geforceerde DB-fout (rollback aangetoond) + happypad, beide groen op dev.
