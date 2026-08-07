@@ -3261,6 +3261,11 @@ export interface Gebruiker {
   dienstverband?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
   moet_wachtwoord_wijzigen?: boolean;
   mislukte_pogingen?: number;
   /** @nullable */
@@ -3718,6 +3723,11 @@ export interface GebruikerInput {
   profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
 }
 
 export type GebruikerUpdateBevoegdheden = {[key: string]: number};
@@ -3742,6 +3752,11 @@ export interface GebruikerUpdate {
   profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
 }
 
 /**
@@ -4974,6 +4989,16 @@ export interface Medewerker {
   opmerkingen?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
+  /**
+     * Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).
+     * @nullable
+     */
+  uitzendbureau_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -5020,6 +5045,11 @@ export interface MedewerkerInput {
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
   /** Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO). */
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
@@ -5151,6 +5181,11 @@ export interface MedewerkerOnboardingInput {
   jaar?: number;
   /** Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf. */
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
 }
 
 export interface CvAnalyseResultaat {
@@ -5264,6 +5299,37 @@ export interface OffboardInput {
   deactiveer_account?: boolean;
   reden?: string;
   overdrachtsnota?: string;
+}
+
+export interface UitzendbureauKoppelKandidaat {
+  id: number;
+  naam: string;
+  /** @nullable */
+  type?: string | null;
+}
+
+export interface UitzendbureauKoppelRegel {
+  /** De vrije tekstwaarde uit bedrijf_uitzendbureau die nog geen verwijzing heeft. */
+  tekst: string;
+  aantal_gebruikers: number;
+  aantal_medewerkers: number;
+  /** Mogelijke organisaties in crm_klanten (naam-overeenkomst); leeg = geen match gevonden. */
+  kandidaten: UitzendbureauKoppelKandidaat[];
+}
+
+export interface UitzendbureauKoppelOverzicht {
+  openstaand: UitzendbureauKoppelRegel[];
+}
+
+export interface UitzendbureauKoppelInput {
+  /** De exacte tekstwaarde uit bedrijf_uitzendbureau die gekoppeld wordt. */
+  tekst: string;
+  crm_klant_id: number;
+}
+
+export interface UitzendbureauKoppelResultaat {
+  gekoppelde_gebruikers: number;
+  gekoppelde_medewerkers: number;
 }
 
 export interface OnboardingFout {

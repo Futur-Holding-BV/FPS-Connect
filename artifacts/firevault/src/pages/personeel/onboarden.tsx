@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2295,6 +2296,7 @@ function UitzendFormulier({
 }) {
   const [form, setForm] = useState<UitzendForm>(() => ({ ...LEEG_UITZEND, naam: context.naam }));
   const [soort, setSoort] = useState<"uitzend" | "inhuur">("uitzend");
+  const [uitzendbureauId, setUitzendbureauId] = useState<number | null>(null);
   const { data: functies } = useListFuncties();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
@@ -2313,6 +2315,7 @@ function UitzendFormulier({
         werkmaatschappij: form.werkmaatschappij,
         dienstverband: soort,
         bedrijf_uitzendbureau: form.bureau_of_bedrijf.trim(),
+        uitzendbureau_id: uitzendbureauId,
         in_dienst_sinds: form.start_datum || undefined,
         uit_dienst_per: form.eind_datum || undefined,
         opmerkingen: form.opmerkingen.trim() || undefined,
@@ -2372,14 +2375,16 @@ function UitzendFormulier({
           <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label>{soort === "uitzend" ? "Naam uitzendbureau *" : "Naam onderaannemer / bedrijf *"}</Label>
-          <Input
-            placeholder={soort === "uitzend" ? "bijv. Randstad, Tempo-Team" : "bijv. Jansen BV"}
-            value={form.bureau_of_bedrijf}
-            onChange={(e) => setForm({ ...form, bureau_of_bedrijf: e.target.value })}
-          />
-        </div>
+        <UitzendbureauSelect
+          idPrefix="onb-uitzendbureau"
+          label={soort === "uitzend" ? "Uitzendbureau *" : "Onderaannemer / bedrijf *"}
+          uitzendbureauId={uitzendbureauId}
+          tekst={form.bureau_of_bedrijf}
+          onChange={({ uitzendbureau_id, tekst }) => {
+            setUitzendbureauId(uitzendbureau_id);
+            setForm({ ...form, bureau_of_bedrijf: tekst });
+          }}
+        />
 
         <div className="space-y-1.5">
           <Label>Vakgebied / functie</Label>

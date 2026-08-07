@@ -28,6 +28,7 @@ export interface GebruikerAanmakenInput {
   uitnodigingStatus?: string;
   dienstverband?: string;
   bedrijfUitzendbureau?: string | null;
+  uitzendbureauId?: number | null;
 }
 
 // Postgres unique-violation (23505) op het e-mailadres — dezelfde detectie die
@@ -62,6 +63,7 @@ export async function maakGebruikerAan(
       uitnodigingStatus: input.uitnodigingStatus ?? "niet_uitgenodigd",
       dienstverband: input.dienstverband || "intern",
       bedrijfUitzendbureau: input.bedrijfUitzendbureau ?? null,
+      uitzendbureauId: input.uitzendbureauId ?? null,
     })
     .returning();
   return gebruiker;

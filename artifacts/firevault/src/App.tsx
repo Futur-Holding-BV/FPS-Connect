@@ -105,6 +105,7 @@ import CapaciteitsplanningPagina from "@/pages/personeel/capaciteitsplanning";
 import UitboardenPagina from "@/pages/personeel/uitboarden";
 import OudMedewerkersPagina from "@/pages/personeel/oud-medewerkers";
 import ExternenPagina from "@/pages/personeel/externen";
+import UitzendbureauKoppelingenPagina from "@/pages/personeel/uitzendbureaus";
 import OnboardenPagina from "@/pages/personeel/onboarden";
 import HrmIntegriteitstools from "@/pages/personeel/hrm-integriteitstools";
 import JaarplanningPagina from "@/pages/personeel/jaarplanning";
@@ -458,6 +459,7 @@ function ConnectPortal() {
         <Route path="/personeel/uitboarden" component={UitboardenPagina} />
         <Route path="/personeel/oud-medewerkers" component={OudMedewerkersPagina} />
         <Route path="/personeel/externen" component={ExternenPagina} />
+        <Route path="/personeel/uitzendbureaus" component={UitzendbureauKoppelingenPagina} />
         <Route path="/personeel/contracten" component={ContractbewakingPagina} />
         <Route path="/personeel/jaarplanning" component={JaarplanningPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />

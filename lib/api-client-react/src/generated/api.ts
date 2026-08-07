@@ -865,6 +865,9 @@ import type {
   UitvoeringsplanTaak,
   UitvoeringsplanTaakPatch,
   Uitvoeringsplanning,
+  UitzendbureauKoppelInput,
+  UitzendbureauKoppelOverzicht,
+  UitzendbureauKoppelResultaat,
   UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
   UpdateFactuurTermijn200,
@@ -28149,6 +28152,153 @@ export function useGetOnboardingContext<TData = Awaited<ReturnType<typeof getOnb
 
 
 
+
+export const getListUitzendbureauKoppelingenUrl = () => {
+
+
+
+
+  return `/api/uitzendbureau-koppelingen`
+}
+
+/**
+ * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
+ */
+export const listUitzendbureauKoppelingen = async ( options?: RequestInit): Promise<UitzendbureauKoppelOverzicht> => {
+
+  return customFetch<UitzendbureauKoppelOverzicht>(getListUitzendbureauKoppelingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListUitzendbureauKoppelingenQueryKey = () => {
+    return [
+    `/api/uitzendbureau-koppelingen`
+    ] as const;
+    }
+
+
+export const getListUitzendbureauKoppelingenQueryOptions = <TData = Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUitzendbureauKoppelingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>> = ({ signal }) => listUitzendbureauKoppelingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListUitzendbureauKoppelingenQueryResult = NonNullable<Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>>
+export type ListUitzendbureauKoppelingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
+ */
+
+export function useListUitzendbureauKoppelingen<TData = Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUitzendbureauKoppelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListUitzendbureauKoppelingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getKoppelUitzendbureauUrl = () => {
+
+
+
+
+  return `/api/uitzendbureau-koppelingen`
+}
+
+/**
+ * @summary Koppel een uitzendbureau-tekstwaarde aan een organisatie in crm_klanten
+ */
+export const koppelUitzendbureau = async (uitzendbureauKoppelInput: UitzendbureauKoppelInput, options?: RequestInit): Promise<UitzendbureauKoppelResultaat> => {
+
+  return customFetch<UitzendbureauKoppelResultaat>(getKoppelUitzendbureauUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uitzendbureauKoppelInput)
+  }
+);}
+
+
+
+
+export const getKoppelUitzendbureauMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelUitzendbureau>>, TError,{data: BodyType<UitzendbureauKoppelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelUitzendbureau>>, TError,{data: BodyType<UitzendbureauKoppelInput>}, TContext> => {
+
+const mutationKey = ['koppelUitzendbureau'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelUitzendbureau>>, {data: BodyType<UitzendbureauKoppelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  koppelUitzendbureau(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelUitzendbureauMutationResult = NonNullable<Awaited<ReturnType<typeof koppelUitzendbureau>>>
+    export type KoppelUitzendbureauMutationBody = BodyType<UitzendbureauKoppelInput>
+    export type KoppelUitzendbureauMutationError = ErrorType<void>
+
+    /**
+ * @summary Koppel een uitzendbureau-tekstwaarde aan een organisatie in crm_klanten
+ */
+export const useKoppelUitzendbureau = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelUitzendbureau>>, TError,{data: BodyType<UitzendbureauKoppelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelUitzendbureau>>,
+        TError,
+        {data: BodyType<UitzendbureauKoppelInput>},
+        TContext
+      > => {
+      return useMutation(getKoppelUitzendbureauMutationOptions(options));
+    }
 
 export const getOnboardMedewerkerUrl = () => {
 

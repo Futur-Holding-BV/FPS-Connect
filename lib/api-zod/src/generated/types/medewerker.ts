@@ -85,6 +85,16 @@ export interface Medewerker {
   opmerkingen?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
+  /**
+     * Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).
+     * @nullable
+     */
+  uitzendbureau_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

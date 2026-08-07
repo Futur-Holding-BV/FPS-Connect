@@ -27,7 +27,7 @@ import {
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
-  Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
+  Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound, Link2,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
@@ -1350,6 +1350,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/personeel/externen">
                               <Handshake />
                               <span>Externen / ZZP</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/uitzendbureaus"}
+                          >
+                            <Link href="/personeel/uitzendbureaus">
+                              <Link2 />
+                              <span>Uitzendbureau-koppelingen</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

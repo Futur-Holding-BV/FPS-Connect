@@ -47,7 +47,15 @@ export const gebruikersTable = pgTable("gebruikers", {
   herkomstAutomatisch: boolean("herkomst_automatisch").notNull().default(false),
   // Type dienstverband voor extern ingeleend personeel (zzp, uitzend, intern).
   dienstverband: text("dienstverband").notNull().default("intern"),
+  // Naam-cache van het uitzendbureau/onderaannemersbedrijf. Bron van waarheid
+  // is uitzendbureauId; de tekst blijft staan voor weergave en oude data en
+  // wordt pas in een latere opdracht verwijderd (FACTUUR_01 §3).
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
+  // Verwijzing naar de organisatie in crm_klanten (type uitzendbureau/inlener).
+  // Bewust géén .references(): crm.ts importeert gebruikers.ts, een verwijzing
+  // hier zou een importcyclus geven. De FK-constraint staat in
+  // lib/db/sql/uitzendbureau-koppeling.sql.
+  uitzendbureauId: integer("uitzendbureau_id"),
   // AVG: geanonimiseerd via een inzageverzoek-afhandelingsflow.
   geanonimiseerd: text("geanonimiseerd"),
   // Beheer wachtwoorden (alleen hoofdbeheerder): token-epoch voor het

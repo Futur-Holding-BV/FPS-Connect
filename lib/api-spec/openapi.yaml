@@ -8080,6 +8080,40 @@ paths:
         "409":
           description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
 
+  /uitzendbureau-koppelingen:
+    get:
+      operationId: listUitzendbureauKoppelingen
+      tags: [personeel]
+      summary: Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UitzendbureauKoppelOverzicht"
+    post:
+      operationId: koppelUitzendbureau
+      tags: [personeel]
+      summary: Koppel een uitzendbureau-tekstwaarde aan een organisatie in crm_klanten
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UitzendbureauKoppelInput"
+      responses:
+        "200":
+          description: Gekoppeld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UitzendbureauKoppelResultaat"
+        "400":
+          description: Validatiefout
+        "404":
+          description: Organisatie niet gevonden
+
   /medewerkers/onboarding:
     post:
       operationId: onboardMedewerker
@@ -28203,6 +28237,9 @@ components:
           type: ["string", "null"]
         bedrijf_uitzendbureau:
           type: ["string", "null"]
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
         moet_wachtwoord_wijzigen:
           type: boolean
         mislukte_pogingen:
@@ -28828,6 +28865,9 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
 
     GebruikerUpdate:
       type: object
@@ -28874,6 +28914,9 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
 
     WachtwoordResettenInput:
       type: object
@@ -30452,6 +30495,12 @@ components:
           type: ["string", "null"]
         bedrijf_uitzendbureau:
           type: ["string", "null"]
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+        uitzendbureau_naam:
+          type: ["string", "null"]
+          description: Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -30525,6 +30574,9 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
         verlofsoort_ids:
           type: array
           items:
@@ -30709,6 +30761,9 @@ components:
         bedrijf_uitzendbureau:
           type: string
           description: Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.
+        uitzendbureau_id:
+          type: ["integer", "null"]
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
 
     CvAnalyseResultaat:
       type: object
@@ -30850,6 +30905,62 @@ components:
           type: string
         overdrachtsnota:
           type: string
+
+    UitzendbureauKoppelKandidaat:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        type:
+          type: ["string", "null"]
+
+    UitzendbureauKoppelRegel:
+      type: object
+      required: [tekst, aantal_gebruikers, aantal_medewerkers, kandidaten]
+      properties:
+        tekst:
+          type: string
+          description: De vrije tekstwaarde uit bedrijf_uitzendbureau die nog geen verwijzing heeft.
+        aantal_gebruikers:
+          type: integer
+        aantal_medewerkers:
+          type: integer
+        kandidaten:
+          type: array
+          description: Mogelijke organisaties in crm_klanten (naam-overeenkomst); leeg = geen match gevonden.
+          items:
+            $ref: "#/components/schemas/UitzendbureauKoppelKandidaat"
+
+    UitzendbureauKoppelOverzicht:
+      type: object
+      required: [openstaand]
+      properties:
+        openstaand:
+          type: array
+          items:
+            $ref: "#/components/schemas/UitzendbureauKoppelRegel"
+
+    UitzendbureauKoppelInput:
+      type: object
+      required: [tekst, crm_klant_id]
+      properties:
+        tekst:
+          type: string
+          description: De exacte tekstwaarde uit bedrijf_uitzendbureau die gekoppeld wordt.
+        crm_klant_id:
+          type: integer
+
+    UitzendbureauKoppelResultaat:
+      type: object
+      required: [gekoppelde_gebruikers, gekoppelde_medewerkers]
+      properties:
+        gekoppelde_gebruikers:
+          type: integer
+        gekoppelde_medewerkers:
+          type: integer
 
     OnboardingFout:
       type: object

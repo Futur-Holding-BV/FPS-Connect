@@ -10,6 +10,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable, profielenTable } from "./gebruikers";
 import { documentenTable } from "./documenten";
+import { crmKlantenTable } from "./crm";
 
 // Werkgever — hoofdentiteit binnen de FPS Groep. Elke werkmaatschappij is een
 // eigen werkgever met eigen CAO, huisstijl (logo/briefpapier), personeelsbeleid,
@@ -104,8 +105,12 @@ export const medewerkersTable = pgTable("medewerkers", {
   leidinggevendeId: integer("leidinggevende_id").references((): AnyPgColumn => medewerkersTable.id, { onDelete: "set null" }),
   cao: text("cao"),
   dienstverband: text("dienstverband").notNull().default("vast"),
-  // Naam uitzendbureau of onderaannemingsbedrijf (alleen relevant bij inhuur/onderaannemer).
+  // Naam-cache uitzendbureau of onderaannemingsbedrijf (alleen relevant bij
+  // inhuur/onderaannemer). Bron van waarheid is uitzendbureauId; de tekst
+  // blijft staan voor weergave en wordt pas in een latere opdracht verwijderd.
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
+  // Verwijzing naar de organisatie in crm_klanten (type uitzendbureau/inlener).
+  uitzendbureauId: integer("uitzendbureau_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
   contracturenPerWeek: real("contracturen_per_week"),
   // Deeltijdpercentage (0-100); null = afgeleid uit contracturen/CAO-norm.
   deeltijdPercentage: real("deeltijd_percentage"),

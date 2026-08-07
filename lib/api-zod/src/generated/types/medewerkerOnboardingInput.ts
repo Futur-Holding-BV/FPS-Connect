@@ -30,4 +30,9 @@ export interface MedewerkerOnboardingInput {
   jaar?: number;
   /** Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf. */
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
 }

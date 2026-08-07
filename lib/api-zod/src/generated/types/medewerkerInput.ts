@@ -48,6 +48,11 @@ export interface MedewerkerInput {
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
   /** Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO). */
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */

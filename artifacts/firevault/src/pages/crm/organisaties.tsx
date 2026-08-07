@@ -30,6 +30,8 @@ const ORG_TYPES = [
   { value: "gemeente", label: "Gemeente" },
   { value: "zorginstelling", label: "Zorginstelling" },
   { value: "onderwijsinstelling", label: "Onderwijsinstelling" },
+  { value: "uitzendbureau", label: "Uitzendbureau" },
+  { value: "inlener", label: "Inlener" },
   { value: "overig", label: "Overig" },
 ];
 

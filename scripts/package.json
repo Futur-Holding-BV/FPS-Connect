@@ -10,6 +10,7 @@
     "seed-studio-opleverrapport": "tsx ./src/seed-studio-opleverrapport.ts",
     "seed-profielen": "tsx ./src/seed-profielen.ts",
     "migreer-bevoegdheden": "tsx ./src/migreer-bevoegdheden.ts",
+    "migreer-uitzendbureau-koppelingen": "tsx ./src/migreer-uitzendbureau-koppelingen.ts",
     "e2e-monteur-testaccount": "tsx ./src/e2e-monteur-testaccount.ts",
     "e2e-monteur": "playwright test",
     "e2e-monteur-ci": "tsx ./src/e2e-monteur-run.ts",

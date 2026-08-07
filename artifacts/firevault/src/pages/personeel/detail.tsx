@@ -83,6 +83,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -928,6 +929,7 @@ export default function MedewerkerDetailPagina() {
       cao: medewerker.cao ?? undefined,
       dienstverband: medewerker.dienstverband,
       bedrijf_uitzendbureau: medewerker.bedrijf_uitzendbureau ?? undefined,
+      uitzendbureau_id: medewerker.uitzendbureau_id ?? null,
       contracturen_per_week: medewerker.contracturen_per_week ?? null,
       in_dienst_sinds: medewerker.in_dienst_sinds ?? undefined,
       uit_dienst_per: medewerker.uit_dienst_per ?? undefined,
@@ -2444,20 +2446,20 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>
-                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined })}>
+                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined, uitzendbureau_id: (v === "uitzend" || v === "inhuur") ? profielForm.uitzendbureau_id : null })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               {(profielForm.dienstverband === "uitzend" || profielForm.dienstverband === "inhuur") && (
-                <div className="space-y-1.5">
-                  <Label>{profielForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
-                  <Input
-                    value={profielForm.bedrijf_uitzendbureau ?? ""}
-                    onChange={(e) => setProfielForm({ ...profielForm, bedrijf_uitzendbureau: e.target.value || undefined })}
-                    placeholder={profielForm.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
-                  />
-                </div>
+                <UitzendbureauSelect
+                  idPrefix="mdw-uitzendbureau"
+                  label={profielForm.dienstverband === "uitzend" ? "Uitzendbureau" : "Bedrijf / onderaannemer"}
+                  uitzendbureauId={profielForm.uitzendbureau_id}
+                  tekst={profielForm.bedrijf_uitzendbureau ?? ""}
+                  onChange={({ uitzendbureau_id, tekst }) =>
+                    setProfielForm({ ...profielForm, uitzendbureau_id, bedrijf_uitzendbureau: tekst || undefined })}
+                />
               )}
               <div className="space-y-1.5">
                 <Label>CAO</Label>

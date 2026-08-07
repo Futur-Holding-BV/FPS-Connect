@@ -133,6 +133,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect, profielIds?: numbe
   herkomst_automatisch: g.herkomstProfielId != null ? (g.herkomstAutomatisch ?? false) : false,
   dienstverband: g.dienstverband ?? "intern",
   bedrijf_uitzendbureau: g.bedrijfUitzendbureau ?? null,
+  uitzendbureau_id: g.uitzendbureauId ?? null,
   gearchiveerd: g.gearchiveerd,
   moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
   mislukte_pogingen: g.misluktePogingen ?? 0,
@@ -319,6 +320,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
       herkomst_profiel_id, profiel_ids, dienstverband, bedrijf_uitzendbureau,
+      uitzendbureau_id,
     } = req.body;
     if (!naam || !email || !rol) {
       return void res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -405,6 +407,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
         uitnodigingStatus: "niet_uitgenodigd",
         dienstverband,
         bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
+        uitzendbureauId: typeof uitzendbureau_id === "number" ? uitzendbureau_id : null,
       });
       if (profielIds && profielIds.length > 0) {
         await tx.insert(gebruikerProfielenTable).values(
@@ -454,6 +457,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal, bevoegdheden,
       herkomst_profiel_id, profiel_ids, dienstverband, bedrijf_uitzendbureau,
+      uitzendbureau_id,
     } = req.body;
     // P2: meerdere rollen (profielen). undefined = koppelingen ongemoeid laten;
     // een array vervangt de volledige set.
@@ -523,6 +527,9 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       taal,
       dienstverband: dienstverband || undefined,
       bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
+      uitzendbureauId: uitzendbureau_id !== undefined
+        ? (typeof uitzendbureau_id === "number" ? uitzendbureau_id : null)
+        : undefined,
     };
     // AVG: opschoonklok alleen aanraken bij een echte overgang, nooit bij een
     // no-op PATCH (anders reset elke onbedoelde `actief`-meesturing de termijn).

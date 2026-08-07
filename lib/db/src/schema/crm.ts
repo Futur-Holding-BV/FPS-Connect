@@ -16,6 +16,10 @@ export const ORG_TYPES = [
   "onderwijsinstelling",
   "concurrent",
   "leverancier",
+  // Uitzendbureau en inlener factureren met G-rekeningverdeling; dit type is
+  // de basis voor de automatische factuurcontrole (uitzendbureau_zonder_g).
+  "uitzendbureau",
+  "inlener",
   "overig",
 ] as const;
 

@@ -5849,6 +5849,7 @@ export const ListGebruikersResponseItem = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -5876,7 +5877,8 @@ export const CreateGebruikerBody = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().optional(),
-  "bedrijf_uitzendbureau": zod.string().optional()
+  "bedrijf_uitzendbureau": zod.string().optional(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.')
 })
 
 export const CreateGebruikerResponse = zod.void()
@@ -5917,6 +5919,7 @@ export const GetGebruikerResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -5948,7 +5951,8 @@ export const UpdateGebruikerBody = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().optional(),
-  "bedrijf_uitzendbureau": zod.string().optional()
+  "bedrijf_uitzendbureau": zod.string().optional(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.')
 })
 
 export const UpdateGebruikerResponse = zod.object({
@@ -5979,6 +5983,7 @@ export const UpdateGebruikerResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6030,6 +6035,7 @@ export const HerstellenGebruikerResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6101,6 +6107,7 @@ export const GebruikerOntgrendelenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6142,6 +6149,7 @@ export const UitnodigingVersturenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6196,6 +6204,7 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6237,6 +6246,7 @@ export const GebruikerHerkomstToepassenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6278,6 +6288,7 @@ export const GebruikerHerkomstBevestigenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -6340,6 +6351,7 @@ export const GebruikerHerkomstVerwijderenResponse = zod.object({
   "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
@@ -9999,6 +10011,8 @@ export const ListMedewerkersResponseItem = zod.object({
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10039,6 +10053,7 @@ export const CreateMedewerkerBody = zod.object({
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
@@ -10063,6 +10078,37 @@ export const GetOnboardingContextResponse = zod.object({
 
 
 /**
+ * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
+ */
+export const ListUitzendbureauKoppelingenResponse = zod.object({
+  "openstaand": zod.array(zod.object({
+  "tekst": zod.string().describe('De vrije tekstwaarde uit bedrijf_uitzendbureau die nog geen verwijzing heeft.'),
+  "aantal_gebruikers": zod.number(),
+  "aantal_medewerkers": zod.number(),
+  "kandidaten": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string().nullish()
+})).describe('Mogelijke organisaties in crm_klanten (naam-overeenkomst); leeg = geen match gevonden.')
+}))
+})
+
+
+/**
+ * @summary Koppel een uitzendbureau-tekstwaarde aan een organisatie in crm_klanten
+ */
+export const KoppelUitzendbureauBody = zod.object({
+  "tekst": zod.string().describe('De exacte tekstwaarde uit bedrijf_uitzendbureau die gekoppeld wordt.'),
+  "crm_klant_id": zod.number()
+})
+
+export const KoppelUitzendbureauResponse = zod.object({
+  "gekoppelde_gebruikers": zod.number(),
+  "gekoppelde_medewerkers": zod.number()
+})
+
+
+/**
  * @summary Onboarding - medewerker koppelen aan gebruiker met CAO/verlofcontrole
  */
 export const OnboardMedewerkerBody = zod.object({
@@ -10081,7 +10127,8 @@ export const OnboardMedewerkerBody = zod.object({
   "noodcontact_telefoon": zod.string().optional(),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een beginsaldo wordt opgebouwd.'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
-  "bedrijf_uitzendbureau": zod.string().optional().describe('Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.')
+  "bedrijf_uitzendbureau": zod.string().optional().describe('Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.'),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.')
 })
 
 export const OnboardMedewerkerResponse = zod.void()
@@ -10159,6 +10206,8 @@ export const GetMedewerkerResponse = zod.object({
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10202,6 +10251,7 @@ export const UpdateMedewerkerBody = zod.object({
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
@@ -10241,6 +10291,8 @@ export const UpdateMedewerkerResponse = zod.object({
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10921,6 +10973,8 @@ export const OffboardMedewerkerResponse = zod.object({
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

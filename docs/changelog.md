@@ -1,3 +1,21 @@
+## 2026-08-07 — FACTUUR_01: uitzendbureau als CRM-verwijzing (fundament factuurstroom)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** de factuurstroom (FACTUUR_02) heeft een betrouwbare koppeling nodig tussen ingeleend personeel en de facturerende organisatie. Het uitzendbureau stond tot nu toe als vrije tekst op gebruikers en medewerkers.
+
+**Wijzigingen:**
+- `lib/db/src/schema/crm.ts` — organisatietypen `uitzendbureau` en `inlener` toegevoegd aan `ORG_TYPES`; ook zichtbaar in CRM → Organisaties (filter + aanmaakformulier).
+- `lib/db/src/schema/gebruikers.ts` + `lib/db/src/schema/hrm.ts` — nieuw veld `uitzendbureau_id` (FK naar `crm_klanten`, nullable) naast het bestaande tekstveld `bedrijf_uitzendbureau`, dat als naam-cache blijft bestaan (verwijdering volgt in een latere opdracht). DDL in `lib/db/sql/uitzendbureau-koppeling.sql` (idempotent).
+- `scripts/src/migreer-uitzendbureau-koppelingen.ts` — eenmalige, idempotente migratie: eenduidige naam-matches krijgen automatisch `uitzendbureau_id` (en het organisatietype gaat van leverancier/overig naar uitzendbureau); geen of meerdere matches → nooit koppelen, blijft zichtbaar voor handmatige afhandeling.
+- `artifacts/api-server/src/routes/uitzendbureau-koppelingen.ts` — `GET/POST /uitzendbureau-koppelingen`: openstaande teksten met kandidaten, en handmatig koppelen (personeel-bevoegdheid).
+- `artifacts/firevault/src/pages/personeel/uitzendbureaus.tsx` — beheerpagina Personeel → Uitzendbureau-koppelingen voor de resterende gevallen.
+- `artifacts/firevault/src/components/uitzendbureau-select.tsx` — één gedeelde selector (CRM-organisatie of tijdelijk vrije tekst) gebruikt in gebruikersbeheer, HRM-profiel en de onboarding-wizard.
+
+**Bewijs (dev):** migratiescript koppelde een eenduidige match automatisch (incl. typecorrectie), liet een niet-matchende tekst staan, tweede run = no-op; handmatig koppelen via de API bevestigd (1 gebruiker gekoppeld, lijst daarna leeg). Productiemigratie draait vóór activatie van de nieuwe schermen.
+
+---
+
 ## 2026-08-07 — Wizard-onboarding geactiveerd in productie; drieledige keuze vervallen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

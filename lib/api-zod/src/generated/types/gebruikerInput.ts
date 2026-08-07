@@ -26,4 +26,9 @@ export interface GebruikerInput {
   profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
 }

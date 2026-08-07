@@ -52,6 +52,11 @@ export interface Gebruiker {
   dienstverband?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  /**
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * @nullable
+     */
+  uitzendbureau_id?: number | null;
   moet_wachtwoord_wijzigen?: boolean;
   mislukte_pogingen?: number;
   /** @nullable */

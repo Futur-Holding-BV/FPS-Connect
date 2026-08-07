@@ -41,6 +41,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -224,6 +225,7 @@ const leegForm = {
   profiel_ids: [] as number[],
   dienstverband: "intern",
   bedrijf_uitzendbureau: "",
+  uitzendbureau_id: null as number | null,
 };
 type GebruikerForm = typeof leegForm;
 
@@ -246,6 +248,7 @@ type Gebruiker = {
   profiel_ids?: number[] | null;
   dienstverband?: string | null;
   bedrijf_uitzendbureau?: string | null;
+  uitzendbureau_id?: number | null;
   uitnodiging_status?: string | null;
   uitnodiging_verstuurd_op?: string | null;
   uitnodiging_verloopt_op?: string | null;
@@ -421,6 +424,7 @@ export default function Gebruikers() {
           profiel_ids:      toevoegenForm.profiel_ids,
           dienstverband:    toevoegenForm.dienstverband || undefined,
           bedrijf_uitzendbureau: toevoegenForm.bedrijf_uitzendbureau.trim() || undefined,
+          uitzendbureau_id: toevoegenForm.uitzendbureau_id,
         },
       });
       await invalideer();
@@ -470,6 +474,7 @@ export default function Gebruikers() {
       profiel_ids:      rolIds,
       dienstverband: g.dienstverband ?? "intern",
       bedrijf_uitzendbureau: g.bedrijf_uitzendbureau ?? "",
+      uitzendbureau_id: g.uitzendbureau_id ?? null,
     });
     setBewerkFout(null);
   }
@@ -512,6 +517,7 @@ export default function Gebruikers() {
               : undefined,
           dienstverband:    bewerkForm.dienstverband || undefined,
           bedrijf_uitzendbureau: bewerkForm.bedrijf_uitzendbureau.trim() || undefined,
+          uitzendbureau_id: bewerkForm.uitzendbureau_id,
         },
       });
       await invalideer();
@@ -2133,7 +2139,12 @@ function GebruikerVelden({
             <Label htmlFor="g-dienstverband">Type personeel</Label>
             <Select
               value={form.dienstverband}
-              onValueChange={(v) => setForm((f) => ({ ...f, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? f.bedrijf_uitzendbureau : "" }))}
+              onValueChange={(v) => setForm((f) => ({
+                ...f,
+                dienstverband: v,
+                bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? f.bedrijf_uitzendbureau : "",
+                uitzendbureau_id: (v === "uitzend" || v === "inhuur") ? f.uitzendbureau_id : null,
+              }))}
             >
               <SelectTrigger id="g-dienstverband"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -2145,15 +2156,14 @@ function GebruikerVelden({
             </Select>
           </div>
           {(form.dienstverband === "uitzend" || form.dienstverband === "inhuur") && (
-            <div className="space-y-1.5">
-              <Label htmlFor="g-bedrijf-uitzend">{form.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
-              <Input
-                id="g-bedrijf-uitzend"
-                value={form.bedrijf_uitzendbureau}
-                onChange={(e) => setForm((f) => ({ ...f, bedrijf_uitzendbureau: e.target.value }))}
-                placeholder={form.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
-              />
-            </div>
+            <UitzendbureauSelect
+              idPrefix="g-bedrijf-uitzend"
+              label={form.dienstverband === "uitzend" ? "Uitzendbureau" : "Bedrijf / onderaannemer"}
+              uitzendbureauId={form.uitzendbureau_id}
+              tekst={form.bedrijf_uitzendbureau}
+              onChange={({ uitzendbureau_id, tekst }) =>
+                setForm((f) => ({ ...f, uitzendbureau_id, bedrijf_uitzendbureau: tekst }))}
+            />
           )}
         </div>
       )}
