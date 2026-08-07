@@ -30,8 +30,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 # Stap 2: alleen de db-bronbestanden kopiëren (drizzle-kit werkt direct op TS)
 COPY lib/db/ lib/db/
 
-# Volgorde is bewust: apply-additive legt additieve stappen (incl. unieke
-# indexes) aan vóórdat push draait, zodat push ze als bestaand ziet en ze
-# NIET dropt of wijzigt. Daarna herhaalt apply-additive (idempotent) zodat
-# ook eventuele push-drops hersteld worden.
-CMD ["sh", "-c", "pnpm --filter @workspace/db run apply-additive && pnpm --filter @workspace/db run push && pnpm --filter @workspace/db run apply-additive"]
+# SCHEMA_01 (aug 2026): drizzle-kit push is uit het deployproces verwijderd.
+# apply-additive blijft als idempotente legacy-stap (draagt oudere wijzigingen
+# die nog niet in genummerde migraties zitten), daarna draait de migratierunner
+# die genummerde migraties uit lib/db/src/migrations/ toepast en registreert
+# in schema_migraties. Nieuwe schemawijzigingen gaan UITSLUITEND via een
+# genummerd migratiebestand — apply-additive is bevroren.
+CMD ["sh", "-c", "pnpm --filter @workspace/db run apply-additive && pnpm --filter @workspace/db run migrate"]

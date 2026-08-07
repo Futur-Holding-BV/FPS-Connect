@@ -10,6 +10,8 @@
   "scripts": {
     "apply-additive": "node ./scripts/apply-additive.mjs",
     "reconcile": "node ./scripts/reconcile-unique.mjs",
+    "migrate": "node ./scripts/migrate.mjs",
+    "drift-check": "node ./scripts/schema-drift-check.mjs",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "schema-healthcheck": "node ./scripts/schema-healthcheck.mjs"

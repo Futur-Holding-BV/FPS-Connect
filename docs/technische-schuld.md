@@ -18,7 +18,7 @@
 | 4 | Geen index op `onderhoud` + status + deadline — opgelost: `onderhoud_gebouw_status_deadline_idx` (geverifieerd 7 aug 2026) | 5 | 4 | 0 | ✅ |
 | 5 | Geen index op `chat_berichten.gesprek_id` — opgelost: `chat_berichten_gesprek_aangemaakt_idx` (geverifieerd 7 aug 2026) | 5 | 5 | 0 | ✅ |
 | 6 | Geen index op `document_koppelingen` — opgelost: `document_koppelingen_doel_idx` (geverifieerd 7 aug 2026) | 4 | 4 | 0 | ✅ |
-| 7 | Geen index op `documenten.entiteit_type` + `entiteit_id` | 4 | 4 | 1 | P1 |
+| 7 | Index entiteit_type+entiteit_id — opgelost 7 aug 2026 via migratie 0005 (eerste testmigratie SCHEMA_01). NB: `documenten` heeft deze kolommen niet (DMS koppelt via het al geïndexeerde document_koppelingen); de ongeïndexeerde tabel was `compliance_signalen` → `compliance_signalen_entiteit_idx` | 4 | 4 | 0 | ✅ |
 | 8 | Geen index op `dossiers.gebouw_id` + `status` | 3 | 3 | 1 | P2 |
 | 9 | Geen index op `verlof_aanvragen.medewerker_id` + `status` | 3 | 3 | 1 | P2 |
 | 10 | Geen index op `uren.medewerker_id` + `week_start` | 3 | 3 | 1 | P2 |
@@ -140,8 +140,8 @@
 | 84 | Geen Sentry/error-tracking in productie | 4 | 3 | 4 | P2 |
 | 85 | Geen performance-monitoring (p95-latency onbekend) | 3 | 2 | 4 | P2 |
 | 86 | `pnpm run typecheck` niet in CI (alleen lokaal) | 3 | 3 | 2 | P2 |
-| 87 | DB-migraties via `drizzle-kit push` (dev-only tool) in ontbrekende productie-migratiehistorie | 4 | 4 | 16 | P1 |
-| 88 | Geen `schema.sql` snapshot — productie-DB kan afwijken van dev | 4 | 4 | 4 | P1 |
+| 87 | drizzle-kit push uit deployproces — opgelost 7 aug 2026 (SCHEMA_01): migratierunner (`lib/db/scripts/migrate.mjs`) + tabel `schema_migraties`; push-script bestaat alleen nog voor lokaal werk | 4 | 4 | 0 | ✅ |
+| 88 | schema.sql snapshot — opgelost 7 aug 2026: `lib/db/schema.sql` uit productie gegenereerd (nulpunt) + `schema-verwachting.txt` + drift-check bij elke deploy. Bevinding: 13 timestamp-kolommen zijn prod `without time zone` vs dev `with time zone` (FACTUUR_02/AANVRAAG_01) — gemeld, aparte opdracht | 4 | 4 | 0 | ✅ |
 | 89 | E2E-tests enkel op Chromium — geen cross-browser coverage | 2 | 1 | 8 | P3 |
 | 90 | Geen load-tests — capaciteit bij 50 gelijktijdige gebruikers onbekend | 3 | 3 | 8 | P2 |
 
@@ -165,7 +165,7 @@
 
 | # | Item | Impact | Risico | Uren | Prio |
 |---|------|--------|--------|------|------|
-| 98 | Geen productie-migratiehistorie — schema-wijzigingen niet reproduceerbaar | 5 | 5 | 24 | P1 |
+| 98 | Productie-migratiehistorie — opgelost 7 aug 2026 (SCHEMA_01): genummerde migraties in `lib/db/src/migrations/` (0001–0004 = basislijn, geregistreerd zonder herdraaien; 0005 = eerste echte migratie), registratietabel met tijdstip, pre-check die stopt bij onbekende migratiestand | 5 | 5 | 0 | ✅ |
 | 99 | Geen event-sourcing / audit-log voor kritieke statusovergangen (offerte→definitief, dossier-bevriezing) | 4 | 3 | 40 | P2 |
 | 100 | Geen CQRS/separation: read-queries en business-logica zitten in dezelfde route-handlers | 3 | 2 | 80 | P3 |
 

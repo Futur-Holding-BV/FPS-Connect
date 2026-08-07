@@ -146,14 +146,22 @@ ${COMPOSE} build --no-cache api
 
 # ─── STAP 6: database-migraties uitvoeren ────────────────────────────────────
 # Het migrate-image MOET zelf ook zonder cache herbouwd worden: het schema zit
-# in het image gebakken. Een verouderd migrate-image meldt "Changes applied"
+# in het image gebakken. Een verouderd migrate-image meldt "geen migraties"
 # met exit 0 terwijl er niets is doorgevoerd (dit brak de login op productie
-# op 13 juli 2026). Daarom hier: vers bouwen, migreren, en daarna het schema
-# aantoonbaar verifiëren met de puur-lezende schema-healthcheck.
-echo "=== STAP 6: migraties (migrate-image vers bouwen + push + verificatie) ==="
+# op 13 juli 2026). Daarom hier: vers bouwen, migreren, en daarna verifiëren.
+#
+# SCHEMA_01 (aug 2026): drizzle-kit push is vervangen door de migratierunner
+# (genummerde bestanden in lib/db/src/migrations/, registratie in
+# schema_migraties). Ná de migraties draaien twee onafhankelijke controles:
+#  1. schema-healthcheck (bestaand vangnet, kritieke kolommen);
+#  2. schema-drift-check (vergelijkt de hele database met lib/db/schema-
+#     verwachting.txt en meldt élk verschil in de deploylog).
+echo "=== STAP 6: migraties (migrate-image vers bouwen + migratierunner + verificatie) ==="
 ${COMPOSE} build --no-cache migrate
 ${COMPOSE} run --rm -T migrate
 ${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run schema-healthcheck
+echo "=== STAP 6b: schema-drift-check (database vs. vastgelegde verwachting) ==="
+${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run drift-check
 
 # ─── STAP 7: Caddy/frontend bouwen zonder cache ──────────────────────────────
 echo "=== STAP 7: Caddy/frontend-image bouwen (--no-cache) ==="

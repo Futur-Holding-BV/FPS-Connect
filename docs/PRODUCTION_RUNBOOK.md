@@ -272,6 +272,13 @@ docker compose -f deploy/docker-compose.production.yml \
 5. Bij DB-schemawijziging: eerst `run --rm migrate`, dan containers herstarten
 6. Healthcheck uitvoeren
 
+## Schemawijzigingen (SCHEMA_01, sinds 7 aug 2026)
+
+- **Elke schemawijziging = een genummerd bestand** in `lib/db/src/migrations/` (`NNNN_naam.sql`, oplopend, met toelichting bovenaan). Nooit meer via `drizzle-kit push` op productie; het `push`-script bestaat alleen nog voor lokaal ontwikkelwerk. `apply-additive.mjs` is bevroren — geen nieuwe stappen toevoegen.
+- De migratierunner (`pnpm --filter @workspace/db run migrate`) houdt in de tabel `schema_migraties` bij wat wanneer gedraaid heeft, voert alleen openstaande migraties uit (elk in een eigen transactie) en stopt als de database migraties kent die de repo niet heeft.
+- `lib/db/schema.sql` is de momentopname van productie (nulpunt 7 aug 2026). `lib/db/schema-verwachting.txt` is de compacte verwachting waar de drift-check (`run drift-check`) de database bij elke deploy tegen aflegt; bij een nieuwe migratie hoort dit bestand mee te veranderen (`drift-check --update` tegen een volledig gemigreerde database, daarna de prod-specifieke verschillen controleren).
+- Snel controleren of een migratie gedraaid heeft: `SELECT * FROM schema_migraties ORDER BY uitgevoerd_op DESC;`
+
 ---
 
 ## Bekende problemen

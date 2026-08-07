@@ -2490,3 +2490,10 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Punt 24 — login-bescherming:** de bestaande rate-limiters logden blokkades niet; elke geblokkeerde poging staat nu in het log (ip, e-mail, welke limiter). Bewezen: 6e foute inlogpoging → 429 + logregel.
 - **Punt 25 — AI-begrenzing:** centraal in de AI-gateway: max 20 AI-verzoeken per gebruiker per minuut en een dagplafond van €25 over het geheel (beide instelbaar via env). Nette meldingen in plaats van stille fouten; bewezen via `verificatie-ai-limieten.ts`.
 - **Punten 21+36 — foutafhandeling:** centrale Express-foutafhandelaar met verwijzingscode (FPS-XXXXXXXX): server logt alles, de client ziet nooit database-details meer. 15 routes die letterlijke foutteksten teruggaven gebruiken nu `veiligeFoutmelding()`.
+
+## 7 augustus 2026 — SCHEMA_01: migratiehistorie hersteld (punten 7, 87, 88, 98)
+- **Nulpunt vastgelegd:** `lib/db/schema.sql` gegenereerd uit de productiedatabase. Bevinding daarbij: 13 timestamp-kolommen wijken af tussen prod (`without time zone`) en dev (`with time zone`) — gemeld, wordt een aparte opdracht.
+- **Genummerde migraties:** de vier bestaande migratiebestanden zijn hernummerd (0001–0004) en als basislijn geregistreerd zonder herdraaien. Nieuwe wijzigingen gaan uitsluitend via `lib/db/src/migrations/NNNN_*.sql`.
+- **Migratierunner + registratietabel:** `schema_migraties` houdt bij welke migratie wanneer draaide; de runner voert alleen openstaande migraties uit (per stuk in een transactie) en stopt als de database vóórloopt op de code.
+- **`drizzle-kit push` verwijderd uit het deployproces**; drift-check vergelijkt bij elke deploy de hele database met de vastgelegde verwachting en meldt elk verschil in de log.
+- **Testmigratie 0005:** entiteit-index (punt 7) — landde op `compliance_signalen` omdat `documenten` die kolommen niet blijkt te hebben (schulddocument was daar onnauwkeurig).
