@@ -142,7 +142,7 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
         type,
         status,
         gewenste_leverdatum: datum || undefined,
-        prijs_bron: (prijsBron || undefined) as "onbekend" | "jaarprijslijst" | "leveranciersofferte" | "vrij" | undefined,
+        prijs_bron: (prijsBron || undefined) as "onbekend" | "jaarprijslijst" | "inkoophistorie" | "leveranciersofferte" | "vrij" | undefined,
         prijs_geldig_tot: prijsGeldigTot || undefined,
       },
     });

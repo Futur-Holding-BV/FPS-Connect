@@ -2601,3 +2601,4 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - `INKOOP_PROMPT` van één zin naar uitgewerkte prompt v2.0.0; offerteaanvraag-mail vraagt gericht om een prijs in de orde van de eigen historie.
 - Bewijs: `scripts/src/bewijs-inkoop-eigen-cijfers.ts` (11/11 groen) en vóór/ná-vergelijking in `docs/inkoop-ai-voor-na.md`.
 - Nulbevinding: er is nog géén inkoopbon-, factuur- of nacalculatiedata (dev én prod) — acceptatie op echte inkoopplannen volgt zodra die data bestaat.
+- Reviewfixes: jaarprijslijst-match nu exact (case-insensitief, ambigu = geen override), `totaleBesparing` herberekend uit regels i.p.v. AI-schatting, blok E telt alleen afgesloten nacalculaties, prijsbron "inkoophistorie" toegevoegd aan verdeling en frontend-typering.

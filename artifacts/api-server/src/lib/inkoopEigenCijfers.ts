@@ -293,7 +293,9 @@ export async function bouwWerkbegrotingEigenCijfersContext(
   regels: Array<{ omschrijving: string; eenheid: string }>,
 ): Promise<string> {
   const [nacalcs, eenheidsprijzen] = await Promise.all([
-    db.select().from(fieNacalculatiesTable),
+    // Alleen afgesloten nacalculaties: onafgesloten/handmatige registraties zijn
+    // nog geen bewijs (fail-closed, zelfde principe als de inkoopbronnen).
+    db.select().from(fieNacalculatiesTable).where(eq(fieNacalculatiesTable.afgesloten, true)),
     db.select().from(eenheidsprijzenTable)
       .where(and(eq(eenheidsprijzenTable.actief, true), isNotNull(eenheidsprijzenTable.gemWerkelijkUren))),
   ]);

@@ -19,7 +19,7 @@ import {
   pimModellenTable,
   artikelenTable,
 } from "@workspace/db";
-import { eq, and, asc, inArray, ilike } from "drizzle-orm";
+import { eq, and, asc, inArray, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
@@ -406,7 +406,7 @@ router.get("/opdrachten/:id/inkoopcoach", lezen, async (req, res): Promise<void>
     };
 
     // Prijsbron-verdeling
-    const prijsbronVerdeling: Record<string, number> = { jaarprijslijst: 0, leveranciersofferte: 0, vrij: 0, onbekend: 0 };
+    const prijsbronVerdeling: Record<string, number> = { jaarprijslijst: 0, inkoophistorie: 0, leveranciersofferte: 0, vrij: 0, onbekend: 0 };
     let verlopenPrijzen = 0;
     let totaleBesparing = 0;
     for (const r of regels) {
@@ -806,7 +806,9 @@ Geef je analyse als JSON:
       aiGegenereerd,
       aiGegeneerdOp: aiGegenereerd ? new Date() : null,
       aiSamenvatting: aiResultaat?.samenvatting ?? null,
-      totaleBesparing: aiResultaat?.totale_besparing ?? null,
+      // Wordt hieronder deterministisch herberekend uit de regels (INKOOP_AI_01);
+      // de AI-schatting wordt niet opgeslagen.
+      totaleBesparing: null,
     }).returning();
 
     // Regels aanmaken
@@ -825,19 +827,23 @@ Geef je analyse als JSON:
       const artikelHistorie = historie.get(artikelSleutel(regel.omschrijving, regel.eenheid));
       let prijsBron = "onbekend";
       let inkoopprijsVerwacht: number | null = null;
-      const [artikel] = await db.select({
+      // Exacte (case-insensitieve) naam-match, géén ilike-patroon: %/_ in een
+      // omschrijving mogen geen wildcard worden. Ambigu (meerdere actieve
+      // artikelen met verschillende inkoopprijs) = fail-closed: geen override.
+      const artikelen = await db.select({
         naam: artikelenTable.naam,
         inkoopprijs: artikelenTable.inkoopprijs,
       })
         .from(artikelenTable)
         .where(and(
           eq(artikelenTable.actief, true),
-          ilike(artikelenTable.naam, regel.omschrijving.trim()),
+          sql`lower(${artikelenTable.naam}) = lower(${regel.omschrijving.trim()})`,
         ))
-        .limit(1);
-      if (artikel && artikel.inkoopprijs != null) {
+        .limit(3);
+      const prijzen = [...new Set(artikelen.filter((a) => a.inkoopprijs != null).map((a) => a.inkoopprijs))];
+      if (prijzen.length === 1) {
         prijsBron = "jaarprijslijst";
-        inkoopprijsVerwacht = artikel.inkoopprijs;
+        inkoopprijsVerwacht = prijzen[0]!;
       } else if (artikelHistorie && artikelHistorie.mediaan != null) {
         prijsBron = "inkoophistorie";
         inkoopprijsVerwacht = Math.round(artikelHistorie.mediaan * 100) / 100;
@@ -881,6 +887,16 @@ Geef je analyse als JSON:
     if (planRegels.length > 0) {
       await db.insert(inkoopplanRegelsTable).values(planRegels);
     }
+
+    // Totale besparing deterministisch uit de regels — nooit uit de AI.
+    const berekendeBesparing = planRegels.reduce((som, r) => som + (r.besparing ?? 0), 0);
+    const totaleBesparing = planRegels.some((r) => r.besparing != null)
+      ? Math.round(berekendeBesparing * 100) / 100
+      : null;
+    await db.update(inkoopplannenTable)
+      .set({ totaleBesparing })
+      .where(eq(inkoopplannenTable.id, plan.id));
+    plan.totaleBesparing = totaleBesparing;
 
     const alleRegels = await db.select().from(inkoopplanRegelsTable)
       .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))

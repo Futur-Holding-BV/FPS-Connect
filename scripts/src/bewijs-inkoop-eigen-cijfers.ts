@@ -95,13 +95,19 @@ async function main(): Promise<void> {
         opdrachtId: opdracht!.id, werktype: `${MARK}-doorvoeringen`,
         calcArbeidUren: 100, werkelijkArbeidUren: 100 + afw, afwijkingPctArbeid: afw,
         calcMateriaalBedrag: 1000, werkelijkMateriaalBedrag: 1000 + afw * 10, afwijkingPctMateriaal: afw / 2,
+        afgesloten: true,
       }).returning();
       nacalcIds.push(n!.id);
     }
     const [n1] = await db.insert(fieNacalculatiesTable).values({
-      opdrachtId: opdracht!.id, werktype: `${MARK}-deuren`, afwijkingPctArbeid: 40, afwijkingPctMateriaal: 5,
+      opdrachtId: opdracht!.id, werktype: `${MARK}-deuren`, afwijkingPctArbeid: 40, afwijkingPctMateriaal: 5, afgesloten: true,
     }).returning();
     nacalcIds.push(n1!.id);
+    // Niet-afgesloten nacalculatie met gifwaarde: mag NOOIT meetellen (fail-closed).
+    const [n2] = await db.insert(fieNacalculatiesTable).values({
+      opdrachtId: opdracht!.id, werktype: `${MARK}-doorvoeringen`, afwijkingPctArbeid: 500, afwijkingPctMateriaal: 500, afgesloten: false,
+    }).returning();
+    nacalcIds.push(n2!.id);
 
     // Eenheidsprijs met werkelijk gemeten uren die structureel afwijken van de normtijd.
     const [ep] = await db.insert(eenheidsprijzenTable).values({
@@ -144,8 +150,8 @@ async function main(): Promise<void> {
       ctx1.includes("BOVEN de calculatieprijs € 4.00") && ctx1.includes("signaal terug naar de calculatiekant"));
     check("Vervuiling: conceptbon (999), verkoopfactuur (777.77) en afgekeurde factuur (888.88) tellen niet mee",
       !ctx1.includes("999") && !ctx1.includes("777.77") && !ctx1.includes("888.88"));
-    check("6. Werkbegroting: werkelijk besteed per werktype met mediaan en aantal",
-      wb1.includes("doorvoeringen\" (3 afgeronde opdrachten") && wb1.includes("mediaan +18.0%"));
+    check("6. Werkbegroting: werkelijk besteed per werktype met mediaan en aantal (niet-afgesloten nacalculatie uitgesloten)",
+      wb1.includes("doorvoeringen\" (3 afgeronde opdrachten") && wb1.includes("mediaan +18.0%") && !wb1.includes("500"));
     check("6b. Werktype met te weinig nacalculaties → melding, geen advies",
       wb1.includes("deuren\": 1 afgeronde opdracht(en)") && wb1.includes("te weinig"));
     check("Normtijd vs werkelijk: structurele afwijking gemeld en gekoppeld aan begroting",

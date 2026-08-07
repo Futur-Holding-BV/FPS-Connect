@@ -146,3 +146,4 @@
 - [Schema-migratieketen (SCHEMA_01)](schema-migratieketen.md) — schemawijziging = genummerde migratie + drift-check --update; apply-additive/drizzle-push bevroren; migratierunner draait in deploy.
 - [Metro crasht op verwijderde test-results](e2e-testresults-watcher.md) — Playwright-cleanup die scripts/test-results verwijdert laat expo crashen (exit 7); .gitkeep behouden.
 - [Calculatie-AI eigen cijfers](calculatie-eigen-cijfers.md) — analyse toetst aan eigen data (mediaan, ≥5 waarnemingen, expliciet bij geen match); vaste %-normen verboden in prompt; gpt-5 heeft ruim tokenbudget nodig.
+- [Inkoop/werkbegroting-AI eigen cijfers](inkoop-eigen-cijfers.md) — inkoopprijs_verwacht nooit van AI (jaarprijslijst>mediaan≥3>onbekend); leveranciers=opsomming; nacalc alleen afgesloten; bronnen fail-closed.
