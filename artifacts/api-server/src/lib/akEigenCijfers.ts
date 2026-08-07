@@ -130,11 +130,14 @@ export async function bouwJaarReeks(): Promise<JaarReeksRij[]> {
     const akTotaal = akPer.has(combo) ? Math.round(akPer.get(combo)!) : null;
     const omzet = real?.omzetGefactureerd ?? null;
     const ohw = real?.ohwMutatie ?? null;
-    const productie = omzet != null ? omzet + (ohw ?? 0) : null;
+    // Harde regel §3.1a: productie alleen berekenen als de OHW-mutatie expliciet
+    // is ingevoerd (0 is een geldige waarde, ontbreken niet). Een percentage op
+    // basis van een stilzwijgende 0 zou zich als productie-percentage voordoen.
+    const productie = omzet != null && ohw != null ? omzet + ohw : null;
     const ontbreektDelen: string[] = [];
     if (akTotaal == null) ontbreektDelen.push("AK-posten");
     if (omzet == null) ontbreektDelen.push("gerealiseerde omzet");
-    if (real != null && ohw == null) ontbreektDelen.push("OHW-mutatie");
+    if (omzet != null && ohw == null) ontbreektDelen.push("OHW-mutatie (vereist voor het productie-percentage)");
     rijen.push({
       boekjaar, werkgeverId, werkgeverNaam: naam(werkgeverId),
       akTotaal, omzetGefactureerd: omzet, ohwMutatie: ohw, productie,
@@ -199,9 +202,9 @@ export async function bouwLopendJaar(nu: Date): Promise<LopendJaar> {
   if (akBegroot == null) toelichting = `Geen begroting met AK-posten voor ${boekjaar} — koersbeeld niet te berekenen.`;
   else if (pctBijKoers == null) toelichting = `Nog geen gefactureerde omzet in ${boekjaar}.`;
   else if (pctBegroot != null && pctBijKoers > pctBegroot) {
-    toelichting = `Bij de huidige koers (${euro(omzetKoers!)} omzet) wordt het AK-percentage feitelijk ${pctBijKoers}% in plaats van de begrote ${pctBegroot}%. Dit wordt alleen getoond — bijstellen is een beslissing, geen automatisme. Kanttekening: gefactureerde omzet, zonder OHW-mutatie van het lopende jaar.`;
+    toelichting = `Bij de huidige koers (${euro(omzetKoers!)} omzet) wordt de AK-verhouding indicatief ${pctBijKoers}% in plaats van de begrote ${pctBegroot}%. Let op: dit is een OMZET-percentage — de OHW-mutatie van het lopende jaar is pas bij de jaarrekening bekend, dus dit is géén productie-percentage. Dit wordt alleen getoond — bijstellen is een beslissing, geen automatisme.`;
   } else {
-    toelichting = `De omzet ligt op of boven koers; het begrote AK-percentage houdt stand. Kanttekening: gefactureerde omzet, zonder OHW-mutatie van het lopende jaar.`;
+    toelichting = `De omzet ligt op of boven koers; het begrote AK-percentage houdt stand. Let op: dit is een OMZET-percentage — de OHW-mutatie van het lopende jaar is pas bij de jaarrekening bekend, dus dit is géén productie-percentage.`;
   }
   return { boekjaar, omzetDoel, omzetTotNu, jaarFractie: Math.round(jaarFractie * 100) / 100, omzetKoers, akBegroot, pctBegroot, pctBijKoers, toelichting };
 }
@@ -322,27 +325,29 @@ export async function bouwSignaalKandidaten(
       continue;
     }
 
-    // Verzekeringen: werkelijke premie uit de eigen polis naast de AK-post.
+    // Verzekeringen: het verzekeringsspecifieke signaal (dekkingsvraag) bestaat
+    // alléén als er een deterministisch gematchte actieve polis met premie is —
+    // anders zou "getoetst aan de werkelijke premie" een lege claim zijn. Zonder
+    // polis valt de post door naar het generieke post-signaal hieronder.
     if (post.isVerzekering) {
       const polis = polissen.find((v) =>
         post.omschrijving.toLowerCase().includes((v.type ?? "").toLowerCase()) && (v.type ?? "").length >= 3);
       const premieJaar = polis && polis.premie != null ? premieJaarbasis(Number(polis.premie), polis.premieFrequentie) : null;
-      if (stijging != null && productieStijgingPct != null && stijging - productieStijgingPct >= SIGNAAL_DREMPEL_PP) {
+      if (premieJaar != null && stijging != null && productieStijgingPct != null && stijging - productieStijgingPct >= SIGNAAL_DREMPEL_PP) {
         signalen.push({
           dedupSleutel: `verzekering|${post.sleutel}|${eerste.boekjaar}-${laatste.boekjaar}`,
           categorie: post.categorie, werkgeverId: post.werkgeverId,
           titel: `Verzekeringspremie steeg harder dan de productie`,
           bedrag: Math.round(laatste.bedrag - eerste.bedrag),
           cijfers: { perJaar: post.perJaar, stijgingPct: stijging, productieStijgingPct: Math.round(productieStijgingPct * 10) / 10, polisPremieJaarbasis: premieJaar, polisMaatschappij: polis?.maatschappij ?? null, polisnummer: polis?.polisnummer ?? null },
-          bron: premieJaar != null
-            ? "fie_ak_posten per boekjaar; werkelijke premie uit org_verzekeringen (eigen polis)"
-            : "fie_ak_posten per boekjaar; geen gekoppelde polis gevonden in org_verzekeringen",
+          bron: "fie_ak_posten per boekjaar; werkelijke premie uit org_verzekeringen (eigen polis)",
           soort: "verzekering_premie",
-          kern: `${post.omschrijving} (${post.werkgeverNaam}): ${jarenTekst} (${pct(stijging)}), terwijl de productie ${pct(productieStijgingPct)} bewoog.${premieJaar != null ? ` De werkelijke premie volgens de eigen polis${polis?.maatschappij ? ` bij ${polis.maatschappij}` : ""} is ${euro(premieJaar)} op jaarbasis.` : ""}`,
+          kern: `${post.omschrijving} (${post.werkgeverNaam}): ${jarenTekst} (${pct(stijging)}), terwijl de productie ${pct(productieStijgingPct)} bewoog. De werkelijke premie volgens de eigen polis${polis?.maatschappij ? ` bij ${polis.maatschappij}` : ""} is ${euro(premieJaar)} op jaarbasis. Is de dekking gewijzigd?`,
           vervolgstap: "Vraag na of de dekking is gewijzigd; zo niet, overweeg een offerte op te vragen.",
         });
+        continue;
       }
-      continue;
+      // geen polis-match → generiek post-signaal (valt door)
     }
 
     // Overige posten: harder gestegen dan de productie = signaal.
@@ -355,7 +360,7 @@ export async function bouwSignaalKandidaten(
         cijfers: { perJaar: post.perJaar, stijgingPct: stijging, productieStijgingPct: Math.round(productieStijgingPct * 10) / 10, aandeelPct: post.aandeelPct },
         bron: "fie_ak_posten per boekjaar; productie uit fie_jaarrealisaties",
         soort: "post_stijging",
-        kern: `${post.omschrijving} (${post.werkgeverNaam}, ${post.categorie}): ${jarenTekst} (${pct(stijging)}), terwijl de productie ${pct(productieStijgingPct)} bewoog. Aandeel in de totale AK: ${post.aandeelPct ?? "?"}%.`,
+        kern: `${post.omschrijving} (${post.werkgeverNaam}, ${post.categorie}): ${jarenTekst} (${pct(stijging)}), terwijl de productie ${pct(productieStijgingPct)} bewoog. Aandeel in de totale AK: ${post.aandeelPct ?? "?"}%. Wat verklaart dit verschil?`,
         vervolgstap: "Zoek de onderliggende facturen erbij en beoordeel of deze post opnieuw moet worden ingekocht.",
       });
     }

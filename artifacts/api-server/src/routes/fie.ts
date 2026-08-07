@@ -14,7 +14,7 @@ import {
   opdrachtenTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
@@ -817,17 +817,22 @@ router.post("/fie/realisaties", schrijven, async (req: Request, res: Response): 
     bijgewerktOp: new Date(),
   };
   // Upsert op (boekjaar, werkgever): realisatie wordt bijgewerkt, niet gedupliceerd.
-  const bestaande = await db.select().from(fieJaarrealisatiesTable)
-    .where(eq(fieJaarrealisatiesTable.boekjaar, boekjaar));
-  const bestaand = bestaande.find((r) => (r.werkgeverId ?? null) === werkgeverId);
-  if (bestaand) {
-    const [rij] = await db.update(fieJaarrealisatiesTable).set(waarden)
-      .where(eq(fieJaarrealisatiesTable.id, bestaand.id)).returning();
-    res.json(mapRealisatie(rij!));
-    return;
-  }
-  const [rij] = await db.insert(fieJaarrealisatiesTable).values(waarden).returning();
-  res.status(201).json(mapRealisatie(rij!));
+  // In een transactie met advisory lock zodat parallelle verzoeken niet allebei
+  // "bestaat nog niet" zien en op de partiële unieke index klappen.
+  const resultaat = await db.transaction(async (tx) => {
+    await tx.execute(sqlRaw`SELECT pg_advisory_xact_lock(hashtext('fie_jaarrealisaties_upsert'))`);
+    const bestaande = await tx.select().from(fieJaarrealisatiesTable)
+      .where(eq(fieJaarrealisatiesTable.boekjaar, boekjaar));
+    const bestaand = bestaande.find((r) => (r.werkgeverId ?? null) === werkgeverId);
+    if (bestaand) {
+      const [rij] = await tx.update(fieJaarrealisatiesTable).set(waarden)
+        .where(eq(fieJaarrealisatiesTable.id, bestaand.id)).returning();
+      return { rij: rij!, nieuw: false };
+    }
+    const [rij] = await tx.insert(fieJaarrealisatiesTable).values(waarden).returning();
+    return { rij: rij!, nieuw: true };
+  });
+  res.status(resultaat.nieuw ? 201 : 200).json(mapRealisatie(resultaat.rij));
 });
 
 router.delete("/fie/realisaties/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
@@ -897,6 +902,12 @@ router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Pro
   }
 });
 
+// Eén kapotte historische rij mag het hele dashboard niet in een 500 trekken.
+function veiligJson(tekst: string | null): unknown {
+  if (!tekst) return null;
+  try { return JSON.parse(tekst) as unknown; } catch { return null; }
+}
+
 function mapAdvies(a: typeof fieAkAdviezenTable.$inferSelect): Record<string, unknown> {
   return {
     id: a.id,
@@ -906,7 +917,7 @@ function mapAdvies(a: typeof fieAkAdviezenTable.$inferSelect): Record<string, un
     advies: a.advies,
     vervolgstap: a.vervolgstap ?? null,
     bedrag: a.bedrag,
-    cijfers: a.cijfers ? JSON.parse(a.cijfers) as unknown : null,
+    cijfers: veiligJson(a.cijfers),
     bron_vermelding: a.bronVermelding ?? null,
     status: a.status,
     afhandel_reden: a.afhandelReden ?? null,
@@ -925,11 +936,14 @@ router.post("/fie/ak-adviezen/genereer", schrijven, async (req: Request, res: Re
     const posten = await bouwPostOntwikkeling();
     const kandidaten = await bouwSignaalKandidaten(reeks, posten);
 
-    const openAdviezen = await db.select().from(fieAkAdviezenTable)
+    // Voorselectie buiten de transactie (alleen om de AI-aanroep te beperken);
+    // de harde max-10- en dedup-garanties worden straks ín de transactie
+    // opnieuw afgedwongen onder een advisory lock.
+    const openAdviezenVooraf = await db.select().from(fieAkAdviezenTable)
       .where(inArray(fieAkAdviezenTable.status, ["open", "weggezet"]));
-    const bestaandeSleutels = new Set(openAdviezen.map((a) => a.dedupSleutel));
-    const ruimte = Math.max(0, MAX_OPEN_ADVIEZEN - openAdviezen.filter((a) => a.status === "open").length);
-    const nieuwe = kandidaten.filter((k) => !bestaandeSleutels.has(k.dedupSleutel)).slice(0, ruimte);
+    const bestaandeSleutels = new Set(openAdviezenVooraf.map((a) => a.dedupSleutel));
+    const ruimteVooraf = Math.max(0, MAX_OPEN_ADVIEZEN - openAdviezenVooraf.filter((a) => a.status === "open").length);
+    const nieuwe = kandidaten.filter((k) => !bestaandeSleutels.has(k.dedupSleutel)).slice(0, ruimteVooraf);
 
     // AI herformuleert de kern als vraag; bij falen valt de deterministische
     // kerntekst zelf in — het advies mag niet afhangen van de AI.
@@ -955,25 +969,39 @@ router.post("/fie/ak-adviezen/genereer", schrijven, async (req: Request, res: Re
       }
     }
 
-    const aangemaakt: (typeof fieAkAdviezenTable.$inferSelect)[] = [];
-    for (const k of nieuwe) {
-      const ai = teksten.get(k.dedupSleutel);
-      // Loonkosten (§3.4): vervolgstap blijft altijd leeg, ook als de AI er één verzint.
-      const vervolgstap = k.soort === "loonkosten_constatering" ? null : (ai?.vervolgstap ?? k.vervolgstap);
-      const [rij] = await db.insert(fieAkAdviezenTable).values({
-        werkgeverId: k.werkgeverId,
-        categorie: k.categorie,
-        titel: k.titel,
-        advies: ai?.advies ?? `${k.kern} (Bron: ${k.bron}.)`,
-        vervolgstap,
-        bedrag: k.bedrag,
-        cijfers: JSON.stringify(k.cijfers),
-        bronVermelding: k.bron,
-        dedupSleutel: k.dedupSleutel,
-        status: "open",
-      }).onConflictDoNothing().returning();
-      if (rij) aangemaakt.push(rij);
-    }
+    // Insert in één transactie onder advisory lock: parallelle genereer-verzoeken
+    // kunnen anders allebei ruimte zien en samen boven de 10 open adviezen uitkomen.
+    const aangemaakt = await db.transaction(async (tx) => {
+      await tx.execute(sqlRaw`SELECT pg_advisory_xact_lock(hashtext('fie_ak_adviezen_genereer'))`);
+      const openNu = await tx.select().from(fieAkAdviezenTable)
+        .where(eq(fieAkAdviezenTable.status, "open"));
+      let ruimte = Math.max(0, MAX_OPEN_ADVIEZEN - openNu.length);
+      const rijen: (typeof fieAkAdviezenTable.$inferSelect)[] = [];
+      for (const k of nieuwe) {
+        if (ruimte <= 0) break;
+        const ai = teksten.get(k.dedupSleutel);
+        // AI-output alleen vertrouwen als hij aan de vorm voldoet: een vraag mét
+        // bedragen erin. Anders valt de deterministische kerntekst in (§4-regels
+        // zijn server-side, niet prompt-only).
+        const aiTekstGeldig = ai != null && ai.advies.includes("?") && ai.advies.includes("€");
+        // Loonkosten (§3.4): vervolgstap blijft altijd leeg, ook als de AI er één verzint.
+        const vervolgstap = k.soort === "loonkosten_constatering" ? null : ((aiTekstGeldig ? ai.vervolgstap : null) ?? k.vervolgstap);
+        const [rij] = await tx.insert(fieAkAdviezenTable).values({
+          werkgeverId: k.werkgeverId,
+          categorie: k.categorie,
+          titel: k.titel,
+          advies: aiTekstGeldig ? ai.advies : `${k.kern} (Bron: ${k.bron}.)`,
+          vervolgstap,
+          bedrag: k.bedrag,
+          cijfers: JSON.stringify(k.cijfers),
+          bronVermelding: k.bron,
+          dedupSleutel: k.dedupSleutel,
+          status: "open",
+        }).onConflictDoNothing().returning();
+        if (rij) { rijen.push(rij); ruimte--; }
+      }
+      return rijen;
+    });
 
     res.json({
       aangemaakt: aangemaakt.map(mapAdvies),
