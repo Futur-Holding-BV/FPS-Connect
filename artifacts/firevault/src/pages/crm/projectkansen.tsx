@@ -20,7 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Target, Plus, ArrowLeft, TrendingUp, Calendar, User, Sparkles } from "lucide-react";
+import { Target, Plus, ArrowLeft, TrendingUp, Calendar, User, Sparkles, FileText, Mail, Clock } from "lucide-react";
+import { useLocation } from "wouter";
+import { useCreateOfferte } from "@workspace/api-client-react";
 import { CrmCoachPanel } from "@/components/crm-coach-panel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -62,6 +64,16 @@ export default function ProjectkansenPagina() {
   const { data: orgs = [] } = useListCrmKlanten();
   const aanmaken = useCreateCrmProjectkans();
   const bijwerken = useUpdateCrmProjectkans();
+  const [, navigeer] = useLocation();
+  const offerteMaken = useCreateOfferte({
+    mutation: {
+      onSuccess: (offerte) => {
+        toast({ title: "Offerte aangemaakt", description: "U wordt doorgestuurd naar de offerte." });
+        navigeer(`/offertes/${offerte.id}`);
+      },
+      onError: () => toast({ title: "Offerte aanmaken mislukt", variant: "destructive" }),
+    },
+  });
 
   const orgMap = new Map((orgs as CrmOrganisatie[]).map((o) => [o.id, o.naam]));
 
@@ -184,10 +196,39 @@ export default function ProjectkansenPagina() {
                       {kans.volgende_actie && (
                         <span className="text-xs text-amber-600 font-medium">{kans.volgende_actie}</span>
                       )}
+                      {kans.binnengekomen_op && (
+                        <span className="text-xs flex items-center gap-1 text-muted-foreground" title="Binnengekomen als aanvraag per mail">
+                          <Mail className="w-3 h-3" /> Aanvraag {new Date(kans.binnengekomen_op).toLocaleDateString("nl-NL")}
+                          {kans.beantwoord_op ? (
+                            <span className="text-emerald-600 flex items-center gap-1">
+                              · <Clock className="w-3 h-3" /> beantwoord na {Math.max(1, Math.round((new Date(kans.beantwoord_op).getTime() - new Date(kans.binnengekomen_op).getTime()) / 3_600_000))} uur
+                            </span>
+                          ) : (
+                            <span className="text-red-600">· nog niet beantwoord</span>
+                          )}
+                        </span>
+                      )}
+                      {kans.bedrijf_bv && <span className="text-xs text-muted-foreground">{kans.bedrijf_bv}</span>}
                     </div>
                   </div>
 
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={offerteMaken.isPending}
+                      onClick={() => offerteMaken.mutate({
+                        data: {
+                          titel: kans.titel,
+                          ...(kans.klant_id != null ? { klant_id: kans.klant_id } : {}),
+                          ...(kans.gebouw_id != null ? { gebouw_id: kans.gebouw_id } : {}),
+                          projectkans_id: kans.id,
+                        },
+                      })}
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Offerte maken
+                    </Button>
                     <Select value={kans.fase ?? "signaal"} onValueChange={(val) => handleFaseWijziging(kans, val)}>
                       <SelectTrigger className="h-8 text-xs w-36">
                         <SelectValue />

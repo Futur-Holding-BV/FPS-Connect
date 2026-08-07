@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,27 @@ export default function InfoPagina() {
   async function toggleMomentsVerjaardag(checked: boolean) {
     await updateInstellingen.mutateAsync({
       data: { moments_verjaardag_ingeschakeld: checked },
+    });
+    queryClient.invalidateQueries();
+  }
+
+  const [reactieUren, setReactieUren] = useState<string>("");
+  const [oppakUren, setOppakUren] = useState<string>("");
+  useEffect(() => {
+    if (instellingen) {
+      setReactieUren(String(instellingen.aanvraag_reactietermijn_uren ?? 24));
+      setOppakUren(String(instellingen.aanvraag_oppak_termijn_uren ?? 72));
+    }
+  }, [instellingen]);
+
+  async function termijnenOpslaan() {
+    const reactie = Number(reactieUren);
+    const oppak = Number(oppakUren);
+    if (!Number.isFinite(reactie) || reactie < 1 || reactie > 720 || !Number.isFinite(oppak) || oppak < 1 || oppak > 720) {
+      return;
+    }
+    await updateInstellingen.mutateAsync({
+      data: { aanvraag_reactietermijn_uren: Math.round(reactie), aanvraag_oppak_termijn_uren: Math.round(oppak) },
     });
     queryClient.invalidateQueries();
   }
@@ -448,6 +469,52 @@ export default function InfoPagina() {
                 disabled={updateInstellingen.isPending}
               />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aanvraagstroom-termijnen */}
+      {isHoofdBeheerder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              Aanvraagstroom-bewaking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground max-w-md">
+              Termijnen voor binnengekomen prijsaanvragen. Bij overschrijding verschijnt automatisch een signaal in de mailstroom-bewaking.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Reactietermijn (uren)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={720}
+                  className="mt-1"
+                  value={reactieUren}
+                  onChange={(e) => setReactieUren(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Binnen dit aantal uren moet een aanvraag beantwoord zijn.</p>
+              </div>
+              <div>
+                <Label>Oppaktermijn (uren)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={720}
+                  className="mt-1"
+                  value={oppakUren}
+                  onChange={(e) => setOppakUren(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Binnen dit aantal uren moet een geaccepteerde aanvraag inhoudelijk opgepakt zijn.</p>
+              </div>
+            </div>
+            <Button size="sm" onClick={termijnenOpslaan} disabled={updateInstellingen.isPending}>
+              <Save className="mr-1 h-4 w-4" /> Termijnen opslaan
+            </Button>
           </CardContent>
         </Card>
       )}

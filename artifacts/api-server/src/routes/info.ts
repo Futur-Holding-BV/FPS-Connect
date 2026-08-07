@@ -50,6 +50,10 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       moments_verjaardag_ingeschakeld: instelling.momentsVerjaardagIngeschakeld,
       heatmap_tracking_ingeschakeld: instelling.heatmapTrackingIngeschakeld,
       ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
+      ai_maandelijkse_export_dag: instelling.aiMaandelijkseExportDag,
+      ai_maandelijkse_export_email: instelling.aiMaandelijkseExportEmail,
+      aanvraag_reactietermijn_uren: instelling.aanvraagReactietermijnUren,
+      aanvraag_oppak_termijn_uren: instelling.aanvraagOppakTermijnUren,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
       bijgewerkt_door_naam: bijgewerktDoorNaam,
@@ -77,6 +81,8 @@ router.put(
         ai_kostendrempel_eur,
         ai_maandelijkse_export_dag,
         ai_maandelijkse_export_email,
+        aanvraag_reactietermijn_uren,
+        aanvraag_oppak_termijn_uren,
       } = req.body as {
           support_email?: string;
           support_telefoon?: string;
@@ -88,6 +94,8 @@ router.put(
           ai_kostendrempel_eur?: number | null;
           ai_maandelijkse_export_dag?: number | null;
           ai_maandelijkse_export_email?: string | null;
+          aanvraag_reactietermijn_uren?: number;
+          aanvraag_oppak_termijn_uren?: number;
         };
       const gebruikerId = req.session.userId!;
 
@@ -143,6 +151,20 @@ router.put(
       if (ai_maandelijkse_export_email !== undefined) {
         payload.aiMaandelijkseExportEmail = ai_maandelijkse_export_email;
       }
+      if (aanvraag_reactietermijn_uren !== undefined) {
+        const uren = Math.round(Number(aanvraag_reactietermijn_uren));
+        if (!Number.isFinite(uren) || uren < 1 || uren > 720) {
+          return void res.status(400).json({ error: "aanvraag_reactietermijn_uren moet tussen 1 en 720 liggen" });
+        }
+        payload.aanvraagReactietermijnUren = uren;
+      }
+      if (aanvraag_oppak_termijn_uren !== undefined) {
+        const uren = Math.round(Number(aanvraag_oppak_termijn_uren));
+        if (!Number.isFinite(uren) || uren < 1 || uren > 720) {
+          return void res.status(400).json({ error: "aanvraag_oppak_termijn_uren moet tussen 1 en 720 liggen" });
+        }
+        payload.aanvraagOppakTermijnUren = uren;
+      }
 
       let result;
       if (bestaand) {
@@ -172,6 +194,8 @@ router.put(
         ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
         ai_maandelijkse_export_dag: result.aiMaandelijkseExportDag,
         ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,
+        aanvraag_reactietermijn_uren: result.aanvraagReactietermijnUren,
+        aanvraag_oppak_termijn_uren: result.aanvraagOppakTermijnUren,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
         bijgewerkt_door_naam: null,

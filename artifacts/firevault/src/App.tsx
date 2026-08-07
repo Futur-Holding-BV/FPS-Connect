@@ -55,6 +55,7 @@ import CrmContactpersonen from "@/pages/crm/contactpersonen";
 import CrmKennisbibliotheek from "@/pages/crm/kennisbibliotheek";
 import CrmTaken from "@/pages/crm/taken";
 import CrmRelatievoorstellen from "@/pages/crm/relatievoorstellen";
+import CrmAanvragen from "@/pages/crm/aanvragen";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
@@ -438,6 +439,7 @@ function ConnectPortal() {
 
         {/* ── Relaties / CRM ── */}
         <Route path="/crm/organisaties" component={CrmOrganisaties} />
+        <Route path="/crm/aanvragen" component={CrmAanvragen} />
         <Route path="/crm/projectkansen" component={CrmProjectkansen} />
         <Route path="/crm/concurrenten" component={CrmConcurrenten} />
         <Route path="/crm/marktintelligentie" component={CrmMarktintelligentie} />

@@ -1,3 +1,23 @@
+## 2026-08-07 — AANVRAAG_01: prijsaanvraag per mail — van mail tot projectkans met bewaakte reactietijd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe automatische mailpipeline)
+
+**Aanleiding:** prijsaanvragen komen per mail binnen en moeten zonder handwerk voorbereid worden: de AI stelt voor (nieuwe aanvraag of meerwerk), een mens accordeert, en pas dan wordt de projectkans vastgelegd met klant, gebouw, BV, bronmail en bijlagen. Het antwoord staat klaar als concept en de reactietijd wordt bewaakt met instelbare grenzen. Een project ontstaat hier nooit — dat gebeurt uitsluitend bij ondertekening van de offerte.
+
+**Wijzigingen:**
+- `lib/db/src/schema/crm.ts` + `werk-inbox.ts` + `facturen.ts` + `systeem.ts` + `offertes.ts` — nieuwe tabel `aanvraag_voorstellen` (uniek per mail); projectkansen kregen `bron_mail_message_id`, `binnengekomen_op`, `beantwoord_op`, `bedrijf_bv`, `gerelateerd_project_id` (meerwerk); mailboxen kregen `is_aanvraagmailbox`, tokens `aanvraag_intake_persoonlijk`; signaaltypes `aanvraag_antwoord_te_laat` en `aanvraag_niet_opgepakt` + `projectkans_id` op signalen; instelbare termijnen (`aanvraag_reactietermijn_uren` 24, `aanvraag_oppak_termijn_uren` 72); offertes kregen `projectkans_id`. Alles ook in `apply-additive.mjs`.
+- `artifacts/api-server/src/services/aanvraagstroomService.ts` — nieuw: verwerkt aanvraagmails (claimpatroon zoals FACTUUR_02, bijlagen naar opslag, PDF-tekst, klant-/gebouwmatch alleen bij precies één treffer, meerwerk alleen bij letterlijk werknummer, conceptantwoord met vraag om aantoonbaar ontbrekende stukken) + reactietijdbewaking via de bestaande 15-minutenlus.
+- `artifacts/api-server/src/lib/documentIntelligence.ts` — `analyseerAanvraagVoorStroom()`; bewust in de bestaande documentherkenner.
+- `artifacts/api-server/src/routes/aanvragen.ts` — nieuw: voorstellenlijst, accorderen (422 zonder klant-bevestiging; meerwerk vereist expliciet gekozen opdracht; nieuwe relatie = prospect, nieuw gebouw alleen na bevestiging), afwijzen, antwoord versturen (reply op bronmail, 409 bij dubbel), persoonlijke-mailbox-toggle.
+- `artifacts/api-server/src/routes/projecten.ts` — POST /projecten verwijderd (project ontstaat uitsluitend bij offerte-ondertekening).
+- `artifacts/api-server/src/routes/info.ts` — termijnen lees-/schrijfbaar (1–720 uur, gevalideerd).
+- `artifacts/api-server/src/services/factuurstroomService.ts` — signalen-dedupe nu ook op mail-id (was alleen factuur/kans).
+- `artifacts/firevault` — nieuwe pagina CRM → Aanvragen (accordeer-dialoog met klant/gebouw-bevestiging, concept-editor + verstuurknop, intake-toggle); Projectkansen tonen aanvraagherkomst + reactietijd en kregen "Offerte maken" met terugverwijzing; App-informatie kreeg de twee termijnvelden; Factuurbewaking toont de nieuwe signaaltypes.
+
+**Bewijs (dev, `scripts/src/verificatie-aanvraagstroom.ts`):** POST /projecten → 404; accorderen zonder klant → 422 en níets aangemaakt; accorderen → projectkans (fase signaal) + prospect + gebouw + mailkoppelingen, 2e keer → 409; offerte vanuit kans met `projectkans_id`; meerwerk zonder opdracht → 422, mét → gekoppeld; verlopen reactie- én oppaktermijn → signalen, herhaalde bewaking maakt geen dubbels; intake-toggle werkt. Typecheck volledig groen.
+
+---
+
 ## 2026-08-07 — FACTUUR_02: de factuurstroom — van mail tot goedgekeurd of afgewezen
 
 - **Uitvoering:** volledig (betalen zelf = FACTUUR_03) | **Kwaliteit:** hoog | **Risico:** middel (nieuwe automatische pipeline)

@@ -46,15 +46,17 @@ export async function maakSignaal(input: {
   mailMessageId?: string | null;
   projectkansId?: number | null;
 }): Promise<void> {
-  // Dubbele open signalen van hetzelfde type voor dezelfde factuur/projectkans voorkomen
-  if (input.factuurId || input.projectkansId) {
+  // Dubbele open signalen van hetzelfde type voor dezelfde factuur/projectkans/mail voorkomen
+  if (input.factuurId || input.projectkansId || input.mailMessageId) {
     const bestaand = await db.select({ id: factuurSignalenTable.id })
       .from(factuurSignalenTable)
       .where(and(
         eq(factuurSignalenTable.type, input.type),
         input.factuurId
           ? eq(factuurSignalenTable.factuurId, input.factuurId)
-          : eq(factuurSignalenTable.projectkansId, input.projectkansId!),
+          : input.projectkansId
+            ? eq(factuurSignalenTable.projectkansId, input.projectkansId)
+            : eq(factuurSignalenTable.mailMessageId, input.mailMessageId!),
         eq(factuurSignalenTable.status, "open"),
       ))
       .limit(1);
