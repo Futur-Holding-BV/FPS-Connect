@@ -406,6 +406,10 @@ Zie [`docs/productie-env-checklist.md`](productie-env-checklist.md) voor de voll
 
 ---
 
+## Vóór de merge: bewijs eerst het gemelde scenario
+
+Vóór de merge — dus vóór het automatisch naar productie gaat: het gemelde probleem is vers getest en aantoonbaar opgelost, niet aangenomen. "Het compileert" of "de tests slagen" is geen bewijs dat het gemelde scenario werkt. Toon het scenario zelf, uitgevoerd na de wijziging, met resultaat. Dit staat los van — en gaat vooraf aan — de vijf controles hieronder, die pas ná de deploy draaien en dus nooit voorkomen dat een niet-geverifieerde wijziging al zichtbaar is voor het kantoor.
+
 ## Definition of Done (voor toekomstige taken)
 
 Een taak is pas **gereed voor productie** wanneer:
