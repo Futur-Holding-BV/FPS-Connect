@@ -504,6 +504,15 @@ export async function verwerkFactuurmails(gebruikerId: number): Promise<{ verwer
       verwerkt += 1;
     } catch (err) {
       logger.error({ err, messageId: mail.messageId }, "factuurstroom: verwerking mislukt");
+      // Claim teruggeven zodat een volgende run het opnieuw probeert (tijdelijke
+      // Graph/AI-fouten mogen een mail nooit permanent onverwerkt laten); het
+      // open signaal (gededupliceerd) houdt de mens ondertussen op de hoogte.
+      await db.update(werkInboxMailsTable)
+        .set({ factuurVerwerktOp: null })
+        .where(and(
+          eq(werkInboxMailsTable.gebruikerId, mail.gebruikerId),
+          eq(werkInboxMailsTable.messageId, mail.messageId),
+        ));
       await maakSignaal({
         type: "ai_onzeker",
         mailMessageId: mail.messageId,

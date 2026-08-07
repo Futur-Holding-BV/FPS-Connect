@@ -627,8 +627,9 @@ router.post("/facturen/:id/goedkeuren-stroom", requireBevoegdheid("financieel", 
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
-  if (!["wacht_op_goedkeuring", "wacht_op_inkoper", "controle_nodig", "ai_gelezen"].includes(factuur.status)) {
-    res.status(409).json({ error: `Deze factuur kan in de huidige stap niet goedgekeurd worden (${factuur.status}).` });
+  // Uitsluitend vanuit wacht_op_goedkeuring: de inkoperstap is niet te omzeilen (§5).
+  if (factuur.status !== "wacht_op_goedkeuring") {
+    res.status(409).json({ error: `Deze factuur kan in de huidige stap niet goedgekeurd worden (${factuur.status}). Eerst moet de inkoper de bestelling bevestigen.` });
     return;
   }
   // Zelfde vier-ogen-gate als accorderen: een geldende beleidsregel is niet te omzeilen.
