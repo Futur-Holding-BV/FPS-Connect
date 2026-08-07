@@ -259,6 +259,17 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
 
     res.status(201).json(mapOpdracht(opdracht, begroting.id, begroting.status, totaalArbeidUren));
   } catch (err) {
+    // Race: twee gelijktijdige verzoeken kunnen allebei de pre-check passeren;
+    // de unieke index opdrachten_offerte_id_uniek (migratie 0006) vangt dat op
+    // databaseniveau af → dezelfde 409 als bij de pre-check.
+    const code = (err as { code?: string; cause?: { code?: string } })?.code
+      ?? (err as { cause?: { code?: string } })?.cause?.code;
+    if (code === "23505") {
+      const [bestaande] = await db.select().from(opdrachtenTable)
+        .where(eq(opdrachtenTable.offerteId, offerteId));
+      res.status(409).json({ error: "Er bestaat al een opdracht voor deze offerte", opdracht_id: bestaande?.id });
+      return;
+    }
     logger.error({ err }, "maak-opdracht fout");
     res.status(500).json({ error: "Serverfout bij aanmaken opdracht" });
   }
