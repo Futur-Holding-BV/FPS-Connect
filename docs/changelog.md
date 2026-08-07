@@ -1,3 +1,21 @@
+## 2026-08-07 — FACTUUR_02: de factuurstroom — van mail tot goedgekeurd of afgewezen
+
+- **Uitvoering:** volledig (betalen zelf = FACTUUR_03) | **Kwaliteit:** hoog | **Risico:** middel (nieuwe automatische pipeline)
+
+**Aanleiding:** inkomende facturen moeten via één ingang (de factuurmailbox) automatisch gelezen, gekoppeld en voorbereid worden, waarbij een mens altijd de beslissingen neemt: de inkoper bevestigt de bestelling, de directie keurt goed, en de bewaker ziet elke twijfel als gebeurtenis op een dashboard.
+
+**Wijzigingen:**
+- `lib/db/src/schema/facturen.ts` + `werk-inbox.ts` — nieuwe stroomvelden op facturen (o.a. `afwijsreden_code`, `inkoper_id`, `onzekere_velden`, `ai_voorstel_stroom`, `conversation_id`, `status_voor_afwijzing`, `tenaamstelling_bv`), nieuwe tabellen `factuur_signalen` (9 gebeurtenistypes) en `factuur_tijdlijn`; mailboxen kregen `is_factuurmailbox`, mails `conversation_id` + `factuur_verwerkt_op`. Alles ook in `apply-additive.mjs` voor productie.
+- `artifacts/api-server/src/services/factuurstroomService.ts` — nieuw: verwerkt factuurmails automatisch (PDF opslaan, AI-extractie, leverancier alleen koppelen bij exact één match, BV-bepaling, dubbel-/IBAN-wissel-/G-rekeningcontroles, automatische afwijzing met conceptmail, routering naar inkoper of directie, leveranciersreacties via `conversationId` hervatten de factuur waar hij was) plus bewaking (hangt te lang, termijn loopt af, uitgaand onbetaald) elke 15 minuten en na elke werk-inbox-sync.
+- `artifacts/api-server/src/lib/documentIntelligence.ts` — `analyseerFactuurVoorStroom()`: factuurvelden incl. onzekerheidslijst; bewust in de bestaande documentherkenner (geen tweede motor).
+- `artifacts/api-server/src/routes/facturen.ts` — nieuwe endpoints: signalen-lijst + afhandelen (rekeningnummer-wijziging vereist verplichte toelichting), tijdlijn, afwijzen met gesloten redenlijst (7 codes, conceptmail klaar), inkoper-bevestiging (403 voor anderen), goedkeuren → "klaar voor betaling" (zelfde vier-ogen-gate als accorderen).
+- `artifacts/firevault/src/pages/facturen/stroom.tsx` — nieuw dashboard "Factuurbewaking" (Financieel-hoofdstuk): open/afgehandelde signalen, afhandelen met toelichting, factuurmailbox-instelling.
+- `artifacts/firevault/src/pages/facturen/detail.tsx` — Factuurstroom-kaart: leesbare tijdlijn, stap-knoppen (bestelling bevestigen, goedkeuren, afwijzen met vaste redenlijst) en "wat het systeem las" naast de definitieve gegevens.
+
+**Bewijs (dev, `scripts/src/verificatie-factuurstroom.ts`):** onbekende afwijsreden → 400; geldig afwijzen → afgekeurd + conceptmail + tijdlijnregel; bevestigen door niet-inkoper → 403; bevestigen → wacht op goedkeuring; goedkeuren → klaar voor betaling; rekeningnummer-signaal zonder toelichting → 422, mét toelichting afgehandeld; signalen-route niet opgeslokt door `/facturen/:id`. Typecheck volledig groen.
+
+---
+
 ## 2026-08-07 — FACTUUR_01: uitzendbureau als CRM-verwijzing (fundament factuurstroom)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

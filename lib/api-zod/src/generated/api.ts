@@ -22049,6 +22049,95 @@ export const AccorderenFactuurResponse = zod.object({
 
 
 /**
+ * @summary Bewakingssignalen van de factuurstroom (FACTUUR_02, §6)
+ */
+export const ListFactuurSignalenQueryParams = zod.object({
+  "status": zod.enum(['open', 'afgehandeld']).optional()
+})
+
+export const ListFactuurSignalenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.enum(['ai_onzeker', 'hangt_te_lang', 'bedrag_wijkt_af', 'mogelijk_dubbel', 'termijn_loopt_af', 'uitgaand_onbetaald', 'rekeningnummer_gewijzigd', 'loondeel_onzeker', 'onbekende_leverancier']),
+  "factuur_id": zod.number().nullish(),
+  "mail_message_id": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "status": zod.enum(['open', 'afgehandeld']),
+  "afhandel_notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afgehandeld_door_naam": zod.string().nullish(),
+  "factuurnummer": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "factuur_status": zod.string().nullish()
+})
+export const ListFactuurSignalenResponse = zod.array(ListFactuurSignalenResponseItem)
+
+
+/**
+ * @summary Signaal afhandelen (rekeningnummer-wijziging vereist toelichting)
+ */
+export const HandelFactuurSignaalAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HandelFactuurSignaalAfBody = zod.object({
+  "notitie": zod.string().nullish()
+})
+
+export const HandelFactuurSignaalAfResponse = zod.unknown()
+
+
+/**
+ * @summary Leesbare tijdlijn van een factuur (FACTUUR_02, §7)
+ */
+export const GetFactuurTijdlijnParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurTijdlijnResponseItem = zod.object({
+  "id": zod.number(),
+  "tekst": zod.string(),
+  "gebeurd_op": zod.string(),
+  "gebruiker_naam": zod.string().nullish()
+})
+export const GetFactuurTijdlijnResponse = zod.array(GetFactuurTijdlijnResponseItem)
+
+
+/**
+ * @summary Factuur afwijzen met een reden uit de gesloten lijst (FACTUUR_02, §4)
+ */
+export const WijsFactuurAfStroomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WijsFactuurAfStroomBody = zod.object({
+  "reden_code": zod.enum(['geen_opdracht', 'bedrag_wijkt_af', 'verkeerde_bv', 'dubbel', 'onvoldoende_specificatie', 'niet_geleverd', 'uitzendbureau_zonder_g'])
+})
+
+export const WijsFactuurAfStroomResponse = zod.unknown()
+
+
+/**
+ * @summary Inkoper bevestigt dat de factuur klopt met de bestelling (FACTUUR_02, §5)
+ */
+export const BevestigFactuurInkoopParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigFactuurInkoopResponse = zod.unknown()
+
+
+/**
+ * @summary Directie keurt goed en geeft betaling vrij — klaar voor betaling (FACTUUR_02, §5)
+ */
+export const KeurFactuurGoedStroomParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KeurFactuurGoedStroomResponse = zod.unknown()
+
+
+/**
  * @summary Factuur ter goedkeuring indienen via de Governance & Approval Engine
  */
 export const TerGoedkeuringIndienenParams = zod.object({

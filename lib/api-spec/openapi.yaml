@@ -17665,6 +17665,145 @@ paths:
               schema:
                 $ref: "#/components/schemas/Factuur"
 
+  /facturen/signalen:
+    get:
+      operationId: listFactuurSignalen
+      summary: Bewakingssignalen van de factuurstroom (FACTUUR_02, §6)
+      tags: [Facturen]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, afgehandeld]
+      responses:
+        "200":
+          description: Lijst signalen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurSignaal"
+
+  /facturen/signalen/{id}/afhandelen:
+    post:
+      operationId: handelFactuurSignaalAf
+      summary: Signaal afhandelen (rekeningnummer-wijziging vereist toelichting)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurSignaalAfhandelenInput"
+      responses:
+        "200":
+          description: Afgehandeld
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Al afgehandeld
+        "422":
+          description: Toelichting verplicht bij rekeningnummer-wijziging
+
+  /facturen/{id}/tijdlijn:
+    get:
+      operationId: getFactuurTijdlijn
+      summary: Leesbare tijdlijn van een factuur (FACTUUR_02, §7)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tijdlijn in gewone taal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurTijdlijnRegel"
+
+  /facturen/{id}/afwijzen-stroom:
+    post:
+      operationId: wijsFactuurAfStroom
+      summary: Factuur afwijzen met een reden uit de gesloten lijst (FACTUUR_02, §4)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurAfwijzenStroomInput"
+      responses:
+        "200":
+          description: Afgewezen; conceptmail voor de leverancier staat klaar
+        "400":
+          description: Ongeldige afwijsreden
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Al afgewezen
+
+  /facturen/{id}/bevestig-inkoop:
+    post:
+      operationId: bevestigFactuurInkoop
+      summary: Inkoper bevestigt dat de factuur klopt met de bestelling (FACTUUR_02, §5)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bevestigd; factuur ligt ter goedkeuring
+        "403":
+          description: Alleen de toegewezen inkoper mag bevestigen
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Factuur wacht niet op de inkoper
+
+  /facturen/{id}/goedkeuren-stroom:
+    post:
+      operationId: keurFactuurGoedStroom
+      summary: Directie keurt goed en geeft betaling vrij — klaar voor betaling (FACTUUR_02, §5)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Klaar voor betaling
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Niet goed te keuren in de huidige stap
+        "422":
+          description: Goedkeuring via de goedkeuringsmodule vereist
+
   /facturen/{id}/ter-goedkeuring-indienen:
     post:
       operationId: terGoedkeuringIndienen
@@ -39065,6 +39204,48 @@ components:
         opmerkingen:
           type: string
           nullable: true
+
+    FactuurSignaal:
+      type: object
+      required: [id, type, omschrijving, status, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [ai_onzeker, hangt_te_lang, bedrag_wijkt_af, mogelijk_dubbel, termijn_loopt_af, uitgaand_onbetaald, rekeningnummer_gewijzigd, loondeel_onzeker, onbekende_leverancier]
+        factuur_id: { type: integer, nullable: true }
+        mail_message_id: { type: string, nullable: true }
+        omschrijving: { type: string }
+        status: { type: string, enum: [open, afgehandeld] }
+        afhandel_notitie: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        afgehandeld_op: { type: string, nullable: true }
+        afgehandeld_door_naam: { type: string, nullable: true }
+        factuurnummer: { type: string, nullable: true }
+        relatienaam: { type: string, nullable: true }
+        factuur_status: { type: string, nullable: true }
+
+    FactuurSignaalAfhandelenInput:
+      type: object
+      properties:
+        notitie: { type: string, nullable: true }
+
+    FactuurTijdlijnRegel:
+      type: object
+      required: [id, tekst, gebeurd_op]
+      properties:
+        id: { type: integer }
+        tekst: { type: string }
+        gebeurd_op: { type: string }
+        gebruiker_naam: { type: string, nullable: true }
+
+    FactuurAfwijzenStroomInput:
+      type: object
+      required: [reden_code]
+      properties:
+        reden_code:
+          type: string
+          enum: [geen_opdracht, bedrag_wijkt_af, verkeerde_bv, dubbel, onvoldoende_specificatie, niet_geleverd, uitzendbureau_zonder_g]
 
     FactuurInput:
       type: object

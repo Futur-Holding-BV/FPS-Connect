@@ -135,4 +135,6 @@
 - [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
 - [Wizard-flag productie](wizard-feature-flag-prod.md) — /personeel/onboarden "niet beschikbaar in pilot" op prod = VITE_FEATURE_WIZARD_ONBOARDING niet in webbuild (opt-in, build-time); API werkt wel.
+- [Prod curl/Playwright sessie-bewijs](prod-curl-sessie-bewijs.md) — Secure-cookies vereisen https; #HttpOnly_ jar-regels; bcrypt-hash via ssh-string wordt door remote shell gemangeld → SQL via stdin pipen.
+- [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; nieuwe additieve kolommen ALTIJD ook in lib/db/scripts/apply-additive.mjs (losse .sql draait nooit op prod).
 - [Functie→preset naam-matching](functie-preset-matching.md) — koppel-heuristiek moet exacte match eerst rangschikken; bidirectionele includes laat langere preset ("Onderhoudsmonteur") exacte "Monteur" verslaan.

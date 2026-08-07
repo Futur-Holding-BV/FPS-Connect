@@ -177,6 +177,7 @@ import ControleboxPagina from "@/pages/facturen/controlebox";
 import KlaarVoorExportPagina from "@/pages/facturen/klaar-voor-export";
 import FinancieelDashboardPagina from "@/pages/facturen/dashboard";
 import ExportlogPagina from "@/pages/facturen/exportlog";
+import FactuurstroomBewakingPagina from "@/pages/facturen/stroom";
 import SalarisarchiefPagina from "@/pages/salarisarchief/index";
 import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail";
 import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
@@ -420,6 +421,7 @@ function ConnectPortal() {
         <Route path="/facturen/exportlog" component={ExportlogPagina} />
         <Route path="/facturen/klaar-voor-export" component={KlaarVoorExportPagina} />
         <Route path="/facturen/controlebox" component={ControleboxPagina} />
+        <Route path="/facturen/stroom" component={FactuurstroomBewakingPagina} />
         <Route path="/facturen/:id" component={FactuurDetailPagina} />
         <Route path="/facturen" component={FacturenPagina} />
         <Route path="/salarisarchief/batch/:id" component={SalarisarchiefBatchDetailPagina} />

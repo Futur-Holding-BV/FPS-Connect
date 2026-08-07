@@ -10180,6 +10180,73 @@ export interface FactuurIncassoInput {
   opmerkingen?: string | null;
 }
 
+export type FactuurSignaalType = typeof FactuurSignaalType[keyof typeof FactuurSignaalType];
+
+
+export const FactuurSignaalType = {
+  ai_onzeker: 'ai_onzeker',
+  hangt_te_lang: 'hangt_te_lang',
+  bedrag_wijkt_af: 'bedrag_wijkt_af',
+  mogelijk_dubbel: 'mogelijk_dubbel',
+  termijn_loopt_af: 'termijn_loopt_af',
+  uitgaand_onbetaald: 'uitgaand_onbetaald',
+  rekeningnummer_gewijzigd: 'rekeningnummer_gewijzigd',
+  loondeel_onzeker: 'loondeel_onzeker',
+  onbekende_leverancier: 'onbekende_leverancier',
+} as const;
+
+export type FactuurSignaalStatus = typeof FactuurSignaalStatus[keyof typeof FactuurSignaalStatus];
+
+
+export const FactuurSignaalStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+} as const;
+
+export interface FactuurSignaal {
+  id: number;
+  type: FactuurSignaalType;
+  factuur_id?: number | null;
+  mail_message_id?: string | null;
+  omschrijving: string;
+  status: FactuurSignaalStatus;
+  afhandel_notitie?: string | null;
+  aangemaakt_op: string;
+  afgehandeld_op?: string | null;
+  afgehandeld_door_naam?: string | null;
+  factuurnummer?: string | null;
+  relatienaam?: string | null;
+  factuur_status?: string | null;
+}
+
+export interface FactuurSignaalAfhandelenInput {
+  notitie?: string | null;
+}
+
+export interface FactuurTijdlijnRegel {
+  id: number;
+  tekst: string;
+  gebeurd_op: string;
+  gebruiker_naam?: string | null;
+}
+
+export type FactuurAfwijzenStroomInputRedenCode = typeof FactuurAfwijzenStroomInputRedenCode[keyof typeof FactuurAfwijzenStroomInputRedenCode];
+
+
+export const FactuurAfwijzenStroomInputRedenCode = {
+  geen_opdracht: 'geen_opdracht',
+  bedrag_wijkt_af: 'bedrag_wijkt_af',
+  verkeerde_bv: 'verkeerde_bv',
+  dubbel: 'dubbel',
+  onvoldoende_specificatie: 'onvoldoende_specificatie',
+  niet_geleverd: 'niet_geleverd',
+  uitzendbureau_zonder_g: 'uitzendbureau_zonder_g',
+} as const;
+
+export interface FactuurAfwijzenStroomInput {
+  reden_code: FactuurAfwijzenStroomInputRedenCode;
+}
+
 export interface FactuurInput {
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
@@ -14782,6 +14849,18 @@ export type GetFactuurUploadUrl200 = {
   upload_url: string;
   object_path: string;
 };
+
+export type ListFactuurSignalenParams = {
+status?: ListFactuurSignalenStatus;
+};
+
+export type ListFactuurSignalenStatus = typeof ListFactuurSignalenStatus[keyof typeof ListFactuurSignalenStatus];
+
+
+export const ListFactuurSignalenStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+} as const;
 
 export type UpdateFactuurCorrespondentie200 = {
   id?: number;

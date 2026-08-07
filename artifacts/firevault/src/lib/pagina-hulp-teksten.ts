@@ -58,6 +58,7 @@ export type PaginaSleutel =
   | "facturen"
   | "factuur-detail"
   | "facturen-dashboard"
+  | "facturen-stroom"
   | "facturen-controlebox"
   | "facturen-export"
   | "facturen-exportlog"
@@ -405,6 +406,11 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
   "facturen-dashboard": {
     hoofdbeheerder:
       "Facturendashboard: live overzicht van openstaande, gecontroleerde en geëxporteerde facturen. Zie in één oogopslag wat nog controle of goedkeuring vereist voordat het naar de boekhouding gaat.",
+  },
+
+  "facturen-stroom": {
+    hoofdbeheerder:
+      "Factuurbewaking: alle gebeurtenissen uit de automatische factuurstroom die aandacht van een mens nodig hebben. Het systeem leest binnenkomende facturen, koppelt ze en signaleert twijfel — goedkeuren doet het nooit zelf. Stel hier ook in welke mailbox de factuurmailbox is.",
   },
 
   "facturen-controlebox": {

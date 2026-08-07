@@ -860,5 +860,131 @@ export async function classificeerDocument(input: {
   };
 }
 
+// ── FACTUUR_02: diepe factuur-extractie voor de factuurstroom ─────────────────
+// Hoort bewust hiér (de ene documentherkenner, §11) — nieuwe documentanalyses
+// worden nooit per-route gebouwd.
+
+export interface FactuurStroomVelden {
+  leverancier_naam: string | null;
+  factuurnummer: string | null;
+  factuurdatum: string | null;       // YYYY-MM-DD
+  vervaldatum: string | null;        // YYYY-MM-DD (evt. afgeleid uit betalingstermijn)
+  betalingstermijn_dagen: number | null;
+  bedrag_excl_btw: number | null;
+  btw_bedrag: number | null;
+  bedrag_incl_btw: number | null;
+  iban: string | null;
+  loondeel_bedrag: number | null;    // G-rekeningdeel zoals op de factuur vermeld
+  loondeel_vermeld: boolean;         // staat er expliciet een G/loondeel-verdeling op?
+  tenaamstelling: string | null;     // aan wie is de factuur gericht (BV-naam)
+  verwijzing: string | null;         // opdracht-/project-/bonnummer op de factuur
+  omschrijving: string | null;
+  onzekere_velden: string[];         // veldnamen waarover de AI niet zeker is
+}
+
+export interface FactuurStroomAnalyse {
+  ok: boolean;
+  is_factuur: boolean;
+  velden: FactuurStroomVelden | null;
+  fout: string | null;
+}
+
+const FACTUUR_STROOM_PROMPT = `Je leest een Nederlandse inkoopfactuur voor een bouwbedrijf (FPS: FPS Bouw BV, FPS Brandpreventie BV, FPS Onderhoud BV).
+Geef uitsluitend JSON met exact deze sleutels:
+{"is_factuur":bool,"leverancier_naam":string|null,"factuurnummer":string|null,"factuurdatum":"YYYY-MM-DD"|null,"vervaldatum":"YYYY-MM-DD"|null,"betalingstermijn_dagen":number|null,"bedrag_excl_btw":number|null,"btw_bedrag":number|null,"bedrag_incl_btw":number|null,"iban":string|null,"loondeel_bedrag":number|null,"loondeel_vermeld":bool,"tenaamstelling":string|null,"verwijzing":string|null,"omschrijving":string|null,"onzekere_velden":[string]}
+Regels:
+- vervaldatum: indien niet vermeld maar wel een betalingstermijn ("30 dagen"), leid af uit factuurdatum + termijn.
+- loondeel: alleen het op de factuur zelf vermelde G-rekening/loondeel-bedrag; nooit zelf schatten. Niet vermeld → loondeel_bedrag null en loondeel_vermeld false.
+- tenaamstelling: de geadresseerde zoals op de factuur staat (bijv. "FPS Bouw B.V.").
+- verwijzing: opdrachtnummer, projectnummer, inkoopbonnummer of referentie zoals vermeld.
+- Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden. Verzin nooit gegevens.`;
+
+export async function analyseerFactuurVoorStroom(input: {
+  buffer: Buffer;
+  bestandsnaam: string;
+  mime: string;
+  mailOnderwerp?: string | null;
+  mailAfzender?: string | null;
+}): Promise<FactuurStroomAnalyse> {
+  if (!heeftGateway()) {
+    return { ok: false, is_factuur: false, velden: null, fout: "AI-gateway niet beschikbaar" };
+  }
+  let tekst: string | null = null;
+  try {
+    const extractie = await extraheerTekst(input.buffer, input.mime, input.bestandsnaam);
+    tekst = extractie.tekst;
+  } catch {
+    tekst = null;
+  }
+
+  const content: Array<Record<string, unknown>> = [];
+  const context = `Bestandsnaam: ${input.bestandsnaam}\nMail-onderwerp: ${input.mailOnderwerp ?? "-"}\nAfzender: ${input.mailAfzender ?? "-"}`;
+  if (tekst && tekst.trim().length > 80) {
+    content.push({ type: "text", text: `${context}\n\nFactuurtekst:\n${tekst.slice(0, 12000)}` });
+  } else if (input.mime === "application/pdf") {
+    // Scan zonder tekstlaag → vision op de eerste pagina's
+    try {
+      const paginas = await renderPdfPaginas(input.buffer, [1, 2]);
+      if (paginas.length === 0) {
+        return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare tekst en rendering mislukt" };
+      }
+      content.push({ type: "text", text: context });
+      for (const p of paginas) {
+        content.push({ type: "image_url", image_url: { url: `data:image/png;base64,${p.base64}` } });
+      }
+    } catch {
+      return { ok: false, is_factuur: false, velden: null, fout: "PDF-rendering niet beschikbaar" };
+    }
+  } else if (input.mime.startsWith("image/")) {
+    content.push({ type: "text", text: context });
+    content.push({ type: "image_url", image_url: { url: `data:${input.mime};base64,${input.buffer.toString("base64")}` } });
+  } else {
+    return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare inhoud gevonden" };
+  }
+
+  const slot = content.some((c) => c["type"] === "image_url") ? "vision" : "fast";
+  const resultaat = await aiGateway.chat(
+    slot,
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 1000,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: "system", content: FACTUUR_STROOM_PROMPT }, { role: "user", content } as any],
+    },
+    undefined,
+    { module: "facturen", functie: "factuurstroom_extractie" },
+  );
+  if (!resultaat.ok) {
+    return { ok: false, is_factuur: false, velden: null, fout: resultaat.fout };
+  }
+  try {
+    const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
+    const s = (k: string): string | null => (typeof json[k] === "string" && (json[k] as string).trim() !== "" ? (json[k] as string).trim() : null);
+    const n = (k: string): number | null => (typeof json[k] === "number" && Number.isFinite(json[k] as number) ? (json[k] as number) : null);
+    const velden: FactuurStroomVelden = {
+      leverancier_naam: s("leverancier_naam"),
+      factuurnummer: s("factuurnummer"),
+      factuurdatum: s("factuurdatum"),
+      vervaldatum: s("vervaldatum"),
+      betalingstermijn_dagen: n("betalingstermijn_dagen"),
+      bedrag_excl_btw: n("bedrag_excl_btw"),
+      btw_bedrag: n("btw_bedrag"),
+      bedrag_incl_btw: n("bedrag_incl_btw"),
+      iban: s("iban")?.replace(/\s+/g, "") ?? null,
+      loondeel_bedrag: n("loondeel_bedrag"),
+      loondeel_vermeld: json["loondeel_vermeld"] === true,
+      tenaamstelling: s("tenaamstelling"),
+      verwijzing: s("verwijzing"),
+      omschrijving: s("omschrijving"),
+      onzekere_velden: Array.isArray(json["onzekere_velden"])
+        ? (json["onzekere_velden"] as unknown[]).filter((v): v is string => typeof v === "string")
+        : [],
+    };
+    return { ok: true, is_factuur: json["is_factuur"] === true, velden, fout: null };
+  } catch {
+    return { ok: false, is_factuur: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };
+  }
+}
+
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).
 export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, bevatGeconsolideerd, CATEGORIE_MODULE };

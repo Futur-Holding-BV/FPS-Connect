@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
 import { planDagelijksBackup } from "./lib/backupService";
+import { startFactuurstroomAchtergrond } from "./services/factuurstroomService";
 import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
 import { planDagelijkseAvgOpruiming } from "./lib/avgOpruiming";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
@@ -60,6 +61,7 @@ ensureSessionTable()
       planDagelijkseMagazijnSignalering();
       planDagelijkseLeverbewaking();
       planDagelijksePlanningMeldingen();
+      startFactuurstroomAchtergrond();
       planDagelijkseReactietermijnSignalering();
       planDagelijkseScout();
       planDagelijkseLeermomenten();

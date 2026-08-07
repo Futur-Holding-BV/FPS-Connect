@@ -26,6 +26,8 @@ export const werkInboxMailboxenTable = pgTable("werk_inbox_mailboxen", {
   label:        text("label"),
   volgorde:     integer("volgorde").notNull().default(0),
   actief:       boolean("actief").notNull().default(true),
+  // FACTUUR_02: mails in deze mailbox gaan automatisch de factuurstroom in.
+  isFactuurmailbox: boolean("is_factuurmailbox").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
   unique("werk_inbox_mailboxen_gebruiker_adres_uq").on(t.gebruikerId, t.emailAdres),
@@ -44,6 +46,11 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
   ontvangenOp:         timestamp("ontvangen_op").notNull(),
   snippet:             text("snippet"),
   heeftBijlage:        boolean("heeft_bijlage").notNull().default(false),
+  // FACTUUR_02: Microsoft Graph conversationId — houdt het gespreksdraad vast
+  // zodat reacties van leveranciers aan dezelfde factuur gekoppeld blijven.
+  conversationId:      text("conversation_id"),
+  // FACTUUR_02: wanneer de factuurpijplijn deze mail heeft verwerkt (dedupe).
+  factuurVerwerktOp:   timestamp("factuur_verwerkt_op"),
   isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
   verwerktOp:          timestamp("verwerkt_op"),
   afgehandeldOp:       timestamp("afgehandeld_op"),
@@ -94,5 +101,5 @@ export type WerkInboxMail       = typeof werkInboxMailsTable.$inferSelect;
 export type WerkInboxNotitie    = typeof werkInboxNotitiesTable.$inferSelect;
 export type WerkInboxKoppeling  = typeof werkInboxKoppelingenTable.$inferSelect;
 
-export const WERK_INBOX_ENTITY_TYPES = ["klant", "gebouw", "project", "calculatie", "planning", "offerte"] as const;
+export const WERK_INBOX_ENTITY_TYPES = ["klant", "gebouw", "project", "calculatie", "planning", "offerte", "factuur"] as const;
 export type WerkInboxEntityType = typeof WERK_INBOX_ENTITY_TYPES[number];

@@ -20,6 +20,10 @@ import {
   useListFactuurHerinneringen,
   useAddFactuurHerinnering,
   useIncassoFactuur,
+  useGetFactuurTijdlijn,
+  useWijsFactuurAfStroom,
+  useBevestigFactuurInkoop,
+  useKeurFactuurGoedStroom,
 } from "@workspace/api-client-react";
 import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,9 +48,23 @@ import {
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
+// FACTUUR_02 §4 — gesloten afwijsredenlijst (geen vrije tekst)
+const STROOM_AFWIJSREDENEN: Record<string, string> = {
+  geen_opdracht: "Geen bestelling of opdracht bekend",
+  bedrag_wijkt_af: "Bedrag wijkt af van de afspraak",
+  verkeerde_bv: "Gericht aan de verkeerde BV",
+  dubbel: "Factuur is al eerder ontvangen",
+  onvoldoende_specificatie: "Onvoldoende specificatie",
+  niet_geleverd: "Niet (volledig) geleverd",
+  uitzendbureau_zonder_g: "Uitzendbureau-factuur zonder G-rekeningdeel",
+};
+
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
   ai_gelezen: "AI gelezen",
+  wacht_op_inkoper: "Wacht op bevestiging inkoper",
+  wacht_op_goedkeuring: "Wacht op goedkeuring directie",
+  klaar_voor_betaling: "Klaar voor betaling",
   controle_nodig: "Controle nodig",
   klaar_voor_boeking: "Klaar voor boeking",
   te_beoordelen_pl: "Ter accordering projectleider",
@@ -126,6 +144,10 @@ export default function FactuurDetailPagina() {
   const [herinneringEmail, setHerinneringEmail] = useState("");
   const [herinneringOpmerking, setHerinneringOpmerking] = useState("");
 
+  // FACTUUR_02: factuurstroom
+  const [stroomAfwijzenOpen, setStroomAfwijzenOpen] = useState(false);
+  const [stroomRedenCode, setStroomRedenCode] = useState<string>("");
+
   // Incasso
   const [incassoOpen, setIncassoOpen] = useState(false);
   const [incassoRef, setIncassoRef] = useState("");
@@ -155,6 +177,10 @@ export default function FactuurDetailPagina() {
   const { data: proceslog = [] } = useGetFactuurProceslog(
     id,
     { query: { queryKey: ["factuur-proceslog", id], enabled: id > 0 } },
+  );
+  const { data: tijdlijn = [] } = useGetFactuurTijdlijn(
+    id,
+    { query: { queryKey: ["factuur-tijdlijn", id], enabled: id > 0 } },
   );
   const { data: toewijsbareGebruikers = [] } = useListToewijsbareGebruikers(
     { query: { queryKey: ["toewijsbare-gebruikers"], enabled: doorstuurOpen } },
@@ -228,6 +254,31 @@ export default function FactuurDetailPagina() {
       onSuccess: () => { invalideer(); queryClient.invalidateQueries({ queryKey: ["factuur-logs", id] }); setAfkeurenOpen(false); setAfkeurReden(""); },
     },
   });
+  // FACTUUR_02 stroomacties
+  const invalideerTijdlijn = () => { queryClient.invalidateQueries({ queryKey: ["factuur-tijdlijn", id] }); };
+  const stroomAfwijzenMut = useWijsFactuurAfStroom({
+    mutation: {
+      onSuccess: () => {
+        invalideer(); invalideerTijdlijn();
+        setStroomAfwijzenOpen(false); setStroomRedenCode("");
+        toast({ title: "Factuur afgewezen", description: "Er staat een conceptmail voor de leverancier klaar." });
+      },
+      onError: (err: unknown) => toast({ title: "Afwijzen mislukt", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    },
+  });
+  const bevestigInkoopMut = useBevestigFactuurInkoop({
+    mutation: {
+      onSuccess: () => { invalideer(); invalideerTijdlijn(); toast({ title: "Bestelling bevestigd", description: "De factuur ligt nu ter goedkeuring bij de directie." }); },
+      onError: (err: unknown) => toast({ title: "Bevestigen mislukt", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    },
+  });
+  const goedkeurenStroomMut = useKeurFactuurGoedStroom({
+    mutation: {
+      onSuccess: () => { invalideer(); invalideerTijdlijn(); toast({ title: "Goedgekeurd", description: "De factuur staat klaar voor betaling." }); },
+      onError: (err: unknown) => toast({ title: "Goedkeuren mislukt", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    },
+  });
+
   const herexportMut = useForceerHerexportFactuur({
     mutation: {
       onSuccess: (data) => {
@@ -499,6 +550,91 @@ export default function FactuurDetailPagina() {
             toonIndienKnop={!f.geaccordeerd && !f.geblokkeerd}
             onWijziging={() => invalideer()}
           />
+        );
+      })()}
+
+      {/* FACTUUR_02 — Factuurstroom: acties + leesbare tijdlijn */}
+      {(() => {
+        const fx = f as unknown as Record<string, unknown>;
+        const aiVoorstel = fx["ai_voorstel_stroom"] as Record<string, unknown> | null | undefined;
+        const onzeker = (fx["onzekere_velden"] as string[] | null | undefined) ?? [];
+        const afwijsCode = fx["afwijsreden_code"] as string | null | undefined;
+        const heeftStroom = tijdlijn.length > 0 || ["wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling"].includes(f.status) || !!aiVoorstel;
+        if (!heeftStroom) return null;
+        return (
+          <Card data-testid="kaart-factuurstroom">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4" /> Factuurstroom</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Acties per stap */}
+              <div className="flex flex-wrap gap-2">
+                {f.status === "wacht_op_inkoper" && (
+                  <Button size="sm" onClick={() => bevestigInkoopMut.mutate({ id })} disabled={bevestigInkoopMut.isPending} data-testid="knop-bevestig-inkoop">
+                    {bevestigInkoopMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCheck className="h-4 w-4 mr-1" />}
+                    Bestelling klopt — bevestigen
+                  </Button>
+                )}
+                {f.status === "wacht_op_goedkeuring" && (
+                  <Button size="sm" onClick={() => goedkeurenStroomMut.mutate({ id })} disabled={goedkeurenStroomMut.isPending} data-testid="knop-goedkeuren-stroom">
+                    {goedkeurenStroomMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+                    Goedkeuren — vrijgeven voor betaling
+                  </Button>
+                )}
+                {!["afgekeurd", "klaar_voor_betaling", "verwerkt"].includes(f.status) && (
+                  <Button size="sm" variant="destructive" onClick={() => setStroomAfwijzenOpen(true)} data-testid="knop-afwijzen-stroom">
+                    <XCircle className="h-4 w-4 mr-1" /> Afwijzen…
+                  </Button>
+                )}
+              </div>
+
+              {f.status === "klaar_voor_betaling" && (
+                <p className="text-sm text-emerald-700 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4" /> Goedgekeurd en klaar voor betaling. Het betalen zelf gebeurt buiten dit systeem.
+                </p>
+              )}
+              {isAfgekeurd && afwijsCode && (
+                <p className="text-sm text-red-700 flex items-center gap-1.5">
+                  <XCircle className="h-4 w-4" /> Afgewezen: {STROOM_AFWIJSREDENEN[afwijsCode] ?? afwijsCode}
+                </p>
+              )}
+
+              {/* AI-voorstel vs uiteindelijke gegevens (§9) */}
+              {aiVoorstel && (
+                <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3 text-sm" data-testid="blok-ai-voorstel">
+                  <p className="font-medium flex items-center gap-1.5 text-amber-800"><Sparkles className="h-4 w-4" /> Wat het systeem las</p>
+                  <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-amber-900">
+                    {Object.entries(aiVoorstel)
+                      .filter(([, w]) => w !== null && w !== undefined && w !== "" && !Array.isArray(w))
+                      .map(([veld, waarde]) => (
+                        <span key={veld}><span className="text-amber-700">{veld.replace(/_/g, " ")}:</span> {String(waarde)}</span>
+                      ))}
+                  </div>
+                  {onzeker.length > 0 && (
+                    <p className="mt-1.5 text-xs text-amber-800 flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Onzeker gelezen: {onzeker.join(", ")} — gecontroleerd door een mens vóór verdere verwerking.
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-amber-700">De gegevens hierboven op deze pagina zijn de uiteindelijke, door mensen gecontroleerde waarden.</p>
+                </div>
+              )}
+
+              {/* Tijdlijn (§7) */}
+              {tijdlijn.length > 0 && (
+                <ol className="relative border-l border-slate-200 ml-2 space-y-3" data-testid="lijst-tijdlijn">
+                  {tijdlijn.map((r) => (
+                    <li key={r.id} className="ml-4">
+                      <span className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-slate-300" />
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(r.gebeurd_op).toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      <p className="text-sm">{r.tekst}</p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
         );
       })()}
 
@@ -1301,6 +1437,45 @@ export default function FactuurDetailPagina() {
       </Dialog>
 
       {/* Afkeuren dialog */}
+      {/* FACTUUR_02 — afwijzen met gesloten redenlijst */}
+      <Dialog open={stroomAfwijzenOpen} onOpenChange={setStroomAfwijzenOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Factuur afwijzen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Kies een reden uit de vaste lijst. Het systeem stelt daarna een conceptmail voor de leverancier op;
+            die wordt pas verstuurd nadat een mens hem heeft gecontroleerd.
+          </p>
+          <div className="space-y-2">
+            {Object.entries(STROOM_AFWIJSREDENEN).map(([code, label]) => (
+              <label key={code} className="flex items-center gap-2 text-sm cursor-pointer rounded-md border px-3 py-2 has-[:checked]:border-primary">
+                <input
+                  type="radio"
+                  name="stroom-afwijsreden"
+                  value={code}
+                  checked={stroomRedenCode === code}
+                  onChange={() => setStroomRedenCode(code)}
+                  data-testid={`radio-afwijsreden-${code}`}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStroomAfwijzenOpen(false)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={!stroomRedenCode || stroomAfwijzenMut.isPending}
+              onClick={() => stroomAfwijzenMut.mutate({ id, data: { reden_code: stroomRedenCode as never } })}
+              data-testid="knop-bevestig-afwijzen-stroom"
+            >
+              {stroomAfwijzenMut.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Afwijzen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={afkeurenOpen} onOpenChange={setAfkeurenOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Factuur afkeuren</DialogTitle></DialogHeader>

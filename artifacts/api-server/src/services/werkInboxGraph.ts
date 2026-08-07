@@ -184,6 +184,7 @@ interface GraphMessage {
   receivedDateTime: string;
   isRead:      boolean;
   hasAttachments: boolean;
+  conversationId?: string;
   from?: { emailAddress?: { name?: string; address?: string } };
 }
 
@@ -193,7 +194,7 @@ interface GraphMessageDetail extends GraphMessage {
   ccRecipients: Array<{ emailAddress: { name: string; address: string } }>;
 }
 
-const MAIL_VELDEN = "id,subject,bodyPreview,receivedDateTime,isRead,hasAttachments,from";
+const MAIL_VELDEN = "id,subject,bodyPreview,receivedDateTime,isRead,hasAttachments,from,conversationId";
 const MAX_PER_MAILBOX = 50;
 
 async function haalMailsVanMailbox(
@@ -254,6 +255,39 @@ export async function haalVolledigeMail(
   });
   if (!res.ok) return null;
   return res.json() as Promise<GraphMessageDetail>;
+}
+
+// ── Bijlagen ophalen (FACTUUR_02: factuur-PDF's uit de mail) ─────────────────
+
+export interface GraphBijlage {
+  id: string;
+  name: string;
+  contentType: string;
+  size: number;
+  contentBytes?: string; // base64
+}
+
+export async function haalBijlagen(
+  gebruikerId: number,
+  mailboxAdres: string,
+  messageId: string,
+  isPersonlijk: boolean,
+): Promise<GraphBijlage[]> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) return [];
+
+  const basis = isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/messages"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
+
+  const res = await fetch(
+    `${basis}/${encodeURIComponent(messageId)}/attachments?$select=id,name,contentType,size,contentBytes`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { value?: GraphBijlage[] };
+  // Alleen echte bestandsbijlagen met inhoud (geen inline/item attachments zonder bytes)
+  return (data.value ?? []).filter((b) => typeof b.contentBytes === "string" && b.contentBytes.length > 0);
 }
 
 // ── Markeer gelezen/ongelezen ─────────────────────────────────────────────────
@@ -494,6 +528,7 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
             ontvangenOp:        new Date(m.receivedDateTime),
             snippet:            m.bodyPreview?.slice(0, 300) ?? null,
             heeftBijlage:       m.hasAttachments,
+            conversationId:     m.conversationId ?? null,
             isGelezenMs:        m.isRead,
             gesynchroniseerdOp: new Date(),
             bijgewerktOp:       new Date(),
@@ -504,6 +539,7 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
               isGelezenMs:        m.isRead,
               snippet:            m.bodyPreview?.slice(0, 300) ?? null,
               heeftBijlage:       m.hasAttachments,
+              conversationId:     m.conversationId ?? null,
               gesynchroniseerdOp: new Date(),
               bijgewerktOp:       new Date(),
             },

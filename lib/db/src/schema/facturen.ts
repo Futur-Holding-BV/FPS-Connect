@@ -170,9 +170,81 @@ export const facturenTable = pgTable("facturen", {
   // Wordt door de gebruiker gelegd; AI vergelijkt de factuur vervolgens met het contract.
   onderhoudscontractId: integer("onderhoudscontract_id"),
 
+  // ── FACTUUR_02: de factuurstroom (mail → goedgekeurd of afgewezen) ──────────
+  // Tenaamstelling bepaalt wélke BV betaalt (FPS Bouw BV | FPS Brandpreventie BV | FPS Onderhoud BV)
+  tenaamstellingBv: text("tenaamstelling_bv"),
+  // Gesloten afwijsredenlijst (§4): geen_opdracht | bedrag_wijkt_af | verkeerde_bv |
+  // dubbel | onvoldoende_specificatie | niet_geleverd | uitzendbureau_zonder_g
+  afwijsredenCode: text("afwijsreden_code"),
+  // Inkoper die moet bevestigen dat de factuur klopt met de bestelling
+  inkoperId: integer("inkoper_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  inkoperBevestigdOp: timestamp("inkoper_bevestigd_op"),
+  // Velden die de AI niet met zekerheid kon bepalen (lijst van veldnamen).
+  // Onzeker = gebeurtenis voor Jacqueline, nooit een stilzwijgende gok.
+  onzekereVelden: jsonb("onzekere_velden"),
+  // Wat de AI voorstelde bij binnenkomst (bevroren momentopname; §9 leren).
+  aiVoorstelStroom: jsonb("ai_voorstel_stroom"),
+  // Microsoft Graph gespreksdraad + oorspronkelijke mail (§8 reacties)
+  conversationId: text("conversation_id"),
+  mailMessageId: text("mail_message_id"),
+  // Bij afwijzing: waar de factuur stond, zodat een nagestuurde aanvulling de
+  // stroom hervat op het punt van afwijzing (§8) — niet opnieuw vooraan.
+  statusVoorAfwijzing: text("status_voor_afwijzing"),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// FACTUUR_02 §4 — gesloten afwijsredenlijst. De AI kiest eruit; nooit vrije tekst.
+export const FACTUUR_AFWIJSREDENEN = {
+  geen_opdracht: "Geen opdracht of inkoop bekend",
+  bedrag_wijkt_af: "Bedrag wijkt af van de opdracht",
+  verkeerde_bv: "Verkeerde tenaamstelling of verkeerde BV",
+  dubbel: "Dubbel ontvangen",
+  onvoldoende_specificatie: "Onvoldoende gespecificeerd",
+  niet_geleverd: "Werk niet geleverd of niet akkoord",
+  uitzendbureau_zonder_g: "Uitzendbureaufactuur zonder G-verdeling",
+} as const;
+export type FactuurAfwijsredenCode = keyof typeof FACTUUR_AFWIJSREDENEN;
+
+// FACTUUR_02 §6 — gebeurtenistypen voor het bewakingsdashboard (Jacqueline).
+export const FACTUUR_SIGNAAL_TYPES = [
+  "ai_onzeker",            // 1. leverancier, BV of bedrag niet met zekerheid bepaald
+  "hangt_te_lang",         // 2. wacht al dagen bij de inkoper of bij René
+  "bedrag_wijkt_af",       // 3. wijkt af van wat deze leverancier normaal factureert
+  "mogelijk_dubbel",       // 4.
+  "termijn_loopt_af",      // 5. betaaltermijn nadert vóór de eerstvolgende batch
+  "uitgaand_onbetaald",    // 6. uitgaande factuur niet betaald
+  "rekeningnummer_gewijzigd", // 7. fraude-indicator — mag nooit stil afgehandeld worden
+  "loondeel_onzeker",      // 8. loondeel niet gevonden/onwaarschijnlijk bij uitzendbureau
+  "onbekende_leverancier", // 9. nog niet in crm_klanten, of type onbepaald
+] as const;
+export type FactuurSignaalType = typeof FACTUUR_SIGNAAL_TYPES[number];
+
+// ── FACTUUR_02: signalen (gebeurtenissen, geen facturen) ──────────────────────
+export const factuurSignalenTable = pgTable("factuur_signalen", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // FactuurSignaalType
+  factuurId: integer("factuur_id").references(() => facturenTable.id, { onDelete: "cascade" }),
+  mailMessageId: text("mail_message_id"),
+  omschrijving: text("omschrijving").notNull(), // gewone taal, voor het dashboard
+  status: text("status").notNull().default("open"), // open | afgehandeld
+  afgehandeldDoor: integer("afgehandeld_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  afgehandeldOp: timestamp("afgehandeld_op"),
+  afhandelNotitie: text("afhandel_notitie"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+export type FactuurSignaal = typeof factuurSignalenTable.$inferSelect;
+
+// ── FACTUUR_02: leesbare tijdlijn per factuur (§7 telefonische toelichting) ───
+export const factuurTijdlijnTable = pgTable("factuur_tijdlijn", {
+  id: serial("id").primaryKey(),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+  tekst: text("tekst").notNull(), // gewone taal, geen veldnamen of statuscodes
+  gebeurdOp: timestamp("gebeurd_op").notNull().defaultNow(),
+  gebruikerNaam: text("gebruiker_naam"), // wie handelde (null = het systeem)
+});
+export type FactuurTijdlijnRegel = typeof factuurTijdlijnTable.$inferSelect;
 
 export const insertFactuurSchema = createInsertSchema(facturenTable).omit({
   id: true, aangemaaktOp: true, bijgewerktOp: true,

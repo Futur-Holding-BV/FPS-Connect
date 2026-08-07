@@ -20,6 +20,10 @@ import {
   factuurImportInstellingenTable,
   factuurImportLogTable,
   onderhoudscontractenTable,
+  factuurSignalenTable,
+  factuurTijdlijnTable,
+  FACTUUR_AFWIJSREDENEN,
+  type FactuurAfwijsredenCode,
 } from "@workspace/db";
 import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -38,6 +42,7 @@ import {
 import { leesFactuurUitMetAi } from "../services/factuurUitlezen";
 import { synchroniseerMailboxFacturen } from "../services/factuurImport";
 import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
+import { schrijfTijdlijn, maakAfwijsMailTekst } from "../services/factuurstroomService";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -473,6 +478,181 @@ router.get("/facturen/financieel-dashboard", requireBevoegdheid("financieel", 1)
     laatste_export_op: laastExport?.op?.toISOString() ?? null,
     export_fouten_open: exportFouten?.n ?? 0,
   });
+});
+
+// ═══ FACTUUR_02: de factuurstroom ═════════════════════════════════════════════
+// Let op routevolgorde: deze niet-geparametriseerde paden moeten vóór /facturen/:id.
+
+// ── GET /facturen/signalen — bewakingsdashboard (Jacqueline, §6) ───────────────
+router.get("/facturen/signalen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const status = (req.query["status"] as string | undefined) === "afgehandeld" ? "afgehandeld" : "open";
+  const rijen = await db.select({
+    id: factuurSignalenTable.id,
+    type: factuurSignalenTable.type,
+    factuur_id: factuurSignalenTable.factuurId,
+    mail_message_id: factuurSignalenTable.mailMessageId,
+    omschrijving: factuurSignalenTable.omschrijving,
+    status: factuurSignalenTable.status,
+    afhandel_notitie: factuurSignalenTable.afhandelNotitie,
+    aangemaakt_op: factuurSignalenTable.aangemaaktOp,
+    afgehandeld_op: factuurSignalenTable.afgehandeldOp,
+    afgehandeld_door_naam: gebruikersTable.naam,
+    factuurnummer: facturenTable.factuurnummer,
+    relatienaam: facturenTable.relatienaam,
+    factuur_status: facturenTable.status,
+  })
+    .from(factuurSignalenTable)
+    .leftJoin(facturenTable, eq(factuurSignalenTable.factuurId, facturenTable.id))
+    .leftJoin(gebruikersTable, eq(factuurSignalenTable.afgehandeldDoor, gebruikersTable.id))
+    .where(eq(factuurSignalenTable.status, status))
+    .orderBy(desc(factuurSignalenTable.aangemaaktOp))
+    .limit(200);
+  res.json(rijen.map((r) => ({
+    ...r,
+    aangemaakt_op: r.aangemaakt_op.toISOString(),
+    afgehandeld_op: r.afgehandeld_op?.toISOString() ?? null,
+  })));
+});
+
+// ── POST /facturen/signalen/:id/afhandelen ─────────────────────────────────────
+router.post("/facturen/signalen/:id/afhandelen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const { notitie } = req.body as { notitie?: string };
+  const [signaal] = await db.select().from(factuurSignalenTable).where(eq(factuurSignalenTable.id, id)).limit(1);
+  if (!signaal) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (signaal.status === "afgehandeld") { res.status(409).json({ error: "Al afgehandeld" }); return; }
+  // §6.7 — een gewijzigd rekeningnummer mag nooit stil afgehandeld worden.
+  if (signaal.type === "rekeningnummer_gewijzigd" && (!notitie || notitie.trim().length < 5)) {
+    res.status(422).json({ error: "Bij een gewijzigd rekeningnummer is een toelichting verplicht: leg vast hoe de wijziging is geverifieerd." });
+    return;
+  }
+  const userId = sessionUserId(req);
+  const [updated] = await db.update(factuurSignalenTable).set({
+    status: "afgehandeld",
+    afgehandeldDoor: userId,
+    afgehandeldOp: new Date(),
+    afhandelNotitie: notitie?.trim() || null,
+  }).where(eq(factuurSignalenTable.id, id)).returning();
+  if (signaal.factuurId) {
+    const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+    await schrijfTijdlijn(signaal.factuurId, `Het aandachtspunt "${signaal.omschrijving.slice(0, 120)}" is afgehandeld${notitie ? `: ${notitie.trim()}` : "."}`, wie?.naam ?? null);
+  }
+  res.json({ ok: true, id: updated.id, status: updated.status });
+});
+
+// ── GET /facturen/:id/tijdlijn — leesbaar verhaal per factuur (§7) ─────────────
+router.get("/facturen/:id/tijdlijn", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const rijen = await db.select().from(factuurTijdlijnTable)
+    .where(eq(factuurTijdlijnTable.factuurId, id))
+    .orderBy(factuurTijdlijnTable.gebeurdOp, factuurTijdlijnTable.id);
+  res.json(rijen.map((r) => ({
+    id: r.id,
+    tekst: r.tekst,
+    gebeurd_op: r.gebeurdOp.toISOString(),
+    gebruiker_naam: r.gebruikerNaam,
+  })));
+});
+
+// ── POST /facturen/:id/afwijzen-stroom — gesloten redenlijst (§4) ──────────────
+router.post("/facturen/:id/afwijzen-stroom", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const { reden_code } = req.body as { reden_code?: string };
+  if (!reden_code || !(reden_code in FACTUUR_AFWIJSREDENEN)) {
+    res.status(400).json({ error: "Kies een geldige afwijsreden uit de vaste lijst.", redenen: Object.keys(FACTUUR_AFWIJSREDENEN) });
+    return;
+  }
+  const code = reden_code as FactuurAfwijsredenCode;
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status === "afgekeurd") { res.status(409).json({ error: "Deze factuur is al afgewezen." }); return; }
+
+  const userId = sessionUserId(req);
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  const redenTekst = FACTUUR_AFWIJSREDENEN[code];
+
+  await db.update(facturenTable).set({
+    status: "afgekeurd",
+    afwijsredenCode: code,
+    afgekeurdReden: redenTekst,
+    afgekeurdOp: new Date(),
+    afgekeurdDoor: userId,
+    statusVoorAfwijzing: factuur.status,
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id));
+
+  // Reactiemail als concept — mens controleert en verstuurt
+  const [concept] = await db.insert(factuurCorrespondentieTable).values({
+    factuurId: id,
+    richting: "uitgaand",
+    soort: "afkeur",
+    status: "concept",
+    ontvangerNaam: factuur.relatienaam,
+    onderwerp: `Uw factuur ${factuur.factuurnummer ?? ""} kan zo niet verwerkt worden`.replace(/\s+/g, " ").trim(),
+    bericht: maakAfwijsMailTekst(code, factuur.relatienaam, factuur.factuurnummer),
+    afkeurCategorie: code,
+    aiGegenereerd: true,
+    opgesteldDoor: userId,
+  }).returning();
+
+  await schrijfTijdlijn(id, `${wie?.naam ?? "Een medewerker"} heeft de factuur afgewezen: ${redenTekst.toLowerCase()}. Er staat een conceptmail voor de leverancier klaar.`, wie?.naam ?? null);
+  res.json({ ok: true, status: "afgekeurd", afwijsreden_code: code, concept_correspondentie_id: concept.id });
+});
+
+// ── POST /facturen/:id/bevestig-inkoop — stap van de inkoper (§5) ──────────────
+router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status !== "wacht_op_inkoper") { res.status(409).json({ error: "Deze factuur wacht niet op bevestiging van de inkoper." }); return; }
+  const userId = sessionUserId(req);
+  if (factuur.inkoperId && userId !== factuur.inkoperId) {
+    res.status(403).json({ error: "Alleen de toegewezen inkoper kan deze bestelling bevestigen." });
+    return;
+  }
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  await db.update(facturenTable).set({
+    status: "wacht_op_goedkeuring",
+    inkoperBevestigdOp: new Date(),
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id));
+  await schrijfTijdlijn(id, `${wie?.naam ?? "De inkoper"} heeft bevestigd dat de factuur klopt met de bestelling. De factuur ligt nu ter goedkeuring bij de directie.`, wie?.naam ?? null);
+  res.json({ ok: true, status: "wacht_op_goedkeuring" });
+});
+
+// ── POST /facturen/:id/goedkeuren-stroom — René keurt goed (§5) ────────────────
+// Eindstation van FACTUUR_02: "klaar voor betaling". Betalen zelf is FACTUUR_03.
+router.post("/facturen/:id/goedkeuren-stroom", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
+  if (!["wacht_op_goedkeuring", "wacht_op_inkoper", "controle_nodig", "ai_gelezen"].includes(factuur.status)) {
+    res.status(409).json({ error: `Deze factuur kan in de huidige stap niet goedgekeurd worden (${factuur.status}).` });
+    return;
+  }
+  // Zelfde vier-ogen-gate als accorderen: een geldende beleidsregel is niet te omzeilen.
+  const documentType = bepaalFactuurDocumentType(factuur);
+  const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+  const { vereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
+  if (vereist) {
+    const goedgekeurd = await haalGoedgekeurdeAanvraag(db, documentType, id);
+    if (!goedgekeurd) {
+      res.status(422).json({ error: "Goedkeuring via de goedkeuringsmodule vereist.", viaGoedkeuring: true });
+      return;
+    }
+  }
+  const userId = sessionUserId(req);
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  await db.update(facturenTable).set({
+    status: "klaar_voor_betaling",
+    geaccordeerd: true,
+    geaccordeerdOp: new Date(),
+    geaccordeerdDoor: userId,
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id));
+  await schrijfTijdlijn(id, `${wie?.naam ?? "De directie"} heeft de factuur goedgekeurd en de betaling vrijgegeven. De factuur staat klaar voor betaling.`, wie?.naam ?? null);
+  res.json({ ok: true, status: "klaar_voor_betaling" });
 });
 
 // ── GET /facturen/:id ──────────────────────────────────────────────────────────
