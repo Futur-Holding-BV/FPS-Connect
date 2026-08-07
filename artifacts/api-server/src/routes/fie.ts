@@ -20,7 +20,7 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
 import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
 import { logger } from "../lib/logger";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, kopieerBegrotingAlsScenario, ScenarioFout, parseScenarioAannames, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
 
@@ -424,8 +424,12 @@ export function valideerScenarioAannames(v: unknown): { ok: true; json: string }
   try {
     const aantalMonteurs = num(b["aantal_monteurs"], "aantal_monteurs", 500);
     const bezetting = num(b["bezettingsgraad_pct"], "bezettingsgraad_pct", 100);
+    const loonkosten = num(b["loonkosten_per_monteur"], "loonkosten_per_monteur", 1_000_000);
     if (aantalMonteurs != null && bezetting == null) {
       return { ok: false, fout: "Bij een wijziging van het aantal monteurs is de bezettingsgraad een verplichte aanname. Zonder die vraag lijkt extra capaciteit altijd gunstig — dat klopt alleen als de uren ook verkocht worden." };
+    }
+    if (aantalMonteurs != null && loonkosten == null) {
+      return { ok: false, fout: "Bij een wijziging van het aantal monteurs zijn de loonkosten per monteur verplicht — zonder dat bedrag bestaat er geen omslagpunt en is het resultaat te rooskleurig." };
     }
     const json = JSON.stringify({
       aantal_monteurs: aantalMonteurs,
@@ -473,43 +477,13 @@ router.post("/fie/begrotingen/:id/scenario", schrijven, async (req: Request, res
   const aannamesR = valideerScenarioAannames(body["aannames"]);
   if (!aannamesR.ok) { res.status(422).json({ error: aannamesR.fout }); return; }
 
-  const [basis] = await db.select().from(fieJaarbegrotingenTable)
-    .where(eq(fieJaarbegrotingenTable.id, basisId)).limit(1);
-  if (!basis) { res.status(404).json({ error: "Basisbegroting niet gevonden" }); return; }
-  if (basis.status === "scenario") {
-    res.status(422).json({ error: "Een scenario kan niet vanaf een ander scenario worden gemaakt — vertrek altijd vanaf een echte begroting." }); return;
+  try {
+    const scenario = await kopieerBegrotingAlsScenario(basisId, naam, aannamesR.json);
+    res.status(201).json(mapScenario(scenario));
+  } catch (e) {
+    if (e instanceof ScenarioFout) { res.status(e.status).json({ error: e.message }); return; }
+    throw e;
   }
-
-  const scenario = await db.transaction(async (tx) => {
-    const [rij] = await tx.insert(fieJaarbegrotingenTable).values({
-      boekjaar: basis.boekjaar,
-      status: "scenario",
-      omzetDoel: basis.omzetDoel,
-      directeKostenDoel: basis.directeKostenDoel,
-      doelMargePct: basis.doelMargePct,
-      akPerProductiefUur: basis.akPerProductiefUur,
-      productieveUrenDoel: basis.productieveUrenDoel,
-      verdeelsleutel: basis.verdeelsleutel,
-      opmerkingen: basis.opmerkingen,
-      scenarioVanId: basis.id,
-      scenarioNaam: naam,
-      scenarioAannames: aannamesR.json,
-    }).returning();
-    const posten = await tx.select().from(fieAkPostenTable)
-      .where(eq(fieAkPostenTable.begrotingId, basis.id));
-    if (posten.length > 0) {
-      await tx.insert(fieAkPostenTable).values(posten.map((p) => ({
-        begrotingId: rij!.id,
-        werkgeverId: p.werkgeverId,
-        categorie: p.categorie,
-        omschrijving: p.omschrijving,
-        bedragJaarbasis: p.bedragJaarbasis,
-        actief: p.actief,
-      })));
-    }
-    return rij!;
-  });
-  res.status(201).json(mapScenario(scenario));
 });
 
 // PATCH /fie/scenarios/:id — naam/aannames wijzigen (alleen op scenario's).

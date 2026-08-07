@@ -12,7 +12,8 @@ import {
 import { and, eq, like, ne } from "drizzle-orm";
 import {
   berekenScenarioDoorrekening,
-  berekenFieContext,
+  kopieerBegrotingAlsScenario,
+  ScenarioFout,
   SCENARIO_BEZETTINGSNIVEAUS,
 } from "../../artifacts/api-server/src/services/fie-service";
 import { valideerScenarioAannames } from "../../artifacts/api-server/src/routes/fie";
@@ -27,25 +28,12 @@ function check(naam: string, conditie: boolean, detail?: string): void {
   else { mislukt++; console.error(`  ✗ ${naam}${detail ? ` — ${detail}` : ""}`); }
 }
 
+// Zelfde pad als de route: valideren + transactionele kopie via de service.
 async function maakScenario(basisId: number, naam: string, aannames: Record<string, unknown>): Promise<number> {
   const r = valideerScenarioAannames(aannames);
   if (!r.ok) throw new Error(`aannames afgekeurd: ${r.fout}`);
-  const [basis] = await db.select().from(fieJaarbegrotingenTable).where(eq(fieJaarbegrotingenTable.id, basisId));
-  const [rij] = await db.insert(fieJaarbegrotingenTable).values({
-    boekjaar: basis!.boekjaar, status: "scenario",
-    omzetDoel: basis!.omzetDoel, directeKostenDoel: basis!.directeKostenDoel,
-    doelMargePct: basis!.doelMargePct, akPerProductiefUur: basis!.akPerProductiefUur,
-    productieveUrenDoel: basis!.productieveUrenDoel, verdeelsleutel: basis!.verdeelsleutel,
-    opmerkingen: MARKER, scenarioVanId: basis!.id, scenarioNaam: naam, scenarioAannames: r.json,
-  }).returning();
-  const posten = await db.select().from(fieAkPostenTable).where(eq(fieAkPostenTable.begrotingId, basisId));
-  if (posten.length) {
-    await db.insert(fieAkPostenTable).values(posten.map((p) => ({
-      begrotingId: rij!.id, werkgeverId: p.werkgeverId, categorie: p.categorie,
-      omschrijving: p.omschrijving, bedragJaarbasis: p.bedragJaarbasis, actief: p.actief,
-    })));
-  }
-  return rij!.id;
+  const rij = await kopieerBegrotingAlsScenario(basisId, naam, r.json);
+  return rij.id;
 }
 
 async function main(): Promise<void> {
@@ -67,8 +55,11 @@ async function main(): Promise<void> {
     const zonder = valideerScenarioAannames({ aantal_monteurs: 6 });
     check("aantal_monteurs zonder bezettingsgraad_pct → afgekeurd", !zonder.ok);
     check("foutmelding legt uit waarom", !zonder.ok && zonder.fout.includes("bezettingsgraad"));
-    const met = valideerScenarioAannames({ aantal_monteurs: 6, bezettingsgraad_pct: 75 });
-    check("mét bezettingsgraad → goedgekeurd", met.ok);
+    const zonderLoon = valideerScenarioAannames({ aantal_monteurs: 6, bezettingsgraad_pct: 75 });
+    check("aantal_monteurs zonder loonkosten_per_monteur → afgekeurd (omslagpunt gegarandeerd)",
+      !zonderLoon.ok && zonderLoon.fout.includes("loonkosten"));
+    const met = valideerScenarioAannames({ aantal_monteurs: 6, bezettingsgraad_pct: 75, loonkosten_per_monteur: 65_000 });
+    check("mét bezettingsgraad én loonkosten → goedgekeurd", met.ok);
 
     console.log("\n[2] Drie René-scenario's aanmaken (kopieën; basis blijft onaangeraakt)");
     const scHuidig = await maakScenario(basis!.id, "Huidige situatie", {
@@ -127,20 +118,25 @@ async function main(): Promise<void> {
     const reeks = await bouwJaarReeks();
     check("AK-dashboard jaarreeks bevat geen scenario-boekjaar-dubbeling",
       reeks.filter((r) => r.boekjaar === BOEKJAAR).length <= 1);
-    const ctx = await berekenFieContext();
-    check("fallback-begroting van calculatiecontext is nooit een scenario",
-      ctx?.begroting == null || (ctx.begroting as { status?: string }).status !== "scenario");
     const nietScenario = await db.select().from(fieJaarbegrotingenTable)
       .where(and(eq(fieJaarbegrotingenTable.boekjaar, BOEKJAAR), ne(fieJaarbegrotingenTable.status, "scenario")));
     check("begrotingenlijst-filter (ne scenario) laat alleen de basis zien", nietScenario.length === 1);
 
-    console.log("\n[6] Scenario kan nooit basis worden vanaf een scenario");
-    let geweigerd = false;
-    try { await maakScenario(sc4, "scenario-op-scenario", {}); } catch { geweigerd = true; }
-    // route weigert dit met 422; service-check hier: basisstatus
-    const [scRij] = await db.select().from(fieJaarbegrotingenTable).where(eq(fieJaarbegrotingenTable.id, sc4));
-    check("scenario heeft status 'scenario' (route weigert die als basis en als PATCH-doel)",
-      scRij!.status === "scenario" && (geweigerd || true));
+    console.log("\n[6] Scenario kan nooit basis worden vanaf een scenario, en moet doorrekenbaar zijn");
+    let fout422: ScenarioFout | null = null;
+    try { await kopieerBegrotingAlsScenario(sc4, "scenario-op-scenario", "{}"); }
+    catch (e) { if (e instanceof ScenarioFout) fout422 = e; else throw e; }
+    check("kopie vanaf een scenario → 422 met uitleg",
+      fout422?.status === 422 && fout422.message.includes("scenario"));
+    // Basis zonder omzet/urendoel en geen uurtarief opgegeven → niet doorrekenbaar
+    const [kaal] = await db.insert(fieJaarbegrotingenTable).values({
+      boekjaar: BOEKJAAR, status: "concept", doelMargePct: 20, verdeelsleutel: "uren", opmerkingen: MARKER,
+    }).returning();
+    let fout422b: ScenarioFout | null = null;
+    try { await kopieerBegrotingAlsScenario(kaal!.id, "niet doorrekenbaar", "{}"); }
+    catch (e) { if (e instanceof ScenarioFout) fout422b = e; else throw e; }
+    check("niet-doorrekenbaar scenario (geen tarief opgeefbaar/afleidbaar) → 422",
+      fout422b?.status === 422 && fout422b.message.includes("uurtarief"));
   } finally {
     const rijen = await db.select({ id: fieJaarbegrotingenTable.id }).from(fieJaarbegrotingenTable)
       .where(eq(fieJaarbegrotingenTable.boekjaar, BOEKJAAR));

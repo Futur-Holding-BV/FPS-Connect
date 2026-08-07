@@ -517,6 +517,71 @@ export function parseScenarioAannames(tekst: string | null): FieScenarioAannames
   }
 }
 
+/** Fout met HTTP-status voor de scenario-routes. */
+export class ScenarioFout extends Error {
+  constructor(public status: number, melding: string) { super(melding); }
+}
+
+/**
+ * Kopieert een begroting (incl. AK-posten) als scenario — transactioneel
+ * consistent: de basisrij wordt binnen de transactie gelockt (FOR UPDATE)
+ * zodat begrotingsvelden en posten uit hetzelfde moment komen.
+ * Dwingt af dat het scenario doorrekenbaar is: bij een capaciteitswijziging
+ * moeten loonkosten per monteur bekend zijn (anders bestaat er geen omslagpunt
+ * en is het resultaat te rooskleurig), en het uurtarief moet opgegeven of uit
+ * de basis afleidbaar zijn.
+ */
+export async function kopieerBegrotingAlsScenario(
+  basisId: number,
+  naam: string,
+  aannamesJson: string,
+): Promise<typeof fieJaarbegrotingenTable.$inferSelect> {
+  const aan = parseScenarioAannames(aannamesJson);
+  return db.transaction(async (tx) => {
+    const [basis] = await tx.select().from(fieJaarbegrotingenTable)
+      .where(eq(fieJaarbegrotingenTable.id, basisId)).for("update").limit(1);
+    if (!basis) throw new ScenarioFout(404, "Basisbegroting niet gevonden");
+    if (basis.status === "scenario") {
+      throw new ScenarioFout(422, "Een scenario kan niet vanaf een ander scenario worden gemaakt — vertrek altijd vanaf een echte begroting.");
+    }
+    const tariefAfleidbaar = aan.uurtarief != null
+      || (basis.omzetDoel != null && basis.omzetDoel > 0 && basis.productieveUrenDoel != null && basis.productieveUrenDoel > 0);
+    if (!tariefAfleidbaar) {
+      throw new ScenarioFout(422, "Geef een uurtarief op: de basisbegroting heeft geen omzetdoel + urendoel om het uit af te leiden, dus het scenario zou niet doorrekenbaar zijn.");
+    }
+    if (aan.aantalMonteurs != null && aan.loonkostenPerMonteur == null) {
+      throw new ScenarioFout(422, "Bij een wijziging van het aantal monteurs zijn de loonkosten per monteur verplicht — zonder dat bedrag bestaat er geen omslagpunt en is het resultaat te rooskleurig.");
+    }
+    const [rij] = await tx.insert(fieJaarbegrotingenTable).values({
+      boekjaar: basis.boekjaar,
+      status: "scenario",
+      omzetDoel: basis.omzetDoel,
+      directeKostenDoel: basis.directeKostenDoel,
+      doelMargePct: basis.doelMargePct,
+      akPerProductiefUur: basis.akPerProductiefUur,
+      productieveUrenDoel: basis.productieveUrenDoel,
+      verdeelsleutel: basis.verdeelsleutel,
+      opmerkingen: basis.opmerkingen,
+      scenarioVanId: basis.id,
+      scenarioNaam: naam,
+      scenarioAannames: aannamesJson,
+    }).returning();
+    const posten = await tx.select().from(fieAkPostenTable)
+      .where(eq(fieAkPostenTable.begrotingId, basis.id));
+    if (posten.length > 0) {
+      await tx.insert(fieAkPostenTable).values(posten.map((p) => ({
+        begrotingId: rij!.id,
+        werkgeverId: p.werkgeverId,
+        categorie: p.categorie,
+        omschrijving: p.omschrijving,
+        bedragJaarbasis: p.bedragJaarbasis,
+        actief: p.actief,
+      })));
+    }
+    return rij!;
+  });
+}
+
 export interface FieScenarioNiveau {
   bezetting_pct: number;
   verkochte_uren: number;

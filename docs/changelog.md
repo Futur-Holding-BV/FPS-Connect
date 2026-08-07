@@ -1,10 +1,10 @@
 ## 2026-08-07 — SCENARIO_01: wat-als-scenario's op de jaarbegroting
 
-- **Uitvoering:** volledig gebouwd en met 21 automatische checks bewezen | **Kwaliteit:** hoog | **Risico:** laag (een scenario is een kopie; begroting, prognose en adviezen worden nooit geraakt)
+- **Uitvoering:** volledig gebouwd en met 22 automatische checks bewezen; code-review-punten verwerkt (transactionele kopie met row-lock, doorrekenbaarheid afgedwongen bij aanmaken) | **Kwaliteit:** hoog | **Risico:** laag (een scenario is een kopie; begroting, prognose en adviezen worden nooit geraakt)
 
 **Nieuw: pagina "Wat-als-scenario's"** (`/financieel/scenarios`, Financieel-hoofdstuk, niveau 2):
 - **Scenario = kopie van de actieve begroting** (status `scenario`, migratie 0008) inclusief alle AK-posten. Draaiknoppen: aantal monteurs, bezettingsgraad, uurtarief, loonkosten per monteur, variabele kosten, uren per monteur; AK-posten weghalen/wijzigen kan op de kopie zonder de echte begroting te raken.
-- **Bezettingsgraad is verplicht bij elke capaciteitswijziging** (server geeft 422 met uitleg) — de les van 2024: zonder die vraag lijkt extra capaciteit altijd gunstig.
+- **Bezettingsgraad én loonkosten per monteur zijn verplicht bij elke capaciteitswijziging** (server geeft 422 met uitleg) — de les van 2024: zonder die vragen lijkt extra capaciteit altijd gunstig en bestaat er geen omslagpunt. Een scenario dat niet doorrekenbaar is (geen uurtarief opgeefbaar of afleidbaar) wordt geweigerd in plaats van stil aangemaakt.
 - **Uitkomst altijd bij 4 bezettingsniveaus (60/70/80/90%)** plus de eigen aanname, nooit als één getal; per niveau productie, dekkingsbijdrage, AK% (altijd over de productie) en bedrijfsresultaat.
 - **Omslagpunt:** "een monteur betaalt zichzelf terug vanaf X% bezetting", met de berekening erbij; onhaalbaar boven 100% wordt expliciet benoemd.
 - **Aannames altijd zichtbaar** met bron per waarde (ingevoerd / afgeleid uit begroting / standaard); ontbrekende gegevens worden als waarschuwing benoemd, nooit stil ingevuld. Geen AI-oordeel.
@@ -12,7 +12,7 @@
 - **Vervuiling uitgesloten:** scenario's tellen nergens mee — niet in de begrotingenlijst, niet in het AK-dashboard (jaarreeks, lopend jaar, postontwikkeling) en nooit als (fallback-)begroting voor de calculatiecontext. Een scenario kan nooit `actief` worden (422) en een scenario kan geen basis voor een nieuw scenario zijn.
 - **Géén tweede rekenmodel:** de doorrekening hergebruikt de bestaande FIE-motor (`berekenDoelmarge`, zelfde AK-som en normen).
 
-**Bewijs:** `scripts/src/bewijs-scenario-doorrekening.ts` — 21/21 groen, inclusief de drie gevraagde scenario's (huidig / 4 monteurs zonder de 2 kantoorfuncties / 6 mét): bij 60% bezetting is klein-zonder-kantoor ca. €41.500 beter dan groot-mét; basisbegroting aantoonbaar onaangeraakt; omslagpunt ≈ 44%.
+**Bewijs:** `scripts/src/bewijs-scenario-doorrekening.ts` — 22/22 groen, inclusief de drie gevraagde scenario's (huidig / 4 monteurs zonder de 2 kantoorfuncties / 6 mét): bij 60% bezetting is klein-zonder-kantoor ca. €41.500 beter dan groot-mét; basisbegroting aantoonbaar onaangeraakt; omslagpunt ≈ 44%.
 
 ## 2026-08-07 — FINANCIEEL_AI_01: AI kijkt kritisch mee op algemene kosten en bedrijfsresultaat
 

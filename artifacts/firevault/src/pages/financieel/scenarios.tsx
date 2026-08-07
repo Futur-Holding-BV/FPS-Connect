@@ -271,7 +271,7 @@ export default function ScenariosPagina() {
                 onChange={zet("uurtarief")} data-testid="invoer-uurtarief" />
             </div>
             <div>
-              <Label htmlFor="sc-loon">Loonkosten per monteur €/jaar</Label>
+              <Label htmlFor="sc-loon">Loonkosten per monteur €/jaar {num("aantal_monteurs") != null ? "*" : ""}</Label>
               <Input id="sc-loon" inputMode="decimal" value={velden["loonkosten_per_monteur"] ?? ""}
                 onChange={zet("loonkosten_per_monteur")} data-testid="invoer-loonkosten" />
             </div>
@@ -291,11 +291,11 @@ export default function ScenariosPagina() {
                 onChange={zet("toelichting")} />
             </div>
           </div>
-          {num("aantal_monteurs") != null && num("bezettingsgraad_pct") == null && (
+          {num("aantal_monteurs") != null && (num("bezettingsgraad_pct") == null || num("loonkosten_per_monteur") == null) && (
             <p className="text-xs text-amber-700 flex gap-1">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              Bij een wijziging van het aantal monteurs is de bezettingsgraad verplicht —
-              zonder die vraag lijkt extra capaciteit altijd gunstig.
+              Bij een wijziging van het aantal monteurs zijn bezettingsgraad én loonkosten per
+              monteur verplicht — anders lijkt extra capaciteit altijd gunstig en is er geen omslagpunt.
             </p>
           )}
           <DialogFooter>
