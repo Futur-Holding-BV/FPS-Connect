@@ -1,3 +1,9 @@
+## 2026-08-08 — HERSTEL_01: gemangelde routes hersteld + archief-rechten aangescherpt
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (bodies hersteld uit intacte revisies, niet opnieuw geschreven; CI-wacht op duplicaten) | **Risico:** middel (auth- en opnameroutes op prod waren stil kapot)
+
+Bij de reverts/merges van 8 aug raakten routekoppen los van hun bodies: dubbele declaraties in `opname.ts` (spots-aanmaken verwijderde foto's), `auth.ts` (taal wisselen eiste wachtwoorden; wachtwoord wijzigen onbereikbaar) en `voorzieningen.ts`. Herstel: `opname.ts` herbouwd uit de intacte `0b2f5b8`-bodies mét de Taak-824-autorisatie op de koppen (o.a. `DELETE /opname/:id` en `GET /opname/items/:itemId` terug); `auth.ts` integraal terug naar de intacte `959b6f9`-versie (enige tussenliggende commit was de mangel zelf). Archief-route nu één variant op niveau 4 met 404- en boolean-check (besluit René §4: alleen werkvoorbereider en projectleider archiveren/verwijderen); preset Werkvoorbereider `voorzieningen` 3→4 en migratie `0019` brengt bestaande accounts mee (alleen wie nog op preset-niveau 3 stond). Nieuwe CI-stap `check-dubbele-routes` faalt op dubbele methode+pad-declaraties, ook in `router.route()`-ketens.
+
 ## 2026-08-08 — SENTRY_01: foutmonitoring op de productie-API
 
 - **Uitvoering:** code volledig; activering wacht op `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` op de VPS | **Risico:** laag (zonder DSN volledig inactief)
