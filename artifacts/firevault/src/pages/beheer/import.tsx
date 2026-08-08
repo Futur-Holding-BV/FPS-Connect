@@ -6,6 +6,7 @@ import { useListImportLogs } from "@workspace/api-client-react";
 import { Upload, CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -172,6 +173,8 @@ export default function ImportPagina() {
   const [bezig, setBezig] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const magImporteren = heeftNiveau("systeem", 2); // uploaden/uitvoeren; lezen (logs/templates) = systeem:1
   const { data: logs = [], refetch: refetchLogs } = useListImportLogs();
 
   const veldDefs = VELD_DEFINITIES[type];
@@ -285,9 +288,17 @@ export default function ImportPagina() {
             </Button>
           </div>
 
+          {!magImporteren && (
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+              Je kunt hier importlogboeken en templates bekijken. Voor het uitvoeren van
+              een import is systeembeheer-schrijfrecht nodig.
+            </div>
+          )}
           <div
-            className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-muted/40 transition-colors"
-            onClick={() => fileRef.current?.click()}
+            className={magImporteren
+              ? "border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-muted/40 transition-colors"
+              : "border-2 border-dashed rounded-lg p-10 text-center opacity-50 pointer-events-none"}
+            onClick={() => magImporteren && fileRef.current?.click()}
           >
             <FileSpreadsheet className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
             <p className="font-medium">Klik om een bestand te kiezen</p>

@@ -9,6 +9,7 @@ import {
   projectBegrotingenTable,
   werkbegrotingRegelsTable,
   gebruikersTable,
+  medewerkersTable,
   planningItemsTable,
 } from "@workspace/db";
 import { eq, and, desc, asc, inArray } from "drizzle-orm";
@@ -260,7 +261,7 @@ router.get("/materiaal-aanvragen", lezen, async (req, res): Promise<void> => {
 // Monteur dient aanvraag in; foto als base64 in body
 
 router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const { opdracht_id, werkdag_id, reden, omschrijving, foto_pad } = req.body as {
@@ -298,6 +299,26 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
   if (!opdracht) return void res.status(404).json({ error: "Opdracht niet gevonden" });
   opdrachtId = opdracht.id;
 
+  // DOORLOOP_01 §2: een monteur mag alleen materiaal aanvragen voor een
+  // opdracht waar hij op is ingepland; kantoor (offertes:2) en hoofdbeheerder
+  // mogen voor elke opdracht aanvragen.
+  const magAlles = !!req.permissies && (req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("offertes", 2));
+  if (!magAlles) {
+    const [eigenMedewerker] = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+    const [toegewezen] = eigenMedewerker
+      ? await db
+          .select({ id: planningItemsTable.id })
+          .from(planningItemsTable)
+          .where(and(eq(planningItemsTable.opdrachtId, opdrachtId), eq(planningItemsTable.medewerkerId, eigenMedewerker.id)))
+      : [];
+    if (!toegewezen) {
+      return void res.status(403).json({ error: "Je bent niet ingepland op deze opdracht" });
+    }
+  }
+
   const [nieuw] = await db
     .insert(materiaalAanvragenTable)
     .values({
@@ -325,7 +346,7 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
 
 router.patch("/materiaal-aanvragen/:id", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
 
   const [bestaand] = await db
     .select()

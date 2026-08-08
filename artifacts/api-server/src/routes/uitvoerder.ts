@@ -52,7 +52,7 @@ function mapBericht(b: typeof uitvoerderBerichtenTable.$inferSelect) {
 // Returned sessie + bestaande berichten
 
 router.post("/uitvoerder/sessies", async (req, res): Promise<void> => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const { werkdag_id, opdracht_id } = req.body as {
@@ -118,7 +118,7 @@ router.post("/uitvoerder/sessies", async (req, res): Promise<void> => {
 // Toegankelijk voor eigenaar (monteur) of WV/PL
 
 router.get("/uitvoerder/sessies/:id", async (req, res): Promise<void> => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
@@ -157,7 +157,7 @@ router.get("/uitvoerder/sessies/:id", async (req, res): Promise<void> => {
 // Monteur stuurt een bericht (+ optioneel foto), AI antwoordt synchroon
 
 router.post("/uitvoerder/sessies/:id/berichten", async (req, res): Promise<void> => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const sessieId = parseInt(String(req.params["id"] ?? "0"), 10);
@@ -288,7 +288,7 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res): Promise<void>
 // Monteur legt de gekozen aanpak vast — sessie wordt bevestigd
 
 router.post("/uitvoerder/sessies/:id/bevestig", async (req, res): Promise<void> => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+  const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const sessieId = parseInt(String(req.params["id"] ?? "0"), 10);

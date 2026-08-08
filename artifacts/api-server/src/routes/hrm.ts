@@ -2187,6 +2187,27 @@ router.patch("/verlofaanvragen/:id", async (req, res): Promise<void> => {
       }
     }
 
+    // DOORLOOP_01 §2: reden/opmerking wijzigen ZONDER statusovergang mag alleen
+    // op de eigen aanvraag, of met personeel-schrijfrecht. Mét statusovergang
+    // autoriseert de WorkflowEngine (leidinggevende) hieronder.
+    if (status === undefined && (reden !== undefined || opmerking !== undefined)) {
+      const magSchrijven = !!req.permissies && (req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("personeel", 2));
+      if (!magSchrijven) {
+        const userId = req.session.userId;
+        const [aanvraag] = await db
+          .select({ medewerkerId: verlofAanvragenTable.medewerkerId })
+          .from(verlofAanvragenTable)
+          .where(eq(verlofAanvragenTable.id, aanvraagId));
+        if (!aanvraag) return void res.status(404).json({ error: "Verlofaanvraag niet gevonden" });
+        const [eigenMedewerker] = userId
+          ? await db.select({ id: medewerkersTable.id }).from(medewerkersTable).where(eq(medewerkersTable.gebruikerId, userId))
+          : [];
+        if (!eigenMedewerker || eigenMedewerker.id !== aanvraag.medewerkerId) {
+          return void res.status(403).json({ error: "Alleen je eigen aanvraag of met personeel-schrijfrecht" });
+        }
+      }
+    }
+
     // Status via de WorkflowEngine — valideert de transitie, past saldo aan en schrijft
     // de auditlog. reden en opmerking worden doorgegeven als params zodat de engine
     // ze kan gebruiken voor de precheck (verplichte reden bij afwijzen) en de log.

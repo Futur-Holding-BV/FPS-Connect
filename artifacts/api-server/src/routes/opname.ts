@@ -196,7 +196,7 @@ router.post("/opname", requireAuth, async (req, res): Promise<void> => {
       naam,
       datum,
       notities: notities ?? null,
-      aangemaaktDoorId: (req.session as { gebruikerId?: number }).gebruikerId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
     })
     .returning();
 
@@ -361,7 +361,7 @@ router.post("/opname/:id/spots-aanmaken", requireAuth, async (req, res): Promise
   const gebouwId = opname.gebouw_id;
   const aangemaakteIds: number[] = [];
   let overgeslagen = 0;
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+  const gebruikerId = req.session.userId ?? null;
 
   for (const item of opname.items) {
     if (!item.spot_type) { overgeslagen++; continue; }

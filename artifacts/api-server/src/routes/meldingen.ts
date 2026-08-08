@@ -39,7 +39,7 @@ router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const sess = req.session as { gebruikerId?: number; naam?: string; rol?: string };
+  const sess = { gebruikerId: req.session.userId, naam: undefined as string | undefined, rol: req.session.rol };
 
   const [melding] = await db.insert(gebruikersMeldingenTable).values({
     type: String(type),
@@ -180,7 +180,7 @@ router.patch("/meldingen/:id", alleenBeheerder, async (req, res): Promise<void> 
     return;
   }
 
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   const nu = new Date();
 
   if (status !== undefined) {

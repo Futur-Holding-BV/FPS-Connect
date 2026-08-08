@@ -26,6 +26,7 @@ import {
   type FactuurSignaalType,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { stuurPushNaarGebruiker } from "../lib/pushService";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { analyseerFactuurVoorStroom, type FactuurStroomVelden } from "../lib/documentIntelligence";
 import { haalBijlagen } from "./werkInboxGraph";

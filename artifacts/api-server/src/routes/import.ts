@@ -15,9 +15,15 @@ import {
   facturenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { randomUUID } from "crypto";
 
 const router = Router();
+
+// DOORLOOP_01 §1.1: import overschrijft o.a. eenheidsprijzen, historische
+// facturen en projecten — dit is systeembeheer, geen basisrecht.
+const importBeheren = requireBevoegdheid("systeem", 2);
+const importLezen   = requireBevoegdheid("systeem", 1);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ── In-memory cache voor geüploade bestanden ───────────────────────────────────
@@ -37,6 +43,7 @@ function cacheBestand(id: string, data: typeof bestandCache extends Map<string, 
 // ── POST /import/preview ───────────────────────────────────────────────────────
 router.post(
   "/import/preview",
+  importBeheren,
   upload.single("bestand"),
   async (req, res): Promise<void> => {
     try {
@@ -77,7 +84,7 @@ router.post(
 );
 
 // ── POST /import/uitvoeren ────────────────────────────────────────────────────
-router.post("/import/uitvoeren", async (req, res): Promise<void> => {
+router.post("/import/uitvoeren", importBeheren, async (req, res): Promise<void> => {
   try {
     const { bestand_id, type, kolomkoppeling, overslaan_lege_naam } = req.body as {
       bestand_id: string;
@@ -281,7 +288,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
 });
 
 // ── GET /import/logs ──────────────────────────────────────────────────────────
-router.get("/import/logs", async (req, res): Promise<void> => {
+router.get("/import/logs", importLezen, async (req, res): Promise<void> => {
   try {
     const logs = await db
       .select()
@@ -529,8 +536,8 @@ function koppelHistorischProject(rij: Record<string, string>, kop: Record<string
 }
 
 // ── GET /import/template/:type ─────────────────────────────────────────────────
-router.get("/import/template/:type", (req, res) => {
-  const type = req.params.type;
+router.get("/import/template/:type", importLezen, (req, res) => {
+  const type = String(req.params["type"] ?? "");
 
   const TEMPLATE_KOLOMMEN: Record<string, string[]> = {
     leveranciers: ["naam", "code", "adres", "postcode", "stad", "contactpersoon", "email", "telefoon", "kvk_nummer", "categorie", "notities"],

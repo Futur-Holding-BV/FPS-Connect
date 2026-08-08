@@ -1,3 +1,19 @@
+## 2026-08-08 — DOORLOOP_01: open autorisatiegaten gedicht (import, calculaties, PBM-foto-inspectie)
+
+- **Uitvoering:** volledig (§6 punt 1+2 van de doorloop) | **Kwaliteit:** hoog | **Risico:** laag (alleen strengere toegang; hoofdbeheerder en gerechtigde profielen merken niets)
+
+**Wat is gedicht:** de import-routes (voorbeeld, uitvoeren, logboek, sjablonen) eisen nu de module systeem (schrijven 2, lezen 1) — voorheen kon elke ingelogde medewerker de prijzenbibliotheek en historische data overschrijven. Alle tien calculatie-routes eisen nu calculaties (lezen 1, schrijven 2). De PBM-foto-inspectie eist nu toolbox:2, gelijk aan de handmatige inspectie.
+
+**Beoordeling §2 (gat of bedoeld):** alle overige gemelde routes nagerekend — uitvoerder-sessies, werkdag-status en materiaal-aanvragen binden aan de eigen gebruiker (bedoeld); hrm-verlofaanvraag was al in de handler afgedekt; systeem-feedback en de inbox-tokenroute horen open. Volledige tabel in `docs/antwoorden/DOORLOOP_01.md`.
+
+**Meegenomen:** na de drie taakmerges van vandaag compileerde de api-server niet (stale lib-declarations + ontbrekende push-helper-import in factuurstroomService) — hersteld, monorepo-typecheck groen.
+
+**Review-fixes (architect):** reden/opmerking op andermans verlofaanvraag zonder statusovergang kon door iedereen — nu alleen eigen aanvraag of personeel:2; materiaal-aanvraag kon aan élke opdracht worden gehangen — nu alleen opdrachten waar je op bent ingepland (kantoor/hoofdbeheerder uitgezonderd); PWA-importpagina en eenheidsprijzen-knoppen volgen nu het systeem-recht.
+
+**Meegevonden en hersteld:** ~21 handlers in 8 routebestanden lazen het niet-bestaande sessieveld `gebruikerId` (sessie kent alleen `userId`) en gaven daardoor altijd 401 — o.a. materiaal-aanvragen indienen, PBM-uitleen/beoordelen en uitvoerder-sessies. Alle omgezet naar het echte sessieveld.
+
+**Bewijs (GEMETEN):** `scripts/src/bewijs-doorloop01-autorisatie.ts` 13/13 groen (monteur overal 403, incl. andermans verlofaanvraag en niet-toegewezen opdracht; calculaties:2+systeem:1 kan lezen maar niet importeren); e2e-suites opnieuw groen.
+
 ## 2026-08-08 — APP_01: bevoegdheden in de app-laag (menu, schermen, dashboard)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (tonen/verbergen in de UI + één backend-versoepeling voor eigen declaraties; alle module-bescherming voor andermans gegevens onveranderd)

@@ -144,7 +144,7 @@ const SLIJTAGE_AANDACHTSPUNTEN: Record<string, string> = {
 
 // ── GET /pbm/items ─────────────────────────────────────────────────────────
 router.get("/pbm/items", lezenPbm, async (req, res): Promise<void> => {
-  const sess = req.session as { gebruikerId?: number; rol?: string };
+  const sess = { gebruikerId: req.session.userId, rol: req.session.rol };
   const { medewerker_id, status } = req.query;
 
   const rows = await db
@@ -163,7 +163,7 @@ router.get("/pbm/items", lezenPbm, async (req, res): Promise<void> => {
 
 // ── GET /pbm/items/eigen ────────────────────────────────────────────────────
 router.get("/pbm/items/eigen", async (req, res): Promise<void> => {
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   if (!sess.gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const medewerker = await db
@@ -185,7 +185,7 @@ router.get("/pbm/items/eigen", async (req, res): Promise<void> => {
 
 // ── POST /pbm/items ─────────────────────────────────────────────────────────
 router.post("/pbm/items", schrijvenPbm, async (req, res): Promise<void> => {
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   const body = req.body as {
     medewerkerId?: number;
     medewerkerNaam?: string;
@@ -287,7 +287,7 @@ router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res): Promise
   const pbmItemId = parseInt(String(req.params.id), 10);
   if (isNaN(pbmItemId)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   const body = req.body as {
     datum?: string;
     fotoPaden?: string[];
@@ -322,7 +322,7 @@ router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res): Promise
 
 // ── POST /pbm/items/:id/foto-inspectie ──────────────────────────────────────
 // AI beoordeelt foto's op slijtage — geeft NOOIT een formele goed-/afkeuring
-router.post("/pbm/items/:id/foto-inspectie", async (req, res): Promise<void> => {
+router.post("/pbm/items/:id/foto-inspectie", schrijvenPbm, async (req, res): Promise<void> => {
   const pbmItemId = parseInt(String(req.params.id), 10);
   if (isNaN(pbmItemId)) return void res.status(400).json({ error: "Ongeldig id" });
 
@@ -393,7 +393,7 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
     }
 
     const datum = new Date().toISOString().slice(0, 10);
-    const sess = req.session as { gebruikerId?: number };
+    const sess = { gebruikerId: req.session.userId };
 
     const [inspectie] = await db
       .insert(pbmInspectiesTable)
@@ -448,7 +448,7 @@ router.get("/pbm/middelen", lezenPbm, async (req, res): Promise<void> => {
 
 // ── POST /pbm/middelen ──────────────────────────────────────────────────────
 router.post("/pbm/middelen", schrijvenPbm, async (req, res): Promise<void> => {
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   const body = req.body as {
     type: string; naam: string; merk?: string; model?: string;
     serienummer?: string; locatie?: string; eigenaarNaam?: string;
@@ -530,7 +530,7 @@ router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res): Prom
   const middelId = parseInt(String(req.params.id), 10);
   if (isNaN(middelId)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const sess = req.session as { gebruikerId?: number };
+  const sess = { gebruikerId: req.session.userId };
   const body = req.body as {
     datum?: string; fotoPaden?: string[]; bevindingen?: string;
     formeleStatus?: string; beoordeeldDoorNaam?: string;

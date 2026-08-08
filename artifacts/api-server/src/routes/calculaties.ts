@@ -10,11 +10,16 @@ import {
   voorzieningenTable,
 } from "@workspace/db";
 import { eq, desc, asc, inArray } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
 const router = Router();
+
+// DOORLOOP_01 §1.2: calculaties bevatten de prijzen — lezen vereist
+// calculaties:1, schrijven calculaties:2 (was: alleen ingelogd).
+const calcLezen     = requireBevoegdheid("calculaties", 1);
+const calcSchrijven = requireBevoegdheid("calculaties", 2);
 
 const iso = (d: Date) => d.toISOString();
 
@@ -60,7 +65,7 @@ function mapRegel(r: typeof calculatieRegelsTable.$inferSelect) {
 
 // ── Calculaties ─────────────────────────────────────────────────────────────
 
-router.get("/calculaties", async (req, res): Promise<void> => {
+router.get("/calculaties", calcLezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({
@@ -100,7 +105,7 @@ router.get("/calculaties", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/calculaties", async (req, res): Promise<void> => {
+router.post("/calculaties", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const { naam, gebouw_id, status, omschrijving } = req.body as {
       naam: string;
@@ -130,7 +135,7 @@ router.post("/calculaties", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/calculaties/:id", async (req, res): Promise<void> => {
+router.get("/calculaties/:id", calcLezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db
@@ -167,7 +172,7 @@ router.get("/calculaties/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/calculaties/:id", async (req, res): Promise<void> => {
+router.patch("/calculaties/:id", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { naam, gebouw_id, status, omschrijving } = req.body as {
@@ -204,7 +209,7 @@ router.patch("/calculaties/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/calculaties/:id", async (req, res): Promise<void> => {
+router.delete("/calculaties/:id", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     await db.delete(calculatiesTable).where(eq(calculatiesTable.id, id));
@@ -217,7 +222,7 @@ router.delete("/calculaties/:id", async (req, res): Promise<void> => {
 
 // ── Regels ──────────────────────────────────────────────────────────────────
 
-router.get("/calculaties/:id/regels", async (req, res): Promise<void> => {
+router.get("/calculaties/:id/regels", calcLezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const regels = await db
@@ -232,7 +237,7 @@ router.get("/calculaties/:id/regels", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/calculaties/:id/regels", async (req, res): Promise<void> => {
+router.post("/calculaties/:id/regels", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const calculatieId = parseId(req.params.id);
     const { categorie, omschrijving, eenheid, hoeveelheid, stukprijs, volgorde, opmerkingen } =
@@ -273,7 +278,7 @@ router.post("/calculaties/:id/regels", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/calculaties/:id/regels/:regelId", async (req, res): Promise<void> => {
+router.patch("/calculaties/:id/regels/:regelId", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params.regelId);
     const { categorie, omschrijving, eenheid, hoeveelheid, stukprijs, volgorde, opmerkingen } =
@@ -318,7 +323,7 @@ router.patch("/calculaties/:id/regels/:regelId", async (req, res): Promise<void>
   }
 });
 
-router.delete("/calculaties/:id/regels/:regelId", async (req, res): Promise<void> => {
+router.delete("/calculaties/:id/regels/:regelId", calcSchrijven, async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params.regelId);
     await db.delete(calculatieRegelsTable).where(eq(calculatieRegelsTable.id, regelId));
@@ -331,7 +336,7 @@ router.delete("/calculaties/:id/regels/:regelId", async (req, res): Promise<void
 
 // POST /calculaties/:id/ai-regels — AI-gestuurde kostenregel-suggesties.
 // Mens bevestigt per regel; niets wordt automatisch opgeslagen.
-router.post("/calculaties/:id/ai-regels", requireAuth, async (req, res): Promise<void> => {
+router.post("/calculaties/:id/ai-regels", calcSchrijven, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
       return void res.status(503).json({ error: "OpenAI niet beschikbaar" });

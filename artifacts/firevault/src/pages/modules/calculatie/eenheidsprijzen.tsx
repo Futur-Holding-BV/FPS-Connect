@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,6 +187,10 @@ export default function EenheidsprijzenBeheer() {
     }
   }
 
+  const { heeftNiveau } = useBevoegdheid();
+  const magSysteemLezen = heeftNiveau("systeem", 1);
+  const magImporteren = heeftNiveau("systeem", 2);
+
   const downloadTemplate = () => {
     window.location.href = "/api/import/template/eenheidsprijzen";
   };
@@ -203,12 +208,16 @@ export default function EenheidsprijzenBeheer() {
           <h1 className="text-xl font-semibold">Eenheidsprijzenbibliotheek</h1>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download className="w-4 h-4 mr-1" /> Template downloaden
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("/beheer/import")}>
-            <Upload className="w-4 h-4 mr-1" /> Importeren
-          </Button>
+          {magSysteemLezen && (
+            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <Download className="w-4 h-4 mr-1" /> Template downloaden
+            </Button>
+          )}
+          {magImporteren && (
+            <Button variant="outline" size="sm" onClick={() => navigate("/beheer/import")}>
+              <Upload className="w-4 h-4 mr-1" /> Importeren
+            </Button>
+          )}
           <Button size="sm" onClick={openNieuw}>
             <Plus className="w-4 h-4 mr-1" /> Nieuwe eenheidsprijs
           </Button>

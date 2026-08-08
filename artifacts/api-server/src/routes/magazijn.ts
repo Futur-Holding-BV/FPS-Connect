@@ -1301,7 +1301,7 @@ router.post("/magazijn/verplaatsingen", aanmaken, async (req, res): Promise<void
     const hoeveelheid = Number(body.hoeveelheid);
     const vanLocatieId = body.van_locatie_id ? Number(body.van_locatie_id) : null;
     const naarLocatieId = Number(body.naar_locatie_id);
-    const userId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+    const userId = req.session.userId ?? null;
 
     if (!artikelId || !hoeveelheid || hoeveelheid <= 0 || !naarLocatieId) {
       return void res.status(400).json({ error: "Ongeldige invoer: artikel_id, hoeveelheid (>0) en naar_locatie_id zijn verplicht" });
@@ -1410,7 +1410,7 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
       regels: Array<{ artikel_id: number; hoeveelheid: number }>;
     };
     const regels = body.regels ?? [];
-    const userId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+    const userId = req.session.userId ?? null;
 
     const artikelIds = [...new Set(regels.map(r => Number(r.artikel_id)))];
     const artikelen = artikelIds.length > 0

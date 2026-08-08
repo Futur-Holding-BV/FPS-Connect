@@ -1599,7 +1599,7 @@ router.get("/offertes/:id/versies", lezen, async (req, res): Promise<void> => {
 router.post("/offertes/:id/versies", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+    const gebruikerId = req.session.userId ?? null;
     const { samenvatting } = req.body;
 
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
