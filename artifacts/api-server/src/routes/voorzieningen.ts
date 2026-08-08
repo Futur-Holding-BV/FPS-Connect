@@ -689,52 +689,8 @@ router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2)
   }
 });
 
-// PATCH /voorzieningen/:id/archief
-router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3), async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(String(req.params.id));
-    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
-      return void res.status(403).json({ error: "Geen toegang tot deze voorziening" });
-    }
-    const gearchiveerd = req.body?.gearchiveerd === true;
-
-    // Terug plaatsen (de-archiveren) vereist volledig beheer (niveau 4).
-    if (!gearchiveerd && !req.permissies!.heeftModuleRecht("voorzieningen", 4)) {
-      return void res.status(403).json({ error: "Geen toegang" });
-    }
-
-    const [v] = await db
-      .update(voorzieningenTable)
-      .set({
-        gearchiveerd,
-        gearchiveerdOp: gearchiveerd ? new Date() : null,
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(voorzieningenTable.id, id))
-      .returning();
-    if (!v) return void res.status(404).json({ error: "Voorziening niet gevonden" });
-    invalideerContext("voorziening", id);
-
-    // Na archiveren/herstellen: herbereken nacalculaties voor dit gebouw
-    triggerNacalculatieHerberekeningVoorGebouw(v.gebouwId, req.log);
-
-    await logActiviteit({
-      type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",
-      omschrijving: gearchiveerd
-        ? `Voorziening ${v.objectnummer} gearchiveerd`
-        : `Voorziening ${v.objectnummer} terug geplaatst`,
-      gebouwId: v.gebouwId,
-      voorzieningId: v.id,
-      voorzieningNummer: v.objectnummer,
-      gebruikerId: req.session.userId,
-    });
-
-    res.json(await mapVoorziening(v));
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
-  }
-});
+// PATCH /voorzieningen/:id/archief staat verderop in dit bestand (niveau 4,
+// HERSTEL_01 §4: alleen werkvoorbereider en projectleider archiveren/verwijderen).
 
 // GET /verdiepingen/:id/voorzieningen
 router.get("/verdiepingen/:id/voorzieningen", lezenVoorzieningen, async (req, res): Promise<void> => {

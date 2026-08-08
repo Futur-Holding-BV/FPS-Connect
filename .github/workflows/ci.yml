@@ -34,6 +34,11 @@ jobs:
       - name: Klant-poort allowlist-controle
         run: pnpm --filter @workspace/scripts run klant-poort-check
 
+      # HERSTEL_01: dubbele methode+pad-declaraties = stille dode code (Express
+      # neemt de eerste); vandaag twee keer ontstaan bij merges.
+      - name: Dubbele-routes-controle
+        run: pnpm --filter @workspace/scripts run check-dubbele-routes
+
       - name: Build api-server
         run: pnpm --filter @workspace/api-server run build
 

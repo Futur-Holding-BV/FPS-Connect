@@ -307,7 +307,10 @@ export const PRESETS: Preset[] = [
     naam: "Werkvoorbereider",
     groep: "Projecten",
     bevoegdheden: matrix({
-      gebouwen: 3, voorzieningen: 3, inspecties: 2, onderhoud: 3,
+      // HERSTEL_01 §4 (René, 08-08-2026): werkvoorbereider mag spots
+      // archiveren/verwijderen → voorzieningen 4 (was 3). Bewust aanvaard:
+      // daarmee ook toegang tot ai-controle (zelfde niveau).
+      gebouwen: 3, voorzieningen: 4, inspecties: 2, onderhoud: 3,
       rapportages: 2, bibliotheek: 3, crm: 1,
       financieel: 3,
     }),
