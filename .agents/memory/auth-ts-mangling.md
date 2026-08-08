@@ -16,3 +16,5 @@ de bron gezond is. Alleen `tsc --noEmit` op api-server toont het.
 typecheck; bij TS2304 `id`-fouten het hele bestand herstellen uit de laatste
 commit waar tsc groen was (niet regel-voor-regel patchen — de mangeling is een
 mix van twee versies).
+
+**Update 8 aug 2026:** ook opname.ts is bij taak-merges twee keer opnieuw gemangeld (bodies onder verkeerde koppen, ongedefinieerde variabelen). Vaste remedie: `git checkout <laatst geverifieerde commit> -- <bestand>` + volledige typecheck. CI bewaakt nu dubbele declaraties via `check-dubbele-routes` (@workspace/scripts), maar verschoven bodies zónder duplicaat vangt alleen tsc. Na ELKE taak-merge die routes raakt: typecheck draaien vóór deploy-vertrouwen.
