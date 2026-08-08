@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { useZetAssistentLabel } from "@/lib/assistent-context";
 import {
   useGetOfferte,
   useUpdateOfferte,
@@ -202,6 +203,7 @@ export default function ProposalStudio() {
   const { data: offerte, isLoading: offerteLoading } = useGetOfferte(offerteId, {
     query: { queryKey: getGetOfferteQueryKey(offerteId), enabled: !!offerteId },
   });
+  useZetAssistentLabel(offerte?.offertenummer ? `offerte ${offerte.offertenummer}` : null);
   const { data: secties, isLoading: sectiesLoading } = useListOfferteSecties(offerteId, {
     query: { queryKey: getListOfferteSectiesQueryKey(offerteId), enabled: !!offerteId },
   });

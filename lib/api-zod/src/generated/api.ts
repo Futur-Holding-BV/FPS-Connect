@@ -12464,6 +12464,8 @@ export const DoorzettenNaarGarageResponse = zod.object({
  */
 export const vraagAdviseurBodyVraagMax = 2000;
 
+export const vraagAdviseurBodyContextSchermMax = 300;
+
 
 
 export const VraagAdviseurBody = zod.object({
@@ -12471,7 +12473,12 @@ export const VraagAdviseurBody = zod.object({
   "geschiedenis": zod.array(zod.object({
   "rol": zod.enum(['user', 'assistant']),
   "inhoud": zod.string()
-})).optional()
+})).optional(),
+  "context": zod.object({
+  "scherm": zod.string().max(vraagAdviseurBodyContextSchermMax).optional(),
+  "object_type": zod.enum(['gebouw', 'voorziening', 'offerte', 'medewerker', 'document', 'dossier', 'onderhoud', 'klant']).optional(),
+  "object_id": zod.number().optional()
+}).optional().describe('Waar de gebruiker nu is (ASSISTENT_01 fase 2)')
 })
 
 export const VraagAdviseurResponse = zod.object({

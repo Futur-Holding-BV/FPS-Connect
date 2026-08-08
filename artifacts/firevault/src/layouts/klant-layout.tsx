@@ -6,7 +6,8 @@ import {
   SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, FileText, Building, Info, LayoutDashboard, ArrowLeft } from "lucide-react";
+import { Home, FileText, Building, Info, LayoutDashboard, ArrowLeft, Bot } from "lucide-react";
+import { ZijrandKnoppen } from "@/components/zijrand-paneel";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
@@ -17,6 +18,7 @@ const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: LayoutDashboard },
   { href: "/gebouwen", labelKey: "nav.mijnGebouwen3d", icoon: Building },
   { href: "/klant/rapportages", labelKey: "nav.rapportages", icoon: FileText },
+  { href: "/assistent", labelKey: "nav.assistent", icoon: Bot },
   { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
@@ -97,11 +99,13 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
             </div>
             <span className="font-semibold text-zinc-900">One</span>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <ZijrandKnoppen zonderPaneel />
             <MeldingKnop />
           </div>
         </div>
-        <div className="hidden md:flex items-center justify-end px-6 py-2 border-b border-zinc-200/50">
+        <div className="hidden md:flex items-center justify-end gap-1 px-6 py-2 border-b border-zinc-200/50">
+          <ZijrandKnoppen />
           <MeldingKnop />
         </div>
         <div className="p-4 md:p-8 xl:p-12 max-w-[1600px] mx-auto animate-in fade-in duration-500">

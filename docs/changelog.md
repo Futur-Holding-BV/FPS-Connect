@@ -1,3 +1,15 @@
+## 2026-08-08 — ASSISTENT_01: Connect-assistent altijd in beeld, contextbewust en met veilige gegevensvragen
+
+- **Uitvoering:** volledig (3 fasen) | **Kwaliteit:** hoog (gedragsbewijs met drie gebruikersprofielen + e2e) | **Risico:** laag-middel (gateway geeft nu tool-aanroepen door; oude zwevende chat-bubble verwijderd)
+
+**Fase 1 — altijd in beeld:** vaste rechterrand in de layout met tabbladen Werkbak/Assistent (hergebruik van `ai-chat-panel.tsx`, geen tweede chatonderdeel; zwevende `adviseur-chat.tsx` verwijderd). Gesprek blijft staan bij dichtklappen; open/dicht-stand en tabblad onthouden. Op telefoon een eigen scherm `/assistent` (ook nav-item in monteur- en klantportaal), geen zwevend venster.
+
+**Fase 2 — weten waar je bent:** elke vraag stuurt scherm + open object mee; paneel toont "Je kijkt naar: …" (offerte-nummer/gebouwnaam op detailpagina's). Server haalt het object op via de bestaande AI Context Service (`bouwContextBundel`) met de effectieve permissies van de vrager — afscherming in de gegevensopvraging, niet in de prompt. Geen AI-aanroep bij pagina-openen.
+
+**Fase 3 — gespecialiseerd:** Connect-kennis staat als onderhouden repo-doc (`docs/connect-kennis.md`) die de route van schijf leest; vijf alleen-lezen gegevens-tools (offertes/facturen/opdrachten/gebouwen/werkbak) met rechtencheck ín de query, bron + peildatum bij elk getal, weigering in plaats van verzinnen. Assistent wijzigt nooit iets. Dagplafond/vraaglimiet → melding in gewone taal.
+
+**Bewijs (GEMETEN, dev 8 aug):** `scripts/src/verificatie-assistent01.ts` — zelfde vraag door hoofdbeheerder (echte aantallen mét herkomst), beperkte gebruiker (offertes wel, facturen geweigerd) en monteur (beide geweigerd, geen verzonnen cijfers); contextvraag op open gebouw correct. E2E `scripts/e2e/web-zijrand-assistent.spec.ts` groen. Kosten: ~EUR 0,006 per aanroep, ~EUR 0,05 per gesprek — zie `docs/metingen/ASSISTENT_01_kosten.md` en `docs/antwoorden/ASSISTENT_01.md`.
+
 ## 2026-08-08 — IMPORT_01: importmodule met rechten per type, verplichte controle-stap, terugdraaien en zichtbare herkomst
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (gedragsbewijs via echte HTTP-flows) | **Risico:** laag-middel (import-rechten strenger: systeem:2 → beheerrecht per module; wie eerder importeerde heeft nu niveau 4 op de betreffende module nodig)

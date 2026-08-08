@@ -44960,6 +44960,18 @@ components:
                 enum: [user, assistant]
               inhoud:
                 type: string
+        context:
+          type: object
+          description: Waar de gebruiker nu is (ASSISTENT_01 fase 2)
+          properties:
+            scherm:
+              type: string
+              maxLength: 300
+            object_type:
+              type: string
+              enum: [gebouw, voorziening, offerte, medewerker, document, dossier, onderhoud, klant]
+            object_id:
+              type: integer
 
     AdviseurAntwoord:
       type: object

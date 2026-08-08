@@ -97,6 +97,8 @@ import ObjectRechtenBeheer from "@/pages/beheer/object-rechten";
 import OpnamePagina from "@/pages/opname/index";
 import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
+import AssistentPagina from "@/pages/assistent";
+import { AssistentContextProvider } from "@/lib/assistent-context";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
 import ContractbewakingPagina from "@/pages/personeel/contracten";
@@ -455,6 +457,7 @@ function ConnectPortal() {
 
         {/* ── Werk-inbox ── */}
         <Route path="/werk-inbox" component={WerkInboxPagina} />
+        <Route path="/assistent" component={AssistentPagina} />
 
         {/* ── Personeel ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
@@ -615,6 +618,7 @@ function MonteurPortal() {
         <Route path="/gebouwen" component={Gebouwen} />
         <Route path="/gebouwen/:id" component={GebouwDetail} />
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+        <Route path="/assistent" component={AssistentPagina} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
@@ -630,6 +634,7 @@ function KlantPortal() {
         <Route path="/gebouwen" component={Gebouwen} />
         <Route path="/gebouwen/:id" component={OneGebouwDetail} />
         <Route path="/klant/rapportages" component={KlantRapportages} />
+        <Route path="/assistent" component={AssistentPagina} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
@@ -891,11 +896,13 @@ function Gate() {
         <Route path="/gebouwen/:id/print" component={GebouwPrint} />
         <Route path="/modules/calculatie/:id/print" component={ModulesCalculatiePrint} />
         <Route>
-          <AchievementProvider>
-            <Portalen />
-            <OndersteuningWidget />
-            <HeatmapTracker />
-          </AchievementProvider>
+          <AssistentContextProvider>
+            <AchievementProvider>
+              <Portalen />
+              <OndersteuningWidget />
+              <HeatmapTracker />
+            </AchievementProvider>
+          </AssistentContextProvider>
         </Route>
       </Switch>
     </WouterRouter>

@@ -51,6 +51,8 @@ export * from './activatielinkResponse';
 export * from './activiteit';
 export * from './adviseurAntwoord';
 export * from './adviseurVraagInput';
+export * from './adviseurVraagInputContext';
+export * from './adviseurVraagInputContextObjectType';
 export * from './adviseurVraagInputGeschiedenisItem';
 export * from './adviseurVraagInputGeschiedenisItemRol';
 export * from './aiAanroepenAggregaat';

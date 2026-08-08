@@ -21,7 +21,7 @@ import type { WerkbakItem } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Inbox, X, Check, ExternalLink, Archive, CircleAlert, ListTodo, Info } from "lucide-react";
+import { Check, ExternalLink, Archive, CircleAlert, ListTodo, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -42,56 +42,23 @@ const BRON_LABELS: Record<string, string> = {
   bewakingsloop: "Systeem",
 };
 
-export function WerkbakKnop() {
-  const [open, setOpen] = useState(false);
+/** Badge-hook voor de zijrand-knop: aantal open werkbak-items (60s-refresh). */
+export function useWerkbakAantal(): number {
   const { data: aantal, refetch } = useGetWerkbakAantal();
   useEffect(() => {
     const timer = setInterval(() => void refetch(), 60000);
     return () => clearInterval(timer);
   }, [refetch]);
-  const totaal = aantal?.totaal ?? 0;
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="relative h-8 px-2"
-        title="Werkbak openen"
-        onClick={() => setOpen((v) => !v)}
-        data-testid="knop-werkbak"
-      >
-        <Inbox className="h-4 w-4" />
-        {totaal > 0 && (
-          <span
-            className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center"
-            data-testid="badge-werkbak-aantal"
-          >
-            {totaal > 99 ? "99+" : totaal}
-          </span>
-        )}
-      </Button>
-      {open && <WerkbakPaneel onSluiten={() => setOpen(false)} />}
-    </>
-  );
+  return aantal?.totaal ?? 0;
 }
 
-function WerkbakPaneel({ onSluiten }: { onSluiten: () => void }) {
-  const { data: items, isLoading } = useListWerkbakItems();
+/** Alleen de werkbak-inhoud (lijst) — wordt in de gedeelde zijrand getoond (ASSISTENT_01 §3). */
+export function WerkbakInhoud({ onNavigeer, actief = true }: { onNavigeer: () => void; actief?: boolean }) {
+  const { data: items, isLoading } = useListWerkbakItems({ query: { enabled: actief, queryKey: getListWerkbakItemsQueryKey() } });
   const doen = useMemo(() => (items ?? []).filter((i) => i.soort === "doen"), [items]);
   const weten = useMemo(() => (items ?? []).filter((i) => i.soort === "weten"), [items]);
   return (
-    <div
-      className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-background border-l border-border shadow-xl flex flex-col"
-      data-testid="paneel-werkbak"
-    >
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <Inbox className="h-4 w-4" />
-        <h2 className="font-semibold text-sm">Werkbak</h2>
-        <Button variant="ghost" size="sm" className="ml-auto h-7 w-7 p-0" onClick={onSluiten} title="Sluiten" data-testid="knop-werkbak-sluiten">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+    <div className="flex-1 overflow-y-auto p-3 space-y-4" data-testid="paneel-werkbak">
         {isLoading && <p className="text-sm text-muted-foreground">Laden…</p>}
         {!isLoading && doen.length === 0 && weten.length === 0 && (
           <p className="text-sm text-muted-foreground py-8 text-center" data-testid="tekst-werkbak-leeg">
@@ -104,7 +71,7 @@ function WerkbakPaneel({ onSluiten }: { onSluiten: () => void }) {
               <ListTodo className="h-3.5 w-3.5" /> Doen ({doen.length})
             </h3>
             <div className="space-y-2">
-              {doen.map((item) => <WerkbakItemKaart key={item.id} item={item} onNavigeer={onSluiten} />)}
+              {doen.map((item) => <WerkbakItemKaart key={item.id} item={item} onNavigeer={onNavigeer} />)}
             </div>
           </section>
         )}
@@ -114,11 +81,10 @@ function WerkbakPaneel({ onSluiten }: { onSluiten: () => void }) {
               <Info className="h-3.5 w-3.5" /> Weten ({weten.length})
             </h3>
             <div className="space-y-2">
-              {weten.map((item) => <WerkbakItemKaart key={item.id} item={item} onNavigeer={onSluiten} />)}
+              {weten.map((item) => <WerkbakItemKaart key={item.id} item={item} onNavigeer={onNavigeer} />)}
             </div>
           </section>
         )}
-      </div>
     </div>
   );
 }

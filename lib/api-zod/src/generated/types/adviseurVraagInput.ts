@@ -5,10 +5,13 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { AdviseurVraagInputContext } from './adviseurVraagInputContext';
 import type { AdviseurVraagInputGeschiedenisItem } from './adviseurVraagInputGeschiedenisItem';
 
 export interface AdviseurVraagInput {
   /** @maxLength 2000 */
   vraag: string;
   geschiedenis?: AdviseurVraagInputGeschiedenisItem[];
+  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2) */
+  context?: AdviseurVraagInputContext;
 }

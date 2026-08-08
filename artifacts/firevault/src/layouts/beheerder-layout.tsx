@@ -3,7 +3,7 @@ import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useState, useEffect } from "react";
 import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
-import { AdviseurChat } from "@/components/adviseur-chat";
+import { ZijrandKnoppen } from "@/components/zijrand-paneel";
 import { useTranslation } from "react-i18next";
 import {
   useListChatGesprekken,
@@ -15,7 +15,6 @@ import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast"
 import { NieuwsTicker } from "@/components/nieuws-ticker";
 import { VersieBadge } from "@/components/versie-badge";
 import { MeldingKnop } from "@/components/melding-knop";
-import { WerkbakKnop } from "@/components/werkbak-paneel";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupContent,
@@ -1703,7 +1702,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
           <div className="ml-auto flex items-center gap-2">
-            <WerkbakKnop />
+            <ZijrandKnoppen metWerkbak />
             <MeldingKnop />
             <VersieBadge />
             <OnlineGebruikersTaakbalk />
@@ -1723,7 +1722,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       <BerichtNotificatieToast />
       <SlimUploadBalk />
       <NieuwsTicker />
-      <AdviseurChat verhoogd />
     </SidebarProvider>
   );
 }

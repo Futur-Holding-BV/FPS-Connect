@@ -256,7 +256,7 @@ function bouwContextJson(ctx: LogContext | undefined): Record<string, unknown> |
 // ── Resultaattype ─────────────────────────────────────────────────────────────
 
 export type ChatResultaat =
-  | { ok: true;  inhoud: string }
+  | { ok: true;  inhoud: string; toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] }
   | { ok: false; fout: string };
 
 // ── Netwerk/5xx-detectie voor retry ──────────────────────────────────────────
@@ -436,6 +436,9 @@ class AiGatewayService {
         );
         const duurMs = Date.now() - start;
         const inhoud = completion.choices[0]?.message?.content ?? null;
+        // Tool-aanroepen (function calling) zijn een geldig antwoord zonder
+        // inhoud — de aanroeper voert de tools uit en vraagt door.
+        const toolCalls = completion.choices[0]?.message?.tool_calls;
         const usage = completion.usage;
 
         const promptTokens = usage?.prompt_tokens ?? null;
@@ -458,12 +461,15 @@ class AiGatewayService {
           totalTokens,
           geschatteKostenEur: berekenKosten(model, promptTokens, completionTokens),
           duurMs,
-          status: inhoud ? "ok" : "fout",
-          foutmelding: inhoud ? null : "Geen inhoud in antwoord",
+          status: inhoud || (toolCalls && toolCalls.length > 0) ? "ok" : "fout",
+          foutmelding: inhoud || (toolCalls && toolCalls.length > 0) ? null : "Geen inhoud in antwoord",
           contextJson,
           uitvoerTekst: inhoud ? inhoud.slice(0, 8000) : null,
         });
 
+        if (toolCalls && toolCalls.length > 0) {
+          return { ok: true, inhoud: inhoud ?? "", toolCalls };
+        }
         if (!inhoud) {
           return { ok: false, fout: "De AI gaf geen inhoud terug." };
         }

@@ -102,6 +102,7 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { TYPE_LABELS } from "@/lib/documenten-labels";
+import { useZetAssistentLabel } from "@/lib/assistent-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
@@ -452,6 +453,7 @@ export default function GebouwDetail() {
   const isBeheerder = heeftNiveau("gebouwen", 2);
 
   const { data: gebouw, isLoading } = useGetGebouw(gebouwId);
+  useZetAssistentLabel(gebouw?.naam ? `gebouw ${gebouw.naam}` : null);
   const { data: kaartData } = useGetGebouwKaart(gebouwId);
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
     useListGebouwToewijzingen(gebouwId);

@@ -1,3 +1,4 @@
+- [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static matcher moet `mjs` bevatten anders serveert Caddy pdfjs-worker als text/html (SPA-fallback) → plattegrond werkt niet.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) — docs/kwaliteitskader.md is verplicht; taak pas gereed bij aantoonbaar werkend businessscenario + bewijs; build/typecheck nooit voldoende; nooit zelf naar productie.
 - [Ontwikkelfilosofie](ontwikkelfilosofie.md) — docs/ontwikkelfilosofie.md is verplicht kader; stabiliteit > functionaliteit; elke opdracht beantwoordt 5 vragen (workflow, handmatig werk, samenwerking, noodzaak vóór release, kan het later?).

@@ -3,13 +3,13 @@ import logoFps from "@/assets/logo-fps.png";
 import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useTranslation } from "react-i18next";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
-import { AdviseurChat } from "@/components/adviseur-chat";
+import { ZijrandKnoppen } from "@/components/zijrand-paneel";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Home, Wrench, Search, Building, Map, Info } from "lucide-react";
+import { ShieldCheck, Home, Wrench, Search, Building, Map, Info, Bot } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
@@ -20,12 +20,14 @@ const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
   { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
+  { href: "/assistent", labelKey: "nav.assistent", icoon: Bot },
   { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
 const ROUTES_CONTROLEUR = [
   { href: "/", labelKey: "nav.mijnInspecties", icoon: Home },
   { href: "/gebouwen", labelKey: "nav.gebouwenPlattegronden", icoon: Map },
+  { href: "/assistent", labelKey: "nav.assistent", icoon: Bot },
   { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
@@ -91,11 +93,13 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
           <SidebarTrigger title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <ZijrandKnoppen zonderPaneel />
             <MeldingKnop />
           </div>
         </div>
-        <div className="hidden md:flex items-center justify-end px-4 py-2 border-b border-border">
+        <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-border">
+          <ZijrandKnoppen />
           <MeldingKnop />
         </div>
         <div className="p-3 md:p-4 xl:p-6">
@@ -103,7 +107,6 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </div>
       </main>
       <BerichtNotificatieToast />
-      <AdviseurChat />
     </SidebarProvider>
   );
 }

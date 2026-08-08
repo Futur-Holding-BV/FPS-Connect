@@ -14294,10 +14294,36 @@ export type AdviseurVraagInputGeschiedenisItem = {
   inhoud: string;
 };
 
+export type AdviseurVraagInputContextObjectType = typeof AdviseurVraagInputContextObjectType[keyof typeof AdviseurVraagInputContextObjectType];
+
+
+export const AdviseurVraagInputContextObjectType = {
+  gebouw: 'gebouw',
+  voorziening: 'voorziening',
+  offerte: 'offerte',
+  medewerker: 'medewerker',
+  document: 'document',
+  dossier: 'dossier',
+  onderhoud: 'onderhoud',
+  klant: 'klant',
+} as const;
+
+/**
+ * Waar de gebruiker nu is (ASSISTENT_01 fase 2)
+ */
+export type AdviseurVraagInputContext = {
+  /** @maxLength 300 */
+  scherm?: string;
+  object_type?: AdviseurVraagInputContextObjectType;
+  object_id?: number;
+};
+
 export interface AdviseurVraagInput {
   /** @maxLength 2000 */
   vraag: string;
   geschiedenis?: AdviseurVraagInputGeschiedenisItem[];
+  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2) */
+  context?: AdviseurVraagInputContext;
 }
 
 export interface AdviseurAntwoord {
