@@ -162,7 +162,9 @@ ${COMPOSE} build --no-cache api
 # ontbreekt hier iets, dan gaat de deploy gewoon door — een mislukte
 # sourcemap-upload is nooit een reden om een werkende release tegen te houden.
 echo "=== STAP 5b: sourcemaps naar Sentry uploaden ==="
-SENTRY_AUTH_TOKEN="$(grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null | head -1 | cut -d= -f2-)"
+# NB: onder set -euo pipefail mag een grep-zonder-treffer de deploy niet
+# stoppen — vandaar de expliciete || true.
+SENTRY_AUTH_TOKEN="$( (grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
 if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
   echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — sourcemap-upload overgeslagen (deploy gaat door)."
 else
