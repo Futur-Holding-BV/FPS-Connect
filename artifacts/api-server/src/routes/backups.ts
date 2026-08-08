@@ -235,4 +235,66 @@ router.delete(
   },
 );
 
+// ─── Externe kopie (BACKUP_01): status van de staffel + NAS-ophaling ─────────
+//
+// De VPS bouwt dagelijks een staffel-set onder /srv/fps-backup (script
+// backup-staffel.sh) en de NAS haalt die op via het read-only account
+// fps-nas. Beide sporen laten een statusbestand achter op de host; de
+// compose-configuratie mount ze read-only in deze container:
+//   /srv/fps-backup   → OFFSITE_BACKUP_DIR (status.json + sets)
+//   /var/lib/fps-nas  → OFFSITE_NAS_DIR    (laatste-verbinding-marker)
+// Buiten productie ontbreken die mounts en melden we "niet geconfigureerd".
+
+const OFFSITE_MAX_UUR = 36;
+
+router.get(
+  "/api/backups/offsite/status",
+  requireBevoegdheid("systeem", 1),
+  async (req, res): Promise<void> => {
+    const backupDir = process.env["OFFSITE_BACKUP_DIR"];
+    const nasDir = process.env["OFFSITE_NAS_DIR"];
+    if (!backupDir) {
+      res.json({ geconfigureerd: false });
+      return;
+    }
+    try {
+      const fs = await import("node:fs/promises");
+      let staffel: Record<string, unknown> | null = null;
+      try {
+        staffel = JSON.parse(await fs.readFile(`${backupDir}/status.json`, "utf8"));
+      } catch {
+        staffel = null;
+      }
+      let nasLaatstePull: string | null = null;
+      if (nasDir) {
+        try {
+          nasLaatstePull = (await fs.readFile(`${nasDir}/laatste-verbinding`, "utf8")).trim();
+        } catch {
+          nasLaatstePull = null;
+        }
+      }
+      const uurOud = (iso: string | null | undefined): number | null => {
+        if (!iso) return null;
+        const t = Date.parse(iso);
+        return Number.isNaN(t) ? null : Math.floor((Date.now() - t) / 3_600_000);
+      };
+      const staffelUur = uurOud(staffel?.["laatste_run"] as string | undefined);
+      const pullUur = uurOud(nasLaatstePull);
+      res.json({
+        geconfigureerd: true,
+        staffel,
+        staffel_uur_geleden: staffelUur,
+        staffel_te_oud: staffelUur === null || staffelUur > OFFSITE_MAX_UUR,
+        nas_laatste_pull: nasLaatstePull,
+        nas_pull_uur_geleden: pullUur,
+        nas_pull_te_oud: pullUur === null || pullUur > OFFSITE_MAX_UUR,
+        max_uur: OFFSITE_MAX_UUR,
+      });
+    } catch (err) {
+      req.log.error({ err }, "Fout bij lezen offsite-backupstatus");
+      res.status(500).json({ fout: "Kon status van de externe kopie niet lezen" });
+    }
+  },
+);
+
 export default router;

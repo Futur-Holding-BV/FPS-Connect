@@ -41,6 +41,25 @@ interface BackupRecord {
   foutTekst: string | null;
 }
 
+interface OffsiteStatus {
+  geconfigureerd: boolean;
+  staffel?: {
+    laatste_run?: string;
+    uitkomst?: string;
+    set?: string;
+    omvang_bytes?: number;
+    aantal_dagelijks?: number;
+    aantal_wekelijks?: number;
+    aantal_maandelijks?: number;
+  } | null;
+  staffel_uur_geleden?: number | null;
+  staffel_te_oud?: boolean;
+  nas_laatste_pull?: string | null;
+  nas_pull_uur_geleden?: number | null;
+  nas_pull_te_oud?: boolean;
+  max_uur?: number;
+}
+
 // ─── Hulpfuncties ─────────────────────────────────────────────────────────────
 
 function formatBytes(bytes: number | null): string {
@@ -434,6 +453,9 @@ export default function BackupBeheer() {
           </Card>
         </div>
 
+        {/* Externe kopie (BACKUP_01) */}
+        <OffsiteStatusKaart />
+
         {/* Tabel */}
         <Card>
           <CardHeader>
@@ -624,5 +646,97 @@ export default function BackupBeheer() {
       {/* Herstel dialoog */}
       <HerstelDialoog backup={herstelBackup} onSluiten={() => setHerstelBackup(null)} />
     </TooltipProvider>
+  );
+}
+
+// ─── Externe kopie (BACKUP_01) ────────────────────────────────────────────────
+
+function OffsiteStatusKaart() {
+  const { data: offsite } = useQuery<OffsiteStatus>({
+    queryKey: ["/api/backups/offsite/status"],
+    queryFn: async () => {
+      const res = await fetch("/api/backups/offsite/status", { credentials: "include" });
+      if (!res.ok) throw new Error("Kon status van de externe kopie niet ophalen");
+      return res.json();
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  if (!offsite) return null;
+
+  if (!offsite.geconfigureerd) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Externe kopie (NAS)</CardDescription>
+          <CardTitle className="text-lg">Niet geconfigureerd in deze omgeving</CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs text-muted-foreground">
+          De externe back-upkopie is alleen actief op de productieserver.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const staffelOk = !offsite.staffel_te_oud && offsite.staffel?.uitkomst === "geslaagd";
+  const nasOoit = Boolean(offsite.nas_laatste_pull);
+  const nasOk = nasOoit && !offsite.nas_pull_te_oud;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Externe kopie: klaargezette back-upset</CardDescription>
+          <CardTitle className="text-lg flex items-center gap-2">
+            {staffelOk ? (
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            )}
+            {offsite.staffel?.laatste_run
+              ? `${offsite.staffel_uur_geleden ?? "?"} uur geleden`
+              : "Nog nooit gebouwd"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs text-muted-foreground space-y-1">
+          <div>
+            Set {offsite.staffel?.set ?? "—"} &bull; {formatBytes(offsite.staffel?.omvang_bytes ?? null)}
+          </div>
+          <div>
+            Staffel: {offsite.staffel?.aantal_dagelijks ?? 0} dagelijks &bull;{" "}
+            {offsite.staffel?.aantal_wekelijks ?? 0} wekelijks &bull;{" "}
+            {offsite.staffel?.aantal_maandelijks ?? 0} maandelijks
+          </div>
+          {!staffelOk && (
+            <div className="text-destructive">
+              Laatste bouw is ouder dan {offsite.max_uur ?? 36} uur of niet geslaagd.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Externe kopie: laatste NAS-ophaling</CardDescription>
+          <CardTitle className="text-lg flex items-center gap-2">
+            {nasOk ? (
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            )}
+            {nasOoit ? `${offsite.nas_pull_uur_geleden ?? "?"} uur geleden` : "Nog nooit opgehaald"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs text-muted-foreground space-y-1">
+          <div>{nasOoit ? formatDatum(offsite.nas_laatste_pull ?? null) : "De NAS heeft zich nog niet gemeld."}</div>
+          {!nasOk && (
+            <div className="text-destructive">
+              {nasOoit
+                ? `Laatste ophaling is ouder dan ${offsite.max_uur ?? 36} uur.`
+                : "Sluit de NAS aan volgens deploy/NAS_KOPPELING.md."}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

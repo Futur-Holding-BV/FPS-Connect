@@ -1,3 +1,13 @@
+## 2026-08-08 — BACKUP_01: externe back-up buiten de VPS (halen, niet brengen) + bewezen herstelproef
+
+- **Uitvoering:** VPS-kant volledig; NAS-aansluiting wacht op René (sleutel + ophaaltaak + versleutelde map) | **Kwaliteit:** hoog (acceptatie via uitgevoerde herstelproef) | **Risico:** laag (alleen additief: extra cron, leesaccount, read-only mounts, één nieuw lees-endpoint)
+
+**Wat is gebouwd:** dagelijkse staffelbouw (`backup-staffel.sh`, 04:00) van een complete zelfstandige set onder `/srv/fps-backup` — db-dump + volledige MinIO-bucket (hardlinks) + config zonder geheimen + manifest/sha256 — met staffel 14 dagen / 13 weken / 12 maanden. Read-only ophaal-account `fps-nas` (rrsync -ro + restrict, elke ophaling gelogd via syslog + marker); de VPS kent géén NAS-gegevens. Bewaking (`check-offsite-backup.sh`, 08:00, uitbreiding SCHULD_01 punt 83): blokkerende melding bij >36u geen set, verdacht kleine set of uitblijvende NAS-ophaling. Zichtbaar op één plek: Beheer → Back-ups toont twee nieuwe kaarten via `GET /api/backups/offsite/status` (statusbestanden read-only in de api-container gemount).
+
+**Bewijs (GEMETEN):** herstelproef in volledig lege omgeving op de VPS (`herstelproef.sh`, herhaalbaar): database terug (6 gebruikers), 164 objecten terug in verse MinIO, applicatie start, volledige UI-login incl. 2FA (screenshots), document uit de herstelde bucket geopend via de app met **identieke sha256** — totaal **22 s**; eerste kopie **110 MB**. Zie `docs/metingen/BACKUP_01_herstelproef.md` + `docs/metingen/bewijs/`.
+
+**Beslispunten René (in `docs/antwoorden/BACKUP_01.md`):** NAS-sleutel + ophaaltaak + versleutelde NAS-map (verplicht), vraag provider-snapshots, optioneel age-sleutel, §10-voorstel externe bucket (alleen ter beoordeling).
+
 ## 2026-08-08 — DOORLOOP_01: open autorisatiegaten gedicht (import, calculaties, PBM-foto-inspectie)
 
 - **Uitvoering:** volledig (§6 punt 1+2 van de doorloop) | **Kwaliteit:** hoog | **Risico:** laag (alleen strengere toegang; hoofdbeheerder en gerechtigde profielen merken niets)

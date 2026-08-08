@@ -109,6 +109,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: "8080"
+      # BACKUP_01: statusbestanden van de externe kopie (read-only mounts hieronder)
+      OFFSITE_BACKUP_DIR: /offsite-backup
+      OFFSITE_NAS_DIR: /offsite-nas
+    volumes:
+      # BACKUP_01: alleen status lezen — de app kan de back-upsets niet wijzigen
+      - /srv/fps-backup:/offsite-backup:ro
+      - /var/lib/fps-nas:/offsite-nas:ro
     depends_on:
       db:
         condition: service_healthy
