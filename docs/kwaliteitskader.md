@@ -56,6 +56,27 @@ Pas daarna wordt de opdracht als voltooid beschouwd.
 
 ---
 
+## Antwoorden en bevindingen in de repo (vaste werkafspraak, 8 augustus 2026)
+
+Antwoorden op vragen uit een opdracht komen niet alleen in de chat, maar worden vastgelegd in de repo:
+
+- vragen en bevindingen → `docs/antwoorden/<OPDRACHTNAAM>.md`
+- metingen, tellingen en inventarisaties → `docs/metingen/<OPDRACHTNAAM>_<onderwerp>.md`
+
+Elk antwoord vermeldt:
+
+- datum
+- de commit-SHA waarop gemeten is
+- de vraag
+- het antwoord
+- en expliciet wat **GEMETEN** is en wat **AANGENOMEN**
+
+Is er een besluit van René nodig, schrijf dat als zodanig op — niet zelf invullen en doorbouwen.
+
+Deze bestanden worden **bijgewerkt, niet overschreven**: oudere bevindingen blijven met hun datum staan.
+
+Waarom het onderscheid gemeten/aangenomen: dat is precies waar het bij dit project meermaals is misgegaan — lokaal groen dat als bewijs gold, aangenomen kolommen die niet bestonden, aangenomen bestandsvormen. Een bevinding zonder dat onderscheid is niet bruikbaar.
+
 ## Validatie op vier niveaus
 
 ### Niveau 1 — Codekwaliteit
