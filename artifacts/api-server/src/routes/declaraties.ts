@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { heeftNiveau } from "@workspace/permissies";
 import {
   stuurDeclaratieIngediendMail,
@@ -279,9 +280,8 @@ router.post("/declaraties/:id/indienen", ...eigenGegevens, async (req, res) => {
   // Mail sturen naar alle gebruikers met declaraties-niveau 3 of 4
   try {
     const mijnNaam = await gebruikerNaam(userId);
-    const appUrl   = process.env["REPLIT_DEV_DOMAIN"]
-      ? `https://${process.env["REPLIT_DEV_DOMAIN"]}/declaraties/${id}`
-      : null;
+    const basis = publiekeAppUrl();
+    const appUrl = basis ? `${basis}/declaraties/${id}` : null;
 
     const alleGebruikers = await db
       .select({ id: gebruikersTable.id, email: gebruikersTable.email, naam: gebruikersTable.naam, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
@@ -384,9 +384,8 @@ router.post("/declaraties/:id/afwijzen", beoordelen, async (req, res) => {
 
     if (mw) {
       const beoordelaarsNaam = await gebruikerNaam(userId);
-      const appUrl = process.env["REPLIT_DEV_DOMAIN"]
-        ? `https://${process.env["REPLIT_DEV_DOMAIN"]}/declaraties/${id}`
-        : null;
+      const basis = publiekeAppUrl();
+      const appUrl = basis ? `${basis}/declaraties/${id}` : null;
       await stuurDeclaratieAfgewezenMail({
         naarEmail:          mw.email,
         naarNaam:           mw.naam,

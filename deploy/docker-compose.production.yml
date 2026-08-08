@@ -108,6 +108,9 @@ services:
     env_file: .env.production
     environment:
       NODE_ENV: production
+      # Publieke basis-URL voor links in uitgaande e-mails/notificaties —
+      # nooit het tijdelijke Replit-dev-domein in productie.
+      PUBLIEKE_APP_URL: ${PUBLIEKE_APP_URL:-https://connect.fps-one.nl}
       PORT: "8080"
       # BACKUP_01: statusbestanden van de externe kopie (read-only mounts hieronder)
       OFFSITE_BACKUP_DIR: /offsite-backup

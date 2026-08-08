@@ -5,6 +5,7 @@
 // offerteverzending. /offertes/:id/uit-spots leest de spots van het gekoppelde
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
 import { execSync } from "child_process";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -874,6 +875,7 @@ router.get("/offertes/:id/pdf", lezen, async (req, res): Promise<void> => {
       // (Host / X-Forwarded-Host zijn aanvallercontroleerbaar en mogen de
       // bestemming van de headless browser NIET bepalen).
       const vertrouwdDomain =
+        process.env["PUBLIEKE_APP_URL"]?.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "") ??
         process.env.REPLIT_DEV_DOMAIN ??
         (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() ??
         null;
@@ -2188,7 +2190,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
       const nieuweToken = randomBytes(32).toString("hex");
       const verlooptOp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await db.insert(offertePortaalTokensTable).values({ offerteId, token: nieuweToken, verlooptOp });
-      const host = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() ?? req.get("host") ?? "";
+      const host = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "";
       portaalLink = host ? `https://${host}/portaal/${nieuweToken}` : `/portaal/${nieuweToken}`;
     }
 

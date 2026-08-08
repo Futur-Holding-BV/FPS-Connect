@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { rateLimit, ipKeyGenerator, MemoryStore } from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -151,7 +152,7 @@ const wachtwoordResetStore = new MemoryStore();
 const wachtwoordResetLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordResetStore, handler: logBlokkade("wachtwoord-reset") });
 
 function domein(): string {
-  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+  return publiekeAppUrl()?.replace(/^https?:\/\//, "") || "localhost";
 }
 
 const ISSUER = "FPS Brandpreventie";
@@ -640,8 +641,7 @@ router.post("/auth/taal", async (req, res): Promise<void> => {
 router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
-    const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
-    const domein = domeinen[0] ?? req.get("host") ?? "";
+    const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "";
     const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
     const qrBuffer = await QRCode.toBuffer(url, {
       type: "png",
@@ -684,8 +684,7 @@ router.get("/auth/app-qr", async (req, res): Promise<void> => {
 router.get("/auth/pwa-url", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
-    const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
-    const domein = domeinen[0] ?? req.get("host") ?? "";
+    const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "";
     const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
     res.json({ url });
   } catch (err) {

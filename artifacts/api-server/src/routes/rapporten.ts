@@ -2,6 +2,7 @@
 // Een rapport slaat selectie (secties, spots, bijlagen, tekeningen) op.
 // Definitief maken bevriest de documentrevisies en start de reactietermijn.
 import { Router, type Request } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import {
   db,
   opleverrapportenTable,
@@ -411,7 +412,7 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
           .where(eq(gebruikersTable.id, gebouw.klantId));
 
         if (klant && klant.actief && !klant.gearchiveerd) {
-          const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+          const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") || "localhost";
           const portaalUrl = `https://${domein}/klant/rapportages`;
           await stuurRapportBeschikbaarMelding({
             naarEmail: klant.email,

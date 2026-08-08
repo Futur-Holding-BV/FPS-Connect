@@ -31,6 +31,7 @@ import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdhed
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
 import { logger } from "../lib/logger";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import {
   stuurGoedkeuringIndienenMail,
   stuurGoedkeuringGoedgekeurdMail,
@@ -720,10 +721,8 @@ export async function dienIn(
   // Stuur direct een notificatie naar alle bevoegde goedkeurders.
   // Fouten worden geslikt — de aanvraag is al opgeslagen.
   try {
-    const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
-    const dashboardUrl = domein
-      ? `https://${domein}/beheer/goedkeuringen-dashboard`
-      : null;
+    const basis = publiekeAppUrl();
+    const dashboardUrl = basis ? `${basis}/beheer/goedkeuringen-dashboard` : null;
 
     // Stel de ontvangerlijst samen: specifieke gebruiker(s) of alle gebruikers
     // met de vereiste module-toegang.

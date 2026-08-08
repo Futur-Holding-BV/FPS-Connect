@@ -1,3 +1,9 @@
+## 2026-08-08 — Fix: e-maillinks wijzen nu naar het echte productiedomein
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (helper geverifieerd met en zonder PUBLIEKE_APP_URL) | **Risico:** laag (alleen link-opbouw in uitgaande mails/QR)
+
+Melding van René (screenshot Outlook): de declaratie-goedkeuringsmail linkte naar het tijdelijke Replit-dev-domein (`…janeway.replit.dev`). Oorzaak: elke mail bouwde zijn link zelf op uit `REPLIT_DEV_DOMAIN`/`REPLIT_DOMAINS`, die op de productie-VPS niet bestaan — daar viel het terug op `localhost` of geen link. Nu is er één helper `publiekeAppUrl()` (voorkeursvolgorde: `PUBLIEKE_APP_URL` → Replit-domein) en zet `deploy/docker-compose.production.yml` die variabele standaard op `https://connect.fps-one.nl`. Doorgetrokken naar álle uitgaande links: declaraties, goedkeuringsnotificaties, offerteportaal, aanvraag-bevestiging, rapport-beschikbaar, uitnodiging/wachtwoord-reset (stonden op `localhost`!), AVG-export, PWA-QR en de offerte-PDF-renderer.
+
 ## 2026-08-08 — NUMMER_01: ENK-kenmerkketen G→M→C→O + inkoop/facturen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (HTTP-gedragsbewijs A t/m I, alle §6-punten groen) | **Risico:** laag-middel (nieuwe nummerkolommen + FK-koerscorrectie migratie 0018)

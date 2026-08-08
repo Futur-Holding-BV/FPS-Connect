@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import multer from "multer";
 import crypto from "crypto";
 import {
@@ -916,8 +917,7 @@ router.post(
       }).returning();
 
       if (ai.contactpersoon_email) {
-        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
-        const baseUrl = domein ? `https://${domein}` : "https://fpsbrandpreventie.nl";
+        const baseUrl = publiekeAppUrl() ?? "https://fpsbrandpreventie.nl";
         const antwoordUrl = `${baseUrl}/api/inbox/aanvraag-antwoord/${antwoordToken}`;
 
         void stuurAanvraagBevestiging({

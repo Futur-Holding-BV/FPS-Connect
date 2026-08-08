@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { db } from "@workspace/db";
 import {
   gebruikersTable,
@@ -184,8 +185,7 @@ router.patch("/avg/inzageverzoek/:id", alleenBeheer, async (req, res): Promise<v
       .where(eq(gebruikersTable.id, bijgewerkt.gebruikerId));
 
     if (gebruiker?.email && (status === "afgerond" || status === "afgewezen")) {
-      const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
-      const host = domeinen[0] ?? req.get("host") ?? "localhost";
+      const host = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "localhost";
       const exportLink = status === "afgerond" && bijgewerkt.type === "inzage" 
         ? `https://${host}/api/avg/inzageverzoek/${bijgewerkt.id}/export`
         : null;

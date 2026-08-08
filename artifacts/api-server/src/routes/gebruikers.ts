@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
@@ -261,7 +262,7 @@ async function isBeheerder(userId: number | undefined): Promise<boolean> {
 }
 
 function domein(): string {
-  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+  return publiekeAppUrl()?.replace(/^https?:\/\//, "") || "localhost";
 }
 
 // GET /gebruikers

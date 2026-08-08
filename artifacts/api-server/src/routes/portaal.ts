@@ -1,6 +1,7 @@
 // Publieke portaalroutes — geen authenticatie vereist.
 // Klant opent een token-link, bekijkt de offerte, stelt vragen en ondertekent.
 import { Router } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import {
   db,
   offertesTable,
@@ -361,7 +362,7 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
           naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
         }
 
-        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "");
         const connectUrl = domein
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
@@ -627,7 +628,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
           naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
         }
 
-        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "");
         const connectUrl = domein
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
@@ -791,7 +792,7 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
           naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
         }
 
-        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "");
         const connectUrl = domein
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;

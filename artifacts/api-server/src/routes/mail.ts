@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { db, mailLogboekTable, offertesTable, crmKlantenTable, gebruikersTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -119,9 +120,9 @@ router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), 
       if (beh) contactpersoon = beh.naam;
     }
 
-    const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
-    const portaalUrl = domein
-      ? `https://${domein}/portaal/demo`
+    const basis = publiekeAppUrl();
+    const portaalUrl = basis
+      ? `${basis}/portaal/demo`
       : "https://fpsbrandpreventie.nl/portaal/demo";
 
     await stuurOpdrachtbevestiging({
