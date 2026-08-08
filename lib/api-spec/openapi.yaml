@@ -24876,8 +24876,142 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BiaeKpiFeed' }
 
+  # ── WERKBAK_01: één werkbak per persoon + bewakingsloop ────────────────────
+  /werkbak:
+    get:
+      operationId: listWerkbakItems
+      tags: [werkbak]
+      summary: Alle open werkbak-items die voor mij zichtbaar zijn (op consequentie gerangschikt).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WerkbakItem' }
+
+  /werkbak/aantal:
+    get:
+      operationId: getWerkbakAantal
+      tags: [werkbak]
+      summary: Teller voor de navigatie (totaal, doen, weten).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakAantal' }
+
+  /werkbak/{id}/afhandelen:
+    post:
+      operationId: handelWerkbakItemAf
+      tags: [werkbak]
+      summary: Markeer een werkbak-item als afgehandeld.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakItem' }
+
+  /werkbak/{id}/wegzetten:
+    post:
+      operationId: zetWerkbakItemWeg
+      tags: [werkbak]
+      summary: Zet een werkbak-item bewust weg met verplichte reden.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WerkbakWegzettenInput' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakItem' }
+
+  /werkbak/bewaking/draai:
+    post:
+      operationId: draaiWerkbakBewaking
+      tags: [werkbak]
+      summary: Voer de bewakingsloop nu uit (alleen hoofdbeheerder).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  samenvatting: { type: object, additionalProperties: true }
+
+  /werkbak/bewaking/draaien:
+    get:
+      operationId: listWerkbakBewakingDraaien
+      tags: [werkbak]
+      summary: Logboek van bewakingsdraaien (alleen hoofdbeheerder).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BewakingDraai' }
+
 components:
   schemas:
+    WerkbakItem:
+      type: object
+      required: [id, soort, bron, titel, gewicht, herkomst_type, status, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        soort: { type: string, enum: [doen, weten] }
+        bron: { type: string }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        gewicht: { type: integer }
+        actie_pad: { type: string, nullable: true }
+        actie_type: { type: string, nullable: true }
+        herkomst_type: { type: string }
+        herkomst_id: { type: integer, nullable: true }
+        status: { type: string, enum: [open, afgehandeld, weggezet] }
+        weggezet_reden: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+    WerkbakAantal:
+      type: object
+      required: [totaal, doen, weten]
+      properties:
+        totaal: { type: integer }
+        doen: { type: integer }
+        weten: { type: integer }
+    WerkbakWegzettenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden: { type: string, minLength: 1 }
+    BewakingDraai:
+      type: object
+      required: [id, gestart_op, status]
+      properties:
+        id: { type: integer }
+        gestart_op: { type: string }
+        klaar_op: { type: string, nullable: true }
+        status: { type: string }
+        samenvatting: { type: object, additionalProperties: true, nullable: true }
+        fout: { type: string, nullable: true }
     BiaeEvent:
       type: object
       required: [id, categorie, type, payload, tijdstip]

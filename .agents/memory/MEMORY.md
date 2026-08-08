@@ -151,4 +151,7 @@
 - [Inkoop/werkbegroting-AI eigen cijfers](inkoop-eigen-cijfers.md) — inkoopprijs_verwacht nooit van AI (jaarprijslijst>mediaan≥3>onbekend); leveranciers=opsomming; nacalc alleen afgesloten; bronnen fail-closed.
 - [Mail-samenwerkomgeving](mail-samenwerkomgeving.md) — mailboxen=organisatiebezit via toegang-tabel (lezen<behandelen<beheren); mails uniek per mailbox+message; modus verwerken/ondersteunen/registreren; detail Graph-tolerant.
 - [Loonstroom SEPA-mailintake](loonstroom-sepa-intake.md) — pain.001 uit mail altijd status ontvangen (nooit auto verder); onvolledig=afgeleid, 422 richting bank; preset-wijziging vergt migratie, niet alleen PRESETS-code.
+- [WVB 5-fasenstroom](wvb-fasenstroom.md) — opdrachtpagina: één TabsContent per fase (extra secties via activeTab-guard); signaal-dedup via partiële unieke index + onConflictDoNothing; dagdeeltarief nooit in uur-middeling.
+- [Contractbewaking bestaat al](contract-bewaking.md) — contracten.ts/contract-bewaking.ts dekken verloop+aanzegtermijn+ketenregel; HRM_01 §2.2 vervallen; gat = alleen periodiek afgaan (WERKBAK_01).
+- [Werkbak & bewakingsloop](werkbak.md) — gesloten bronnenlijst==werkelijkheid; hoofdbeheerder-check eerst; fijnmazige rechten (mailbox) = persoonlijke items, nooit module-breed; klaar-status alleen bij 100% geslaagde voeders.
 - [FIE wat-als-scenario's](fie-scenarios.md) — scenario-begrotingen (status scenario) altijd uitfilteren in lijst/aggregatie/fallback-queries; nooit een tweede rekenmodel naast de FIE-motor.

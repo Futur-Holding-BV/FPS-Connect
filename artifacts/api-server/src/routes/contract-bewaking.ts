@@ -66,7 +66,7 @@ function aanzegtermijnCheck(contract: { eindDatum: string | null; startDatum: st
 
 // ── Bewaking uitvoeren (genereer signaleringen voor actieve tijdelijke contracten) ──
 
-async function voerBewakingUit(): Promise<number> {
+export async function voerContractBewakingUit(): Promise<number> {
   const actief = await db
     .select({
       c: arbeidsovereenkomstenTable,
@@ -165,7 +165,7 @@ async function voerBewakingUit(): Promise<number> {
 // GET /contract-bewaking/dashboard
 router.get("/contract-bewaking/dashboard", lezen, async (req, res): Promise<void> => {
   // Bewaking bijwerken
-  await voerBewakingUit();
+  await voerContractBewakingUit();
 
   const nu = new Date().toISOString().slice(0, 10);
 
@@ -353,7 +353,7 @@ router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (re
   }).returning();
 
   // Activeer bewaking voor dit nieuwe contract
-  if (eind_datum) await voerBewakingUit();
+  if (eind_datum) await voerContractBewakingUit();
 
   res.status(201).json({ id: rij.id, bijgewerkt_op: rij.bijgewerktOp });
 });

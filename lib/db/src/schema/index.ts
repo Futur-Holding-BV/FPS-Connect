@@ -39,6 +39,7 @@ export * from "./salarismutaties";
 export * from "./workflow";
 export * from "./wagenpark";
 export * from "./organisatie";
+export * from "./werkbak";
 export * from "./werkvoorbereiding";
 export * from "./leveranciers";
 export * from "./artikelen";

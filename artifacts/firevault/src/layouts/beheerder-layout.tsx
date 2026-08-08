@@ -15,6 +15,7 @@ import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast"
 import { NieuwsTicker } from "@/components/nieuws-ticker";
 import { VersieBadge } from "@/components/versie-badge";
 import { MeldingKnop } from "@/components/melding-knop";
+import { WerkbakKnop } from "@/components/werkbak-paneel";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupContent,
@@ -1702,6 +1703,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
           <div className="ml-auto flex items-center gap-2">
+            <WerkbakKnop />
             <MeldingKnop />
             <VersieBadge />
             <OnlineGebruikersTaakbalk />

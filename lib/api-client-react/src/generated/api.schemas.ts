@@ -5,6 +5,61 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type WerkbakItemSoort = typeof WerkbakItemSoort[keyof typeof WerkbakItemSoort];
+
+
+export const WerkbakItemSoort = {
+  doen: 'doen',
+  weten: 'weten',
+} as const;
+
+export type WerkbakItemStatus = typeof WerkbakItemStatus[keyof typeof WerkbakItemStatus];
+
+
+export const WerkbakItemStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+  weggezet: 'weggezet',
+} as const;
+
+export interface WerkbakItem {
+  id: number;
+  soort: WerkbakItemSoort;
+  bron: string;
+  titel: string;
+  omschrijving?: string | null;
+  gewicht: number;
+  actie_pad?: string | null;
+  actie_type?: string | null;
+  herkomst_type: string;
+  herkomst_id?: number | null;
+  status: WerkbakItemStatus;
+  weggezet_reden?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface WerkbakAantal {
+  totaal: number;
+  doen: number;
+  weten: number;
+}
+
+export interface WerkbakWegzettenInput {
+  /** @minLength 1 */
+  reden: string;
+}
+
+export type BewakingDraaiSamenvatting = { [key: string]: unknown } | null;
+
+export interface BewakingDraai {
+  id: number;
+  gestart_op: string;
+  klaar_op?: string | null;
+  status: string;
+  samenvatting?: BewakingDraaiSamenvatting;
+  fout?: string | null;
+}
+
 export type BiaeEventPayload = { [key: string]: unknown };
 
 export interface BiaeEvent {
@@ -15657,4 +15712,10 @@ export const ListBiaeComplianceSignalenStatus = {
   opgelost: 'opgelost',
   genegeerd: 'genegeerd',
 } as const;
+
+export type DraaiWerkbakBewaking200Samenvatting = { [key: string]: unknown };
+
+export type DraaiWerkbakBewaking200 = {
+  samenvatting?: DraaiWerkbakBewaking200Samenvatting;
+};
 

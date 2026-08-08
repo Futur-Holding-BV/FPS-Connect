@@ -19,6 +19,7 @@ import { startVerlofVervalService } from "./lib/verlofVervalService";
 import { initBiae } from "./services/biae/init";
 import { planCentraleDeadlineBewaking } from "./services/biae/jobs/deadline-bewaking";
 import { planDagelijkseComplianceControle } from "./services/biae/jobs/compliance-monitoring";
+import { planDagelijkseBewakingsloop } from "./lib/bewakingsloop";
 
 const rawPort = process.env["PORT"];
 
@@ -76,6 +77,8 @@ ensureSessionTable()
       initBiae();
       planCentraleDeadlineBewaking();
       planDagelijkseComplianceControle();
+      // WERKBAK_01 — dagelijkse bewakingsloop die de werkbak voedt (06:30).
+      planDagelijkseBewakingsloop();
     });
   })
   .catch((err) => {

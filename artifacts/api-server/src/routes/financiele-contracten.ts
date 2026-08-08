@@ -492,28 +492,33 @@ router.get("/financiele-contract-signaleringen", lezen, async (req, res): Promis
 
 // Voer de deterministische bewaking uit en persisteer nieuwe signaleringen
 // (ontdubbeld via dedupeSleutel). Idempotent: reeds bestaande signalen blijven.
+export async function voerFinancieleContractBewakingUit(): Promise<{ gecontroleerd: number; nieuw: number }> {
+  const contracten = await db.select().from(financieleContractenTable);
+  const signalen = bewaakContracten(contracten.map(naarInvoer));
+  let nieuw = 0;
+  for (const s of signalen) {
+    const ingevoegd = await db
+      .insert(financieleContractSignaleringenTable)
+      .values({
+        contractId: s.contractId,
+        type: s.type,
+        ernst: s.ernst,
+        boodschap: s.boodschap,
+        bedrag: s.bedrag,
+        zekerheid: s.zekerheid,
+        dedupeSleutel: s.dedupeSleutel,
+      })
+      .onConflictDoNothing({ target: financieleContractSignaleringenTable.dedupeSleutel })
+      .returning();
+    if (ingevoegd.length > 0) nieuw += 1;
+  }
+  return { gecontroleerd: contracten.length, nieuw };
+}
+
 router.post("/financiele-contract-signaleringen/bewaak", schrijven, async (req, res): Promise<void> => {
   try {
-    const contracten = await db.select().from(financieleContractenTable);
-    const signalen = bewaakContracten(contracten.map(naarInvoer));
-    let nieuw = 0;
-    for (const s of signalen) {
-      const ingevoegd = await db
-        .insert(financieleContractSignaleringenTable)
-        .values({
-          contractId: s.contractId,
-          type: s.type,
-          ernst: s.ernst,
-          boodschap: s.boodschap,
-          bedrag: s.bedrag,
-          zekerheid: s.zekerheid,
-          dedupeSleutel: s.dedupeSleutel,
-        })
-        .onConflictDoNothing({ target: financieleContractSignaleringenTable.dedupeSleutel })
-        .returning();
-      if (ingevoegd.length > 0) nieuw += 1;
-    }
-    res.json({ gecontroleerd: contracten.length, nieuwe_signaleringen: nieuw });
+    const { gecontroleerd, nieuw } = await voerFinancieleContractBewakingUit();
+    res.json({ gecontroleerd, nieuwe_signaleringen: nieuw });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

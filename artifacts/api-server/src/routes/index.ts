@@ -113,6 +113,7 @@ import goedkeuringRouter from "./goedkeuring";
 import declaratiesRouter from "./declaraties";
 import directiecockpitRouter from "./directiecockpit";
 import biaeRouter from "./biae";
+import werkbakRouter from "./werkbak";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -247,5 +248,6 @@ router.use(directiecockpitRouter);
 router.use(biaeRouter);
 router.use(adviseurRouter);
 router.use(financieleContractenRouter);
+router.use(werkbakRouter);
 
 export default router;

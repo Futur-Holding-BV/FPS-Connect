@@ -97,6 +97,7 @@ import type {
   BeoordelenInput,
   BevindingFotoInput,
   BevindingHerstellInput,
+  BewakingDraai,
   BiaeCapability,
   BiaeComplianceSignaal,
   BiaeEvent,
@@ -212,6 +213,7 @@ import type {
   DossierDocumentInput,
   DossierInput,
   DownloadUrlResultaat,
+  DraaiWerkbakBewaking200,
   DuplicaatCheckInput,
   DuplicaatCheckResultaat,
   EenheidsPrijs,
@@ -987,6 +989,9 @@ import type {
   WeekStaatAfwijzenInput,
   WeekStaatInput,
   WeekStaatPatch,
+  WerkbakAantal,
+  WerkbakItem,
+  WerkbakWegzettenInput,
   Werkbegroting,
   WerkbegrotingAiVoorstelBeoordeling,
   WerkbegrotingRegel,
@@ -87215,6 +87220,448 @@ export function useGetBiaeKpiFeed<TData = Awaited<ReturnType<typeof getBiaeKpiFe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetBiaeKpiFeedQueryOptions(boekjaar,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListWerkbakItemsUrl = () => {
+
+
+
+
+  return `/api/werkbak`
+}
+
+/**
+ * @summary Alle open werkbak-items die voor mij zichtbaar zijn (op consequentie gerangschikt).
+ */
+export const listWerkbakItems = async ( options?: RequestInit): Promise<WerkbakItem[]> => {
+
+  return customFetch<WerkbakItem[]>(getListWerkbakItemsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWerkbakItemsQueryKey = () => {
+    return [
+    `/api/werkbak`
+    ] as const;
+    }
+
+
+export const getListWerkbakItemsQueryOptions = <TData = Awaited<ReturnType<typeof listWerkbakItems>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkbakItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWerkbakItemsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWerkbakItems>>> = ({ signal }) => listWerkbakItems({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWerkbakItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWerkbakItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listWerkbakItems>>>
+export type ListWerkbakItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle open werkbak-items die voor mij zichtbaar zijn (op consequentie gerangschikt).
+ */
+
+export function useListWerkbakItems<TData = Awaited<ReturnType<typeof listWerkbakItems>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkbakItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWerkbakItemsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetWerkbakAantalUrl = () => {
+
+
+
+
+  return `/api/werkbak/aantal`
+}
+
+/**
+ * @summary Teller voor de navigatie (totaal, doen, weten).
+ */
+export const getWerkbakAantal = async ( options?: RequestInit): Promise<WerkbakAantal> => {
+
+  return customFetch<WerkbakAantal>(getGetWerkbakAantalUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkbakAantalQueryKey = () => {
+    return [
+    `/api/werkbak/aantal`
+    ] as const;
+    }
+
+
+export const getGetWerkbakAantalQueryOptions = <TData = Awaited<ReturnType<typeof getWerkbakAantal>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbakAantal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkbakAantalQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkbakAantal>>> = ({ signal }) => getWerkbakAantal({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkbakAantal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkbakAantalQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkbakAantal>>>
+export type GetWerkbakAantalQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Teller voor de navigatie (totaal, doen, weten).
+ */
+
+export function useGetWerkbakAantal<TData = Awaited<ReturnType<typeof getWerkbakAantal>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbakAantal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkbakAantalQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getHandelWerkbakItemAfUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkbak/${id}/afhandelen`
+}
+
+/**
+ * @summary Markeer een werkbak-item als afgehandeld.
+ */
+export const handelWerkbakItemAf = async (id: number, options?: RequestInit): Promise<WerkbakItem> => {
+
+  return customFetch<WerkbakItem>(getHandelWerkbakItemAfUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHandelWerkbakItemAfMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handelWerkbakItemAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof handelWerkbakItemAf>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['handelWerkbakItemAf'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof handelWerkbakItemAf>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  handelWerkbakItemAf(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HandelWerkbakItemAfMutationResult = NonNullable<Awaited<ReturnType<typeof handelWerkbakItemAf>>>
+
+    export type HandelWerkbakItemAfMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Markeer een werkbak-item als afgehandeld.
+ */
+export const useHandelWerkbakItemAf = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handelWerkbakItemAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof handelWerkbakItemAf>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getHandelWerkbakItemAfMutationOptions(options));
+    }
+
+export const getZetWerkbakItemWegUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkbak/${id}/wegzetten`
+}
+
+/**
+ * @summary Zet een werkbak-item bewust weg met verplichte reden.
+ */
+export const zetWerkbakItemWeg = async (id: number,
+    werkbakWegzettenInput: WerkbakWegzettenInput, options?: RequestInit): Promise<WerkbakItem> => {
+
+  return customFetch<WerkbakItem>(getZetWerkbakItemWegUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkbakWegzettenInput)
+  }
+);}
+
+
+
+
+export const getZetWerkbakItemWegMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetWerkbakItemWeg>>, TError,{id: number;data: BodyType<WerkbakWegzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof zetWerkbakItemWeg>>, TError,{id: number;data: BodyType<WerkbakWegzettenInput>}, TContext> => {
+
+const mutationKey = ['zetWerkbakItemWeg'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof zetWerkbakItemWeg>>, {id: number;data: BodyType<WerkbakWegzettenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  zetWerkbakItemWeg(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ZetWerkbakItemWegMutationResult = NonNullable<Awaited<ReturnType<typeof zetWerkbakItemWeg>>>
+    export type ZetWerkbakItemWegMutationBody = BodyType<WerkbakWegzettenInput>
+    export type ZetWerkbakItemWegMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Zet een werkbak-item bewust weg met verplichte reden.
+ */
+export const useZetWerkbakItemWeg = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetWerkbakItemWeg>>, TError,{id: number;data: BodyType<WerkbakWegzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof zetWerkbakItemWeg>>,
+        TError,
+        {id: number;data: BodyType<WerkbakWegzettenInput>},
+        TContext
+      > => {
+      return useMutation(getZetWerkbakItemWegMutationOptions(options));
+    }
+
+export const getDraaiWerkbakBewakingUrl = () => {
+
+
+
+
+  return `/api/werkbak/bewaking/draai`
+}
+
+/**
+ * @summary Voer de bewakingsloop nu uit (alleen hoofdbeheerder).
+ */
+export const draaiWerkbakBewaking = async ( options?: RequestInit): Promise<DraaiWerkbakBewaking200> => {
+
+  return customFetch<DraaiWerkbakBewaking200>(getDraaiWerkbakBewakingUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDraaiWerkbakBewakingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draaiWerkbakBewaking>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof draaiWerkbakBewaking>>, TError,void, TContext> => {
+
+const mutationKey = ['draaiWerkbakBewaking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof draaiWerkbakBewaking>>, void> = () => {
+
+
+          return  draaiWerkbakBewaking(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DraaiWerkbakBewakingMutationResult = NonNullable<Awaited<ReturnType<typeof draaiWerkbakBewaking>>>
+
+    export type DraaiWerkbakBewakingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voer de bewakingsloop nu uit (alleen hoofdbeheerder).
+ */
+export const useDraaiWerkbakBewaking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draaiWerkbakBewaking>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof draaiWerkbakBewaking>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDraaiWerkbakBewakingMutationOptions(options));
+    }
+
+export const getListWerkbakBewakingDraaienUrl = () => {
+
+
+
+
+  return `/api/werkbak/bewaking/draaien`
+}
+
+/**
+ * @summary Logboek van bewakingsdraaien (alleen hoofdbeheerder).
+ */
+export const listWerkbakBewakingDraaien = async ( options?: RequestInit): Promise<BewakingDraai[]> => {
+
+  return customFetch<BewakingDraai[]>(getListWerkbakBewakingDraaienUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWerkbakBewakingDraaienQueryKey = () => {
+    return [
+    `/api/werkbak/bewaking/draaien`
+    ] as const;
+    }
+
+
+export const getListWerkbakBewakingDraaienQueryOptions = <TData = Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWerkbakBewakingDraaienQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>> = ({ signal }) => listWerkbakBewakingDraaien({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWerkbakBewakingDraaienQueryResult = NonNullable<Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>>
+export type ListWerkbakBewakingDraaienQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Logboek van bewakingsdraaien (alleen hoofdbeheerder).
+ */
+
+export function useListWerkbakBewakingDraaien<TData = Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkbakBewakingDraaien>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWerkbakBewakingDraaienQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

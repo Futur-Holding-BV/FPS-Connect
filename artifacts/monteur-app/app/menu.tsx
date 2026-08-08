@@ -27,6 +27,7 @@ import {
   useUitstellenToolboxMaandopdracht,
   useVoltooienToolboxMaandopdracht,
   useListMomentenVandaag,
+  useGetWerkbakAantal,
   type MijnToolboxMaandopdracht,
   type Moment,
 } from "@workspace/api-client-react";
@@ -74,6 +75,7 @@ export default function MenuScherm() {
   const jarigeCollegas = ((momentenVandaag as Moment[]) ?? []).filter((m) => !m.geldt_voor_jou);
 
   const { nieuwAantal: picklijstNieuw } = usePicklijstMelding();
+  const { data: werkbakAantal } = useGetWerkbakAantal();
 
   const uitstellenMut = useUitstellenToolboxMaandopdracht();
   const voltooienMut = useVoltooienToolboxMaandopdracht();
@@ -106,6 +108,7 @@ export default function MenuScherm() {
   ];
 
   const meerActies: RadiaalActie[] = [
+    { sleutel: "werkbak", label: "Werkbak", icoon: "file-tray-full-outline", badge: werkbakAantal?.totaal ?? 0, onPress: () => router.push("/werkbak" as "/werkdag") },
     { sleutel: "personeel", label: "Personeel", icoon: "people-outline", onPress: () => router.push("/hrm") },
     { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
     { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },
@@ -126,6 +129,7 @@ export default function MenuScherm() {
     planning: "/planning",
     veiligheid: "/veiligheid",
     personeel: "/hrm",
+    werkbak: "/werkbak",
     berichten: "/berichten",
     opname: "/opname",
     documenten: "/documenten",

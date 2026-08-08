@@ -1,3 +1,17 @@
+## 2026-08-08 — WERKBAK_01: één persoonlijke werkbak, gevoed door de dagelijkse bewakingsloop
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe motor + 13 voeders, maar additief: geen bestaande flow gewijzigd)
+
+**Wat is gebouwd:** elke gebruiker heeft nu één werkbak met alles wat een handeling (Doen) of aandacht (Weten) vraagt, gerangschikt op consequentie. Web: rechterzijpaneel via een topbalk-knop met teller; mobiel: eigen scherm "Werkbak" in het menu met teller-badge. Een dagelijkse bewakingsloop (06:30 + opstartcontrole, zelfde patroon als de back-ups) voedt de bak uit 12 voeders / 13 bronnen (contracten, poortwachter, verloopdatums, verlofverjaring, factuursignalen, goedkeurings-/verlofaanvragen, facturen, betaalbatches, conceptantwoorden, onbeantwoorde mails, financiële contracten). Items verdwijnen nooit vanzelf: afhandelen (handmatig of automatisch zodra de oorzaak aantoonbaar weg is) of wegzetten met verplichte reden. Verlofaanvragen zijn inline vanuit het paneel te beoordelen; de rest deep-linkt naar de bestaande pagina. Zichtbaarheid volgt de bevoegdhedenmatrix; klanten zien nooit iets; betaalbatches ziet alleen de hoofdbeheerder. Elke draai wordt gelogd; blijft de loop >26 uur stil dan meldt het systeem dat zelf als Weten-item.
+
+**Wijzigingen:** migratie 0015 (`werkbak_items` met partiële unieke dedup-index + `bewaking_draaien`); `werkbakService.ts` (gesloten bronnenlijst, idempotente sync); `bewakingsloop.ts` (12 voeders + planner + gezondheidscontrole + overlap-guard); routes `/werkbak/*`; OpenAPI + codegen; web `werkbak-paneel.tsx` + topbalk-knop; mobiel `app/werkbak.tsx` + menu-item. Contract- en financiële-contractbewaking hergebruikt via geëxporteerde functies (geen duplicatie).
+
+**Bewijs (GEMETEN):** `scripts/src/bewijs-werkbak.ts` — 4 scenario's groen: items uit ≥4 bronnen; 2 opeenvolgende draaien zonder dubbelen + logboek; inline verlof beoordelen → reconciliatie handelt af, wegzetten zonder reden = 400; gebruiker met alleen gebouwen:1 ziet lege lijst + teller 0, draai-trigger 403. Zie `docs/metingen/werkbak-bewijs.md`.
+
+**Review:** architect-review vond een mailbox-autorisatielek (mail-items waren module-breed zichtbaar) plus vier middelzware punten (gezondheid bij deels falende draai, dode bronnen in de lijst, concurrency, hoofdbeheerder-zichtbaarheid) — alle vijf opgelost en het bewijs opnieuw groen (zie `docs/metingen/werkbak-bewijs.md`).
+
+**Bevinding:** de documenten-inbox is bewust géén voeder in v1 (staat niet in §5; eigen werkvoorraad-flow) — vastgelegd in `docs/antwoorden/WERKBAK_01.md`.
+
 ## 2026-08-08 — WVB_01: werkvoorbereiding als stroom (12 tabbladen → 5 fasen)
 
 - **Uitvoering:** gebouwd na expliciet besluit van René ("Ja, bouw de stroom zo"); gedragsbewijs via echte HTTP-scenario's (`scripts/src/bewijs-wvb-stroom.ts`, alle scenario's geslaagd) | **Kwaliteit:** hoog | **Risico:** laag (additieve migratie 0013; bestaande tab-inhoud verplaatst, niet herschreven)

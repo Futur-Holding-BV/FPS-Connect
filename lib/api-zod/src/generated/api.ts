@@ -31108,3 +31108,111 @@ export const GetBiaeKpiFeedResponse = zod.object({
 })
 
 
+/**
+ * @summary Alle open werkbak-items die voor mij zichtbaar zijn (op consequentie gerangschikt).
+ */
+export const ListWerkbakItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "soort": zod.enum(['doen', 'weten']),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "actie_type": zod.string().nullish(),
+  "herkomst_type": zod.string(),
+  "herkomst_id": zod.number().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "weggezet_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListWerkbakItemsResponse = zod.array(ListWerkbakItemsResponseItem)
+
+
+/**
+ * @summary Teller voor de navigatie (totaal, doen, weten).
+ */
+export const GetWerkbakAantalResponse = zod.object({
+  "totaal": zod.number(),
+  "doen": zod.number(),
+  "weten": zod.number()
+})
+
+
+/**
+ * @summary Markeer een werkbak-item als afgehandeld.
+ */
+export const HandelWerkbakItemAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HandelWerkbakItemAfResponse = zod.object({
+  "id": zod.number(),
+  "soort": zod.enum(['doen', 'weten']),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "actie_type": zod.string().nullish(),
+  "herkomst_type": zod.string(),
+  "herkomst_id": zod.number().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "weggezet_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Zet een werkbak-item bewust weg met verplichte reden.
+ */
+export const ZetWerkbakItemWegParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const ZetWerkbakItemWegBody = zod.object({
+  "reden": zod.string().min(1)
+})
+
+export const ZetWerkbakItemWegResponse = zod.object({
+  "id": zod.number(),
+  "soort": zod.enum(['doen', 'weten']),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "actie_type": zod.string().nullish(),
+  "herkomst_type": zod.string(),
+  "herkomst_id": zod.number().nullish(),
+  "status": zod.enum(['open', 'afgehandeld', 'weggezet']),
+  "weggezet_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Voer de bewakingsloop nu uit (alleen hoofdbeheerder).
+ */
+export const DraaiWerkbakBewakingResponse = zod.object({
+  "samenvatting": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Logboek van bewakingsdraaien (alleen hoofdbeheerder).
+ */
+export const ListWerkbakBewakingDraaienResponseItem = zod.object({
+  "id": zod.number(),
+  "gestart_op": zod.string(),
+  "klaar_op": zod.string().nullish(),
+  "status": zod.string(),
+  "samenvatting": zod.record(zod.string(), zod.unknown()).nullish(),
+  "fout": zod.string().nullish()
+})
+export const ListWerkbakBewakingDraaienResponse = zod.array(ListWerkbakBewakingDraaienResponseItem)
+
+
