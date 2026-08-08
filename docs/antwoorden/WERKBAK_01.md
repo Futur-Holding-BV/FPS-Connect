@@ -73,3 +73,15 @@ patroon staat er al).
 
 Zie `docs/metingen/werkbak-bewijs.md`. Alle vier scenario's GEMETEN geslaagd
 via `scripts/src/bewijs-werkbak.ts` tegen de draaiende dev-omgeving.
+
+---
+
+## Aanvulling 8 augustus 2026 — welke module regelt het leesrecht op veiligheidshandboek en personeelsgids?
+
+Datum: 2026-08-08 · gemeten op commit `01414f4` · vraag van René bij de §5-uitbreiding (rol Ondersteuning).
+
+**Antwoord (GEMETEN in de code):** de module **`organisatie`**. Documenten als veiligheidshandboek, personeelsgids en kwaliteitshandboek horen bij **Bedrijfsdocumenten** onder Organisatie (`routes/organisatie.ts`, categorieën contract/vergunning/certificaat/kwaliteitshandboek/overig, met vervaldatum). Alle leesroutes daar staan achter `requireBevoegdheid("organisatie", 1)`; schrijven/vervangen achter niveau 2.
+
+Ter onderscheid: de module **`bibliotheek`** (`routes/documenten.ts`) is de productdocumentatie-bibliotheek (testrapporten, verwerkingsvoorschriften, gekoppeld aan toepassingen/gebouwen) — dat is níét de plek van handboeken en gidsen.
+
+**Consequentie voor het preset Ondersteuning (beslispunt):** de RECHTEN_01-aanvulling vraagt *leesrecht*, maar werkbak-bron 4 ("document of handboek dat verouderd is", soort Doen) laat deze rol het document ook zelf **vervangen** — dat vereist `organisatie` op schrijfniveau (2). Advies: organisatie:2, anders kan de rol zijn eigen werkbak-items niet zelf afsluiten. **AANGENOMEN** tot René anders beslist; bij strikt leesrecht (organisatie:1) moet bron 4 naar iemand anders routeren of het vervangen zelf buiten deze rol blijven.
