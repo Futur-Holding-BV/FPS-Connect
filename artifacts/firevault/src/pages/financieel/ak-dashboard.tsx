@@ -177,6 +177,45 @@ export default function AkDashboardPagina() {
         </CardContent>
       </Card>
 
+      {/* Urenverhouding per boekjaar — onderbouwing van de loonsplitsing */}
+      {(d?.uren_splitsing_per_jaar?.length ?? 0) > 0 && (
+        <Card data-testid="kaart-urenverhouding">
+          <CardHeader>
+            <CardTitle>Urenverhouding productief / indirect per boekjaar</CardTitle>
+            <CardDescription>
+              Onderbouwing van de splitsing van het indirecte loondeel per boekjaar, op basis van de
+              urenregistratie. Jaren zonder uren worden benoemd, nooit ingevuld.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table data-testid="tabel-urenverhouding">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Boekjaar</TableHead>
+                  <TableHead className="text-right">Productieve uren</TableHead>
+                  <TableHead className="text-right">Indirecte uren</TableHead>
+                  <TableHead className="text-right">Aandeel indirect</TableHead>
+                  <TableHead>Opmerking</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {d?.uren_splitsing_per_jaar?.map((j) => (
+                  <TableRow key={j.boekjaar} data-testid={`urenverhouding-rij-${j.boekjaar}`}>
+                    <TableCell>{j.boekjaar}</TableCell>
+                    <TableCell className="text-right">{j.dekkend ? j.productief.toLocaleString("nl-NL") : "—"}</TableCell>
+                    <TableCell className="text-right">{j.dekkend ? j.indirect.toLocaleString("nl-NL") : "—"}</TableCell>
+                    <TableCell className="text-right font-semibold">{pctTekst(j.indirect_pct)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {j.dekkend ? "" : "geen uren geregistreerd"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Lopend jaar */}
       {d?.lopend_jaar && (
         <Card data-testid="kaart-lopend-jaar">

@@ -18,7 +18,7 @@ import { eq, ne, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
-import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsing, bepaalLoonkostenDekking, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
+import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsingPerJaar, bepaalLoonkostenDekking, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
 import { logger } from "../lib/logger";
 import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, kopieerBegrotingAlsScenario, ScenarioFout, parseScenarioAannames, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
@@ -1009,7 +1009,17 @@ router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Pro
     // Per boekjaar afdwingen: één post in één jaar dekt de andere jaren niet.
     const { begrotingsJaren, jarenZonderLoonkosten, dekkend: heeftLoonkostenPost } =
       await bepaalLoonkostenDekking(posten);
-    const urenSplitsing = await bouwUrenSplitsing(new Date().getFullYear());
+    // Urenverhouding per boekjaar (§3.4-onderbouwing): voor álle jaren in de
+    // reeks plus het lopende jaar. Jaren zonder registraties blijven expliciet
+    // "geen uren geregistreerd" — nooit ingevuld. Het lopende jaar komt uit
+    // dezelfde ruwe-som-berekening zodat tabel en bevinding nooit tegenspreken.
+    const huidigJaar = new Date().getFullYear();
+    const urenSplitsingPerJaar = await bouwUrenSplitsingPerJaar([
+      ...reeks.map((r) => r.boekjaar),
+      huidigJaar,
+    ]);
+    const urenSplitsing = urenSplitsingPerJaar.find((j) => j.boekjaar === huidigJaar)
+      ?? { boekjaar: huidigJaar, productief: 0, indirect: 0, dekkend: false, indirectPct: null };
     res.json({
       reeks,
       lopend_jaar: lopendJaar,
@@ -1035,7 +1045,14 @@ router.get("/fie/ak-dashboard", lezen, async (_req: Request, res: Response): Pro
           `De urenregistratie van ${new Date().getFullYear()} bevat nog geen uren; de splitsing productief/indirect kan niet worden onderbouwd.`,
         ]),
       ],
-      uren_splitsing: urenSplitsing,
+      uren_splitsing: { productief: urenSplitsing.productief, indirect: urenSplitsing.indirect, dekkend: urenSplitsing.dekkend },
+      uren_splitsing_per_jaar: urenSplitsingPerJaar.map((j) => ({
+        boekjaar: j.boekjaar,
+        productief: j.productief,
+        indirect: j.indirect,
+        dekkend: j.dekkend,
+        indirect_pct: j.indirectPct,
+      })),
     });
   } catch (err) {
     logger.error({ err }, "ak-dashboard fout");

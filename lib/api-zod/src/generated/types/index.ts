@@ -359,6 +359,7 @@ export * from './fieAkPost';
 export * from './fieAkPostInput';
 export * from './fieAkPostUpdate';
 export * from './fieAkReeksRij';
+export * from './fieAkUrenSplitsingJaar';
 export * from './fieBegrotingKwartaal';
 export * from './fieCalculatieContext';
 export * from './fieCapaciteitInput';

@@ -287,17 +287,69 @@ export async function bepaalLoonkostenDekking(posten: AkPostOntwikkeling[]): Pro
     dekkend: begrotingsJaren.length > 0 && jarenZonderLoonkosten.length === 0,
   };
 }
-export async function bouwUrenSplitsing(boekjaar: number): Promise<{ productief: number; indirect: number; dekkend: boolean }> {
-  const start = `${boekjaar}-01-01`;
-  const eind = `${boekjaar + 1}-01-01`;
+export interface UrenSplitsingJaar {
+  boekjaar: number;
+  productief: number;
+  indirect: number;
+  dekkend: boolean;
+  /** Aandeel indirecte uren in het totaal (1 decimaal); null zonder uren — nooit ingevuld. */
+  indirectPct: number | null;
+}
+
+/**
+ * Pure kern: verhouding uit ONafgeronde uursommen. Dekking en percentage worden
+ * op de ruwe waarden bepaald (netto_uren is een real; 0,25 uur mag niet naar 0
+ * wegronden en zo "geen uren geregistreerd" opleveren). Alleen de getoonde
+ * uren worden op 1 decimaal afgerond.
+ */
+export function berekenUrenSplitsingJaar(boekjaar: number, productiefRuw: number, indirectRuw: number): UrenSplitsingJaar {
+  const totaal = productiefRuw + indirectRuw;
+  return {
+    boekjaar,
+    productief: Math.round(productiefRuw * 10) / 10,
+    indirect: Math.round(indirectRuw * 10) / 10,
+    dekkend: totaal > 0,
+    indirectPct: totaal > 0 ? Math.round((indirectRuw / totaal) * 1000) / 10 : null,
+  };
+}
+
+/**
+ * Urenverhouding productief/indirect per boekjaar, voor alle opgegeven jaren.
+ * Jaren zonder registraties krijgen dekkend=false en indirectPct=null — de
+ * verhouding wordt nooit ingevuld of doorgetrokken uit een ander jaar (§4).
+ */
+export async function bouwUrenSplitsingPerJaar(jaren: number[]): Promise<UrenSplitsingJaar[]> {
+  const unieke = [...new Set(jaren)].sort((a, b) => a - b);
+  if (unieke.length === 0) return [];
+  const start = `${unieke[0]}-01-01`;
+  const eind = `${unieke[unieke.length - 1]! + 1}-01-01`;
   const rijen = await db.select({
+    // datum is een tekstkolom (YYYY-MM-DD), dus het jaar is de eerste 4 tekens.
+    boekjaar: sql<string>`substr(${urenRegistratiesTable.datum}, 1, 4)`,
     productief: sql<string>`coalesce(sum(${urenRegistratiesTable.nettoUren}) filter (where ${urenRegistratiesTable.projectId} is not null or ${urenRegistratiesTable.gebouwId} is not null), 0)`,
     indirect: sql<string>`coalesce(sum(${urenRegistratiesTable.nettoUren}) filter (where ${urenRegistratiesTable.projectId} is null and ${urenRegistratiesTable.gebouwId} is null), 0)`,
   }).from(urenRegistratiesTable)
-    .where(and(gte(urenRegistratiesTable.datum, start), lt(urenRegistratiesTable.datum, eind)));
-  const productief = Math.round(Number(rijen[0]?.productief ?? 0));
-  const indirect = Math.round(Number(rijen[0]?.indirect ?? 0));
-  return { productief, indirect, dekkend: productief + indirect > 0 };
+    .where(and(gte(urenRegistratiesTable.datum, start), lt(urenRegistratiesTable.datum, eind)))
+    .groupBy(sql`substr(${urenRegistratiesTable.datum}, 1, 4)`);
+  const perJaar = new Map<number, { productief: number; indirect: number }>(
+    rijen.map((r) => [Number(r.boekjaar), {
+      productief: Number(r.productief ?? 0),
+      indirect: Number(r.indirect ?? 0),
+    }]),
+  );
+  return unieke.map((boekjaar) => {
+    const r = perJaar.get(boekjaar) ?? { productief: 0, indirect: 0 };
+    return berekenUrenSplitsingJaar(boekjaar, r.productief, r.indirect);
+  });
+}
+
+/**
+ * Urenverhouding van één boekjaar — zelfde ruwe-som-berekening als de
+ * per-jaar-variant, zodat dekking nooit door afronding op hele uren omslaat.
+ */
+export async function bouwUrenSplitsing(boekjaar: number): Promise<UrenSplitsingJaar> {
+  const [rij] = await bouwUrenSplitsingPerJaar([boekjaar]);
+  return rij ?? berekenUrenSplitsingJaar(boekjaar, 0, 0);
 }
 
 // ─── Deterministische signaal-kandidaten ────────────────────────────────────

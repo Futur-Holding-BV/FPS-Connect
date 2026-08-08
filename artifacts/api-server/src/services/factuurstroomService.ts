@@ -29,7 +29,6 @@ import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { analyseerFactuurVoorStroom, type FactuurStroomVelden } from "../lib/documentIntelligence";
 import { haalBijlagen } from "./werkInboxGraph";
-import { stuurPushNaarGebruiker } from "../lib/pushService";
 
 // Verificatie-haak: alleen het Graph-HTTP-randje is vervangbaar, zodat het
 // verificatiescript (verificatie-mail-naar-factuur.ts) de volledige pijplijn

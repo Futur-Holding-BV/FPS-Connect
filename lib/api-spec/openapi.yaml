@@ -44232,6 +44232,20 @@ components:
             productief: { type: number }
             indirect: { type: number }
             dekkend: { type: boolean }
+        uren_splitsing_per_jaar:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieAkUrenSplitsingJaar"
+
+    FieAkUrenSplitsingJaar:
+      type: object
+      required: [boekjaar, productief, indirect, dekkend]
+      properties:
+        boekjaar:     { type: integer }
+        productief:   { type: number }
+        indirect:     { type: number }
+        dekkend:      { type: boolean }
+        indirect_pct: { type: number, nullable: true }
 
     FieAkAdviezenGenereerResultaat:
       type: object

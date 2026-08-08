@@ -1,4 +1,3 @@
-// hint: Logic changed on both sides. Requires understanding intent of each change.
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static matcher moet `mjs` bevatten anders serveert Caddy pdfjs-worker als text/html (SPA-fallback) → plattegrond werkt niet.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) — docs/kwaliteitskader.md is verplicht; taak pas gereed bij aantoonbaar werkend businessscenario + bewijs; build/typecheck nooit voldoende; nooit zelf naar productie.
 - [Ontwikkelfilosofie](ontwikkelfilosofie.md) — docs/ontwikkelfilosofie.md is verplicht kader; stabiliteit > functionaliteit; elke opdracht beantwoordt 5 vragen (workflow, handmatig werk, samenwerking, noodzaak vóór release, kan het later?).
@@ -157,3 +156,4 @@
 - [Werkbak & bewakingsloop](werkbak.md) — gesloten bronnenlijst==werkelijkheid; hoofdbeheerder-check eerst; fijnmazige rechten (mailbox) = persoonlijke items, nooit module-breed; klaar-status alleen bij 100% geslaagde voeders.
 - [Bevoegdheden in de app-laag](app-bevoegdheden-laag.md) — server stuurt effectieve bevoegdheden (login+/auth/me via requireAuth voor bearer); menu verbergt (nooit grijs); /mijn/-routes = basisrecht zonder module.
 - [FIE wat-als-scenario's](fie-scenarios.md) — scenario-begrotingen (status scenario) altijd uitfilteren in lijst/aggregatie/fallback-queries; nooit een tweede rekenmodel naast de FIE-motor.
+- [Urenverhouding afronding](uren-splitsing-afronding.md) — dekking/percentage uit ruwe sommen, afronden alleen voor weergave; één gedeelde berekenfunctie voor bevinding én tabel; datum=tekst → substr, geen extract.

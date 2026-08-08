@@ -13626,6 +13626,13 @@ export type FieAkDashboardUrenSplitsing = {
   dekkend: boolean;
 };
 
+export interface FieAkUrenSplitsingJaar {
+  boekjaar: number;
+  productief: number;
+  indirect: number;
+  dekkend: boolean;
+  indirect_pct?: number | null;
+}
 export interface FieAkDashboard {
   reeks: FieAkReeksRij[];
   lopend_jaar: FieAkLopendJaar;
@@ -13633,6 +13640,7 @@ export interface FieAkDashboard {
   adviezen: FieAkAdvies[];
   bevindingen: string[];
   uren_splitsing?: FieAkDashboardUrenSplitsing;
+  uren_splitsing_per_jaar?: FieAkUrenSplitsingJaar[];
 }
 
 export interface FieAkAdviezenGenereerResultaat {
@@ -15718,4 +15726,3 @@ export type DraaiWerkbakBewaking200Samenvatting = { [key: string]: unknown };
 export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
-

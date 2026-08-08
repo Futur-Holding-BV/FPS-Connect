@@ -10,6 +10,7 @@ import type { FieAkDashboardPost } from './fieAkDashboardPost';
 import type { FieAkDashboardUrenSplitsing } from './fieAkDashboardUrenSplitsing';
 import type { FieAkLopendJaar } from './fieAkLopendJaar';
 import type { FieAkReeksRij } from './fieAkReeksRij';
+import type { FieAkUrenSplitsingJaar } from './fieAkUrenSplitsingJaar';
 
 export interface FieAkDashboard {
   reeks: FieAkReeksRij[];
@@ -18,4 +19,5 @@ export interface FieAkDashboard {
   adviezen: FieAkAdvies[];
   bevindingen: string[];
   uren_splitsing?: FieAkDashboardUrenSplitsing;
+  uren_splitsing_per_jaar?: FieAkUrenSplitsingJaar[];
 }
