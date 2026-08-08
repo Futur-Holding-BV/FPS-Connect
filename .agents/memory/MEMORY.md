@@ -109,6 +109,7 @@
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
 - [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
+- [Dev-API sessiebewijs via https](dev-api-sessie-bewijs.md) — Secure-cookie: login via https://$REPLIT_DEV_DOMAIN/api, nooit http://localhost; klant-gebouwtoegang = toewijzing+publicatie.
 - [Prod curl/Playwright sessie-bewijs](prod-curl-sessie-bewijs.md) — Secure-cookies vereisen https; #HttpOnly_ jar-regels; bcrypt-hash via ssh-string wordt door remote shell gemangeld → SQL via stdin pipen.
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; schemawijziging sinds SCHEMA_01 via genummerde migratie (zie schema-migratieketen).
 - [Factuurstroom pijplijn-verificatie](factuurstroom-verificatie.md) — Graph-randje injecteerbaar; inkoperroute matcht nooit (leveranciers- vs crm_klanten-id's), verwacht directieroute.
