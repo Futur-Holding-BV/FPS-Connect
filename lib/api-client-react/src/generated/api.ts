@@ -206,6 +206,8 @@ import type {
   DocumentStudioWerkgever,
   DocumentToepassingenInput,
   DocumentUpdate,
+  Documentsoort,
+  DocumentsoortInput,
   DoorzettenGarageInput,
   DoorzettenNaarGarage200,
   Dossier,
@@ -516,6 +518,7 @@ import type {
   ListDocumentLogboekParams,
   ListDocumentStudioModellenParams,
   ListDocumentenParams,
+  ListDocumentsoortenParams,
   ListEenheidsprijzenParams,
   ListEnkBronbestandenParams,
   ListExportlogParams,
@@ -640,6 +643,7 @@ import type {
   MeldingOntvangst,
   MeldingOverzichtItem,
   MeldingUpdate,
+  MijnAuto,
   MijnCertificaten,
   MijnMedewerkerInfo,
   MijnOpleidingDetail,
@@ -816,6 +820,7 @@ import type {
   RapportDefinitief,
   RapportInput,
   RapportPatch,
+  RdwVoertuigGegevens,
   ReistijdSchatting,
   ReistijdSchattingInput,
   Reservering,
@@ -916,6 +921,7 @@ import type {
   UpdateMijnInitialenBody,
   UploadUrlRequest,
   UploadUrlResponse,
+  UploadVoertuigDocumentBody,
   UrenRegistratie,
   UrenRegistratieInput,
   VeiligheidAfronding,
@@ -958,7 +964,9 @@ import type {
   VisualGuidanceResult,
   VisualPatch,
   Voertuig,
+  VoertuigDocument,
   VoertuigInput,
+  VoertuigKostenJaar,
   VoertuigSamenvatting,
   VolgendSpotnummer,
   VoorraadCorrectieInput,
@@ -72836,6 +72844,758 @@ export function useListWagenparkAiAdvies<TData = Awaited<ReturnType<typeof listW
 
 
 
+
+export const getGetMijnAutoUrl = () => {
+
+
+
+
+  return `/api/wagenpark/mijn-auto`
+}
+
+/**
+ * @summary Eigen auto van de ingelogde monteur (server-side afgedwongen op chauffeur_id)
+ */
+export const getMijnAuto = async ( options?: RequestInit): Promise<MijnAuto> => {
+
+  return customFetch<MijnAuto>(getGetMijnAutoUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnAutoQueryKey = () => {
+    return [
+    `/api/wagenpark/mijn-auto`
+    ] as const;
+    }
+
+
+export const getGetMijnAutoQueryOptions = <TData = Awaited<ReturnType<typeof getMijnAuto>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnAuto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnAutoQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnAuto>>> = ({ signal }) => getMijnAuto({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnAuto>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnAutoQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnAuto>>>
+export type GetMijnAutoQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eigen auto van de ingelogde monteur (server-side afgedwongen op chauffeur_id)
+ */
+
+export function useGetMijnAuto<TData = Awaited<ReturnType<typeof getMijnAuto>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnAuto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnAutoQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRdwVoertuigGegevensUrl = (kenteken: string,) => {
+
+
+
+
+  return `/api/wagenpark/rdw/${kenteken}`
+}
+
+/**
+ * @summary RDW open data opzoeken als invulhulp (voorstel, geen waarheid)
+ */
+export const getRdwVoertuigGegevens = async (kenteken: string, options?: RequestInit): Promise<RdwVoertuigGegevens> => {
+
+  return customFetch<RdwVoertuigGegevens>(getGetRdwVoertuigGegevensUrl(kenteken),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRdwVoertuigGegevensQueryKey = (kenteken: string,) => {
+    return [
+    `/api/wagenpark/rdw/${kenteken}`
+    ] as const;
+    }
+
+
+export const getGetRdwVoertuigGegevensQueryOptions = <TData = Awaited<ReturnType<typeof getRdwVoertuigGegevens>>, TError = ErrorType<void>>(kenteken: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRdwVoertuigGegevens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRdwVoertuigGegevensQueryKey(kenteken);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRdwVoertuigGegevens>>> = ({ signal }) => getRdwVoertuigGegevens(kenteken, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: kenteken !== null && kenteken !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRdwVoertuigGegevens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRdwVoertuigGegevensQueryResult = NonNullable<Awaited<ReturnType<typeof getRdwVoertuigGegevens>>>
+export type GetRdwVoertuigGegevensQueryError = ErrorType<void>
+
+
+/**
+ * @summary RDW open data opzoeken als invulhulp (voorstel, geen waarheid)
+ */
+
+export function useGetRdwVoertuigGegevens<TData = Awaited<ReturnType<typeof getRdwVoertuigGegevens>>, TError = ErrorType<void>>(
+ kenteken: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRdwVoertuigGegevens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRdwVoertuigGegevensQueryOptions(kenteken,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVoertuigKostenOverzichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/kosten-overzicht`
+}
+
+/**
+ * @summary Kosten per jaar per categorie voor één voertuig
+ */
+export const getVoertuigKostenOverzicht = async (id: number, options?: RequestInit): Promise<VoertuigKostenJaar[]> => {
+
+  return customFetch<VoertuigKostenJaar[]>(getGetVoertuigKostenOverzichtUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVoertuigKostenOverzichtQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}/kosten-overzicht`
+    ] as const;
+    }
+
+
+export const getGetVoertuigKostenOverzichtQueryOptions = <TData = Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVoertuigKostenOverzichtQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>> = ({ signal }) => getVoertuigKostenOverzicht(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVoertuigKostenOverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>>
+export type GetVoertuigKostenOverzichtQueryError = ErrorType<void>
+
+
+/**
+ * @summary Kosten per jaar per categorie voor één voertuig
+ */
+
+export function useGetVoertuigKostenOverzicht<TData = Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoertuigKostenOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVoertuigKostenOverzichtQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListVoertuigDocumentenUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/documenten`
+}
+
+/**
+ * @summary Documenten gekoppeld aan een voertuig
+ */
+export const listVoertuigDocumenten = async (id: number, options?: RequestInit): Promise<VoertuigDocument[]> => {
+
+  return customFetch<VoertuigDocument[]>(getListVoertuigDocumentenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoertuigDocumentenQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}/documenten`
+    ] as const;
+    }
+
+
+export const getListVoertuigDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listVoertuigDocumenten>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoertuigDocumentenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoertuigDocumenten>>> = ({ signal }) => listVoertuigDocumenten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoertuigDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoertuigDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listVoertuigDocumenten>>>
+export type ListVoertuigDocumentenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Documenten gekoppeld aan een voertuig
+ */
+
+export function useListVoertuigDocumenten<TData = Awaited<ReturnType<typeof listVoertuigDocumenten>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoertuigDocumentenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUploadVoertuigDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/documenten`
+}
+
+/**
+ * @summary Document uploaden en aan een voertuig koppelen
+ */
+export const uploadVoertuigDocument = async (id: number,
+    uploadVoertuigDocumentBody: UploadVoertuigDocumentBody, options?: RequestInit): Promise<VoertuigDocument> => {
+    const formData = new FormData();
+formData.append(`bestand`, uploadVoertuigDocumentBody.bestand);
+formData.append(`documentsoort_id`, uploadVoertuigDocumentBody.documentsoort_id);
+if(uploadVoertuigDocumentBody.geldig_tot !== undefined && uploadVoertuigDocumentBody.geldig_tot !== null) {
+ formData.append(`geldig_tot`, uploadVoertuigDocumentBody.geldig_tot);
+ }
+
+  return customFetch<VoertuigDocument>(getUploadVoertuigDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getUploadVoertuigDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadVoertuigDocument>>, TError,{id: number;data: BodyType<UploadVoertuigDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadVoertuigDocument>>, TError,{id: number;data: BodyType<UploadVoertuigDocumentBody>}, TContext> => {
+
+const mutationKey = ['uploadVoertuigDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadVoertuigDocument>>, {id: number;data: BodyType<UploadVoertuigDocumentBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  uploadVoertuigDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadVoertuigDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadVoertuigDocument>>>
+    export type UploadVoertuigDocumentMutationBody = BodyType<UploadVoertuigDocumentBody>
+    export type UploadVoertuigDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Document uploaden en aan een voertuig koppelen
+ */
+export const useUploadVoertuigDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadVoertuigDocument>>, TError,{id: number;data: BodyType<UploadVoertuigDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadVoertuigDocument>>,
+        TError,
+        {id: number;data: BodyType<UploadVoertuigDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getUploadVoertuigDocumentMutationOptions(options));
+    }
+
+export const getDeleteVoertuigDocumentUrl = (id: number,
+    documentId: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/documenten/${documentId}`
+}
+
+/**
+ * @summary Voertuigdocument verwijderen (archiveren)
+ */
+export const deleteVoertuigDocument = async (id: number,
+    documentId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVoertuigDocumentUrl(id,documentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVoertuigDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoertuigDocument>>, TError,{id: number;documentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVoertuigDocument>>, TError,{id: number;documentId: number}, TContext> => {
+
+const mutationKey = ['deleteVoertuigDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVoertuigDocument>>, {id: number;documentId: number}> = (props) => {
+          const {id,documentId} = props ?? {};
+
+          return  deleteVoertuigDocument(id,documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVoertuigDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVoertuigDocument>>>
+
+    export type DeleteVoertuigDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Voertuigdocument verwijderen (archiveren)
+ */
+export const useDeleteVoertuigDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoertuigDocument>>, TError,{id: number;documentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVoertuigDocument>>,
+        TError,
+        {id: number;documentId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVoertuigDocumentMutationOptions(options));
+    }
+
+export const getListDocumentsoortenUrl = (params?: ListDocumentsoortenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documentsoorten?${stringifiedParams}` : `/api/documentsoorten`
+}
+
+/**
+ * @summary Beheerbare documentsoorten (per context)
+ */
+export const listDocumentsoorten = async (params?: ListDocumentsoortenParams, options?: RequestInit): Promise<Documentsoort[]> => {
+
+  return customFetch<Documentsoort[]>(getListDocumentsoortenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentsoortenQueryKey = (params?: ListDocumentsoortenParams,) => {
+    return [
+    `/api/documentsoorten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentsoortenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentsoorten>>, TError = ErrorType<void>>(params?: ListDocumentsoortenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentsoorten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentsoortenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentsoorten>>> = ({ signal }) => listDocumentsoorten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentsoorten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentsoortenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentsoorten>>>
+export type ListDocumentsoortenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Beheerbare documentsoorten (per context)
+ */
+
+export function useListDocumentsoorten<TData = Awaited<ReturnType<typeof listDocumentsoorten>>, TError = ErrorType<void>>(
+ params?: ListDocumentsoortenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentsoorten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentsoortenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDocumentsoortUrl = () => {
+
+
+
+
+  return `/api/documentsoorten`
+}
+
+/**
+ * @summary Documentsoort aanmaken
+ */
+export const createDocumentsoort = async (documentsoortInput: DocumentsoortInput, options?: RequestInit): Promise<Documentsoort> => {
+
+  return customFetch<Documentsoort>(getCreateDocumentsoortUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentsoortInput)
+  }
+);}
+
+
+
+
+export const getCreateDocumentsoortMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocumentsoort>>, TError,{data: BodyType<DocumentsoortInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDocumentsoort>>, TError,{data: BodyType<DocumentsoortInput>}, TContext> => {
+
+const mutationKey = ['createDocumentsoort'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDocumentsoort>>, {data: BodyType<DocumentsoortInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDocumentsoort(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDocumentsoortMutationResult = NonNullable<Awaited<ReturnType<typeof createDocumentsoort>>>
+    export type CreateDocumentsoortMutationBody = BodyType<DocumentsoortInput>
+    export type CreateDocumentsoortMutationError = ErrorType<void>
+
+    /**
+ * @summary Documentsoort aanmaken
+ */
+export const useCreateDocumentsoort = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocumentsoort>>, TError,{data: BodyType<DocumentsoortInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDocumentsoort>>,
+        TError,
+        {data: BodyType<DocumentsoortInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDocumentsoortMutationOptions(options));
+    }
+
+export const getUpdateDocumentsoortUrl = (id: number,) => {
+
+
+
+
+  return `/api/documentsoorten/${id}`
+}
+
+/**
+ * @summary Documentsoort bijwerken
+ */
+export const updateDocumentsoort = async (id: number,
+    documentsoortInput: DocumentsoortInput, options?: RequestInit): Promise<Documentsoort> => {
+
+  return customFetch<Documentsoort>(getUpdateDocumentsoortUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentsoortInput)
+  }
+);}
+
+
+
+
+export const getUpdateDocumentsoortMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocumentsoort>>, TError,{id: number;data: BodyType<DocumentsoortInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocumentsoort>>, TError,{id: number;data: BodyType<DocumentsoortInput>}, TContext> => {
+
+const mutationKey = ['updateDocumentsoort'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocumentsoort>>, {id: number;data: BodyType<DocumentsoortInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocumentsoort(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentsoortMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocumentsoort>>>
+    export type UpdateDocumentsoortMutationBody = BodyType<DocumentsoortInput>
+    export type UpdateDocumentsoortMutationError = ErrorType<void>
+
+    /**
+ * @summary Documentsoort bijwerken
+ */
+export const useUpdateDocumentsoort = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocumentsoort>>, TError,{id: number;data: BodyType<DocumentsoortInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocumentsoort>>,
+        TError,
+        {id: number;data: BodyType<DocumentsoortInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentsoortMutationOptions(options));
+    }
+
+export const getDeleteDocumentsoortUrl = (id: number,) => {
+
+
+
+
+  return `/api/documentsoorten/${id}`
+}
+
+/**
+ * @summary Documentsoort verwijderen
+ */
+export const deleteDocumentsoort = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDocumentsoortUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDocumentsoortMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentsoort>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentsoort>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDocumentsoort'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDocumentsoort>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDocumentsoort(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDocumentsoortMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDocumentsoort>>>
+
+    export type DeleteDocumentsoortMutationError = ErrorType<void>
+
+    /**
+ * @summary Documentsoort verwijderen
+ */
+export const useDeleteDocumentsoort = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentsoort>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDocumentsoort>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDocumentsoortMutationOptions(options));
+    }
 
 export const getListWagenparkAvgLogboekUrl = (params?: ListWagenparkAvgLogboekParams,) => {
   const normalizedParams = new URLSearchParams();

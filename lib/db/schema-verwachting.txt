@@ -86,6 +86,8 @@ INDEX|document_toepassingen|document_toepassingen_document_id_label_id_unique
 INDEX|document_toepassingen|document_toepassingen_pkey
 INDEX|documenten|documenten_groep_id_revisie_nummer_unique
 INDEX|documenten|documenten_pkey
+INDEX|documentsoorten|documentsoorten_context_naam_uniek
+INDEX|documentsoorten|documentsoorten_pkey
 INDEX|dossier_documenten|dossier_documenten_pkey
 INDEX|dossiers|dossiers_pkey
 INDEX|eenheidsprijzen|eenheidsprijzen_code_unique
@@ -393,6 +395,7 @@ INDEX|wagenpark_kwartaalcontrole|wagenpark_kwartaalcontrole_pkey
 INDEX|wagenpark_meldingen|wagenpark_meldingen_pkey
 INDEX|wagenpark_onderhoud|wagenpark_onderhoud_pkey
 INDEX|wagenpark_ritten|wagenpark_ritten_pkey
+INDEX|wagenpark_ritten|wagenpark_ritten_provider_rit_id_uniek
 INDEX|wagenpark_sync_log|wagenpark_sync_log_pkey
 INDEX|week_staten|week_staten_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_mailbox_idx
@@ -1236,6 +1239,7 @@ KOLOM|documenten|bestands_hash|text|YES|
 KOLOM|documenten|bestandsgrootte|integer|YES|
 KOLOM|documenten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|documenten|datum|text|YES|
+KOLOM|documenten|documentsoort_id|integer|YES|
 KOLOM|documenten|documenttype|text|NO|'testrapport'::text
 KOLOM|documenten|en_norm|text|YES|
 KOLOM|documenten|fabrikant|text|YES|
@@ -1252,6 +1256,13 @@ KOLOM|documenten|rapportnummer|text|YES|
 KOLOM|documenten|revisie_nummer|integer|NO|1
 KOLOM|documenten|revisie|text|YES|
 KOLOM|documenten|status|text|NO|'actueel'::text
+KOLOM|documentsoorten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|documentsoorten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|documentsoorten|context|text|NO|'voertuig'::text
+KOLOM|documentsoorten|heeft_vervaldatum|boolean|NO|true
+KOLOM|documentsoorten|id|integer|NO|nextval('documentsoorten_id_seq'::regclass)
+KOLOM|documentsoorten|naam|text|NO|
+KOLOM|documentsoorten|waarschuwing_dagen|integer|NO|30
 KOLOM|dossier_documenten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|dossier_documenten|bestand_url|text|YES|
 KOLOM|dossier_documenten|bevroren_op|timestamp without time zone|YES|
@@ -4198,6 +4209,7 @@ KOLOM|vge_effectiviteitslog|spot_type|text|NO|
 KOLOM|vge_effectiviteitslog|stap_duur_seconden|integer|YES|
 KOLOM|vge_effectiviteitslog|stap_type|text|NO|
 KOLOM|vge_effectiviteitslog|visual_id|integer|NO|
+KOLOM|voertuigen|aandrijving|text|NO|'diesel'::text
 KOLOM|voertuigen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voertuigen|apk_datum|timestamp without time zone|YES|
 KOLOM|voertuigen|bandenwissels_status|text|NO|'geen_actie'::text
@@ -4207,6 +4219,8 @@ KOLOM|voertuigen|chassisnummer|text|YES|
 KOLOM|voertuigen|chauffeur_id|integer|YES|
 KOLOM|voertuigen|eigendoms_type|text|NO|'eigendom'::text
 KOLOM|voertuigen|fleet_provider|text|YES|
+KOLOM|voertuigen|garage_email|text|YES|
+KOLOM|voertuigen|garage_naam|text|YES|
 KOLOM|voertuigen|gearchiveerd|boolean|NO|false
 KOLOM|voertuigen|id|integer|NO|nextval('voertuigen_id_seq'::regclass)
 KOLOM|voertuigen|kenteken|text|NO|
@@ -4223,6 +4237,7 @@ KOLOM|voertuigen|onderhouds_interval_dag|integer|YES|
 KOLOM|voertuigen|onderhouds_interval_km|integer|YES|
 KOLOM|voertuigen|opmerkingen|text|YES|
 KOLOM|voertuigen|provider_voertuig_id|text|YES|
+KOLOM|voertuigen|rdw_opgehaald_op|timestamp without time zone|YES|
 KOLOM|voertuigen|status|text|NO|'actief'::text
 KOLOM|voertuigen|type|text|NO|
 KOLOM|voertuigen|verzekeraar_naam|text|YES|

@@ -23,6 +23,10 @@ export interface VoertuigSamenvatting {
   bandenwissels_status?: string;
   fleet_provider?: string | null;
   provider_voertuig_id?: string | null;
+  aandrijving?: string;
+  garage_naam?: string | null;
+  garage_email?: string | null;
+  rdw_opgehaald_op?: Date | null;
   aandacht_nodig?: boolean;
   bijgewerkt_op?: Date;
 }

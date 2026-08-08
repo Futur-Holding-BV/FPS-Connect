@@ -79,7 +79,9 @@ export type PaginaSleutel =
   | "wagenpark"
   | "wagenpark-meldingen"
   | "wagenpark-detail"
-  | "wagenpark-brandstof-import";
+  | "wagenpark-brandstof-import"
+  | "wagenpark-documentsoorten"
+  | "wagenpark-form";
 
 type RolTekst = Partial<Record<Rol | "default", string>>;
 
@@ -519,6 +521,16 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
   "wagenpark-brandstof-import": {
     hoofdbeheerder:
       "Brandstofimport: lees tankpas-transacties in uit een bestand van uw brandstofleverancier. De transacties worden gekoppeld aan het juiste voertuig zodat u het verbruik en de kosten per voertuig kunt volgen.",
+  },
+
+  "wagenpark-documentsoorten": {
+    hoofdbeheerder:
+      "Documentsoorten: beheer de soorten voertuigdocumenten (bijv. verzekeringsbewijs, leasecontract). Stel per soort in of er een vervaldatum geldt en na hoeveel dagen een waarschuwing wordt getoond.",
+  },
+
+  "wagenpark-form": {
+    hoofdbeheerder:
+      "Voertuig aanmaken of bewerken: vul de basisgegevens, aandrijving, vaste garage, verzekering en lease in. Gebruik 'RDW ophalen' als invulhulp op basis van het kenteken.",
   },
 };
 

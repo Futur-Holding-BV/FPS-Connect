@@ -42,6 +42,8 @@ export const WERKBAK_BRONNEN = [
   "factuursignaal",
   "contract_verlenging",
   "bewakingsloop",
+  // WAGENPARK_01 §6.1: garagemail die niet verstuurd kon worden mag nooit stil blijven.
+  "wagenpark_garagemail",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

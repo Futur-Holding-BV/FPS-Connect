@@ -117,6 +117,8 @@ export default function MenuScherm() {
     magazijn_inkoop: "/magazijn/inkoop",
     magazijn_picklijsten: "/magazijn/picklijsten",
     magazijn_inkooporders: "/magazijn/inkooporders",
+    mijn_auto: "/mijn-auto",
+    voertuig_melding: "/voertuig-melding",
   };
 
   useEffect(() => {
@@ -160,6 +162,7 @@ export default function MenuScherm() {
     { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", vereist: { module: "magazijn", niveau: 3 }, onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
     { sleutel: "magazijn_picklijsten", label: "Picklijsten", icoon: "list-circle-outline", badge: picklijstNieuw, vereist: { module: "magazijn", niveau: 1 }, onPress: () => router.push("/magazijn/picklijsten" as "/werkdag") },
     { sleutel: "magazijn_inkooporders", label: "Inkooporders", icoon: "receipt-outline", vereist: { module: "magazijn", niveau: 2 }, onPress: () => router.push("/magazijn/inkooporders" as "/werkdag") },
+    { sleutel: "mijn_auto", label: "Mijn auto", icoon: "car-sport-outline", onPress: () => router.push("/mijn-auto") },
     { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
   ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
 

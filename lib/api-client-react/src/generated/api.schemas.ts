@@ -11777,6 +11777,10 @@ export interface VoertuigSamenvatting {
   bandenwissels_status?: string;
   fleet_provider?: string | null;
   provider_voertuig_id?: string | null;
+  aandrijving?: string;
+  garage_naam?: string | null;
+  garage_email?: string | null;
+  rdw_opgehaald_op?: string | null;
   aandacht_nodig?: boolean;
   bijgewerkt_op?: string;
 }
@@ -11832,6 +11836,16 @@ export const VoertuigInputStatus = {
   gereserveerd: 'gereserveerd',
 } as const;
 
+export type VoertuigInputAandrijving = typeof VoertuigInputAandrijving[keyof typeof VoertuigInputAandrijving];
+
+
+export const VoertuigInputAandrijving = {
+  diesel: 'diesel',
+  benzine: 'benzine',
+  elektrisch: 'elektrisch',
+  hybride: 'hybride',
+} as const;
+
 export interface VoertuigInput {
   kenteken: string;
   merk: string;
@@ -11856,6 +11870,10 @@ export interface VoertuigInput {
   fleet_provider?: string | null;
   werkgever_id?: number | null;
   status?: VoertuigInputStatus;
+  aandrijving?: VoertuigInputAandrijving;
+  garage_naam?: string | null;
+  garage_email?: string | null;
+  rdw_opgehaald_op?: string | null;
   opmerkingen?: string | null;
 }
 
@@ -11945,6 +11963,7 @@ export type WagenparkKostenInputCategorie = typeof WagenparkKostenInputCategorie
 export const WagenparkKostenInputCategorie = {
   onderhoud: 'onderhoud',
   brandstof: 'brandstof',
+  laden: 'laden',
   banden: 'banden',
   verzekering: 'verzekering',
   lease: 'lease',
@@ -12000,6 +12019,94 @@ export interface WagenparkAiAdvies {
   prioriteit: string;
   reden?: string | null;
   onderhoud_id?: number | null;
+}
+
+export interface Documentsoort {
+  id: number;
+  context: string;
+  naam: string;
+  heeft_vervaldatum: boolean;
+  waarschuwing_dagen: number;
+  /** Aantal documenten dat deze soort gebruikt */
+  in_gebruik: number;
+}
+
+export type DocumentsoortInputContext = typeof DocumentsoortInputContext[keyof typeof DocumentsoortInputContext];
+
+
+export const DocumentsoortInputContext = {
+  voertuig: 'voertuig',
+  financieel_contract: 'financieel_contract',
+} as const;
+
+export interface DocumentsoortInput {
+  context?: DocumentsoortInputContext;
+  naam: string;
+  heeft_vervaldatum?: boolean;
+  waarschuwing_dagen?: number;
+}
+
+export interface VoertuigDocument {
+  id: number;
+  naam: string;
+  documentsoort_id?: number | null;
+  documentsoort_naam?: string | null;
+  geldig_tot?: string | null;
+  pdf_url?: string | null;
+  bestandsgrootte?: number | null;
+  aangemaakt_op: string;
+}
+
+export type VoertuigKostenJaarPerCategorie = {[key: string]: number};
+
+export interface VoertuigKostenJaar {
+  jaar: number;
+  totaal: number;
+  per_categorie: VoertuigKostenJaarPerCategorie;
+}
+
+export interface RdwVoertuigGegevens {
+  gevonden: boolean;
+  kenteken: string;
+  merk?: string | null;
+  handelsbenaming?: string | null;
+  voertuigsoort?: string | null;
+  kleur?: string | null;
+  datum_eerste_toelating?: string | null;
+  apk_vervaldatum?: string | null;
+  foutmelding?: string | null;
+}
+
+export interface MijnAutoMelding {
+  id: number;
+  type: string;
+  omschrijving: string;
+  status: string;
+  aangemaakt_op: string;
+}
+
+export type MijnAutoVoertuig = ({
+  id: number;
+  kenteken: string;
+  merk: string;
+  type: string;
+  bouwjaar?: number | null;
+  kleur?: string | null;
+  aandrijving?: string;
+  km_stand: number;
+  km_stand_datum?: string | null;
+  apk_datum?: string | null;
+  onderhouds_interval_km?: number | null;
+  onderhouds_interval_dag?: number | null;
+  llaatst_onderhoud_km?: number | null;
+  llaatste_onderhoud_datum?: string | null;
+  volgend_onderhoud_km?: number | null;
+  volgend_onderhoud_datum?: string | null;
+}) | null;
+
+export interface MijnAuto {
+  voertuig: MijnAutoVoertuig;
+  meldingen: MijnAutoMelding[];
 }
 
 export interface WagenparkAvgLogboekRegel {
@@ -15831,6 +15938,24 @@ gearchiveerd?: boolean;
 export type ListWagenparkSyncLogsParams = {
 limit?: number;
 };
+
+export type UploadVoertuigDocumentBody = {
+  bestand: Blob;
+  documentsoort_id: string;
+  geldig_tot?: string | null;
+};
+
+export type ListDocumentsoortenParams = {
+context?: ListDocumentsoortenContext;
+};
+
+export type ListDocumentsoortenContext = typeof ListDocumentsoortenContext[keyof typeof ListDocumentsoortenContext];
+
+
+export const ListDocumentsoortenContext = {
+  voertuig: 'voertuig',
+  financieel_contract: 'financieel_contract',
+} as const;
 
 export type ListWagenparkAvgLogboekParams = {
 van?: string;

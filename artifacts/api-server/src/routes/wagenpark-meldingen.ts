@@ -550,22 +550,21 @@ router.post("/meldingen/:id/doorzetten-garage", requireBevoegdheid("wagenpark", 
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const { garage_email, garage_naam, notitie } = req.body as {
-    garage_email: string;
+  const body = req.body as {
+    garage_email?: string;
     garage_naam?: string;
     notitie?: string;
   };
+  const notitie = body.notitie;
 
-  if (!garage_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(garage_email)) {
-    return void res.status(422).json({ error: "Geldig e-mailadres van garage is verplicht" });
-  }
-
-  // Melding ophalen inclusief voertuig + monteur info
+  // Melding ophalen inclusief voertuig (met vaste garage) + monteur info
   const [rij] = await db
     .select({
       melding: wagenparkMeldingenTable,
       voertuig_kenteken: voertuigenTable.kenteken,
       voertuig_merk: voertuigenTable.merk,
+      voertuig_garage_naam: voertuigenTable.garageNaam,
+      voertuig_garage_email: voertuigenTable.garageEmail,
       monteur_naam: gebruikersTable.naam,
     })
     .from(wagenparkMeldingenTable)
@@ -575,29 +574,45 @@ router.post("/meldingen/:id/doorzetten-garage", requireBevoegdheid("wagenpark", 
 
   if (!rij) return void res.status(404).json({ error: "Melding niet gevonden" });
 
-  // Status bijwerken naar doorgezet_garage
+  // Vaste garage van het voertuig is de standaard; per melding overschrijfbaar.
+  const garage_email = body.garage_email?.trim() || rij.voertuig_garage_email || "";
+  const garage_naam = body.garage_naam?.trim() || rij.voertuig_garage_naam || undefined;
+
+  if (!garage_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(garage_email)) {
+    return void res.status(422).json({ error: "Geldig e-mailadres van garage is verplicht (stel eventueel een vaste garage in bij het voertuig)" });
+  }
+
   const datumTijd = new Date().toLocaleDateString("nl-NL", {
     day: "numeric", month: "long", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
 
-  const opvolgNotitie = [
-    rij.melding.opvolgNotitie,
-    `Doorgezet naar garage (${garage_email}) op ${datumTijd}.`,
-    notitie ? `Notitie: ${notitie}` : null,
-  ].filter(Boolean).join("\n");
-
-  const [bijgewerkt] = await db
-    .update(wagenparkMeldingenTable)
-    .set({ status: "doorgezet_garage", opvolgNotitie, bijgewerktOp: new Date() })
-    .where(eq(wagenparkMeldingenTable.id, id))
-    .returning();
-
-  if (!bijgewerkt) return void res.status(500).json({ error: "Bijwerken mislukt" });
-
-  // E-mail versturen naar garage (fire-and-forget, gooit bij mislukken alleen een warn)
+  // §6.1: eerst de mail, pas daarna de status. Mislukt de mail, dan blijft de
+  // melding open, krijgt de beheerder een duidelijke fout én een werkbak-signaal.
   const { isGeconfigureerd, verstuurMail } = await import("../services/email.js");
-  if (isGeconfigureerd()) {
+  const meldGaragemailMislukt = async (reden: string) => {
+    const { meldWerkbakItem } = await import("../lib/werkbakService.js");
+    await meldWerkbakItem({
+      soort: "doen",
+      bron: "wagenpark_garagemail",
+      titel: `Garagemail niet verstuurd — melding #${id} (${rij.voertuig_kenteken ?? "onbekend voertuig"})`,
+      omschrijving: `Doorzetten naar ${garage_email} is mislukt: ${reden}. De melding staat nog open.`,
+      vereisteModule: "wagenpark",
+      vereistNiveau: 2,
+      gewicht: 70,
+      actiePad: "/wagenpark/meldingen",
+      herkomstType: "wagenpark_melding",
+      herkomstId: id,
+      dedupSleutel: `garagemail:${id}`,
+    }).catch((e) => req.log.error({ e }, "werkbak-signaal garagemail mislukt"));
+  };
+
+  if (!isGeconfigureerd()) {
+    await meldGaragemailMislukt("e-mail is niet geconfigureerd");
+    return void res.status(503).json({ error: "E-mail is niet geconfigureerd — de melding is NIET doorgezet" });
+  }
+
+  {
     const m = rij.melding;
     const voertuigLabel = [rij.voertuig_merk, rij.voertuig_kenteken ? `(${rij.voertuig_kenteken})` : null]
       .filter(Boolean).join(" ") || "Onbekend voertuig";
@@ -658,11 +673,33 @@ router.post("/meldingen/:id/doorzetten-garage", requireBevoegdheid("wagenpark", 
         soort: "voertuig_melding_garage",
       });
     } catch (mailErr) {
-      req.log.warn({ mailErr, garage_email }, "doorzetten-garage: e-mail versturen mislukt, melding toch doorgezet");
+      // Mail mislukt → status blijft zoals hij was (open), duidelijke fout + werkbak-signaal.
+      req.log.warn({ mailErr, garage_email }, "doorzetten-garage: e-mail versturen mislukt, melding NIET doorgezet");
+      await meldGaragemailMislukt("de mail kon niet worden verstuurd");
+      return void res.status(502).json({
+        error: `De garagemail naar ${garage_email} kon niet worden verstuurd. De melding staat nog open; probeer het opnieuw of controleer het adres.`,
+      });
     }
-  } else {
-    req.log.info("doorzetten-garage: mail niet geconfigureerd, melding doorgezet zonder e-mail");
   }
+
+  // Mail is aantoonbaar verstuurd → nu pas de status doorzetten.
+  const opvolgNotitie = [
+    rij.melding.opvolgNotitie,
+    `Doorgezet naar garage (${garage_email}) op ${datumTijd}.`,
+    notitie ? `Notitie: ${notitie}` : null,
+  ].filter(Boolean).join("\n");
+
+  const [bijgewerkt] = await db
+    .update(wagenparkMeldingenTable)
+    .set({ status: "doorgezet_garage", opvolgNotitie, bijgewerktOp: new Date() })
+    .where(eq(wagenparkMeldingenTable.id, id))
+    .returning();
+
+  if (!bijgewerkt) return void res.status(500).json({ error: "Bijwerken mislukt" });
+
+  // Eerder faal-signaal voor deze melding is hiermee opgelost.
+  const { handelBronAf } = await import("../lib/werkbakService.js");
+  await handelBronAf(`garagemail:${id}`).catch(() => undefined);
 
   return void res.json(mapMeldingNaarApi(bijgewerkt, {
     voertuig_kenteken: rij.voertuig_kenteken,

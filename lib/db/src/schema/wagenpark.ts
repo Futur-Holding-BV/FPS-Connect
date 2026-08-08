@@ -55,6 +55,13 @@ export const voertuigenTable = pgTable("voertuigen", {
   leaseEindDatum:      timestamp("lease_eind_datum"),
   leaseKmJaarlijks:    integer("lease_km_jaarlijks"),
 
+  // WAGENPARK_01: aandrijving (elektrische bus herkenbaar) + vaste garage + RDW-herkomst
+  aandrijving:     text("aandrijving").notNull().default("diesel"),
+  // "diesel" | "benzine" | "elektrisch" | "hybride"
+  garageNaam:      text("garage_naam"),
+  garageEmail:     text("garage_email"),
+  rdwOpgehaaldOp:  timestamp("rdw_opgehaald_op"),   // wanneer RDW-gegevens als voorstel zijn overgenomen
+
   // Gekoppelde chauffeur/gebruiker (vaste toewijzing — optioneel)
   chauffeurId:     integer("chauffeur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 
@@ -83,6 +90,8 @@ export const voertuigInsertSchema = createInsertSchema(voertuigenTable, {
   eigendomsType: z.enum(["eigendom", "lease", "huur"]),
   status:        z.enum(["actief", "in_onderhoud", "beschadigd", "afgestoten", "gereserveerd"]),
   bandenwisselStatus: z.enum(["geen_actie", "plannen", "gepland", "gewisseld"]),
+  aandrijving: z.enum(["diesel", "benzine", "elektrisch", "hybride"]),
+  garageEmail: z.string().email().max(200).nullish(),
 }).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
 export type VoertuigInsert = z.infer<typeof voertuigInsertSchema>;
@@ -155,7 +164,7 @@ export const wagenparkKostenTable = pgTable("wagenpark_kosten", {
 });
 
 export const wagenparkKostenInsertSchema = createInsertSchema(wagenparkKostenTable, {
-  categorie: z.enum(["onderhoud", "brandstof", "banden", "verzekering", "lease", "schade", "apk", "overig"]),
+  categorie: z.enum(["onderhoud", "brandstof", "laden", "banden", "verzekering", "lease", "schade", "apk", "overig"]),
   bedrag:    z.number().positive(),
 }).omit({ id: true, aangemaaktOp: true });
 
@@ -338,7 +347,7 @@ export const wagenparkMeldingenTable = pgTable("wagenpark_meldingen", {
 
 export const wagenparkMeldingInsertSchema = createInsertSchema(wagenparkMeldingenTable, {
   type:     z.enum(["storing", "schade", "kwartaalcontrole", "onderhoud", "overige"]),
-  status:   z.enum(["nieuw", "in_beoordeling", "actie_nodig", "ingepland", "opgelost", "afgewezen_duplicaat"]),
+  status:   z.enum(["nieuw", "in_beoordeling", "actie_nodig", "ingepland", "doorgezet_garage", "opgelost", "afgewezen_duplicaat"]),
   omschrijving: z.string().min(1),
   schadeLocatie: z.enum([
     "voorzijde", "achterzijde", "links", "rechts", "interieur", "laadruimte", "ruit", "band", "velg",

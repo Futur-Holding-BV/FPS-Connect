@@ -88,6 +88,9 @@ async function maakOfUpdateE2eAccount(opties: {
         actief: true,
         gearchiveerd: false,
         bevoegdheden,
+        // NOTITIE_01: initialen vooraf zetten zodat de eenmalige
+        // "Je initialen"-dialoog geen e2e-tests blokkeert.
+        initialen: "E2E",
       })
       .where(eq(gebruikersTable.id, bestaand.id));
     return bestaand.id;
@@ -104,6 +107,7 @@ async function maakOfUpdateE2eAccount(opties: {
       tweeFactorIngeschakeld: true,
       actief: true,
       bevoegdheden,
+      initialen: "E2E",
     })
     .returning({ id: gebruikersTable.id });
   return nieuw.id;

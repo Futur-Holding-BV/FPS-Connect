@@ -435,6 +435,7 @@ function RootLayoutNav() {
         <Stack.Screen name="lmra" />
         <Stack.Screen name="incidenten" />
         <Stack.Screen name="veiligheid-melding" />
+        <Stack.Screen name="mijn-auto" />
         <Stack.Screen name="veiligheid/index" />
         <Stack.Screen name="pbm" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />

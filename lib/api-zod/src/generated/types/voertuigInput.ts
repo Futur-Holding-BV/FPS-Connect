@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { VoertuigInputAandrijving } from './voertuigInputAandrijving';
 import type { VoertuigInputBandenwisselsStatus } from './voertuigInputBandenwisselsStatus';
 import type { VoertuigInputEigendomsType } from './voertuigInputEigendomsType';
 import type { VoertuigInputStatus } from './voertuigInputStatus';
@@ -33,5 +34,9 @@ export interface VoertuigInput {
   fleet_provider?: string | null;
   werkgever_id?: number | null;
   status?: VoertuigInputStatus;
+  aandrijving?: VoertuigInputAandrijving;
+  garage_naam?: string | null;
+  garage_email?: string | null;
+  rdw_opgehaald_op?: Date | null;
   opmerkingen?: string | null;
 }

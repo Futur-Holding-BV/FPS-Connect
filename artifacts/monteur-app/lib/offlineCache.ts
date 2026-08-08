@@ -197,6 +197,17 @@ export async function leesArtikelen(): Promise<CachedArtikel[] | null> {
   return lees<CachedArtikel[]>(ARTIKELEN_KEY);
 }
 
+// ─── Mijn auto (WAGENPARK_01 §3) ──────────────────────────────────────────────
+const MIJN_AUTO_KEY = `${P}:mijn_auto`;
+
+export async function slaMijnAutoOp<T>(data: T): Promise<void> {
+  await sla(MIJN_AUTO_KEY, data);
+}
+
+export async function leesMijnAuto<T>(): Promise<T | null> {
+  return lees<T>(MIJN_AUTO_KEY);
+}
+
 // ─── Volledige cache wissen ───────────────────────────────────────────────────
 export async function wisOfflineCache(): Promise<void> {
   const all = await AsyncStorage.getAllKeys();

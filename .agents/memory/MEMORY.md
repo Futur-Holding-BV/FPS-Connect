@@ -70,6 +70,7 @@
 - [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.
 - [Back-up & Herstel systeem](backup-systeem.md) — backup_records tabel; ObjectStorageService.uploadBackupFile/downloadBackupFile; backupService.ts (pg_dump+gzip+sha256); dagelijks 03:00 via recursieve setTimeout; restore vereist "HERSTEL BEVESTIGEN" + hoofdbeheerder.
 - [FPS Connect PWA](fps-pwa.md) — manifest+SW in firevault/public; icons PNG via ImageMagick; QR via /api/auth/pwa-qr (qrcode pkg); René id=11 is_hoofdtester=true.
+- [Wagenpark-module patronen](wagenpark-module.md) — voertuigdoc-download alleen via eigen ACL-route; delete=unlink; scan-first bij server-uploads; effectieveContext is async; rit-dedupe via unieke index.
 - [Werkdag-module patroon](werkdag-module.md) — planning_items=work orders; uitvoering_status via SQL ALTER (geen drizzle push); medewerker opzoeken via gebruiker_id in sessie; useFocusEffect voor refresh bij terugkeer.
 - [Importmodule (IMPORT_01)](import-module.md) — recht=niveau 4 op doelmodule; cache aan uploader + inUitvoering-grendel + verse dubbelcheck vóór insert; terugdraai-claim atomair, gewijzigd per rij.
 - [Legacy storage gebouw-ACL](legacy-storage-acl.md) — ongescoopte /objects-paden krijgen gebouw-ACL via live DB-afleiding (zoekGebouwenVoorLegacyPad); nieuwe pad-tabel = bron toevoegen.

@@ -12,6 +12,7 @@ export type WagenparkKostenInputCategorie = typeof WagenparkKostenInputCategorie
 export const WagenparkKostenInputCategorie = {
   onderhoud: 'onderhoud',
   brandstof: 'brandstof',
+  laden: 'laden',
   banden: 'banden',
   verzekering: 'verzekering',
   lease: 'lease',

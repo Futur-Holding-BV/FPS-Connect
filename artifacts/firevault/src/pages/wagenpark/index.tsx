@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import {
   Truck, AlertTriangle, Wrench, CheckCircle, RefreshCw,
-  ShieldAlert, Sparkles, Search, Plus, Eye, FileInput,
+  ShieldAlert, Sparkles, Search, Plus, Eye, FileInput, FileText,
 } from "lucide-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -140,6 +140,14 @@ export default function WagenparkPagina() {
               Brandstof importeren
             </Link>
           </Button>
+          {magSchrijven && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/wagenpark/documentsoorten">
+                <FileText className="h-4 w-4 mr-2" />
+                Documentsoorten
+              </Link>
+            </Button>
+          )}
           {magAanmaken && (
             <Button asChild size="sm">
               <Link href="/wagenpark/nieuw">

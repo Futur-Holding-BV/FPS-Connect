@@ -38,11 +38,31 @@ export const documentenTable = pgTable("documenten", {
   aiGeanalyseerd: boolean("ai_geanalyseerd").notNull().default(false),
   aiMetadata: jsonb("ai_metadata"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
+  // WAGENPARK_01: door de beheerder ingestelde documentsoort (met eigen vervaldatum-vlag/waarschuwingstermijn)
+  documentsoortId: integer("documentsoort_id").references(() => documentsoortenTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => ({
   uniekeRevisie: unique().on(t.groepId, t.revisieNummer),
 }));
+
+// ── DOCUMENTSOORTEN (WAGENPARK_01 §2.2) ─────────────────────────────────────
+// Door de beheerder zelf beheerbare soorten (naam, vervaldatum ja/nee, waarschuwingstermijn).
+// context: 'voertuig' nu; 'financieel_contract' volgt in CONTRACT_01 (zelfde beheerscherm).
+export const documentsoortenTable = pgTable("documentsoorten", {
+  id: serial("id").primaryKey(),
+  context: text("context").notNull().default("voertuig"),
+  naam: text("naam").notNull(),
+  heeftVervaldatum: boolean("heeft_vervaldatum").notNull().default(true),
+  waarschuwingDagen: integer("waarschuwing_dagen").notNull().default(30),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekeNaam: unique("documentsoorten_context_naam_uniek").on(t.context, t.naam),
+  contextCheck: check("documentsoorten_context_check", sql`${t.context} in ('voertuig','financieel_contract')`),
+  waarschuwingCheck: check("documentsoorten_waarschuwing_check", sql`${t.waarschuwingDagen} >= 0 and ${t.waarschuwingDagen} <= 365`),
+}));
+export type Documentsoort = typeof documentsoortenTable.$inferSelect;
 
 export const insertDocumentSchema = createInsertSchema(documentenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
@@ -73,7 +93,7 @@ export const documentKoppelingenTable = pgTable("document_koppelingen", {
   doelIdx: index("document_koppelingen_doel_idx").on(t.doelType, t.doelId),
   doelTypeCheck: check(
     "document_koppelingen_doel_type_check",
-    sql`${t.doelType} in ('gebouw','klant','offerte','dossier','voorziening','opdracht')`,
+    sql`${t.doelType} in ('gebouw','klant','offerte','dossier','voorziening','opdracht','voertuig')`,
   ),
 }));
 export type DocumentKoppeling = typeof documentKoppelingenTable.$inferSelect;

@@ -25903,6 +25903,10 @@ export const ListVoertuigenResponseItem = zod.object({
   "bandenwissels_status": zod.string().optional(),
   "fleet_provider": zod.string().nullish(),
   "provider_voertuig_id": zod.string().nullish(),
+  "aandrijving": zod.string().optional(),
+  "garage_naam": zod.string().nullish(),
+  "garage_email": zod.string().nullish(),
+  "rdw_opgehaald_op": zod.coerce.date().nullish(),
   "aandacht_nodig": zod.boolean().optional(),
   "bijgewerkt_op": zod.coerce.date().optional()
 })
@@ -25936,6 +25940,10 @@ export const CreateVoertuigBody = zod.object({
   "fleet_provider": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "status": zod.enum(['actief', 'in_onderhoud', 'beschadigd', 'afgestoten', 'gereserveerd']).optional(),
+  "aandrijving": zod.enum(['diesel', 'benzine', 'elektrisch', 'hybride']).optional(),
+  "garage_naam": zod.string().nullish(),
+  "garage_email": zod.string().nullish(),
+  "rdw_opgehaald_op": zod.coerce.date().nullish(),
   "opmerkingen": zod.string().nullish()
 })
 
@@ -25966,6 +25974,10 @@ export const GetVoertuigResponse = zod.object({
   "bandenwissels_status": zod.string().optional(),
   "fleet_provider": zod.string().nullish(),
   "provider_voertuig_id": zod.string().nullish(),
+  "aandrijving": zod.string().optional(),
+  "garage_naam": zod.string().nullish(),
+  "garage_email": zod.string().nullish(),
+  "rdw_opgehaald_op": zod.coerce.date().nullish(),
   "aandacht_nodig": zod.boolean().optional(),
   "bijgewerkt_op": zod.coerce.date().optional()
 }).and(zod.object({
@@ -26021,6 +26033,10 @@ export const UpdateVoertuigBody = zod.object({
   "fleet_provider": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "status": zod.enum(['actief', 'in_onderhoud', 'beschadigd', 'afgestoten', 'gereserveerd']).optional(),
+  "aandrijving": zod.enum(['diesel', 'benzine', 'elektrisch', 'hybride']).optional(),
+  "garage_naam": zod.string().nullish(),
+  "garage_email": zod.string().nullish(),
+  "rdw_opgehaald_op": zod.coerce.date().nullish(),
   "opmerkingen": zod.string().nullish()
 })
 
@@ -26041,6 +26057,10 @@ export const UpdateVoertuigResponse = zod.object({
   "bandenwissels_status": zod.string().optional(),
   "fleet_provider": zod.string().nullish(),
   "provider_voertuig_id": zod.string().nullish(),
+  "aandrijving": zod.string().optional(),
+  "garage_naam": zod.string().nullish(),
+  "garage_email": zod.string().nullish(),
+  "rdw_opgehaald_op": zod.coerce.date().nullish(),
   "aandacht_nodig": zod.boolean().optional(),
   "bijgewerkt_op": zod.coerce.date().optional()
 }).and(zod.object({
@@ -26200,7 +26220,7 @@ export const CreateVoertuigKostenParams = zod.object({
 })
 
 export const CreateVoertuigKostenBody = zod.object({
-  "categorie": zod.enum(['onderhoud', 'brandstof', 'banden', 'verzekering', 'lease', 'schade', 'apk', 'overig']),
+  "categorie": zod.enum(['onderhoud', 'brandstof', 'laden', 'banden', 'verzekering', 'lease', 'schade', 'apk', 'overig']),
   "bedrag": zod.number(),
   "datum": zod.coerce.date(),
   "omschrijving": zod.string().nullish(),
@@ -26287,6 +26307,185 @@ export const ListWagenparkAiAdviesResponseItem = zod.object({
   "onderhoud_id": zod.number().nullish()
 })
 export const ListWagenparkAiAdviesResponse = zod.array(ListWagenparkAiAdviesResponseItem)
+
+
+/**
+ * @summary Eigen auto van de ingelogde monteur (server-side afgedwongen op chauffeur_id)
+ */
+export const GetMijnAutoResponse = zod.object({
+  "voertuig": zod.object({
+  "id": zod.number(),
+  "kenteken": zod.string(),
+  "merk": zod.string(),
+  "type": zod.string(),
+  "bouwjaar": zod.number().nullish(),
+  "kleur": zod.string().nullish(),
+  "aandrijving": zod.string().optional(),
+  "km_stand": zod.number(),
+  "km_stand_datum": zod.coerce.date().nullish(),
+  "apk_datum": zod.coerce.date().nullish(),
+  "onderhouds_interval_km": zod.number().nullish(),
+  "onderhouds_interval_dag": zod.number().nullish(),
+  "llaatst_onderhoud_km": zod.number().nullish(),
+  "llaatste_onderhoud_datum": zod.coerce.date().nullish(),
+  "volgend_onderhoud_km": zod.number().nullish(),
+  "volgend_onderhoud_datum": zod.coerce.date().nullish()
+}).nullable(),
+  "meldingen": zod.array(zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary RDW open data opzoeken als invulhulp (voorstel, geen waarheid)
+ */
+export const GetRdwVoertuigGegevensParams = zod.object({
+  "kenteken": zod.coerce.string()
+})
+
+export const GetRdwVoertuigGegevensResponse = zod.object({
+  "gevonden": zod.boolean(),
+  "kenteken": zod.string(),
+  "merk": zod.string().nullish(),
+  "handelsbenaming": zod.string().nullish(),
+  "voertuigsoort": zod.string().nullish(),
+  "kleur": zod.string().nullish(),
+  "datum_eerste_toelating": zod.string().nullish(),
+  "apk_vervaldatum": zod.string().nullish(),
+  "foutmelding": zod.string().nullish()
+})
+
+
+/**
+ * @summary Kosten per jaar per categorie voor één voertuig
+ */
+export const GetVoertuigKostenOverzichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVoertuigKostenOverzichtResponseItem = zod.object({
+  "jaar": zod.number(),
+  "totaal": zod.number(),
+  "per_categorie": zod.record(zod.string(), zod.number())
+})
+export const GetVoertuigKostenOverzichtResponse = zod.array(GetVoertuigKostenOverzichtResponseItem)
+
+
+/**
+ * @summary Documenten gekoppeld aan een voertuig
+ */
+export const ListVoertuigDocumentenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVoertuigDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documentsoort_id": zod.number().nullish(),
+  "documentsoort_naam": zod.string().nullish(),
+  "geldig_tot": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})
+export const ListVoertuigDocumentenResponse = zod.array(ListVoertuigDocumentenResponseItem)
+
+
+/**
+ * @summary Document uploaden en aan een voertuig koppelen
+ */
+export const UploadVoertuigDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UploadVoertuigDocumentBody = zod.object({
+  "bestand": zod.instanceof(File),
+  "documentsoort_id": zod.string(),
+  "geldig_tot": zod.string().nullish()
+})
+
+export const UploadVoertuigDocumentResponse = zod.void()
+
+
+/**
+ * @summary Voertuigdocument verwijderen (archiveren)
+ */
+export const DeleteVoertuigDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "documentId": zod.coerce.number()
+})
+
+export const DeleteVoertuigDocumentResponse = zod.void()
+
+
+/**
+ * @summary Beheerbare documentsoorten (per context)
+ */
+export const ListDocumentsoortenQueryParams = zod.object({
+  "context": zod.enum(['voertuig', 'financieel_contract']).optional()
+})
+
+export const ListDocumentsoortenResponseItem = zod.object({
+  "id": zod.number(),
+  "context": zod.string(),
+  "naam": zod.string(),
+  "heeft_vervaldatum": zod.boolean(),
+  "waarschuwing_dagen": zod.number(),
+  "in_gebruik": zod.number().describe('Aantal documenten dat deze soort gebruikt')
+})
+export const ListDocumentsoortenResponse = zod.array(ListDocumentsoortenResponseItem)
+
+
+/**
+ * @summary Documentsoort aanmaken
+ */
+export const CreateDocumentsoortBody = zod.object({
+  "context": zod.enum(['voertuig', 'financieel_contract']).optional(),
+  "naam": zod.string(),
+  "heeft_vervaldatum": zod.boolean().optional(),
+  "waarschuwing_dagen": zod.number().optional()
+})
+
+export const CreateDocumentsoortResponse = zod.void()
+
+
+/**
+ * @summary Documentsoort bijwerken
+ */
+export const UpdateDocumentsoortParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentsoortBody = zod.object({
+  "context": zod.enum(['voertuig', 'financieel_contract']).optional(),
+  "naam": zod.string(),
+  "heeft_vervaldatum": zod.boolean().optional(),
+  "waarschuwing_dagen": zod.number().optional()
+})
+
+export const UpdateDocumentsoortResponse = zod.object({
+  "id": zod.number(),
+  "context": zod.string(),
+  "naam": zod.string(),
+  "heeft_vervaldatum": zod.boolean(),
+  "waarschuwing_dagen": zod.number(),
+  "in_gebruik": zod.number().describe('Aantal documenten dat deze soort gebruikt')
+})
+
+
+/**
+ * @summary Documentsoort verwijderen
+ */
+export const DeleteDocumentsoortParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDocumentsoortResponse = zod.void()
 
 
 /**

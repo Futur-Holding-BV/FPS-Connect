@@ -32,6 +32,9 @@ interface Props {
   toewijsbareGebruikers: ToewijsbareGebruiker[];
   onderhoudOpties?: WagenparkOnderhoud[];
   toonVoertuigLink?: boolean;
+  /** Vaste garage van het voertuig — voor het voorinvullen van de doorzet-dialoog. */
+  standaardGarageEmail?: string | null;
+  standaardGarageNaam?: string | null;
   onPatch: (waarden: {
     status?: string;
     toegewezen_beheerder_id?: number | null;
@@ -46,7 +49,7 @@ function formatDatumTijd(iso: string | null): string {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export function MeldingKaart({ melding: m, toewijsbareGebruikers, onderhoudOpties = [], toonVoertuigLink, onPatch }: Props) {
+export function MeldingKaart({ melding: m, toewijsbareGebruikers, onderhoudOpties = [], toonVoertuigLink, standaardGarageEmail, standaardGarageNaam, onPatch }: Props) {
   const voertuigLabel = [m.voertuig_merk, m.voertuig_type_naam, m.voertuig_kenteken ? `(${m.voertuig_kenteken})` : null]
     .filter(Boolean).join(" ");
 
@@ -54,6 +57,14 @@ export function MeldingKaart({ melding: m, toewijsbareGebruikers, onderhoudOptie
   const [garageEmail, setGarageEmail] = useState("");
   const [garageNaam, setGarageNaam] = useState("");
   const [garageNotitie, setGarageNotitie] = useState("");
+
+  function openGarageDialog() {
+    // Vaste garage voorinvullen (overschrijfbaar).
+    setGarageEmail(standaardGarageEmail ?? "");
+    setGarageNaam(standaardGarageNaam ?? "");
+    setGarageNotitie("");
+    setGarageDialogOpen(true);
+  }
   const [doorzetBezig, setDoorzetBezig] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -76,8 +87,15 @@ export function MeldingKaart({ melding: m, toewijsbareGebruikers, onderhoudOptie
         }),
       });
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({})) as { error?: string };
-        throw new Error(err.error ?? "Doorzetten mislukt");
+        const err = await resp.json().catch(() => ({})) as { error?: string; detail?: string; title?: string };
+        // 502/503: e-mail kon niet verstuurd worden — melding blijft open.
+        if (resp.status === 502 || resp.status === 503) {
+          throw new Error(
+            err.detail ?? err.error ??
+            "De e-mail naar de garage kon niet worden verstuurd. De melding blijft open — probeer het later opnieuw.",
+          );
+        }
+        throw new Error(err.detail ?? err.error ?? err.title ?? "Doorzetten mislukt");
       }
       toast({ title: "Doorgezet naar garage", description: `E-mail verstuurd naar ${garageEmail.trim()}.` });
       setGarageDialogOpen(false);
@@ -273,7 +291,7 @@ export function MeldingKaart({ melding: m, toewijsbareGebruikers, onderhoudOptie
                 variant="outline"
                 size="sm"
                 className="text-xs gap-1.5"
-                onClick={() => setGarageDialogOpen(true)}
+                onClick={openGarageDialog}
               >
                 <Wrench className="h-3.5 w-3.5" />
                 Doorzetten naar garage

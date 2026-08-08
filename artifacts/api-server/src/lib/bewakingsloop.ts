@@ -18,6 +18,10 @@ import {
   medewerkerOpleidingenTable,
   opleidingenTable,
   voertuigenTable,
+  wagenparkSyncLogTable,
+  documentenTable,
+  documentKoppelingenTable,
+  documentsoortenTable,
   factuurSignalenTable,
   facturenTable,
   goedkeuringAanvragenTable,
@@ -262,8 +266,151 @@ async function voedVerloopdatums(): Promise<{ nieuw: number; afgehandeld: number
         dedupSleutel: `voertuig:${v.id}:${c.soort.toLowerCase()}`,
       });
     }
+
+    // WAGENPARK_01 §4: km-gebonden onderhoud (zelfde drempel als het AI-advies:
+    // nog ≤ 2000 km tot de onderhoudsbeurt) en bandenwissel "plannen".
+    // Ontvanger: module wagenpark niveau 3 (§5.3-fallback — er is geen vaste
+    // wagenparkbeheerder-toewijzing op voertuigniveau).
+    if (v.onderhoudsIntervalKm && v.llaatstOnderhoudKm != null) {
+      const kmRest = v.llaatstOnderhoudKm + v.onderhoudsIntervalKm - v.kmStand;
+      if (kmRest <= 2000) {
+        items.push({
+          soort: "weten",
+          bron: "verloopdatum",
+          titel: kmRest <= 0
+            ? `Onderhoudsbeurt van ${v.kenteken ?? "voertuig"} is over de km-grens (${Math.abs(kmRest)} km overschreden)`
+            : `Onderhoudsbeurt van ${v.kenteken ?? "voertuig"} nadert: nog ${kmRest} km`,
+          omschrijving: `Kilometerstand ${v.kmStand}, laatste beurt bij ${v.llaatstOnderhoudKm} km, interval ${v.onderhoudsIntervalKm} km.`,
+          vereisteModule: "wagenpark",
+          vereistNiveau: 3,
+          gewicht: kmRest <= 0 ? 70 : 50,
+          actiePad: `/wagenpark/${v.id}`,
+          herkomstType: "voertuig",
+          herkomstId: v.id,
+          dedupSleutel: `voertuig:${v.id}:km_onderhoud`,
+        });
+      }
+    }
+    if (v.bandenwisselStatus === "plannen") {
+      items.push({
+        soort: "weten",
+        bron: "verloopdatum",
+        titel: `Bandenwissel plannen voor ${v.kenteken ?? "voertuig"}`,
+        omschrijving: "De bandenwissel staat op 'plannen'.",
+        vereisteModule: "wagenpark",
+        vereistNiveau: 3,
+        gewicht: 40,
+        actiePad: `/wagenpark/${v.id}`,
+        herkomstType: "voertuig",
+        herkomstId: v.id,
+        dedupSleutel: `voertuig:${v.id}:bandenwissel`,
+      });
+    }
   }
+
+  // WAGENPARK_01 §2: voertuigdocumenten met vervaldatum — venster per
+  // documentsoort (waarschuwing_dagen), niet één vaste 30 dagen.
+  const docs = await db
+    .select({
+      docId: documentenTable.id,
+      naam: documentenTable.naam,
+      geldigTot: documentenTable.geldigTot,
+      soortNaam: documentsoortenTable.naam,
+      waarschuwingDagen: documentsoortenTable.waarschuwingDagen,
+      heeftVervaldatum: documentsoortenTable.heeftVervaldatum,
+      voertuigId: documentKoppelingenTable.doelId,
+      kenteken: voertuigenTable.kenteken,
+    })
+    .from(documentenTable)
+    .innerJoin(documentsoortenTable, eq(documentenTable.documentsoortId, documentsoortenTable.id))
+    .innerJoin(documentKoppelingenTable, and(
+      eq(documentKoppelingenTable.documentId, documentenTable.id),
+      eq(documentKoppelingenTable.doelType, "voertuig"),
+    ))
+    .innerJoin(voertuigenTable, and(
+      eq(voertuigenTable.id, documentKoppelingenTable.doelId),
+      eq(voertuigenTable.gearchiveerd, false),
+    ))
+    .where(and(
+      eq(documentenTable.gearchiveerd, false),
+      isNotNull(documentenTable.geldigTot),
+    ));
+  for (const d of docs) {
+    if (!d.heeftVervaldatum || !d.geldigTot) continue;
+    const dagen = dagenTot(d.geldigTot);
+    if (dagen > (d.waarschuwingDagen ?? 30)) continue;
+    items.push({
+      soort: "weten",
+      bron: "verloopdatum",
+      titel: dagen < 0
+        ? `${d.soortNaam} van ${d.kenteken ?? "voertuig"} is verlopen`
+        : `${d.soortNaam} van ${d.kenteken ?? "voertuig"} verloopt over ${dagen} dagen`,
+      omschrijving: `Document '${d.naam}', geldig tot ${d.geldigTot}.`,
+      vereisteModule: "wagenpark",
+      vereistNiveau: 3,
+      gewicht: dagen < 0 ? 75 : dagen <= 7 ? 65 : 40,
+      actiePad: `/wagenpark/${d.voertuigId}`,
+      herkomstType: "document",
+      herkomstId: d.docId,
+      dedupSleutel: `voertuigdoc:${d.docId}`,
+    });
+  }
+
   return syncBron("verloopdatum", items);
+}
+
+// WAGENPARK_01 §6.3: dagelijkse Traxgo-synchronisatie als onderdeel van de
+// bewakingsloop, plus bewaking op het uitblijven ervan (>24u = werkbak-item).
+async function voedWagenparkSync(): Promise<{ nieuw: number; afgehandeld: number }> {
+  // Alleen syncen als er iets te syncen valt (voertuigen met provider-ID).
+  const [koppelbaar] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(voertuigenTable)
+    .where(and(isNotNull(voertuigenTable.providerVoertuigId), eq(voertuigenTable.gearchiveerd, false)));
+
+  if (Number(koppelbaar?.n ?? 0) > 0) {
+    const { voerWagenparkSyncUit } = await import("./wagenparkSync");
+    await voerWagenparkSyncUit(null); // null = automatische draai (sync-log zonder gestart_door)
+  }
+
+  // Bewaking: laatste geslaagde sync ouder dan 24 uur (of nooit) → signaal.
+  const items: WerkbakInvoer[] = [];
+  if (Number(koppelbaar?.n ?? 0) > 0) {
+    const [laatste] = await db
+      .select()
+      .from(wagenparkSyncLogTable)
+      .where(eq(wagenparkSyncLogTable.status, "voltooid"))
+      .orderBy(desc(wagenparkSyncLogTable.gestartOp))
+      .limit(1);
+    const teOud = !laatste?.voltooIdOp || Date.now() - laatste.voltooIdOp.getTime() > 24 * 3600 * 1000;
+    if (teOud) {
+      items.push({
+        soort: "weten",
+        bron: "bewakingsloop",
+        titel: "Traxgo-synchronisatie heeft langer dan 24 uur niet gedraaid",
+        omschrijving: laatste?.voltooIdOp
+          ? `Laatste geslaagde sync: ${laatste.voltooIdOp.toLocaleString("nl-NL")}. Kilometerstanden en ritten lopen achter.`
+          : "Er is nog nooit een geslaagde synchronisatie geregistreerd.",
+        vereisteModule: "wagenpark",
+        vereistNiveau: 3,
+        gewicht: 60,
+        actiePad: "/wagenpark",
+        herkomstType: "wagenpark_sync",
+        herkomstId: laatste?.id ?? null,
+        dedupSleutel: "wagenpark:sync_uitgebleven",
+      });
+    } else {
+      const { handelBronAf } = await import("./werkbakService");
+      await handelBronAf("wagenpark:sync_uitgebleven");
+    }
+  }
+  // syncBron niet gebruiken voor deze ene sleutel binnen de gedeelde bron
+  // "bewakingsloop" (reconciliatie zou andermans items sluiten); meld direct.
+  let nieuw = 0;
+  for (const item of items) {
+    if (await meldWerkbakItem(item)) nieuw += 1;
+  }
+  return { nieuw, afgehandeld: 0 };
 }
 
 // §5 + HRM_01 §2.4: verlofverjaring → HRM-rol (Weten), 8 weken vooraf.
@@ -505,6 +652,7 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["financiele_contracten", voedFinancieleContracten],
     ["poortwachter", voedPoortwachter],
     ["verloopdatums", voedVerloopdatums],
+    ["wagenpark_sync", voedWagenparkSync],
     ["verlofverjaring", voedVerlofverjaring],
     ["factuursignalen", voedFactuursignalen],
     ["goedkeuringsaanvragen", voedGoedkeuringsaanvragen],

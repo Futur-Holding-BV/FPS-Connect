@@ -9,7 +9,19 @@ import {
   useCreateVoertuigKosten,
   useListVoertuigRitten,
   useListToewijsbareGebruikers,
+  useGetVoertuigKostenOverzicht,
+  useListVoertuigDocumenten,
+  useUploadVoertuigDocument,
+  useDeleteVoertuigDocument,
+  useListDocumentsoorten,
+  getListVoertuigDocumentenQueryKey,
 } from "@workspace/api-client-react";
+import type { VoertuigDocument, Documentsoort } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { MeldingKaart } from "@/components/wagenpark/melding-kaart";
 import type { VoertuigMelding } from "@/lib/wagenpark-melding-types";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -36,7 +48,7 @@ import {
 } from "@/components/ui/alert";
 import {
   ArrowLeft, Truck, Wrench, Euro, Route, ShieldAlert, Plus, CheckCircle,
-  AlertTriangle, Sparkles, RefreshCw,
+  AlertTriangle, Sparkles, RefreshCw, FileText, Upload, Trash2, Download, Pencil,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WagenparkOnderhoud } from "@workspace/api-client-react";
@@ -170,8 +182,8 @@ function OnderhoudDialoog({
 // ══════════════════════════════════════════════════════════
 
 function KostenDialoog({
-  voertuigId, open, onSluit,
-}: { voertuigId: number; open: boolean; onSluit: () => void }) {
+  voertuigId, open, onSluit, isElektrisch,
+}: { voertuigId: number; open: boolean; onSluit: () => void; isElektrisch: boolean }) {
   const [categorie,    setCategorie]    = useState("onderhoud");
   const [bedrag,       setBedrag]       = useState("");
   const [datum,        setDatum]        = useState(new Date().toISOString().slice(0, 10));
@@ -186,7 +198,7 @@ function KostenDialoog({
       {
         id: voertuigId,
         data: {
-          categorie: categorie as "onderhoud" | "brandstof" | "banden" | "verzekering" | "lease" | "schade" | "apk" | "overig",
+          categorie: categorie as "onderhoud" | "brandstof" | "laden" | "banden" | "verzekering" | "lease" | "schade" | "apk" | "overig",
           bedrag:    b,
           datum:     new Date(datum).toISOString(),
           omschrijving: omschrijving || null,
@@ -213,7 +225,14 @@ function KostenDialoog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="onderhoud">Onderhoud</SelectItem>
-                  <SelectItem value="brandstof">Brandstof / Laadkosten</SelectItem>
+                  {isElektrisch ? (
+                    <SelectItem value="laden">Laden</SelectItem>
+                  ) : (
+                    <>
+                      <SelectItem value="brandstof">Brandstof</SelectItem>
+                      <SelectItem value="laden">Laden</SelectItem>
+                    </>
+                  )}
                   <SelectItem value="banden">Banden</SelectItem>
                   <SelectItem value="verzekering">Verzekering</SelectItem>
                   <SelectItem value="lease">Lease / Afschrijving</SelectItem>
@@ -261,6 +280,362 @@ function KostenDialoog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+// Document-upload-dialoog
+// ══════════════════════════════════════════════════════════
+
+function DocumentUploadDialoog({
+  voertuigId, open, onSluit, soorten,
+}: {
+  voertuigId: number;
+  open: boolean;
+  onSluit: () => void;
+  soorten: Documentsoort[];
+}) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const upload = useUploadVoertuigDocument();
+
+  const [bestand,        setBestand]        = useState<File | null>(null);
+  const [documentsoortId, setDocumentsoortId] = useState<string>("");
+  const [geldigTot,      setGeldigTot]      = useState("");
+
+  const gekozenSoort = soorten.find((s) => String(s.id) === documentsoortId);
+  const vervaldatumVerplicht = gekozenSoort?.heeft_vervaldatum ?? false;
+
+  function reset() {
+    setBestand(null);
+    setDocumentsoortId("");
+    setGeldigTot("");
+  }
+
+  function opslaan() {
+    if (!bestand) {
+      toast({ title: "Kies een bestand", variant: "destructive" });
+      return;
+    }
+    if (!documentsoortId) {
+      toast({ title: "Kies een documentsoort", variant: "destructive" });
+      return;
+    }
+    if (vervaldatumVerplicht && !geldigTot) {
+      toast({
+        title: "Vervaldatum verplicht",
+        description: `De soort "${gekozenSoort?.naam}" vereist een geldig-tot datum.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    upload.mutate(
+      {
+        id: voertuigId,
+        data: {
+          bestand,
+          documentsoort_id: documentsoortId,
+          geldig_tot: geldigTot ? new Date(geldigTot).toISOString() : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          void qc.invalidateQueries({ queryKey: getListVoertuigDocumentenQueryKey(voertuigId) });
+          toast({ title: "Document geüpload" });
+          reset();
+          onSluit();
+        },
+        onError: (err) => {
+          toast({
+            title: "Uploaden mislukt",
+            description: err instanceof Error ? err.message : "Onbekende fout.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onSluit(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Document uploaden</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1">
+            <Label>Bestand</Label>
+            <Input
+              type="file"
+              onChange={(e) => setBestand(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Documentsoort</Label>
+            <Select value={documentsoortId} onValueChange={setDocumentsoortId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kies een soort" />
+              </SelectTrigger>
+              <SelectContent>
+                {soorten.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.naam}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {soorten.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Nog geen documentsoorten — voeg deze eerst toe via Documentsoorten.
+              </p>
+            )}
+          </div>
+          {vervaldatumVerplicht && (
+            <div className="space-y-1">
+              <Label>Geldig tot *</Label>
+              <Input type="date" value={geldigTot} onChange={(e) => setGeldigTot(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onSluit}>Annuleren</Button>
+          <Button onClick={opslaan} disabled={upload.isPending || !bestand || !documentsoortId}>
+            Uploaden
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+// Documenten-tab
+// ══════════════════════════════════════════════════════════
+
+function DocumentVervalStatus(iso: string | null | undefined, waarschuwingDagen = 30): "verlopen" | "bijna" | "ok" | null {
+  if (!iso) return null;
+  const nu = Date.now();
+  const verval = new Date(iso).getTime();
+  if (verval < nu) return "verlopen";
+  if (verval < nu + waarschuwingDagen * 86_400_000) return "bijna";
+  return "ok";
+}
+
+function DocumentenTab({
+  voertuigId, magAanmaken,
+}: { voertuigId: number; magAanmaken: boolean }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: documenten = [] } = useListVoertuigDocumenten(voertuigId);
+  const { data: soorten = [] } = useListDocumentsoorten({ context: "voertuig" });
+
+  const [uploadOpen,    setUploadOpen]    = useState(false);
+  const [teVerwijderen, setTeVerwijderen] = useState<VoertuigDocument | null>(null);
+
+  const verwijder = useDeleteVoertuigDocument();
+
+  function verwijderBevestig() {
+    if (!teVerwijderen) return;
+    verwijder.mutate(
+      { id: voertuigId, documentId: teVerwijderen.id },
+      {
+        onSuccess: () => {
+          void qc.invalidateQueries({ queryKey: getListVoertuigDocumentenQueryKey(voertuigId) });
+          toast({ title: "Document verwijderd" });
+          setTeVerwijderen(null);
+        },
+        onError: (err) => {
+          toast({
+            title: "Verwijderen mislukt",
+            description: err instanceof Error ? err.message : "Onbekende fout.",
+            variant: "destructive",
+          });
+          setTeVerwijderen(null);
+        },
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-4 mt-4">
+      <div className="flex justify-end">
+        {magAanmaken && (
+          <Button size="sm" onClick={() => setUploadOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Document uploaden
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Soort</TableHead>
+                <TableHead>Naam</TableHead>
+                <TableHead>Geldig tot</TableHead>
+                <TableHead className="text-right">Acties</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documenten.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <div>Nog geen documenten</div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                documenten.map((d) => {
+                  const status = DocumentVervalStatus(d.geldig_tot);
+                  return (
+                    <TableRow key={d.id}>
+                      <TableCell className="text-sm">
+                        {d.documentsoort_naam ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{d.naam}</TableCell>
+                      <TableCell className="text-sm">
+                        {d.geldig_tot ? (
+                          <span className={
+                            status === "verlopen" ? "text-red-600 font-semibold"
+                              : status === "bijna" ? "text-orange-600 font-medium" : ""
+                          }>
+                            {formatDatum(d.geldig_tot)}
+                            {status === "verlopen" && " (verlopen)"}
+                            {status === "bijna" && " (bijna verlopen)"}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {d.pdf_url && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <a
+                                href={`/api/wagenpark/voertuigen/${voertuigId}/documenten/${d.id}/download`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                          {magAanmaken && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setTeVerwijderen(d)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {magAanmaken && (
+        <DocumentUploadDialoog
+          voertuigId={voertuigId}
+          open={uploadOpen}
+          onSluit={() => setUploadOpen(false)}
+          soorten={soorten}
+        />
+      )}
+
+      <AlertDialog open={!!teVerwijderen} onOpenChange={(o) => { if (!o) setTeVerwijderen(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Document verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Weet u zeker dat u &quot;{teVerwijderen?.naam}&quot; wilt verwijderen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={verwijderBevestig}
+              disabled={verwijder.isPending}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+// Kosten per jaar-overzicht
+// ══════════════════════════════════════════════════════════
+
+const KOSTEN_CATEGORIE_LABELS: Record<string, string> = {
+  onderhoud:   "Onderhoud",
+  brandstof:   "Brandstof",
+  laden:       "Laden",
+  banden:      "Banden",
+  verzekering: "Verzekering",
+  lease:       "Lease",
+  schade:      "Schade",
+  apk:         "APK",
+  overig:      "Overig",
+};
+
+function KostenPerJaar({ voertuigId }: { voertuigId: number }) {
+  const { data: overzicht = [] } = useGetVoertuigKostenOverzicht(voertuigId);
+
+  if (overzicht.length === 0) return null;
+
+  // Verzamel alle voorkomende categorieën
+  const categorieen = Array.from(
+    new Set(overzicht.flatMap((j) => Object.keys(j.per_categorie))),
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Kosten per jaar</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Jaar</TableHead>
+              {categorieen.map((c) => (
+                <TableHead key={c} className="text-right">
+                  {KOSTEN_CATEGORIE_LABELS[c] ?? c}
+                </TableHead>
+              ))}
+              <TableHead className="text-right font-semibold">Totaal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {overzicht.map((j) => (
+              <TableRow key={j.jaar}>
+                <TableCell className="font-medium">{j.jaar}</TableCell>
+                {categorieen.map((c) => (
+                  <TableCell key={c} className="text-right font-mono text-sm">
+                    {j.per_categorie[c] ? formatBedrag(j.per_categorie[c]) : "—"}
+                  </TableCell>
+                ))}
+                <TableCell className="text-right font-mono font-semibold">
+                  {formatBedrag(j.totaal)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -355,9 +730,11 @@ export default function WagenparkDetailPagina() {
     );
   }
 
+  const isElektrisch    = voertuig.aandrijving === "elektrisch";
   const totaalKosten    = kosten.reduce((s, k) => s + k.bedrag, 0);
   const onderhoudKosten = kosten.filter((k) => k.categorie === "onderhoud").reduce((s, k) => s + k.bedrag, 0);
   const brandstofKosten = kosten.filter((k) => k.categorie === "brandstof").reduce((s, k) => s + k.bedrag, 0);
+  const laadKosten      = kosten.filter((k) => k.categorie === "laden").reduce((s, k) => s + k.bedrag, 0);
 
   const gefilterdOnderhoud = onderhoud.filter((o) =>
     statusFilter === "alle" || o.status === statusFilter,
@@ -369,13 +746,21 @@ export default function WagenparkDetailPagina() {
   return (
     <div className="p-6 space-y-6 max-w-screen-xl">
       <PaginaHulp pagina="wagenpark-detail" />
-      <div>
+      <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/wagenpark">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Terug naar wagenpark
           </Link>
         </Button>
+        {magAanmaken && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/wagenpark/${voertuigId}/bewerken`}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Bewerken
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Alert className="border-blue-200 bg-blue-50">
@@ -461,6 +846,7 @@ export default function WagenparkDetailPagina() {
               <Badge className="ml-2 bg-red-100 text-red-800 text-xs">{nieuweMeldingen}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="documenten">Documenten</TabsTrigger>
         </TabsList>
 
         {/* ── Overzicht ── */}
@@ -475,6 +861,9 @@ export default function WagenparkDetailPagina() {
                   ["Chassisnummer", voertuig.chassisnummer],
                   ["Kleur", voertuig.kleur],
                   ["Bouwjaar", voertuig.bouwjaar?.toString()],
+                  ["Aandrijving", voertuig.aandrijving],
+                  ["Vaste garage", voertuig.garage_naam],
+                  ["Garage e-mail", voertuig.garage_email],
                   ["Chauffeur (vast)", voertuig.chauffeur_naam],
                 ] as [string, string | null | undefined][]).map(([label, waarde]) =>
                   waarde ? (
@@ -640,6 +1029,8 @@ export default function WagenparkDetailPagina() {
 
         {/* ── Kosten ── */}
         <TabsContent value="kosten" className="space-y-4 mt-4">
+          <KostenPerJaar voertuigId={voertuigId} />
+
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardContent className="pt-3">
@@ -655,8 +1046,12 @@ export default function WagenparkDetailPagina() {
             </Card>
             <Card>
               <CardContent className="pt-3">
-                <div className="font-bold text-lg">{formatBedrag(brandstofKosten)}</div>
-                <div className="text-xs text-muted-foreground">Brandstof / Laad</div>
+                <div className="font-bold text-lg">
+                  {formatBedrag(isElektrisch ? laadKosten : brandstofKosten)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {isElektrisch ? "Laden" : "Brandstof"}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -784,10 +1179,17 @@ export default function WagenparkDetailPagina() {
                 melding={m}
                 toewijsbareGebruikers={toewijsbareGebruikers}
                 onderhoudOpties={onderhoud}
+                standaardGarageEmail={voertuig.garage_email}
+                standaardGarageNaam={voertuig.garage_naam}
                 onPatch={(waarden) => patchMelding.mutate({ id: m.id, ...waarden })}
               />
             ))
           )}
+        </TabsContent>
+
+        {/* ── Documenten ── */}
+        <TabsContent value="documenten">
+          <DocumentenTab voertuigId={voertuigId} magAanmaken={magAanmaken} />
         </TabsContent>
       </Tabs>
 
@@ -800,6 +1202,7 @@ export default function WagenparkDetailPagina() {
         voertuigId={voertuigId}
         open={toonKostenDialoog}
         onSluit={() => setToonKostenDialoog(false)}
+        isElektrisch={isElektrisch}
       />
     </div>
   );

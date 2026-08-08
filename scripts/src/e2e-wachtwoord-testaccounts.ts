@@ -57,6 +57,8 @@ async function maakOfUpdate(
     misluktePogingen: 0,
     vergrendeldTot: null,
     moetWachtwoordWijzigen: false,
+    // NOTITIE_01: vooraf gevuld zodat de "Je initialen"-dialoog e2e niet blokkeert.
+    initialen: "E2E",
   };
 
   if (bestaand) {
@@ -93,6 +95,9 @@ export async function setupE2eWachtwoordAccounts(): Promise<{ adminId: number; t
   const targetHash = await bcrypt.hash(E2E_WW_TARGET_WACHTWOORD, 10);
 
   const adminId = await maakOfUpdate(E2E_WW_ADMIN_EMAIL, {
+    // NOTITIE_01: initialen worden hieronder vooraf gezet zodat de eenmalige
+    // "Je initialen"-dialoog de e2e-tests niet blokkeert (verse browsercontext
+    // per run → dialoog verschijnt anders elke keer opnieuw).
     naam: "E2E Test Hoofdbeheerder",
     rol: "hoofdbeheerder",
     wachtwoordHash: adminHash,
