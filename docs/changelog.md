@@ -1,3 +1,9 @@
+## 2026-08-08 — MERGE_01: het mergeproces zelf kan hersteld werk niet meer overschrijven
+
+- **Uitvoering:** volledig, alle 6 acceptatiebewijzen geleverd | **Kwaliteit:** hoog | **Risico:** laag (alleen procesbewaking; geen route-inhoud gewijzigd)
+
+Oorzaak-aanpak van de vijfvoudig gemangelde routebestanden. (1) De sync-controle in `scripts/post-merge.sh` is nu **blokkerend**: loopt de werkruimte achter op GitHub main, ontbreekt `GITHUB_TOKEN_PUSH` of faalt de fetch, dan stopt de merge met exit 1 en herstelinstructie — geen waarschuwing meer die genegeerd wordt. (2) `deploy.yml` draait typecheck, dubbele-routes- en klant-poort-controle vóór de eerste VPS-stap (live bewezen: testtak met bewust duplicaat stopte op "Controle 2/3", alle SSH-stappen skipped). (3) Review-fix: de pre-push auto-merge (stap 7a) lost conflicten niet meer stil op met `--ours` — dat was exact het patroon dat hersteld werk overschreef; conflict = blokkade + faalmelding aan René. `opname.ts` byte-identiek aan referentie `7b60cc2`. Regressietelling laatste 10 commits toont: duplicaten alleen in de bekende mangel-commits (`791515c`/`4e4a414`: 4, `d7cac83`/`5479d8b`: 2), overal elders nul.
+
 ## 2026-08-08 — DEPLOY-GATE: kapotte code kan productie niet meer bereiken (Taak #840)
 
 - **Uitvoering:** volledig, met live bewijs | **Kwaliteit:** hoog | **Risico:** laag (extra controles vóór deploy; noodpad gedocumenteerd)
