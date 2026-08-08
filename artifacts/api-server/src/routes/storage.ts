@@ -14,8 +14,19 @@ import {
 } from "../lib/objectStorage";
 import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
-import { gebouwToewijzingenTable, tekeningenTable, gebruikersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  gebouwToewijzingenTable,
+  tekeningenTable,
+  gebruikersTable,
+  verdiepingenTable,
+  fotosTable,
+  voorzieningenTable,
+  spotAiVoorstellenTable,
+  opnameFotosTable,
+  opnameItemsTable,
+  opnamesTable,
+} from "@workspace/db";
+import { eq, inArray, or } from "drizzle-orm";
 import { isBeperktTotToegewezen } from "../utils/rol";
 import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
 
@@ -34,20 +45,94 @@ const MAX_UPLOAD_BYTES = (() => {
 // dit bestand hoort. Gebruikers met volledige bevoegdheden zijn niet beperkt.
 // Bestanden zonder gebouw-koppeling (legacy/algemeen) zijn toegankelijk voor
 // elke geauthenticeerde gebruiker.
+// Zoek voor een legacy/ongescoopte objectpad (zonder gebouw-id in het pad)
+// de gebouw-koppeling(en) via de database-registraties die dit pad refereren.
+// Dekking: spotfoto's (fotos→voorzieningen), tekeningen, plattegronden
+// (verdiepingen), opnamefoto's (opname_fotos→opname_items→opnames) en
+// AI-spotvoorstellen. Paden kunnen zowel als "/objects/..." als via de
+// API-route "/api/storage/objects/..." zijn opgeslagen.
+async function zoekGebouwenVoorLegacyPad(objectPath: string): Promise<number[]> {
+  const rest = objectPath.startsWith("/objects/")
+    ? objectPath.slice("/objects/".length)
+    : objectPath;
+  const varianten = [
+    objectPath,
+    `/api/storage/objects/${rest}`,
+    `/api/storage/thumbnails/${rest}`,
+  ];
+
+  const [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen] =
+    await Promise.all([
+      db
+        .select({ gebouwId: voorzieningenTable.gebouwId })
+        .from(fotosTable)
+        .innerJoin(voorzieningenTable, eq(fotosTable.voorzieningId, voorzieningenTable.id))
+        .where(inArray(fotosTable.url, varianten)),
+      db
+        .select({ gebouwId: tekeningenTable.gebouwId })
+        .from(tekeningenTable)
+        .where(inArray(tekeningenTable.url, varianten)),
+      db
+        .select({ gebouwId: verdiepingenTable.gebouwId })
+        .from(verdiepingenTable)
+        .where(inArray(verdiepingenTable.plattegrondUrl, varianten)),
+      db
+        .select({ gebouwId: opnamesTable.gebouwId })
+        .from(opnameFotosTable)
+        .innerJoin(opnameItemsTable, eq(opnameFotosTable.itemId, opnameItemsTable.id))
+        .innerJoin(opnamesTable, eq(opnameItemsTable.opnameId, opnamesTable.id))
+        .where(inArray(opnameFotosTable.objectPath, varianten)),
+      db
+        .select({ gebouwId: spotAiVoorstellenTable.gebouwId })
+        .from(spotAiVoorstellenTable)
+        .where(
+          or(
+            inArray(spotAiVoorstellenTable.fotoVoorUrl, varianten),
+            inArray(spotAiVoorstellenTable.fotoNaUrl, varianten),
+          ),
+        ),
+    ]);
+
+  const gebouwen = new Set<number>();
+  for (const rows of [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen]) {
+    for (const r of rows) {
+      if (r.gebouwId != null) gebouwen.add(r.gebouwId);
+    }
+  }
+  return [...gebouwen];
+}
+
 async function magBestandInGebouw(
   userId: number,
   objectPath: string,
 ): Promise<boolean> {
   const gebouwId = parseGebouwIdFromObjectPath(objectPath);
   if (gebouwId == null) {
-    // Legacy uploads/ of algemeen/ — elke ingelogde MEDEWERKER mag lezen.
+    // Legacy uploads/ of algemeen/ — geen gebouw-id in het pad.
     // KLANT_01: klanten uitsluitend bestanden met een gebouw-koppeling naar
     // een toegewezen gebouw; ongescoopte paden zijn voor klanten dicht.
     const [g] = await db
       .select({ rol: gebruikersTable.rol })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, userId));
-    return g?.rol !== "klant";
+    if (g?.rol === "klant") return false;
+    // Leid de gebouw-koppeling af uit de registraties in de database.
+    // Is het bestand aan één of meer gebouwen gekoppeld, dan gelden dezelfde
+    // gebouw-ACL-regels als voor gestructureerde paden: beperkte gebruikers
+    // moeten aan (minstens) één van die gebouwen zijn toegewezen.
+    const gekoppeldeGebouwen = await zoekGebouwenVoorLegacyPad(objectPath);
+    if (gekoppeldeGebouwen.length === 0) {
+      // Geen gebouw-koppeling bekend (echt algemeen bestand, bv. avatar of
+      // bibliotheek-PDF): elke ingelogde medewerker mag lezen.
+      return true;
+    }
+    if (!(await isBeperktTotToegewezen(userId))) return true;
+    const rows = await db
+      .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+      .from(gebouwToewijzingenTable)
+      .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+    const toegewezen = new Set(rows.map((r) => r.gebouwId));
+    return gekoppeldeGebouwen.some((id) => toegewezen.has(id));
   }
   // Gebruikers die niet beperkt zijn (beheerder, bevoegdheid gebouwen:2) zien alles.
   if (!(await isBeperktTotToegewezen(userId))) return true;

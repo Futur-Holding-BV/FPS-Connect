@@ -2862,3 +2862,15 @@ De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-token
 **Aanleiding:** de eerder gebouwde drieledige keuze (stap 3 in de gebruikersaanmaak-dialoog: alleen account / + dossier / + onboarding) conflicteert met de geconsolideerde onboarding-flow op productie (commit cf4d7159). Op main loopt onboarding bewust via HRM > "Gebruikers zonder medewerkerprofiel" > Onboarden; een parallelle keuze in de aanmaakdialoog creëert verwarrende dubbele UX.
 
 **Besluit:** de drieledige keuze wordt niet doorgevoerd. `artifacts/firevault/src/pages/gebruikers/index.tsx` hersteld naar de origin/main-versie. De bijbehorende e2e-spec `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` verwijderd. De HRM-lijst "Gebruikers zonder medewerkerprofiel" blijft het officiële onboarding-vangnet.
+
+## 2026-08-08 — Task 825: Gebouw-koppeling afgedwongen op legacy storage-paden
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (7-punts gedragsbewijs met beperkte medewerker, hoofdbeheerder en klant) | **Risico:** laag (alleen legacy/ongescoopte paden strenger; ongekoppelde algemene bestanden ongewijzigd)
+
+**Probleem:** legacy/algemene storage-paden (`/objects/uploads/...`, `/objects/algemeen/...`) hadden geen gebouw-koppeling: elke ingelogde medewerker kon met een gedeeld/geraden pad privéfoto's van een ander gebouw lezen.
+
+**Oplossing:** `magBestandInGebouw` (`artifacts/api-server/src/routes/storage.ts`) leidt de gebouw-koppeling voor ongescoopte paden nu live af uit de database-registraties die het pad refereren (spotfoto's→voorzieningen, tekeningen, verdieping-plattegronden, opnamefoto's, AI-spotvoorstellen) en past daarop dezelfde gebouw-ACL toe als voor gestructureerde paden. Ongekoppelde bestanden (avatars, bibliotheek-PDF's) blijven medewerker-leesbaar; klanten blijven op alle ongescoopte paden dicht (KLANT_01). Geldt voor objects- én thumbnails-route.
+
+**Bewijs:** `scripts/src/verificatie-legacy-bestand-acl.ts` — L1 t/m L7 groen (kruistoegang 403 via beide koppelbronnen, eigen gebouw en ongekoppeld pad blijven werken, hoofdbeheerder ongewijzigd, klant dicht, thumbnails gelijk).
+
+**Meegerepareerd:** `routes/auth.ts` was op main door een eerdere revert-commit gemangeld (compileerde niet: `id` onbekend, dubbele taal-route, verdwenen wachtwoord-wijzigen-route); hersteld naar de laatst werkende versie.

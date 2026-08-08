@@ -94,6 +94,7 @@
 - [Canvas viewport vs. sidebar zichtbaarheid](canvas-sidebar-viewport.md) — firevault-iframe staat op Canvas positie (-974,-551) bij 1920x1080; sidebar (x=0..250) valt buiten het Canvas-viewport als dat bij (0,0) begint; gebruik Preview-pane voor volledige app-weergave.
 - [E2E getByText nav-kaart val](e2e-getbytext-navkaart.md) — getByText("Verlof").first() matcht ancestor-containers (View/ScrollView) als meer dan één DOM-element de substring bevat; gebruik testID op de Pressable en getByTestId voor betrouwbaar klikken.
 - [Importmodule (IMPORT_01)](import-module.md) — recht=niveau 4 op doelmodule; cache aan uploader + inUitvoering-grendel + verse dubbelcheck vóór insert; terugdraai-claim atomair, gewijzigd per rij.
+- [Legacy storage gebouw-ACL](legacy-storage-acl.md) — ongescoopte /objects-paden krijgen gebouw-ACL via live DB-afleiding (zoekGebouwenVoorLegacyPad); nieuwe pad-tabel = bron toevoegen.
 - [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).
 - [PIM Architectuur](pim-architectuur.md) — PIM=AI-context only (geen operationele data); 4 correcties: geen org_id, document_koppelingen CHECK uitbreiden, geen FK stap→inkoop, concurrency-index; Fase A (#296) eerst, B-G geblokkeerd.
 - [Silent-failure invite flow](silent-failure-invite-flow.md) — mail-send helper returning bool instead of throwing let a try/catch-only caller mark a user "invited" with no email sent; side effects gating state transitions must throw.
