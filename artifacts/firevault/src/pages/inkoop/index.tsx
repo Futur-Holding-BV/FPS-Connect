@@ -183,8 +183,18 @@ export default function InkoopOverzicht() {
               <TableBody>
                 {bonnen.map((bon) => (
                   <TableRow key={bon.id}>
-                    <TableCell className="font-mono text-sm">
-                      {bon.bon_nummer ?? `#${bon.id}`}
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {bon.kenmerk && (
+                          <span
+                            className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                            title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                          >
+                            {bon.kenmerk}
+                          </span>
+                        )}
+                        <span className="font-mono text-sm">{bon.bon_nummer ?? `#${bon.id}`}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-sm">{bon.opdracht_nummer ?? "—"}</div>

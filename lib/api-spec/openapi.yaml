@@ -40088,6 +40088,18 @@ components:
           type: string
           nullable: true
           description: "Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null"
+        offerte_id:
+          type: integer
+          nullable: true
+          description: "Gekoppelde offerte (basis voor het F-kenmerk); null bij losse/geïmporteerde facturen"
+        nummer:
+          type: integer
+          nullable: true
+          description: "NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)"
+        kenmerk:
+          type: string
+          nullable: true
+          description: "Berekend kenmerk (bijv. O405/F002); niet bewerkbaar, los van het fiscale factuurnummer"
         factuurnummer:
           type: string
           nullable: true
@@ -44097,6 +44109,9 @@ components:
       properties:
         id:
           type: integer
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. O405/I088a)"
         bon_nummer:
           type: ["string", "null"]
         opdracht_id:

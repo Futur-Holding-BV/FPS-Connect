@@ -10442,6 +10442,12 @@ export interface Factuur {
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
   subtype?: string | null;
+  /** Gekoppelde offerte (basis voor het F-kenmerk); null bij losse/geïmporteerde facturen */
+  offerte_id?: number | null;
+  /** NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …) */
+  nummer?: number | null;
+  /** Berekend kenmerk (bijv. O405/F002); niet bewerkbaar, los van het fiscale factuurnummer */
+  kenmerk?: string | null;
   factuurnummer?: string | null;
   factuurdatum?: string | null;
   vervaldatum?: string | null;
@@ -13512,6 +13518,11 @@ export interface WerkbonnenGenereerResultaat {
 
 export interface InkoopoverzichtItem {
   id: number;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. O405/I088a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   /** @nullable */
   bon_nummer?: string | null;
   opdracht_id: number;

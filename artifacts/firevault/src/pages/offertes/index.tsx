@@ -313,7 +313,17 @@ export default function OffertesPagina() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{o.titel}</div>
-                    {o.offertenummer && <div className="text-xs text-muted-foreground">{o.offertenummer}</div>}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      {o.kenmerk && (
+                        <span
+                          className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                          title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                        >
+                          {o.kenmerk}
+                        </span>
+                      )}
+                      {o.offertenummer && <span className="text-xs text-muted-foreground">{o.offertenummer}</span>}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1 items-end shrink-0">
                     <Badge variant="outline" className={STATUS_KLEUR[o.status] ?? ""}>{o.status}</Badge>

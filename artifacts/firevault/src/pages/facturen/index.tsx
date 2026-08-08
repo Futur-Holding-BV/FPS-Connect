@@ -212,9 +212,19 @@ export default function FacturenPagina() {
                         {f.type === "inkoop" ? "INK" : "VRK"}
                       </span>
                       <div>
-                        <p className="font-medium text-slate-900 truncate max-w-48">
-                          {f.factuurnummer ?? f.bestandsnaam ?? `Factuur #${f.id}`}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {f.kenmerk && (
+                            <span
+                              className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                              title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                            >
+                              {f.kenmerk}
+                            </span>
+                          )}
+                          <p className="font-medium text-slate-900 truncate max-w-48">
+                            {f.factuurnummer ?? f.bestandsnaam ?? `Factuur #${f.id}`}
+                          </p>
+                        </div>
                         {f.factuurnummer && f.bestandsnaam && (
                           <p className="text-xs text-muted-foreground truncate max-w-48">{f.bestandsnaam}</p>
                         )}

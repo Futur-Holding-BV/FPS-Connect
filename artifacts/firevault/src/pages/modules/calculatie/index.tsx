@@ -228,9 +228,19 @@ export default function ModulesCalculatie() {
                 <p className="font-semibold text-foreground truncate leading-snug">
                   {c.naam}
                 </p>
-                {c.referentie ? (
-                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{c.referentie}</p>
-                ) : null}
+                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  {c.kenmerk && (
+                    <span
+                      className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                      title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                    >
+                      {c.kenmerk}
+                    </span>
+                  )}
+                  {c.referentie ? (
+                    <span className="text-xs text-muted-foreground font-mono">{c.referentie}</span>
+                  ) : null}
+                </div>
               </div>
 
               {/* Klant / Project */}

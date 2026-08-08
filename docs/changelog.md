@@ -2900,6 +2900,12 @@ De statische klant-poort-check (`klant-poort-check`) draait niet langer alleen h
 
 **Meegerepareerd:** `routes/auth.ts` was op main door een eerdere revert-commit gemangeld (compileerde niet: `id` onbekend, dubbele taal-route, verdwenen wachtwoord-wijzigen-route); hersteld naar de laatst werkende versie.
 
+
+## 2026-08-08 — Kenmerken breder zichtbaar: facturen, inkoopbonnen en lijstweergaven
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (API-respons geverifieerd via ingelogde HTTP-calls; typecheck groen) | **Risico:** laag (alleen weergave + één extra join in het inkoopoverzicht)
+
+Vervolg op NUMMER_01: het berekende kenmerk (hét communicatienummer richting klant/leverancier) stond al op calculatie-detail, offerte-studio en magazijn-inkooporders, maar ontbrak elders. Nu ook als niet-bewerkbare badge op: factuurlijst en factuur-detail (O405/F002; alleen bij offerte-gekoppelde verkoopfacturen), de inkoopbon-kaarten en het verzenddialoog in de projectinkoopplanning (O405/I088a), het globale inkoopoverzicht (`/inkoop`) en de offerte- en calculatielijsten. Legacy nummers (offertenummer, INK-bonnummer, referentie) blijven als secundair zichtbaar. Backend: `GET /inkoop/overzicht` levert nu `kenmerk` mee (inline berekend via join op offertes, geen N+1) + OpenAPI-schema en codegen bijgewerkt.
 ## 2026-08-08 — Taak 824: medewerker-lek projecten/opname/workflow gedicht (+ kapotte login hersteld)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (gedragsbewijs 29 route-gevallen, 2 accounts) | **Risico:** laag-middel (medewerkers zonder recht verliezen bewust toegang)

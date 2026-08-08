@@ -381,6 +381,14 @@ export default function FactuurDetailPagina() {
                   <h1 className="text-xl font-semibold text-slate-900">
                     {f.factuurnummer ?? f.bestandsnaam ?? `Factuur #${f.id}`}
                   </h1>
+                  {f.kenmerk && (
+                    <span
+                      className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 select-all"
+                      title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                    >
+                      {f.kenmerk}
+                    </span>
+                  )}
                   <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${f.type === "inkoop" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-600"}`}>
                     {f.type === "inkoop" ? "Inkoopfactuur" : "Verkoopfactuur"}
                   </span>

@@ -516,6 +516,14 @@ function VerzendDialoog({ bon, opdrachtId, open, onClose, defaultEmail }: Verzen
         <div className="space-y-4">
           <div className="bg-muted/30 rounded-md p-3 text-sm">
             <p className="font-medium">{bon.leverancier}</p>
+            {bon.kenmerk && (
+              <p
+                className="font-mono text-xs font-semibold tracking-wide text-muted-foreground select-all"
+                title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+              >
+                {bon.kenmerk}
+              </p>
+            )}
             {bon.bon_nummer && <p className="text-xs text-muted-foreground">{bon.bon_nummer}</p>}
             {bon.totaal_bedrag != null && (
               <p className="text-xs text-muted-foreground">Totaal: {euro(bon.totaal_bedrag)}</p>
@@ -887,6 +895,14 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-sm">{bon.leverancier}</CardTitle>
+                {bon.kenmerk && (
+                  <span
+                    className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                    title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                  >
+                    {bon.kenmerk}
+                  </span>
+                )}
                 {bon.bon_nummer && <span className="text-xs text-muted-foreground">{bon.bon_nummer}</span>}
                 {bon.ai_suggestie && (
                   <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">

@@ -48,7 +48,7 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
     // Offerte-rijen zijn role="button" divs (geen <a href>); zoek de eerste kaart.
     const offerteRij = page
       .locator('[role="button"]')
-      .filter({ hasText: /OFF-\d+/i })
+      .filter({ hasText: /OFF-\d+|O\d{3}/ })
       .first();
     const leegStaat = page.getByText(/geen offertes/i).filter({ visible: true });
 
@@ -74,7 +74,7 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
 
     const offerteRij = page
       .locator('[role="button"]')
-      .filter({ hasText: /OFF-\d+/i })
+      .filter({ hasText: /OFF-\d+|O\d{3}/ })
       .first();
 
     await expect(offerteRij).toBeVisible({ timeout: INHOUD_TIMEOUT });

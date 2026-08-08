@@ -8,6 +8,11 @@
 
 export interface InkoopoverzichtItem {
   id: number;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. O405/I088a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   /** @nullable */
   bon_nummer?: string | null;
   opdracht_id: number;
