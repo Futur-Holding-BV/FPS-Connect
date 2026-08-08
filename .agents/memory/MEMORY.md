@@ -1,3 +1,4 @@
+- [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: grep onder set -e altijd || true.
 - [NUMMER_01 kenmerkketen](kenmerkketen.md) — nummers uit DB-sequences, kenmerk altijd berekend, bevriezen alleen bij versturen/definitief; offertes kopiëren=nieuw nummer, inkoop=letterherziening+snapshot.
 - [Orval index-fix](orval-index-fix.md) — orval herschrijft api-zod index.ts met dubbele exports; fix-zod-index.mjs in codegen-script houden.
 - [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
