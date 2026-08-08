@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ export default function LeveranciersPagina() {
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const { toast } = useToast();
 
+  const { heeftNiveau } = useBevoegdheid();
   const { data: leveranciers = [], refetch } = useListLeveranciers({ zoek: zoek || undefined });
   const { mutate: maakAan, isPending } = useCreateLeverancier({
     mutation: {
@@ -64,7 +66,11 @@ export default function LeveranciersPagina() {
           <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p className="font-medium">Geen leveranciers gevonden</p>
           <p className="text-sm mt-1">
-            Maak een nieuwe leverancier aan of importeer via <Link href="/beheer/import" className="underline">Importeren</Link>.
+            Maak een nieuwe leverancier aan
+            {heeftNiveau("crm", 4) && (
+              <> of importeer via <Link href="/beheer/import" className="underline">Importeren</Link></>
+            )}
+            .
           </p>
         </div>
       ) : (

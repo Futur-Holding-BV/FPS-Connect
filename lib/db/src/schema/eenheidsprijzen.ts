@@ -23,6 +23,8 @@ export const eenheidsprijzenTable = pgTable("eenheidsprijzen", {
   gemWerkelijkMateriaal: real("gem_werkelijk_materiaal"),
   aantalKeerGebruikt: integer("aantal_keer_gebruikt").notNull().default(0),
   afwijkingNormtijd: real("afwijking_normtijd"),
+  bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
+  importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -9,6 +9,10 @@ import type { GebouwStats } from './gebouwStats';
 import type { Verdieping } from './verdieping';
 
 export interface GebouwDetail {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   werknummer?: string | null;

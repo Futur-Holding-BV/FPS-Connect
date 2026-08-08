@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { magIetsImporteren } from "@/lib/import-rechten";
 import { useRol } from "@/context/rol-context";
 
 type InstItem = {
@@ -180,7 +181,7 @@ export default function InstellingenPagina() {
           pad: "/beheer/import",
           icoon: Upload,
           beschrijving: "Gegevens importeren vanuit externe bestanden",
-          zichtbaar: toonSysteem,
+          zichtbaar: magIetsImporteren(heeftNiveau),
         },
         {
           label: "Toolbox",

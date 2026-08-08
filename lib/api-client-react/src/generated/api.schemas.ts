@@ -1073,6 +1073,10 @@ export interface VersieStatus {
 }
 
 export interface CrmContactpersoon {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   klant_id: number | null;
@@ -1144,6 +1148,10 @@ export interface CrmProjectkans {
 }
 
 export interface CrmOrganisatie {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   naam: string;
   /** @nullable */
@@ -1189,6 +1197,10 @@ export interface CrmOrganisatie {
 export type CrmKlant = CrmOrganisatie;
 
 export interface CrmKlantInput {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   naam: string;
   type?: string;
   kvk?: string;
@@ -2104,6 +2116,10 @@ export type GebouwPartijenItem = {
 };
 
 export interface Gebouw {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   werknummer?: string | null;
@@ -2192,6 +2208,10 @@ export interface GebouwStats {
 }
 
 export interface GebouwDetail {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   werknummer?: string | null;
@@ -5090,6 +5110,10 @@ export interface OpleidingenVoorstelResultaat {
 }
 
 export interface Medewerker {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   gebruiker_id?: number | null;
@@ -10336,6 +10360,10 @@ export interface AccountviewInstellingenInput {
 export type FactuurAiMetadata = { [key: string]: unknown } | null;
 
 export interface Factuur {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
@@ -12111,6 +12139,8 @@ export interface OrgAiBedrijfsscanResultaat {
 }
 
 export interface Leverancier {
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   code?: string | null;
@@ -12219,6 +12249,8 @@ export interface LeverancierInput {
 }
 
 export interface Artikel {
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   code?: string | null;
@@ -12362,6 +12394,8 @@ export interface MagazijnLocatieInput {
 }
 
 export interface MagazijnArtikelItem {
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   code?: string | null;
@@ -12715,8 +12749,14 @@ export type ImportUploadBestandType = typeof ImportUploadBestandType[keyof typeo
 export const ImportUploadBestandType = {
   leveranciers: 'leveranciers',
   klanten: 'klanten',
+  contactpersonen: 'contactpersonen',
   artikelen: 'artikelen',
-  projecten: 'projecten',
+  magazijn_artikelen: 'magazijn_artikelen',
+  medewerkers: 'medewerkers',
+  gebouwen: 'gebouwen',
+  historische_projecten: 'historische_projecten',
+  eenheidsprijzen: 'eenheidsprijzen',
+  historische_facturen: 'historische_facturen',
 } as const;
 
 export interface ImportUploadBestand {
@@ -12731,6 +12771,47 @@ export interface ImportPreview {
   rijen: ImportPreviewRijenItem[];
   totaal_rijen: number;
   bestand_id?: string;
+  /** @nullable */
+  sleutel_omschrijving?: string | null;
+}
+
+export type ImportControlerenInputType = typeof ImportControlerenInputType[keyof typeof ImportControlerenInputType];
+
+
+export const ImportControlerenInputType = {
+  leveranciers: 'leveranciers',
+  klanten: 'klanten',
+  contactpersonen: 'contactpersonen',
+  artikelen: 'artikelen',
+  magazijn_artikelen: 'magazijn_artikelen',
+  medewerkers: 'medewerkers',
+  gebouwen: 'gebouwen',
+  historische_projecten: 'historische_projecten',
+  eenheidsprijzen: 'eenheidsprijzen',
+  historische_facturen: 'historische_facturen',
+} as const;
+
+export type ImportControlerenInputKolomkoppeling = {[key: string]: string};
+
+export interface ImportControlerenInput {
+  bestand_id: string;
+  type: ImportControlerenInputType;
+  kolomkoppeling: ImportControlerenInputKolomkoppeling;
+}
+
+export type ImportControleResultaatOnbruikbaarRedenenItem = {
+  rij: number;
+  reden: string;
+};
+
+export interface ImportControleResultaat {
+  totaal_rijen: number;
+  nieuw: number;
+  dubbel: number;
+  onbruikbaar: number;
+  onbruikbaar_redenen?: ImportControleResultaatOnbruikbaarRedenenItem[];
+  /** @nullable */
+  sleutel_omschrijving?: string | null;
 }
 
 export type ImportUitvoerenInputType = typeof ImportUitvoerenInputType[keyof typeof ImportUitvoerenInputType];
@@ -12739,17 +12820,35 @@ export type ImportUitvoerenInputType = typeof ImportUitvoerenInputType[keyof typ
 export const ImportUitvoerenInputType = {
   leveranciers: 'leveranciers',
   klanten: 'klanten',
+  contactpersonen: 'contactpersonen',
   artikelen: 'artikelen',
-  projecten: 'projecten',
+  magazijn_artikelen: 'magazijn_artikelen',
+  medewerkers: 'medewerkers',
+  gebouwen: 'gebouwen',
+  historische_projecten: 'historische_projecten',
+  eenheidsprijzen: 'eenheidsprijzen',
+  historische_facturen: 'historische_facturen',
 } as const;
 
 export type ImportUitvoerenInputKolomkoppeling = {[key: string]: string};
+
+/**
+ * @nullable
+ */
+export type ImportUitvoerenInputKeuzeDubbelen = typeof ImportUitvoerenInputKeuzeDubbelen[keyof typeof ImportUitvoerenInputKeuzeDubbelen] | null;
+
+
+export const ImportUitvoerenInputKeuzeDubbelen = {
+  overslaan: 'overslaan',
+  als_nieuw: 'als_nieuw',
+} as const;
 
 export interface ImportUitvoerenInput {
   bestand_id: string;
   type: ImportUitvoerenInputType;
   kolomkoppeling: ImportUitvoerenInputKolomkoppeling;
-  overslaan_lege_naam?: boolean;
+  /** @nullable */
+  keuze_dubbelen?: ImportUitvoerenInputKeuzeDubbelen;
 }
 
 export type ImportResultaatFoutenItem = {
@@ -12765,9 +12864,22 @@ export interface ImportResultaat {
   fouten: ImportResultaatFoutenItem[];
   /** @nullable */
   log_id?: number | null;
+  /** @nullable */
+  rijen_dubbel_overgeslagen?: number | null;
 }
 
 export type ImportLogFoutenItem = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type ImportLogTerugdraaiDetail = {
+  verwijderd?: number;
+  niet_verwijderd?: {
+  id: number;
+  reden: string;
+}[];
+} | null;
 
 export interface ImportLog {
   id: number;
@@ -12776,8 +12888,29 @@ export interface ImportLog {
   rijen_totaal: number;
   rijen_verwerkt: number;
   rijen_overgeslagen: number;
+  /** @nullable */
+  rijen_dubbel?: number | null;
+  /** @nullable */
+  keuze_dubbelen?: string | null;
   fouten?: ImportLogFoutenItem[];
+  bestand_beschikbaar?: boolean;
+  /** @nullable */
+  teruggedraaid_op?: string | null;
+  /** @nullable */
+  terugdraai_detail?: ImportLogTerugdraaiDetail;
   aangemaakt_op: string;
+}
+
+export type ImportTerugdraaiResultaatNietVerwijderdItem = {
+  id: number;
+  reden: string;
+};
+
+export interface ImportTerugdraaiResultaat {
+  log_id: number;
+  verwijderd: number;
+  niet_verwijderd: ImportTerugdraaiResultaatNietVerwijderdItem[];
+  volledig: boolean;
 }
 
 export interface Onderhoudscontract {
@@ -13320,6 +13453,10 @@ export interface InkoopoverzichtItem {
 }
 
 export interface EenheidsPrijs {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   code: string;
   omschrijving: string;
@@ -13633,6 +13770,7 @@ export interface FieAkUrenSplitsingJaar {
   dekkend: boolean;
   indirect_pct?: number | null;
 }
+
 export interface FieAkDashboard {
   reeks: FieAkReeksRij[];
   lopend_jaar: FieAkLopendJaar;
@@ -15726,3 +15864,4 @@ export type DraaiWerkbakBewaking200Samenvatting = { [key: string]: unknown };
 export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
+

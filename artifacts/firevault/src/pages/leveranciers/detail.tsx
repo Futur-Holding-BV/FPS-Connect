@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -82,11 +83,11 @@ export default function LeverancierDetailPagina() {
             <Badge variant={leverancier.actief ? "default" : "secondary"}>
               {leverancier.actief ? "Actief" : "Inactief"}
             </Badge>
+            <ImportBadge bron={leverancier.bron} importId={leverancier.import_id} />
           </div>
           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
             {leverancier.code && <span>Code: {leverancier.code}</span>}
             {leverancier.categorie && <span>• {leverancier.categorie}</span>}
-            {leverancier.bron === "import" && <span>• Geïmporteerd</span>}
           </div>
         </div>
         <div className="flex gap-2">

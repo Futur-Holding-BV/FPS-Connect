@@ -7,6 +7,10 @@
  */
 
 export interface CrmKlantInput {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   naam: string;
   type?: string;
   kvk?: string;

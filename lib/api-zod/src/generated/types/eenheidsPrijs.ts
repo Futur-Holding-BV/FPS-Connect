@@ -7,6 +7,10 @@
  */
 
 export interface EenheidsPrijs {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   code: string;
   omschrijving: string;

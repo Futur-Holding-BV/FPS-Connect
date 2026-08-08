@@ -70,6 +70,7 @@ export const leveranciersTable = pgTable("leveranciers", {
   notities: text("notities"),
   actief: boolean("actief").notNull().default(true),
   bron: text("bron").notNull().default("handmatig"),     // "handmatig" | "import"
+  importId: integer("import_id"),                        // IMPORT_01: verwijzing naar import_logs.id
 
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

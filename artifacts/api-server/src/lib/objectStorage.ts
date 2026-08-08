@@ -416,7 +416,14 @@ export class ObjectStorageService {
    * Download een back-upbestand als Buffer vanuit object storage.
    */
   async downloadBackupFile(slug: string, filename: string): Promise<Buffer> {
-    const subPath = `backups/${slug}/${filename}`;
+    return this.downloadBestandBuffer(`backups/${slug}/${filename}`);
+  }
+
+  /**
+   * Download een willekeurig server-side geüpload bestand (uploadBestand) als Buffer.
+   * subPath is het pad zoals aan uploadBestand meegegeven (zonder /objects/-prefix).
+   */
+  async downloadBestandBuffer(subPath: string): Promise<Buffer> {
 
     if (isS3Mode()) {
       const { GetObjectCommand } = await import("@aws-sdk/client-s3");

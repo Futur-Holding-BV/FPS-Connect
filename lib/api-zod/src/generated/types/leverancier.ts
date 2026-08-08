@@ -7,6 +7,8 @@
  */
 
 export interface Leverancier {
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   code?: string | null;

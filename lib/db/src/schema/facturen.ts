@@ -160,7 +160,8 @@ export const facturenTable = pgTable("facturen", {
   incassoReferentie: text("incasso_referentie"),
 
   // Herkomst van de factuur (hoe kwam de factuur binnen)
-  bron: text("bron").notNull().default("handmatig"), // handmatig | upload | mailbox
+  bron: text("bron").notNull().default("handmatig"), // handmatig | upload | mailbox | import
+  importId: integer("import_id"),                    // IMPORT_01: verwijzing naar import_logs.id
 
   // Afkeuring — gekozen categorie (naast de vrije reden)
   // verkeerde_prijs | verkeerd_aantal | levering_ontbreekt | verkeerde_leverancier |

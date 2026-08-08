@@ -144,6 +144,8 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     iban_afwijking: r.ibanAfwijking,
     incasso_datum: r.incassoDatum ?? null,
     incasso_referentie: r.incassoReferentie ?? null,
+    bron: r.bron,
+    import_id: r.importId ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

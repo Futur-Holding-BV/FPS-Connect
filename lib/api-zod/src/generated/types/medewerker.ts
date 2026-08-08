@@ -7,6 +7,10 @@
  */
 
 export interface Medewerker {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   gebruiker_id?: number | null;

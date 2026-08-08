@@ -15,4 +15,6 @@ export interface ImportResultaat {
   fouten: ImportResultaatFoutenItem[];
   /** @nullable */
   log_id?: number | null;
+  /** @nullable */
+  rijen_dubbel_overgeslagen?: number | null;
 }

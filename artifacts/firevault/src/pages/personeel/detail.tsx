@@ -85,6 +85,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -1341,7 +1342,10 @@ export default function MedewerkerDetailPagina() {
             <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-foreground truncate">{medewerker.naam}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-foreground truncate">{medewerker.naam}</h1>
+              <ImportBadge bron={medewerker.bron} importId={medewerker.import_id} />
+            </div>
             <p className="text-sm text-muted-foreground">
               {medewerker.functie_naam ?? "Geen functie"} — {medewerker.werkmaatschappij}
             </p>

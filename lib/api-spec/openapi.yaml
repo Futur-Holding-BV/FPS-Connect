@@ -22680,6 +22680,25 @@ paths:
         "400":
           description: Ongeldig bestandsformaat
 
+  /import/controleren:
+    post:
+      operationId: importControleren
+      tags: [import]
+      summary: Controle-overzicht (nieuw/dubbel/onbruikbaar) vóór uitvoeren
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportControlerenInput"
+      responses:
+        "200":
+          description: Controle-overzicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportControleResultaat"
+
   /import/uitvoeren:
     post:
       operationId: importUitvoeren
@@ -22713,6 +22732,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ImportLog"
+
+  /import/logs/{id}/terugdraaien:
+    post:
+      operationId: importTerugdraaien
+      tags: [import]
+      summary: Eén import in zijn geheel terugdraaien
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Terugdraairesultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportTerugdraaiResultaat"
+        "409":
+          description: Al teruggedraaid
 
   /studio/modellen:
     get:
@@ -26010,6 +26049,10 @@ components:
       type: object
       required: [id, naam, status, aangemaakt_op, bijgewerkt_op]
       properties:
+        bron:
+          type: ["string", "null"]
+        import_id:
+          type: ["integer", "null"]
         id:
           type: integer
         naam:
@@ -26067,6 +26110,8 @@ components:
       type: object
       required: [naam]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         naam:
           type: string
         type:
@@ -26106,6 +26151,8 @@ components:
       type: object
       required: [id, klant_id, naam, primair, aangemaakt_op, bijgewerkt_op]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         id:
           type: integer
         klant_id:
@@ -27471,6 +27518,8 @@ components:
       type: object
       required: [id, naam, adres, aangemaakt_op]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         id:
           type: integer
         werknummer:
@@ -27548,6 +27597,10 @@ components:
       type: object
       required: [id, naam, adres, aangemaakt_op, verdiepingen]
       properties:
+        bron:
+          type: ["string", "null"]
+        import_id:
+          type: ["integer", "null"]
         id:
           type: integer
         werknummer:
@@ -31431,6 +31484,8 @@ components:
       type: object
       required: [id, naam, werkmaatschappij, dienstverband, actief, aangemaakt_op, bijgewerkt_op]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         id:
           type: integer
         gebruiker_id:
@@ -39904,6 +39959,8 @@ components:
       type: object
       required: [id, type, status, geblokkeerd, geaccordeerd, aangemaakt_op]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         id:
           type: integer
         type:
@@ -42825,6 +42882,7 @@ components:
       type: object
       required: [id, naam, actief, bron, aangemaakt_op, bijgewerkt_op]
       properties:
+        import_id:          { type: ["integer", "null"] }
         id:                       { type: integer }
         code:                     { type: ["string", "null"] }
         naam:                     { type: string }
@@ -42909,6 +42967,7 @@ components:
       type: object
       required: [id, naam, eenheid, btw_percentage, actief, bron, aangemaakt_op, bijgewerkt_op]
       properties:
+        import_id:          { type: ["integer", "null"] }
         id:                 { type: integer }
         code:               { type: ["string", "null"] }
         naam:               { type: string }
@@ -43041,6 +43100,7 @@ components:
       type: object
       required: [id, naam, eenheid, actief, aangemaakt_op, bijgewerkt_op]
       properties:
+        import_id:             { type: ["integer", "null"] }
         id:                    { type: integer }
         code:                  { type: ["string", "null"] }
         naam:                  { type: string }
@@ -43385,7 +43445,7 @@ components:
           format: binary
         type:
           type: string
-          enum: [leveranciers, klanten, artikelen, projecten]
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
 
     ImportPreview:
       type: object
@@ -43405,6 +43465,41 @@ components:
           type: integer
         bestand_id:
           type: string
+        sleutel_omschrijving:
+          type: ["string", "null"]
+
+    ImportControlerenInput:
+      type: object
+      required: [bestand_id, type, kolomkoppeling]
+      properties:
+        bestand_id:
+          type: string
+        type:
+          type: string
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
+        kolomkoppeling:
+          type: object
+          additionalProperties:
+            type: string
+
+    ImportControleResultaat:
+      type: object
+      required: [totaal_rijen, nieuw, dubbel, onbruikbaar]
+      properties:
+        totaal_rijen: { type: integer }
+        nieuw:        { type: integer }
+        dubbel:       { type: integer }
+        onbruikbaar:  { type: integer }
+        onbruikbaar_redenen:
+          type: array
+          items:
+            type: object
+            required: [rij, reden]
+            properties:
+              rij:   { type: integer }
+              reden: { type: string }
+        sleutel_omschrijving:
+          type: ["string", "null"]
 
     ImportUitvoerenInput:
       type: object
@@ -43414,13 +43509,14 @@ components:
           type: string
         type:
           type: string
-          enum: [leveranciers, klanten, artikelen, projecten]
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
         kolomkoppeling:
           type: object
           additionalProperties:
             type: string
-        overslaan_lege_naam:
-          type: boolean
+        keuze_dubbelen:
+          type: ["string", "null"]
+          enum: [overslaan, als_nieuw, null]
 
     ImportResultaat:
       type: object
@@ -43439,6 +43535,7 @@ components:
               rij:  { type: integer }
               fout: { type: string }
         log_id:             { type: ["integer", "null"] }
+        rijen_dubbel_overgeslagen: { type: ["integer", "null"] }
 
     ImportLog:
       type: object
@@ -43450,11 +43547,43 @@ components:
         rijen_totaal:       { type: integer }
         rijen_verwerkt:     { type: integer }
         rijen_overgeslagen: { type: integer }
+        rijen_dubbel:       { type: ["integer", "null"] }
+        keuze_dubbelen:     { type: ["string", "null"] }
         fouten:
           type: array
           items:
             type: object
+        bestand_beschikbaar: { type: boolean }
+        teruggedraaid_op:   { type: ["string", "null"] }
+        terugdraai_detail:
+          type: ["object", "null"]
+          properties:
+            verwijderd: { type: integer }
+            niet_verwijderd:
+              type: array
+              items:
+                type: object
+                required: [id, reden]
+                properties:
+                  id:    { type: integer }
+                  reden: { type: string }
         aangemaakt_op:      { type: string }
+
+    ImportTerugdraaiResultaat:
+      type: object
+      required: [log_id, verwijderd, niet_verwijderd, volledig]
+      properties:
+        log_id:     { type: integer }
+        verwijderd: { type: integer }
+        niet_verwijderd:
+          type: array
+          items:
+            type: object
+            required: [id, reden]
+            properties:
+              id:    { type: integer }
+              reden: { type: string }
+        volledig:   { type: boolean }
 
     # ── Onderhoudscontracten ──────────────────────────────────────────────────
 
@@ -43873,6 +44002,8 @@ components:
       type: object
       required: [id, code, omschrijving, categorie, eenheid, materiaalcomponent, arbeidscomponent, normtijd, kostprijs, verkoopprijs, marge, actief, aantal_keer_gebruikt, aangemaakt_op, bijgewerkt_op]
       properties:
+        bron:               { type: ["string", "null"] }
+        import_id:          { type: ["integer", "null"] }
         id:
           type: integer
         code:

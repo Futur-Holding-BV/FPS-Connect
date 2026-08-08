@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -188,8 +189,9 @@ export default function EenheidsprijzenBeheer() {
   }
 
   const { heeftNiveau } = useBevoegdheid();
-  const magSysteemLezen = heeftNiveau("systeem", 1);
-  const magImporteren = heeftNiveau("systeem", 2);
+  // IMPORT_01: eenheidsprijzen importeren vereist beheerrecht op calculaties
+  const magImporteren = heeftNiveau("calculaties", 4);
+  const magSysteemLezen = magImporteren;
 
   const downloadTemplate = () => {
     window.location.href = "/api/import/template/eenheidsprijzen";
@@ -297,7 +299,10 @@ export default function EenheidsprijzenBeheer() {
                     <TableRow key={p.id} className="group">
                       <TableCell className="font-mono text-sm font-medium">{p.code}</TableCell>
                       <TableCell>
-                        <div className="font-medium">{p.omschrijving}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {p.omschrijving}
+                          <ImportBadge bron={p.bron} importId={p.import_id} />
+                        </div>
                         {p.opmerkingen && (
                           <div className="text-xs text-muted-foreground truncate max-w-[280px]">{p.opmerkingen}</div>
                         )}

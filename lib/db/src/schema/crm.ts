@@ -49,6 +49,8 @@ export const crmKlantenTable = pgTable("crm_klanten", {
   voorkeurFpsBedrijf: text("voorkeur_fps_bedrijf"),
   opmerkingen: text("opmerkingen"),
   voorkeursPresentatieNiveau: integer("voorkeurs_presentatie_niveau"),
+  bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
+  importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -68,6 +70,8 @@ export const crmContactpersonenTable = pgTable("crm_contactpersonen", {
   opmerkingen: text("opmerkingen"),
   laatste_contact_datum: text("laatste_contact_datum"),
   volgende_actie: text("volgende_actie"),
+  bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
+  importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -427,9 +427,12 @@ import type {
   HrmOnboardingTaak,
   HrmOnboardingTaakInput,
   HrmStats,
+  ImportControleResultaat,
+  ImportControlerenInput,
   ImportLog,
   ImportPreview,
   ImportResultaat,
+  ImportTerugdraaiResultaat,
   ImportUitvoerenInput,
   ImportUploadBestand,
   InboxAfwijzenBody,
@@ -79210,6 +79213,76 @@ export const useImportPreview = <TError = ErrorType<void>,
       return useMutation(getImportPreviewMutationOptions(options));
     }
 
+export const getImportControlerenUrl = () => {
+
+
+
+
+  return `/api/import/controleren`
+}
+
+/**
+ * @summary Controle-overzicht (nieuw/dubbel/onbruikbaar) vóór uitvoeren
+ */
+export const importControleren = async (importControlerenInput: ImportControlerenInput, options?: RequestInit): Promise<ImportControleResultaat> => {
+
+  return customFetch<ImportControleResultaat>(getImportControlerenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(importControlerenInput)
+  }
+);}
+
+
+
+
+export const getImportControlerenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importControleren>>, TError,{data: BodyType<ImportControlerenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importControleren>>, TError,{data: BodyType<ImportControlerenInput>}, TContext> => {
+
+const mutationKey = ['importControleren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importControleren>>, {data: BodyType<ImportControlerenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importControleren(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportControlerenMutationResult = NonNullable<Awaited<ReturnType<typeof importControleren>>>
+    export type ImportControlerenMutationBody = BodyType<ImportControlerenInput>
+    export type ImportControlerenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Controle-overzicht (nieuw/dubbel/onbruikbaar) vóór uitvoeren
+ */
+export const useImportControleren = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importControleren>>, TError,{data: BodyType<ImportControlerenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importControleren>>,
+        TError,
+        {data: BodyType<ImportControlerenInput>},
+        TContext
+      > => {
+      return useMutation(getImportControlerenMutationOptions(options));
+    }
+
 export const getImportUitvoerenUrl = () => {
 
 
@@ -79356,6 +79429,76 @@ export function useListImportLogs<TData = Awaited<ReturnType<typeof listImportLo
 
 
 
+
+export const getImportTerugdraaienUrl = (id: number,) => {
+
+
+
+
+  return `/api/import/logs/${id}/terugdraaien`
+}
+
+/**
+ * @summary Eén import in zijn geheel terugdraaien
+ */
+export const importTerugdraaien = async (id: number, options?: RequestInit): Promise<ImportTerugdraaiResultaat> => {
+
+  return customFetch<ImportTerugdraaiResultaat>(getImportTerugdraaienUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getImportTerugdraaienMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importTerugdraaien>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importTerugdraaien>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['importTerugdraaien'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importTerugdraaien>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  importTerugdraaien(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportTerugdraaienMutationResult = NonNullable<Awaited<ReturnType<typeof importTerugdraaien>>>
+
+    export type ImportTerugdraaienMutationError = ErrorType<void>
+
+    /**
+ * @summary Eén import in zijn geheel terugdraaien
+ */
+export const useImportTerugdraaien = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importTerugdraaien>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importTerugdraaien>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getImportTerugdraaienMutationOptions(options));
+    }
 
 export const getListDocumentStudioModellenUrl = (params?: ListDocumentStudioModellenParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -12,4 +12,6 @@ export interface ImportPreview {
   rijen: ImportPreviewRijenItem[];
   totaal_rijen: number;
   bestand_id?: string;
+  /** @nullable */
+  sleutel_omschrijving?: string | null;
 }

@@ -129,6 +129,8 @@ export const ListGebouwenQueryParams = zod.object({
 })
 
 export const ListGebouwenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -321,6 +323,8 @@ export const GetGebouwParams = zod.object({
 })
 
 export const GetGebouwResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -403,6 +407,8 @@ export const UpdateGebouwBody = zod.object({
 })
 
 export const UpdateGebouwResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -463,6 +469,8 @@ export const MeldGebouwGereedBody = zod.object({
 })
 
 export const MeldGebouwGereedResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -509,6 +517,8 @@ export const HerstelGebouwActiefParams = zod.object({
 })
 
 export const HerstelGebouwActiefResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -575,6 +585,8 @@ export const ArchiveerGebouwBody = zod.object({
 })
 
 export const ArchiveerGebouwResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
   "projectnummer": zod.string().nullish(),
@@ -852,6 +864,8 @@ export const ListGebouwFacturenParams = zod.object({
 })
 
 export const ListGebouwFacturenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -1364,6 +1378,7 @@ export const MaakRapportDefinitiefParams = zod.object({
 export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
 
 
+
 export const MaakRapportDefinitiefBody = zod.object({
   "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
 })
@@ -1613,6 +1628,7 @@ export const ListVoorzieningenResponse = zod.object({
 export const createVoorzieningBodyApplicatiesMax = 5;
 
 
+
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1774,6 +1790,7 @@ export const UpdateVoorzieningParams = zod.object({
 })
 
 export const updateVoorzieningBodyApplicatiesMax = 5;
+
 
 
 export const UpdateVoorzieningBody = zod.object({
@@ -2797,6 +2814,7 @@ export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrecti
  * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
  */
 export const listOnlineGebruikersResponseInitialenMax = 3;
+
 
 
 export const ListOnlineGebruikersResponseItem = zod.object({
@@ -4867,6 +4885,9 @@ export const DeleteModuleBeoordelingResponse = zod.void()
  */
 
 
+
+
+
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
@@ -4874,6 +4895,10 @@ export const RequestUploadUrlBody = zod.object({
   "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
   "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
+
+
+
+
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -6373,6 +6398,7 @@ export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
  */
 
 
+
 export const CreateProfielBody = zod.object({
   "naam": zod.string().min(1),
   "groep": zod.string().nullish(),
@@ -6433,6 +6459,8 @@ export const AiRollenVoorstelResponse = zod.object({
 export const UpdateProfielParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
 
 
 export const UpdateProfielBody = zod.object({
@@ -6520,6 +6548,9 @@ export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBel
  */
 
 
+
+
+
 export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "naam": zod.string().min(1),
   "document_type": zod.string().min(1),
@@ -6551,6 +6582,10 @@ export const CreateGoedkeuringBeleidsregelResponse = zod.void()
 export const UpdateGoedkeuringBeleidsregelParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
+
+
 
 
 export const UpdateGoedkeuringBeleidsregelBody = zod.object({
@@ -6766,6 +6801,8 @@ export const GoedkeuringAanvraagAfwijzenParams = zod.object({
 })
 
 
+
+
 export const GoedkeuringAanvraagAfwijzenBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -6851,6 +6888,7 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 export const listGoedkeuringDashboardQueryVensterMin = 0;
 
 
+
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
@@ -6897,6 +6935,7 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
  * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
  */
 export const exportGoedkeuringDashboardQueryVensterMin = 0;
+
 
 
 export const ExportGoedkeuringDashboardQueryParams = zod.object({
@@ -7324,6 +7363,8 @@ export const UpdateInfoInstellingenResponse = zod.object({
  * @summary Klanten ophalen (beheerder+)
  */
 export const ListCrmKlantenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "naam": zod.string(),
   "type": zod.string().nullish(),
@@ -7343,6 +7384,8 @@ export const ListCrmKlantenResponseItem = zod.object({
   "opmerkingen": zod.string().nullish(),
   "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -7394,6 +7437,8 @@ export const ListCrmKlantenResponse = zod.array(ListCrmKlantenResponseItem)
  * @summary Klant aanmaken (beheerder+)
  */
 export const CreateCrmKlantBody = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "naam": zod.string(),
   "type": zod.string().optional(),
   "kvk": zod.string().optional(),
@@ -7424,6 +7469,8 @@ export const GetCrmKlantParams = zod.object({
 })
 
 export const GetCrmKlantResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "naam": zod.string(),
   "type": zod.string().nullish(),
@@ -7443,6 +7490,8 @@ export const GetCrmKlantResponse = zod.object({
   "opmerkingen": zod.string().nullish(),
   "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -7497,6 +7546,8 @@ export const UpdateCrmKlantParams = zod.object({
 })
 
 export const UpdateCrmKlantBody = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "naam": zod.string(),
   "type": zod.string().optional(),
   "kvk": zod.string().optional(),
@@ -7517,6 +7568,8 @@ export const UpdateCrmKlantBody = zod.object({
 })
 
 export const UpdateCrmKlantResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "naam": zod.string(),
   "type": zod.string().nullish(),
@@ -7536,6 +7589,8 @@ export const UpdateCrmKlantResponse = zod.object({
   "opmerkingen": zod.string().nullish(),
   "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -7600,6 +7655,8 @@ export const ListCrmContactpersonenParams = zod.object({
 })
 
 export const ListCrmContactpersonenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -7668,6 +7725,8 @@ export const UpdateCrmContactpersoonBody = zod.object({
 })
 
 export const UpdateCrmContactpersoonResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -8056,6 +8115,8 @@ export const ListCrmContactpersonenAllQueryParams = zod.object({
 })
 
 export const ListCrmContactpersonenAllResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
   "naam": zod.string(),
@@ -10214,6 +10275,8 @@ export const DeleteOpleidingResponse = zod.void()
  * @summary Medewerkers ophalen
  */
 export const ListMedewerkersResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_rol": zod.string().nullish(),
@@ -10409,6 +10472,8 @@ export const GetMedewerkerParams = zod.object({
 })
 
 export const GetMedewerkerResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_rol": zod.string().nullish(),
@@ -10494,6 +10559,8 @@ export const UpdateMedewerkerBody = zod.object({
 })
 
 export const UpdateMedewerkerResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_rol": zod.string().nullish(),
@@ -11031,6 +11098,7 @@ export const CreateSaldoCorrectieParams = zod.object({
 export const createSaldoCorrectieBodyRedenMin = 3;
 
 
+
 export const CreateSaldoCorrectieBody = zod.object({
   "verlofsoort_id": zod.number(),
   "jaar": zod.number(),
@@ -11175,6 +11243,8 @@ export const OffboardMedewerkerBody = zod.object({
 })
 
 export const OffboardMedewerkerResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_rol": zod.string().nullish(),
@@ -12393,6 +12463,7 @@ export const DoorzettenNaarGarageResponse = zod.object({
  * @summary Stel een vraag aan de FPS Bedrijfsadviseur
  */
 export const vraagAdviseurBodyVraagMax = 2000;
+
 
 
 export const VraagAdviseurBody = zod.object({
@@ -15364,6 +15435,7 @@ export const AfwijzenPimAdviesParams = zod.object({
 })
 
 export const afwijzenPimAdviesBodyRedenMax = 1000;
+
 
 
 export const AfwijzenPimAdviesBody = zod.object({
@@ -18440,6 +18512,8 @@ export const ListEenheidsprijzenQueryParams = zod.object({
 })
 
 export const ListEenheidsprijzenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string(),
   "omschrijving": zod.string(),
@@ -18502,6 +18576,8 @@ export const GetEenheidsprijsParams = zod.object({
 })
 
 export const GetEenheidsprijsResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string(),
   "omschrijving": zod.string(),
@@ -18557,6 +18633,8 @@ export const UpdateEenheidsprijsBody = zod.object({
 })
 
 export const UpdateEenheidsprijsResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string(),
   "omschrijving": zod.string(),
@@ -21876,6 +21954,8 @@ export const ListFacturenQueryParams = zod.object({
 })
 
 export const ListFacturenResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -21984,6 +22064,8 @@ export const GetFactuurUploadUrlResponse = zod.object({
  * @summary Facturen klaar voor AccountView export
  */
 export const ListFacturenKlaarVoorExportResponseItem = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22056,6 +22138,8 @@ export const GetFactuurParams = zod.object({
 })
 
 export const GetFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22148,6 +22232,8 @@ export const UpdateFactuurBody = zod.object({
 })
 
 export const UpdateFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22229,6 +22315,8 @@ export const AiUitlezenFactuurParams = zod.object({
 })
 
 export const AiUitlezenFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22300,6 +22388,8 @@ export const AccorderenFactuurParams = zod.object({
 })
 
 export const AccorderenFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22475,6 +22565,8 @@ export const BlokkerenFactuurBody = zod.object({
 })
 
 export const BlokkerenFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22592,6 +22684,8 @@ export const AfkeurenFactuurBody = zod.object({
 })
 
 export const AfkeurenFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22865,6 +22959,8 @@ export const BeoordelenFactuurPLBody = zod.object({
 })
 
 export const BeoordelenFactuurPLResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -22941,6 +23037,8 @@ export const BeoordelenFactuurWVBBody = zod.object({
 })
 
 export const BeoordelenFactuurWVBResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23017,6 +23115,8 @@ export const DoorstuurenFactuurMedewerkerBody = zod.object({
 })
 
 export const DoorstuurenFactuurMedewerkerResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23093,6 +23193,8 @@ export const BeoordelenFactuurMedewerkerBody = zod.object({
 })
 
 export const BeoordelenFactuurMedewerkerResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23286,6 +23388,8 @@ export const IncassoFactuurBody = zod.object({
 })
 
 export const IncassoFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -26607,6 +26711,7 @@ export const ListLeveranciersQueryParams = zod.object({
 })
 
 export const ListLeveranciersResponseItem = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26700,6 +26805,7 @@ export const GetLeverancierParams = zod.object({
 })
 
 export const GetLeverancierResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26786,6 +26892,7 @@ export const PatchLeverancierBody = zod.object({
 })
 
 export const PatchLeverancierResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26845,6 +26952,7 @@ export const ListLeverancierArtikelenParams = zod.object({
 })
 
 export const ListLeverancierArtikelenResponseItem = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26878,6 +26986,7 @@ export const ListArtikelenQueryParams = zod.object({
 })
 
 export const ListArtikelenResponseItem = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26927,6 +27036,7 @@ export const GetArtikelParams = zod.object({
 })
 
 export const GetArtikelResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -26969,6 +27079,7 @@ export const PatchArtikelBody = zod.object({
 })
 
 export const PatchArtikelResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -27019,6 +27130,7 @@ export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
 
 
+
 export const GetMagazijnInstellingenResponse = zod.object({
   "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
   "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
@@ -27039,6 +27151,7 @@ export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
 export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
 
 
+
 export const UpdateMagazijnInstellingenBody = zod.object({
   "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
   "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
@@ -27052,6 +27165,7 @@ export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
 export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 
 export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
+
 
 
 export const UpdateMagazijnInstellingenResponse = zod.object({
@@ -27228,6 +27342,7 @@ export const GetMagazijnArtikelParams = zod.object({
 })
 
 export const GetMagazijnArtikelResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -27273,6 +27388,7 @@ export const UpdateMagazijnArtikelBody = zod.object({
 })
 
 export const UpdateMagazijnArtikelResponse = zod.object({
+  "import_id": zod.number().nullish(),
   "id": zod.number(),
   "code": zod.string().nullish(),
   "naam": zod.string(),
@@ -27301,6 +27417,7 @@ export const SnoozeMagazijnArtikelParams = zod.object({
 })
 
 export const snoozeMagazijnArtikelBodyDagenMax = 90;
+
 
 
 export const SnoozeMagazijnArtikelBody = zod.object({
@@ -28099,14 +28216,37 @@ export const KeurMagazijnStellingsscanGoedResponse = zod.object({
  */
 export const ImportPreviewBody = zod.object({
   "bestand": zod.instanceof(File),
-  "type": zod.enum(['leveranciers', 'klanten', 'artikelen', 'projecten'])
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen'])
 })
 
 export const ImportPreviewResponse = zod.object({
   "kolommen": zod.array(zod.string()),
   "rijen": zod.array(zod.record(zod.string(), zod.string().nullable())),
   "totaal_rijen": zod.number(),
-  "bestand_id": zod.string().optional()
+  "bestand_id": zod.string().optional(),
+  "sleutel_omschrijving": zod.string().nullish()
+})
+
+
+/**
+ * @summary Controle-overzicht (nieuw/dubbel/onbruikbaar) vóór uitvoeren
+ */
+export const ImportControlerenBody = zod.object({
+  "bestand_id": zod.string(),
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen']),
+  "kolomkoppeling": zod.record(zod.string(), zod.string())
+})
+
+export const ImportControlerenResponse = zod.object({
+  "totaal_rijen": zod.number(),
+  "nieuw": zod.number(),
+  "dubbel": zod.number(),
+  "onbruikbaar": zod.number(),
+  "onbruikbaar_redenen": zod.array(zod.object({
+  "rij": zod.number(),
+  "reden": zod.string()
+})).optional(),
+  "sleutel_omschrijving": zod.string().nullish()
 })
 
 
@@ -28115,9 +28255,9 @@ export const ImportPreviewResponse = zod.object({
  */
 export const ImportUitvoerenBody = zod.object({
   "bestand_id": zod.string(),
-  "type": zod.enum(['leveranciers', 'klanten', 'artikelen', 'projecten']),
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen']),
   "kolomkoppeling": zod.record(zod.string(), zod.string()),
-  "overslaan_lege_naam": zod.boolean().optional()
+  "keuze_dubbelen": zod.union([zod.literal('overslaan'),zod.literal('als_nieuw'),zod.literal(null)]).nullish()
 })
 
 export const ImportUitvoerenResponse = zod.object({
@@ -28129,7 +28269,8 @@ export const ImportUitvoerenResponse = zod.object({
   "rij": zod.number(),
   "fout": zod.string()
 })),
-  "log_id": zod.number().nullish()
+  "log_id": zod.number().nullish(),
+  "rijen_dubbel_overgeslagen": zod.number().nullish()
 })
 
 
@@ -28143,12 +28284,41 @@ export const ListImportLogsResponseItem = zod.object({
   "rijen_totaal": zod.number(),
   "rijen_verwerkt": zod.number(),
   "rijen_overgeslagen": zod.number(),
+  "rijen_dubbel": zod.number().nullish(),
+  "keuze_dubbelen": zod.string().nullish(),
   "fouten": zod.array(zod.object({
 
 }).passthrough()).optional(),
+  "bestand_beschikbaar": zod.boolean().optional(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "terugdraai_detail": zod.object({
+  "verwijderd": zod.number().optional(),
+  "niet_verwijderd": zod.array(zod.object({
+  "id": zod.number(),
+  "reden": zod.string()
+})).optional()
+}).nullish(),
   "aangemaakt_op": zod.string()
 })
 export const ListImportLogsResponse = zod.array(ListImportLogsResponseItem)
+
+
+/**
+ * @summary Eén import in zijn geheel terugdraaien
+ */
+export const ImportTerugdraaienParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ImportTerugdraaienResponse = zod.object({
+  "log_id": zod.number(),
+  "verwijderd": zod.number(),
+  "niet_verwijderd": zod.array(zod.object({
+  "id": zod.number(),
+  "reden": zod.string()
+})),
+  "volledig": zod.boolean()
+})
 
 
 /**
@@ -29276,6 +29446,7 @@ export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
 export const updateFieLeermomentBodyCorrectieFactorMax = 3;
 
 
+
 export const UpdateFieLeermomentBody = zod.object({
   "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
@@ -29405,6 +29576,7 @@ export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
 export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
 
 export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
+
 
 
 export const CreateLeverancierPrestatieBody = zod.object({
@@ -31002,6 +31174,7 @@ export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponse
 export const listBiaeEventsQueryLimietMax = 500;
 
 
+
 export const ListBiaeEventsQueryParams = zod.object({
   "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
 })
@@ -31143,6 +31316,8 @@ export const ZetWerkbakItemWegParams = zod.object({
 })
 
 
+
+
 export const ZetWerkbakItemWegBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -31184,4 +31359,5 @@ export const ListWerkbakBewakingDraaienResponseItem = zod.object({
   "fout": zod.string().nullish()
 })
 export const ListWerkbakBewakingDraaienResponse = zod.array(ListWerkbakBewakingDraaienResponseItem)
+
 

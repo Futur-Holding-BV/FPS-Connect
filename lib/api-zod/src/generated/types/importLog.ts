@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ImportLogFoutenItem } from './importLogFoutenItem';
+import type { ImportLogTerugdraaiDetail } from './importLogTerugdraaiDetail';
 
 export interface ImportLog {
   id: number;
@@ -14,6 +15,15 @@ export interface ImportLog {
   rijen_totaal: number;
   rijen_verwerkt: number;
   rijen_overgeslagen: number;
+  /** @nullable */
+  rijen_dubbel?: number | null;
+  /** @nullable */
+  keuze_dubbelen?: string | null;
   fouten?: ImportLogFoutenItem[];
+  bestand_beschikbaar?: boolean;
+  /** @nullable */
+  teruggedraaid_op?: string | null;
+  /** @nullable */
+  terugdraai_detail?: ImportLogTerugdraaiDetail;
   aangemaakt_op: string;
 }

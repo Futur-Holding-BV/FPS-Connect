@@ -119,6 +119,8 @@ function gebouwRij(
     werkmaatschappij_naam: werkmaatschappijNaam,
     project_status: g.projectStatus ?? null,
     galerij_upload_toegestaan: g.galerijUploadToegestaan,
+    bron: g.bron,
+    import_id: g.importId ?? null,
   };
 }
 

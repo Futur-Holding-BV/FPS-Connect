@@ -32,6 +32,7 @@ import { useQueryClient, useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -771,6 +772,7 @@ export default function GebouwDetail() {
                 <CheckCircle className="h-3 w-3" /> Gereed
               </Badge>
             )}
+            <ImportBadge bron={(gebouw as { bron?: string | null }).bron} importId={(gebouw as { import_id?: number | null }).import_id} />
           </div>
           <p className="text-muted-foreground mt-0.5 text-sm">
             {gebouw.adres}

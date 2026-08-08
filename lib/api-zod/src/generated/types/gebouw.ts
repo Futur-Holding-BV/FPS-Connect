@@ -8,6 +8,10 @@
 import type { GebouwPartijenItem } from './gebouwPartijenItem';
 
 export interface Gebouw {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   werknummer?: string | null;

@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ImportUitvoerenInputType = typeof ImportUitvoerenInputType[keyof typeof ImportUitvoerenInputType];
+export type ImportControlerenInputType = typeof ImportControlerenInputType[keyof typeof ImportControlerenInputType];
 
 
-export const ImportUitvoerenInputType = {
+export const ImportControlerenInputType = {
   leveranciers: 'leveranciers',
   klanten: 'klanten',
   contactpersonen: 'contactpersonen',

@@ -1,27 +1,42 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useListImportLogs } from "@workspace/api-client-react";
-import { Upload, CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw, Download } from "lucide-react";
+import { CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw, Download, Undo2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
-type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen" | "historische_facturen" | "historische_projecten";
+type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen" | "eenheidsprijzen" | "historische_facturen" | "historische_projecten";
 
 const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
   leveranciers: "Leveranciers",
   klanten: "Klanten",
+  contactpersonen: "Contactpersonen",
   artikelen: "Artikelen",
+  magazijn_artikelen: "Magazijnartikelen",
   medewerkers: "Medewerkers",
   gebouwen: "Gebouwen",
-  contactpersonen: "Contactpersonen",
-  magazijn_artikelen: "Magazijnartikelen",
-  historische_facturen: "Historische facturen (archief)",
   historische_projecten: "Historische projecten (archief)",
+  eenheidsprijzen: "Eenheidsprijzen",
+  historische_facturen: "Historische facturen (archief)",
+};
+
+// IMPORT_01 §2.1: importrecht = hoogste niveau (4 = Beheer) op de module waar
+// de gegevens thuishoren. Zelfde afleiding als de server — geen aparte lijst.
+const IMPORT_TYPE_MODULES: Record<ImportType, string> = {
+  leveranciers: "crm",
+  klanten: "crm",
+  contactpersonen: "crm",
+  artikelen: "magazijn",
+  magazijn_artikelen: "magazijn",
+  medewerkers: "personeel",
+  gebouwen: "gebouwen",
+  historische_projecten: "gebouwen",
+  eenheidsprijzen: "calculaties",
+  historische_facturen: "financieel",
 };
 
 // Beschikbare velden per importtype
@@ -80,12 +95,12 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
     { veld: "mobiel", label: "Mobiel" },
     { veld: "dienstverband", label: "Dienstverband (vast/tijdelijk/oproep/inhuur/zzp)" },
     { veld: "in_dienst_sinds", label: "In dienst sinds (JJJJ-MM-DD)" },
+    { veld: "geboortedatum", label: "Geboortedatum (JJJJ-MM-DD)" },
     { veld: "werkmaatschappij", label: "Werkmaatschappij" },
     { veld: "adres", label: "Woonadres" },
     { veld: "postcode", label: "Postcode" },
     { veld: "woonplaats", label: "Woonplaats" },
     { veld: "actief", label: "Actief (ja/nee)" },
-    { veld: "opmerkingen", label: "Opmerkingen" },
   ],
   gebouwen: [
     { veld: "naam", label: "Naam / projectnaam", verplicht: true },
@@ -114,6 +129,22 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
     { veld: "eenheid", label: "Eenheid (st/m/m2/rol)" },
     { veld: "inkoopprijs", label: "Inkoopprijs" },
     { veld: "categorie", label: "Categorie" },
+  ],
+  eenheidsprijzen: [
+    { veld: "code", label: "Code", verplicht: true },
+    { veld: "omschrijving", label: "Omschrijving", verplicht: true },
+    { veld: "categorie", label: "Categorie" },
+    { veld: "eenheid", label: "Eenheid" },
+    { veld: "materiaalcomponent", label: "Materiaalcomponent" },
+    { veld: "arbeidscomponent", label: "Arbeidscomponent" },
+    { veld: "normtijd", label: "Normtijd (uren)" },
+    { veld: "kostprijs", label: "Kostprijs" },
+    { veld: "verkoopprijs", label: "Verkoopprijs" },
+    { veld: "marge", label: "Marge" },
+    { veld: "btw_code", label: "Btw-code" },
+    { veld: "inclusies", label: "Inclusies" },
+    { veld: "exclusies", label: "Exclusies" },
+    { veld: "opmerkingen", label: "Opmerkingen" },
   ],
   historische_facturen: [
     { veld: "factuurnummer", label: "Factuurnummer", verplicht: true },
@@ -146,13 +177,23 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
   ],
 };
 
-type Stap = "keuze" | "koppeling" | "preview" | "resultaat";
+type Stap = "keuze" | "koppeling" | "controle" | "resultaat";
 
 interface PreviewData {
   kolommen: string[];
   rijen: Record<string, string>[];
   totaal_rijen: number;
   bestand_id: string;
+  sleutel_omschrijving?: string | null;
+}
+
+interface ControleData {
+  totaal_rijen: number;
+  nieuw: number;
+  dubbel: number;
+  onbruikbaar: number;
+  onbruikbaar_redenen: { rij: number; reden: string }[];
+  sleutel_omschrijving?: string | null;
 }
 
 interface Resultaat {
@@ -160,21 +201,54 @@ interface Resultaat {
   rijen_totaal: number;
   rijen_verwerkt: number;
   rijen_overgeslagen: number;
+  rijen_dubbel_overgeslagen?: number;
   fouten: { rij: number; fout: string }[];
+  log_id?: number;
 }
 
 export default function ImportPagina() {
+  const { heeftNiveau } = useBevoegdheid();
+
+  // IMPORT_01 aanvulling: toon uitsluitend de types die deze gebruiker mag
+  // importeren; geen enkel recht → pagina onbereikbaar (ook via directe URL).
+  const toegestaneTypes = useMemo(
+    () =>
+      (Object.keys(IMPORT_TYPE_LABELS) as ImportType[]).filter((t) =>
+        heeftNiveau(IMPORT_TYPE_MODULES[t], 4),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [heeftNiveau],
+  );
+
+  if (toegestaneTypes.length === 0) {
+    return (
+      <div className="p-6 max-w-xl mx-auto mt-12 text-center space-y-3">
+        <ShieldAlert className="h-10 w-10 mx-auto text-muted-foreground" />
+        <h1 className="text-lg font-semibold">Geen toegang</h1>
+        <p className="text-sm text-muted-foreground">
+          Je hebt geen rechten om gegevens te importeren. Importeren vereist
+          beheerrecht op de module waar de gegevens thuishoren.
+        </p>
+      </div>
+    );
+  }
+
+  return <ImportWizard toegestaneTypes={toegestaneTypes} />;
+}
+
+function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
   const [stap, setStap] = useState<Stap>("keuze");
-  const [type, setType] = useState<ImportType>("leveranciers");
+  const [type, setType] = useState<ImportType>(toegestaneTypes[0]!);
   const [bestand, setBestand] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [koppeling, setKoppeling] = useState<Record<string, string>>({});
+  const [controle, setControle] = useState<ControleData | null>(null);
+  const [keuzeDubbelen, setKeuzeDubbelen] = useState<"overslaan" | "als_nieuw">("overslaan");
   const [resultaat, setResultaat] = useState<Resultaat | null>(null);
   const [bezig, setBezig] = useState(false);
+  const [terugdraaiBezig, setTerugdraaiBezig] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { heeftNiveau } = useBevoegdheid();
-  const magImporteren = heeftNiveau("systeem", 2); // uploaden/uitvoeren; lezen (logs/templates) = systeem:1
   const { data: logs = [], refetch: refetchLogs } = useListImportLogs();
 
   const veldDefs = VELD_DEFINITIES[type];
@@ -190,7 +264,6 @@ export default function ImportPagina() {
       const data = await resp.json() as PreviewData;
       setPreview(data);
 
-      // Auto-koppeling: kolom die exact overeenkomt met veld
       const autoKoppeling: Record<string, string> = {};
       for (const { veld } of veldDefs) {
         const gevonden = data.kolommen.find(
@@ -208,23 +281,69 @@ export default function ImportPagina() {
     }
   }
 
-  async function uitvoeren() {
+  async function controleren() {
     if (!preview) return;
+    setBezig(true);
+    try {
+      const resp = await fetch("/api/import/controleren", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bestand_id: preview.bestand_id, type, kolomkoppeling: koppeling }),
+      });
+      if (!resp.ok) throw new Error((await resp.json() as { error: string }).error);
+      const data = await resp.json() as ControleData;
+      setControle(data);
+      setStap("controle");
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Controle mislukt", variant: "destructive" });
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  async function uitvoeren() {
+    if (!preview || !controle) return;
     setBezig(true);
     try {
       const resp = await fetch("/api/import/uitvoeren", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bestand_id: preview.bestand_id, type, kolomkoppeling: koppeling }),
+        body: JSON.stringify({
+          bestand_id: preview.bestand_id,
+          type,
+          kolomkoppeling: koppeling,
+          ...(controle.dubbel > 0 ? { keuze_dubbelen: keuzeDubbelen } : {}),
+        }),
       });
-      const data = await resp.json() as Resultaat;
+      const data = await resp.json() as Resultaat & { error?: string };
+      if (!resp.ok) throw new Error(data.error ?? "Import mislukt");
       setResultaat(data);
       setStap("resultaat");
       void refetchLogs();
-    } catch {
-      toast({ title: "Import mislukt", variant: "destructive" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Import mislukt", variant: "destructive" });
     } finally {
       setBezig(false);
+    }
+  }
+
+  async function terugdraaien(logId: number) {
+    if (!window.confirm("Weet je zeker dat je deze import wilt terugdraaien? Alle geïmporteerde records uit deze import worden verwijderd (behalve records die inmiddels gewijzigd of in gebruik zijn).")) return;
+    setTerugdraaiBezig(logId);
+    try {
+      const resp = await fetch(`/api/import/logs/${logId}/terugdraaien`, { method: "POST" });
+      const data = await resp.json() as { error?: string; verwijderd: number; niet_verwijderd: { id: number; reden: string }[]; volledig: boolean };
+      if (!resp.ok) throw new Error(data.error ?? "Terugdraaien mislukt");
+      toast({
+        title: data.volledig
+          ? `Import teruggedraaid — ${data.verwijderd} records verwijderd`
+          : `${data.verwijderd} records verwijderd, ${data.niet_verwijderd.length} niet (gewijzigd of in gebruik)`,
+      });
+      void refetchLogs();
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Terugdraaien mislukt", variant: "destructive" });
+    } finally {
+      setTerugdraaiBezig(null);
     }
   }
 
@@ -233,10 +352,13 @@ export default function ImportPagina() {
     setBestand(null);
     setPreview(null);
     setKoppeling({});
+    setControle(null);
     setResultaat(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  // Alleen logs van types die de gebruiker zelf mag importeren zijn relevant;
+  // de server geeft leesrecht al breder (module-leesrecht), dus tonen wat er komt.
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8">
       <PaginaHulp pagina="beheer-import" />
@@ -253,10 +375,11 @@ export default function ImportPagina() {
           <div className="space-y-2">
             <p className="text-sm font-medium">Wat wil je importeren?</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(Object.keys(IMPORT_TYPE_LABELS) as ImportType[]).map((t) => (
+              {toegestaneTypes.map((t) => (
                 <button
                   key={t}
                   onClick={() => setType(t)}
+                  data-testid={`import-type-${t}`}
                   className={`px-4 py-2.5 rounded-md border text-sm font-medium transition-colors ${
                     type === t
                       ? "border-primary bg-primary/5 text-primary"
@@ -276,11 +399,7 @@ export default function ImportPagina() {
                 Download het Excel-sjabloon met de juiste kolomindeling voor {IMPORT_TYPE_LABELS[type].toLowerCase()}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-            >
+            <Button variant="outline" size="sm" asChild>
               <a href={`/api/import/template/${type}`} download>
                 <Download className="h-4 w-4 mr-1.5" />
                 Template
@@ -288,17 +407,9 @@ export default function ImportPagina() {
             </Button>
           </div>
 
-          {!magImporteren && (
-            <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
-              Je kunt hier importlogboeken en templates bekijken. Voor het uitvoeren van
-              een import is systeembeheer-schrijfrecht nodig.
-            </div>
-          )}
           <div
-            className={magImporteren
-              ? "border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-muted/40 transition-colors"
-              : "border-2 border-dashed rounded-lg p-10 text-center opacity-50 pointer-events-none"}
-            onClick={() => magImporteren && fileRef.current?.click()}
+            className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-muted/40 transition-colors"
+            onClick={() => fileRef.current?.click()}
           >
             <FileSpreadsheet className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
             <p className="font-medium">Klik om een bestand te kiezen</p>
@@ -371,24 +482,25 @@ export default function ImportPagina() {
           <div className="flex gap-3">
             <Button variant="outline" onClick={opnieuw}>Terug</Button>
             <Button
-              onClick={() => setStap("preview")}
-              disabled={!koppeling[veldDefs.find((v) => v.verplicht)?.veld ?? "naam"]}
+              onClick={() => void controleren()}
+              disabled={bezig || !koppeling[veldDefs.find((v) => v.verplicht)?.veld ?? "naam"]}
+              data-testid="knop-controleren"
             >
-              Voorvertoning
+              {bezig ? "Controleren..." : "Controleren"}
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Stap 3: Preview */}
-      {stap === "preview" && preview && (
+      {/* Stap 3: Controle-overzicht (IMPORT_01 §2.2) */}
+      {stap === "controle" && preview && controle && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold">Voorvertoning</h2>
+              <h2 className="font-semibold">Controle vóór importeren</h2>
               <p className="text-sm text-muted-foreground">
-                Eerste {Math.min(preview.rijen.length, 20)} van {preview.totaal_rijen} rijen
+                Er wordt pas iets opgeslagen na jouw bevestiging
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={opnieuw}>
@@ -397,38 +509,85 @@ export default function ImportPagina() {
             </Button>
           </div>
 
-          <div className="overflow-x-auto border rounded-md">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40">
-                <tr>
-                  {Object.entries(koppeling).map(([veld]) => {
-                    const def = veldDefs.find((d) => d.veld === veld);
-                    return (
-                      <th key={veld} className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                        {def?.label ?? veld}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rijen.map((rij, i) => (
-                  <tr key={i} className="border-t">
-                    {Object.entries(koppeling).map(([veld, kolom]) => (
-                      <td key={veld} className="px-3 py-1.5 text-muted-foreground max-w-[180px] truncate">
-                        {rij[kolom] ?? ""}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-lg border">
+              <p className="text-sm text-muted-foreground">Totaal</p>
+              <p className="text-2xl font-semibold" data-testid="controle-totaal">{controle.totaal_rijen}</p>
+            </div>
+            <div className="p-4 rounded-lg border">
+              <p className="text-sm text-muted-foreground">Nieuw</p>
+              <p className="text-2xl font-semibold text-green-600" data-testid="controle-nieuw">{controle.nieuw}</p>
+            </div>
+            <div className="p-4 rounded-lg border">
+              <p className="text-sm text-muted-foreground">Lijkt al te bestaan</p>
+              <p className="text-2xl font-semibold text-amber-600" data-testid="controle-dubbel">{controle.dubbel}</p>
+            </div>
+            <div className="p-4 rounded-lg border">
+              <p className="text-sm text-muted-foreground">Onbruikbaar</p>
+              <p className="text-2xl font-semibold text-destructive" data-testid="controle-onbruikbaar">{controle.onbruikbaar}</p>
+            </div>
           </div>
+
+          {controle.sleutel_omschrijving && (
+            <p className="text-xs text-muted-foreground">
+              Bestaande records worden herkend op: {controle.sleutel_omschrijving}
+            </p>
+          )}
+
+          {controle.dubbel > 0 && (
+            <div className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-950/30 space-y-3" data-testid="dubbelen-waarschuwing">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">
+                    {controle.dubbel} {controle.dubbel === 1 ? "rij lijkt" : "rijen lijken"} op iets dat al bestaat
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Kies wat er met deze rijen moet gebeuren. Bestaande gegevens worden nooit overschreven.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4 pl-8">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={keuzeDubbelen === "overslaan"}
+                    onChange={() => setKeuzeDubbelen("overslaan")}
+                  />
+                  Overslaan (aanbevolen)
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={keuzeDubbelen === "als_nieuw"}
+                    onChange={() => setKeuzeDubbelen("als_nieuw")}
+                  />
+                  Toch als nieuw toevoegen
+                </label>
+              </div>
+            </div>
+          )}
+
+          {controle.onbruikbaar_redenen.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Onbruikbare rijen (worden overgeslagen)</p>
+              <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
+                {controle.onbruikbaar_redenen.map((f, i) => (
+                  <div key={i} className="flex gap-3 px-3 py-1.5 text-sm">
+                    <span className="text-muted-foreground shrink-0">Rij {f.rij}</span>
+                    <span className="text-destructive">{f.reden}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStap("koppeling")}>Terug</Button>
-            <Button onClick={uitvoeren} disabled={bezig}>
-              {bezig ? "Importeren..." : `${preview.totaal_rijen} rijen importeren`}
+            <Button onClick={() => void uitvoeren()} disabled={bezig || controle.nieuw + (keuzeDubbelen === "als_nieuw" ? controle.dubbel : 0) === 0} data-testid="knop-importeren">
+              {bezig
+                ? "Importeren..."
+                : `${controle.nieuw + (keuzeDubbelen === "als_nieuw" ? controle.dubbel : 0)} rijen importeren`}
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
@@ -446,18 +605,22 @@ export default function ImportPagina() {
             )}
             <div className="flex-1">
               <h2 className="font-semibold text-lg">Import voltooid</h2>
-              <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+              <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Totaal</p>
                   <p className="font-semibold text-lg">{resultaat.rijen_totaal}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Verwerkt</p>
-                  <p className="font-semibold text-lg text-green-600">{resultaat.rijen_verwerkt}</p>
+                  <p className="font-semibold text-lg text-green-600" data-testid="resultaat-verwerkt">{resultaat.rijen_verwerkt}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Overgeslagen</p>
                   <p className="font-semibold text-lg text-amber-600">{resultaat.rijen_overgeslagen}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Waarvan dubbel</p>
+                  <p className="font-semibold text-lg text-amber-600">{resultaat.rijen_dubbel_overgeslagen ?? 0}</p>
                 </div>
               </div>
             </div>
@@ -489,23 +652,62 @@ export default function ImportPagina() {
         <div className="space-y-3 pt-4 border-t">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Importgeschiedenis</h2>
           <div className="space-y-2">
-            {logs.slice(0, 10).map((log) => (
-              <div key={log.id} className="flex items-center justify-between px-4 py-2.5 rounded-md border text-sm">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="capitalize">{log.type}</Badge>
-                  <span className="text-muted-foreground truncate max-w-48">{log.bestandsnaam}</span>
-                </div>
-                <div className="flex items-center gap-4 text-muted-foreground shrink-0">
-                  <span className="text-green-600">{log.rijen_verwerkt} verwerkt</span>
-                  {log.rijen_overgeslagen > 0 && (
-                    <span className="text-amber-600">{log.rijen_overgeslagen} overgeslagen</span>
+            {logs.slice(0, 15).map((log) => {
+              const magDitType = toegestaneTypes.includes(log.type as ImportType);
+              const detail = log.terugdraai_detail as { verwijderd?: number; niet_verwijderd?: { id: number; reden: string }[] } | null | undefined;
+              return (
+                <div key={log.id} className="px-4 py-2.5 rounded-md border text-sm space-y-1.5" data-testid={`import-log-${log.id}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Badge variant="outline" className="capitalize shrink-0">{IMPORT_TYPE_LABELS[log.type as ImportType] ?? log.type}</Badge>
+                      <span className="text-muted-foreground truncate">{log.bestandsnaam}</span>
+                      <span className="text-muted-foreground/70 shrink-0">#{log.id}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-muted-foreground shrink-0">
+                      {log.teruggedraaid_op ? (
+                        <Badge variant="secondary" className="text-muted-foreground">
+                          {detail?.niet_verwijderd?.length ? "Deels teruggedraaid" : "Teruggedraaid"}
+                        </Badge>
+                      ) : (
+                        <>
+                          <span className="text-green-600">{log.rijen_verwerkt} verwerkt</span>
+                          {log.rijen_overgeslagen > 0 && (
+                            <span className="text-amber-600">{log.rijen_overgeslagen} overgeslagen</span>
+                          )}
+                        </>
+                      )}
+                      <span>
+                        {formatDistanceToNow(new Date(log.aangemaakt_op), { addSuffix: true, locale: nl })}
+                      </span>
+                      {log.bestand_beschikbaar && magDitType && (
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={`/api/import/logs/${log.id}/bestand`} download title="Origineel bestand downloaden">
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                      {!log.teruggedraaid_op && magDitType && log.rijen_verwerkt > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void terugdraaien(log.id)}
+                          disabled={terugdraaiBezig === log.id}
+                          data-testid={`terugdraai-${log.id}`}
+                          title="Import terugdraaien"
+                        >
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {detail?.niet_verwijderd && detail.niet_verwijderd.length > 0 && (
+                    <p className="text-xs text-muted-foreground pl-1">
+                      Niet teruggedraaid: {detail.niet_verwijderd.length} records ({[...new Set(detail.niet_verwijderd.map((n) => n.reden))].join("; ")})
+                    </p>
                   )}
-                  <span>
-                    {formatDistanceToNow(new Date(log.aangemaakt_op), { addSuffix: true, locale: nl })}
-                  </span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -168,6 +168,7 @@ function mapArtikel(r: ArtikelRij, leverancierNaam: string | null) {
     notities: r.notities,
     actief: r.actief,
     bron: r.bron,
+    import_id: r.importId ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

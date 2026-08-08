@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { ImportUitvoerenInputKeuzeDubbelen } from './importUitvoerenInputKeuzeDubbelen';
 import type { ImportUitvoerenInputKolomkoppeling } from './importUitvoerenInputKolomkoppeling';
 import type { ImportUitvoerenInputType } from './importUitvoerenInputType';
 
@@ -12,5 +13,6 @@ export interface ImportUitvoerenInput {
   bestand_id: string;
   type: ImportUitvoerenInputType;
   kolomkoppeling: ImportUitvoerenInputKolomkoppeling;
-  overslaan_lege_naam?: boolean;
+  /** @nullable */
+  keuze_dubbelen?: ImportUitvoerenInputKeuzeDubbelen;
 }

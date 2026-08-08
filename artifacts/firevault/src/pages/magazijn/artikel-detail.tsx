@@ -3,6 +3,7 @@ import { useGetMagazijnArtikel, useListVoorraad, useListVoorraadMutaties, useLis
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,7 @@ export default function MagazijnArtikelDetailPagina() {
             <Package className="h-6 w-6 text-muted-foreground" />
             {artikel.naam}
             {artikel.code && <span className="text-base text-muted-foreground font-normal">({artikel.code})</span>}
+            <ImportBadge bron={artikel.bron} importId={(artikel as { import_id?: number | null }).import_id} />
           </h1>
           {artikel.leverancier_naam && <p className="text-sm text-muted-foreground">{artikel.leverancier_naam}</p>}
         </div>

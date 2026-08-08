@@ -835,6 +835,8 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     cv_tekst: m.cvTekst ?? null,
     actief: m.actief,
     opmerkingen: m.opmerkingen,
+    bron: m.bron,
+    import_id: m.importId ?? null,
     aangemaakt_op: iso(m.aangemaaktOp),
     bijgewerkt_op: iso(m.bijgewerktOp),
   };
@@ -884,6 +886,8 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
         cv_tekst: r.m.cvTekst ?? null,
         actief: r.m.actief,
         opmerkingen: r.m.opmerkingen,
+        bron: r.m.bron,
+        import_id: r.m.importId ?? null,
         aangemaakt_op: iso(r.m.aangemaaktOp),
         bijgewerkt_op: iso(r.m.bijgewerktOp),
       })),

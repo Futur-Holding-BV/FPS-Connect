@@ -31,6 +31,8 @@ export const gebouwenTable = pgTable("gebouwen", {
   werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   projectStatus: text("project_status"),
   galerijUploadToegestaan: boolean("galerij_upload_toegestaan").notNull().default(false),
+  bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
+  importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
 });
 
 export const insertGebouwSchema = createInsertSchema(gebouwenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });

@@ -1,3 +1,11 @@
+## 2026-08-08 — IMPORT_01: importmodule met rechten per type, verplichte controle-stap, terugdraaien en zichtbare herkomst
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (gedragsbewijs via echte HTTP-flows) | **Risico:** laag-middel (import-rechten strenger: systeem:2 → beheerrecht per module; wie eerder importeerde heeft nu niveau 4 op de betreffende module nodig)
+
+**Wat is gebouwd:** importrecht per type afgeleid uit modulerechten (crm/magazijn/personeel/gebouwen/calculaties/financieel op niveau 4, geen aparte rechtenlijst); scherm toont alleen toegestane types en is zonder enig recht onbereikbaar. Verplichte controle-stap vóór uitvoeren (nieuw/dubbel/onbruikbaar per rij, herkenningssleutels per type); bij dubbelen verplichte keuze overslaan/als-nieuw, overschrijven bestaat niet. Volledig terugdraaibaar: rijen dragen bron='import' + importnummer, origineel bestand bewaard en downloadbaar, terugdraaiknop meldt precies wat bleef staan (gewijzigd/in gebruik). Entiteitsschermen tonen een "Geïmporteerd #nr"-badge. Migratie 0016 (import_id + logvelden, additief).
+
+**Bewijs (GEMETEN):** `scripts/src/verificatie-import01.ts` — 403 zonder recht (voorbeeld/template/logboek), magazijn:4 alleen artikelen, uitvoeren zonder controle 400, 2× zelfde lijst → 3 dubbelen herkend, zonder keuze 422, met overslaan 0 nieuwe records, terugdraaien exact 3 verwijderd + 409 bij herhaling. Prod-meting: 0 imports/0 dubbelen op productie. Zie `docs/metingen/IMPORT_01_gedragsbewijs.md` en `docs/antwoorden/IMPORT_01.md`.
+
 ## 2026-08-08 — BACKUP_01: externe back-up buiten de VPS (halen, niet brengen) + bewezen herstelproef
 
 - **Uitvoering:** VPS-kant volledig; NAS-aansluiting wacht op René (sleutel + ophaaltaak + versleutelde map) | **Kwaliteit:** hoog (acceptatie via uitgevoerde herstelproef) | **Risico:** laag (alleen additief: extra cron, leesaccount, read-only mounts, één nieuw lees-endpoint)

@@ -146,6 +146,7 @@ function mapArtikelMagazijn(r: typeof artikelenTable.$inferSelect, leverancierNa
     notities: r.notities ?? null,
     actief: r.actief,
     bron: r.bron,
+    import_id: r.importId ?? null,
     aangemaakt_op: iso(r.aangemaaktOp)!,
     bijgewerkt_op: iso(r.bijgewerktOp)!,
   };

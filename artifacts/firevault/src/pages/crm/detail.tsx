@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ImportBadge } from "@/components/import-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -112,7 +113,10 @@ export default function CrmKlantDetail() {
           <Building2 className="h-6 w-6" />
         </div>
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-foreground">{klant.naam}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-foreground">{klant.naam}</h1>
+            <ImportBadge bron={(klant as { bron?: string | null }).bron} importId={(klant as { import_id?: number | null }).import_id} />
+          </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {klant.branche && <span>{klant.branche}</span>}
             {klant.kvk && <span>KvK {klant.kvk}</span>}
@@ -276,6 +280,7 @@ function ContactpersonenTab({ klantId }: { klantId: number }) {
                   <div className="font-medium flex items-center gap-2">
                     {c.naam}
                     {c.primair && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                    <ImportBadge bron={c.bron} importId={c.import_id} />
                   </div>
                   {c.functie && <div className="text-xs text-muted-foreground">{c.functie}</div>}
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">

@@ -37,6 +37,8 @@ function mapRij(r: typeof eenheidsprijzenTable.$inferSelect) {
     gem_werkelijk_materiaal: r.gemWerkelijkMateriaal ?? null,
     aantal_keer_gebruikt: r.aantalKeerGebruikt,
     afwijking_normtijd: r.afwijkingNormtijd ?? null,
+    bron: r.bron,
+    import_id: r.importId ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

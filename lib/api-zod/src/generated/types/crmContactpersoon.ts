@@ -7,6 +7,10 @@
  */
 
 export interface CrmContactpersoon {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   /** @nullable */
   klant_id: number | null;

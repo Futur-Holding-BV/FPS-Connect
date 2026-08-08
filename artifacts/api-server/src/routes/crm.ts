@@ -51,6 +51,8 @@ const mapOrg = (k: typeof crmKlantenTable.$inferSelect) => ({
   voorkeur_fps_bedrijf: k.voorkeurFpsBedrijf,
   opmerkingen: k.opmerkingen,
   voorkeurs_presentatie_niveau: k.voorkeursPresentatieNiveau ?? null,
+  bron: k.bron,
+  import_id: k.importId ?? null,
   aangemaakt_op: iso(k.aangemaaktOp),
   bijgewerkt_op: iso(k.bijgewerktOp),
 });
@@ -70,6 +72,8 @@ const mapContactpersoon = (c: typeof crmContactpersonenTable.$inferSelect) => ({
   opmerkingen: c.opmerkingen,
   laatste_contact_datum: c.laatste_contact_datum,
   volgende_actie: c.volgende_actie,
+  bron: c.bron,
+  import_id: c.importId ?? null,
   aangemaakt_op: iso(c.aangemaaktOp),
   bijgewerkt_op: iso(c.bijgewerktOp),
 });

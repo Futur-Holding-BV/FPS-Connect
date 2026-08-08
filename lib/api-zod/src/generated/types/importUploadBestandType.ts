@@ -12,6 +12,12 @@ export type ImportUploadBestandType = typeof ImportUploadBestandType[keyof typeo
 export const ImportUploadBestandType = {
   leveranciers: 'leveranciers',
   klanten: 'klanten',
+  contactpersonen: 'contactpersonen',
   artikelen: 'artikelen',
-  projecten: 'projecten',
+  magazijn_artikelen: 'magazijn_artikelen',
+  medewerkers: 'medewerkers',
+  gebouwen: 'gebouwen',
+  historische_projecten: 'historische_projecten',
+  eenheidsprijzen: 'eenheidsprijzen',
+  historische_facturen: 'historische_facturen',
 } as const;

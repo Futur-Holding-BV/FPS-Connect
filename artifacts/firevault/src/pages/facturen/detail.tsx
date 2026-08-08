@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportBadge } from "@/components/import-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -383,6 +384,7 @@ export default function FactuurDetailPagina() {
                   <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${f.type === "inkoop" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-600"}`}>
                     {f.type === "inkoop" ? "Inkoopfactuur" : "Verkoopfactuur"}
                   </span>
+                  <ImportBadge bron={f.bron} importId={f.import_id} />
                 </div>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${STATUS_KLEUR[f.status] ?? "bg-slate-100 text-slate-600"}`}>

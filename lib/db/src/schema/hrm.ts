@@ -147,6 +147,8 @@ export const medewerkersTable = pgTable("medewerkers", {
   //   onboarding_bezig | onboarding_afgerond | uit_dienst
   medewerkerStatus: text("medewerker_status").default("concept"),
   wizardVoortgang: jsonb("wizard_voortgang"),
+  bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
+  importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [

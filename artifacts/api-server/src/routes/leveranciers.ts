@@ -206,6 +206,7 @@ function mapLeverancier(r: LeverancierRij) {
     notities: r.notities,
     actief: r.actief,
     bron: r.bron,
+    import_id: r.importId ?? null,
     grootboekrekening: r.grootboekrekening ?? null,
     kostenplaats: r.kostenplaats ?? null,
     btw_code_default: r.btwCodeDefault ?? null,
@@ -217,7 +218,7 @@ function mapLeverancier(r: LeverancierRij) {
   };
 }
 
-function mapArtikel(r: { id: number; code: string | null; naam: string; omschrijving: string | null; eenheid: string; categorie: string | null; inkoopprijs: number | null; verkoopprijs: number | null; btwPercentage: number; leverancierId: number | null; notities: string | null; actief: boolean; bron: string; aangemaaktOp: Date; bijgewerktOp: Date }) {
+function mapArtikel(r: { id: number; code: string | null; naam: string; omschrijving: string | null; eenheid: string; categorie: string | null; inkoopprijs: number | null; verkoopprijs: number | null; btwPercentage: number; leverancierId: number | null; notities: string | null; actief: boolean; bron: string; importId: number | null; aangemaaktOp: Date; bijgewerktOp: Date }) {
   return {
     id: r.id,
     code: r.code,
@@ -233,6 +234,7 @@ function mapArtikel(r: { id: number; code: string | null; naam: string; omschrij
     notities: r.notities,
     actief: r.actief,
     bron: r.bron,
+    import_id: r.importId ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

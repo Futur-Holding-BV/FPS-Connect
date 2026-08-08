@@ -9,6 +9,10 @@ import type { CrmContactpersoon } from './crmContactpersoon';
 import type { CrmProjectkans } from './crmProjectkans';
 
 export interface CrmOrganisatie {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   naam: string;
   /** @nullable */

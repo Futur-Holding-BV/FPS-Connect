@@ -8,6 +8,10 @@
 import type { FactuurAiMetadata } from './factuurAiMetadata';
 
 export interface Factuur {
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  import_id?: number | null;
   id: number;
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
