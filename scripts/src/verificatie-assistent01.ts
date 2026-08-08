@@ -30,7 +30,8 @@ const ACCOUNTS = {
 function faal(msg: string): never { console.error(`❌ FAAL: ${msg}`); process.exit(1); }
 function ok(msg: string) { console.log(`✅ ${msg}`); }
 
-async function maakGebruiker(a: (typeof ACCOUNTS)[keyof typeof ACCOUNTS]): Promise<number> {
+type Account = { email: string; totp: string; rol: "hoofdbeheerder" | "gebruiker"; bevoegdheden: Record<string, number> };
+async function maakGebruiker(a: Account): Promise<number> {
   if (process.env.REPLIT_DEPLOYMENT || process.env.NODE_ENV === "production") throw new Error("GEWEIGERD: testaccounts alleen in dev");
   const hash = await bcrypt.hash(WACHTWOORD, 10);
   const [bestaand] = await db.select({ id: gebruikersTable.id }).from(gebruikersTable).where(eq(gebruikersTable.email, a.email));
@@ -46,7 +47,7 @@ async function maakGebruiker(a: (typeof ACCOUNTS)[keyof typeof ACCOUNTS]): Promi
   return rij.id;
 }
 
-async function login(a: (typeof ACCOUNTS)[keyof typeof ACCOUNTS]): Promise<string> {
+async function login(a: Account): Promise<string> {
   const resp = await fetch(`${BASIS}/auth/mobile/login`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: a.email, wachtwoord: WACHTWOORD, code: authenticator.generate(a.totp) }),

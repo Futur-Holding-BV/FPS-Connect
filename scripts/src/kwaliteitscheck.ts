@@ -429,9 +429,27 @@ async function main() {
     }
   }
 
+  // ─── 8b. Klant-poort (KLANT_01) ───────────────────────────────────────────
+  // Statische buildcontrole: elke route die requireBevoegdheidOfKlant gebruikt
+  // moet bewust in KLANT_TOEGESTANE_ROUTES staan. Let op: dit bewaakt de
+  // afspraak; de runtime klant-poort-middleware blijft de echte garantie.
+
+  sectie("12. Klant-poort — allowlist-controle");
+  const klantPoort = run("pnpm --filter @workspace/scripts run klant-poort-check");
+  if (klantPoort.ok) {
+    const samenvatting = klantPoort.output.split("\n").find((l) => l.includes("Klant-poort-check OK"));
+    ok(samenvatting ?? "Klant-poort-check geslaagd");
+    info("Statische check bewaakt de afspraak; runtime klant-poort is de garantie");
+  } else {
+    const regels = klantPoort.output.split("\n").filter((l) => l.trim().startsWith("- ") || l.includes("GEFAALD"));
+    regels.slice(0, 10).forEach((l) => fout(l.trim()));
+    registreer("Security / Klant-poort", "kritiek",
+      "klant-poort-check gefaald — nieuwe klantroute zonder bewuste allowlist-opname (zie uitvoer hierboven)");
+  }
+
   // ─── 9. Git changelog ─────────────────────────────────────────────────────
 
-  sectie("12. Recente wijzigingen (changelog)");
+  sectie("13. Recente wijzigingen (changelog)");
   const gitLog = run("git --no-optional-locks log --oneline -10 --no-decorate");
   if (gitLog.ok && gitLog.output) {
     gitLog.output.split("\n").forEach((l) => info(l));

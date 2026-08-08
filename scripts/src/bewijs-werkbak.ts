@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     // Bron 4: wagenpark APK die over 10 dagen verloopt
     const apk = new Date(); apk.setDate(apk.getDate() + 10);
     const [voertuig] = await db.insert(voertuigenTable).values({
-      kenteken: "BW-011-E2E", merk: MARK, type: "Transit", eigendomsType: "eigendom", apkDatum: apk,
+      kenteken: "BW-011-E2E", merk: MARK, type: "Transit", apkDatum: apk,
     }).returning();
     opruimen.push(async () => {
       await db.delete(werkbakItemsTable).where(like(werkbakItemsTable.titel, `%${MARK}%`));

@@ -10,11 +10,27 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { KLANT_TOEGESTANE_ROUTES } from "../../artifacts/api-server/src/middlewares/klantPoort";
 
 const API_SRC = new URL("../../artifacts/api-server/src", import.meta.url).pathname;
 const ROUTES_DIR = join(API_SRC, "routes");
 const fouten: string[] = [];
+
+// De allowlist wordt uit de brontekst van klantPoort.ts geparseerd in plaats
+// van geïmporteerd: een directe import van api-server-source valt buiten de
+// rootDir van het scripts-package en breekt de scripts-typecheck (TS6059).
+// De entries zijn bewust eenregelige objectliterals met een regex-literal.
+interface KlantRoute { methode: string; patroon: RegExp; omschrijving: string }
+const poortSrc = readFileSync(join(API_SRC, "middlewares/klantPoort.ts"), "utf8");
+const KLANT_TOEGESTANE_ROUTES: KlantRoute[] = [];
+for (const m of poortSrc.matchAll(
+  /\{\s*methode:\s*"(GET|POST|PATCH|PUT|DELETE)"\s*,\s*patroon:\s*\/((?:[^/\\\n]|\\.)+)\/([a-z]*)\s*,\s*omschrijving:\s*"([^"]*)"/g,
+)) {
+  KLANT_TOEGESTANE_ROUTES.push({ methode: m[1], patroon: new RegExp(m[2], m[3]), omschrijving: m[4] });
+}
+if (KLANT_TOEGESTANE_ROUTES.length === 0) {
+  console.error("KLANT-POORT-CHECK GEFAALD:\n - Kon KLANT_TOEGESTANE_ROUTES niet uit klantPoort.ts parsen — is het bestandsformaat gewijzigd?");
+  process.exit(1);
+}
 
 // 1. Poort gemount na laadPermissies
 const indexSrc = readFileSync(join(ROUTES_DIR, "index.ts"), "utf8");

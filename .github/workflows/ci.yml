@@ -28,6 +28,12 @@ jobs:
       - name: Typecheck alle packages
         run: pnpm run typecheck
 
+      # KLANT_01 — blokkeer de build als een route requireBevoegdheidOfKlant
+      # gebruikt zonder bewuste opname in KLANT_TOEGESTANE_ROUTES.
+      # Statische check bewaakt de afspraak; de runtime klant-poort blijft de garantie.
+      - name: Klant-poort allowlist-controle
+        run: pnpm --filter @workspace/scripts run klant-poort-check
+
       - name: Build api-server
         run: pnpm --filter @workspace/api-server run build
 

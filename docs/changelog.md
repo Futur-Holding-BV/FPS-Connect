@@ -2876,6 +2876,12 @@ De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-token
 
 **Besluit:** de drieledige keuze wordt niet doorgevoerd. `artifacts/firevault/src/pages/gebruikers/index.tsx` hersteld naar de origin/main-versie. De bijbehorende e2e-spec `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` verwijderd. De HRM-lijst "Gebruikers zonder medewerkerprofiel" blijft het officiële onboarding-vangnet.
 
+
+## 2026-08-08 — KLANT_02: klant-poort-check automatisch in kwaliteitscheck en CI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (bewezen groen in kwaliteitscheck-run) | **Risico:** geen (alleen controle-infrastructuur)
+
+De statische klant-poort-check (`klant-poort-check`) draait niet langer alleen handmatig: hij is opgenomen als sectie 12 in de kwaliteitscheck (`scripts/src/kwaliteitscheck.ts`, falen = kritieke bevinding → exit 1) én als aparte stap in de CI-pijplijn (`.github/workflows/ci.yml`, na typecheck). Een nieuwe route met `requireBevoegdheidOfKlant` zonder bewuste opname in `KLANT_TOEGESTANE_ROUTES` blokkeert daarmee de build. Beperking blijft gedocumenteerd (in check-uitvoer en CI-commentaar): de statische check bewaakt de afspraak; de runtime klant-poort-middleware is de garantie.
 ## 2026-08-08 — Task 825: Gebouw-koppeling afgedwongen op legacy storage-paden
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (7-punts gedragsbewijs met beperkte medewerker, hoofdbeheerder en klant) | **Risico:** laag (alleen legacy/ongescoopte paden strenger; ongekoppelde algemene bestanden ongewijzigd)
