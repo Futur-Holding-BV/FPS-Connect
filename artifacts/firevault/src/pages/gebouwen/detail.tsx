@@ -104,6 +104,7 @@ import { PaginaHulp } from "@/components/pagina-hulp";
 import { TYPE_LABELS } from "@/lib/documenten-labels";
 import { useZetAssistentLabel } from "@/lib/assistent-context";
 import GebouwPartijen from "./gebouw-partijen";
+import GebouwNotities from "./gebouw-notities";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
 import GebouwBouwlagen from "./gebouw-bouwlagen";
@@ -1123,6 +1124,9 @@ export default function GebouwDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Aantekeningen (NOTITIE_01) — zichtbaar zonder doorklikken */}
+            <GebouwNotities gebouwId={gebouwId} />
 
             {/* Contactpartijen */}
             <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />

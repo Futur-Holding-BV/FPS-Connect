@@ -150,6 +150,8 @@ INDEX|gebouw_email_bijlagen|gebouw_email_bijlagen_pkey
 INDEX|gebouw_email_samenvattingen|gebouw_email_samenvattingen_gebouw_id_unique
 INDEX|gebouw_email_samenvattingen|gebouw_email_samenvattingen_pkey
 INDEX|gebouw_emails|gebouw_emails_pkey
+INDEX|gebouw_notities|gebouw_notities_gebouw_id_idx
+INDEX|gebouw_notities|gebouw_notities_pkey
 INDEX|gebouw_partijen|gebouw_partijen_pkey
 INDEX|gebouw_publicaties|gebouw_publicaties_pkey
 INDEX|gebouw_toewijzingen|gebouw_toewijzingen_pkey
@@ -1806,6 +1808,16 @@ KOLOM|gebouw_emails|object_pad|text|YES|
 KOLOM|gebouw_emails|onderwerp|text|YES|
 KOLOM|gebouw_emails|ontvanger|text|YES|
 KOLOM|gebouw_emails|status|text|NO|'in_behandeling'::text
+KOLOM|gebouw_notities|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|gebouw_notities|beller_naam|text|YES|
+KOLOM|gebouw_notities|bewerkt_op|timestamp without time zone|YES|
+KOLOM|gebouw_notities|gebouw_id|integer|NO|
+KOLOM|gebouw_notities|gebruiker_id|integer|NO|
+KOLOM|gebouw_notities|id|integer|NO|nextval('gebouw_notities_id_seq'::regclass)
+KOLOM|gebouw_notities|tekst|text|NO|
+KOLOM|gebouw_notities|type|text|NO|'algemeen'::text
+KOLOM|gebouw_notities|verwijderd_door_id|integer|YES|
+KOLOM|gebouw_notities|verwijderd_op|timestamp without time zone|YES|
 KOLOM|gebouw_partijen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebouw_partijen|adres|text|YES|
 KOLOM|gebouw_partijen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -1904,6 +1916,7 @@ KOLOM|gebruikers|gedeactiveerd_op|timestamp without time zone|YES|
 KOLOM|gebruikers|herkomst_automatisch|boolean|NO|false
 KOLOM|gebruikers|herkomst_profiel_id|integer|YES|
 KOLOM|gebruikers|id|integer|NO|nextval('gebruikers_id_seq'::regclass)
+KOLOM|gebruikers|initialen|text|YES|
 KOLOM|gebruikers|is_hoofdtester|boolean|NO|false
 KOLOM|gebruikers|laatst_online|timestamp without time zone|YES|
 KOLOM|gebruikers|mislukte_pogingen|integer|NO|0

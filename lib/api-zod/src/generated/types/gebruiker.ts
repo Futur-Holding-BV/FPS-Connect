@@ -13,6 +13,8 @@ import type { GebruikerUitnodigingStatus } from './gebruikerUitnodigingStatus';
 export interface Gebruiker {
   id: number;
   naam: string;
+  /** @nullable */
+  initialen?: string | null;
   email: string;
   rol: GebruikerRol;
   functietitels?: string[];

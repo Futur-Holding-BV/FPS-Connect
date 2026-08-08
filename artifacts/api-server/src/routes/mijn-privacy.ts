@@ -15,6 +15,27 @@ import { requireAuth } from "../middlewares/auth.js";
 
 const mijnPrivacyRouter = Router();
 
+// PATCH /mijn/initialen — NOTITIE_01: iedereen stelt zijn eigen initialen in;
+// leeg laten mag (dan worden ze afgeleid uit de naam).
+mijnPrivacyRouter.patch("/mijn/initialen", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
+
+  const ruw = (req.body as { initialen?: unknown })?.initialen;
+  if (typeof ruw !== "string") {
+    return void res.status(400).json({ message: "initialen moet een tekst zijn" });
+  }
+  const initialen = ruw.trim();
+  if (initialen.length > 6) {
+    return void res.status(400).json({ message: "Initialen zijn maximaal 6 tekens" });
+  }
+  await db
+    .update(gebruikersTable)
+    .set({ initialen: initialen === "" ? null : initialen })
+    .where(eq(gebruikersTable.id, userId));
+  res.json({ initialen });
+});
+
 mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
   if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });

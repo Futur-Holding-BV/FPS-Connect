@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const gebruikersTable = pgTable("gebruikers", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
+  initialen: text("initialen"), // NOTITIE_01: zelf in te stellen; leeg = afgeleid uit naam
   email: text("email").notNull().unique(),
   rol: text("rol").notNull().default("gebruiker"),
   telefoon: text("telefoon"),

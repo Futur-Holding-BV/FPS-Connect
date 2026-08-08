@@ -1,3 +1,9 @@
+## 2026-08-08 — NOTITIE_01: aantekeningen bij een gebouw
+
+- **Uitvoering:** volledig, 16/16 acceptatiechecks groen via bewijsscript | **Kwaliteit:** hoog | **Risico:** laag (nieuwe, geïsoleerde module; klantweg aantoonbaar dicht)
+
+Elke collega met gebouwtoegang (niveau 1) kan nu op de gebouwpagina in één handeling een aantekening plaatsen: typen, Enter, klaar. Regels worden nooit overschreven — elke aantekening is een losse regel met initialen, datum en tijd (volle naam bij aanwijzen). Type is optioneel (telefoon/bezoek/mail/algemeen; bij telefoon een optioneel beller-veld). Eigen aantekening is 15 minuten corrigeerbaar door de schrijver zelf; daarna staat hij vast (server-side afgedwongen). Verwijderen = doorhalen (alleen gebouwen-niveau 4): de regel blijft zichtbaar met "doorgehaald door … op …". Initialen worden afgeleid uit de naam (tussenvoegsels klein: Jan van der Berg → JvdB); bij de eerste keer inloggen vraagt Connect eenmalig of ze kloppen, aanpasbaar tot 6 tekens. **Klantweg dicht:** de notitieroutes staan bewust niet in de klant-allowlist — bewezen: klant kan het gebouw zelf opvragen maar krijgt 403 op de aantekeningen en het gebouwantwoord bevat geen notitiedata. §5-bewijs 6 (waarom een eigen tabel i.p.v. `crm_communicatie`): die tabel hangt verplicht aan `crm_klanten`, terwijl gebouwen via `klant_id` aan `gebruikers` hangen — een koppeling via CRM zou notities onmogelijk maken bij gebouwen zonder CRM-relatie en de klant-afscherming vertroebelen. Bewijsscript: `scripts/src/verificatie-notitie01.ts`. Migratie `0020_gebouw-notities.sql`.
+
 ## 2026-08-08 — MERGE_01: het mergeproces zelf kan hersteld werk niet meer overschrijven
 
 - **Uitvoering:** volledig, alle 6 acceptatiebewijzen geleverd | **Kwaliteit:** hoog | **Risico:** laag (alleen procesbewaking; geen route-inhoud gewijzigd)

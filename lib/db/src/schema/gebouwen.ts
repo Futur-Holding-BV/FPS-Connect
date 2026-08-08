@@ -68,6 +68,23 @@ export const gebouwToewijzingenTable = pgTable("gebouw_toewijzingen", {
 
 export type GebouwToewijzing = typeof gebouwToewijzingenTable.$inferSelect;
 
+// NOTITIE_01: losse aantekeningen bij een gebouw (telefoon/bezoek/mail/algemeen).
+// Nooit overschrijven; corrigeren = nieuwe regel. Verwijderen = doorhalen (soft delete).
+export const gebouwNotitiesTable = pgTable("gebouw_notities", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  tekst: text("tekst").notNull(),
+  type: text("type").notNull().default("algemeen"), // "telefoon" | "bezoek" | "mail" | "algemeen"
+  bellerNaam: text("beller_naam"), // alleen zinvol bij type "telefoon", optioneel
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bewerktOp: timestamp("bewerkt_op"), // alleen gezet als de schrijver binnen 15 min corrigeerde
+  verwijderdOp: timestamp("verwijderd_op"), // doorgehaald, niet weg
+  verwijderdDoorId: integer("verwijderd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+});
+
+export type GebouwNotitie = typeof gebouwNotitiesTable.$inferSelect;
+
 export const gebouwPartijenTable = pgTable("gebouw_partijen", {
   id: serial("id").primaryKey(),
   gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),

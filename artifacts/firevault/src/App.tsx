@@ -165,6 +165,7 @@ import RegieDetailPagina from "@/pages/regie/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
+import InitialenPrompt from "@/components/initialen-prompt";
 import RapportenPagina from "@/pages/rapporten/index";
 import UrenPagina from "@/pages/uren/index";
 import WeekstatenPaginaComponent from "@/pages/uren/weekstaten";
@@ -676,7 +677,13 @@ function Portalen() {
   }
 
   // Interne FPS Connect gebruikers
-  if (rolStr === "hoofdbeheerder" || rolStr === "beheerder") return <ConnectPortal />;
+  if (rolStr === "hoofdbeheerder" || rolStr === "beheerder")
+    return (
+      <>
+        <InitialenPrompt />
+        <ConnectPortal />
+      </>
+    );
 
   // Klant-portaal
   if (rolStr === "klant") return <KlantPortal />;
@@ -684,7 +691,14 @@ function Portalen() {
   // Gebruiker met bevoegdhedenmatrix
   if (rolStr === "gebruiker") {
     const heeftToegang = Object.values(bevoegdheden).some((n) => n > 0);
-    return heeftToegang ? <ConnectPortal /> : <GeenToegang />;
+    return heeftToegang ? (
+      <>
+        <InitialenPrompt />
+        <ConnectPortal />
+      </>
+    ) : (
+      <GeenToegang />
+    );
   }
 
   // Legacy: monteur/controleur — worden in T016 omgezet naar "gebruiker"

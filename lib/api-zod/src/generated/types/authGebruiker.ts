@@ -12,6 +12,8 @@ import type { AuthGebruikerTaal } from './authGebruikerTaal';
 export interface AuthGebruiker {
   id: number;
   naam: string;
+  /** @nullable */
+  initialen?: string | null;
   email: string;
   rol: AuthGebruikerRol;
   /** @nullable */

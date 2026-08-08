@@ -332,6 +332,9 @@ import type {
   GebouwEmailSamenvattingUpdate,
   GebouwGereedInput,
   GebouwInput,
+  GebouwNotitie,
+  GebouwNotitieInput,
+  GebouwNotitieUpdate,
   GebouwPartij,
   GebouwPartijInput,
   GebouwPartijOptie,
@@ -909,6 +912,8 @@ import type {
   UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
   UpdateFactuurTermijn200,
+  UpdateMijnInitialen200,
+  UpdateMijnInitialenBody,
   UploadUrlRequest,
   UploadUrlResponse,
   UrenRegistratie,
@@ -4016,6 +4021,295 @@ export const useDeleteGebouwPartij = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteGebouwPartijMutationOptions(options));
+    }
+
+export const getListGebouwNotitiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/notities`
+}
+
+/**
+ * @summary Aantekeningen bij een gebouw (nieuwste eerst, doorgehaalde regels inbegrepen)
+ */
+export const listGebouwNotities = async (id: number, options?: RequestInit): Promise<GebouwNotitie[]> => {
+
+  return customFetch<GebouwNotitie[]>(getListGebouwNotitiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGebouwNotitiesQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/notities`
+    ] as const;
+    }
+
+
+export const getListGebouwNotitiesQueryOptions = <TData = Awaited<ReturnType<typeof listGebouwNotities>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwNotities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGebouwNotitiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGebouwNotities>>> = ({ signal }) => listGebouwNotities(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGebouwNotities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGebouwNotitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listGebouwNotities>>>
+export type ListGebouwNotitiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Aantekeningen bij een gebouw (nieuwste eerst, doorgehaalde regels inbegrepen)
+ */
+
+export function useListGebouwNotities<TData = Awaited<ReturnType<typeof listGebouwNotities>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwNotities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGebouwNotitiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateGebouwNotitieUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/notities`
+}
+
+/**
+ * @summary Aantekening toevoegen (schrijver en tijdstip komen van het systeem)
+ */
+export const createGebouwNotitie = async (id: number,
+    gebouwNotitieInput: GebouwNotitieInput, options?: RequestInit): Promise<GebouwNotitie> => {
+
+  return customFetch<GebouwNotitie>(getCreateGebouwNotitieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gebouwNotitieInput)
+  }
+);}
+
+
+
+
+export const getCreateGebouwNotitieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGebouwNotitie>>, TError,{id: number;data: BodyType<GebouwNotitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGebouwNotitie>>, TError,{id: number;data: BodyType<GebouwNotitieInput>}, TContext> => {
+
+const mutationKey = ['createGebouwNotitie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGebouwNotitie>>, {id: number;data: BodyType<GebouwNotitieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createGebouwNotitie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGebouwNotitieMutationResult = NonNullable<Awaited<ReturnType<typeof createGebouwNotitie>>>
+    export type CreateGebouwNotitieMutationBody = BodyType<GebouwNotitieInput>
+    export type CreateGebouwNotitieMutationError = ErrorType<void>
+
+    /**
+ * @summary Aantekening toevoegen (schrijver en tijdstip komen van het systeem)
+ */
+export const useCreateGebouwNotitie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGebouwNotitie>>, TError,{id: number;data: BodyType<GebouwNotitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGebouwNotitie>>,
+        TError,
+        {id: number;data: BodyType<GebouwNotitieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGebouwNotitieMutationOptions(options));
+    }
+
+export const getUpdateGebouwNotitieUrl = (notitieId: number,) => {
+
+
+
+
+  return `/api/gebouwen/notities/${notitieId}`
+}
+
+/**
+ * @summary Eigen aantekening corrigeren (alleen binnen 15 minuten na aanmaken)
+ */
+export const updateGebouwNotitie = async (notitieId: number,
+    gebouwNotitieUpdate: GebouwNotitieUpdate, options?: RequestInit): Promise<GebouwNotitie> => {
+
+  return customFetch<GebouwNotitie>(getUpdateGebouwNotitieUrl(notitieId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gebouwNotitieUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateGebouwNotitieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGebouwNotitie>>, TError,{notitieId: number;data: BodyType<GebouwNotitieUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGebouwNotitie>>, TError,{notitieId: number;data: BodyType<GebouwNotitieUpdate>}, TContext> => {
+
+const mutationKey = ['updateGebouwNotitie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGebouwNotitie>>, {notitieId: number;data: BodyType<GebouwNotitieUpdate>}> = (props) => {
+          const {notitieId,data} = props ?? {};
+
+          return  updateGebouwNotitie(notitieId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGebouwNotitieMutationResult = NonNullable<Awaited<ReturnType<typeof updateGebouwNotitie>>>
+    export type UpdateGebouwNotitieMutationBody = BodyType<GebouwNotitieUpdate>
+    export type UpdateGebouwNotitieMutationError = ErrorType<void>
+
+    /**
+ * @summary Eigen aantekening corrigeren (alleen binnen 15 minuten na aanmaken)
+ */
+export const useUpdateGebouwNotitie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGebouwNotitie>>, TError,{notitieId: number;data: BodyType<GebouwNotitieUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGebouwNotitie>>,
+        TError,
+        {notitieId: number;data: BodyType<GebouwNotitieUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateGebouwNotitieMutationOptions(options));
+    }
+
+export const getDeleteGebouwNotitieUrl = (notitieId: number,) => {
+
+
+
+
+  return `/api/gebouwen/notities/${notitieId}`
+}
+
+/**
+ * @summary Aantekening doorhalen (alleen gebouwen niveau 4; regel blijft zichtbaar)
+ */
+export const deleteGebouwNotitie = async (notitieId: number, options?: RequestInit): Promise<GebouwNotitie> => {
+
+  return customFetch<GebouwNotitie>(getDeleteGebouwNotitieUrl(notitieId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteGebouwNotitieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwNotitie>>, TError,{notitieId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwNotitie>>, TError,{notitieId: number}, TContext> => {
+
+const mutationKey = ['deleteGebouwNotitie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGebouwNotitie>>, {notitieId: number}> = (props) => {
+          const {notitieId} = props ?? {};
+
+          return  deleteGebouwNotitie(notitieId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGebouwNotitieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGebouwNotitie>>>
+
+    export type DeleteGebouwNotitieMutationError = ErrorType<void>
+
+    /**
+ * @summary Aantekening doorhalen (alleen gebouwen niveau 4; regel blijft zichtbaar)
+ */
+export const useDeleteGebouwNotitie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwNotitie>>, TError,{notitieId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGebouwNotitie>>,
+        TError,
+        {notitieId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteGebouwNotitieMutationOptions(options));
     }
 
 export const getListGebouwTekeningenUrl = (id: number,) => {
@@ -21245,6 +21539,76 @@ export function useGetHuidigeGebruiker<TData = Awaited<ReturnType<typeof getHuid
 
 
 
+
+export const getUpdateMijnInitialenUrl = () => {
+
+
+
+
+  return `/api/mijn/initialen`
+}
+
+/**
+ * @summary Eigen initialen instellen (getoond bij aantekeningen)
+ */
+export const updateMijnInitialen = async (updateMijnInitialenBody: UpdateMijnInitialenBody, options?: RequestInit): Promise<UpdateMijnInitialen200> => {
+
+  return customFetch<UpdateMijnInitialen200>(getUpdateMijnInitialenUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateMijnInitialenBody)
+  }
+);}
+
+
+
+
+export const getUpdateMijnInitialenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMijnInitialen>>, TError,{data: BodyType<UpdateMijnInitialenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMijnInitialen>>, TError,{data: BodyType<UpdateMijnInitialenBody>}, TContext> => {
+
+const mutationKey = ['updateMijnInitialen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMijnInitialen>>, {data: BodyType<UpdateMijnInitialenBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMijnInitialen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMijnInitialenMutationResult = NonNullable<Awaited<ReturnType<typeof updateMijnInitialen>>>
+    export type UpdateMijnInitialenMutationBody = BodyType<UpdateMijnInitialenBody>
+    export type UpdateMijnInitialenMutationError = ErrorType<void>
+
+    /**
+ * @summary Eigen initialen instellen (getoond bij aantekeningen)
+ */
+export const useUpdateMijnInitialen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMijnInitialen>>, TError,{data: BodyType<UpdateMijnInitialenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMijnInitialen>>,
+        TError,
+        {data: BodyType<UpdateMijnInitialenBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateMijnInitialenMutationOptions(options));
+    }
 
 export const getGetInfoInstellingenUrl = () => {
 

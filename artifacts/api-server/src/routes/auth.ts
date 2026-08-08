@@ -167,6 +167,7 @@ const mapAuthGebruiker = (
 ) => ({
   id: g.id,
   naam: g.naam,
+  initialen: g.initialen ?? null,
   email: g.email,
   rol: g.rol,
   avatar_url: g.avatarUrl ?? null,

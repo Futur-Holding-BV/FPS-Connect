@@ -1050,6 +1050,109 @@ export const DeleteGebouwPartijResponse = zod.void()
 
 
 /**
+ * @summary Aantekeningen bij een gebouw (nieuwste eerst, doorgehaalde regels inbegrepen)
+ */
+export const ListGebouwNotitiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGebouwNotitiesResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "tekst": zod.string(),
+  "type": zod.enum(['telefoon', 'bezoek', 'mail', 'algemeen']),
+  "beller_naam": zod.string().nullish(),
+  "gebruiker_naam": zod.string(),
+  "initialen": zod.string().describe('Zelf ingestelde initialen van de schrijver, of afgeleid uit de naam.'),
+  "aangemaakt_op": zod.string(),
+  "bewerkt_op": zod.string().nullish(),
+  "verwijderd": zod.boolean(),
+  "verwijderd_op": zod.string().nullish(),
+  "verwijderd_door_naam": zod.string().nullish(),
+  "mag_bewerken": zod.boolean().describe('Alleen true voor de schrijver zelf, binnen 15 minuten na aanmaken.')
+})
+export const ListGebouwNotitiesResponse = zod.array(ListGebouwNotitiesResponseItem)
+
+
+/**
+ * @summary Aantekening toevoegen (schrijver en tijdstip komen van het systeem)
+ */
+export const CreateGebouwNotitieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const createGebouwNotitieBodyTypeDefault = `algemeen`;
+
+export const CreateGebouwNotitieBody = zod.object({
+  "tekst": zod.string().min(1),
+  "type": zod.enum(['telefoon', 'bezoek', 'mail', 'algemeen']).default(createGebouwNotitieBodyTypeDefault),
+  "beller_naam": zod.string().nullish()
+})
+
+export const CreateGebouwNotitieResponse = zod.void()
+
+
+/**
+ * @summary Eigen aantekening corrigeren (alleen binnen 15 minuten na aanmaken)
+ */
+export const UpdateGebouwNotitieParams = zod.object({
+  "notitieId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateGebouwNotitieBody = zod.object({
+  "tekst": zod.string().min(1),
+  "beller_naam": zod.string().nullish()
+})
+
+export const UpdateGebouwNotitieResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "tekst": zod.string(),
+  "type": zod.enum(['telefoon', 'bezoek', 'mail', 'algemeen']),
+  "beller_naam": zod.string().nullish(),
+  "gebruiker_naam": zod.string(),
+  "initialen": zod.string().describe('Zelf ingestelde initialen van de schrijver, of afgeleid uit de naam.'),
+  "aangemaakt_op": zod.string(),
+  "bewerkt_op": zod.string().nullish(),
+  "verwijderd": zod.boolean(),
+  "verwijderd_op": zod.string().nullish(),
+  "verwijderd_door_naam": zod.string().nullish(),
+  "mag_bewerken": zod.boolean().describe('Alleen true voor de schrijver zelf, binnen 15 minuten na aanmaken.')
+})
+
+
+/**
+ * @summary Aantekening doorhalen (alleen gebouwen niveau 4; regel blijft zichtbaar)
+ */
+export const DeleteGebouwNotitieParams = zod.object({
+  "notitieId": zod.coerce.number()
+})
+
+export const DeleteGebouwNotitieResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "tekst": zod.string(),
+  "type": zod.enum(['telefoon', 'bezoek', 'mail', 'algemeen']),
+  "beller_naam": zod.string().nullish(),
+  "gebruiker_naam": zod.string(),
+  "initialen": zod.string().describe('Zelf ingestelde initialen van de schrijver, of afgeleid uit de naam.'),
+  "aangemaakt_op": zod.string(),
+  "bewerkt_op": zod.string().nullish(),
+  "verwijderd": zod.boolean(),
+  "verwijderd_op": zod.string().nullish(),
+  "verwijderd_door_naam": zod.string().nullish(),
+  "mag_bewerken": zod.boolean().describe('Alleen true voor de schrijver zelf, binnen 15 minuten na aanmaken.')
+})
+
+
+/**
  * @summary Tekeningen van een gebouw
  */
 export const ListGebouwTekeningenParams = zod.object({
@@ -5842,6 +5945,7 @@ export const ListToewijsbareGebruikersResponse = zod.array(ListToewijsbareGebrui
 export const ListGebruikersResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -5912,6 +6016,7 @@ export const GetGebruikerParams = zod.object({
 export const GetGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -5976,6 +6081,7 @@ export const UpdateGebruikerBody = zod.object({
 export const UpdateGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6028,6 +6134,7 @@ export const HerstellenGebruikerParams = zod.object({
 export const HerstellenGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6100,6 +6207,7 @@ export const GebruikerOntgrendelenParams = zod.object({
 export const GebruikerOntgrendelenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6142,6 +6250,7 @@ export const UitnodigingVersturenParams = zod.object({
 export const UitnodigingVersturenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6197,6 +6306,7 @@ export const UitnodigingOpnieuwVersturenParams = zod.object({
 export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6239,6 +6349,7 @@ export const GebruikerHerkomstToepassenParams = zod.object({
 export const GebruikerHerkomstToepassenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6281,6 +6392,7 @@ export const GebruikerHerkomstBevestigenParams = zod.object({
 export const GebruikerHerkomstBevestigenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -6344,6 +6456,7 @@ export const GebruikerHerkomstVerwijderenParams = zod.object({
 export const GebruikerHerkomstVerwijderenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "functietitels": zod.array(zod.string()).optional(),
@@ -7089,6 +7202,7 @@ export const TaalWijzigenBody = zod.object({
 export const TaalWijzigenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "avatar_url": zod.string().nullish(),
@@ -7238,6 +7352,7 @@ export const TweeFactorActiverenBody = zod.object({
 export const TweeFactorActiverenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "avatar_url": zod.string().nullish(),
@@ -7262,6 +7377,7 @@ export const TweeFactorVerifyBody = zod.object({
 export const TweeFactorVerifyResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "avatar_url": zod.string().nullish(),
@@ -7288,6 +7404,7 @@ export const LogoutResponse = zod.void()
 export const GetHuidigeGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "initialen": zod.string().nullish(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
   "avatar_url": zod.string().nullish(),
@@ -7299,6 +7416,22 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
   "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
+})
+
+
+/**
+ * @summary Eigen initialen instellen (getoond bij aantekeningen)
+ */
+export const updateMijnInitialenBodyInitialenMax = 6;
+
+
+
+export const UpdateMijnInitialenBody = zod.object({
+  "initialen": zod.string().max(updateMijnInitialenBodyInitialenMax)
+})
+
+export const UpdateMijnInitialenResponse = zod.object({
+  "initialen": zod.string()
 })
 
 

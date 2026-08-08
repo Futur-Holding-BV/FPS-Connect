@@ -2300,6 +2300,64 @@ export interface SpotsInzicht {
   per_monteur: SpotsInzichtMonteur[];
 }
 
+export type GebouwNotitieType = typeof GebouwNotitieType[keyof typeof GebouwNotitieType];
+
+
+export const GebouwNotitieType = {
+  telefoon: 'telefoon',
+  bezoek: 'bezoek',
+  mail: 'mail',
+  algemeen: 'algemeen',
+} as const;
+
+export interface GebouwNotitie {
+  id: number;
+  gebouw_id: number;
+  gebruiker_id: number;
+  tekst: string;
+  type: GebouwNotitieType;
+  /** @nullable */
+  beller_naam?: string | null;
+  gebruiker_naam: string;
+  /** Zelf ingestelde initialen van de schrijver, of afgeleid uit de naam. */
+  initialen: string;
+  aangemaakt_op: string;
+  /** @nullable */
+  bewerkt_op?: string | null;
+  verwijderd: boolean;
+  /** @nullable */
+  verwijderd_op?: string | null;
+  /** @nullable */
+  verwijderd_door_naam?: string | null;
+  /** Alleen true voor de schrijver zelf, binnen 15 minuten na aanmaken. */
+  mag_bewerken: boolean;
+}
+
+export type GebouwNotitieInputType = typeof GebouwNotitieInputType[keyof typeof GebouwNotitieInputType];
+
+
+export const GebouwNotitieInputType = {
+  telefoon: 'telefoon',
+  bezoek: 'bezoek',
+  mail: 'mail',
+  algemeen: 'algemeen',
+} as const;
+
+export interface GebouwNotitieInput {
+  /** @minLength 1 */
+  tekst: string;
+  type?: GebouwNotitieInputType;
+  /** @nullable */
+  beller_naam?: string | null;
+}
+
+export interface GebouwNotitieUpdate {
+  /** @minLength 1 */
+  tekst: string;
+  /** @nullable */
+  beller_naam?: string | null;
+}
+
 export interface GebouwPartij {
   id: number;
   gebouw_id: number;
@@ -3415,6 +3473,8 @@ export type GebruikerBevoegdheden = {[key: string]: number};
 export interface Gebruiker {
   id: number;
   naam: string;
+  /** @nullable */
+  initialen?: string | null;
   email: string;
   rol: GebruikerRol;
   functietitels?: string[];
@@ -4103,6 +4163,8 @@ export type AuthGebruikerBevoegdheden = {[key: string]: number};
 export interface AuthGebruiker {
   id: number;
   naam: string;
+  /** @nullable */
+  initialen?: string | null;
   email: string;
   rol: AuthGebruikerRol;
   /** @nullable */
@@ -15247,6 +15309,15 @@ export type UitnodigingActiveren200 = {
 
 export type InstallatieUitvoeren201 = {
   status?: string;
+};
+
+export type UpdateMijnInitialenBody = {
+  /** @maxLength 6 */
+  initialen: string;
+};
+
+export type UpdateMijnInitialen200 = {
+  initialen: string;
 };
 
 export type ListCrmContactpersonenAllParams = {

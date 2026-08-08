@@ -6,6 +6,7 @@ import installatieRouter from "./installatie";
 import dashboardRouter from "./dashboard";
 import gebouwenRouter from "./gebouwen";
 import voorzieningenRouter from "./voorzieningen";
+import gebouwNotitiesRouter from "./gebouw-notities";
 import classificatieRouter from "./classificatie";
 import fabrikantenRouter from "./fabrikanten";
 import documentenRouter from "./documenten";
@@ -149,6 +150,7 @@ router.use((req, _res, next) => {
 router.use(dashboardRouter);
 router.use(gebouwenRouter);
 router.use(voorzieningenRouter);
+router.use(gebouwNotitiesRouter);
 router.use(classificatieRouter);
 router.use(fabrikantenRouter);
 router.use(documentenRouter);

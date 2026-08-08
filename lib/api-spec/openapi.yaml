@@ -961,6 +961,107 @@ paths:
         "403":
           description: Geen toegang
 
+  /gebouwen/{id}/notities:
+    get:
+      operationId: listGebouwNotities
+      tags: [gebouwen]
+      summary: Aantekeningen bij een gebouw (nieuwste eerst, doorgehaalde regels inbegrepen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GebouwNotitie"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createGebouwNotitie
+      tags: [gebouwen]
+      summary: Aantekening toevoegen (schrijver en tijdstip komen van het systeem)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwNotitieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwNotitie"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/notities/{notitieId}:
+    patch:
+      operationId: updateGebouwNotitie
+      tags: [gebouwen]
+      summary: Eigen aantekening corrigeren (alleen binnen 15 minuten na aanmaken)
+      parameters:
+        - in: path
+          name: notitieId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwNotitieUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwNotitie"
+        "403":
+          description: Geen toegang (niet de schrijver, of termijn verstreken)
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteGebouwNotitie
+      tags: [gebouwen]
+      summary: Aantekening doorhalen (alleen gebouwen niveau 4; regel blijft zichtbaar)
+      parameters:
+        - in: path
+          name: notitieId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Doorgehaald
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwNotitie"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+
   /gebouwen/{id}/tekeningen:
     get:
       operationId: listGebouwTekeningen
@@ -6171,6 +6272,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthGebruiker"
+
+  /mijn/initialen:
+    patch:
+      operationId: updateMijnInitialen
+      tags: [auth]
+      summary: Eigen initialen instellen (getoond bij aantekeningen)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [initialen]
+              properties:
+                initialen:
+                  type: string
+                  maxLength: 6
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [initialen]
+                properties:
+                  initialen:
+                    type: string
+        "400":
+          description: Ongeldige invoer
 
   /info/instellingen:
     get:
@@ -27813,6 +27944,55 @@ components:
           items:
             $ref: "#/components/schemas/SpotsInzichtMonteur"
 
+    GebouwNotitie:
+      type: object
+      required: [id, gebouw_id, gebruiker_id, tekst, type, gebruiker_naam, initialen, aangemaakt_op, verwijderd, mag_bewerken]
+      properties:
+        id: { type: integer }
+        gebouw_id: { type: integer }
+        gebruiker_id: { type: integer }
+        tekst: { type: string }
+        type:
+          type: string
+          enum: [telefoon, bezoek, mail, algemeen]
+        beller_naam: { type: ["string", "null"] }
+        gebruiker_naam: { type: string }
+        initialen:
+          type: string
+          description: Zelf ingestelde initialen van de schrijver, of afgeleid uit de naam.
+        aangemaakt_op: { type: string }
+        bewerkt_op: { type: ["string", "null"] }
+        verwijderd: { type: boolean }
+        verwijderd_op: { type: ["string", "null"] }
+        verwijderd_door_naam: { type: ["string", "null"] }
+        mag_bewerken:
+          type: boolean
+          description: Alleen true voor de schrijver zelf, binnen 15 minuten na aanmaken.
+
+    GebouwNotitieInput:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [telefoon, bezoek, mail, algemeen]
+          default: algemeen
+        beller_naam:
+          type: ["string", "null"]
+
+    GebouwNotitieUpdate:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+          minLength: 1
+        beller_naam:
+          type: ["string", "null"]
+
     GebouwPartij:
       type: object
       required: [id, gebouw_id, type, naam, aangemaakt_op]
@@ -29299,6 +29479,8 @@ components:
           type: integer
         naam:
           type: string
+        initialen:
+          type: ["string", "null"]
         email:
           type: string
         rol:
@@ -30203,6 +30385,8 @@ components:
           type: integer
         naam:
           type: string
+        initialen:
+          type: ["string", "null"]
         email:
           type: string
         rol:
