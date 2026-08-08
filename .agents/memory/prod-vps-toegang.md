@@ -93,3 +93,5 @@ dezelfde fix bevatten die je bewust overschrijft.
 in de crontab van een niet-root-gebruiker breekt de hele cronregel als het
 logbestand root-owned is (redirect faalt vóór het commando draait). Na het
 aanmaken van cronregels altijd een schrijftest op het logpad doen (of chown).
+
+**Beleidswijziging (8 aug 2026, René):** géén SSH-toegang tot productie meer voor de agent. Deploys lopen uitsluitend via GitHub Actions; VPS-configuratie (env-bestanden e.d.) zet René zelf. Prod-bewijzen dus via publieke endpoints (curl/API) + Actions-run-logs (GitHub API), niet via ssh/psql op de server.
