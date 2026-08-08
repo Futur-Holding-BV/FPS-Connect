@@ -132,6 +132,11 @@ proces "deploy pas ná goedkeuring van een reviewer".
 
 **Verplichte gates (alle vier groen vóór deploy):**
 
+0. Pre-deploy controles in `deploy.yml` zelf: de workflow draait `pnpm run typecheck`,
+   `check-dubbele-routes` en `klant-poort-check` vóórdat de VPS wordt aangeraakt.
+   Faalt één van deze controles, dan wordt er **niets** uitgerold — een push met rode
+   typecheck bereikt de server dus nooit (ingevoerd na het incident van 8 aug 2026,
+   waarbij gemangelde `opname.ts` ~15 min live stond).
 1. GitHub CI groen.
 2. Geen destructieve databasemigratie zonder expliciete waarschuwing.
 3. Geen verzwakking van de beveiliging.
@@ -154,6 +159,23 @@ Bij falen stuurt de workflow automatisch een e-mail naar René (via de Graph/mai
 - `SMOKETEST_PASSWORD` — wachtwoord van dat account
 
 Als de secrets ontbreken, wordt de smoketest overgeslagen met een waarschuwing (de deploy mislukt er niet door).
+
+**Noodfix: gate bewust passeren**
+
+De pre-deploy controles (typecheck, dubbele-routes, klant-poort) kunnen in een
+noodgeval bewust worden overgeslagen — bijvoorbeeld als productie plat ligt en de
+controles zelf de blokkade zijn (kapotte CI-tooling, een typefout in een controle-
+script). Dat kan uitsluitend handmatig:
+
+1. Ga naar GitHub → Actions → workflow "Deploy naar productie" → **Run workflow**.
+2. Vul in het invoerveld `noodfix` exact de waarde `NOODFIX` in (hoofdletters).
+3. Start de run. De workflow logt een duidelijke waarschuwing
+   ("NOODFIX-BYPASS ACTIEF") en slaat alleen de drie controle-stappen over;
+   de deploy-stappen en de post-deploy smoketest draaien gewoon.
+
+Een gewone push naar `main` kan de gate **nooit** omzeilen: de bypass werkt alleen
+via `workflow_dispatch` met die expliciete input. Herstel na een noodfix altijd zo
+snel mogelijk de reguliere situatie (controles groen op de eerstvolgende commit).
 
 **Aanvullende handmatige smoketest na elke deploy:**
 
