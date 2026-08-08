@@ -8,8 +8,14 @@ import {
   sepaBestandenTable,
   scabMailsTable,
   werkgeversTable,
+  declaratiesTable,
+  verlofAanvragenTable,
+  verlofAanvraagLogTable,
+  verlofsoortenTable,
+  medewerkersTable,
+  gebruikersTable,
 } from "@workspace/db";
-import { eq, and, count, desc } from "drizzle-orm";
+import { eq, and, count, desc, isNull, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 
@@ -153,5 +159,131 @@ router.post(
     return void res.status(201).json(mapUpload(rij));
   }
 );
+
+// ─── LOON_01 Schakel 2: goedgekeurde declaraties en verlof voor de loonstrook ─
+//
+// De boekhouder ziet uitsluitend GOEDGEKEURDE posten en markeert ze als
+// verwerkt zodra ze op de loonstrook staan — daarna verdwijnen ze uit de
+// openstaande lijst, zodat niets dubbel verwerkt wordt. Alles onder de
+// boekhouder_portaal-bevoegdheid: hij heeft géén declaratie- of HRM-rechten
+// nodig (en dus ook geen toegang tot facturen/projecten/offertes).
+
+router.get("/boekhouder/declaraties", portaal, async (req: Request, res: Response): Promise<void> => {
+  const toonVerwerkt = String(req.query["verwerkt"] ?? "") === "true";
+  const beoordelaar = { naam: gebruikersTable.naam };
+  const rows = await db
+    .select({
+      d: declaratiesTable,
+      medewerkerNaam: medewerkersTable.naam,
+      goedgekeurdDoorNaam: beoordelaar.naam,
+    })
+    .from(declaratiesTable)
+    .leftJoin(medewerkersTable, eq(medewerkersTable.id, declaratiesTable.medewerkerId))
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, declaratiesTable.beoordeeldDoor))
+    .where(toonVerwerkt
+      ? and(eq(declaratiesTable.status, "verwerkt"), isNotNull(declaratiesTable.verwerkingOp))
+      : eq(declaratiesTable.status, "goedgekeurd"))
+    .orderBy(desc(declaratiesTable.beoordeeldOp))
+    .limit(300);
+
+  return void res.json(rows.map(({ d, medewerkerNaam, goedgekeurdDoorNaam }) => ({
+    id: d.id,
+    medewerker_naam: medewerkerNaam ?? `Medewerker #${d.medewerkerId}`,
+    categorie: d.categorie,
+    omschrijving: d.omschrijving,
+    bedrag_totaal_cents: d.bedragTotaalCents,
+    datum: d.datum,
+    status: d.status,
+    goedgekeurd_op: d.beoordeeldOp ? d.beoordeeldOp.toISOString() : null,
+    goedgekeurd_door_naam: goedgekeurdDoorNaam,
+    verwerkt_op: d.verwerkingOp ? d.verwerkingOp.toISOString() : null,
+  })));
+});
+
+router.post("/boekhouder/declaraties/:id/verwerken", uploaden, async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
+  const sess = req.session as { userId?: number };
+
+  // Alleen een goedgekeurde declaratie kan verwerkt worden — en maar één keer.
+  const [rij] = await db.update(declaratiesTable)
+    .set({
+      status: "verwerkt",
+      verwerkingOp: new Date(),
+      verwerktDoor: sess.userId ?? null,
+      bijgewerktOp: new Date(),
+    })
+    .where(and(eq(declaratiesTable.id, id), eq(declaratiesTable.status, "goedgekeurd")))
+    .returning();
+
+  if (!rij) return void res.status(409).json({ message: "Declaratie is niet goedgekeurd of is al verwerkt" });
+  return void res.json({ id: rij.id, status: rij.status, verwerkt_op: rij.verwerkingOp?.toISOString() ?? null });
+});
+
+router.get("/boekhouder/verlof", portaal, async (req: Request, res: Response): Promise<void> => {
+  const toonVerwerkt = String(req.query["verwerkt"] ?? "") === "true";
+  const rows = await db
+    .select({
+      v: verlofAanvragenTable,
+      medewerkerNaam: medewerkersTable.naam,
+      verlofsoortNaam: verlofsoortenTable.naam,
+      goedgekeurdDoorNaam: gebruikersTable.naam,
+    })
+    .from(verlofAanvragenTable)
+    .leftJoin(medewerkersTable, eq(medewerkersTable.id, verlofAanvragenTable.medewerkerId))
+    .leftJoin(verlofsoortenTable, eq(verlofsoortenTable.id, verlofAanvragenTable.verlofsoortId))
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, verlofAanvragenTable.beoordeeldDoorId))
+    .where(and(
+      eq(verlofAanvragenTable.status, "goedgekeurd"),
+      toonVerwerkt
+        ? isNotNull(verlofAanvragenTable.boekhouderVerwerktOp)
+        : isNull(verlofAanvragenTable.boekhouderVerwerktOp),
+    ))
+    .orderBy(desc(verlofAanvragenTable.beoordeeldOp))
+    .limit(300);
+
+  return void res.json(rows.map(({ v, medewerkerNaam, verlofsoortNaam, goedgekeurdDoorNaam }) => ({
+    id: v.id,
+    medewerker_naam: medewerkerNaam ?? `Medewerker #${v.medewerkerId}`,
+    verlofsoort_naam: verlofsoortNaam ?? "Onbekend",
+    start_datum: v.startDatum,
+    eind_datum: v.eindDatum,
+    aantal_uren: v.aantalUren,
+    goedgekeurd_op: v.beoordeeldOp ? v.beoordeeldOp.toISOString() : null,
+    goedgekeurd_door_naam: goedgekeurdDoorNaam,
+    verwerkt_op: v.boekhouderVerwerktOp ? v.boekhouderVerwerktOp.toISOString() : null,
+  })));
+});
+
+router.post("/boekhouder/verlof/:id/verwerken", uploaden, async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
+  const sess = req.session as { userId?: number };
+
+  const [rij] = await db.update(verlofAanvragenTable)
+    .set({
+      boekhouderVerwerktOp: new Date(),
+      boekhouderVerwerktDoorId: sess.userId ?? null,
+      bijgewerktOp: new Date(),
+    })
+    .where(and(
+      eq(verlofAanvragenTable.id, id),
+      eq(verlofAanvragenTable.status, "goedgekeurd"),
+      isNull(verlofAanvragenTable.boekhouderVerwerktOp),
+    ))
+    .returning();
+
+  if (!rij) return void res.status(409).json({ message: "Verlofaanvraag is niet goedgekeurd of is al verwerkt" });
+
+  await db.insert(verlofAanvraagLogTable).values({
+    verlofaanvraagId: rij.id,
+    medewerkerId: rij.medewerkerId,
+    uitgevoerdDoorId: sess.userId ?? null,
+    actie: "loon_verwerkt",
+    oudStatus: "goedgekeurd",
+    nieuwStatus: "goedgekeurd",
+    opmerking: "Door de boekhouder gemarkeerd als verwerkt op de loonstrook",
+  });
+
+  return void res.json({ id: rij.id, verwerkt_op: rij.boekhouderVerwerktOp?.toISOString() ?? null });
+});
 
 export default router;

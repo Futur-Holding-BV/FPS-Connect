@@ -290,6 +290,10 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   // true = bij goedkeuren was de minimale bezetting (functie.minimaleBezetting) op één of
   // meer dagen onderschreden; een hoofdbeheerder/HRM heeft dit expliciet overruled.
   bezettingOverschreden: boolean("bezetting_overschreden").notNull().default(false),
+  // LOON_01: de boekhouder markeert een goedgekeurde verlofpost als verwerkt op
+  // de loonstrook; daarna verdwijnt hij uit zijn openstaande lijst (nooit dubbel).
+  boekhouderVerwerktOp: timestamp("boekhouder_verwerkt_op"),
+  boekhouderVerwerktDoorId: integer("boekhouder_verwerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

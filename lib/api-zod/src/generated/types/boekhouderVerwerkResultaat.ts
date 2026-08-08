@@ -6,10 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SepaBestandPatch {
+export interface BoekhouderVerwerkResultaat {
+  id: number;
   status?: string;
-  omschrijving?: string;
-  werkgever_id?: number | null;
-  periode_jaar?: number | null;
-  periode_maand?: number | null;
+  verwerkt_op?: string | null;
 }

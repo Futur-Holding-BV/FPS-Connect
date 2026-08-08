@@ -445,6 +445,10 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => 
     verwerkFactuurmails(uid).catch((err) => req.log.error({ err }, "factuurstroom: pijplijn na sync mislukt"));
     // AANVRAAG_01: de aanvraagpijplijn draait automatisch mee — zelfde intake-mechanisme.
     verwerkAanvraagmails(uid).catch((err) => req.log.error({ err }, "aanvraagstroom: pijplijn na sync mislukt"));
+    // LOON_01: binnengekomen SEPA-loonbestanden automatisch naar het salarisarchief.
+    import("../services/loonSepaIntakeService")
+      .then(({ verwerkLoonSepaMails }) => verwerkLoonSepaMails())
+      .catch((err) => req.log.error({ err }, "loon-sepa-intake: pijplijn na sync mislukt"));
     res.json(resultaat);
   } catch (err) {
     if (err instanceof GeenToegang) {

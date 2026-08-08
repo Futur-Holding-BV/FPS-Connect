@@ -10955,6 +10955,12 @@ export interface SepaBestand {
   bestandsformaat?: string | null;
   status: string;
   bestandsnaam: string;
+  bron?: string;
+  bron_mail_message_id?: string | null;
+  bron_mailbox_adres?: string | null;
+  onvolledig?: boolean;
+  werkgever_id?: number | null;
+  werkmaatschappij?: string | null;
   bestandsgrootte?: number | null;
   uploader_naam?: string | null;
   gedownload_op?: string | null;
@@ -10967,6 +10973,40 @@ export interface SepaBestand {
 export interface SepaBestandPatch {
   status?: string;
   omschrijving?: string;
+  werkgever_id?: number | null;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+}
+
+export interface BoekhouderDeclaratie {
+  id: number;
+  medewerker_naam: string;
+  categorie: string;
+  omschrijving: string;
+  bedrag_totaal_cents: number;
+  datum: string;
+  status: string;
+  goedgekeurd_op?: string | null;
+  goedgekeurd_door_naam?: string | null;
+  verwerkt_op?: string | null;
+}
+
+export interface BoekhouderVerlofPost {
+  id: number;
+  medewerker_naam: string;
+  verlofsoort_naam: string;
+  start_datum: string;
+  eind_datum: string;
+  aantal_uren: number;
+  goedgekeurd_op?: string | null;
+  goedgekeurd_door_naam?: string | null;
+  verwerkt_op?: string | null;
+}
+
+export interface BoekhouderVerwerkResultaat {
+  id: number;
+  status?: string;
+  verwerkt_op?: string | null;
 }
 
 export interface DownloadUrlResultaat {
@@ -15312,6 +15352,14 @@ export type GetBoekhouderUploadsParams = {
 werkgever_id?: number;
 map?: string;
 jaar?: number;
+};
+
+export type GetBoekhouderDeclaratiesParams = {
+verwerkt?: boolean;
+};
+
+export type GetBoekhouderVerlofParams = {
+verwerkt?: boolean;
 };
 
 export type ListVoertuigenParams = {

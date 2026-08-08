@@ -24118,6 +24118,12 @@ export const GetSepaBestandenResponseItem = zod.object({
   "bestandsformaat": zod.string().nullish(),
   "status": zod.string(),
   "bestandsnaam": zod.string(),
+  "bron": zod.string().optional(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "bron_mailbox_adres": zod.string().nullish(),
+  "onvolledig": zod.boolean().optional(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
   "bestandsgrootte": zod.number().nullish(),
   "uploader_naam": zod.string().nullish(),
   "gedownload_op": zod.string().nullish(),
@@ -24160,6 +24166,12 @@ export const GetSepaBestandenIdResponse = zod.object({
   "bestandsformaat": zod.string().nullish(),
   "status": zod.string(),
   "bestandsnaam": zod.string(),
+  "bron": zod.string().optional(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "bron_mailbox_adres": zod.string().nullish(),
+  "onvolledig": zod.boolean().optional(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
   "bestandsgrootte": zod.number().nullish(),
   "uploader_naam": zod.string().nullish(),
   "gedownload_op": zod.string().nullish(),
@@ -24179,7 +24191,10 @@ export const PatchSepaBestandenIdParams = zod.object({
 
 export const PatchSepaBestandenIdBody = zod.object({
   "status": zod.string().optional(),
-  "omschrijving": zod.string().optional()
+  "omschrijving": zod.string().optional(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish()
 })
 
 export const PatchSepaBestandenIdResponse = zod.object({
@@ -24194,6 +24209,12 @@ export const PatchSepaBestandenIdResponse = zod.object({
   "bestandsformaat": zod.string().nullish(),
   "status": zod.string(),
   "bestandsnaam": zod.string(),
+  "bron": zod.string().optional(),
+  "bron_mail_message_id": zod.string().nullish(),
+  "bron_mailbox_adres": zod.string().nullish(),
+  "onvolledig": zod.boolean().optional(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
   "bestandsgrootte": zod.number().nullish(),
   "uploader_naam": zod.string().nullish(),
   "gedownload_op": zod.string().nullish(),
@@ -25010,6 +25031,77 @@ export const PostBoekhouderUploadsBody = zod.object({
 })
 
 export const PostBoekhouderUploadsResponse = zod.void()
+
+
+/**
+ * @summary Goedgekeurde declaraties voor de loonstrook (boekhouderportaal)
+ */
+export const GetBoekhouderDeclaratiesQueryParams = zod.object({
+  "verwerkt": zod.coerce.boolean().optional()
+})
+
+export const GetBoekhouderDeclaratiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.string(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "verwerkt_op": zod.string().nullish()
+})
+export const GetBoekhouderDeclaratiesResponse = zod.array(GetBoekhouderDeclaratiesResponseItem)
+
+
+/**
+ * @summary Declaratie markeren als verwerkt op de loonstrook
+ */
+export const PostBoekhouderDeclaratiesIdVerwerkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostBoekhouderDeclaratiesIdVerwerkenResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string().optional(),
+  "verwerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Goedgekeurd verlof voor de loonstrook (boekhouderportaal)
+ */
+export const GetBoekhouderVerlofQueryParams = zod.object({
+  "verwerkt": zod.coerce.boolean().optional()
+})
+
+export const GetBoekhouderVerlofResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "verlofsoort_naam": zod.string(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "verwerkt_op": zod.string().nullish()
+})
+export const GetBoekhouderVerlofResponse = zod.array(GetBoekhouderVerlofResponseItem)
+
+
+/**
+ * @summary Verlofpost markeren als verwerkt op de loonstrook
+ */
+export const PostBoekhouderVerlofIdVerwerkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostBoekhouderVerlofIdVerwerkenResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string().optional(),
+  "verwerkt_op": zod.string().nullish()
+})
 
 
 /**

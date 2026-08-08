@@ -36,6 +36,7 @@ const SIGNAAL_META: Record<string, { label: string; icoon: typeof AlertTriangle;
   onbekende_leverancier: { label: "Onbekende leverancier", icoon: UserX, kleur: "bg-amber-100 text-amber-700" },
   aanvraag_antwoord_te_laat: { label: "Aanvraag nog niet beantwoord", icoon: Mail, kleur: "bg-red-100 text-red-700" },
   aanvraag_niet_opgepakt: { label: "Aanvraag niet opgepakt", icoon: Inbox, kleur: "bg-orange-100 text-orange-700" },
+  loon_sepa_onvolledig: { label: "SEPA-loonbestand onvolledig", icoon: AlertTriangle, kleur: "bg-amber-100 text-amber-700" },
 };
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {

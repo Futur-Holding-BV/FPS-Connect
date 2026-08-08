@@ -20077,6 +20077,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/BoekhouderUpload'
 
+  /boekhouder/declaraties:
+    get:
+      summary: Goedgekeurde declaraties voor de loonstrook (boekhouderportaal)
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: verwerkt
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoekhouderDeclaratie'
+
+  /boekhouder/declaraties/{id}/verwerken:
+    post:
+      summary: Declaratie markeren als verwerkt op de loonstrook
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoekhouderVerwerkResultaat'
+
+  /boekhouder/verlof:
+    get:
+      summary: Goedgekeurd verlof voor de loonstrook (boekhouderportaal)
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: verwerkt
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoekhouderVerlofPost'
+
+  /boekhouder/verlof/{id}/verwerken:
+    post:
+      summary: Verlofpost markeren als verwerkt op de loonstrook
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoekhouderVerwerkResultaat'
+
   /werkgevers/{id}/salaris-config:
     patch:
       summary: Salarisverwerker-instellingen werkgever bijwerken
@@ -40869,6 +40943,22 @@ components:
           type: string
         bestandsnaam:
           type: string
+        bron:
+          type: string
+        bron_mail_message_id:
+          type: string
+          nullable: true
+        bron_mailbox_adres:
+          type: string
+          nullable: true
+        onvolledig:
+          type: boolean
+        werkgever_id:
+          type: integer
+          nullable: true
+        werkmaatschappij:
+          type: string
+          nullable: true
         bestandsgrootte:
           type: integer
           nullable: true
@@ -40898,6 +40988,81 @@ components:
           type: string
         omschrijving:
           type: string
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+
+    BoekhouderDeclaratie:
+      type: object
+      required: [id, medewerker_naam, categorie, omschrijving, bedrag_totaal_cents, datum, status]
+      properties:
+        id:
+          type: integer
+        medewerker_naam:
+          type: string
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        bedrag_totaal_cents:
+          type: integer
+        datum:
+          type: string
+        status:
+          type: string
+        goedgekeurd_op:
+          type: string
+          nullable: true
+        goedgekeurd_door_naam:
+          type: string
+          nullable: true
+        verwerkt_op:
+          type: string
+          nullable: true
+
+    BoekhouderVerlofPost:
+      type: object
+      required: [id, medewerker_naam, verlofsoort_naam, start_datum, eind_datum, aantal_uren]
+      properties:
+        id:
+          type: integer
+        medewerker_naam:
+          type: string
+        verlofsoort_naam:
+          type: string
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        aantal_uren:
+          type: number
+        goedgekeurd_op:
+          type: string
+          nullable: true
+        goedgekeurd_door_naam:
+          type: string
+          nullable: true
+        verwerkt_op:
+          type: string
+          nullable: true
+
+    BoekhouderVerwerkResultaat:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        verwerkt_op:
+          type: string
+          nullable: true
 
     DownloadUrlResultaat:
       type: object

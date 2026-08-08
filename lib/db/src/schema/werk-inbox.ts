@@ -74,6 +74,8 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
   factuurVerwerktOp:   timestamp("factuur_verwerkt_op"),
   // AANVRAAG_01: wanneer de aanvraagpijplijn deze mail heeft verwerkt (dedupe).
   aanvraagVerwerktOp:  timestamp("aanvraag_verwerkt_op"),
+  // LOON_01: wanneer de SEPA-loonintake deze mail heeft verwerkt (dedupe).
+  sepaVerwerktOp:      timestamp("sepa_verwerkt_op"),
   isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
   verwerktOp:          timestamp("verwerkt_op"),
   afgehandeldOp:       timestamp("afgehandeld_op"),

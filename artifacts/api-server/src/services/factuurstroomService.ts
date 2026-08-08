@@ -719,6 +719,14 @@ export function startFactuurstroomAchtergrond(): void {
       } catch (err) {
         logger.warn({ err }, "factuurstroom: achtergrond-verwerking mislukt");
       }
+      // LOON_01: extra actiesoort op hetzelfde intakemechanisme — binnengekomen
+      // SEPA-loonbestanden (PAIN.001) automatisch naar het salarisarchief.
+      try {
+        const { verwerkLoonSepaMails } = await import("./loonSepaIntakeService");
+        await verwerkLoonSepaMails();
+      } catch (err) {
+        logger.warn({ err }, "loon-sepa-intake: achtergrond-verwerking mislukt");
+      }
       // AANVRAAG_01: aanvraagpijplijn draait per token-gebruiker mee vanwege de
       // persoonlijke-intake-vlag (aanvraag_intake_persoonlijk).
       const tokenGebruikers = await db.selectDistinct({ gebruikerId: werkInboxTokensTable.gebruikerId }).from(werkInboxTokensTable);

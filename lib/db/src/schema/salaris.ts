@@ -1,6 +1,7 @@
 import {
-  pgTable, serial, text, integer, boolean, timestamp, numeric, real, jsonb,
+  pgTable, serial, text, integer, boolean, timestamp, numeric, real, jsonb, uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { gebruikersTable } from "./gebruikers";
 import { medewerkersTable, werkgeversTable } from "./hrm";
 
@@ -67,9 +68,20 @@ export const sepaBestandenTable = pgTable("sepa_bestanden", {
   gedownloadOp: timestamp("gedownload_op"),
   fouten: text("fouten").array(),
   batchReferentie: text("batch_referentie"),
+  // LOON_01: herkomst — 'upload' (handmatig) of 'mail' (automatische intake).
+  bron: text("bron").notNull().default("upload"),
+  bronMailMessageId: text("bron_mail_message_id"),
+  bronMailboxAdres: text("bron_mailbox_adres"),
+  // LOON_01: werkgever of periode kon niet met zekerheid bepaald worden.
+  onvolledig: boolean("onvolledig").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // LOON_01: dezelfde mailbijlage nooit twee keer in het archief (race-proof).
+  uniqueIndex("sepa_bestanden_bronmail_bijlage_uq")
+    .on(t.bronMailMessageId, t.bestandsnaam)
+    .where(sql`${t.bronMailMessageId} IS NOT NULL`),
+]);
 
 export const salarisdocumentAuditTable = pgTable("salarisdocument_audit", {
   id: serial("id").primaryKey(),

@@ -5,7 +5,11 @@ import {
   useGetSepaBestanden,
   usePatchSepaBestandenId,
   getGetSepaBestandenQueryKey,
+  useListWerkgevers,
 } from "@workspace/api-client-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { useRol } from "@/context/rol-context";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +58,13 @@ export default function SepaBestandenPagina() {
   const [bezigUploaden, setBezigUploaden] = useState(false);
 
   const { data: sepabestanden, isLoading } = useGetSepaBestanden();
+  const { data: werkgevers = [] } = useListWerkgevers();
+
+  // LOON_01: aanvullen van een onvolledig mail-bestand (werkgever + periode).
+  const [aanvullenVoor, setAanvullenVoor] = useState<number | null>(null);
+  const [aanvulWerkgever, setAanvulWerkgever] = useState<string>("");
+  const [aanvulJaar, setAanvulJaar] = useState<string>(String(new Date().getFullYear()));
+  const [aanvulMaand, setAanvulMaand] = useState<string>("");
 
   const updateStatus = usePatchSepaBestandenId({
     mutation: {
@@ -208,6 +219,33 @@ export default function SepaBestandenPagina() {
                     <TableCell>
                       <div className="font-medium text-sm truncate max-w-[180px]">{s.bestandsnaam}</div>
                       {s.omschrijving && <div className="text-xs text-muted-foreground">{s.omschrijving}</div>}
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {s.bron === "mail" && (
+                          <Badge variant="outline" className="text-xs">
+                            Per mail{s.bron_mailbox_adres ? ` via ${s.bron_mailbox_adres}` : ""}
+                          </Badge>
+                        )}
+                        {s.onvolledig && (
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />Onvolledig
+                          </Badge>
+                        )}
+                        {s.onvolledig && magBewerken && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => {
+                              setAanvullenVoor(s.id);
+                              setAanvulWerkgever(s.werkgever_id ? String(s.werkgever_id) : "");
+                              setAanvulJaar(String(s.periode_jaar ?? new Date().getFullYear()));
+                              setAanvulMaand(s.periode_maand ? String(s.periode_maand) : "");
+                            }}
+                          >
+                            Aanvullen
+                          </Button>
+                        )}
+                      </div>
                       {s.fouten && s.fouten.length > 0 && (
                         <div className="text-xs text-amber-700 mt-0.5">
                           <AlertCircle className="h-3 w-3 inline mr-0.5" />
@@ -263,6 +301,70 @@ export default function SepaBestandenPagina() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={aanvullenVoor !== null} onOpenChange={(open) => { if (!open) setAanvullenVoor(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bestand aanvullen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Dit betaalbestand kwam per mail binnen maar kon niet automatisch aan een
+            werkgever of periode worden gekoppeld. Vul het aan; pas daarna kan het richting de bank.
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Werkgever</Label>
+              <Select value={aanvulWerkgever} onValueChange={setAanvulWerkgever}>
+                <SelectTrigger><SelectValue placeholder="Kies werkgever" /></SelectTrigger>
+                <SelectContent>
+                  {werkgevers.map((w) => (
+                    <SelectItem key={w.id} value={String(w.id)}>{w.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Maand</Label>
+                <Select value={aanvulMaand} onValueChange={setAanvulMaand}>
+                  <SelectTrigger><SelectValue placeholder="Kies maand" /></SelectTrigger>
+                  <SelectContent>
+                    {MAANDEN.slice(1).map((m, i) => (
+                      <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jaar</Label>
+                <Input type="number" value={aanvulJaar} onChange={(e) => setAanvulJaar(e.target.value)} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAanvullenVoor(null)}>Annuleren</Button>
+            <Button
+              disabled={!aanvulWerkgever || !aanvulMaand || !aanvulJaar || updateStatus.isPending}
+              onClick={() => {
+                if (aanvullenVoor === null) return;
+                updateStatus.mutate(
+                  {
+                    id: aanvullenVoor,
+                    data: {
+                      werkgever_id: Number(aanvulWerkgever),
+                      periode_jaar: Number(aanvulJaar),
+                      periode_maand: Number(aanvulMaand),
+                    },
+                  },
+                  { onSuccess: () => setAanvullenVoor(null) },
+                );
+              }}
+            >
+              Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

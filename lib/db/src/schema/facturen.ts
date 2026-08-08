@@ -228,6 +228,8 @@ export const FACTUUR_SIGNAAL_TYPES = [
   // AANVRAAG_01 — reactietijdbewaking van prijsaanvragen (zelfde mechanisme, geen tweede dashboard)
   "aanvraag_antwoord_te_laat",  // conceptantwoord nog niet verstuurd binnen de instelbare termijn
   "aanvraag_niet_opgepakt",     // projectkans staat na de instelbare termijn nog in fase 'signaal'
+  // LOON_01 — SEPA-loonbestand per mail binnengekomen maar werkgever/periode onzeker
+  "loon_sepa_onvolledig",
 ] as const;
 export type FactuurSignaalType = typeof FACTUUR_SIGNAAL_TYPES[number];
 

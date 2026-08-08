@@ -115,47 +115,19 @@ function mapSepa(s: typeof sepaBestandenTable.$inferSelect) {
     gedownload_op: s.gedownloadOp ? s.gedownloadOp.toISOString() : null,
     fouten: s.fouten,
     batch_referentie: s.batchReferentie,
+    bron: s.bron,
+    bron_mail_message_id: s.bronMailMessageId,
+    bron_mailbox_adres: s.bronMailboxAdres,
+    onvolledig: s.onvolledig,
+    werkgever_id: s.werkgeverId,
+    werkmaatschappij: s.werkmaatschappij,
     aangemaakt_op: s.aangemaaktOp.toISOString(),
     bijgewerkt_op: s.bijgewerktOp.toISOString(),
   };
 }
 
-// ── SEPA XML parsing (PAIN.001) ───────────────────────────────────────────────
-
-function parsePainXml(xml: string): {
-  msgId: string | null;
-  aantalBetalingen: number | null;
-  controleSom: string | null;
-  betaaldatum: string | null;
-  ibanOpdrachtgever: string | null;
-  fouten: string[];
-} {
-  const tag = (naam: string) => {
-    const m = xml.match(new RegExp(`<(?:[^:>]+:)?${naam}[^>]*>([^<]*)</(?:[^:>]+:)?${naam}>`));
-    return m ? m[1].trim() : null;
-  };
-
-  const msgId = tag("MsgId");
-  const nbOfTxs = tag("NbOfTxs");
-  const ctrlSum = tag("CtrlSum");
-  const datum = tag("ReqdExctnDt") ?? tag("ReqdColltnDt");
-
-  const ibanMatch = xml.match(/<(?:[^:>]+:)?DbtrAcct[^>]*>[\s\S]*?<(?:[^:>]+:)?IBAN>([A-Z0-9]+)<\/(?:[^:>]+:)?IBAN>/);
-  const iban = ibanMatch ? ibanMatch[1] : null;
-
-  const fouten: string[] = [];
-  if (!msgId) fouten.push("Geen bericht-ID gevonden");
-  if (!ctrlSum) fouten.push("Geen controlessom gevonden");
-
-  return {
-    msgId,
-    aantalBetalingen: nbOfTxs ? parseInt(nbOfTxs, 10) : null,
-    controleSom: ctrlSum,
-    betaaldatum: datum,
-    ibanOpdrachtgever: iban,
-    fouten,
-  };
-}
+// ── SEPA XML parsing (PAIN.001) — gedeeld met de mailintake (LOON_01) ─────────
+import { parsePainXml } from "../lib/painParser";
 
 // ── Medewerker koppeling op basis van bestandsnaam ────────────────────────────
 
@@ -701,11 +673,44 @@ router.get("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 1), async
 
 router.patch("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 2), async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  const { status, omschrijving } = req.body as { status?: string; omschrijving?: string };
+  const { status, omschrijving, werkgever_id, periode_jaar, periode_maand } = req.body as {
+    status?: string; omschrijving?: string;
+    werkgever_id?: number | null; periode_jaar?: number | null; periode_maand?: number | null;
+  };
+
+  const [huidig] = await db.select().from(sepaBestandenTable).where(eq(sepaBestandenTable.id, id)).limit(1);
+  if (!huidig) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  // Alleen bekende statussen; geen vrije tekst.
+  const TOEGESTANE_STATUSSEN = ["ontvangen", "klaar_voor_bank", "gedownload", "verwerkt", "fout"];
+  if (status !== undefined && !TOEGESTANE_STATUSSEN.includes(status)) {
+    res.status(422).json({ error: `Onbekende status "${status}"` });
+    return;
+  }
 
   const patch: Partial<typeof sepaBestandenTable.$inferInsert> = { bijgewerktOp: new Date() };
   if (status !== undefined) patch.status = status;
   if (omschrijving !== undefined) patch.omschrijving = omschrijving;
+  // LOON_01: een mens vult werkgever/periode aan van een onvolledig mail-bestand.
+  if (werkgever_id !== undefined) patch.werkgeverId = werkgever_id;
+  if (periode_jaar !== undefined) patch.periodeJaar = periode_jaar;
+  if (periode_maand !== undefined) patch.periodeMaand = periode_maand;
+
+  // LOON_01: onvolledig is altijd afgeleid van werkgever én geldige periode
+  // (voor bestanden uit de mailintake) — in beide richtingen.
+  const nieuweWerkgever = werkgever_id !== undefined ? werkgever_id : huidig.werkgeverId;
+  const nieuwJaar = periode_jaar !== undefined ? periode_jaar : huidig.periodeJaar;
+  const nieuweMaand = periode_maand !== undefined ? periode_maand : huidig.periodeMaand;
+  const periodeGeldig = !!nieuwJaar && !!nieuweMaand && nieuweMaand >= 1 && nieuweMaand <= 12;
+  const wordtOnvolledig = huidig.bron === "mail" ? !(nieuweWerkgever && periodeGeldig) : huidig.onvolledig;
+  if (huidig.bron === "mail") patch.onvolledig = wordtOnvolledig;
+
+  // Een onvolledig bestand mag nooit richting de bank: eerst aanvullen.
+  const nieuweStatus = status ?? huidig.status;
+  if (wordtOnvolledig && nieuweStatus !== "ontvangen" && nieuweStatus !== "fout") {
+    res.status(422).json({ error: "Dit bestand is onvolledig (werkgever of periode ontbreekt). Vul het eerst aan voordat het verder kan." });
+    return;
+  }
 
   const userId = sessieGebruikerId(req);
   const gebruikerNaam = sessieGebruikerNaam(req);

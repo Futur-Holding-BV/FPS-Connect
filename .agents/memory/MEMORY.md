@@ -150,4 +150,5 @@
 - [Scripts-typecheck bewijsscripts](scripts-typecheck-bewijs.md) — bewijsscripts nooit api-server-source importeren (TS6059); test via HTTP + @workspace/db; offenders staan in tsconfig-exclude.
 - [Inkoop/werkbegroting-AI eigen cijfers](inkoop-eigen-cijfers.md) — inkoopprijs_verwacht nooit van AI (jaarprijslijst>mediaan≥3>onbekend); leveranciers=opsomming; nacalc alleen afgesloten; bronnen fail-closed.
 - [Mail-samenwerkomgeving](mail-samenwerkomgeving.md) — mailboxen=organisatiebezit via toegang-tabel (lezen<behandelen<beheren); mails uniek per mailbox+message; modus verwerken/ondersteunen/registreren; detail Graph-tolerant.
+- [Loonstroom SEPA-mailintake](loonstroom-sepa-intake.md) — pain.001 uit mail altijd status ontvangen (nooit auto verder); onvolledig=afgeleid, 422 richting bank; preset-wijziging vergt migratie, niet alleen PRESETS-code.
 - [FIE wat-als-scenario's](fie-scenarios.md) — scenario-begrotingen (status scenario) altijd uitfilteren in lijst/aggregatie/fallback-queries; nooit een tweede rekenmodel naast de FIE-motor.

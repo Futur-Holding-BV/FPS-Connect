@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SepaBestandPatch {
-  status?: string;
-  omschrijving?: string;
-  werkgever_id?: number | null;
-  periode_jaar?: number | null;
-  periode_maand?: number | null;
-}
+export type GetBoekhouderDeclaratiesParams = {
+verwerkt?: boolean;
+};

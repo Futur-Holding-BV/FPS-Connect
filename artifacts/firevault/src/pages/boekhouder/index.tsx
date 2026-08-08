@@ -1,11 +1,15 @@
 import { useState, useRef } from "react";
-import { useGetBoekhouderDashboard, useGetBoekhouderUploads } from "@workspace/api-client-react";
+import {
+  useGetBoekhouderDashboard, useGetBoekhouderUploads,
+  useGetBoekhouderDeclaraties, useGetBoekhouderVerlof,
+  usePostBoekhouderDeclaratiesIdVerwerken, usePostBoekhouderVerlofIdVerwerken,
+} from "@workspace/api-client-react";
 import { useListWerkgevers } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, ClipboardList, Banknote, HardDriveUpload, LayoutDashboard } from "lucide-react";
+import { Upload, FileText, ClipboardList, Banknote, HardDriveUpload, LayoutDashboard, Receipt, CalendarDays, CheckCircle2 } from "lucide-react";
 
 const HUIDIG_JAAR = new Date().getFullYear();
 
@@ -37,6 +41,20 @@ export default function BoekhouderPage() {
   if (werkgeverId) uploadsParams.werkgever_id = werkgeverId;
   if (mapFilter !== "alle") uploadsParams.map = mapFilter;
   const { data: uploads = [], refetch: refetchUploads } = useGetBoekhouderUploads(uploadsParams);
+
+  // LOON_01: goedgekeurde posten voor de loonstrook — na verwerken verdwijnen ze.
+  const [toonVerwerkteDeclaraties, setToonVerwerkteDeclaraties] = useState(false);
+  const [toonVerwerktVerlof, setToonVerwerktVerlof] = useState(false);
+  const { data: declaraties = [], refetch: refetchDeclaraties } =
+    useGetBoekhouderDeclaraties({ verwerkt: toonVerwerkteDeclaraties });
+  const { data: verlofposten = [], refetch: refetchVerlof } =
+    useGetBoekhouderVerlof({ verwerkt: toonVerwerktVerlof });
+  const verwerkDeclaratie = usePostBoekhouderDeclaratiesIdVerwerken({
+    mutation: { onSuccess: () => { refetchDeclaraties(); } },
+  });
+  const verwerkVerlof = usePostBoekhouderVerlofIdVerwerken({
+    mutation: { onSuccess: () => { refetchVerlof(); } },
+  });
 
   async function uploadBestand(file: File) {
     setUploading(true);
@@ -123,6 +141,103 @@ export default function BoekhouderPage() {
           ))}
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Receipt size={16} className="text-muted-foreground" />
+              {toonVerwerkteDeclaraties ? "Verwerkte declaraties" : "Goedgekeurde declaraties voor de loonstrook"}
+            </CardTitle>
+            <Button variant="outline" size="sm" className="h-8 text-xs"
+              onClick={() => setToonVerwerkteDeclaraties((v) => !v)}>
+              {toonVerwerkteDeclaraties ? "Toon openstaand" : "Toon verwerkt"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {declaraties.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-sm">
+              {toonVerwerkteDeclaraties ? "Nog geen verwerkte declaraties." : "Geen openstaande goedgekeurde declaraties."}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {declaraties.map((d) => (
+                <div key={d.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{d.medewerker_naam} — {d.omschrijving}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                      <span>{d.categorie}</span>
+                      <span>{d.datum}</span>
+                      {d.goedgekeurd_op && <span>goedgekeurd {new Date(d.goedgekeurd_op).toLocaleDateString("nl-NL")}{d.goedgekeurd_door_naam ? ` door ${d.goedgekeurd_door_naam}` : ""}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-sm font-semibold">€ {(d.bedrag_totaal_cents / 100).toFixed(2)}</span>
+                    {toonVerwerkteDeclaraties ? (
+                      <Badge variant="secondary" className="text-xs"><CheckCircle2 size={12} className="mr-1" />Verwerkt</Badge>
+                    ) : (
+                      <Button size="sm" className="h-7 text-xs"
+                        disabled={verwerkDeclaratie.isPending}
+                        onClick={() => verwerkDeclaratie.mutate({ id: d.id })}>
+                        Markeer als verwerkt
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays size={16} className="text-muted-foreground" />
+              {toonVerwerktVerlof ? "Verwerkt verlof" : "Goedgekeurd verlof voor de loonstrook"}
+            </CardTitle>
+            <Button variant="outline" size="sm" className="h-8 text-xs"
+              onClick={() => setToonVerwerktVerlof((v) => !v)}>
+              {toonVerwerktVerlof ? "Toon openstaand" : "Toon verwerkt"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {verlofposten.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-sm">
+              {toonVerwerktVerlof ? "Nog geen verwerkt verlof." : "Geen openstaand goedgekeurd verlof."}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {verlofposten.map((v) => (
+                <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{v.medewerker_naam} — {v.verlofsoort_naam}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                      <span>{v.start_datum} t/m {v.eind_datum}</span>
+                      {v.goedgekeurd_op && <span>goedgekeurd {new Date(v.goedgekeurd_op).toLocaleDateString("nl-NL")}{v.goedgekeurd_door_naam ? ` door ${v.goedgekeurd_door_naam}` : ""}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-sm font-semibold">{v.aantal_uren} uur</span>
+                    {toonVerwerktVerlof ? (
+                      <Badge variant="secondary" className="text-xs"><CheckCircle2 size={12} className="mr-1" />Verwerkt</Badge>
+                    ) : (
+                      <Button size="sm" className="h-7 text-xs"
+                        disabled={verwerkVerlof.isPending}
+                        onClick={() => verwerkVerlof.mutate({ id: v.id })}>
+                        Markeer als verwerkt
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

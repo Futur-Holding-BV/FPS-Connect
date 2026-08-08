@@ -375,11 +375,11 @@ export const PRESETS: Preset[] = [
   {
     naam: "Externe boekhouder",
     groep: "Financieel & Directie",
+    // LOON_01: strak afgebakend — de boekhouder werkt in het portaal en het
+    // salarisarchief (incl. SEPA-upload en publiceren van loonstroken), maar
+    // heeft bewust GEEN toegang tot facturen (financieel), projecten of offertes.
     bevoegdheden: matrix({
-      rapportages: 1,
-      financieel: 4,
-      financieel_vertrouwelijk: 2,
-      salarisarchief: 2,
+      salarisarchief: 3,
       salaris_mutaties: 1,
       boekhouder_portaal: 4,
     }),

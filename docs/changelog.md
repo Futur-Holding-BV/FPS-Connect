@@ -1,3 +1,25 @@
+## 2026-08-08 — LOON_01: loonstroom sluiten (SEPA-intake, boekhouderportaal, afgebakende toegang)
+
+- **Uitvoering:** volledig gebouwd; gedragsbewijs via de echte pijplijn (gesimuleerde SCAB-mail door ongewijzigde productiecode) en via HTTP met een boekhouder-testaccount; review-punten direct verwerkt (zie hardening) | **Kwaliteit:** hoog | **Risico:** laag (additieve migraties 0011+0012; bestaande SEPA-statusreeks en publicatie ongewijzigd)
+
+**Schakel 1 — binnengekomen SEPA-loonbestand automatisch in het salarisarchief:**
+- Zelfde intake-mechanisme als FACTUUR_02, nieuwe actiesoort: PAIN.001-bijlagen in alle actieve verwerken-mailboxen worden herkend op de ISO 20022-namespace (nooit alleen op extensie) en als `sepa_bestand` met status **ontvangen** opgeslagen — gekoppeld aan werkgever, periode en de bronmail. De status gaat **nooit automatisch verder**: klaarzetten voor de bank blijft mensenwerk.
+- Werkgever-herkenning zonder gokken: IBAN-opdrachtgever → SCAB-afzenderadres → debiteurnaam, alleen bij een eenduidige match. Periode uit de gevraagde uitvoerdatum. Bij twijfel: wél opslaan, gemarkeerd als **onvolledig** + gebeurtenis "SEPA-loonbestand onvolledig" op het bewakingsdashboard; aanvullen kan via het bestaande SEPA-scherm (markering vervalt zodra werkgever én periode bekend zijn).
+- Idempotent (claim per mail + dedupe per bijlage), claim wordt teruggegeven bij een tijdelijke fout; alles in het bestaande audit-logboek (`mail_intake`).
+
+**Schakel 2 — boekhouderportaal toont wat op de loonstrook moet:**
+- Twee nieuwe overzichten in het portaal: **goedgekeurde declaraties** en **goedgekeurd verlof** (medewerker, soort, bedrag/uren, wanneer en door wie goedgekeurd). "Markeer als verwerkt" haalt de post uit de openstaande lijst; dubbel verwerken wordt server-side geweigerd (409). Verlof-verwerking staat in het verlof-logboek.
+
+**Toegang boekhouder strak afgebakend:**
+- Het systeemprofiel "Externe boekhouder" is aangescherpt: portaal (incl. uploads), salarisarchief (incl. SEPA en publiceren) en mutatie-inzage — **géén** facturen, projecten of offertes meer (voorheen gaf het profiel volledig financieel-recht). Server-side afgedwongen en bewezen: 403 op /facturen, /offertes en /gebouwen. Migratie 0012 trekt het bestaande systeemprofiel én accounts die eruit voortkomen automatisch strak bij deploy (geen handmatige synchronisatie nodig).
+
+**Hardening (n.a.v. code-review):**
+- Unieke database-index op bronmail+bijlage: dezelfde mailbijlage kan ook bij een race tussen parallelle runs nooit twee keer in het archief belanden (conflict = idempotent succes).
+- Verweesde mailclaims (procescrash ná claimen, vóór verwerking) worden na een uur automatisch teruggegeven zodat een betaalbestand nooit blijft liggen.
+- Statuswijzigingen op SEPA-bestanden zijn gevalideerd (alleen bekende statussen) en een **onvolledig** bestand kan nooit richting de bank (422) tot werkgever én periode zijn aangevuld; de markering wordt in beide richtingen afgeleid (periode wissen = weer onvolledig). Het SEPA-scherm heeft daarvoor een "Aanvullen"-dialoog (werkgever + periode).
+
+**Bewijs (dev, 8 aug):** `verificatie-loon-sepa-intake.ts` — herkenbaar bestand gekoppeld aan werkgever+periode met status ontvangen; onzeker bestand opgeslagen als onvolledig + gebeurtenis; tweede run maakte geen dubbelen. `bewijs-loon-boekhouder.ts` — eigen inlog (wachtwoord+2FA), declaratie en verlof zichtbaar → verwerkt → verdwenen, dubbel = 409, buiten het loondomein 403. Testdata opgeruimd.
+
 ## 2026-08-08 — MAIL_01: mailomgeving als samenwerkomgeving
 
 - **Uitvoering:** volledig gebouwd; gedragsbewijs via API met twee gelijktijdige gebruikers (presence over en weer gezien, geen-toegang → onzichtbaar + 404, registreren-modus → 422) | **Kwaliteit:** hoog | **Risico:** middel (migratie 0009 verandert het eigenaarschap van mailboxen; toegang is per gebruiker gemigreerd zonder verlies)

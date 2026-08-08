@@ -18,6 +18,12 @@ export interface SepaBestand {
   bestandsformaat?: string | null;
   status: string;
   bestandsnaam: string;
+  bron?: string;
+  bron_mail_message_id?: string | null;
+  bron_mailbox_adres?: string | null;
+  onvolledig?: boolean;
+  werkgever_id?: number | null;
+  werkmaatschappij?: string | null;
   bestandsgrootte?: number | null;
   uploader_naam?: string | null;
   gedownload_op?: string | null;

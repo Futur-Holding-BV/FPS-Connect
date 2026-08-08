@@ -320,6 +320,7 @@ INDEX|security_intake_scans|security_intake_scans_pkey
 INDEX|security_releases|security_releases_pkey
 INDEX|security_scan_runs|security_scan_runs_pkey
 INDEX|security_test_resultaten|security_test_resultaten_pkey
+INDEX|sepa_bestanden|sepa_bestanden_bronmail_bijlage_uq
 INDEX|sepa_bestanden|sepa_bestanden_pkey
 INDEX|session|IDX_session_expire
 INDEX|session|session_pkey
@@ -3647,6 +3648,9 @@ KOLOM|sepa_bestanden|bestandsgrootte|integer|YES|
 KOLOM|sepa_bestanden|bestandsnaam|text|NO|
 KOLOM|sepa_bestanden|betaaldatum|text|YES|
 KOLOM|sepa_bestanden|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|sepa_bestanden|bron_mail_message_id|text|YES|
+KOLOM|sepa_bestanden|bron_mailbox_adres|text|YES|
+KOLOM|sepa_bestanden|bron|text|NO|'upload'::text
 KOLOM|sepa_bestanden|fouten|ARRAY|YES|
 KOLOM|sepa_bestanden|gedownload_door_id|integer|YES|
 KOLOM|sepa_bestanden|gedownload_op|timestamp without time zone|YES|
@@ -3654,6 +3658,7 @@ KOLOM|sepa_bestanden|iban_opdrachtgever|text|YES|
 KOLOM|sepa_bestanden|id|integer|NO|nextval('sepa_bestanden_id_seq'::regclass)
 KOLOM|sepa_bestanden|object_path|text|NO|
 KOLOM|sepa_bestanden|omschrijving|text|YES|
+KOLOM|sepa_bestanden|onvolledig|boolean|NO|false
 KOLOM|sepa_bestanden|periode_jaar|integer|YES|
 KOLOM|sepa_bestanden|periode_maand|integer|YES|
 KOLOM|sepa_bestanden|status|text|NO|'ontvangen'::text
@@ -4058,6 +4063,8 @@ KOLOM|verlofaanvragen|beoordeeld_door_id|integer|YES|
 KOLOM|verlofaanvragen|beoordeeld_op|timestamp without time zone|YES|
 KOLOM|verlofaanvragen|bezetting_overschreden|boolean|NO|false
 KOLOM|verlofaanvragen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|verlofaanvragen|boekhouder_verwerkt_door_id|integer|YES|
+KOLOM|verlofaanvragen|boekhouder_verwerkt_op|timestamp without time zone|YES|
 KOLOM|verlofaanvragen|eind_datum|text|NO|
 KOLOM|verlofaanvragen|id|integer|NO|nextval('verlofaanvragen_id_seq'::regclass)
 KOLOM|verlofaanvragen|medewerker_id|integer|NO|
@@ -4352,6 +4359,7 @@ KOLOM|werk_inbox_mails|onderwerp|text|NO|''::text
 KOLOM|werk_inbox_mails|ontvangen_op|timestamp without time zone|NO|
 KOLOM|werk_inbox_mails|relatie_categorie_ai|text|YES|
 KOLOM|werk_inbox_mails|samenwerk_status|text|NO|'open'::text
+KOLOM|werk_inbox_mails|sepa_verwerkt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|snippet|text|YES|
 KOLOM|werk_inbox_mails|toegewezen_aan|integer|YES|
 KOLOM|werk_inbox_mails|verwerkt_op|timestamp without time zone|YES|

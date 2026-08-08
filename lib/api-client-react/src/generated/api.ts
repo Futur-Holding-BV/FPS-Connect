@@ -102,8 +102,11 @@ import type {
   BiaeEvent,
   BiaeKpiFeed,
   BoekhouderDashboard,
+  BoekhouderDeclaratie,
   BoekhouderUpload,
   BoekhouderUploadInput,
+  BoekhouderVerlofPost,
+  BoekhouderVerwerkResultaat,
   BrandstofFactuurUploadInput,
   BrandstofImport,
   BrandstofImportDetail,
@@ -352,7 +355,9 @@ import type {
   GetAiPresentatieNiveau200,
   GetAvgExport200,
   GetBoekhouderDashboardParams,
+  GetBoekhouderDeclaratiesParams,
   GetBoekhouderUploadsParams,
+  GetBoekhouderVerlofParams,
   GetCapaciteitBezettingParams,
   GetCrmAiCoach503,
   GetDirectiecockpitParams,
@@ -69734,6 +69739,314 @@ export const usePostBoekhouderUploads = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPostBoekhouderUploadsMutationOptions(options));
+    }
+
+export const getGetBoekhouderDeclaratiesUrl = (params?: GetBoekhouderDeclaratiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/boekhouder/declaraties?${stringifiedParams}` : `/api/boekhouder/declaraties`
+}
+
+/**
+ * @summary Goedgekeurde declaraties voor de loonstrook (boekhouderportaal)
+ */
+export const getBoekhouderDeclaraties = async (params?: GetBoekhouderDeclaratiesParams, options?: RequestInit): Promise<BoekhouderDeclaratie[]> => {
+
+  return customFetch<BoekhouderDeclaratie[]>(getGetBoekhouderDeclaratiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBoekhouderDeclaratiesQueryKey = (params?: GetBoekhouderDeclaratiesParams,) => {
+    return [
+    `/api/boekhouder/declaraties`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetBoekhouderDeclaratiesQueryOptions = <TData = Awaited<ReturnType<typeof getBoekhouderDeclaraties>>, TError = ErrorType<unknown>>(params?: GetBoekhouderDeclaratiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBoekhouderDeclaratiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBoekhouderDeclaraties>>> = ({ signal }) => getBoekhouderDeclaraties(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDeclaraties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBoekhouderDeclaratiesQueryResult = NonNullable<Awaited<ReturnType<typeof getBoekhouderDeclaraties>>>
+export type GetBoekhouderDeclaratiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Goedgekeurde declaraties voor de loonstrook (boekhouderportaal)
+ */
+
+export function useGetBoekhouderDeclaraties<TData = Awaited<ReturnType<typeof getBoekhouderDeclaraties>>, TError = ErrorType<unknown>>(
+ params?: GetBoekhouderDeclaratiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBoekhouderDeclaratiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostBoekhouderDeclaratiesIdVerwerkenUrl = (id: number,) => {
+
+
+
+
+  return `/api/boekhouder/declaraties/${id}/verwerken`
+}
+
+/**
+ * @summary Declaratie markeren als verwerkt op de loonstrook
+ */
+export const postBoekhouderDeclaratiesIdVerwerken = async (id: number, options?: RequestInit): Promise<BoekhouderVerwerkResultaat> => {
+
+  return customFetch<BoekhouderVerwerkResultaat>(getPostBoekhouderDeclaratiesIdVerwerkenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostBoekhouderDeclaratiesIdVerwerkenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postBoekhouderDeclaratiesIdVerwerken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postBoekhouderDeclaratiesIdVerwerken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBoekhouderDeclaratiesIdVerwerkenMutationResult = NonNullable<Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>>
+
+    export type PostBoekhouderDeclaratiesIdVerwerkenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie markeren als verwerkt op de loonstrook
+ */
+export const usePostBoekhouderDeclaratiesIdVerwerken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBoekhouderDeclaratiesIdVerwerken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostBoekhouderDeclaratiesIdVerwerkenMutationOptions(options));
+    }
+
+export const getGetBoekhouderVerlofUrl = (params?: GetBoekhouderVerlofParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/boekhouder/verlof?${stringifiedParams}` : `/api/boekhouder/verlof`
+}
+
+/**
+ * @summary Goedgekeurd verlof voor de loonstrook (boekhouderportaal)
+ */
+export const getBoekhouderVerlof = async (params?: GetBoekhouderVerlofParams, options?: RequestInit): Promise<BoekhouderVerlofPost[]> => {
+
+  return customFetch<BoekhouderVerlofPost[]>(getGetBoekhouderVerlofUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBoekhouderVerlofQueryKey = (params?: GetBoekhouderVerlofParams,) => {
+    return [
+    `/api/boekhouder/verlof`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetBoekhouderVerlofQueryOptions = <TData = Awaited<ReturnType<typeof getBoekhouderVerlof>>, TError = ErrorType<unknown>>(params?: GetBoekhouderVerlofParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderVerlof>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBoekhouderVerlofQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBoekhouderVerlof>>> = ({ signal }) => getBoekhouderVerlof(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderVerlof>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBoekhouderVerlofQueryResult = NonNullable<Awaited<ReturnType<typeof getBoekhouderVerlof>>>
+export type GetBoekhouderVerlofQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Goedgekeurd verlof voor de loonstrook (boekhouderportaal)
+ */
+
+export function useGetBoekhouderVerlof<TData = Awaited<ReturnType<typeof getBoekhouderVerlof>>, TError = ErrorType<unknown>>(
+ params?: GetBoekhouderVerlofParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderVerlof>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBoekhouderVerlofQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostBoekhouderVerlofIdVerwerkenUrl = (id: number,) => {
+
+
+
+
+  return `/api/boekhouder/verlof/${id}/verwerken`
+}
+
+/**
+ * @summary Verlofpost markeren als verwerkt op de loonstrook
+ */
+export const postBoekhouderVerlofIdVerwerken = async (id: number, options?: RequestInit): Promise<BoekhouderVerwerkResultaat> => {
+
+  return customFetch<BoekhouderVerwerkResultaat>(getPostBoekhouderVerlofIdVerwerkenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostBoekhouderVerlofIdVerwerkenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postBoekhouderVerlofIdVerwerken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postBoekhouderVerlofIdVerwerken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBoekhouderVerlofIdVerwerkenMutationResult = NonNullable<Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>>
+
+    export type PostBoekhouderVerlofIdVerwerkenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verlofpost markeren als verwerkt op de loonstrook
+ */
+export const usePostBoekhouderVerlofIdVerwerken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBoekhouderVerlofIdVerwerken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostBoekhouderVerlofIdVerwerkenMutationOptions(options));
     }
 
 export const getPatchWerkgeversIdSalarisConfigUrl = (id: number,) => {
