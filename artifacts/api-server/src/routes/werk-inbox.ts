@@ -1,17 +1,37 @@
+// MAIL_01 — de mailomgeving als samenwerkomgeving.
+//
+// Twee lagen (opdracht §2):
+//   Laag 1 (Exchange) — wie de mailbox technisch mag openen. Dat is Microsoft
+//   365; Connect toont dit alleen (exchange-status), beheert het nooit.
+//   Laag 2 (Connect)  — wie de mailbox in de werkinbox ziet en wat hij mag.
+//   Dat staat in werk_inbox_mailbox_toegang (lezen < behandelen < beheren).
+//
+// Berichten, notities en koppelingen zijn gedeelde toestand per mailbox.
+// Tokens blijven per gebruiker: elke gebruiker meldt zich zelf aan bij
+// Microsoft (opdracht §3).
+
 import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   werkInboxTokensTable,
   werkInboxMailboxenTable,
+  werkInboxMailboxToegangTable,
   werkInboxMailsTable,
   werkInboxNotitiesTable,
   werkInboxKoppelingenTable,
+  gebruikersTable,
   WERK_INBOX_ENTITY_TYPES,
+  WERK_INBOX_RECHTEN,
+  WERK_INBOX_MODI,
+  WERK_INBOX_STATUSSEN,
   type WerkInboxEntityType,
+  type WerkInboxRecht,
+  type WerkInboxModus,
+  type WerkInboxStatus,
   crmContactpersonenTable,
   crmKlantenTable,
 } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNull, gte, lt, isNotNull } from "drizzle-orm";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { requireAuth } from "../middlewares/auth";
 import {
@@ -29,9 +49,19 @@ import {
   archiveerMail,
   beantwoordMail,
   verstuurNieuwDelegatedMail,
+  probeExchangeToegang,
   GeenToegang,
   type TokenResponse,
 } from "../services/werkInboxGraph";
+import {
+  rechtDekt,
+  isHoofdbeheerder,
+  haalRecht,
+  toegankelijkeMailboxen,
+  rechtOpMailboxAdres,
+  meldAanwezigheid,
+  leesAanwezigheid,
+} from "../services/werkInboxToegang";
 import { logger } from "../lib/logger";
 import { verwerkFactuurmails } from "../services/factuurstroomService";
 import { verwerkAanvraagmails } from "../services/aanvraagstroomService";
@@ -48,6 +78,46 @@ function redirectUri(req: { protocol: string; get: (h: string) => string | undef
 
 function gebruikerId(req: import("express").Request): number {
   return (req.session as unknown as { userId: number }).userId;
+}
+
+async function gebruikersNaam(uid: number): Promise<string> {
+  const [g] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable)
+    .where(eq(gebruikersTable.id, uid)).limit(1);
+  return g?.naam ?? `Gebruiker ${uid}`;
+}
+
+/**
+ * Zoekt een bericht op messageId en bepaalt het effectieve recht van de
+ * gebruiker via de mailbox van dat bericht. Fail-closed: geen mailbox of geen
+ * toegang → null (naar buiten toe niet te onderscheiden van "bestaat niet").
+ */
+async function vindMailMetToegang(uid: number, messageId: string, vereist: WerkInboxRecht) {
+  const kandidaten = await db.select().from(werkInboxMailsTable)
+    .where(eq(werkInboxMailsTable.messageId, messageId));
+  for (const mail of kandidaten) {
+    const t = await rechtOpMailboxAdres(uid, mail.mailboxAdres);
+    if (t && rechtDekt(t.recht, vereist)) return { mail, mailbox: t.mailbox, recht: t.recht };
+  }
+  return null;
+}
+
+/** Persoonlijke mailbox van een zojuist gekoppeld Microsoft-account als organisatiemailbox registreren. */
+async function zorgPersoonlijkeMailbox(uid: number, email: string): Promise<void> {
+  const adres = email.toLowerCase();
+  const [bestaand] = await db.select({ id: werkInboxMailboxenTable.id }).from(werkInboxMailboxenTable)
+    .where(eq(werkInboxMailboxenTable.emailAdres, adres)).limit(1);
+  let mailboxId = bestaand?.id;
+  if (!mailboxId) {
+    const [rij] = await db.insert(werkInboxMailboxenTable)
+      .values({ emailAdres: adres, label: "Persoonlijke mailbox", modus: "ondersteunen" })
+      .onConflictDoNothing().returning();
+    mailboxId = rij?.id;
+  }
+  if (mailboxId) {
+    await db.insert(werkInboxMailboxToegangTable)
+      .values({ mailboxId, gebruikerId: uid, recht: "beheren" })
+      .onConflictDoNothing();
+  }
 }
 
 // ─── OAuth start ──────────────────────────────────────────────────────────────
@@ -113,6 +183,7 @@ router.get("/werk-inbox/oauth/callback", async (req, res): Promise<void> => {
 
     const email = await haalMicrosoftEmail(tokens.access_token);
     await slaTokenOp(uid, tokens, email);
+    await zorgPersoonlijkeMailbox(uid, email);
 
     res.redirect("/werk-inbox?ms_gekoppeld=1");
   } catch (err) {
@@ -145,45 +216,64 @@ router.delete("/werk-inbox/oauth/ontkoppel", requireAuth, async (req, res): Prom
   res.json({ ok: true });
 });
 
-// ─── Mailboxen ────────────────────────────────────────────────────────────────
+// ─── Mailboxen: wat mag ik zien ───────────────────────────────────────────────
 router.get("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void> => {
-  const rijen = await db.select()
-    .from(werkInboxMailboxenTable)
-    .where(eq(werkInboxMailboxenTable.gebruikerId, gebruikerId(req)))
-    .orderBy(werkInboxMailboxenTable.volgorde);
+  const rijen = await toegankelijkeMailboxen(gebruikerId(req));
   res.json(rijen);
 });
 
+// ─── Mailbox toevoegen (beheerscherm; opdracht §6) ───────────────────────────
 router.post("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
-  const { emailAdres, label } = req.body as { emailAdres?: string; label?: string };
+  if (!(await isHoofdbeheerder(uid))) {
+    res.status(403).json({ error: "Alleen de hoofdbeheerder kan mailboxen toevoegen." });
+    return;
+  }
+  const { emailAdres, label, modus } = req.body as { emailAdres?: string; label?: string; modus?: string };
   if (!emailAdres || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAdres)) {
     res.status(400).json({ error: "Ongeldig e-mailadres." });
     return;
   }
+  if (modus !== undefined && !WERK_INBOX_MODI.includes(modus as WerkInboxModus)) {
+    res.status(400).json({ error: `Ongeldige modus. Kies uit: ${WERK_INBOX_MODI.join(", ")}` });
+    return;
+  }
   try {
     const [rij] = await db.insert(werkInboxMailboxenTable)
-      .values({ gebruikerId: uid, emailAdres: emailAdres.toLowerCase(), label: label ?? null })
+      .values({ emailAdres: emailAdres.toLowerCase(), label: label ?? null, modus: (modus as WerkInboxModus | undefined) ?? "ondersteunen" })
       .returning();
     res.status(201).json(rij);
   } catch {
-    res.status(409).json({ error: "Deze mailbox is al toegevoegd." });
+    res.status(409).json({ error: "Deze mailbox bestaat al." });
   }
 });
 
 router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id = Number(req.params["id"]);
-  const { label, actief, volgorde, isFactuurmailbox, isAanvraagmailbox } = req.body as { label?: string; actief?: boolean; volgorde?: number; isFactuurmailbox?: boolean; isAanvraagmailbox?: boolean };
+  const recht = await haalRecht(uid, id);
+  if (!rechtDekt(recht, "beheren")) {
+    res.status(recht ? 403 : 404).json({ error: recht ? "Hiervoor is het recht Beheren op deze mailbox nodig." : "Niet gevonden." });
+    return;
+  }
+  const { label, actief, volgorde, modus, isFactuurmailbox, isAanvraagmailbox } = req.body as {
+    label?: string; actief?: boolean; volgorde?: number; modus?: string;
+    isFactuurmailbox?: boolean; isAanvraagmailbox?: boolean;
+  };
+  if (modus !== undefined && !WERK_INBOX_MODI.includes(modus as WerkInboxModus)) {
+    res.status(400).json({ error: `Ongeldige modus. Kies uit: ${WERK_INBOX_MODI.join(", ")}` });
+    return;
+  }
   const [rij] = await db.update(werkInboxMailboxenTable)
     .set({
       ...(label !== undefined && { label }),
       ...(actief !== undefined && { actief }),
       ...(volgorde !== undefined && { volgorde }),
+      ...(modus !== undefined && { modus: modus as WerkInboxModus }),
       ...(isFactuurmailbox !== undefined && { isFactuurmailbox }),
       ...(isAanvraagmailbox !== undefined && { isAanvraagmailbox }),
     })
-    .where(and(eq(werkInboxMailboxenTable.id, id), eq(werkInboxMailboxenTable.gebruikerId, uid)))
+    .where(eq(werkInboxMailboxenTable.id, id))
     .returning();
   if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
   res.json(rij);
@@ -191,10 +281,158 @@ router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise
 
 router.delete("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
-  const id = Number(req.params["id"]);
-  await db.delete(werkInboxMailboxenTable)
-    .where(and(eq(werkInboxMailboxenTable.id, id), eq(werkInboxMailboxenTable.gebruikerId, uid)));
+  if (!(await isHoofdbeheerder(uid))) {
+    res.status(403).json({ error: "Alleen de hoofdbeheerder kan mailboxen verwijderen." });
+    return;
+  }
+  await db.delete(werkInboxMailboxenTable).where(eq(werkInboxMailboxenTable.id, Number(req.params["id"])));
   res.json({ ok: true });
+});
+
+// ─── Toegang per mailbox (opdracht §3/§6) ────────────────────────────────────
+router.get("/werk-inbox/mailboxen/:id/toegang", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const id = Number(req.params["id"]);
+  const recht = await haalRecht(uid, id);
+  if (!recht) { res.status(404).json({ error: "Niet gevonden." }); return; }
+  const leden = await db.select({
+    id:          werkInboxMailboxToegangTable.id,
+    gebruikerId: werkInboxMailboxToegangTable.gebruikerId,
+    recht:       werkInboxMailboxToegangTable.recht,
+    naam:        gebruikersTable.naam,
+    email:       gebruikersTable.email,
+  })
+    .from(werkInboxMailboxToegangTable)
+    .innerJoin(gebruikersTable, eq(gebruikersTable.id, werkInboxMailboxToegangTable.gebruikerId))
+    .where(eq(werkInboxMailboxToegangTable.mailboxId, id))
+    .orderBy(gebruikersTable.naam);
+  res.json(leden);
+});
+
+router.post("/werk-inbox/mailboxen/:id/toegang", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const id = Number(req.params["id"]);
+  const mijnRecht = await haalRecht(uid, id);
+  if (!rechtDekt(mijnRecht, "beheren")) {
+    res.status(mijnRecht ? 403 : 404).json({ error: mijnRecht ? "Hiervoor is het recht Beheren op deze mailbox nodig." : "Niet gevonden." });
+    return;
+  }
+  const { gebruikerId: doelUid, recht } = req.body as { gebruikerId?: number; recht?: string };
+  if (!doelUid || !Number.isInteger(doelUid)) { res.status(400).json({ error: "gebruikerId is verplicht." }); return; }
+  if (!recht || !WERK_INBOX_RECHTEN.includes(recht as WerkInboxRecht)) {
+    res.status(400).json({ error: `Ongeldig recht. Kies uit: ${WERK_INBOX_RECHTEN.join(", ")}` });
+    return;
+  }
+  const [gebruiker] = await db.select({ id: gebruikersTable.id }).from(gebruikersTable)
+    .where(eq(gebruikersTable.id, doelUid)).limit(1);
+  if (!gebruiker) { res.status(404).json({ error: "Gebruiker niet gevonden." }); return; }
+  const [rij] = await db.insert(werkInboxMailboxToegangTable)
+    .values({ mailboxId: id, gebruikerId: doelUid, recht: recht as WerkInboxRecht })
+    .onConflictDoUpdate({
+      target: [werkInboxMailboxToegangTable.mailboxId, werkInboxMailboxToegangTable.gebruikerId],
+      set: { recht: recht as WerkInboxRecht },
+    })
+    .returning();
+  res.status(201).json(rij);
+});
+
+router.delete("/werk-inbox/mailboxen/:id/toegang/:gebruikerId", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const id = Number(req.params["id"]);
+  const mijnRecht = await haalRecht(uid, id);
+  if (!rechtDekt(mijnRecht, "beheren")) {
+    res.status(mijnRecht ? 403 : 404).json({ error: mijnRecht ? "Hiervoor is het recht Beheren op deze mailbox nodig." : "Niet gevonden." });
+    return;
+  }
+  await db.delete(werkInboxMailboxToegangTable).where(and(
+    eq(werkInboxMailboxToegangTable.mailboxId, id),
+    eq(werkInboxMailboxToegangTable.gebruikerId, Number(req.params["gebruikerId"])),
+  ));
+  res.json({ ok: true });
+});
+
+// ─── Exchange-toegang tonen, niet beheren (opdracht §2) ──────────────────────
+router.get("/werk-inbox/mailboxen/:id/exchange-status", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const id = Number(req.params["id"]);
+  const mijnRecht = await haalRecht(uid, id);
+  if (!rechtDekt(mijnRecht, "beheren")) {
+    res.status(mijnRecht ? 403 : 404).json({ error: mijnRecht ? "Hiervoor is het recht Beheren op deze mailbox nodig." : "Niet gevonden." });
+    return;
+  }
+  const [mailbox] = await db.select().from(werkInboxMailboxenTable)
+    .where(eq(werkInboxMailboxenTable.id, id)).limit(1);
+  if (!mailbox) { res.status(404).json({ error: "Niet gevonden." }); return; }
+
+  const leden = await db.select({
+    gebruikerId: werkInboxMailboxToegangTable.gebruikerId,
+    recht:       werkInboxMailboxToegangTable.recht,
+    naam:        gebruikersTable.naam,
+    microsoftEmail: werkInboxTokensTable.microsoftEmail,
+  })
+    .from(werkInboxMailboxToegangTable)
+    .innerJoin(gebruikersTable, eq(gebruikersTable.id, werkInboxMailboxToegangTable.gebruikerId))
+    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailboxToegangTable.gebruikerId))
+    .where(eq(werkInboxMailboxToegangTable.mailboxId, id));
+
+  const resultaten = [];
+  for (const lid of leden) {
+    if (!lid.microsoftEmail) {
+      resultaten.push({ gebruikerId: lid.gebruikerId, naam: lid.naam, recht: lid.recht, exchange: "geen_koppeling" as const });
+      continue;
+    }
+    const isPersonlijk = lid.microsoftEmail.toLowerCase() === mailbox.emailAdres;
+    const status = await probeExchangeToegang(lid.gebruikerId, mailbox.emailAdres, isPersonlijk);
+    resultaten.push({ gebruikerId: lid.gebruikerId, naam: lid.naam, recht: lid.recht, exchange: status });
+  }
+  res.json({ mailbox: mailbox.emailAdres, leden: resultaten });
+});
+
+// ─── Reactietijd per mailbox (opdracht §5.5) ─────────────────────────────────
+router.get("/werk-inbox/mailboxen/:id/reactietijd", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const id = Number(req.params["id"]);
+  const recht = await haalRecht(uid, id);
+  if (!recht) { res.status(404).json({ error: "Niet gevonden." }); return; }
+  const [mailbox] = await db.select().from(werkInboxMailboxenTable)
+    .where(eq(werkInboxMailboxenTable.id, id)).limit(1);
+  if (!mailbox) { res.status(404).json({ error: "Niet gevonden." }); return; }
+
+  const dertigDagen = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [gemiddelde] = await db.select({
+    gemiddeldeUren: sql<number | null>`avg(extract(epoch from (${werkInboxMailsTable.beantwoordOp} - ${werkInboxMailsTable.ontvangenOp})) / 3600.0)`,
+    aantalBeantwoord: sql<number>`count(*)::int`,
+  })
+    .from(werkInboxMailsTable)
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, mailbox.emailAdres),
+      isNotNull(werkInboxMailsTable.beantwoordOp),
+      gte(werkInboxMailsTable.ontvangenOp, dertigDagen),
+    ));
+
+  const teLangGrens = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const teLang = await db.select({
+    messageId:   werkInboxMailsTable.messageId,
+    onderwerp:   werkInboxMailsTable.onderwerp,
+    afzenderEmail: werkInboxMailsTable.afzenderEmail,
+    ontvangenOp: werkInboxMailsTable.ontvangenOp,
+    samenwerkStatus: werkInboxMailsTable.samenwerkStatus,
+  })
+    .from(werkInboxMailsTable)
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, mailbox.emailAdres),
+      inArray(werkInboxMailsTable.samenwerkStatus, ["open", "toegewezen"]),
+      lt(werkInboxMailsTable.ontvangenOp, teLangGrens),
+    ))
+    .orderBy(werkInboxMailsTable.ontvangenOp)
+    .limit(10);
+
+  res.json({
+    mailbox: mailbox.emailAdres,
+    gemiddeldeReactieUren: gemiddelde?.gemiddeldeUren != null ? Math.round(Number(gemiddelde.gemiddeldeUren) * 10) / 10 : null,
+    aantalBeantwoord30d: gemiddelde?.aantalBeantwoord ?? 0,
+    ligtTeLang: teLang,
+  });
 });
 
 // ─── Sync ─────────────────────────────────────────────────────────────────────
@@ -221,12 +459,19 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => 
 // ─── Mails ophalen ────────────────────────────────────────────────────────────
 router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
-  const { mailbox, ongelezen, vandaag, bijlage } = req.query as Record<string, string>;
+  const { mailbox, ongelezen, vandaag, bijlage, status, toegewezen } = req.query as Record<string, string>;
 
-  const filters = [eq(werkInboxMailsTable.gebruikerId, uid)];
+  // Alleen mailboxen waar deze gebruiker toegang toe heeft (acceptatie 2).
+  const toegankelijk = await toegankelijkeMailboxen(uid);
+  const adressen = toegankelijk.map((m) => m.emailAdres);
+  if (adressen.length === 0) { res.json([]); return; }
+
+  const filters = [inArray(werkInboxMailsTable.mailboxAdres, adressen)];
 
   if (mailbox) {
-    filters.push(eq(werkInboxMailsTable.mailboxAdres, mailbox));
+    const gevraagd = mailbox.toLowerCase();
+    if (!adressen.includes(gevraagd)) { res.json([]); return; }
+    filters.push(eq(werkInboxMailsTable.mailboxAdres, gevraagd));
   }
   if (ongelezen === "true") {
     filters.push(eq(werkInboxMailsTable.isGelezenMs, false));
@@ -239,27 +484,33 @@ router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => 
   if (bijlage === "true") {
     filters.push(eq(werkInboxMailsTable.heeftBijlage, true));
   }
+  if (status && WERK_INBOX_STATUSSEN.includes(status as WerkInboxStatus)) {
+    filters.push(eq(werkInboxMailsTable.samenwerkStatus, status));
+  }
+  if (toegewezen === "mij") {
+    filters.push(eq(werkInboxMailsTable.toegewezenAan, uid));
+  }
 
-  // Filter: niet verwerkt? Optioneel; we tonen alles maar geven verwerkt_op mee.
-  const mails = await db.select()
+  const mails = await db.select({
+    mail: werkInboxMailsTable,
+    toegewezenNaam: gebruikersTable.naam,
+  })
     .from(werkInboxMailsTable)
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, werkInboxMailsTable.toegewezenAan))
     .where(and(...filters))
     .orderBy(desc(werkInboxMailsTable.ontvangenOp))
     .limit(200);
 
-  // Notities en koppelingen aantallen meegeven
-  const messageIds = mails.map((m) => m.messageId);
-  if (messageIds.length === 0) {
-    res.json(mails.map((m) => ({ ...m, notitie_aantal: 0, koppeling_aantal: 0 })));
-    return;
-  }
+  const messageIds = mails.map((m) => m.mail.messageId);
+  if (messageIds.length === 0) { res.json([]); return; }
 
+  // Gedeelde notitie-/koppeling-aantallen per bericht (niet per gebruiker).
   const notitieAantallen = await db.select({
     messageId: werkInboxNotitiesTable.messageId,
     aantal:    sql<number>`count(*)::int`,
   })
     .from(werkInboxNotitiesTable)
-    .where(eq(werkInboxNotitiesTable.gebruikerId, uid))
+    .where(inArray(werkInboxNotitiesTable.messageId, messageIds))
     .groupBy(werkInboxNotitiesTable.messageId);
 
   const koppelingAantallen = await db.select({
@@ -267,61 +518,160 @@ router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => 
     aantal:    sql<number>`count(*)::int`,
   })
     .from(werkInboxKoppelingenTable)
-    .where(eq(werkInboxKoppelingenTable.gebruikerId, uid))
+    .where(inArray(werkInboxKoppelingenTable.messageId, messageIds))
     .groupBy(werkInboxKoppelingenTable.messageId);
 
   const notitieMap = Object.fromEntries(notitieAantallen.map((n) => [n.messageId, n.aantal]));
   const koppelingMap = Object.fromEntries(koppelingAantallen.map((k) => [k.messageId, k.aantal]));
 
-  res.json(mails.map((m) => ({
+  res.json(mails.map(({ mail: m, toegewezenNaam }) => ({
     ...m,
+    toegewezen_naam:  toegewezenNaam,
     notitie_aantal:   notitieMap[m.messageId] ?? 0,
     koppeling_aantal: koppelingMap[m.messageId] ?? 0,
   })));
 });
+
+/** Bepaal met wiens token we Graph benaderen: eigen token als dat er is, anders dat van de synchroniserende collega. */
+async function graphContext(uid: number, mail: { gebruikerId: number; mailboxAdres: string }) {
+  const [eigenToken] = await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
+    .from(werkInboxTokensTable).where(eq(werkInboxTokensTable.gebruikerId, uid)).limit(1);
+  const viaUid = eigenToken ? uid : mail.gebruikerId;
+  const [tokenRecord] = eigenToken
+    ? [eigenToken]
+    : await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
+        .from(werkInboxTokensTable).where(eq(werkInboxTokensTable.gebruikerId, viaUid)).limit(1);
+  const isPersonlijk = tokenRecord?.microsoftEmail?.toLowerCase() === mail.mailboxAdres;
+  return { viaUid, isPersonlijk };
+}
 
 // ─── Volledige mail inhoud (on-demand van Graph) ──────────────────────────────
 router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
 
-  // Zoek de mail in onze metadata om mailbox te weten
-  const [meta] = await db.select()
-    .from(werkInboxMailsTable)
-    .where(and(
-      eq(werkInboxMailsTable.gebruikerId, uid),
-      eq(werkInboxMailsTable.messageId, messageId),
-    ))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "lezen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+  const meta = gevonden.mail;
 
-  if (!meta) {
-    res.status(404).json({ error: "Mail niet gevonden." });
-    return;
-  }
+  // Inhoud is best-effort: als Graph faalt (geen token / geen Exchange-toegang)
+  // blijven meta, samenwerking en interne opmerkingen gewoon bruikbaar — de
+  // samenwerkomgeving mag niet onbereikbaar worden door een Microsoft-storing.
+  const { viaUid, isPersonlijk } = await graphContext(uid, meta);
+  const inhoud = await haalVolledigeMail(viaUid, meta.mailboxAdres, messageId, isPersonlijk);
+  const inhoudWaarschuwing = inhoud
+    ? null
+    : "Mailinhoud kon niet worden opgehaald van Microsoft 365. Controleer of uw account Exchange-toegang tot deze mailbox heeft.";
 
-  const [tokenRecord] = await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
-    .from(werkInboxTokensTable)
-    .where(eq(werkInboxTokensTable.gebruikerId, uid))
-    .limit(1);
-
-  const isPersonlijk = !tokenRecord || meta.mailboxAdres === tokenRecord.microsoftEmail;
-
-  const inhoud = await haalVolledigeMail(uid, meta.mailboxAdres, messageId, isPersonlijk);
-  if (!inhoud) {
-    res.status(502).json({ error: "Mail kon niet worden opgehaald van Microsoft 365." });
-    return;
-  }
-
-  // Notities + koppelingen meegeven
-  const notities    = await db.select().from(werkInboxNotitiesTable)
-    .where(and(eq(werkInboxNotitiesTable.gebruikerId, uid), eq(werkInboxNotitiesTable.messageId, messageId)))
+  // Gedeelde notities + koppelingen, met auteursnaam.
+  const notities = await db.select({
+    id: werkInboxNotitiesTable.id,
+    messageId: werkInboxNotitiesTable.messageId,
+    gebruikerId: werkInboxNotitiesTable.gebruikerId,
+    tekst: werkInboxNotitiesTable.tekst,
+    aangemaaktOp: werkInboxNotitiesTable.aangemaaktOp,
+    bijgewerktOp: werkInboxNotitiesTable.bijgewerktOp,
+    auteurNaam: gebruikersTable.naam,
+  })
+    .from(werkInboxNotitiesTable)
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, werkInboxNotitiesTable.gebruikerId))
+    .where(eq(werkInboxNotitiesTable.messageId, messageId))
     .orderBy(desc(werkInboxNotitiesTable.aangemaaktOp));
 
   const koppelingen = await db.select().from(werkInboxKoppelingenTable)
-    .where(and(eq(werkInboxKoppelingenTable.gebruikerId, uid), eq(werkInboxKoppelingenTable.messageId, messageId)))
+    .where(eq(werkInboxKoppelingenTable.messageId, messageId))
     .orderBy(desc(werkInboxKoppelingenTable.aangemaaktOp));
 
-  res.json({ meta, inhoud, notities, koppelingen });
+  // Aanwezigheid: dit bericht staat nu open bij deze gebruiker (opdracht §5.2).
+  meldAanwezigheid(messageId, uid, await gebruikersNaam(uid), "bekijkt");
+  const anderen = leesAanwezigheid(messageId, uid);
+
+  res.json({
+    meta,
+    inhoud: inhoud ?? {},
+    inhoud_waarschuwing: inhoudWaarschuwing,
+    notities,
+    koppelingen,
+    aanwezigheid: anderen,
+    mijn_recht: gevonden.recht,
+    mailbox_modus: gevonden.mailbox.modus,
+  });
+});
+
+// ─── Aanwezigheid (opdracht §5.2) ────────────────────────────────────────────
+router.post("/werk-inbox/mails/:messageId/aanwezigheid", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { activiteit } = req.body as { activiteit?: string };
+  if (!activiteit || !["bekijkt", "typt", "weg"].includes(activiteit)) {
+    res.status(400).json({ error: "activiteit moet 'bekijkt', 'typt' of 'weg' zijn." });
+    return;
+  }
+  const gevonden = await vindMailMetToegang(uid, messageId, "lezen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+  meldAanwezigheid(messageId, uid, await gebruikersNaam(uid), activiteit as "bekijkt" | "typt" | "weg");
+  res.json({ aanwezigheid: leesAanwezigheid(messageId, uid) });
+});
+
+// ─── Toewijzen (opdracht §5.1) ───────────────────────────────────────────────
+router.patch("/werk-inbox/mails/:messageId/toewijzen", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { gebruikerId: doelUid } = req.body as { gebruikerId?: number | null };
+
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  if (doelUid != null) {
+    // Toewijzen kan alleen aan iemand die de mailbox ook echt kan behandelen.
+    const doelRecht = await haalRecht(doelUid, gevonden.mailbox.id);
+    if (!rechtDekt(doelRecht, "behandelen")) {
+      res.status(422).json({ error: "Deze gebruiker heeft geen behandelrecht op deze mailbox." });
+      return;
+    }
+  }
+
+  const [rij] = await db.update(werkInboxMailsTable)
+    .set({
+      toegewezenAan: doelUid ?? null,
+      samenwerkStatus: doelUid != null
+        ? "toegewezen"
+        : (gevonden.mail.samenwerkStatus === "toegewezen" ? "open" : gevonden.mail.samenwerkStatus),
+      bijgewerktOp: new Date(),
+    })
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ))
+    .returning();
+  res.json({ ok: true, toegewezenAan: rij?.toegewezenAan ?? null, samenwerkStatus: rij?.samenwerkStatus });
+});
+
+// ─── Gezamenlijke status (opdracht §5.4) ─────────────────────────────────────
+router.patch("/werk-inbox/mails/:messageId/status", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { status } = req.body as { status?: string };
+  if (!status || !WERK_INBOX_STATUSSEN.includes(status as WerkInboxStatus)) {
+    res.status(400).json({ error: `Ongeldige status. Kies uit: ${WERK_INBOX_STATUSSEN.join(", ")}` });
+    return;
+  }
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  const [rij] = await db.update(werkInboxMailsTable)
+    .set({
+      samenwerkStatus: status as WerkInboxStatus,
+      afgehandeldOp: status === "afgehandeld" ? new Date() : null,
+      ...(status === "open" && { toegewezenAan: null }),
+      bijgewerktOp: new Date(),
+    })
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ))
+    .returning();
+  res.json({ ok: true, samenwerkStatus: rij?.samenwerkStatus });
 });
 
 // ─── Gelezen markeren ─────────────────────────────────────────────────────────
@@ -330,29 +680,18 @@ router.patch("/werk-inbox/mails/:messageId/gelezen", requireAuth, async (req, re
   const messageId = String(req.params.messageId);
   const { isGelezen } = req.body as { isGelezen: boolean };
 
-  const [meta] = await db.select()
-    .from(werkInboxMailsTable)
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Niet gevonden." }); return; }
+  const meta = gevonden.mail;
 
-  if (!meta) { res.status(404).json({ error: "Niet gevonden." }); return; }
-
-  const [tokenRecord] = await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
-    .from(werkInboxTokensTable)
-    .where(eq(werkInboxTokensTable.gebruikerId, uid))
-    .limit(1);
-
-  const isPersonlijk = !tokenRecord || meta.mailboxAdres === tokenRecord.microsoftEmail;
-
-  // Update in Graph (best-effort)
-  await markeerGelezen(uid, meta.mailboxAdres, messageId, isPersonlijk, isGelezen).catch((err) =>
+  const { viaUid, isPersonlijk } = await graphContext(uid, meta);
+  await markeerGelezen(viaUid, meta.mailboxAdres, messageId, isPersonlijk, isGelezen).catch((err) =>
     logger.warn({ err }, "werk-inbox: markeerGelezen Graph call mislukt"),
   );
 
-  // Update lokaal
   await db.update(werkInboxMailsTable)
     .set({ isGelezenMs: isGelezen, bijgewerktOp: new Date() })
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)));
+    .where(and(eq(werkInboxMailsTable.mailboxAdres, meta.mailboxAdres), eq(werkInboxMailsTable.messageId, messageId)));
 
   res.json({ ok: true });
 });
@@ -363,19 +702,22 @@ router.patch("/werk-inbox/mails/:messageId/verwerkt", requireAuth, async (req, r
   const messageId = String(req.params.messageId);
   const { verwerkt } = req.body as { verwerkt: boolean };
 
-  const [rij] = await db.update(werkInboxMailsTable)
-    .set({
-      verwerktOp:   verwerkt ? new Date() : null,
-      bijgewerktOp: new Date(),
-    })
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .returning();
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Niet gevonden." }); return; }
 
-  if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
-  res.json({ ok: true, verwerktOp: rij.verwerktOp });
+  const [rij] = await db.update(werkInboxMailsTable)
+    .set({ verwerktOp: verwerkt ? new Date() : null, bijgewerktOp: new Date() })
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ))
+    .returning();
+  res.json({ ok: true, verwerktOp: rij?.verwerktOp ?? null });
 });
 
-// ─── Notities ────────────────────────────────────────────────────────────────
+// ─── Interne opmerkingen (opdracht §5.3) ─────────────────────────────────────
+// Gedeeld per bericht, met auteur. Gaan NOOIT naar buiten: er is geen enkel
+// pad van dit veld naar een Graph-verzendroute.
 router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
@@ -385,26 +727,27 @@ router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, re
     res.status(400).json({ error: "Tekst mag niet leeg zijn." });
     return;
   }
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
   const [rij] = await db.insert(werkInboxNotitiesTable)
     .values({ messageId, gebruikerId: uid, tekst: tekst.trim() })
     .returning();
 
-  res.status(201).json(rij);
+  res.status(201).json({ ...rij, auteurNaam: await gebruikersNaam(uid) });
 });
 
 router.patch("/werk-inbox/notities/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
   const { tekst } = req.body as { tekst?: string };
-
   if (!tekst?.trim()) { res.status(400).json({ error: "Tekst mag niet leeg zijn." }); return; }
 
+  // Alleen de auteur wijzigt zijn eigen opmerking.
   const [rij] = await db.update(werkInboxNotitiesTable)
     .set({ tekst: tekst.trim(), bijgewerktOp: new Date() })
     .where(and(eq(werkInboxNotitiesTable.id, id), eq(werkInboxNotitiesTable.gebruikerId, uid)))
     .returning();
-
   if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
   res.json(rij);
 });
@@ -412,8 +755,15 @@ router.patch("/werk-inbox/notities/:id", requireAuth, async (req, res): Promise<
 router.delete("/werk-inbox/notities/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
-  await db.delete(werkInboxNotitiesTable)
-    .where(and(eq(werkInboxNotitiesTable.id, id), eq(werkInboxNotitiesTable.gebruikerId, uid)));
+  const [notitie] = await db.select().from(werkInboxNotitiesTable)
+    .where(eq(werkInboxNotitiesTable.id, id)).limit(1);
+  if (!notitie) { res.json({ ok: true }); return; }
+  // Auteur zelf, of iemand met beheren-recht op de mailbox van het bericht.
+  if (notitie.gebruikerId !== uid) {
+    const gevonden = await vindMailMetToegang(uid, notitie.messageId, "beheren");
+    if (!gevonden) { res.status(403).json({ error: "Alleen de auteur of een beheerder kan deze opmerking verwijderen." }); return; }
+  }
+  await db.delete(werkInboxNotitiesTable).where(eq(werkInboxNotitiesTable.id, id));
   res.json({ ok: true });
 });
 
@@ -435,6 +785,8 @@ router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req,
     res.status(400).json({ error: "entityId is verplicht." });
     return;
   }
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
   try {
     const [rij] = await db.insert(werkInboxKoppelingenTable)
@@ -449,8 +801,12 @@ router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req,
 router.delete("/werk-inbox/koppelingen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
-  await db.delete(werkInboxKoppelingenTable)
-    .where(and(eq(werkInboxKoppelingenTable.id, id), eq(werkInboxKoppelingenTable.gebruikerId, uid)));
+  const [koppeling] = await db.select().from(werkInboxKoppelingenTable)
+    .where(eq(werkInboxKoppelingenTable.id, id)).limit(1);
+  if (!koppeling) { res.json({ ok: true }); return; }
+  const gevonden = await vindMailMetToegang(uid, koppeling.messageId, "behandelen");
+  if (!gevonden) { res.status(403).json({ error: "Hiervoor is behandelrecht op de mailbox nodig." }); return; }
+  await db.delete(werkInboxKoppelingenTable).where(eq(werkInboxKoppelingenTable.id, id));
   res.json({ ok: true });
 });
 
@@ -460,16 +816,23 @@ router.patch("/werk-inbox/mails/:messageId/afgehandeld", requireAuth, async (req
   const messageId = String(req.params.messageId);
   const { afgehandeld } = req.body as { afgehandeld: boolean };
 
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Niet gevonden." }); return; }
+
   const [rij] = await db.update(werkInboxMailsTable)
     .set({
       afgehandeldOp: afgehandeld ? new Date() : null,
+      samenwerkStatus: afgehandeld
+        ? "afgehandeld"
+        : (gevonden.mail.toegewezenAan != null ? "toegewezen" : "open"),
       bijgewerktOp:  new Date(),
     })
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ))
     .returning();
-
-  if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
-  res.json({ ok: true, afgehandeldOp: rij.afgehandeldOp });
+  res.json({ ok: true, afgehandeldOp: rij?.afgehandeldOp ?? null });
 });
 
 // ─── Actie vereist markeren ───────────────────────────────────────────────────
@@ -478,16 +841,19 @@ router.patch("/werk-inbox/mails/:messageId/actie-vereist", requireAuth, async (r
   const messageId = String(req.params.messageId);
   const { actieVereist, reden } = req.body as { actieVereist: boolean; reden?: string };
 
-  const [rij] = await db.update(werkInboxMailsTable)
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Niet gevonden." }); return; }
+
+  await db.update(werkInboxMailsTable)
     .set({
       actieVereist,
       actieVereistReden: actieVereist ? (reden ?? null) : null,
       bijgewerktOp: new Date(),
     })
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .returning();
-
-  if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ));
   res.json({ ok: true });
 });
 
@@ -499,7 +865,6 @@ router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res): Pro
     return;
   }
 
-  // Zoek contactpersoon op e-mail
   const [contact] = await db.select({
     id:              crmContactpersonenTable.id,
     naam:            crmContactpersonenTable.naam,
@@ -541,7 +906,6 @@ router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res): Pro
     return;
   }
 
-  // Geen contactpersoon — zoek op organisatie-e-mail
   const [org] = await db.select({
     id:     crmKlantenTable.id,
     naam:   crmKlantenTable.naam,
@@ -571,19 +935,11 @@ router.post("/werk-inbox/mails/:messageId/verplaats", requireAuth, async (req, r
     return;
   }
 
-  const [mail] = await db.select({
-    mailboxAdres: werkInboxMailsTable.mailboxAdres,
-    microsoftEmail: werkInboxTokensTable.microsoftEmail,
-  })
-    .from(werkInboxMailsTable)
-    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
-  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
-
-  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
-  const ok = await verplaatsMail(uid, mail.mailboxAdres, messageId, isPersonlijk, doelMap.trim());
+  const { viaUid, isPersonlijk } = await graphContext(uid, gevonden.mail);
+  const ok = await verplaatsMail(viaUid, gevonden.mail.mailboxAdres, messageId, isPersonlijk, doelMap.trim());
   if (!ok) { res.status(502).json({ error: "Verplaatsen via Microsoft Graph mislukt. Controleer uw mailkoppeling." }); return; }
 
   res.json({ ok: true });
@@ -594,19 +950,11 @@ router.post("/werk-inbox/mails/:messageId/archiveer", requireAuth, async (req, r
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
 
-  const [mail] = await db.select({
-    mailboxAdres:   werkInboxMailsTable.mailboxAdres,
-    microsoftEmail: werkInboxTokensTable.microsoftEmail,
-  })
-    .from(werkInboxMailsTable)
-    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
-  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
-
-  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
-  const ok = await archiveerMail(uid, mail.mailboxAdres, messageId, isPersonlijk);
+  const { viaUid, isPersonlijk } = await graphContext(uid, gevonden.mail);
+  const ok = await archiveerMail(viaUid, gevonden.mail.mailboxAdres, messageId, isPersonlijk);
   if (!ok) { res.status(502).json({ error: "Archiveren via Microsoft Graph mislukt. Controleer uw mailkoppeling." }); return; }
 
   res.json({ ok: true });
@@ -626,19 +974,11 @@ router.post("/werk-inbox/mails/:messageId/beantwoord", requireAuth, async (req, 
     return;
   }
 
-  const [mail] = await db.select({
-    mailboxAdres:   werkInboxMailsTable.mailboxAdres,
-    microsoftEmail: werkInboxTokensTable.microsoftEmail,
-  })
-    .from(werkInboxMailsTable)
-    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
-  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
-
-  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
-  const resultaat = await beantwoordMail(uid, mail.mailboxAdres, messageId, isPersonlijk, {
+  const { viaUid, isPersonlijk } = await graphContext(uid, gevonden.mail);
+  const resultaat = await beantwoordMail(viaUid, gevonden.mail.mailboxAdres, messageId, isPersonlijk, {
     htmlBody: htmlBody.trim(),
     extraOntvangers,
   });
@@ -647,6 +987,20 @@ router.post("/werk-inbox/mails/:messageId/beantwoord", requireAuth, async (req, 
     res.status(502).json({ error: resultaat.fout ?? "Beantwoorden via Microsoft Graph mislukt." });
     return;
   }
+
+  // Reactietijd (opdracht §5.5) + gezamenlijke status: beantwoord = wacht op antwoord.
+  await db.update(werkInboxMailsTable)
+    .set({
+      beantwoordOp: gevonden.mail.beantwoordOp ?? new Date(),
+      ...(gevonden.mail.samenwerkStatus !== "afgehandeld" && { samenwerkStatus: "wacht_op_antwoord" }),
+      bijgewerktOp: new Date(),
+    })
+    .where(and(
+      eq(werkInboxMailsTable.mailboxAdres, gevonden.mail.mailboxAdres),
+      eq(werkInboxMailsTable.messageId, messageId),
+    ));
+  meldAanwezigheid(messageId, uid, await gebruikersNaam(uid), "bekijkt");
+
   res.json({ ok: true });
 });
 
@@ -666,7 +1020,6 @@ router.post("/werk-inbox/mails/nieuw", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  // Mailbox bepalen: expliciet opgegeven of persoonlijk
   const [tokenRec] = await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
     .from(werkInboxTokensTable)
     .where(eq(werkInboxTokensTable.gebruikerId, uid))
@@ -677,8 +1030,17 @@ router.post("/werk-inbox/mails/nieuw", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const effectiefMailbox  = mailboxAdres ?? tokenRec.microsoftEmail;
-  const isPersonlijk      = effectiefMailbox === tokenRec.microsoftEmail;
+  const effectiefMailbox = (mailboxAdres ?? tokenRec.microsoftEmail).toLowerCase();
+  const isPersonlijk     = effectiefMailbox === tokenRec.microsoftEmail.toLowerCase();
+
+  // Versturen vanuit een gedeelde mailbox vereist behandelrecht in Connect.
+  if (!isPersonlijk) {
+    const t = await rechtOpMailboxAdres(uid, effectiefMailbox);
+    if (!t || !rechtDekt(t.recht, "behandelen")) {
+      res.status(403).json({ error: "Geen behandelrecht op deze mailbox." });
+      return;
+    }
+  }
 
   const resultaat = await verstuurNieuwDelegatedMail(uid, {
     naarEmail,
@@ -706,12 +1068,17 @@ router.post("/werk-inbox/mails/:messageId/analyseer", requireAuth, async (req, r
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
 
-  const [mail] = await db.select()
-    .from(werkInboxMailsTable)
-    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
-    .limit(1);
+  const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
+  if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+  const mail = gevonden.mail;
 
-  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+  // Modus 'Alleen registreren' = geen AI-bemoeienis, ook niet op verzoek
+  // (opdracht §4). In 'Ondersteunen' draait AI uitsluitend op verzoek zoals
+  // hier — nooit automatisch, nooit blokkerend.
+  if (gevonden.mailbox.modus === "registreren") {
+    res.status(422).json({ error: "Deze mailbox staat op 'Alleen registreren' — AI-analyse is hier uitgeschakeld." });
+    return;
+  }
 
   const prompt = `Je bent AI-assistent voor FPS Brandpreventie, specialist in brandpreventieve gebouwvoorzieningen.
 
@@ -766,7 +1133,6 @@ Regels:
       return;
     }
 
-    // Voeg logboek-entry toe
     let logboek: { actie: string; uitgevoerdOp: string; samenvatting?: string; categorie?: string }[] = [];
     try { logboek = JSON.parse(mail.aiLogboekJson ?? "[]") as typeof logboek; } catch { /* ignore */ }
     logboek.unshift({
@@ -785,7 +1151,10 @@ Regels:
         actieVereistReden: analyse.actie_vereist_reden ?? null,
         bijgewerktOp:      new Date(),
       })
-      .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+      .where(and(
+        eq(werkInboxMailsTable.mailboxAdres, mail.mailboxAdres),
+        eq(werkInboxMailsTable.messageId, messageId),
+      ))
       .returning();
 
     res.json({ ok: true, analyse, mail: bijgewerkt });

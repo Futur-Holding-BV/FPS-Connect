@@ -380,16 +380,20 @@ INDEX|wagenpark_ritten|wagenpark_ritten_pkey
 INDEX|wagenpark_sync_log|wagenpark_sync_log_pkey
 INDEX|week_staten|week_staten_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_message_idx
+INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_msg_uq
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_pkey
-INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_uq
-INDEX|werk_inbox_mailboxen|werk_inbox_mailboxen_gebruiker_adres_uq
-INDEX|werk_inbox_mailboxen|werk_inbox_mailboxen_gebruiker_idx
+INDEX|werk_inbox_mailbox_toegang|werk_inbox_mailbox_toegang_pkey
+INDEX|werk_inbox_mailbox_toegang|werk_inbox_toegang_gebruiker_idx
+INDEX|werk_inbox_mailbox_toegang|werk_inbox_toegang_uq
+INDEX|werk_inbox_mailboxen|werk_inbox_mailboxen_adres_uq
 INDEX|werk_inbox_mailboxen|werk_inbox_mailboxen_pkey
 INDEX|werk_inbox_mails|werk_inbox_mails_gebruiker_idx
-INDEX|werk_inbox_mails|werk_inbox_mails_gebruiker_message_uq
 INDEX|werk_inbox_mails|werk_inbox_mails_mailbox_idx
+INDEX|werk_inbox_mails|werk_inbox_mails_mailbox_message_uq
 INDEX|werk_inbox_mails|werk_inbox_mails_ontvangen_idx
 INDEX|werk_inbox_mails|werk_inbox_mails_pkey
+INDEX|werk_inbox_mails|werk_inbox_mails_status_idx
+INDEX|werk_inbox_mails|werk_inbox_mails_toegewezen_idx
 INDEX|werk_inbox_notities|werk_inbox_notities_message_idx
 INDEX|werk_inbox_notities|werk_inbox_notities_pkey
 INDEX|werk_inbox_tokens|werk_inbox_tokens_gebruiker_uq
@@ -4308,14 +4312,19 @@ KOLOM|werk_inbox_koppelingen|entity_type|text|NO|
 KOLOM|werk_inbox_koppelingen|gebruiker_id|integer|NO|
 KOLOM|werk_inbox_koppelingen|id|integer|NO|nextval('werk_inbox_koppelingen_id_seq'::regclass)
 KOLOM|werk_inbox_koppelingen|message_id|text|NO|
+KOLOM|werk_inbox_mailbox_toegang|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werk_inbox_mailbox_toegang|gebruiker_id|integer|NO|
+KOLOM|werk_inbox_mailbox_toegang|id|integer|NO|nextval('werk_inbox_mailbox_toegang_id_seq'::regclass)
+KOLOM|werk_inbox_mailbox_toegang|mailbox_id|integer|NO|
+KOLOM|werk_inbox_mailbox_toegang|recht|text|NO|'behandelen'::text
 KOLOM|werk_inbox_mailboxen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|werk_inbox_mailboxen|actief|boolean|NO|true
 KOLOM|werk_inbox_mailboxen|email_adres|text|NO|
-KOLOM|werk_inbox_mailboxen|gebruiker_id|integer|NO|
 KOLOM|werk_inbox_mailboxen|id|integer|NO|nextval('werk_inbox_mailboxen_id_seq'::regclass)
 KOLOM|werk_inbox_mailboxen|is_aanvraagmailbox|boolean|NO|false
 KOLOM|werk_inbox_mailboxen|is_factuurmailbox|boolean|NO|false
 KOLOM|werk_inbox_mailboxen|label|text|YES|
+KOLOM|werk_inbox_mailboxen|modus|text|NO|'ondersteunen'::text
 KOLOM|werk_inbox_mailboxen|volgorde|integer|NO|0
 KOLOM|werk_inbox_mails|aanvraag_verwerkt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|actie_vereist_reden|text|YES|
@@ -4325,6 +4334,7 @@ KOLOM|werk_inbox_mails|afzender_email|text|NO|''::text
 KOLOM|werk_inbox_mails|afzender_naam|text|YES|
 KOLOM|werk_inbox_mails|ai_logboek_json|text|YES|
 KOLOM|werk_inbox_mails|ai_voorstel_json|text|YES|
+KOLOM|werk_inbox_mails|beantwoord_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|werk_inbox_mails|conversation_id|text|YES|
 KOLOM|werk_inbox_mails|factuur_verwerkt_op|timestamp without time zone|YES|
@@ -4338,7 +4348,9 @@ KOLOM|werk_inbox_mails|message_id|text|NO|
 KOLOM|werk_inbox_mails|onderwerp|text|NO|''::text
 KOLOM|werk_inbox_mails|ontvangen_op|timestamp without time zone|NO|
 KOLOM|werk_inbox_mails|relatie_categorie_ai|text|YES|
+KOLOM|werk_inbox_mails|samenwerk_status|text|NO|'open'::text
 KOLOM|werk_inbox_mails|snippet|text|YES|
+KOLOM|werk_inbox_mails|toegewezen_aan|integer|YES|
 KOLOM|werk_inbox_mails|verwerkt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_notities|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|werk_inbox_notities|bijgewerkt_op|timestamp without time zone|NO|now()

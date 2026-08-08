@@ -477,6 +477,27 @@ export async function verstuurNieuwDelegatedMail(
   return { ok: true };
 }
 
+// ── Exchange-toegang tonen (MAIL_01 §2: tonen, nooit beheren) ─────────────────
+
+export type ExchangeStatus = "ok" | "geen_toegang" | "geen_token" | "fout";
+
+/** Lichtgewicht probe: kan dit Microsoft-account de inbox van deze mailbox openen? */
+export async function probeExchangeToegang(gebruikerId: number, mailboxAdres: string, isPersonlijk: boolean): Promise<ExchangeStatus> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) return "geen_token";
+  const basis = isPersonlijk ? "me" : `users/${encodeURIComponent(mailboxAdres)}`;
+  try {
+    const res = await fetch(`https://graph.microsoft.com/v1.0/${basis}/mailFolders/inbox?$select=id`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) return "ok";
+    if (res.status === 403 || res.status === 404) return "geen_toegang";
+    return "fout";
+  } catch {
+    return "fout";
+  }
+}
+
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
 export interface SyncResultaat {
@@ -496,19 +517,18 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
     .where(eq(werkInboxTokensTable.gebruikerId, gebruikerId))
     .limit(1);
 
-  const eigenEmail = tokenRecord?.microsoftEmail ?? "";
-  const mailboxen  = await db.select()
-    .from(werkInboxMailboxenTable)
-    .where(and(
-      eq(werkInboxMailboxenTable.gebruikerId, gebruikerId),
-      eq(werkInboxMailboxenTable.actief, true),
-    ));
+  const eigenEmail = (tokenRecord?.microsoftEmail ?? "").toLowerCase();
+  // MAIL_01: sync alle actieve mailboxen waar deze gebruiker Connect-toegang
+  // toe heeft. De persoonlijke mailbox staat sinds de migratie ook als rij in
+  // werk_inbox_mailboxen (met toegang 'beheren' voor de eigenaar).
+  const { toegankelijkeMailboxen } = await import("./werkInboxToegang");
+  const mailboxen = (await toegankelijkeMailboxen(gebruikerId)).filter((m) => m.actief);
 
-  // Persoonlijke mailbox is altijd inbegrepen
-  const alleMailboxen = [
-    { adres: eigenEmail, label: "Mijn mailbox", isPersonlijk: true },
-    ...mailboxen.map((m) => ({ adres: m.emailAdres, label: m.label ?? m.emailAdres, isPersonlijk: false })),
-  ];
+  const alleMailboxen = mailboxen.map((m) => ({
+    adres: m.emailAdres,
+    label: m.label ?? m.emailAdres,
+    isPersonlijk: m.emailAdres === eigenEmail,
+  }));
 
   const resultaten: SyncResultaat["mailboxen"] = [];
   let totaal = 0;
@@ -534,8 +554,9 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
             bijgewerktOp:       new Date(),
           })
           .onConflictDoUpdate({
-            target: [werkInboxMailsTable.gebruikerId, werkInboxMailsTable.messageId],
+            target: [werkInboxMailsTable.mailboxAdres, werkInboxMailsTable.messageId],
             set: {
+              gebruikerId,
               isGelezenMs:        m.isRead,
               snippet:            m.bodyPreview?.slice(0, 300) ?? null,
               heeftBijlage:       m.hasAttachments,

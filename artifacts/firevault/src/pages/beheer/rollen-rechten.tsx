@@ -69,6 +69,7 @@ const ROUTE_RAPPORT: RouteRapportRegel[] = [
   { module: "gebruikers",     label: "Gebruikers",            route: "/gebruikers",                  navItem: true,  gate: "gebruikers:1",     sectie: "Beheer" },
   { module: "systeem",        label: "Login-pogingen",        route: "/beheer/login-pogingen",       navItem: true,  gate: "systeem:1",        sectie: "Beheer" },
   { module: "systeem",        label: "Mailinstellingen",      route: "/beheer/mail",                 navItem: true,  gate: "systeem:1",        sectie: "Beheer" },
+  { module: "systeem",        label: "Gedeelde mailboxen",    route: "/beheer/mailboxen",            navItem: true,  gate: "systeem:1",        sectie: "Beheer" },
   { module: "systeem",        label: "Back-up & Herstel",     route: "/beheer/backup",               navItem: true,  gate: "systeem:1",        sectie: "Beheer" },
   { module: "crm",            label: "CRM Dashboard",         route: "/crm",                         navItem: true,  gate: "crm:1",            sectie: "CRM" },
   { module: "crm",            label: "Organisaties",          route: "/crm/organisaties",            navItem: true,  gate: "crm:1",            sectie: "CRM" },

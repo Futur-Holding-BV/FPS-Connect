@@ -198,10 +198,10 @@ async function main(): Promise<void> {
     inkoopbonId = bon.id;
 
     const [mb] = await db.insert(werkInboxMailboxenTable).values({
-      gebruikerId: uid,
       emailAdres: MAILBOX_ADRES,
       label: `${MARK} factuurmailbox`,
       actief: true,
+      modus: "verwerken",
       isFactuurmailbox: true,
     }).returning({ id: werkInboxMailboxenTable.id });
     mailboxId = mb.id;

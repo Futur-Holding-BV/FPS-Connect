@@ -74,6 +74,7 @@ import DocumentopmaakBeheer from "@/pages/organisatie/documentopmaak";
 import WerkmaatschappijPagina from "@/pages/organisatie/werkmaatschappijen";
 import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
 import MailBeheer from "@/pages/beheer/mail";
+import MailboxenBeheer from "@/pages/beheer/mailboxen";
 import BackupBeheer from "@/pages/beheer/backup";
 import HerstelDashboard from "@/pages/beheer/herstel";
 import ImportPagina from "@/pages/beheer/import";
@@ -554,6 +555,7 @@ function ConnectPortal() {
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
         <Route path="/beheer/visuals" component={VisualsLegacyBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
+        <Route path="/beheer/mailboxen" component={MailboxenBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/herstel" component={HerstelDashboard} />
         <Route path="/beheer/import" component={ImportPagina} />

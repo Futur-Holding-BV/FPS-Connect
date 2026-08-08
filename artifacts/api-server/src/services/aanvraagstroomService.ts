@@ -267,11 +267,13 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
 // ── Intake: mails van aanvraagmailboxen verwerken (claim + retry, als FACTUUR_02) ─
 
 export async function verwerkAanvraagmails(gebruikerId: number): Promise<{ verwerkt: number }> {
+  // MAIL_01: aanvraagmailboxen zijn organisatiebezit; de automatische
+  // verwerker draait alleen voor mailboxen in modus 'verwerken' (§4).
   const boxen = await db.select({ emailAdres: werkInboxMailboxenTable.emailAdres })
     .from(werkInboxMailboxenTable)
     .where(and(
-      eq(werkInboxMailboxenTable.gebruikerId, gebruikerId),
       eq(werkInboxMailboxenTable.isAanvraagmailbox, true),
+      eq(werkInboxMailboxenTable.modus, "verwerken"),
       eq(werkInboxMailboxenTable.actief, true),
     ));
   const adressen = boxen.map((b) => b.emailAdres);
@@ -301,7 +303,6 @@ export async function verwerkAanvraagmails(gebruikerId: number): Promise<{ verwe
   })
     .from(werkInboxMailsTable)
     .where(and(
-      eq(werkInboxMailsTable.gebruikerId, gebruikerId),
       inArray(werkInboxMailsTable.mailboxAdres, adressen),
       isNull(werkInboxMailsTable.aanvraagVerwerktOp),
     ))
@@ -314,7 +315,7 @@ export async function verwerkAanvraagmails(gebruikerId: number): Promise<{ verwe
     const claim = await db.update(werkInboxMailsTable)
       .set({ aanvraagVerwerktOp: new Date() })
       .where(and(
-        eq(werkInboxMailsTable.gebruikerId, mail.gebruikerId),
+        eq(werkInboxMailsTable.mailboxAdres, mail.mailboxAdres),
         eq(werkInboxMailsTable.messageId, mail.messageId),
         isNull(werkInboxMailsTable.aanvraagVerwerktOp),
       ))
@@ -328,7 +329,7 @@ export async function verwerkAanvraagmails(gebruikerId: number): Promise<{ verwe
       await db.update(werkInboxMailsTable)
         .set({ aanvraagVerwerktOp: null })
         .where(and(
-          eq(werkInboxMailsTable.gebruikerId, mail.gebruikerId),
+          eq(werkInboxMailsTable.mailboxAdres, mail.mailboxAdres),
           eq(werkInboxMailsTable.messageId, mail.messageId),
         ));
       await maakSignaal({

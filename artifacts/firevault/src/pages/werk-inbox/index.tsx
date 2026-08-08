@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   RefreshCw, Inbox, Paperclip, CheckCircle2, AlertCircle,
   Sparkles, Building2, User, ExternalLink, LogOut, LinkIcon,
-  StickyNote, Loader2, Search, X, Mail, MailOpen,
+  StickyNote, Loader2, Search, X, Mail, MailOpen, Eye, Users,
+  UserCheck, Send, Lock, Clock,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -19,9 +24,33 @@ type OAuthStatus =
   | { gekoppeld: false }
   | { gekoppeld: true; email: string; verlooptOp: string };
 
+type Mailbox = {
+  id: number;
+  emailAdres: string;
+  label: string | null;
+  actief: boolean;
+  modus: "verwerken" | "ondersteunen" | "registreren";
+  recht: "lezen" | "behandelen" | "beheren";
+};
+
+type ToegangLid = {
+  id: number;
+  gebruikerId: number;
+  recht: string;
+  naam: string;
+  email: string;
+};
+
+type Aanwezige = { gebruikerId: number; naam: string; activiteit: "bekijkt" | "typt" };
+
 type MailItem = {
   id: number;
   messageId: string;
+  mailboxAdres: string;
+  toegewezenAan: number | null;
+  toegewezen_naam: string | null;
+  samenwerkStatus: "open" | "toegewezen" | "wacht_op_antwoord" | "afgehandeld";
+  beantwoordOp: string | null;
   onderwerp: string;
   afzenderNaam: string | null;
   afzenderEmail: string;
@@ -48,7 +77,11 @@ type MailDetail = {
     body?: string;
     bijlagen?: { naam: string; contentType: string; contentId?: string }[];
   };
-  notities: { id: number; tekst: string; aangemaaktOp: string }[];
+  inhoud_waarschuwing: string | null;
+  notities: { id: number; tekst: string; aangemaaktOp: string; gebruikerId: number; auteurNaam: string | null }[];
+  aanwezigheid: Aanwezige[];
+  mijn_recht: "lezen" | "behandelen" | "beheren";
+  mailbox_modus: "verwerken" | "ondersteunen" | "registreren";
   koppelingen: {
     id: number;
     entityType: string;
@@ -133,6 +166,17 @@ function voorstelIcon(type: string): string {
   };
   return map[type] ?? type;
 }
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+  open:              { label: "Open",              cls: "bg-muted text-muted-foreground" },
+  toegewezen:        { label: "Toegewezen",        cls: "bg-blue-100 text-blue-800" },
+  wacht_op_antwoord: { label: "Wacht op antwoord", cls: "bg-purple-100 text-purple-800" },
+  afgehandeld:       { label: "Afgehandeld",       cls: "bg-green-100 text-green-800" },
+};
 
 function relatiesterkteBadge(s: string): { label: string; cls: string } {
   const map: Record<string, { label: string; cls: string }> = {
@@ -276,19 +320,52 @@ function RelatiePanel({ email }: { email: string }) {
 
 function MailDetailView({
   messageId,
+  mailboxen,
   onSluiten,
 }: {
   messageId: string;
+  mailboxen: Mailbox[];
   onSluiten: () => void;
 }) {
   const queryClient = useQueryClient();
   const [nieuwNotitie, setNieuwNotitie] = useState("");
   const [notitieOpen, setNotitieOpen] = useState(false);
   const [logboekOpen, setLogboekOpen] = useState(false);
+  const [antwoordOpen, setAntwoordOpen] = useState(false);
+  const [antwoordTekst, setAntwoordTekst] = useState("");
+  const [aanwezigen, setAanwezigen] = useState<Aanwezige[]>([]);
+  const typtRef = useRef(false);
+  typtRef.current = antwoordOpen && antwoordTekst.length > 0;
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ["werk-inbox", "mail", messageId],
     queryFn: () => apiFetch<MailDetail>(`/api/werk-inbox/mails/${messageId}`),
+  });
+
+  // Aanwezigheid: heartbeat elke 8s ("bekijkt" of "typt"), bij verlaten "weg".
+  useEffect(() => {
+    let actief = true;
+    const stuur = async (activiteit: "bekijkt" | "typt" | "weg") => {
+      try {
+        const r = await apiFetch<{ aanwezigheid: Aanwezige[] }>(
+          `/api/werk-inbox/mails/${encodeURIComponent(messageId)}/aanwezigheid`,
+          { method: "POST", body: JSON.stringify({ activiteit }) },
+        );
+        if (actief && activiteit !== "weg") setAanwezigen(r.aanwezigheid);
+      } catch { /* aanwezigheid is best-effort */ }
+    };
+    void stuur("bekijkt");
+    const timer = setInterval(() => { void stuur(typtRef.current ? "typt" : "bekijkt"); }, 8000);
+    return () => { actief = false; clearInterval(timer); void stuur("weg"); };
+  }, [messageId]);
+
+  const mailbox = mailboxen.find((mb) => mb.emailAdres === detail?.meta.mailboxAdres) ?? null;
+
+  const { data: leden = [] } = useQuery({
+    queryKey: ["werk-inbox", "toegang", mailbox?.id],
+    queryFn: () => apiFetch<ToegangLid[]>(`/api/werk-inbox/mailboxen/${mailbox!.id}/toegang`),
+    enabled: mailbox != null,
+    staleTime: 60_000,
   });
 
   const invalideer = () => {
@@ -335,6 +412,33 @@ function MailDetailView({
     onSuccess: invalideer,
   });
 
+  const toewijzenMutatie = useMutation({
+    mutationFn: (gebruikerId: number | null) =>
+      apiFetch(`/api/werk-inbox/mails/${messageId}/toewijzen`, {
+        method: "PATCH",
+        body: JSON.stringify({ gebruikerId }),
+      }),
+    onSuccess: invalideer,
+  });
+
+  const statusMutatie = useMutation({
+    mutationFn: (status: string) =>
+      apiFetch(`/api/werk-inbox/mails/${messageId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: invalideer,
+  });
+
+  const beantwoordMutatie = useMutation({
+    mutationFn: (tekst: string) =>
+      apiFetch(`/api/werk-inbox/mails/${messageId}/beantwoord`, {
+        method: "POST",
+        body: JSON.stringify({ htmlBody: tekst.split("\n").map((r) => escapeHtml(r)).join("<br>") }),
+      }),
+    onSuccess: () => { invalideer(); setAntwoordTekst(""); setAntwoordOpen(false); },
+  });
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground gap-2">
@@ -353,6 +457,8 @@ function MailDetailView({
   }
 
   const { meta, inhoud, notities, koppelingen } = detail;
+  const magBehandelen = detail.mijn_recht === "behandelen" || detail.mijn_recht === "beheren";
+  const behandelaars = leden.filter((l) => l.recht === "behandelen" || l.recht === "beheren");
   const voorstellen: AiVoorstel[] = (() => {
     try { return meta.aiVoorstelJson ? (JSON.parse(meta.aiVoorstelJson) as AiVoorstel[]) : []; }
     catch { return []; }
@@ -399,14 +505,83 @@ function MailDetailView({
 
           <h2 className="font-semibold text-base leading-tight">{meta.onderwerp}</h2>
 
+          {/* Samenwerking: wie kijkt mee (opdracht §5.2) */}
+          {aanwezigen.length > 0 && (
+            <div className="flex items-center gap-2 text-xs bg-blue-50 border border-blue-200 text-blue-800 rounded px-2.5 py-1.5" data-testid="aanwezigheid-banner">
+              <Eye className="h-3.5 w-3.5 shrink-0" />
+              {aanwezigen.map((a) => (
+                <span key={a.gebruikerId} className="font-medium">
+                  {a.naam} {a.activiteit === "typt" ? "typt een antwoord…" : "heeft dit bericht open"}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Toewijzing + gezamenlijke status (opdracht §5.1/§5.4) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={cn("inline-flex items-center text-xs px-2 py-0.5 rounded-full", STATUS_LABELS[meta.samenwerkStatus]?.cls)}>
+              {STATUS_LABELS[meta.samenwerkStatus]?.label ?? meta.samenwerkStatus}
+            </span>
+            {magBehandelen && (
+              <>
+                <Select
+                  value={meta.toegewezenAan != null ? String(meta.toegewezenAan) : "niemand"}
+                  onValueChange={(v) => toewijzenMutatie.mutate(v === "niemand" ? null : Number(v))}
+                  disabled={toewijzenMutatie.isPending}
+                >
+                  <SelectTrigger className="h-7 w-auto min-w-[160px] text-xs" data-testid="toewijzen-select">
+                    <UserCheck className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue placeholder="Toewijzen aan…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="niemand">Niet toegewezen</SelectItem>
+                    {behandelaars.map((l) => (
+                      <SelectItem key={l.gebruikerId} value={String(l.gebruikerId)}>{l.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={meta.samenwerkStatus}
+                  onValueChange={(v) => statusMutatie.mutate(v)}
+                  disabled={statusMutatie.isPending}
+                >
+                  <SelectTrigger className="h-7 w-auto min-w-[150px] text-xs" data-testid="status-select">
+                    <Clock className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_LABELS).map(([w, s]) => (
+                      <SelectItem key={w} value={w}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+            {meta.toegewezen_naam && (
+              <span className="text-xs text-muted-foreground">Behandelaar: <span className="font-medium text-foreground">{meta.toegewezen_naam}</span></span>
+            )}
+          </div>
+
           {/* Actie-knoppen */}
           <div className="flex items-center gap-2 flex-wrap">
+            {magBehandelen && (
+              <Button
+                variant={antwoordOpen ? "secondary" : "default"}
+                size="sm"
+                className="gap-2 h-7 text-xs"
+                onClick={() => setAntwoordOpen(!antwoordOpen)}
+                data-testid="knop-beantwoorden"
+              >
+                <Send className="h-3 w-3" />
+                Beantwoorden
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
               className="gap-2 h-7 text-xs"
               onClick={() => gelezenMutatie.mutate(!meta.isGelezenMs)}
-              disabled={gelezenMutatie.isPending}
+              disabled={gelezenMutatie.isPending || !magBehandelen}
             >
               {meta.isGelezenMs ? <Mail className="h-3 w-3" /> : <MailOpen className="h-3 w-3" />}
               {meta.isGelezenMs ? "Ongelezen" : "Gelezen"}
@@ -437,6 +612,14 @@ function MailDetailView({
             </Button>
           </div>
         </div>
+
+        {/* Inhoud niet beschikbaar (Graph-storing of geen Exchange-toegang) */}
+        {detail.inhoud_waarschuwing && (
+          <div className="px-4 py-2 bg-muted border-b flex items-center gap-2 text-sm text-muted-foreground shrink-0">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{detail.inhoud_waarschuwing}</span>
+          </div>
+        )}
 
         {/* Actie vereist banner */}
         {meta.actieVereist && (
@@ -496,6 +679,44 @@ function MailDetailView({
           )}
         </div>
 
+        {/* Antwoord-composer (opdracht §5.2/§5.5) — strikt gescheiden van interne opmerkingen */}
+        {antwoordOpen && magBehandelen && (
+          <div className="border-t px-4 py-3 space-y-2 shrink-0 bg-background" data-testid="antwoord-composer">
+            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Send className="h-3 w-3" />
+              Antwoord aan {meta.afzenderNaam ?? meta.afzenderEmail}
+            </p>
+            <Textarea
+              value={antwoordTekst}
+              onChange={(e) => setAntwoordTekst(e.target.value)}
+              placeholder="Typ uw antwoord aan de afzender…"
+              className="text-sm min-h-[100px]"
+              data-testid="antwoord-tekst"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">Dit antwoord wordt via Microsoft 365 naar de afzender gestuurd.</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAntwoordOpen(false); setAntwoordTekst(""); }}>
+                  Annuleren
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => antwoordTekst.trim() && beantwoordMutatie.mutate(antwoordTekst.trim())}
+                  disabled={!antwoordTekst.trim() || beantwoordMutatie.isPending}
+                  data-testid="antwoord-versturen"
+                >
+                  {beantwoordMutatie.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  Versturen
+                </Button>
+              </div>
+            </div>
+            {beantwoordMutatie.isError && (
+              <p className="text-xs text-destructive">{(beantwoordMutatie.error as Error).message}</p>
+            )}
+          </div>
+        )}
+
         {/* Bijlagen */}
         {(inhoud.bijlagen?.length ?? 0) > 0 && (
           <div className="border-t px-4 py-2 shrink-0">
@@ -534,54 +755,66 @@ function MailDetailView({
           </div>
         )}
 
-        {/* Notities */}
-        <div className="border-t shrink-0">
+        {/* Interne opmerkingen (opdracht §5.3): gedeeld met collega's, gaan NOOIT naar de klant */}
+        <div className="border-t shrink-0 bg-amber-50/60">
           <button
-            className="w-full px-4 py-2 flex items-center justify-between text-xs font-medium text-muted-foreground hover:bg-muted/50"
+            className="w-full px-4 py-2 flex items-center justify-between text-xs font-medium text-amber-800 hover:bg-amber-100/60"
             onClick={() => setNotitieOpen(!notitieOpen)}
+            data-testid="opmerkingen-toggle"
           >
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
+              <Lock className="h-3 w-3" />
               <StickyNote className="h-3 w-3" />
-              Notities ({notities.length})
+              Interne opmerkingen ({notities.length}) — nooit zichtbaar voor de klant
             </span>
             <span>{notitieOpen ? "▲" : "▼"}</span>
           </button>
           {notitieOpen && (
             <div className="px-4 pb-3 space-y-2">
               {notities.map((n) => (
-                <div key={n.id} className="flex items-start gap-2 bg-muted/50 rounded p-2 text-xs">
-                  <p className="flex-1 whitespace-pre-wrap">{n.tekst}</p>
+                <div key={n.id} className="flex items-start gap-2 bg-amber-100/70 border border-amber-200 rounded p-2 text-xs">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-amber-900">{n.auteurNaam ?? "Collega"}
+                      <span className="font-normal text-amber-700/70 ml-2">
+                        {new Date(n.aangemaaktOp).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </p>
+                    <p className="whitespace-pre-wrap text-amber-900">{n.tekst}</p>
+                  </div>
                   <button
-                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    className="text-amber-700 hover:text-destructive shrink-0"
                     onClick={() => notitiVerwijderenMutatie.mutate(n.id)}
-                    title="Verwijder notitie"
+                    title="Verwijder opmerking"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
-              <div className="flex gap-2">
-                <Input
-                  value={nieuwNotitie}
-                  onChange={(e) => setNieuwNotitie(e.target.value)}
-                  placeholder="Notitie toevoegen..."
-                  className="h-7 text-xs"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && nieuwNotitie.trim()) {
-                      notitieAanmakenMutatie.mutate(nieuwNotitie.trim());
-                    }
-                  }}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => nieuwNotitie.trim() && notitieAanmakenMutatie.mutate(nieuwNotitie.trim())}
-                  disabled={!nieuwNotitie.trim() || notitieAanmakenMutatie.isPending}
-                >
-                  Opslaan
-                </Button>
-              </div>
+              {magBehandelen && (
+                <div className="flex gap-2">
+                  <Input
+                    value={nieuwNotitie}
+                    onChange={(e) => setNieuwNotitie(e.target.value)}
+                    placeholder="Interne opmerking voor collega's — gaat nooit naar de klant…"
+                    className="h-7 text-xs bg-white border-amber-300"
+                    data-testid="opmerking-invoer"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && nieuwNotitie.trim()) {
+                        notitieAanmakenMutatie.mutate(nieuwNotitie.trim());
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-amber-300"
+                    onClick={() => nieuwNotitie.trim() && notitieAanmakenMutatie.mutate(nieuwNotitie.trim())}
+                    disabled={!nieuwNotitie.trim() || notitieAanmakenMutatie.isPending}
+                  >
+                    Plaatsen
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -681,7 +914,15 @@ function MailLijstItem({
               <CheckCircle2 className="h-3 w-3 text-green-600" />
             )}
             {mail.notitie_aantal > 0 && (
-              <StickyNote className="h-3 w-3 text-muted-foreground" />
+              <StickyNote className="h-3 w-3 text-amber-600" />
+            )}
+            {mail.toegewezen_naam && (
+              <span className="text-[10px] px-1.5 py-0 rounded-full bg-blue-100 text-blue-800 truncate max-w-[100px]">
+                {mail.toegewezen_naam}
+              </span>
+            )}
+            {mail.samenwerkStatus === "wacht_op_antwoord" && (
+              <span className="text-[10px] px-1.5 py-0 rounded-full bg-purple-100 text-purple-800">wacht</span>
             )}
             {mail.koppeling_aantal > 0 && (
               <LinkIcon className="h-3 w-3 text-muted-foreground" />
@@ -715,16 +956,28 @@ export default function WerkInboxPagina() {
   const [zoekterm, setZoekterm] = useState("");
   const [filterOngelezen, setFilterOngelezen] = useState(false);
   const [filterBijlage, setFilterBijlage] = useState(false);
+  const [filterMailbox, setFilterMailbox] = useState<string>("alle");
+  const [filterVanMij, setFilterVanMij] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("alle");
 
   const { data: oauthStatus, isLoading: oauthLaden } = useQuery({
     queryKey: ["werk-inbox", "oauth-status"],
     queryFn: () => apiFetch<OAuthStatus>("/api/werk-inbox/oauth/status"),
   });
 
+  // Mailboxen waar deze gebruiker toegang toe heeft (organisatiebezit, §3).
+  const { data: mailboxen = [] } = useQuery({
+    queryKey: ["werk-inbox", "mailboxen"],
+    queryFn: () => apiFetch<Mailbox[]>("/api/werk-inbox/mailboxen"),
+  });
+
+  const mailsParams = new URLSearchParams();
+  if (filterVanMij) mailsParams.set("toegewezen", "mij");
+  if (filterStatus !== "alle") mailsParams.set("status", filterStatus);
   const { data: mails = [], isLoading: mailsLaden } = useQuery({
-    queryKey: ["werk-inbox", "mails"],
-    queryFn: () => apiFetch<MailItem[]>("/api/werk-inbox/mails"),
-    enabled: oauthStatus?.gekoppeld === true,
+    queryKey: ["werk-inbox", "mails", filterVanMij, filterStatus],
+    queryFn: () => apiFetch<MailItem[]>(`/api/werk-inbox/mails${mailsParams.size ? `?${mailsParams}` : ""}`),
+    enabled: mailboxen.length > 0,
     refetchInterval: 60_000,
   });
 
@@ -752,12 +1005,17 @@ export default function WerkInboxPagina() {
     );
   }
 
-  if (!oauthStatus?.gekoppeld) {
+  // Zonder eigen Microsoft-koppeling én zonder toegang tot gedeelde mailboxen
+  // valt er niets te tonen; met gedeelde toegang kan er wél gelezen worden.
+  if (!oauthStatus?.gekoppeld && mailboxen.length === 0) {
     return <VerbindingsScherm />;
   }
 
   // Filter mails per tab
   const gefilterd = mails.filter((m) => {
+    if (filterMailbox !== "alle" && m.mailboxAdres !== filterMailbox) return false;
+    return true;
+  }).filter((m) => {
     if (zoekterm) {
       const z = zoekterm.toLowerCase();
       if (
@@ -814,27 +1072,56 @@ export default function WerkInboxPagina() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground hidden sm:block">{oauthStatus.email}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-8"
-            onClick={() => syncMutatie.mutate()}
-            disabled={syncMutatie.isPending}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", syncMutatie.isPending && "animate-spin")} />
-            Synchroniseer
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 h-8 text-muted-foreground"
-            onClick={() => ontkoppelMutatie.mutate()}
-            disabled={ontkoppelMutatie.isPending}
-            title="Ontkoppel Microsoft 365"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </Button>
+          {mailboxen.length > 0 && (
+            <Select value={filterMailbox} onValueChange={setFilterMailbox}>
+              <SelectTrigger className="h-8 w-auto min-w-[180px] text-xs" data-testid="mailbox-filter">
+                <Users className="h-3.5 w-3.5 mr-1 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alle">Alle mailboxen</SelectItem>
+                {mailboxen.map((mb) => (
+                  <SelectItem key={mb.id} value={mb.emailAdres}>
+                    {mb.label ?? mb.emailAdres}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {oauthStatus?.gekoppeld ? (
+            <>
+              <span className="text-xs text-muted-foreground hidden sm:block">{oauthStatus.email}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 h-8"
+                onClick={() => syncMutatie.mutate()}
+                disabled={syncMutatie.isPending}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", syncMutatie.isPending && "animate-spin")} />
+                Synchroniseer
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 h-8 text-muted-foreground"
+                onClick={() => ontkoppelMutatie.mutate()}
+                disabled={ontkoppelMutatie.isPending}
+                title="Ontkoppel Microsoft 365"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              className="gap-2 h-8"
+              onClick={() => { window.location.href = "/api/werk-inbox/oauth/start"; }}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Koppel Microsoft 365
+            </Button>
+          )}
         </div>
       </div>
 
@@ -906,6 +1193,27 @@ export default function WerkInboxPagina() {
               <Paperclip className="h-3 w-3" />
               Bijlagen
             </Button>
+            <Button
+              variant={filterVanMij ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => setFilterVanMij(!filterVanMij)}
+              data-testid="filter-van-mij"
+            >
+              <UserCheck className="h-3 w-3" />
+              Aan mij toegewezen
+            </Button>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-7 w-auto min-w-[130px] text-xs" data-testid="filter-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alle">Alle statussen</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([w, s]) => (
+                  <SelectItem key={w} value={w}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -946,6 +1254,7 @@ export default function WerkInboxPagina() {
                   <MailDetailView
                     key={geselecteerdeMessageId}
                     messageId={geselecteerdeMessageId}
+                    mailboxen={mailboxen}
                     onSluiten={() => setGeselecteerdeMessageId(null)}
                   />
                 ) : (

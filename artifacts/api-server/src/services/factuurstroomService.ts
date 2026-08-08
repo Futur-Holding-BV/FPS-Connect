@@ -10,7 +10,6 @@
 // Betaling zelf is FACTUUR_03 en zit hier bewust niet in.
 
 import { and, desc, eq, inArray, isNull, isNotNull, lt, ne, sql } from "drizzle-orm";
-import { stuurPushNaarGebruiker } from "../lib/pushService";
 import {
   db,
   facturenTable,
@@ -564,15 +563,18 @@ async function verwerkLeveranciersReactie(
 // ── Ingang: draai de pijplijn voor alle onverwerkte factuurmails ─────────────
 
 export async function verwerkFactuurmails(gebruikerId: number): Promise<{ verwerkt: number }> {
+  // MAIL_01: factuurmailboxen zijn organisatiebezit; de automatische
+  // verwerker draait alleen voor mailboxen in modus 'verwerken' (§4).
   const factuurmailboxen = await db.select({ adres: werkInboxMailboxenTable.emailAdres })
     .from(werkInboxMailboxenTable)
     .where(and(
-      eq(werkInboxMailboxenTable.gebruikerId, gebruikerId),
       eq(werkInboxMailboxenTable.actief, true),
+      eq(werkInboxMailboxenTable.modus, "verwerken"),
       eq(werkInboxMailboxenTable.isFactuurmailbox, true),
     ));
   if (factuurmailboxen.length === 0) return { verwerkt: 0 };
   const adressen = factuurmailboxen.map((m) => m.adres);
+  void gebruikerId; // intake is mailbox-gedreven; parameter blijft voor de aanroepsites
 
   const mails = await db.select({
     messageId: werkInboxMailsTable.messageId,
@@ -586,7 +588,6 @@ export async function verwerkFactuurmails(gebruikerId: number): Promise<{ verwer
   })
     .from(werkInboxMailsTable)
     .where(and(
-      eq(werkInboxMailsTable.gebruikerId, gebruikerId),
       inArray(werkInboxMailsTable.mailboxAdres, adressen),
       isNull(werkInboxMailsTable.factuurVerwerktOp),
     ))
@@ -599,7 +600,7 @@ export async function verwerkFactuurmails(gebruikerId: number): Promise<{ verwer
     const claim = await db.update(werkInboxMailsTable)
       .set({ factuurVerwerktOp: new Date() })
       .where(and(
-        eq(werkInboxMailsTable.gebruikerId, mail.gebruikerId),
+        eq(werkInboxMailsTable.mailboxAdres, mail.mailboxAdres),
         eq(werkInboxMailsTable.messageId, mail.messageId),
         isNull(werkInboxMailsTable.factuurVerwerktOp),
       ))
@@ -616,7 +617,7 @@ export async function verwerkFactuurmails(gebruikerId: number): Promise<{ verwer
       await db.update(werkInboxMailsTable)
         .set({ factuurVerwerktOp: null })
         .where(and(
-          eq(werkInboxMailsTable.gebruikerId, mail.gebruikerId),
+          eq(werkInboxMailsTable.mailboxAdres, mail.mailboxAdres),
           eq(werkInboxMailsTable.messageId, mail.messageId),
         ));
       await maakSignaal({
@@ -689,25 +690,39 @@ export function startFactuurstroomAchtergrond(): void {
 
   const lus = async (): Promise<void> => {
     try {
-      // Sync + pijplijn voor alle gebruikers met een factuurmailbox
-      const eigenaren = await db.selectDistinct({ gebruikerId: werkInboxMailboxenTable.gebruikerId })
-        .from(werkInboxMailboxenTable)
-        .where(and(eq(werkInboxMailboxenTable.isFactuurmailbox, true), eq(werkInboxMailboxenTable.actief, true)));
-      for (const e of eigenaren) {
+      // MAIL_01: mailboxen zijn organisatiebezit. Syncen kan alleen met een
+      // persoonlijk Microsoft-token, dus we draaien de sync voor iedere
+      // gebruiker die (a) een token heeft en (b) Connect-toegang tot minstens
+      // één actieve verwerk-mailbox met factuur- of aanvraagvlag.
+      const { werkInboxTokensTable, werkInboxMailboxToegangTable } = await import("@workspace/db");
+      const syncers = await db.selectDistinct({ gebruikerId: werkInboxTokensTable.gebruikerId })
+        .from(werkInboxTokensTable)
+        .innerJoin(werkInboxMailboxToegangTable, eq(werkInboxMailboxToegangTable.gebruikerId, werkInboxTokensTable.gebruikerId))
+        .innerJoin(werkInboxMailboxenTable, eq(werkInboxMailboxenTable.id, werkInboxMailboxToegangTable.mailboxId))
+        .where(and(
+          eq(werkInboxMailboxenTable.actief, true),
+          eq(werkInboxMailboxenTable.modus, "verwerken"),
+        ));
+      for (const e of syncers) {
         try {
           const { syncMailboxen } = await import("./werkInboxGraph");
           await syncMailboxen(e.gebruikerId);
-          await verwerkFactuurmails(e.gebruikerId);
         } catch (err) {
           logger.warn({ err, gebruikerId: e.gebruikerId }, "factuurstroom: achtergrond-sync mislukt");
         }
       }
-      // AANVRAAG_01: zelfde lus — aanvraagmailboxen verwerken + reactietijdbewaking (geen tweede mechanisme).
+      // De pijplijnen zelf zijn mailbox-gedreven (claim op mailbox+message),
+      // één run per lus volstaat.
       const { verwerkAanvraagmails, draaiAanvraagBewaking } = await import("./aanvraagstroomService");
-      const aanvraagEigenaren = await db.selectDistinct({ gebruikerId: werkInboxMailboxenTable.gebruikerId })
-        .from(werkInboxMailboxenTable)
-        .where(and(eq(werkInboxMailboxenTable.isAanvraagmailbox, true), eq(werkInboxMailboxenTable.actief, true)));
-      for (const e of aanvraagEigenaren) {
+      try {
+        await verwerkFactuurmails(0);
+      } catch (err) {
+        logger.warn({ err }, "factuurstroom: achtergrond-verwerking mislukt");
+      }
+      // AANVRAAG_01: aanvraagpijplijn draait per token-gebruiker mee vanwege de
+      // persoonlijke-intake-vlag (aanvraag_intake_persoonlijk).
+      const tokenGebruikers = await db.selectDistinct({ gebruikerId: werkInboxTokensTable.gebruikerId }).from(werkInboxTokensTable);
+      for (const e of tokenGebruikers) {
         try {
           await verwerkAanvraagmails(e.gebruikerId);
         } catch (err) {

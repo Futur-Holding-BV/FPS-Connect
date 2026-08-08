@@ -1,3 +1,17 @@
+## 2026-08-08 — MAIL_01: mailomgeving als samenwerkomgeving
+
+- **Uitvoering:** volledig gebouwd; gedragsbewijs via API met twee gelijktijdige gebruikers (presence over en weer gezien, geen-toegang → onzichtbaar + 404, registreren-modus → 422) | **Kwaliteit:** hoog | **Risico:** middel (migratie 0009 verandert het eigenaarschap van mailboxen; toegang is per gebruiker gemigreerd zonder verlies)
+
+**Kern: mailboxen zijn organisatiebezit, niet meer van één account:**
+- **Migratie 0009** — nieuwe koppeltabel `werk_inbox_mailbox_toegang` (recht per gebruiker: lezen < behandelen < beheren), mailboxen ontdubbeld op adres (eigenaren kregen 'beheren'), persoonlijke postbussen uit de Microsoft-koppelingen als rijen toegevoegd, `gebruiker_id` van mailboxen verwijderd; mails ontdubbeld en uniek per (mailbox, bericht) i.p.v. per (gebruiker, bericht).
+- **Modus per mailbox:** `verwerken` (AI verwerkt automatisch — factuur/aanvraag-vlaggen blijven bewust bestaan als verfijning bínnen verwerken), `ondersteunen` (AI stelt voor, mens beslist; AI onderbreekt nooit) en `registreren` (alleen archief; AI-analyse geeft 422).
+- **Samenwerking op één bericht:** toewijzen aan een collega mét behandelrecht (anders 422), gezamenlijke status (open → toegewezen → wacht op antwoord → afgehandeld), live-aanwezigheid ("Anna heeft dit bericht open", "Bram typt een antwoord…") en gedeelde **interne opmerkingen** — amber, met slot-icoon en de tekst "nooit zichtbaar voor de klant", volledig gescheiden van de nieuwe antwoord-composer.
+- **Beantwoorden vanuit Connect:** antwoord gaat via Microsoft 365; eerste antwoord zet de reactietijd vast en de status op "wacht op antwoord".
+- **Beheerscherm `/beheer/mailboxen`:** mailbox toevoegen/deactiveren/verwijderen (hoofdbeheerder), modus en stroom-vlaggen instellen, Connect-toegang per collega, **werkelijke Exchange-toegang tonen** (probe per lid — Connect beheert géén Exchange-rechten, dat blijft Microsoft 365) en reactietijd per mailbox (gemiddelde 30 dagen + berichten die >48 uur open liggen).
+- **Robuustheid:** als Microsoft 365 de inhoud niet kan leveren blijven meta, status, toewijzing en interne opmerkingen gewoon werken (waarschuwing i.p.v. foutpagina); factuur- en aanvraagpijplijn draaien nu mailbox-gedreven (claim per mailbox+bericht) in plaats van per eigenaar.
+
+**Bewijs (dev, 8 aug):** twee testgebruikers in dezelfde mailbox zagen elkaars aanwezigheid en typen-status over en weer; gebruiker zonder toegang zag lege lijsten en kreeg 404 op detail; registreren-mailbox weigerde AI-analyse met 422; toewijzen aan iemand zonder behandelrecht weigerde met 422; toegang verlenen zonder beheren-recht weigerde met 403. Testdata daarna opgeruimd.
+
 ## 2026-08-07 — SCENARIO_01: wat-als-scenario's op de jaarbegroting
 
 - **Uitvoering:** volledig gebouwd en met 22 automatische checks bewezen; code-review-punten verwerkt (transactionele kopie met row-lock, doorrekenbaarheid afgedwongen bij aanmaken) | **Kwaliteit:** hoog | **Risico:** laag (een scenario is een kopie; begroting, prognose en adviezen worden nooit geraakt)
