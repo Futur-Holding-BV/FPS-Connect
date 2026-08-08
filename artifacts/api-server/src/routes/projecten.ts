@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, projectenTable, crmKlantenTable, gebouwenTable, gebruikersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireBevoegdheid, requireEnigeBevoegdheid } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -50,7 +50,7 @@ async function projectMetNamen(id: number) {
 
 // ── GET /projecten ────────────────────────────────────────────────────────────
 
-router.get("/projecten", requireAuth, async (req, res): Promise<void> => {
+router.get("/projecten", requireAuth, requireEnigeBevoegdheid([["gebouwen", 1], ["crm", 1]]), async (req, res): Promise<void> => {
   const crmKlantId = req.query.crm_klant_id ? Number(req.query.crm_klant_id) : undefined;
   const gebouwId   = req.query.gebouw_id    ? Number(req.query.gebouw_id)    : undefined;
   const status     = req.query.status as string | undefined;
@@ -85,7 +85,7 @@ router.get("/projecten", requireAuth, async (req, res): Promise<void> => {
 
 // ── GET /projecten/:id ────────────────────────────────────────────────────────
 
-router.get("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/projecten/:id", requireAuth, requireEnigeBevoegdheid([["gebouwen", 1], ["crm", 1]]), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const project = await projectMetNamen(id);
   if (!project) { res.status(404).json({ fout: "Niet gevonden" }); return; }
@@ -94,7 +94,7 @@ router.get("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
 
 // ── PATCH /projecten/:id ──────────────────────────────────────────────────────
 
-router.patch("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/projecten/:id", requireAuth, requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
   const id   = Number(req.params.id);
   const body = req.body as Record<string, unknown>;
 
@@ -122,7 +122,7 @@ router.patch("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
 
 // ── DELETE /projecten/:id ─────────────────────────────────────────────────────
 
-router.delete("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/projecten/:id", requireAuth, requireBevoegdheid("gebouwen", 4), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const [deleted] = await db
     .delete(projectenTable)

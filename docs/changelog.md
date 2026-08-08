@@ -2887,3 +2887,13 @@ De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-token
 **Bewijs:** `scripts/src/verificatie-legacy-bestand-acl.ts` — L1 t/m L7 groen (kruistoegang 403 via beide koppelbronnen, eigen gebouw en ongekoppeld pad blijven werken, hoofdbeheerder ongewijzigd, klant dicht, thumbnails gelijk).
 
 **Meegerepareerd:** `routes/auth.ts` was op main door een eerdere revert-commit gemangeld (compileerde niet: `id` onbekend, dubbele taal-route, verdwenen wachtwoord-wijzigen-route); hersteld naar de laatst werkende versie.
+
+## 2026-08-08 — Taak 824: medewerker-lek projecten/opname/workflow gedicht (+ kapotte login hersteld)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (gedragsbewijs 29 route-gevallen, 2 accounts) | **Risico:** laag-middel (medewerkers zonder recht verliezen bewust toegang)
+
+**Wat:** de drie routegroepen uit de KLANT_01-spoedmelding hebben nu `requireBevoegdheid` per route: `projecten.ts` (lezen via gebouwen:1 óf crm:1 — CRM-aanvragen gebruikt de projectlijst; wijzigen gebouwen:2, verwijderen gebouwen:4), `opname.ts` (lezen gebouwen:1 óf voorzieningen:1; schrijven voorzieningen:2/3 zodat de monteur-veldflow — preset voorzieningen:3, incl. item/foto-verwijderen tijdens opname, conform de bestaande voorzieningen.ts-conventie — blijft werken; hele opname verwijderen voorzieningen:4) en `workflow.ts` (organisatie 1/2/3, verwijderen 4).
+
+**Blokkade onderweg:** de laatste revert-commit had `auth.ts` gemangeld (11× `eq(gebruikersTable.id, id)` met niet-bestaande `id` → login 500 voor iedereen + 9 typecheckfouten). Hersteld naar de laatst goede versie (commit APP_01); typecheck api-server weer 0 fouten.
+
+**Bewijs (GEMETEN, dev 8 aug):** `scripts/src/bewijs-task824-routebeveiliging.ts` — tijdelijk account zonder enig module-recht krijgt op alle 29 routes 403; account met niveau 4 overal werkt ongewijzigd (200/204/400/404, geen autorisatiefout); hoofdbeheerder die via "Bekijken als" (X-Gebruiker-Override) een rechteloze medewerker nabootst krijgt óók overal 403 (`requireEnigeBevoegdheid` honoreert nu net als `requireBevoegdheid` de effectieve permissies). Accounts worden in `finally` opgeruimd.

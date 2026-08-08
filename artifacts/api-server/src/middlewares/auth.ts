@@ -322,6 +322,18 @@ export function requireEnigeBevoegdheid(
       res.status(401).json({ error: "Niet ingelogd" });
       return;
     }
+    // Als laadPermissies al heeft gedraaid, gebruik de gecachte service — die
+    // is impersonatie-bewust ("Bekijken als"): de effectieve gebruiker telt.
+    if (req.permissies) {
+      if (req.permissies.isHoofdbeheerder) { next(); return; }
+      if (req.permissies.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
+      if (eisen.some(([module, minNiveau]) => req.permissies!.heeftModuleRecht(module, minNiveau))) {
+        next();
+        return;
+      }
+      res.status(403).json({ error: "Geen toegang" });
+      return;
+    }
     try {
       const [g] = await db
         .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
