@@ -6,7 +6,7 @@
 // aantekeningen zijn intern, altijd (KLANT_01: dicht tenzij open).
 import { Router } from "express";
 import { db, gebouwNotitiesTable, gebouwenTable, gebruikersTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull, gt } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -187,7 +187,10 @@ router.patch("/gebouwen/notities/:notitieId", lezenGebouwen, async (req, res): P
     });
     return;
   }
-  await db
+  // Race-safe: alle voorwaarden nogmaals in de UPDATE zelf, zodat een
+  // tussentijdse doorhaling of het verlopen van het venster nooit alsnog
+  // een wijziging doorlaat (de checks hierboven geven alleen nette meldingen).
+  const bijgewerkt = await db
     .update(gebouwNotitiesTable)
     .set({
       tekst: parse.data.tekst,
@@ -197,7 +200,21 @@ router.patch("/gebouwen/notities/:notitieId", lezenGebouwen, async (req, res): P
           : null,
       bewerktOp: new Date(),
     })
-    .where(eq(gebouwNotitiesTable.id, notitieId));
+    .where(
+      and(
+        eq(gebouwNotitiesTable.id, notitieId),
+        eq(gebouwNotitiesTable.gebruikerId, ctx.userId),
+        isNull(gebouwNotitiesTable.verwijderdOp),
+        gt(gebouwNotitiesTable.aangemaaktOp, new Date(Date.now() - BEWERK_VENSTER_MS)),
+      ),
+    )
+    .returning({ id: gebouwNotitiesTable.id });
+  if (bijgewerkt.length === 0) {
+    res.status(403).json({
+      message: "Aanpassen kan niet meer: de aantekening is doorgehaald of het correctievenster is verlopen",
+    });
+    return;
+  }
   const [rij] = await notitieSelectie().where(eq(gebouwNotitiesTable.id, notitieId));
   res.json(naarAntwoord(rij!, ctx.userId));
 });
@@ -225,12 +242,14 @@ router.delete(
       return;
     }
     const ctx = await effectieveContext(req);
-    if (bestaand.verwijderdOp === null) {
-      await db
-        .update(gebouwNotitiesTable)
-        .set({ verwijderdOp: new Date(), verwijderdDoorId: ctx.userId })
-        .where(eq(gebouwNotitiesTable.id, notitieId));
-    }
+    // Race-safe: alleen doorhalen als de regel nog niet doorgehaald is; bij
+    // twee gelijktijdige beheerders wint de eerste en blijft diens metadata staan.
+    await db
+      .update(gebouwNotitiesTable)
+      .set({ verwijderdOp: new Date(), verwijderdDoorId: ctx.userId })
+      .where(
+        and(eq(gebouwNotitiesTable.id, notitieId), isNull(gebouwNotitiesTable.verwijderdOp)),
+      );
     const [rij] = await notitieSelectie().where(eq(gebouwNotitiesTable.id, notitieId));
     res.json(naarAntwoord(rij!, ctx.userId));
   },

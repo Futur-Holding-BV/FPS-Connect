@@ -10,7 +10,9 @@ import {
   E2E_WEB_ADMIN_EMAIL, E2E_WEB_ADMIN_WACHTWOORD, E2E_WEB_ADMIN_TOTP_SECRET,
 } from "./e2e-monteur-testaccount";
 
-const BASIS = process.env.API_BASIS ?? "http://localhost:8080/api";
+// Secure-sessiecookies vereisen https; standaard dus via het dev-domein.
+const BASIS = process.env.API_BASIS
+  ?? (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}/api` : "http://localhost:8080/api");
 
 let geslaagd = 0;
 let gefaald = 0;
