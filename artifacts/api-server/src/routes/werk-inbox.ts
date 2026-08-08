@@ -31,7 +31,7 @@ import {
   crmContactpersonenTable,
   crmKlantenTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, inArray, isNull, gte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, or, desc, sql, inArray, isNull, gte, lt, isNotNull } from "drizzle-orm";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { requireAuth } from "../middlewares/auth";
 import {
@@ -505,12 +505,24 @@ router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => 
   if (messageIds.length === 0) { res.json([]); return; }
 
   // Gedeelde notitie-/koppeling-aantallen per bericht (niet per gebruiker).
+  // Mailbox-scoping (migratie 0010): tel alleen rijen van dezelfde mailbox als
+  // het bericht (NULL = legacy-rij van vóór de backfill, telt overal mee).
+  const mailboxAdressen = [...new Set(mails.map((m) => m.mail.mailboxAdres))];
+  const scopeNotitie = or(
+    inArray(werkInboxNotitiesTable.mailboxAdres, mailboxAdressen),
+    isNull(werkInboxNotitiesTable.mailboxAdres),
+  );
+  const scopeKoppeling = or(
+    inArray(werkInboxKoppelingenTable.mailboxAdres, mailboxAdressen),
+    isNull(werkInboxKoppelingenTable.mailboxAdres),
+  );
+
   const notitieAantallen = await db.select({
     messageId: werkInboxNotitiesTable.messageId,
     aantal:    sql<number>`count(*)::int`,
   })
     .from(werkInboxNotitiesTable)
-    .where(inArray(werkInboxNotitiesTable.messageId, messageIds))
+    .where(and(inArray(werkInboxNotitiesTable.messageId, messageIds), scopeNotitie))
     .groupBy(werkInboxNotitiesTable.messageId);
 
   const koppelingAantallen = await db.select({
@@ -518,7 +530,7 @@ router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => 
     aantal:    sql<number>`count(*)::int`,
   })
     .from(werkInboxKoppelingenTable)
-    .where(inArray(werkInboxKoppelingenTable.messageId, messageIds))
+    .where(and(inArray(werkInboxKoppelingenTable.messageId, messageIds), scopeKoppeling))
     .groupBy(werkInboxKoppelingenTable.messageId);
 
   const notitieMap = Object.fromEntries(notitieAantallen.map((n) => [n.messageId, n.aantal]));
@@ -575,11 +587,17 @@ router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res): Promis
   })
     .from(werkInboxNotitiesTable)
     .leftJoin(gebruikersTable, eq(gebruikersTable.id, werkInboxNotitiesTable.gebruikerId))
-    .where(eq(werkInboxNotitiesTable.messageId, messageId))
+    .where(and(
+      eq(werkInboxNotitiesTable.messageId, messageId),
+      or(eq(werkInboxNotitiesTable.mailboxAdres, meta.mailboxAdres), isNull(werkInboxNotitiesTable.mailboxAdres)),
+    ))
     .orderBy(desc(werkInboxNotitiesTable.aangemaaktOp));
 
   const koppelingen = await db.select().from(werkInboxKoppelingenTable)
-    .where(eq(werkInboxKoppelingenTable.messageId, messageId))
+    .where(and(
+      eq(werkInboxKoppelingenTable.messageId, messageId),
+      or(eq(werkInboxKoppelingenTable.mailboxAdres, meta.mailboxAdres), isNull(werkInboxKoppelingenTable.mailboxAdres)),
+    ))
     .orderBy(desc(werkInboxKoppelingenTable.aangemaaktOp));
 
   // Aanwezigheid: dit bericht staat nu open bij deze gebruiker (opdracht §5.2).
@@ -617,10 +635,23 @@ router.post("/werk-inbox/mails/:messageId/aanwezigheid", requireAuth, async (req
 router.patch("/werk-inbox/mails/:messageId/toewijzen", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
-  const { gebruikerId: doelUid } = req.body as { gebruikerId?: number | null };
+  const { gebruikerId: doelUid, verwachtToegewezenAan } = req.body as {
+    gebruikerId?: number | null;
+    /** Optioneel: wie de client dénkt dat nu toegewezen is. Bij mismatch → 409 (review MAIL_01: geen stille last-write-wins tussen behandelaren). */
+    verwachtToegewezenAan?: number | null;
+  };
 
   const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
   if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  if (verwachtToegewezenAan !== undefined && (gevonden.mail.toegewezenAan ?? null) !== verwachtToegewezenAan) {
+    res.status(409).json({
+      error: "Een collega heeft de toewijzing zojuist gewijzigd. De actuele stand is opnieuw geladen.",
+      toegewezenAan: gevonden.mail.toegewezenAan,
+      samenwerkStatus: gevonden.mail.samenwerkStatus,
+    });
+    return;
+  }
 
   if (doelUid != null) {
     // Toewijzen kan alleen aan iemand die de mailbox ook echt kan behandelen.
@@ -651,13 +682,26 @@ router.patch("/werk-inbox/mails/:messageId/toewijzen", requireAuth, async (req, 
 router.patch("/werk-inbox/mails/:messageId/status", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
-  const { status } = req.body as { status?: string };
+  const { status, verwachteStatus } = req.body as {
+    status?: string;
+    /** Optioneel: de status die de client nu toont. Bij mismatch → 409 (review MAIL_01). */
+    verwachteStatus?: string;
+  };
   if (!status || !WERK_INBOX_STATUSSEN.includes(status as WerkInboxStatus)) {
     res.status(400).json({ error: `Ongeldige status. Kies uit: ${WERK_INBOX_STATUSSEN.join(", ")}` });
     return;
   }
   const gevonden = await vindMailMetToegang(uid, messageId, "behandelen");
   if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  if (verwachteStatus !== undefined && gevonden.mail.samenwerkStatus !== verwachteStatus) {
+    res.status(409).json({
+      error: "Een collega heeft de status zojuist gewijzigd. De actuele stand is opnieuw geladen.",
+      toegewezenAan: gevonden.mail.toegewezenAan,
+      samenwerkStatus: gevonden.mail.samenwerkStatus,
+    });
+    return;
+  }
 
   const [rij] = await db.update(werkInboxMailsTable)
     .set({
@@ -731,7 +775,7 @@ router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, re
   if (!gevonden) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
 
   const [rij] = await db.insert(werkInboxNotitiesTable)
-    .values({ messageId, gebruikerId: uid, tekst: tekst.trim() })
+    .values({ messageId, mailboxAdres: gevonden.mail.mailboxAdres, gebruikerId: uid, tekst: tekst.trim() })
     .returning();
 
   res.status(201).json({ ...rij, auteurNaam: await gebruikersNaam(uid) });
@@ -790,7 +834,7 @@ router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req,
 
   try {
     const [rij] = await db.insert(werkInboxKoppelingenTable)
-      .values({ messageId, gebruikerId: uid, entityType, entityId, entityLabel: entityLabel ?? null })
+      .values({ messageId, mailboxAdres: gevonden.mail.mailboxAdres, gebruikerId: uid, entityType, entityId, entityLabel: entityLabel ?? null })
       .returning();
     res.status(201).json(rij);
   } catch {

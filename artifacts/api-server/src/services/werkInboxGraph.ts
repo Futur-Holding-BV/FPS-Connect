@@ -20,7 +20,16 @@ const CLIENT_SECRET = process.env["AZURE_CLIENT_SECRET"];
 
 export const DELEGATED_SCOPES = "Mail.Read offline_access User.Read";
 
-const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "fps-default-secret-change-me";
+// Review MAIL_01: nooit een voorspelbare fallback — een bekende secret zou
+// iedereen in staat stellen OAuth-states namens willekeurige gebruikers te
+// ondertekenen. Zonder configuratie faalt de OAuth-flow expliciet.
+const SESSION_SECRET = (() => {
+  const s = process.env["SESSION_SECRET"];
+  if (!s || s.length < 16) {
+    throw new Error("SESSION_SECRET ontbreekt of is te kort — vereist voor het ondertekenen van OAuth-states van de werk-inbox.");
+  }
+  return s;
+})();
 
 // ── State-parameter (stateless, HMAC-gesigned) ────────────────────────────────
 

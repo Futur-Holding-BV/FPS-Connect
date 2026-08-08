@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -412,22 +413,26 @@ function MailDetailView({
     onSuccess: invalideer,
   });
 
+  // Optimistic concurrency: stuur de stand mee die we nu tonen; bij 409 heeft
+  // een collega net gewijzigd — dan herladen we en tonen we diens stand.
   const toewijzenMutatie = useMutation({
     mutationFn: (gebruikerId: number | null) =>
       apiFetch(`/api/werk-inbox/mails/${messageId}/toewijzen`, {
         method: "PATCH",
-        body: JSON.stringify({ gebruikerId }),
+        body: JSON.stringify({ gebruikerId, verwachtToegewezenAan: detail?.meta.toegewezenAan ?? null }),
       }),
     onSuccess: invalideer,
+    onError: (err: Error) => { invalideer(); toast({ title: "Toewijzing niet doorgevoerd", description: err.message, variant: "destructive" }); },
   });
 
   const statusMutatie = useMutation({
     mutationFn: (status: string) =>
       apiFetch(`/api/werk-inbox/mails/${messageId}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, verwachteStatus: detail?.meta.samenwerkStatus }),
       }),
     onSuccess: invalideer,
+    onError: (err: Error) => { invalideer(); toast({ title: "Status niet gewijzigd", description: err.message, variant: "destructive" }); },
   });
 
   const beantwoordMutatie = useMutation({

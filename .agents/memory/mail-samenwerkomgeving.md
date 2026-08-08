@@ -1,13 +1,14 @@
 ---
-name: Mail-samenwerkomgeving (MAIL_01)
+name: Mail-samenwerkomgeving
 description: Duurzame regels voor de gedeelde werk-inbox — mailbox-eigenaarschap, rechten, modus, presence en pijplijnkoppeling.
 ---
 
 # Mail-samenwerkomgeving
 
-- **Mailboxen zijn organisatiebezit.** `werk_inbox_mailboxen` heeft géén `gebruiker_id` meer; toegang loopt uitsluitend via `werk_inbox_mailbox_toegang` (recht: lezen < behandelen < beheren, helper `rechtDekt`). Mails zijn uniek per (mailbox_adres, message_id) — nooit meer per gebruiker filteren.
-  **Why:** vóór migratie 0009 verdween een mailbox met de eigenaar mee; samenwerking vereist gedeeld bezit.
-  **How to apply:** elke nieuwe werk-inbox-query/route via `werkInboxToegang.ts` (fail-closed); hoofdbeheerder-check via DB-rol (sessie heeft geen rol).
+- **Mailboxen zijn organisatiebezit.** Toegang loopt uitsluitend via de toegang-koppeltabel (recht: lezen < behandelen < beheren). Mails, notities en koppelingen zijn uniek/gescoped per (mailbox, bericht) — een Graph message-id is NIET globaal uniek, dus nooit alleen op message_id filteren of joinen.
+  **Why:** vroeger verdween een mailbox met de eigenaar mee; samenwerking vereist gedeeld bezit, en message-id-botsingen tussen mailboxen zouden anders gedeelde context lekken.
+  **How to apply:** elke nieuwe werk-inbox-query/route via de rechten-service (fail-closed); hoofdbeheerder-check via DB-rol (sessie heeft geen rol).
+- **Samenwerkingsmutaties zijn conditioneel:** toewijzen/status accepteren een "verwachte oude stand" en geven 409 bij een tussentijdse wijziging door een collega; UI herlaadt dan. Nooit stille last-write-wins tussen behandelaren.
 - **Modus per mailbox** (`verwerken|ondersteunen|registreren`): automatische pijplijnen (factuur/aanvraag) selecteren op `actief + modus='verwerken' + vlag`; de vlaggen `is_factuurmailbox`/`is_aanvraagmailbox` zijn bewust behouden als verfijning bínnen verwerken. `registreren` ⇒ AI-analyse 422. In `ondersteunen` mag AI nooit zelf handelen.
 - **Graph-toegang is persoonlijk:** syncen/lezen/antwoorden gebeurt met het token van de gebruiker zelf, anders dat van de laatste syncer (`graphContext`). Exchange-rechten worden alleen getoond (probe), nooit beheerd door Connect.
 - **Detail-route is Graph-tolerant:** meta/status/opmerkingen/presence blijven werken als Microsoft 365 faalt (`inhoud_waarschuwing` i.p.v. 502) — de samenwerkomgeving mag niet omvallen door een Microsoft-storing.

@@ -102,26 +102,33 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
 export const werkInboxNotitiesTable = pgTable("werk_inbox_notities", {
   id:          serial("id").primaryKey(),
   messageId:   text("message_id").notNull(),
+  // Mailbox-scoping (migratie 0010): message_id is alleen uniek binnen een
+  // mailbox; NULL = legacy-rij van vóór de backfill (alleen via bericht leesbaar).
+  mailboxAdres: text("mailbox_adres"),
   gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
   tekst:       text("tekst").notNull(),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [
   index("werk_inbox_notities_message_idx").on(t.messageId, t.gebruikerId),
+  index("werk_inbox_notities_mailbox_idx").on(t.mailboxAdres, t.messageId),
 ]);
 
 // ─── Koppelingen mail ↔ FPS-entiteit ─────────────────────────────────────────
 export const werkInboxKoppelingenTable = pgTable("werk_inbox_koppelingen", {
   id:           serial("id").primaryKey(),
   messageId:    text("message_id").notNull(),
+  // Mailbox-scoping (migratie 0010); uniciteit inclusief mailbox via unieke
+  // expressie-index in de migratie (coalesce(mailbox_adres,'')).
+  mailboxAdres: text("mailbox_adres"),
   gebruikerId:  integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
   entityType:   text("entity_type").notNull(),
   entityId:     integer("entity_id").notNull(),
   entityLabel:  text("entity_label"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
-  unique("werk_inbox_koppelingen_msg_uq").on(t.messageId, t.entityType, t.entityId),
   index("werk_inbox_koppelingen_message_idx").on(t.messageId, t.gebruikerId),
+  index("werk_inbox_koppelingen_mailbox_idx").on(t.mailboxAdres, t.messageId),
 ]);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
