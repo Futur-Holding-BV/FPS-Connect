@@ -18,6 +18,8 @@ import {
   onderaannemeOrdersTable,
   pimModellenTable,
   artikelenTable,
+  opdrachtChecklistItemsTable,
+  complianceSignalenTable,
 } from "@workspace/db";
 import { eq, and, asc, inArray, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -284,6 +286,124 @@ async function getAiClient() {
   const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
   return { apiKey, baseUrl };
 }
+
+// ── Vooraf-regelen-checklist (WVB_01) ────────────────────────────────────────
+// Expliciete regel-het-vooraf-items per opdracht: toegang, vergunning, V&G,
+// hoogwerker. Afvinken met audit (wie, wanneer).
+
+const STANDAARD_CHECKLIST: { label: string; categorie: string }[] = [
+  { label: "Toegang tot het werk geregeld (sleutels/afspraken)", categorie: "toegang" },
+  { label: "Vergunning(en) aanwezig of niet vereist", categorie: "vergunning" },
+  { label: "V&G-plan beschikbaar en gedeeld", categorie: "veiligheid" },
+  { label: "Hoogwerker / materieel gereserveerd", categorie: "materieel" },
+];
+
+const CHECKLIST_CATEGORIEEN = new Set(["toegang", "vergunning", "veiligheid", "materieel", "overig"]);
+
+function mapChecklistItem(
+  item: typeof opdrachtChecklistItemsTable.$inferSelect,
+  naam?: string | null,
+) {
+  return {
+    id: item.id,
+    opdracht_id: item.opdrachtId,
+    label: item.label,
+    categorie: item.categorie,
+    afgevinkt: item.afgevinkt,
+    afgevinkt_door: naam ?? null,
+    afgevinkt_op: iso(item.afgevinktOp),
+    volgorde: item.volgorde,
+  };
+}
+
+async function checklistMetNamen(opdrachtId: number) {
+  const rijen = await db
+    .select({ item: opdrachtChecklistItemsTable, naam: gebruikersTable.naam })
+    .from(opdrachtChecklistItemsTable)
+    .leftJoin(gebruikersTable, eq(opdrachtChecklistItemsTable.afgevinktDoorId, gebruikersTable.id))
+    .where(eq(opdrachtChecklistItemsTable.opdrachtId, opdrachtId))
+    .orderBy(asc(opdrachtChecklistItemsTable.volgorde), asc(opdrachtChecklistItemsTable.id));
+  return rijen.map(r => mapChecklistItem(r.item, r.naam));
+}
+
+router.get("/opdrachten/:id/checklist", lezen, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  res.json(await checklistMetNamen(id));
+});
+
+router.post("/opdrachten/:id/checklist/initialiseer", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+  if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+  const bestaand = await db.select().from(opdrachtChecklistItemsTable)
+    .where(eq(opdrachtChecklistItemsTable.opdrachtId, id));
+  if (bestaand.length === 0) {
+    await db.insert(opdrachtChecklistItemsTable).values(
+      STANDAARD_CHECKLIST.map((s, i) => ({ opdrachtId: id, label: s.label, categorie: s.categorie, volgorde: i })),
+    );
+  }
+  res.json(await checklistMetNamen(id));
+});
+
+router.post("/opdrachten/:id/checklist", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+  if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+  const { label, categorie, volgorde } = req.body as Record<string, unknown>;
+  if (typeof label !== "string" || label.trim().length === 0) {
+    res.status(400).json({ error: "Label is verplicht" }); return;
+  }
+  const cat = typeof categorie === "string" && CHECKLIST_CATEGORIEEN.has(categorie) ? categorie : "overig";
+  const [item] = await db.insert(opdrachtChecklistItemsTable).values({
+    opdrachtId: id,
+    label: label.trim(),
+    categorie: cat,
+    volgorde: typeof volgorde === "number" ? volgorde : 99,
+  }).returning();
+  res.status(201).json(mapChecklistItem(item));
+});
+
+router.patch("/opdrachten/:id/checklist/:itemId", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  const itemId = parseInt(String(req.params.itemId), 10);
+  if (isNaN(id) || isNaN(itemId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const { label, categorie, afgevinkt, volgorde } = req.body as Record<string, unknown>;
+  const updates: Partial<typeof opdrachtChecklistItemsTable.$inferInsert> = { bijgewerktOp: new Date() };
+  if (typeof label === "string" && label.trim().length > 0) updates.label = label.trim();
+  if (typeof categorie === "string" && CHECKLIST_CATEGORIEEN.has(categorie)) updates.categorie = categorie;
+  if (typeof volgorde === "number") updates.volgorde = volgorde;
+  if (typeof afgevinkt === "boolean") {
+    updates.afgevinkt = afgevinkt;
+    updates.afgevinktDoorId = afgevinkt ? (req.session.userId ?? null) : null;
+    updates.afgevinktOp = afgevinkt ? new Date() : null;
+  }
+  const [item] = await db.update(opdrachtChecklistItemsTable)
+    .set(updates)
+    .where(and(eq(opdrachtChecklistItemsTable.id, itemId), eq(opdrachtChecklistItemsTable.opdrachtId, id)))
+    .returning();
+  if (!item) { res.status(404).json({ error: "Checklist-item niet gevonden" }); return; }
+  let naam: string | null = null;
+  if (item.afgevinktDoorId) {
+    const [g] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable)
+      .where(eq(gebruikersTable.id, item.afgevinktDoorId));
+    naam = g?.naam ?? null;
+  }
+  res.json(mapChecklistItem(item, naam));
+});
+
+router.delete("/opdrachten/:id/checklist/:itemId", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  const itemId = parseInt(String(req.params.itemId), 10);
+  if (isNaN(id) || isNaN(itemId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const verwijderd = await db.delete(opdrachtChecklistItemsTable)
+    .where(and(eq(opdrachtChecklistItemsTable.id, itemId), eq(opdrachtChecklistItemsTable.opdrachtId, id)))
+    .returning();
+  if (verwijderd.length === 0) { res.status(404).json({ error: "Checklist-item niet gevonden" }); return; }
+  res.status(204).end();
+});
 
 // ── PATCH /opdrachten/:id/werkbegroting/regels/:regelId ────────────────────
 
@@ -910,6 +1030,81 @@ Geef je analyse als JSON:
   }
 });
 
+// ── WVB_01: divergentiesignaal inkoop- vs uitvoeringsplanning ────────────────
+// Vergelijkt gewenste leverdatums in het inkoopplan met het start/eind-venster
+// van het uitvoeringsplan. Loopt de planning uiteen → open compliance-signaal
+// (dedup per opdracht); klopt het weer → open signaal oplossen.
+// Bewust een lees-en-vergelijk bij vaststellen, geen achtergrondworker.
+
+async function controleerWvbDivergentie(opdrachtId: number): Promise<void> {
+  const dedupSleutel = `wvb_planning_divergentie:opdracht:${opdrachtId}`;
+  try {
+    const [uitvoeringsplan] = await db.select().from(uitvoeringsplannenTable)
+      .where(eq(uitvoeringsplannenTable.opdrachtId, opdrachtId));
+    const [inkoopplan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, opdrachtId));
+
+    const problemen: string[] = [];
+    if (uitvoeringsplan && inkoopplan) {
+      const start = uitvoeringsplan.startdatum ? new Date(uitvoeringsplan.startdatum) : null;
+      const eind = uitvoeringsplan.einddatum ? new Date(uitvoeringsplan.einddatum) : null;
+      if (start || eind) {
+        const regels = await db.select().from(inkoopplanRegelsTable)
+          .where(eq(inkoopplanRegelsTable.inkoopplanId, inkoopplan.id));
+        for (const regel of regels) {
+          if (!regel.gewensteLeverdatum) continue;
+          const lever = new Date(regel.gewensteLeverdatum);
+          if (isNaN(lever.getTime())) continue;
+          if (eind && lever > eind) {
+            problemen.push(`"${regel.omschrijving}" wordt pas op ${regel.gewensteLeverdatum} geleverd, ná de verwachte oplevering (${uitvoeringsplan.einddatum}).`);
+          } else if (start && regel.besteldatum) {
+            const bestel = new Date(regel.besteldatum);
+            if (!isNaN(bestel.getTime()) && bestel > start) {
+              problemen.push(`"${regel.omschrijving}" moet pas op ${regel.besteldatum} besteld worden terwijl de uitvoering al op ${uitvoeringsplan.startdatum} start.`);
+            }
+          }
+        }
+      }
+    }
+
+    const [openSignaal] = await db.select().from(complianceSignalenTable)
+      .where(and(
+        eq(complianceSignalenTable.dedupSleutel, dedupSleutel),
+        eq(complianceSignalenTable.status, "open"),
+      ))
+      .limit(1);
+
+    if (problemen.length > 0) {
+      const omschrijving = `Inkoop- en uitvoeringsplanning lopen uiteen:\n- ${problemen.slice(0, 5).join("\n- ")}${problemen.length > 5 ? `\n(+${problemen.length - 5} meer)` : ""}`;
+      if (openSignaal) {
+        await db.update(complianceSignalenTable)
+          .set({ omschrijving, bijgewerktOp: new Date() })
+          .where(eq(complianceSignalenTable.id, openSignaal.id));
+      } else {
+        // Race-safe: de partiële unieke index (dedup_sleutel WHERE status='open',
+        // migratie 0014) maakt dubbele open signalen onmogelijk; bij een
+        // gelijktijdige insert wint de eerste en doet deze niets.
+        await db.insert(complianceSignalenTable).values({
+          regel: "wvb_planning_divergentie",
+          ernst: "waarschuwing",
+          entiteitType: "opdracht",
+          entiteitId: opdrachtId,
+          titel: "Inkoopplanning en uitvoeringsplanning lopen uiteen",
+          omschrijving,
+          dedupSleutel,
+        }).onConflictDoNothing();
+      }
+    } else if (openSignaal) {
+      await db.update(complianceSignalenTable)
+        .set({ status: "opgelost", opgelostOp: new Date(), bijgewerktOp: new Date() })
+        .where(eq(complianceSignalenTable.id, openSignaal.id));
+    }
+  } catch (err) {
+    // Niet-blokkerend: signaalcontrole mag vaststellen nooit laten falen
+    logger.warn({ err, opdrachtId }, "WVB-divergentiecontrole mislukt — niet-blokkerend");
+  }
+}
+
 // ── POST /opdrachten/:id/inkoopplanning/vaststellen ───────────────────────
 
 router.post("/opdrachten/:id/inkoopplanning/vaststellen", schrijven, async (req, res): Promise<void> => {
@@ -961,6 +1156,8 @@ router.post("/opdrachten/:id/inkoopplanning/vaststellen", schrijven, async (req,
       // Niet-blokkerend: PIM update mislukt mag vaststellen niet blokkeren
       logger.warn({ pimErr }, "PIM inkoop_context bijwerken mislukt — niet-blokkerend");
     }
+
+    await controleerWvbDivergentie(id);
 
     const hoofdstukMapVoorResponse = await buildHoofdstukMap(regels);
     res.json(mapInkoopplan(updated, regels, hoofdstukMapVoorResponse));
@@ -1785,6 +1982,8 @@ router.post("/opdrachten/:id/uitvoeringsplanning/vaststellen", schrijven, async 
     const taken = await db.select().from(uitvoeringsplanTakenTable)
       .where(eq(uitvoeringsplanTakenTable.uitvoeringsplanId, plan.id))
       .orderBy(asc(uitvoeringsplanTakenTable.volgorde));
+
+    await controleerWvbDivergentie(id);
 
     res.json(mapUitvoeringsplan(updated, taken));
   } catch (err) {

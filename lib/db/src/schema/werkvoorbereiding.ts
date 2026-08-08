@@ -154,6 +154,24 @@ export const uitvoeringsplanTakenTable = pgTable("uitvoeringsplan_taken", {
 // Status: concept → uitbesteed → uitgevoerd → betaald
 // Kan los van de inkoopplanning bestaan (niet per se afgeleid uit werkbegroting).
 
+// ── VOORAF-REGELEN-CHECKLIST (WVB_01) ─────────────────────────────────────────
+// Expliciete regel-het-vooraf-items per opdracht: toegang, vergunning, V&G-plan,
+// hoogwerker/materieel, etc. Afvinken met audit (wie, wanneer).
+
+export const opdrachtChecklistItemsTable = pgTable("opdracht_checklist_items", {
+  id: serial("id").primaryKey(),
+  opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  // toegang | vergunning | veiligheid | materieel | overig
+  categorie: text("categorie").notNull().default("overig"),
+  afgevinkt: boolean("afgevinkt").notNull().default(false),
+  afgevinktDoorId: integer("afgevinkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  afgevinktOp: timestamp("afgevinkt_op"),
+  volgorde: integer("volgorde").notNull().default(0),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const onderaannemeOrdersTable = pgTable("onderaannemer_orders", {
   id: serial("id").primaryKey(),
   opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),

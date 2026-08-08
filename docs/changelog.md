@@ -1,3 +1,26 @@
+## 2026-08-08 — WVB_01: werkvoorbereiding als stroom (12 tabbladen → 5 fasen)
+
+- **Uitvoering:** gebouwd na expliciet besluit van René ("Ja, bouw de stroom zo"); gedragsbewijs via echte HTTP-scenario's (`scripts/src/bewijs-wvb-stroom.ts`, alle scenario's geslaagd) | **Kwaliteit:** hoog | **Risico:** laag (additieve migratie 0013; bestaande tab-inhoud verplaatst, niet herschreven)
+
+**Opdrachtpagina geconsolideerd naar 5 fasen:**
+- Voorbereiding · Inkoop · Planning · Uitvoering · Oplevering & nacalculatie. De losse AI-tab en Inkoopcoach verdwijnen als tab (inhoud opgenomen in Voorbereiding resp. Inkoop); Uitvoeringsplanning + geboekte uren staan samen onder Planning; Materiaal/magazijn onder Uitvoering.
+- `?tab=`-links werken nu écht: oude tabnamen (werkbegroting, inkoopplanning, nacalculatie, …) worden automatisch naar de juiste fase vertaald, dus bestaande links vanuit Kompas en Inkoop landen goed. De actieve fase staat in de URL.
+- Bij een regieopdracht toont Voorbereiding een kaart die direct doorlinkt naar Regievoorwaarden & tarieven.
+
+**Vooraf-regelen-checklist (nieuw):**
+- Per opdracht een checklist in Voorbereiding (standaarditems: toegang, vergunning, V&G-plan, hoogwerker; eigen items toevoegbaar). Afvinken legt vast wie en wanneer. Nieuwe tabel `opdracht_checklist_items` (migratie 0013).
+
+**Dagdeeltarieven bij regie (nieuw):**
+- Regie-tarieven hebben een tariefsoort **per uur** of **per dagdeel** — een dagdeel wordt nooit meer stilzwijgend als 4 uur gerekend. Instelbaar in het regiescherm.
+
+**Hardening (n.a.v. code-review):**
+- Eén tabpanel per fase (AI-analyse, PIM-regisseur en urenplanning renderen als secties bínnen hun fase, niet als dubbele panels); de actieve fase volgt de URL ook bij browser-terug/vooruit.
+- Dubbele open divergentiesignalen zijn database-onmogelijk (partiële unieke index, migratie 0014); bewezen met parallelle inserts.
+- Dagdeeltarieven vervuilen de uren-kostprijsberekening van het regie-dashboard niet meer (alleen uur-tarieven worden gemiddeld).
+
+**Divergentiesignaal inkoop- vs. uitvoeringsplanning (nieuw):**
+- Bij het vaststellen van de inkoop- of uitvoeringsplanning controleert het systeem of gewenste leverdatums buiten het uitvoeringsvenster vallen (levering ná oplevering, of bestellen ná de start). Loopt het uiteen → open signaal op het compliance-dashboard; klopt het weer na correctie → signaal lost automatisch op. Bewezen in beide richtingen.
+
 ## 2026-08-08 — LOON_01: loonstroom sluiten (SEPA-intake, boekhouderportaal, afgebakende toegang)
 
 - **Uitvoering:** volledig gebouwd; gedragsbewijs via de echte pijplijn (gesimuleerde SCAB-mail door ongewijzigde productiecode) en via HTTP met een boekhouder-testaccount; review-punten direct verwerkt (zie hardening) | **Kwaliteit:** hoog | **Risico:** laag (additieve migraties 0011+0012; bestaande SEPA-statusreeks en publicatie ongewijzigd)

@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Tarief {
   id: number;
   functiegroep: string;
+  tariefsoort?: string;
   uurtarief: number;
 }
 
@@ -113,7 +114,7 @@ function urenFormat(n: number | null | undefined) {
 function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [tarieven, setTarieven] = useState<{ functiegroep: string; uurtarief: string }[]>([]);
+  const [tarieven, setTarieven] = useState<{ functiegroep: string; tariefsoort: string; uurtarief: string }[]>([]);
   const [form, setForm] = useState<Partial<Omit<Voorwaarden, "id" | "opdrachtId" | "tarieven">>>({});
   const [initieel, setInitieel] = useState(true);
 
@@ -149,7 +150,7 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
       bewijsvereisten: vw.bewijsvereisten ?? "",
       notities: vw.notities ?? "",
     });
-    setTarieven(vw.tarieven.map(t => ({ functiegroep: t.functiegroep, uurtarief: String(t.uurtarief) })));
+    setTarieven(vw.tarieven.map(t => ({ functiegroep: t.functiegroep, tariefsoort: t.tariefsoort === "dagdeel" ? "dagdeel" : "uur", uurtarief: String(t.uurtarief) })));
     setInitieel(false);
   }
 
@@ -162,7 +163,7 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
           ...form,
           tarieven: tarieven
             .filter(t => t.functiegroep && t.uurtarief)
-            .map(t => ({ functiegroep: t.functiegroep, uurtarief: parseFloat(t.uurtarief) })),
+            .map(t => ({ functiegroep: t.functiegroep, tariefsoort: t.tariefsoort, uurtarief: parseFloat(t.uurtarief) })),
         }),
       });
       if (!r.ok) throw new Error("Opslaan mislukt.");
@@ -208,7 +209,7 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
 
       {/* Uurtarieven */}
       <div>
-        <h3 className="font-medium mb-3 flex items-center gap-2"><Euro className="h-4 w-4" /> Uurtarieven per functiegroep</h3>
+        <h3 className="font-medium mb-3 flex items-center gap-2"><Euro className="h-4 w-4" /> Tarieven per functiegroep</h3>
         <div className="space-y-2">
           {tarieven.map((t, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -221,11 +222,21 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
                   {FUNCTIEGROEPEN.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={t.tariefsoort} disabled={!kanSchrijven}
+                onValueChange={v => setTarieven(ts => ts.map((x, j) => j === i ? { ...x, tariefsoort: v } : x))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Soort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uur">Per uur</SelectItem>
+                  <SelectItem value="dagdeel">Per dagdeel</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="flex items-center gap-1">
                 <span className="text-sm text-muted-foreground">€</span>
                 <Input type="number" min={0} step={0.01} className="w-28" value={t.uurtarief} disabled={!kanSchrijven}
                   onChange={e => setTarieven(ts => ts.map((x, j) => j === i ? { ...x, uurtarief: e.target.value } : x))} />
-                <span className="text-sm text-muted-foreground">/uur</span>
+                <span className="text-sm text-muted-foreground">{t.tariefsoort === "dagdeel" ? "/dagdeel" : "/uur"}</span>
               </div>
               {kanSchrijven && (
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
@@ -236,7 +247,7 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
             </div>
           ))}
           {kanSchrijven && (
-            <Button variant="outline" size="sm" onClick={() => setTarieven(ts => [...ts, { functiegroep: "monteur", uurtarief: "" }])}>
+            <Button variant="outline" size="sm" onClick={() => setTarieven(ts => [...ts, { functiegroep: "monteur", tariefsoort: "uur", uurtarief: "" }])}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Tarief toevoegen
             </Button>

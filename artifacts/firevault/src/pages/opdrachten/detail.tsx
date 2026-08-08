@@ -1,6 +1,6 @@
 // Opdracht detail — werkbegroting, nacalculatie, planning-uren, inkoopplanning, uitvoeringsplanning
-import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useEffect, useState } from "react";
+import { useParams, Link, useSearch } from "wouter";
 import {
   useGetOpdracht,
   useGetWerkbegroting,
@@ -56,6 +56,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { ChecklistKaart } from "./checklist-kaart";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import InkoopplanningTab from "./inkoopplanning-tab";
 import { InkoopcoachTab } from "./inkoopcoach-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
@@ -403,14 +405,51 @@ function WerkbegrotingRegelRij({ r, opdrachtId, isVastgesteld }: WerkbegrotingRe
   );
 }
 
+// ── Fase-indeling (WVB_01): 12 tabbladen → 5 fasen; oude tabnamen blijven als alias werken ──
+const FASE_ALIAS: Record<string, string> = {
+  voorbereiding: "voorbereiding",
+  werkbegroting: "voorbereiding",
+  ai: "voorbereiding",
+  "ai-regisseur": "voorbereiding",
+  inkoop: "inkoop",
+  inkoopplanning: "inkoop",
+  inkoopcoach: "inkoop",
+  onderaanneming: "inkoop",
+  planning: "planning",
+  uitvoeringsplanning: "planning",
+  uitvoering: "uitvoering",
+  materiaal: "uitvoering",
+  oplevering: "oplevering",
+  nacalculatie: "oplevering",
+};
+
 // ── Hoofdpagina ────────────────────────────────────────────────────────────────
 export default function OpdrachtDetailPagina() {
+  const { heeftNiveau } = useBevoegdheid();
   const { id } = useParams<{ id: string }>();
   const opdrachtId = parseInt(id ?? "0", 10);
   const qc = useQueryClient();
   const { toast } = useToast();
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
-  const [activeTab, setActiveTab] = useState("werkbegroting");
+  const zoekParams = useSearch();
+  const [activeTab, setActiveTabState] = useState(() => {
+    const gevraagd = new URLSearchParams(zoekParams).get("tab") ?? "";
+    return FASE_ALIAS[gevraagd] ?? "voorbereiding";
+  });
+  // Reactief synchroniseren met de URL (browser-terug/vooruit of nieuwe ?tab=-navigatie)
+  useEffect(() => {
+    const gevraagd = new URLSearchParams(zoekParams).get("tab") ?? "";
+    const fase = FASE_ALIAS[gevraagd];
+    if (fase) setActiveTabState(fase);
+  }, [zoekParams]);
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url.toString());
+  };
+  const scrollNaar = (sectieId: string) =>
+    setTimeout(() => document.getElementById(sectieId)?.scrollIntoView({ behavior: "smooth" }), 50);
   const [chatOpen, setChatOpen] = useState(false);
   const [seniorOpen, setSeniorOpen] = useState(false);
   const [pimKaartIngeklapt, setPimKaartIngeklapt] = useState(false);
@@ -678,33 +717,17 @@ export default function OpdrachtDetailPagina() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1 print:hidden">
-          <TabsTrigger value="werkbegroting">Werkbegroting</TabsTrigger>
-          <TabsTrigger value="inkoopplanning">
+          <TabsTrigger value="voorbereiding">
+            <Brain className="h-3.5 w-3.5 mr-1.5" />
+            Voorbereiding
+          </TabsTrigger>
+          <TabsTrigger value="inkoop">
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-            Inkoopplanning
+            Inkoop
           </TabsTrigger>
-          <TabsTrigger value="inkoopcoach">
-            <Brain className="h-3.5 w-3.5 mr-1.5" />
-            AI-inkoopcoach
-          </TabsTrigger>
-          <TabsTrigger value="onderaanneming">
-            <Building2 className="h-3.5 w-3.5 mr-1.5" />
-            Onderaanneming
-          </TabsTrigger>
-          <TabsTrigger value="uitvoeringsplanning">
+          <TabsTrigger value="planning">
             <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
-            Uitvoeringsplanning
-          </TabsTrigger>
-          <TabsTrigger value="materiaal">
-            <Package className="h-3.5 w-3.5 mr-1.5" />
-            Materiaal & uitgiftes
-          </TabsTrigger>
-          <TabsTrigger value="nacalculatie">Nacalculatie</TabsTrigger>
-          <TabsTrigger value="planning">Planning-uren</TabsTrigger>
-          {aiAnalyse && <TabsTrigger value="ai">AI-analyse</TabsTrigger>}
-          <TabsTrigger value="ai-regisseur">
-            <Brain className="h-3.5 w-3.5 mr-1.5" />
-            AI Regisseur
+            Planning
           </TabsTrigger>
           <TabsTrigger value="uitvoering">
             <HardHat className="h-3.5 w-3.5 mr-1.5" />
@@ -712,12 +735,28 @@ export default function OpdrachtDetailPagina() {
           </TabsTrigger>
           <TabsTrigger value="oplevering">
             <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-            Oplevering
+            Oplevering & nacalculatie
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Werkbegroting ── */}
-        <TabsContent value="werkbegroting" className="space-y-4 mt-4">
+        {/* ── Fase 1: Voorbereiding (werkbegroting / regievoorwaarden + AI-regisseur) ── */}
+        <TabsContent value="voorbereiding" className="space-y-4 mt-4">
+          <ChecklistKaart opdrachtId={opdrachtId} kanSchrijven={heeftNiveau("offertes", 2)} />
+          {(opdracht as { type?: string } | undefined)?.type === "regie" && (
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="py-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-sm">
+                  <p className="font-medium">Regieopdracht</p>
+                  <p className="text-xs text-muted-foreground">
+                    Afrekening op voorwaarden en tarieven — geen vaste werkbegroting vereist.
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/regie/${opdrachtId}`}>Regievoorwaarden &amp; tarieven</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           {/* ── AI-werkbegrotingvoorstel (nog te bevestigen) ── */}
           {isVoorstel && (
             <Card className="border-amber-200 bg-amber-50/60">
@@ -758,7 +797,7 @@ export default function OpdrachtDetailPagina() {
                     variant="link"
                     size="sm"
                     className="h-7 p-0 text-xs text-amber-700"
-                    onClick={() => setActiveTab("ai")}
+                    onClick={() => scrollNaar("ai-analyse-sectie")}
                   >
                     Volledig voorstel bekijken
                   </Button>
@@ -779,7 +818,7 @@ export default function OpdrachtDetailPagina() {
                 variant="link"
                 size="sm"
                 className="h-auto p-0 text-xs text-muted-foreground"
-                onClick={() => setActiveTab("ai")}
+                onClick={() => scrollNaar("ai-analyse-sectie")}
               >
                 Bekijken
               </Button>
@@ -903,7 +942,7 @@ export default function OpdrachtDetailPagina() {
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs text-indigo-600"
-                      onClick={() => setActiveTab("ai-regisseur")}
+                      onClick={() => scrollNaar("pim-regisseur-sectie")}
                     >
                       Volledige PIM-analyse bekijken
                     </Button>
@@ -922,14 +961,14 @@ export default function OpdrachtDetailPagina() {
             <div className="flex gap-2 flex-wrap">
               <Button
                 size="sm" variant="outline"
-                onClick={() => setActiveTab("inkoopplanning")}
+                onClick={() => setActiveTab("inkoop")}
               >
                 <ShoppingBag className="h-3.5 w-3.5" />
                 Materialen bestellen
               </Button>
               <Button
                 size="sm" variant="outline"
-                onClick={() => setActiveTab("onderaanneming")}
+                onClick={() => setActiveTab("inkoop")}
               >
                 <Building2 className="h-3.5 w-3.5" />
                 Onderaannemer
@@ -1054,36 +1093,24 @@ export default function OpdrachtDetailPagina() {
           )}
         </TabsContent>
 
-        {/* ── Inkoopplanning ── */}
-        <TabsContent value="inkoopplanning">
+        {/* ── Fase 2: Inkoop (inkoopplanning + AI-advies + onderaanneming) ── */}
+        <TabsContent value="inkoop" className="space-y-6 mt-4">
           <InkoopplanningTab opdrachtId={opdrachtId} />
-        </TabsContent>
-
-        {/* ── AI-inkoopcoach ── */}
-        <TabsContent value="inkoopcoach">
           <InkoopcoachTab opdrachtId={opdrachtId} />
-        </TabsContent>
-
-        {/* ── Onderaanneming ── */}
-        <TabsContent value="onderaanneming">
           <OnderaannemeringTab
             opdrachtId={opdrachtId}
-            onNaarMaterialen={() => setActiveTab("inkoopplanning")}
+            onNaarMaterialen={() => setActiveTab("inkoop")}
           />
         </TabsContent>
 
-        {/* ── Uitvoeringsplanning ── */}
-        <TabsContent value="uitvoeringsplanning">
+        {/* ── Fase 3: Planning (uitvoeringsplan + geboekte uren) ── */}
+        <TabsContent value="planning" className="space-y-6 mt-4">
           <UitvoeringsplanningTab opdrachtId={opdrachtId} />
         </TabsContent>
 
-        {/* ── Materiaal ── */}
-        <TabsContent value="materiaal">
-          <MateriaaltabTab opdrachtId={opdrachtId} />
-        </TabsContent>
-
-        {/* ── Nacalculatie ── */}
-        <TabsContent value="nacalculatie" className="mt-4">
+        {/* ── Fase 5: Oplevering & nacalculatie ── */}
+        <TabsContent value="oplevering" className="mt-4 space-y-6">
+          <PimOpleveringTab opdrachtId={opdrachtId} />
           {!nacalculatie ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
@@ -1281,8 +1308,9 @@ export default function OpdrachtDetailPagina() {
           )}
         </TabsContent>
 
-        {/* ── Planning-uren ── */}
-        <TabsContent value="planning" className="mt-4">
+        {/* ── Planning-uren (onderdeel van fase Planning, geen eigen tabpanel) ── */}
+        {activeTab === "planning" && (
+        <div className="mt-4">
           {!planningUren || planningUren.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -1332,11 +1360,12 @@ export default function OpdrachtDetailPagina() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
+        </div>
+        )}
 
-        {/* ── AI-analyse ── */}
-        {aiAnalyse && (
-          <TabsContent value="ai" className="mt-4 space-y-4">
+        {/* ── AI-analyse (onderdeel van Voorbereiding, geen eigen tabpanel) ── */}
+        {aiAnalyse && activeTab === "voorbereiding" && (
+          <div id="ai-analyse-sectie" className="mt-4 space-y-4">
             {isVoorstel && (
               <Card className="border-amber-200 bg-amber-50/60">
                 <CardContent className="py-3 flex items-center gap-3 flex-wrap">
@@ -1461,11 +1490,12 @@ export default function OpdrachtDetailPagina() {
                 Analyse gegenereerd op {new Date(aiAnalyse.gegenereerd_op).toLocaleString("nl-NL")}
               </p>
             )}
-          </TabsContent>
+          </div>
         )}
 
-        {/* ── AI Regisseur ── */}
-        <TabsContent value="ai-regisseur" className="mt-4 space-y-4">
+        {/* ── AI Regisseur (onderdeel van Voorbereiding, geen eigen tabpanel) ── */}
+        {activeTab === "voorbereiding" && (
+        <div id="pim-regisseur-sectie" className="mt-4 space-y-4">
           {pimLoading && (
             <Card>
               <CardContent className="pt-6 space-y-3">
@@ -2015,16 +2045,13 @@ export default function OpdrachtDetailPagina() {
               })()}
             </>
           )}
-        </TabsContent>
+        </div>
+        )}
 
-        {/* ── Uitvoering ── */}
-        <TabsContent value="uitvoering">
+        {/* ── Fase 4: Uitvoering (PIM-uitvoering + materiaal/magazijn) ── */}
+        <TabsContent value="uitvoering" className="space-y-6 mt-4">
           <PimUitvoeringTab opdrachtId={opdrachtId} />
-        </TabsContent>
-
-        {/* ── Oplevering ── */}
-        <TabsContent value="oplevering">
-          <PimOpleveringTab opdrachtId={opdrachtId} />
+          <MateriaaltabTab opdrachtId={opdrachtId} />
         </TabsContent>
       </Tabs>
 

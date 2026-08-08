@@ -43,6 +43,8 @@ export const regieTarievenTable = pgTable("regie_tarieven", {
   voorwaardenId: integer("voorwaarden_id").notNull().references(() => regieVoorwaardenTable.id, { onDelete: "cascade" }),
   functiegroep: text("functiegroep").notNull(),
   // monteur | timmerman | voorman | projectleider | werkvoorbereider | onderaannemer
+  // uur | dagdeel — dagdeel is een eigen tariefsoort (WVB_01), nooit stilzwijgend 4 uur
+  tariefsoort: text("tariefsoort").notNull().default("uur"),
   uurtarief: real("uurtarief").notNull(),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });

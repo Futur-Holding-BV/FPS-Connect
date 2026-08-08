@@ -7345,6 +7345,63 @@ export interface OpdrachtNacalculatie {
   materiaal_inkoop_kosten: number;
 }
 
+export type OpdrachtChecklistItemCategorie = typeof OpdrachtChecklistItemCategorie[keyof typeof OpdrachtChecklistItemCategorie];
+
+
+export const OpdrachtChecklistItemCategorie = {
+  toegang: 'toegang',
+  vergunning: 'vergunning',
+  veiligheid: 'veiligheid',
+  materieel: 'materieel',
+  overig: 'overig',
+} as const;
+
+export interface OpdrachtChecklistItem {
+  id: number;
+  opdracht_id: number;
+  label: string;
+  categorie: OpdrachtChecklistItemCategorie;
+  afgevinkt: boolean;
+  afgevinkt_door?: string | null;
+  afgevinkt_op?: string | null;
+  volgorde: number;
+}
+
+export type OpdrachtChecklistItemInputCategorie = typeof OpdrachtChecklistItemInputCategorie[keyof typeof OpdrachtChecklistItemInputCategorie];
+
+
+export const OpdrachtChecklistItemInputCategorie = {
+  toegang: 'toegang',
+  vergunning: 'vergunning',
+  veiligheid: 'veiligheid',
+  materieel: 'materieel',
+  overig: 'overig',
+} as const;
+
+export interface OpdrachtChecklistItemInput {
+  label: string;
+  categorie?: OpdrachtChecklistItemInputCategorie;
+  volgorde?: number;
+}
+
+export type OpdrachtChecklistItemPatchCategorie = typeof OpdrachtChecklistItemPatchCategorie[keyof typeof OpdrachtChecklistItemPatchCategorie];
+
+
+export const OpdrachtChecklistItemPatchCategorie = {
+  toegang: 'toegang',
+  vergunning: 'vergunning',
+  veiligheid: 'veiligheid',
+  materieel: 'materieel',
+  overig: 'overig',
+} as const;
+
+export interface OpdrachtChecklistItemPatch {
+  label?: string;
+  categorie?: OpdrachtChecklistItemPatchCategorie;
+  afgevinkt?: boolean;
+  volgorde?: number;
+}
+
 export interface PlanningUrenRegel {
   planning_item_id: number;
   medewerker_naam: string;

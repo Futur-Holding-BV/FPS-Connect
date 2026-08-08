@@ -12039,6 +12039,119 @@ paths:
                 items:
                   $ref: "#/components/schemas/PlanningUrenRegel"
 
+  /opdrachten/{id}/checklist:
+    get:
+      operationId: listOpdrachtChecklist
+      tags: [opdrachten]
+      summary: Vooraf-regelen-checklist van een opdracht (WVB_01)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpdrachtChecklistItem"
+    post:
+      operationId: createOpdrachtChecklistItem
+      tags: [opdrachten]
+      summary: Checklist-item toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpdrachtChecklistItemInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtChecklistItem"
+
+  /opdrachten/{id}/checklist/initialiseer:
+    post:
+      operationId: initialiseerOpdrachtChecklist
+      tags: [opdrachten]
+      summary: Standaard vooraf-regelen-items aanmaken (alleen als checklist leeg is)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpdrachtChecklistItem"
+
+  /opdrachten/{id}/checklist/{itemId}:
+    patch:
+      operationId: patchOpdrachtChecklistItem
+      tags: [opdrachten]
+      summary: Checklist-item bijwerken of afvinken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpdrachtChecklistItemPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtChecklistItem"
+    delete:
+      operationId: deleteOpdrachtChecklistItem
+      tags: [opdrachten]
+      summary: Checklist-item verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /opdrachten/{id}/werkbegroting/regels/{regelId}:
     patch:
       operationId: patchWerkbegrotingRegel
@@ -34310,6 +34423,55 @@ components:
         materiaal_inkoop_kosten:
           type: number
           description: Kosten uit inkoopregels met status besteld of geleverd
+
+    OpdrachtChecklistItem:
+      type: object
+      required: [id, opdracht_id, label, categorie, afgevinkt, volgorde]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        label:
+          type: string
+        categorie:
+          type: string
+          enum: [toegang, vergunning, veiligheid, materieel, overig]
+        afgevinkt:
+          type: boolean
+        afgevinkt_door:
+          type: string
+          nullable: true
+        afgevinkt_op:
+          type: string
+          nullable: true
+        volgorde:
+          type: integer
+
+    OpdrachtChecklistItemInput:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        categorie:
+          type: string
+          enum: [toegang, vergunning, veiligheid, materieel, overig]
+        volgorde:
+          type: integer
+
+    OpdrachtChecklistItemPatch:
+      type: object
+      properties:
+        label:
+          type: string
+        categorie:
+          type: string
+          enum: [toegang, vergunning, veiligheid, materieel, overig]
+        afgevinkt:
+          type: boolean
+        volgorde:
+          type: integer
 
     PlanningUrenRegel:
       type: object

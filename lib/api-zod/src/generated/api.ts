@@ -14664,6 +14664,100 @@ export const ListOpdrachtPlanningUrenResponse = zod.array(ListOpdrachtPlanningUr
 
 
 /**
+ * @summary Vooraf-regelen-checklist van een opdracht (WVB_01)
+ */
+export const ListOpdrachtChecklistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOpdrachtChecklistResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "label": zod.string(),
+  "categorie": zod.enum(['toegang', 'vergunning', 'veiligheid', 'materieel', 'overig']),
+  "afgevinkt": zod.boolean(),
+  "afgevinkt_door": zod.string().nullish(),
+  "afgevinkt_op": zod.string().nullish(),
+  "volgorde": zod.number()
+})
+export const ListOpdrachtChecklistResponse = zod.array(ListOpdrachtChecklistResponseItem)
+
+
+/**
+ * @summary Checklist-item toevoegen
+ */
+export const CreateOpdrachtChecklistItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOpdrachtChecklistItemBody = zod.object({
+  "label": zod.string(),
+  "categorie": zod.enum(['toegang', 'vergunning', 'veiligheid', 'materieel', 'overig']).optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const CreateOpdrachtChecklistItemResponse = zod.void()
+
+
+/**
+ * @summary Standaard vooraf-regelen-items aanmaken (alleen als checklist leeg is)
+ */
+export const InitialiseerOpdrachtChecklistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const InitialiseerOpdrachtChecklistResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "label": zod.string(),
+  "categorie": zod.enum(['toegang', 'vergunning', 'veiligheid', 'materieel', 'overig']),
+  "afgevinkt": zod.boolean(),
+  "afgevinkt_door": zod.string().nullish(),
+  "afgevinkt_op": zod.string().nullish(),
+  "volgorde": zod.number()
+})
+export const InitialiseerOpdrachtChecklistResponse = zod.array(InitialiseerOpdrachtChecklistResponseItem)
+
+
+/**
+ * @summary Checklist-item bijwerken of afvinken
+ */
+export const PatchOpdrachtChecklistItemParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const PatchOpdrachtChecklistItemBody = zod.object({
+  "label": zod.string().optional(),
+  "categorie": zod.enum(['toegang', 'vergunning', 'veiligheid', 'materieel', 'overig']).optional(),
+  "afgevinkt": zod.boolean().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const PatchOpdrachtChecklistItemResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "label": zod.string(),
+  "categorie": zod.enum(['toegang', 'vergunning', 'veiligheid', 'materieel', 'overig']),
+  "afgevinkt": zod.boolean(),
+  "afgevinkt_door": zod.string().nullish(),
+  "afgevinkt_op": zod.string().nullish(),
+  "volgorde": zod.number()
+})
+
+
+/**
+ * @summary Checklist-item verwijderen
+ */
+export const DeleteOpdrachtChecklistItemParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const DeleteOpdrachtChecklistItemResponse = zod.void()
+
+
+/**
  * @summary Werkbegroting-regel bijwerken (omschrijving / hoeveelheid / tarief)
  */
 export const PatchWerkbegrotingRegelParams = zod.object({

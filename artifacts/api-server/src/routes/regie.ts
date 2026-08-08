@@ -50,6 +50,7 @@ function mapVoorwaarden(v: typeof regieVoorwaardenTable.$inferSelect, tarieven: 
     tarieven: tarieven.map(t => ({
       id: t.id,
       functiegroep: t.functiegroep,
+      tariefsoort: t.tariefsoort,
       uurtarief: t.uurtarief,
     })),
     aangemaaktOp: v.aangemaaktOp,
@@ -168,8 +169,11 @@ router.get("/regie/dashboard", requireAuth, lezen, async (req, res): Promise<voi
       ? await db.select().from(regieTarievenTable).where(eq(regieTarievenTable.voorwaardenId, voorwaarden.id))
       : [];
 
-    const gemiddelTarief = tarieven.length > 0
-      ? tarieven.reduce((s, t) => s + t.uurtarief, 0) / tarieven.length
+    // Alleen uur-tarieven middelen: een dagdeeltarief is geen uurprijs en zou
+    // de uren-kostprijsberekening vervuilen (WVB_01 review).
+    const uurTarieven = tarieven.filter(t => t.tariefsoort !== "dagdeel");
+    const gemiddelTarief = uurTarieven.length > 0
+      ? uurTarieven.reduce((s, t) => s + t.uurtarief, 0) / uurTarieven.length
       : 0;
 
     const besteedUrenEuro = besteedUren * gemiddelTarief;
@@ -270,7 +274,7 @@ router.put("/regie/voorwaarden/:opdrachtId", requireAuth, schrijven, async (req,
     fotosVereist?: boolean;
     bewijsvereisten?: string;
     notities?: string;
-    tarieven?: { functiegroep: string; uurtarief: number }[];
+    tarieven?: { functiegroep: string; uurtarief: number; tariefsoort?: string }[];
   };
 
   const velden = {
@@ -320,6 +324,8 @@ router.put("/regie/voorwaarden/:opdrachtId", requireAuth, schrijven, async (req,
           tarievenInput.map(t => ({
             voorwaardenId: id,
             functiegroep: t.functiegroep,
+            // Dagdeel is een eigen tariefsoort — nooit stilzwijgend als 4 uur rekenen (WVB_01)
+            tariefsoort: t.tariefsoort === "dagdeel" ? "dagdeel" : "uur",
             uurtarief: t.uurtarief,
           }))
         );

@@ -711,6 +711,9 @@ import type {
   OnlineGebruiker,
   OnvoldoendeVoorraadFout,
   Opdracht,
+  OpdrachtChecklistItem,
+  OpdrachtChecklistItemInput,
+  OpdrachtChecklistItemPatch,
   OpdrachtMateriaal,
   OpdrachtNacalculatie,
   OpdrachtPatch,
@@ -42077,6 +42080,369 @@ export function useListOpdrachtPlanningUren<TData = Awaited<ReturnType<typeof li
 
 
 
+
+export const getListOpdrachtChecklistUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/checklist`
+}
+
+/**
+ * @summary Vooraf-regelen-checklist van een opdracht (WVB_01)
+ */
+export const listOpdrachtChecklist = async (id: number, options?: RequestInit): Promise<OpdrachtChecklistItem[]> => {
+
+  return customFetch<OpdrachtChecklistItem[]>(getListOpdrachtChecklistUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpdrachtChecklistQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/checklist`
+    ] as const;
+    }
+
+
+export const getListOpdrachtChecklistQueryOptions = <TData = Awaited<ReturnType<typeof listOpdrachtChecklist>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtChecklist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpdrachtChecklistQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpdrachtChecklist>>> = ({ signal }) => listOpdrachtChecklist(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtChecklist>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpdrachtChecklistQueryResult = NonNullable<Awaited<ReturnType<typeof listOpdrachtChecklist>>>
+export type ListOpdrachtChecklistQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Vooraf-regelen-checklist van een opdracht (WVB_01)
+ */
+
+export function useListOpdrachtChecklist<TData = Awaited<ReturnType<typeof listOpdrachtChecklist>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtChecklist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpdrachtChecklistQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOpdrachtChecklistItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/checklist`
+}
+
+/**
+ * @summary Checklist-item toevoegen
+ */
+export const createOpdrachtChecklistItem = async (id: number,
+    opdrachtChecklistItemInput: OpdrachtChecklistItemInput, options?: RequestInit): Promise<OpdrachtChecklistItem> => {
+
+  return customFetch<OpdrachtChecklistItem>(getCreateOpdrachtChecklistItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opdrachtChecklistItemInput)
+  }
+);}
+
+
+
+
+export const getCreateOpdrachtChecklistItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpdrachtChecklistItem>>, TError,{id: number;data: BodyType<OpdrachtChecklistItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOpdrachtChecklistItem>>, TError,{id: number;data: BodyType<OpdrachtChecklistItemInput>}, TContext> => {
+
+const mutationKey = ['createOpdrachtChecklistItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOpdrachtChecklistItem>>, {id: number;data: BodyType<OpdrachtChecklistItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOpdrachtChecklistItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOpdrachtChecklistItemMutationResult = NonNullable<Awaited<ReturnType<typeof createOpdrachtChecklistItem>>>
+    export type CreateOpdrachtChecklistItemMutationBody = BodyType<OpdrachtChecklistItemInput>
+    export type CreateOpdrachtChecklistItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Checklist-item toevoegen
+ */
+export const useCreateOpdrachtChecklistItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpdrachtChecklistItem>>, TError,{id: number;data: BodyType<OpdrachtChecklistItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOpdrachtChecklistItem>>,
+        TError,
+        {id: number;data: BodyType<OpdrachtChecklistItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOpdrachtChecklistItemMutationOptions(options));
+    }
+
+export const getInitialiseerOpdrachtChecklistUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/checklist/initialiseer`
+}
+
+/**
+ * @summary Standaard vooraf-regelen-items aanmaken (alleen als checklist leeg is)
+ */
+export const initialiseerOpdrachtChecklist = async (id: number, options?: RequestInit): Promise<OpdrachtChecklistItem[]> => {
+
+  return customFetch<OpdrachtChecklistItem[]>(getInitialiseerOpdrachtChecklistUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getInitialiseerOpdrachtChecklistMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['initialiseerOpdrachtChecklist'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  initialiseerOpdrachtChecklist(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InitialiseerOpdrachtChecklistMutationResult = NonNullable<Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>>
+
+    export type InitialiseerOpdrachtChecklistMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Standaard vooraf-regelen-items aanmaken (alleen als checklist leeg is)
+ */
+export const useInitialiseerOpdrachtChecklist = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof initialiseerOpdrachtChecklist>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getInitialiseerOpdrachtChecklistMutationOptions(options));
+    }
+
+export const getPatchOpdrachtChecklistItemUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/checklist/${itemId}`
+}
+
+/**
+ * @summary Checklist-item bijwerken of afvinken
+ */
+export const patchOpdrachtChecklistItem = async (id: number,
+    itemId: number,
+    opdrachtChecklistItemPatch: OpdrachtChecklistItemPatch, options?: RequestInit): Promise<OpdrachtChecklistItem> => {
+
+  return customFetch<OpdrachtChecklistItem>(getPatchOpdrachtChecklistItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opdrachtChecklistItemPatch)
+  }
+);}
+
+
+
+
+export const getPatchOpdrachtChecklistItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>, TError,{id: number;itemId: number;data: BodyType<OpdrachtChecklistItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>, TError,{id: number;itemId: number;data: BodyType<OpdrachtChecklistItemPatch>}, TContext> => {
+
+const mutationKey = ['patchOpdrachtChecklistItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>, {id: number;itemId: number;data: BodyType<OpdrachtChecklistItemPatch>}> = (props) => {
+          const {id,itemId,data} = props ?? {};
+
+          return  patchOpdrachtChecklistItem(id,itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchOpdrachtChecklistItemMutationResult = NonNullable<Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>>
+    export type PatchOpdrachtChecklistItemMutationBody = BodyType<OpdrachtChecklistItemPatch>
+    export type PatchOpdrachtChecklistItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Checklist-item bijwerken of afvinken
+ */
+export const usePatchOpdrachtChecklistItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>, TError,{id: number;itemId: number;data: BodyType<OpdrachtChecklistItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchOpdrachtChecklistItem>>,
+        TError,
+        {id: number;itemId: number;data: BodyType<OpdrachtChecklistItemPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchOpdrachtChecklistItemMutationOptions(options));
+    }
+
+export const getDeleteOpdrachtChecklistItemUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/checklist/${itemId}`
+}
+
+/**
+ * @summary Checklist-item verwijderen
+ */
+export const deleteOpdrachtChecklistItem = async (id: number,
+    itemId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOpdrachtChecklistItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOpdrachtChecklistItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>, TError,{id: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteOpdrachtChecklistItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>, {id: number;itemId: number}> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  deleteOpdrachtChecklistItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOpdrachtChecklistItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>>
+
+    export type DeleteOpdrachtChecklistItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Checklist-item verwijderen
+ */
+export const useDeleteOpdrachtChecklistItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOpdrachtChecklistItem>>,
+        TError,
+        {id: number;itemId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOpdrachtChecklistItemMutationOptions(options));
+    }
 
 export const getPatchWerkbegrotingRegelUrl = (id: number,
     regelId: number,) => {
