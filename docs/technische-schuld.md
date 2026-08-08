@@ -137,13 +137,14 @@
 | 81 | Geen structured logging voor business-events (offerte verstuurd, dossier definitief) | 3 | 2 | 8 | P2 |
 | 82 | Geen health-check endpoint voor DB-verbinding (alleen `/healthz` die altijd 200 geeft) | 4 | 3 | 2 | P2 |
 | 83 | Geen alerting op backup-failures — opgelost 7 aug 2026: mislukte of verdacht kleine back-up → blokkerende melding aan alle hoofdbeheerders (`gebruikers_meldingen` type `backup_alarm`); bewezen via `scripts/src/verificatie-backup-alarm.ts` (gesaboteerde pg_dump → melding). Restore eenmalig bewezen: meest recente prod-backup teruggezet in proefdatabase (298 tabellen, rijaantallen identiek aan live, 0 fouten) | 4 | 4 | 0 | ✅ |
-| 84 | Geen Sentry/error-tracking in productie | 4 | 3 | 4 | P2 |
+| 84 | Geen Sentry/error-tracking in productie — opgelost 8 aug 2026 (SENTRY_01): `@sentry/node` alleen error monitoring (tracing/profiling uit), init in `src/instrument.ts` (start door zonder `SENTRY_DSN`), aangehaakt op de bestaande foutafhandelaar met tag `verwijzingscode`; privacy-scrub in `beforeSend` (geen body/cookie/authorization/querystring); sourcemap-upload als niet-blokkerende stap 5b in deployscript; release = `GIT_COMMIT` | 4 | 3 | 0 | ✅ |
 | 85 | Geen performance-monitoring (p95-latency onbekend) | 3 | 2 | 4 | P2 |
 | 86 | `pnpm run typecheck` niet in CI (alleen lokaal) | 3 | 3 | 2 | P2 |
 | 87 | drizzle-kit push uit deployproces — opgelost 7 aug 2026 (SCHEMA_01): migratierunner (`lib/db/scripts/migrate.mjs`) + tabel `schema_migraties`; push-script bestaat alleen nog voor lokaal werk | 4 | 4 | 0 | ✅ |
 | 88 | schema.sql snapshot — opgelost 7 aug 2026: `lib/db/schema.sql` uit productie gegenereerd (nulpunt) + `schema-verwachting.txt` + drift-check bij elke deploy. Bevinding: 13 timestamp-kolommen zijn prod `without time zone` vs dev `with time zone` (FACTUUR_02/AANVRAAG_01) — gemeld, aparte opdracht | 4 | 4 | 0 | ✅ |
 | 89 | E2E-tests enkel op Chromium — geen cross-browser coverage | 2 | 1 | 8 | P3 |
 | 90 | Geen load-tests — capaciteit bij 50 gelijktijdige gebruikers onbekend | 3 | 3 | 8 | P2 |
+| 101 | `artifacts/api-server/Dockerfile` is een ongebruikte, inhoudelijk afgeweken kopie van `deploy/Dockerfile.api` (alpine vs slim, andere stages) — compose bouwt uitsluitend met `deploy/Dockerfile.api`; valstrik bij de volgende bouwwijziging (gemeld 8 aug 2026, SENTRY_01) | 2 | 3 | 1 | P3 |
 
 ---
 

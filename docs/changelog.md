@@ -1,3 +1,9 @@
+## 2026-08-08 — SENTRY_01: foutmonitoring op de productie-API
+
+- **Uitvoering:** code volledig; activering wacht op `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` op de VPS | **Risico:** laag (zonder DSN volledig inactief)
+
+`@sentry/node` (alleen Error Monitoring; tracing/profiling/logs/metrics uit) via `src/instrument.ts` als allereerste import. Zonder `SENTRY_DSN` geen init — dev/CI versturen nooit iets. Aangehaakt op de bestaande centrale foutafhandelaar: alleen de onverwachte 500 gaat naar Sentry, met de `FPS-`-verwijzingscode als tag (zoeksleutel bij telefonische meldingen). Privacy vóór gemak: `sendDefaultPii: false` + `beforeSend` stript request body, cookie/authorization/x-api-key-headers en alle querystring-waarden. `release` = `GIT_COMMIT` uit de image. Deployscript stap 5b uploadt sourcemaps uit de gebouwde image naar `de.sentry.io` (org `futur-holding`, project `fps-connect-api`) — niet-blokkerend: ontbrekend token = waarschuwing, deploy gaat door. Docs bijgewerkt (runbook, env-checklist, technische schuld #84 opgelost; #101 gemeld: ongebruikte Dockerfile-kopie).
+
 ## 2026-08-08 — Fix: e-maillinks wijzen nu naar het echte productiedomein
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (helper geverifieerd met en zonder PUBLIEKE_APP_URL) | **Risico:** laag (alleen link-opbouw in uitgaande mails/QR)

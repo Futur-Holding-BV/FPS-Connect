@@ -10,6 +10,7 @@
  */
 import type { Request, Response, NextFunction } from "express";
 import { randomBytes } from "crypto";
+import * as Sentry from "@sentry/node";
 import { logger } from "../lib/logger";
 
 export function maakVerwijzingscode(): string {
@@ -50,6 +51,13 @@ export function foutafhandelaar(err: unknown, req: Request, res: Response, next:
   }
 
   const code = maakVerwijzingscode();
+  // SENTRY_01 §2.4: alleen de onverwachte 500 gaat naar Sentry, met de
+  // verwijzingscode als tag — de code die een gebruiker voorleest is zo de
+  // zoeksleutel in Sentry. Zonder SENTRY_DSN is dit een no-op.
+  Sentry.captureException(err, {
+    tags: { verwijzingscode: code },
+    contexts: { verzoek: { methode: req.method, pad: req.originalUrl?.split("?")[0], status: 500 } },
+  });
   logger.error(
     { verwijzingscode: code, method: req.method, pad: req.originalUrl?.split("?")[0], err },
     "Onverwachte fout afgevangen door centrale foutafhandelaar",

@@ -101,6 +101,19 @@ curl -s https://connect.fps-one.nl/api/versie/status
 
 ---
 
+## Foutmonitoring (Sentry — SENTRY_01)
+
+Beide waarden staan uitsluitend in `deploy/.env.production` op de VPS (ongetrackt, blijft bij `git reset --hard` staan). Ze zijn **niet** verplicht: ontbreken ze, dan draait de app zonder monitoring door en slaat de deploy de sourcemap-upload over met een waarschuwing — een deploy mag hier nooit op stuklopen.
+
+| Variabele | Doel |
+|---|---|
+| `SENTRY_DSN` | DSN van project `fps-connect-api` (org `futur-holding`, EU-regio `de.sentry.io`). Zet Sentry-foutmonitoring in de API aan; leeg/afwezig = geen init, geen events. |
+| `SENTRY_AUTH_TOKEN` | Auth-token voor `sentry-cli sourcemaps upload` in stap 5b van `scripts/deploy-production.sh`. Alleen scope `project:releases` nodig. |
+
+Optioneel: `SENTRY_ENVIRONMENT` (terugval: `NODE_ENV`).
+
+---
+
 ## Aandachtspunten
 
 - `AZURE_CLIENT_ID_NEW` in `deploy/ENV_PRODUCTION.example` is een verouderde tijdelijke naam — gebruik `AZURE_CLIENT_ID` in de werkende configuratie.

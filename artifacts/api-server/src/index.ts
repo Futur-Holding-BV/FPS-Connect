@@ -1,3 +1,5 @@
+// SENTRY_01: instrument.ts moet de allereerste import zijn, vóór ./app.
+import "./instrument";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";

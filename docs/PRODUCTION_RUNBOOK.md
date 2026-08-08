@@ -109,6 +109,18 @@ Of trigger de deploy handmatig via GitHub Actions > `deploy.yml` > "Run workflow
 
 ---
 
+## Verwijzingscode terugzoeken in Sentry (SENTRY_01, 8 aug 2026)
+
+Meldt een gebruiker een fout met een `FPS-`-code (bijv. `FPS-3A9C1B04`)?
+
+1. Open Sentry (EU): `https://futur-holding.de.sentry.io`, project **fps-connect-api**.
+2. Zoek in Issues op de tag: `verwijzingscode:FPS-3A9C1B04`.
+3. Het event toont de stacktrace (bronbestand + regelnummer dankzij de sourcemap-upload in deploystap 5b), de release (commit-SHA) en methode/pad van het verzoek. Request body, cookies, authorization-headers en querystrings worden bewust nooit meegestuurd.
+
+Geen event te vinden? Dan is de fout van vóór de Sentry-koppeling of ontbrak `SENTRY_DSN` — zoek dan op de code in de containerlogs: `docker logs deploy-api-1 2>&1 | grep FPS-3A9C1B04`.
+
+---
+
 ## Deploybeleid: productie als acceptatieomgeving (vastgesteld 10 juli 2026)
 
 Dit beleid is leidend voor het hele runbook en voor alle deploys.

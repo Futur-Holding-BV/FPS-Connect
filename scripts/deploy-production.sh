@@ -156,6 +156,40 @@ ${COMPOSE} build --no-cache api
 #  1. schema-healthcheck (bestaand vangnet, kritieke kolommen);
 #  2. schema-drift-check (vergelijkt de hele database met lib/db/schema-
 #     verwachting.txt en meldt élk verschil in de deploylog).
+# ─── STAP 5b: sourcemaps naar Sentry (SENTRY_01) ─────────────────────────────
+# Uploadt de sourcemaps uit de zojuist gebouwde api-image naar Sentry, zodat
+# stacktraces naar echte bronbestanden wijzen i.p.v. dist/index.mjs. Faalt of
+# ontbreekt hier iets, dan gaat de deploy gewoon door — een mislukte
+# sourcemap-upload is nooit een reden om een werkende release tegen te houden.
+echo "=== STAP 5b: sourcemaps naar Sentry uploaden ==="
+SENTRY_AUTH_TOKEN="$(grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null | head -1 | cut -d= -f2-)"
+if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
+  echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — sourcemap-upload overgeslagen (deploy gaat door)."
+else
+  SENTRY_TMP="$(mktemp -d)"
+  SENTRY_CID=""
+  set +e
+  API_IMAGE="$(${COMPOSE} images -q api | head -1)"
+  if [ -z "${API_IMAGE}" ]; then
+    echo "WAARSCHUWING: api-image niet gevonden — sourcemap-upload overgeslagen."
+  else
+    SENTRY_CID="$(docker create "${API_IMAGE}")"
+    docker cp "${SENTRY_CID}:/app/dist" "${SENTRY_TMP}/dist" \
+      && docker run --rm -v "${SENTRY_TMP}/dist:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
+           getsentry/sentry-cli sourcemaps upload \
+           --url https://de.sentry.io \
+           --org futur-holding \
+           --project fps-connect-api \
+           --release "${GIT_COMMIT}" \
+           /work \
+      && echo "Sourcemaps geüpload voor release ${GIT_COMMIT}." \
+      || echo "WAARSCHUWING: sourcemap-upload mislukt — deploy gaat door."
+  fi
+  [ -n "${SENTRY_CID}" ] && docker rm -f "${SENTRY_CID}" >/dev/null 2>&1
+  rm -rf "${SENTRY_TMP}"
+  set -e
+fi
+
 echo "=== STAP 6: migraties (migrate-image vers bouwen + migratierunner + verificatie) ==="
 ${COMPOSE} build --no-cache migrate
 ${COMPOSE} run --rm -T migrate
