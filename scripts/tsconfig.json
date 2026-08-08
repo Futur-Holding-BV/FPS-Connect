@@ -6,14 +6,10 @@
     "types": ["node"]
   },
   "include": ["src"],
-  // Deze bewijsscripts importeren api-server-bronbestanden (buiten rootDir) en
-  // draaien uitsluitend via tsx. Structurele ontkoppeling (gedeeld workspace-
-  // package of verhuizing naar het api-package) is een aparte opruimtaak.
+  // Deze scripts importeren api-server-bronbestanden buiten rootDir en draaien
+  // uitsluitend via tsx. Structurele ontkoppeling is een aparte opruimtaak.
   "exclude": [
-    "src/bewijs-financieel-ak.ts",
     "src/bewijs-scenario-doorrekening.ts",
-    "src/bewijs-werkbak.ts",
-    "src/klant-poort-check.ts",
-    "src/verificatie-assistent01.ts"
+    "src/klant-poort-check.ts"
   ]
 }

@@ -2855,6 +2855,19 @@ De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-token
 
 **Bewijs (dev, 8 aug):** `scripts/src/bewijs-mailbox-syncbewaking.ts` — 13/13 checks: gezonde koppeling (telling 1, geen alarm), refresh-weigering (telling 0, alarm binnen één run), 24-uurs alarm-dedupe, herstel (alarm gereset), stale-sync >6 uur met werkende koppeling (alarm). Via ingelogde hoofdbeheerder-sessie + echte achtergrondbewaking; testdata in finally opgeruimd.
 
+
+## 2026-08-08 — FINANCIEEL_AI_01 acceptatiebewijs: AK-dashboard met echte jaarcijfers (2023–2024)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (zelfstandig bewijs-script + geauthenticeerde dashboard-screenshot) | **Risico:** geen (alleen bewijsscript + bugfix stale api-build)
+
+**Wat is bewezen:** het AK-dashboard (`/financieel/algemene-kosten`) met echte productie-percentages voor 2023 en 2024, en adviezen aantoonbaar afgeleid uit de eigen cijfers. Jaarcijfers (omzet + OHW) en AK-posten ingezaaid via self-contained script `scripts/src/bewijs-ak-echte-jaarcijfers.ts` (18/18 checks groen). Dashboard screenshot via `scripts/src/bewijs-ak-dashboard-screenshot.ts`: ingelogd als beheerder, beide jaren zichtbaar (2023 AK% 15.5%, 2024 AK% 19.2%), Adviezen-sectie zichtbaar. Bewijs opgeslagen in `screenshots/bewijs-ak-dashboard-ingelogd.jpg`.
+
+**Meegevonden en hersteld:**
+- **Rules of Hooks bug (Expo menu.tsx):** `routeMap` const + `useEffect` stonden ná de `if (!token) return <Redirect>` early return — schending van React's hooks-regels. Op tweede render detecteert React meer hooks dan eerder → ErrorBoundary → "Something went wrong". Fix: beide naar vóór de early return verplaatst.
+- **Stale API-dist (APP_01 `/auth/me` zonder `requireAuth`):** `GET /auth/me` met bearer-token gaf altijd 401 (0ms) omdat de dist van vóór APP_01 geen `requireAuth` middleware had. Oorzaak: APP_01 voegde `requireAuth` toe aan auth.ts maar de api-server was niet opnieuw gebuild. Na rebuild: bearer-token `/auth/me` → 200.
+- **Expo `.env` EXPO_PUBLIC_DOMAIN stale:** bijgewerkt naar huidige `$REPLIT_DEV_DOMAIN` (met `-9691uift` suffix).
+
+**Bewijs (GEMETEN):** bewijs-script 18/18 groen; dashboard-screenshot opgeslagen; e2e-menu 1/1; e2e-web 39/41 (2 overgeslagen, zelfde als voor taak). Zie `docs/metingen/AK_FINANCIEEL_AI_01_acceptatie.md` (nog aan te maken bij volledige documentatie).
 ## 2026-08-08 — Drieledige aanmaakkeuze teruggedraaid (conflicteert met geconsolideerde onboarding)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

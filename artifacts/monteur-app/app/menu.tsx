@@ -97,6 +97,40 @@ export default function MenuScherm() {
     });
   }, [token, router]);
 
+  // Statische route-map (uitsluitend hardcoded paden, geen afhankelijkheden).
+  // Moet BOVEN de vroege return staan om de Rules of Hooks te respecteren —
+  // useEffect mag nooit conditioneel worden aangeroepen.
+  const routeMap: Record<string, string> = {
+    werkdag: "/werkdag",
+    gebouwen: "/gebouwen",
+    verlof: "/hrm/verlof",
+    uren: "/uren",
+    planning: "/planning",
+    veiligheid: "/veiligheid",
+    personeel: "/hrm",
+    werkbak: "/werkbak",
+    berichten: "/berichten",
+    opname: "/opname",
+    documenten: "/documenten",
+    magazijn: "/magazijn/scan",
+    magazijn_artikelen: "/magazijn/artikelen",
+    magazijn_inkoop: "/magazijn/inkoop",
+    magazijn_picklijsten: "/magazijn/picklijsten",
+    magazijn_inkooporders: "/magazijn/inkooporders",
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    window.__FPS_ROUTES__ = routeMap;
+    window.__FPS_NAVIGEER__ = (pad: string) => {
+      router.push(pad as Parameters<typeof router.push>[0]);
+    };
+    return () => {
+      delete (window as Partial<Window>).__FPS_ROUTES__;
+      delete (window as Partial<Window>).__FPS_NAVIGEER__;
+    };
+  });
+
   if (!token) return <Redirect href="/login" />;
 
   // APP_01 §3.2 — elk menu-item draagt de bevoegdheid die de bijbehorende
@@ -128,38 +162,6 @@ export default function MenuScherm() {
     { sleutel: "magazijn_inkooporders", label: "Inkooporders", icoon: "receipt-outline", vereist: { module: "magazijn", niveau: 2 }, onPress: () => router.push("/magazijn/inkooporders" as "/werkdag") },
     { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
   ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
-
-  const routeMap: Record<string, string> = {
-    werkdag: "/werkdag",
-    gebouwen: "/gebouwen",
-    verlof: "/hrm/verlof",
-    uren: "/uren",
-    planning: "/planning",
-    veiligheid: "/veiligheid",
-    personeel: "/hrm",
-    werkbak: "/werkbak",
-    berichten: "/berichten",
-    opname: "/opname",
-    documenten: "/documenten",
-    magazijn: "/magazijn/scan",
-    magazijn_artikelen: "/magazijn/artikelen",
-    magazijn_inkoop: "/magazijn/inkoop",
-    magazijn_picklijsten: "/magazijn/picklijsten",
-    magazijn_inkooporders: "/magazijn/inkooporders",
-  };
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    window.__FPS_ROUTES__ = routeMap;
-    window.__FPS_NAVIGEER__ = (pad: string) => {
-      router.push(pad as Parameters<typeof router.push>[0]);
-    };
-    return () => {
-      delete (window as Partial<Window>).__FPS_ROUTES__;
-      delete (window as Partial<Window>).__FPS_NAVIGEER__;
-    };
-  });
 
   function sluitModal() {
     setModalZichtbaar(false);

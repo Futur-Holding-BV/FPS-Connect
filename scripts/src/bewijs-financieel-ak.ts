@@ -20,7 +20,7 @@ import {
   bepaalLoonkostenDekking,
   premieJaarbasis,
   MAX_OPEN_ADVIEZEN,
-} from "../../artifacts/api-server/src/lib/akEigenCijfers";
+} from "./akEigenCijfers";
 
 const MARKER = "BEWIJS_AK";
 let geslaagd = 0;
