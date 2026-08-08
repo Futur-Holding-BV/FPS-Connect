@@ -341,6 +341,8 @@ function MailDetailView({
   const { data: detail, isLoading } = useQuery({
     queryKey: ["werk-inbox", "mail", messageId],
     queryFn: () => apiFetch<MailDetail>(`/api/werk-inbox/mails/${messageId}`),
+    // Kort pollen zodat opmerkingen/status/toewijzing van collega's "live" verschijnen.
+    refetchInterval: 12_000,
   });
 
   // Aanwezigheid: heartbeat elke 8s ("bekijkt" of "typt"), bij verlaten "weg".
@@ -983,7 +985,8 @@ export default function WerkInboxPagina() {
     queryKey: ["werk-inbox", "mails", filterVanMij, filterStatus],
     queryFn: () => apiFetch<MailItem[]>(`/api/werk-inbox/mails${mailsParams.size ? `?${mailsParams}` : ""}`),
     enabled: mailboxen.length > 0,
-    refetchInterval: 60_000,
+    // Kort pollen zodat wijzigingen van collega's zonder handmatige refresh zichtbaar zijn.
+    refetchInterval: 15_000,
   });
 
   const syncMutatie = useMutation({
