@@ -2901,6 +2901,11 @@ De statische klant-poort-check (`klant-poort-check`) draait niet langer alleen h
 **Meegerepareerd:** `routes/auth.ts` was op main door een eerdere revert-commit gemangeld (compileerde niet: `id` onbekend, dubbele taal-route, verdwenen wachtwoord-wijzigen-route); hersteld naar de laatst werkende versie.
 
 
+## 2026-08-08 — NUMMER_01 restpunt: offerteverzendmail end-to-end bewezen (task #835)
+
+- **Uitvoering:** volledig; bewijs op dev via het echte mail-kanaal | **Kwaliteit:** hoog | **Risico:** geen (alleen bewijsscript + docs, geen productiecode gewijzigd)
+
+Na de kenmerk-bevriezing (atomair verzend-endpoint) was het mail-kanaal zelf niet opnieuw getest. Nieuw bewijsscript `scripts/src/bewijs-nummer01-verzendmail.ts` verstuurt een testoferte via POST `/offertes/:id/verzenden` → Microsoft Graph (gedeelde postbus) naar een intern testadres en bewijst 5 punten: Graph accepteert de mail; `mail_logboek` bevat een succes-rij (soort=offerte, geen foutcategorie); offerte op `portaal_status=verzonden`; kenmerk bevroren (gebouwwissel wijzigt het niet, PATCH → 409); publieke portaallink geeft 200 met de juiste offerte. Kanttekening: het app-token heeft alleen `Mail.Send`, dus aankomst is bewezen op het niveau van Graph-acceptatie + logboek (inbox niet programmatisch uitleesbaar). Restpunt in `docs/antwoorden/NUMMER_01.md` afgevinkt.
 ## 2026-08-08 — Kenmerken breder zichtbaar: facturen, inkoopbonnen en lijstweergaven
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (API-respons geverifieerd via ingelogde HTTP-calls; typecheck groen) | **Risico:** laag (alleen weergave + één extra join in het inkoopoverzicht)

@@ -46,9 +46,11 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
     await expect(page.locator("body")).toBeVisible({ timeout: INHOUD_TIMEOUT });
 
     // Offerte-rijen zijn role="button" divs (geen <a href>); zoek de eerste kaart.
+    // Sinds NUMMER_01 tonen kaarten geen OFF-nummer meer; herken ze aan de
+    // status-badge (concept/verzonden/...).
     const offerteRij = page
       .locator('[role="button"]')
-      .filter({ hasText: /OFF-\d+|O\d{3}/ })
+      .filter({ hasText: /OFF-\d+|O\d{3}|concept|verzonden|geaccepteerd|afgewezen|ingetrokken/i })
       .first();
     const leegStaat = page.getByText(/geen offertes/i).filter({ visible: true });
 
@@ -74,7 +76,7 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
 
     const offerteRij = page
       .locator('[role="button"]')
-      .filter({ hasText: /OFF-\d+|O\d{3}/ })
+      .filter({ hasText: /OFF-\d+|O\d{3}|concept|verzonden|geaccepteerd|afgewezen|ingetrokken/i })
       .first();
 
     await expect(offerteRij).toBeVisible({ timeout: INHOUD_TIMEOUT });

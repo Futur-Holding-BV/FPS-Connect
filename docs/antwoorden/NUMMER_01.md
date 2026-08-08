@@ -46,6 +46,6 @@ Het fiscale factuurnummer per BV start bij `00001` (opgemaakt als 5 cijfers). Al
 
 ### Restpunten
 
-- E-mailverzending van offertes zelf is niet opnieuw e2e getest (mail-kanaal); de bevriezings- en blokkade-gedragingen op de verzonden toestand zijn wél via HTTP bewezen (punt F).
+- ~~E-mailverzending van offertes zelf is niet opnieuw e2e getest (mail-kanaal)~~ — **afgevinkt (8 aug 2026, task #835):** `scripts/src/bewijs-nummer01-verzendmail.ts` verstuurt een testoferte via het echte verzendpad (POST `/offertes/:id/verzenden` → Microsoft Graph, gedeelde postbus) naar een intern testadres. Bewezen: Graph accepteert de mail (succes-rij in `mail_logboek`, soort=offerte, geen foutcategorie), offerte op `verzonden`, kenmerk bevroren (gebouwwissel verandert het niet; PATCH → 409) en de publieke portaallink werkt. Kanttekening: het app-token heeft alleen `Mail.Send` (geen `Mail.Read`), dus de inbox-aankomst is bewezen op het niveau van Graph-acceptatie + logboek — de mailbox zelf is niet programmatisch uitleesbaar.
 - Bugfix meegenomen: de magazijn-inkooporderroutes stonden op `/inkooporders` terwijl de API-spec en frontend `/magazijn/inkooporders` verwachten — routes rechtgezet.
 - Herstel meegenomen: een eerdere revert had `routes/auth.ts` naar een kapotte oude staat teruggezet (o.a. 2FA-flows); de correcte pre-revert-versie is teruggehaald.
