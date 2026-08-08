@@ -1,3 +1,9 @@
+## 2026-08-08 — DEPLOY-GATE: kapotte code kan productie niet meer bereiken (Taak #840)
+
+- **Uitvoering:** volledig, met live bewijs | **Kwaliteit:** hoog | **Risico:** laag (extra controles vóór deploy; noodpad gedocumenteerd)
+
+Na het incident van 8 aug (gemangelde `opname.ts` stond ~15 min live omdat esbuild geen types controleert) draait `deploy.yml` nu typecheck, dubbele-routes- en klant-poort-controle vóórdat de VPS wordt aangeraakt; faalt er één, dan wordt niets uitgerold. Nieuw in deze taak: een bewuste noodfix-bypass (alleen via handmatige workflow_dispatch met input `NOODFIX`, met luide waarschuwing in de run-log — een gewone push kan de gate nooit omzeilen), documentatie in het runbook ("Noodfix: gate bewust passeren"), en live bewijs: een bewust rode testcommit (`42537caa`, typecheck faalt) is naar main gepusht en is aantoonbaar nooit in `/api/versie` verschenen; productie ging van `fd179b40` direct naar de revert (`2ce598da`).
+
 ## 2026-08-08 — HERSTEL_01: gemangelde routes hersteld + archief-rechten aangescherpt
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog (bodies hersteld uit intacte revisies, niet opnieuw geschreven; CI-wacht op duplicaten) | **Risico:** middel (auth- en opnameroutes op prod waren stil kapot)
