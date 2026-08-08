@@ -1,3 +1,20 @@
+## 2026-08-08 — KLANT_01: klantportaal dicht tenzij open (centrale klant-poort)
+
+- **Uitvoering:** volledig (fase 0 t/m 3 + bewijs) | **Kwaliteit:** hoog (gedragsbewijs met 2 klantaccounts + medewerker) | **Risico:** laag voor medewerkers (poort raakt alleen rol klant), hoog beveiligingsrendement
+
+**Fase 0 — meting eerst:** statische route-analyse (`klant-routes-analyse`): 229 van de 1264 sessieroutes waren bereikbaar voor klanten, terwijl het bedoelde klantoppervlak ~19 routes is. Tabel + risico's in `docs/metingen/KLANT_01_klantbereikbare_routes.md`.
+
+**Fase 1 — centrale klant-poort** (`middlewares/klantPoort.ts`, direct na `laadPermissies`): voor rol klant is alleen een expliciete allowlist van 26 routes open (dashboard, gebouwen, inspecties, rapporten, PIM, assistent, eigen chat, bestandsweergave, eigen AVG, melding indienen); al het andere geeft 403 — ook muterende verzoeken. Bestaande handlerfilters blijven staan als tweede laag.
+
+**Fase 2 — beide bekende gaten waren echte lekken, nu gedicht:** PIM (klant kon met elk opdracht-id andermans projectmodel opvragen; nu gebouw-toewijzingscheck op alle 5 klantroutes) en rapporten (klant kon definitieve rapporten van élk gebouw lezen en zelfs reageren; nu `magBijGebouw` op lijst/detail/klant-reactie, 404).
+
+**Fase 3 — buildcontrole** `klant-poort-check`: faalt als de poort ontbreekt, een `requireBevoegdheidOfKlant`-route niet bewust in de allowlist staat, of een allowlist-regel nergens meer op matcht. Ving tijdens de bouw direct 4 vergeten PIM-uitvoeringsroutes.
+
+**Bewijs:** `scripts/src/verificatie-klant01.ts` — K1 t/m K5 + M1 groen: kruistoegang tussen twee klanten onmogelijk (lijst én directe URL), 15 poortblokkades incl. PATCH/DELETE, klantoppervlak werkt, hoofdbeheerder-toegang ongewijzigd.
+
+**Architect-review verwerkt:** (1) legacy/algemeen storage-paden (zonder gebouw-koppeling) zijn nu dicht voor klanten — die waren via de bestandsweergave-allowlist leesbaar; (2) de bijlagenbundel-download in het klantportaal (voorheen óók al kapot voor klanten: medewerkers-only middleware) is bewust opengesteld met klant-checks (toegewezen gebouw + definitief/gearchiveerd). Extra bewijs: padvarianten (trailing/dubbele slash, case, encoded, query) omzeilen de poort niet.
+
+**⚠️ Spoedmelding (aparte opdracht nodig):** `projecten.ts`, `opname.ts` en `workflow.ts` staan voor ingelogde **medewerkers** zonder module-recht nog volledig open (lezen + muteren + verwijderen). Voor klanten nu dicht via de poort; medewerker-kant mocht binnen KLANT_01 niet gewijzigd worden. Details in `docs/antwoorden/KLANT_01.md`.
 ## 2026-08-08 — ASSISTENT_01: Connect-assistent altijd in beeld, contextbewust en met veilige gegevensvragen
 
 - **Uitvoering:** volledig (3 fasen) | **Kwaliteit:** hoog (gedragsbewijs met drie gebruikersprofielen + e2e) | **Risico:** laag-middel (gateway geeft nu tool-aanroepen door; oude zwevende chat-bubble verwijderd)

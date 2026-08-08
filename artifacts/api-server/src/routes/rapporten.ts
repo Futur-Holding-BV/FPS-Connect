@@ -124,6 +124,11 @@ router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res): P
   try {
     const gebouwId = parseId(req.params.id);
     const isKlant = (req.session as { rol?: string }).rol === "klant";
+    // KLANT_01: klant alleen bij een toegewezen gebouw (404, geen bestaan verklappen)
+    if (isKlant && !req.permissies?.magBijGebouw(gebouwId)) {
+      res.status(404).json({ error: "Gebouw niet gevonden" });
+      return;
+    }
     const basisFilter = eq(opleverrapportenTable.gebouwId, gebouwId);
     const waarFilter = isKlant
       ? and(basisFilter, inArray(opleverrapportenTable.status, ["definitief", "gearchiveerd"]))
@@ -195,6 +200,11 @@ router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (r
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
     const isKlant = (req.session as { rol?: string }).rol === "klant";
+    // KLANT_01: klant alleen bij een toegewezen gebouw
+    if (isKlant && !req.permissies?.magBijGebouw(gebouwId)) {
+      res.status(404).json({ error: "Rapport niet gevonden" });
+      return;
+    }
 
     const [rij] = await db
       .select({ r: opleverrapportenTable, naam: gebruikersTable.naam })
@@ -523,6 +533,12 @@ router.post("/gebouwen/:id/rapporten/:rapportId/klant-reactie", lezenRapportenOf
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
+    // KLANT_01: klant alleen bij een toegewezen gebouw
+    const reactieIsKlant = (req.session as { rol?: string }).rol === "klant";
+    if (reactieIsKlant && !req.permissies?.magBijGebouw(gebouwId)) {
+      res.status(404).json({ error: "Rapport niet gevonden" });
+      return;
+    }
 
     const [huidig] = await db
       .select()
@@ -592,7 +608,27 @@ function wrapTextPdf(
 
 // ── GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel ─────────────────────
 
-router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, async (req, res): Promise<void> => {
+router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapportenOfKlant, async (req, res): Promise<void> => {
+  // KLANT_01: klant alleen bij een toegewezen gebouw én een definitief/gearchiveerd rapport
+  {
+    const isKlant = (req.session as { rol?: string }).rol === "klant";
+    if (isKlant) {
+      const gebouwIdKlant = parseId(req.params.id);
+      if (!req.permissies?.magBijGebouw(gebouwIdKlant)) {
+        res.status(404).json({ error: "Rapport niet gevonden" });
+        return;
+      }
+      const [rapportKlant] = await db
+        .select({ status: opleverrapportenTable.status, gebouwId: opleverrapportenTable.gebouwId })
+        .from(opleverrapportenTable)
+        .where(eq(opleverrapportenTable.id, parseId(req.params.rapportId)));
+      if (!rapportKlant || rapportKlant.gebouwId !== gebouwIdKlant ||
+          (rapportKlant.status !== "definitief" && rapportKlant.status !== "gearchiveerd")) {
+        res.status(404).json({ error: "Rapport niet gevonden" });
+        return;
+      }
+    }
+  }
   try {
     const gebouwId  = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);

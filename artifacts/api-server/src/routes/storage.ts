@@ -40,8 +40,14 @@ async function magBestandInGebouw(
 ): Promise<boolean> {
   const gebouwId = parseGebouwIdFromObjectPath(objectPath);
   if (gebouwId == null) {
-    // Legacy uploads/ of algemeen/ — elke ingelogde gebruiker mag lezen.
-    return true;
+    // Legacy uploads/ of algemeen/ — elke ingelogde MEDEWERKER mag lezen.
+    // KLANT_01: klanten uitsluitend bestanden met een gebouw-koppeling naar
+    // een toegewezen gebouw; ongescoopte paden zijn voor klanten dicht.
+    const [g] = await db
+      .select({ rol: gebruikersTable.rol })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, userId));
+    return g?.rol !== "klant";
   }
   // Gebruikers die niet beperkt zijn (beheerder, bevoegdheid gebouwen:2) zien alles.
   if (!(await isBeperktTotToegewezen(userId))) return true;

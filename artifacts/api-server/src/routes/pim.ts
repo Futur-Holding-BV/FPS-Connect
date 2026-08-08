@@ -121,6 +121,18 @@ const router = Router();
 const lezen = requireBevoegdheidOfKlant("offertes", 1);
 const schrijven = requireBevoegdheid("offertes", 2);
 
+// KLANT_01: een klant mag PIM-gegevens alleen zien voor een opdracht op een
+// gebouw dat aan hem is toegewezen. Geeft true voor niet-klanten.
+async function klantMagBijOpdracht(req: import("express").Request, opdrachtId: number): Promise<boolean> {
+  if (!(req.permissies?.isKlant ?? false)) return true;
+  const [opdracht] = await db
+    .select({ gebouwId: opdrachtenTable.gebouwId })
+    .from(opdrachtenTable)
+    .where(eq(opdrachtenTable.id, opdrachtId));
+  if (!opdracht?.gebouwId) return false;
+  return req.permissies!.magBijGebouw(opdracht.gebouwId);
+}
+
 // ── Fase-transitiematrix ─────────────────────────────────────────────────────
 // Volgorde is bepalend; alleen +1 stap voorwaarts is toegestaan.
 // advies_gereed = beheerder heeft de AI-adviesrapportage goedgekeurd.
@@ -327,6 +339,18 @@ router.get("/opdrachten/:id/pim", lezen, async (req, res): Promise<void> => {
     if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
 
     const isKlant = req.permissies?.isKlant ?? false;
+    // KLANT_01: een klant mag alleen de PIM zien van een opdracht op een
+    // gebouw dat aan hem is toegewezen (404, geen bestaan verklappen).
+    if (isKlant) {
+      const [opdracht] = await db
+        .select({ gebouwId: opdrachtenTable.gebouwId })
+        .from(opdrachtenTable)
+        .where(eq(opdrachtenTable.id, opdrachtId));
+      if (!opdracht?.gebouwId || !req.permissies!.magBijGebouw(opdracht.gebouwId)) {
+        res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" });
+        return;
+      }
+    }
     res.json(mapPim(pim, isKlant));
   } catch (err) {
     logger.error({ err }, "getPim fout");
@@ -1376,6 +1400,7 @@ router.get("/opdrachten/:id/pim/uitvoering/stappen", lezen, async (req, res) => 
   if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
 
   try {
+    if (!(await klantMagBijOpdracht(req, opdrachtId))) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
     const [pim] = await db
       .select({ id: pimModellenTable.id })
       .from(pimModellenTable)
@@ -1505,6 +1530,7 @@ router.get("/opdrachten/:id/pim/uitvoering/huidige-stap", lezen, async (req, res
   if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
 
   try {
+    if (!(await klantMagBijOpdracht(req, opdrachtId))) { res.status(404).json({ error: "PIM niet gevonden" }); return; }
     const [pim] = await db
       .select({ id: pimModellenTable.id })
       .from(pimModellenTable)
@@ -2157,6 +2183,7 @@ router.get("/opdrachten/:id/pim/uitvoering/stap/:stapId/foto-analyse/:analyseId"
   if (isNaN(opdrachtId) || isNaN(stapId) || isNaN(analyseId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
 
   try {
+    if (!(await klantMagBijOpdracht(req, opdrachtId))) { res.status(404).json({ error: "Stap niet gevonden of behoort niet tot deze opdracht" }); return; }
     const resolved = await resolvePimVoorOpdracht(opdrachtId, stapId);
     if (!resolved) { res.status(404).json({ error: "Stap niet gevonden of behoort niet tot deze opdracht" }); return; }
 
@@ -3161,6 +3188,7 @@ router.get("/opdrachten/:id/pim/uitvoering/verslag", lezen, async (req, res): Pr
   const gebruikerId = req.session.userId ?? null;
 
   try {
+    if (!(await klantMagBijOpdracht(req, opdrachtId))) { res.status(404).json({ error: "PIM niet gevonden" }); return; }
     const [pim] = await db
       .select()
       .from(pimModellenTable)

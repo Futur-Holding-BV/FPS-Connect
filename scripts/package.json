@@ -19,6 +19,8 @@
     "clean-stale-dist": "tsx ./src/clean-stale-dist.ts",
     "check-codegen-stale": "tsx ./src/check-codegen-stale.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
+    "klant-poort-check": "tsx ./src/klant-poort-check.ts",
+    "klant-routes-analyse": "tsx ./src/klant-routes-analyse.ts",
     "broncode-export": "tsx ./src/broncode-export.ts",
     "valideer-installatie": "tsx ./src/valideer-installatie.ts",
     "pre-publish-validatie": "tsx ./src/pre-publish-validatie.ts",
