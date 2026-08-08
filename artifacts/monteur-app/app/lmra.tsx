@@ -26,6 +26,7 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const STANDAARD_RISICOS = [
   "Val van hoogte",
@@ -83,7 +84,7 @@ function datumLabel(iso: string) {
   });
 }
 
-export default function LmraPagina() {
+function LmraPagina() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
@@ -685,5 +686,15 @@ export default function LmraPagina() {
         </View>
       </Modal>
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).
+export default function LmraPaginaBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "toolbox", niveau: 1 }}>
+      <LmraPagina />
+    </BevoegdheidGuard>
   );
 }

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 type Kaart = {
   sleutel: string;
@@ -56,7 +57,7 @@ const KAARTEN: Kaart[] = [
   },
 ];
 
-export default function VeiligheidHub() {
+function VeiligheidHub() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -158,5 +159,15 @@ export default function VeiligheidHub() {
         ))}
       </ScrollView>
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).
+export default function VeiligheidHubBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "toolbox", niveau: 1 }}>
+      <VeiligheidHub />
+    </BevoegdheidGuard>
   );
 }

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const EENHEID_LABELS: Record<string, string> = {
   st: "stuks", m: "meter", m2: "m\u00b2", m3: "m\u00b3",
@@ -36,7 +37,7 @@ type ArtikelItem = {
   minimum_voorraad: number | null | undefined;
 };
 
-export default function MagazijnArtikelenScherm() {
+function MagazijnArtikelenScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -215,5 +216,15 @@ export default function MagazijnArtikelenScherm() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist magazijn niveau 1; gemeten, zie docs/metingen).
+export default function MagazijnArtikelenSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "magazijn", niveau: 1 }}>
+      <MagazijnArtikelenScherm />
+    </BevoegdheidGuard>
   );
 }

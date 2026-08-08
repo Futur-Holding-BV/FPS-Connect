@@ -7,7 +7,7 @@ import {
   medewerkersTable,
 } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
 import {
   stuurDeclaratieIngediendMail,
@@ -17,9 +17,18 @@ import {
 const router = Router();
 
 const lezen       = requireBevoegdheid("declaraties", 1);
-const indienen    = requireBevoegdheid("declaraties", 2);
 const beoordelen  = requireBevoegdheid("declaraties", 3);
 const beheerder   = requireBevoegdheid("declaraties", 4);
+
+// Basisrecht (APP_01 §4): eigen declaraties zijn geen HRM-recht. Elke
+// ingelogde medewerker (geen klant) mag zijn eigen declaraties inzien,
+// aanmaken, wijzigen en indienen; de module `declaraties` gaat uitsluitend
+// over het zien (niveau 3) en beoordelen/verwerken van ANDERMANS declaraties.
+// Eigendom wordt in elke handler afgedwongen via de medewerker-koppeling.
+const eigenGegevens = [requireAuth, (req: Parameters<typeof requireAuth>[0], res: Parameters<typeof requireAuth>[1], next: Parameters<typeof requireAuth>[2]): void => {
+  if (req.permissies?.isKlant) { res.status(403).json({ bericht: "Geen toegang" }); return; }
+  next();
+}] as const;
 
 // ── Helper: medewerker_id voor sessie-gebruiker ───────────────────────────────
 async function medewerkerId(gebruikerId: number): Promise<number | null> {
@@ -117,7 +126,7 @@ router.get("/declaraties", lezen, async (req, res) => {
 });
 
 // ── GET /mijn/declaraties ─────────────────────────────────────────────────────
-router.get("/mijn/declaraties", lezen, async (req, res) => {
+router.get("/mijn/declaraties", ...eigenGegevens, async (req, res) => {
   const userId = req.session.userId!;
   const mid = await medewerkerId(userId);
   if (!mid) { res.json([]); return; }
@@ -132,7 +141,7 @@ router.get("/mijn/declaraties", lezen, async (req, res) => {
 });
 
 // ── POST /declaraties ─────────────────────────────────────────────────────────
-router.post("/declaraties", indienen, async (req, res) => {
+router.post("/declaraties", ...eigenGegevens, async (req, res) => {
   const userId = req.session.userId!;
   const mid = await medewerkerId(userId);
   if (!mid) { res.status(403).json({ bericht: "U heeft geen medewerkersprofiel" }); return; }
@@ -162,7 +171,7 @@ router.post("/declaraties", indienen, async (req, res) => {
 });
 
 // ── GET /declaraties/:id ──────────────────────────────────────────────────────
-router.get("/declaraties/:id", lezen, async (req, res) => {
+router.get("/declaraties/:id", ...eigenGegevens, async (req, res) => {
   const id     = Number(req.params["id"]);
   const userId = req.session.userId!;
   const bev    = await gebruikerBevoegdheden(userId);
@@ -186,7 +195,7 @@ router.get("/declaraties/:id", lezen, async (req, res) => {
 });
 
 // ── PATCH /declaraties/:id ────────────────────────────────────────────────────
-router.patch("/declaraties/:id", indienen, async (req, res) => {
+router.patch("/declaraties/:id", ...eigenGegevens, async (req, res) => {
   const id     = Number(req.params["id"]);
   const userId = req.session.userId!;
   const mid    = await medewerkerId(userId);
@@ -226,7 +235,7 @@ router.patch("/declaraties/:id", indienen, async (req, res) => {
 });
 
 // ── DELETE /declaraties/:id ───────────────────────────────────────────────────
-router.delete("/declaraties/:id", indienen, async (req, res) => {
+router.delete("/declaraties/:id", ...eigenGegevens, async (req, res) => {
   const id     = Number(req.params["id"]);
   const userId = req.session.userId!;
   const mid    = await medewerkerId(userId);
@@ -246,7 +255,7 @@ router.delete("/declaraties/:id", indienen, async (req, res) => {
 });
 
 // ── POST /declaraties/:id/indienen ────────────────────────────────────────────
-router.post("/declaraties/:id/indienen", indienen, async (req, res) => {
+router.post("/declaraties/:id/indienen", ...eigenGegevens, async (req, res) => {
   const id     = Number(req.params["id"]);
   const userId = req.session.userId!;
   const mid    = await medewerkerId(userId);
@@ -424,7 +433,7 @@ router.post("/declaraties/:id/verwerken", beheerder, async (req, res) => {
 });
 
 // ── GET /declaratiebeleid ─────────────────────────────────────────────────────
-router.get("/declaratiebeleid", lezen, async (_req, res) => {
+router.get("/declaratiebeleid", ...eigenGegevens, async (_req, res) => {
   const [rij] = await db
     .select()
     .from(declaratieBeleidTable)

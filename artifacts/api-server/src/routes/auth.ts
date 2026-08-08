@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
 import { eq, and, gt, isNull, sql } from "drizzle-orm";
 import { maakToken } from "../lib/token";
+import { requireAuth } from "../middlewares/auth";
 import { legLoginPogingVast } from "./systeem";
 import { verstuurWachtwoordResetMail } from "../services/email.js";
 import {
@@ -711,8 +712,11 @@ router.delete("/auth/e2e-rate-reset", (req, res): void => {
   res.status(204).end();
 });
 
-// GET /auth/me
-router.get("/auth/me", async (req, res): Promise<void> => {
+// GET /auth/me — via requireAuth zodat ook de mobiele app (bearer-token) hier
+// haar gebruiker + effectieve bevoegdheden kan verversen bij het openen
+// (APP_01 acceptatie 6). Voor web verandert er niets: zonder sessie blijft
+// het antwoord 401.
+router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   try {
     const id = req.session.userId;
     if (!id) {

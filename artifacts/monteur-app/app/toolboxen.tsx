@@ -32,6 +32,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -588,7 +589,7 @@ function DetailModal({
 
 // ─── Hoofdscherm ──────────────────────────────────────────────────────────────
 
-export default function ToolboxenScherm() {
+function ToolboxenScherm() {
   const insets = useSafeAreaInsets();
   const c = useColors();
   const queryClient = useQueryClient();
@@ -764,5 +765,15 @@ export default function ToolboxenScherm() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).
+export default function ToolboxenSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "toolbox", niveau: 1 }}>
+      <ToolboxenScherm />
+    </BevoegdheidGuard>
   );
 }

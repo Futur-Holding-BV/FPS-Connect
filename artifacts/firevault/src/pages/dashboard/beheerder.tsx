@@ -31,7 +31,14 @@ import {
   LayoutDashboard, FolderOpen, FileText, Bug, Euro, BarChart3,
   CheckCircle2, XCircle, Star, ArrowUpRight, HardHat,
   Activity, Percent, ShieldAlert, Wrench, AlertCircle,
+  MoreHorizontal, ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
 import { Link } from "wouter";
@@ -90,19 +97,25 @@ interface DashboardDef {
   label: string;
   icoon: typeof LayoutDashboard;
   gecombineerdMet?: string;
+  // APP_01 §5.1/§5.3 — welke module (niveau 1+) deze weergave rechtvaardigt;
+  // undefined = hoort bij iedere rol die de kiezer ziet.
+  vereistModule?: string;
 }
 
 const DASHBOARD_DEFINITIES: DashboardDef[] = [
   { id: "operationeel", label: "Operationeel",        icoon: LayoutDashboard },
-  { id: "spots",        label: "Spots",               icoon: ShieldCheck },
-  { id: "projecten",    label: "Projecten & Offertes", icoon: FolderOpen, gecombineerdMet: "Projecten + Offerte-pipeline" },
-  { id: "facturen",     label: "Facturen & Verkoop",  icoon: FileText, gecombineerdMet: "Facturen + Onderhoud" },
-  { id: "financieel",   label: "Bedrijfsgezondheid",  icoon: Euro, gecombineerdMet: "Pijplijn + Contracten" },
-  { id: "hrm",          label: "HRM",                 icoon: Users, gecombineerdMet: "Personeel + Verlof + Ziekte" },
-  { id: "bugreports",   label: "Bugreports",          icoon: Bug, gecombineerdMet: "Feedback + Inbox + Veiligheid" },
-  { id: "kwartaal",     label: "Kwartaaloverzicht",   icoon: BarChart3, gecombineerdMet: "Offertes + Facturen + HRM" },
-  { id: "maand",        label: "Maandoverzicht",      icoon: Calendar, gecombineerdMet: "AI-kosten + Activiteit + Verlof" },
+  { id: "spots",        label: "Spots",               icoon: ShieldCheck, vereistModule: "gebouwen" },
+  { id: "projecten",    label: "Projecten & Offertes", icoon: FolderOpen, gecombineerdMet: "Projecten + Offerte-pipeline", vereistModule: "offertes" },
+  { id: "facturen",     label: "Facturen & Verkoop",  icoon: FileText, gecombineerdMet: "Facturen + Onderhoud", vereistModule: "financieel" },
+  { id: "financieel",   label: "Bedrijfsgezondheid",  icoon: Euro, gecombineerdMet: "Pijplijn + Contracten", vereistModule: "financieel" },
+  { id: "hrm",          label: "HRM",                 icoon: Users, gecombineerdMet: "Personeel + Verlof + Ziekte", vereistModule: "personeel" },
+  { id: "bugreports",   label: "Bugreports",          icoon: Bug, gecombineerdMet: "Feedback + Inbox + Veiligheid", vereistModule: "systeem" },
+  { id: "kwartaal",     label: "Kwartaaloverzicht",   icoon: BarChart3, gecombineerdMet: "Offertes + Facturen + HRM", vereistModule: "rapportages" },
+  { id: "maand",        label: "Maandoverzicht",      icoon: Calendar, gecombineerdMet: "AI-kosten + Activiteit + Verlof", vereistModule: "rapportages" },
 ];
+
+// Primaire chips op een klein scherm; de rest zit achter één doorgang (§5.1).
+const PRIMAIRE_WEERGAVEN: DashboardWeergave[] = ["operationeel", "spots", "projecten"];
 
 // ---------------------------------------------------------------------------
 // Helper: mini KPI-kaart
@@ -138,20 +151,27 @@ function KpiKaart({
 function DashboardKiezer({
   actief,
   onChange,
+  definities,
 }: {
   actief: DashboardWeergave;
   onChange: (v: DashboardWeergave) => void;
+  definities: DashboardDef[];
 }) {
+  // Mobiel (APP_01 §5.1): niet negen chips over drie regels, maar de primaire
+  // chips + één doorgang ("Meer") voor de rest. Desktop toont alles.
+  const secundair = definities.filter((d) => !PRIMAIRE_WEERGAVEN.includes(d.id));
+  const actiefSecundair = secundair.find((d) => d.id === actief);
   return (
     <div className="flex flex-wrap gap-2">
-      {DASHBOARD_DEFINITIES.map(({ id, label, icoon: Icoon, gecombineerdMet }) => (
+      {definities.map(({ id, label, icoon: Icoon, gecombineerdMet }) => (
         <button
           key={id}
           type="button"
           title={gecombineerdMet ? `Gecombineerd: ${gecombineerdMet}` : label}
           onClick={() => onChange(id)}
           className={[
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+            "items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+            PRIMAIRE_WEERGAVEN.includes(id) ? "inline-flex" : "hidden sm:inline-flex",
             actief === id
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground",
@@ -161,6 +181,34 @@ function DashboardKiezer({
           {label}
         </button>
       ))}
+      {/* Eén doorgang naar de overige weergaven op een klein scherm */}
+      {secundair.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={[
+                "sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                actiefSecundair
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border",
+              ].join(" ")}
+            >
+              {actiefSecundair ? <actiefSecundair.icoon className="h-3.5 w-3.5" /> : <MoreHorizontal className="h-3.5 w-3.5" />}
+              {actiefSecundair ? actiefSecundair.label : "Meer"}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {secundair.map(({ id, label, icoon: Icoon }) => (
+              <DropdownMenuItem key={id} onClick={() => onChange(id)}>
+                <Icoon className="h-3.5 w-3.5 mr-2" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }
@@ -1464,6 +1512,11 @@ export default function BeheerderDashboard() {
   const magVerlof      = magHrm || (bevoegdheden.planning ?? 0) >= 1;
   const magRapportages = isHoofdBeheerder || (bevoegdheden.rapportages ?? 0) >= 1;
 
+  // APP_01 §5.1/§5.3 — alleen chips tonen die bij de bevoegdheden horen.
+  const zichtbareDefinities = DASHBOARD_DEFINITIES.filter(
+    (d) => !d.vereistModule || isHoofdBeheerder || (bevoegdheden[d.vereistModule] ?? 0) >= 1,
+  );
+
   const [weergave, setWeergave] = useState<DashboardWeergave>(() => {
     try {
       const opgeslagen = localStorage.getItem(OPSLAG_SLEUTEL);
@@ -1473,6 +1526,16 @@ export default function BeheerderDashboard() {
       return "operationeel";
     }
   });
+
+  // Opgeslagen keuze die inmiddels buiten de bevoegdheden valt → terug naar de
+  // eerste toegestane weergave (rechtenwijziging mag geen oude inhoud tonen).
+  useEffect(() => {
+    if (zichtbareDefinities.length > 0 && !zichtbareDefinities.some((d) => d.id === weergave)) {
+      setWeergave(zichtbareDefinities[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weergave, zichtbareDefinities.map((d) => d.id).join(",")]);
+
 
   useEffect(() => {
     try { localStorage.setItem(OPSLAG_SLEUTEL, weergave); } catch { /* ignore */ }
@@ -1501,9 +1564,9 @@ export default function BeheerderDashboard() {
         </div>
       </div>
 
-      {/* Dashboard kiezer — alleen hoofdbeheerder */}
-      {isHoofdBeheerder && (
-        <DashboardKiezer actief={weergave} onChange={setWeergave} />
+      {/* Dashboard kiezer — voor iedereen met meer dan één toegestane weergave (APP_01 §5.1) */}
+      {zichtbareDefinities.length > 1 && (
+        <DashboardKiezer actief={weergave} onChange={setWeergave} definities={zichtbareDefinities} />
       )}
 
       {/* Actieve dashboard-inhoud */}

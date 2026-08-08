@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const STATUS_LABELS: Record<string, string> = {
   concept: "Concept",
@@ -117,7 +118,7 @@ function InkooporderKaart({ item }: { item: MagazijnInkooporder }) {
   );
 }
 
-export default function InkoopordersScherm() {
+function InkoopordersScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -203,5 +204,15 @@ export default function InkoopordersScherm() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist magazijn niveau 2; gemeten, zie docs/metingen).
+export default function InkoopordersSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "magazijn", niveau: 2 }}>
+      <InkoopordersScherm />
+    </BevoegdheidGuard>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const STANDAARD_MAATREGELEN = [
   "Direct gestopt met werk",
@@ -101,7 +102,7 @@ function statusLabel(status: string) {
   return "Open";
 }
 
-export default function IncidentenScherm() {
+function IncidentenScherm() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
@@ -700,5 +701,15 @@ export default function IncidentenScherm() {
         </View>
       </Modal>
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).
+export default function IncidentenSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "toolbox", niveau: 1 }}>
+      <IncidentenScherm />
+    </BevoegdheidGuard>
   );
 }

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 type Stap = "formulier" | "bevestigd";
 
@@ -46,6 +47,10 @@ function leesActueleRol(): string {
 }
 
 export function MeldingKnop() {
+  // APP_01 §5.3 — bugmeldingen horen bij wie het systeem bewaakt, niet in de
+  // topbalk van iedere gebruiker. Zichtbaar met de module `systeem` (niveau 1+).
+  const { heeftNiveau } = useBevoegdheid();
+  const magMelden = heeftNiveau("systeem", 1);
   const [open, setOpen] = useState(false);
   const [stap, setStap] = useState<Stap>("formulier");
   const [type, setType] = useState("bug");
@@ -156,6 +161,8 @@ export function MeldingKnop() {
       toast({ title: "Melding kon niet worden ingediend", description: "Probeer het opnieuw.", variant: "destructive" });
     }
   }
+
+  if (!magMelden) return null;
 
   return (
     <>

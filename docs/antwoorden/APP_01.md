@@ -1,28 +1,73 @@
-# Antwoorden en bevindingen — APP_01
+# APP_01 — Bevoegdheden in de app-laag (menu, schermen, dashboard)
 
-## 8 augustus 2026 · gemeten op commit `272d217`
+Datum: 8 augustus 2026 · Status: gebouwd en bewezen (dev)
 
-### Aanvulling René: basislaag voor iedere medewerker (vóór het bouwen van het filteren)
+## Wat is er gebouwd
 
-**Vraag/correctie:** menu-item Personeel koppelen aan module `personeel` zou eigen declaraties/verlof/loonstrookjes blokkeren voor wie dat modulerecht niet heeft. Er komt een basislaag (eigen uren, declaraties, verlof, loonstrookjes, gegevens/certificaten) voor iedere ingelogde medewerker, opgehangen aan de bestaande `/mijn/`-routefamilie; de modules `declaraties`/`personeel`/`salarisarchief` gaan uitsluitend over ANDEREN. Menu wordt gesplitst: "Mijn gegevens" (iedereen) en "Personeel" (module `personeel`).
+### 1. Monteur-app (Expo): menu volgt de effectieve bevoegdheden
+- De server stuurt bij login én bij elke app-start (verversing via `GET /auth/me`,
+  nu ook bereikbaar met het mobiele bearer-token) de **effectieve bevoegdheden**
+  mee. De app berekent zelf niets en combineert zelf niets (§3.1).
+- Elk menu-item in het radiaalmenu draagt de bevoegdheid die de bijbehorende
+  backendroute **werkelijk eist** (gemeten, zie `docs/metingen/APP_01_menu-bevoegdheden.md`).
+  Items waar de gebruiker niet bij kan worden **niet getoond** — niet uitgegrijsd (§3.2).
+- Schermen zijn beschermd met een gedeelde `BevoegdheidGuard`: wie via een direct
+  adres binnenkomt zonder recht krijgt een nette uitleg + terugknop, geen leeg
+  scherm of technische fout (§3.3).
+- "Personeel" heet zonder personeel-recht **"Mijn gegevens"**; het scherm toont dan
+  alleen de eigen onderdelen (verlof, loonstrookjes, opleidingen, kennisbank,
+  CAO-keuzes, declaraties) en geen teamstatistieken.
 
-**Antwoord:** wordt zo meegenomen in APP_01, vóór de bouw van het menufilteren.
+### 2. Basisrecht eigen gegevens (§4)
+- Eigen declaraties (bekijken, aanmaken, bewerken, indienen + declaratiebeleid
+  lezen) zijn nu een **basisrecht** voor elke ingelogde medewerker (klanten
+  uitgezonderd). De module `declaraties` blijft gelden voor andermans gegevens:
+  de lijst-alle-route en beoordelen/verwerken zijn onveranderd beschermd.
+- Verlof, uren, loonstrookjes en overige `/mijn/`-routes waren al basisrecht —
+  gemeten en bevestigd, geen wijziging nodig.
 
-**GEMETEN (routes en hun huidige eis):**
-- `/mijn/`-routefamilie bestaat in de api-server: declaraties, verlofaanvragen (GET+POST), verlofsaldi, verlofsoorten, verlof-correcties, salarisdocumenten (incl. download), medewerker, certificaten, opleidingen, ziekmeldingen (GET+POST).
-- **Bevestigd probleem:** `routes/declaraties.ts` r.19-21: `GET /mijn/declaraties` eist `declaraties` niveau 1; indienen (`POST /declaraties`, `POST /declaraties/:id/indienen`) eist niveau 2 — dezelfde module waarmee andermans declaraties worden beoordeeld (niveau 3). René's constatering klopt exact.
-- De overige gemeten `/mijn/`-routes (`hrm.ts` verlof, `salarisarchief.ts` salarisdocumenten) hebben **geen** modulerecht-eis — alleen inlog. De basislaag bestaat daar dus al; alleen declaraties wijkt af.
+### 3. PWA (FPS Connect): telefoonvriendelijk dashboard (§5)
+- **Paginauitleg staat standaard uit**; wie hem wil kan hem aanzetten via de
+  weergave-instellingen (bestaande toggle).
+- De **"Melden"-knop** (bugmeldingen) staat niet meer bij iedereen in de topbalk:
+  alleen zichtbaar met de module `systeem` (of hoofdbeheerder). De
+  **Bugreports-chip** volgt dezelfde regel.
+- De dashboard-chips zijn gekoppeld aan bevoegdheden (Spots→gebouwen,
+  Projecten→offertes, Facturen/Bedrijfsgezondheid→financieel, HRM→personeel,
+  Kwartaal/Maand→rapportages) en op een klein scherm staan alleen de primaire
+  chips + **één "Meer"-doorgang** (dropdown) voor de rest — geen drie regels
+  chips meer op een telefoon.
 
-**AANGENOMEN (nog te meten bij de bouw):** dat er geen andere `/mijn/`-routes zijn met een verstopte modulerecht-eis; bij de bouw wordt de hele familie route-voor-route nagelopen en de dekking gerapporteerd.
+## Gemeten afwijkingen t.o.v. de opdracht-tabel (bewust NIET stilzwijgend aangepast)
+| Onderdeel | Opdracht verwachtte | Werkelijk (gemeten) | Gekozen gedrag |
+|---|---|---|---|
+| Routeplanner | basislaag | backend eist niets extra's (`/mijn-werk` = alleen ingelogd) | basis, zichtbaar voor iedereen |
+| Opname | module | backend eist alleen inloggen | basis |
+| Voertuig melden | module | backend eist alleen inloggen | basis |
+| Documenten | `dossiers` | backend eist `bibliotheek` niveau 1 | `bibliotheek:1` |
+| Inkooporders | "magazijn hoger niveau" | leesroute eiste `magazijn:1` | backend-leesroutes verhoogd naar `magazijn:2`, gelijk aan menu/guard (besluit n.a.v. review) |
+| Inkoop aanvragen | "magazijn hoger niveau" | bestelbon aanmaken eist `magazijn:3` | `magazijn:3` |
 
-**Consequentie voor de bouw:** eigen-declaratieroutes (`/mijn/declaraties` + indienen/wijzigen van EIGEN niet-ingediende declaraties) worden basisrecht van elke ingelogde medewerker; module `declaraties` blijft uitsluitend voor het zien en beoordelen van anderen (niveau ≥3). Indienen van een eigen declaratie krijgt daarvoor een `/mijn/`-pad of een eigenaarschapscheck i.p.v. modulerecht — exacte vorm wordt bij de bouw bepaald en bewezen.
+## Beslissingen voor René
+1. **iPhones Jacqueline/Ruben** — hebben zij een iPhone? De PWA (FPS Connect)
+   werkt daar gewoon op; de Expo-app is Android-eerst. Graag bevestigen zodat we
+   weten of er actie nodig is.
+2. **Dashboardchip per rol** — welke chip hoort standaard bij welke rol? Nu
+   gekoppeld aan modules (zie boven); zeg het als een koppeling anders moet.
+3. **Inkooporders-leesrecht** — end-to-end op `magazijn:2` gezet (backend +
+   menu + guard), conform "hoger niveau" in de opdracht. Terugdraaien naar
+   niveau 1 kan als dat toch de bedoeling was.
 
-### Open vraag marketingprofiel — DOOR RENÉ BEANTWOORD
+## Review-fixes (architect, 8 aug 2026)
+- Dashboardkiezer nu voor iedereen met >1 toegestane weergave (was hoofdbeheerder-only);
+  een opgeslagen keuze buiten de bevoegdheden springt terug naar de eerste toegestane chip.
+- Inkooporders-leesroutes backend naar `magazijn:2` (zie tabel).
+- Mobiele verversing: 401/403 op `/auth/me` = volledig uitloggen (ingetrokken
+  token werkt niet meer door op een oude cache); alleen transiënte fouten houden de cache.
 
-**Vraag (opdracht-aanvulling):** volstaat de preset 'Commercieel' voor de marketingmedewerker, of moet er een profiel bij?
-
-**Antwoord René (8 augustus 2026, chat):** *"marketing en commercieel zijn gelijk"* — **Commercieel volstaat**, er komt geen apart marketingprofiel. Geen besluit meer open op dit punt.
-
-### Nog open (uit APP_01 §5)
-
-**BESLUIT/INFO VAN RENÉ NODIG:** hebben Jacqueline, Ruben of anderen een iPhone? De MONTEURAPP_01-APK is Android-only; voor iPhone-gebruikers is een aparte beslissing nodig.
+## Bewijs
+- `scripts/src/bewijs-app01-bevoegdheden.ts` — groen (8 aug 2026): login/`me`
+  bevatten bevoegdheden; medewerker zonder declaraties-module kan eigen
+  declaratie aanmaken en indienen (201/200) maar krijgt 403 op de lijst-alle.
+- e2e-menu (vol-bevoegd account: alle menu-items zichtbaar + doorlinken): 1/1 groen.
+- e2e-web (firevault regressie incl. login/bevoegdheden): 39 geslaagd, 2 bewust overgeslagen.

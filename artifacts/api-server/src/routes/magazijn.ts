@@ -1903,8 +1903,12 @@ async function genereerInkooporderNummer(): Promise<string> {
   return `INK-${jaar}-${volgnr}`;
 }
 
+// Inkooporders lezen = magazijn niveau 2 (APP_01, besluit n.a.v. review):
+// orders horen bij "magazijn op een hoger niveau", niet bij elke scan-gebruiker.
+const inkooporderLezen = requireBevoegdheid("magazijn", 2);
+
 // GET /magazijn/inkooporders
-router.get("/inkooporders", lezen, async (req, res) => {
+router.get("/inkooporders", inkooporderLezen, async (req, res) => {
   try {
     const { status, leverancier_id } = req.query;
     const conditions = [];
@@ -1989,7 +1993,7 @@ router.post("/inkooporders", aanmaken, async (req, res) => {
 });
 
 // GET /magazijn/inkooporders/:id
-router.get("/inkooporders/:id", lezen, async (req, res) => {
+router.get("/inkooporders/:id", inkooporderLezen, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [order] = await db

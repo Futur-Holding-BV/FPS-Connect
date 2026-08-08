@@ -28,7 +28,9 @@ export const STANDAARD_VOORKEUREN: WeergaveVoorkeuren = {
   lettergrootte: "normaal",
   dichtheid:     "normaal",
   helderheid:    100,
-  toonPaginaHulp: true,
+  // APP_01 §5.2 — paginauitleg standaard uit; wie hem wil kan hem aanzetten
+  // via de weergave-instellingen ("Paginauitleg altijd verbergen"-toggle).
+  toonPaginaHulp: false,
 };
 
 const FONT_GROOTTE: Record<Lettergrootte, string> = {

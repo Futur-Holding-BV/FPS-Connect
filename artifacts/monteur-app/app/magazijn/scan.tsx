@@ -35,6 +35,7 @@ import { useColors } from "@/hooks/useColors";
 import * as offlineCache from "@/lib/offlineCache";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { useOffline } from "@/context/offline";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 type Modus = "scan" | "resultaat";
 type Actie = "uitgifte" | "retour" | "verplaatsen";
@@ -767,7 +768,7 @@ function HandmatigZoekenModal({
   );
 }
 
-export default function MagazijnScanScherm() {
+function MagazijnScanScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -1018,5 +1019,15 @@ export default function MagazijnScanScherm() {
         }}
       />
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist magazijn niveau 1; gemeten, zie docs/metingen).
+export default function MagazijnScanSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "magazijn", niveau: 1 }}>
+      <MagazijnScanScherm />
+    </BevoegdheidGuard>
   );
 }

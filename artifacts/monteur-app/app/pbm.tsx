@@ -7,6 +7,7 @@ import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/context/auth";
 import { useFotoUpload } from "@/hooks/useFotoUpload";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ function isVervangingBinnenkort(d: string | null | undefined) {
 
 // ── Hoofd-scherm ─────────────────────────────────────────────────────────────
 
-export default function PbmScherm() {
+function PbmScherm() {
   const { token } = useAuth();
   const { uploadFoto } = useFotoUpload();
 
@@ -400,3 +401,13 @@ const s = StyleSheet.create({
   },
   keurWaarschuwingTekst: { fontSize: 13, color: "#92400e", fontWeight: "600" },
 });
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).
+export default function PbmSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "toolbox", niveau: 1 }}>
+      <PbmScherm />
+    </BevoegdheidGuard>
+  );
+}

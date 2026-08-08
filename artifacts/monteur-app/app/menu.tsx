@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { heeftBevoegdheid, type Vereiste } from "@/lib/bevoegdheden";
 import { useColors } from "@/hooks/useColors";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 import { BirthdayCelebration } from "@/components/BirthdayCelebration";
@@ -98,28 +99,35 @@ export default function MenuScherm() {
 
   if (!token) return <Redirect href="/login" />;
 
-  const acties: RadiaalActie[] = [
+  // APP_01 §3.2 — elk menu-item draagt de bevoegdheid die de bijbehorende
+  // backendroute werkelijk eist (gemeten; zie docs/metingen/APP_01_menu-bevoegdheden.md).
+  // Wat de gebruiker niet mag, wordt NIET getoond — niet uitgegrijsd.
+  const magPersoneel = heeftBevoegdheid(gebruiker, { module: "personeel", niveau: 1 });
+
+  type MenuActie = RadiaalActie & { vereist?: Vereiste };
+  const acties: RadiaalActie[] = ([
     { sleutel: "werkdag", label: "Mijn werkdag", icoon: "today", onPress: () => router.push("/werkdag") },
-    { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", onPress: () => router.push("/gebouwen") },
+    { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", vereist: { module: "gebouwen", niveau: 1 }, onPress: () => router.push("/gebouwen") },
     { sleutel: "verlof", label: "Verlof", icoon: "calendar-outline", onPress: () => router.push("/hrm/verlof") },
     { sleutel: "uren", label: "Uren", icoon: "stopwatch", onPress: () => router.push("/uren") },
     { sleutel: "planning", label: "Routeplanner", icoon: "navigate", onPress: () => router.push("/planning") },
-    { sleutel: "veiligheid", label: "Veiligheid", icoon: "shield-checkmark-outline", onPress: () => router.push("/veiligheid") },
-  ];
+    { sleutel: "veiligheid", label: "Veiligheid", icoon: "shield-checkmark-outline", vereist: { module: "toolbox", niveau: 1 }, onPress: () => router.push("/veiligheid") },
+  ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
 
-  const meerActies: RadiaalActie[] = [
+  const meerActies: RadiaalActie[] = ([
     { sleutel: "werkbak", label: "Werkbak", icoon: "file-tray-full-outline", badge: werkbakAantal?.totaal ?? 0, onPress: () => router.push("/werkbak" as "/werkdag") },
-    { sleutel: "personeel", label: "Personeel", icoon: "people-outline", onPress: () => router.push("/hrm") },
+    // §4: eigen gegevens zijn een basisrecht; "Personeel" (anderen) vereist de module.
+    { sleutel: "personeel", label: magPersoneel ? "Personeel" : "Mijn gegevens", icoon: "people-outline", onPress: () => router.push("/hrm") },
     { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
     { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },
-    { sleutel: "documenten", label: "Documenten", icoon: "folder-outline", onPress: () => router.push("/documenten") },
-    { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", onPress: () => router.push("/magazijn/scan" as "/werkdag") },
-    { sleutel: "magazijn_artikelen", label: "Artikelen", icoon: "cube-outline", onPress: () => router.push("/magazijn/artikelen" as "/werkdag") },
-    { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
-    { sleutel: "magazijn_picklijsten", label: "Picklijsten", icoon: "list-circle-outline", badge: picklijstNieuw, onPress: () => router.push("/magazijn/picklijsten" as "/werkdag") },
-    { sleutel: "magazijn_inkooporders", label: "Inkooporders", icoon: "receipt-outline", onPress: () => router.push("/magazijn/inkooporders" as "/werkdag") },
+    { sleutel: "documenten", label: "Documenten", icoon: "folder-outline", vereist: { module: "bibliotheek", niveau: 1 }, onPress: () => router.push("/documenten") },
+    { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", vereist: { module: "magazijn", niveau: 1 }, onPress: () => router.push("/magazijn/scan" as "/werkdag") },
+    { sleutel: "magazijn_artikelen", label: "Artikelen", icoon: "cube-outline", vereist: { module: "magazijn", niveau: 1 }, onPress: () => router.push("/magazijn/artikelen" as "/werkdag") },
+    { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", vereist: { module: "magazijn", niveau: 3 }, onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
+    { sleutel: "magazijn_picklijsten", label: "Picklijsten", icoon: "list-circle-outline", badge: picklijstNieuw, vereist: { module: "magazijn", niveau: 1 }, onPress: () => router.push("/magazijn/picklijsten" as "/werkdag") },
+    { sleutel: "magazijn_inkooporders", label: "Inkooporders", icoon: "receipt-outline", vereist: { module: "magazijn", niveau: 2 }, onPress: () => router.push("/magazijn/inkooporders" as "/werkdag") },
     { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
-  ];
+  ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
 
   const routeMap: Record<string, string> = {
     werkdag: "/werkdag",

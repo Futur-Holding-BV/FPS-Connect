@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { heeftBevoegdheid } from "@/lib/bevoegdheden";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -34,7 +35,10 @@ export default function HrmDashboard() {
   const insets = useSafeAreaInsets();
   const { inhoudMaxBreedte } = useResponsive();
   const { token, gebruiker } = useAuth();
-  const { data: stats, isLoading } = useGetHrmStats();
+  // APP_01 §4 — teamstatistieken (andermans gegevens) alleen met de module
+  // `personeel`; de eigen onderdelen hieronder zijn een basisrecht.
+  const magPersoneel = heeftBevoegdheid(gebruiker, { module: "personeel", niveau: 1 });
+  const { data: stats, isLoading } = useGetHrmStats({ query: { enabled: magPersoneel } } as any);
   const { data: certificaten } = useGetMijnCertificaten();
 
   if (!token) return <Redirect href="/login" />;
@@ -90,7 +94,7 @@ export default function HrmDashboard() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>Personeel</Text>
+              <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>{magPersoneel ? "Personeel" : "Mijn gegevens"}</Text>
               <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
                 {gebruiker?.naam ?? "Medewerker"}
               </Text>
@@ -102,7 +106,7 @@ export default function HrmDashboard() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
       >
-        {isLoading ? (
+        {!magPersoneel ? null : isLoading ? (
           <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 32 }} />
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>

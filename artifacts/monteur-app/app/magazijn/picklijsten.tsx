@@ -18,6 +18,7 @@ import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const STATUS_LABELS: Record<string, string> = {
   concept: "Concept",
@@ -119,7 +120,7 @@ function PicklijstKaart({
   );
 }
 
-export default function PicklijstenScherm() {
+function PicklijstenScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -231,5 +232,15 @@ export default function PicklijstenScherm() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist magazijn niveau 1; gemeten, zie docs/metingen).
+export default function PicklijstenSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "magazijn", niveau: 1 }}>
+      <PicklijstenScherm />
+    </BevoegdheidGuard>
   );
 }

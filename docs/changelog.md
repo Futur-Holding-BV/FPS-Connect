@@ -1,3 +1,17 @@
+## 2026-08-08 — APP_01: bevoegdheden in de app-laag (menu, schermen, dashboard)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (tonen/verbergen in de UI + één backend-versoepeling voor eigen declaraties; alle module-bescherming voor andermans gegevens onveranderd)
+
+**Wat is gebouwd:** de monteur-app (Expo) toont alleen nog menu-items waar de gebruiker bij kan. De server stuurt de effectieve bevoegdheden mee bij login en de app ververst ze bij elke start via `GET /auth/me` (nu ook bereikbaar met het mobiele bearer-token) — profielwijzigingen zijn dus zichtbaar bij de volgende keer openen, zonder herinstallatie. Schermen zijn beschermd met een nette weigering (uitleg + terugknop) voor wie via een direct adres binnenkomt. "Personeel" heet zonder personeel-recht "Mijn gegevens" en toont dan alleen de eigen onderdelen. Eigen declaraties (bekijken, aanmaken, indienen + beleid lezen) zijn nu een basisrecht voor elke medewerker; de declaraties-module blijft gelden voor andermans gegevens. PWA: paginauitleg standaard uit, de "Melden"-knop en de Bugreports-chip alleen voor wie het systeem bewaakt (module systeem), dashboardchips gekoppeld aan bevoegdheden en op de telefoon compact (primaire chips + één "Meer"-doorgang).
+
+**Wijzigingen:** api-server `declaraties.ts` (eigen-routes → `eigenGegevens`), `auth.ts` (`/auth/me` via requireAuth voor bearer); Expo `context/auth.tsx` (bevoegdheden + verversing), `lib/bevoegdheden.ts`, `components/BevoegdheidGuard.tsx`, `menu.tsx` (filtering + labelsplitsing), 12 schermen met guard, `hrm/index.tsx` adaptief; firevault `weergave-context.tsx`, `melding-knop.tsx`, `dashboard/beheerder.tsx`.
+
+**Bewijs (GEMETEN):** `scripts/src/bewijs-app01-bevoegdheden.ts` 10/10 groen (login/me bevatten bevoegdheden; zonder declaraties-module: eigen declaratie 201 + indienen 200, lijst-alle 403); e2e-menu 1/1; e2e-web 39 geslaagd / 2 overgeslagen. Zie `docs/metingen/APP_01_menu-bevoegdheden.md`.
+
+**Review-fixes (architect):** dashboardkiezer voor iedereen met >1 toegestane weergave + reset van een niet-meer-toegestane opgeslagen keuze; inkooporders-leesroutes backend naar magazijn:2 (end-to-end gelijk aan menu/guard); 401/403 op /auth/me = volledig uitloggen i.p.v. doorwerken op oude cache.
+
+**Beslispunten René (in `docs/antwoorden/APP_01.md`):** iPhones Jacqueline/Ruben; chip-per-rol-koppeling; inkooporders desgewenst terug naar niveau 1.
+
 ## 2026-08-08 — WERKBAK_01: één persoonlijke werkbak, gevoed door de dagelijkse bewakingsloop
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe motor + 13 voeders, maar additief: geen bestaande flow gewijzigd)

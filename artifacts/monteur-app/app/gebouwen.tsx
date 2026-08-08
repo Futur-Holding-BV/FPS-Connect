@@ -18,8 +18,9 @@ import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
-export default function Gebouwen() {
+function Gebouwen() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -281,5 +282,15 @@ export default function Gebouwen() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist gebouwen niveau 1; gemeten, zie docs/metingen).
+export default function GebouwenBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "gebouwen", niveau: 1 }}>
+      <Gebouwen />
+    </BevoegdheidGuard>
   );
 }

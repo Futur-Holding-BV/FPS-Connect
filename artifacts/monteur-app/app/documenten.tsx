@@ -20,6 +20,7 @@ import { LijstFout, TekstVeld, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.eta]: "ETA",
@@ -44,7 +45,7 @@ const STATUS_LABELS: Record<DocumentStatus, string> = {
   [DocumentStatus.ingetrokken]: "Ingetrokken",
 };
 
-export default function Documenten() {
+function Documenten() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -185,5 +186,15 @@ export default function Documenten() {
         />
       )}
     </View>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist bibliotheek niveau 1; gemeten, zie docs/metingen).
+export default function DocumentenBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "bibliotheek", niveau: 1 }}>
+      <Documenten />
+    </BevoegdheidGuard>
   );
 }

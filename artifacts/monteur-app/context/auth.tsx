@@ -23,6 +23,9 @@ export type Gebruiker = {
   rol: string;
   avatar_url?: string | null;
   taal?: string | null;
+  // Effectieve bevoegdheden (module → niveau), berekend door de server bij
+  // login en ververst bij elke app-start. GEEN eigen berekening in de app.
+  bevoegdheden?: Record<string, number>;
 };
 
 // Module-level token, uitgelezen door de gedeelde fetch-laag (setAuthTokenGetter).
@@ -135,6 +138,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       actief = false;
     };
   }, []);
+
+  // Ververs de gebruiker (incl. effectieve bevoegdheden) zodra er een bruikbare
+  // token is. Zo verandert het menu bij de volgende keer openen wanneer iemands
+  // profiel is gewijzigd — zonder herinstallatie of opnieuw inloggen.
+  useEffect(() => {
+    if (!token) return;
+    let actief = true;
+    (async () => {
+      try {
+        const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+        const resp = await fetch(`${basis}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (resp.status === 401 || resp.status === 403) {
+          // Token ingetrokken of account geblokkeerd: niet doorwerken op de
+          // oude cache — volledig uitloggen zodat opnieuw ingelogd moet worden.
+          if (actief) await uitloggen();
+          return;
+        }
+        if (!resp.ok) return; // transiente serverfout — bestaande gegevens houden
+        const vers = (await resp.json()) as Gebruiker;
+        if (!actief || !vers?.id) return;
+        setGebruiker(vers);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(vers));
+      } catch {
+        // offline — stil houden, cache blijft gelden
+      }
+    })();
+    return () => { actief = false; };
+  }, [token]);
 
   const inloggen = useCallback(
     async (email: string, wachtwoord: string, code: string) => {

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
 const EENHEID_LABELS: Record<string, string> = {
   st: "stuks", m: "meter", m2: "m\u00b2", m3: "m\u00b3",
@@ -35,7 +36,7 @@ function eenheidLabel(e: string | null | undefined) {
 type BestelRegel = { artikel_id: number; hoeveelheid: string; naam: string; eenheid: string; vrij: number; gewenst: number };
 type LeverancierGroep = { leverancier_id: number | null; leverancier_naam: string; email: string | null; regels: BestelRegel[] };
 
-export default function MagazijnInkoopScherm() {
+function MagazijnInkoopScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -377,5 +378,15 @@ export default function MagazijnInkoopScherm() {
         )}
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+// APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
+// (backendroute eist magazijn niveau 3; gemeten, zie docs/metingen).
+export default function MagazijnInkoopSchermBeveiligd() {
+  return (
+    <BevoegdheidGuard vereiste={{ module: "magazijn", niveau: 3 }}>
+      <MagazijnInkoopScherm />
+    </BevoegdheidGuard>
   );
 }
