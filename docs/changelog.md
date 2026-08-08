@@ -293,7 +293,7 @@
 
 ## 2026-07-28 — Drieledige keuze bij gebruikersaanmaak voor interne profielen
 
-> **VERVALLEN (2026-08-07):** teruggedraaid — strijdig met de definitieve geconsolideerde onboardingflow (geen medewerkerprofiel-aanmaak vanuit gebruikersbeheer). Zie entry 2026-08-07.
+> **VERVALLEN (2026-08-08):** teruggedraaid — strijdig met de definitieve geconsolideerde onboardingflow (geen medewerkerprofiel-aanmaak vanuit gebruikersbeheer). Zie entry 2026-08-08.
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
@@ -302,7 +302,6 @@
 **Wijziging (alleen `artifacts/firevault/src/pages/gebruikers/index.tsx`):** extra dialoogstap (stap 3) ná de basisgegevens, uitsluitend bij interne profielen, met drie opties: (1) alleen gebruikersaccount; (2) account + medewerkerdossier via de bestaande `POST /medewerkers/onboarding` (minimale velden: functie, werkmaatschappij met automatische CAO-voorselectie, contracturen, in dienst sinds); (3) account + doornavigeren naar het bestaande onboardingscherm `/personeel/onboarden?userId=<id>`. Externe profielen (Klant e.d.) krijgen de vraag niet; er is géén parallelle medewerker-aanmaakroute toegevoegd en bestaande onboarding-logica is onaangeraakt. Mislukt het dossier na een geslaagd account, dan meldt de UI dat expliciet (geen stille fout).
 
 **Bewijs:** nieuwe e2e-suite `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` — 4/4 groen: keuze 1 (account zonder dossier, DB-check), keuze 2 (dossier aanwezig én gekoppeld aan nieuwe gebruiker_id, geen onboardingscherm), keuze 3 (redirect naar onboardingscherm met juiste userId, nog geen dossier), extern profiel Klant (geen stap 3). Typecheck groen; screenshot van de keuzestap in `scripts/test-results/dossier-keuze-stap3.png`.
-
 ## 2026-07-28 — Ontbrekende indexen toegevoegd (technische-schuld #1-7, P1)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -940,7 +939,9 @@ alle layout-hooks `.map()`/`.filter()`/`.length` aanroepen zonder te crashen.
 6. **`docs/productie-env-checklist.md` (nieuw)** — volledige tabel van alle verplichte/aanbevolen variabelen, locatie (VPS / GitHub Actions / beide), beveiligingsregels (wat nooit in Git mag).
 
 7. **`docs/PRODUCTION_RUNBOOK.md` uitgebreid** — nieuwe secties: automatische rollback-procedure, versie controleren (pagina + API), smoketest handmatig triggeren, omgevingsvariabelen-checklist verwijzing, Definition of Done.
-=======
+
+---
+
 ## 2026-07-16 — Diagnose productie-login connect.fps-one.nl (kritiek — opgelost voor aanvang)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
@@ -2835,3 +2836,11 @@ De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-token
 - **Echte koppeling-gezondheid (migratie 0014):** "werkende koppeling" is niet "er staat een token-rij". Weigert Microsoft de token-refresh met een auth-fout (invalid_grant — wachtwoordwissel, ingetrokken consent), dan wordt `werk_inbox_tokens.refresh_mislukt_op` direct gezet: de koppeling telt vanaf dat moment niet meer mee in het beheerscherm én de bewaking. Een geslaagde refresh of herkoppeling wist de markering. Tijdelijke fouten (netwerk/5xx) markeren niets.
 
 **Bewijs (dev, 8 aug):** `scripts/src/bewijs-mailbox-syncbewaking.ts` — 13/13 checks: gezonde koppeling (telling 1, geen alarm), refresh-weigering (telling 0, alarm binnen één run), 24-uurs alarm-dedupe, herstel (alarm gereset), stale-sync >6 uur met werkende koppeling (alarm). Via ingelogde hoofdbeheerder-sessie + echte achtergrondbewaking; testdata in finally opgeruimd.
+
+## 2026-08-08 — Drieledige aanmaakkeuze teruggedraaid (conflicteert met geconsolideerde onboarding)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** de eerder gebouwde drieledige keuze (stap 3 in de gebruikersaanmaak-dialoog: alleen account / + dossier / + onboarding) conflicteert met de geconsolideerde onboarding-flow op productie (commit cf4d7159). Op main loopt onboarding bewust via HRM > "Gebruikers zonder medewerkerprofiel" > Onboarden; een parallelle keuze in de aanmaakdialoog creëert verwarrende dubbele UX.
+
+**Besluit:** de drieledige keuze wordt niet doorgevoerd. `artifacts/firevault/src/pages/gebruikers/index.tsx` hersteld naar de origin/main-versie. De bijbehorende e2e-spec `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` verwijderd. De HRM-lijst "Gebruikers zonder medewerkerprofiel" blijft het officiële onboarding-vangnet.

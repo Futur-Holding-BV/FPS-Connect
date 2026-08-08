@@ -99,7 +99,6 @@ const FUNCTIE_GROEPEN: FunctieGroep[] = [
 ];
 
 const GROEP_NAMEN = new Set(FUNCTIE_GROEPEN.map((g) => g.naam));
-
 function niveauLabel(n: number): string {
   return NIVEAUS.find((x) => x.waarde === n)?.kort ?? "";
 }
@@ -228,7 +227,6 @@ const leegForm = {
   uitzendbureau_id: null as number | null,
 };
 type GebruikerForm = typeof leegForm;
-
 type Gebruiker = {
   id: number;
   naam: string | null;
