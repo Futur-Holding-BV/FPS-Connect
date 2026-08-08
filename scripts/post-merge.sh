@@ -415,23 +415,33 @@ else
       REMOTE_MAIN_SHA=$(git rev-parse refs/remotes/fps-postsync/main 2>/dev/null || echo "")
       if [ -n "$REMOTE_MAIN_SHA" ] && \
          ! git merge-base --is-ancestor "$REMOTE_MAIN_SHA" HEAD 2>/dev/null; then
-        echo "Remote main (${REMOTE_MAIN_SHA:0:8}) bevat commits die lokaal ontbreken; auto-merge..."
-        git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
-          merge --no-edit refs/remotes/fps-postsync/main 2>&1 || {
-            # Bij conflict: bewaar altijd de lokale (inkomende task-merge) versie.
-            CONFLICTING=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
-            if [ -n "$CONFLICTING" ]; then
-              echo "Conflicten gevonden in: $CONFLICTING"
-              echo "Lokale versie wordt bewaard (--ours)..."
-              echo "$CONFLICTING" | tr '\n' '\0' | xargs -0 git checkout --ours --
-              git add -A
-              git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
-                commit -m "Merge remote-sync: conflicten opgelost via --ours" 2>&1 || \
-                echo "WAARSCHUWING: Conflict-commit mislukt; push toch geprobeerd." >&2
-            else
-              echo "WAARSCHUWING: Auto-merge mislukt zonder detecteerbaar conflict; push wordt toch geprobeerd." >&2
-            fi
-          }
+        echo "Remote main (${REMOTE_MAIN_SHA:0:8}) is gewijzigd sinds de pre-check; schone merge proberen..."
+        # MERGE_01: een schone merge (zonder conflicten) behoudt beide kanten en
+        # is veilig. Bij een CONFLICT wordt er NIET meer stilzwijgend gekozen
+        # voor de lokale versie (--ours) — dat overschreef eerder op main
+        # hersteld werk. Conflict = stoppen, faalmelding, handmatig oplossen.
+        if ! git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
+          merge --no-edit refs/remotes/fps-postsync/main 2>&1; then
+          CONFLICTING=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
+          git merge --abort 2>/dev/null || true
+          echo "====================================================" >&2
+          echo "FOUT: merge met remote main geeft conflicten in:" >&2
+          echo "${CONFLICTING:-onbekend}" >&2
+          echo "Automatisch oplossen is niet toegestaan (MERGE_01): dat heeft" >&2
+          echo "eerder hersteld werk op main overschreven. De push is NIET" >&2
+          echo "uitgevoerd; los de conflicten handmatig op en push daarna." >&2
+          echo "====================================================" >&2
+          _stuur_faalmelding \
+            "Stap 7a: merge-conflict met remote main — push geblokkeerd" \
+            "${LOCAL_SHA}" \
+            "Conflicterende bestanden:
+${CONFLICTING:-onbekend}
+
+  1. Haal main binnen: git pull https://github.com/vinkrene-jpg/fps-one.git main
+  2. Los de conflicten handmatig en inhoudelijk op (geen --ours/--theirs).
+  3. Draai pnpm run typecheck en check-dubbele-routes, push daarna naar main."
+          exit 1
+        fi
         # LOCAL_SHA bijwerken na merge zodat de log het juiste commit-SHA toont
         LOCAL_SHA=$(git rev-parse HEAD)
       else
