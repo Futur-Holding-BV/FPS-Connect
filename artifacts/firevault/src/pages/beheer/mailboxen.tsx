@@ -35,6 +35,9 @@ type Mailbox = {
   modus: "verwerken" | "ondersteunen" | "registreren";
   isFactuurmailbox: boolean;
   isAanvraagmailbox: boolean;
+  laatstGesynctOp: string | null;
+  aangemaaktOp: string;
+  werkendeKoppelingen: number;
   recht: "lezen" | "behandelen" | "beheren";
 };
 
@@ -78,6 +81,71 @@ const RECHT_LABELS: Record<string, string> = {
   behandelen: "Behandelen",
   beheren: "Beheren",
 };
+
+// ─── Sync-status per mailbox ──────────────────────────────────────────────────
+// De achtergrondsync draait op persoonlijke Microsoft-koppelingen van collega's
+// met toegang. Zonder werkende koppeling valt de sync stil — dat mag nooit
+// onzichtbaar blijven.
+
+const SYNC_STIL_NA_UREN = 6;
+
+function formateerSyncTijd(iso: string): string {
+  const verschilMin = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (verschilMin < 1) return "zojuist";
+  if (verschilMin < 60) return `${verschilMin} min. geleden`;
+  const uren = Math.floor(verschilMin / 60);
+  if (uren < 48) return `${uren} uur geleden`;
+  return `${Math.floor(uren / 24)} dagen geleden`;
+}
+
+function SyncStatusSectie({ mailbox }: { mailbox: Mailbox }) {
+  const geenKoppeling = mailbox.werkendeKoppelingen === 0;
+  // Nooit gesynct telt vanaf het aanmaken: ook een nieuwe mailbox die na de
+  // gratieperiode nog nooit gesynct is (wel koppeling, geen Exchange-toegang)
+  // moet waarschuwen — nooit stilzwijgend.
+  const urenStil = (Date.now() - new Date(mailbox.laatstGesynctOp ?? mailbox.aangemaaktOp).getTime()) / 3_600_000;
+  const teLangStil = mailbox.actief && urenStil > SYNC_STIL_NA_UREN;
+
+  return (
+    <div className="space-y-1.5" data-testid={`sync-status-${mailbox.id}`}>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+        <span className="flex items-center gap-1">
+          <RefreshCw className="h-3 w-3" />
+          {mailbox.laatstGesynctOp
+            ? `Laatst gesynct ${formateerSyncTijd(mailbox.laatstGesynctOp)}`
+            : "Nog nooit gesynchroniseerd"}
+        </span>
+        <span className="flex items-center gap-1">
+          <Users className="h-3 w-3" />
+          {mailbox.werkendeKoppelingen === 1
+            ? "1 collega met werkende Microsoft-koppeling"
+            : `${mailbox.werkendeKoppelingen} collega's met werkende Microsoft-koppeling`}
+        </span>
+      </div>
+      {mailbox.actief && geenKoppeling && (
+        <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded px-2.5 py-1.5" data-testid={`sync-waarschuwing-${mailbox.id}`}>
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span>
+            Geen werkende Microsoft-koppeling: niemand met toegang tot deze mailbox heeft
+            zijn Microsoft-account gekoppeld. De synchronisatie ligt stil — nieuwe mails
+            blijven onzichtbaar tot iemand met toegang zijn account (opnieuw) koppelt.
+          </span>
+        </div>
+      )}
+      {!geenKoppeling && teLangStil && (
+        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5" data-testid={`sync-waarschuwing-${mailbox.id}`}>
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span>
+            {mailbox.laatstGesynctOp
+              ? `Deze mailbox is al ruim ${Math.floor(urenStil)} uur niet gesynchroniseerd, terwijl er wel een werkende koppeling is.`
+              : `Deze mailbox is ${Math.floor(urenStil)} uur geleden aangemaakt maar nog nooit gesynchroniseerd, terwijl er wel een werkende koppeling is.`}
+            {" "}Controleer de Exchange-toegang hieronder.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Toegangsbeheer per mailbox ───────────────────────────────────────────────
 
@@ -439,6 +507,7 @@ export default function MailboxenBeheer() {
                 </label>
               </div>
             )}
+            <SyncStatusSectie mailbox={mb} />
             <ReactietijdSectie mailboxId={mb.id} />
             <ToegangSectie mailbox={mb} />
             <ExchangeSectie mailboxId={mb.id} />

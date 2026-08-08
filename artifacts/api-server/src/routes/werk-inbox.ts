@@ -219,7 +219,34 @@ router.delete("/werk-inbox/oauth/ontkoppel", requireAuth, async (req, res): Prom
 // ─── Mailboxen: wat mag ik zien ───────────────────────────────────────────────
 router.get("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void> => {
   const rijen = await toegankelijkeMailboxen(gebruikerId(req));
-  res.json(rijen);
+  // Bewaking: per mailbox tellen hoeveel collega's met Connect-toegang óók een
+  // werkend Microsoft-token hebben. 0 = de achtergrondsync ligt stil voor deze
+  // mailbox (niemand kan hem nog syncen).
+  const koppelingen = await db.select({
+    mailboxId: werkInboxMailboxToegangTable.mailboxId,
+    aantal:    sql<number>`count(distinct ${werkInboxTokensTable.gebruikerId})::int`,
+  })
+    .from(werkInboxMailboxToegangTable)
+    .innerJoin(werkInboxTokensTable, and(
+      eq(werkInboxTokensTable.gebruikerId, werkInboxMailboxToegangTable.gebruikerId),
+      // Gezondheid, niet alleen aanwezigheid: een token waarvan de refresh met
+      // een auth-fout is geweigerd telt niet als werkende koppeling.
+      isNull(werkInboxTokensTable.refreshMisluktOp),
+    ))
+    .groupBy(werkInboxMailboxToegangTable.mailboxId);
+  const perMailbox = new Map(koppelingen.map((k) => [k.mailboxId, k.aantal]));
+  res.json(rijen.map((r) => ({ ...r, werkendeKoppelingen: perMailbox.get(r.id) ?? 0 })));
+});
+
+// ─── Syncbewaking direct draaien (hoofdbeheerder; ook basis voor bewijsscript) ─
+router.post("/werk-inbox/sync-bewaking/run", requireAuth, async (req, res): Promise<void> => {
+  if (!(await isHoofdbeheerder(gebruikerId(req)))) {
+    res.status(403).json({ error: "Alleen de hoofdbeheerder kan de syncbewaking handmatig draaien." });
+    return;
+  }
+  const { bewaakMailboxSync } = await import("../services/factuurstroomService");
+  await bewaakMailboxSync();
+  res.json({ ok: true });
 });
 
 // ─── Mailbox toevoegen (beheerscherm; opdracht §6) ───────────────────────────

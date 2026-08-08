@@ -149,6 +149,7 @@
 - [AK-dashboard eigen cijfers](ak-eigen-cijfers.md) — AK% altijd over productie (omzet+OHW uit fie_jaarrealisaties); adviezen max 10 open, nooit vanzelf weg, wegzetten=reden; loonkosten zonder vervolgstap.
 - [Scripts-typecheck bewijsscripts](scripts-typecheck-bewijs.md) — bewijsscripts nooit api-server-source importeren (TS6059); test via HTTP + @workspace/db; offenders staan in tsconfig-exclude.
 - [Inkoop/werkbegroting-AI eigen cijfers](inkoop-eigen-cijfers.md) — inkoopprijs_verwacht nooit van AI (jaarprijslijst>mediaan≥3>onbekend); leveranciers=opsomming; nacalc alleen afgesloten; bronnen fail-closed.
+- [Mailbox-syncbewaking & token-gezondheid](mailbox-syncbewaking.md) — "werkende koppeling" = token-rij mét refresh_mislukt_op IS NULL; invalid_grant markeert direct; alarm-dedupe via sync_alarm_op.
 - [Mail-samenwerkomgeving](mail-samenwerkomgeving.md) — mailboxen=organisatiebezit via toegang-tabel (lezen<behandelen<beheren); mails uniek per mailbox+message; modus verwerken/ondersteunen/registreren; detail Graph-tolerant.
 - [Loonstroom SEPA-mailintake](loonstroom-sepa-intake.md) — pain.001 uit mail altijd status ontvangen (nooit auto verder); onvolledig=afgeleid, 422 richting bank; preset-wijziging vergt migratie, niet alleen PRESETS-code.
 - [WVB 5-fasenstroom](wvb-fasenstroom.md) — opdrachtpagina: één TabsContent per fase (extra secties via activeTab-guard); signaal-dedup via partiële unieke index + onConflictDoNothing; dagdeeltarief nooit in uur-middeling.

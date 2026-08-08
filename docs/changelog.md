@@ -2758,3 +2758,17 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - Loonkosten-signalen blijven een constatering zonder vervolgstap — server-side afgedwongen, ook als de AI er één verzint (ongewijzigd, opnieuw bewezen).
 - **Bewijs:** `scripts/src/bewijs-financieel-ak.ts` uitgebreid (acceptatie 5b) — 24/24 groen: beide jaren gedekt → geen bevinding; post van één jaar verwijderd → precies dat jaar gesignaleerd, dekking niet sluitend.
 - **Restpunt:** de euro-bedragen zelf voert René per boekjaar in uit de jaarrekening via het Bedrijfskompas (categorie "Personeel indirect"); dev/prod bevatten nog geen jaarcijfers (zie acceptatiebewijs-taak met echte cijfers vanaf 2023).
+
+## 2026-08-08 — Mailbox-syncbewaking: stilvallende achtergrondsync nooit meer onzichtbaar
+
+- **Uitvoering:** volledig gebouwd; bewijs op dev (alarm binnen één bewakingsrun gezet, verrijkte API geverifieerd via ingelogde hoofdbeheerder-sessie) | **Kwaliteit:** hoog | **Risico:** laag (additieve migratie 0013, geen gedragswijziging in de sync zelf)
+
+De achtergrondsync van gedeelde mailboxen draait op persoonlijke Microsoft-tokens van collega's met Connect-toegang. Verloor de laatste collega zijn koppeling of toegang, dan viel de sync geruisloos stil en bleven nieuwe mails onzichtbaar hangen. Dat is nu zichtbaar én gesignaleerd:
+
+- **Migratie 0013** — `werk_inbox_mailboxen` krijgt `laatst_gesynct_op` (laatste succesvolle sync, per mailbox bijgewerkt in `syncMailboxen`) en `sync_alarm_op` (dedupe voor het stilstand-alarm).
+- **Beheerscherm `/beheer/mailboxen`** toont per mailbox wanneer er voor het laatst is gesynct en hoeveel collega's met toegang een werkende Microsoft-koppeling hebben. Rode waarschuwing als er géén werkende koppeling (meer) is; amber als een actieve mailbox ondanks een koppeling >6 uur niet gesynct is.
+- **Alarm naar hoofdbeheerder(s):** de periodieke bewaking (`bewaakMailboxSync`, elke 15 min in de factuurstroom-achtergrondlus) stuurt een pushmelding wanneer een actieve verwerk-mailbox geen werkende koppeling heeft of >6 uur niet gesynct is; maximaal één alarm per 24 uur per mailbox, dedupe reset zodra de mailbox weer gezond is. Hoofdbeheerder kan de bewaking ook direct draaien via `POST /werk-inbox/sync-bewaking/run`.
+- **Nooit gesynct = ook stilstand:** voor een actieve verwerk-mailbox die nog nooit succesvol gesynct is telt de stilte vanaf het aanmaakmoment (zelfde 6-uursgrens) — een nieuwe mailbox met wél een koppeling maar zonder Exchange-toegang blijft dus nooit onzichtbaar hangen (waarschuwing in UI + alarm).
+- **Echte koppeling-gezondheid (migratie 0014):** "werkende koppeling" is niet "er staat een token-rij". Weigert Microsoft de token-refresh met een auth-fout (invalid_grant — wachtwoordwissel, ingetrokken consent), dan wordt `werk_inbox_tokens.refresh_mislukt_op` direct gezet: de koppeling telt vanaf dat moment niet meer mee in het beheerscherm én de bewaking. Een geslaagde refresh of herkoppeling wist de markering. Tijdelijke fouten (netwerk/5xx) markeren niets.
+
+**Bewijs (dev, 8 aug):** `scripts/src/bewijs-mailbox-syncbewaking.ts` — 13/13 checks: gezonde koppeling (telling 1, geen alarm), refresh-weigering (telling 0, alarm binnen één run), 24-uurs alarm-dedupe, herstel (alarm gereset), stale-sync >6 uur met werkende koppeling (alarm). Via ingelogde hoofdbeheerder-sessie + echte achtergrondbewaking; testdata in finally opgeruimd.

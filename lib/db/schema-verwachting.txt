@@ -4333,8 +4333,10 @@ KOLOM|werk_inbox_mailboxen|email_adres|text|NO|
 KOLOM|werk_inbox_mailboxen|id|integer|NO|nextval('werk_inbox_mailboxen_id_seq'::regclass)
 KOLOM|werk_inbox_mailboxen|is_aanvraagmailbox|boolean|NO|false
 KOLOM|werk_inbox_mailboxen|is_factuurmailbox|boolean|NO|false
+KOLOM|werk_inbox_mailboxen|laatst_gesynct_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mailboxen|label|text|YES|
 KOLOM|werk_inbox_mailboxen|modus|text|NO|'ondersteunen'::text
+KOLOM|werk_inbox_mailboxen|sync_alarm_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mailboxen|volgorde|integer|NO|0
 KOLOM|werk_inbox_mails|aanvraag_verwerkt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|actie_vereist_reden|text|YES|
@@ -4377,6 +4379,7 @@ KOLOM|werk_inbox_tokens|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|werk_inbox_tokens|gebruiker_id|integer|NO|
 KOLOM|werk_inbox_tokens|id|integer|NO|nextval('werk_inbox_tokens_id_seq'::regclass)
 KOLOM|werk_inbox_tokens|microsoft_email|text|NO|
+KOLOM|werk_inbox_tokens|refresh_mislukt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_tokens|refresh_token_enc|text|NO|
 KOLOM|werk_inbox_tokens|scope|text|NO|'Mail.Read offline_access'::text
 KOLOM|werk_inbox_tokens|verloopt_op|timestamp without time zone|NO|

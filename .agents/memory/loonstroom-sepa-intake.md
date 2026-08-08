@@ -13,6 +13,6 @@ description: Patronen en invarianten van de SEPA-loonbestand-intake, boekhouderp
 
 **Waarom:** betaalbestanden raken echte salarissen; dubbel of automatisch doorzetten is onacceptabel; crash-recovery voorkomt stilliggende bestanden.
 
-**Boekhouder:** preset "Externe boekhouder" = alleen salarisarchief:3, salaris_mutaties:1, boekhouder_portaal:4. Preset-aanscherping in code verandert bestaande profielen/accounts NIET — dat vergt een gerichte migratie (0012-patroon: profielen-rij + gebruikers met herkomst_profiel_id bijwerken). Verwerkt-markering (declaraties/verlof) is one-way met 409 op dubbel.
+**Boekhouder:** preset "Externe boekhouder" = alleen salarisarchief:3, salaris_mutaties:1, boekhouder_portaal:4. Preset-aanscherping in code verandert bestaande profielen/accounts NIET — dat vergt een gerichte migratie (profielen-rij + gebruikers met herkomst_profiel_id bijwerken). Verwerkt-markering (declaraties/verlof) is one-way met 409 op dubbel.
 
 **Hoe toe te passen:** bij nieuwe mail-intakesoorten hetzelfde claim/dedupe/twijfelpad-patroon volgen; bij elke preset-wijziging een migratie meesturen, niet vertrouwen op synchroniseer-standaard.

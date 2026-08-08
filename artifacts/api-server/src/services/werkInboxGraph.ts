@@ -103,6 +103,16 @@ async function ruilCodeVoorToken(code: string, redirectUri: string): Promise<Tok
   return res.json() as Promise<TokenResponse>;
 }
 
+// Auth-fout bij refresh (invalid_grant e.d.) = koppeling stuk; netwerk/5xx niet.
+export class TokenRefreshGeweigerd extends Error {
+  status: number;
+  constructor(status: number, body: string) {
+    super(`Token refresh geweigerd: ${status} — ${body.slice(0, 200)}`);
+    this.name = "TokenRefreshGeweigerd";
+    this.status = status;
+  }
+}
+
 async function verversToken(refreshToken: string): Promise<TokenResponse> {
   const res = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
     method: "POST",
@@ -117,6 +127,11 @@ async function verversToken(refreshToken: string): Promise<TokenResponse> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "(leeg)");
+    // 400/401 = de refresh-token zelf is ongeldig (wachtwoordwissel, consent
+    // ingetrokken). Andere statussen (netwerk, 5xx) zijn tijdelijk.
+    if (res.status === 400 || res.status === 401) {
+      throw new TokenRefreshGeweigerd(res.status, body);
+    }
     throw new Error(`Token refresh mislukt: ${res.status} — ${body.slice(0, 200)}`);
   }
   return res.json() as Promise<TokenResponse>;
@@ -132,6 +147,8 @@ export async function slaTokenOp(gebruikerId: number, tokenData: TokenResponse, 
     accessTokenEnc:  encrypteer(tokenData.access_token),
     refreshTokenEnc: encrypteer(tokenData.refresh_token),
     verlooptOp,
+    // Geslaagde refresh/herkoppeling = koppeling weer gezond.
+    refreshMisluktOp: null,
     bijgewerktOp:    new Date(),
   };
   await db.insert(werkInboxTokensTable)
@@ -161,7 +178,16 @@ async function haalGeldigToken(gebruikerId: number): Promise<string | null> {
     await slaTokenOp(gebruikerId, fresh, token.microsoftEmail);
     return fresh.access_token;
   } catch (err) {
-    logger.warn({ err, gebruikerId }, "werk-inbox: token refresh mislukt");
+    if (err instanceof TokenRefreshGeweigerd) {
+      // Koppeling is definitief stuk (invalid_grant): markeer dat direct zodat
+      // het beheerscherm en de syncbewaking dit niet als "werkend" meetellen.
+      await db.update(werkInboxTokensTable)
+        .set({ refreshMisluktOp: new Date(), bijgewerktOp: new Date() })
+        .where(eq(werkInboxTokensTable.gebruikerId, gebruikerId));
+      logger.warn({ gebruikerId, status: err.status }, "werk-inbox: Microsoft-koppeling geweigerd bij refresh — gemarkeerd als niet-werkend");
+    } else {
+      logger.warn({ err, gebruikerId }, "werk-inbox: token refresh mislukt (tijdelijk)");
+    }
     return null;
   }
 }
@@ -534,6 +560,7 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
   const mailboxen = (await toegankelijkeMailboxen(gebruikerId)).filter((m) => m.actief);
 
   const alleMailboxen = mailboxen.map((m) => ({
+    id: m.id,
     adres: m.emailAdres,
     label: m.label ?? m.emailAdres,
     isPersonlijk: m.emailAdres === eigenEmail,
@@ -577,6 +604,11 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
       }
       resultaten.push({ adres: mb.adres, gesynchroniseerd: mails.length });
       totaal += mails.length;
+      // Bewaking: markeer de succesvolle sync zodat het beheerscherm en de
+      // achtergrondbewaking kunnen zien of de sync nog loopt.
+      await db.update(werkInboxMailboxenTable)
+        .set({ laatstGesynctOp: new Date() })
+        .where(eq(werkInboxMailboxenTable.id, mb.id));
     } catch (err) {
       const fout = err instanceof GeenToegang
         ? "Geen toegang tot deze mailbox"

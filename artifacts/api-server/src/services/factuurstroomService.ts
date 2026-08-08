@@ -665,6 +665,17 @@ export async function draaiFactuurstroomBewaking(): Promise<void> {
     }
   }
 
+  // Mailbox-sync stilgevallen? Een actieve verwerk-mailbox moet regelmatig
+  // gesynct worden; dat kan alleen via het persoonlijke Microsoft-token van
+  // een collega met Connect-toegang. Valt de laatste koppeling weg of blijft
+  // de sync te lang uit, dan waarschuwen we de hoofdbeheerder(s) — nooit
+  // stilzwijgend mails laten hangen. Max één alarm per 24 uur per mailbox.
+  try {
+    await bewaakMailboxSync();
+  } catch (err) {
+    logger.warn({ err }, "factuurstroom: mailbox-syncbewaking mislukt");
+  }
+
   // Uitgaande (verkoop)facturen die na de vervaldatum nog niet betaald zijn
   const uitgaand = await db.select().from(facturenTable).where(and(
     eq(facturenTable.type, "verkoop"),
@@ -679,8 +690,7 @@ export async function draaiFactuurstroomBewaking(): Promise<void> {
   }
 }
 
-// ── Achtergrondlus: automatisch syncen + verwerken (§1/§10.1) ────────────────
-
+const SYNC_STIL_NA_UREN = 6;
 const BEWAKING_INTERVAL_MS = 15 * 60 * 1000;
 let bewakingGestart = false;
 
@@ -757,3 +767,82 @@ let bijlagenOphaler: BijlagenOphaler = haalBijlagen;
 export function zetBijlagenOphalerVoorVerificatie(fn: BijlagenOphaler | null): void {
   bijlagenOphaler = fn ?? haalBijlagen;
 }
+
+export async function bewaakMailboxSync(): Promise<void> {
+  const { werkInboxTokensTable, werkInboxMailboxToegangTable } = await import("@workspace/db");
+  const nu = new Date();
+
+  const mailboxen = await db.select().from(werkInboxMailboxenTable).where(and(
+    eq(werkInboxMailboxenTable.actief, true),
+    eq(werkInboxMailboxenTable.modus, "verwerken"),
+  ));
+  if (mailboxen.length === 0) return;
+
+  // Per mailbox: hoeveel collega's met Connect-toegang hebben een wérkend
+  // Microsoft-token? Een token waarvan de refresh met een auth-fout is
+  // geweigerd (refresh_mislukt_op gezet) telt niet mee.
+  const koppelingen = await db.select({
+    mailboxId: werkInboxMailboxToegangTable.mailboxId,
+    aantal:    sql<number>`count(distinct ${werkInboxTokensTable.gebruikerId})::int`,
+  })
+    .from(werkInboxMailboxToegangTable)
+    .innerJoin(werkInboxTokensTable, and(
+      eq(werkInboxTokensTable.gebruikerId, werkInboxMailboxToegangTable.gebruikerId),
+      isNull(werkInboxTokensTable.refreshMisluktOp),
+    ))
+    .groupBy(werkInboxMailboxToegangTable.mailboxId);
+  const perMailbox = new Map(koppelingen.map((k) => [k.mailboxId, k.aantal]));
+
+  const beheerders = await hoofdbeheerderIds();
+
+  for (const mb of mailboxen) {
+    const werkend = perMailbox.get(mb.id) ?? 0;
+    // Nooit gesynct? Dan telt de stilte vanaf het aanmaken van de mailbox —
+    // een nieuwe verwerk-mailbox die na de gratieperiode nog nooit gesynct is
+    // (bijv. wél een token maar geen Exchange-toegang) is óók stilgevallen.
+    const stilSindsBasis = mb.laatstGesynctOp ?? mb.aangemaaktOp;
+    const stilSinds = (nu.getTime() - stilSindsBasis.getTime()) / 3_600_000;
+    const teLangStil = stilSinds > SYNC_STIL_NA_UREN;
+    const probleem = werkend === 0 || teLangStil;
+
+    if (!probleem) {
+      // Gezond → alarm-dedupe resetten zodat een nieuwe stilstand weer meldt.
+      if (mb.syncAlarmOp) {
+        await db.update(werkInboxMailboxenTable).set({ syncAlarmOp: null })
+          .where(eq(werkInboxMailboxenTable.id, mb.id));
+      }
+      continue;
+    }
+
+    // Dedupe: max één alarm per 24 uur per mailbox.
+    if (mb.syncAlarmOp && (nu.getTime() - mb.syncAlarmOp.getTime()) / 3_600_000 < SYNC_ALARM_HERHAAL_UREN) {
+      continue;
+    }
+
+    const naam = mb.label ?? mb.emailAdres;
+    const reden = werkend === 0
+      ? "Niemand met Connect-toegang heeft nog een werkende Microsoft-koppeling — de synchronisatie ligt stil."
+      : mb.laatstGesynctOp
+        ? `De mailbox is al ruim ${Math.floor(stilSinds)} uur niet gesynchroniseerd.`
+        : `De mailbox is ${Math.floor(stilSinds)} uur geleden aangemaakt maar nog nooit gesynchroniseerd — controleer de Exchange-toegang.`;
+    logger.warn({ mailboxId: mb.id, mailbox: mb.emailAdres, werkendeKoppelingen: werkend, stilSindsUren: stilSinds }, "werk-inbox: mailbox-sync stilgevallen");
+
+    await db.update(werkInboxMailboxenTable).set({ syncAlarmOp: nu })
+      .where(eq(werkInboxMailboxenTable.id, mb.id));
+
+    for (const beheerderId of beheerders) {
+      try {
+        await stuurPushNaarGebruiker(
+          beheerderId,
+          `Mailbox-sync stilgevallen: ${naam}`,
+          `${reden} Nieuwe mails blijven onzichtbaar tot iemand met toegang zijn Microsoft-account (opnieuw) koppelt.`,
+          { url: "/beheer/mailboxen" },
+        );
+      } catch (err) {
+        logger.warn({ err, beheerderId }, "werk-inbox: sync-alarm versturen mislukt");
+      }
+    }
+  }
+}
+
+const SYNC_ALARM_HERHAAL_UREN = 24;

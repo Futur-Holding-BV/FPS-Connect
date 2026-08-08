@@ -15,6 +15,9 @@ export const werkInboxTokensTable = pgTable("werk_inbox_tokens", {
   // AANVRAAG_01: verwerk ook de persoonlijke mailbox als aanvraag-ingang
   // (klanten mailen René vaak rechtstreeks).
   aanvraagIntakePersoonlijk: boolean("aanvraag_intake_persoonlijk").notNull().default(false),
+  // Koppeling-gezondheid: gezet zodra een token-refresh met een auth-fout
+  // faalt (invalid_grant e.d.); gewist bij een geslaagde refresh/herkoppeling.
+  refreshMisluktOp: timestamp("refresh_mislukt_op"),
   aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [
@@ -38,6 +41,9 @@ export const werkInboxMailboxenTable = pgTable("werk_inbox_mailboxen", {
   isFactuurmailbox: boolean("is_factuurmailbox").notNull().default(false),
   // AANVRAAG_01: mails in deze mailbox gaan automatisch de aanvraagstroom in.
   isAanvraagmailbox: boolean("is_aanvraagmailbox").notNull().default(false),
+  // Bewaking achtergrondsync: laatste succesvolle sync + laatste stilstand-alarm.
+  laatstGesynctOp: timestamp("laatst_gesynct_op"),
+  syncAlarmOp:     timestamp("sync_alarm_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
   unique("werk_inbox_mailboxen_adres_uq").on(t.emailAdres),
