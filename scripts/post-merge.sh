@@ -5,11 +5,21 @@ set -e
 export PATH="$PWD/node_modules/.bin:$PATH"
 
 # ─── Pre-taak sync-verificatie ───────────────────────────────────────────────
-# Niet-blokkerend: controleert of GitHub main commits bevat die lokaal
-# ontbreken. Als dat zo is, worden de divergente commits getoond als
-# waarschuwing zodat afwijkingen zichtbaar zijn vóór de merge wordt verwerkt.
-# Slaat de check over als GITHUB_TOKEN_PUSH niet beschikbaar is.
-if [ -n "${GITHUB_TOKEN_PUSH:-}" ]; then
+# BLOKKEREND (MERGE_01 §3.1): als GitHub main commits bevat die lokaal
+# ontbreken, stopt het proces met exit 1 vóór de merge wordt verwerkt.
+# Mergen vanuit een verouderde werkruimte heeft op 8 aug 2026 vijf keer
+# eerder hersteld werk overschreven (gemangelde routebestanden).
+# Zonder GITHUB_TOKEN_PUSH is niet vast te stellen of de werkruimte actueel
+# is — dan wordt er dus óók geblokkeerd, niet stilzwijgend overgeslagen.
+if [ -z "${GITHUB_TOKEN_PUSH:-}" ]; then
+  echo "====================================================" >&2
+  echo "FOUT: GITHUB_TOKEN_PUSH ontbreekt — kan niet controleren of de" >&2
+  echo "werkruimte gelijk loopt met GitHub main. Mergen vanuit een mogelijk" >&2
+  echo "verouderde werkruimte is niet toegestaan (MERGE_01 §3.1)." >&2
+  echo "Stel GITHUB_TOKEN_PUSH in als Replit-secret en probeer opnieuw." >&2
+  echo "====================================================" >&2
+  exit 1
+else
   _PRESYNC_ASKPASS=$(mktemp /tmp/fps-presync-askpass-XXXXXX)
   chmod 700 "$_PRESYNC_ASKPASS"
   cat > "$_PRESYNC_ASKPASS" << 'PRESYNC_ASKPASS_EOF'
@@ -32,19 +42,31 @@ PRESYNC_ASKPASS_EOF
   rm -f "$_PRESYNC_ASKPASS"
   trap - EXIT INT TERM
 
-  if [ "$_PRESYNC_FETCH_EXIT" -eq 0 ]; then
-    _REMOTE_SHA=$(git rev-parse refs/remotes/fps-presync/main 2>/dev/null || echo "")
-    if [ -n "$_REMOTE_SHA" ] && \
-       ! git merge-base --is-ancestor "$_REMOTE_SHA" HEAD 2>/dev/null; then
-      echo "====================================================" >&2
-      echo "WAARSCHUWING: GitHub main (${_REMOTE_SHA:0:8}) bevat commits die" >&2
-      echo "lokaal ontbreken. De merge gaat door, maar de werkruimte wijkt af." >&2
-      echo "Divergente remote commits:" >&2
-      git log --oneline HEAD.."refs/remotes/fps-presync/main" 2>/dev/null \
-        | head -10 || true
-      echo "====================================================" >&2
-    fi
+  if [ "$_PRESYNC_FETCH_EXIT" -ne 0 ]; then
+    echo "====================================================" >&2
+    echo "FOUT: kon GitHub main niet ophalen (fetch exit ${_PRESYNC_FETCH_EXIT})." >&2
+    echo "Zonder geslaagde sync-controle mag er niet gemerged worden" >&2
+    echo "(MERGE_01 §3.1). Controleer netwerk/token en probeer opnieuw." >&2
+    echo "====================================================" >&2
+    exit 1
   fi
+  _REMOTE_SHA=$(git rev-parse refs/remotes/fps-presync/main 2>/dev/null || echo "")
+  if [ -n "$_REMOTE_SHA" ] && \
+     ! git merge-base --is-ancestor "$_REMOTE_SHA" HEAD 2>/dev/null; then
+    echo "====================================================" >&2
+    echo "FOUT: GitHub main (${_REMOTE_SHA:0:8}) bevat commits die lokaal" >&2
+    echo "ontbreken. Mergen vanuit deze verouderde werkruimte zou die" >&2
+    echo "commits overschrijven — de merge is GEBLOKKEERD (MERGE_01 §3.1)." >&2
+    echo "Ontbrekende remote commits:" >&2
+    git log --oneline HEAD.."refs/remotes/fps-presync/main" 2>/dev/null \
+      | head -10 >&2 || true
+    echo "" >&2
+    echo "Herstel: haal eerst main binnen en verwerk de merge daarna opnieuw:" >&2
+    echo "  git pull https://github.com/vinkrene-jpg/fps-one.git main" >&2
+    echo "====================================================" >&2
+    exit 1
+  fi
+  echo "Sync-controle geslaagd: werkruimte bevat GitHub main (${_REMOTE_SHA:0:8})."
 fi
 
 # ─── Fallback-melding-hulpfunctie ────────────────────────────────────────────

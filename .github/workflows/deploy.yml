@@ -48,6 +48,34 @@ jobs:
       # omschrijving voor de faalmelding) beschikbaar te hebben.
       - uses: actions/checkout@v4
 
+      # ─── Controles vóór de VPS wordt aangeraakt (MERGE_01 §3.2) ─────────────
+      # De Docker-build bundelt met esbuild en controleert geen types; op
+      # 8 aug 2026 belandde daardoor code met ongedefinieerde variabelen op
+      # productie. Deze stappen draaien dezelfde controles als de CI, maar
+      # binnen de deploy zelf: faalt er één, dan wordt er niets uitgerold.
+      # Dit is geen goedkeuringspoort — elke push naar main rolt nog steeds
+      # automatisch uit zodra de controles slagen.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Installeer dependencies (voor controles)
+        run: pnpm install --frozen-lockfile
+
+      - name: Controle 1/3 — typecheck
+        run: pnpm run typecheck
+
+      - name: Controle 2/3 — dubbele-routes-controle
+        run: pnpm --filter @workspace/scripts run check-dubbele-routes
+
+      - name: Controle 3/3 — klant-poort allowlist
+        run: pnpm --filter @workspace/scripts run klant-poort-check
+
       - name: SSH-sleutel en hostkey instellen
         env:
           PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
