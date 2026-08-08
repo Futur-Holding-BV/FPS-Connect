@@ -20,10 +20,12 @@ import {
   artikelenTable,
   opdrachtChecklistItemsTable,
   complianceSignalenTable,
+  inkoopVersiesTable,
 } from "@workspace/db";
 import { eq, and, asc, inArray, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { formatNummer, herzieningsLetter, kenmerkVoorProjectinkoop } from "../lib/kenmerk";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
@@ -215,11 +217,17 @@ function mapBonRegel(r: typeof inkoopbonRegelsTable.$inferSelect) {
 function mapInkoopbon(
   bon: typeof inkoopbonnenTable.$inferSelect,
   regels: typeof inkoopbonRegelsTable.$inferSelect[],
+  kenmerk?: string | null,
 ) {
   return {
     id: bon.id,
     inkoopplan_id: bon.inkoopplanId ?? null,
     opdracht_id: bon.opdrachtId,
+    // NUMMER_01: I-nummer uit de gedeelde reeks + kenmerk O405/I088[a]
+    nummer: bon.nummer,
+    offerte_id: bon.offerteId ?? null,
+    herziening: bon.herziening,
+    kenmerk: kenmerk ?? null,
     bon_nummer: bon.bonNummer ?? null,
     leverancier: bon.leverancier,
     leverancier_id: bon.leverancierId ?? null,
@@ -1236,7 +1244,7 @@ router.get("/opdrachten/:id/inkoopplanning/inkoopbonnen", lezen, async (req, res
       const regels = await db.select().from(inkoopbonRegelsTable)
         .where(eq(inkoopbonRegelsTable.inkoopbonId, bon.id))
         .orderBy(asc(inkoopbonRegelsTable.volgorde));
-      return mapInkoopbon(bon, regels);
+      return mapInkoopbon(bon, regels, await kenmerkVoorProjectinkoop(bon.offerteId, bon.nummer, bon.herziening));
     }));
 
     res.json(result);
@@ -1247,8 +1255,6 @@ router.get("/opdrachten/:id/inkoopplanning/inkoopbonnen", lezen, async (req, res
 });
 
 // ── POST /opdrachten/:id/inkoopplanning/inkoopbonnen ──────────────────────
-
-let bonTeller = 1;
 
 router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
@@ -1275,24 +1281,33 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req
     const [plan] = await db.select().from(inkoopplannenTable)
       .where(eq(inkoopplannenTable.opdrachtId, id));
 
-    const jaar = new Date().getFullYear();
-    const bonNummer = `IB-${jaar}-${String(bonTeller++).padStart(3, "0")}`;
+    // NUMMER_01 §4.5: projectinkoop hangt aan de offerte van de opdracht.
+    const [opdrachtRij] = await db
+      .select({ offerteId: opdrachtenTable.offerteId })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, id));
 
     const inputRegels = body.regels ?? [];
     const totaalBedrag = inputRegels.reduce((acc, r) => {
       return acc + (r.prijs ?? 0) * r.hoeveelheid;
     }, 0);
 
-    const [bon] = await db.insert(inkoopbonnenTable).values({
+    let [bon] = await db.insert(inkoopbonnenTable).values({
       inkoopplanId: plan?.id ?? null,
       opdrachtId: id,
-      bonNummer,
+      offerteId: opdrachtRij?.offerteId ?? null,
       leverancier: body.leverancier,
       gewensteLeverdatum: body.gewenste_leverdatum ?? null,
       totaalBedrag: totaalBedrag > 0 ? totaalBedrag : null,
       status: "concept",
       opmerkingen: body.opmerkingen ?? null,
     }).returning();
+
+    // Legacy weergaveveld meezetten op basis van het echte sequencenummer.
+    [bon] = await db.update(inkoopbonnenTable)
+      .set({ bonNummer: formatNummer("I", bon.nummer) })
+      .where(eq(inkoopbonnenTable.id, bon.id))
+      .returning();
 
     if (inputRegels.length > 0) {
       await db.insert(inkoopbonRegelsTable).values(
@@ -1313,7 +1328,7 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req
       .where(eq(inkoopbonRegelsTable.inkoopbonId, bon.id))
       .orderBy(asc(inkoopbonRegelsTable.volgorde));
 
-    res.status(201).json(mapInkoopbon(bon, regels));
+    res.status(201).json(mapInkoopbon(bon, regels, await kenmerkVoorProjectinkoop(bon.offerteId, bon.nummer, bon.herziening)));
   } catch (err) {
     logger.error({ err }, "createInkoopbon fout");
     res.status(500).json({ error: "Serverfout" });
@@ -1486,18 +1501,49 @@ router.patch("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, as
     for (const [bodyKey, dbKey] of Object.entries(bodyMap)) {
       if (body[bodyKey] !== undefined) updates[dbKey] = body[bodyKey];
     }
+    const inhoudelijkeWijziging = Object.keys(updates).length > 1;
 
-    const [updated] = await db.update(inkoopbonnenTable)
-      .set(updates as Partial<typeof inkoopbonnenTable.$inferInsert>)
-      .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, id)))
-      .returning();
+    // NUMMER_01 §4.5: een al verstuurde bon inhoudelijk wijzigen = herziening.
+    // De oude versie wordt eerst bevroren in inkoop_versies; daarna krijgt de
+    // bon een herzieningsletter (I088 → I088a). De vorige versie blijft bestaan.
+    // Transactioneel met row-lock: twee gelijktijdige wijzigingen op een
+    // verzonden bon mogen nooit dezelfde herzieningsletter uitgeven of
+    // dezelfde versie dubbel snapshotten.
+    const updated = await db.transaction(async (tx) => {
+      const [huidig] = await tx.select().from(inkoopbonnenTable)
+        .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, id)))
+        .for("update");
+      if (!huidig) return null;
+
+      if (inhoudelijkeWijziging && huidig.verzondenOp) {
+        const huidigeRegels = await tx.select().from(inkoopbonRegelsTable)
+          .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))
+          .orderBy(asc(inkoopbonRegelsTable.volgorde));
+        await tx.insert(inkoopVersiesTable).values({
+          bronTabel: "inkoopbonnen",
+          bronId: bonId,
+          herziening: huidig.herziening,
+          kenmerk: await kenmerkVoorProjectinkoop(huidig.offerteId, huidig.nummer, huidig.herziening),
+          snapshot: { bon: huidig, regels: huidigeRegels },
+          aangemaaktDoorId: (req.session?.userId as number | undefined) ?? null,
+        }).onConflictDoNothing();
+        updates.herziening = huidig.herziening + 1;
+        updates.bonNummer = formatNummer("I", huidig.nummer) + herzieningsLetter(huidig.herziening + 1);
+      }
+
+      const [rij] = await tx.update(inkoopbonnenTable)
+        .set(updates as Partial<typeof inkoopbonnenTable.$inferInsert>)
+        .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, id)))
+        .returning();
+      return rij ?? null;
+    });
     if (!updated) { res.status(404).json({ error: "Inkoopbon niet gevonden" }); return; }
 
     const regels = await db.select().from(inkoopbonRegelsTable)
       .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))
       .orderBy(asc(inkoopbonRegelsTable.volgorde));
 
-    res.json(mapInkoopbon(updated, regels));
+    res.json(mapInkoopbon(updated, regels, await kenmerkVoorProjectinkoop(updated.offerteId, updated.nummer, updated.herziening)));
   } catch (err) {
     logger.error({ err }, "patchInkoopbon fout");
     res.status(500).json({ error: "Serverfout" });
@@ -1731,7 +1777,7 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden", schr
       .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))
       .orderBy(asc(inkoopbonRegelsTable.volgorde));
 
-    res.json(mapInkoopbon(updated, updatedRegels));
+    res.json(mapInkoopbon(updated, updatedRegels, await kenmerkVoorProjectinkoop(updated.offerteId, updated.nummer, updated.herziening)));
   } catch (err) {
     logger.error({ err }, "verzendInkoopbon fout");
     res.status(500).json({ error: "Serverfout" });

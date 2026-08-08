@@ -9,6 +9,20 @@
 export interface ModCalcHeader {
   id: number;
   naam: string;
+  /**
+     * NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks
+     * @nullable
+     */
+  nummer?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315)
+     * @nullable
+     */
+  kenmerk?: string | null;
+  /** @nullable */
+  gekopieerd_van_id?: number | null;
+  /** @nullable */
+  verzonden_op?: string | null;
   referentie?: string | null;
   klant_naam?: string | null;
   gebouw_id?: number | null;

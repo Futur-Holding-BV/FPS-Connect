@@ -8,6 +8,11 @@
 
 export interface FactuurInput {
   type: string;
+  /**
+     * NUMMER_01 §4.6: koppelt de verkoopfactuur aan de offerte; het F-volgnummer wordt automatisch uitgegeven
+     * @nullable
+     */
+  offerte_id?: number | null;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
   subtype?: string | null;
   factuurnummer?: string | null;

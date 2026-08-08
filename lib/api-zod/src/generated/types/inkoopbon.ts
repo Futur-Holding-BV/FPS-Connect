@@ -13,6 +13,23 @@ export interface Inkoopbon {
   /** @nullable */
   inkoopplan_id?: number | null;
   opdracht_id: number;
+  /**
+     * NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks
+     * @nullable
+     */
+  nummer?: number | null;
+  /** @nullable */
+  offerte_id?: number | null;
+  /**
+     * NUMMER_01: 0 = origineel, 1 = a, 2 = b, …
+     * @nullable
+     */
+  herziening?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. O405/I088a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   /** @nullable */
   bon_nummer?: string | null;
   leverancier: string;

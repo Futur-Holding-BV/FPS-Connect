@@ -9,6 +9,22 @@
 export interface MagazijnInkooporder {
   id: number;
   nummer?: string | null;
+  /**
+     * NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks
+     * @nullable
+     */
+  inkoopnummer?: number | null;
+  gebouw_id?: number | null;
+  /**
+     * NUMMER_01: 0 = origineel, 1 = a, 2 = b, …
+     * @nullable
+     */
+  herziening?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. G002/I089a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   status: string;
   leverancier_id?: number | null;
   leverancier_naam?: string | null;

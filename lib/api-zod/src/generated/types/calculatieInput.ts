@@ -8,6 +8,11 @@
 
 export interface CalculatieInput {
   naam: string;
+  /**
+     * NUMMER_01 §4.3: koppeling naar de opname (M) waarop de calculatie is gebaseerd
+     * @nullable
+     */
+  opname_id?: number | null;
   /** @nullable */
   gebouw_id?: number | null;
   status?: string;

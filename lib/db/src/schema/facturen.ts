@@ -7,6 +7,15 @@ import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 
 // ── AccountView instellingen (singleton per installatie) ──────────────────────
+// NUMMER_01 §4.6 — fiscale factuurreeks per BV: teller onder slot, toegekend
+// bij definitief maken (nooit bij concept), zodat een weggegooid concept geen
+// nummer verbruikt en de reeks geen gaten krijgt.
+export const factuurnummerTellersTable = pgTable("factuurnummer_tellers", {
+  werkgeverId: integer("werkgever_id").primaryKey(), // FK in DB (migratie 0010)
+  laatsteNummer: integer("laatste_nummer").notNull().default(0),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const accountviewInstellingenTable = pgTable("accountview_instellingen", {
   id: serial("id").primaryKey(),
   apiEndpoint: text("api_endpoint"),
@@ -135,6 +144,12 @@ export const facturenTable = pgTable("facturen", {
   // Opdracht/project-koppeling (voor verkoopfacturen en gelinkte inkoopfacturen)
   opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   inkoopbonId: integer("inkoopbon_id"), // soft ref naar inkoopbonnen.id (geen FK — cross-schema dep)
+  // NUMMER_01 §4.6: kenmerkketen — verkoopfactuur hangt aan de offerte (O405/F002)
+  offerteId: integer("offerte_id"), // FK in DB (migratie 0010); soft ref hier tegen circulaire import
+  // NUMMER_01 §4.6: F-volgnummer per offerte vanaf 1 — uitdrukkelijk NIET het factuurnummer
+  nummer: integer("nummer"),
+  // NUMMER_01 §4.3: vastgevroren kenmerk-momentopname bij definitief maken
+  kenmerk: text("kenmerk"),
 
   // Factuurcategorie (structureert inkoopfacturen)
   // projectmateriaal | onderaanneming | algemene_kosten | investering | wagenpark |

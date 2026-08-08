@@ -9,6 +9,11 @@ import type { OpnameItem } from './opnameItem';
 
 export interface Opname {
   id: number;
+  /**
+     * NUMMER_01: M-volgnummer uit seq_nummer_m
+     * @nullable
+     */
+  nummer?: number | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;

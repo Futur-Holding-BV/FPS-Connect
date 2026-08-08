@@ -15,6 +15,8 @@
 //  - Risicoanalyse/uitgangspunten/voorbehouden: per snag meer-/minderwerk,
 //    adviezen en condities.
 import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { calculatiesTable } from "./calculaties";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -84,7 +86,17 @@ export const offertesTable = pgTable("offertes", {
   btwPercentage: real("btw_percentage").notNull().default(21),
   bedragInclBtw: real("bedrag_incl_btw").notNull().default(0),
   kleurthema: text("kleurthema").default("fps-oranje"),
+  // NUMMER_01 §4.3: verwijst naar mod_calc_headers (ENK-calculatiemodule).
+  // De echte FK is in migratie 0018 op DB-niveau gelegd; hier bewust géén
+  // .references() om een importcyclus offertes.ts ↔ mod-calculatie.ts te
+  // vermijden (soft ref in TS, harde FK in de database).
   calculatieId: integer("calculatie_id"),
+  // NUMMER_01: O-volgnummer uit seq_nummer_o (doorlopend, systeem-uitgegeven)
+  nummer: integer("nummer").notNull().default(sql`nextval('seq_nummer_o')`).unique(),
+  // NUMMER_01 §4.10: herziening = kopie met nieuw nummer
+  gekopieerdVanId: integer("gekopieerd_van_id"),
+  // NUMMER_01 §4.3: vastgevroren kenmerk-momentopname bij versturen (berekend, nooit invoer)
+  kenmerk: text("kenmerk"),
   // Betaalcondities
   betalingstermijnDagen: integer("betalingstermijn_dagen").notNull().default(30),
   betaalwijze: text("betaalwijze"),

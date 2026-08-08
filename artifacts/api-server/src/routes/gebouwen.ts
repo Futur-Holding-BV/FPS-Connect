@@ -18,6 +18,7 @@ import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
+import { volgendeGWerknummer } from "../lib/kenmerk";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -285,8 +286,12 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
     if (!naam || !adres) {
       return void res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
+    // NUMMER_01 besluit 7: het systeem geeft het G-nummer zelf uit (seq_nummer_g);
+    // handmatige invoer blijft alleen mogelijk voor bestaande externe nummers.
     const werknummerWaarde =
-      typeof werknummer === "string" && werknummer.trim() ? werknummer.trim() : null;
+      typeof werknummer === "string" && werknummer.trim()
+        ? werknummer.trim()
+        : await volgendeGWerknummer();
     const projectnummerWaarde =
       typeof projectnummer === "string" && projectnummer.trim() ? projectnummer.trim() : null;
     const [gebouw] = await db

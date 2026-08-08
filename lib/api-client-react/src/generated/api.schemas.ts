@@ -6350,6 +6350,18 @@ export interface Offerte {
   projectkans_id?: number | null;
   /** @nullable */
   offertenummer?: string | null;
+  /**
+     * NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)
+     * @nullable
+     */
+  nummer?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315/O405); bevroren bij versturen
+     * @nullable
+     */
+  kenmerk?: string | null;
+  /** @nullable */
+  gekopieerd_van_id?: number | null;
   titel: string;
   /** @nullable */
   gebouw_id?: number | null;
@@ -7850,6 +7862,23 @@ export interface Inkoopbon {
   /** @nullable */
   inkoopplan_id?: number | null;
   opdracht_id: number;
+  /**
+     * NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks
+     * @nullable
+     */
+  nummer?: number | null;
+  /** @nullable */
+  offerte_id?: number | null;
+  /**
+     * NUMMER_01: 0 = origineel, 1 = a, 2 = b, …
+     * @nullable
+     */
+  herziening?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. O405/I088a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   /** @nullable */
   bon_nummer?: string | null;
   leverancier: string;
@@ -8139,6 +8168,22 @@ export interface OfferteBijlageInput {
 export interface Calculatie {
   id: number;
   naam: string;
+  /**
+     * NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks
+     * @nullable
+     */
+  nummer?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315)
+     * @nullable
+     */
+  kenmerk?: string | null;
+  /** @nullable */
+  opname_id?: number | null;
+  /** @nullable */
+  gekopieerd_van_id?: number | null;
+  /** @nullable */
+  verzonden_op?: string | null;
   /** @nullable */
   gebouw_id?: number | null;
   /** @nullable */
@@ -8193,6 +8238,11 @@ export interface CalculatieDetail {
 
 export interface CalculatieInput {
   naam: string;
+  /**
+     * NUMMER_01 §4.3: koppeling naar de opname (M) waarop de calculatie is gebaseerd
+     * @nullable
+     */
+  opname_id?: number | null;
   /** @nullable */
   gebouw_id?: number | null;
   status?: string;
@@ -8732,6 +8782,20 @@ export interface ModCalcNormtijdInput {
 export interface ModCalcHeader {
   id: number;
   naam: string;
+  /**
+     * NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks
+     * @nullable
+     */
+  nummer?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315)
+     * @nullable
+     */
+  kenmerk?: string | null;
+  /** @nullable */
+  gekopieerd_van_id?: number | null;
+  /** @nullable */
+  verzonden_op?: string | null;
   referentie?: string | null;
   klant_naam?: string | null;
   gebouw_id?: number | null;
@@ -9579,6 +9643,11 @@ export interface ProjectPatchInput {
 
 export interface OpnameSamenvatting {
   id: number;
+  /**
+     * NUMMER_01: M-volgnummer uit seq_nummer_m
+     * @nullable
+     */
+  nummer?: number | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
@@ -9624,6 +9693,11 @@ export interface OpnameItem {
 
 export interface Opname {
   id: number;
+  /**
+     * NUMMER_01: M-volgnummer uit seq_nummer_m
+     * @nullable
+     */
+  nummer?: number | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
@@ -10520,6 +10594,11 @@ export interface FactuurAfwijzenStroomInput {
 
 export interface FactuurInput {
   type: string;
+  /**
+     * NUMMER_01 §4.6: koppelt de verkoopfactuur aan de offerte; het F-volgnummer wordt automatisch uitgegeven
+     * @nullable
+     */
+  offerte_id?: number | null;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
   subtype?: string | null;
   factuurnummer?: string | null;
@@ -14478,6 +14557,22 @@ export interface MagazijnInkooporderRegelInput {
 export interface MagazijnInkooporder {
   id: number;
   nummer?: string | null;
+  /**
+     * NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks
+     * @nullable
+     */
+  inkoopnummer?: number | null;
+  gebouw_id?: number | null;
+  /**
+     * NUMMER_01: 0 = origineel, 1 = a, 2 = b, …
+     * @nullable
+     */
+  herziening?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. G002/I089a)
+     * @nullable
+     */
+  kenmerk?: string | null;
   status: string;
   leverancier_id?: number | null;
   leverancier_naam?: string | null;

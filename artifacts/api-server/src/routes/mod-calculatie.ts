@@ -29,6 +29,7 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
 import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
 import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
+import { kenmerkVoorModCalc } from "../lib/kenmerk";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -113,11 +114,17 @@ function mapHeader(
     aangemaaktDoorNaam?: string | null;
     subtotaal?: number;
     totaalNaOpslagen?: number;
+    kenmerk?: string | null;
   },
 ) {
   return {
     id: h.id,
     naam: h.naam,
+    // NUMMER_01: C-nummer uit de gedeelde reeks + berekend kenmerk
+    nummer: h.nummer,
+    kenmerk: extra?.kenmerk ?? null,
+    gekopieerd_van_id: h.gekopieerdVanId ?? null,
+    verzonden_op: h.verzondenOp ? iso(h.verzondenOp) : null,
     referentie: h.referentie,
     klant_naam: h.klantNaam,
     gebouw_id: h.gebouwId,
@@ -417,7 +424,7 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
       );
     }
 
-    res.json(resultaten.map(({ header, gebouwNaam, opnameNaam, makerNaam }) => {
+    res.json(await Promise.all(resultaten.map(async ({ header, gebouwNaam, opnameNaam, makerNaam }) => {
       const calcRegels = regelsByCalc.get(header.id) ?? [];
       const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
         opslagMateriaal: header.opslagMateriaal ?? 0,
@@ -432,8 +439,8 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
         risicoIsVast: header.risicoIsVast ?? false,
         winstIsVast: header.winstIsVast ?? false,
       });
-      return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, opnameNaam: opnameNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen });
-    }));
+      return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, opnameNaam: opnameNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen, kenmerk: await kenmerkVoorModCalc(header.gebouwId, header.nummer) });
+    })));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -484,7 +491,7 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res): Promise<void
       finalRow = updated;
     }
 
-    res.status(201).json(mapHeader(finalRow, { subtotaal: 0, totaalNaOpslagen: 0 }));
+    res.status(201).json(mapHeader(finalRow, { subtotaal: 0, totaalNaOpslagen: 0, kenmerk: await kenmerkVoorModCalc(finalRow.gebouwId, finalRow.nummer) }));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -752,6 +759,7 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void
         aangemaaktDoorNaam: headerRow.makerNaam ?? null,
         subtotaal,
         totaalNaOpslagen: totaal_na_opslagen,
+        kenmerk: await kenmerkVoorModCalc(headerRow.header.gebouwId, headerRow.header.nummer),
       }),
       regels,
     });
@@ -789,7 +797,7 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res): Promis
     if (body.winst_is_vast !== undefined) update.winstIsVast = Boolean(body.winst_is_vast);
     const [row] = await db.update(modCalcHeadersTable).set(update).where(eq(modCalcHeadersTable.id, id)).returning();
     if (!row) return void res.status(404).json({ error: "Niet gevonden" });
-    res.json(mapHeader(row));
+    res.json(mapHeader(row, { kenmerk: await kenmerkVoorModCalc(row.gebouwId, row.nummer) }));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -863,7 +871,7 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
       );
     }
 
-    res.status(201).json(mapHeader(kopie));
+    res.status(201).json(mapHeader(kopie, { kenmerk: await kenmerkVoorModCalc(kopie.gebouwId, kopie.nummer) }));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

@@ -1,3 +1,9 @@
+## 2026-08-08 — NUMMER_01: ENK-kenmerkketen G→M→C→O + inkoop/facturen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog (HTTP-gedragsbewijs A t/m I, alle §6-punten groen) | **Risico:** laag-middel (nieuwe nummerkolommen + FK-koerscorrectie migratie 0018)
+
+Doorlopende nummerreeksen via DB-sequences (nooit max+1; parallel bewezen uniek). Kenmerk wordt altijd **berekend** uit de actuele keten (`BP-G156/C590/O405`) en beweegt mee; alleen bij versturen/definitief maken wordt het bevroren als momentopname. Nieuw gebouw krijgt automatisch een G-nummer. Offertes/calculaties kopiëren = nieuw nummer (kopie-endpoints); inkoop herzien = letter (`I088a`) + snapshot in `inkoop_versies`. Verzonden offertes server-side alleen-lezen (409). Facturen: F-nummer per offerte bij aanmaken; fiscaal nummer per BV pas bij definitief (concept verbruikt niets). Voorraadinkoop trekt uit dezelfde I-reeks, kenmerk aan het magazijn-gebouw. UI toont kenmerken als niet-bewerkbare badges. Bugfix meegenomen: magazijn-inkooporderroutes misten het `/magazijn`-prefix (spec/frontend-mismatch). Bewijs: `scripts/src/bewijs-nummer01-kenmerkketen.ts`; details + accountant-actiepunt (bestaande fiscale reeks doortellen) in `docs/antwoorden/NUMMER_01.md`.
+
 ## 2026-08-08 — KLANT_01: klantportaal dicht tenzij open (centrale klant-poort)
 
 - **Uitvoering:** volledig (fase 0 t/m 3 + bewijs) | **Kwaliteit:** hoog (gedragsbewijs met 2 klantaccounts + medewerker) | **Risico:** laag voor medewerkers (poort raakt alleen rol klant), hoog beveiligingsrendement

@@ -1,7 +1,9 @@
 import {
   pgTable, serial, text, integer, real, boolean, timestamp, unique, jsonb,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { artikelenTable } from "./artikelen";
+import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { leveranciersTable } from "./leveranciers";
@@ -84,6 +86,8 @@ export const magazijnInstellingenTable = pgTable("magazijn_instellingen", {
   signaleringUur:   integer("signalering_uur").notNull().default(7),     // 0-23
   signaleringMinuut: integer("signalering_minuut").notNull().default(0), // 0-59
   signaleringMarge: integer("signalering_marge").notNull().default(0),   // extra buffer bovenop minimumvoorraad
+  // NUMMER_01 besluit 10: het magazijn is een eigen gebouw — ouder van voorraadinkoop-kenmerken
+  magazijnGebouwId: integer("magazijn_gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
   bijgewerktOp:     timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });
@@ -128,7 +132,13 @@ export const magazijnStellingscansTable = pgTable("magazijn_stellingscans", {
 
 export const magazijnInkoopordersTable = pgTable("magazijn_inkooporders", {
   id:                    serial("id").primaryKey(),
-  nummer:                text("nummer"),              // INK-2026-0001 (server-generated)
+  nummer:                text("nummer"),              // INK-2026-0001 (legacy weergave)
+  // NUMMER_01: I-volgnummer uit de gedeelde seq_nummer_i (voorraadinkoop → G.../I...)
+  inkoopnummer:          integer("inkoopnummer").notNull().default(sql`nextval('seq_nummer_i')`).unique(),
+  // NUMMER_01 besluit 10: voorraadinkoop hangt aan het magazijn-gebouw
+  gebouwId:              integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  // NUMMER_01 §4.5: herziening van een verstuurde order = letter achter het nummer
+  herziening:            integer("herziening").notNull().default(0),
   status:                text("status").notNull().default("concept"),
   // concept | verstuurd | bevestigd | gedeeltelijk_ontvangen | volledig_ontvangen | geannuleerd
   leverancierId:         integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),

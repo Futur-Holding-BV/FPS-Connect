@@ -273,7 +273,7 @@ export default function MagazijnInkoopordersPagina() {
                   onClick={() => navigate(`/magazijn/inkooporders/${o.id}`)}
                 >
                   <TableCell className="font-mono text-sm font-medium">
-                    {o.nummer ?? `#${o.id}`}
+                    {(o as any).kenmerk ?? o.nummer ?? `#${o.id}`}
                   </TableCell>
                   <TableCell>{o.leverancier_naam ?? <span className="text-muted-foreground text-sm">Onbekend</span>}</TableCell>
                   <TableCell>

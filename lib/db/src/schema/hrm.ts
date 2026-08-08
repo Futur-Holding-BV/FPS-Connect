@@ -33,6 +33,8 @@ export const werkgeversTable = pgTable("werkgevers", {
   email: text("email"),
   website: text("website"),
   voettekst: text("voettekst"),
+  // NUMMER_01 §4.7: BV-prefix vóór het kenmerk (bv. "BP" → BP-G156/C590/O405)
+  kenmerkPrefix: text("kenmerk_prefix"),
   handtekeningUrl: text("handtekening_url"),
   logoUrl: text("logo_url"),
   primaireKleur: text("primaire_kleur").default("#F23B0D"),

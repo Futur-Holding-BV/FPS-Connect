@@ -1,3 +1,5 @@
+- [NUMMER_01 kenmerkketen](kenmerkketen.md) — nummers uit DB-sequences, kenmerk altijd berekend, bevriezen alleen bij versturen/definitief; offertes kopiëren=nieuw nummer, inkoop=letterherziening+snapshot.
+- [Orval index-fix](orval-index-fix.md) — orval herschrijft api-zod index.ts met dubbele exports; fix-zod-index.mjs in codegen-script houden.
 - [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static matcher moet `mjs` bevatten anders serveert Caddy pdfjs-worker als text/html (SPA-fallback) → plattegrond werkt niet.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) — docs/kwaliteitskader.md is verplicht; taak pas gereed bij aantoonbaar werkend businessscenario + bewijs; build/typecheck nooit voldoende; nooit zelf naar productie.

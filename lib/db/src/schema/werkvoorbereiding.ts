@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, real, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, timestamp, boolean, jsonb, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { werkbegrotingRegelsTable } from "./planning";
@@ -73,7 +74,13 @@ export const inkoopbonnenTable = pgTable("inkoopbonnen", {
   id: serial("id").primaryKey(),
   inkoopplanId: integer("inkoopplan_id").references(() => inkoopplannenTable.id, { onDelete: "set null" }),
   opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),
-  bonNummer: text("bon_nummer"),                   // bijv. IB-2025-001
+  bonNummer: text("bon_nummer"),                   // bijv. IB-2025-001 (legacy weergave)
+  // NUMMER_01: I-volgnummer uit de gedeelde seq_nummer_i (projectinkoop → O.../I...)
+  nummer: integer("nummer").notNull().default(sql`nextval('seq_nummer_i')`).unique(),
+  // NUMMER_01 §4.5: projectinkoop hangt aan de offerte
+  offerteId: integer("offerte_id"),
+  // NUMMER_01 §4.5: herziening van een verstuurde bon = letter achter het nummer (I088a)
+  herziening: integer("herziening").notNull().default(0),
   leverancier: text("leverancier").notNull(),
   leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
   gewensteLeverdatum: text("gewenste_leverdatum"),
@@ -90,6 +97,19 @@ export const inkoopbonnenTable = pgTable("inkoopbonnen", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// NUMMER_01 §4.5 — herziene inkoopopdrachten overschrijven de vorige niet:
+// bij elke herziening van een verstuurde bon/order wordt de vorige versie hier bevroren.
+export const inkoopVersiesTable = pgTable("inkoop_versies", {
+  id: serial("id").primaryKey(),
+  bronTabel: text("bron_tabel").notNull(),   // 'inkoopbonnen' | 'magazijn_inkooporders'
+  bronId: integer("bron_id").notNull(),
+  herziening: integer("herziening").notNull(), // de bevroren versie (0 = origineel)
+  kenmerk: text("kenmerk").notNull(),          // bv. O405/I088a zoals verstuurd
+  snapshot: jsonb("snapshot").notNull(),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [unique().on(t.bronTabel, t.bronId, t.herziening)]);
 
 export const inkoopbonRegelsTable = pgTable("inkoopbon_regels", {
   id: serial("id").primaryKey(),

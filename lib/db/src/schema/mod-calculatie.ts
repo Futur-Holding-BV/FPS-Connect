@@ -1,4 +1,5 @@
 import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { opnamesTable } from "./opname";
@@ -53,6 +54,11 @@ export const modCalcArtekelenTable = pgTable("mod_calc_artikelen", {
 
 export const modCalcHeadersTable = pgTable("mod_calc_headers", {
   id: serial("id").primaryKey(),
+  // NUMMER_01: C-volgnummer uit de gedeelde seq_nummer_c (één reeks over beide calculatiemodules)
+  nummer: integer("nummer").notNull().default(sql`nextval('seq_nummer_c')`).unique(),
+  // NUMMER_01 §4.10: herziening = kopie met nieuw nummer
+  gekopieerdVanId: integer("gekopieerd_van_id"),
+  verzondenOp: timestamp("verzonden_op"),
   naam: text("naam").notNull(),
   referentie: text("referentie"),
   klantNaam: text("klant_naam"),

@@ -1,4 +1,5 @@
 import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { gebouwenTable } from "./gebouwen";
 import { verdiepingenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
@@ -6,6 +7,8 @@ import { gebruikersTable } from "./gebruikers";
 // Opname — een veldopname van een gebouw door de projectleider
 export const opnamesTable = pgTable("opnames", {
   id:               serial("id").primaryKey(),
+  // NUMMER_01: M-volgnummer uit seq_nummer_m (doorlopend, systeem-uitgegeven)
+  nummer:           integer("nummer").notNull().default(sql`nextval('seq_nummer_m')`).unique(),
   gebouwId:         integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
   naam:             text("naam").notNull(),
   datum:            text("datum").notNull(),           // ISO-datum (YYYY-MM-DD)

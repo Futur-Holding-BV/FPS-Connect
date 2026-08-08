@@ -15,6 +15,7 @@ import {
   opdrachtenTable,
   magazijnStellingscansTable,
   magazijnInstellingenTable,
+  inkoopVersiesTable,
   magazijnSnoozesTable,
   magazijnInkoopordersTable,
   magazijnInkooporderRegelsTable,
@@ -31,6 +32,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT, MAGAZIJN_BESTELSUGGESTIE_PROMPT } from "../lib/aiPrompts";
 import { herplanMagazijnSignalering } from "../lib/magazijnSignalering";
+import { kenmerkVoorVoorraadinkoop } from "../lib/kenmerk";
 
 const router = Router();
 
@@ -1872,10 +1874,16 @@ function mapInkooporderRegel(r: typeof magazijnInkooporderRegelsTable.$inferSele
 function mapInkooporder(r: typeof magazijnInkoopordersTable.$inferSelect & {
   aangemaakt_door_naam?: string | null;
   totaal_regels?: number;
+  kenmerk_berekend?: string | null;
 }) {
   return {
     id: r.id,
     nummer: r.nummer ?? null,
+    // NUMMER_01: I-nummer uit de gedeelde reeks + kenmerk G002/I089[a]
+    inkoopnummer: r.inkoopnummer,
+    gebouw_id: r.gebouwId ?? null,
+    herziening: r.herziening,
+    kenmerk: r.kenmerk_berekend ?? null,
     status: r.status,
     leverancier_id: r.leverancierId ?? null,
     leverancier_naam: r.leverancierNaam ?? null,
@@ -1909,7 +1917,7 @@ async function genereerInkooporderNummer(): Promise<string> {
 const inkooporderLezen = requireBevoegdheid("magazijn", 2);
 
 // GET /magazijn/inkooporders
-router.get("/inkooporders", inkooporderLezen, async (req, res) => {
+router.get("/magazijn/inkooporders", inkooporderLezen, async (req, res) => {
   try {
     const { status, leverancier_id } = req.query;
     const conditions = [];
@@ -1929,11 +1937,12 @@ router.get("/inkooporders", inkooporderLezen, async (req, res) => {
       .groupBy(magazijnInkoopordersTable.id, gebruikersTable.naam)
       .orderBy(desc(magazijnInkoopordersTable.aangemaaktOp));
 
-    return void res.json(rows.map((r) => mapInkooporder({
+    return void res.json(await Promise.all(rows.map(async (r) => mapInkooporder({
       ...r.order,
       aangemaakt_door_naam: r.aangemaakt_door_naam,
       totaal_regels: Number(r.totaal_regels),
-    })));
+      kenmerk_berekend: await kenmerkVoorVoorraadinkoop(r.order.gebouwId, r.order.inkoopnummer, r.order.herziening),
+    }))));
   } catch (err) {
     logger.error({ err }, "lijst inkooporders ophalen fout");
     return void res.status(500).json({ error: "Interne serverfout" });
@@ -1941,7 +1950,7 @@ router.get("/inkooporders", inkooporderLezen, async (req, res) => {
 });
 
 // POST /magazijn/inkooporders
-router.post("/inkooporders", aanmaken, async (req, res) => {
+router.post("/magazijn/inkooporders", aanmaken, async (req, res) => {
   try {
     const userId = req.session.userId!;
     const { leverancier_id, verwachte_leverdatum, notities, referentie, regels } = req.body as {
@@ -1961,8 +1970,13 @@ router.post("/inkooporders", aanmaken, async (req, res) => {
 
     const nummer = await genereerInkooporderNummer();
 
+    // NUMMER_01 besluit 10: voorraadinkoop hangt aan het magazijn-gebouw
+    // (magazijn_instellingen.magazijn_gebouw_id) → kenmerk G002/I089.
+    const [instellingen] = await db.select().from(magazijnInstellingenTable).limit(1);
+
     const [order] = await db.insert(magazijnInkoopordersTable).values({
       nummer,
+      gebouwId: instellingen?.magazijnGebouwId ?? null,
       status: "concept",
       leverancierId: leverancier_id ?? null,
       leverancierNaam,
@@ -1986,7 +2000,11 @@ router.post("/inkooporders", aanmaken, async (req, res) => {
       );
     }
 
-    return void res.status(201).json(mapInkooporder({ ...order, totaal_regels: regels?.length ?? 0 }));
+    return void res.status(201).json(mapInkooporder({
+      ...order,
+      totaal_regels: regels?.length ?? 0,
+      kenmerk_berekend: await kenmerkVoorVoorraadinkoop(order.gebouwId, order.inkoopnummer, order.herziening),
+    }));
   } catch (err) {
     logger.error({ err }, "inkooporder aanmaken fout");
     return void res.status(500).json({ error: "Interne serverfout" });
@@ -1994,7 +2012,7 @@ router.post("/inkooporders", aanmaken, async (req, res) => {
 });
 
 // GET /magazijn/inkooporders/:id
-router.get("/inkooporders/:id", inkooporderLezen, async (req, res) => {
+router.get("/magazijn/inkooporders/:id", inkooporderLezen, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [order] = await db
@@ -2026,6 +2044,7 @@ router.get("/inkooporders/:id", inkooporderLezen, async (req, res) => {
         ...order.order,
         aangemaakt_door_naam: order.aangemaakt_door_naam,
         totaal_regels: regels.length,
+        kenmerk_berekend: await kenmerkVoorVoorraadinkoop(order.order.gebouwId, order.order.inkoopnummer, order.order.herziening),
       }),
       regels: regels.map((r) => mapInkooporderRegel({
         ...r.regel,
@@ -2041,13 +2060,9 @@ router.get("/inkooporders/:id", inkooporderLezen, async (req, res) => {
 });
 
 // PATCH /magazijn/inkooporders/:id
-router.patch("/inkooporders/:id", schrijven, async (req, res) => {
+router.patch("/magazijn/inkooporders/:id", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const [bestaand] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
-    if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
-    if (bestaand.status !== "concept") return void res.status(409).json({ error: "Alleen concept-orders kunnen worden bijgewerkt" });
-
     const { leverancier_id, verwachte_leverdatum, notities, referentie, regels } = req.body as {
       leverancier_id?: number | null;
       verwachte_leverdatum?: string | null;
@@ -2056,49 +2071,83 @@ router.patch("/inkooporders/:id", schrijven, async (req, res) => {
       regels?: Array<{ artikel_id: number; gevraagd_hoeveelheid: number; eenheidsprijs?: number | null; btw_percentage?: number; omschrijving?: string | null }>;
     };
 
-    let leverancierNaam = bestaand.leverancierNaam;
-    let leverancierEmail = bestaand.leverancierEmail;
-    if (leverancier_id !== undefined) {
-      if (leverancier_id) {
-        const [lev] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, leverancier_id)).limit(1);
-        if (lev) { leverancierNaam = lev.naam; leverancierEmail = str(lev.email); }
-      } else {
-        leverancierNaam = null; leverancierEmail = null;
+    // Transactioneel met row-lock: parallel wijzigen van een verstuurde order
+    // mag nooit dezelfde herzieningsletter dubbel uitgeven of dezelfde versie
+    // twee keer snapshotten.
+    const uitkomst = await db.transaction(async (tx) => {
+      const [bestaand] = await tx.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).for("update");
+      if (!bestaand) return { fout: 404 as const };
+      // NUMMER_01 §4.5: een al verstuurde order wijzigen mag, maar wordt een
+      // herziening met letter (I089 → I089a); de oude versie wordt eerst bevroren.
+      const isHerziening = bestaand.status !== "concept";
+      if (isHerziening && !bestaand.verstuurdOp) return { fout: 409 as const };
+      if (isHerziening) {
+        const oudeRegels = await tx.select().from(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+        await tx.insert(inkoopVersiesTable).values({
+          bronTabel: "magazijn_inkooporders",
+          bronId: id,
+          herziening: bestaand.herziening,
+          kenmerk: await kenmerkVoorVoorraadinkoop(bestaand.gebouwId, bestaand.inkoopnummer, bestaand.herziening),
+          snapshot: { order: bestaand, regels: oudeRegels },
+          aangemaaktDoorId: req.session.userId ?? null,
+        }).onConflictDoNothing();
       }
-    }
 
-    const [updated] = await db
-      .update(magazijnInkoopordersTable)
-      .set({
-        leverancierId: leverancier_id !== undefined ? (leverancier_id ?? null) : bestaand.leverancierId,
-        leverancierNaam,
-        leverancierEmail,
-        verwachteLeverdatum: verwachte_leverdatum !== undefined ? (verwachte_leverdatum ? new Date(verwachte_leverdatum) : null) : bestaand.verwachteLeverdatum,
-        notities: notities !== undefined ? str(notities) : bestaand.notities,
-        referentie: referentie !== undefined ? str(referentie) : bestaand.referentie,
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(magazijnInkoopordersTable.id, id))
-      .returning();
-
-    if (regels !== undefined) {
-      await db.delete(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
-      if (regels.length > 0) {
-        await db.insert(magazijnInkooporderRegelsTable).values(
-          regels.map((r) => ({
-            inkooporderId: id,
-            artikelId: r.artikel_id,
-            gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
-            eenheidsprijs: r.eenheidsprijs ?? null,
-            btwPercentage: r.btw_percentage ?? 21,
-            omschrijving: str(r.omschrijving),
-          }))
-        );
+      let leverancierNaam = bestaand.leverancierNaam;
+      let leverancierEmail = bestaand.leverancierEmail;
+      if (leverancier_id !== undefined) {
+        if (leverancier_id) {
+          const [lev] = await tx.select().from(leveranciersTable).where(eq(leveranciersTable.id, leverancier_id)).limit(1);
+          if (lev) { leverancierNaam = lev.naam; leverancierEmail = str(lev.email); }
+        } else {
+          leverancierNaam = null; leverancierEmail = null;
+        }
       }
+
+      const [updated] = await tx
+        .update(magazijnInkoopordersTable)
+        .set({
+          leverancierId: leverancier_id !== undefined ? (leverancier_id ?? null) : bestaand.leverancierId,
+          leverancierNaam,
+          leverancierEmail,
+          verwachteLeverdatum: verwachte_leverdatum !== undefined ? (verwachte_leverdatum ? new Date(verwachte_leverdatum) : null) : bestaand.verwachteLeverdatum,
+          notities: notities !== undefined ? str(notities) : bestaand.notities,
+          referentie: referentie !== undefined ? str(referentie) : bestaand.referentie,
+          ...(isHerziening ? { herziening: bestaand.herziening + 1 } : {}),
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(magazijnInkoopordersTable.id, id))
+        .returning();
+
+      if (regels !== undefined) {
+        await tx.delete(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+        if (regels.length > 0) {
+          await tx.insert(magazijnInkooporderRegelsTable).values(
+            regels.map((r) => ({
+              inkooporderId: id,
+              artikelId: r.artikel_id,
+              gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
+              eenheidsprijs: r.eenheidsprijs ?? null,
+              btwPercentage: r.btw_percentage ?? 21,
+              omschrijving: str(r.omschrijving),
+            }))
+          );
+        }
+      }
+      return { updated };
+    });
+    if ("fout" in uitkomst) {
+      if (uitkomst.fout === 404) return void res.status(404).json({ error: "Niet gevonden" });
+      return void res.status(409).json({ error: "Alleen concept- of verstuurde orders kunnen worden bijgewerkt" });
     }
+    const { updated } = uitkomst;
 
     const totaalRegels = await db.select({ count: sql<number>`count(*)` }).from(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
-    return void res.json(mapInkooporder({ ...updated, totaal_regels: Number(totaalRegels[0]?.count ?? 0) }));
+    return void res.json(mapInkooporder({
+      ...updated,
+      totaal_regels: Number(totaalRegels[0]?.count ?? 0),
+      kenmerk_berekend: await kenmerkVoorVoorraadinkoop(updated.gebouwId, updated.inkoopnummer, updated.herziening),
+    }));
   } catch (err) {
     logger.error({ err }, "inkooporder bijwerken fout");
     return void res.status(500).json({ error: "Interne serverfout" });
@@ -2106,7 +2155,7 @@ router.patch("/inkooporders/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /magazijn/inkooporders/:id
-router.delete("/inkooporders/:id", beheer, async (req, res) => {
+router.delete("/magazijn/inkooporders/:id", beheer, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [order] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
@@ -2121,7 +2170,7 @@ router.delete("/inkooporders/:id", beheer, async (req, res) => {
 });
 
 // POST /magazijn/inkooporders/:id/verstuur
-router.post("/inkooporders/:id/verstuur", schrijven, async (req, res) => {
+router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [order] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
@@ -2173,7 +2222,7 @@ ${order.notities ? `<p><strong>Notities:</strong> ${order.notities}</p>` : ""}
 });
 
 // POST /magazijn/inkooporders/:id/ontvang
-router.post("/inkooporders/:id/ontvang", schrijven, async (req, res) => {
+router.post("/magazijn/inkooporders/:id/ontvang", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const userId = req.session.userId!;

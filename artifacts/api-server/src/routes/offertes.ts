@@ -39,9 +39,11 @@ import {
   offerteContractAdviezenTable,
   documentStudioModellenTable,
   modCalcHeadersTable,
+  werkgeversTable,
   fpsVisualsTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { kenmerkVoorOfferte, formatNummer } from "../lib/kenmerk";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -62,12 +64,18 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 }
 
+// NUMMER_01 §4.10: een verzonden offerte is een uitgegaan document en wordt
+// server-side alleen-lezen; wijzigen = kopiëren met een nieuw O-nummer.
 async function isOfferteBlokkeerd(offerteId: number): Promise<boolean> {
   const [o] = await db
     .select({ portaalStatus: offertesTable.portaalStatus })
     .from(offertesTable)
     .where(eq(offertesTable.id, offerteId));
-  return o?.portaalStatus === "ondertekend" || o?.portaalStatus === "afgewezen";
+  return (
+    o?.portaalStatus === "ondertekend" ||
+    o?.portaalStatus === "afgewezen" ||
+    o?.portaalStatus === "verzonden"
+  );
 }
 
 const lezen = requireBevoegdheid("offertes", 1);
@@ -311,6 +319,10 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
   }
   return {
     id: o.id,
+    nummer: o.nummer,
+    // NUMMER_01 §4.3: bevroren momentopname na verzenden, anders live berekend
+    kenmerk: o.kenmerk ?? (await kenmerkVoorOfferte(o.id)),
+    gekopieerd_van_id: o.gekopieerdVanId,
     offertenummer: o.offertenummer,
     titel: o.titel,
     gebouw_id: o.gebouwId,
@@ -356,9 +368,19 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
 router.get("/offertes", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
-      .select({ o: offertesTable, gebouwNaam: gebouwenTable.naam, klantNaam: crmKlantenTable.naam, behandeldDoorNaam: gebruikersTable.naam })
+      .select({
+        o: offertesTable,
+        gebouwNaam: gebouwenTable.naam,
+        werknummer: gebouwenTable.werknummer,
+        bvPrefix: werkgeversTable.kenmerkPrefix,
+        calcNummer: modCalcHeadersTable.nummer,
+        klantNaam: crmKlantenTable.naam,
+        behandeldDoorNaam: gebruikersTable.naam,
+      })
       .from(offertesTable)
       .leftJoin(gebouwenTable, eq(offertesTable.gebouwId, gebouwenTable.id))
+      .leftJoin(werkgeversTable, eq(gebouwenTable.werkgeverId, werkgeversTable.id))
+      .leftJoin(modCalcHeadersTable, eq(offertesTable.calculatieId, modCalcHeadersTable.id))
       .leftJoin(crmKlantenTable, eq(offertesTable.klantId, crmKlantenTable.id))
       .leftJoin(gebruikersTable, eq(offertesTable.behandeldDoorId, gebruikersTable.id))
       .orderBy(desc(offertesTable.aangemaaktOp));
@@ -399,6 +421,19 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
     res.json(
       rijen.map((r) => ({
         id: r.o.id,
+        nummer: r.o.nummer,
+        kenmerk:
+          r.o.kenmerk ??
+          [
+            r.werknummer?.trim()
+              ? `${r.bvPrefix?.trim() ? `${r.bvPrefix.trim()}-` : ""}${r.werknummer.trim()}`
+              : null,
+            r.calcNummer != null ? formatNummer("C", r.calcNummer) : null,
+            formatNummer("O", r.o.nummer),
+          ]
+            .filter(Boolean)
+            .join("/"),
+        gekopieerd_van_id: r.o.gekopieerdVanId,
         offertenummer: r.o.offertenummer,
         titel: r.o.titel,
         gebouw_id: r.o.gebouwId,
@@ -436,14 +471,28 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
 
 router.post("/offertes", schrijven, async (req, res): Promise<void> => {
   try {
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, projectkans_id } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, projectkans_id, calculatie_id } = req.body;
     if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
+    // NUMMER_01 §4.3: de schakel calculatie → offerte; verwijzing moet bestaan
+    // en het gebouw volgt automatisch mee als het niet apart is opgegeven.
+    let calculatieId: number | null = null;
+    let gebouwIdUitCalc: number | null = null;
+    if (calculatie_id != null) {
+      const [c] = await db
+        .select({ id: modCalcHeadersTable.id, gebouwId: modCalcHeadersTable.gebouwId })
+        .from(modCalcHeadersTable)
+        .where(eq(modCalcHeadersTable.id, calculatie_id));
+      if (!c) return void res.status(400).json({ error: "calculatie_id verwijst niet naar een bestaande calculatie" });
+      calculatieId = c.id;
+      gebouwIdUitCalc = c.gebouwId;
+    }
     const [o] = await db
       .insert(offertesTable)
       .values({
         titel,
         offertenummer,
-        gebouwId: gebouw_id ?? null,
+        calculatieId,
+        gebouwId: gebouw_id ?? gebouwIdUitCalc ?? null,
         klantId: klant_id ?? null,
         sjabloonId: sjabloon_id ?? null,
         opdrachtgever,
@@ -1232,7 +1281,7 @@ router.get("/offertes/:id/secties", lezen, async (req, res): Promise<void> => {
 router.post("/offertes/:id/secties", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     const { sectie_type, volgorde, actief, titel, inhoud } = req.body;
     if (!titel && !sectie_type) return void res.status(400).json({ error: "titel is verplicht" });
     const titelEff = titel || (SECTIE_LABELS[sectie_type ?? "vrij"] ?? "Sectie");
@@ -1258,7 +1307,7 @@ router.post("/offertes/:id/secties", schrijven, async (req, res): Promise<void> 
 router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     const bestaande = await db
       .select({ id: offerteSectiesTable.id })
       .from(offerteSectiesTable)
@@ -1291,7 +1340,7 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res): Promise<void> 
       .from(offerteSectiesTable)
       .where(eq(offerteSectiesTable.id, sectieId));
     if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd, fotos } = req.body;
 
     // Materiële-wijzigingsguard: als de inhoud of titel van een sectie wijzigt
@@ -1343,7 +1392,7 @@ router.delete("/offerte-secties/:id", schrijven, async (req, res): Promise<void>
       .from(offerteSectiesTable)
       .where(eq(offerteSectiesTable.id, sectieId));
     if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     await db.delete(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
     res.status(204).send();
   } catch (err) {
@@ -1359,7 +1408,7 @@ router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res): Pr
     const sectieId = parseId(req.params.id);
     const [sectie] = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
     if (!sectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(sectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(sectie.offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
 
     const [offerte] = await db
       .select({
@@ -1604,7 +1653,7 @@ router.post("/offertes/:id/versies", schrijven, async (req, res): Promise<void> 
 
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
-    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
 
     const secties = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerteId)).orderBy(offerteSectiesTable.volgorde);
     const regels = await db.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, offerteId)).orderBy(offerteRegelsTable.volgorde);
@@ -1663,7 +1712,7 @@ router.get("/offertes/:id/bijlagen", lezen, async (req, res): Promise<void> => {
 router.post("/offertes/:id/bijlagen", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [b] = await db
@@ -1693,7 +1742,7 @@ router.patch("/offerte-bijlagen/:id", schrijven, async (req, res): Promise<void>
       .from(offerteBijlagenTable)
       .where(eq(offerteBijlagenTable.id, bijlageId));
     if (!bestaandeBijlage) return void res.status(404).json({ error: "Bijlage niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
     const [b] = await db
       .update(offerteBijlagenTable)
@@ -1724,7 +1773,7 @@ router.delete("/offerte-bijlagen/:id", schrijven, async (req, res): Promise<void
       .from(offerteBijlagenTable)
       .where(eq(offerteBijlagenTable.id, bijlageId));
     if (!bestaandeBijlage) return void res.status(404).json({ error: "Bijlage niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
     await db.delete(offerteBijlagenTable).where(eq(offerteBijlagenTable.id, bijlageId));
     res.status(204).send();
   } catch (err) {
@@ -1743,7 +1792,7 @@ router.post("/offertes/:id/uit-spots", schrijven, async (req, res): Promise<void
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
     if (offerte.gebouwId == null) return void res.status(400).json({ error: "Koppel eerst een gebouw aan de offerte." });
-    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Verzonden, ondertekende of afgewezen offerte kan niet worden gewijzigd. Maak een kopie met een nieuw nummer." });
 
     const spots = await db
       .select()
@@ -2268,20 +2317,48 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
       }
     }
 
-    await db
-      .update(offertesTable)
-      .set({
-        portaalStatus: "verzonden",
-        bijgewerktOp: new Date(),
-        ...(voorwaardenSnapshot !== undefined && { voorwaardenSnapshot }),
-        ...(studioModelId !== null && { studioModelId }),
-      })
-      .where(
-        and(
-          eq(offertesTable.id, offerteId),
-          not(inArray(offertesTable.portaalStatus, ["ondertekend", "afgewezen", "vervallen"])),
-        ),
-      );
+    // NUMMER_01 §4.3+§4.10: bij verzenden wordt het berekende kenmerk als
+    // momentopname bevroren en wordt automatisch een versie-snapshot gemaakt —
+    // de offerte is daarna server-side alleen-lezen (isOfferteBlokkeerd).
+    const bevrorenKenmerk = await kenmerkVoorOfferte(offerteId);
+    // Atomair: snapshot + bevriezing + statusovergang in één transactie onder
+    // een advisory lock per offerte, zodat gelijktijdig verzenden nooit twee
+    // snapshots met hetzelfde versienummer of een half-bevroren offerte geeft.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(864202, ${offerteId})`);
+      const [volledigeOfferte] = await tx.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+      const secties = await tx.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerteId)).orderBy(offerteSectiesTable.volgorde);
+      const regels = await tx.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, offerteId)).orderBy(offerteRegelsTable.volgorde);
+      const [laatste] = await tx
+        .select({ versienummer: offerteVersiesTable.versienummer })
+        .from(offerteVersiesTable)
+        .where(eq(offerteVersiesTable.offerteId, offerteId))
+        .orderBy(desc(offerteVersiesTable.versienummer))
+        .limit(1);
+      await tx.insert(offerteVersiesTable).values({
+        offerteId,
+        versienummer: (laatste?.versienummer ?? 0) + 1,
+        snapshot: { offerte: { ...volledigeOfferte, kenmerk: bevrorenKenmerk }, secties, regels },
+        samenvatting: `Automatische momentopname bij verzenden (${bevrorenKenmerk ?? "zonder kenmerk"})`,
+        aangemaaktDoorId: req.session.userId ?? null,
+      });
+
+      await tx
+        .update(offertesTable)
+        .set({
+          portaalStatus: "verzonden",
+          bijgewerktOp: new Date(),
+          kenmerk: bevrorenKenmerk,
+          ...(voorwaardenSnapshot !== undefined && { voorwaardenSnapshot }),
+          ...(studioModelId !== null && { studioModelId }),
+        })
+        .where(
+          and(
+            eq(offertesTable.id, offerteId),
+            not(inArray(offertesTable.portaalStatus, ["ondertekend", "afgewezen", "vervallen"])),
+          ),
+        );
+    });
 
     await db.insert(offerteTrackingTable).values({
       offerteId,
@@ -2291,6 +2368,87 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
     });
 
     res.json({ ok: true, portaal_link: portaalLink });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Offerte kopiëren ──────────────────────────────────────────────────────────
+// NUMMER_01 §4.10: herzien = kopiëren. De kopie krijgt een nieuw O-nummer uit
+// dezelfde doorlopende reeks (géén letters); het origineel blijft ongewijzigd.
+router.post("/offertes/:id/kopieer", schrijven, async (req, res): Promise<void> => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [bron] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!bron) return void res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const kopie = await db.transaction(async (tx) => {
+      const [nieuw] = await tx
+        .insert(offertesTable)
+        .values({
+          titel: bron.titel,
+          offertenummer: bron.offertenummer,
+          calculatieId: bron.calculatieId,
+          gebouwId: bron.gebouwId,
+          klantId: bron.klantId,
+          sjabloonId: bron.sjabloonId,
+          opdrachtgever: bron.opdrachtgever,
+          onsKenmerk: bron.onsKenmerk,
+          uwKenmerk: bron.uwKenmerk,
+          uwBriefVan: bron.uwBriefVan,
+          behandeldDoorId: bron.behandeldDoorId,
+          datum: bron.datum,
+          geldigheidDagen: bron.geldigheidDagen,
+          voorwaarden: bron.voorwaarden,
+          betalingstermijnDagen: bron.betalingstermijnDagen,
+          betaalwijze: bron.betaalwijze,
+          factuurSchema: bron.factuurSchema,
+          voorwaardenSetId: bron.voorwaardenSetId,
+          bedragExclBtw: bron.bedragExclBtw,
+          btwPercentage: bron.btwPercentage,
+          bedragInclBtw: bron.bedragInclBtw,
+          status: "concept",
+          portaalStatus: "concept",
+          kenmerk: null, // kenmerk van de kopie wordt weer live berekend
+          gekopieerdVanId: bron.id,
+          projectkansId: bron.projectkansId,
+          aangemaaktDoorId: req.session.userId ?? null,
+        })
+        .returning();
+
+      const secties = await tx.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, bron.id));
+      if (secties.length > 0) {
+        await tx.insert(offerteSectiesTable).values(
+          secties.map(({ id: _id, offerteId: _oid, aangemaaktOp: _a, bijgewerktOp: _b, ...rest }) => ({
+            ...rest,
+            offerteId: nieuw.id,
+          })),
+        );
+      }
+      const regels = await tx.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, bron.id));
+      if (regels.length > 0) {
+        await tx.insert(offerteRegelsTable).values(
+          regels.map(({ id: _id, offerteId: _oid, aangemaaktOp: _a, bijgewerktOp: _b, ...rest }) => ({
+            ...rest,
+            offerteId: nieuw.id,
+          })),
+        );
+      }
+      const bijlagen = await tx.select().from(offerteBijlagenTable).where(eq(offerteBijlagenTable.offerteId, bron.id));
+      if (bijlagen.length > 0) {
+        await tx.insert(offerteBijlagenTable).values(
+          bijlagen.map(({ id: _id, offerteId: _oid, aangemaaktOp: _a, ...rest }) => ({
+            ...rest,
+            offerteId: nieuw.id,
+          })),
+        );
+      }
+      return nieuw;
+    });
+
+    invalideerContext("offerte", kopie.id);
+    res.status(201).json(await offerteNaarJson(kopie));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

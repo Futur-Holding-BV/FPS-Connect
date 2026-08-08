@@ -969,8 +969,18 @@ export default function ProposalStudio() {
                   </DialogContent>
                 </Dialog>
               </div>
-              {offerte.offertenummer && (
-                <p className="text-xs text-muted-foreground">{offerte.offertenummer}</p>
+              {((offerte as any).kenmerk || offerte.offertenummer) && (
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  {(offerte as any).kenmerk && (
+                    <span
+                      className="font-mono font-semibold tracking-wide bg-muted border border-border rounded px-1.5 py-0.5 select-all"
+                      title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                    >
+                      {(offerte as any).kenmerk}
+                    </span>
+                  )}
+                  {offerte.offertenummer && <span>{offerte.offertenummer}</span>}
+                </p>
               )}
             </div>
           </div>

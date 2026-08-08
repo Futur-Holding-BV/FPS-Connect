@@ -1,4 +1,5 @@
 import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
+import { kenmerkVoorFactuur } from "../lib/kenmerk";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as XLSX from "xlsx";
@@ -21,6 +22,9 @@ import {
   factuurImportInstellingenTable,
   factuurImportLogTable,
   onderhoudscontractenTable,
+  offertesTable,
+  factuurnummerTellersTable,
+  werkgeversTable,
   factuurSignalenTable,
   factuurTijdlijnTable,
   FACTUUR_AFWIJSREDENEN,
@@ -88,6 +92,11 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     id: r.id,
     type: r.type,
     subtype: r.subtype ?? null,
+    // NUMMER_01 §4.6: F-nummer per offerte + kenmerk (O405/F002); het fiscale
+    // factuurnummer staat los daarvan in `factuurnummer`.
+    offerte_id: r.offerteId,
+    nummer: r.nummer,
+    kenmerk: r.kenmerk ?? (await kenmerkVoorFactuur(r.offerteId, r.nummer)),
     factuurnummer: r.factuurnummer,
     factuurdatum: r.factuurdatum,
     vervaldatum: r.vervaldatum,
@@ -200,7 +209,7 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
     omschrijving?: string; relatienaam?: string; relatie_code?: string; relatie_adres?: string;
     bedrag_excl_btw?: string; btw_bedrag?: string; bedrag_incl_btw?: string;
     btw_code?: string; grootboekrekening?: string; kostenplaats?: string; project_code?: string;
-    pdf_url?: string; bestandsnaam?: string; gebouw_id?: number;
+    pdf_url?: string; bestandsnaam?: string; gebouw_id?: number; offerte_id?: number;
   };
   // FACTUUR_02 §2 — één ingang: inkoopfacturen komen uitsluitend via de
   // factuurmailbox binnen. Handmatig aanmaken is beperkt tot verkoopfacturen.
@@ -213,10 +222,42 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
   }
   const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
   const subtype = body.subtype && TOEGESTANE_SUBTYPES.has(body.subtype) ? body.subtype : null;
-  const [rij] = await db.insert(facturenTable).values({
+  // NUMMER_01 §4.6: verkoopfactuur onder een offerte krijgt bij aanmaak een
+  // F-volgnummer per offerte (F001, F002, …) — het fiscale factuurnummer wordt
+  // pas bij definitief maken uitgegeven en een concept verbruikt er dus geen.
+  let offerteId: number | null = null;
+  let fNummer: number | null = null;
+  if (body.offerte_id != null) {
+    const [offerte] = await db
+      .select({ id: offertesTable.id })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, body.offerte_id));
+    if (!offerte) {
+      res.status(400).json({ error: "offerte_id verwijst niet naar een bestaande offerte" });
+      return;
+    }
+    offerteId = offerte.id;
+  }
+
+  const [rij] = await db.transaction(async (tx) => {
+    if (offerteId != null) {
+      // Advisory lock per offerte: twee gelijktijdige facturen onder dezelfde
+      // offerte krijgen gegarandeerd F001 en F002 (nooit twee keer F001).
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(864201, ${offerteId})`);
+      const [m] = await tx
+        .select({ max: sql<number>`COALESCE(MAX(${facturenTable.nummer}), 0)` })
+        .from(facturenTable)
+        .where(eq(facturenTable.offerteId, offerteId));
+      fNummer = Number(m?.max ?? 0) + 1;
+    }
+    return tx.insert(facturenTable).values({
     type: "verkoop",
     subtype,
-    factuurnummer: body.factuurnummer ?? null,
+    offerteId,
+    nummer: fNummer,
+    // NUMMER_01 §4.6: het fiscale factuurnummer wordt UITSLUITEND door
+    // /facturen/:id/definitief uitgegeven — nooit door de client meegegeven.
+    factuurnummer: null,
     factuurdatum: body.factuurdatum ?? null,
     vervaldatum: body.vervaldatum ?? null,
     omschrijving: body.omschrijving ?? null,
@@ -235,8 +276,81 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
     gebouwId: body.gebouw_id ?? null,
     uploaderId: sessionUserId(req),
     status: "ontvangen",
-  }).returning();
+    }).returning();
+  });
   res.status(201).json(await mapFactuur(rij));
+});
+
+// ── POST /facturen/:id/definitief ─────────────────────────────────────────────
+// NUMMER_01 §4.6: pas bij het definitief maken van een verkoopfactuur wordt het
+// fiscale factuurnummer uitgegeven — per BV, doorlopend, teller onder slot in
+// één transactie. Een concept verbruikt dus nooit een fiscaal nummer.
+router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id));
+  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+  if (factuur.type !== "verkoop") {
+    res.status(422).json({ error: "Alleen verkoopfacturen krijgen een fiscaal nummer uit de eigen reeks" });
+    return;
+  }
+  if (factuur.factuurnummer) {
+    res.status(409).json({ error: "Deze factuur heeft al een fiscaal factuurnummer", factuurnummer: factuur.factuurnummer });
+    return;
+  }
+
+  // BV bepalen via offerte → gebouw → werkgever (of direct gebouw → werkgever).
+  let werkgeverId: number | null = null;
+  let gebouwId = factuur.gebouwId;
+  if (!gebouwId && factuur.offerteId) {
+    const [o] = await db.select({ gebouwId: offertesTable.gebouwId }).from(offertesTable).where(eq(offertesTable.id, factuur.offerteId));
+    gebouwId = o?.gebouwId ?? null;
+  }
+  if (gebouwId) {
+    const [g] = await db.select({ werkgeverId: gebouwenTable.werkgeverId }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
+    werkgeverId = g?.werkgeverId ?? null;
+  }
+  if (!werkgeverId) {
+    res.status(422).json({
+      error: "Geen BV bepaalbaar voor de fiscale reeks",
+      detail: "Koppel de factuur (via de offerte) aan een gebouw met een werkgever/BV; het fiscale factuurnummer is per BV.",
+    });
+    return;
+  }
+
+  const resultaat = await db.transaction(async (tx) => {
+    // Row-lock op de factuur + hercheck ín de transactie: twee gelijktijdige
+    // definitief-verzoeken kunnen anders elk een tellernummer verbruiken.
+    const [vergrendeld] = await tx
+      .select({ factuurnummer: facturenTable.factuurnummer })
+      .from(facturenTable)
+      .where(eq(facturenTable.id, id))
+      .for("update");
+    if (!vergrendeld || vergrendeld.factuurnummer) return null;
+    // Teller per BV onder slot: eerst rij garanderen, dan atomair ophogen.
+    await tx
+      .insert(factuurnummerTellersTable)
+      .values({ werkgeverId: werkgeverId!, laatsteNummer: 0 })
+      .onConflictDoNothing();
+    const [teller] = await tx
+      .update(factuurnummerTellersTable)
+      .set({ laatsteNummer: sql`${factuurnummerTellersTable.laatsteNummer} + 1`, bijgewerktOp: new Date() })
+      .where(eq(factuurnummerTellersTable.werkgeverId, werkgeverId!))
+      .returning();
+    const fiscaal = String(teller.laatsteNummer).padStart(5, "0");
+    const kenmerk = await kenmerkVoorFactuur(factuur.offerteId, factuur.nummer);
+    const [bijgewerkt] = await tx
+      .update(facturenTable)
+      .set({ factuurnummer: fiscaal, kenmerk, bijgewerktOp: new Date() })
+      .where(eq(facturenTable.id, id))
+      .returning();
+    return bijgewerkt;
+  });
+  if (!resultaat) {
+    res.status(409).json({ error: "Deze factuur heeft al een fiscaal factuurnummer" });
+    return;
+  }
+
+  res.json(await mapFactuur(resultaat));
 });
 
 // ── GET /facturen/historisch-archief/excel ─────────────────────────────────────
@@ -708,7 +822,18 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: R
     const sub = body["subtype"];
     update.subtype = typeof sub === "string" && TOEGESTANE_SUBTYPES.has(sub) ? sub : null;
   }
-  if ("factuurnummer" in body) update.factuurnummer = body["factuurnummer"] as string | null;
+  if ("factuurnummer" in body && (body["factuurnummer"] ?? null) !== bestaand.factuurnummer) {
+    // NUMMER_01 §4.6: fiscale nummers van verkoopfacturen komen uitsluitend
+    // uit de reeks per BV (via /definitief) en zijn daarna onwijzigbaar.
+    if (bestaand.type === "verkoop") {
+      res.status(409).json({
+        error: "Het fiscale factuurnummer van een verkoopfactuur kan niet handmatig worden gezet of gewijzigd",
+        detail: "Gebruik 'Definitief maken'; het nummer komt uit de doorlopende reeks per BV.",
+      });
+      return;
+    }
+    update.factuurnummer = body["factuurnummer"] as string | null;
+  }
   if ("factuurdatum" in body) update.factuurdatum = body["factuurdatum"] as string | null;
   if ("vervaldatum" in body) update.vervaldatum = body["vervaldatum"] as string | null;
   if ("omschrijving" in body) update.omschrijving = body["omschrijving"] as string | null;

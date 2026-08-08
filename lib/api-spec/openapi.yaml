@@ -11457,6 +11457,29 @@ paths:
                   ok:
                     type: boolean
 
+  /offertes/{id}/kopieer:
+    post:
+      operationId: kopieerOfferte
+      tags: [offertes]
+      summary: Offerte kopiëren met een nieuw O-nummer (NUMMER_01 §4.10)
+      description: >
+        Maakt een volledige kopie (secties, regels, bijlagen) met een nieuw
+        nummer uit de doorlopende O-reeks. De kopie start als concept; het
+        origineel blijft ongewijzigd bewaard.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: De aangemaakte kopie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offerte"
+
   /offertes/{id}/klant-contracten:
     get:
       operationId: listOfferteKlantContracten
@@ -13773,6 +13796,29 @@ paths:
       responses:
         "201":
           description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculatie"
+
+  /calculaties/{id}/kopieer:
+    post:
+      operationId: kopieerCalculatie
+      tags: [calculaties]
+      summary: Calculatie kopiëren met een nieuw C-nummer (NUMMER_01 §4.10)
+      description: >
+        Maakt een volledige kopie (inclusief regels) met een nieuw nummer uit
+        de doorlopende C-reeks. De kopie start als concept; het origineel
+        blijft ongewijzigd bewaard.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: De aangemaakte kopie
           content:
             application/json:
               schema:
@@ -17934,6 +17980,29 @@ paths:
       responses:
         "200":
           description: Geaccordeerde factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/definitief:
+    post:
+      operationId: definitiefMakenFactuur
+      summary: Verkoopfactuur definitief maken — fiscaal nummer per BV (NUMMER_01 §4.6)
+      description: >
+        Geeft het fiscale factuurnummer uit de doorlopende reeks van de BV uit
+        en bevriest het kenmerk. Alleen verkoopfacturen; een concept verbruikt
+        geen fiscaal nummer.
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: De definitieve factuur met fiscaal nummer
           content:
             application/json:
               schema:
@@ -33215,6 +33284,14 @@ components:
           type: ["integer", "null"]
         offertenummer:
           type: ["string", "null"]
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)"
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315/O405); bevroren bij versturen"
+        gekopieerd_van_id:
+          type: ["integer", "null"]
         titel:
           type: string
         gebouw_id:
@@ -35053,6 +35130,17 @@ components:
           type: ["integer", "null"]
         opdracht_id:
           type: integer
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks"
+        offerte_id:
+          type: ["integer", "null"]
+        herziening:
+          type: ["integer", "null"]
+          description: "NUMMER_01: 0 = origineel, 1 = a, 2 = b, …"
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. O405/I088a)"
         bon_nummer:
           type: ["string", "null"]
         leverancier:
@@ -35499,6 +35587,18 @@ components:
           type: integer
         naam:
           type: string
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks"
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315)"
+        opname_id:
+          type: ["integer", "null"]
+        gekopieerd_van_id:
+          type: ["integer", "null"]
+        verzonden_op:
+          type: ["string", "null"]
         gebouw_id:
           type: ["integer", "null"]
         gebouw_naam:
@@ -35555,6 +35655,9 @@ components:
       properties:
         naam:
           type: string
+        opname_id:
+          type: ["integer", "null"]
+          description: "NUMMER_01 §4.3: koppeling naar de opname (M) waarop de calculatie is gebaseerd"
         gebouw_id:
           type: ["integer", "null"]
         status:
@@ -36492,6 +36595,16 @@ components:
           type: integer
         naam:
           type: string
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks"
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315)"
+        gekopieerd_van_id:
+          type: ["integer", "null"]
+        verzonden_op:
+          type: ["string", "null"]
         referentie:
           type: string
           nullable: true
@@ -38246,6 +38359,9 @@ components:
       properties:
         id:
           type: integer
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: M-volgnummer uit seq_nummer_m"
         gebouw_id:
           type: integer
           nullable: true
@@ -38279,6 +38395,9 @@ components:
       properties:
         id:
           type: integer
+        nummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: M-volgnummer uit seq_nummer_m"
         gebouw_id:
           type: integer
           nullable: true
@@ -40233,6 +40352,9 @@ components:
       properties:
         type:
           type: string
+        offerte_id:
+          type: ["integer", "null"]
+          description: "NUMMER_01 §4.6: koppelt de verkoopfactuur aan de offerte; het F-volgnummer wordt automatisch uitgegeven"
         subtype:
           type: string
           nullable: true
@@ -45107,6 +45229,16 @@ components:
       properties:
         id: { type: integer }
         nummer: { type: string, nullable: true }
+        inkoopnummer:
+          type: ["integer", "null"]
+          description: "NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks"
+        gebouw_id: { type: integer, nullable: true }
+        herziening:
+          type: ["integer", "null"]
+          description: "NUMMER_01: 0 = origineel, 1 = a, 2 = b, …"
+        kenmerk:
+          type: ["string", "null"]
+          description: "NUMMER_01: berekend kenmerk (bijv. G002/I089a)"
         status: { type: string }
         leverancier_id: { type: integer, nullable: true }
         leverancier_naam: { type: string, nullable: true }

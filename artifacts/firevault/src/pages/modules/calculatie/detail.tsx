@@ -2407,6 +2407,14 @@ export default function ModulesCalculatieDetail() {
                 </span>
               )}
               <h1 className="text-xl font-semibold text-foreground">{data.naam}</h1>
+              {(data as any).kenmerk && (
+                <span
+                  className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 select-all"
+                  title="Kenmerk (automatisch berekend, niet bewerkbaar)"
+                >
+                  {(data as any).kenmerk}
+                </span>
+              )}
               <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
                 {STATUS_LABEL[data.status] ?? data.status}
               </Badge>

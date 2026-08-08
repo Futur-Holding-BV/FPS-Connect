@@ -18,7 +18,6 @@ INDEX|ai_veld_correcties|ai_veld_correcties_pkey
 INDEX|ai_wijzigingsvoorstellen|ai_wijzigingsvoorstellen_pkey
 INDEX|app_instellingen|app_instellingen_pkey
 INDEX|arbeidsovereenkomsten|arbeidsovereenkomsten_pkey
-INDEX|artikelen|artikelen_import_id_idx
 INDEX|artikelen|artikelen_pkey
 INDEX|audit_log|audit_log_document_idx
 INDEX|audit_log|audit_log_entiteit_idx
@@ -41,6 +40,7 @@ INDEX|brandstof_importen|brandstof_importen_pkey
 INDEX|brandstof_regels|brandstof_regels_pkey
 INDEX|bruikleen_overeenkomsten|bruikleen_overeenkomsten_pkey
 INDEX|calculatie_regels|calculatie_regels_pkey
+INDEX|calculaties|calculaties_nummer_uniek
 INDEX|calculaties|calculaties_pkey
 INDEX|chat_berichten|chat_berichten_gesprek_aangemaakt_idx
 INDEX|chat_berichten|chat_berichten_pkey
@@ -63,10 +63,8 @@ INDEX|cqo_verbeterpunten|cqo_verbeterpunten_pkey
 INDEX|crm_commercieel|crm_commercieel_pkey
 INDEX|crm_communicatie|crm_communicatie_pkey
 INDEX|crm_concurrenten|crm_concurrenten_pkey
-INDEX|crm_contactpersonen|crm_contactpersonen_import_id_idx
 INDEX|crm_contactpersonen|crm_contactpersonen_pkey
 INDEX|crm_financieel|crm_financieel_pkey
-INDEX|crm_klanten|crm_klanten_import_id_idx
 INDEX|crm_klanten|crm_klanten_pkey
 INDEX|crm_marktintelligentie|crm_marktintelligentie_pkey
 INDEX|crm_opdrachten|crm_opdrachten_pkey
@@ -91,12 +89,11 @@ INDEX|documenten|documenten_pkey
 INDEX|dossier_documenten|dossier_documenten_pkey
 INDEX|dossiers|dossiers_pkey
 INDEX|eenheidsprijzen|eenheidsprijzen_code_unique
-INDEX|eenheidsprijzen|eenheidsprijzen_import_id_idx
 INDEX|eenheidsprijzen|eenheidsprijzen_pkey
 INDEX|fabrikanten|fabrikanten_naam_unique
 INDEX|fabrikanten|fabrikanten_pkey
-INDEX|facturen|facturen_import_id_idx
 INDEX|facturen|facturen_mailstroom_bijlage_uniek
+INDEX|facturen|facturen_offerte_nummer_uniek
 INDEX|facturen|facturen_pkey
 INDEX|factuur_correspondentie|factuur_correspondentie_pkey
 INDEX|factuur_herinneringen|factuur_herinneringen_pkey
@@ -111,6 +108,7 @@ INDEX|factuur_signalen|factuur_signalen_open_mail_uq
 INDEX|factuur_signalen|factuur_signalen_pkey
 INDEX|factuur_termijnen|factuur_termijnen_pkey
 INDEX|factuur_tijdlijn|factuur_tijdlijn_pkey
+INDEX|factuurnummer_tellers|factuurnummer_tellers_pkey
 INDEX|feedback|feedback_pkey
 INDEX|feestdagen|feestdagen_pkey
 INDEX|fie_ak_adviezen|fie_ak_adviezen_dedup_open_uniek
@@ -155,7 +153,6 @@ INDEX|gebouw_emails|gebouw_emails_pkey
 INDEX|gebouw_partijen|gebouw_partijen_pkey
 INDEX|gebouw_publicaties|gebouw_publicaties_pkey
 INDEX|gebouw_toewijzingen|gebouw_toewijzingen_pkey
-INDEX|gebouwen|gebouwen_import_id_idx
 INDEX|gebouwen|gebouwen_pkey
 INDEX|gebouwen|gebouwen_projectnummer_unique
 INDEX|gebouwen|gebouwen_werknummer_unique
@@ -193,7 +190,10 @@ INDEX|hrm_onboarding_taken|hrm_onboarding_taken_pkey
 INDEX|import_logs|import_logs_pkey
 INDEX|inbox_audit_log|inbox_audit_log_pkey
 INDEX|inbox_items|inbox_items_pkey
+INDEX|inkoop_versies|inkoop_versies_bron_tabel_bron_id_herziening_key
+INDEX|inkoop_versies|inkoop_versies_pkey
 INDEX|inkoopbon_regels|inkoopbon_regels_pkey
+INDEX|inkoopbonnen|inkoopbonnen_nummer_uniek
 INDEX|inkoopbonnen|inkoopbonnen_pkey
 INDEX|inkoopplan_regels|inkoopplan_regels_pkey
 INDEX|inkoopplannen|inkoopplannen_pkey
@@ -210,11 +210,11 @@ INDEX|leverancier_categorisatie|leverancier_categorisatie_leverancier_id_grootbo
 INDEX|leverancier_categorisatie|leverancier_categorisatie_pkey
 INDEX|leverancier_prestaties|idx_lev_prestaties_leverancier
 INDEX|leverancier_prestaties|leverancier_prestaties_pkey
-INDEX|leveranciers|leveranciers_import_id_idx
 INDEX|leveranciers|leveranciers_pkey
 INDEX|login_pogingen|login_pogingen_pkey
 INDEX|loon_output_bestanden|loon_output_bestanden_pkey
 INDEX|magazijn_inkooporder_regels|magazijn_inkooporder_regels_pkey
+INDEX|magazijn_inkooporders|magazijn_inkooporders_inkoopnummer_uniek
 INDEX|magazijn_inkooporders|magazijn_inkooporders_pkey
 INDEX|magazijn_instellingen|magazijn_instellingen_pkey
 INDEX|magazijn_locaties|magazijn_locaties_pkey
@@ -230,12 +230,12 @@ INDEX|medewerker_cao_keuzes|medewerker_cao_keuzes_pkey
 INDEX|medewerker_documenten|medewerker_documenten_pkey
 INDEX|medewerker_opleidingen|medewerker_opleidingen_pkey
 INDEX|medewerkers|medewerkers_gebruiker_id_unique
-INDEX|medewerkers|medewerkers_import_id_idx
 INDEX|medewerkers|medewerkers_pkey
 INDEX|mod_calc_adviezen|mod_calc_adviezen_pkey
 INDEX|mod_calc_artikelen|mod_calc_artikelen_pkey
 INDEX|mod_calc_bronbestanden|mod_calc_bronbestanden_pkey
 INDEX|mod_calc_eenheden|mod_calc_eenheden_pkey
+INDEX|mod_calc_headers|mod_calc_headers_nummer_uq
 INDEX|mod_calc_headers|mod_calc_headers_pkey
 INDEX|mod_calc_inkoop_items|mod_calc_inkoop_items_pkey
 INDEX|mod_calc_leveranciers|mod_calc_leveranciers_pkey
@@ -271,6 +271,7 @@ INDEX|offerte_uitgangspunten|offerte_uitgangspunten_pkey
 INDEX|offerte_versies|offerte_versies_pkey
 INDEX|offerte_voorwaarden_sets|offerte_voorwaarden_sets_pkey
 INDEX|offerte_vragen|offerte_vragen_pkey
+INDEX|offertes|offertes_nummer_uniek
 INDEX|offertes|offertes_pkey
 INDEX|offertes|uq_offertes_auto_project_id
 INDEX|onderaannemer_orders|onderaannemer_orders_pkey
@@ -280,7 +281,6 @@ INDEX|onderhoudscontracten|onderhoudscontracten_pkey
 INDEX|onderhoud|onderhoud_gebouw_status_deadline_idx
 INDEX|onderhoud|onderhoud_pkey
 INDEX|opdracht_checklist_items|opdracht_checklist_items_pkey
-INDEX|opdracht_checklist_items|opdracht_checklist_opdracht_idx
 INDEX|opdrachten|opdrachten_offerte_id_uniek
 INDEX|opdrachten|opdrachten_pkey
 INDEX|opdrachtgever_voorkeuren|opdrachtgever_voorkeuren_klant_id_unique
@@ -289,6 +289,7 @@ INDEX|opleidingen|opleidingen_pkey
 INDEX|opleverrapporten|opleverrapporten_pkey
 INDEX|opname_fotos|opname_fotos_pkey
 INDEX|opname_items|opname_items_pkey
+INDEX|opnames|opnames_nummer_uniek
 INDEX|opnames|opnames_pkey
 INDEX|org_bedrijfsdocumenten|org_bedrijfsdocumenten_pkey
 INDEX|org_jaarverslagen|org_jaarverslagen_pkey
@@ -394,7 +395,6 @@ INDEX|wagenpark_sync_log|wagenpark_sync_log_pkey
 INDEX|week_staten|week_staten_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_mailbox_idx
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_message_idx
-INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_msg_uq
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_pkey
 INDEX|werk_inbox_mailbox_toegang|werk_inbox_mailbox_toegang_pkey
 INDEX|werk_inbox_mailbox_toegang|werk_inbox_toegang_gebruiker_idx
@@ -878,10 +878,14 @@ KOLOM|calculaties|aangemaakt_door_id|integer|YES|
 KOLOM|calculaties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|calculaties|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|calculaties|gebouw_id|integer|YES|
+KOLOM|calculaties|gekopieerd_van_id|integer|YES|
 KOLOM|calculaties|id|integer|NO|nextval('calculaties_id_seq'::regclass)
 KOLOM|calculaties|naam|text|NO|
+KOLOM|calculaties|nummer|integer|NO|nextval('seq_nummer_c'::regclass)
 KOLOM|calculaties|omschrijving|text|YES|
+KOLOM|calculaties|opname_id|integer|YES|
 KOLOM|calculaties|status|text|NO|'concept'::text
+KOLOM|calculaties|verzonden_op|timestamp without time zone|YES|
 KOLOM|chat_berichten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|chat_berichten|afzender_id|integer|YES|
 KOLOM|chat_berichten|bijlage_type|text|YES|
@@ -1358,10 +1362,13 @@ KOLOM|facturen|incasso_referentie|text|YES|
 KOLOM|facturen|inkoopbon_id|integer|YES|
 KOLOM|facturen|inkoper_bevestigd_op|timestamp without time zone|YES|
 KOLOM|facturen|inkoper_id|integer|YES|
+KOLOM|facturen|kenmerk|text|YES|
 KOLOM|facturen|kostenplaats|text|YES|
 KOLOM|facturen|leverancier_id|integer|YES|
 KOLOM|facturen|mail_message_id|text|YES|
 KOLOM|facturen|normaal_bedrag|numeric|YES|
+KOLOM|facturen|nummer|integer|YES|
+KOLOM|facturen|offerte_id|integer|YES|
 KOLOM|facturen|omschrijving|text|YES|
 KOLOM|facturen|onderhoudscontract_id|integer|YES|
 KOLOM|facturen|onzekere_velden|jsonb|YES|
@@ -1481,6 +1488,9 @@ KOLOM|factuur_tijdlijn|gebeurd_op|timestamp without time zone|NO|now()
 KOLOM|factuur_tijdlijn|gebruiker_naam|text|YES|
 KOLOM|factuur_tijdlijn|id|integer|NO|nextval('factuur_tijdlijn_id_seq'::regclass)
 KOLOM|factuur_tijdlijn|tekst|text|NO|
+KOLOM|factuurnummer_tellers|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|factuurnummer_tellers|laatste_nummer|integer|NO|0
+KOLOM|factuurnummer_tellers|werkgever_id|integer|NO|
 KOLOM|feedback|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|feedback|bericht|text|NO|
 KOLOM|feedback|gebruiker_id|integer|YES|
@@ -2192,6 +2202,14 @@ KOLOM|inbox_items|snagstream_rapporttype|text|YES|
 KOLOM|inbox_items|snagstream_status|text|YES|
 KOLOM|inbox_items|status|text|NO|'nieuw'::text
 KOLOM|inbox_items|verplaatst_op|timestamp without time zone|YES|
+KOLOM|inkoop_versies|aangemaakt_door_id|integer|YES|
+KOLOM|inkoop_versies|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|inkoop_versies|bron_id|integer|NO|
+KOLOM|inkoop_versies|bron_tabel|text|NO|
+KOLOM|inkoop_versies|herziening|integer|NO|
+KOLOM|inkoop_versies|id|integer|NO|nextval('inkoop_versies_id_seq'::regclass)
+KOLOM|inkoop_versies|kenmerk|text|NO|
+KOLOM|inkoop_versies|snapshot|jsonb|NO|
 KOLOM|inkoopbon_regels|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|inkoopbon_regels|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|inkoopbon_regels|eenheid|text|NO|'st'::text
@@ -2211,10 +2229,13 @@ KOLOM|inkoopbonnen|bon_nummer|text|YES|
 KOLOM|inkoopbonnen|gewenste_leverdatum|text|YES|
 KOLOM|inkoopbonnen|goedgekeurd_door_id|integer|YES|
 KOLOM|inkoopbonnen|goedgekeurd_op|timestamp without time zone|YES|
+KOLOM|inkoopbonnen|herziening|integer|NO|0
 KOLOM|inkoopbonnen|id|integer|NO|nextval('inkoopbonnen_id_seq'::regclass)
 KOLOM|inkoopbonnen|inkoopplan_id|integer|YES|
 KOLOM|inkoopbonnen|leverancier_id|integer|YES|
 KOLOM|inkoopbonnen|leverancier|text|NO|
+KOLOM|inkoopbonnen|nummer|integer|NO|nextval('seq_nummer_i'::regclass)
+KOLOM|inkoopbonnen|offerte_id|integer|YES|
 KOLOM|inkoopbonnen|opdracht_id|integer|NO|
 KOLOM|inkoopbonnen|opmerkingen|text|YES|
 KOLOM|inkoopbonnen|status|text|NO|'concept'::text
@@ -2458,7 +2479,10 @@ KOLOM|magazijn_inkooporders|aangemaakt_door_id|integer|YES|
 KOLOM|magazijn_inkooporders|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|magazijn_inkooporders|bevestigd_op|timestamp without time zone|YES|
 KOLOM|magazijn_inkooporders|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|magazijn_inkooporders|gebouw_id|integer|YES|
+KOLOM|magazijn_inkooporders|herziening|integer|NO|0
 KOLOM|magazijn_inkooporders|id|integer|NO|nextval('magazijn_inkooporders_id_seq'::regclass)
+KOLOM|magazijn_inkooporders|inkoopnummer|integer|NO|nextval('seq_nummer_i'::regclass)
 KOLOM|magazijn_inkooporders|leverancier_email|text|YES|
 KOLOM|magazijn_inkooporders|leverancier_id|integer|YES|
 KOLOM|magazijn_inkooporders|leverancier_naam|text|YES|
@@ -2473,6 +2497,7 @@ KOLOM|magazijn_inkooporders|werkelijke_leverdatum|timestamp without time zone|YE
 KOLOM|magazijn_instellingen|bijgewerkt_door_id|integer|YES|
 KOLOM|magazijn_instellingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|magazijn_instellingen|id|integer|NO|1
+KOLOM|magazijn_instellingen|magazijn_gebouw_id|integer|YES|
 KOLOM|magazijn_instellingen|signalering_marge|integer|NO|0
 KOLOM|magazijn_instellingen|signalering_minuut|integer|NO|0
 KOLOM|magazijn_instellingen|signalering_uur|integer|NO|7
@@ -2683,10 +2708,12 @@ KOLOM|mod_calc_headers|abk_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|ak_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_headers|gebouw_id|integer|YES|
+KOLOM|mod_calc_headers|gekopieerd_van_id|integer|YES|
 KOLOM|mod_calc_headers|id|integer|NO|nextval('mod_calc_headers_id_seq'::regclass)
 KOLOM|mod_calc_headers|klant_naam|text|YES|
 KOLOM|mod_calc_headers|korting|real|NO|0
 KOLOM|mod_calc_headers|naam|text|NO|
+KOLOM|mod_calc_headers|nummer|integer|NO|nextval('seq_nummer_c'::regclass)
 KOLOM|mod_calc_headers|omschrijving|text|YES|
 KOLOM|mod_calc_headers|opmerkingen|text|YES|
 KOLOM|mod_calc_headers|opname_id|integer|YES|
@@ -2700,6 +2727,7 @@ KOLOM|mod_calc_headers|project_naam|text|YES|
 KOLOM|mod_calc_headers|referentie|text|YES|
 KOLOM|mod_calc_headers|risico_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|status|text|NO|'concept'::text
+KOLOM|mod_calc_headers|verzonden_op|timestamp without time zone|YES|
 KOLOM|mod_calc_headers|werknummer|text|YES|
 KOLOM|mod_calc_headers|winst_is_vast|boolean|NO|false
 KOLOM|mod_calc_inkoop_items|aangemaakt_op|timestamp without time zone|NO|now()
@@ -2975,11 +3003,14 @@ KOLOM|offertes|calculatie_id|integer|YES|
 KOLOM|offertes|datum|text|YES|
 KOLOM|offertes|factuur_schema|jsonb|YES|
 KOLOM|offertes|gebouw_id|integer|YES|
+KOLOM|offertes|gekopieerd_van_id|integer|YES|
 KOLOM|offertes|geldigheid_dagen|integer|NO|30
 KOLOM|offertes|id|integer|NO|nextval('offertes_id_seq'::regclass)
+KOLOM|offertes|kenmerk|text|YES|
 KOLOM|offertes|klant_id|integer|YES|
 KOLOM|offertes|klant_type|text|YES|
 KOLOM|offertes|kleurthema|text|YES|'fps-oranje'::text
+KOLOM|offertes|nummer|integer|NO|nextval('seq_nummer_o'::regclass)
 KOLOM|offertes|offertenummer|text|YES|
 KOLOM|offertes|ons_kenmerk|text|YES|
 KOLOM|offertes|opdrachtgever|text|YES|
@@ -3169,6 +3200,7 @@ KOLOM|opnames|gebouw_id|integer|YES|
 KOLOM|opnames|id|integer|NO|nextval('opnames_id_seq'::regclass)
 KOLOM|opnames|naam|text|NO|
 KOLOM|opnames|notities|text|YES|
+KOLOM|opnames|nummer|integer|NO|nextval('seq_nummer_m'::regclass)
 KOLOM|opnames|status|text|NO|'concept'::text
 KOLOM|org_bedrijfsdocumenten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|org_bedrijfsdocumenten|bestand_hash|text|YES|
@@ -4515,6 +4547,7 @@ KOLOM|werkgevers|iban|text|YES|
 KOLOM|werkgevers|id|integer|NO|nextval('werkgevers_id_seq'::regclass)
 KOLOM|werkgevers|intern_contact_email|text|YES|
 KOLOM|werkgevers|intern_contact_naam|text|YES|
+KOLOM|werkgevers|kenmerk_prefix|text|YES|
 KOLOM|werkgevers|koptekst_positie|text|YES|
 KOLOM|werkgevers|kvk|text|YES|
 KOLOM|werkgevers|logo_document_id|integer|YES|

@@ -69,6 +69,8 @@ async function opnameMetItems(id: number) {
   const [opname] = await db
     .select({
       id: opnamesTable.id,
+      // NUMMER_01: M-nummer uit seq_nummer_m (systeem-uitgegeven)
+      nummer: opnamesTable.nummer,
       gebouw_id: opnamesTable.gebouwId,
       gebouw_naam: gebouwenTable.naam,
       naam: opnamesTable.naam,
@@ -147,6 +149,8 @@ router.get("/opname", requireAuth, async (req, res): Promise<void> => {
   const rows = await db
     .select({
       id: opnamesTable.id,
+      // NUMMER_01: M-nummer uit seq_nummer_m (systeem-uitgegeven)
+      nummer: opnamesTable.nummer,
       gebouw_id: opnamesTable.gebouwId,
       gebouw_naam: gebouwenTable.naam,
       naam: opnamesTable.naam,

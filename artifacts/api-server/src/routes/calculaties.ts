@@ -8,7 +8,10 @@ import {
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
+  werkgeversTable,
+  opnamesTable,
 } from "@workspace/db";
+import { formatNummer } from "../lib/kenmerk";
 import { eq, desc, asc, inArray } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -27,12 +30,37 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
+// NUMMER_01 §4.3: kenmerk wordt berekend uit de verwijzingen, nooit opgeslagen als
+// bewerkbaar veld. [PFX-]G156/C590 — G uit gebouwen.werknummer, prefix uit de BV.
+function berekenCalculatieKenmerk(
+  nummer: number,
+  werknummer?: string | null,
+  bvPrefix?: string | null,
+): string {
+  const cdeel = formatNummer("C", nummer);
+  const g = werknummer?.trim();
+  if (!g) return cdeel;
+  const prefix = bvPrefix?.trim() ? `${bvPrefix.trim()}-` : "";
+  return `${prefix}${g}/${cdeel}`;
+}
+
 function mapCalculatie(
   c: typeof calculatiesTable.$inferSelect,
-  extra?: { gebouwNaam?: string | null; aangemaaktDoorNaam?: string | null; totaal?: number },
+  extra?: {
+    gebouwNaam?: string | null;
+    aangemaaktDoorNaam?: string | null;
+    totaal?: number;
+    werknummer?: string | null;
+    bvPrefix?: string | null;
+  },
 ) {
   return {
     id: c.id,
+    nummer: c.nummer,
+    kenmerk: berekenCalculatieKenmerk(c.nummer, extra?.werknummer, extra?.bvPrefix),
+    opname_id: c.opnameId,
+    gekopieerd_van_id: c.gekopieerdVanId,
+    verzonden_op: c.verzondenOp ? iso(c.verzondenOp) : null,
     naam: c.naam,
     gebouw_id: c.gebouwId,
     gebouw_naam: extra?.gebouwNaam ?? null,
@@ -71,10 +99,13 @@ router.get("/calculaties", calcLezen, async (req, res): Promise<void> => {
       .select({
         c: calculatiesTable,
         gebouwNaam: gebouwenTable.naam,
+        werknummer: gebouwenTable.werknummer,
+        bvPrefix: werkgeversTable.kenmerkPrefix,
         aangemaaktDoorNaam: gebruikersTable.naam,
       })
       .from(calculatiesTable)
       .leftJoin(gebouwenTable, eq(calculatiesTable.gebouwId, gebouwenTable.id))
+      .leftJoin(werkgeversTable, eq(gebouwenTable.werkgeverId, werkgeversTable.id))
       .leftJoin(gebruikersTable, eq(calculatiesTable.aangemaaktDoorId, gebruikersTable.id))
       .orderBy(desc(calculatiesTable.aangemaaktOp));
 
@@ -94,6 +125,8 @@ router.get("/calculaties", calcLezen, async (req, res): Promise<void> => {
       rijen.map((r) =>
         mapCalculatie(r.c, {
           gebouwNaam: r.gebouwNaam,
+          werknummer: r.werknummer,
+          bvPrefix: r.bvPrefix,
           aangemaaktDoorNaam: r.aangemaaktDoorNaam,
           totaal: totalen[r.c.id] ?? 0,
         }),
@@ -107,21 +140,41 @@ router.get("/calculaties", calcLezen, async (req, res): Promise<void> => {
 
 router.post("/calculaties", calcSchrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, gebouw_id, status, omschrijving } = req.body as {
+    const { naam, gebouw_id, status, omschrijving, opname_id } = req.body as {
       naam: string;
       gebouw_id?: number | null;
       status?: string;
       omschrijving?: string | null;
+      opname_id?: number | null;
     };
     if (!naam?.trim()) {
       res.status(400).json({ error: "naam is verplicht" });
       return;
+    }
+    // NUMMER_01 §4.4: de schakel meeting → calculatie; opname moet bestaan en
+    // (indien beide opgegeven) bij hetzelfde gebouw horen.
+    let opnameId: number | null = null;
+    if (opname_id != null) {
+      const [opname] = await db
+        .select({ id: opnamesTable.id, gebouwId: opnamesTable.gebouwId })
+        .from(opnamesTable)
+        .where(eq(opnamesTable.id, opname_id));
+      if (!opname) {
+        res.status(400).json({ error: "opname_id verwijst niet naar een bestaande opname" });
+        return;
+      }
+      if (gebouw_id != null && opname.gebouwId != null && opname.gebouwId !== gebouw_id) {
+        res.status(400).json({ error: "De opname hoort bij een ander gebouw" });
+        return;
+      }
+      opnameId = opname.id;
     }
     const [nieuw] = await db
       .insert(calculatiesTable)
       .values({
         naam: naam.trim(),
         gebouwId: gebouw_id ?? null,
+        opnameId,
         status: status ?? "concept",
         omschrijving: omschrijving ?? null,
         aangemaaktDoorId: (req.session as { userId?: number }).userId ?? null,
@@ -142,10 +195,13 @@ router.get("/calculaties/:id", calcLezen, async (req, res): Promise<void> => {
       .select({
         c: calculatiesTable,
         gebouwNaam: gebouwenTable.naam,
+        werknummer: gebouwenTable.werknummer,
+        bvPrefix: werkgeversTable.kenmerkPrefix,
         aangemaaktDoorNaam: gebruikersTable.naam,
       })
       .from(calculatiesTable)
       .leftJoin(gebouwenTable, eq(calculatiesTable.gebouwId, gebouwenTable.id))
+      .leftJoin(werkgeversTable, eq(gebouwenTable.werkgeverId, werkgeversTable.id))
       .leftJoin(gebruikersTable, eq(calculatiesTable.aangemaaktDoorId, gebruikersTable.id))
       .where(eq(calculatiesTable.id, id));
     if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -161,11 +217,63 @@ router.get("/calculaties/:id", calcLezen, async (req, res): Promise<void> => {
     res.json({
       ...mapCalculatie(rij.c, {
         gebouwNaam: rij.gebouwNaam,
+        werknummer: rij.werknummer,
+        bvPrefix: rij.bvPrefix,
         aangemaaktDoorNaam: rij.aangemaaktDoorNaam,
         totaal,
       }),
       regels: regels.map(mapRegel),
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// NUMMER_01 §4.10 — herzien = kopiëren: de kopie krijgt een nieuw C-nummer uit
+// dezelfde reeks; het origineel blijft ongewijzigd bestaan.
+router.post("/calculaties/:id/kopieer", calcSchrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [bron] = await db.select().from(calculatiesTable).where(eq(calculatiesTable.id, id));
+    if (!bron) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+    const kopie = await db.transaction(async (tx) => {
+      const [nieuw] = await tx
+        .insert(calculatiesTable)
+        .values({
+          naam: bron.naam,
+          gebouwId: bron.gebouwId,
+          opnameId: bron.opnameId,
+          gekopieerdVanId: bron.id,
+          status: "concept",
+          omschrijving: bron.omschrijving,
+          aangemaaktDoorId: (req.session as { userId?: number }).userId ?? null,
+          bijgewerktOp: new Date(),
+        })
+        .returning();
+      const regels = await tx
+        .select()
+        .from(calculatieRegelsTable)
+        .where(eq(calculatieRegelsTable.calculatieId, bron.id));
+      if (regels.length > 0) {
+        await tx.insert(calculatieRegelsTable).values(
+          regels.map((r) => ({
+            calculatieId: nieuw.id,
+            categorie: r.categorie,
+            omschrijving: r.omschrijving,
+            eenheid: r.eenheid,
+            hoeveelheid: r.hoeveelheid,
+            stukprijs: r.stukprijs,
+            totaal: r.totaal,
+            volgorde: r.volgorde,
+            opmerkingen: r.opmerkingen,
+          })),
+        );
+      }
+      return nieuw;
+    });
+    res.status(201).json(mapCalculatie(kopie, { totaal: 0 }));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });

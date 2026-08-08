@@ -15,6 +15,18 @@ export interface Offerte {
   projectkans_id?: number | null;
   /** @nullable */
   offertenummer?: string | null;
+  /**
+     * NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)
+     * @nullable
+     */
+  nummer?: number | null;
+  /**
+     * NUMMER_01: berekend kenmerk (bijv. FPS G157/M203/C315/O405); bevroren bij versturen
+     * @nullable
+     */
+  kenmerk?: string | null;
+  /** @nullable */
+  gekopieerd_van_id?: number | null;
   titel: string;
   /** @nullable */
   gebouw_id?: number | null;

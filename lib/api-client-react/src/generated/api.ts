@@ -40235,6 +40235,77 @@ export const useIntrekkenOfferte = <TError = ErrorType<unknown>,
       return useMutation(getIntrekkenOfferteMutationOptions(options));
     }
 
+export const getKopieerOfferteUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/kopieer`
+}
+
+/**
+ * Maakt een volledige kopie (secties, regels, bijlagen) met een nieuw nummer uit de doorlopende O-reeks. De kopie start als concept; het origineel blijft ongewijzigd bewaard.
+ * @summary Offerte kopiëren met een nieuw O-nummer (NUMMER_01 §4.10)
+ */
+export const kopieerOfferte = async (id: number, options?: RequestInit): Promise<Offerte> => {
+
+  return customFetch<Offerte>(getKopieerOfferteUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getKopieerOfferteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kopieerOfferte>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof kopieerOfferte>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['kopieerOfferte'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof kopieerOfferte>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  kopieerOfferte(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KopieerOfferteMutationResult = NonNullable<Awaited<ReturnType<typeof kopieerOfferte>>>
+
+    export type KopieerOfferteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offerte kopiëren met een nieuw O-nummer (NUMMER_01 §4.10)
+ */
+export const useKopieerOfferte = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kopieerOfferte>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof kopieerOfferte>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getKopieerOfferteMutationOptions(options));
+    }
+
 export const getListOfferteKlantContractenUrl = (id: number,) => {
 
 
@@ -47261,6 +47332,77 @@ export const useCreateCalculatie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateCalculatieMutationOptions(options));
+    }
+
+export const getKopieerCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/kopieer`
+}
+
+/**
+ * Maakt een volledige kopie (inclusief regels) met een nieuw nummer uit de doorlopende C-reeks. De kopie start als concept; het origineel blijft ongewijzigd bewaard.
+ * @summary Calculatie kopiëren met een nieuw C-nummer (NUMMER_01 §4.10)
+ */
+export const kopieerCalculatie = async (id: number, options?: RequestInit): Promise<Calculatie> => {
+
+  return customFetch<Calculatie>(getKopieerCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getKopieerCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kopieerCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof kopieerCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['kopieerCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof kopieerCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  kopieerCalculatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KopieerCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof kopieerCalculatie>>>
+
+    export type KopieerCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie kopiëren met een nieuw C-nummer (NUMMER_01 §4.10)
+ */
+export const useKopieerCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kopieerCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof kopieerCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getKopieerCalculatieMutationOptions(options));
     }
 
 export const getGetCalculatieUrl = (id: number,) => {
@@ -62229,6 +62371,77 @@ export const useAccorderenFactuur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAccorderenFactuurMutationOptions(options));
+    }
+
+export const getDefinitiefMakenFactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/definitief`
+}
+
+/**
+ * Geeft het fiscale factuurnummer uit de doorlopende reeks van de BV uit en bevriest het kenmerk. Alleen verkoopfacturen; een concept verbruikt geen fiscaal nummer.
+ * @summary Verkoopfactuur definitief maken — fiscaal nummer per BV (NUMMER_01 §4.6)
+ */
+export const definitiefMakenFactuur = async (id: number, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getDefinitiefMakenFactuurUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDefinitiefMakenFactuurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof definitiefMakenFactuur>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof definitiefMakenFactuur>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['definitiefMakenFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof definitiefMakenFactuur>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  definitiefMakenFactuur(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DefinitiefMakenFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof definitiefMakenFactuur>>>
+
+    export type DefinitiefMakenFactuurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verkoopfactuur definitief maken — fiscaal nummer per BV (NUMMER_01 §4.6)
+ */
+export const useDefinitiefMakenFactuur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof definitiefMakenFactuur>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof definitiefMakenFactuur>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDefinitiefMakenFactuurMutationOptions(options));
     }
 
 export const getListFactuurSignalenUrl = (params?: ListFactuurSignalenParams,) => {

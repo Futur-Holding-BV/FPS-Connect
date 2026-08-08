@@ -13172,6 +13172,9 @@ export const ListOffertesResponseItem = zod.object({
   "id": zod.number(),
   "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315\/O405); bevroren bij versturen'),
+  "gekopieerd_van_id": zod.number().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -13298,6 +13301,9 @@ export const GetOfferteResponse = zod.object({
   "id": zod.number(),
   "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315\/O405); bevroren bij versturen'),
+  "gekopieerd_van_id": zod.number().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -13417,6 +13423,9 @@ export const UpdateOfferteResponse = zod.object({
   "id": zod.number(),
   "projectkans_id": zod.number().nullish(),
   "offertenummer": zod.string().nullish(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: O-volgnummer uit de doorlopende reeks (systeem-uitgegeven)'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315\/O405); bevroren bij versturen'),
+  "gekopieerd_van_id": zod.number().nullish(),
   "titel": zod.string(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -14061,6 +14070,17 @@ export const IntrekkenOfferteBody = zod.object({
 export const IntrekkenOfferteResponse = zod.object({
   "ok": zod.boolean().optional()
 })
+
+
+/**
+ * Maakt een volledige kopie (secties, regels, bijlagen) met een nieuw nummer uit de doorlopende O-reeks. De kopie start als concept; het origineel blijft ongewijzigd bewaard.
+ * @summary Offerte kopiëren met een nieuw O-nummer (NUMMER_01 §4.10)
+ */
+export const KopieerOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KopieerOfferteResponse = zod.void()
 
 
 /**
@@ -15148,6 +15168,10 @@ export const ListInkoopbonnenResponseItem = zod.object({
   "id": zod.number(),
   "inkoopplan_id": zod.number().nullish(),
   "opdracht_id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "offerte_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. O405\/I088a)'),
   "bon_nummer": zod.string().nullish(),
   "leverancier": zod.string(),
   "leverancier_id": zod.number().nullish(),
@@ -15244,6 +15268,10 @@ export const PatchInkoopbonResponse = zod.object({
   "id": zod.number(),
   "inkoopplan_id": zod.number().nullish(),
   "opdracht_id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "offerte_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. O405\/I088a)'),
   "bon_nummer": zod.string().nullish(),
   "leverancier": zod.string(),
   "leverancier_id": zod.number().nullish(),
@@ -15300,6 +15328,10 @@ export const VerzendInkoopbonResponse = zod.object({
   "id": zod.number(),
   "inkoopplan_id": zod.number().nullish(),
   "opdracht_id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "offerte_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. O405\/I088a)'),
   "bon_nummer": zod.string().nullish(),
   "leverancier": zod.string(),
   "leverancier_id": zod.number().nullish(),
@@ -16547,6 +16579,11 @@ export const SendOpdrachtbevestigingDemoResponse = zod.object({
 export const ListCalculatiesResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315)'),
+  "opname_id": zod.number().nullish(),
+  "gekopieerd_van_id": zod.number().nullish(),
+  "verzonden_op": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "status": zod.string(),
@@ -16565,12 +16602,24 @@ export const ListCalculatiesResponse = zod.array(ListCalculatiesResponseItem)
  */
 export const CreateCalculatieBody = zod.object({
   "naam": zod.string(),
+  "opname_id": zod.number().nullish().describe('NUMMER_01 §4.3: koppeling naar de opname (M) waarop de calculatie is gebaseerd'),
   "gebouw_id": zod.number().nullish(),
   "status": zod.string().optional(),
   "omschrijving": zod.string().nullish()
 })
 
 export const CreateCalculatieResponse = zod.void()
+
+
+/**
+ * Maakt een volledige kopie (inclusief regels) met een nieuw nummer uit de doorlopende C-reeks. De kopie start als concept; het origineel blijft ongewijzigd bewaard.
+ * @summary Calculatie kopiëren met een nieuw C-nummer (NUMMER_01 §4.10)
+ */
+export const KopieerCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KopieerCalculatieResponse = zod.void()
 
 
 /**
@@ -16618,6 +16667,7 @@ export const UpdateCalculatieParams = zod.object({
 
 export const UpdateCalculatieBody = zod.object({
   "naam": zod.string(),
+  "opname_id": zod.number().nullish().describe('NUMMER_01 §4.3: koppeling naar de opname (M) waarop de calculatie is gebaseerd'),
   "gebouw_id": zod.number().nullish(),
   "status": zod.string().optional(),
   "omschrijving": zod.string().nullish()
@@ -16626,6 +16676,11 @@ export const UpdateCalculatieBody = zod.object({
 export const UpdateCalculatieResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315)'),
+  "opname_id": zod.number().nullish(),
+  "gekopieerd_van_id": zod.number().nullish(),
+  "verzonden_op": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "status": zod.string(),
@@ -17423,6 +17478,10 @@ export const ListModCalculatiesQueryParams = zod.object({
 export const ListModCalculatiesResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315)'),
+  "gekopieerd_van_id": zod.number().nullish(),
+  "verzonden_op": zod.string().nullish(),
   "referentie": zod.string().nullish(),
   "klant_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
@@ -17599,6 +17658,10 @@ export const getModCalculatieResponseTwoRegelsItemBtwTariefDefault = `21`;
 export const GetModCalculatieResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315)'),
+  "gekopieerd_van_id": zod.number().nullish(),
+  "verzonden_op": zod.string().nullish(),
   "referentie": zod.string().nullish(),
   "klant_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
@@ -17693,6 +17756,10 @@ export const UpdateModCalculatieBody = zod.object({
 export const UpdateModCalculatieResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: C-volgnummer uit de gedeelde calculatiereeks'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. FPS G157\/M203\/C315)'),
+  "gekopieerd_van_id": zod.number().nullish(),
+  "verzonden_op": zod.string().nullish(),
   "referentie": zod.string().nullish(),
   "klant_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
@@ -20086,6 +20153,7 @@ export const ListOpnamesQueryParams = zod.object({
 
 export const ListOpnamesResponseItem = zod.object({
   "id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: M-volgnummer uit seq_nummer_m'),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
@@ -20122,6 +20190,7 @@ export const GetOpnameParams = zod.object({
 
 export const GetOpnameResponse = zod.object({
   "id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: M-volgnummer uit seq_nummer_m'),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
@@ -20178,6 +20247,7 @@ export const UpdateOpnameBody = zod.object({
 
 export const UpdateOpnameResponse = zod.object({
   "id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: M-volgnummer uit seq_nummer_m'),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
@@ -20237,6 +20307,7 @@ export const SluitOpnameAfParams = zod.object({
 
 export const SluitOpnameAfResponse = zod.object({
   "id": zod.number(),
+  "nummer": zod.number().nullish().describe('NUMMER_01: M-volgnummer uit seq_nummer_m'),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
@@ -22032,6 +22103,7 @@ export const ListFacturenResponse = zod.array(ListFacturenResponseItem)
  */
 export const CreateFactuurBody = zod.object({
   "type": zod.string(),
+  "offerte_id": zod.number().nullish().describe('NUMMER_01 §4.6: koppelt de verkoopfactuur aan de offerte; het F-volgnummer wordt automatisch uitgegeven'),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
@@ -22395,6 +22467,80 @@ export const AccorderenFactuurParams = zod.object({
 })
 
 export const AccorderenFactuurResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
+  "id": zod.number(),
+  "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "payload_hash": zod.string().nullish(),
+  "betaalstatus": zod.string().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "boekingsnummer": zod.string().nullish(),
+  "terugkoppeling_op": zod.string().nullish(),
+  "afgekeurd": zod.boolean().optional(),
+  "afkeuring_reden": zod.string().nullish(),
+  "afgekeurd_op": zod.string().nullish(),
+  "afgekeurd_door_naam": zod.string().nullish(),
+  "herexport_op": zod.string().nullish(),
+  "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
+})
+
+
+/**
+ * Geeft het fiscale factuurnummer uit de doorlopende reeks van de BV uit en bevriest het kenmerk. Alleen verkoopfacturen; een concept verbruikt geen fiscaal nummer.
+ * @summary Verkoopfactuur definitief maken — fiscaal nummer per BV (NUMMER_01 §4.6)
+ */
+export const DefinitiefMakenFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DefinitiefMakenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
   "id": zod.number(),
@@ -27716,6 +27862,10 @@ export const ListMagazijnInkoopordersQueryParams = zod.object({
 export const ListMagazijnInkoopordersResponseItem = zod.object({
   "id": zod.number(),
   "nummer": zod.string().nullish(),
+  "inkoopnummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "gebouw_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. G002\/I089a)'),
   "status": zod.string(),
   "leverancier_id": zod.number().nullish(),
   "leverancier_naam": zod.string().nullish(),
@@ -27766,6 +27916,10 @@ export const GetMagazijnInkooporderParams = zod.object({
 export const GetMagazijnInkooporderResponse = zod.object({
   "id": zod.number(),
   "nummer": zod.string().nullish(),
+  "inkoopnummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "gebouw_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. G002\/I089a)'),
   "status": zod.string(),
   "leverancier_id": zod.number().nullish(),
   "leverancier_naam": zod.string().nullish(),
@@ -27823,6 +27977,10 @@ export const UpdateMagazijnInkooporderBody = zod.object({
 export const UpdateMagazijnInkooporderResponse = zod.object({
   "id": zod.number(),
   "nummer": zod.string().nullish(),
+  "inkoopnummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "gebouw_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. G002\/I089a)'),
   "status": zod.string(),
   "leverancier_id": zod.number().nullish(),
   "leverancier_naam": zod.string().nullish(),
@@ -27862,6 +28020,10 @@ export const VerstuurMagazijnInkooporderParams = zod.object({
 export const VerstuurMagazijnInkooporderResponse = zod.object({
   "id": zod.number(),
   "nummer": zod.string().nullish(),
+  "inkoopnummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "gebouw_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. G002\/I089a)'),
   "status": zod.string(),
   "leverancier_id": zod.number().nullish(),
   "leverancier_naam": zod.string().nullish(),
@@ -27900,6 +28062,10 @@ export const OntvangMagazijnInkooporderBody = zod.object({
 export const OntvangMagazijnInkooporderResponse = zod.object({
   "id": zod.number(),
   "nummer": zod.string().nullish(),
+  "inkoopnummer": zod.number().nullish().describe('NUMMER_01: I-volgnummer uit de gedeelde inkoopreeks'),
+  "gebouw_id": zod.number().nullish(),
+  "herziening": zod.number().nullish().describe('NUMMER_01: 0 = origineel, 1 = a, 2 = b, …'),
+  "kenmerk": zod.string().nullish().describe('NUMMER_01: berekend kenmerk (bijv. G002\/I089a)'),
   "status": zod.string(),
   "leverancier_id": zod.number().nullish(),
   "leverancier_naam": zod.string().nullish(),
