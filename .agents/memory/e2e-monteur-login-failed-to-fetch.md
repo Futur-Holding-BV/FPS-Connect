@@ -37,3 +37,16 @@ wijzigingen daadwerkelijk `app.ts`/CORS/sessielaag/`EXPO_PUBLIC_DOMAIN` raken.
 Een extra `restart_workflow` van de Expo-workflow ververst soms de env-waarden,
 maar garandeert geen fix. Zie ook `e2e-totp-timing.md` voor de gerelateerde
 TOTP-timinggevoeligheid van dezelfde test.
+
+**Aanvulling (9 aug 2026):** het kan óók manifest zijn als: ALLE app-fetches
+(login én de polling-endpoints `mijn/lmra-openstaand`, `chat/gesprekken`,
+`mijn/toolbox-maandopdracht`, `healthz`) falen met `net::ERR_FAILED` + console
+"blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present",
+terwijl identieke fetches (zelfde URL, zelfde origin, zelfde headers) vanuit
+`page.evaluate()` in dezelfde pagina én via curl-met-Origin-header WÉL slagen
+met correcte ACAO-header. De server zet de header dus altijd; de kapotte
+responses komen ergens uit de dev-proxy/tunnel-laag (vermoedelijk
+HTTP/2-verbinding-hergebruik tussen de twee *.replit.dev-domeinen). Herstart
+van Expo-workflow, rate-limit-reset en herhaalde runs helpen dan niet. Bewijs
+de featurecode via directe API-verificatie en sla de e2e-menu-validatie
+gemotiveerd over als de wijziging de app/login/CORS-laag niet raakt.

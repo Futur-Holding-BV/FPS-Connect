@@ -336,6 +336,17 @@ export default function Gebruikers() {
   // QR-afbeelding kan ontbreken (app nog niet gepubliceerd → 404); dan tonen we
   // een duidelijke uitleg in plaats van een kapot plaatje.
   const [appQrFout, setAppQrFout] = useState(false);
+  // Welke store-links zijn ingesteld? Bepaalt of we één of twee (iOS/Android)
+  // QR-codes tonen. null = nog niet opgehaald.
+  const [appStoreInfo, setAppStoreInfo] = useState<{ store_url: string | null; play_store_url: string | null } | null>(null);
+  useEffect(() => {
+    if (!appQrGebruiker) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/auth/app-installatie-info`)
+      .then((r) => (r.ok ? r.json() : { store_url: null, play_store_url: null }))
+      .then((d: { store_url: string | null; play_store_url: string | null }) => setAppStoreInfo(d))
+      .catch(() => setAppStoreInfo({ store_url: null, play_store_url: null }));
+  }, [appQrGebruiker]);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -1601,16 +1612,51 @@ export default function Gebruikers() {
               Laat <strong>{appQrGebruiker?.naam}</strong> deze code scannen met de camera van de
               telefoon om de FPS Monteur-app te openen.
             </p>
-            <div className="flex justify-center">
-              <img
-                src="/api/auth/app-qr"
-                alt="QR-code FPS Monteur-app"
-                className="rounded-lg border border-border shadow-sm"
-                width={240}
-                height={240}
-                onError={() => setAppQrFout(true)}
-              />
-            </div>
+            {appStoreInfo?.store_url && appStoreInfo?.play_store_url ? (
+              <div className="flex justify-center gap-4">
+                <div className="flex flex-col items-center gap-1.5">
+                  <img
+                    src="/api/auth/app-qr?platform=ios"
+                    alt="QR-code FPS Monteur-app voor iPhone (App Store)"
+                    className="rounded-lg border border-border shadow-sm"
+                    width={150}
+                    height={150}
+                    data-testid="img-app-qr-ios"
+                    onError={() => setAppQrFout(true)}
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">iPhone (App Store)</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <img
+                    src="/api/auth/app-qr?platform=android"
+                    alt="QR-code FPS Monteur-app voor Android (Google Play)"
+                    className="rounded-lg border border-border shadow-sm"
+                    width={150}
+                    height={150}
+                    data-testid="img-app-qr-android"
+                    onError={() => setAppQrFout(true)}
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">Android (Google Play)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5">
+                <img
+                  src={appStoreInfo?.play_store_url ? "/api/auth/app-qr?platform=android" : "/api/auth/app-qr"}
+                  alt="QR-code FPS Monteur-app"
+                  className="rounded-lg border border-border shadow-sm"
+                  width={240}
+                  height={240}
+                  data-testid="img-app-qr"
+                  onError={() => setAppQrFout(true)}
+                />
+                {appStoreInfo?.store_url ? (
+                  <span className="text-xs font-medium text-muted-foreground">iPhone (App Store)</span>
+                ) : appStoreInfo?.play_store_url ? (
+                  <span className="text-xs font-medium text-muted-foreground">Android (Google Play)</span>
+                ) : null}
+              </div>
+            )}
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
               <li>Scan bovenstaande code met de camera van de telefoon</li>
               <li>Volg de link om de app te openen of te installeren</li>

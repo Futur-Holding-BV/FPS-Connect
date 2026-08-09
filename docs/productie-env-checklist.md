@@ -62,6 +62,7 @@ Het deploy-script (`scripts/deploy-production.sh`) controleert deze variabelen v
 | `MINIO_ROOT_USER` | VPS `.env.production` | MinIO root-gebruiker, bijv. `fps_minio`. |
 | `AVG_ACTIVITEIT_BEWAARDAGEN` | VPS `.env.production` | Bewaarperiode activiteitslog in dagen; standaard `365`. |
 | `MONTEUR_APP_STORE_URL` | VPS `.env.production` | App Store-link voor de FPS Monteur-app, bijv. `https://apps.apple.com/nl/app/fps-monteur/id...`. Zodra ingesteld toont de "App QR-code"-dialoog in Gebruikersbeheer een scanbare QR die naar de App Store leidt. Leeg laten zolang de app nog niet gepubliceerd is — de dialoog geeft dan een nette uitleg. |
+| `MONTEUR_PLAY_STORE_URL` | VPS `.env.production` | Google Play-link voor de FPS Monteur-app, bijv. `https://play.google.com/store/apps/details?id=nl.fpsone.monteur`. Zodra ingesteld toont de "App QR-code"-dialoog in Gebruikersbeheer óók (of alleen) een Android-QR, en biedt de publieke /app-pagina een Google Play-knop. Leeg laten zolang de app nog niet op Google Play staat. |
 
 ---
 

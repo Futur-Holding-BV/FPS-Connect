@@ -15,12 +15,16 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 export default function AppInstallatiePagina() {
   const [laden, setLaden] = useState(true);
   const [storeUrl, setStoreUrl] = useState<string | null>(null);
+  const [playStoreUrl, setPlayStoreUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${BASE}/api/auth/app-installatie-info`)
-      .then((r) => (r.ok ? r.json() : { store_url: null }))
-      .then((d: { store_url: string | null }) => setStoreUrl(d.store_url))
-      .catch(() => setStoreUrl(null))
+      .then((r) => (r.ok ? r.json() : { store_url: null, play_store_url: null }))
+      .then((d: { store_url: string | null; play_store_url: string | null }) => {
+        setStoreUrl(d.store_url);
+        setPlayStoreUrl(d.play_store_url ?? null);
+      })
+      .catch(() => { setStoreUrl(null); setPlayStoreUrl(null); })
       .finally(() => setLaden(false));
   }, []);
 
@@ -40,19 +44,32 @@ export default function AppInstallatiePagina() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
             </div>
-          ) : storeUrl ? (
+          ) : storeUrl || playStoreUrl ? (
             <div className="space-y-4 text-center">
               <h2 className="text-lg font-semibold text-zinc-900">Installeer de app</h2>
               <p className="text-sm text-zinc-500">
-                Tik op de knop hieronder om de FPS Monteur-app op uw telefoon te installeren.
+                {storeUrl && playStoreUrl
+                  ? "Kies hieronder uw telefoon om de FPS Monteur-app te installeren."
+                  : "Tik op de knop hieronder om de FPS Monteur-app op uw telefoon te installeren."}
               </p>
-              <Button
-                className="w-full bg-[#F23B0D] hover:bg-[#F23B0D]/90 text-white h-11 text-base"
-                onClick={() => { window.location.href = storeUrl; }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                App installeren
-              </Button>
+              {storeUrl && (
+                <Button
+                  className="w-full bg-[#F23B0D] hover:bg-[#F23B0D]/90 text-white h-11 text-base"
+                  onClick={() => { window.location.href = storeUrl; }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {playStoreUrl ? "Installeren op iPhone (App Store)" : "App installeren"}
+                </Button>
+              )}
+              {playStoreUrl && (
+                <Button
+                  className="w-full bg-[#F23B0D] hover:bg-[#F23B0D]/90 text-white h-11 text-base"
+                  onClick={() => { window.location.href = playStoreUrl; }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {storeUrl ? "Installeren op Android (Google Play)" : "App installeren"}
+                </Button>
+              )}
               <p className="text-xs text-zinc-400">
                 Na installatie logt u in met uw FPS Connect-account. Vragen? Neem contact op met uw beheerder.
               </p>

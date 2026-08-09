@@ -3005,6 +3005,12 @@ Op het wagenpark-overzicht staat nu een AI-afstootadviespaneel (zichtbaar vanaf 
 
 De variabele `MONTEUR_APP_STORE_URL` is toegevoegd aan `docs/productie-env-checklist.md`. Zodra de FPS Monteur-app in de App Store staat, voegt René de App Store-link toe aan `/opt/fps-one/deploy/.env.production` op de VPS. De QR-route (`GET /auth/app-qr`) en de dialoog in Gebruikersbeheer zijn al gereed: ze pikken de variabele automatisch op en tonen een scanbare QR-code zonder verdere code-aanpassingen.
 
+
+## 2026-08-09 — Android-installatielink (Google Play) naast de App Store-link
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve env-variabele + UI-uitbreiding)
+
+Zodra de FPS Monteur-app op Google Play staat, kan naast `MONTEUR_APP_STORE_URL` ook `MONTEUR_PLAY_STORE_URL` worden ingesteld. De QR-route `GET /auth/app-qr` ondersteunt nu `?platform=ios|android` (404 als de betreffende link ontbreekt, 400 bij een onbekend platform); zonder platform blijft de bestaande voorkeursvolgorde gelden (App Store → Google Play → Expo-dev → /app-pagina). De QR-dialoog in Gebruikersbeheer toont automatisch één of twee QR-codes ("iPhone (App Store)" / "Android (Google Play)") afhankelijk van welke links zijn ingesteld, en de publieke installatiepagina `/app` biedt beide installeer-knoppen. Nieuwe variabele gedocumenteerd in `docs/productie-env-checklist.md`. Bewijs: integratierun tegen een lokale api-server met beide en met alleen de Play-link ingesteld (login+2FA, alle platform-varianten gecontroleerd).
 ## 2026-08-09 — Activatiescherm overschrijft bestaand wachtwoord niet meer vóór afgeronde 2FA
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (activatieflow, gedrag naar buiten ongewijzigd)

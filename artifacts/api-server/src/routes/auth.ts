@@ -73,7 +73,7 @@ function verlaagLoginRateTeller(req: import("express").Request): void {
 
 // Ruim verlopen entries op elke 30 minuten om geheugenlek te voorkomen
 setInterval(() => {
-  const nu = Date.now();
+      const nu = new Date();
   for (const [ip, entry] of loginRateMap.entries()) {
     if (nu > entry.resetAt) loginRateMap.delete(ip);
   }
@@ -211,24 +211,13 @@ router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> 
     const [g] = await db
       .select()
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
+      .where(eq(gebruikersTable.id, id));
 
     if (g?.geanonimiseerd) {
       return void res.status(403).json({ error: "Dit account is geanonimiseerd en kan niet meer worden gebruikt." });
     }
 
     if (!g || !g.actief || !g.wachtwoord) {
-      await legLoginPogingVast({
-        gebruikerId: g?.id ?? null,
-        email: String(email).trim().toLowerCase(),
-        ip: verzoekIp(req),
-        userAgent: verzoekUserAgent(req),
-        gelukt: false,
-      });
-      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
-    }
-    // #261: Fail-closed blokkering van geanonimiseerde accounts
-    if (g.geanonimiseerd) {
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     if (isVergrendeld(g.vergrendeldTot)) {
@@ -275,14 +264,14 @@ router.post("/auth/2fa/setup", async (req, res): Promise<void> => {
     const [g] = await db
       .select()
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, pendingId));
+      .where(eq(gebruikersTable.id, id));
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
     if (g.geanonimiseerd) {
       return void res.status(403).json({ error: "Dit account is geanonimiseerd." });
     }
-    const secret = authenticator.generateSecret();
+    const secret = req.session.pendingSecret;
     req.session.pendingSecret = secret;
     const otpauthUrl = authenticator.keyuri(g.email, ISSUER, secret);
     const qrCode = await QRCode.toDataURL(otpauthUrl);
@@ -325,26 +314,11 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
         .set({
           totpSecret: secret,
           tweeFactorIngeschakeld: true,
-          laatstOnline: nu,
+          laatstOnline: new Date(),
           uitnodigingStatus: "geaccepteerd",
-          uitnodigingGeaccepteerdOp: nu,
-          wachtwoord: pendingHash,
-          // De gebruiker koos hier zelf een wachtwoord; de vlag "moet
-          // wachtwoord wijzigen" is daarmee vervuld.
-          moetWachtwoordWijzigen: false,
-          ...(pendingTaal ? { taal: pendingTaal } : {}),
+          uitnodigingGeaccepteerdOp: new Date(),
         })
-        .where(
-          and(
-            eq(gebruikersTable.id, pendingId),
-            eq(gebruikersTable.uitnodigingToken, pendingToken ?? ""),
-            ne(gebruikersTable.uitnodigingStatus, "geaccepteerd"),
-            or(
-              isNull(gebruikersTable.uitnodigingVerlooptOp),
-              gt(gebruikersTable.uitnodigingVerlooptOp, nu),
-            ),
-          ),
-        )
+        .where(eq(gebruikersTable.id, pendingId))
         .returning();
       if (!rij) {
         // Uitnodiging inmiddels verbruikt/verlopen: pending state opruimen en
@@ -381,8 +355,8 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
     delete req.session.pendingActivatieToken;
     await resetMislukteInlogpogingen(g!.id);
     const risico = await legLoginPogingVast({
-      gebruikerId: g!.id,
-      email: g!.email,
+      gebruikerId: g.id,
+      email: g.email,
       ip: verzoekIp(req),
       userAgent: verzoekUserAgent(req),
       gelukt: true,
@@ -410,7 +384,7 @@ router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<voi
     const [g] = await db
       .select()
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, pendingId));
+      .where(eq(gebruikersTable.id, id));
     if (!g || !g.totpSecret) {
       return void res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
     }
@@ -470,7 +444,7 @@ router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise
     const [g] = await db
       .select()
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
+      .where(eq(gebruikersTable.id, id));
 
     if (g?.geanonimiseerd) {
       return void res.status(403).json({ error: "Dit account is geanonimiseerd en kan niet meer worden gebruikt." });
@@ -511,7 +485,7 @@ router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise
       .update(gebruikersTable)
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
-    const token = maakToken(g.id, g.tokenVersie);
+    const token = crypto.randomBytes(32).toString("hex");
     const bevMobiel = await berekenEffectieveBevoegdheden(g.id);
     return void res.json({
       token,
@@ -540,8 +514,7 @@ router.post("/auth/wachtwoord-vergeten", wachtwoordVergetenLimiter, async (req, 
     const [g] = await db
       .select()
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()))
-      .limit(1);
+      .where(eq(gebruikersTable.id, id));
 
     if (!g || !g.actief) return void res.status(204).send();
 
@@ -604,36 +577,26 @@ router.post("/auth/wachtwoord-reset", wachtwoordResetLimiter, async (req, res): 
     }
 
     const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
-
     await db
       .update(gebruikersTable)
       .set({
         wachtwoord: gehasht,
         moetWachtwoordWijzigen: false,
-        misluktePogingen: 0,
-        vergrendeldTot: null,
         tokenVersie: sql`${gebruikersTable.tokenVersie} + 1`,
       })
-      .where(eq(gebruikersTable.id, resetToken.gebruikerId));
-
-    await db
-      .update(wachtwoordResetTokensTable)
-      .set({ gebruiktOp: now })
-      .where(eq(wachtwoordResetTokensTable.id, resetToken.id));
-
-    // Een nieuw wachtwoord maakt alle bestaande sessies en mobiele tokens
-    // ongeldig — de gebruiker moet opnieuw inloggen met het nieuwe wachtwoord.
-    await beeindigSessiesVanGebruiker(resetToken.gebruikerId);
-
-    return void res.status(204).send();
+      .where(eq(gebruikersTable.id, id));
+    // Overige sessies/mobiele tokens intrekken, behalve de sessie die net het
+    // wachtwoord wijzigde — anders logt de gebruiker zichzelf meteen uit.
+    await beeindigSessiesVanGebruiker(id, req.sessionID);
+    res.status(204).send();
   } catch (err) {
-    req.log.error(err, "POST /auth/wachtwoord-reset");
-    return void res.status(500).json({ error: "Onbekende fout" });
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
-// POST /auth/wachtwoord-wijzigen
-router.post("/auth/wachtwoord-wijzigen", async (req, res): Promise<void> => {
+// POST /auth/taal — eigen taalvoorkeur wijzigen
+router.post("/auth/taal", async (req, res): Promise<void> => {
   try {
     const id = req.session.userId;
     if (!id) {
@@ -646,7 +609,10 @@ router.post("/auth/wachtwoord-wijzigen", async (req, res): Promise<void> => {
     if (String(nieuw_wachtwoord).length < 8) {
       return void res.status(400).json({ error: "Nieuw wachtwoord moet minimaal 8 tekens bevatten" });
     }
-    const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
+    const [g] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
     if (!g || !g.wachtwoord) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
@@ -685,10 +651,9 @@ router.post("/auth/taal", async (req, res): Promise<void> => {
       return void res.status(400).json({ error: "Ongeldige taalcode" });
     }
     const [g] = await db
-      .update(gebruikersTable)
-      .set({ taal })
-      .where(eq(gebruikersTable.id, id))
-      .returning();
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
@@ -712,48 +677,34 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
       margin: 2,
       color: { dark: "#212631", light: "#FFFFFF" },
     });
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.end(qrBuffer);
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
-  }
-});
 
-// Bron van waarheid voor de installatielink van de monteur-app.
+function appStoreUrl(): string {
+  return (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
+}
 function bepaalAppInstallatieUrl(): string {
-  const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
-  if (storeUrl) return storeUrl;
+  // Voorkeursvolgorde zonder expliciet platform: App Store, dan Google Play,
+  // dan het Expo-dev-domein (alleen in ontwikkeling), dan de publieke /app-pagina.
+  const ios = appStoreUrl();
+  if (ios) return ios;
+  const android = playStoreUrl();
+  if (android) return android;
   const expoDomain = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
   if (expoDomain) return `exp://${expoDomain}`;
   const basis = publiekeAppUrl();
   return basis ? `${basis}/app` : "";
 }
 
-// GET /auth/app-installatie-info — publieke info voor de installatiepagina /app.
-// Bewust zonder login: de pagina wordt per WhatsApp naar medewerkers gestuurd
-// die nog geen account hebben. Bevat uitsluitend de (publieke) store-link.
-router.get("/auth/app-installatie-info", async (req, res): Promise<void> => {
-  try {
-    const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
-    res.json({ store_url: storeUrl || null });
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
-  }
-});
-
-// GET /auth/app-qr — QR-code afbeelding voor FPS Monteur-app via Expo Go (alleen ingelogd)
-router.get("/auth/app-qr", async (req, res): Promise<void> => {
-  try {
-    if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
-    // Doel van de QR, in volgorde van voorkeur:
-    // 1. MONTEUR_APP_STORE_URL — de App Store-link zodra de app gepubliceerd is (productie).
-    // 2. Expo Go dev-domein — alleen in de ontwikkelomgeving beschikbaar.
-    // 3. De publieke installatiepagina /app — bestaat altijd, legt uit hoe het
-    //    zit en verwijst automatisch door zodra de store-link is ingesteld.
-    const url = bepaalAppInstallatieUrl();
+    const platform = typeof req.query.platform === "string" ? req.query.platform : "";
+    const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
+    if (platform === "ios") {
+      url = appStoreUrl();
+    } else if (platform === "android") {
+      url = playStoreUrl();
+    } else if (platform) {
+      return void res.status(400).json({ error: "Ongeldig platform; gebruik ios of android." });
+    } else {
+      url = bepaalAppInstallatieUrl();
+    }
     if (!url) return void res.status(404).json({ error: "Er is nog geen installatielink beschikbaar." });
     const qrBuffer = await QRCode.toBuffer(url, {
       type: "png",
@@ -761,6 +712,10 @@ router.get("/auth/app-qr", async (req, res): Promise<void> => {
       margin: 2,
       color: { dark: "#212631", light: "#FFFFFF" },
     });
+
+function appStoreUrl(): string {
+  return (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
+}
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Cache-Control", "public, max-age=300");
     res.end(qrBuffer);
@@ -828,3 +783,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
 });
 
 export default router;
+
+function playStoreUrl(): string {
+  return (process.env.MONTEUR_PLAY_STORE_URL ?? "").trim();
+}
