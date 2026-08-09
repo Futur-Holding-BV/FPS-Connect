@@ -123,6 +123,8 @@ import type {
   BruikleenOvereenkomst,
   BruikleenRetourgaveInput,
   CalcAdvies,
+  CalcAdviesAnalyse,
+  CalcAdviesAnalyseInput,
   CalcAdviesUpdate,
   CalcEenheid,
   CalcEenheidInput,
@@ -53319,6 +53321,77 @@ export const usePlakAnalyseCalculatie = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPlakAnalyseCalculatieMutationOptions(options));
+    }
+
+export const getAdviesrapportAnalyseCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/adviesrapport-analyse`
+}
+
+/**
+ * @summary ADVIES_01 — adviesrapport uit de bibliotheek uitlezen en per genummerd punt een calculatievoorstel doen (wordt niet opgeslagen als regel)
+ */
+export const adviesrapportAnalyseCalculatie = async (id: number,
+    calcAdviesAnalyseInput: CalcAdviesAnalyseInput, options?: RequestInit): Promise<CalcAdviesAnalyse> => {
+
+  return customFetch<CalcAdviesAnalyse>(getAdviesrapportAnalyseCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calcAdviesAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAdviesrapportAnalyseCalculatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcAdviesAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcAdviesAnalyseInput>}, TContext> => {
+
+const mutationKey = ['adviesrapportAnalyseCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>, {id: number;data: BodyType<CalcAdviesAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adviesrapportAnalyseCalculatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdviesrapportAnalyseCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>>
+    export type AdviesrapportAnalyseCalculatieMutationBody = BodyType<CalcAdviesAnalyseInput>
+    export type AdviesrapportAnalyseCalculatieMutationError = ErrorType<void>
+
+    /**
+ * @summary ADVIES_01 — adviesrapport uit de bibliotheek uitlezen en per genummerd punt een calculatievoorstel doen (wordt niet opgeslagen als regel)
+ */
+export const useAdviesrapportAnalyseCalculatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcAdviesAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adviesrapportAnalyseCalculatie>>,
+        TError,
+        {id: number;data: BodyType<CalcAdviesAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAdviesrapportAnalyseCalculatieMutationOptions(options));
     }
 
 export const getCalcPlakVeldCorrectieUrl = () => {

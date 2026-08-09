@@ -60,6 +60,10 @@ const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
   // dan jaarrekeningen), maar de tabelinhoud gaat via de importstroom naar
   // prijsafspraken. Er is geen eigen DocumentType, dus "overig".
   prijslijst: "overig",
+  // ADVIES_01 §4.1: het adviesrapport wordt gearchiveerd in de bibliotheek; de
+  // inhoud gaat via de doorschakeling door naar "calculatie-inrichten". Geen eigen
+  // DocumentType, dus "overig".
+  adviesrapport: "overig",
   bibliotheek: "overig",
   offerte: "overig",
   factuur: "overig",
@@ -731,6 +735,20 @@ router.post(
             naar: "import",
             import_type: "prijsafspraken",
             reden: "Prijslijst gearchiveerd — ga verder in de importstroom om de prijzen te verwerken.",
+          },
+        });
+      }
+      // ADVIES_01 §4.1: het adviesrapport is gearchiveerd; de gebruiker moet dóór
+      // naar "calculatie-inrichten". Anders dan bij de prijslijst sturen we hier
+      // WÉL het document_id mee: de analyse-route leest het gearchiveerde bestand
+      // zelf uit object storage, dus de frontend heeft de File niet nodig.
+      if (categorie === "adviesrapport") {
+        return void res.status(201).json({
+          ...gemapt,
+          doorschakeling: {
+            naar: "calculatie-inrichten",
+            document_id: d.id,
+            reden: "Adviesrapport gearchiveerd — kies of maak een calculatie om het rapport in te lezen.",
           },
         });
       }

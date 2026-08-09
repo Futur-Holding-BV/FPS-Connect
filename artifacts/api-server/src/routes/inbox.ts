@@ -47,6 +47,7 @@ const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
   jaarrekening: "jaarrekening",
   contract: "contract",
   prijslijst: "prijslijst",
+  adviesrapport: "adviesrapport",
   bibliotheek: "product_certificaat",
   document_sjabloon: "document_sjabloon",
   algemeen: "onbekend",

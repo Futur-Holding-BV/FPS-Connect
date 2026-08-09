@@ -29,7 +29,7 @@ type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
   | "personeelsdocument" | "verzekering" | "snagstream" | "jaarrekening" | "contract"
-  | "prijslijst" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
+  | "prijslijst" | "adviesrapport" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
 
@@ -271,6 +271,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   jaarrekening:      { label: "Jaarrekeningen (archief)",      icoon: <Archive className="h-4 w-4" />,      pad: "/documenten",  kleur: "bg-slate-50 text-slate-700 border-slate-200",     omschrijving: "Jaarrekening, jaarverslag of accountantsverklaring" },
   contract:          { label: "Contracten",                    icoon: <FileText className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-lime-50 text-lime-700 border-lime-200",        omschrijving: "Commerciële overeenkomst met klant of leverancier" },
   prijslijst:        { label: "Prijslijsten (leverancier)",     icoon: <Package className="h-4 w-4" />,      pad: "",             kleur: "bg-emerald-50 text-emerald-700 border-emerald-200", omschrijving: "Jaarprijzen / nettoprijslijst van een leverancier — wordt gearchiveerd én ingelezen als prijsafspraken" },
+  adviesrapport:     { label: "Adviesrapport → calculatie",     icoon: <ClipboardList className="h-4 w-4" />, pad: "",            kleur: "bg-amber-50 text-amber-700 border-amber-200",     omschrijving: "Adviesrapport met genummerde punten — wordt gearchiveerd én ingelezen om een calculatie in te richten" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
   document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/studio", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
   algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
@@ -1051,6 +1052,39 @@ async function uploadNaarBibliotheek(
   }
 }
 
+// ADVIES_01 §4.1: archiveer het adviesrapport en lees het document_id uit de
+// doorschakeling. Anders dan uploadNaarBibliotheek geeft deze het id terug zodat
+// de frontend naar de calculatiepagina kan navigeren met ?adviesrapport=<id>.
+async function uploadAdviesrapport(
+  bestand: File,
+  toelichting?: string,
+): Promise<{ ok: boolean; status: number; documentId: number | null; foutmelding: string | null }> {
+  try {
+    const form = new FormData();
+    form.append("bestand", bestand);
+    form.append("categorie", "adviesrapport");
+    if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
+    const res = await fetch("/api/documenten/aanleveren", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    let documentId: number | null = null;
+    let foutmelding: string | null = null;
+    try {
+      const body = (await res.json()) as { error?: string; doorschakeling?: { document_id?: number } };
+      if (res.ok) {
+        documentId = typeof body.doorschakeling?.document_id === "number" ? body.doorschakeling.document_id : null;
+      } else {
+        foutmelding = typeof body.error === "string" ? body.error : null;
+      }
+    } catch { /* geen JSON-body */ }
+    return { ok: res.ok, status: res.status, documentId, foutmelding };
+  } catch {
+    return { ok: false, status: 0, documentId: null, foutmelding: null };
+  }
+}
+
 // Jaarrekeningen gaan NIET naar de algemene inbox/archief, maar vertrouwelijk naar
 // Financieel › Jaarrekeningen (subpad "Geconsolideerde jaarrekeningen" indien geconsolideerd).
 // Gated op het recht financieel_vertrouwelijk (server-side fail-closed).
@@ -1345,6 +1379,26 @@ export function SlimUploadBalk() {
       // Ongeacht de archiveringsuitkomst dóór naar de importstroom: de gebruiker
       // heeft de File nog (gestasht) en kan daar de prijzen bevestigen.
       setTimeout(() => navigate("/beheer/import?type=prijsafspraken&bron=slim-upload"), 300);
+    } else if (cat === "adviesrapport") {
+      // ADVIES_01 §4.1: adviesrapport wordt gearchiveerd; de server geeft in de
+      // doorschakeling het document_id terug. Anders dan bij de prijslijst hoeft
+      // de frontend de File NIET te bewaren — de analyse-route leest het
+      // gearchiveerde bestand zelf uit object storage. We navigeren met het id in
+      // de query zodat de calculatiepagina het rapport kan inlezen.
+      void uploadAdviesrapport(bestand, item.toelichting).then(({ ok, status, documentId, foutmelding }) => {
+        toast({
+          title: ok ? "Adviesrapport gearchiveerd" : "Opslaan mislukt",
+          description: ok
+            ? `${bestand.name} staat in Documenten. Kies of maak een calculatie om het rapport in te lezen.`
+            : status === 401 || status === 403
+              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
+              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+          variant: ok ? undefined : "destructive",
+        });
+        if (ok && documentId != null) {
+          setTimeout(() => navigate(`/modules/calculatie?adviesrapport=${documentId}`), 300);
+        }
+      });
     } else {
       // Lever het bestand direct aan bij de documentbibliotheek (fire and forget)
       void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {

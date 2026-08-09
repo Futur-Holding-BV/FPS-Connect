@@ -12,6 +12,7 @@ import {
   offertesTable,
   dossiersTable,
   voorzieningenTable,
+  modCalcHeadersTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 
@@ -60,12 +61,23 @@ export function isGoedkeuringStatus(v: unknown): v is GoedkeuringStatus {
   return typeof v === "string" && (GOEDKEURING_STATUSSEN as readonly string[]).includes(v);
 }
 
+// Gehele lijst is geharmoniseerd met de DB-CHECK
+// (document_koppelingen_doel_type_check, laatst 0041_advies01-…): de code-whitelist
+// miste eerder opdracht/voertuig/prijsafspraak die de DB wél toestaat. Dit is
+// een bestaande inconsistentie wegwerken — GEEN nieuwe rechten: routes valideren
+// autorisatie apart per doeltype.
 export const KOPPELING_DOEL_TYPES = [
   "gebouw",
   "klant",
   "offerte",
   "dossier",
   "voorziening",
+  "opdracht",
+  "voertuig",
+  "prijsafspraak",
+  // ADVIES_01 §4.5: een adviesrapport wordt aan de calculatie gekoppeld waaruit
+  // het is ingelezen, zodat de calculatie het bronrapport klikbaar kan tonen.
+  "calculatie",
 ] as const;
 export type KoppelingDoelType = (typeof KOPPELING_DOEL_TYPES)[number];
 export function isKoppelingDoelType(v: unknown): v is KoppelingDoelType {
@@ -205,6 +217,12 @@ export async function resolveDoelNamen(refs: DoelRef[]): Promise<Map<string, str
           .from(voorzieningenTable)
           .where(inArray(voorzieningenTable.id, ids));
         for (const r of rows) out.set(`voorziening:${r.id}`, r.naam);
+      } else if (type === "calculatie") {
+        const rows = await db
+          .select({ id: modCalcHeadersTable.id, naam: modCalcHeadersTable.naam })
+          .from(modCalcHeadersTable)
+          .where(inArray(modCalcHeadersTable.id, ids));
+        for (const r of rows) out.set(`calculatie:${r.id}`, r.naam);
       }
     } catch {
       // orphan-tolerant: laat namen leeg bij ontbrekende/onbekende doeltabel

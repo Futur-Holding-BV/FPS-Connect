@@ -43,6 +43,7 @@ export const DOC_CATEGORIEEN = [
   "jaarrekening",
   "contract",
   "prijslijst",
+  "adviesrapport",
   "bibliotheek",
   "document_sjabloon",
   "algemeen",
@@ -225,6 +226,7 @@ export const CATEGORIE_MODULE: Record<DocCategorie, string> = {
   jaarrekening: "Financieel",
   contract: "CRM",
   prijslijst: "Productbibliotheek",
+  adviesrapport: "Calculaties",
   bibliotheek: "Productbibliotheek",
   document_sjabloon: "DMS",
   algemeen: "DMS",
@@ -297,6 +299,11 @@ CATEGORIEËN:
 "prijslijst"         — Jaarprijslijst, nettoprijslijst, bruto prijslijst of staffelprijslijst van een leverancier: een
                         tabel met artikelcodes, omschrijvingen, prijzen en eenheden. Zet in gevonden_gegevens indien
                         aanwezig: organisatie (leverancier), jaar, geldig_van, geldig_tot, valuta.
+"adviesrapport"      — Adviesrapport, brandveiligheidsconsult, bouwkundig advies of inspectierapport-met-advies: een
+                        rapport met genummerde bevindingen/tekortkomingen én geadviseerd herstel, waarvan een calculatie
+                        opgesteld wordt. Onderscheid van "snagstream": een adviesrapport adviseert herstel (per genummerd
+                        punt), een opleverrapport/punchlijst constateert louter gebreken. Zet in gevonden_gegevens indien
+                        aanwezig: organisatie (opdrachtgever/adviseur), locatie, jaar.
 "bibliotheek"         — Overige technische brandveiligheidsdocumenten.
 "document_sjabloon"  — Lege/visuele PDF met bedrijfslogo of huisstijl, bedoeld als briefpapier of onderlegger.
 "algemeen"           — Correspondentie, notulen, presentaties, interne memo's.
@@ -494,6 +501,10 @@ const SLEUTELWOORDEN: Array<{ categorie: DocCategorie; woorden: string[] }> = [
     "dienstverband", "salaris", "functieomschrijving", "functie beschrijving",
   ] },
   { categorie: "verzekering", woorden: ["polisnummer", "verzekeringspolis", "assurantie", "premie", "dekking"] },
+  // adviesrapport staat VÓÓR snagstream: een adviesrapport adviseert herstel per
+  // genummerd punt; de sleutelwoorden zijn specifieker dan het generieke
+  // "inspectierapport"/"bevindingen" dat bij een opleverrapport hoort.
+  { categorie: "adviesrapport", woorden: ["adviesrapport", "brandveiligheidsconsult", "bouwkundig advies", "inspectierapport advies", "geadviseerd herstel", "geadviseerde maatregelen", "tekortkomingen en advies"] },
   { categorie: "snagstream", woorden: ["opleverrapport", "inspectierapport", "onderhoudsrapport", "punchlijst", "snagstream", "bevindingen"] },
   { categorie: "tekening", woorden: ["schaal 1:", "noordpijl", "plattegrond", "situatietekening"] },
   // "contract" als generiek woord staat ACHTERAAN: alleen als geen

@@ -34,10 +34,13 @@ import {
   useGetFieContextCalculatie,
   getGetFieContextCalculatieQueryKey,
   useListEnkBronbestanden,
+  useListGekoppeldeDocumenten,
+  getListGekoppeldeDocumentenQueryKey,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
 import { PlakInvoer } from "./plak-invoer";
+import { AdviesInrichten } from "./advies-inrichten";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -206,6 +209,9 @@ type RegelRow = {
   btw_tarief?: string | null;
   wand_plafond?: string | null;
   toepassing_tekst?: string | null;
+  soort?: string | null;
+  optioneel?: boolean;
+  ouder_regel_id?: number | null;
 };
 
 type LocalDraft = {
@@ -227,6 +233,9 @@ type LocalDraft = {
   btw_tarief: string;
   wand_plafond: string;
   toepassing_tekst: string;
+  soort: string;
+  optioneel: boolean;
+  ouder_regel_id: number | null;
 };
 
 const LEEG_DRAFT: LocalDraft = {
@@ -248,6 +257,9 @@ const LEEG_DRAFT: LocalDraft = {
   btw_tarief: "21",
   wand_plafond: "",
   toepassing_tekst: "",
+  soort: "regel",
+  optioneel: false,
+  ouder_regel_id: null,
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -272,6 +284,9 @@ function regelToDraft(r: RegelRow): LocalDraft {
     btw_tarief: r.btw_tarief ?? "21",
     wand_plafond: r.wand_plafond ?? "",
     toepassing_tekst: r.toepassing_tekst ?? "",
+    soort: r.soort ?? "regel",
+    optioneel: r.optioneel ?? false,
+    ouder_regel_id: r.ouder_regel_id ?? null,
   };
 }
 
@@ -295,6 +310,9 @@ function draftToPayload(d: LocalDraft) {
     btw_tarief: d.btw_tarief || "21",
     wand_plafond: d.wand_plafond || null,
     toepassing_tekst: d.toepassing_tekst || null,
+    soort: d.soort || "regel",
+    optioneel: d.optioneel,
+    ouder_regel_id: d.ouder_regel_id ?? null,
   };
 }
 
@@ -318,6 +336,27 @@ function fmt2(n: number) {
 }
 
 function rnd(n: number) { return Math.round(n * 100) / 100; }
+
+// ADVIES_01 §6: alleen 'regel' en 'materiaal' tellen mee in het totaal.
+const MEETELLENDE_SOORTEN = new Set(["regel", "materiaal"]);
+function teltMeeRegel(r: { soort?: string | null }): boolean {
+  return MEETELLENDE_SOORTEN.has(r.soort ?? "regel");
+}
+
+// Ouderkeuze voor een materiaalregel: de gewone werkregels binnen dezelfde groep.
+function ouderOptiesVoor(siblings: RegelRow[], eigenId: number): Array<{ id: number; omschrijving: string }> {
+  return siblings
+    .filter((x) => (x.soort ?? "regel") === "regel" && x.id !== eigenId)
+    .map((x) => ({ id: x.id, omschrijving: x.omschrijving }));
+}
+
+const SOORT_OPTIES = [
+  { value: "regel",     label: "Regel" },
+  { value: "materiaal", label: "Materiaal (onder ouderregel)" },
+  { value: "tekst",     label: "Tekst (geen bedrag)" },
+  { value: "stelpost",  label: "Stelpost (telt niet mee)" },
+  { value: "kop",       label: "Kop" },
+];
 
 function toepassingHintVoorOmschrijving(omschrijving: string) {
   const lower = omschrijving.toLowerCase();
@@ -366,6 +405,7 @@ function SpreadsheetRegelRij({
   bezig,
   toonOnderaanneming,
   tarieven,
+  ouderOpties = [],
 }: {
   rij: RegelRow;
   weergave: Weergave;
@@ -376,6 +416,7 @@ function SpreadsheetRegelRij({
   bezig: boolean;
   toonOnderaanneming: boolean;
   tarieven: Array<{ id: number; naam: string; tarief: number; categorie: string }>;
+  ouderOpties?: Array<{ id: number; omschrijving: string }>;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [editing, setEditing] = useState(false);
@@ -459,41 +500,92 @@ function SpreadsheetRegelRij({
       {/* Omschrijving + categorie inline */}
       <td className="px-1 py-1 min-w-[220px]">
         {editing ? (
-          <div className="flex items-center gap-1.5 px-0.5">
-            <select
-              value={draft.categorie}
-              onChange={(e) => {
-                const cat = e.target.value;
-                const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
-                upd({ categorie: cat, btw_tarief: btw });
-              }}
-              className={cn(
-                "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
-                CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+          <div className="flex flex-col gap-1 px-0.5">
+            <div className="flex items-center gap-1.5">
+              {/* ADVIES_01 §3: soort-keuze */}
+              <select
+                value={draft.soort}
+                onChange={(e) => {
+                  const s = e.target.value;
+                  // tekst/kop hebben geen bedragvelden — leegmaken.
+                  if (s === "tekst" || s === "kop") upd({ soort: s, hoeveelheid: "0", tarief: "0", mu_per_eenheid: "0", arbeids_tarief: "0", onderaanneming_bedrag: "0" });
+                  else upd({ soort: s });
+                }}
+                className="text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium bg-muted"
+                style={{ maxWidth: 90 }}
+                title="Regelsoort"
+              >
+                {SOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {(draft.soort === "regel" || draft.soort === "materiaal") && (
+                <select
+                  value={draft.categorie}
+                  onChange={(e) => {
+                    const cat = e.target.value;
+                    const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+                    upd({ categorie: cat, btw_tarief: btw });
+                  }}
+                  className={cn(
+                    "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
+                    CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+                  )}
+                  style={{ maxWidth: 78 }}
+                >
+                  {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
               )}
-              style={{ maxWidth: 78 }}
-            >
-              {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <input
-              type="text"
-              data-celindex={1}
-              value={draft.omschrijving}
-              onChange={(e) => upd({ omschrijving: e.target.value })}
-              onKeyDown={mkKD(1)}
-              className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
-              placeholder="Omschrijving werkzaamheid..."
-              autoFocus
-            />
+              <input
+                type="text"
+                data-celindex={1}
+                value={draft.omschrijving}
+                onChange={(e) => upd({ omschrijving: e.target.value })}
+                onKeyDown={mkKD(1)}
+                className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
+                placeholder="Omschrijving werkzaamheid..."
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-0.5">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" checked={draft.optioneel} onChange={(e) => upd({ optioneel: e.target.checked })} />
+                optioneel
+              </label>
+              {draft.soort === "materiaal" && ouderOpties.length > 0 && (
+                <label className="flex items-center gap-1">
+                  onder:
+                  <select
+                    value={draft.ouder_regel_id ?? ""}
+                    onChange={(e) => upd({ ouder_regel_id: e.target.value ? Number(e.target.value) : null })}
+                    className="border border-border/70 rounded px-1 py-0.5 max-w-[160px]"
+                  >
+                    <option value="">— geen ouder —</option>
+                    {ouderOpties.map((o) => <option key={o.id} value={o.id}>{o.omschrijving.slice(0, 40)}</option>)}
+                  </select>
+                </label>
+              )}
+              {draft.soort === "stelpost" && <span className="text-amber-700">stelpost — telt niet mee</span>}
+            </div>
           </div>
         ) : (
-          <div onClick={() => setEditing(true)} className="px-1.5 py-1.5 cursor-pointer flex items-center gap-2 min-w-0">
-            {rij.categorie !== "arbeid" && (
+          <div onClick={() => setEditing(true)} className={cn("px-1.5 py-1.5 cursor-pointer flex items-center gap-2 min-w-0", rij.soort === "materiaal" && "pl-6")}>
+            {rij.soort === "regel" && rij.categorie !== "arbeid" && (
               <span className={cn("text-[10px] px-1.5 py-px rounded-sm shrink-0 whitespace-nowrap font-medium", CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground")}>
                 {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
               </span>
             )}
-            <span className="text-sm font-medium truncate">
+            {rij.soort === "stelpost" && (
+              <span className="text-[10px] px-1.5 py-px rounded-sm shrink-0 whitespace-nowrap font-medium bg-amber-100 text-amber-800">stelpost — telt niet mee</span>
+            )}
+            {rij.soort === "materiaal" && (
+              <span className="text-[10px] px-1.5 py-px rounded-sm shrink-0 whitespace-nowrap font-medium bg-green-50 text-green-700">materiaal</span>
+            )}
+            {rij.optioneel && (
+              <span className="text-[10px] px-1.5 py-px rounded-sm shrink-0 whitespace-nowrap font-medium bg-blue-50 text-blue-700">optioneel</span>
+            )}
+            <span className={cn(
+              "text-sm truncate",
+              rij.soort === "kop" ? "font-bold uppercase tracking-wide" : rij.soort === "tekst" ? "italic font-normal text-muted-foreground" : "font-medium",
+            )}>
               {rij.omschrijving || <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>}
             </span>
           </div>
@@ -743,6 +835,7 @@ function NieuweRegelRij({
   bezig,
   toonOnderaanneming,
   tarieven,
+  ouderOpties = [],
 }: {
   initialDraft: LocalDraft;
   weergave: Weergave;
@@ -751,6 +844,7 @@ function NieuweRegelRij({
   bezig: boolean;
   toonOnderaanneming: boolean;
   tarieven: Array<{ id: number; naam: string; tarief: number; categorie: string }>;
+  ouderOpties?: Array<{ id: number; omschrijving: string }>;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [draft, setDraft] = useState<LocalDraft>(initialDraft);
@@ -815,32 +909,69 @@ function NieuweRegelRij({
 
       {/* Omschrijving + categorie inline */}
       <td className="px-1 py-1 min-w-[220px]">
-        <div className="flex items-center gap-1.5 px-0.5">
-          <select
-            value={draft.categorie}
-            onChange={(e) => {
-              const cat = e.target.value;
-              const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
-              upd({ categorie: cat, btw_tarief: btw });
-            }}
-            className={cn(
-              "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
-              CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+        <div className="flex flex-col gap-1 px-0.5">
+          <div className="flex items-center gap-1.5">
+            <select
+              value={draft.soort}
+              onChange={(e) => {
+                const s = e.target.value;
+                if (s === "tekst" || s === "kop") upd({ soort: s, hoeveelheid: "0", tarief: "0", mu_per_eenheid: "0", arbeids_tarief: "0", onderaanneming_bedrag: "0" });
+                else upd({ soort: s });
+              }}
+              className="text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium bg-muted"
+              style={{ maxWidth: 90 }}
+              title="Regelsoort"
+            >
+              {SOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {(draft.soort === "regel" || draft.soort === "materiaal") && (
+              <select
+                value={draft.categorie}
+                onChange={(e) => {
+                  const cat = e.target.value;
+                  const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+                  upd({ categorie: cat, btw_tarief: btw });
+                }}
+                className={cn(
+                  "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
+                  CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+                )}
+                style={{ maxWidth: 78 }}
+              >
+                {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             )}
-            style={{ maxWidth: 78 }}
-          >
-            {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <input
-            type="text"
-            value={draft.omschrijving}
-            data-celindex={1}
-            onChange={(e) => upd({ omschrijving: e.target.value })}
-            onKeyDown={mkKD(1)}
-            className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
-            placeholder="Omschrijving werkzaamheid..."
-            autoFocus
-          />
+            <input
+              type="text"
+              value={draft.omschrijving}
+              data-celindex={1}
+              onChange={(e) => upd({ omschrijving: e.target.value })}
+              onKeyDown={mkKD(1)}
+              className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
+              placeholder="Omschrijving werkzaamheid..."
+              autoFocus
+            />
+          </div>
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-0.5">
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={draft.optioneel} onChange={(e) => upd({ optioneel: e.target.checked })} />
+              optioneel
+            </label>
+            {draft.soort === "materiaal" && ouderOpties.length > 0 && (
+              <label className="flex items-center gap-1">
+                onder:
+                <select
+                  value={draft.ouder_regel_id ?? ""}
+                  onChange={(e) => upd({ ouder_regel_id: e.target.value ? Number(e.target.value) : null })}
+                  className="border border-border/70 rounded px-1 py-0.5 max-w-[160px]"
+                >
+                  <option value="">— geen ouder —</option>
+                  {ouderOpties.map((o) => <option key={o.id} value={o.id}>{o.omschrijving.slice(0, 40)}</option>)}
+                </select>
+              </label>
+            )}
+            {draft.soort === "stelpost" && <span className="text-amber-700">stelpost — telt niet mee</span>}
+          </div>
         </div>
       </td>
 
@@ -1155,7 +1286,7 @@ function DirectieView({
   arbSubtotaal, arbOpslagBedrag, opslagArbeid,
   oaSubtotaal, bouwplaatsSubtotaal, staartSubtotaal,
   subtotaal, akBedrag, abkBedrag, risicoBedrag, basisWinst, winstBedrag,
-  kortingBedrag, totaal, marge,
+  kortingBedrag, totaal, marge, optioneelSubtotaal = 0,
   opslagAk, opslagAbk, opslagRisico, opslagWinst, korting,
   akIsVast, abkIsVast, risicoIsVast, winstIsVast,
 }: {
@@ -1165,11 +1296,13 @@ function DirectieView({
   oaSubtotaal: number; bouwplaatsSubtotaal: number; staartSubtotaal: number;
   subtotaal: number; akBedrag: number; abkBedrag: number; risicoBedrag: number;
   basisWinst: number; winstBedrag: number; kortingBedrag: number; totaal: number; marge: number;
+  optioneelSubtotaal?: number;
   opslagAk: number; opslagAbk: number; opslagRisico: number; opslagWinst: number; korting: number;
   akIsVast: boolean; abkIsVast: boolean; risicoIsVast: boolean; winstIsVast: boolean;
 }) {
+  // ADVIES_01 §6: alleen meetellende, niet-optionele regels in de kostprijssom.
   const groepenPerCat = Object.entries(CATEGORIE_LABEL)
-    .map(([cat, label]) => ({ cat, label, regels: directeRegels.filter((r) => r.categorie === cat) }))
+    .map(([cat, label]) => ({ cat, label, regels: directeRegels.filter((r) => r.categorie === cat && teltMeeRegel(r) && !r.optioneel) }))
     .filter((g) => g.regels.length > 0);
 
   return (
@@ -1272,6 +1405,18 @@ function DirectieView({
             <td colSpan={4} />
             <td className="py-3 pl-4 text-right tabular-nums text-primary">{formatBedrag(totaal)}</td>
           </tr>
+          {optioneelSubtotaal > 0 && (
+            <tr className="text-blue-700 border-t">
+              <td className="py-2 pl-3">
+                <span className="inline-flex items-center gap-1.5">
+                  <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700">optioneel</Badge>
+                  Optioneel (niet in aanneemsom)
+                </span>
+              </td>
+              <td colSpan={4} />
+              <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(optioneelSubtotaal)}</td>
+            </tr>
+          )}
         </tbody>
       </table>
       <div className="flex justify-end">
@@ -1286,8 +1431,17 @@ function DirectieView({
 
 // ─── Klant view ──────────────────────────────────────────────────────────────
 
-function KlantView({ regels, totaal, totaalBtw }: { regels: RegelRow[]; totaal: number; totaalBtw: number }) {
-  const zichtbaar = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten);
+function KlantView({ regels, totaal, totaalBtw, optioneelTotaal = 0 }: { regels: RegelRow[]; totaal: number; totaalBtw: number; optioneelTotaal?: number }) {
+  // ADVIES_01 §6: tekst/stelpost/kop tellen niet mee in het aangeboden bedrag;
+  // optioneel telt niet mee maar wordt apart getoond.
+  const zichtbaar = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten && !r.optioneel);
+  const optioneleRegels = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten && r.optioneel);
+  const aangeboden = zichtbaar.filter((r) => teltMeeRegel(r)).reduce((s, r) => s + r.totaal, 0);
+  const bedragCel = (r: RegelRow) => {
+    if (r.soort === "tekst" || r.soort === "kop") return <span className="text-muted-foreground/40">—</span>;
+    if (r.soort === "stelpost") return <span className="tabular-nums">{formatBedrag(r.totaal)} <span className="text-[10px] text-amber-700">stelpost</span></span>;
+    return <span className="tabular-nums font-medium">{formatBedrag(r.totaal)}</span>;
+  };
   return (
     <div>
       <table className="w-full text-sm">
@@ -1300,27 +1454,37 @@ function KlantView({ regels, totaal, totaalBtw }: { regels: RegelRow[]; totaal: 
           </tr>
         </thead>
         <tbody className="divide-y">
-          {zichtbaar.map((r) => (
-            <tr key={r.id} className="hover:bg-muted/40">
-              <td className="px-6 py-2.5">
-                <p className="font-medium text-foreground">{r.klanttekst || r.omschrijving}</p>
-                {r.regelnummer && <p className="text-xs text-muted-foreground">{r.regelnummer}</p>}
-              </td>
-              <td className="px-3 py-2.5 text-center text-muted-foreground">{r.eenheid}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{r.hoeveelheid}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
-            </tr>
-          ))}
+          {zichtbaar.map((r) => {
+            if (r.soort === "kop") {
+              return (
+                <tr key={r.id} className="bg-muted/30">
+                  <td colSpan={4} className="px-6 py-2 font-bold uppercase tracking-wide text-xs text-foreground">{r.klanttekst || r.omschrijving}</td>
+                </tr>
+              );
+            }
+            const tekstRegel = r.soort === "tekst";
+            return (
+              <tr key={r.id} className="hover:bg-muted/40">
+                <td className="px-6 py-2.5">
+                  <p className={cn("font-medium text-foreground", tekstRegel && "italic font-normal text-muted-foreground")}>{r.klanttekst || r.omschrijving}</p>
+                  {r.regelnummer && <p className="text-xs text-muted-foreground">{r.regelnummer}</p>}
+                </td>
+                <td className="px-3 py-2.5 text-center text-muted-foreground">{tekstRegel ? "" : r.eenheid}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{tekstRegel ? "" : r.hoeveelheid}</td>
+                <td className="px-3 py-2.5 text-right">{bedragCel(r)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <div className="border-t px-6 py-4 space-y-1.5 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>Subtotaal werkzaamheden</span>
-          <span className="tabular-nums">{formatBedrag(zichtbaar.reduce((s, r) => s + r.totaal, 0))}</span>
+          <span className="tabular-nums">{formatBedrag(aangeboden)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
           <span>Opslagen en beheerkosten</span>
-          <span className="tabular-nums">{formatBedrag(totaal - zichtbaar.reduce((s, r) => s + r.totaal, 0))}</span>
+          <span className="tabular-nums">{formatBedrag(totaal - aangeboden)}</span>
         </div>
         <Separator className="my-1" />
         <div className="flex justify-between font-semibold">
@@ -1336,6 +1500,28 @@ function KlantView({ regels, totaal, totaalBtw }: { regels: RegelRow[]; totaal: 
           <span className="tabular-nums">{formatBedrag(totaalBtw)}</span>
         </div>
       </div>
+      {optioneleRegels.length > 0 && (
+        <div className="border-t px-6 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Optioneel — apart aangeboden, telt niet mee in bovenstaand totaal</p>
+          <table className="w-full text-sm">
+            <tbody className="divide-y">
+              {optioneleRegels.map((r) => (
+                <tr key={r.id} className="hover:bg-muted/40">
+                  <td className="py-2 pr-3">
+                    <span className="font-medium text-foreground">{r.klanttekst || r.omschrijving}</span>
+                    <Badge variant="outline" className="ml-2 text-[10px]">optioneel</Badge>
+                  </td>
+                  <td className="py-2 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
+                </tr>
+              ))}
+              <tr className="border-t font-semibold">
+                <td className="py-2">Optioneel subtotaal</td>
+                <td className="py-2 text-right tabular-nums">{formatBedrag(optioneelTotaal || optioneleRegels.filter(teltMeeRegel).reduce((s, r) => s + r.totaal, 0))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -2016,6 +2202,23 @@ export default function ModulesCalculatieDetail() {
   const [, navigate] = useLocation();
   const id = params?.id ? parseInt(params.id, 10) : 0;
 
+  // ADVIES_01 §4.1: open het inleespaneel automatisch als de pagina met
+  // ?adviesrapport=<document_id> geopend wordt (vanuit Slim Upload / index).
+  const [adviesDocumentId, setAdviesDocumentId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("adviesrapport");
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
+  });
+  const ruimAdviesParamOp = useCallback(() => {
+    setAdviesDocumentId(null);
+    if (typeof window !== "undefined" && window.location.search.includes("adviesrapport")) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("adviesrapport");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const invalidate = useCallback(() => {
@@ -2037,6 +2240,13 @@ export default function ModulesCalculatieDetail() {
     { query: { queryKey: ["enk-bronbestanden-calc", id], enabled: id > 0 } },
   );
   const bronbestand = bronbestanden[0];
+  // ADVIES_01 §4.5: gekoppelde adviesrapporten (bronrapporten) klikbaar tonen.
+  const gekoppeldeDocParams = { doel_type: "calculatie" as const, doel_id: id };
+  const { data: gekoppeldeDocumenten = [] } = useListGekoppeldeDocumenten(gekoppeldeDocParams, {
+    query: { queryKey: getListGekoppeldeDocumentenQueryKey(gekoppeldeDocParams), enabled: id > 0 },
+  });
+  const adviesBronnen = (Array.isArray(gekoppeldeDocumenten) ? gekoppeldeDocumenten : [])
+    .filter((d: any) => d?.ai_metadata?.categorie === "adviesrapport");
   const maakEenheidMut    = useCreateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const updateEenheidMut  = useUpdateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const verwijderEenheidMut = useDeleteModCalcEenheid({ mutation: { onSuccess: invalidate } });
@@ -2317,15 +2527,23 @@ export default function ModulesCalculatieDetail() {
   }
 
   const regels: RegelRow[] = (data.regels ?? []) as RegelRow[];
+  // ADVIES_01 §6: tekst/stelpost/kop tellen NOOIT mee; optioneel telt niet mee in
+  // het aangeboden totaal maar wordt apart gesommeerd. Alle weergave-groepen tonen
+  // alle regels; alleen de bedrag-sommeringen filteren op meetellende regels.
   const directeRegels    = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
   const bouwplaatsRegels = regels.filter((r) => r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
   const staartRegels     = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
 
-  const matSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
-  const arbSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.arbeidsloon, 0));
-  const oaSubtotaal         = rnd(directeRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
-  const bouwplaatsSubtotaal = rnd(bouwplaatsRegels.reduce((s, r) => s + r.totaal, 0));
-  const staartSubtotaal     = rnd(staartRegels.reduce((s, r) => s + r.totaal, 0));
+  const directeMeetellend    = directeRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
+  const bouwplaatsMeetellend = bouwplaatsRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
+  const staartMeetellend     = staartRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
+  const optioneelSubtotaal   = rnd(regels.filter((r) => teltMeeRegel(r) && r.optioneel).reduce((s, r) => s + r.totaal, 0));
+
+  const matSubtotaal        = rnd(directeMeetellend.reduce((s, r) => s + r.materiaal_totaal, 0));
+  const arbSubtotaal        = rnd(directeMeetellend.reduce((s, r) => s + r.arbeidsloon, 0));
+  const oaSubtotaal         = rnd(directeMeetellend.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
+  const bouwplaatsSubtotaal = rnd(bouwplaatsMeetellend.reduce((s, r) => s + r.totaal, 0));
+  const staartSubtotaal     = rnd(staartMeetellend.reduce((s, r) => s + r.totaal, 0));
   const opslagMateriaal     = data.opslag_materiaal ?? 0;
   const opslagArbeid        = data.opslag_arbeid ?? 0;
   const opslagAk            = data.opslag_ak;
@@ -2526,6 +2744,14 @@ export default function ModulesCalculatieDetail() {
               <span className="font-medium">{(data as any).opname_naam}</span>
             </div>
           )}
+          {adviesBronnen.map((doc: any) => (
+            <div key={doc.id} className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Bron: adviesrapport</span>
+              <Link href={`/documenten/${doc.id}`} className="font-medium text-blue-600 hover:underline" title="Open het adviesrapport in de bibliotheek">
+                {doc.naam}
+              </Link>
+            </div>
+          ))}
           {bronbestand && (
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Geïmporteerd uit:</span>
@@ -2676,6 +2902,7 @@ export default function ModulesCalculatieDetail() {
                                   bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                                   toonOnderaanneming={toonOnderaanneming}
                                   tarieven={[]}
+                                  ouderOpties={ouderOptiesVoor(hRegels, r.id)}
                                 />
                               ))}
                             </React.Fragment>
@@ -2700,6 +2927,7 @@ export default function ModulesCalculatieDetail() {
                                   bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                                   toonOnderaanneming={toonOnderaanneming}
                                   tarieven={[]}
+                                  ouderOpties={ouderOptiesVoor(overigeRegels, r.id)}
                                 />
                               ))}
                             </>
@@ -2730,6 +2958,7 @@ export default function ModulesCalculatieDetail() {
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
+                          ouderOpties={ouderOptiesVoor(hRegels, r.id)}
                         />
                       ))}
                     </React.Fragment>
@@ -2762,6 +2991,7 @@ export default function ModulesCalculatieDetail() {
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
+                          ouderOpties={ouderOptiesVoor(directeRegels, r.id)}
                         />
                       ))}
                     </>
@@ -2788,6 +3018,7 @@ export default function ModulesCalculatieDetail() {
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
+                          ouderOpties={ouderOptiesVoor(bouwplaatsRegels, r.id)}
                         />
                       ))}
                     </>
@@ -2814,6 +3045,7 @@ export default function ModulesCalculatieDetail() {
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
+                          ouderOpties={ouderOptiesVoor(staartRegels, r.id)}
                         />
                       ))}
                     </>
@@ -2829,6 +3061,7 @@ export default function ModulesCalculatieDetail() {
                       bezig={createRegelMut.isPending}
                       toonOnderaanneming={toonOnderaanneming}
                       tarieven={[]}
+                      ouderOpties={ouderOptiesVoor(directeRegels, -1)}
                     />
                   )}
 
@@ -2888,6 +3121,7 @@ export default function ModulesCalculatieDetail() {
                     kortingBedrag={kortingBedrag}
                     totaal={totaal}
                     marge={marge}
+                    optioneelSubtotaal={optioneelSubtotaal}
                     opslagAk={opslagAk}
                     opslagAbk={opslagAbk}
                     opslagRisico={opslagRisico}
@@ -2902,7 +3136,7 @@ export default function ModulesCalculatieDetail() {
               )}
             </div>
           ) : weergave === "klant" ? (
-            <KlantView regels={regels} totaal={totaal} totaalBtw={totaalBtw} />
+            <KlantView regels={regels} totaal={totaal} totaalBtw={totaalBtw} optioneelTotaal={optioneelSubtotaal} />
           ) : (
             <MonteurView regels={regels} />
           )}
@@ -2988,6 +3222,13 @@ export default function ModulesCalculatieDetail() {
             )}
             {/* CALC_INVOER_01 — plakken van leverancier */}
             <PlakInvoer calculatieId={id} onOvergenomen={invalidate} />
+            {/* ADVIES_01 — adviesrapport uitlezen en per punt inrichten */}
+            <AdviesInrichten
+              calculatieId={id}
+              openDocumentId={adviesDocumentId}
+              onAfgehandeld={ruimAdviesParamOp}
+              onOvergenomen={invalidate}
+            />
           </div>
 
           {/* Kostopbouw */}
@@ -3083,6 +3324,15 @@ export default function ModulesCalculatieDetail() {
               <span>Totaal incl. BTW</span>
               <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
             </div>
+            {optioneelSubtotaal > 0 && (
+              <div className="flex justify-between items-center text-xs pt-1 border-t">
+                <span className="flex items-center gap-1.5 text-blue-700">
+                  <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700">optioneel</Badge>
+                  Niet in aanneemsom
+                </span>
+                <span className="tabular-nums font-medium text-blue-700">{formatBedrag(optioneelSubtotaal)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
               <span>Marge</span>
               <span>{marge}%</span>

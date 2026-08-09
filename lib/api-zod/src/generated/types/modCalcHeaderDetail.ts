@@ -8,6 +8,8 @@
 import type { ModCalcHeader } from './modCalcHeader';
 import type { ModCalcRegel } from './modCalcRegel';
 
-export type ModCalcHeaderDetail = ModCalcHeader & {
+export type ModCalcHeaderDetail = ModCalcHeader & ({
+  /** ADVIES_01: som van optionele meetellende regels (telt niet mee in totaal_na_opslagen). */
+  optioneel_totaal?: number | null;
   regels?: ModCalcRegel[];
-};
+});

@@ -2943,7 +2943,10 @@ KOLOM|mod_calc_regels|normtijd_id|integer|YES|
 KOLOM|mod_calc_regels|omschrijving|text|NO|
 KOLOM|mod_calc_regels|onderaanneming_bedrag|real|NO|0
 KOLOM|mod_calc_regels|opmerkingen|text|YES|
+KOLOM|mod_calc_regels|optioneel|boolean|NO|false
+KOLOM|mod_calc_regels|ouder_regel_id|integer|YES|
 KOLOM|mod_calc_regels|regelnummer|text|YES|
+KOLOM|mod_calc_regels|soort|text|NO|'regel'::text
 KOLOM|mod_calc_regels|tarief|real|NO|0
 KOLOM|mod_calc_regels|toepassing_tekst|text|YES|
 KOLOM|mod_calc_regels|totaal|real|NO|0

@@ -26,6 +26,8 @@ import {
   offerteRegelsTable,
   prijsafsprakenTable,
   leveranciersTable,
+  documentenTable,
+  documentKoppelingenTable,
 } from "@workspace/db";
 import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
@@ -33,8 +35,11 @@ import multer from "multer";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
-import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT, CALCULATIE_PLAK_HERKEN_PROMPT, CALCULATIE_PLAK_KOPPEL_PROMPT } from "../lib/aiPrompts";
+import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT, CALCULATIE_PLAK_HERKEN_PROMPT, CALCULATIE_PLAK_KOPPEL_PROMPT, CALCULATIE_ADVIES_PUNTEN_PROMPT, CALCULATIE_ADVIES_KOPPEL_PROMPT } from "../lib/aiPrompts";
 import { haalPlakInvoerBeeld } from "../lib/documentIntelligence";
+import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { renderPdfPaginas, resizeAfbeelding } from "../lib/pdfVisie";
+import { ObjectStorageService } from "../lib/objectStorage";
 import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
 import { kenmerkVoorModCalc } from "../lib/kenmerk";
 import { vindGeldigeAfspraak } from "../services/prijsAfspraken";
@@ -104,7 +109,17 @@ type RegelCalcInput = {
   isStaartkosten: boolean;
   isBouwplaatskosten: boolean;
   totaal: number;
+  // ADVIES_01 §6: soort/optioneel bepalen of een regel meetelt.
+  soort?: string;
+  optioneel?: boolean;
 };
+
+// ADVIES_01 §3/§6: alleen 'regel' en 'materiaal' tellen mee in het totaal.
+// tekst/kop tellen nooit mee; stelpost is zichtbaar met bedrag maar telt niet mee.
+const MEETELLENDE_SOORTEN = new Set(["regel", "materiaal"]);
+function teltMee(r: { soort?: string | null }): boolean {
+  return MEETELLENDE_SOORTEN.has(r.soort ?? "regel");
+}
 
 export function berekenTotalen(
   regels: RegelCalcInput[],
@@ -124,9 +139,15 @@ export function berekenTotalen(
 ) {
   const rnd = (n: number) => Math.round(n * 100) / 100;
 
-  const directe    = regels.filter(r => !r.isStaartkosten && !r.isBouwplaatskosten);
-  const bouwplaats = regels.filter(r => r.isBouwplaatskosten);
-  const staart     = regels.filter(r => r.isStaartkosten);
+  // ADVIES_01 §6: tekst/stelpost/kop tellen NOOIT mee. Alleen regel/materiaal.
+  // optioneel=true telt niet mee in het aangeboden totaal, maar wordt apart gesommeerd.
+  const meetellend = regels.filter(r => teltMee(r) && !r.optioneel);
+  const optioneleRegels = regels.filter(r => teltMee(r) && r.optioneel);
+  const optioneelTotaal = rnd(optioneleRegels.reduce((s, r) => s + (r.totaal ?? 0), 0));
+
+  const directe    = meetellend.filter(r => !r.isStaartkosten && !r.isBouwplaatskosten);
+  const bouwplaats = meetellend.filter(r => r.isBouwplaatskosten);
+  const staart     = meetellend.filter(r => r.isStaartkosten);
 
   const matSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.tarief, 0));
   const arbSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.muPerEenheid * r.arbeidsTarief, 0));
@@ -155,6 +176,7 @@ export function berekenTotalen(
   return {
     subtotaal,
     totaal_na_opslagen: rnd(aanneemsom - kortingBedrag),
+    optioneel_totaal: optioneelTotaal,
   };
 }
 
@@ -239,6 +261,9 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
     klanttekst: (r as any).klanttekst ?? null,
     btw_tarief: (r as any).btwTarief ?? "21",
+    soort: (r as any).soort ?? "regel",
+    optioneel: (r as any).optioneel ?? false,
+    ouder_regel_id: (r as any).ouderRegelId ?? null,
     materiaal_totaal: materiaalTotaal,
     mu_totaal: muTotaal,
     arbeidsloon,
@@ -248,8 +273,24 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
 }
 
 function berekenRegelTotaal(body: Record<string, unknown>, existing?: {
-  hoeveelheid: number; tarief: number; muPerEenheid?: number; arbeidsTarief?: number; onderaannemingBedrag?: number;
+  hoeveelheid: number; tarief: number; muPerEenheid?: number; arbeidsTarief?: number; onderaannemingBedrag?: number; soort?: string | null;
 }) {
+  // ADVIES_01 §6: soort bepaalt hoe de regel gerekend wordt.
+  const soort = body.soort !== undefined ? String(body.soort) : (existing?.soort ?? "regel");
+
+  // tekst/kop: geen bedragen. Totaal 0, materiaal/mu/arbeid leeg.
+  if (soort === "tekst" || soort === "kop") {
+    return { hv: 0, t: 0, mu: 0, at: 0, ob: 0, totaal: 0 };
+  }
+
+  // stelpost: het bedrag wordt WEL opgeslagen in tarief/totaal van de regel zelf,
+  // maar telt niet mee in het calculatietotaal (gefilterd in berekenTotalen).
+  if (soort === "stelpost") {
+    const t = body.tarief !== undefined ? Number(body.tarief) : (existing?.tarief ?? 0);
+    const totaal = Math.round(t * 100) / 100;
+    return { hv: 1, t, mu: 0, at: 0, ob: 0, totaal };
+  }
+
   const hv = body.hoeveelheid !== undefined ? Number(body.hoeveelheid) : (existing?.hoeveelheid ?? 0);
   const t  = body.tarief !== undefined ? Number(body.tarief) : (existing?.tarief ?? 0);
   const mu = body.mu_per_eenheid !== undefined ? Number(body.mu_per_eenheid) : ((existing as any)?.muPerEenheid ?? 0);
@@ -448,6 +489,8 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
       onderaannemingBedrag: modCalcRegelsTable.onderaannemingBedrag,
       isStaartkosten: modCalcRegelsTable.isStaartkosten,
       isBouwplaatskosten: modCalcRegelsTable.isBouwplaatskosten,
+      soort: modCalcRegelsTable.soort,
+      optioneel: modCalcRegelsTable.optioneel,
     }).from(modCalcRegelsTable);
 
     const regelsByCalc = new Map<number, RegelCalcInput[]>();
@@ -462,6 +505,8 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
         isStaartkosten: r.isStaartkosten,
         isBouwplaatskosten: r.isBouwplaatskosten,
         totaal: r.totaal,
+        soort: r.soort,
+        optioneel: r.optioneel,
       });
     }
 
@@ -881,8 +926,10 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void
       isStaartkosten: r.isStaartkosten,
       isBouwplaatskosten: r.isBouwplaatskosten,
       totaal: r.totaal,
+      soort: r.soort,
+      optioneel: r.optioneel,
     }));
-    const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
+    const { subtotaal, totaal_na_opslagen, optioneel_totaal } = berekenTotalen(calcRegels, {
       opslagMateriaal: headerRow.header.opslagMateriaal ?? 0,
       opslagArbeid: headerRow.header.opslagArbeid ?? 0,
       opslagAk: headerRow.header.opslagAk,
@@ -905,6 +952,7 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void
         totaalNaOpslagen: totaal_na_opslagen,
         kenmerk: await kenmerkVoorModCalc(headerRow.header.gebouwId, headerRow.header.nummer),
       }),
+      optioneel_totaal,
       regels,
     });
   } catch (e) {
@@ -1137,7 +1185,8 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res): 
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
       regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
       hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21",
-      wand_plafond, toepassing_tekst, eenheid_id } = body;
+      wand_plafond, toepassing_tekst, eenheid_id,
+      soort = "regel", optioneel = false, ouder_regel_id } = body;
     if (!omschrijving) return void res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
@@ -1165,6 +1214,9 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res): 
       btwTarief: String(btw_tarief),
       wandPlafond: wand_plafond ? String(wand_plafond) : null,
       toepassingTekst: toepassing_tekst ? String(toepassing_tekst) : null,
+      soort: String(soort),
+      optioneel: Boolean(optioneel),
+      ouderRegelId: ouder_regel_id ? Number(ouder_regel_id) : null,
     } as typeof modCalcRegelsTable.$inferInsert).returning();
 
     res.status(201).json(mapRegel(row));
@@ -1200,6 +1252,9 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     if (body.btw_tarief !== undefined) (update as any).btwTarief = String(body.btw_tarief);
     if (body.wand_plafond !== undefined) (update as any).wandPlafond = body.wand_plafond ? String(body.wand_plafond) : null;
     if (body.toepassing_tekst !== undefined) (update as any).toepassingTekst = body.toepassing_tekst ? String(body.toepassing_tekst) : null;
+    if (body.soort !== undefined) (update as any).soort = String(body.soort);
+    if (body.optioneel !== undefined) (update as any).optioneel = Boolean(body.optioneel);
+    if (body.ouder_regel_id !== undefined) (update as any).ouderRegelId = body.ouder_regel_id ? Number(body.ouder_regel_id) : null;
     update.hoeveelheid = hv;
     update.tarief = t;
     (update as any).muPerEenheid = mu;
@@ -1393,10 +1448,17 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
     if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
-    const regels = await db.select().from(modCalcRegelsTable)
+    const alleRegels = await db.select().from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, id))
       .orderBy(asc(modCalcRegelsTable.volgorde));
 
+    // ADVIES_01 §6: tekst/stelpost/kop gaan niet als begrotingsregel naar de offerte.
+    // optioneel=true gaat wél mee, maar als apart optioneel blok (is_optioneel).
+    const meetellendeRegels = alleRegels.filter((r) => teltMee(r));
+    const regels = meetellendeRegels.filter((r) => !r.optioneel);
+    const optioneleRegels = meetellendeRegels.filter((r) => r.optioneel);
+
+    // Alleen de aangeboden (niet-optionele) regels bepalen het offertetotaal en de opslagen.
     const subtotaal = regels.reduce((s, r) => s + (r.totaal ?? 0), 0);
     const opslagAbk = (header as any).opslagAbk ?? 10;
     const akBedrag     = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
@@ -1448,6 +1510,23 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
       );
     }
 
+    // Optionele regels als apart optioneel blok naar de offerte (zoals de Cityflat-optie).
+    if (optioneleRegels.length > 0) {
+      await db.insert(offerteRegelsTable).values(
+        optioneleRegels.map((r, i) => ({
+          offerteId: offerte.id,
+          categorie: "maatregel",
+          maatregel: r.omschrijving,
+          eenheid: r.eenheid || "st",
+          aantal: r.hoeveelheid,
+          prijsPerEenheid: r.hoeveelheid > 0 ? Math.round((r.totaal / r.hoeveelheid) * 100) / 100 : r.totaal,
+          kosten: r.totaal,
+          isOptioneel: true,
+          volgorde: regels.length + i + 1,
+        }))
+      );
+    }
+
     const opslagen = [
       { label: `Algemene kosten (${header.opslagAk}%)`, bedrag: akBedrag },
       { label: `Algemene bedrijfskosten (${opslagAbk}%)`, bedrag: abkBedrag },
@@ -1466,7 +1545,7 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
         aantal: 1,
         prijsPerEenheid: o.bedrag,
         kosten: o.bedrag,
-        volgorde: regels.length + i + 1,
+        volgorde: regels.length + optioneleRegels.length + i + 1,
       }))
     );
 
@@ -1590,8 +1669,13 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       gebouwNaam = g?.naam ?? null;
     }
 
-    const subtotaal = regels.filter((r) => !r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
-    const staarttotaal = regels.filter((r) => r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
+    // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart gesommeerd.
+    const meetellend = regels.filter((r) => teltMee(r) && !r.optioneel);
+    const optioneelTotaal = Math.round(
+      regels.filter((r) => teltMee(r) && r.optioneel).reduce((s, r) => s + (r.totaal ?? 0), 0) * 100
+    ) / 100;
+    const subtotaal = meetellend.filter((r) => !r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
+    const staarttotaal = meetellend.filter((r) => r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
     const opslagAbk = header.opslagAbk ?? 10;
     const akBedrag = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
     const abkBedrag = Math.round(subtotaal * (opslagAbk / 100) * 100) / 100;
@@ -1618,12 +1702,15 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
         onderaanneming_bedrag: r.onderaannemingBedrag, totaal: r.totaal,
         is_staartkosten: r.isStaartkosten, hoofdstuk: r.hoofdstuk,
         regelnummer: r.regelnummer,
+        soort: r.soort ?? "regel", optioneel: r.optioneel ?? false,
+        ouder_regel_id: r.ouderRegelId ?? null,
       })),
       totalen: {
         subtotaal, staarttotaal, ak_bedrag: akBedrag, abk_bedrag: abkBedrag,
         risico_bedrag: risicoBedrag, winst_bedrag: winstBedrag,
         korting_bedrag: kortingBedrag, eindtotaal,
         excl_btw: eindtotaal, incl_btw: Math.round(eindtotaal * 1.21 * 100) / 100,
+        optioneel_totaal: optioneelTotaal,
       },
     });
   } catch (e) {
@@ -2730,6 +2817,600 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
   }
 });
 
+// ── ADVIES_01 §4.2/§4.3 — adviesrapport uitlezen en een calculatie inrichten ──
+// Leest het aan de calculatie te koppelen adviesrapport (uit de bibliotheek, via
+// object storage), haalt ELK genummerd punt eruit (stap 1) en stelt per punt een
+// soortvoorstel + koppeling voor (stap 2). Verzint NOOIT bedragen/uren/hoeveelheden
+// (§6); prijzen/uren komen uitsluitend uit eigen tabellen. Slaat NIETS op als
+// calculatieregel — de calculator bevestigt per punt in de UI. Autorisatie:
+// schrijvenCalc (§4.5 review): de route heeft schrijf-side-effects (analyse-log in
+// calc_plak_analyses + documentkoppeling), dus niveau ≥2 op calculaties. Daarnaast
+// wordt vóór het lezen gecontroleerd dat (b) het document ai-categorie
+// 'adviesrapport' heeft, en (c) de gebruiker het document via de bibliotheek-
+// leesautorisatie mag inzien — hergebruikt de eis van GET /documenten/:id/download
+// (requireBevoegdheid("bibliotheek", 1)).
+const adviesObjectStorage = new ObjectStorageService();
+
+router.post("/modules/calculaties/:id/adviesrapport-analyse", schrijvenCalc, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI is niet beschikbaar in deze omgeving." });
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const documentId = body.document_id !== undefined && body.document_id !== "" ? Number(body.document_id) : NaN;
+    if (!Number.isInteger(documentId) || documentId <= 0) {
+      return void res.status(400).json({ error: "document_id is verplicht" });
+    }
+
+    // (c) Documentleesautorisatie afdwingen vóór er ook maar iets van het document
+    // wordt gelezen — zelfde eis als GET /documenten/:id/download
+    // (requireBevoegdheid("bibliotheek", 1)). laadPermissies vult req.permissies
+    // globaal (routes/index.ts); hoofdbeheerder mag altijd, klant nooit.
+    const magBibliotheekLezen =
+      req.permissies?.isHoofdbeheerder === true ||
+      (req.permissies?.isKlant !== true && req.permissies?.heeftModuleRecht("bibliotheek", 1) === true);
+    if (!magBibliotheekLezen) {
+      return void res.status(403).json({ error: "Geen leestoegang tot de documentbibliotheek." });
+    }
+
+    const [doc] = await db.select().from(documentenTable).where(eq(documentenTable.id, documentId));
+    if (!doc || !doc.pdfUrl) {
+      return void res.status(404).json({ error: "Adviesrapport niet gevonden" });
+    }
+
+    // (b) Alleen documenten met ai-categorie 'adviesrapport' mogen hier ingelezen
+    // worden. Slim Upload zet de categorie in ai_metadata.categorie (documenttype
+    // valt terug op 'overig'). Anders 422 met nette uitleg — geen blind inlezen.
+    const aiCategorie =
+      doc.aiMetadata && typeof doc.aiMetadata === "object"
+        ? (doc.aiMetadata as Record<string, unknown>).categorie
+        : undefined;
+    if (aiCategorie !== "adviesrapport") {
+      return void res.status(422).json({
+        error:
+          "Dit document is geen adviesrapport. Lever het aan via Slim Upload met categorie 'Adviesrapport' voordat je het als bron voor de calculatie gebruikt.",
+      });
+    }
+
+    // ── a. Bestand uit object storage lezen → tekst + eventueel vision-beeld ──
+    let bestandBuffer: Buffer;
+    try {
+      const file = await adviesObjectStorage.getObjectEntityFile(doc.pdfUrl);
+      const stream = file.createReadStream();
+      bestandBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        stream.on("data", (chunk: unknown) =>
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as ArrayBufferLike)),
+        );
+        stream.on("end", () => resolve(Buffer.concat(chunks)));
+        stream.on("error", (err: Error) => reject(err));
+      });
+    } catch (err) {
+      req.log.error({ err, documentId }, "Adviesrapport kon niet uit opslag gelezen worden");
+      return void res.status(503).json({ error: "Het adviesrapport kon niet uit de opslag gelezen worden. Probeer het later opnieuw." });
+    }
+
+    const magic = detecteerBestandssoort(bestandBuffer);
+    const isPdf = magic === "application/pdf";
+    const isImage = magic === "image/jpeg" || magic === "image/png" || magic === "image/webp";
+
+    let rapportTekst: string | null = null;
+    let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+    if (isPdf) {
+      const extractie = await extraheerPdfTekst(bestandBuffer);
+      rapportTekst = extractie.tekst && extractie.tekst.trim().length > 80 ? extractie.tekst : null;
+      // Ook zonder machineleesbare tekst (gescand rapport) proberen we de eerste
+      // pagina's te renderen voor vision (max 5, DOCUMENT_01 §3.5).
+      if (!rapportTekst) {
+        try {
+          const aantal = Math.min(Math.max(extractie.paginaAantal ?? 3, 1), 5);
+          afbeeldingen = await renderPdfPaginas(bestandBuffer, Array.from({ length: aantal }, (_, i) => i + 1));
+        } catch (err) {
+          req.log.warn({ err, documentId }, "Adviesrapport PDF-rendering mislukt");
+        }
+      }
+    } else if (isImage) {
+      const base64 = await resizeAfbeelding(bestandBuffer);
+      if (base64) afbeeldingen = [{ paginaNummer: 1, base64 }];
+    }
+
+    if (!rapportTekst && afbeeldingen.length === 0) {
+      return void res.status(422).json({ error: "Het adviesrapport kon niet gelezen worden (geen tekst en geen render mogelijk)." });
+    }
+
+    // ── b. STAP 1 — alle genummerde punten uitlezen ─────────────────────────
+    // Bron-aftopping expliciet melden (geen stille aftopping): tekst >24.000
+    // tekens of >5 gerenderde pagina's betekent dat het gelezen deel korter is
+    // dan het volledige rapport. We geven dat mee als waarschuwing in de respons.
+    const MAX_TEKST_TEKENS = 24000;
+    const MAX_VISION_PAGINAS = 5;
+    let bronAfgekaptWaarschuwing: string | null = null;
+    if (rapportTekst && rapportTekst.length > MAX_TEKST_TEKENS) {
+      bronAfgekaptWaarschuwing =
+        "Rapport langer dan gelezen deel: controleer punten na de eerste 24.000 tekens.";
+    } else if (!rapportTekst && afbeeldingen.length >= MAX_VISION_PAGINAS) {
+      bronAfgekaptWaarschuwing =
+        "Rapport langer dan gelezen deel: controleer punten na pagina 5.";
+    }
+
+    type PuntBlock =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string; detail: "high" } };
+    const puntTekstBlok = rapportTekst
+      ? `Adviesrapport (tekst):\n${rapportTekst.slice(0, MAX_TEKST_TEKENS)}`
+      : "Adviesrapport bijgevoegd als gerenderde pagina's (afbeeldingen).";
+    const puntContent: PuntBlock[] = [{ type: "text", text: puntTekstBlok }];
+    for (const afb of afbeeldingen) {
+      puntContent.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "high" } });
+    }
+
+    const puntSlot = afbeeldingen.length > 0 ? "vision" : "default";
+    const puntResultaat = await aiGateway.chat(
+      puntSlot,
+      {
+        response_format: { type: "json_object" },
+        max_tokens: 4000,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: "system", content: CALCULATIE_ADVIES_PUNTEN_PROMPT.tekst }, { role: "user", content: puntContent } as any],
+      },
+      undefined,
+      { module: "calculaties", functie: "advies_punten" },
+    );
+
+    if (!puntResultaat.ok || !puntResultaat.inhoud) {
+      return void res.status(502).json({ error: "AI-uitlezing van het adviesrapport mislukt", detail: puntResultaat.ok ? "leeg antwoord" : puntResultaat.fout });
+    }
+
+    type AdviesPunt = {
+      nummer: string;
+      tekortkoming: string;
+      geadviseerd_herstel: string | null;
+      locatie: string | null;
+      hoofdstuk: string | null;
+    };
+    let punten: AdviesPunt[] = [];
+    let puntenAantalGemeld = 0;
+    try {
+      const parsed = JSON.parse(puntResultaat.inhoud) as Record<string, unknown>;
+      puntenAantalGemeld = typeof parsed.punten_aantal === "number" ? parsed.punten_aantal : 0;
+      const arr = Array.isArray(parsed.punten) ? (parsed.punten as unknown[]) : [];
+      punten = arr
+        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+        .map((p, i) => ({
+          nummer: typeof p.nummer === "string" && p.nummer.trim() ? p.nummer.trim() : String(i + 1),
+          tekortkoming: typeof p.tekortkoming === "string" ? p.tekortkoming.trim() : "",
+          geadviseerd_herstel: typeof p.geadviseerd_herstel === "string" && p.geadviseerd_herstel.trim() ? p.geadviseerd_herstel.trim() : null,
+          locatie: typeof p.locatie === "string" && p.locatie.trim() ? p.locatie.trim() : null,
+          hoofdstuk: typeof p.hoofdstuk === "string" && p.hoofdstuk.trim() ? p.hoofdstuk.trim() : null,
+        }));
+    } catch {
+      return void res.status(502).json({ error: "AI-antwoord was geen geldige JSON" });
+    }
+
+    // §6: elk punt telt. Als het gemelde aantal afwijkt van het aantal objecten,
+    // is er stil weggelaten — we geven dat expliciet mee als waarschuwing i.p.v.
+    // het te verbergen. Het aantal punten dat we tonen = het aantal objecten.
+    const puntenAantal = Math.max(punten.length, puntenAantalGemeld);
+
+    if (punten.length === 0) {
+      return void res.json({
+        document_id: documentId,
+        document_naam: doc.naam,
+        punten_aantal: puntenAantalGemeld,
+        voorstellen: [],
+        koppelgraad: { werkzaamheden: 0, volledig: 0, alleen_artikel: 0, alleen_normtijd: 0, ongekoppeld: 0, geen_werkzaamheden: 0, niet_te_beoordelen: 0 },
+        waarschuwing: [bronAfgekaptWaarschuwing, "Er zijn geen genummerde punten herkend in het rapport."]
+          .filter(Boolean)
+          .join(" "),
+      });
+    }
+
+    // ── c. STAP 2 — per punt kandidaten zoeken (ILIKE op herstel/tekst) ──────
+    const alleNormtijden = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true));
+    const tarieven = await db.select().from(modCalcTarievenTable).where(eq(modCalcTarievenTable.actief, true));
+    const standaardArbeidstarief = tarieven.find((t) => t.categorie === "arbeid")?.tarief ?? null;
+
+    type Artikel = typeof modCalcArtekelenTable.$inferSelect & { leverancierNaam: string | null };
+    const artikelKandidatenPerPunt: Artikel[][] = [];
+    for (const punt of punten) {
+      // Zoektermen: uit het geadviseerde herstel en de tekortkoming, opgeknipt in
+      // zinvolle woorden (>= 4 tekens) zodat ILIKE iets kan matchen.
+      const bron = `${punt.geadviseerd_herstel ?? ""} ${punt.tekortkoming}`.toLowerCase();
+      const woorden = Array.from(new Set(bron.split(/[^a-zà-ÿ0-9]+/).filter((w) => w.length >= 4))).slice(0, 6);
+      let kandidaten: Artikel[] = [];
+      if (woorden.length > 0) {
+        const orFilters = woorden.flatMap((w) => [
+          ilike(modCalcArtekelenTable.omschrijving, `%${w}%`),
+          ilike(modCalcLeveranciersTable.naam, `%${w}%`),
+        ]);
+        const rows = await db
+          .select({
+            id: modCalcArtekelenTable.id, leverancierId: modCalcArtekelenTable.leverancierId,
+            artikelcode: modCalcArtekelenTable.artikelcode, omschrijving: modCalcArtekelenTable.omschrijving,
+            eenheid: modCalcArtekelenTable.eenheid, inkoopprijs: modCalcArtekelenTable.inkoopprijs,
+            verkoopprijs: modCalcArtekelenTable.verkoopprijs, categorie: modCalcArtekelenTable.categorie,
+            actief: modCalcArtekelenTable.actief, aangemaaktOp: modCalcArtekelenTable.aangemaaktOp,
+            bijgewerktOp: modCalcArtekelenTable.bijgewerktOp,
+            leverancierNaam: modCalcLeveranciersTable.naam,
+          })
+          .from(modCalcArtekelenTable)
+          .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
+          .where(and(eq(modCalcArtekelenTable.actief, true), or(...orFilters)))
+          .limit(30);
+        kandidaten = rows as Artikel[];
+      }
+      artikelKandidatenPerPunt.push(kandidaten);
+    }
+
+    // ── d. Tweede AI-aanroep: soortvoorstel + artikel/normtijd-id per punt ────
+    const koppelContext = punten.map((punt, i) => {
+      const arts = artikelKandidatenPerPunt[i]!;
+      const artLijst = arts.length > 0
+        ? arts.map((a) => `  - artikel_id ${a.id}: [${a.artikelcode ?? "geen code"}] ${a.omschrijving} (${a.eenheid})${a.leverancierNaam ? ` — leverancier: ${a.leverancierNaam}` : ""}`).join("\n")
+        : "  (geen kandidaat-artikelen)";
+      const ntLijst = alleNormtijden.length > 0
+        ? alleNormtijden.map((n) => `  - normtijd_id ${n.id}: [${n.code}] ${n.omschrijving} (${n.eenheid}, categorie ${n.categorie})`).join("\n")
+        : "  (geen normtijden beschikbaar)";
+      return `Punt ${i} (index ${i}) — nummer ${punt.nummer}${punt.hoofdstuk ? `; hoofdstuk: ${punt.hoofdstuk}` : ""}\nTekortkoming: ${punt.tekortkoming || "(niet vermeld)"}\nGeadviseerd herstel: ${punt.geadviseerd_herstel ?? "(niet vermeld)"}\nKANDIDAAT-ARTIKELEN:\n${artLijst}\nKANDIDAAT-NORMTIJDEN:\n${ntLijst}`;
+    }).join("\n\n");
+
+    const koppelResultaat = await aiGateway.chat(
+      "default",
+      {
+        response_format: { type: "json_object" },
+        max_tokens: 4000,
+        messages: [
+          { role: "system", content: CALCULATIE_ADVIES_KOPPEL_PROMPT.tekst },
+          { role: "user", content: koppelContext },
+        ],
+      },
+      undefined,
+      { module: "calculaties", functie: "advies_koppel" },
+    );
+
+    type SoortVoorstel = "werkzaamheden" | "geen_werkzaamheden" | "niet_te_beoordelen";
+    const keuzePerIndex = new Map<number, { soort: SoortVoorstel; artikelId: number | null; normtijdId: number | null; vraag: string | null }>();
+    if (koppelResultaat.ok && koppelResultaat.inhoud) {
+      try {
+        const parsed = JSON.parse(koppelResultaat.inhoud) as Record<string, unknown>;
+        const arr = Array.isArray(parsed.koppelingen) ? (parsed.koppelingen as unknown[]) : [];
+        for (const k of arr) {
+          if (typeof k !== "object" || k === null) continue;
+          const rec = k as Record<string, unknown>;
+          const idx = typeof rec.punt_index === "number" ? rec.punt_index : null;
+          if (idx === null) continue;
+          const soortRuw = typeof rec.soortvoorstel === "string" ? rec.soortvoorstel : "werkzaamheden";
+          const soort: SoortVoorstel = soortRuw === "geen_werkzaamheden" || soortRuw === "niet_te_beoordelen" ? soortRuw : "werkzaamheden";
+          keuzePerIndex.set(idx, {
+            soort,
+            artikelId: typeof rec.artikel_id === "number" ? rec.artikel_id : null,
+            normtijdId: typeof rec.normtijd_id === "number" ? rec.normtijd_id : null,
+            vraag: typeof rec.vraag === "string" && rec.vraag.trim() ? rec.vraag.trim() : null,
+          });
+        }
+      } catch {
+        // fail-closed: geen keuzes → alle punten "werkzaamheden" ongekoppeld
+      }
+    }
+
+    // ── e. Respons per punt opbouwen — fail-closed id-verificatie ────────────
+    const normtijdOpId = new Map(alleNormtijden.map((n) => [n.id, n] as const));
+
+    // Inkoop-herkomst (PRIJS_01 §5) voor gekozen artikelen.
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const gekozenArtikelIds = new Set<number>();
+    for (const [i] of punten.entries()) {
+      const keuze = keuzePerIndex.get(i);
+      if (keuze?.soort === "werkzaamheden" && keuze.artikelId != null) {
+        const art = artikelKandidatenPerPunt[i]!.find((a) => a.id === keuze.artikelId);
+        if (art) gekozenArtikelIds.add(art.id);
+      }
+    }
+    type ArtikelAfspraak = { afgesproken_prijs: number; leverancierId: number; afspraak_geldig_tot: string };
+    const afspraakPerArtikel = new Map<number, ArtikelAfspraak>();
+    for (const artikelId of gekozenArtikelIds) {
+      const { afspraak } = await vindGeldigeAfspraak({ artikelId, datum: vandaag });
+      if (afspraak) {
+        afspraakPerArtikel.set(artikelId, {
+          afgesproken_prijs: parseFloat(afspraak.prijs),
+          leverancierId: afspraak.leverancierId,
+          afspraak_geldig_tot: afspraak.geldigTot,
+        });
+      }
+    }
+    const leverancierIdsVoorAfspraak = [...new Set([...afspraakPerArtikel.values()].map((a) => a.leverancierId))];
+    const leverancierNaamOpId = new Map<number, string>();
+    if (leverancierIdsVoorAfspraak.length > 0) {
+      const levRijen = await db
+        .select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
+        .from(leveranciersTable)
+        .where(inArray(leveranciersTable.id, leverancierIdsVoorAfspraak));
+      for (const l of levRijen) leverancierNaamOpId.set(l.id, l.naam);
+    }
+    function inkoopHerkomstVoorArtikel(artikelId: number): {
+      inkoop_bron: "afspraak" | "catalogus";
+      afgesproken_inkoopprijs: number | null;
+      afspraak_leverancier: string | null;
+      afspraak_geldig_tot: string | null;
+    } {
+      const a = afspraakPerArtikel.get(artikelId);
+      if (a) {
+        return {
+          inkoop_bron: "afspraak",
+          afgesproken_inkoopprijs: a.afgesproken_prijs,
+          afspraak_leverancier: leverancierNaamOpId.get(a.leverancierId) ?? null,
+          afspraak_geldig_tot: a.afspraak_geldig_tot,
+        };
+      }
+      return { inkoop_bron: "catalogus", afgesproken_inkoopprijs: null, afspraak_leverancier: null, afspraak_geldig_tot: null };
+    }
+
+    let telWerkzaamheden = 0, telVolledig = 0, telAlleenArtikel = 0, telAlleenNormtijd = 0, telOngekoppeld = 0, telGeenWerk = 0, telNietTeBeoordelen = 0;
+
+    // §6 (review): elk punt uit stap 1 MOET een voorstel krijgen. Als de tweede
+    // AI-aanroep minder koppelingen teruggaf dan er punten zijn, vullen we
+    // fail-closed aan: de ontbrekende punten worden 'niet_te_beoordelen' met de
+    // standaardvraag i.p.v. stil op 'werkzaamheden' te vallen. Zo wordt geen punt
+    // stil overgeslagen.
+    const STANDAARD_NIET_TE_BEOORDELEN_VRAAG =
+      "Dit punt kon niet automatisch worden beoordeeld — wat moet ermee?";
+    const voorstellen = punten.map((punt, i) => {
+      const keuze = keuzePerIndex.get(i) ?? {
+        soort: "niet_te_beoordelen" as SoortVoorstel,
+        artikelId: null,
+        normtijdId: null,
+        vraag: STANDAARD_NIET_TE_BEOORDELEN_VRAAG,
+      };
+      // regelnummer volgt het puntnummer uit het rapport (§4.4: altijd zichtbaar/bewerkbaar).
+      const regelnummer = punt.nummer;
+      const hoofdstuk = punt.hoofdstuk ?? "Overige werkzaamheden";
+      const basis = {
+        nummer: punt.nummer,
+        regelnummer,
+        hoofdstuk,
+        tekortkoming: punt.tekortkoming,
+        geadviseerd_herstel: punt.geadviseerd_herstel,
+        locatie: punt.locatie,
+      };
+
+      if (keuze.soort === "geen_werkzaamheden") {
+        telGeenWerk++;
+        // §4.3.2: tekstregel "geen werkzaamheden aannemer".
+        return {
+          ...basis,
+          soortvoorstel: "geen_werkzaamheden" as const,
+          regel_soort: "tekst" as const,
+          omschrijving: punt.geadviseerd_herstel ?? punt.tekortkoming ?? "Geen werkzaamheden aannemer",
+          tekstregel: "Geen werkzaamheden aannemer",
+          uitkomst: null,
+          artikel: null,
+          normtijd: null,
+          normtijd_kandidaten: [],
+          conceptregel: null,
+          vraag: null,
+        };
+      }
+
+      if (keuze.soort === "niet_te_beoordelen") {
+        telNietTeBeoordelen++;
+        // §4.3.3: niet te beoordelen — met een vervolgvraag. Wordt niet stil
+        // weggelaten; de calculator kan het punt overslaan of zelf invullen.
+        return {
+          ...basis,
+          soortvoorstel: "niet_te_beoordelen" as const,
+          regel_soort: "regel" as const,
+          omschrijving: punt.geadviseerd_herstel ?? punt.tekortkoming,
+          tekstregel: null,
+          uitkomst: null,
+          artikel: null,
+          normtijd: null,
+          normtijd_kandidaten: alleNormtijden.slice(0, 8).map((n) => ({ id: n.id, code: n.code, omschrijving: n.omschrijving, eenheid: n.eenheid, categorie: n.categorie })),
+          conceptregel: null,
+          vraag: keuze.vraag ?? STANDAARD_NIET_TE_BEOORDELEN_VRAAG,
+        };
+      }
+
+      // soort = werkzaamheden → koppeling verifiëren (fail-closed)
+      telWerkzaamheden++;
+      const kandidaten = artikelKandidatenPerPunt[i]!;
+      const artikel = keuze.artikelId != null ? kandidaten.find((a) => a.id === keuze.artikelId) ?? null : null;
+      const normtijd = keuze.normtijdId != null ? normtijdOpId.get(keuze.normtijdId) ?? null : null;
+      const heeftArtikel = !!artikel;
+      const heeftNormtijd = !!normtijd;
+      const topNormtijden = alleNormtijden.slice(0, 8).map((n) => ({ id: n.id, code: n.code, omschrijving: n.omschrijving, eenheid: n.eenheid, categorie: n.categorie }));
+      const omschrijving = punt.geadviseerd_herstel ?? punt.tekortkoming ?? (artikel?.omschrijving ?? "Werkzaamheden");
+
+      if (heeftArtikel && heeftNormtijd) {
+        telVolledig++;
+        const inkoop = inkoopHerkomstVoorArtikel(artikel!.id);
+        return {
+          ...basis,
+          soortvoorstel: "werkzaamheden" as const,
+          regel_soort: "regel" as const,
+          omschrijving,
+          tekstregel: null,
+          uitkomst: "volledig" as const,
+          artikel: { id: artikel!.id, artikelcode: artikel!.artikelcode, omschrijving: artikel!.omschrijving, eenheid: artikel!.eenheid, leverancier_naam: artikel!.leverancierNaam, categorie: artikel!.categorie },
+          normtijd: { id: normtijd!.id, code: normtijd!.code, omschrijving: normtijd!.omschrijving, eenheid: normtijd!.eenheid, uren_per_eenheid: normtijd!.urenPerEenheid },
+          normtijd_kandidaten: [],
+          conceptregel: {
+            hoofdstuk,
+            categorie: "materiaal",
+            omschrijving,
+            eenheid: artikel!.eenheid,
+            hoeveelheid: null,                          // §6: nooit geschat
+            tarief: artikel!.verkoopprijs,              // verkoopprijs — niet de jaarprijs
+            mu_per_eenheid: normtijd!.urenPerEenheid,
+            arbeids_tarief: standaardArbeidstarief,
+            arbeids_tarief_ontbreekt: standaardArbeidstarief == null,
+            normtijd_id: normtijd!.id,
+          },
+          inkoop_bron: inkoop.inkoop_bron,
+          afgesproken_inkoopprijs: inkoop.afgesproken_inkoopprijs,
+          afspraak_leverancier: inkoop.afspraak_leverancier,
+          afspraak_geldig_tot: inkoop.afspraak_geldig_tot,
+          prijs_ontbreekt: false,
+          mu_ontbreekt: false,
+          vraag: null,
+        };
+      }
+
+      if (heeftArtikel && !heeftNormtijd) {
+        telAlleenArtikel++;
+        const inkoop = inkoopHerkomstVoorArtikel(artikel!.id);
+        return {
+          ...basis,
+          soortvoorstel: "werkzaamheden" as const,
+          regel_soort: "regel" as const,
+          omschrijving,
+          tekstregel: null,
+          uitkomst: "alleen_artikel" as const,
+          artikel: { id: artikel!.id, artikelcode: artikel!.artikelcode, omschrijving: artikel!.omschrijving, eenheid: artikel!.eenheid, leverancier_naam: artikel!.leverancierNaam, categorie: artikel!.categorie },
+          normtijd: null,
+          normtijd_kandidaten: topNormtijden,
+          conceptregel: {
+            hoofdstuk,
+            categorie: "materiaal",
+            omschrijving,
+            eenheid: artikel!.eenheid,
+            hoeveelheid: null,
+            tarief: artikel!.verkoopprijs,
+            mu_per_eenheid: null,
+            arbeids_tarief: null,
+            normtijd_id: null,
+          },
+          inkoop_bron: inkoop.inkoop_bron,
+          afgesproken_inkoopprijs: inkoop.afgesproken_inkoopprijs,
+          afspraak_leverancier: inkoop.afspraak_leverancier,
+          afspraak_geldig_tot: inkoop.afspraak_geldig_tot,
+          prijs_ontbreekt: false,
+          mu_ontbreekt: true,
+          vraag: "Welke normtijd hoort bij dit herstel?",
+        };
+      }
+
+      if (!heeftArtikel && heeftNormtijd) {
+        telAlleenNormtijd++;
+        return {
+          ...basis,
+          soortvoorstel: "werkzaamheden" as const,
+          regel_soort: "regel" as const,
+          omschrijving,
+          tekstregel: null,
+          uitkomst: "alleen_normtijd" as const,
+          artikel: null,
+          normtijd: { id: normtijd!.id, code: normtijd!.code, omschrijving: normtijd!.omschrijving, eenheid: normtijd!.eenheid, uren_per_eenheid: normtijd!.urenPerEenheid },
+          normtijd_kandidaten: [],
+          conceptregel: {
+            hoofdstuk,
+            categorie: "arbeid",
+            omschrijving,
+            eenheid: normtijd!.eenheid,
+            hoeveelheid: null,
+            tarief: null,
+            mu_per_eenheid: normtijd!.urenPerEenheid,
+            arbeids_tarief: standaardArbeidstarief,
+            arbeids_tarief_ontbreekt: standaardArbeidstarief == null,
+            normtijd_id: normtijd!.id,
+          },
+          prijs_ontbreekt: true,
+          mu_ontbreekt: false,
+          vraag: null,
+        };
+      }
+
+      telOngekoppeld++;
+      return {
+        ...basis,
+        soortvoorstel: "werkzaamheden" as const,
+        regel_soort: "regel" as const,
+        omschrijving,
+        tekstregel: null,
+        uitkomst: "ongekoppeld" as const,
+        artikel: null,
+        normtijd: null,
+        normtijd_kandidaten: topNormtijden,
+        conceptregel: null,                              // geen regel; prijs/uren ontbreken
+        prijs_ontbreekt: true,
+        mu_ontbreekt: true,
+        vraag: null,
+      };
+    });
+
+    // ── f. Analyse loggen in calc_plak_analyses (§8.11 koppelgraad) ──────────
+    // We hergebruiken de bestaande metingstabel met invoerSoort "adviesrapport"
+    // zodat er geen aparte migratie nodig is. herkendAantal = aantal punten;
+    // de vier plak-uitkomsten mappen op de werkzaamheden-uitkomsten.
+    const meetPunten = voorstellen.slice(0, 40).map((v) => ({
+      nummer: v.nummer,
+      soortvoorstel: v.soortvoorstel,
+      uitkomst: v.uitkomst,
+    }));
+    await db.insert(modCalcPlakAnalysesTable).values({
+      calculatieId: id,
+      gebruikerId: req.session.userId ?? null,
+      invoerSoort: "adviesrapport",
+      herkendAantal: puntenAantal,
+      gekoppeldBeide: telVolledig,
+      alleenArtikel: telAlleenArtikel,
+      alleenNormtijd: telAlleenNormtijd,
+      ongekoppeld: telOngekoppeld,
+      herkendeProducten: meetPunten,
+    });
+
+    // ── g. Adviesrapport aan de calculatie koppelen (§4.5/§8.10) ─────────────
+    // Idempotent: uniek op (document_id, doel_type, doel_id). Faalt niet als de
+    // koppeling al bestaat (onConflictDoNothing).
+    try {
+      await db.insert(documentKoppelingenTable).values({
+        documentId,
+        doelType: "calculatie",
+        doelId: id,
+        aangemaaktDoorId: req.session.userId ?? null,
+      }).onConflictDoNothing();
+    } catch (err) {
+      req.log.warn({ err, documentId, calculatieId: id }, "Koppeling adviesrapport ↔ calculatie kon niet worden vastgelegd");
+    }
+
+    res.json({
+      document_id: documentId,
+      document_naam: doc.naam,
+      punten_aantal: puntenAantal,
+      voorstellen,
+      koppelgraad: {
+        werkzaamheden: telWerkzaamheden,
+        volledig: telVolledig,
+        alleen_artikel: telAlleenArtikel,
+        alleen_normtijd: telAlleenNormtijd,
+        ongekoppeld: telOngekoppeld,
+        geen_werkzaamheden: telGeenWerk,
+        niet_te_beoordelen: telNietTeBeoordelen,
+      },
+      waarschuwing: [
+        bronAfgekaptWaarschuwing,
+        puntenAantalGemeld > punten.length
+          ? `Het rapport meldt ${puntenAantalGemeld} punten maar er zijn er ${punten.length} uitgelezen. Controleer of alle punten aanwezig zijn.`
+          : null,
+        // Fail-closed aanvulling: als de koppel-AI minder koppelingen teruggaf dan
+        // er punten zijn, kregen de ontbrekende punten 'niet_te_beoordelen'.
+        keuzePerIndex.size < punten.length
+          ? `${punten.length - keuzePerIndex.size} punt(en) konden niet automatisch worden beoordeeld en zijn gemarkeerd als 'niet te beoordelen' — controleer deze handmatig.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Adviesrapport-analyse mislukt" });
+  }
+});
+
 // ── CALC_INVOER_01 §3.4: leerbron — voorgestelde regel vs. wat de calculator ──
 // ervan maakte, vastgelegd in ai_veld_correcties (AI_01). Autorisatie: schrijvenCalc.
 const CALC_PLAK_VELDEN = [
@@ -2740,6 +3421,17 @@ const CALC_PLAK_VELDEN = [
   "calc_plak.mu_per_eenheid",
   "calc_plak.normtijd",
   "calc_plak.artikel",
+  // ADVIES_01 §4.5 — leerbron voor adviesrapport-velden (AI-voorstel vs. keuze).
+  "advies.omschrijving",
+  "advies.hoeveelheid",
+  "advies.eenheid",
+  "advies.tarief",
+  "advies.mu_per_eenheid",
+  "advies.normtijd",
+  "advies.artikel",
+  "advies.soortvoorstel",
+  "advies.regelnummer",
+  "advies.hoofdstuk",
 ] as const;
 
 router.post("/modules/calculaties/veld-correctie", schrijvenCalc, async (req, res): Promise<void> => {

@@ -19,6 +19,7 @@ import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/Documen
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { berekenOfferteTotalen } from "@/lib/offerte-totalen";
 
 function euro(bedrag: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
@@ -104,9 +105,12 @@ export default function OffertePrintPagina() {
   const alleActieveSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde).filter((s) => s.actief);
   const alleMaatregelen = (regels ?? []).filter((r) => r.categorie !== "algemene_kosten");
   const alleAlgemeenKosten = (regels ?? []).filter((r) => r.categorie === "algemene_kosten");
-  const totaal = (regels ?? []).reduce((s, r) => s + (r.kosten ?? 0), 0);
-  const btw = totaal * ((offerte.btw_percentage ?? 21) / 100);
-  const inclBtw = totaal + btw;
+  // ADVIES_01 review-fix: het aangeboden totaal = som van NIET-optionele regels.
+  // Optionele regels tellen niet mee in de aanneemsom en worden apart getoond.
+  const totalen = berekenOfferteTotalen(regels ?? [], offerte.btw_percentage ?? 21);
+  const totaal = totalen.aangebodenExcl;
+  const btw = totalen.btw;
+  const inclBtw = totalen.aangebodenIncl;
 
   const presentatieNiveau: number = (offerte as any).presentatie_niveau ?? 3;
 
@@ -142,10 +146,15 @@ export default function OffertePrintPagina() {
     return presentatieNiveau >= 1;
   }
 
-  const maatregelen = (w.optionele_posten === "verbergen"
-    ? alleMaatregelen.filter((r) => !r.is_optioneel) : alleMaatregelen).filter(filterRegelNiveau);
-  const algemeenKosten = (w.optionele_posten === "verbergen"
-    ? alleAlgemeenKosten.filter((r) => !r.is_optioneel) : alleAlgemeenKosten).filter(filterRegelNiveau);
+  // ADVIES_01 review-fix: het hoofdoverzicht toont uitsluitend NIET-optionele
+  // regels (die vormen de aanneemsom). Optionele regels komen in een apart blok
+  // "Optioneel — niet in de aanneemsom" onder de totalen. Bij "verbergen" worden
+  // optionele posten geheel weggelaten (geen blok).
+  const maatregelen = alleMaatregelen.filter((r) => !r.is_optioneel).filter(filterRegelNiveau);
+  const algemeenKosten = alleAlgemeenKosten.filter((r) => !r.is_optioneel).filter(filterRegelNiveau);
+  const optioneleRegels = w.optionele_posten === "verbergen"
+    ? []
+    : (regels ?? []).filter((r) => r.is_optioneel).filter(filterRegelNiveau);
 
   const VERVOLG_LABELS: Record<string, string> = {
     periodiek_onderhoud: "Periodiek onderhoud",
@@ -319,10 +328,11 @@ export default function OffertePrintPagina() {
             ) : (
               <>
                 {(() => {
+                  // Het hoofdoverzicht (ook zonder groepering) toont uitsluitend de
+                  // NIET-optionele regels; optionele posten staan in het aparte
+                  // blok onder de totalen.
                   const alleRegels = w.groepering === "geen"
-                    ? (w.optionele_posten === "verbergen"
-                        ? (regels ?? []).filter((r) => !r.is_optioneel)
-                        : (regels ?? []))
+                    ? (regels ?? []).filter((r) => !r.is_optioneel)
                     : null;
 
                   function RegelRijPrint({ r }: { r: any }) {
@@ -346,8 +356,10 @@ export default function OffertePrintPagina() {
                     );
                   }
 
-                  const subtotaalMaatregelen = alleMaatregelen.reduce((s, r) => s + (r.kosten ?? 0), 0);
-                  const subtotaalAlgemeen = alleAlgemeenKosten.reduce((s, r) => s + (r.kosten ?? 0), 0);
+                  // Groepssubtotalen tellen — net als het hoofdtotaal — alleen de
+                  // NIET-optionele regels; optionele posten staan in een apart blok.
+                  const subtotaalMaatregelen = alleMaatregelen.filter((r) => !r.is_optioneel).reduce((s, r) => s + (r.kosten ?? 0), 0);
+                  const subtotaalAlgemeen = alleAlgemeenKosten.filter((r) => !r.is_optioneel).reduce((s, r) => s + (r.kosten ?? 0), 0);
 
                   return (
                     <div className="mb-6">
@@ -374,21 +386,7 @@ export default function OffertePrintPagina() {
                                       Maatregelen
                                     </td>
                                   </tr>
-                                  {w.optionele_posten === "samengevat" ? (
-                                    <>
-                                      {maatregelen.filter((r) => !r.is_optioneel).map((r) => <RegelRijPrint key={r.id} r={r} />)}
-                                      {alleMaatregelen.some((r) => r.is_optioneel) && (
-                                        <tr className="border-b border-slate-100">
-                                          <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
-                                            className="py-2 px-3 text-xs text-amber-700 italic">
-                                            + {alleMaatregelen.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </>
-                                  ) : (
-                                    maatregelen.map((r) => <RegelRijPrint key={r.id} r={r} />)
-                                  )}
+                                  {maatregelen.map((r) => <RegelRijPrint key={r.id} r={r} />)}
                                   {w.toon_subtotalen && (
                                     <tr className="bg-slate-50/50">
                                       <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0)}
@@ -406,21 +404,7 @@ export default function OffertePrintPagina() {
                                       Algemene kosten
                                     </td>
                                   </tr>
-                                  {w.optionele_posten === "samengevat" ? (
-                                    <>
-                                      {algemeenKosten.filter((r) => !r.is_optioneel).map((r) => <RegelRijPrint key={r.id} r={r} />)}
-                                      {alleAlgemeenKosten.some((r) => r.is_optioneel) && (
-                                        <tr className="border-b border-slate-100">
-                                          <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
-                                            className="py-2 px-3 text-xs text-amber-700 italic">
-                                            + {alleAlgemeenKosten.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </>
-                                  ) : (
-                                    algemeenKosten.map((r) => <RegelRijPrint key={r.id} r={r} />)
-                                  )}
+                                  {algemeenKosten.map((r) => <RegelRijPrint key={r.id} r={r} />)}
                                   {w.toon_subtotalen && (
                                     <tr className="bg-slate-50/50">
                                       <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0)}
@@ -458,6 +442,46 @@ export default function OffertePrintPagina() {
                     </div>
                   )}
                 </div>
+
+                {/* ADVIES_01 review-fix: optionele posten apart — niet in de aanneemsom.
+                    Btw is uitsluitend over het aangeboden deel berekend; dit blok
+                    toont zijn eigen bedrag (excl. btw). */}
+                {optioneleRegels.length > 0 && (
+                  <div className="mt-6">
+                    <h2 className="text-sm font-semibold text-slate-700 mb-2">
+                      Optioneel — niet in de aanneemsom
+                    </h2>
+                    <table className="w-full text-sm border-collapse">
+                      <tbody>
+                        {optioneleRegels.map((r) => {
+                          const omschrijving = w.toon_regelomschrijving
+                            ? r.maatregel
+                            : (r.categorie === "algemene_kosten" ? "Algemene kosten" : "Brandwerende maatregel");
+                          return (
+                            <tr key={r.id} className="border-b border-slate-100">
+                              <td className="py-2 px-3">
+                                <div>{omschrijving}</div>
+                                {w.toon_ruimte && r.ruimte && <div className="text-xs text-slate-400">{r.ruimte}</div>}
+                              </td>
+                              {w.toon_aantal && <td className="py-2 px-3 text-right">{r.aantal}</td>}
+                              {w.toon_eenheid && <td className="py-2 px-3 text-right text-slate-500">{r.eenheid}</td>}
+                              {w.toon_prijs_per_eenheid && <td className="py-2 px-3 text-right">{euro(r.prijs_per_eenheid)}</td>}
+                              <td className="py-2 px-3 text-right font-medium">{euro(r.kosten)}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0)}
+                            className="py-1.5 px-3 text-right text-xs text-slate-500">Subtotaal optioneel (excl. btw)</td>
+                          <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(totalen.optioneelExcl)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <p className="text-xs text-slate-400 mt-1.5 italic">
+                      Optionele posten zijn niet inbegrepen in de aanneemsom en worden pas na akkoord afzonderlijk in rekening gebracht.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

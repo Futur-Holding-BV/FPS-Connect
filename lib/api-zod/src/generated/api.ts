@@ -4372,7 +4372,7 @@ export const ListDocumentLogboekResponse = zod.array(ListDocumentLogboekResponse
  * @summary Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
  */
 export const ListGekoppeldeDocumentenQueryParams = zod.object({
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
   "doel_id": zod.coerce.number()
 })
 
@@ -4415,7 +4415,7 @@ export const ListDocumentKoppelingenParams = zod.object({
 export const ListDocumentKoppelingenResponseItem = zod.object({
   "id": zod.number(),
   "document_id": zod.number(),
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
   "doel_id": zod.number(),
   "doel_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string()
@@ -4431,7 +4431,7 @@ export const AddDocumentKoppelingParams = zod.object({
 })
 
 export const AddDocumentKoppelingBody = zod.object({
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
   "doel_id": zod.number()
 })
 
@@ -18097,6 +18097,8 @@ export const GetModCalculatieParams = zod.object({
 
 export const getModCalculatieResponseTwoRegelsItemHoofdstukDefault = `Overige werkzaamheden`;
 export const getModCalculatieResponseTwoRegelsItemBtwTariefDefault = `21`;
+export const getModCalculatieResponseTwoRegelsItemSoortDefault = `regel`;
+export const getModCalculatieResponseTwoRegelsItemOptioneelDefault = false;
 
 export const GetModCalculatieResponse = zod.object({
   "id": zod.number(),
@@ -18133,6 +18135,7 @@ export const GetModCalculatieResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 }).and(zod.object({
+  "optioneel_totaal": zod.number().nullish().describe('ADVIES_01: som van optionele meetellende regels (telt niet mee in totaal_na_opslagen).'),
   "regels": zod.array(zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
@@ -18160,7 +18163,10 @@ export const GetModCalculatieResponse = zod.object({
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional(),
   "wand_plafond": zod.string().nullish().describe('Orientatie: \"wand\" of \"plafond\"'),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(getModCalculatieResponseTwoRegelsItemSoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\". Alleen \"regel\" en \"materiaal\" tellen mee in de totalen.'),
+  "optioneel": zod.boolean().default(getModCalculatieResponseTwoRegelsItemOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende (werk)regel waaronder deze regel hangt.')
 })).optional()
 }))
 
@@ -18351,6 +18357,8 @@ export const ListModCalcRegelsParams = zod.object({
 
 export const listModCalcRegelsResponseHoofdstukDefault = `Overige werkzaamheden`;
 export const listModCalcRegelsResponseBtwTariefDefault = `21`;
+export const listModCalcRegelsResponseSoortDefault = `regel`;
+export const listModCalcRegelsResponseOptioneelDefault = false;
 
 export const ListModCalcRegelsResponseItem = zod.object({
   "id": zod.number(),
@@ -18379,7 +18387,10 @@ export const ListModCalcRegelsResponseItem = zod.object({
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional(),
   "wand_plafond": zod.string().nullish().describe('Orientatie: \"wand\" of \"plafond\"'),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(listModCalcRegelsResponseSoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\". Alleen \"regel\" en \"materiaal\" tellen mee in de totalen.'),
+  "optioneel": zod.boolean().default(listModCalcRegelsResponseOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende (werk)regel waaronder deze regel hangt.')
 })
 export const ListModCalcRegelsResponse = zod.array(ListModCalcRegelsResponseItem)
 
@@ -18390,6 +18401,9 @@ export const ListModCalcRegelsResponse = zod.array(ListModCalcRegelsResponseItem
 export const CreateModCalcRegelParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const createModCalcRegelBodySoortDefault = `regel`;
+export const createModCalcRegelBodyOptioneelDefault = false;
 
 export const CreateModCalcRegelBody = zod.object({
   "eenheid_id": zod.number().nullish(),
@@ -18411,7 +18425,10 @@ export const CreateModCalcRegelBody = zod.object({
   "klanttekst": zod.string().nullish(),
   "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "wand_plafond": zod.string().nullish(),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(createModCalcRegelBodySoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\".'),
+  "optioneel": zod.boolean().default(createModCalcRegelBodyOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende regel.')
 })
 
 export const CreateModCalcRegelResponse = zod.void()
@@ -18424,6 +18441,9 @@ export const UpdateModCalcRegelParams = zod.object({
   "id": zod.coerce.number(),
   "regelId": zod.coerce.number()
 })
+
+export const updateModCalcRegelBodySoortDefault = `regel`;
+export const updateModCalcRegelBodyOptioneelDefault = false;
 
 export const UpdateModCalcRegelBody = zod.object({
   "eenheid_id": zod.number().nullish(),
@@ -18445,11 +18465,16 @@ export const UpdateModCalcRegelBody = zod.object({
   "klanttekst": zod.string().nullish(),
   "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "wand_plafond": zod.string().nullish(),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(updateModCalcRegelBodySoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\".'),
+  "optioneel": zod.boolean().default(updateModCalcRegelBodyOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende regel.')
 })
 
 export const updateModCalcRegelResponseHoofdstukDefault = `Overige werkzaamheden`;
 export const updateModCalcRegelResponseBtwTariefDefault = `21`;
+export const updateModCalcRegelResponseSoortDefault = `regel`;
+export const updateModCalcRegelResponseOptioneelDefault = false;
 
 export const UpdateModCalcRegelResponse = zod.object({
   "id": zod.number(),
@@ -18478,7 +18503,10 @@ export const UpdateModCalcRegelResponse = zod.object({
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional(),
   "wand_plafond": zod.string().nullish().describe('Orientatie: \"wand\" of \"plafond\"'),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(updateModCalcRegelResponseSoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\". Alleen \"regel\" en \"materiaal\" tellen mee in de totalen.'),
+  "optioneel": zod.boolean().default(updateModCalcRegelResponseOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende (werk)regel waaronder deze regel hangt.')
 })
 
 
@@ -18499,6 +18527,9 @@ export const DeleteModCalcRegelResponse = zod.void()
 export const AiModCalcRegelsParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const aiModCalcRegelsResponseRegelsItemSoortDefault = `regel`;
+export const aiModCalcRegelsResponseRegelsItemOptioneelDefault = false;
 
 export const AiModCalcRegelsResponse = zod.object({
   "regels": zod.array(zod.object({
@@ -18521,7 +18552,10 @@ export const AiModCalcRegelsResponse = zod.object({
   "klanttekst": zod.string().nullish(),
   "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "wand_plafond": zod.string().nullish(),
-  "toepassing_tekst": zod.string().nullish()
+  "toepassing_tekst": zod.string().nullish(),
+  "soort": zod.string().default(aiModCalcRegelsResponseRegelsItemSoortDefault).describe('Regelsoort: \"regel\", \"materiaal\", \"tekst\", \"stelpost\" of \"kop\".'),
+  "optioneel": zod.boolean().default(aiModCalcRegelsResponseRegelsItemOptioneelDefault).describe('Optionele regel — telt niet mee in het aangeboden totaal.'),
+  "ouder_regel_id": zod.number().nullish().describe('Bij soort \"materiaal\": de bovenliggende regel.')
 })),
   "waarschuwingen": zod.array(zod.string())
 })
@@ -18612,6 +18646,88 @@ export const PlakAnalyseCalculatieResponse = zod.object({
   "alleen_normtijd": zod.number(),
   "ongekoppeld": zod.number()
 })
+})
+
+
+/**
+ * @summary ADVIES_01 — adviesrapport uit de bibliotheek uitlezen en per genummerd punt een calculatievoorstel doen (wordt niet opgeslagen als regel)
+ */
+export const AdviesrapportAnalyseCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdviesrapportAnalyseCalculatieBody = zod.object({
+  "document_id": zod.number().describe('id van het gearchiveerde adviesrapport (documentenbibliotheek)')
+}).describe('ADVIES_01 §4.2 — verwijst naar het in de bibliotheek gearchiveerde adviesrapport. De server leest het bestand zelf uit object storage.')
+
+export const AdviesrapportAnalyseCalculatieResponse = zod.object({
+  "document_id": zod.number(),
+  "document_naam": zod.string().nullish(),
+  "punten_aantal": zod.number().describe('ADVIES_01 §8.6 — totaal aantal genummerde punten (elk punt levert een voorstel; nooit stil weglaten)'),
+  "voorstellen": zod.array(zod.object({
+  "nummer": zod.string().describe('Puntnummer letterlijk uit het rapport (samengesteld nummer niet gesplitst)'),
+  "regelnummer": zod.string().describe('Voorgesteld regelnummer (volgt het puntnummer); altijd zichtbaar en bewerkbaar'),
+  "hoofdstuk": zod.string(),
+  "tekortkoming": zod.string(),
+  "geadviseerd_herstel": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "soortvoorstel": zod.enum(['werkzaamheden', 'geen_werkzaamheden', 'niet_te_beoordelen']),
+  "regel_soort": zod.enum(['regel', 'tekst']).describe('soort calculatieregel; \'tekst\' bij geen_werkzaamheden, anders \'regel\''),
+  "omschrijving": zod.string().nullish(),
+  "tekstregel": zod.string().nullish().describe('Vaste tekst bij geen_werkzaamheden (§4.3.2)'),
+  "vraag": zod.string().nullish().describe('Vervolgvraag bij niet_te_beoordelen (§4.3.3) of bij alleen_artikel'),
+  "uitkomst": zod.union([zod.enum(['volledig', 'alleen_artikel', 'alleen_normtijd', 'ongekoppeld']),zod.null()]).optional().describe('Koppeluitkomst bij soortvoorstel werkzaamheden; null bij tekst\/niet-te-beoordelen'),
+  "artikel": zod.union([zod.object({
+  "id": zod.number(),
+  "artikelcode": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "leverancier_naam": zod.string().nullish(),
+  "categorie": zod.string().nullish()
+}),zod.null()]).optional(),
+  "normtijd": zod.union([zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number()
+}),zod.null()]).optional(),
+  "normtijd_kandidaten": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number()
+})).optional(),
+  "conceptregel": zod.union([zod.object({
+  "hoofdstuk": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "tarief": zod.number().nullish().describe('Materiaalprijs uit eigen artikel; null als geen artikel gekoppeld'),
+  "mu_per_eenheid": zod.number().nullish().describe('Arbeidsnorm uit eigen normtijd; null als geen normtijd gekoppeld'),
+  "arbeids_tarief": zod.number().nullish(),
+  "arbeids_tarief_ontbreekt": zod.boolean().optional(),
+  "normtijd_id": zod.number().nullish()
+}).describe('Voorgestelde calculatieregel. Prijs\/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (niet 0).'),zod.null()]).optional(),
+  "inkoop_bron": zod.enum(['afspraak', 'catalogus']).optional().describe('PRIJS_01 §5 — herkomst van de inkoopprijs; alleen bij gekoppeld artikel'),
+  "afgesproken_inkoopprijs": zod.number().nullish(),
+  "afspraak_leverancier": zod.string().nullish(),
+  "afspraak_geldig_tot": zod.string().nullish(),
+  "prijs_ontbreekt": zod.boolean().optional(),
+  "mu_ontbreekt": zod.boolean().optional()
+}).describe('ADVIES_01 §4.3 — voorstel voor één genummerd punt uit het adviesrapport. Prijs\/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (nooit 0). Bedragen, uren en hoeveelheden worden NOOIT geschat (§6).')),
+  "koppelgraad": zod.object({
+  "werkzaamheden": zod.number(),
+  "volledig": zod.number(),
+  "alleen_artikel": zod.number(),
+  "alleen_normtijd": zod.number(),
+  "ongekoppeld": zod.number(),
+  "geen_werkzaamheden": zod.number(),
+  "niet_te_beoordelen": zod.number()
+}).describe('ADVIES_01 §8.11 — telling van de uitkomsten'),
+  "waarschuwing": zod.string().nullish()
 })
 
 

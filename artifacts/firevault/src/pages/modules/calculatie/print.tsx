@@ -18,11 +18,13 @@ type PrintData = {
     hoeveelheid: number; tarief: number; mu_per_eenheid: number; arbeids_tarief: number;
     onderaanneming_bedrag: number; totaal: number; is_staartkosten: boolean;
     hoofdstuk: string; regelnummer: string | null;
+    soort?: string; optioneel?: boolean; ouder_regel_id?: number | null;
   }[];
   totalen: {
     subtotaal: number; staarttotaal: number; ak_bedrag: number; abk_bedrag: number;
     risico_bedrag: number; winst_bedrag: number; korting_bedrag: number;
     eindtotaal: number; excl_btw: number; incl_btw: number;
+    optioneel_totaal?: number;
   };
   fie?: {
     correctie_factor: number | null;
@@ -116,8 +118,11 @@ export default function ModulesCalculatiePrint() {
   }
 
   const { header, regels, totalen, fie } = data;
-  const directeRegels = regels.filter((r) => !r.is_staartkosten);
-  const staartRegels = regels.filter((r) => r.is_staartkosten);
+  // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart.
+  const teltMee = (r: { soort?: string }) => (r.soort ?? "regel") === "regel" || (r.soort ?? "regel") === "materiaal";
+  const directeRegels = regels.filter((r) => !r.is_staartkosten && !r.optioneel);
+  const staartRegels = regels.filter((r) => r.is_staartkosten && !r.optioneel);
+  const optioneleRegels = regels.filter((r) => r.optioneel);
 
   const heeftLeereffect = fie?.correctie_factor != null && fie.correctie_factor !== 1.0;
 
@@ -268,23 +273,38 @@ export default function ModulesCalculatiePrint() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {hRegels.map((r, i) => (
-                  <tr key={r.id}>
-                    <td className="px-2 py-1 text-muted-foreground">{r.regelnummer ?? i + 1}</td>
-                    <td className="px-2 py-1">{r.omschrijving}</td>
-                    <td className="px-2 py-1 text-muted-foreground capitalize">{r.categorie.slice(0, 3)}</td>
-                    <td className="px-2 py-1 text-right tabular-nums">{fmt2(r.hoeveelheid)}</td>
-                    <td className="px-2 py-1 text-muted-foreground">{r.eenheid}</td>
-                    <td className="px-2 py-1 text-right tabular-nums">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
-                    <td className="px-2 py-1 text-right tabular-nums">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
-                    <td className="px-2 py-1 text-right tabular-nums">{r.arbeids_tarief > 0 ? formatBedrag(r.arbeids_tarief) : "—"}</td>
-                    <td className="px-2 py-1 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
-                  </tr>
-                ))}
+                {hRegels.map((r, i) => {
+                  if (r.soort === "kop") {
+                    return (
+                      <tr key={r.id} className="bg-slate-50">
+                        <td colSpan={9} className="px-2 py-1 font-bold uppercase tracking-wide">{r.omschrijving}</td>
+                      </tr>
+                    );
+                  }
+                  const tekst = r.soort === "tekst";
+                  const stelpost = r.soort === "stelpost";
+                  return (
+                    <tr key={r.id} className={r.soort === "materiaal" ? "text-muted-foreground" : ""}>
+                      <td className="px-2 py-1 text-muted-foreground">{r.regelnummer ?? i + 1}</td>
+                      <td className={cn("px-2 py-1", tekst && "italic text-muted-foreground", r.soort === "materiaal" && "pl-5")}>{r.omschrijving}</td>
+                      <td className="px-2 py-1 text-muted-foreground capitalize">{tekst ? "" : r.categorie.slice(0, 3)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{tekst ? "" : fmt2(r.hoeveelheid)}</td>
+                      <td className="px-2 py-1 text-muted-foreground">{tekst ? "" : r.eenheid}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{tekst ? "" : r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{tekst ? "" : r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{tekst ? "" : r.arbeids_tarief > 0 ? formatBedrag(r.arbeids_tarief) : "—"}</td>
+                      <td className="px-2 py-1 text-right tabular-nums font-medium">
+                        {tekst ? "" : stelpost
+                          ? <span>{formatBedrag(r.totaal)} <span className="text-[8px] text-amber-700">stelpost — telt niet mee</span></span>
+                          : formatBedrag(r.totaal)}
+                      </td>
+                    </tr>
+                  );
+                })}
                 <tr className="border-t-2 bg-slate-50">
                   <td colSpan={8} className="px-2 py-1 text-right font-medium text-muted-foreground">Subtotaal {hoofdstuk}</td>
                   <td className="px-2 py-1 text-right font-bold tabular-nums">
-                    {formatBedrag(hRegels.reduce((s, r) => s + r.totaal, 0))}
+                    {formatBedrag(hRegels.filter(teltMee).reduce((s, r) => s + r.totaal, 0))}
                   </td>
                 </tr>
               </tbody>
@@ -309,6 +329,34 @@ export default function ModulesCalculatiePrint() {
                     <td className="px-2 py-1 text-right font-medium tabular-nums">{formatBedrag(r.totaal)}</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Optionele regels — apart aangeboden, telt niet mee in totaal */}
+        {optioneleRegels.length > 0 && (
+          <div className="mb-4">
+            <div
+              className="px-3 py-1.5 font-semibold rounded-t border border-b-0 text-xs uppercase tracking-wide"
+              style={{ backgroundColor: kleur + "18", color: kleur, borderColor: kleur + "30" }}
+            >
+              Optioneel — telt niet mee in bovenstaand totaal
+            </div>
+            <table className="w-full border border-t-0 rounded-b text-[10px]">
+              <tbody className="divide-y">
+                {optioneleRegels.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-2 py-1">{r.regelnummer ? `${r.regelnummer} ` : ""}{r.omschrijving}</td>
+                    <td className="px-2 py-1 text-right font-medium tabular-nums">{formatBedrag(r.totaal)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 bg-slate-50">
+                  <td className="px-2 py-1 text-right font-medium text-muted-foreground">Optioneel subtotaal</td>
+                  <td className="px-2 py-1 text-right font-bold tabular-nums">
+                    {formatBedrag(totalen.optioneel_totaal ?? optioneleRegels.filter(teltMee).reduce((s, r) => s + r.totaal, 0))}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

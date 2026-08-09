@@ -28,4 +28,10 @@ export interface ModCalcRegelInput {
   btw_tarief?: string;
   wand_plafond?: string | null;
   toepassing_tekst?: string | null;
+  /** Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop". */
+  soort?: string;
+  /** Optionele regel — telt niet mee in het aangeboden totaal. */
+  optioneel?: boolean;
+  /** Bij soort "materiaal": de bovenliggende regel. */
+  ouder_regel_id?: number | null;
 }

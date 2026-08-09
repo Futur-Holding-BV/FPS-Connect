@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Plus, Search, MoreHorizontal, Copy, Trash2, Calculator, TrendingUp, Building2,
+  Plus, Search, MoreHorizontal, Copy, Trash2, Calculator, TrendingUp, Building2, ClipboardList,
   ArrowRight, FileUp,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -58,6 +58,19 @@ function formatDatum(s: string) {
 
 export default function ModulesCalculatie() {
   const [, navigate] = useLocation();
+  // ADVIES_01 §4.1: Slim Upload stuurt hierheen met ?adviesrapport=<document_id>.
+  // De gebruiker kiest of maakt een calculatie; het id reizen we mee zodat de
+  // detailpagina het rapport-inleespaneel automatisch opent.
+  const adviesrapportId = (() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("adviesrapport");
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
+  })();
+  const naarCalculatie = (calcId: number) =>
+    navigate(adviesrapportId != null
+      ? `/modules/calculatie/${calcId}?adviesrapport=${adviesrapportId}`
+      : `/modules/calculatie/${calcId}`);
   const [zoek, setZoek] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
   const [teVerwijderen, setTeVerwijderen] = useState<number | null>(null);
@@ -112,12 +125,25 @@ export default function ModulesCalculatie() {
             <Building2 className="h-4 w-4 mr-2" />
             Leveranciers & artikelen
           </Button>
-          <Button onClick={() => navigate("/modules/calculatie/nieuw")}>
+          <Button onClick={() => navigate(adviesrapportId != null ? `/modules/calculatie/nieuw?adviesrapport=${adviesrapportId}` : "/modules/calculatie/nieuw")}>
             <Plus className="h-4 w-4 mr-2" />
             Nieuwe calculatie
           </Button>
         </div>
       </div>
+
+      {/* ADVIES_01 §4.1: banner wanneer een adviesrapport klaarstaat om in te lezen */}
+      {adviesrapportId != null && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
+          <ClipboardList className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-900">
+            <p className="font-medium">Adviesrapport klaar om in te lezen</p>
+            <p className="mt-0.5 text-amber-800">
+              Kies hieronder een bestaande calculatie of maak een nieuwe — het rapport wordt daar per punt ingelezen.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Statistieken */}
       <div className="grid grid-cols-3 gap-4">
@@ -196,11 +222,11 @@ export default function ModulesCalculatie() {
               key={c.id}
               role="button"
               tabIndex={0}
-              onClick={() => navigate(`/modules/calculatie/${c.id}`)}
+              onClick={() => naarCalculatie(c.id)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  navigate(`/modules/calculatie/${c.id}`);
+                  naarCalculatie(c.id);
                 }
               }}
               className={cn(

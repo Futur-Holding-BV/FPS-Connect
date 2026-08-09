@@ -66,6 +66,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { cn } from "@/lib/utils";
+import { berekenOfferteTotalen } from "@/lib/offerte-totalen";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 
@@ -2338,11 +2339,16 @@ function PrijzenTab({
     ? algemeenKosten.filter((r) => !r.is_optioneel)
     : algemeenKosten;
 
-  const subtotaalMaatregelen = maatregelen.reduce((s, r) => s + (r.kosten ?? 0), 0);
-  const subtotaalAlgemeen = algemeenKosten.reduce((s, r) => s + (r.kosten ?? 0), 0);
-  const totaal = subtotaalMaatregelen + subtotaalAlgemeen;
-  const btw = totaal * ((offerte?.btw_percentage ?? 21) / 100);
-  const inclBtw = totaal + btw;
+  // ADVIES_01 review-fix: subtotalen én het aangeboden totaal tellen alleen de
+  // NIET-optionele regels; optionele posten staan in een apart blok "Optioneel —
+  // niet in de aanneemsom". Btw uitsluitend over het aangeboden deel.
+  const subtotaalMaatregelen = maatregelen.filter((r) => !r.is_optioneel).reduce((s, r) => s + (r.kosten ?? 0), 0);
+  const subtotaalAlgemeen = algemeenKosten.filter((r) => !r.is_optioneel).reduce((s, r) => s + (r.kosten ?? 0), 0);
+  const totalen = berekenOfferteTotalen(regels, offerte?.btw_percentage ?? 21);
+  const totaal = totalen.aangebodenExcl;
+  const btw = totalen.btw;
+  const inclBtw = totalen.aangebodenIncl;
+  const optioneleRegels = regels.filter((r) => r.is_optioneel);
 
   const aantalKolommen = 1
     + (weergave.toon_eenheid ? 1 : 0)
@@ -2662,6 +2668,14 @@ function PrijzenTab({
               <td className="py-2.5 px-3 text-right font-bold text-base">{euro(inclBtw)}</td>
             </tr>
             )}
+            {/* ADVIES_01 review-fix: optioneel-subtotaal apart — niet in de aanneemsom.
+                Alleen tonen als er optionele posten zijn en ze niet verborgen zijn. */}
+            {optioneleRegels.length > 0 && weergave.optionele_posten !== "verbergen" && (
+            <tr className="border-t bg-amber-50/40 text-amber-800">
+              <td colSpan={aantalKolommen - 1} className="py-2 px-3 text-right text-sm font-semibold">Optioneel — niet in de aanneemsom (excl. btw)</td>
+              <td className="py-2 px-3 text-right font-semibold">{euro(totalen.optioneelExcl)}</td>
+            </tr>
+            )}
           </tfoot>
         </table>
       </div>
@@ -2681,9 +2695,14 @@ function OfferteVoorbeeldInline({
   regels: any[];
   bijlagen: any[];
 }) {
-  const totaal = regels.reduce((som, r) => som + (r.kosten ?? 0), 0);
-  const btw = totaal * ((offerte.btw_percentage ?? 21) / 100);
-  const inclBtw = totaal + btw;
+  // ADVIES_01 review-fix: aangeboden totaal = niet-optionele regels; btw over
+  // uitsluitend dat deel; optionele posten in een apart blok.
+  const totalen = berekenOfferteTotalen(regels, offerte.btw_percentage ?? 21);
+  const totaal = totalen.aangebodenExcl;
+  const btw = totalen.btw;
+  const inclBtw = totalen.aangebodenIncl;
+  const aangebodenRegels = regels.filter((r) => !r.is_optioneel);
+  const optioneleRegels = regels.filter((r) => r.is_optioneel);
 
   return (
     <div
@@ -2770,7 +2789,7 @@ function OfferteVoorbeeldInline({
                 </tr>
               </thead>
               <tbody>
-                {regels.map((r) => (
+                {aangebodenRegels.map((r) => (
                   <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                     <td style={{ padding: "7px 10px" }}>
                       <div style={{ fontWeight: 500 }}>{r.maatregel}</div>
@@ -2798,6 +2817,38 @@ function OfferteVoorbeeldInline({
                 </tr>
               </tfoot>
             </table>
+
+            {/* ADVIES_01 review-fix: optionele posten apart — niet in de aanneemsom. */}
+            {optioneleRegels.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#b45309", marginBottom: 8 }}>
+                  Optioneel — niet in de aanneemsom
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <tbody>
+                    {optioneleRegels.map((r) => (
+                      <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "7px 10px" }}>
+                          <div style={{ fontWeight: 500 }}>{r.maatregel}</div>
+                          {r.ruimte && <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.ruimte}</div>}
+                        </td>
+                        <td style={{ padding: "7px 10px", textAlign: "right", color: "#64748b" }}>{r.eenheid}</td>
+                        <td style={{ padding: "7px 10px", textAlign: "right" }}>{r.aantal}</td>
+                        <td style={{ padding: "7px 10px", textAlign: "right" }}>{euro(r.prijs_per_eenheid)}</td>
+                        <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 500 }}>{euro(r.kosten)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ background: "#fffbeb" }}>
+                      <td colSpan={4} style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "#b45309" }}>Subtotaal optioneel (excl. btw)</td>
+                      <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, color: "#b45309" }}>{euro(totalen.optioneelExcl)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic", marginTop: 6 }}>
+                  Optionele posten zijn niet inbegrepen in de aanneemsom en worden pas na akkoord afzonderlijk in rekening gebracht.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -2839,9 +2890,14 @@ function OffertePrintView({
   regels: any[];
   bijlagen: any[];
 }) {
-  const totaal = regels.reduce((som, r) => som + (r.kosten ?? 0), 0);
-  const btw = totaal * ((offerte.btw_percentage ?? 21) / 100);
-  const inclBtw = totaal + btw;
+  // ADVIES_01 review-fix: aangeboden totaal = niet-optionele regels; btw over
+  // uitsluitend dat deel; optionele posten in een apart blok.
+  const totalen = berekenOfferteTotalen(regels, offerte.btw_percentage ?? 21);
+  const totaal = totalen.aangebodenExcl;
+  const btw = totalen.btw;
+  const inclBtw = totalen.aangebodenIncl;
+  const aangebodenRegels = regels.filter((r) => !r.is_optioneel);
+  const optioneleRegels = regels.filter((r) => r.is_optioneel);
 
   const euro = (bedrag: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
@@ -2893,7 +2949,7 @@ function OffertePrintView({
               </tr>
             </thead>
             <tbody>
-              {regels.map((r) => (
+              {aangebodenRegels.map((r) => (
                 <tr key={r.id}>
                   <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>{r.maatregel}</td>
                   <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0", textAlign: "right" }}>{r.eenheid}</td>
@@ -2918,6 +2974,32 @@ function OffertePrintView({
               </tr>
             </tfoot>
           </table>
+
+          {/* ADVIES_01 review-fix: optionele posten apart — niet in de aanneemsom. */}
+          {optioneleRegels.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: "#b45309", marginBottom: 6 }}>
+                Optioneel — niet in de aanneemsom
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <tbody>
+                  {optioneleRegels.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>{r.maatregel}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0", textAlign: "right" }}>{r.eenheid}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0", textAlign: "right" }}>{r.aantal}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0", textAlign: "right" }}>{euro(r.prijs_per_eenheid)}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0", textAlign: "right" }}>{euro(r.kosten)}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: "#fffbeb" }}>
+                    <td colSpan={4} style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: "#b45309" }}>Subtotaal optioneel (excl. btw)</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: "#b45309" }}>{euro(totalen.optioneelExcl)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

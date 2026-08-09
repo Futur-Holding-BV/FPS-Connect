@@ -15,4 +15,5 @@ export const KoppelingDoelType = {
   offerte: 'offerte',
   dossier: 'dossier',
   voorziening: 'voorziening',
+  calculatie: 'calculatie',
 } as const;

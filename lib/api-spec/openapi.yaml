@@ -15501,6 +15501,41 @@ paths:
         '503':
           description: AI niet beschikbaar
 
+  /modules/calculaties/{id}/adviesrapport-analyse:
+    post:
+      operationId: adviesrapportAnalyseCalculatie
+      summary: ADVIES_01 — adviesrapport uit de bibliotheek uitlezen en per genummerd punt een calculatievoorstel doen (wordt niet opgeslagen als regel)
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcAdviesAnalyseInput'
+      responses:
+        '200':
+          description: Voorstel met per punt een soortvoorstel en koppeling
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcAdviesAnalyse'
+        '400':
+          description: Ongeldige of ontbrekende invoer
+        '404':
+          description: Calculatie of adviesrapport niet gevonden
+        '422':
+          description: Adviesrapport kon niet gelezen worden
+        '502':
+          description: AI-uitlezing mislukt
+        '503':
+          description: AI of opslag niet beschikbaar
+
   /modules/calculaties/veld-correctie:
     post:
       operationId: calcPlakVeldCorrectie
@@ -32832,7 +32867,7 @@ components:
 
     KoppelingDoelType:
       type: string
-      enum: [gebouw, klant, offerte, dossier, voorziening]
+      enum: [gebouw, klant, offerte, dossier, voorziening, calculatie]
 
     DocumentKoppeling:
       type: object
@@ -38731,6 +38766,10 @@ components:
         - $ref: '#/components/schemas/ModCalcHeader'
         - type: object
           properties:
+            optioneel_totaal:
+              type: number
+              nullable: true
+              description: 'ADVIES_01: som van optionele meetellende regels (telt niet mee in totaal_na_opslagen).'
             regels:
               type: array
               items:
@@ -38896,6 +38935,18 @@ components:
         toepassing_tekst:
           type: string
           nullable: true
+        soort:
+          type: string
+          default: 'regel'
+          description: 'Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop". Alleen "regel" en "materiaal" tellen mee in de totalen.'
+        optioneel:
+          type: boolean
+          default: false
+          description: 'Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond.'
+        ouder_regel_id:
+          type: integer
+          nullable: true
+          description: 'Bij soort "materiaal": de bovenliggende (werk)regel waaronder deze regel hangt.'
 
     ModCalcRegelInput:
       type: object
@@ -38949,6 +39000,18 @@ components:
         toepassing_tekst:
           type: string
           nullable: true
+        soort:
+          type: string
+          default: 'regel'
+          description: 'Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop".'
+        optioneel:
+          type: boolean
+          default: false
+          description: 'Optionele regel — telt niet mee in het aangeboden totaal.'
+        ouder_regel_id:
+          type: integer
+          nullable: true
+          description: 'Bij soort "materiaal": de bovenliggende regel.'
 
     CalcPlakAnalyseInput:
       type: object
@@ -39114,6 +39177,98 @@ components:
             alleen_artikel:  { type: integer }
             alleen_normtijd: { type: integer }
             ongekoppeld:     { type: integer }
+
+    CalcAdviesAnalyseInput:
+      type: object
+      required: [document_id]
+      description: >-
+        ADVIES_01 §4.2 — verwijst naar het in de bibliotheek gearchiveerde
+        adviesrapport. De server leest het bestand zelf uit object storage.
+      properties:
+        document_id:
+          type: integer
+          description: id van het gearchiveerde adviesrapport (documentenbibliotheek)
+
+    CalcAdviesVoorstel:
+      type: object
+      description: >-
+        ADVIES_01 §4.3 — voorstel voor één genummerd punt uit het adviesrapport.
+        Prijs/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (nooit 0).
+        Bedragen, uren en hoeveelheden worden NOOIT geschat (§6).
+      required: [nummer, regelnummer, hoofdstuk, tekortkoming, soortvoorstel, regel_soort]
+      properties:
+        nummer:            { type: string, description: Puntnummer letterlijk uit het rapport (samengesteld nummer niet gesplitst) }
+        regelnummer:       { type: string, description: Voorgesteld regelnummer (volgt het puntnummer); altijd zichtbaar en bewerkbaar }
+        hoofdstuk:         { type: string }
+        tekortkoming:      { type: string }
+        geadviseerd_herstel: { type: ["string", "null"] }
+        locatie:           { type: ["string", "null"] }
+        soortvoorstel:
+          type: string
+          enum: [werkzaamheden, geen_werkzaamheden, niet_te_beoordelen]
+        regel_soort:
+          type: string
+          enum: [regel, tekst]
+          description: soort calculatieregel; 'tekst' bij geen_werkzaamheden, anders 'regel'
+        omschrijving:      { type: ["string", "null"] }
+        tekstregel:        { type: ["string", "null"], description: Vaste tekst bij geen_werkzaamheden (§4.3.2) }
+        vraag:             { type: ["string", "null"], description: Vervolgvraag bij niet_te_beoordelen (§4.3.3) of bij alleen_artikel }
+        uitkomst:
+          oneOf:
+            - type: string
+              enum: [volledig, alleen_artikel, alleen_normtijd, ongekoppeld]
+            - type: "null"
+          description: Koppeluitkomst bij soortvoorstel werkzaamheden; null bij tekst/niet-te-beoordelen
+        artikel:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakArtikel'
+            - type: "null"
+        normtijd:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakNormtijd'
+            - type: "null"
+        normtijd_kandidaten:
+          type: array
+          items: { $ref: '#/components/schemas/CalcPlakNormtijd' }
+        conceptregel:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakConceptregel'
+            - type: "null"
+        inkoop_bron:
+          type: string
+          enum: [afspraak, catalogus]
+          description: PRIJS_01 §5 — herkomst van de inkoopprijs; alleen bij gekoppeld artikel
+        afgesproken_inkoopprijs: { type: ["number", "null"] }
+        afspraak_leverancier:    { type: ["string", "null"] }
+        afspraak_geldig_tot:     { type: ["string", "null"] }
+        prijs_ontbreekt:  { type: boolean }
+        mu_ontbreekt:     { type: boolean }
+
+    CalcAdviesAnalyse:
+      type: object
+      required: [document_id, punten_aantal, voorstellen, koppelgraad]
+      properties:
+        document_id:      { type: integer }
+        document_naam:    { type: ["string", "null"] }
+        punten_aantal:
+          type: integer
+          description: ADVIES_01 §8.6 — totaal aantal genummerde punten (elk punt levert een voorstel; nooit stil weglaten)
+        voorstellen:
+          type: array
+          items: { $ref: '#/components/schemas/CalcAdviesVoorstel' }
+        koppelgraad:
+          type: object
+          description: ADVIES_01 §8.11 — telling van de uitkomsten
+          required: [werkzaamheden, volledig, alleen_artikel, alleen_normtijd, ongekoppeld, geen_werkzaamheden, niet_te_beoordelen]
+          properties:
+            werkzaamheden:       { type: integer }
+            volledig:            { type: integer }
+            alleen_artikel:      { type: integer }
+            alleen_normtijd:     { type: integer }
+            ongekoppeld:         { type: integer }
+            geen_werkzaamheden:  { type: integer }
+            niet_te_beoordelen:  { type: integer }
+        waarschuwing:     { type: ["string", "null"] }
 
     EnkImportAnalyseInput:
       type: object

@@ -4782,6 +4782,7 @@ export const KoppelingDoelType = {
   offerte: 'offerte',
   dossier: 'dossier',
   voorziening: 'voorziening',
+  calculatie: 'calculatie',
 } as const;
 
 export interface DocumentKoppeling {
@@ -9148,11 +9149,19 @@ export interface ModCalcRegel {
   /** Orientatie: "wand" of "plafond" */
   wand_plafond?: string | null;
   toepassing_tekst?: string | null;
+  /** Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop". Alleen "regel" en "materiaal" tellen mee in de totalen. */
+  soort?: string;
+  /** Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond. */
+  optioneel?: boolean;
+  /** Bij soort "materiaal": de bovenliggende (werk)regel waaronder deze regel hangt. */
+  ouder_regel_id?: number | null;
 }
 
-export type ModCalcHeaderDetail = ModCalcHeader & {
+export type ModCalcHeaderDetail = ModCalcHeader & ({
+  /** ADVIES_01: som van optionele meetellende regels (telt niet mee in totaal_na_opslagen). */
+  optioneel_totaal?: number | null;
   regels?: ModCalcRegel[];
-};
+});
 
 export interface ModCalcHeaderInput {
   naam: string;
@@ -9217,6 +9226,12 @@ export interface ModCalcRegelInput {
   btw_tarief?: string;
   wand_plafond?: string | null;
   toepassing_tekst?: string | null;
+  /** Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop". */
+  soort?: string;
+  /** Optionele regel — telt niet mee in het aangeboden totaal. */
+  optioneel?: boolean;
+  /** Bij soort "materiaal": de bovenliggende regel. */
+  ouder_regel_id?: number | null;
 }
 
 /**
@@ -9396,6 +9411,131 @@ export interface CalcPlakAnalyse {
   invoer_soort: CalcPlakAnalyseInvoerSoort;
   producten: CalcPlakProduct[];
   telling: CalcPlakAnalyseTelling;
+}
+
+/**
+ * ADVIES_01 §4.2 — verwijst naar het in de bibliotheek gearchiveerde adviesrapport. De server leest het bestand zelf uit object storage.
+ */
+export interface CalcAdviesAnalyseInput {
+  /** id van het gearchiveerde adviesrapport (documentenbibliotheek) */
+  document_id: number;
+}
+
+export type CalcAdviesVoorstelSoortvoorstel = typeof CalcAdviesVoorstelSoortvoorstel[keyof typeof CalcAdviesVoorstelSoortvoorstel];
+
+
+export const CalcAdviesVoorstelSoortvoorstel = {
+  werkzaamheden: 'werkzaamheden',
+  geen_werkzaamheden: 'geen_werkzaamheden',
+  niet_te_beoordelen: 'niet_te_beoordelen',
+} as const;
+
+/**
+ * soort calculatieregel; 'tekst' bij geen_werkzaamheden, anders 'regel'
+ */
+export type CalcAdviesVoorstelRegelSoort = typeof CalcAdviesVoorstelRegelSoort[keyof typeof CalcAdviesVoorstelRegelSoort];
+
+
+export const CalcAdviesVoorstelRegelSoort = {
+  regel: 'regel',
+  tekst: 'tekst',
+} as const;
+
+/**
+ * Koppeluitkomst bij soortvoorstel werkzaamheden; null bij tekst/niet-te-beoordelen
+ */
+export type CalcAdviesVoorstelUitkomst = typeof CalcAdviesVoorstelUitkomst[keyof typeof CalcAdviesVoorstelUitkomst] | null;
+
+
+export const CalcAdviesVoorstelUitkomst = {
+  volledig: 'volledig',
+  alleen_artikel: 'alleen_artikel',
+  alleen_normtijd: 'alleen_normtijd',
+  ongekoppeld: 'ongekoppeld',
+} as const;
+
+/**
+ * PRIJS_01 §5 — herkomst van de inkoopprijs; alleen bij gekoppeld artikel
+ */
+export type CalcAdviesVoorstelInkoopBron = typeof CalcAdviesVoorstelInkoopBron[keyof typeof CalcAdviesVoorstelInkoopBron];
+
+
+export const CalcAdviesVoorstelInkoopBron = {
+  afspraak: 'afspraak',
+  catalogus: 'catalogus',
+} as const;
+
+/**
+ * ADVIES_01 §4.3 — voorstel voor één genummerd punt uit het adviesrapport. Prijs/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (nooit 0). Bedragen, uren en hoeveelheden worden NOOIT geschat (§6).
+ */
+export interface CalcAdviesVoorstel {
+  /** Puntnummer letterlijk uit het rapport (samengesteld nummer niet gesplitst) */
+  nummer: string;
+  /** Voorgesteld regelnummer (volgt het puntnummer); altijd zichtbaar en bewerkbaar */
+  regelnummer: string;
+  hoofdstuk: string;
+  tekortkoming: string;
+  /** @nullable */
+  geadviseerd_herstel?: string | null;
+  /** @nullable */
+  locatie?: string | null;
+  soortvoorstel: CalcAdviesVoorstelSoortvoorstel;
+  /** soort calculatieregel; 'tekst' bij geen_werkzaamheden, anders 'regel' */
+  regel_soort: CalcAdviesVoorstelRegelSoort;
+  /** @nullable */
+  omschrijving?: string | null;
+  /**
+     * Vaste tekst bij geen_werkzaamheden (§4.3.2)
+     * @nullable
+     */
+  tekstregel?: string | null;
+  /**
+     * Vervolgvraag bij niet_te_beoordelen (§4.3.3) of bij alleen_artikel
+     * @nullable
+     */
+  vraag?: string | null;
+  /** Koppeluitkomst bij soortvoorstel werkzaamheden; null bij tekst/niet-te-beoordelen */
+  uitkomst?: CalcAdviesVoorstelUitkomst;
+  artikel?: CalcPlakArtikel | null;
+  normtijd?: CalcPlakNormtijd | null;
+  normtijd_kandidaten?: CalcPlakNormtijd[];
+  conceptregel?: CalcPlakConceptregel | null;
+  /** PRIJS_01 §5 — herkomst van de inkoopprijs; alleen bij gekoppeld artikel */
+  inkoop_bron?: CalcAdviesVoorstelInkoopBron;
+  /** @nullable */
+  afgesproken_inkoopprijs?: number | null;
+  /** @nullable */
+  afspraak_leverancier?: string | null;
+  /** @nullable */
+  afspraak_geldig_tot?: string | null;
+  prijs_ontbreekt?: boolean;
+  mu_ontbreekt?: boolean;
+}
+
+/**
+ * ADVIES_01 §8.11 — telling van de uitkomsten
+ */
+export type CalcAdviesAnalyseKoppelgraad = {
+  werkzaamheden: number;
+  volledig: number;
+  alleen_artikel: number;
+  alleen_normtijd: number;
+  ongekoppeld: number;
+  geen_werkzaamheden: number;
+  niet_te_beoordelen: number;
+};
+
+export interface CalcAdviesAnalyse {
+  document_id: number;
+  /** @nullable */
+  document_naam?: string | null;
+  /** ADVIES_01 §8.6 — totaal aantal genummerde punten (elk punt levert een voorstel; nooit stil weglaten) */
+  punten_aantal: number;
+  voorstellen: CalcAdviesVoorstel[];
+  /** ADVIES_01 §8.11 — telling van de uitkomsten */
+  koppelgraad: CalcAdviesAnalyseKoppelgraad;
+  /** @nullable */
+  waarschuwing?: string | null;
 }
 
 export interface EnkImportAnalyseInput {

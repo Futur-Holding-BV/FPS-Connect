@@ -558,7 +558,10 @@ export function VerzendTab({
   const actieveSecties = (secties ?? []).filter((s) => s.actief);
   const verplichtRegels = (regels ?? []).filter((r) => !r.is_optioneel);
   const optioneleRegels = (regels ?? []).filter((r) => r.is_optioneel);
-  const totaalBedrag = (regels ?? []).reduce((s, r) => s + (r.kosten ?? 0), 0);
+  // ADVIES_01 review-fix: het aangeboden totaal telt alleen NIET-optionele regels;
+  // optionele posten worden apart getoond (niet in de aanneemsom).
+  const totaalBedrag = verplichtRegels.reduce((s, r) => s + (r.kosten ?? 0), 0);
+  const optioneelBedrag = optioneleRegels.reduce((s, r) => s + (r.kosten ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -657,11 +660,20 @@ export function VerzendTab({
                     </div>
                   )}
                   <div className="flex justify-between pt-1 border-t">
-                    <span className="text-muted-foreground">Totaal excl. btw</span>
+                    <span className="text-muted-foreground">Aangeboden totaal excl. btw</span>
                     <span className="font-semibold">
                       {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(totaalBedrag)}
                     </span>
                   </div>
+                  {/* ADVIES_01 review-fix: optioneel-bedrag apart — niet in de aanneemsom. */}
+                  {optioneleRegels.length > 0 && (
+                    <div className="flex justify-between text-amber-700">
+                      <span>Optioneel — niet in de aanneemsom</span>
+                      <span className="font-medium">
+                        {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(optioneelBedrag)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

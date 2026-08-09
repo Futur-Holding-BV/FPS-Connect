@@ -36,4 +36,10 @@ export interface ModCalcRegel {
   /** Orientatie: "wand" of "plafond" */
   wand_plafond?: string | null;
   toepassing_tekst?: string | null;
+  /** Regelsoort: "regel", "materiaal", "tekst", "stelpost" of "kop". Alleen "regel" en "materiaal" tellen mee in de totalen. */
+  soort?: string;
+  /** Optionele regel — telt niet mee in het aangeboden totaal, wordt apart als optioneel subtotaal getoond. */
+  optioneel?: boolean;
+  /** Bij soort "materiaal": de bovenliggende (werk)regel waaronder deze regel hangt. */
+  ouder_regel_id?: number | null;
 }

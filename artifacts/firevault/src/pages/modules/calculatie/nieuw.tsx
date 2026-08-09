@@ -20,6 +20,13 @@ export default function ModulesCalculatieNieuw() {
   const { toast } = useToast();
 
   const vooringevuldGebouwId = new URLSearchParams(search).get("gebouw_id") ?? "__geen__";
+  // ADVIES_01 §4.1: reik het adviesrapport-id door naar de detailpagina zodat het
+  // inleespaneel na aanmaken automatisch opent.
+  const adviesrapportId = (() => {
+    const raw = new URLSearchParams(search).get("adviesrapport");
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
+  })();
 
   const [form, setForm] = useState({
     naam: "",
@@ -98,7 +105,9 @@ export default function ModulesCalculatieNieuw() {
     mutation: {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
-        navigate(`/modules/calculatie/${data.id}`);
+        navigate(adviesrapportId != null
+          ? `/modules/calculatie/${data.id}?adviesrapport=${adviesrapportId}`
+          : `/modules/calculatie/${data.id}`);
       },
       onError: () => {
         toast({

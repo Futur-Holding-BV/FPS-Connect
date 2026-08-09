@@ -110,6 +110,15 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   volgorde: integer("volgorde").notNull().default(0),
   opmerkingen: text("opmerkingen"),
   regelnummer: text("regelnummer"),
+  // ADVIES_01 fase A — regelsoorten (§3):
+  //   regel | materiaal | tekst | stelpost | kop.
+  //   tekst/kop tellen NOOIT mee; stelpost is zichtbaar met bedrag maar telt niet mee;
+  //   materiaal telt mee als gewone regel en hangt via ouderRegelId aan een ouder.
+  soort: text("soort").notNull().default("regel"),
+  // Optioneel: telt niet mee in het aangeboden totaal, wordt apart onder de offerte vermeld.
+  optioneel: boolean("optioneel").notNull().default(false),
+  // Ouder-kindrelatie: materiaalregel hangt aan een werkregel binnen hetzelfde hoofdstuk.
+  ouderRegelId: integer("ouder_regel_id"),
   muPerEenheid: real("mu_per_eenheid").notNull().default(0),
   arbeidsTarief: real("arbeids_tarief").notNull().default(0),
   onderaannemingBedrag: real("onderaanneming_bedrag").notNull().default(0),
