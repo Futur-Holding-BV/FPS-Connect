@@ -1,3 +1,9 @@
+## 2026-08-09 — NP_INKOOP_01: Algemene inkoop (niet-projectgebonden) met A-nummerreeks
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe module + koppeling factuurstroom, projectinkoop ongewijzigd)
+
+Nieuwe module **Algemene inkoop** voor alles wat zonder project wordt gekocht (kantoorartikelen, gereedschap, webshopbestellingen). Twee soorten: **op rekening** — je krijgt direct een A‑nummer (eigen nummerreeks, groot in beeld en kopieerbaar) dat de leverancier als referentie op de factuur zet, waarna de binnenkomende factuur in de factuurstroom automatisch wordt herkend en gekoppeld (kostensoort gaat als voorstel mee; een bedragafwijking >2%/€2 t.o.v. het verwachte bedrag incl. btw geeft een signaal, nooit stil) — en **direct betaald** (pas/creditcard/contant/iDEAL) waar een bon (foto of pdf, met virusscan) verplicht is om af te ronden. Bedragen boven de goedkeuringsgrens lopen via de bestaande goedkeuringsmotor (documenttype `algemene_inkoop`) en zijn niet te omzeilen. Toegang: financieel niveau 2 óf offertes (Jacqueline kan er dus bij zonder werkvoorbereidingsrechten). Sidebar opgeruimd: het hoofdstuk Inkoop is weg — Leveranciers en Artikelen staan onder Instellingen (oude adressen blijven werken), het Inkoopoverzicht staat bij Uitvoering naast Werkvoorbereiding, en "Algemene inkoop" is een eigen menu-item. Nieuwe leveranciers zijn nu ook inline toe te voegen vanuit het inkoopformulier en de inkoopbon-dialoog; die schrijven in het bestaande leveranciersregister (geen derde register). Projectinkoop is volledig ongewijzigd (`opdracht_id` blijft verplicht). Bewijs: `scripts/src/verificatie-np-inkoop01.ts` (alle acceptatiecriteria groen, incl. factuurmatch-harnas op de echte productiecode).
+
 ## 2026-08-09 — Instellingen-knop verplaatst naar onderkant sidebar
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen plaats in de navigatie)

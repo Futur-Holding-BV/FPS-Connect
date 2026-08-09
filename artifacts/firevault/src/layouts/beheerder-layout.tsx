@@ -123,6 +123,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonDossiers      = heeftNiveau("dossiers", 1);
   const toonOpname        = heeftNiveau("gebouwen", 1);
   const toonOffertes      = heeftNiveau("offertes", 1);
+  // NP_INKOOP_01: ook administratie (financieel ≥ 2) zonder werkvoorbereidingsrechten
+  const toonAlgemeneInkoop = toonOffertes || heeftNiveau("financieel", 2);
   const toonOnderhoud     = heeftNiveau("onderhoud", 1);
   const toonToolboxen     = heeftNiveau("toolbox", 1);
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
@@ -231,7 +233,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     isAangepast,
   } = useSidebarHoofdstukken("sidebar_hoofdstukken", [
     "projectaanpak",
-    "inkoop",
     "magazijn",
     "commercie",
     "communicatie",
@@ -413,6 +414,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
+                        isActive={location === "/inkoop/overzicht"}
+                      >
+                        <Link href="/inkoop/overzicht">
+                          <ShoppingCart />
+                          <span>Inkoopoverzicht</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
                         isActive={location === "/regie" || location.startsWith("/regie/")}
                       >
                         <Link href="/regie">
@@ -524,52 +536,23 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
               </InklapbaarHoofdstuk>
 
-              {/* Inkoop */}
-              {toonOffertes && (
-              <InklapbaarHoofdstuk
-                sleutel="inkoop"
-                titel="Inkoop"
-                positie={hoofdstukPositie("inkoop")}
-                onVerplaats={verplaatsHoofdstuk}
-                open={hoofdstukOpen("inkoop")}
-                onOpenChange={(open) => setHoofdstukOpen("inkoop", open)}
-              >
-                        <SidebarMenu>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/leveranciers" || location.startsWith("/leveranciers/")}
-                            >
-                              <Link href="/leveranciers">
-                                <Truck />
-                                <span>Leveranciers</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/artikelen" || location.startsWith("/artikelen/")}
-                            >
-                              <Link href="/artikelen">
-                                <Package />
-                                <span>Artikelen</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/inkoop/overzicht"}
-                            >
-                              <Link href="/inkoop/overzicht">
-                                <ShoppingCart />
-                                <span>Inkoopoverzicht</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              {/* Algemene inkoop (NP_INKOOP_01) — losse post, geen hoofdstuk.
+                  Leveranciers & Artikelen staan onder Instellingen; het
+                  Inkoopoverzicht staat bij Uitvoering (Werkvoorbereiding). */}
+              {toonAlgemeneInkoop && (
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/algemene-inkoop" || location.startsWith("/algemene-inkoop/")}
+                    >
+                      <Link href="/algemene-inkoop">
+                        <ShoppingCart />
+                        <span>Algemene inkoop</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
               )}
 
               {/* Magazijn */}

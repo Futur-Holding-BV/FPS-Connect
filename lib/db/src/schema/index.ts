@@ -71,3 +71,4 @@ export * from "./kantoor-release";
 export * from "./goedkeuring";
 export * from "./compliance";
 export * from "./declaraties";
+export * from "./algemene-inkoop";

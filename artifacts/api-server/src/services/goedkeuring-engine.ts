@@ -49,6 +49,9 @@ type Db = typeof _mainDb;
 const OBJECT_WORKFLOW_ACTIE: Record<string, { workflowId: string; naarStatus: string }> = {
   inkoopbon: { workflowId: "inkoopbon", naarStatus: "goedgekeurd" },
   verlofaanvraag: { workflowId: "verlofaanvraag", naarStatus: "goedgekeurd" },
+  // NP_INKOOP_01 — "vrijgegeven" is virtueel: de workflow-config zet de echte
+  // beginstatus op basis van de soort (op_rekening → besteld, direct → open).
+  algemene_inkoop: { workflowId: "algemene_inkoop", naarStatus: "vrijgegeven" },
 };
 
 // Directe DB-statusovergang na goedkeuring voor entiteiten die géén WorkflowService

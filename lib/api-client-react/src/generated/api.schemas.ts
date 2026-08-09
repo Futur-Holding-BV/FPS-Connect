@@ -12174,6 +12174,43 @@ export interface WagenparkWerktijdvenster {
   actief: boolean;
   bijgewerkt_op: string;
 }
+
+export interface WagenparkWerktijdvensterInput {
+  voertuig_id?: number | null;
+  werkdagen: number[];
+  start_tijd: string;
+  eind_tijd: string;
+  actief?: boolean;
+}
+
+export interface WagenparkBuitenWerktijdRit {
+  id: number;
+  start_datum: string;
+  eind_datum?: string | null;
+  afstand_km?: number | null;
+  bron: string;
+}
+
+export interface WagenparkBuitenWerktijdVoertuig {
+  voertuig_id: number;
+  kenteken: string;
+  merk: string;
+  type: string;
+  venster_bron: string;
+  aantal_ritten_totaal: number;
+  aantal_buiten_venster: number;
+  km_buiten_venster: number;
+  ritten_buiten: WagenparkBuitenWerktijdRit[];
+}
+
+export interface WagenparkBuitenWerktijdRapport {
+  geconfigureerd: boolean;
+  van: string;
+  tot: string;
+  voertuigen: WagenparkBuitenWerktijdVoertuig[];
+  privacy_tekst: string;
+}
+
 export type BrandstofImportAiSignalenItem = {
   type: string;
   omschrijving: string;
@@ -13762,6 +13799,172 @@ export interface InkoopoverzichtItem {
   aantal_regels?: number;
 }
 
+export type AlgemeneInkoopSoort = typeof AlgemeneInkoopSoort[keyof typeof AlgemeneInkoopSoort];
+
+
+export const AlgemeneInkoopSoort = {
+  op_rekening: 'op_rekening',
+  direct_betaald: 'direct_betaald',
+} as const;
+
+export type AlgemeneInkoopStatus = typeof AlgemeneInkoopStatus[keyof typeof AlgemeneInkoopStatus];
+
+
+export const AlgemeneInkoopStatus = {
+  ter_goedkeuring: 'ter_goedkeuring',
+  besteld: 'besteld',
+  factuur_ontvangen: 'factuur_ontvangen',
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+} as const;
+
+export type AlgemeneInkoopKostensoort = typeof AlgemeneInkoopKostensoort[keyof typeof AlgemeneInkoopKostensoort];
+
+
+export const AlgemeneInkoopKostensoort = {
+  algemene_kosten: 'algemene_kosten',
+  gereedschap: 'gereedschap',
+  wagenpark: 'wagenpark',
+  investering: 'investering',
+  representatie: 'representatie',
+  software: 'software',
+  verzekering: 'verzekering',
+} as const;
+
+export interface AlgemeneInkoop {
+  id: number;
+  nummer: number;
+  /** A-reeks weergave, bijv. A012 */
+  nummer_weergave: string;
+  soort: AlgemeneInkoopSoort;
+  status: AlgemeneInkoopStatus;
+  /** @nullable */
+  leverancier_id?: number | null;
+  leverancier_naam: string;
+  omschrijving: string;
+  kostensoort: AlgemeneInkoopKostensoort;
+  /** @nullable */
+  verwacht_bedrag?: number | null;
+  besteld_door_id: number;
+  /** @nullable */
+  besteld_door_naam?: string | null;
+  /** @nullable */
+  betaalwijze?: string | null;
+  /** @nullable */
+  betaald_op?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  /** @nullable */
+  bon_pad?: string | null;
+  /** @nullable */
+  factuur_id?: number | null;
+  /** @nullable */
+  factuur_nummer?: string | null;
+  /** @nullable */
+  factuur_bedrag?: string | null;
+  /** @nullable */
+  factuur_gekoppeld_op?: string | null;
+  /** @nullable */
+  open_goedkeuringsaanvraag_id?: number | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export type AlgemeneInkoopInputSoort = typeof AlgemeneInkoopInputSoort[keyof typeof AlgemeneInkoopInputSoort];
+
+
+export const AlgemeneInkoopInputSoort = {
+  op_rekening: 'op_rekening',
+  direct_betaald: 'direct_betaald',
+} as const;
+
+export type AlgemeneInkoopInputKostensoort = typeof AlgemeneInkoopInputKostensoort[keyof typeof AlgemeneInkoopInputKostensoort];
+
+
+export const AlgemeneInkoopInputKostensoort = {
+  algemene_kosten: 'algemene_kosten',
+  gereedschap: 'gereedschap',
+  wagenpark: 'wagenpark',
+  investering: 'investering',
+  representatie: 'representatie',
+  software: 'software',
+  verzekering: 'verzekering',
+} as const;
+
+/**
+ * @nullable
+ */
+export type AlgemeneInkoopInputBetaalwijze = typeof AlgemeneInkoopInputBetaalwijze[keyof typeof AlgemeneInkoopInputBetaalwijze] | null;
+
+
+export const AlgemeneInkoopInputBetaalwijze = {
+  zakelijke_pas: 'zakelijke_pas',
+  creditcard: 'creditcard',
+  contant: 'contant',
+  ideal: 'ideal',
+} as const;
+
+export interface AlgemeneInkoopInput {
+  soort: AlgemeneInkoopInputSoort;
+  omschrijving: string;
+  kostensoort: AlgemeneInkoopInputKostensoort;
+  /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
+  leverancier_naam?: string | null;
+  /** @nullable */
+  verwacht_bedrag?: number | null;
+  /** @nullable */
+  betaalwijze?: AlgemeneInkoopInputBetaalwijze;
+  /** @nullable */
+  betaald_op?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
+export type AlgemeneInkoopUpdateKostensoort = typeof AlgemeneInkoopUpdateKostensoort[keyof typeof AlgemeneInkoopUpdateKostensoort];
+
+
+export const AlgemeneInkoopUpdateKostensoort = {
+  algemene_kosten: 'algemene_kosten',
+  gereedschap: 'gereedschap',
+  wagenpark: 'wagenpark',
+  investering: 'investering',
+  representatie: 'representatie',
+  software: 'software',
+  verzekering: 'verzekering',
+} as const;
+
+export type AlgemeneInkoopUpdateBetaalwijze = typeof AlgemeneInkoopUpdateBetaalwijze[keyof typeof AlgemeneInkoopUpdateBetaalwijze];
+
+
+export const AlgemeneInkoopUpdateBetaalwijze = {
+  zakelijke_pas: 'zakelijke_pas',
+  creditcard: 'creditcard',
+  contant: 'contant',
+  ideal: 'ideal',
+} as const;
+
+export interface AlgemeneInkoopUpdate {
+  omschrijving?: string;
+  kostensoort?: AlgemeneInkoopUpdateKostensoort;
+  /** @nullable */
+  leverancier_id?: number | null;
+  leverancier_naam?: string;
+  /** @nullable */
+  verwacht_bedrag?: number | null;
+  betaalwijze?: AlgemeneInkoopUpdateBetaalwijze;
+  betaald_op?: string;
+  bedrag?: number;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
 export interface EenheidsPrijs {
   /** @nullable */
   bron?: string | null;
@@ -15335,6 +15538,14 @@ van?: string;
 tot?: string;
 };
 
+export type ListAlgemeneInkoopParams = {
+status?: string;
+};
+
+export type UploadAlgemeneInkoopBonBody = {
+  bestand: Blob;
+};
+
 export type ListWerkbonnenParams = {
 contract_id?: number;
 gebouw_id?: number;
@@ -16017,6 +16228,7 @@ export type GetWagenparkBuitenWerktijdRapportParams = {
 van?: string;
 tot?: string;
 };
+
 export type ListBrandstofImportenParams = {
 status?: string;
 };
@@ -16248,39 +16460,3 @@ export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
 
-
-export interface WagenparkBuitenWerktijdVoertuig {
-  voertuig_id: number;
-  kenteken: string;
-  merk: string;
-  type: string;
-  venster_bron: string;
-  aantal_ritten_totaal: number;
-  aantal_buiten_venster: number;
-  km_buiten_venster: number;
-  ritten_buiten: WagenparkBuitenWerktijdRit[];
-}
-
-export interface WagenparkWerktijdvensterInput {
-  voertuig_id?: number | null;
-  werkdagen: number[];
-  start_tijd: string;
-  eind_tijd: string;
-  actief?: boolean;
-}
-
-export interface WagenparkBuitenWerktijdRit {
-  id: number;
-  start_datum: string;
-  eind_datum?: string | null;
-  afstand_km?: number | null;
-  bron: string;
-}
-
-export interface WagenparkBuitenWerktijdRapport {
-  geconfigureerd: boolean;
-  van: string;
-  tot: string;
-  voertuigen: WagenparkBuitenWerktijdVoertuig[];
-  privacy_tekst: string;
-}

@@ -23,6 +23,7 @@ import {
 } from "@workspace/api-client-react";
 import type { InkoopplanRegel, Inkoopbon, InkoopbonAiSuggestieResultaat } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
 import { ToastAction } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -343,6 +344,7 @@ interface NieuweInkoopbonDialoogProps {
 function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: NieuweInkoopbonDialoogProps) {
   const [leverancier, setLeverancier] = useState("");
   const [leverancierId, setLeverancierId] = useState<number | null>(null);
+  const [nieuweLevOpen, setNieuweLevOpen] = useState(false);
   const [datum, setDatum] = useState("");
   const [geselecteerd, setGeselecteerd] = useState<number[]>([]);
   const { toast } = useToast();
@@ -432,6 +434,17 @@ function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: N
                 className="mt-1"
               />
             )}
+            <Button
+              type="button" variant="link" size="sm" className="px-0 h-6 text-xs"
+              onClick={() => setNieuweLevOpen(true)}
+            >
+              + Leverancier toevoegen aan register
+            </Button>
+            <NieuweLeverancierDialoog
+              open={nieuweLevOpen}
+              onOpenChange={setNieuweLevOpen}
+              onAangemaakt={(lev) => { setLeverancierId(lev.id); setLeverancier(lev.naam); }}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Gewenste leverdatum</label>

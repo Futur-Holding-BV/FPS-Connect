@@ -246,6 +246,9 @@ export const FACTUUR_SIGNAAL_TYPES = [
   "aanvraag_niet_opgepakt",     // projectkans staat na de instelbare termijn nog in fase 'signaal'
   // LOON_01 — SEPA-loonbestand per mail binnengekomen maar werkgever/periode onzeker
   "loon_sepa_onvolledig",
+  // NP_INKOOP_01 — factuur gekoppeld aan algemene inkoop maar het bedrag wijkt
+  // af van het verwachte bedrag; mag nooit stil geaccepteerd worden.
+  "algemene_inkoop_bedrag_afwijkend",
 ] as const;
 export type FactuurSignaalType = typeof FACTUUR_SIGNAAL_TYPES[number];
 

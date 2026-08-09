@@ -4909,6 +4909,169 @@ paths:
                 items:
                   $ref: "#/components/schemas/InkoopoverzichtItem"
 
+  # ── ALGEMENE INKOOP (NP_INKOOP_01) ────────────────────────────────────────
+  /algemene-inkoop:
+    get:
+      operationId: listAlgemeneInkoop
+      tags: [algemene-inkoop]
+      summary: Algemene (niet-projectgebonden) inkopen ophalen
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlgemeneInkoop"
+    post:
+      operationId: createAlgemeneInkoop
+      tags: [algemene-inkoop]
+      summary: Algemene inkoop vastleggen (op rekening of direct betaald)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgemeneInkoopInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlgemeneInkoop"
+
+  /algemene-inkoop/{id}:
+    get:
+      operationId: getAlgemeneInkoop
+      tags: [algemene-inkoop]
+      summary: Algemene inkoop ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlgemeneInkoop"
+    patch:
+      operationId: updateAlgemeneInkoop
+      tags: [algemene-inkoop]
+      summary: Algemene inkoop bijwerken (niet meer na afhandeling)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgemeneInkoopUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlgemeneInkoop"
+    delete:
+      operationId: deleteAlgemeneInkoop
+      tags: [algemene-inkoop]
+      summary: Algemene inkoop verwijderen (alleen zonder factuur/afronding)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verwijderd
+
+  /algemene-inkoop/{id}/bon:
+    post:
+      operationId: uploadAlgemeneInkoopBon
+      tags: [algemene-inkoop]
+      summary: Bon (foto/pdf) uploaden bij een direct betaalde inkoop
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [bestand]
+              properties:
+                bestand:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlgemeneInkoop"
+        "400":
+          description: Ongeldig bestand (type/grootte) of geen bestand
+        "422":
+          description: Bon niet toegestaan in deze status of bij deze soort
+        "503":
+          description: Virusscan niet beschikbaar — upload geweigerd (fail-closed)
+    get:
+      operationId: downloadAlgemeneInkoopBon
+      tags: [algemene-inkoop]
+      summary: Bon downloaden (na geslaagde virusscan)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Het bonbestand
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Geen bon aanwezig
+        "409":
+          description: Bestand nog niet vrijgegeven door de virusscan
+
+  /algemene-inkoop/{id}/afronden:
+    post:
+      operationId: rondAlgemeneInkoopAf
+      tags: [algemene-inkoop]
+      summary: Algemene inkoop afronden (direct betaald vereist een bon)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlgemeneInkoop"
+
   # ── WERKBONNEN ────────────────────────────────────────────────────────────
   /werkbonnen:
     get:
@@ -44853,6 +45016,81 @@ components:
           type: string
         aantal_regels:
           type: integer
+
+    AlgemeneInkoop:
+      type: object
+      required: [id, nummer, nummer_weergave, soort, status, leverancier_naam, omschrijving, kostensoort, besteld_door_id, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        nummer: { type: integer }
+        nummer_weergave:
+          type: string
+          description: "A-reeks weergave, bijv. A012"
+        soort:
+          type: string
+          enum: [op_rekening, direct_betaald]
+        status:
+          type: string
+          enum: [ter_goedkeuring, besteld, factuur_ontvangen, open, afgehandeld]
+        leverancier_id: { type: ["integer", "null"] }
+        leverancier_naam: { type: string }
+        omschrijving: { type: string }
+        kostensoort:
+          type: string
+          enum: [algemene_kosten, gereedschap, wagenpark, investering, representatie, software, verzekering]
+        verwacht_bedrag: { type: ["number", "null"] }
+        besteld_door_id: { type: integer }
+        besteld_door_naam: { type: ["string", "null"] }
+        betaalwijze: { type: ["string", "null"] }
+        betaald_op: { type: ["string", "null"] }
+        bedrag: { type: ["number", "null"] }
+        bon_pad: { type: ["string", "null"] }
+        factuur_id: { type: ["integer", "null"] }
+        factuur_nummer: { type: ["string", "null"] }
+        factuur_bedrag: { type: ["string", "null"] }
+        factuur_gekoppeld_op: { type: ["string", "null"] }
+        open_goedkeuringsaanvraag_id: { type: ["integer", "null"] }
+        opmerkingen: { type: ["string", "null"] }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: ["string", "null"] }
+
+    AlgemeneInkoopInput:
+      type: object
+      required: [soort, omschrijving, kostensoort]
+      properties:
+        soort:
+          type: string
+          enum: [op_rekening, direct_betaald]
+        omschrijving: { type: string }
+        kostensoort:
+          type: string
+          enum: [algemene_kosten, gereedschap, wagenpark, investering, representatie, software, verzekering]
+        leverancier_id: { type: ["integer", "null"] }
+        leverancier_naam: { type: ["string", "null"] }
+        verwacht_bedrag: { type: ["number", "null"] }
+        betaalwijze:
+          type: ["string", "null"]
+          enum: [zakelijke_pas, creditcard, contant, ideal, null]
+        betaald_op: { type: ["string", "null"] }
+        bedrag: { type: ["number", "null"] }
+        opmerkingen: { type: ["string", "null"] }
+
+    AlgemeneInkoopUpdate:
+      type: object
+      properties:
+        omschrijving: { type: string }
+        kostensoort:
+          type: string
+          enum: [algemene_kosten, gereedschap, wagenpark, investering, representatie, software, verzekering]
+        leverancier_id: { type: ["integer", "null"] }
+        leverancier_naam: { type: string }
+        verwacht_bedrag: { type: ["number", "null"] }
+        betaalwijze:
+          type: string
+          enum: [zakelijke_pas, creditcard, contant, ideal]
+        betaald_op: { type: string }
+        bedrag: { type: number }
+        opmerkingen: { type: ["string", "null"] }
 
     EenheidsPrijs:
       type: object

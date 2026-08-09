@@ -17,6 +17,7 @@ import {
   factuurTijdlijnTable,
   factuurCorrespondentieTable,
   crmKlantenTable,
+  algemeneInkopenTable,
   gebruikersTable,
   werkInboxMailboxenTable,
   werkInboxMailsTable,
@@ -420,6 +421,12 @@ async function verwerkFactuurBijlage(
       omschrijving: `Het loondeel (€ ${v.loondeel_bedrag}) op de uitzendfactuur van ${leverancier?.naam} oogt onwaarschijnlijk ten opzichte van het totaalbedrag (€ ${v.bedrag_incl_btw}).` }, tx);
   }
 
+  // ── NP_INKOOP_01: match op algemene-inkoopnummer (A-reeks) ─────────────────
+  // Alleen additief: bij een match wordt de inkoopregel gekoppeld en de
+  // kostensoort als voorstel op de factuur gezet. Geen match = bestaand gedrag
+  // volledig ongewijzigd. Een bedragafwijking geeft een signaal, nooit stil.
+  await koppelAlgemeneInkoop(factuur.id, v, mail.onderwerp, tx);
+
   // §4 automatische afwijzingen
   if (dubbel) {
     await wijsAutomatischAf(factuur.id, "dubbel", "ai_gelezen", mail.afzenderEmail, leverancier?.naam ?? v.leverancier_naam, v.factuurnummer, tx);
@@ -443,6 +450,90 @@ async function verwerkFactuurBijlage(
     } catch (err) {
       logger.warn({ err }, "factuurstroom: pushmelding versturen mislukt");
     }
+  }
+}
+
+// ── NP_INKOOP_01: koppeling factuur ↔ algemene inkoop via het A-nummer ────────
+// Zoekt A-nummers (bv. "A012") in de factuurverwijzing/-omschrijving en het
+// mailonderwerp. Bij precies één passende, openstaande op-rekening-inkoop:
+// koppelen, status → factuur_ontvangen, kostensoort als VOORSTEL op de factuur
+// (alleen als er nog geen categorie staat). Bedragafwijking = signaal, nooit
+// stil. Geen match = niets doen (bestaand gedrag ongewijzigd).
+// Geëxporteerd zodat het bewijs-harnas (src/scripts/verificatie-algemene-inkoop-match.ts)
+// exact deze productiecode kan aanroepen; de app zelf gebruikt hem alleen intern.
+export async function koppelAlgemeneInkoop(
+  factuurId: number,
+  v: FactuurStroomVelden,
+  mailOnderwerp: string | null | undefined,
+  tx: DbOfTx,
+): Promise<void> {
+  try {
+    const zoektekst = [v.verwijzing, v.omschrijving, mailOnderwerp].filter(Boolean).join(" ");
+    const nummers = [...zoektekst.matchAll(/\bA(\d{3,6})\b/gi)].map((m) => parseInt(m[1]!, 10));
+    const uniek = [...new Set(nummers)].filter((n) => Number.isInteger(n) && n > 0);
+    if (uniek.length === 0) return;
+
+    const kandidaten = await tx.select().from(algemeneInkopenTable)
+      .where(and(
+        inArray(algemeneInkopenTable.nummer, uniek),
+        eq(algemeneInkopenTable.soort, "op_rekening"),
+        eq(algemeneInkopenTable.status, "besteld"),
+        isNull(algemeneInkopenTable.factuurId),
+      ));
+    if (kandidaten.length === 0) return;
+    if (kandidaten.length > 1) {
+      // Meerdere open inkoopregels genoemd — nooit gokken; mens beslist.
+      await schrijfTijdlijn(factuurId,
+        `Op deze factuur staan meerdere algemene-inkoopnummers (${kandidaten.map((k) => `A${String(k.nummer).padStart(3, "0")}`).join(", ")}). Koppel handmatig de juiste inkoop.`,
+        null, tx);
+      return;
+    }
+
+    const inkoop = kandidaten[0]!;
+    const nummerWeergave = `A${String(inkoop.nummer).padStart(3, "0")}`;
+    // Atomaire claim: alleen koppelen als de regel op dit moment nog écht
+    // open is (besteld + zonder factuur). Twee parallel binnenkomende
+    // facturen met hetzelfde A-nummer kunnen zo nooit allebei koppelen —
+    // de tweede claimt nul rijen en laat de factuur ongemoeid.
+    const geclaimd = await tx.update(algemeneInkopenTable)
+      .set({ factuurId, status: "factuur_ontvangen", factuurGekoppeldOp: new Date(), bijgewerktOp: new Date() })
+      .where(and(
+        eq(algemeneInkopenTable.id, inkoop.id),
+        eq(algemeneInkopenTable.status, "besteld"),
+        isNull(algemeneInkopenTable.factuurId),
+      ))
+      .returning({ id: algemeneInkopenTable.id });
+    if (geclaimd.length !== 1) {
+      await schrijfTijdlijn(factuurId,
+        `Algemene inkoop ${nummerWeergave} was net al aan een andere factuur gekoppeld. Controleer handmatig welke factuur bij deze inkoop hoort.`,
+        null, tx);
+      return;
+    }
+
+    // Kostensoort als voorstel overnemen — nooit een bestaande categorie overschrijven.
+    const [f] = await tx.select({ categorie: facturenTable.categorie }).from(facturenTable)
+      .where(eq(facturenTable.id, factuurId)).limit(1);
+    if (f && !f.categorie) {
+      await tx.update(facturenTable).set({ categorie: inkoop.kostensoort, bijgewerktOp: new Date() })
+        .where(eq(facturenTable.id, factuurId));
+    }
+    await schrijfTijdlijn(factuurId,
+      `Deze factuur is herkend als de factuur bij algemene inkoop ${nummerWeergave} (${inkoop.omschrijving}). De kostensoort "${inkoop.kostensoort}" is als voorstel overgenomen.`,
+      null, tx);
+
+    // Bedragvergelijking (incl. btw) — afwijking wordt gemeld, nooit stil verwerkt.
+    if (inkoop.verwachtBedrag != null && v.bedrag_incl_btw != null) {
+      const verschil = Math.abs(v.bedrag_incl_btw - inkoop.verwachtBedrag);
+      const tolerantie = Math.max(2, inkoop.verwachtBedrag * 0.02); // 2% met een bodem van € 2
+      if (verschil > tolerantie) {
+        await maakSignaal({ type: "algemene_inkoop_bedrag_afwijkend", factuurId,
+          omschrijving: `Het factuurbedrag (€ ${v.bedrag_incl_btw}) wijkt af van het verwachte bedrag (€ ${inkoop.verwachtBedrag}) van algemene inkoop ${nummerWeergave}. Controleer of dit klopt voordat de factuur verder gaat.` }, tx);
+        await schrijfTijdlijn(factuurId,
+          `Let op: het factuurbedrag wijkt af van het verwachte bedrag van ${nummerWeergave}. Dit is gemeld en wordt niet stil afgehandeld.`, null, tx);
+      }
+    }
+  } catch (err) {
+    logger.warn({ err, factuurId }, "factuurstroom: koppeling met algemene inkoop mislukt — factuur volgt de normale route");
   }
 }
 

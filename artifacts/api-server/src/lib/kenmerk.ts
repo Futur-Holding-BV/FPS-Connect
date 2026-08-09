@@ -19,7 +19,7 @@ import {
 } from "@workspace/db";
 
 /** Toon een volgnummer met minimaal drie posities; groeit mee boven 999 (§4.1). */
-export function formatNummer(letter: "G" | "M" | "C" | "O" | "I" | "F", n: number): string {
+export function formatNummer(letter: "G" | "M" | "C" | "O" | "I" | "F" | "A", n: number): string {
   return `${letter}${String(n).padStart(3, "0")}`;
 }
 

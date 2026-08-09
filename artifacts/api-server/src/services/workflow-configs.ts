@@ -16,6 +16,7 @@ import {
   calculatiesTable,
   planningItemsTable,
   arbeidsovereenkomstenTable,
+  algemeneInkopenTable,
   medewerkersTable,
   functiesTable,
 } from "@workspace/db";
@@ -662,6 +663,55 @@ const arbeidsovereenkomstConfig: WorkflowConfig<Arbeidsovereenkomst> = {
   ],
 };
 
+// ── Algemene inkoop (NP_INKOOP_01) ────────────────────────────────────────────
+// Alleen de goedkeuringstransitie loopt via de workflow-engine; de rest van de
+// lichte statusmachine (besteld → factuur_ontvangen → afgehandeld) zit in de
+// eigen routes. "vrijgegeven" is een virtuele doelstatus: de echte beginstatus
+// hangt af van de soort (op_rekening → besteld, direct_betaald → open).
+
+type AlgemeneInkoop = typeof algemeneInkopenTable.$inferSelect;
+
+const algemeneInkoopConfig: WorkflowConfig<AlgemeneInkoop> = {
+  id: "algemene_inkoop",
+  naam: "Algemene inkoop",
+  haalEntityOp: async (id, db) => {
+    const [r] = await db.select().from(algemeneInkopenTable).where(eq(algemeneInkopenTable.id, id));
+    return r ?? null;
+  },
+  uitvoerenTransitie: async (id, _nieuweStatus, _van, ctx) => {
+    const [huidig] = await ctx.db.select().from(algemeneInkopenTable).where(eq(algemeneInkopenTable.id, id));
+    const doel = huidig?.soort === "direct_betaald" ? "open" : "besteld";
+    const [r] = await ctx.db.update(algemeneInkopenTable)
+      .set({ status: doel, bijgewerktOp: new Date() })
+      .where(eq(algemeneInkopenTable.id, id))
+      .returning();
+    return r!;
+  },
+  transities: [
+    {
+      van: "ter_goedkeuring",
+      naar: "vrijgegeven",
+      label: "Vrijgeven",
+      // Vrijgeven kan uitsluitend via de goedkeuringsmotor — óók voor de
+      // hoofdbeheerder. Het beleid dat de regel in ter_goedkeuring zette,
+      // blijft daarmee bindend; wie boven de grens zit, doorloopt de aanvraag
+      // (de hoofdbeheerder kan die zelf goedkeuren, maar nooit overslaan).
+      magUitvoeren: async (_entity, ctx) => ctx.params?.viaGoedkeuring === true,
+      precheck: async (entity, ctx) => {
+        if (ctx.params?.viaGoedkeuring === true) return null;
+        const bedrag = entity.soort === "direct_betaald" ? entity.bedrag : entity.verwachtBedrag;
+        const { vereist } = await checkVereistGoedkeuring(ctx.db, "algemene_inkoop", bedrag ?? null, null);
+        if (vereist) {
+          return voorwaardeFout(
+            "Voor deze inkoop is volgens het geldende goedkeuringsbeleid een formele goedkeuringsaanvraag vereist.",
+          );
+        }
+        return null;
+      },
+    },
+  ],
+};
+
 // ── Registreren ────────────────────────────────────────────────────────────────
 
 workflowService
@@ -674,4 +724,5 @@ workflowService
   .registreer(onderhoudConfig)
   .registreer(calculatieConfig)
   .registreer(planningItemUitvoeringConfig)
-  .registreer(arbeidsovereenkomstConfig);
+  .registreer(arbeidsovereenkomstConfig)
+  .registreer(algemeneInkoopConfig);

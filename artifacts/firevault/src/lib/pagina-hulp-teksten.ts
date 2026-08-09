@@ -20,6 +20,7 @@ export type PaginaSleutel =
   | "offertes"
   | "offerte-studio"
   | "leveranciers"
+  | "algemene-inkoop"
   | "leverancier-detail"
   | "artikelen"
   | "beheer-import"
@@ -199,6 +200,10 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
       "De offertestudio heeft vijf tabbladen: Secties (vrije tekstvakken voor inleiding, aanpak en slotwoord), Prijzen (begrotingsregels + weergave-instellingen), Condities (betalingstermijn, geldigheid, factuurschema), Bijlagen (verwijzingen naar certificaten en documenten) en Voorbeeld (live preview). Sla per tabblad afzonderlijk op. Gebruik 'DDS afdrukken' voor de definitieve PDF.",
   },
 
+  "algemene-inkoop": {
+    default:
+      "Algemene inkoop voor kosten zonder project. Kies 'Op rekening' voor bestellingen waarvoor een factuur volgt — u krijgt direct een A-nummer dat de leverancier als referentie op de factuur zet, zodat de factuur automatisch wordt gekoppeld. Kies 'Direct betaald' voor pinbetalingen, creditcard of contant; daar is een bon (foto of pdf) verplicht om af te ronden. Boven de goedkeuringsgrens loopt de inkoop eerst langs goedkeuring.",
+  },
   "leveranciers": {
     hoofdbeheerder:
       "Leveranciersregister. Maak leveranciers aan met contactgegevens, bankgegevens (IBAN, BIC) en betalingstermijn. Via de detailpagina koppelt u artikelen aan een leverancier en ziet u gekoppelde inkoopbonnen.",

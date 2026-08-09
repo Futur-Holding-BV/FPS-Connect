@@ -5,6 +5,7 @@ import {
   Bot, Activity, ScrollText, HardDrive, Upload, HardDriveUpload,
   Mail, MessageSquarePlus, LifeBuoy, Smartphone, Info, ListChecks,
   BarChart3, FileArchive, Target, Package, Award, ImageIcon, BookOpen,
+  Truck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -33,6 +34,7 @@ export default function InstellingenPagina() {
   const toonSysteem = heeftNiveau("systeem", 1);
   const toonGebruikers = heeftNiveau("gebruikers", 1);
   const toonBibliotheek = heeftNiveau("bibliotheek", 1);
+  const toonInkoopStamgegevens = heeftNiveau("offertes", 1);
 
   const groepen: Groep[] = useMemo(() => [
     {
@@ -66,6 +68,27 @@ export default function InstellingenPagina() {
           icoon: ShieldCheck,
           beschrijving: "Gebouw- en objectspecifieke toegangsrechten instellen",
           zichtbaar: isHoofdbeheerder,
+        },
+      ],
+    },
+    {
+      // NP_INKOOP_01 — stamgegevens verhuisd uit het (opgeheven) sidebar-hoofdstuk Inkoop.
+      id: "inkoop-stamgegevens",
+      titel: "Inkoop-stamgegevens",
+      items: [
+        {
+          label: "Leveranciers",
+          pad: "/leveranciers",
+          icoon: Truck,
+          beschrijving: "Leveranciersregister beheren (adressen, contactpersonen, voorwaarden)",
+          zichtbaar: toonInkoopStamgegevens,
+        },
+        {
+          label: "Artikelen",
+          pad: "/artikelen",
+          icoon: Package,
+          beschrijving: "Artikelbestand en prijzen voor inkoop en calculatie beheren",
+          zichtbaar: toonInkoopStamgegevens,
         },
       ],
     },

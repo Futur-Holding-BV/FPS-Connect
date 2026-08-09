@@ -16,6 +16,9 @@ INDEX|ai_categorie_correcties|ai_categorie_correcties_pkey
 INDEX|ai_prompt_scans|ai_prompt_scans_pkey
 INDEX|ai_veld_correcties|ai_veld_correcties_pkey
 INDEX|ai_wijzigingsvoorstellen|ai_wijzigingsvoorstellen_pkey
+INDEX|algemene_inkopen|algemene_inkopen_factuur_idx
+INDEX|algemene_inkopen|algemene_inkopen_nummer_uniek
+INDEX|algemene_inkopen|algemene_inkopen_pkey
 INDEX|app_instellingen|app_instellingen_pkey
 INDEX|arbeidsovereenkomsten|arbeidsovereenkomsten_pkey
 INDEX|artikelen|artikelen_pkey
@@ -641,6 +644,25 @@ KOLOM|ai_wijzigingsvoorstellen|risico_niveau|text|NO|'oranje'::text
 KOLOM|ai_wijzigingsvoorstellen|rol|text|YES|
 KOLOM|ai_wijzigingsvoorstellen|status|text|NO|'wacht'::text
 KOLOM|ai_wijzigingsvoorstellen|titel|text|NO|
+KOLOM|algemene_inkopen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|algemene_inkopen|bedrag|real|YES|
+KOLOM|algemene_inkopen|besteld_door_id|integer|NO|
+KOLOM|algemene_inkopen|betaald_op|text|YES|
+KOLOM|algemene_inkopen|betaalwijze|text|YES|
+KOLOM|algemene_inkopen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|algemene_inkopen|bon_pad|text|YES|
+KOLOM|algemene_inkopen|factuur_gekoppeld_op|timestamp without time zone|YES|
+KOLOM|algemene_inkopen|factuur_id|integer|YES|
+KOLOM|algemene_inkopen|id|integer|NO|nextval('algemene_inkopen_id_seq'::regclass)
+KOLOM|algemene_inkopen|kostensoort|text|NO|
+KOLOM|algemene_inkopen|leverancier_id|integer|YES|
+KOLOM|algemene_inkopen|leverancier_naam|text|NO|
+KOLOM|algemene_inkopen|nummer|integer|NO|nextval('seq_nummer_a'::regclass)
+KOLOM|algemene_inkopen|omschrijving|text|NO|
+KOLOM|algemene_inkopen|opmerkingen|text|YES|
+KOLOM|algemene_inkopen|soort|text|NO|
+KOLOM|algemene_inkopen|status|text|NO|
+KOLOM|algemene_inkopen|verwacht_bedrag|real|YES|
 KOLOM|app_instellingen|aanvraag_oppak_termijn_uren|integer|NO|72
 KOLOM|app_instellingen|aanvraag_reactietermijn_uren|integer|NO|24
 KOLOM|app_instellingen|ai_drempel_melding_gestuurd_maand|text|YES|

@@ -747,6 +747,26 @@ router.post(
         effectiefDocumentType = afgeleidType;
       }
 
+      // Object-level autorisatie voor algemene inkoop (NP_INKOOP_01):
+      // zelfde toegangspredicaat als de algemene-inkooproutes (financieel:2 óf
+      // offertes:1), en bedrag + documentType worden server-side uit het record
+      // afgeleid — client-input wordt genegeerd zodat niemand met een verzonnen
+      // (lager) bedrag een zwakker beleid kan activeren.
+      let effectiefBedrag = bedrag;
+      if (objectType === "algemene_inkoop") {
+        const p = req.permissies!;
+        if (!p.isHoofdbeheerder && !p.heeftModuleRecht("financieel", 2) && !p.heeftModuleRecht("offertes", 1)) {
+          res.status(403).json({ error: "Toegang tot algemene inkoop vereist voor dit type goedkeuringsaanvraag" });
+          return;
+        }
+        const { algemeneInkopenTable } = await import("@workspace/db");
+        const [inkoop] = await db.select().from(algemeneInkopenTable)
+          .where(eq(algemeneInkopenTable.id, objectId)).limit(1);
+        if (!inkoop) { res.status(404).json({ error: "Algemene inkoop niet gevonden" }); return; }
+        effectiefDocumentType = "algemene_inkoop";
+        effectiefBedrag = (inkoop.soort === "direct_betaald" ? inkoop.bedrag : inkoop.verwachtBedrag) ?? null;
+      }
+
       // Object-bestaan validatie voor niet-financiële types:
       // Controleer dat het objectId daadwerkelijk bestaat in de juiste tabel
       // voordat een aanvraag wordt aangemaakt. Vereist geen extra bevoegdheden
@@ -791,6 +811,8 @@ router.post(
         hrm_besluit: async () => true,  // besluit-validatie loopt via eigen routes
         verlofaanvraag: async () => true, // reeds geregistreerd in OBJECT_WORKFLOW_ACTIE
         inkoopbon: async () => true,      // reeds geregistreerd in OBJECT_WORKFLOW_ACTIE
+        // algemene_inkoop: volledig afgehandeld in het aparte blok hierboven
+        // (recht-check + server-side bedrag/documentType-afleiding).
       };
       const objectCheck = NIET_FINANCIELE_OBJECT_CHECKS[objectType];
       if (!FINANCIELE_TYPES.has(objectType) && objectCheck) {
@@ -806,7 +828,7 @@ router.post(
         objectId,
         documentType: effectiefDocumentType,
         omschrijving,
-        bedrag,
+        bedrag: effectiefBedrag,
         werkmaatschappijId,
         actor,
       });
