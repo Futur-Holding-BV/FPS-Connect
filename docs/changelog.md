@@ -3043,3 +3043,9 @@ Vervolg op de activatie-verharding van gisteren: een oude activatielink op ieman
 - Herrekeningsrapport ADV (`scripts/src/rapport-adv-herrekening.ts`): rapporteert alleen; er waren 0 bestaande weekstaten, dus geen herrekening nodig.
 - Bewijs: `scripts/src/bewijs-uren01.ts` — 38 controles geslaagd (ADV 36/38/40/44, slot dicht/open/plafond/verdeling, TvT-voorstel zonder stille vastlegging, vakantieweek zonder alarm).
 - Na code-review verhard: slotverbruik atomair (conditionele UPDATE, race-vast, ook bij wijzigen van een regel), weekcontrole-overtreding op norm+2 met per-regel attributie zoals de invoertoets, ISO-jaar consistent rond nieuwjaar, weekcontrole draait alleen maandag en ruimt opgeloste meldingen zelf op.
+
+## 2026-08-09 — Toebehoren-verbruik zichtbaar als eigen kostenpost in het magazijn
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuw lees-endpoint + sectie op bestaande pagina)
+
+Uitgiftes van toebehoren-gereedschap (BOUW_01 §6, rubriek `gereedschap_toebehoren`) zijn nu als aparte kostenpost zichtbaar op de pagina **Magazijn → Voorraadwaarde**. Een nieuwe sectie "Kostenpost gereedschap-toebehoren" toont totaal uitgegeven aantal + kostprijs (op basis van gemiddelde/laatst bekende inkoopprijs), uitgesplitst per maand en per artikel, met een van/tot-datumfilter. Hoeveelheden zonder bekende inkoopprijs worden apart geteld en niet stilzwijgend in de kostprijs meegenomen. Bewijs via echte flow: login → gezaaide rubriek-uitgifte (4 stuks à €12,50) → endpoint gaf €50 in de juiste maand en het juiste artikel; datumfilter in de toekomst gaf leeg resultaat. De rubriek-mutaties hebben geen opdracht-koppeling (`referentie_type`/`opdracht_id` null) en verschijnen daardoor aantoonbaar niet in projectkosten/nacalculatie.

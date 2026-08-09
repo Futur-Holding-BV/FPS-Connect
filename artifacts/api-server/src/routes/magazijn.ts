@@ -24,7 +24,7 @@ import {
   medewerkersTable,
   planningItemsTable,
 } from "@workspace/db";
-import { eq, and, asc, desc, ilike, lt, lte, sql, gt, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, asc, desc, ilike, lt, lte, gte, sql, gt, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
@@ -234,6 +234,82 @@ async function bepaalKostenrubriek(
   const cat = (art?.categorie ?? "").toLowerCase();
   return cat.includes("toebehoren") ? "gereedschap_toebehoren" : null;
 }
+
+// ── Toebehoren-verbruik: BOUW_01 §6 — eigen kostenpost, los van projecten ────
+// Aggregeert alle uitgifte-mutaties met kostenrubriek 'gereedschap_toebehoren'
+// per maand (aantal + kostprijs op basis van gemiddelde/laatst bekende inkoopprijs).
+router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<void> => {
+  try {
+    const van = typeof req.query.van === "string" && req.query.van ? new Date(`${req.query.van}T00:00:00`) : null;
+    const tot = typeof req.query.tot === "string" && req.query.tot ? new Date(`${req.query.tot}T23:59:59.999`) : null;
+    if ((van && isNaN(van.getTime())) || (tot && isNaN(tot.getTime()))) {
+      res.status(400).json({ error: "Ongeldige datum (verwacht YYYY-MM-DD)" });
+      return;
+    }
+
+    const condities = [
+      eq(voorraadMutatiesTable.kostenrubriek, "gereedschap_toebehoren"),
+      eq(voorraadMutatiesTable.type, "uitgifte"),
+    ];
+    if (van) condities.push(gte(voorraadMutatiesTable.aangemaaktOp, van));
+    if (tot) condities.push(lte(voorraadMutatiesTable.aangemaaktOp, tot));
+
+    const mutaties = await db
+      .select({
+        artikelId: voorraadMutatiesTable.artikelId,
+        hoeveelheid: voorraadMutatiesTable.hoeveelheid,
+        aangemaaktOp: voorraadMutatiesTable.aangemaaktOp,
+        naam: artikelenTable.naam,
+        eenheid: artikelenTable.eenheid,
+        inkoopprijs: artikelenTable.inkoopprijs,
+        gemiddeldInkoopprijs: artikelenTable.gemiddeldInkoopprijs,
+        laatsteInkoopprijs: artikelenTable.laatsteInkoopprijs,
+      })
+      .from(voorraadMutatiesTable)
+      .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+      .where(and(...condities));
+
+    const rond = (n: number) => Math.round(n * 100) / 100;
+    const periodeMap = new Map<string, { aantal: number; kosten: number }>();
+    const artikelMap = new Map<number, { naam: string; eenheid: string; aantal: number; kosten: number }>();
+    let totaalAantal = 0;
+    let totaalKosten = 0;
+    let onbekendePrijsAantal = 0;
+
+    for (const m of mutaties) {
+      // Prijsbasis: gewogen gemiddelde > laatst bekende inkoop > vaste inkoopprijs > onbekend
+      const prijs = m.gemiddeldInkoopprijs ?? m.laatsteInkoopprijs ?? m.inkoopprijs ?? null;
+      const kosten = prijs != null && prijs > 0 ? m.hoeveelheid * prijs : 0;
+      if (prijs == null || prijs <= 0) onbekendePrijsAantal += m.hoeveelheid;
+
+      totaalAantal += m.hoeveelheid;
+      totaalKosten += kosten;
+
+      const d = m.aangemaaktOp;
+      const periode = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const p = periodeMap.get(periode) ?? { aantal: 0, kosten: 0 };
+      periodeMap.set(periode, { aantal: p.aantal + m.hoeveelheid, kosten: p.kosten + kosten });
+
+      const a = artikelMap.get(m.artikelId) ?? { naam: m.naam ?? "Onbekend artikel", eenheid: m.eenheid ?? "stuks", aantal: 0, kosten: 0 };
+      artikelMap.set(m.artikelId, { ...a, aantal: a.aantal + m.hoeveelheid, kosten: a.kosten + kosten });
+    }
+
+    res.json({
+      totaal_aantal: rond(totaalAantal),
+      totaal_kosten: rond(totaalKosten),
+      per_periode: [...periodeMap.entries()]
+        .map(([periode, v]) => ({ periode, aantal: rond(v.aantal), kosten: rond(v.kosten) }))
+        .sort((a, b) => b.periode.localeCompare(a.periode)),
+      per_artikel: [...artikelMap.entries()]
+        .map(([artikel_id, v]) => ({ artikel_id, naam: v.naam, eenheid: v.eenheid, aantal: rond(v.aantal), kosten: rond(v.kosten) }))
+        .sort((a, b) => b.kosten - a.kosten),
+      onbekende_prijs_aantal: rond(onbekendePrijsAantal),
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn toebehoren-verbruik fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD
@@ -1235,7 +1311,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
           } else {
             // Fallback: geen mutatie-rijen beschikbaar (legacy) → neem via bijwerkenVoorraad
             await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
-              opdrachtId ? "opdracht" : "reservering", opdrachtId ?? resId, str(body.omschrijving), opdrachtId);
+              opdrachtId ? "opdracht" : "reservering", opdrachtId ?? resId, str(body.omschrijving), opdrachtId, kostenrubriek);
             await tx.update(voorraadTable)
               .set({ gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${hoeveelheid})`, bijgewerktOp: new Date() })
               .where(eq(voorraadTable.artikelId, artikelId));

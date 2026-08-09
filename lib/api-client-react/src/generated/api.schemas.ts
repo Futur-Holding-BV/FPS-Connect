@@ -15260,6 +15260,12 @@ export interface MagazijnVoorraadwaarde {
   onbekende_prijs: MagazijnVoorraadwaardeOnbekend[];
 }
 
+export type ToebehorenVerbruikPerPeriodeItem = {
+  /** Maand in formaat YYYY-MM */
+  periode: string;
+  aantal: number;
+  kosten: number;
+};
 export interface DuplicaatCheckInput {
   naam?: string;
   email?: string;
@@ -16490,6 +16496,16 @@ actief?: boolean;
 barcode?: string;
 };
 
+export type GetMagazijnToebehorenVerbruikParams = {
+/**
+ * Begindatum (YYYY-MM-DD), inclusief
+ */
+van?: string;
+/**
+ * Einddatum (YYYY-MM-DD), inclusief
+ */
+tot?: string;
+};
 export type ListVoorraadParams = {
 artikel_id?: number;
 locatie_id?: number;
@@ -16658,3 +16674,20 @@ export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
 
+
+export interface ToebehorenVerbruik {
+  totaal_aantal: number;
+  totaal_kosten: number;
+  per_periode: ToebehorenVerbruikPerPeriodeItem[];
+  per_artikel: ToebehorenVerbruikPerArtikelItem[];
+  /** Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld) */
+  onbekende_prijs_aantal: number;
+}
+
+export type ToebehorenVerbruikPerArtikelItem = {
+  artikel_id: number;
+  naam: string;
+  eenheid: string;
+  aantal: number;
+  kosten: number;
+};

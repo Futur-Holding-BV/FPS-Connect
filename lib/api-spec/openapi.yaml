@@ -22886,6 +22886,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/MagazijnVoorraadwaarde"
 
+  /magazijn/toebehoren-verbruik:
+    get:
+      operationId: getMagazijnToebehorenVerbruik
+      tags: [magazijn]
+      summary: Verbruik op kostenrubriek gereedschap-toebehoren (aantal + kostprijs per periode)
+      parameters:
+        - in: query
+          name: van
+          required: false
+          schema:
+            type: string
+          description: Begindatum (YYYY-MM-DD), inclusief
+        - in: query
+          name: tot
+          required: false
+          schema:
+            type: string
+          description: Einddatum (YYYY-MM-DD), inclusief
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToebehorenVerbruik"
+
   /magazijn/locaties:
     get:
       operationId: listMagazijnLocaties
@@ -46866,6 +46892,47 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MagazijnVoorraadwaardeOnbekend"
+
+    ToebehorenVerbruik:
+      type: object
+      required: [totaal_aantal, totaal_kosten, per_periode, per_artikel, onbekende_prijs_aantal]
+      properties:
+        totaal_aantal:
+          type: number
+        totaal_kosten:
+          type: number
+        per_periode:
+          type: array
+          items:
+            type: object
+            required: [periode, aantal, kosten]
+            properties:
+              periode:
+                type: string
+                description: Maand in formaat YYYY-MM
+              aantal:
+                type: number
+              kosten:
+                type: number
+        per_artikel:
+          type: array
+          items:
+            type: object
+            required: [artikel_id, naam, eenheid, aantal, kosten]
+            properties:
+              artikel_id:
+                type: integer
+              naam:
+                type: string
+              eenheid:
+                type: string
+              aantal:
+                type: number
+              kosten:
+                type: number
+        onbekende_prijs_aantal:
+          type: number
+          description: Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)
 
     DuplicaatCheckInput:
       type: object
