@@ -1,3 +1,9 @@
+## 2026-08-09 — App QR-code robuust + opschoning HRM-integriteitstools
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (kleine UI/route-aanpassingen)
+
+De "App QR-code"-dialoog in Gebruikersbeheer toonde op productie een kapotte afbeelding en de downloadknop faalde stil, omdat er nog geen installatielink bestaat. De QR-route kiest nu: App Store-link (instelling `MONTEUR_APP_STORE_URL`, te zetten zodra de app gepubliceerd is) → Expo-dev-domein (ontwikkelomgeving) → nette 404. De dialoog legt uit dat er nog geen installatielink is i.p.v. een kapot plaatje; downloaden geeft bij falen een duidelijke foutmelding. Daarnaast is de monteur-app productieklaar gemaakt voor Expo Launch: één centrale bron voor het API-domein (`lib/apiDomein.ts`) zodat gepubliceerde builds altijd met connect.fps-one.nl praten (publicatie wacht op een Apple Developer-account). Op verzoek van René is de loze kaart "Onboarding-status overzicht" van de HRM-integriteitstools verwijderd (toonde geen data).
+
 ## 2026-08-08 — WAGENPARK_01: wagenpark volwassen — mijn auto, documenten, EV, RDW en waakzame bewaking
 
 - **Uitvoering:** volledig, 25/25 acceptatiechecks groen via bewijsscript | **Kwaliteit:** hoog | **Risico:** laag-middel (bestaande wagenpark-module uitgebreid; garagemail-gedrag bewust strenger gemaakt)

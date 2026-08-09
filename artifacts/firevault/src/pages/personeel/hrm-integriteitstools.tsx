@@ -268,25 +268,6 @@ export default function HrmIntegriteitstools() {
         </CardContent>
       </Card>
 
-      {/* Wizard-status overzicht */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Onboarding-status overzicht</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Overzicht van medewerkers per wizard-status.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Per medewerker is de wizard-status zichtbaar op de detailpagina. Gebruik de zoekfunctie op de medewerkers-lijst om te filteren.
-          </p>
-          <Link href="/personeel">
-            <Button variant="outline" size="sm" className="mt-3">
-              Naar medewerkers-lijst
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
     </div>
   );
 }
