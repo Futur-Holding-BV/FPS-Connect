@@ -4150,6 +4150,8 @@ KOLOM|uren_registraties|normtijd_id|integer|YES|
 KOLOM|uren_registraties|object_omschrijving|text|YES|
 KOLOM|uren_registraties|opdracht_id|integer|YES|
 KOLOM|uren_registraties|opmerkingen|text|YES|
+KOLOM|uren_registraties|overwerk_slot_id|integer|YES|
+KOLOM|uren_registraties|overwerk_slot_uren|real|NO|0
 KOLOM|uren_registraties|pauze_minuten|integer|NO|30
 KOLOM|uren_registraties|planning_item_id|integer|YES|
 KOLOM|uren_registraties|project_id|integer|YES|

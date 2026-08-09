@@ -80,6 +80,78 @@ interface OverwerkToets {
   weigering: string | null;
 }
 
+// Uitvoerder: de gewone db óf een transactie — de overwerk-keten draait
+// sinds de concurrency-hardening altijd binnen één transactie.
+type DbUitvoerder = Pick<typeof db, "select" | "execute">;
+
+// Serialiseer alle uren-mutaties van dezelfde medewerker in dezelfde ISO-week:
+// toets, slotboeking en schrijfactie vormen zo één ondeelbare stap, en twee
+// gelijktijdige registraties kunnen niet samen ongezien boven de weekgrens
+// uitkomen. Advisory lock (transactie-gebonden) op medewerker+ISO-jaarweek.
+const UREN_WEEK_LOCK_NS = 748201;
+
+async function lockMedewerkerWeek(tx: DbUitvoerder, medewerkerId: number, datums: string[]): Promise<void> {
+  const sleutels = [...new Set(datums.map((datum) => {
+    const { jaar, week } = isoJaarWeek(new Date(datum + "T00:00:00Z"));
+    return `${medewerkerId}:${jaar}-${week}`;
+  }))].sort(); // vaste volgorde → geen onderlinge deadlocks
+  for (const sleutel of sleutels) {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${UREN_WEEK_LOCK_NS}, hashtext(${sleutel}))`);
+  }
+}
+
+// Sleutel van de medewerker-week waar een datum in valt (voor de dekkingscheck
+// van het retry-protocol hieronder).
+function weekLockSleutel(medewerkerId: number, datum: string): string {
+  const { jaar, week } = isoJaarWeek(new Date(datum + "T00:00:00Z"));
+  return `${medewerkerId}:${jaar}-${week}`;
+}
+
+// Retry-protocol voor rij-gebonden mutaties (PATCH/DELETE): de te vergrendelen
+// weken hangen af van de rij zelf, maar de rij kan door een gelijktijdige
+// PATCH naar een andere week zijn verplaatst terwijl wij op de lock wachtten.
+// Locken gebeurt daarom ALTIJD vooraf in vaste (gesorteerde) volgorde; blijkt
+// ná de verse lezing dat de rij in een niet-vergrendelde week ligt, dan rolt
+// de transactie terug en proberen we opnieuw met de uitgebreide datumset.
+// Zo blijft de lockvolgorde deterministisch (geen deadlocks) én is de
+// mutatie altijd geserialiseerd tegen de week waarin de rij WERKELIJK ligt.
+const WEEKLOCK_MAX_POGINGEN = 5;
+class WeekLockRetry extends Error {
+  constructor(public datum: string) { super("WEEKLOCK_RETRY"); }
+}
+async function metWeekLockRetry<T>(
+  initieel: string[],
+  zetDatums: (datums: string[]) => void,
+  run: () => Promise<T>,
+): Promise<T> {
+  let datums = initieel;
+  for (let poging = 1; ; poging++) {
+    try {
+      return await run();
+    } catch (e) {
+      if (e instanceof WeekLockRetry && poging < WEEKLOCK_MAX_POGINGEN) {
+        datums = [...datums, e.datum];
+        zetDatums(datums);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+function weekLockDekt(medewerkerId: number, datums: string[], rijDatum: string): boolean {
+  const gedekt = new Set(datums.map((d) => weekLockSleutel(medewerkerId, d)));
+  return gedekt.has(weekLockSleutel(medewerkerId, rijDatum));
+}
+
+// Weigering als uitzondering, zodat de transactie (incl. eventueel al geboekt
+// slotverbruik en de urenregel zelf) in z'n geheel wordt teruggedraaid.
+class OverwerkGeweigerd extends Error {
+  constructor(public toets: OverwerkToets) { super(toets.weigering ?? "Overwerk geweigerd"); }
+}
+
+// Uurcode-weigering vanuit de PATCH-transactie (rolt alles terug → 400 buiten de tx).
+class UurcodeGeweigerd extends Error {}
+
 async function toetsOverwerkSlot(opts: {
   medewerkerId: number;
   datum: string;
@@ -87,13 +159,18 @@ async function toetsOverwerkSlot(opts: {
   projectId: number | null;
   cao: string | null;
   negeerRegistratieId?: number; // bij PATCH: eigen rij niet dubbel tellen
-}): Promise<OverwerkToets> {
+  // Bij PATCH: eerder door DEZE regel geboekt verbruik op een slot; telt bij de
+  // plafondtoets niet mee (anders weigert een ongewijzigde regel zijn eigen
+  // reeds geboekte uren) en een slot dat door die eigen boeking automatisch
+  // dichtging telt als open voor deze toets.
+  eigenVerbruik?: { slotId: number; uren: number };
+}, uitvoerder: DbUitvoerder = db): Promise<OverwerkToets> {
   const grens = overwerkGrens(opts.cao);
   const d = new Date(opts.datum + "T00:00:00Z");
   const { jaar, week } = isoJaarWeek(d);
   const grenzen = weekGrenzen(jaar, week);
 
-  const rows = await db
+  const rows = await uitvoerder
     .select({ id: urenRegistratiesTable.id, nettoUren: urenRegistratiesTable.nettoUren })
     .from(urenRegistratiesTable)
     .where(and(
@@ -117,17 +194,21 @@ async function toetsOverwerkSlot(opts: {
   }
 
   // Slot moet open zijn op de datum van de urenregel én binnen het plafond blijven.
-  const sloten = await db
+  const alleSloten = await uitvoerder
     .select()
     .from(overwerkSlotenTable)
-    .where(and(
-      eq(overwerkSlotenTable.projectId, opts.projectId),
-      eq(overwerkSlotenTable.status, "open"),
-    ));
+    .where(eq(overwerkSlotenTable.projectId, opts.projectId));
+  const eigenOp = (s: { id: number }) =>
+    opts.eigenVerbruik && opts.eigenVerbruik.slotId === s.id ? opts.eigenVerbruik.uren : 0;
+  const sloten = alleSloten.filter((s) =>
+    s.status === "open" ||
+    // Automatisch (plafond-)gesloten slot telt als open wanneer het eigen,
+    // eerder geboekte verbruik van deze regel het plafond weer zou vrijmaken.
+    (s.status === "gesloten" && s.geslotenDoorId == null && eigenOp(s) > 0));
   const slot = sloten.find((s) =>
     s.geldigVan != null && s.geldigTot != null &&
     opts.datum >= s.geldigVan && opts.datum <= s.geldigTot &&
-    (s.urenPlafond == null || s.verbruikteUren + bovenVanRegel <= s.urenPlafond + 1e-9)
+    (s.urenPlafond == null || s.verbruikteUren - eigenOp(s) + bovenVanRegel <= s.urenPlafond + 1e-9)
   );
   if (!slot) {
     const plafondVol = sloten.some((s) =>
@@ -146,8 +227,8 @@ async function toetsOverwerkSlot(opts: {
 // Boek slotverbruik ATOMAIR: één conditionele UPDATE die alleen slaagt als het
 // plafond het nog toelaat (voorkomt races tussen gelijktijdige invoer), en het
 // slot in dezelfde statement sluit zodra het plafond is bereikt.
-async function boekSlotVerbruik(slotId: number, uren: number): Promise<boolean> {
-  const rijen = await db.execute(sql`
+async function boekSlotVerbruik(uitvoerder: DbUitvoerder, slotId: number, uren: number): Promise<boolean> {
+  const rijen = await uitvoerder.execute(sql`
     UPDATE overwerk_sloten
     SET verbruikte_uren = round((verbruikte_uren + ${uren})::numeric, 2),
         status = CASE WHEN uren_plafond IS NOT NULL AND verbruikte_uren + ${uren} >= uren_plafond - 1e-9 THEN 'gesloten' ELSE status END,
@@ -158,6 +239,61 @@ async function boekSlotVerbruik(slotId: number, uren: number): Promise<boolean> 
     RETURNING id`);
   const n = Array.isArray(rijen) ? rijen.length : ((rijen as { rows?: unknown[] }).rows?.length ?? 0);
   return n > 0;
+}
+
+// Geef eerder verbruikt plafond terug aan het slot (bij DELETE van een regel).
+// Een slot dat automatisch dichtging door het plafond (gesloten_door_id IS NULL)
+// gaat daarbij weer open; een handmatig gesloten slot blijft dicht.
+async function geefSlotVerbruikTerug(uitvoerder: DbUitvoerder, slotId: number, uren: number): Promise<void> {
+  if (uren <= 0) return;
+  await uitvoerder.execute(sql`
+    UPDATE overwerk_sloten
+    SET verbruikte_uren = greatest(0, round((verbruikte_uren - ${uren})::numeric, 2)),
+        gesloten_op = CASE WHEN status = 'gesloten' AND gesloten_door_id IS NULL THEN NULL ELSE gesloten_op END,
+        status = CASE WHEN status = 'gesloten' AND gesloten_door_id IS NULL THEN 'open' ELSE status END,
+        bijgewerkt_op = now()
+    WHERE id = ${slotId}`);
+}
+
+// Legacy-afleiding: regels van vóór de per-regel-administratie (overwerk_slot_id
+// NULL / uren 0) hebben destijds wél slotplafond verbruikt. Herleid binnen de
+// transactie welk slot en hoeveel boven-grensdeel dat was, zodat PATCH/DELETE
+// ook voor die regels correct teruggeven i.p.v. verbruik te laten stranden.
+async function herleidLegacyVerbruik(
+  tx: DbUitvoerder,
+  regel: { id: number; medewerkerId: number; datum: string; nettoUren: number; projectId: number | null },
+  cao: string | null,
+): Promise<{ slotId: number; uren: number } | null> {
+  if (regel.projectId == null) return null;
+  const grens = overwerkGrens(cao);
+  const { jaar, week } = isoJaarWeek(new Date(regel.datum + "T00:00:00Z"));
+  const grenzen = weekGrenzen(jaar, week);
+  const rows = await tx
+    .select({ id: urenRegistratiesTable.id, nettoUren: urenRegistratiesTable.nettoUren })
+    .from(urenRegistratiesTable)
+    .where(and(
+      eq(urenRegistratiesTable.medewerkerId, regel.medewerkerId),
+      gte(urenRegistratiesTable.datum, grenzen.van),
+      lte(urenRegistratiesTable.datum, grenzen.tot),
+    ));
+  const overig = rows.filter((r) => r.id !== regel.id).reduce((acc, r) => acc + r.nettoUren, 0);
+  const boven = Math.round((overig + regel.nettoUren - grens) * 100) / 100;
+  if (boven <= 0) return null;
+  const bovenVanRegel = Math.min(regel.nettoUren, boven);
+  // Slot op het project dat de regel-datum dekt, ongeacht status (het slot kan
+  // inmiddels — al dan niet door deze regel — gesloten zijn). Bij meerdere
+  // kandidaten: eerst een slot dat het verbruik daadwerkelijk nog draagt
+  // (verbruikte_uren >= herleid deel), met voorkeur voor een open slot —
+  // anders zou teruggave op een leeg/verkeerd slot belanden.
+  const sloten = await tx.select().from(overwerkSlotenTable)
+    .where(eq(overwerkSlotenTable.projectId, regel.projectId));
+  const kandidaten = sloten.filter((s) =>
+    s.geldigVan != null && s.geldigTot != null &&
+    regel.datum >= s.geldigVan && regel.datum <= s.geldigTot);
+  const score = (s: typeof kandidaten[number]) =>
+    (s.verbruikteUren >= bovenVanRegel - 1e-9 ? 2 : 0) + (s.status === "open" ? 1 : 0);
+  const slot = kandidaten.sort((a, b) => score(b) - score(a))[0];
+  return slot ? { slotId: slot.id, uren: bovenVanRegel } : null;
 }
 
 function mapUren(
@@ -646,64 +782,78 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
   }
 
   // UREN_01 §4: boven de weekgrens alleen op een project met open slot.
+  // Toets + slotboeking + insert vormen ÉÉN transactie onder een advisory
+  // lock per medewerker+week: gelijktijdige invoer kan niet samen ongezien
+  // boven de grens uitkomen, en een mislukte insert laat geen verbruikt
+  // plafond achter (alles rolt samen terug).
   const medewerkerCao = await medewerkerVoorId(mid, db);
-  const toets = await toetsOverwerkSlot({
-    medewerkerId: mid,
-    datum,
-    nettoUren,
-    projectId: project_id ? Number(project_id) : null,
-    cao: medewerkerCao?.cao ?? null,
-  });
-  if (!toets.toegestaan) {
-    return void res.status(422).json({
-      code: "OVERWERK_SLOT_DICHT",
-      error: toets.weigering,
-      boven_uren: toets.boven_uren,
-      grens: toets.grens,
-      project_id: project_id ? Number(project_id) : null,
-    });
-  }
+  let toets: OverwerkToets;
+  let rij: typeof urenRegistratiesTable.$inferSelect;
+  try {
+    ({ toets, rij } = await db.transaction(async (tx) => {
+      await lockMedewerkerWeek(tx, mid, [datum]);
+      const toets = await toetsOverwerkSlot({
+        medewerkerId: mid,
+        datum,
+        nettoUren,
+        projectId: project_id ? Number(project_id) : null,
+        cao: medewerkerCao?.cao ?? null,
+      }, tx);
+      if (!toets.toegestaan) throw new OverwerkGeweigerd(toets);
 
-  if (toets.slot_id != null && toets.boven_uren > 0) {
-    const geboekt = await boekSlotVerbruik(toets.slot_id, toets.boven_uren);
-    if (!geboekt) {
+      if (toets.slot_id != null && toets.boven_uren > 0) {
+        const geboekt = await boekSlotVerbruik(tx, toets.slot_id, toets.boven_uren);
+        if (!geboekt) {
+          throw new OverwerkGeweigerd({
+            ...toets, toegestaan: false, slot_id: null,
+            weigering: `Het overwerkslot heeft geen ruimte meer binnen het urenplafond (gelijktijdige invoer).`,
+          });
+        }
+      }
+
+      const [rij] = await tx
+        .insert(urenRegistratiesTable)
+        .values({
+          datum,
+          medewerkerId: mid,
+          gebouwId: gebouw_id ? Number(gebouw_id) : null,
+          projectId: project_id ? Number(project_id) : null,
+          projectNaam: project_naam ?? null,
+          werkzaamheden: werkzaamheden ?? null,
+          werkzaamheidCategorie: werkzaamheid_categorie ?? null,
+          ruimte: ruimte ?? null,
+          objectOmschrijving: object_omschrijving ?? null,
+          beginTijd: begin_tijd,
+          eindTijd: eind_tijd,
+          pauzeMinuten: Number(pauze_minuten),
+          nettoUren,
+          opmerkingen: opmerkingen ?? null,
+          planningItemId: planning_item_id ? Number(planning_item_id) : null,
+          opdrachtId: uurcodeOpdrachtId,
+          normtijdId: uurcodeInvoer.normtijdId,
+          indirecteWerkzaamheidId: uurcodeInvoer.indirecteId,
+          nietInBegroting: uurcodeInvoer.nietInBegroting,
+          nietInBegrotingOmschrijving: uurcodeInvoer.nietInBegroting ? (niet_in_begroting_omschrijving ?? "").trim() : null,
+          overwerkSlotId: toets.boven_uren > 0 ? toets.slot_id : null,
+          overwerkSlotUren: toets.slot_id != null && toets.boven_uren > 0 ? toets.boven_uren : 0,
+          aangemaaktDoorId: userId,
+          bijgewerktOp: new Date(),
+        })
+        .returning();
+      return { toets, rij };
+    }));
+  } catch (e) {
+    if (e instanceof OverwerkGeweigerd) {
       return void res.status(422).json({
         code: "OVERWERK_SLOT_DICHT",
-        error: `Het overwerkslot heeft geen ruimte meer binnen het urenplafond (gelijktijdige invoer).`,
-        boven_uren: toets.boven_uren,
-        grens: toets.grens,
+        error: e.toets.weigering,
+        boven_uren: e.toets.boven_uren,
+        grens: e.toets.grens,
         project_id: project_id ? Number(project_id) : null,
       });
     }
+    throw e;
   }
-
-  const [rij] = await db
-    .insert(urenRegistratiesTable)
-    .values({
-      datum,
-      medewerkerId: mid,
-      gebouwId: gebouw_id ? Number(gebouw_id) : null,
-      projectId: project_id ? Number(project_id) : null,
-      projectNaam: project_naam ?? null,
-      werkzaamheden: werkzaamheden ?? null,
-      werkzaamheidCategorie: werkzaamheid_categorie ?? null,
-      ruimte: ruimte ?? null,
-      objectOmschrijving: object_omschrijving ?? null,
-      beginTijd: begin_tijd,
-      eindTijd: eind_tijd,
-      pauzeMinuten: Number(pauze_minuten),
-      nettoUren,
-      opmerkingen: opmerkingen ?? null,
-      planningItemId: planning_item_id ? Number(planning_item_id) : null,
-      opdrachtId: uurcodeOpdrachtId,
-      normtijdId: uurcodeInvoer.normtijdId,
-      indirecteWerkzaamheidId: uurcodeInvoer.indirecteId,
-      nietInBegroting: uurcodeInvoer.nietInBegroting,
-      nietInBegrotingOmschrijving: uurcodeInvoer.nietInBegroting ? (niet_in_begroting_omschrijving ?? "").trim() : null,
-      aangemaaktDoorId: userId,
-      bijgewerktOp: new Date(),
-    })
-    .returning();
 
   // §6b: "staat niet in de begroting" is informatie, geen fout → signaal WVB.
   if (uurcodeInvoer.nietInBegroting && uurcodeOpdrachtId != null) {
@@ -805,108 +955,180 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
     niet_in_begroting_omschrijving,
   } = req.body;
 
-  // UREN_01 §6b: ook een wijziging moet de uurcode-eis blijven halen.
-  const patchOpdrachtId = req.body["opdracht_id"] !== undefined || req.body["planning_item_id"] !== undefined
-    ? await bepaalOpdrachtId(req.body, req.body["planning_item_id"] !== undefined
-        ? (req.body["planning_item_id"] ? Number(req.body["planning_item_id"]) : null)
-        : bestaand.planningItemId)
-    : bestaand.opdrachtId;
-  const patchUurcode: UurcodeInvoer = {
-    opdrachtId: patchOpdrachtId,
-    normtijdId: normtijd_id !== undefined ? (normtijd_id ? Number(normtijd_id) : null) : bestaand.normtijdId,
-    indirecteId: indirecte_werkzaamheid_id !== undefined ? (indirecte_werkzaamheid_id ? Number(indirecte_werkzaamheid_id) : null) : bestaand.indirecteWerkzaamheidId,
-    nietInBegroting: niet_in_begroting !== undefined ? niet_in_begroting === true : bestaand.nietInBegroting,
-    nietInBegrotingOmschrijving: niet_in_begroting_omschrijving !== undefined ? (niet_in_begroting_omschrijving ?? null) : bestaand.nietInBegrotingOmschrijving,
-  };
-  const patchUurcodeToets = await toetsUurcode(patchUurcode);
-  if (!patchUurcodeToets.ok) {
-    return void res.status(400).json({ code: "UURCODE_VEREIST", error: patchUurcodeToets.fout });
-  }
-
-  const nieuwBegin = begin_tijd ?? bestaand.beginTijd;
-  const nieuwEind = eind_tijd ?? bestaand.eindTijd;
-  const nieuwPauze = pauze_minuten !== undefined ? Number(pauze_minuten) : bestaand.pauzeMinuten;
-  const nettoUren = berekenNettoUren(nieuwBegin, nieuwEind, nieuwPauze);
-
-  // UREN_01 §4: ook een wijziging mag niet ongetoetst boven de weekgrens uitkomen.
-  const patchProjectId = project_id !== undefined
-    ? (project_id ? Number(project_id) : null)
-    : bestaand.projectId;
+  // UREN_01 §4/§6b: ALLE effectieve waarden (uurcode, tijden, project) worden
+  // pas ná de advisory lock afgeleid uit de VERSE rij — een gelijktijdige
+  // PATCH kan project/tijden hebben gewijzigd, en een toets op een stale rij
+  // zou verbruik op het verkeerde slot kunnen boeken of teruggeven.
   const patchMedewerker = await medewerkerVoorId(bestaand.medewerkerId, db);
-  const patchToets = await toetsOverwerkSlot({
-    medewerkerId: bestaand.medewerkerId,
-    datum: datum ?? bestaand.datum,
-    nettoUren,
-    projectId: patchProjectId,
-    cao: patchMedewerker?.cao ?? null,
-    negeerRegistratieId: bestaand.id,
-  });
-  if (!patchToets.toegestaan) {
-    return void res.status(422).json({
-      code: "OVERWERK_SLOT_DICHT",
-      error: patchToets.weigering,
-      boven_uren: patchToets.boven_uren,
-      grens: patchToets.grens,
-      project_id: patchProjectId,
-    });
-  }
-  // Bij een wijziging wordt alleen de TOENAME van het boven-grensdeel op het
-  // slot bijgeboekt: het oude boven-deel van deze regel is bij de eerdere
-  // POST/PATCH al verbruikt. Ongewijzigd opslaan boekt zo niets dubbel.
-  // Afname wordt bewust niet teruggegeven (conservatief: plafond kan hooguit
-  // strenger uitvallen, nooit stilzwijgend ruimer).
-  const oudeToets = await toetsOverwerkSlot({
-    medewerkerId: bestaand.medewerkerId,
-    datum: bestaand.datum,
-    nettoUren: bestaand.nettoUren,
-    projectId: bestaand.projectId,
-    cao: patchMedewerker?.cao ?? null,
-    negeerRegistratieId: bestaand.id,
-  });
-  const bovenDelta = patchToets.boven_uren - (oudeToets.toegestaan ? oudeToets.boven_uren : 0);
-  if (patchToets.slot_id != null && bovenDelta > 0) {
-    const geboekt = await boekSlotVerbruik(patchToets.slot_id, bovenDelta);
-    if (!geboekt) {
+  let rij: typeof urenRegistratiesTable.$inferSelect;
+  let patchNietInBegrotingNieuw = false;
+  let patchOpdrachtIdVoorMelding: number | null = null;
+  let patchOmschrijvingVoorMelding: string | null = null;
+  let lockDatums = [bestaand.datum, datum ?? bestaand.datum];
+  try {
+    rij = await metWeekLockRetry(lockDatums, (d) => { lockDatums = d; }, () => db.transaction(async (tx) => {
+      await lockMedewerkerWeek(tx, bestaand.medewerkerId, lockDatums);
+      // Vers lezen ná de lock: een gelijktijdige PATCH kan de rij hebben gewijzigd.
+      const [vers] = await tx.select().from(urenRegistratiesTable)
+        .where(eq(urenRegistratiesTable.id, id)).limit(1);
+      if (!vers) throw new Error("VERDWENEN");
+      // De lockset moet zowel de week dekken waar de rij WERKELIJK ligt (kan
+      // door een gelijktijdige PATCH verplaatst zijn) als de effectieve
+      // DOELWEEK (datum ?? vers.datum). Ontbreekt er één, dan terugrollen en
+      // opnieuw met uitgebreide set — nooit ná de verse lezing bijlocken
+      // (dat breekt de vaste lockvolgorde).
+      const doelDatum = datum ?? vers.datum;
+      if (!weekLockDekt(vers.medewerkerId, lockDatums, vers.datum)) {
+        throw new WeekLockRetry(vers.datum);
+      }
+      if (!weekLockDekt(vers.medewerkerId, lockDatums, doelDatum)) {
+        throw new WeekLockRetry(doelDatum);
+      }
+
+      // UREN_01 §6b: ook een wijziging moet de uurcode-eis blijven halen.
+      const patchOpdrachtId = req.body["opdracht_id"] !== undefined || req.body["planning_item_id"] !== undefined
+        ? await bepaalOpdrachtId(req.body, req.body["planning_item_id"] !== undefined
+            ? (req.body["planning_item_id"] ? Number(req.body["planning_item_id"]) : null)
+            : vers.planningItemId)
+        : vers.opdrachtId;
+      const patchUurcode: UurcodeInvoer = {
+        opdrachtId: patchOpdrachtId,
+        normtijdId: normtijd_id !== undefined ? (normtijd_id ? Number(normtijd_id) : null) : vers.normtijdId,
+        indirecteId: indirecte_werkzaamheid_id !== undefined ? (indirecte_werkzaamheid_id ? Number(indirecte_werkzaamheid_id) : null) : vers.indirecteWerkzaamheidId,
+        nietInBegroting: niet_in_begroting !== undefined ? niet_in_begroting === true : vers.nietInBegroting,
+        nietInBegrotingOmschrijving: niet_in_begroting_omschrijving !== undefined ? (niet_in_begroting_omschrijving ?? null) : vers.nietInBegrotingOmschrijving,
+      };
+      const patchUurcodeToets = await toetsUurcode(patchUurcode);
+      if (!patchUurcodeToets.ok) {
+        throw new UurcodeGeweigerd(patchUurcodeToets.fout ?? "Uurcode vereist");
+      }
+      patchNietInBegrotingNieuw = patchUurcode.nietInBegroting && !vers.nietInBegroting;
+      patchOpdrachtIdVoorMelding = patchOpdrachtId;
+      patchOmschrijvingVoorMelding = patchUurcode.nietInBegrotingOmschrijving;
+
+      const nieuwBegin = begin_tijd ?? vers.beginTijd;
+      const nieuwEind = eind_tijd ?? vers.eindTijd;
+      const nieuwPauze = pauze_minuten !== undefined ? Number(pauze_minuten) : vers.pauzeMinuten;
+      const nettoUren = berekenNettoUren(nieuwBegin, nieuwEind, nieuwPauze);
+      const patchProjectId = project_id !== undefined
+        ? (project_id ? Number(project_id) : null)
+        : vers.projectId;
+      // Eerder door DEZE regel verbruikt plafond: sinds de hardening op de
+      // regel zelf vastgelegd; voor legacy-regels (NULL/0) binnen dezelfde
+      // transactie herleid, zodat ook die correct teruggeven/verrekenen.
+      const oudAlloc = vers.overwerkSlotId != null && vers.overwerkSlotUren > 0
+        ? { slotId: vers.overwerkSlotId, uren: vers.overwerkSlotUren }
+        : await herleidLegacyVerbruik(tx, vers, patchMedewerker?.cao ?? null);
+      const patchToets = await toetsOverwerkSlot({
+        medewerkerId: vers.medewerkerId,
+        datum: datum ?? vers.datum,
+        nettoUren,
+        projectId: patchProjectId,
+        cao: patchMedewerker?.cao ?? null,
+        negeerRegistratieId: vers.id,
+        eigenVerbruik: oudAlloc ?? undefined,
+      }, tx);
+      if (!patchToets.toegestaan) throw new OverwerkGeweigerd(patchToets);
+      // Bij een wijziging wordt alleen de TOENAME van het boven-grensdeel op
+      // het slot bijgeboekt. Afname op hetzelfde slot wordt bewust niet
+      // teruggegeven (conservatief: plafond kan hooguit strenger uitvallen,
+      // nooit stilzwijgend ruimer) — teruggave gebeurt bij slotwissel of
+      // DELETE van de regel.
+      let nieuwSlotAdministratie: { overwerkSlotId: number | null; overwerkSlotUren: number };
+      if (patchToets.slot_id != null && oudAlloc?.slotId === patchToets.slot_id) {
+        // Zelfde slot: alleen de toename bijboeken.
+        const bovenDelta = patchToets.boven_uren - oudAlloc.uren;
+        if (bovenDelta > 0) {
+          const geboekt = await boekSlotVerbruik(tx, patchToets.slot_id, bovenDelta);
+          if (!geboekt) {
+            throw new OverwerkGeweigerd({
+              ...patchToets, toegestaan: false, slot_id: null,
+              weigering: "Het overwerkslot heeft geen ruimte meer binnen het urenplafond.",
+            });
+          }
+        }
+        nieuwSlotAdministratie = {
+          overwerkSlotId: patchToets.slot_id,
+          overwerkSlotUren: oudAlloc.uren + Math.max(0, bovenDelta),
+        };
+      } else if (patchToets.slot_id != null && patchToets.boven_uren > 0) {
+        // ANDER slot (bv. project gewisseld): eerst het volledige boven-deel
+        // op het nieuwe slot boeken; slaagt dat, dan de oude allocatie in
+        // dezelfde transactie teruggeven aan het oude slot. Zo raakt er nooit
+        // verbruik verweesd, en bij een weigering blijft alles zoals het was.
+        const geboekt = await boekSlotVerbruik(tx, patchToets.slot_id, patchToets.boven_uren);
+        if (!geboekt) {
+          throw new OverwerkGeweigerd({
+            ...patchToets, toegestaan: false, slot_id: null,
+            weigering: "Het overwerkslot heeft geen ruimte meer binnen het urenplafond.",
+          });
+        }
+        if (oudAlloc) {
+          await geefSlotVerbruikTerug(tx, oudAlloc.slotId, oudAlloc.uren);
+        }
+        nieuwSlotAdministratie = { overwerkSlotId: patchToets.slot_id, overwerkSlotUren: patchToets.boven_uren };
+      } else {
+        // Geen overwerk (meer): oude allocatie blijft staan — afname wordt
+        // bewust niet teruggegeven (conservatief); teruggave volgt bij DELETE.
+        // Legacy-afleiding wordt hier wél gepersisteerd zodat de regel voortaan
+        // eigen administratie draagt.
+        nieuwSlotAdministratie = {
+          overwerkSlotId: oudAlloc?.slotId ?? null,
+          overwerkSlotUren: oudAlloc?.uren ?? 0,
+        };
+      }
+
+      const [rij] = await tx
+        .update(urenRegistratiesTable)
+        .set({
+          datum: datum ?? vers.datum,
+          gebouwId: gebouw_id !== undefined ? (gebouw_id ? Number(gebouw_id) : null) : vers.gebouwId,
+          projectId: project_id !== undefined ? (project_id ? Number(project_id) : null) : vers.projectId,
+          projectNaam: project_naam !== undefined ? project_naam : vers.projectNaam,
+          werkzaamheden: werkzaamheden !== undefined ? werkzaamheden : vers.werkzaamheden,
+          werkzaamheidCategorie: werkzaamheid_categorie !== undefined ? werkzaamheid_categorie : vers.werkzaamheidCategorie,
+          ruimte: ruimte !== undefined ? ruimte : vers.ruimte,
+          objectOmschrijving: object_omschrijving !== undefined ? object_omschrijving : vers.objectOmschrijving,
+          beginTijd: nieuwBegin,
+          eindTijd: nieuwEind,
+          pauzeMinuten: nieuwPauze,
+          nettoUren,
+          opmerkingen: opmerkingen !== undefined ? opmerkingen : vers.opmerkingen,
+          opdrachtId: patchOpdrachtId,
+          normtijdId: patchUurcode.normtijdId,
+          indirecteWerkzaamheidId: patchUurcode.indirecteId,
+          nietInBegroting: patchUurcode.nietInBegroting,
+          nietInBegrotingOmschrijving: patchUurcode.nietInBegroting ? patchUurcode.nietInBegrotingOmschrijving : null,
+          ...nieuwSlotAdministratie,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(urenRegistratiesTable.id, id))
+        .returning();
+      return rij;
+    }));
+  } catch (e) {
+    if (e instanceof OverwerkGeweigerd) {
       return void res.status(422).json({
         code: "OVERWERK_SLOT_DICHT",
-        error: "Het overwerkslot heeft geen ruimte meer binnen het urenplafond.",
-        boven_uren: patchToets.boven_uren,
-        grens: patchToets.grens,
-        project_id: patchProjectId,
+        error: e.toets.weigering,
+        boven_uren: e.toets.boven_uren,
+        grens: e.toets.grens,
+        project_id: project_id !== undefined ? (project_id ? Number(project_id) : null) : bestaand.projectId,
       });
     }
+    if (e instanceof UurcodeGeweigerd) {
+      return void res.status(400).json({ code: "UURCODE_VEREIST", error: e.message });
+    }
+    if (e instanceof Error && e.message === "VERDWENEN") {
+      return void res.status(404).json({ error: "Niet gevonden" });
+    }
+    throw e;
   }
 
-  const [rij] = await db
-    .update(urenRegistratiesTable)
-    .set({
-      datum: datum ?? bestaand.datum,
-      gebouwId: gebouw_id !== undefined ? (gebouw_id ? Number(gebouw_id) : null) : bestaand.gebouwId,
-      projectId: project_id !== undefined ? (project_id ? Number(project_id) : null) : bestaand.projectId,
-      projectNaam: project_naam !== undefined ? project_naam : bestaand.projectNaam,
-      werkzaamheden: werkzaamheden !== undefined ? werkzaamheden : bestaand.werkzaamheden,
-      werkzaamheidCategorie: werkzaamheid_categorie !== undefined ? werkzaamheid_categorie : bestaand.werkzaamheidCategorie,
-      ruimte: ruimte !== undefined ? ruimte : bestaand.ruimte,
-      objectOmschrijving: object_omschrijving !== undefined ? object_omschrijving : bestaand.objectOmschrijving,
-      beginTijd: nieuwBegin,
-      eindTijd: nieuwEind,
-      pauzeMinuten: nieuwPauze,
-      nettoUren,
-      opmerkingen: opmerkingen !== undefined ? opmerkingen : bestaand.opmerkingen,
-      opdrachtId: patchOpdrachtId,
-      normtijdId: patchUurcode.normtijdId,
-      indirecteWerkzaamheidId: patchUurcode.indirecteId,
-      nietInBegroting: patchUurcode.nietInBegroting,
-      nietInBegrotingOmschrijving: patchUurcode.nietInBegroting ? patchUurcode.nietInBegrotingOmschrijving : null,
-      bijgewerktOp: new Date(),
-    })
-    .where(eq(urenRegistratiesTable.id, id))
-    .returning();
-
   // §6b: alleen melden wanneer de keuze "niet in begroting" NIEUW is.
-  if (patchUurcode.nietInBegroting && !bestaand.nietInBegroting && patchOpdrachtId != null) {
+  if (patchNietInBegrotingNieuw && patchOpdrachtIdVoorMelding != null) {
     const naamRij = await medewerkerVoorId(bestaand.medewerkerId, db);
-    await meldNietInBegroting(rij.id, patchOpdrachtId, naamRij?.naam ?? null, (patchUurcode.nietInBegrotingOmschrijving ?? "").trim());
+    await meldNietInBegroting(rij.id, patchOpdrachtIdVoorMelding, naamRij?.naam ?? null, (patchOmschrijvingVoorMelding ?? "").trim());
   }
 
   res.json(mapUren(rij));
@@ -940,7 +1162,37 @@ router.delete("/uren/:id", requireAuth, async (req, res): Promise<void> => {
     return void res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
-  await db.delete(urenRegistratiesTable).where(eq(urenRegistratiesTable.id, id));
+  // Verwijderen en teruggeven van eerder verbruikt slotplafond in ÉÉN
+  // transactie onder de weeklock: het plafond komt weer vrij en een slot dat
+  // automatisch dichtging op het plafond gaat weer open (handmatig gesloten
+  // sloten blijven dicht).
+  const delMedewerker = await medewerkerVoorId(bestaand.medewerkerId, db);
+  let delLockDatums = [bestaand.datum];
+  await metWeekLockRetry(delLockDatums, (d) => { delLockDatums = d; }, () => db.transaction(async (tx) => {
+    await lockMedewerkerWeek(tx, bestaand.medewerkerId, delLockDatums);
+    const [versRij] = await tx.select().from(urenRegistratiesTable)
+      .where(eq(urenRegistratiesTable.id, id)).limit(1);
+    if (!versRij) return; // al weg — 204 blijft correct
+    // Rij door een gelijktijdige PATCH naar een niet-vergrendelde week
+    // verplaatst? Terugrollen en opnieuw met uitgebreide lockset — nooit ná de
+    // verse lezing bijlocken (dat breekt de vaste lockvolgorde).
+    if (!weekLockDekt(versRij.medewerkerId, delLockDatums, versRij.datum)) {
+      throw new WeekLockRetry(versRij.datum);
+    }
+    // Legacy-regels (van vóór de per-regel-administratie) hebben destijds wél
+    // plafond verbruikt: herleid dat binnen dezelfde transactie zodat ook hun
+    // verbruik netjes terugkomt i.p.v. te stranden.
+    const vers = versRij.overwerkSlotId != null && versRij.overwerkSlotUren > 0
+      ? { overwerkSlotId: versRij.overwerkSlotId as number | null, overwerkSlotUren: versRij.overwerkSlotUren }
+      : await herleidLegacyVerbruik(tx, versRij, delMedewerker?.cao ?? null)
+          .then((alloc) => alloc
+            ? { overwerkSlotId: alloc.slotId as number | null, overwerkSlotUren: alloc.uren }
+            : { overwerkSlotId: null as number | null, overwerkSlotUren: 0 });
+    if (vers.overwerkSlotId != null && vers.overwerkSlotUren > 0) {
+      await geefSlotVerbruikTerug(tx, vers.overwerkSlotId, vers.overwerkSlotUren);
+    }
+    await tx.delete(urenRegistratiesTable).where(eq(urenRegistratiesTable.id, id));
+  }));
   res.status(204).end();
 });
 

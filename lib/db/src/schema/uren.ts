@@ -50,6 +50,10 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   // óf: werk past niet op een begrotingscode — informatie, geen fout (signaal WVB)
   nietInBegroting: boolean("niet_in_begroting").notNull().default(false),
   nietInBegrotingOmschrijving: text("niet_in_begroting_omschrijving"),
+  // UREN_01 §4: welk slot en hoeveel uur deze regel op dat slot heeft verbruikt.
+  // Bron van waarheid voor PATCH-delta's en voor teruggave bij DELETE.
+  overwerkSlotId: integer("overwerk_slot_id").references(() => overwerkSlotenTable.id, { onDelete: "set null" }),
+  overwerkSlotUren: real("overwerk_slot_uren").notNull().default(0),
   ingediendOp: timestamp("ingediend_op"),
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   goedgekeurdOp: timestamp("goedgekeurd_op"),
