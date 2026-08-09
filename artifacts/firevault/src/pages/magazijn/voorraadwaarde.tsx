@@ -1,4 +1,4 @@
-import { useGetMagazijnVoorraadwaarde, useGetMagazijnToebehorenVerbruik, type MagazijnVoorraadwaarde } from "@workspace/api-client-react";
+import { useGetMagazijnVoorraadwaarde, useGetMagazijnToebehorenVerbruik, type MagazijnVoorraadwaarde, type ToebehorenVerbruik } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,6 +134,44 @@ function csvEscape(val: string) {
   return val;
 }
 
+// Task 858: toebehoren-kostenpost als CSV voor de administratie, incl. van/tot-filter
+// en zichtbare markering van hoeveelheden zonder inkoopprijs.
+function downloadToebehorenCsv(data: ToebehorenVerbruik | undefined, van: string, tot: string) {
+  if (!data) return;
+
+  const zonderPrijs = (aantal: number) =>
+    aantal > 0 ? `${aantal} (LET OP: zonder inkoopprijs, niet in kostprijs meegeteld)` : "";
+
+  const rijen: string[] = [
+    "Kostenpost gereedschap-toebehoren",
+    `Periode van,${van || "(geen filter)"}`,
+    `Periode tot en met,${tot || "(geen filter)"}`,
+    `Totaal uitgegeven,${data.totaal_aantal}`,
+    `Totale kostprijs (EUR),${data.totaal_kosten.toFixed(2)}`,
+    `Hoeveelheid zonder inkoopprijs,${zonderPrijs(data.onbekende_prijs_aantal)}`,
+    "",
+    "Toebehoren per maand",
+    "Periode,Aantal,Kostprijs (EUR),Waarvan zonder inkoopprijs",
+    ...data.per_periode.map((r) =>
+      `${r.periode},${r.aantal},${r.kosten.toFixed(2)},${csvEscape(zonderPrijs(r.aantal_zonder_prijs))}`
+    ),
+    "",
+    "Toebehoren per artikel",
+    "Artikel,Eenheid,Aantal,Kostprijs (EUR),Waarvan zonder inkoopprijs",
+    ...data.per_artikel.map((r) =>
+      `${csvEscape(r.naam)},${csvEscape(r.eenheid)},${r.aantal},${r.kosten.toFixed(2)},${csvEscape(zonderPrijs(r.aantal_zonder_prijs))}`
+    ),
+  ];
+
+  const blob = new Blob([rijen.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `toebehoren-kostenpost-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function formatPeriode(periode: string) {
   const [jaar, maand] = periode.split("-");
   const namen = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
@@ -173,6 +211,16 @@ function ToebehorenVerbruikSectie() {
               <Label htmlFor="toebehoren-tot" className="text-xs text-muted-foreground">Tot en met</Label>
               <Input id="toebehoren-tot" type="date" value={tot} onChange={(e) => setTot(e.target.value)} className="h-8 w-40" />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => downloadToebehorenCsv(data, van, tot)}
+              disabled={!data || isLoading}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exporteren als CSV
+            </Button>
           </div>
         </div>
       </CardHeader>

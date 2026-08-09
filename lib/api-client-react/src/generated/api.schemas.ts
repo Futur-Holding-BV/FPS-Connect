@@ -16234,6 +16234,8 @@ export type ToebehorenVerbruikPerPeriodeItem = {
   periode: string;
   aantal: number;
   kosten: number;
+  /** Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld) */
+  aantal_zonder_prijs: number;
 };
 
 export type ToebehorenVerbruikPerArtikelItem = {
@@ -16242,6 +16244,8 @@ export type ToebehorenVerbruikPerArtikelItem = {
   eenheid: string;
   aantal: number;
   kosten: number;
+  /** Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld) */
+  aantal_zonder_prijs: number;
 };
 
 export interface ToebehorenVerbruik {

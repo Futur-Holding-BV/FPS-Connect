@@ -29028,14 +29028,16 @@ export const GetMagazijnToebehorenVerbruikResponse = zod.object({
   "per_periode": zod.array(zod.object({
   "periode": zod.string().describe('Maand in formaat YYYY-MM'),
   "aantal": zod.number(),
-  "kosten": zod.number()
+  "kosten": zod.number(),
+  "aantal_zonder_prijs": zod.number().describe('Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)')
 })),
   "per_artikel": zod.array(zod.object({
   "artikel_id": zod.number(),
   "naam": zod.string(),
   "eenheid": zod.string(),
   "aantal": zod.number(),
-  "kosten": zod.number()
+  "kosten": zod.number(),
+  "aantal_zonder_prijs": zod.number().describe('Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)')
 })),
   "onbekende_prijs_aantal": zod.number().describe('Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)')
 })

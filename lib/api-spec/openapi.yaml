@@ -48671,7 +48671,7 @@ components:
           type: array
           items:
             type: object
-            required: [periode, aantal, kosten]
+            required: [periode, aantal, kosten, aantal_zonder_prijs]
             properties:
               periode:
                 type: string
@@ -48680,11 +48680,14 @@ components:
                 type: number
               kosten:
                 type: number
+              aantal_zonder_prijs:
+                type: number
+                description: Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)
         per_artikel:
           type: array
           items:
             type: object
-            required: [artikel_id, naam, eenheid, aantal, kosten]
+            required: [artikel_id, naam, eenheid, aantal, kosten, aantal_zonder_prijs]
             properties:
               artikel_id:
                 type: integer
@@ -48696,6 +48699,9 @@ components:
                 type: number
               kosten:
                 type: number
+              aantal_zonder_prijs:
+                type: number
+                description: Deel van het aantal waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)
         onbekende_prijs_aantal:
           type: number
           description: Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld)

@@ -270,8 +270,8 @@ router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<voi
       .where(and(...condities));
 
     const rond = (n: number) => Math.round(n * 100) / 100;
-    const periodeMap = new Map<string, { aantal: number; kosten: number }>();
-    const artikelMap = new Map<number, { naam: string; eenheid: string; aantal: number; kosten: number }>();
+    const periodeMap = new Map<string, { aantal: number; kosten: number; aantalZonderPrijs: number }>();
+    const artikelMap = new Map<number, { naam: string; eenheid: string; aantal: number; kosten: number; aantalZonderPrijs: number }>();
     let totaalAantal = 0;
     let totaalKosten = 0;
     let onbekendePrijsAantal = 0;
@@ -280,28 +280,29 @@ router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<voi
       // Prijsbasis: gewogen gemiddelde > laatst bekende inkoop > vaste inkoopprijs > onbekend
       const prijs = m.gemiddeldInkoopprijs ?? m.laatsteInkoopprijs ?? m.inkoopprijs ?? null;
       const kosten = prijs != null && prijs > 0 ? m.hoeveelheid * prijs : 0;
-      if (prijs == null || prijs <= 0) onbekendePrijsAantal += m.hoeveelheid;
+      const zonderPrijs = prijs == null || prijs <= 0 ? m.hoeveelheid : 0;
+      onbekendePrijsAantal += zonderPrijs;
 
       totaalAantal += m.hoeveelheid;
       totaalKosten += kosten;
 
       const d = m.aangemaaktOp;
       const periode = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const p = periodeMap.get(periode) ?? { aantal: 0, kosten: 0 };
-      periodeMap.set(periode, { aantal: p.aantal + m.hoeveelheid, kosten: p.kosten + kosten });
+      const p = periodeMap.get(periode) ?? { aantal: 0, kosten: 0, aantalZonderPrijs: 0 };
+      periodeMap.set(periode, { aantal: p.aantal + m.hoeveelheid, kosten: p.kosten + kosten, aantalZonderPrijs: p.aantalZonderPrijs + zonderPrijs });
 
-      const a = artikelMap.get(m.artikelId) ?? { naam: m.naam ?? "Onbekend artikel", eenheid: m.eenheid ?? "stuks", aantal: 0, kosten: 0 };
-      artikelMap.set(m.artikelId, { ...a, aantal: a.aantal + m.hoeveelheid, kosten: a.kosten + kosten });
+      const a = artikelMap.get(m.artikelId) ?? { naam: m.naam ?? "Onbekend artikel", eenheid: m.eenheid ?? "stuks", aantal: 0, kosten: 0, aantalZonderPrijs: 0 };
+      artikelMap.set(m.artikelId, { ...a, aantal: a.aantal + m.hoeveelheid, kosten: a.kosten + kosten, aantalZonderPrijs: a.aantalZonderPrijs + zonderPrijs });
     }
 
     res.json({
       totaal_aantal: rond(totaalAantal),
       totaal_kosten: rond(totaalKosten),
       per_periode: [...periodeMap.entries()]
-        .map(([periode, v]) => ({ periode, aantal: rond(v.aantal), kosten: rond(v.kosten) }))
+        .map(([periode, v]) => ({ periode, aantal: rond(v.aantal), kosten: rond(v.kosten), aantal_zonder_prijs: rond(v.aantalZonderPrijs) }))
         .sort((a, b) => b.periode.localeCompare(a.periode)),
       per_artikel: [...artikelMap.entries()]
-        .map(([artikel_id, v]) => ({ artikel_id, naam: v.naam, eenheid: v.eenheid, aantal: rond(v.aantal), kosten: rond(v.kosten) }))
+        .map(([artikel_id, v]) => ({ artikel_id, naam: v.naam, eenheid: v.eenheid, aantal: rond(v.aantal), kosten: rond(v.kosten), aantal_zonder_prijs: rond(v.aantalZonderPrijs) }))
         .sort((a, b) => b.kosten - a.kosten),
       onbekende_prijs_aantal: rond(onbekendePrijsAantal),
     });
