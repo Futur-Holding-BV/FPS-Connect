@@ -170,6 +170,8 @@ INDEX|gebruiker_profielen|gebruiker_profielen_gebruiker_id_profiel_id_unique
 INDEX|gebruiker_profielen|gebruiker_profielen_pkey
 INDEX|gebruiker_profielen|gp_gebruiker_idx
 INDEX|gebruiker_profielen|gp_profiel_idx
+INDEX|gebruiker_voorkeuren|gebruiker_voorkeuren_gebruiker_id_sleutel_unique
+INDEX|gebruiker_voorkeuren|gebruiker_voorkeuren_pkey
 INDEX|gebruikers_meldingen|gebruikers_meldingen_pkey
 INDEX|gebruikers|gebruikers_email_unique
 INDEX|gebruikers|gebruikers_pkey
@@ -1946,6 +1948,11 @@ KOLOM|gebruiker_profielen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruiker_profielen|gebruiker_id|integer|NO|
 KOLOM|gebruiker_profielen|id|integer|NO|nextval('gebruiker_profielen_id_seq'::regclass)
 KOLOM|gebruiker_profielen|profiel_id|integer|NO|
+KOLOM|gebruiker_voorkeuren|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|gebruiker_voorkeuren|gebruiker_id|integer|NO|
+KOLOM|gebruiker_voorkeuren|id|integer|NO|nextval('gebruiker_voorkeuren_id_seq'::regclass)
+KOLOM|gebruiker_voorkeuren|sleutel|text|NO|
+KOLOM|gebruiker_voorkeuren|waarde|jsonb|NO|
 KOLOM|gebruikers_meldingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruikers_meldingen|ai_classificatie|text|YES|
 KOLOM|gebruikers_meldingen|ai_reactie|text|YES|

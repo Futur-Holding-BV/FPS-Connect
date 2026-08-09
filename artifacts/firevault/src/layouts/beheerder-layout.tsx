@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import logoFpsConnect from "@/assets/logo-fps-connect.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { ZijrandKnoppen } from "@/components/zijrand-paneel";
@@ -45,6 +45,11 @@ import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
+import { PaneelProvider, usePaneel } from "@/components/paneel/paneel-context";
+import { BanenMenu } from "@/components/paneel/banen-menu";
+import { BanenWeergave } from "@/components/paneel/banen-weergave";
+import { isPaneelGeschikt } from "@/lib/paneel-geschiktheid";
+import { useToast } from "@/hooks/use-toast";
 
 function PwaInstalleerKnop() {
   const [prompt, setPrompt] = useState<Event & { prompt: () => Promise<void> } | null>(null);
@@ -101,15 +106,76 @@ function omgevingVanLocatie(loc: string): Omgeving | null {
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   return (
     <NavigatieBewakingProvider>
-      <BeheerderLayoutInhoud>{children}</BeheerderLayoutInhoud>
+      <PaneelProvider>
+        <BeheerderLayoutInhoud>{children}</BeheerderLayoutInhoud>
+      </PaneelProvider>
     </NavigatieBewakingProvider>
   );
 }
 
 function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   useBottomBarHeight();
-  const [location] = useLocation();
+  const [location, navigeer] = useLocation();
   const { t } = useTranslation();
+  const { paneelAan, teSmal, gereed: paneelGereed, zetBeschikbareBreedte } =
+    usePaneel();
+  const { toast } = useToast();
+
+  // Meet de werkelijke breedte van de hoofdcontent (ná sidebar) zodat het
+  // banen-menu en de terugval-logica op de échte beschikbare ruimte rekenen,
+  // niet op window.innerWidth. Deze <main> is altijd gemount.
+  const mainRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const meet = () => zetBeschikbareBreedte(el.getBoundingClientRect().width);
+    meet();
+    const ro = new ResizeObserver(meet);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [zetBeschikbareBreedte]);
+
+  // Paneelmodus is alleen actief in het Connect-portaal, boven de
+  // terugvalbreedte, en niet op de mail-/werkbak-volledigschermroutes.
+  const paneelBeschikbaar =
+    !location.startsWith("/one/") &&
+    !location.startsWith("/berichten") &&
+    !location.startsWith("/werk-inbox");
+  // Wanneer een baan naar een niet-geschikt pad navigeert, sturen we het
+  // hoofdvenster daarheen. Zolang het hoofdvenster op een niet-geschikt pad
+  // staat tonen we dat over de volle breedte i.p.v. de banen.
+  const hoofdPadGeschikt = isPaneelGeschikt(location);
+  const banenActief =
+    paneelGereed && paneelAan && !teSmal && paneelBeschikbaar && hoofdPadGeschikt;
+  const toonTerugNaarBanen =
+    paneelGereed && paneelAan && !teSmal && paneelBeschikbaar && !hoofdPadGeschikt;
+
+  // Niet-geschikt pad uit een baan → open over de volle breedte in het
+  // hoofdvenster (paneelmodus blijft aan om naar terug te keren).
+  const openVolleBreedte = useCallback(
+    (pad: string) => {
+      navigeer(pad);
+      toast({
+        title: "Volle breedte",
+        description:
+          "Dit scherm is niet geschikt voor een baan en is over de volle breedte geopend.",
+      });
+    },
+    [navigeer, toast],
+  );
+
+  // Laatste baan sluiten (2 → 1): paneelmodus uit, overgebleven pad over de
+  // volle breedte in het hoofdvenster.
+  const sluitNaarVolleBreedte = useCallback(
+    (pad: string) => {
+      navigeer(pad);
+      toast({
+        title: "Paneelmodus uit",
+        description: "De baan is gesloten; het scherm staat nu over de volle breedte open.",
+      });
+    },
+    [navigeer, toast],
+  );
   const { heeftNiveau } = useBevoegdheid();
   const { rol } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
@@ -1709,9 +1775,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
 
-      <main className={cn(
+      <main ref={mainRef} className={cn(
         "flex-1 bg-background min-h-0",
-        (location.startsWith("/berichten") || location.startsWith("/werk-inbox"))
+        (banenActief || location.startsWith("/berichten") || location.startsWith("/werk-inbox"))
           ? "overflow-hidden flex flex-col"
           : "overflow-y-auto",
       )}>
@@ -1724,14 +1790,37 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
           <div className="ml-auto flex items-center gap-2">
+            {paneelBeschikbaar && <BanenMenu />}
             <ZijrandKnoppen metWerkbak />
             <MeldingKnop />
             <VersieBadge />
             <OnlineGebruikersTaakbalk />
           </div>
         </div>
+        {toonTerugNaarBanen && (
+          <div className="flex items-center gap-2 border-b border-border bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+            <span>
+              Dit scherm is niet geschikt voor een baan en staat over de volle
+              breedte open.
+            </span>
+            <button
+              type="button"
+              onClick={() => navigeer("/")}
+              className="ml-auto rounded px-2 py-0.5 font-medium text-amber-900 underline hover:bg-amber-100"
+            >
+              Terug naar banen
+            </button>
+          </div>
+        )}
         {toonToolboxen && <VeiligheidMeldingBanner />}
-        {(location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? (
+        {banenActief ? (
+          <div className="flex-1 min-h-0">
+            <BanenWeergave
+              onNietGeschikt={openVolleBreedte}
+              onNaarVolleBreedte={sluitNaarVolleBreedte}
+            />
+          </div>
+        ) : (location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? (
           <div className="flex-1 min-h-0">
             {children}
           </div>

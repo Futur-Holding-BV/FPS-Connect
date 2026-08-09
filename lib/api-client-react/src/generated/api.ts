@@ -394,6 +394,7 @@ import type {
   GetMagazijnToebehorenVerbruikParams,
   GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
+  GetMijnVoorkeuren200,
   GetMijnWeekUrenParams,
   GetOfferteKlantContractUploadUrl200,
   GetOpdrachtUurcodes200,
@@ -1085,6 +1086,8 @@ import type {
   WorkflowLijst,
   WorkflowSterInput,
   WorkflowTransitieLog,
+  ZetMijnVoorkeur200,
+  ZetMijnVoorkeurBody,
   Ziekmelding,
   ZiekmeldingenInput,
   ZiekmeldingenSelfInput,
@@ -7706,6 +7709,224 @@ export function useGetMijnMedewerker<TData = Awaited<ReturnType<typeof getMijnMe
 
 
 
+
+export const getGetMijnVoorkeurenUrl = () => {
+
+
+
+
+  return `/api/mijn/voorkeuren`
+}
+
+/**
+ * @summary Alle UI-voorkeuren van de ingelogde gebruiker (sleutel -> waarde)
+ */
+export const getMijnVoorkeuren = async ( options?: RequestInit): Promise<GetMijnVoorkeuren200> => {
+
+  return customFetch<GetMijnVoorkeuren200>(getGetMijnVoorkeurenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnVoorkeurenQueryKey = () => {
+    return [
+    `/api/mijn/voorkeuren`
+    ] as const;
+    }
+
+
+export const getGetMijnVoorkeurenQueryOptions = <TData = Awaited<ReturnType<typeof getMijnVoorkeuren>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnVoorkeuren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnVoorkeurenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnVoorkeuren>>> = ({ signal }) => getMijnVoorkeuren({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnVoorkeuren>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnVoorkeurenQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnVoorkeuren>>>
+export type GetMijnVoorkeurenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle UI-voorkeuren van de ingelogde gebruiker (sleutel -> waarde)
+ */
+
+export function useGetMijnVoorkeuren<TData = Awaited<ReturnType<typeof getMijnVoorkeuren>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnVoorkeuren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnVoorkeurenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getZetMijnVoorkeurUrl = (sleutel: string,) => {
+
+
+
+
+  return `/api/mijn/voorkeuren/${sleutel}`
+}
+
+/**
+ * @summary Zet (upsert) één UI-voorkeur van de ingelogde gebruiker
+ */
+export const zetMijnVoorkeur = async (sleutel: string,
+    zetMijnVoorkeurBody: ZetMijnVoorkeurBody, options?: RequestInit): Promise<ZetMijnVoorkeur200> => {
+
+  return customFetch<ZetMijnVoorkeur200>(getZetMijnVoorkeurUrl(sleutel),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(zetMijnVoorkeurBody)
+  }
+);}
+
+
+
+
+export const getZetMijnVoorkeurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetMijnVoorkeur>>, TError,{sleutel: string;data: BodyType<ZetMijnVoorkeurBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof zetMijnVoorkeur>>, TError,{sleutel: string;data: BodyType<ZetMijnVoorkeurBody>}, TContext> => {
+
+const mutationKey = ['zetMijnVoorkeur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof zetMijnVoorkeur>>, {sleutel: string;data: BodyType<ZetMijnVoorkeurBody>}> = (props) => {
+          const {sleutel,data} = props ?? {};
+
+          return  zetMijnVoorkeur(sleutel,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ZetMijnVoorkeurMutationResult = NonNullable<Awaited<ReturnType<typeof zetMijnVoorkeur>>>
+    export type ZetMijnVoorkeurMutationBody = BodyType<ZetMijnVoorkeurBody>
+    export type ZetMijnVoorkeurMutationError = ErrorType<void>
+
+    /**
+ * @summary Zet (upsert) één UI-voorkeur van de ingelogde gebruiker
+ */
+export const useZetMijnVoorkeur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetMijnVoorkeur>>, TError,{sleutel: string;data: BodyType<ZetMijnVoorkeurBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof zetMijnVoorkeur>>,
+        TError,
+        {sleutel: string;data: BodyType<ZetMijnVoorkeurBody>},
+        TContext
+      > => {
+      return useMutation(getZetMijnVoorkeurMutationOptions(options));
+    }
+
+export const getVerwijderMijnVoorkeurUrl = (sleutel: string,) => {
+
+
+
+
+  return `/api/mijn/voorkeuren/${sleutel}`
+}
+
+/**
+ * @summary Verwijder één UI-voorkeur van de ingelogde gebruiker
+ */
+export const verwijderMijnVoorkeur = async (sleutel: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getVerwijderMijnVoorkeurUrl(sleutel),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getVerwijderMijnVoorkeurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwijderMijnVoorkeur>>, TError,{sleutel: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwijderMijnVoorkeur>>, TError,{sleutel: string}, TContext> => {
+
+const mutationKey = ['verwijderMijnVoorkeur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwijderMijnVoorkeur>>, {sleutel: string}> = (props) => {
+          const {sleutel} = props ?? {};
+
+          return  verwijderMijnVoorkeur(sleutel,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwijderMijnVoorkeurMutationResult = NonNullable<Awaited<ReturnType<typeof verwijderMijnVoorkeur>>>
+
+    export type VerwijderMijnVoorkeurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verwijder één UI-voorkeur van de ingelogde gebruiker
+ */
+export const useVerwijderMijnVoorkeur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwijderMijnVoorkeur>>, TError,{sleutel: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwijderMijnVoorkeur>>,
+        TError,
+        {sleutel: string},
+        TContext
+      > => {
+      return useMutation(getVerwijderMijnVoorkeurMutationOptions(options));
+    }
 
 export const getGetMijnCertificatenUrl = () => {
 

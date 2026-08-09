@@ -2202,6 +2202,68 @@ paths:
         "404":
           description: Geen medewerker gekoppeld aan dit account
 
+  /mijn/voorkeuren:
+    get:
+      operationId: getMijnVoorkeuren
+      tags: [mijn]
+      summary: Alle UI-voorkeuren van de ingelogde gebruiker (sleutel -> waarde)
+      responses:
+        "200":
+          description: Object met alle voorkeuren; sleutel naar willekeurige JSON-waarde
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /mijn/voorkeuren/{sleutel}:
+    put:
+      operationId: zetMijnVoorkeur
+      tags: [mijn]
+      summary: Zet (upsert) één UI-voorkeur van de ingelogde gebruiker
+      parameters:
+        - in: path
+          name: sleutel
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [waarde]
+              properties:
+                waarde: {}
+      responses:
+        "200":
+          description: Opgeslagen voorkeur
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sleutel, waarde]
+                properties:
+                  sleutel:
+                    type: string
+                  waarde: {}
+        "422":
+          description: Ongeldige sleutel of te grote waarde
+    delete:
+      operationId: verwijderMijnVoorkeur
+      tags: [mijn]
+      summary: Verwijder één UI-voorkeur van de ingelogde gebruiker
+      parameters:
+        - in: path
+          name: sleutel
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Verwijderd (ook als de sleutel niet bestond)
+
   /mijn/certificaten:
     get:
       operationId: getMijnCertificaten

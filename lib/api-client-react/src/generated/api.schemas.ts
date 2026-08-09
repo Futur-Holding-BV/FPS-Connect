@@ -15794,6 +15794,17 @@ export type ListVoorzieningTypesParams = {
 inclusief_inactief?: boolean;
 };
 
+export type GetMijnVoorkeuren200 = { [key: string]: unknown };
+
+export type ZetMijnVoorkeurBody = {
+  waarde: unknown;
+};
+
+export type ZetMijnVoorkeur200 = {
+  sleutel: string;
+  waarde: unknown;
+};
+
 export type GetMijnLmraStatusParams = {
 gebouw_id?: number;
 opdracht_id?: number;

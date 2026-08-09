@@ -2648,6 +2648,39 @@ export const GetMijnMedewerkerResponse = zod.object({
 
 
 /**
+ * @summary Alle UI-voorkeuren van de ingelogde gebruiker (sleutel -> waarde)
+ */
+export const GetMijnVoorkeurenResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Zet (upsert) één UI-voorkeur van de ingelogde gebruiker
+ */
+export const ZetMijnVoorkeurParams = zod.object({
+  "sleutel": zod.coerce.string()
+})
+
+export const ZetMijnVoorkeurBody = zod.object({
+  "waarde": zod.unknown()
+})
+
+export const ZetMijnVoorkeurResponse = zod.object({
+  "sleutel": zod.string(),
+  "waarde": zod.unknown()
+})
+
+
+/**
+ * @summary Verwijder één UI-voorkeur van de ingelogde gebruiker
+ */
+export const VerwijderMijnVoorkeurParams = zod.object({
+  "sleutel": zod.coerce.string()
+})
+
+export const VerwijderMijnVoorkeurResponse = zod.void()
+
+
+/**
  * @summary VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
  */
 export const GetMijnCertificatenResponse = zod.object({
