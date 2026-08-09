@@ -3004,3 +3004,9 @@ Op het wagenpark-overzicht staat nu een AI-afstootadviespaneel (zichtbaar vanaf 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (documentatie-only)
 
 De variabele `MONTEUR_APP_STORE_URL` is toegevoegd aan `docs/productie-env-checklist.md`. Zodra de FPS Monteur-app in de App Store staat, voegt René de App Store-link toe aan `/opt/fps-one/deploy/.env.production` op de VPS. De QR-route (`GET /auth/app-qr`) en de dialoog in Gebruikersbeheer zijn al gereed: ze pikken de variabele automatisch op en tonen een scanbare QR-code zonder verdere code-aanpassingen.
+
+## 2026-08-09 — Activatiescherm overschrijft bestaand wachtwoord niet meer vóór afgeronde 2FA
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (activatieflow, gedrag naar buiten ongewijzigd)
+
+Vandaag raakte de hoofdbeheerder bijna buitengesloten: hij opende de activatielink van zijn eigen account op zijn telefoon, vulde een testwachtwoord in en brak af bij de 2FA-stap — waarna zijn echte wachtwoord al vervangen bleek. De activatieroute sloeg het nieuwe wachtwoord namelijk direct op bij de eerste stap. Dat is nu opgelost: het gekozen wachtwoord (en de taalkeuze) wordt tijdelijk in de sessie bewaard en pas definitief opgeslagen ná een geslaagde 2FA-bevestiging. Afbreken halverwege laat het bestaande wachtwoord dus volledig intact; volledig afronden werkt precies zoals eerst. Stale activatiegegevens in de sessie kunnen een normale login of first-install nooit beïnvloeden (worden daar gewist). Bewijs: `scripts/src/bewijs-task851-activatie-wachtwoord.ts` — 16/16 controles groen (afbreken → oud wachtwoord werkt nog; afronden → nieuw werkt; stale sessie na verbruikte uitnodiging → 409, wachtwoord en TOTP onaangetast). De definitieve opslag is atomair gebonden aan een nog geldige, onverbruikte uitnodigingstoken.

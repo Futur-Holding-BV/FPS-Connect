@@ -71,20 +71,20 @@ router.post("/uitnodiging/:token/activeren", async (req, res): Promise<void> => 
 
     const gehasht = await bcrypt.hash(String(wachtwoord), 10);
 
-    await db
-      .update(gebruikersTable)
-      .set({
-        wachtwoord: gehasht,
-        taal,
-        uitnodigingGeopendOp: g.uitnodigingGeopendOp ?? new Date(),
-        // De gebruiker kiest hier zelf een wachtwoord; de vlag "moet wachtwoord
-        // wijzigen" (gezet bij aanmaak met tijdelijk wachtwoord) is dan vervuld.
-        // Zonder dit dwingt de app direct na activatie alsnog een wijziging af.
-        moetWachtwoordWijzigen: false,
-      })
-      .where(eq(gebruikersTable.id, g.id));
+    // Het wachtwoord wordt hier NIET direct opgeslagen: dat gebeurt pas ná een
+    // geslaagde 2FA-bevestiging in /auth/2fa/activeren. Zo blijft het bestaande
+    // wachtwoord intact wanneer iemand de activatie halverwege afbreekt.
+    if (!g.uitnodigingGeopendOp) {
+      await db
+        .update(gebruikersTable)
+        .set({ uitnodigingGeopendOp: new Date() })
+        .where(eq(gebruikersTable.id, g.id));
+    }
 
     req.session.pendingUserId = g.id;
+    req.session.pendingWachtwoordHash = gehasht;
+    req.session.pendingTaal = taal;
+    req.session.pendingActivatieToken = token;
     delete req.session.userId;
     delete req.session.pendingSecret;
 

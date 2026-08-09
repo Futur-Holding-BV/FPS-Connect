@@ -114,6 +114,9 @@ router.post("/installatie", async (req, res): Promise<void> => {
 
     req.log.info("First installation completed");
     req.session.pendingUserId = gebruiker.id;
+    delete req.session.pendingWachtwoordHash;
+    delete req.session.pendingTaal;
+    delete req.session.pendingActivatieToken;
     delete req.session.userId;
     delete req.session.pendingSecret;
     res.status(201).json({ status: "setup_2fa" });

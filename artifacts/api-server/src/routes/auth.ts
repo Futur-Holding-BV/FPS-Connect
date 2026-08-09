@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
-import { eq, and, gt, isNull, sql } from "drizzle-orm";
+import { eq, and, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { maakToken } from "../lib/token";
 import { requireAuth } from "../middlewares/auth";
 import { legLoginPogingVast } from "./systeem";
@@ -249,6 +249,11 @@ router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> 
     req.session.pendingUserId = g.id;
     delete req.session.userId;
     delete req.session.pendingSecret;
+    // Stale activatie-gegevens uit een eerdere (afgebroken) uitnodigingsflow
+    // mogen een normale login nooit beïnvloeden.
+    delete req.session.pendingWachtwoordHash;
+    delete req.session.pendingTaal;
+    delete req.session.pendingActivatieToken;
     verlaagLoginRateTeller(req);
     if (g.tweeFactorIngeschakeld && g.totpSecret) {
       return void res.json({ status: "verify_2fa" });
@@ -303,20 +308,77 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
     if (!authenticator.check(code, secret)) {
       return void res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
     }
-    const [g] = await db
-      .update(gebruikersTable)
-      .set({
-        totpSecret: secret,
-        tweeFactorIngeschakeld: true,
-        laatstOnline: new Date(),
-        uitnodigingStatus: "geaccepteerd",
-        uitnodigingGeaccepteerdOp: new Date(),
-      })
-      .where(eq(gebruikersTable.id, pendingId))
-      .returning();
+    // Bij activatie via uitnodiging staat het gekozen wachtwoord tijdelijk in
+    // de sessie; pas nu (na geslaagde 2FA-bevestiging) wordt het definitief.
+    const pendingHash = req.session.pendingWachtwoordHash;
+    const pendingTaal = req.session.pendingTaal;
+    const pendingToken = req.session.pendingActivatieToken;
+    let g: typeof gebruikersTable.$inferSelect | undefined;
+    if (pendingHash) {
+      // Uitnodigings-activatie: schrijf atomair en ALLEEN als de uitnodiging
+      // nog geldig en onverbruikt is (zelfde token, niet geaccepteerd, niet
+      // verlopen). Zo kan een stale sessie de activatie van een inmiddels
+      // afgerond account nooit alsnog overschrijven.
+      const nu = new Date();
+      const [rij] = await db
+        .update(gebruikersTable)
+        .set({
+          totpSecret: secret,
+          tweeFactorIngeschakeld: true,
+          laatstOnline: nu,
+          uitnodigingStatus: "geaccepteerd",
+          uitnodigingGeaccepteerdOp: nu,
+          wachtwoord: pendingHash,
+          // De gebruiker koos hier zelf een wachtwoord; de vlag "moet
+          // wachtwoord wijzigen" is daarmee vervuld.
+          moetWachtwoordWijzigen: false,
+          ...(pendingTaal ? { taal: pendingTaal } : {}),
+        })
+        .where(
+          and(
+            eq(gebruikersTable.id, pendingId),
+            eq(gebruikersTable.uitnodigingToken, pendingToken ?? ""),
+            ne(gebruikersTable.uitnodigingStatus, "geaccepteerd"),
+            or(
+              isNull(gebruikersTable.uitnodigingVerlooptOp),
+              gt(gebruikersTable.uitnodigingVerlooptOp, nu),
+            ),
+          ),
+        )
+        .returning();
+      if (!rij) {
+        // Uitnodiging inmiddels verbruikt/verlopen: pending state opruimen en
+        // niets aan het account wijzigen.
+        delete req.session.pendingUserId;
+        delete req.session.pendingSecret;
+        delete req.session.pendingWachtwoordHash;
+        delete req.session.pendingTaal;
+        delete req.session.pendingActivatieToken;
+        return void res
+          .status(409)
+          .json({ error: "Deze uitnodiging is niet meer geldig. Log in met uw bestaande gegevens." });
+      }
+      g = rij;
+    } else {
+      const [rij] = await db
+        .update(gebruikersTable)
+        .set({
+          totpSecret: secret,
+          tweeFactorIngeschakeld: true,
+          laatstOnline: new Date(),
+          uitnodigingStatus: "geaccepteerd",
+          uitnodigingGeaccepteerdOp: new Date(),
+        })
+        .where(eq(gebruikersTable.id, pendingId))
+        .returning();
+      g = rij;
+    }
     req.session.userId = pendingId;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
+    delete req.session.pendingWachtwoordHash;
+    delete req.session.pendingTaal;
+    delete req.session.pendingActivatieToken;
     await resetMislukteInlogpogingen(g!.id);
     const risico = await legLoginPogingVast({
       gebruikerId: g!.id,

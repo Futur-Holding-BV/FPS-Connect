@@ -9,6 +9,13 @@ declare module "express-session" {
     rol?: string;
     pendingUserId?: number;
     pendingSecret?: string;
+    // Activatie via uitnodiging: het gekozen wachtwoord wordt pas definitief
+    // opgeslagen ná geslaagde 2FA-bevestiging (zie /auth/2fa/activeren).
+    pendingWachtwoordHash?: string;
+    pendingTaal?: string;
+    // Bindt de pending activatie aan de gebruikte uitnodigingstoken zodat een
+    // stale sessie na consumptie van de uitnodiging niets meer kan schrijven.
+    pendingActivatieToken?: string;
   }
 }
 
