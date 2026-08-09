@@ -10,6 +10,7 @@
   // uitsluitend via tsx. Structurele ontkoppeling is een aparte opruimtaak.
   "exclude": [
     "src/bewijs-scenario-doorrekening.ts",
+    "src/bewijs-uren01c.ts",
     "src/klant-poort-check.ts"
   ]
 }
