@@ -6,8 +6,8 @@ import { createHash } from "crypto";
 import { randomUUID } from "crypto";
 import { Readable } from "stream";
 import multer from "multer";
-import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable, appInstellingenTable } from "@workspace/db";
+import { eq, ne, desc, sql, inArray, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import {
@@ -374,43 +374,105 @@ router.post(
         }
       }
 
-      // Laad recente correcties als few-shot voorbeelden (categorie + overige velden)
-      const [catCorrecties, veldCorrecties] = await Promise.all([
-        db
-          .select()
-          .from(aiCategorieCorrectiesTable)
-          .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp))
-          .limit(10),
-        db
-          .select()
-          .from(aiVeldCorrectiesTable)
-          .orderBy(desc(aiVeldCorrectiesTable.aangemaaktOp))
-          .limit(15),
-      ]);
+      // AI_01 §4 — leerlus van correcties: uitzetbaar, met tien-waarnemingen-rem en zichtbaarheid.
+      // TIEN_WAARNEMINGEN_REM: correcties voor een veld tellen pas mee vanaf ≥10 correcties voor dát veld.
+      // ZICHTBAAR: elk toegepast veld komt terug in "geleerd_van_correcties".
+      // UITZETBAAR: staat de systeeminstelling uit → geen few-shot, geen bijsturing.
+      const DREMPEL_CORRECTIES = 10;
+      const MAX_VOORBEELDEN = 15;
+
+      const [instelling] = await db
+        .select({ aan: appInstellingenTable.aiLerenVanCorrectiesIngeschakeld })
+        .from(appInstellingenTable)
+        .orderBy(appInstellingenTable.id)
+        .limit(1);
+      // Standaard aan wanneer er (nog) geen instellingenrij bestaat.
+      const lerenIngeschakeld = instelling ? instelling.aan : true;
 
       let fewShotSectie = "";
-      const voorbeeldenParts: string[] = [];
+      const geleerdVanCorrecties: { veld: string; aantal_correcties: number; uitleg: string }[] = [];
 
-      if (catCorrecties.length > 0) {
-        const catVoorbeelden = catCorrecties.map((c) => {
-          const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
-          return `${context}\nVeld categorie — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
-        }).join("\n\n");
-        voorbeeldenParts.push(catVoorbeelden);
-      }
+      if (lerenIngeschakeld) {
+        // Tel het aantal correcties per veld — categorie apart (aparte tabel), overige velden per veld_naam.
+        const [catTelling, veldTellingen] = await Promise.all([
+          db
+            .select({ aantal: sql<number>`count(*)::int` })
+            .from(aiCategorieCorrectiesTable)
+            // Alleen échte correcties tellen — een overgenomen voorstel (voorstel == gekozen) is een bevestiging, geen correctie.
+            .where(ne(aiCategorieCorrectiesTable.aiVoorstel, aiCategorieCorrectiesTable.gekozen)),
+          db
+            .select({
+              veldNaam: aiVeldCorrectiesTable.veldNaam,
+              aantal: sql<number>`count(*)::int`,
+            })
+            .from(aiVeldCorrectiesTable)
+            .where(ne(aiVeldCorrectiesTable.aiVoorstel, aiVeldCorrectiesTable.gekozen))
+            .groupBy(aiVeldCorrectiesTable.veldNaam),
+        ]);
 
-      if (veldCorrecties.length > 0) {
-        const veldVoorbeelden = veldCorrecties.map((c) => {
-          const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
-          return `${context}\nVeld ${c.veldNaam} — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
-        }).join("\n\n");
-        voorbeeldenParts.push(veldVoorbeelden);
-      }
+        const catAantal = catTelling[0]?.aantal ?? 0;
+        const categorieHaaltDrempel = catAantal >= DREMPEL_CORRECTIES;
+        const veldenBovenDrempel = veldTellingen
+          .filter((v) => v.aantal >= DREMPEL_CORRECTIES)
+          .map((v) => v.veldNaam);
+        const veldAantalPerVeld = new Map(veldTellingen.map((v) => [v.veldNaam, v.aantal]));
 
-      if (voorbeeldenParts.length > 0) {
-        fewShotSectie =
-          "\n\nLeer van deze eerdere correcties door gebruikers — pas je extractie hierop aan:\n" +
-          voorbeeldenParts.join("\n\n");
+        const voorbeeldenParts: string[] = [];
+
+        if (categorieHaaltDrempel) {
+          const catCorrecties = await db
+            .select()
+            .from(aiCategorieCorrectiesTable)
+            .where(ne(aiCategorieCorrectiesTable.aiVoorstel, aiCategorieCorrectiesTable.gekozen))
+            .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp))
+            .limit(MAX_VOORBEELDEN);
+          if (catCorrecties.length > 0) {
+            const catVoorbeelden = catCorrecties.map((c) => {
+              const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
+              return `${context}\nVeld categorie — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
+            }).join("\n\n");
+            voorbeeldenParts.push(catVoorbeelden);
+            geleerdVanCorrecties.push({
+              veld: "categorie",
+              aantal_correcties: catAantal,
+              uitleg: `dit voorstel is bijgestuurd omdat dit veld ${catAantal} keer eerder anders is ingevuld`,
+            });
+          }
+        }
+
+        if (veldenBovenDrempel.length > 0) {
+          // Alleen recente voorbeelden van velden die de drempel halen; max 15 in totaal.
+          const veldCorrecties = await db
+            .select()
+            .from(aiVeldCorrectiesTable)
+            .where(and(
+              inArray(aiVeldCorrectiesTable.veldNaam, veldenBovenDrempel),
+              ne(aiVeldCorrectiesTable.aiVoorstel, aiVeldCorrectiesTable.gekozen),
+            ))
+            .orderBy(desc(aiVeldCorrectiesTable.aangemaaktOp))
+            .limit(MAX_VOORBEELDEN);
+          if (veldCorrecties.length > 0) {
+            const veldVoorbeelden = veldCorrecties.map((c) => {
+              const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
+              return `${context}\nVeld ${c.veldNaam} — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
+            }).join("\n\n");
+            voorbeeldenParts.push(veldVoorbeelden);
+          }
+          for (const veld of veldenBovenDrempel) {
+            const aantal = veldAantalPerVeld.get(veld) ?? 0;
+            geleerdVanCorrecties.push({
+              veld,
+              aantal_correcties: aantal,
+              uitleg: `dit voorstel is bijgestuurd omdat dit veld ${aantal} keer eerder anders is ingevuld`,
+            });
+          }
+        }
+
+        if (voorbeeldenParts.length > 0) {
+          fewShotSectie =
+            "\n\nLeer van deze eerdere correcties door gebruikers — pas je extractie hierop aan:\n" +
+            voorbeeldenParts.join("\n\n");
+        }
       }
 
       const systeemPrompt =
@@ -466,6 +528,8 @@ router.post(
         bestand_pad: bestandPad,
         tekstFragment: tekstBlok.slice(0, 500),
         dubbeling,
+        geleerd_van_correcties: geleerdVanCorrecties,
+        ...(lerenIngeschakeld ? {} : { leren_uitgeschakeld: true }),
       });
     } catch (err) {
       req.log.error(err);

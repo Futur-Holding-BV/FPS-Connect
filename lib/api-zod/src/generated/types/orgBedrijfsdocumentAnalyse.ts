@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OrgBedrijfsdocumentAnalyseDubbeling } from './orgBedrijfsdocumentAnalyseDubbeling';
+import type { OrgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem } from './orgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem';
 
 export interface OrgBedrijfsdocumentAnalyse {
   naam: string;
@@ -26,4 +27,8 @@ export interface OrgBedrijfsdocumentAnalyse {
   /** @nullable */
   tekstFragment?: string | null;
   dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;
+  /** AI_01 §4 (zichtbaar) — velden waarvan het voorstel is bijgestuurd op basis van eerdere gebruikerscorrecties. Alleen velden met ≥10 correcties (tien-waarnemingen-rem) komen hier voor. Leeg als er niets is toegepast. */
+  geleerd_van_correcties?: OrgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem[];
+  /** AI_01 §4 (uitzetbaar) — aanwezig en true wanneer de systeeminstelling ai_leren_van_correcties_ingeschakeld uit staat; geleerd_van_correcties is dan altijd leeg. */
+  leren_uitgeschakeld?: boolean;
 }

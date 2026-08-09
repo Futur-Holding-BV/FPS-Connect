@@ -4425,6 +4425,8 @@ export interface AppInstellingen {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan. */
+  ai_leren_van_correcties_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
      * @nullable
@@ -4464,6 +4466,8 @@ export interface AppInstellingenInput {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan. */
+  ai_leren_van_correcties_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
      * @nullable
@@ -12791,6 +12795,12 @@ export type OrgBedrijfsdocumentAnalyseDubbeling = {
   naam: string;
 } | null;
 
+export type OrgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem = {
+  veld: string;
+  aantal_correcties: number;
+  uitleg: string;
+};
+
 export interface OrgBedrijfsdocumentAnalyse {
   naam: string;
   categorie: string;
@@ -12810,6 +12820,10 @@ export interface OrgBedrijfsdocumentAnalyse {
   /** @nullable */
   tekstFragment?: string | null;
   dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;
+  /** AI_01 §4 (zichtbaar) — velden waarvan het voorstel is bijgestuurd op basis van eerdere gebruikerscorrecties. Alleen velden met ≥10 correcties (tien-waarnemingen-rem) komen hier voor. Leeg als er niets is toegepast. */
+  geleerd_van_correcties?: OrgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem[];
+  /** AI_01 §4 (uitzetbaar) — aanwezig en true wanneer de systeeminstelling ai_leren_van_correcties_ingeschakeld uit staat; geleerd_van_correcties is dan altijd leeg. */
+  leren_uitgeschakeld?: boolean;
 }
 
 export type OrgAiBedrijfsscanResultaatAdviezenItem = {

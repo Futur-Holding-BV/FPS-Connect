@@ -688,6 +688,7 @@ KOLOM|app_instellingen|aanvraag_oppak_termijn_uren|integer|NO|72
 KOLOM|app_instellingen|aanvraag_reactietermijn_uren|integer|NO|24
 KOLOM|app_instellingen|ai_drempel_melding_gestuurd_maand|text|YES|
 KOLOM|app_instellingen|ai_kostendrempel_eur|numeric|YES|
+KOLOM|app_instellingen|ai_leren_van_correcties_ingeschakeld|boolean|NO|true
 KOLOM|app_instellingen|ai_maandelijkse_export_dag|integer|YES|
 KOLOM|app_instellingen|ai_maandelijkse_export_email|text|YES|
 KOLOM|app_instellingen|ai_maandelijkse_export_laatst_verzonden_maand|text|YES|

@@ -7678,6 +7678,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
+  "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
@@ -7700,6 +7701,7 @@ export const UpdateInfoInstellingenBody = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.'),
+  "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.'),
@@ -7716,6 +7718,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
+  "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
@@ -27842,7 +27845,13 @@ export const AnalyseerBedrijfsdocumentResponse = zod.object({
   "dubbeling": zod.object({
   "id": zod.number(),
   "naam": zod.string()
-}).nullish()
+}).nullish(),
+  "geleerd_van_correcties": zod.array(zod.object({
+  "veld": zod.string(),
+  "aantal_correcties": zod.number(),
+  "uitleg": zod.string()
+})).optional().describe('AI_01 §4 (zichtbaar) — velden waarvan het voorstel is bijgestuurd op basis van eerdere gebruikerscorrecties. Alleen velden met ≥10 correcties (tien-waarnemingen-rem) komen hier voor. Leeg als er niets is toegepast.'),
+  "leren_uitgeschakeld": zod.boolean().optional().describe('AI_01 §4 (uitzetbaar) — aanwezig en true wanneer de systeeminstelling ai_leren_van_correcties_ingeschakeld uit staat; geleerd_van_correcties is dan altijd leeg.')
 })
 
 

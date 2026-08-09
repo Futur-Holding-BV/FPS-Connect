@@ -37,13 +37,28 @@ import {
   voorzieningenTable,
   opdrachtenTable,
   regieMaterialenTable,
+  modCalcHeadersTable,
+  modCalcRegelsTable,
+  factuurRegelsTable,
+  artikelenTable,
+  voorraadTable,
+  magazijnSnoozesTable,
+  functiesTable,
+  ziekmeldingenTable,
+  gebruikersTable,
+  projectBegrotingenTable,
+  werkbegrotingRegelsTable,
+  inkoopplannenTable,
+  inkoopplanRegelsTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { syncBron, meldWerkbakItem, type WerkbakInvoer } from "./werkbakService";
 import { beoordeelVorigeWeek, bouwWeekControleItems, bouwTvtOpnameItems } from "./weekControle";
 import { vindGebruikersMetFunctietitel } from "./bouwMeldingen";
+import { haalInkoopHistorie, artikelSleutel, MIN_WAARNEMINGEN_INKOOP } from "./inkoopEigenCijfers";
+import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { voerContractBewakingUit } from "../routes/contract-bewaking";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
@@ -827,6 +842,539 @@ async function voedRegieOpenstaand(): Promise<{ nieuw: number; afgehandeld: numb
 // PLANNER_01 §8 en kan pas gebouwd worden als de planner geïntegreerd is.
 // Dit is expliciet gemeld (geen stille weglating).
 
+// ── AI_01 §3 — proactieve AI-signalen als voeders ────────────────────────────
+// ONTWERPKEUZE (vastgesteld): de detectie hieronder is DETERMINISTISCH op de
+// eigen cijfers — er worden GEEN LLM-aanroepen in de bewakingsloop gedaan
+// (kosten + betrouwbaarheid: twee runs op dezelfde data moeten hetzelfde
+// signaal geven). Het werkbak-item is een "doen"-taak met concrete handeling in
+// de titel en de onderbouwing (waarvan wijkt het af, met hoeveel, hoeveel
+// waarnemingen, welke periode) in de omschrijving. Het actiePad verwijst naar
+// het scherm waar de bestaande AI-analyse desgewenst opgevraagd kan worden.
+// Zwijgen boven gokken: onder de bestaande waarnemingsdrempels
+// (calculatie ≥5 via MIN_WAARNEMINGEN, inkoop ≥3 via MIN_WAARNEMINGEN_INKOOP)
+// komt er geen item. syncBron reconcilieert: opgelost → item afgehandeld.
+
+const AI_AFWIJKING_DREMPEL_PCT = 30; // AI_01 §3: ondergrens voor "wijkt af".
+const AI_CALC_MIN_WAARNEMINGEN = 5;  // spiegelt MIN_WAARNEMINGEN in calculatieEigenCijfers.ts.
+
+function aiNormaliseer(tekst: string): string {
+  return tekst.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function aiMediaan(waarden: number[]): number {
+  const s = [...waarden].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 1 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
+// Vergelijkbare "stukprijs per eenheid" voor een calc-regel: materiaaltarief +
+// arbeid (MU × arbeidstarief). Identiek aan calculatieEigenCijfers.ts.
+function aiRegelEenheidsprijs(r: { tarief: number; muPerEenheid: number | null; arbeidsTarief: number | null }): number {
+  return Number(r.tarief) + Number(r.muPerEenheid ?? 0) * Number(r.arbeidsTarief ?? 0);
+}
+
+function aiRegelsoortSleutel(omschrijving: string, eenheid: string): string {
+  return `${aiNormaliseer(omschrijving)}|${aiNormaliseer(eenheid)}`;
+}
+
+// Review-bevinding (AUTORISATIELEK): een rechtstreeks geadresseerd werkbak-item
+// (gebruikerId) omzeilt de module-check in zichtbaarVoor() — de ontvanger ziet
+// het ongeacht bevoegdheid. Deze AI-items bevatten prijzen/afwijkingen, dus elke
+// directe ontvanger MOET actueel het benodigde niveau op de relevante module
+// hebben. Deze helper filtert een lijst gebruiker-ids op module≥niveau via de
+// effectieve bevoegdheden (opgeslagen + functie-profiel). Wie het recht mist,
+// valt weg; heeft geen enkele ontvanger het recht, dan gebruikt de voeder het
+// bestaande groepsvangnet (dat wél door zichtbaarVoor() wordt gecontroleerd).
+async function filterOntvangersOpBevoegdheid(
+  gebruikerIds: number[],
+  module: string,
+  minNiveau: number,
+): Promise<number[]> {
+  if (gebruikerIds.length === 0) return [];
+  const gebruikers = await db
+    .select({ id: gebruikersTable.id, rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+    .from(gebruikersTable)
+    .where(inArray(gebruikersTable.id, gebruikerIds));
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
+  return gebruikers
+    .filter((g) => ((effectief.get(g.id) ?? {})[module] ?? 0) >= minNiveau)
+    .map((g) => g.id);
+}
+
+// Korte, stabiele hash zodat de dedupSleutel niet afhangt van speciale tekens
+// in een omschrijving (§3: dedupSleutels stabiel per onderwerp).
+function aiHash(tekst: string): string {
+  let h = 0;
+  for (let i = 0; i < tekst.length; i++) {
+    h = (Math.imul(31, h) + tekst.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
+// ── AI_01 §3.1 — calculatieregel wijkt af van de eigen historische mediaan ────
+// Nog niet-definitieve calculaties (status concept/intern_akkoord) waarvan een
+// regel ≥30% afwijkt van de eigen mediaan per regelsoort. De mediaan wordt
+// bepaald over regels uit ÁNDERE headers (zelfde groepering als
+// calculatieEigenCijfers.ts: omschrijving+eenheid genormaliseerd, prijs =
+// tarief + MU×arbeidstarief), alleen bij ≥5 waarnemingen (anders zwijgen).
+// Ontvanger: header.aangemaaktDoorId; vangnet: bevoegdheidsgroep calculaties≥1
+// (de calculatie-routes eisen requireBevoegdheid("calculaties", 1) voor lezen).
+const AI_CALC_OPEN_STATUSSEN = ["concept", "intern_akkoord"];
+
+async function voedAiCalculatieAfwijking(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const openHeaders = await db
+    .select({ id: modCalcHeadersTable.id, naam: modCalcHeadersTable.naam, aangemaaktDoorId: modCalcHeadersTable.aangemaaktDoorId })
+    .from(modCalcHeadersTable)
+    .where(inArray(modCalcHeadersTable.status, AI_CALC_OPEN_STATUSSEN));
+  const openHeaderIds = new Set(openHeaders.map((h) => h.id));
+  const headerInfo = new Map(openHeaders.map((h) => [h.id, h] as const));
+
+  const calcIds = openHeaders.map((h) => h.id);
+  if (calcIds.length === 0) return syncBron("ai_calculatie_afwijking", []);
+
+  const openRegels = await db
+    .select({
+      id: modCalcRegelsTable.id,
+      calculatieId: modCalcRegelsTable.calculatieId,
+      omschrijving: modCalcRegelsTable.omschrijving,
+      eenheid: modCalcRegelsTable.eenheid,
+      tarief: modCalcRegelsTable.tarief,
+      muPerEenheid: modCalcRegelsTable.muPerEenheid,
+      arbeidsTarief: modCalcRegelsTable.arbeidsTarief,
+    })
+    .from(modCalcRegelsTable)
+    .where(inArray(modCalcRegelsTable.calculatieId, calcIds));
+
+  // PERFORMANCE: alleen de regelsoorten (genormaliseerde omschrijving+eenheid)
+  // die in de open concept/intern_akkoord-headers voorkomen bepalen de
+  // vergelijking. Begrens de historische query in SQL tot die paren i.p.v. ALLE
+  // mod_calc_regels te lezen. Match op lower(trim(...)) zodat de SQL-normalisatie
+  // aiNormaliseer() (toLowerCase + spaties inklappen + trim) benadert; de
+  // definitieve groepering gebeurt daarna in JS via aiRegelsoortSleutel.
+  const openParen = new Map<string, { omschrijving: string; eenheid: string }>();
+  for (const r of openRegels) {
+    openParen.set(aiRegelsoortSleutel(r.omschrijving, r.eenheid), { omschrijving: r.omschrijving, eenheid: r.eenheid });
+  }
+  const paarVoorwaarden = [...openParen.values()].map((p) =>
+    sql`(lower(btrim(${modCalcRegelsTable.omschrijving})) = ${aiNormaliseer(p.omschrijving)} AND lower(btrim(${modCalcRegelsTable.eenheid})) = ${aiNormaliseer(p.eenheid)})`,
+  );
+
+  // Historische mediaan per regelsoort: alle regels (uit welke header dan ook)
+  // die tot een van de open regelsoorten behoren. Per header sluiten we later de
+  // eigen regels uit door op headerId te vergelijken.
+  const historischeRegels = paarVoorwaarden.length > 0
+    ? await db
+        .select({
+          calculatieId: modCalcRegelsTable.calculatieId,
+          omschrijving: modCalcRegelsTable.omschrijving,
+          eenheid: modCalcRegelsTable.eenheid,
+          tarief: modCalcRegelsTable.tarief,
+          muPerEenheid: modCalcRegelsTable.muPerEenheid,
+          arbeidsTarief: modCalcRegelsTable.arbeidsTarief,
+        })
+        .from(modCalcRegelsTable)
+        .where(sql.join(paarVoorwaarden, sql` OR `))
+    : [];
+
+  // Per regelsoort: alle (headerId, prijs). Mediaan over andere headers =
+  // volledige lijst minus de bijdragen van de eigen header.
+  const perSoort = new Map<string, Array<{ headerId: number; prijs: number }>>();
+  for (const r of historischeRegels) {
+    const sleutel = aiRegelsoortSleutel(r.omschrijving, r.eenheid);
+    const lijst = perSoort.get(sleutel) ?? [];
+    lijst.push({ headerId: r.calculatieId, prijs: aiRegelEenheidsprijs(r) });
+    perSoort.set(sleutel, lijst);
+  }
+
+  // AUTORISATIELEK-fix: aangemaaktDoorId en functietitel-ontvangers zijn direct
+  // geadresseerd → geen module-check in zichtbaarVoor(). Filter beide op
+  // calculaties≥1 (het leesniveau dat de calculatie-routes eisen).
+  const aangemaaktDoorKandidaten = [...new Set(openHeaders.map((h) => h.aangemaaktDoorId).filter((v): v is number => v != null))];
+  const calcTitelKandidaten = await vindGebruikersMetFunctietitel("Calculator");
+  const [gerechtigdeAangemaaktDoor, calcGroepIds] = await Promise.all([
+    filterOntvangersOpBevoegdheid(aangemaaktDoorKandidaten, "calculaties", 1),
+    filterOntvangersOpBevoegdheid(calcTitelKandidaten, "calculaties", 1),
+  ]);
+  const aangemaaktDoorGerechtigd = new Set(gerechtigdeAangemaaktDoor);
+
+  // Per header: verzamel de afwijkende regelsoorten (één item per header, niet
+  // per regel — anders overspoelt één rommelige calculatie de werkbak).
+  const afwijkendPerHeader = new Map<number, Array<{ soortLabel: string; prijs: number; mediaan: number; afwPct: number; aantal: number }>>();
+  for (const r of openRegels) {
+    if (!openHeaderIds.has(r.calculatieId)) continue;
+    const sleutel = aiRegelsoortSleutel(r.omschrijving, r.eenheid);
+    const alle = perSoort.get(sleutel) ?? [];
+    const andere = alle.filter((x) => x.headerId !== r.calculatieId).map((x) => x.prijs);
+    if (andere.length < AI_CALC_MIN_WAARNEMINGEN) continue; // zwijgen boven gokken
+    const med = aiMediaan(andere);
+    if (med <= 0) continue;
+    const prijs = aiRegelEenheidsprijs(r);
+    const afwPct = ((prijs - med) / med) * 100;
+    if (Math.abs(afwPct) < AI_AFWIJKING_DREMPEL_PCT) continue;
+    const lijst = afwijkendPerHeader.get(r.calculatieId) ?? [];
+    lijst.push({ soortLabel: `${r.omschrijving} (${r.eenheid})`, prijs, mediaan: med, afwPct, aantal: andere.length });
+    afwijkendPerHeader.set(r.calculatieId, lijst);
+  }
+
+  const items: WerkbakInvoer[] = [];
+  for (const [headerId, afwijkingen] of afwijkendPerHeader) {
+    const header = headerInfo.get(headerId);
+    if (!header) continue;
+    // Stabiele dedup: header + hash van de gesorteerde afwijkende regelsoorten,
+    // zodat een gecorrigeerde/veranderde afwijking als nieuw onderwerp geldt en
+    // een ongewijzigde afwijking geen dagelijks duplicaat oplevert.
+    const soortSleutels = afwijkingen.map((a) => aiRegelsoortSleutel(a.soortLabel, "")).sort();
+    const regelsoortHash = aiHash(soortSleutels.join("|"));
+    const detail = afwijkingen
+      .map((a) => `"${a.soortLabel}" ${a.prijs.toFixed(2)}/eenh vs eigen mediaan ${a.mediaan.toFixed(2)} (${a.afwPct >= 0 ? "+" : ""}${a.afwPct.toFixed(0)}%, ${a.aantal} waarnemingen)`)
+      .join("; ");
+    const basis = {
+      soort: "doen" as const,
+      bron: "ai_calculatie_afwijking",
+      titel: `Controleer calculatie "${header.naam}": ${afwijkingen.length} regel(s) wijken ≥${AI_AFWIJKING_DREMPEL_PCT}% af van je eigen mediaan`,
+      omschrijving: `Afwijking t.o.v. de eigen historische mediaan per regelsoort (eerdere calculaties): ${detail}. Open de AI-analyse op de detailpagina voor de onderbouwing.`,
+      gewicht: 40,
+      actiePad: `/modules/calculatie/${headerId}`,
+      herkomstType: "mod_calc_header",
+      herkomstId: headerId,
+    };
+    if (header.aangemaaktDoorId != null && aangemaaktDoorGerechtigd.has(header.aangemaaktDoorId)) {
+      items.push({ ...basis, gebruikerId: header.aangemaaktDoorId, dedupSleutel: `ai-calculatie:${headerId}:${regelsoortHash}` });
+    } else if (calcGroepIds.length > 0) {
+      for (const gebruikerId of calcGroepIds) {
+        items.push({ ...basis, gebruikerId, dedupSleutel: `ai-calculatie:${headerId}:${regelsoortHash}:${gebruikerId}` });
+      }
+    } else {
+      items.push({ ...basis, vereisteModule: "calculaties", vereistNiveau: 1, dedupSleutel: `ai-calculatie:${headerId}:${regelsoortHash}:groep` });
+    }
+  }
+  return syncBron("ai_calculatie_afwijking", items);
+}
+
+// ── AI_01 §3.2 — inkoopfactuurregel wijkt af van de verwachte prijs ───────────
+// Inkoopfactuurregels (facturen type=inkoop, status verwerkt/betaald) van de
+// afgelopen 30 dagen waarvan de stukprijs ≥30% afwijkt van de verwachting.
+// Prioriteit van de verwachting (bestaande volgorde): jaarprijslijst
+// (artikelen.inkoopprijs, exacte naam-match) > eigen inkoophistorie-mediaan
+// (haalInkoopHistorie, ≥3 waarnemingen). Geen verwachting → geen item.
+// Ontvanger: werkvoorbereider; vangnet: bevoegdheidsgroep projecten≥3.
+async function voedAiInkoopAfwijking(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const grens = new Date(Date.now() - 30 * DAG_MS);
+  const regels = await db
+    .select({
+      regelId: factuurRegelsTable.id,
+      factuurId: factuurRegelsTable.factuurId,
+      omschrijving: factuurRegelsTable.omschrijving,
+      eenheid: factuurRegelsTable.eenheid,
+      stukprijs: factuurRegelsTable.stukprijs,
+      relatienaam: facturenTable.relatienaam,
+    })
+    .from(factuurRegelsTable)
+    .innerJoin(facturenTable, eq(factuurRegelsTable.factuurId, facturenTable.id))
+    .where(and(
+      eq(facturenTable.type, "inkoop"),
+      inArray(facturenTable.status, ["verwerkt", "betaald"]),
+      isNotNull(factuurRegelsTable.stukprijs),
+      isNotNull(factuurRegelsTable.eenheid),
+      gte(factuurRegelsTable.aangemaaktOp, grens),
+    ));
+
+  // PERFORMANCE: geen factuurregels in het venster → geen jaarprijslijst- of
+  // historie-query nodig (haalInkoopHistorie scant twee grote tabellen).
+  if (regels.length === 0) return syncBron("ai_inkoop_afwijking", []);
+
+  // Jaarprijslijst: exacte naam-match (genormaliseerd) op actieve artikelen met inkoopprijs.
+  const artikelen = await db
+    .select({ naam: artikelenTable.naam, inkoopprijs: artikelenTable.inkoopprijs })
+    .from(artikelenTable)
+    .where(and(eq(artikelenTable.actief, true), isNotNull(artikelenTable.inkoopprijs)));
+  const jaarprijsOpNaam = new Map<string, number>();
+  for (const a of artikelen) {
+    if (a.inkoopprijs == null) continue;
+    jaarprijsOpNaam.set(aiNormaliseer(a.naam), Number(a.inkoopprijs));
+  }
+
+  // PERFORMANCE: haalInkoopHistorie is de fallback-verwachting; roep hem alleen
+  // aan (en dan alleen voor de artikelen ZONDER jaarprijslijst-match). Heeft elke
+  // factuurregel al een jaarprijs, dan slaan we de historie-query volledig over.
+  const uniekeZonderJaarprijs = new Map<string, { omschrijving: string; eenheid: string }>();
+  for (const r of regels) {
+    if (r.eenheid == null) continue;
+    const jaarprijs = jaarprijsOpNaam.get(aiNormaliseer(r.omschrijving));
+    if (jaarprijs != null && jaarprijs > 0) continue; // jaarprijslijst dekt deze al
+    uniekeZonderJaarprijs.set(artikelSleutel(r.omschrijving, r.eenheid), { omschrijving: r.omschrijving, eenheid: r.eenheid });
+  }
+  const historie: Awaited<ReturnType<typeof haalInkoopHistorie>> = uniekeZonderJaarprijs.size > 0
+    ? await haalInkoopHistorie([...uniekeZonderJaarprijs.values()])
+    : new Map();
+
+  // AUTORISATIELEK-fix: werkvoorbereiders zijn direct geadresseerd → geen
+  // module-check. Deze items tonen bedragen, dus filter op projecten≥2 (het
+  // niveau waarop bedragen zichtbaar zijn). Zonder gerechtigde ontvanger valt
+  // de voeder terug op het groepsvangnet projecten≥3.
+  const wvbIds = await filterOntvangersOpBevoegdheid(
+    await vindGebruikersMetFunctietitel("Werkvoorbereider"), "projecten", 2,
+  );
+
+  const items: WerkbakInvoer[] = [];
+  for (const r of regels) {
+    if (r.stukprijs == null || r.eenheid == null) continue;
+    const prijs = Number(r.stukprijs);
+    if (!(prijs > 0)) continue;
+
+    let verwacht: number | null = null;
+    let bronTekst = "";
+    let aantalTekst = "";
+    const jaarprijs = jaarprijsOpNaam.get(aiNormaliseer(r.omschrijving));
+    if (jaarprijs != null && jaarprijs > 0) {
+      verwacht = jaarprijs;
+      bronTekst = "jaarprijslijst (artikelen.inkoopprijs)";
+      aantalTekst = "";
+    } else {
+      const h = historie.get(artikelSleutel(r.omschrijving, r.eenheid));
+      if (h && h.mediaan != null && h.mediaan > 0) {
+        verwacht = h.mediaan;
+        bronTekst = "eigen inkoophistorie-mediaan";
+        aantalTekst = ` (${h.aantal} waarnemingen${h.periode ? `, ${h.periode}` : ""}, minimaal ${MIN_WAARNEMINGEN_INKOOP})`;
+      }
+    }
+    if (verwacht == null) continue; // geen verwachting → geen item (zwijgen boven gokken)
+    const afwPct = ((prijs - verwacht) / verwacht) * 100;
+    if (Math.abs(afwPct) < AI_AFWIJKING_DREMPEL_PCT) continue;
+
+    const basis = {
+      soort: "doen" as const,
+      bron: "ai_inkoop_afwijking",
+      titel: `Beoordeel inkoopregel "${r.omschrijving}"${r.relatienaam ? ` van ${r.relatienaam}` : ""}: € ${prijs.toFixed(2)} wijkt ${afwPct >= 0 ? "+" : ""}${afwPct.toFixed(0)}% af`,
+      omschrijving: `Stukprijs € ${prijs.toFixed(2)}/${r.eenheid} vs verwachting € ${verwacht.toFixed(2)} volgens ${bronTekst}${aantalTekst}. Afwijking ${afwPct >= 0 ? "+" : ""}${afwPct.toFixed(0)}% (drempel ${AI_AFWIJKING_DREMPEL_PCT}%). Open de factuur om te controleren.`,
+      gewicht: 35,
+      actiePad: `/facturen/${r.factuurId}`,
+      herkomstType: "factuur_regel",
+      herkomstId: r.regelId,
+    };
+    if (wvbIds.length > 0) {
+      for (const gebruikerId of wvbIds) {
+        items.push({ ...basis, gebruikerId, dedupSleutel: `ai-inkoop:${r.regelId}:${gebruikerId}` });
+      }
+    } else {
+      items.push({ ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `ai-inkoop:${r.regelId}:groep` });
+    }
+  }
+  return syncBron("ai_inkoop_afwijking", items);
+}
+
+// ── AI_01 §3.3 — magazijn bestelsuggestie ─────────────────────────────────────
+// Artikelen onder minimumvoorraad (dezelfde aggregatie als magazijnSignalering.ts:
+// som van voorraad per artikel, actieve artikelen met een ingestelde
+// minimum_voorraad), met respect voor actieve snoozes uit magazijn_snoozes.
+// Item per artikel aan de bevoegdheidsgroep magazijn≥2. actiePad /magazijn.
+async function voedAiMagazijnBestelsuggestie(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const [voorraad, artikelen, snoozes] = await Promise.all([
+    db.select({ artikelId: voorraadTable.artikelId, hoeveelheid: voorraadTable.hoeveelheid }).from(voorraadTable),
+    db.select({
+      id: artikelenTable.id,
+      naam: artikelenTable.naam,
+      eenheid: artikelenTable.eenheid,
+      minimumVoorraad: artikelenTable.minimumVoorraad,
+      gewensteVoorraad: artikelenTable.gewensteVoorraad,
+    }).from(artikelenTable).where(eq(artikelenTable.actief, true)),
+    db.select({ artikelId: magazijnSnoozesTable.artikelId })
+      .from(magazijnSnoozesTable)
+      .where(gt(magazijnSnoozesTable.gesnoozedTot, new Date())),
+  ]);
+
+  const gesnoozed = new Set(snoozes.map((s) => s.artikelId));
+  const voorraadMap = new Map<number, number>();
+  for (const v of voorraad) {
+    voorraadMap.set(v.artikelId, (voorraadMap.get(v.artikelId) ?? 0) + (v.hoeveelheid ?? 0));
+  }
+
+  const items: WerkbakInvoer[] = [];
+  for (const a of artikelen) {
+    if (a.minimumVoorraad == null) continue;
+    if (gesnoozed.has(a.id)) continue;
+    const min = Number(a.minimumVoorraad);
+    const hoeveelheid = voorraadMap.get(a.id) ?? 0;
+    if (hoeveelheid >= min) continue;
+    const gewenst = a.gewensteVoorraad != null ? Number(a.gewensteVoorraad) : null;
+    items.push({
+      soort: "doen",
+      bron: "ai_magazijn_bestelsuggestie",
+      titel: `Maak een bestelling aan voor ${a.naam}`,
+      omschrijving: `Voorraad ${hoeveelheid} ${a.eenheid} ligt onder het minimum van ${min} ${a.eenheid}${gewenst != null ? ` (gewenste voorraad ${gewenst} ${a.eenheid})` : ""}. Bestel bij om onder het minimum uit te komen.`,
+      vereisteModule: "magazijn",
+      vereistNiveau: 2,
+      gewicht: 30,
+      actiePad: "/magazijn",
+      herkomstType: "artikel",
+      herkomstId: a.id,
+      dedupSleutel: `ai-magazijn:${a.id}`,
+    });
+  }
+  return syncBron("ai_magazijn_bestelsuggestie", items);
+}
+
+// ── AI_01 §3.4 — HRM capaciteitssignaal ───────────────────────────────────────
+// Komende 14 dagen, per functie (medewerkers actief): dagen waarop ALLE
+// medewerkers met die functie tegelijk afwezig zijn (goedgekeurd verlof of open
+// ziekmelding) terwijl de functie ≥1 medewerker heeft. Geanonimiseerd: geen
+// namen van zieken/verlofgangers in titel of omschrijving (aantallen mogen).
+// Item aan de bevoegdheidsgroep personeel≥2. actiePad /personeel/capaciteitsplanning.
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+async function voedAiHrmCapaciteit(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const vandaag = new Date();
+  vandaag.setHours(0, 0, 0, 0);
+  const eind = new Date(vandaag.getTime() + 14 * DAG_MS);
+  const dagen: string[] = [];
+  for (let i = 0; i < 14; i++) dagen.push(ymd(new Date(vandaag.getTime() + i * DAG_MS)));
+
+  const medewerkers = await db
+    .select({ id: medewerkersTable.id, functieId: medewerkersTable.functieId, functieNaam: functiesTable.naam })
+    .from(medewerkersTable)
+    .innerJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+    .where(and(eq(medewerkersTable.actief, true), eq(functiesTable.actief, true)));
+
+  // Functie → set actieve medewerker-ids.
+  const perFunctie = new Map<number, { naam: string; medewerkers: Set<number> }>();
+  for (const m of medewerkers) {
+    if (m.functieId == null) continue;
+    const entry = perFunctie.get(m.functieId) ?? { naam: m.functieNaam, medewerkers: new Set<number>() };
+    entry.medewerkers.add(m.id);
+    perFunctie.set(m.functieId, entry);
+  }
+  const alleMwIds = medewerkers.map((m) => m.id);
+  if (alleMwIds.length === 0) return syncBron("ai_hrm_capaciteit", []);
+
+  const [verlof, ziek] = await Promise.all([
+    db.select({ medewerkerId: verlofAanvragenTable.medewerkerId, start: verlofAanvragenTable.startDatum, eind: verlofAanvragenTable.eindDatum })
+      .from(verlofAanvragenTable)
+      .where(and(eq(verlofAanvragenTable.status, "goedgekeurd"), inArray(verlofAanvragenTable.medewerkerId, alleMwIds))),
+    // Open ziekmelding = geen einddatum, of einddatum op/na vandaag.
+    db.select({ medewerkerId: ziekmeldingenTable.medewerkerId, start: ziekmeldingenTable.startDatum, eind: ziekmeldingenTable.eindDatum, status: ziekmeldingenTable.status })
+      .from(ziekmeldingenTable)
+      .where(and(inArray(ziekmeldingenTable.medewerkerId, alleMwIds), ne(ziekmeldingenTable.status, "hersteld"))),
+  ]);
+
+  // Per dag: welke medewerkers afwezig zijn.
+  const afwezigPerDag = new Map<string, Set<number>>();
+  const markeer = (mwId: number, startStr: string, eindStr: string | null): void => {
+    for (const dag of dagen) {
+      if (dag < startStr) continue;
+      if (eindStr != null && dag > eindStr) continue;
+      const set = afwezigPerDag.get(dag) ?? new Set<number>();
+      set.add(mwId);
+      afwezigPerDag.set(dag, set);
+    }
+  };
+  for (const v of verlof) markeer(v.medewerkerId, v.start, v.eind);
+  for (const z of ziek) {
+    // Open ziekmelding zonder einddatum geldt de hele venster; met einddatum in
+    // het verleden is de medewerker weer beschikbaar.
+    if (z.eind != null && z.eind < ymd(vandaag)) continue;
+    markeer(z.medewerkerId, z.start, z.eind);
+  }
+
+  const items: WerkbakInvoer[] = [];
+  for (const [functieId, functie] of perFunctie) {
+    if (functie.medewerkers.size === 0) continue;
+    for (const dag of dagen) {
+      const afwezig = afwezigPerDag.get(dag);
+      if (!afwezig) continue;
+      const allenAfwezig = [...functie.medewerkers].every((id) => afwezig.has(id));
+      if (!allenAfwezig) continue;
+      items.push({
+        soort: "doen",
+        bron: "ai_hrm_capaciteit",
+        titel: `Beoordeel de bezetting van functie ${functie.naam} rond ${dag}`,
+        omschrijving: `Op ${dag} zijn alle ${functie.medewerkers.size} medewerker(s) met functie ${functie.naam} tegelijk afwezig (goedgekeurd verlof of open ziekmelding). Regel vervanging of herplan het werk.`,
+        vereisteModule: "personeel",
+        vereistNiveau: 2,
+        gewicht: 45,
+        actiePad: "/personeel/capaciteitsplanning",
+        herkomstType: "functie",
+        herkomstId: functieId,
+        dedupSleutel: `ai-hrm-capaciteit:${functieId}:${dag}`,
+      });
+    }
+  }
+  return syncBron("ai_hrm_capaciteit", items);
+}
+
+// ── AI_01 §3.5 — werkvoorbereidingssignaal ────────────────────────────────────
+// Actieve opdrachten met een werkbegroting waarvan materiaalregels GEEN
+// leverancier én geen inkoopplan-koppeling hebben. Zelfde tabellen als de
+// AI-kandidaten in routes/opdrachten.ts: werkbegroting_regels (categorie
+// materiaal) tegenover inkoopplan_regels (via werkbegrotingRegelId, met gevulde
+// leverancier). Eén item per opdracht. Ontvanger: werkvoorbereider; vangnet
+// projecten≥3. actiePad naar de opdrachtpagina.
+async function voedAiWerkvoorbereidingSignaal(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const rijen = await db
+    .select({
+      opdrachtId: opdrachtenTable.id,
+      opdrachtTitel: opdrachtenTable.titel,
+      regelId: werkbegrotingRegelsTable.id,
+      leverancier: inkoopplanRegelsTable.leverancier,
+    })
+    .from(opdrachtenTable)
+    .innerJoin(projectBegrotingenTable, eq(projectBegrotingenTable.opdrachtId, opdrachtenTable.id))
+    .innerJoin(werkbegrotingRegelsTable, eq(werkbegrotingRegelsTable.begrotingId, projectBegrotingenTable.id))
+    .leftJoin(inkoopplanRegelsTable, eq(inkoopplanRegelsTable.werkbegrotingRegelId, werkbegrotingRegelsTable.id))
+    .where(and(
+      eq(opdrachtenTable.status, "actief"),
+      eq(werkbegrotingRegelsTable.categorie, "materiaal"),
+    ));
+
+  // Een materiaalregel geldt als "gedekt" zodra er minstens één gekoppelde
+  // inkoopplanregel met een gevulde leverancier bestaat. Ongedekt = geen enkele
+  // koppeling óf alle koppelingen zonder leverancier.
+  const perOpdracht = new Map<number, { titel: string; ongedekteRegels: Set<number> }>();
+  const gedektePerRegel = new Map<number, boolean>();
+  for (const r of rijen) {
+    const heeftLeverancier = r.leverancier != null && r.leverancier.trim() !== "";
+    gedektePerRegel.set(r.regelId, (gedektePerRegel.get(r.regelId) ?? false) || heeftLeverancier);
+    const entry = perOpdracht.get(r.opdrachtId) ?? { titel: r.opdrachtTitel, ongedekteRegels: new Set<number>() };
+    entry.ongedekteRegels.add(r.regelId); // voorlopig; ontdubbelen na de loop
+    perOpdracht.set(r.opdrachtId, entry);
+  }
+
+  // AUTORISATIELEK-fix: werkvoorbereiders zijn direct geadresseerd → geen
+  // module-check. Filter op projecten≥2; zonder gerechtigde ontvanger valt de
+  // voeder terug op het groepsvangnet projecten≥3.
+  const wvbIds = await filterOntvangersOpBevoegdheid(
+    await vindGebruikersMetFunctietitel("Werkvoorbereider"), "projecten", 2,
+  );
+
+  const items: WerkbakInvoer[] = [];
+  for (const [opdrachtId, opdracht] of perOpdracht) {
+    const ongedekt = [...opdracht.ongedekteRegels].filter((regelId) => !gedektePerRegel.get(regelId));
+    const n = ongedekt.length;
+    if (n === 0) continue;
+    const basis = {
+      soort: "doen" as const,
+      bron: "ai_werkvoorbereiding_signaal",
+      titel: `Controleer de werkvoorbereiding van ${opdracht.titel}: ${n} materiaalregel(s) zonder leverancier/inkoopkoppeling`,
+      omschrijving: `${n} materiaalregel(s) in de werkbegroting hebben geen leverancier en geen inkoopplan-koppeling. Koppel een leverancier of neem de regels op in een inkoopplan.`,
+      gewicht: 35,
+      actiePad: `/opdrachten/${opdrachtId}`,
+      herkomstType: "opdracht",
+      herkomstId: opdrachtId,
+    };
+    if (wvbIds.length > 0) {
+      for (const gebruikerId of wvbIds) {
+        items.push({ ...basis, gebruikerId, dedupSleutel: `ai-werkvoorbereiding:${opdrachtId}:${gebruikerId}` });
+      }
+    } else {
+      items.push({ ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `ai-werkvoorbereiding:${opdrachtId}:groep` });
+    }
+  }
+  return syncBron("ai_werkvoorbereiding_signaal", items);
+}
+
 // ── De loop zelf ──────────────────────────────────────────────────────────────
 
 let _loopBezig = false;
@@ -880,6 +1428,12 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["tvt_opname", voedTvtOpname],
     ["voorzieningen_openstaand", voedOpenstaandeVoorzieningen],
     ["regie_openstaand", voedRegieOpenstaand],
+    // AI_01 §3 — proactieve AI-signalen (deterministisch, geen LLM in de loop).
+    ["ai_calculatie_afwijking", voedAiCalculatieAfwijking],
+    ["ai_inkoop_afwijking", voedAiInkoopAfwijking],
+    ["ai_magazijn_bestelsuggestie", voedAiMagazijnBestelsuggestie],
+    ["ai_hrm_capaciteit", voedAiHrmCapaciteit],
+    ["ai_werkvoorbereiding_signaal", voedAiWerkvoorbereidingSignaal],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

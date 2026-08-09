@@ -31925,6 +31925,9 @@ components:
         heatmap_tracking_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.
+        ai_leren_van_correcties_ingeschakeld:
+          type: boolean
+          description: AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
@@ -31967,6 +31970,9 @@ components:
         heatmap_tracking_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.
+        ai_leren_van_correcties_ingeschakeld:
+          type: boolean
+          description: AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan.
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
@@ -44964,6 +44970,24 @@ components:
           properties:
             id:   { type: integer }
             naam: { type: string }
+        geleerd_van_correcties:
+          type: array
+          description: >-
+            AI_01 §4 (zichtbaar) — velden waarvan het voorstel is bijgestuurd op basis van eerdere
+            gebruikerscorrecties. Alleen velden met ≥10 correcties (tien-waarnemingen-rem) komen hier voor.
+            Leeg als er niets is toegepast.
+          items:
+            type: object
+            required: [veld, aantal_correcties, uitleg]
+            properties:
+              veld:              { type: string }
+              aantal_correcties: { type: integer }
+              uitleg:            { type: string }
+        leren_uitgeschakeld:
+          type: boolean
+          description: >-
+            AI_01 §4 (uitzetbaar) — aanwezig en true wanneer de systeeminstelling
+            ai_leren_van_correcties_ingeschakeld uit staat; geleerd_van_correcties is dan altijd leeg.
 
     OrgAiBedrijfsscanResultaat:
       type: object

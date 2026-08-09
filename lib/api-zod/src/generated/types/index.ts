@@ -1070,6 +1070,7 @@ export * from './orgBedrijfsdocument';
 export * from './orgBedrijfsdocumentAnalyse';
 export * from './orgBedrijfsdocumentAnalyseDubbeling';
 export * from './orgBedrijfsdocumentAnalyseerInput';
+export * from './orgBedrijfsdocumentAnalyseGeleerdVanCorrectiesItem';
 export * from './orgBedrijfsdocumentInput';
 export * from './orgJaarverslag';
 export * from './orgJaarverslagInput';

@@ -24,6 +24,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         opdrachtbevestiging_auto_verzenden: false,
         moments_verjaardag_ingeschakeld: true,
         heatmap_tracking_ingeschakeld: false,
+        ai_leren_van_correcties_ingeschakeld: true,
         ai_kostendrempel_eur: null,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
@@ -49,6 +50,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestigingAutoVerzenden,
       moments_verjaardag_ingeschakeld: instelling.momentsVerjaardagIngeschakeld,
       heatmap_tracking_ingeschakeld: instelling.heatmapTrackingIngeschakeld,
+      ai_leren_van_correcties_ingeschakeld: instelling.aiLerenVanCorrectiesIngeschakeld,
       ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
       ai_maandelijkse_export_dag: instelling.aiMaandelijkseExportDag,
       ai_maandelijkse_export_email: instelling.aiMaandelijkseExportEmail,
@@ -78,6 +80,7 @@ router.put(
         opdrachtbevestiging_auto_verzenden,
         moments_verjaardag_ingeschakeld,
         heatmap_tracking_ingeschakeld,
+        ai_leren_van_correcties_ingeschakeld,
         ai_kostendrempel_eur,
         ai_maandelijkse_export_dag,
         ai_maandelijkse_export_email,
@@ -91,6 +94,7 @@ router.put(
           opdrachtbevestiging_auto_verzenden?: boolean;
           moments_verjaardag_ingeschakeld?: boolean;
           heatmap_tracking_ingeschakeld?: boolean;
+          ai_leren_van_correcties_ingeschakeld?: boolean;
           ai_kostendrempel_eur?: number | null;
           ai_maandelijkse_export_dag?: number | null;
           ai_maandelijkse_export_email?: string | null;
@@ -124,6 +128,9 @@ router.put(
           : {}),
         ...(typeof heatmap_tracking_ingeschakeld === "boolean"
           ? { heatmapTrackingIngeschakeld: heatmap_tracking_ingeschakeld }
+          : {}),
+        ...(typeof ai_leren_van_correcties_ingeschakeld === "boolean"
+          ? { aiLerenVanCorrectiesIngeschakeld: ai_leren_van_correcties_ingeschakeld }
           : {}),
       };
 
@@ -191,6 +198,7 @@ router.put(
         opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
         moments_verjaardag_ingeschakeld: result.momentsVerjaardagIngeschakeld,
         heatmap_tracking_ingeschakeld: result.heatmapTrackingIngeschakeld,
+        ai_leren_van_correcties_ingeschakeld: result.aiLerenVanCorrectiesIngeschakeld,
         ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
         ai_maandelijkse_export_dag: result.aiMaandelijkseExportDag,
         ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,

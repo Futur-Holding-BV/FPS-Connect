@@ -22,6 +22,8 @@ export interface AppInstellingen {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan. */
+  ai_leren_van_correcties_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
      * @nullable

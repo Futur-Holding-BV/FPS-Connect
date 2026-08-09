@@ -82,6 +82,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   // Heatmap-tracker (klik-/muisbeweging-registratie). AVG: persoonsgegevens gekoppeld aan account.
   // Standaard UIT; alleen een beheerder mag dit expliciet inschakelen (grondslag gerechtvaardigd belang).
   heatmapTrackingIngeschakeld: boolean("heatmap_tracking_ingeschakeld").notNull().default(false),
+  // AI_01 §4 — leerlus van correcties (uitzetbaar). Aan = de AI-analyse mag leren van eerdere
+  // gebruikerscorrecties (few-shot). Uit = geen few-shot, geen bijsturing. Standaard aan.
+  aiLerenVanCorrectiesIngeschakeld: boolean("ai_leren_van_correcties_ingeschakeld").notNull().default(true),
   aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
   aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
   aiMaandelijkseExportDag: integer("ai_maandelijkse_export_dag"), // 1-28, null = uit

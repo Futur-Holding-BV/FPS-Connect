@@ -73,6 +73,16 @@ export const WERKBAK_BRONNEN = [
   "voorziening_openstaand",
   // WERKBAK_02 §3.2: actieve regie-opdracht met niet-gefactureerde regels → werkvoorbereider.
   "regie_openstaand",
+  // AI_01 §3.1: calculatieregel wijkt ≥30% af van de eigen historische mediaan → calculator.
+  "ai_calculatie_afwijking",
+  // AI_01 §3.2: inkoopfactuurregel wijkt ≥30% af van de verwachte prijs → werkvoorbereider.
+  "ai_inkoop_afwijking",
+  // AI_01 §3.3: artikel onder minimumvoorraad → magazijn (bestelsuggestie).
+  "ai_magazijn_bestelsuggestie",
+  // AI_01 §3.4: functie waarvan alle medewerkers tegelijk afwezig zijn → HRM (bezetting).
+  "ai_hrm_capaciteit",
+  // AI_01 §3.5: actieve opdracht met materiaalregels zonder leverancier/inkoopkoppeling → werkvoorbereider.
+  "ai_werkvoorbereiding_signaal",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
