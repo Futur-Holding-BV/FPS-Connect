@@ -3,13 +3,14 @@ name: Caddyfile mjs static matcher
 description: Caddyfile @static path_regexp moet mjs bevatten, anders wordt pdfjs-worker als SPA-fallback (text/html) geserveerd
 ---
 
-# Caddyfile `@static` matcher — mjs vereist
+# Caddyfile `@static` matcher — mjs vereist, en NOOIT path + path_regexp combineren
 
-**Regel:** de `path_regexp ext` in de Caddyfile moet `mjs` bevatten naast `js`.
+**Regel 1:** de `path_regexp ext` in de Caddyfile moet `mjs` bevatten naast `js`.
+
+**Regel 2 (aug 2026):** binnen één named matcher worden verschillende matcher-soorten (`path` én `path_regexp`) door Caddy ge-**AND**, niet ge-OR. Een extra `path`-lijst naast de extensie-regexp zorgde ervoor dat root-bestanden buiten die lijst (bv. `/logo-fps-one.png`) als text/html via de SPA-fallback werden geserveerd. De matcher bevat daarom alleen nog de `path_regexp` op extensie.
 
 ```caddy
 @static {
-    path /assets/* /icons/* /favicon* /manifest* /sw.js
     path_regexp ext \.(js|mjs|css|png|jpg|...)$
 }
 ```
