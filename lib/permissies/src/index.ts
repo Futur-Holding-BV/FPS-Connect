@@ -269,6 +269,9 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 3, inspecties: 2, onderhoud: 3,
       rapportages: 1, bibliotheek: 1, declaraties: 2,
+      // UREN_01 §6b: uurcodes per opdracht vereisen projecten:1 (lezen zonder
+      // bedragen) — elk veld-preset moet uren op een opdracht kunnen schrijven.
+      projecten: 1,
     }),
   },
   {
@@ -288,6 +291,8 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 2, inspecties: 2, onderhoud: 4,
       rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
+      // UREN_01 §6b: projecten:1 voor de uurcodelijst per opdracht.
+      projecten: 1,
     }),
   },
   {
@@ -296,6 +301,8 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, inspecties: 3, onderhoud: 3,
       rapportages: 1, bibliotheek: 1,
+      // UREN_01 §6b: projecten:1 voor de uurcodelijst per opdracht.
+      projecten: 1,
     }),
   },
   {
@@ -304,6 +311,8 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 2, inspecties: 1, onderhoud: 2,
       rapportages: 1, bibliotheek: 1, toolbox: 1,
+      // UREN_01 §6b: projecten:1 voor de uurcodelijst per opdracht.
+      projecten: 1,
     }),
   },
   {

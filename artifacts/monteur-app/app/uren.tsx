@@ -272,10 +272,12 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const heeftOpdracht = effectieveOpdrachtId != null;
 
   // Haal uurcodes op indien we een opdracht hebben
-  const { data: opdrachtUurcodes, isError: offlineUurcodes } = useGetOpdrachtUurcodes(
+  const { data: opdrachtUurcodes, isError: offlineUurcodes, error: uurcodesError } = useGetOpdrachtUurcodes(
     effectieveOpdrachtId!,
     { query: { enabled: heeftOpdracht, queryKey: getGetOpdrachtUurcodesQueryKey(effectieveOpdrachtId!) } }
   );
+  // 403 = geen projectenrecht: toon een nette uitleg i.p.v. een lege lijst.
+  const uurcodesGeenRecht = uurcodesError instanceof ApiError && uurcodesError.status === 403;
   
   // Haal globale indirecte werkzaamheden op voor als er geen opdracht is, maar wel indirect geselecteerd
   const { data: globaleIndirect } = useListIndirecteWerkzaamheden({ query: { enabled: !heeftOpdracht, queryKey: getListIndirecteWerkzaamhedenQueryKey() } });
@@ -895,7 +897,17 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
               </View>
             )}
 
-            {!opdrachtUurcodes && !offlineUurcodes ? (
+            {uurcodesGeenRecht ? (
+              <View style={{ backgroundColor: "#fef3c7", padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 }}>
+                  Geen toegang tot de uurcodelijst
+                </Text>
+                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                  Je account mist het projectenrecht (Projecten: lezen). Vraag je
+                  beheerder om dit recht, dan kun je hier uren op de opdracht schrijven.
+                </Text>
+              </View>
+            ) : !opdrachtUurcodes && !offlineUurcodes ? (
               <ActivityIndicator size="small" color={c.primary} style={{ alignSelf: "flex-start", marginBottom: 12 }} />
             ) : (
               <View style={{ gap: 16 }}>

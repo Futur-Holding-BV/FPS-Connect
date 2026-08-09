@@ -253,7 +253,7 @@ function UrenInvoerDialog({
   const [nietInBegrotingOmschrijving, setNietInBegrotingOmschrijving] = useState("");
   const [fout, setFout] = useState<string | null>(null);
 
-  const { data: uurcodes } = useGetOpdrachtUurcodes(opdracht?.id ?? 0, {
+  const { data: uurcodes, error: uurcodesError } = useGetOpdrachtUurcodes(opdracht?.id ?? 0, {
     query: {
       enabled: !!opdracht?.id,
       queryKey: getGetOpdrachtUurcodesQueryKey(opdracht?.id ?? 0),
@@ -444,6 +444,13 @@ function UrenInvoerDialog({
             <>
               <div className="grid gap-1.5">
                 <Label>Uurcode / Werkzaamheid</Label>
+                {uurcodesError instanceof ApiError && uurcodesError.status === 403 ? (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800" data-testid="melding-uurcodes-geen-recht">
+                    Je hebt geen toegang tot de uurcodelijst van deze opdracht.
+                    Vraag je beheerder om het projectenrecht (Projecten: lezen),
+                    dan kun je hier uren op de opdracht schrijven.
+                  </div>
+                ) : (
                 <Select value={uurcodeSelectie} onValueChange={setUurcodeSelectie}>
                   <SelectTrigger>
                     <SelectValue placeholder="Kies een uurcode" />
@@ -476,6 +483,7 @@ function UrenInvoerDialog({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                )}
               </div>
               {uurcodeSelectie === "niet_in_begroting" && (
                 <div className="grid gap-1.5 pl-4 border-l-2 border-primary/20">
