@@ -80,11 +80,7 @@ async function toetsOverwerkSlot(opts: {
 }): Promise<OverwerkToets> {
   const grens = overwerkGrens(opts.cao);
   const d = new Date(opts.datum + "T00:00:00Z");
-  const { van, tot } = weekGrenzen(d.getUTCFullYear(), isoWeekNummer(d));
-  // Valt de datum door jaarovergang buiten die grenzen, herbereken via de week zelf.
-  const week = isoWeekNummer(d);
-  const jaar = opts.datum >= van && opts.datum <= tot ? d.getUTCFullYear()
-    : (week > 50 ? d.getUTCFullYear() - 1 : d.getUTCFullYear() + 1);
+  const { jaar, week } = isoJaarWeek(d);
   const grenzen = weekGrenzen(jaar, week);
 
   const rows = await db
@@ -137,15 +133,21 @@ async function toetsOverwerkSlot(opts: {
   return { toegestaan: true, boven_uren: bovenVanRegel, grens, slot_id: slot.id, weigering: null };
 }
 
-// Verhoog het slotverbruik en sluit het slot vanzelf zodra het plafond is bereikt.
-async function boekSlotVerbruik(slotId: number, uren: number): Promise<void> {
-  const [slot] = await db.select().from(overwerkSlotenTable).where(eq(overwerkSlotenTable.id, slotId)).limit(1);
-  if (!slot) return;
-  const nieuw = Math.round((slot.verbruikteUren + uren) * 100) / 100;
-  const vol = slot.urenPlafond != null && nieuw >= slot.urenPlafond - 1e-9;
-  await db.update(overwerkSlotenTable)
-    .set({ verbruikteUren: nieuw, status: vol ? "gesloten" : slot.status, geslotenOp: vol ? new Date() : slot.geslotenOp, bijgewerktOp: new Date() })
-    .where(eq(overwerkSlotenTable.id, slotId));
+// Boek slotverbruik ATOMAIR: één conditionele UPDATE die alleen slaagt als het
+// plafond het nog toelaat (voorkomt races tussen gelijktijdige invoer), en het
+// slot in dezelfde statement sluit zodra het plafond is bereikt.
+async function boekSlotVerbruik(slotId: number, uren: number): Promise<boolean> {
+  const rijen = await db.execute(sql`
+    UPDATE overwerk_sloten
+    SET verbruikte_uren = round((verbruikte_uren + ${uren})::numeric, 2),
+        status = CASE WHEN uren_plafond IS NOT NULL AND verbruikte_uren + ${uren} >= uren_plafond - 1e-9 THEN 'gesloten' ELSE status END,
+        gesloten_op = CASE WHEN uren_plafond IS NOT NULL AND verbruikte_uren + ${uren} >= uren_plafond - 1e-9 THEN now() ELSE gesloten_op END,
+        bijgewerkt_op = now()
+    WHERE id = ${slotId} AND status = 'open'
+      AND (uren_plafond IS NULL OR verbruikte_uren + ${uren} <= uren_plafond + 1e-9)
+    RETURNING id`);
+  const n = Array.isArray(rijen) ? rijen.length : ((rijen as { rows?: unknown[] }).rows?.length ?? 0);
+  return n > 0;
 }
 
 function mapUren(
@@ -219,10 +221,17 @@ function mapWeekStaat(
   };
 }
 
+// ISO-jaar hoort bij het ISO-weeknummer (rond nieuwjaar wijkt het af van het kalenderjaar).
+function isoJaarWeek(datum: Date): { jaar: number; week: number } {
+  const d = new Date(Date.UTC(datum.getUTCFullYear(), datum.getUTCMonth(), datum.getUTCDate()));
+  const dag = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dag);
+  return { jaar: d.getUTCFullYear(), week: isoWeekNummer(datum) };
+}
+
 async function isWeekVergrendeld(medId: number, datum: string): Promise<boolean> {
   const d = new Date(datum + "T00:00:00Z");
-  const jaar = d.getUTCFullYear();
-  const week = isoWeekNummer(d);
+  const { jaar, week } = isoJaarWeek(d);
   const [ws] = await db
     .select({ vergrendeld: weekStatenTable.vergrendeld })
     .from(weekStatenTable)
@@ -349,7 +358,7 @@ router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
   }
 
   const nu = new Date();
-  const targetJaar = jaar ? Number(jaar) : nu.getFullYear();
+  const targetJaar = jaar ? Number(jaar) : isoJaarWeek(new Date(Date.UTC(nu.getFullYear(), nu.getMonth(), nu.getDate()))).jaar;
   const targetWeek = week ? Number(week) : isoWeekNummer(nu);
 
   const { van, tot } = weekGrenzen(targetJaar, targetWeek);
@@ -545,6 +554,19 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
     });
   }
 
+  if (toets.slot_id != null && toets.boven_uren > 0) {
+    const geboekt = await boekSlotVerbruik(toets.slot_id, toets.boven_uren);
+    if (!geboekt) {
+      return void res.status(422).json({
+        code: "OVERWERK_SLOT_DICHT",
+        error: `Het overwerkslot heeft geen ruimte meer binnen het urenplafond (gelijktijdige invoer).`,
+        boven_uren: toets.boven_uren,
+        grens: toets.grens,
+        project_id: project_id ? Number(project_id) : null,
+      });
+    }
+  }
+
   const [rij] = await db
     .insert(urenRegistratiesTable)
     .values({
@@ -567,10 +589,6 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
       bijgewerktOp: new Date(),
     })
     .returning();
-
-  if (toets.slot_id != null && toets.boven_uren > 0) {
-    await boekSlotVerbruik(toets.slot_id, toets.boven_uren);
-  }
 
   // UREN_01 §5: geaccepteerd overwerk levert een VOORSTEL voor tijd-voor-tijd
   // op — getoond aan de medewerker, nooit stilzwijgend aangemaakt.
@@ -688,6 +706,21 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
       grens: patchToets.grens,
       project_id: patchProjectId,
     });
+  }
+  // Ook bij een wijziging wordt het boven-deel atomair op het slot geboekt
+  // (bewust conservatief: eerder geboekt verbruik van de oude versie wordt
+  // niet teruggegeven — het plafond kan zo hooguit strenger uitvallen).
+  if (patchToets.slot_id != null && patchToets.boven_uren > 0) {
+    const geboekt = await boekSlotVerbruik(patchToets.slot_id, patchToets.boven_uren);
+    if (!geboekt) {
+      return void res.status(422).json({
+        code: "OVERWERK_SLOT_DICHT",
+        error: "Het overwerkslot heeft geen ruimte meer binnen het urenplafond.",
+        boven_uren: patchToets.boven_uren,
+        grens: patchToets.grens,
+        project_id: patchProjectId,
+      });
+    }
   }
 
   const [rij] = await db

@@ -669,27 +669,26 @@ async function voedMailAntwoorden(): Promise<{ nieuw: number; afgehandeld: numbe
 
 let _loopBezig = false;
 
-// UREN_01 §6: wekelijkse volledigheidscontrole — maandagochtend over de week
-// ervoor (dedup per medewerker+week; de loop draait dagelijks 06:30).
+// UREN_01 §6: wekelijkse volledigheidscontrole — alleen op maandag over de
+// week ervoor. syncBron sluit items vanzelf zodra de medewerker de week
+// alsnog compleet maakt (volgende maandag, of dezelfde dag bij een herdraai).
 async function voedWeekstaatControle(): Promise<{ nieuw: number; afgehandeld: number }> {
+  if (new Date().getDay() !== 1 && process.env.UREN01_WEEKCONTROLE_FORCE !== "1") {
+    return { nieuw: 0, afgehandeld: 0 };
+  }
   const resultaten = await beoordeelVorigeWeek();
   const items = bouwWeekControleItems(resultaten);
-  let nieuw = 0;
-  for (const item of items) {
-    if (await meldWerkbakItem(item)) nieuw += 1;
-  }
-  return { nieuw, afgehandeld: 0 };
+  const a = await syncBron("weekstaat_onvolledig", items.filter((i) => i.bron === "weekstaat_onvolledig"));
+  const b = await syncBron("weekstaat_overwerk_overtreding", items.filter((i) => i.bron === "weekstaat_overwerk_overtreding"));
+  return { nieuw: a.nieuw + b.nieuw, afgehandeld: a.afgehandeld + b.afgehandeld };
 }
 
-// UREN_01 §5: tijd-voor-tijd langer dan een maand open → herinnering (geen verval).
+// UREN_01 §5: tijd-voor-tijd langer dan een maand open → herinnering (geen
+// verval, geen blokkade). syncBron ruimt herinneringen op zodra opgenomen.
 async function voedTvtOpname(): Promise<{ nieuw: number; afgehandeld: number }> {
   const plIds = await vindGebruikersMetFunctietitel("Projectleider");
   const items = await bouwTvtOpnameItems(plIds);
-  let nieuw = 0;
-  for (const item of items) {
-    if (await meldWerkbakItem(item)) nieuw += 1;
-  }
-  return { nieuw, afgehandeld: 0 };
+  return syncBron("tvt_opname_herinnering", items);
 }
 
 export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: number; afgehandeld: number } | { fout: string }>> {

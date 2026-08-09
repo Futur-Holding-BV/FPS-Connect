@@ -154,23 +154,29 @@ async function beoordeelWeek(
     .limit(1);
   const ingediend = !!staat && staat.status !== "concept";
 
-  // §6.3 derde melding: meer dan grens (norm CAO + ADV, doorgaans 40) + 2 uur
-  // gewerkt zonder dat de overuren gedekt zijn door een open slot.
-  const grens = overwerkGrens(m.cao);
+  // §6.3 derde melding: meer dan norm+2 gewerkt zonder dat het deel boven de
+  // drempel gedekt is. Attributie zoals de invoertoets zelf werkt: regels op
+  // datumvolgorde, het deel van elke regel dat de lopende teller boven de
+  // drempel duwt moet gedekt zijn door een op DIE datum open slot voor DAT
+  // project. Sloten die inmiddels gesloten zijn tellen mee als ze op de
+  // regel-datum geldig waren (destijds rechtmatig geschreven overwerk).
+  const drempel = normUren + 2;
   let overtreding = 0;
-  if (gewerkt > grens + 2) {
-    const bovenTotaal = gewerkt - grens;
-    // Gedekt = uren boven de grens op projecten met een op die datum open slot.
-    const sloten = await db.select().from(overwerkSlotenTable).where(eq(overwerkSlotenTable.status, "open"));
-    const gedekteProjecten = (datum: string) => new Set(
-      sloten.filter((s) => s.geldigVan != null && s.geldigTot != null && datum >= s.geldigVan && datum <= s.geldigTot)
-        .map((s) => s.projectId));
-    // Ruime benadering: som van uren op gedekte project-datums, gemaximeerd op bovenTotaal.
-    let gedekt = 0;
-    for (const r of uren) {
-      if (r.projectId != null && gedekteProjecten(r.datum).has(r.projectId)) gedekt += r.nettoUren;
+  if (gewerkt > drempel) {
+    const sloten = await db.select().from(overwerkSlotenTable)
+      .where(sql`${overwerkSlotenTable.status} IN ('open','gesloten')`);
+    const isGedekt = (projectId: number | null, datum: string) =>
+      projectId != null && sloten.some((s) =>
+        s.geldigVan != null && s.geldigTot != null && s.geopendOp != null &&
+        s.projectId === projectId && datum >= s.geldigVan && datum <= s.geldigTot);
+    const gesorteerd = [...uren].sort((a, b) => a.datum.localeCompare(b.datum));
+    let teller = 0;
+    for (const r of gesorteerd) {
+      const bovenDeel = Math.max(0, Math.min(r.nettoUren, teller + r.nettoUren - drempel));
+      teller += r.nettoUren;
+      if (bovenDeel > 0 && !isGedekt(r.projectId, r.datum)) overtreding += bovenDeel;
     }
-    overtreding = Math.max(0, Math.round((bovenTotaal - gedekt) * 100) / 100);
+    overtreding = Math.round(overtreding * 100) / 100;
   }
 
   return {
