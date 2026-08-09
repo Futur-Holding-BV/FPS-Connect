@@ -61,6 +61,7 @@ Het deploy-script (`scripts/deploy-production.sh`) controleert deze variabelen v
 | `S3_PUBLIC_ENDPOINT` | VPS `.env.production` | Publiek adres voor presigned uploads: `https://connect.fps-one.nl`. |
 | `MINIO_ROOT_USER` | VPS `.env.production` | MinIO root-gebruiker, bijv. `fps_minio`. |
 | `AVG_ACTIVITEIT_BEWAARDAGEN` | VPS `.env.production` | Bewaarperiode activiteitslog in dagen; standaard `365`. |
+| `MONTEUR_APP_STORE_URL` | VPS `.env.production` | App Store-link voor de FPS Monteur-app, bijv. `https://apps.apple.com/nl/app/fps-monteur/id...`. Zodra ingesteld toont de "App QR-code"-dialoog in Gebruikersbeheer een scanbare QR die naar de App Store leidt. Leeg laten zolang de app nog niet gepubliceerd is — de dialoog geeft dan een nette uitleg. |
 
 ---
 
