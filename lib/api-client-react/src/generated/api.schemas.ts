@@ -12021,6 +12021,47 @@ export interface WagenparkAiAdvies {
   onderhoud_id?: number | null;
 }
 
+export type WagenparkAfstootAdviesAdvies = typeof WagenparkAfstootAdviesAdvies[keyof typeof WagenparkAfstootAdviesAdvies];
+
+
+export const WagenparkAfstootAdviesAdvies = {
+  behouden: 'behouden',
+  monitoren: 'monitoren',
+  vervangen: 'vervangen',
+  afstoten: 'afstoten',
+} as const;
+
+export interface WagenparkAfstootAdvies {
+  voertuig_id: number;
+  kenteken: string;
+  merk: string;
+  type: string;
+  advies: WagenparkAfstootAdviesAdvies;
+  onderbouwing: string;
+  prioriteit: string;
+  kosten_laatste_12m: number;
+  kosten_per_km?: number | null;
+  leeftijd_jaren?: number | null;
+  km_stand: number;
+  aantal_kostenregels: number;
+}
+
+export type WagenparkAfstootAdviesResultaatVlootmedianen = {
+  kosten_laatste_12m?: number | null;
+  kosten_per_km?: number | null;
+  leeftijd_jaren?: number | null;
+  km_stand?: number | null;
+  voertuigen_met_kostendata: number;
+  voertuigen_totaal: number;
+};
+
+export interface WagenparkAfstootAdviesResultaat {
+  gegenereerd_op: string;
+  samenvatting?: string | null;
+  vlootmedianen: WagenparkAfstootAdviesResultaatVlootmedianen;
+  adviezen: WagenparkAfstootAdvies[];
+}
+
 export interface Documentsoort {
   id: number;
   context: string;

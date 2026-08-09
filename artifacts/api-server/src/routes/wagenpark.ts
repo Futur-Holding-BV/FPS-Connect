@@ -25,6 +25,8 @@ import multer from "multer";
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth.js";
 import { effectieveContext } from "../utils/rol";
 import { voerWagenparkSyncUit } from "../lib/wagenparkSync";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { pasAfstootBeleidToe, type AfstootAdvies } from "../lib/wagenparkAfstootBeleid";
 import { getFleetProvider } from "../lib/fleet-provider/index.js";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { scanBestandBytes, haalScanStatusOpVoorPad } from "../services/security-intake-engine";
@@ -631,6 +633,256 @@ router.get("/ai-advies", lezen, async (req, res): Promise<void> => {
     - (volgorde[b.prioriteit as keyof typeof volgorde] ?? 9));
 
   res.json(adviezen);
+});
+
+// ══════════════════════════════════════════════════════════
+// AI-afstootadvies (eigen cijfers eerst — mens beslist, niets automatisch)
+// ══════════════════════════════════════════════════════════
+
+function mediaan(waarden: number[]): number | null {
+  if (waarden.length === 0) return null;
+  const s = [...waarden].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+}
+
+router.post("/afstoot-advies", schrijven, async (req, res): Promise<void> => {
+  if (!heeftGateway()) {
+    return void res.status(503).json({ error: "AI-services niet geconfigureerd" });
+  }
+
+  const nu = new Date();
+  const voertuigen = await db
+    .select()
+    .from(voertuigenTable)
+    .where(and(eq(voertuigenTable.gearchiveerd, false), sql`${voertuigenTable.status} != 'afgestoten'`));
+
+  if (voertuigen.length === 0) {
+    return void res.status(422).json({ error: "Geen actieve voertuigen om te beoordelen" });
+  }
+
+  // ── Eigen cijfers per voertuig uit kosten- en onderhoudsdata ──
+  const kostenRijen = await db
+    .select({
+      voertuigId: wagenparkKostenTable.voertuigId,
+      categorie:  wagenparkKostenTable.categorie,
+      bedrag:     wagenparkKostenTable.bedrag,
+      datum:      wagenparkKostenTable.datum,
+    })
+    .from(wagenparkKostenTable);
+
+  const onderhoudRijen = await db
+    .select({
+      voertuigId:   wagenparkOnderhoudTable.voertuigId,
+      status:       wagenparkOnderhoudTable.status,
+      kosten:       wagenparkOnderhoudTable.kosten,
+      afgerondDatum: wagenparkOnderhoudTable.afgerondDatum,
+      aangemaaktOp:  wagenparkOnderhoudTable.aangemaaktOp,
+    })
+    .from(wagenparkOnderhoudTable);
+
+  interface VoertuigCijfers {
+    voertuig_id: number;
+    kenteken: string;
+    merk: string;
+    type: string;
+    bouwjaar: number | null;
+    leeftijd_jaren: number | null;
+    km_stand: number;
+    status: string;
+    eigendoms_type: string;
+    apk_datum: string | null;
+    lease_eind_datum: string | null;
+    kosten_totaal: number;
+    kosten_per_jaar: Record<string, number>;
+    kosten_laatste_12m: number;
+    onderhoud_laatste_12m: number;
+    kosten_per_km_totaal: number | null;
+    aantal_onderhoudsmeldingen: number;
+    aantal_kostenregels: number;
+  }
+
+  const cijfers: VoertuigCijfers[] = voertuigen.map((v) => {
+    const eigenKosten = kostenRijen.filter((k) => k.voertuigId === v.id);
+    const eigenOnderhoud = onderhoudRijen.filter((o) => o.voertuigId === v.id);
+    const grens12m = new Date(nu.getTime() - 365 * 86_400_000);
+
+    // Beide kostenbronnen tellen mee: de kostentabel én bedragen op
+    // onderhoudsmeldingen (wagenpark_onderhoud.kosten). Onderhoudskosten
+    // worden gedateerd op de afgerond-datum, met de aanmaakdatum als
+    // gedocumenteerde terugval wanneer die (nog) ontbreekt.
+    const kostenBronnen: { categorie: string; bedrag: number; datum: Date }[] = [
+      ...eigenKosten.map((k) => ({ categorie: k.categorie, bedrag: k.bedrag, datum: k.datum })),
+      ...eigenOnderhoud
+        .filter((o) => o.kosten != null && o.kosten > 0)
+        .map((o) => ({ categorie: "onderhoud", bedrag: o.kosten!, datum: o.afgerondDatum ?? o.aangemaaktOp })),
+    ];
+
+    const perJaar: Record<string, number> = {};
+    let totaal = 0;
+    let laatste12m = 0;
+    let onderhoud12m = 0;
+    for (const k of kostenBronnen) {
+      const jaar = String(k.datum.getFullYear());
+      perJaar[jaar] = Math.round(((perJaar[jaar] ?? 0) + k.bedrag) * 100) / 100;
+      totaal += k.bedrag;
+      if (k.datum >= grens12m) {
+        laatste12m += k.bedrag;
+        if (k.categorie === "onderhoud" || k.categorie === "banden" || k.categorie === "schade") {
+          onderhoud12m += k.bedrag;
+        }
+      }
+    }
+
+    const leeftijd = v.bouwjaar ? nu.getFullYear() - v.bouwjaar : null;
+    return {
+      voertuig_id:      v.id,
+      kenteken:         v.kenteken,
+      merk:             v.merk,
+      type:             v.type,
+      bouwjaar:         v.bouwjaar ?? null,
+      leeftijd_jaren:   leeftijd,
+      km_stand:         v.kmStand,
+      status:           v.status,
+      eigendoms_type:   v.eigendomsType,
+      apk_datum:        v.apkDatum?.toISOString().slice(0, 10) ?? null,
+      lease_eind_datum: v.leaseEindDatum?.toISOString().slice(0, 10) ?? null,
+      kosten_totaal:    Math.round(totaal * 100) / 100,
+      kosten_per_jaar:  perJaar,
+      kosten_laatste_12m: Math.round(laatste12m * 100) / 100,
+      onderhoud_laatste_12m: Math.round(onderhoud12m * 100) / 100,
+      kosten_per_km_totaal: v.kmStand > 0 && totaal > 0
+        ? Math.round((totaal / v.kmStand) * 10000) / 10000
+        : null,
+      aantal_onderhoudsmeldingen: eigenOnderhoud.length,
+      // Bewijsregels uit beide bronnen: kostentabel + onderhoudsmeldingen met bedrag.
+      aantal_kostenregels: kostenBronnen.length,
+    };
+  });
+
+  // ── Vlootmedianen (eigen data, geen vaste normen) ──
+  const metData = cijfers.filter((c) => c.aantal_kostenregels > 0);
+  const vlootmedianen = {
+    mediaan_kosten_laatste_12m: mediaan(metData.map((c) => c.kosten_laatste_12m)),
+    mediaan_kosten_per_km:      mediaan(metData.map((c) => c.kosten_per_km_totaal).filter((x): x is number => x !== null)),
+    mediaan_leeftijd_jaren:     mediaan(cijfers.map((c) => c.leeftijd_jaren).filter((x): x is number => x !== null)),
+    mediaan_km_stand:           mediaan(cijfers.map((c) => c.km_stand).filter((x) => x > 0)),
+    voertuigen_met_kostendata:  metData.length,
+    voertuigen_totaal:          cijfers.length,
+  };
+
+  const prompt = `Je bent wagenparkadviseur voor een Nederlands brandpreventiebedrijf.
+Beoordeel per voertuig of het aan vervanging of afstoten toe is, UITSLUITEND op basis van de eigen bedrijfscijfers hieronder. Gebruik GEEN algemene vuistregels of vaste normen (zoals "na X jaar vervangen") — toets elk voertuig aan de medianen van dit eigen wagenpark.
+
+Regels:
+- Vergelijk elk voertuig met de vlootmedianen (kosten, kosten per km, leeftijd, km-stand).
+- Alleen "vervangen" of "afstoten" adviseren als de eigen cijfers dat aantoonbaar onderbouwen (bovengemiddelde kosten, oplopende onderhoudslast, hoge kosten per km).
+- Bij te weinig eigen data (weinig kostenregels) zeg je dat expliciet en adviseer je "monitoren" of "behouden" — nooit een oordeel zonder cijfers.
+- Onderbouwing verwijst naar concrete bedragen/waarden uit de data, vergeleken met de mediaan.
+- Dit is een voorstel; een mens beslist. Geen actietaal alsof het al besloten is.
+
+Vlootmedianen (eigen data):
+${JSON.stringify(vlootmedianen)}
+
+Voertuigen (eigen data):
+${JSON.stringify(cijfers)}
+
+Antwoord ALLEEN met geldige JSON in dit formaat:
+{
+  "adviezen": [
+    {
+      "voertuig_id": getal,
+      "advies": "behouden" | "monitoren" | "vervangen" | "afstoten",
+      "onderbouwing": "2-3 zinnen met concrete eigen cijfers vs. vlootmediaan",
+      "prioriteit": "hoog" | "normaal" | "laag"
+    }
+  ],
+  "samenvatting": "1-2 zinnen over het wagenpark als geheel"
+}
+Neem ELK voertuig uit de lijst op in adviezen.`;
+
+  const userId = (await effectieveContext(req)).userId;
+  const resultaat = await aiGateway.chat("default", {
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 3000,
+  }, undefined, {
+    module: "wagenpark",
+    functie: "afstoot-advies",
+    gebruikerId: userId ?? null,
+  });
+
+  if (!resultaat.ok) {
+    return void res.status(502).json({ error: "AI-advies kon niet worden opgehaald" });
+  }
+
+  let parsed: { adviezen?: unknown; samenvatting?: unknown };
+  try {
+    const kaal = resultaat.inhoud.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    parsed = JSON.parse(kaal) as { adviezen?: unknown; samenvatting?: unknown };
+  } catch {
+    return void res.status(502).json({ error: "AI-antwoord kon niet worden verwerkt" });
+  }
+
+  // Server-side beleid: "eigen cijfers eerst" wordt hier afgedwongen — een
+  // AI-antwoord kan nooit vervangen/afstoten opleveren zonder voldoende eigen
+  // data én mediaan-overschrijdend bewijs (zie lib/wagenparkAfstootBeleid.ts).
+  const beleidMedianen = {
+    mediaan_kosten_laatste_12m: vlootmedianen.mediaan_kosten_laatste_12m,
+    mediaan_kosten_per_km:      vlootmedianen.mediaan_kosten_per_km,
+  };
+  const ruweAdviezen = Array.isArray(parsed.adviezen) ? parsed.adviezen : [];
+  const perVoertuig = new Map<number, { advies: AfstootAdvies; onderbouwing: string; prioriteit: string }>();
+  for (const ruw of ruweAdviezen) {
+    if (typeof ruw !== "object" || ruw === null || Array.isArray(ruw)) continue; // rommel uit model overslaan
+    const a = ruw as Record<string, unknown>;
+    const vid = Number(a.voertuig_id);
+    const eigenCijfers = cijfers.find((c) => c.voertuig_id === vid);
+    if (!eigenCijfers) continue; // whitelist: alleen echte voertuigen
+    const beleid = pasAfstootBeleidToe(a.advies, a.onderbouwing, eigenCijfers, beleidMedianen);
+    const prioriteit = beleid.afgezwakt
+      ? "normaal"
+      : ["hoog", "normaal", "laag"].includes(String(a.prioriteit)) ? String(a.prioriteit) : "normaal";
+    perVoertuig.set(vid, {
+      advies: beleid.advies,
+      onderbouwing: beleid.onderbouwing,
+      prioriteit,
+    });
+  }
+
+  const volgorde: Record<AfstootAdvies, number> = { afstoten: 0, vervangen: 1, monitoren: 2, behouden: 3 };
+  const adviezen = cijfers
+    .map((c) => {
+      const ai = perVoertuig.get(c.voertuig_id);
+      return {
+        voertuig_id:  c.voertuig_id,
+        kenteken:     c.kenteken,
+        merk:         c.merk,
+        type:         c.type,
+        advies:       ai?.advies ?? ("monitoren" as AfstootAdvies),
+        onderbouwing: ai?.onderbouwing || "Geen AI-onderbouwing ontvangen voor dit voertuig.",
+        prioriteit:   ai?.prioriteit ?? "normaal",
+        kosten_laatste_12m: c.kosten_laatste_12m,
+        kosten_per_km:      c.kosten_per_km_totaal,
+        leeftijd_jaren:     c.leeftijd_jaren,
+        km_stand:           c.km_stand,
+        aantal_kostenregels: c.aantal_kostenregels,
+      };
+    })
+    .sort((a, b) => (volgorde[a.advies] ?? 9) - (volgorde[b.advies] ?? 9));
+
+  res.json({
+    gegenereerd_op: nu.toISOString(),
+    samenvatting: typeof parsed.samenvatting === "string" ? parsed.samenvatting.slice(0, 1000) : null,
+    vlootmedianen: {
+      kosten_laatste_12m: vlootmedianen.mediaan_kosten_laatste_12m,
+      kosten_per_km:      vlootmedianen.mediaan_kosten_per_km,
+      leeftijd_jaren:     vlootmedianen.mediaan_leeftijd_jaren,
+      km_stand:           vlootmedianen.mediaan_km_stand,
+      voertuigen_met_kostendata: vlootmedianen.voertuigen_met_kostendata,
+      voertuigen_totaal:  vlootmedianen.voertuigen_totaal,
+    },
+    adviezen,
+  });
 });
 
 // ══════════════════════════════════════════════════════════

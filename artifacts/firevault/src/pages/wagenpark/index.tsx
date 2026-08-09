@@ -5,6 +5,7 @@ import {
   useListWagenparkAiAdvies,
   useListWagenparkSyncLogs,
   useTriggerWagenparkSync,
+  useGenereerWagenparkAfstootAdvies,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
@@ -53,6 +54,25 @@ const PRIO_KLEUR: Record<string, string> = {
   laag:    "bg-gray-100 text-gray-600",
 };
 
+const AFSTOOT_LABELS: Record<string, string> = {
+  behouden:  "Behouden",
+  monitoren: "Monitoren",
+  vervangen: "Vervangen overwegen",
+  afstoten:  "Afstoten overwegen",
+};
+
+const AFSTOOT_KLEUR: Record<string, string> = {
+  behouden:  "bg-green-100 text-green-800",
+  monitoren: "bg-blue-100 text-blue-800",
+  vervangen: "bg-orange-100 text-orange-800",
+  afstoten:  "bg-red-100 text-red-800",
+};
+
+function formatEuro(bedrag: number | null | undefined): string {
+  if (bedrag == null) return "—";
+  return bedrag.toLocaleString("nl-NL", { style: "currency", currency: "EUR" });
+}
+
 function formatDatum(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -79,6 +99,8 @@ export default function WagenparkPagina() {
   const { data: aiAdvies = [] }   = useListWagenparkAiAdvies();
   const { data: syncLogs = [] }   = useListWagenparkSyncLogs({ limit: 1 });
   const sync = useTriggerWagenparkSync();
+  const afstootAdvies = useGenereerWagenparkAfstootAdvies();
+  const afstoot = afstootAdvies.data;
 
   // Filters
   const gefilterd = voertuigen.filter((v) => {
@@ -257,6 +279,102 @@ export default function WagenparkPagina() {
                   +{aiAdvies.length - 8} meer adviezen — bekijk voertuigdetails
                 </p>
               )}
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      {/* AI-afstootadvies — eigen cijfers eerst; voorstel, mens beslist */}
+      {magSchrijven && (
+        <Card className="border-amber-200">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-base text-amber-800">
+                  AI-afstootadvies (vervangen of afstoten)
+                </CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => afstootAdvies.mutate()}
+                disabled={afstootAdvies.isPending}
+                className="border-amber-300 text-amber-800"
+              >
+                <Sparkles className={`h-4 w-4 mr-2 ${afstootAdvies.isPending ? "animate-pulse" : ""}`} />
+                {afstootAdvies.isPending
+                  ? "Analyseren..."
+                  : afstoot ? "Opnieuw genereren" : "Genereer advies"}
+              </Button>
+            </div>
+            <p className="text-xs text-amber-700">
+              Toetst elk voertuig aan de eigen kosten- en onderhoudscijfers van dit wagenpark
+              (geen vaste normen). Het advies is een voorstel — u beslist.
+            </p>
+          </CardHeader>
+          {afstootAdvies.isError && (
+            <CardContent>
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  Het AI-advies kon niet worden gegenereerd. Probeer het later opnieuw.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          )}
+          {afstoot && (
+            <CardContent className="space-y-3">
+              {afstoot.samenvatting && (
+                <p className="text-sm text-amber-900 bg-amber-50 border border-amber-100 rounded p-2">
+                  {afstoot.samenvatting}
+                </p>
+              )}
+              <div className="text-xs text-muted-foreground">
+                Vlootmedianen (eigen data): kosten 12 mnd {formatEuro(afstoot.vlootmedianen.kosten_laatste_12m)}
+                {" · "}kosten/km {afstoot.vlootmedianen.kosten_per_km != null
+                  ? `€ ${afstoot.vlootmedianen.kosten_per_km.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                  : "—"}
+                {" · "}leeftijd {afstoot.vlootmedianen.leeftijd_jaren ?? "—"} jr
+                {" · "}km-stand {afstoot.vlootmedianen.km_stand?.toLocaleString("nl-NL") ?? "—"}
+                {" · "}kostendata voor {afstoot.vlootmedianen.voertuigen_met_kostendata} van {afstoot.vlootmedianen.voertuigen_totaal} voertuigen
+              </div>
+              <div className="space-y-2">
+                {afstoot.adviezen.map((a) => (
+                  <div
+                    key={a.voertuig_id}
+                    className="flex items-start justify-between p-3 rounded bg-amber-50 border border-amber-100"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{a.kenteken}</span>
+                        <span className="text-xs text-muted-foreground">{a.merk} {a.type}</span>
+                        <Badge className={AFSTOOT_KLEUR[a.advies] ?? ""}>
+                          {AFSTOOT_LABELS[a.advies] ?? a.advies}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{a.prioriteit}</Badge>
+                      </div>
+                      <p className="text-sm mt-1">{a.onderbouwing}</p>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Kosten 12 mnd: {formatEuro(a.kosten_laatste_12m)}
+                        {a.kosten_per_km != null && <> · €/km: {a.kosten_per_km.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</>}
+                        {a.leeftijd_jaren != null && <> · {a.leeftijd_jaren} jr</>}
+                        {" · "}{a.km_stand.toLocaleString("nl-NL")} km
+                        {" · "}{a.aantal_kostenregels} kostenregel{a.aantal_kostenregels === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild className="ml-2 flex-shrink-0">
+                      <Link href={`/wagenpark/${a.voertuig_id}`}>
+                        <Eye className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Gegenereerd op {new Date(afstoot.gegenereerd_op).toLocaleString("nl-NL")} —
+                er wordt niets automatisch gewijzigd.
+              </p>
             </CardContent>
           )}
         </Card>

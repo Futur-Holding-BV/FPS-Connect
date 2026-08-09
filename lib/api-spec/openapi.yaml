@@ -20985,6 +20985,24 @@ paths:
         '401': { description: Niet ingelogd }
         '403': { description: Geen toegang }
 
+  /wagenpark/afstoot-advies:
+    post:
+      operationId: genereerWagenparkAfstootAdvies
+      tags: [wagenpark]
+      summary: AI-afstootadvies per voertuig op basis van eigen kosten/onderhoudsdata (voorstel — mens beslist)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkAfstootAdviesResultaat'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '422': { description: Geen actieve voertuigen }
+        '502': { description: AI-antwoord kon niet worden verwerkt }
+        '503': { description: AI-services niet geconfigureerd }
+
   /wagenpark/mijn-auto:
     get:
       operationId: getMijnAuto
@@ -43116,6 +43134,46 @@ components:
         prioriteit:   { type: string }
         reden:        { type: string, nullable: true }
         onderhoud_id: { type: integer, nullable: true }
+
+    WagenparkAfstootAdvies:
+      type: object
+      required: [voertuig_id, kenteken, merk, type, advies, onderbouwing, prioriteit, kosten_laatste_12m, km_stand, aantal_kostenregels]
+      properties:
+        voertuig_id:  { type: integer }
+        kenteken:     { type: string }
+        merk:         { type: string }
+        type:         { type: string }
+        advies:
+          type: string
+          enum: [behouden, monitoren, vervangen, afstoten]
+        onderbouwing: { type: string }
+        prioriteit:   { type: string }
+        kosten_laatste_12m: { type: number }
+        kosten_per_km:      { type: number, nullable: true }
+        leeftijd_jaren:     { type: integer, nullable: true }
+        km_stand:           { type: integer }
+        aantal_kostenregels: { type: integer }
+
+    WagenparkAfstootAdviesResultaat:
+      type: object
+      required: [gegenereerd_op, vlootmedianen, adviezen]
+      properties:
+        gegenereerd_op: { type: string, format: date-time }
+        samenvatting:   { type: string, nullable: true }
+        vlootmedianen:
+          type: object
+          required: [voertuigen_met_kostendata, voertuigen_totaal]
+          properties:
+            kosten_laatste_12m: { type: number, nullable: true }
+            kosten_per_km:      { type: number, nullable: true }
+            leeftijd_jaren:     { type: number, nullable: true }
+            km_stand:           { type: number, nullable: true }
+            voertuigen_met_kostendata: { type: integer }
+            voertuigen_totaal:  { type: integer }
+        adviezen:
+          type: array
+          items:
+            $ref: '#/components/schemas/WagenparkAfstootAdvies'
 
     Documentsoort:
       type: object

@@ -26310,6 +26310,37 @@ export const ListWagenparkAiAdviesResponse = zod.array(ListWagenparkAiAdviesResp
 
 
 /**
+ * @summary AI-afstootadvies per voertuig op basis van eigen kosten/onderhoudsdata (voorstel — mens beslist)
+ */
+export const GenereerWagenparkAfstootAdviesResponse = zod.object({
+  "gegenereerd_op": zod.coerce.date(),
+  "samenvatting": zod.string().nullish(),
+  "vlootmedianen": zod.object({
+  "kosten_laatste_12m": zod.number().nullish(),
+  "kosten_per_km": zod.number().nullish(),
+  "leeftijd_jaren": zod.number().nullish(),
+  "km_stand": zod.number().nullish(),
+  "voertuigen_met_kostendata": zod.number(),
+  "voertuigen_totaal": zod.number()
+}),
+  "adviezen": zod.array(zod.object({
+  "voertuig_id": zod.number(),
+  "kenteken": zod.string(),
+  "merk": zod.string(),
+  "type": zod.string(),
+  "advies": zod.enum(['behouden', 'monitoren', 'vervangen', 'afstoten']),
+  "onderbouwing": zod.string(),
+  "prioriteit": zod.string(),
+  "kosten_laatste_12m": zod.number(),
+  "kosten_per_km": zod.number().nullish(),
+  "leeftijd_jaren": zod.number().nullish(),
+  "km_stand": zod.number(),
+  "aantal_kostenregels": zod.number()
+}))
+})
+
+
+/**
  * @summary Eigen auto van de ingelogde monteur (server-side afgedwongen op chauffeur_id)
  */
 export const GetMijnAutoResponse = zod.object({

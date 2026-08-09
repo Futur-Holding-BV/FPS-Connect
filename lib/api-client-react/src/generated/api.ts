@@ -990,6 +990,7 @@ import type {
   WachtwoordResettenOutput,
   WachtwoordVergetenInput,
   WachtwoordWijzigen,
+  WagenparkAfstootAdviesResultaat,
   WagenparkAiAdvies,
   WagenparkAvgLogboekRegel,
   WagenparkKosten,
@@ -72844,6 +72845,76 @@ export function useListWagenparkAiAdvies<TData = Awaited<ReturnType<typeof listW
 
 
 
+
+export const getGenereerWagenparkAfstootAdviesUrl = () => {
+
+
+
+
+  return `/api/wagenpark/afstoot-advies`
+}
+
+/**
+ * @summary AI-afstootadvies per voertuig op basis van eigen kosten/onderhoudsdata (voorstel — mens beslist)
+ */
+export const genereerWagenparkAfstootAdvies = async ( options?: RequestInit): Promise<WagenparkAfstootAdviesResultaat> => {
+
+  return customFetch<WagenparkAfstootAdviesResultaat>(getGenereerWagenparkAfstootAdviesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerWagenparkAfstootAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>, TError,void, TContext> => {
+
+const mutationKey = ['genereerWagenparkAfstootAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>, void> = () => {
+
+
+          return  genereerWagenparkAfstootAdvies(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerWagenparkAfstootAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>>
+
+    export type GenereerWagenparkAfstootAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-afstootadvies per voertuig op basis van eigen kosten/onderhoudsdata (voorstel — mens beslist)
+ */
+export const useGenereerWagenparkAfstootAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerWagenparkAfstootAdvies>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenereerWagenparkAfstootAdviesMutationOptions(options));
+    }
 
 export const getGetMijnAutoUrl = () => {
 
