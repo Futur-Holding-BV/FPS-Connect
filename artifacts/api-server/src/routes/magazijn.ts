@@ -170,6 +170,8 @@ async function bijwerkenVoorraad(
   referentieId: number | null,
   omschrijving: string | null,
   opdrachtId?: number | null,
+  // BOUW_01 §6: verbruik dat niet op een project mag landen
+  kostenrubriek?: string | null,
 ) {
   const whereExpr = locatieId != null
     ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, locatieId))
@@ -212,7 +214,25 @@ async function bijwerkenVoorraad(
     opdrachtId: opdrachtId ?? null,
     gebruikerId: gebruikerId ?? null,
     omschrijving,
+    kostenrubriek: kostenrubriek ?? null,
   });
+}
+
+// BOUW_01 §6: toebehoren gereedschap = verbruik op de rubriek
+// magazijn-gereedschap-toebehoren, nooit op een project. Afgeleid uit de
+// artikelcategorie zodra er zonder opdracht wordt uitgegeven.
+async function bepaalKostenrubriek(
+  exec: DbExec,
+  artikelId: number,
+  opdrachtId: number | null,
+): Promise<string | null> {
+  if (opdrachtId) return null;
+  const [art] = await exec
+    .select({ categorie: artikelenTable.categorie })
+    .from(artikelenTable)
+    .where(eq(artikelenTable.id, artikelId));
+  const cat = (art?.categorie ?? "").toLowerCase();
+  return cat.includes("toebehoren") ? "gereedschap_toebehoren" : null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1158,6 +1178,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
         const artikelId = Number(regel.artikel_id);
         const hoeveelheid = Number(regel.hoeveelheid);
         const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
+        const kostenrubriek = await bepaalKostenrubriek(tx, artikelId, opdrachtId ?? null);
 
         if (regel.reservering_id) {
           const resId = Number(regel.reservering_id);
@@ -1200,6 +1221,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
                 opdrachtId: opdrachtId ?? null,
                 gebruikerId: userId ?? null,
                 omschrijving: str(body.omschrijving),
+                kostenrubriek,
               });
               resterendUitgifte -= teNemen;
             }
@@ -1228,7 +1250,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
         } else {
           // Directe uitgifte zonder reservering
           await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
-            opdrachtId ? "opdracht" : null, opdrachtId, str(body.omschrijving), opdrachtId);
+            opdrachtId ? "opdracht" : null, opdrachtId, str(body.omschrijving), opdrachtId, kostenrubriek);
         }
       }
     });

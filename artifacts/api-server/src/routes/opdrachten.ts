@@ -33,12 +33,28 @@ import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTIN
 import { bouwWerkbegrotingEigenCijfersContext } from "../lib/inkoopEigenCijfers";
 import { logger } from "../lib/logger";
 import { berekenEnSlaOpNacalculatie } from "../services/fie-service";
+import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 
-const lezen    = requireBevoegdheid("offertes", 1);
-const schrijven = requireBevoegdheid("offertes", 2);
+// BOUW_01 §1 (René, 09-08-2026): opdrachten & werkbegroting vallen onder de
+// eigen sleutel 'projecten' (1 = lezen zonder bedragen, 2 = lezen mét
+// bedragen, 3 = schrijven). Alleen het aanmaken van een opdracht vanuit een
+// offerte blijft een offerte-handeling.
+const lezen    = requireBevoegdheid("projecten", 1);
+const schrijven = requireBevoegdheid("projecten", 3);
+const metBedragen = requireBevoegdheid("projecten", 2);
+const maakOpdrachtRecht = requireBevoegdheid("offertes", 2);
+
+// Server-side beslissing welke weergave iemand krijgt (§3.1): wie geen recht
+// heeft op bedragen, krijgt ze niet in het antwoord — nooit alleen in de app
+// verbergen.
+function magBedragenZien(req: import("express").Request): boolean {
+  const perm = req.permissies;
+  if (!perm) return false;
+  return perm.isHoofdbeheerder || perm.heeftModuleRecht("projecten", 2);
+}
 
 function mapOpdracht(
   o: typeof opdrachtenTable.$inferSelect,
@@ -74,7 +90,7 @@ function mapOpdracht(
   };
 }
 
-function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
+function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect, toonBedragen = true) {
   return {
     id: r.id,
     begroting_id: r.begrotingId,
@@ -83,8 +99,8 @@ function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
     omschrijving: r.omschrijving,
     eenheid: r.eenheid,
     hoeveelheid: r.hoeveelheid,
-    tarief: r.tarief,
-    totaal: r.totaal,
+    tarief: toonBedragen ? r.tarief : null,
+    totaal: toonBedragen ? r.totaal : null,
     hoofdstuk: r.hoofdstuk,
     ai_inkoop_voorstel: r.aiInkoopVoorstel ?? null,
     ai_arbeid_voorstel: r.aiArbeidVoorstel ?? null,
@@ -94,6 +110,7 @@ function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
 function mapBegroting(
   b: typeof projectBegrotingenTable.$inferSelect,
   regels: typeof werkbegrotingRegelsTable.$inferSelect[],
+  toonBedragen = true,
 ) {
   return {
     id: b.id,
@@ -103,7 +120,7 @@ function mapBegroting(
     werknummer: b.werknummer ?? null,
     hoofd_uren_begroot: b.hoofdUrenBegroot,
     totaal_arbeid_uren: b.totaalArbeidUren,
-    totaal_materiaal_bedrag: b.totaalMateriaalBedrag,
+    totaal_materiaal_bedrag: toonBedragen ? b.totaalMateriaalBedrag : null,
     omschrijving: b.omschrijving ?? null,
     status: b.status,
     vastgesteld_op: iso(b.vastgesteldOp),
@@ -111,13 +128,13 @@ function mapBegroting(
     ai_analyse_op: iso(b.aiAnalyseOp),
     aangemaakt_op: iso(b.aangemaaktOp)!,
     bijgewerkt_op: iso(b.bijgewerktOp)!,
-    regels: regels.map(mapRegel),
+    regels: regels.map((r) => mapRegel(r, toonBedragen)),
   };
 }
 
 // ── POST /offertes/:id/maak-opdracht ──────────────────────────────────────
 
-router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<void> => {
+router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): Promise<void> => {
   const offerteId = parseInt(String(req.params.id), 10);
   if (isNaN(offerteId)) { res.status(400).json({ error: "Ongeldig offerte-id" }); return; }
 
@@ -457,7 +474,7 @@ router.get("/opdrachten/:id/werkbegroting", lezen, async (req, res): Promise<voi
       .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
       .orderBy(asc(werkbegrotingRegelsTable.id));
 
-    res.json(mapBegroting(begroting, regels));
+    res.json(mapBegroting(begroting, regels, magBedragenZien(req)));
   } catch (err) {
     logger.error({ err }, "getWerkbegroting fout");
     res.status(500).json({ error: "Serverfout" });
@@ -637,7 +654,7 @@ router.post("/opdrachten/:id/werkbegroting/ai-analyse/beoordeling", schrijven, a
 
 // ── GET /opdrachten/:id/nacalculatie ─────────────────────────────────────
 
-router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void> => {
+router.get("/opdrachten/:id/nacalculatie", metBedragen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -835,7 +852,7 @@ router.get("/opdrachten/:id/planning-uren", lezen, async (req, res): Promise<voi
 });
 
 // ── Materiaallijst per opdracht ─────────────────────────────────────────────
-router.get("/opdrachten/:id/materiaal", lezen, async (req, res): Promise<void> => {
+router.get("/opdrachten/:id/materiaal", metBedragen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -1257,6 +1274,86 @@ router.patch("/opdrachten/:id/werkbegroting/senior-adviezen/:adviesId", schrijve
   } catch (err) {
     logger.error({ err }, "updateWbAdvies fout");
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/meerwerk-meldingen ─────────────────────────────────
+// BOUW_01 §4 — meer-/minderwerk melden vanaf de bouwplaats. Alle velden
+// verplicht, voor iedereen die meldt — ook de projectleider. Een melding wordt
+// GEEN werkbegrotingsregel en raakt geen enkel bedrag; hij landt als doen-item
+// bij de werkvoorbereider met vaste cc (weten) aan de projectleider.
+router.post("/opdrachten/:id/meerwerk-meldingen", lezen, async (req, res): Promise<void> => {
+  try {
+    const opdrachtId = Number(req.params.id);
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, werknummer: opdrachtenTable.werknummer })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) return void res.status(404).json({ error: "Opdracht niet gevonden" });
+
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const type = typeof b.type === "string" ? b.type : "";
+    const fotos = Array.isArray(b.fotos) ? b.fotos.filter((f): f is string => typeof f === "string" && f.trim() !== "") : [];
+    const omschrijving = typeof b.omschrijving === "string" ? b.omschrijving.trim() : "";
+    const impactMateriaal = typeof b.impact_materiaal === "string" ? b.impact_materiaal.trim() : "";
+    const impactUren = typeof b.impact_uren === "string" ? b.impact_uren.trim() : "";
+    const impactPlanning = typeof b.impact_planning === "string" ? b.impact_planning.trim() : "";
+
+    // Wie meldt, denkt na: elk veld is verplicht — een ruwe schatting is
+    // genoeg, leeg laten niet (BOUW_01 §4).
+    const ontbreekt: string[] = [];
+    if (type !== "meerwerk" && type !== "minderwerk") ontbreekt.push("type (meerwerk of minderwerk)");
+    if (fotos.length < 1) ontbreekt.push("minimaal één foto");
+    if (!omschrijving) ontbreekt.push("omschrijving");
+    if (!impactMateriaal) ontbreekt.push("ingeschatte impact materiaal");
+    if (!impactUren) ontbreekt.push("ingeschatte impact uren");
+    if (!impactPlanning) ontbreekt.push("ingeschatte impact planning");
+    if (ontbreekt.length > 0) {
+      return void res.status(400).json({
+        error: `Melding onvolledig — verplicht: ${ontbreekt.join(", ")}. Een ruwe schatting is genoeg, leeg laten niet.`,
+        ontbrekende_velden: ontbreekt,
+      });
+    }
+
+    const melderId = req.session.userId!;
+    const [melder] = await db
+      .select({ naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, melderId));
+
+    const kenmerk = opdracht.werknummer ?? `#${opdracht.id}`;
+    const detail = [
+      `${type === "meerwerk" ? "Meerwerk" : "Minderwerk"} gemeld door ${melder?.naam ?? "onbekend"} op opdracht ${kenmerk} (${opdracht.titel}).`,
+      `Omschrijving: ${omschrijving}`,
+      `Impact materiaal: ${impactMateriaal}`,
+      `Impact uren: ${impactUren}`,
+      `Impact planning: ${impactPlanning}`,
+      `Foto's: ${fotos.join(" | ")}`,
+      `Let op: dit is een melding — geen begroting en geen doorbelasting. Doorbelasten blijft een besluit van de projectleider.`,
+    ].join("\n");
+
+    const uniek = `meerwerk:${opdracht.id}:${Date.now()}:${melderId}`;
+    const geplaatst = await meldAanWerkvoorbereiderMetCcProjectleider({
+      bron: "meerwerk_melding",
+      titel: `${type === "meerwerk" ? "Meerwerk" : "Minderwerk"} gemeld op ${kenmerk}`,
+      omschrijving: detail,
+      gewicht: 30,
+      actiePad: `/opdrachten/${opdracht.id}`,
+      herkomstType: "opdracht",
+      herkomstId: opdracht.id,
+      dedupBasis: uniek,
+    });
+
+    res.status(201).json({
+      status: "gemeld",
+      opdracht_id: opdracht.id,
+      type,
+      werkvoorbereider_items: geplaatst.werkvoorbereiders,
+      projectleider_cc_items: geplaatst.projectleiders,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

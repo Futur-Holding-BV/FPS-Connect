@@ -14800,7 +14800,7 @@ export const GetWerkbegrotingResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
   "totaal_arbeid_uren": zod.number(),
-  "totaal_materiaal_bedrag": zod.number(),
+  "totaal_materiaal_bedrag": zod.number().nullish(),
   "omschrijving": zod.string().nullish(),
   "status": zod.string(),
   "vastgesteld_op": zod.string().nullish(),
@@ -14818,13 +14818,46 @@ export const GetWerkbegrotingResponse = zod.object({
   "omschrijving": zod.string(),
   "eenheid": zod.string(),
   "hoeveelheid": zod.number(),
-  "tarief": zod.number(),
-  "totaal": zod.number(),
+  "tarief": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
   "hoofdstuk": zod.string(),
   "ai_inkoop_voorstel": zod.string().nullish(),
   "ai_arbeid_voorstel": zod.string().nullish()
 }))
 })
+
+
+/**
+ * @summary Meer-/minderwerk melden vanaf de bouwplaats (BOUW_01 §4)
+ */
+export const MeldMeerwerkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const MeldMeerwerkBody = zod.object({
+  "type": zod.enum(['meerwerk', 'minderwerk']),
+  "fotos": zod.array(zod.string()).min(1),
+  "omschrijving": zod.string(),
+  "impact_materiaal": zod.string(),
+  "impact_uren": zod.string(),
+  "impact_planning": zod.string()
+})
+
+export const MeldMeerwerkResponse = zod.void()
+
+
+/**
+ * @summary Toebehoren gereedschap aanvragen (verbruik, geen project — BOUW_01 §6)
+ */
+export const CreateToebehorenAanvraagBody = zod.object({
+  "omschrijving": zod.string(),
+  "foto_pad": zod.string().nullish()
+})
+
+export const CreateToebehorenAanvraagResponse = zod.void()
 
 
 /**
@@ -14842,7 +14875,7 @@ export const VaststellenWerkbegrotingResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
   "totaal_arbeid_uren": zod.number(),
-  "totaal_materiaal_bedrag": zod.number(),
+  "totaal_materiaal_bedrag": zod.number().nullish(),
   "omschrijving": zod.string().nullish(),
   "status": zod.string(),
   "vastgesteld_op": zod.string().nullish(),
@@ -14860,8 +14893,8 @@ export const VaststellenWerkbegrotingResponse = zod.object({
   "omschrijving": zod.string(),
   "eenheid": zod.string(),
   "hoeveelheid": zod.number(),
-  "tarief": zod.number(),
-  "totaal": zod.number(),
+  "tarief": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
   "hoofdstuk": zod.string(),
   "ai_inkoop_voorstel": zod.string().nullish(),
   "ai_arbeid_voorstel": zod.string().nullish()
@@ -14884,7 +14917,7 @@ export const AiAnalyseWerkbegrotingResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
   "totaal_arbeid_uren": zod.number(),
-  "totaal_materiaal_bedrag": zod.number(),
+  "totaal_materiaal_bedrag": zod.number().nullish(),
   "omschrijving": zod.string().nullish(),
   "status": zod.string(),
   "vastgesteld_op": zod.string().nullish(),
@@ -14902,8 +14935,8 @@ export const AiAnalyseWerkbegrotingResponse = zod.object({
   "omschrijving": zod.string(),
   "eenheid": zod.string(),
   "hoeveelheid": zod.number(),
-  "tarief": zod.number(),
-  "totaal": zod.number(),
+  "tarief": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
   "hoofdstuk": zod.string(),
   "ai_inkoop_voorstel": zod.string().nullish(),
   "ai_arbeid_voorstel": zod.string().nullish()
@@ -14930,7 +14963,7 @@ export const BeoordeelWerkbegrotingAiVoorstelResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
   "totaal_arbeid_uren": zod.number(),
-  "totaal_materiaal_bedrag": zod.number(),
+  "totaal_materiaal_bedrag": zod.number().nullish(),
   "omschrijving": zod.string().nullish(),
   "status": zod.string(),
   "vastgesteld_op": zod.string().nullish(),
@@ -14948,8 +14981,8 @@ export const BeoordeelWerkbegrotingAiVoorstelResponse = zod.object({
   "omschrijving": zod.string(),
   "eenheid": zod.string(),
   "hoeveelheid": zod.number(),
-  "tarief": zod.number(),
-  "totaal": zod.number(),
+  "tarief": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
   "hoofdstuk": zod.string(),
   "ai_inkoop_voorstel": zod.string().nullish(),
   "ai_arbeid_voorstel": zod.string().nullish()
@@ -15219,8 +15252,8 @@ export const PatchWerkbegrotingRegelResponse = zod.object({
   "omschrijving": zod.string(),
   "eenheid": zod.string(),
   "hoeveelheid": zod.number(),
-  "tarief": zod.number(),
-  "totaal": zod.number(),
+  "tarief": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
   "hoofdstuk": zod.string(),
   "ai_inkoop_voorstel": zod.string().nullish(),
   "ai_arbeid_voorstel": zod.string().nullish()

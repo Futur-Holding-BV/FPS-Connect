@@ -25,11 +25,18 @@ import { uploadFoto } from "@/lib/upload";
 const DOMEIN = API_DOMEIN;
 
 type Reden = "op" | "beschadigd" | "nodig";
+type VolgensOpdracht = "ja" | "wijkt_af" | "weet_niet";
 
 const REDEN_OPTIES: { waarde: Reden; label: string; icoon: keyof typeof Ionicons.glyphMap; kleur: string }[] = [
   { waarde: "op", label: "Op / verbruikt", icoon: "warning-outline", kleur: "#dc2626" },
   { waarde: "beschadigd", label: "Beschadigd", icoon: "construct-outline", kleur: "#d97706" },
   { waarde: "nodig", label: "Nodig voor werk", icoon: "bag-add-outline", kleur: "#2563eb" },
+];
+
+const VOLGENS_OPDRACHT_OPTIES: { waarde: VolgensOpdracht; label: string }[] = [
+  { waarde: "ja", label: "Ja" },
+  { waarde: "wijkt_af", label: "Wijkt af" },
+  { waarde: "weet_niet", label: "Weet ik niet" },
 ];
 
 export default function MateriaalAanvraagNieuw() {
@@ -44,10 +51,12 @@ export default function MateriaalAanvraagNieuw() {
   const werknummer = params.werknummer ?? null;
 
   const [reden, setReden] = useState<Reden | null>(null);
+  const [volgensOpdracht, setVolgensOpdracht] = useState<VolgensOpdracht | null>(null);
   const [omschrijving, setOmschrijving] = useState("");
   const [fotoUri, setFotoUri] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
   const [verzonden, setVerzonden] = useState(false);
+  const [verzondenVolgensOpdracht, setVerzondenVolgensOpdracht] = useState<VolgensOpdracht | null>(null);
 
   async function maakFoto() {
     const permCam = await ImagePicker.requestCameraPermissionsAsync();
@@ -92,6 +101,13 @@ export default function MateriaalAanvraagNieuw() {
       Alert.alert("Reden verplicht", "Kies eerst een reden voor de aanvraag.");
       return;
     }
+    if (!volgensOpdracht) {
+      Alert.alert(
+        "Antwoord verplicht",
+        "Geef eerst aan of dit volgens de opdracht is.",
+      );
+      return;
+    }
     if (!fotoUri) {
       Alert.alert("Foto verplicht", "Voeg een foto toe zodat de werkvoorbereider het artikel kan herkennen.");
       return;
@@ -114,6 +130,7 @@ export default function MateriaalAanvraagNieuw() {
         body: JSON.stringify({
           werkdag_id: werkdagId,
           reden,
+          volgens_opdracht: volgensOpdracht,
           omschrijving: omschrijving.trim() || null,
           foto_pad: fotoPad,
         }),
@@ -124,6 +141,7 @@ export default function MateriaalAanvraagNieuw() {
         throw new Error(fout.error ?? "Verzenden mislukt");
       }
 
+      setVerzondenVolgensOpdracht(volgensOpdracht);
       setVerzonden(true);
     } catch (err) {
       Alert.alert("Fout", err instanceof Error ? err.message : "Onbekende fout. Probeer opnieuw.");
@@ -154,6 +172,26 @@ export default function MateriaalAanvraagNieuw() {
         <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20, marginBottom: 32 }}>
           De werkvoorbereider ontvangt uw melding. AI analyseert het artikel en controleert de werkbegroting.
         </Text>
+        {(verzondenVolgensOpdracht === "wijkt_af" || verzondenVolgensOpdracht === "weet_niet") && (
+          <View
+            style={{
+              backgroundColor: "#d9770618",
+              borderWidth: 1,
+              borderColor: "#d9770655",
+              borderRadius: 10,
+              padding: 14,
+              marginBottom: 32,
+              flexDirection: "row",
+              gap: 10,
+              alignItems: "flex-start",
+            }}
+          >
+            <Ionicons name="information-circle-outline" size={18} color="#d97706" style={{ marginTop: 1 }} />
+            <Text style={{ flex: 1, color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              Omdat dit afwijkt van of niet zeker volgens de opdracht is, gaat de aanvraag eerst langs de werkvoorbereider ter controle.
+            </Text>
+          </View>
+        )}
         <Pressable
           onPress={() => router.back()}
           style={{ backgroundColor: c.tint, borderRadius: 10, paddingHorizontal: 28, paddingVertical: 12 }}
@@ -257,6 +295,55 @@ export default function MateriaalAanvraagNieuw() {
           </View>
         </View>
 
+        {/* Is dit volgens de opdracht? */}
+        <View>
+          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 }}>
+            Is dit volgens de opdracht?
+            <Text style={{ color: "#dc2626", fontFamily: "Inter_400Regular" }}> *</Text>
+          </Text>
+          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 10 }}>
+            Verplicht. "Weet ik niet" is een geldig antwoord.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {VOLGENS_OPDRACHT_OPTIES.map((opt) => {
+              const geselecteerd = volgensOpdracht === opt.waarde;
+              return (
+                <Pressable
+                  key={opt.waarde}
+                  onPress={() => setVolgensOpdracht(opt.waarde)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: geselecteerd ? c.tint + "18" : c.card,
+                    borderWidth: 1.5,
+                    borderColor: geselecteerd ? c.tint : c.border,
+                    borderRadius: 10,
+                    paddingVertical: 14,
+                    paddingHorizontal: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: geselecteerd ? c.tint : c.foreground,
+                      fontSize: 13,
+                      fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
+                      textAlign: "center",
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {!volgensOpdracht && (
+            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 6 }}>
+              Zonder antwoord kunt u de melding niet indienen.
+            </Text>
+          )}
+        </View>
+
         {/* Foto */}
         <View>
           <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 }}>
@@ -333,10 +420,10 @@ export default function MateriaalAanvraagNieuw() {
         {/* Verzend knop */}
         <Pressable
           onPress={() => void verzend()}
-          disabled={bezig || !reden || !fotoUri}
+          disabled={bezig || !reden || !volgensOpdracht || !fotoUri}
           style={({ pressed }) => ({
             backgroundColor:
-              !reden || !fotoUri ? c.muted : pressed ? "#c93009" : c.tint,
+              !reden || !volgensOpdracht || !fotoUri ? c.muted : pressed ? "#c93009" : c.tint,
             borderRadius: 10,
             paddingVertical: 14,
             alignItems: "center",
@@ -349,11 +436,11 @@ export default function MateriaalAanvraagNieuw() {
           {bezig ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Ionicons name="send-outline" size={16} color={!reden || !fotoUri ? c.mutedForeground : "#fff"} />
+            <Ionicons name="send-outline" size={16} color={!reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : "#fff"} />
           )}
           <Text
             style={{
-              color: !reden || !fotoUri ? c.mutedForeground : "#fff",
+              color: !reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : "#fff",
               fontSize: 14,
               fontFamily: "Inter_600SemiBold",
             }}

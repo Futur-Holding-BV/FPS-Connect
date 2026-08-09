@@ -2,6 +2,8 @@ import {
   useGetGebouw,
   useListGebouwTekeningen,
   useListVerdiepingen,
+  useListOpdrachten,
+  type Opdracht,
 } from "@workspace/api-client-react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
@@ -15,6 +17,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LijstFout, bovenInset } from "@/components/ui";
+import { useAuth } from "@/context/auth";
+import { heeftBevoegdheid } from "@/lib/bevoegdheden";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -30,12 +34,23 @@ export default function GebouwDetail() {
   const itemBreedte =
     kolommen > 1 ? (beschikbareBreedte - RASTER_GAP * (kolommen - 1)) / kolommen : undefined;
 
+  const { gebruiker } = useAuth();
+  const magProjecten = heeftBevoegdheid(gebruiker, { module: "projecten", niveau: 1 });
+
   const { data: gebouw } = useGetGebouw(gebouwId);
   const { data: verdiepingen, isLoading, isError, refetch } = useListVerdiepingen(gebouwId);
   const { data: tekeningen } = useListGebouwTekeningen(gebouwId);
+  const { data: opdrachtenData } = useListOpdrachten(
+    { gebouw_id: gebouwId },
+    { query: { enabled: magProjecten && !Number.isNaN(gebouwId) } } as any,
+  );
 
   const gesorteerd = [...(verdiepingen ?? [])].sort((a, b) => a.niveau - b.niveau);
   const documenten = (tekeningen ?? []).filter((t) => t.zichtbaar_monteur === true);
+  // Client-side filteren op gebouw_id als extra vangnet (de API filtert al via param).
+  const opdrachten = ((opdrachtenData as Opdracht[]) ?? []).filter(
+    (o) => o.gebouw_id === gebouwId,
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -85,7 +100,63 @@ export default function GebouwDetail() {
             </Text>
           }
           ListFooterComponent={
-            documenten.length > 0 ? (
+            <View style={{ gap: 12 }}>
+            {magProjecten && opdrachten.length > 0 ? (
+              <View style={{ marginTop: 12, gap: 10 }}>
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 13,
+                    fontFamily: "Inter_600SemiBold",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Opdrachten
+                </Text>
+                {opdrachten.map((o) => (
+                  <Pressable
+                    key={o.id}
+                    onPress={() => router.push(`/projecten/${o.id}`)}
+                    style={({ pressed }) => ({
+                      backgroundColor: c.card,
+                      borderRadius: c.radius,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      padding: 16,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 14,
+                      opacity: pressed ? 0.85 : 1,
+                    })}
+                  >
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        backgroundColor: c.secondary,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                        {o.werknummer ?? `#${o.id}`}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold" }} numberOfLines={1}>
+                        {o.titel}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                        {o.status}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {documenten.length > 0 ? (
               <View style={{ marginTop: 12, gap: 10 }}>
                 <Text
                   style={{
@@ -151,7 +222,8 @@ export default function GebouwDetail() {
                   );
                 })}
               </View>
-            ) : null
+            ) : null}
+            </View>
           }
           renderItem={({ item }) => {
             const heeftPlan = !!item.plattegrond_url;

@@ -7404,6 +7404,32 @@ export interface PimOpleveringDefinitiefResultaat {
   ai_fase: string;
 }
 
+export type MeerwerkMeldingInputType = typeof MeerwerkMeldingInputType[keyof typeof MeerwerkMeldingInputType];
+
+
+export const MeerwerkMeldingInputType = {
+  meerwerk: 'meerwerk',
+  minderwerk: 'minderwerk',
+} as const;
+
+export interface MeerwerkMeldingInput {
+  type: MeerwerkMeldingInputType;
+  /** @minItems 1 */
+  fotos: string[];
+  omschrijving: string;
+  impact_materiaal: string;
+  impact_uren: string;
+  impact_planning: string;
+}
+
+export interface MeerwerkMeldingResultaat {
+  status: string;
+  opdracht_id: number;
+  type: string;
+  werkvoorbereider_items: number;
+  projectleider_cc_items: number;
+}
+
 export interface WerkbegrotingRegel {
   id: number;
   begroting_id: number;
@@ -7413,8 +7439,10 @@ export interface WerkbegrotingRegel {
   omschrijving: string;
   eenheid: string;
   hoeveelheid: number;
-  tarief: number;
-  totaal: number;
+  /** @nullable */
+  tarief?: number | null;
+  /** @nullable */
+  totaal?: number | null;
   hoofdstuk: string;
   /** @nullable */
   ai_inkoop_voorstel?: string | null;
@@ -7439,7 +7467,8 @@ export interface Werkbegroting {
   werknummer?: string | null;
   hoofd_uren_begroot: number;
   totaal_arbeid_uren: number;
-  totaal_materiaal_bedrag: number;
+  /** @nullable */
+  totaal_materiaal_bedrag?: number | null;
   /** @nullable */
   omschrijving?: string | null;
   status: string;
@@ -15870,6 +15899,18 @@ status?: string;
  * Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)
  */
 mijn?: boolean;
+};
+
+export type CreateToebehorenAanvraagBody = {
+  omschrijving: string;
+  /** @nullable */
+  foto_pad?: string | null;
+};
+
+export type CreateToebehorenAanvraag201 = {
+  id: number;
+  soort: string;
+  kostenrubriek: string;
 };
 
 export type OndertekenenPortaal201 = {

@@ -20,7 +20,8 @@ export interface Werkbegroting {
   werknummer?: string | null;
   hoofd_uren_begroot: number;
   totaal_arbeid_uren: number;
-  totaal_materiaal_bedrag: number;
+  /** @nullable */
+  totaal_materiaal_bedrag?: number | null;
   /** @nullable */
   omschrijving?: string | null;
   status: string;

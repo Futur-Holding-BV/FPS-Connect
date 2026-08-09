@@ -47,12 +47,23 @@ import {
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 
-const lezen    = requireBevoegdheid("offertes", 1);
-const schrijven = requireBevoegdheid("offertes", 2);
+// BOUW_01 §1 (René, 09-08-2026): werkvoorbereiding & inkoop vallen onder de
+// eigen sleutel 'projecten' (1 = lezen zonder bedragen, 2 = lezen mét
+// bedragen, 3 = schrijven).
+const lezen    = requireBevoegdheid("projecten", 1);
+const schrijven = requireBevoegdheid("projecten", 3);
+const metBedragen = requireBevoegdheid("projecten", 2);
+
+// Server-side beslissing welke weergave iemand krijgt (§3.1/§3.2).
+function magBedragenZien(req: import("express").Request): boolean {
+  const perm = req.permissies;
+  if (!perm) return false;
+  return perm.isHoofdbeheerder || perm.heeftModuleRecht("projecten", 2);
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
+function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect, toonBedragen = true) {
   return {
     id: r.id,
     begroting_id: r.begrotingId,
@@ -61,8 +72,8 @@ function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
     omschrijving: r.omschrijving,
     eenheid: r.eenheid,
     hoeveelheid: r.hoeveelheid,
-    tarief: r.tarief,
-    totaal: r.totaal,
+    tarief: toonBedragen ? r.tarief : null,
+    totaal: toonBedragen ? r.totaal : null,
     hoofdstuk: r.hoofdstuk,
     ai_inkoop_voorstel: (r as Record<string,unknown>).aiInkoopVoorstel ?? null,
     ai_arbeid_voorstel: (r as Record<string,unknown>).aiArbeidVoorstel ?? null,
@@ -72,6 +83,7 @@ function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
 function mapInkoopRegel(
   r: typeof inkoopplanRegelsTable.$inferSelect,
   werkpakketSleutel?: string | null,
+  toonBedragen = true,
 ) {
   return {
     id: r.id,
@@ -84,11 +96,11 @@ function mapInkoopRegel(
     type: r.type,
     leverancier: r.leverancier ?? null,
     aanbevolen_leverancier: r.aanbevolenLeverancier ?? null,
-    calc_prijs: r.calcPrijs ?? null,
-    inkoopprijs_verwacht: r.inkoopprijsVerwacht ?? null,
-    inkoopprijs: r.inkoopprijs ?? null,
-    besparing_per_eenheid: r.besparingPerEenheid ?? null,
-    besparing: r.besparing ?? null,
+    calc_prijs: toonBedragen ? (r.calcPrijs ?? null) : null,
+    inkoopprijs_verwacht: toonBedragen ? (r.inkoopprijsVerwacht ?? null) : null,
+    inkoopprijs: toonBedragen ? (r.inkoopprijs ?? null) : null,
+    besparing_per_eenheid: toonBedragen ? (r.besparingPerEenheid ?? null) : null,
+    besparing: toonBedragen ? (r.besparing ?? null) : null,
     levertijd_weken: r.levertijdWeken ?? null,
     gewenste_leverdatum: r.gewensteLeverdatum ?? null,
     besteldatum: r.besteldatum ?? null,
@@ -176,6 +188,7 @@ function mapInkoopplan(
   plan: typeof inkoopplannenTable.$inferSelect,
   regels: typeof inkoopplanRegelsTable.$inferSelect[],
   hoofdstukMap?: Map<number, string | null>,
+  toonBedragen = true,
 ) {
   return {
     id: plan.id,
@@ -184,7 +197,7 @@ function mapInkoopplan(
     ai_gegenereerd: plan.aiGegenereerd,
     ai_gegenereerd_op: iso(plan.aiGegeneerdOp),
     ai_samenvatting: plan.aiSamenvatting ?? null,
-    totale_besparing: plan.totaleBesparing ?? null,
+    totale_besparing: toonBedragen ? (plan.totaleBesparing ?? null) : null,
     vastgesteld_op: iso(plan.vastgesteldOp),
     opmerkingen: plan.opmerkingen ?? null,
     aangemaakt_op: iso(plan.aangemaaktOp)!,
@@ -195,12 +208,13 @@ function mapInkoopplan(
         r.werkbegrotingRegelId && hoofdstukMap
           ? (hoofdstukMap.get(r.werkbegrotingRegelId) ?? null)
           : null,
+        toonBedragen,
       )
     ),
   };
 }
 
-function mapBonRegel(r: typeof inkoopbonRegelsTable.$inferSelect) {
+function mapBonRegel(r: typeof inkoopbonRegelsTable.$inferSelect, toonBedragen = true) {
   return {
     id: r.id,
     inkoopbon_id: r.inkoopbonId,
@@ -208,8 +222,8 @@ function mapBonRegel(r: typeof inkoopbonRegelsTable.$inferSelect) {
     omschrijving: r.omschrijving,
     hoeveelheid: r.hoeveelheid,
     eenheid: r.eenheid,
-    prijs: r.prijs ?? null,
-    totaal: r.totaal ?? null,
+    prijs: toonBedragen ? (r.prijs ?? null) : null,
+    totaal: toonBedragen ? (r.totaal ?? null) : null,
     volgorde: r.volgorde,
   };
 }
@@ -218,6 +232,7 @@ function mapInkoopbon(
   bon: typeof inkoopbonnenTable.$inferSelect,
   regels: typeof inkoopbonRegelsTable.$inferSelect[],
   kenmerk?: string | null,
+  toonBedragen = true,
 ) {
   return {
     id: bon.id,
@@ -232,7 +247,7 @@ function mapInkoopbon(
     leverancier: bon.leverancier,
     leverancier_id: bon.leverancierId ?? null,
     gewenste_leverdatum: bon.gewensteLeverdatum ?? null,
-    totaal_bedrag: bon.totaalBedrag ?? null,
+    totaal_bedrag: toonBedragen ? (bon.totaalBedrag ?? null) : null,
     status: bon.status,
     goedgekeurd_op: iso(bon.goedgekeurdOp),
     opmerkingen: bon.opmerkingen ?? null,
@@ -242,7 +257,7 @@ function mapInkoopbon(
     ai_motivatie: bon.aiMotivatie ?? null,
     aangemaakt_op: iso(bon.aangemaaktOp)!,
     bijgewerkt_op: iso(bon.bijgewerktOp)!,
-    regels: regels.map(mapBonRegel),
+    regels: regels.map((r) => mapBonRegel(r, toonBedragen)),
   };
 }
 
@@ -489,7 +504,7 @@ router.get("/opdrachten/:id/inkoopplanning", lezen, async (req, res): Promise<vo
       .orderBy(asc(inkoopplanRegelsTable.volgorde), asc(inkoopplanRegelsTable.id));
 
     const hoofdstukMap = await buildHoofdstukMap(regels);
-    res.json(mapInkoopplan(plan, regels, hoofdstukMap));
+    res.json(mapInkoopplan(plan, regels, hoofdstukMap, magBedragenZien(req)));
   } catch (err) {
     logger.error({ err }, "getInkoopplanning fout");
     res.status(500).json({ error: "Serverfout" });
@@ -502,7 +517,7 @@ router.get("/opdrachten/:id/inkoopplanning", lezen, async (req, res): Promise<vo
 // (statusverdeling, verlopen/naderende leverdatums) en AI-aandachtspunten.
 // Signaleert alleen; de mens blijft in control.
 
-router.get("/opdrachten/:id/inkoopcoach", lezen, async (req, res): Promise<void> => {
+router.get("/opdrachten/:id/inkoopcoach", metBedragen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -1244,7 +1259,7 @@ router.get("/opdrachten/:id/inkoopplanning/inkoopbonnen", lezen, async (req, res
       const regels = await db.select().from(inkoopbonRegelsTable)
         .where(eq(inkoopbonRegelsTable.inkoopbonId, bon.id))
         .orderBy(asc(inkoopbonRegelsTable.volgorde));
-      return mapInkoopbon(bon, regels, await kenmerkVoorProjectinkoop(bon.offerteId, bon.nummer, bon.herziening));
+      return mapInkoopbon(bon, regels, await kenmerkVoorProjectinkoop(bon.offerteId, bon.nummer, bon.herziening), magBedragenZien(req));
     }));
 
     res.json(result);
@@ -1581,7 +1596,7 @@ router.delete("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, a
 // geen van deze velden hoeft te kennen. Na goedkeuring door de motor wordt de
 // inkoopbon automatisch naar status "goedgekeurd" gezet (via OBJECT_WORKFLOW_ACTIE).
 
-router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/ter-goedkeuring-indienen", requireBevoegdheid("offertes", 1), async (req, res): Promise<void> => {
+router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/ter-goedkeuring-indienen", requireBevoegdheid("projecten", 2), async (req, res): Promise<void> => {
   const opdrachtId = parseInt(String(req.params.id), 10);
   const bonId = parseInt(String(req.params.bonId), 10);
   if (isNaN(opdrachtId) || isNaN(bonId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
@@ -2160,7 +2175,7 @@ router.delete("/opdrachten/:id/inkoopplanning/regels/:regelId", schrijven, async
 
 // ── GET /opdrachten/:id/onderaanneming ────────────────────────────────────
 
-router.get("/opdrachten/:id/onderaanneming", lezen, async (req, res): Promise<void> => {
+router.get("/opdrachten/:id/onderaanneming", metBedragen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 

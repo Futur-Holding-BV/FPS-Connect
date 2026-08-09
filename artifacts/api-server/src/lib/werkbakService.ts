@@ -46,6 +46,12 @@ export const WERKBAK_BRONNEN = [
   "wagenpark_garagemail",
   // LEVERANCIER_01 §3.3: inkoopfactuur zonder koppeling aan het leveranciersregister.
   "factuur_zonder_leverancier",
+  // BOUW_01 §4: meer-/minderwerkmelding vanaf de bouwplaats → werkvoorbereider (doen) + vaste cc projectleider (weten).
+  "meerwerk_melding",
+  // BOUW_01 §5: materiaalaanvraag "wijkt af" of "weet ik niet" → eerst de werkvoorbereider.
+  "materiaal_afwijking",
+  // BOUW_01 §6: toebehoren-aanvraag (verbruik, kostenrubriek gereedschap-toebehoren) → werkvoorbereider.
+  "toebehoren_aanvraag",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

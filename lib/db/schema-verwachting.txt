@@ -2622,9 +2622,11 @@ KOLOM|materiaal_aanvragen|foto_pad|text|YES|
 KOLOM|materiaal_aanvragen|id|integer|NO|nextval('materiaal_aanvragen_id_seq'::regclass)
 KOLOM|materiaal_aanvragen|ingediend_door_id|integer|YES|
 KOLOM|materiaal_aanvragen|omschrijving|text|YES|
-KOLOM|materiaal_aanvragen|opdracht_id|integer|NO|
+KOLOM|materiaal_aanvragen|opdracht_id|integer|YES|
 KOLOM|materiaal_aanvragen|reden|text|NO|
+KOLOM|materiaal_aanvragen|soort|text|NO|'materiaal'::text
 KOLOM|materiaal_aanvragen|status|text|NO|'nieuw'::text
+KOLOM|materiaal_aanvragen|volgens_opdracht|text|YES|
 KOLOM|medewerker_aanstellingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|medewerker_aanstellingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|medewerker_aanstellingen|cao|text|YES|
@@ -4285,6 +4287,7 @@ KOLOM|voorraad_mutaties|delta|real|NO|
 KOLOM|voorraad_mutaties|gebruiker_id|integer|YES|
 KOLOM|voorraad_mutaties|hoeveelheid|real|NO|
 KOLOM|voorraad_mutaties|id|integer|NO|nextval('voorraad_mutaties_id_seq'::regclass)
+KOLOM|voorraad_mutaties|kostenrubriek|text|YES|
 KOLOM|voorraad_mutaties|locatie_id|integer|YES|
 KOLOM|voorraad_mutaties|omschrijving|text|YES|
 KOLOM|voorraad_mutaties|opdracht_id|integer|YES|

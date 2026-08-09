@@ -68,6 +68,13 @@ export const MODULES = [
     omschrijving: "Offertestructuur, begroting en uitgangspunten (Offerte Intelligence)",
   },
   {
+    id: "projecten",
+    label: "Projecten (opdrachten & werkvoorbereiding)",
+    omschrijving:
+      "Opdrachten, werkbegroting, inkoop en werkvoorbereiding (BOUW_01-splitsing van 'offertes'). " +
+      "Niveau 1 = lezen zonder financiële bedragen, niveau 2 = lezen mét bedragen, niveau 3 = schrijven",
+  },
+  {
     id: "systeem",
     label: "Systeembeheer",
     omschrijving: "Systeeminstellingen, beveiliging en logboeken",
@@ -249,8 +256,11 @@ export const PRESETS: Preset[] = [
     naam: "Monteur",
     groep: "Uitvoering",
     bevoegdheden: matrix({
+      // BOUW_01 (René, 09-08-2026): projecten 1 = werkbegroting/inkoop lezen
+      // ZONDER bedragen; magazijn/gereedschappen 1 voor voorraadinzicht.
       gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
       rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
+      projecten: 1, magazijn: 1, gereedschappen: 1,
     }),
   },
   {
@@ -265,8 +275,11 @@ export const PRESETS: Preset[] = [
     naam: "Uitvoerder",
     groep: "Uitvoering",
     bevoegdheden: matrix({
+      // BOUW_01 (René, 09-08-2026): projecten 2 = zelfde schermen mét bedragen,
+      // maar geen schrijfrechten.
       gebouwen: 2, voorzieningen: 3, inspecties: 3, onderhoud: 3,
       rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1, declaraties: 2,
+      projecten: 2, magazijn: 1, gereedschappen: 1,
     }),
   },
   {
@@ -297,10 +310,13 @@ export const PRESETS: Preset[] = [
     naam: "Projectleider",
     groep: "Projecten",
     bevoegdheden: matrix({
+      // BOUW_01 (René, 09-08-2026): projecten 3 = werkvoorbereiding/inkoop
+      // muteren; magazijn/gereedschappen 2.
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
       planning: 3, toolbox: 3, calculaties: 1,
       financieel: 2, goedkeuring: 3, declaraties: 3,
+      projecten: 3, magazijn: 2, gereedschappen: 2,
     }),
   },
   {
@@ -313,6 +329,9 @@ export const PRESETS: Preset[] = [
       gebouwen: 3, voorzieningen: 4, inspecties: 2, onderhoud: 3,
       rapportages: 2, bibliotheek: 3, crm: 1,
       financieel: 3,
+      // BOUW_01 (René, 09-08-2026): werkvoorbereider pakt meldingen/aanvragen
+      // op en muteert inkoop en planning; leest calculatie.
+      projecten: 3, calculaties: 1, magazijn: 2, gereedschappen: 2, planning: 2,
     }),
   },
   {
@@ -336,7 +355,7 @@ export const PRESETS: Preset[] = [
     groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 1,
-      crm: 4, abonnementen: 4, offertes: 3,
+      crm: 4, abonnementen: 4, offertes: 3, projecten: 3,
     }),
   },
   {
@@ -344,7 +363,7 @@ export const PRESETS: Preset[] = [
     groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 2,
-      offertes: 4, dossiers: 2, crm: 1, calculaties: 4,
+      offertes: 4, projecten: 3, dossiers: 2, crm: 1, calculaties: 4,
     }),
   },
   {
@@ -360,7 +379,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
-      personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
+      personeel: 2, dossiers: 2, offertes: 2, projecten: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
       goedkeuring: 4, declaraties: 4,
     }),
@@ -370,7 +389,7 @@ export const PRESETS: Preset[] = [
     groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
-      crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
+      crm: 2, personeel: 2, dossiers: 3, offertes: 1, projecten: 2, planning: 1,
       financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
       goedkeuring: 3, declaraties: 4,
     }),
@@ -401,7 +420,7 @@ export const PRESETS: Preset[] = [
     groep: "Operationeel",
     bevoegdheden: matrix({
       magazijn: 4,
-      offertes: 1,
+      offertes: 1, projecten: 2,
     }),
   },
 ];
@@ -459,6 +478,8 @@ export function bevoegdhedenVoorLegacyRol(
       return matrix({
         gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
         rapportages: 1, bibliotheek: 1,
+        // BOUW_01: veldrollen lezen projecten zonder bedragen
+        projecten: 1, magazijn: 1, gereedschappen: 1,
       });
     case "controleur":
       return matrix({

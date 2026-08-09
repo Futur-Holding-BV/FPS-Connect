@@ -12150,6 +12150,66 @@ paths:
               schema:
                 $ref: "#/components/schemas/Werkbegroting"
 
+  /opdrachten/{id}/meerwerk-meldingen:
+    post:
+      operationId: meldMeerwerk
+      tags: [opdrachten]
+      summary: Meer-/minderwerk melden vanaf de bouwplaats (BOUW_01 §4)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeerwerkMeldingInput"
+      responses:
+        "201":
+          description: Gemeld — doen-item bij werkvoorbereider, vaste cc projectleider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeerwerkMeldingResultaat"
+        "400":
+          description: Melding onvolledig (alle velden verplicht)
+
+  /toebehoren-aanvragen:
+    post:
+      operationId: createToebehorenAanvraag
+      tags: [opdrachten]
+      summary: Toebehoren gereedschap aanvragen (verbruik, geen project — BOUW_01 §6)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [omschrijving]
+              properties:
+                omschrijving:
+                  type: string
+                foto_pad:
+                  type: ["string", "null"]
+      responses:
+        "201":
+          description: Aangemaakt — naar werkvoorbereider, kostenrubriek gereedschap-toebehoren
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, soort, kostenrubriek]
+                properties:
+                  id:
+                    type: integer
+                  soort:
+                    type: string
+                  kostenrubriek:
+                    type: string
+
   /opdrachten/{id}/werkbegroting/vaststellen:
     post:
       operationId: vaststellenWerkbegroting
@@ -35263,9 +35323,45 @@ components:
         ai_fase:
           type: string
 
+    MeerwerkMeldingInput:
+      type: object
+      required: [type, fotos, omschrijving, impact_materiaal, impact_uren, impact_planning]
+      properties:
+        type:
+          type: string
+          enum: [meerwerk, minderwerk]
+        fotos:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        omschrijving:
+          type: string
+        impact_materiaal:
+          type: string
+        impact_uren:
+          type: string
+        impact_planning:
+          type: string
+
+    MeerwerkMeldingResultaat:
+      type: object
+      required: [status, opdracht_id, type, werkvoorbereider_items, projectleider_cc_items]
+      properties:
+        status:
+          type: string
+        opdracht_id:
+          type: integer
+        type:
+          type: string
+        werkvoorbereider_items:
+          type: integer
+        projectleider_cc_items:
+          type: integer
+
     WerkbegrotingRegel:
       type: object
-      required: [id, begroting_id, categorie, omschrijving, eenheid, hoeveelheid, tarief, totaal, hoofdstuk]
+      required: [id, begroting_id, categorie, omschrijving, eenheid, hoeveelheid, hoofdstuk]
       properties:
         id:
           type: integer
@@ -35282,9 +35378,10 @@ components:
         hoeveelheid:
           type: number
         tarief:
-          type: number
+          # null wanneer de kijker geen bedragen mag zien (projecten-niveau 1)
+          type: ["number", "null"]
         totaal:
-          type: number
+          type: ["number", "null"]
         hoofdstuk:
           type: string
         ai_inkoop_voorstel:
@@ -35294,7 +35391,7 @@ components:
 
     Werkbegroting:
       type: object
-      required: [id, status, totaal_arbeid_uren, totaal_materiaal_bedrag, hoofd_uren_begroot, regels]
+      required: [id, status, totaal_arbeid_uren, hoofd_uren_begroot, regels]
       properties:
         id:
           type: integer
@@ -35311,7 +35408,8 @@ components:
         totaal_arbeid_uren:
           type: number
         totaal_materiaal_bedrag:
-          type: number
+          # null wanneer de kijker geen bedragen mag zien (projecten-niveau 1)
+          type: ["number", "null"]
         omschrijving:
           type: ["string", "null"]
         status:

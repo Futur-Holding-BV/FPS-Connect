@@ -57,6 +57,9 @@ export const voorraadMutatiesTable = pgTable("voorraad_mutaties", {
   opdrachtId:      integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   gebruikerId:     integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   omschrijving:        text("omschrijving"),
+  // BOUW_01 §6: verbruik op eigen kostenrubriek i.p.v. een project
+  // (null = regulier/project; 'gereedschap_toebehoren' = magazijn-gereedschap-toebehoren)
+  kostenrubriek:       text("kostenrubriek"),
   aangemaaktOp:        timestamp("aangemaakt_op").notNull().defaultNow(),
   accountviewExportOp: timestamp("accountview_export_op"),
 });

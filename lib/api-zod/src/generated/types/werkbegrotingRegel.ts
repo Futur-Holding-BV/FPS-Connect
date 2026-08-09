@@ -15,8 +15,10 @@ export interface WerkbegrotingRegel {
   omschrijving: string;
   eenheid: string;
   hoeveelheid: number;
-  tarief: number;
-  totaal: number;
+  /** @nullable */
+  tarief?: number | null;
+  /** @nullable */
+  totaal?: number | null;
   hoofdstuk: string;
   /** @nullable */
   ai_inkoop_voorstel?: string | null;

@@ -4,9 +4,15 @@ import { opdrachtenTable } from "./opdrachten";
 
 export const materiaalAanvragenTable = pgTable("materiaal_aanvragen", {
   id: serial("id").primaryKey(),
-  opdrachtId: integer("opdracht_id").notNull().references(
+  // BOUW_01 §6: toebehoren-aanvragen horen niet bij een project → nullable.
+  opdrachtId: integer("opdracht_id").references(
     () => opdrachtenTable.id, { onDelete: "cascade" }
   ),
+  // BOUW_01 §5/§6: 'materiaal' (bestaand) | 'toebehoren' (verbruik, geen project)
+  soort: text("soort").notNull().default("materiaal"),
+  // BOUW_01 §5: verplichte vraag "Is dit volgens de opdracht?"
+  // ja | wijkt_af | weet_niet — null alleen bij historische aanvragen.
+  volgensOpdracht: text("volgens_opdracht"),
   ingediendDoorId: integer("ingediend_door_id").references(
     () => gebruikersTable.id, { onDelete: "set null" }
   ),

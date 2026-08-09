@@ -395,10 +395,20 @@ export default function GereedschappenPagina() {
               <div className="space-y-1">
                 <Label>Categorie <span className="text-red-500">*</span></Label>
                 <Input
-                  placeholder="bijv. boormachine, zaag"
+                  placeholder="bijv. boormachine, zaag, klimmaterieel"
+                  list="gereedschap-categorie-suggesties"
                   value={formulier.categorie ?? ""}
                   onChange={(e) => setFormulier((f) => ({ ...f, categorie: e.target.value }))}
                 />
+                {/* BOUW_01 §7: klimmaterieel is een categorie binnen gereedschappen —
+                    erft daarmee automatisch de keuring-/inspectievelden. */}
+                <datalist id="gereedschap-categorie-suggesties">
+                  <option value="Klimmaterieel" />
+                  <option value="Boormachine" />
+                  <option value="Zaag" />
+                  <option value="Meetapparatuur" />
+                  <option value="overig" />
+                </datalist>
               </div>
               <div className="space-y-1">
                 <Label>Aandrijving <span className="text-red-500">*</span></Label>

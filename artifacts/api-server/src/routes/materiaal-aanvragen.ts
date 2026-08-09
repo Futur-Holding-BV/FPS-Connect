@@ -16,13 +16,16 @@ import { eq, and, desc, asc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 
-const lezen    = requireBevoegdheid("offertes", 1);
-const schrijven = requireBevoegdheid("offertes", 2);
+// BOUW_01: behandelen van aanvragen hoort bij de projecten-sleutel
+// (2 = inzien mét bedragen/AI-advies, 3 = behandelen).
+const lezen    = requireBevoegdheid("projecten", 2);
+const schrijven = requireBevoegdheid("projecten", 3);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -70,11 +73,14 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
       .where(eq(materiaalAanvragenTable.id, aanvraagId));
     if (!row) return;
 
-    // Haal werkbegroting materiaalregels op
-    const [opdracht] = await db
-      .select()
-      .from(opdrachtenTable)
-      .where(eq(opdrachtenTable.id, row.opdrachtId));
+    // Haal werkbegroting materiaalregels op (toebehoren-aanvragen hebben
+    // bewust geen opdracht — BOUW_01 §6)
+    const [opdracht] = row.opdrachtId
+      ? await db
+          .select()
+          .from(opdrachtenTable)
+          .where(eq(opdrachtenTable.id, row.opdrachtId))
+      : [];
 
     const begroting = opdracht
       ? await db
@@ -264,12 +270,13 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
   const gebruikerId = req.session.userId;
   if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
-  const { opdracht_id, werkdag_id, reden, omschrijving, foto_pad } = req.body as {
+  const { opdracht_id, werkdag_id, reden, omschrijving, foto_pad, volgens_opdracht } = req.body as {
     opdracht_id?: number;
     werkdag_id?: number;
     reden?: string;
     omschrijving?: string;
     foto_pad?: string;
+    volgens_opdracht?: string;
   };
 
   if (!reden) {
@@ -277,6 +284,11 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
   }
   if (!["op", "beschadigd", "nodig"].includes(reden)) {
     return void res.status(400).json({ error: "reden moet op, beschadigd of nodig zijn" });
+  }
+  // BOUW_01 §5: verplichte vraag "Is dit volgens de opdracht?".
+  // "weet_niet" is een volwaardig antwoord — geen extra vragen of omweg.
+  if (!volgens_opdracht || !["ja", "wijkt_af", "weet_niet"].includes(volgens_opdracht)) {
+    return void res.status(400).json({ error: "volgens_opdracht is verplicht: ja, wijkt_af of weet_niet" });
   }
 
   // Resolve opdracht_id: rechtstreeks of via werkdag (planning item)
@@ -302,7 +314,8 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
   // DOORLOOP_01 §2: een monteur mag alleen materiaal aanvragen voor een
   // opdracht waar hij op is ingepland; kantoor (offertes:2) en hoofdbeheerder
   // mogen voor elke opdracht aanvragen.
-  const magAlles = !!req.permissies && (req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("offertes", 2));
+  // BOUW_01: opdrachten vallen sinds de sleutel-splitsing onder 'projecten'.
+  const magAlles = !!req.permissies && (req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("projecten", 3));
   if (!magAlles) {
     const [eigenMedewerker] = await db
       .select({ id: medewerkersTable.id })
@@ -328,10 +341,31 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
       omschrijving: omschrijving ?? null,
       fotoPad: foto_pad ?? null,
       status: "nieuw",
+      volgensOpdracht: volgens_opdracht,
     })
     .returning();
 
   if (!nieuw) return void res.status(500).json({ error: "Aanvraag aanmaken mislukt" });
+
+  // BOUW_01 §5: "wijkt af" en "weet ik niet" gaan naar de werkvoorbereider
+  // vóórdat er besteld wordt; "ja" volgt de bestaande weg.
+  if (volgens_opdracht !== "ja") {
+    const label = volgens_opdracht === "wijkt_af" ? "wijkt af van de opdracht" : "melder weet niet of dit volgens de opdracht is";
+    try {
+      await meldAanWerkvoorbereiderMetCcProjectleider({
+        bron: "materiaal_afwijking",
+        titel: `Materiaalaanvraag #${nieuw.id}: ${label}`,
+        omschrijving: `Reden: ${reden}. ${omschrijving ?? ""}`.trim(),
+        gewicht: 20,
+        actiePad: `/opdrachten/${opdrachtId}`,
+        herkomstType: "materiaal_aanvraag",
+        herkomstId: nieuw.id,
+        dedupBasis: `materiaal-afwijking:${nieuw.id}`,
+      });
+    } catch (err) {
+      req.log.error(err);
+    }
+  }
 
   // AI analyse asynchroon starten (fire-and-forget)
   if (heeftGateway()) {
@@ -397,6 +431,53 @@ router.post("/materiaal-aanvragen/:id/heranalyseer", schrijven, async (req, res)
 
   void voerAiAnalyseUit(id);
   return void res.json({ gestart: true });
+});
+
+// ── POST /toebehoren-aanvragen ──────────────────────────────────────────────
+// BOUW_01 §6 — toebehoren gereedschap (zaagjes, boortjes, schijven): verbruik.
+// Aan te vragen door iedereen; gaat naar de werkvoorbereider. De kosten landen
+// op de rubriek magazijn-gereedschap-toebehoren, dus NIET op een project —
+// daarom bewust geen opdracht_id aan deze aanvraag.
+router.post("/toebehoren-aanvragen", async (req, res): Promise<void> => {
+  const gebruikerId = req.session.userId;
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+
+  const { omschrijving, foto_pad } = req.body as { omschrijving?: string; foto_pad?: string };
+  if (!omschrijving || !omschrijving.trim()) {
+    return void res.status(400).json({ error: "omschrijving is verplicht (wat is er nodig?)" });
+  }
+
+  const [nieuw] = await db
+    .insert(materiaalAanvragenTable)
+    .values({
+      opdrachtId: null,
+      soort: "toebehoren",
+      ingediendDoorId: gebruikerId,
+      reden: "nodig",
+      omschrijving: omschrijving.trim(),
+      fotoPad: foto_pad ?? null,
+      status: "nieuw",
+      volgensOpdracht: null,
+    })
+    .returning();
+  if (!nieuw) return void res.status(500).json({ error: "Aanvraag aanmaken mislukt" });
+
+  try {
+    await meldAanWerkvoorbereiderMetCcProjectleider({
+      bron: "toebehoren_aanvraag",
+      titel: `Toebehoren-aanvraag #${nieuw.id}`,
+      omschrijving: `${omschrijving.trim()}\nKosten: rubriek magazijn-gereedschap-toebehoren (verbruik, niet op een project).`,
+      gewicht: 10,
+      actiePad: `/magazijn`,
+      herkomstType: "materiaal_aanvraag",
+      herkomstId: nieuw.id,
+      dedupBasis: `toebehoren:${nieuw.id}`,
+    });
+  } catch (err) {
+    req.log.error(err);
+  }
+
+  return void res.status(201).json({ id: nieuw.id, soort: "toebehoren", kostenrubriek: "gereedschap_toebehoren" });
 });
 
 export default router;

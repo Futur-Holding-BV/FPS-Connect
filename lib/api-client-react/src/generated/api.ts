@@ -151,6 +151,8 @@ import type {
   CreateFactuurRegel201,
   CreateFactuurTermijn201,
   CreateSaldoCorrectie200,
+  CreateToebehorenAanvraag201,
+  CreateToebehorenAanvraagBody,
   CrmCoachAntwoord,
   CrmCoachInput,
   CrmCommercieel,
@@ -645,6 +647,8 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  MeerwerkMeldingInput,
+  MeerwerkMeldingResultaat,
   MeldingDetail,
   MeldingInput,
   MeldingOntvangst,
@@ -42479,6 +42483,147 @@ export function useGetWerkbegroting<TData = Awaited<ReturnType<typeof getWerkbeg
 
 
 
+
+export const getMeldMeerwerkUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/meerwerk-meldingen`
+}
+
+/**
+ * @summary Meer-/minderwerk melden vanaf de bouwplaats (BOUW_01 §4)
+ */
+export const meldMeerwerk = async (id: number,
+    meerwerkMeldingInput: MeerwerkMeldingInput, options?: RequestInit): Promise<MeerwerkMeldingResultaat> => {
+
+  return customFetch<MeerwerkMeldingResultaat>(getMeldMeerwerkUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(meerwerkMeldingInput)
+  }
+);}
+
+
+
+
+export const getMeldMeerwerkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldMeerwerk>>, TError,{id: number;data: BodyType<MeerwerkMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof meldMeerwerk>>, TError,{id: number;data: BodyType<MeerwerkMeldingInput>}, TContext> => {
+
+const mutationKey = ['meldMeerwerk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof meldMeerwerk>>, {id: number;data: BodyType<MeerwerkMeldingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  meldMeerwerk(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MeldMeerwerkMutationResult = NonNullable<Awaited<ReturnType<typeof meldMeerwerk>>>
+    export type MeldMeerwerkMutationBody = BodyType<MeerwerkMeldingInput>
+    export type MeldMeerwerkMutationError = ErrorType<void>
+
+    /**
+ * @summary Meer-/minderwerk melden vanaf de bouwplaats (BOUW_01 §4)
+ */
+export const useMeldMeerwerk = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldMeerwerk>>, TError,{id: number;data: BodyType<MeerwerkMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof meldMeerwerk>>,
+        TError,
+        {id: number;data: BodyType<MeerwerkMeldingInput>},
+        TContext
+      > => {
+      return useMutation(getMeldMeerwerkMutationOptions(options));
+    }
+
+export const getCreateToebehorenAanvraagUrl = () => {
+
+
+
+
+  return `/api/toebehoren-aanvragen`
+}
+
+/**
+ * @summary Toebehoren gereedschap aanvragen (verbruik, geen project — BOUW_01 §6)
+ */
+export const createToebehorenAanvraag = async (createToebehorenAanvraagBody: CreateToebehorenAanvraagBody, options?: RequestInit): Promise<CreateToebehorenAanvraag201> => {
+
+  return customFetch<CreateToebehorenAanvraag201>(getCreateToebehorenAanvraagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createToebehorenAanvraagBody)
+  }
+);}
+
+
+
+
+export const getCreateToebehorenAanvraagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToebehorenAanvraag>>, TError,{data: BodyType<CreateToebehorenAanvraagBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createToebehorenAanvraag>>, TError,{data: BodyType<CreateToebehorenAanvraagBody>}, TContext> => {
+
+const mutationKey = ['createToebehorenAanvraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createToebehorenAanvraag>>, {data: BodyType<CreateToebehorenAanvraagBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createToebehorenAanvraag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateToebehorenAanvraagMutationResult = NonNullable<Awaited<ReturnType<typeof createToebehorenAanvraag>>>
+    export type CreateToebehorenAanvraagMutationBody = BodyType<CreateToebehorenAanvraagBody>
+    export type CreateToebehorenAanvraagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toebehoren gereedschap aanvragen (verbruik, geen project — BOUW_01 §6)
+ */
+export const useCreateToebehorenAanvraag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToebehorenAanvraag>>, TError,{data: BodyType<CreateToebehorenAanvraagBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createToebehorenAanvraag>>,
+        TError,
+        {data: BodyType<CreateToebehorenAanvraagBody>},
+        TContext
+      > => {
+      return useMutation(getCreateToebehorenAanvraagMutationOptions(options));
+    }
 
 export const getVaststellenWerkbegrotingUrl = (id: number,) => {
 

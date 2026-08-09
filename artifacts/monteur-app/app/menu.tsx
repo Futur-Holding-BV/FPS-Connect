@@ -103,6 +103,7 @@ export default function MenuScherm() {
   const routeMap: Record<string, string> = {
     werkdag: "/werkdag",
     gebouwen: "/gebouwen",
+    projecten: "/projecten",
     verlof: "/hrm/verlof",
     uren: "/uren",
     planning: "/planning",
@@ -144,6 +145,7 @@ export default function MenuScherm() {
   const acties: RadiaalActie[] = ([
     { sleutel: "werkdag", label: "Mijn werkdag", icoon: "today", onPress: () => router.push("/werkdag") },
     { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", vereist: { module: "gebouwen", niveau: 1 }, onPress: () => router.push("/gebouwen") },
+    { sleutel: "projecten", label: "Projecten", icoon: "briefcase-outline", vereist: { module: "projecten", niveau: 1 }, onPress: () => router.push("/projecten") },
     { sleutel: "verlof", label: "Verlof", icoon: "calendar-outline", onPress: () => router.push("/hrm/verlof") },
     { sleutel: "uren", label: "Uren", icoon: "stopwatch", onPress: () => router.push("/uren") },
     { sleutel: "planning", label: "Routeplanner", icoon: "navigate", onPress: () => router.push("/planning") },
