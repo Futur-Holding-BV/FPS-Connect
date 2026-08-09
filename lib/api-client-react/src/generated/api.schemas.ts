@@ -5,6 +5,172 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type WerkbakTaakInputSoort = typeof WerkbakTaakInputSoort[keyof typeof WerkbakTaakInputSoort];
+
+
+export const WerkbakTaakInputSoort = {
+  doen: 'doen',
+  idee: 'idee',
+} as const;
+
+export interface WerkbakTaakInput {
+  titel: string;
+  omschrijving?: string | null;
+  soort?: WerkbakTaakInputSoort;
+  eigenaar_id: number;
+  /** jjjj-mm-dd; verplicht behalve bij idee */
+  deadline?: string | null;
+  meewerker_ids?: number[];
+  overleg_id?: number | null;
+}
+
+export interface WerkbakTaakUpdate {
+  titel?: string;
+  omschrijving?: string | null;
+  deadline?: string;
+  meewerker_ids?: number[];
+}
+
+export interface WerkbakTaak {
+  id: number;
+  soort: string;
+  bron: string;
+  titel: string;
+  omschrijving?: string | null;
+  status: string;
+  deadline?: string | null;
+  eigenaar_id?: number | null;
+  eigenaar_naam?: string | null;
+  meewerker_ids: number[];
+  meewerker_namen?: string[];
+  overleg_id?: number | null;
+  gewicht?: number;
+  actie_pad?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface WerkbakTeamSignaal {
+  id: number;
+  bron: string;
+  titel: string;
+  omschrijving?: string | null;
+  gewicht: number;
+  actie_pad?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface WerkbakTeamOverzicht {
+  taken: WerkbakTaak[];
+  signalen: WerkbakTeamSignaal[];
+}
+
+export type OverlegBesproken = { [key: string]: unknown } | null;
+
+export interface Overleg {
+  id: number;
+  datum: string;
+  aanwezigen: string[];
+  besproken?: OverlegBesproken;
+  aangemaakt_op: string;
+}
+
+export type OverlegInputBesproken = { [key: string]: unknown } | null;
+
+export interface OverlegInput {
+  datum?: string;
+  aanwezigen: string[];
+  besproken?: OverlegInputBesproken;
+  taken?: WerkbakTaakInput[];
+}
+
+export interface OverlegResultaat {
+  id: number;
+  datum: string;
+  aanwezigen: string[];
+  taken_aangemaakt: number;
+}
+
+export type OverlegAgendaVorigOverleg = {
+  id?: number;
+  datum?: string;
+  aanwezigen?: string[];
+} | null;
+
+export type OverlegAgendaBlok3Nieuw = {
+  taken: WerkbakTaak[];
+  signalen: WerkbakTeamSignaal[];
+};
+
+export interface OverlegAgenda {
+  vorig_overleg?: OverlegAgendaVorigOverleg;
+  blok1_afgesproken: WerkbakTaak[];
+  blok2_loopt_vast: WerkbakTaak[];
+  blok3_nieuw: OverlegAgendaBlok3Nieuw;
+  blok4_ideeen: WerkbakTaak[];
+}
+
+export type WorkflowRijSoortRij = typeof WorkflowRijSoortRij[keyof typeof WorkflowRijSoortRij];
+
+
+export const WorkflowRijSoortRij = {
+  werkbak: 'werkbak',
+  mail: 'mail',
+} as const;
+
+export interface WorkflowRij {
+  soort_rij: WorkflowRijSoortRij;
+  sleutel: string;
+  titel: string;
+  omschrijving?: string | null;
+  bron: string;
+  sterren: number;
+  deadline?: string | null;
+  gewicht: number;
+  actie_pad?: string | null;
+  uitleg: string;
+  aangemaakt_op: string;
+}
+
+export interface WorkflowLijst {
+  rijen: WorkflowRij[];
+}
+
+export type WorkflowSterInputDoelType = typeof WorkflowSterInputDoelType[keyof typeof WorkflowSterInputDoelType];
+
+
+export const WorkflowSterInputDoelType = {
+  werkbak: 'werkbak',
+  mail_conversatie: 'mail_conversatie',
+} as const;
+
+export interface WorkflowSterInput {
+  doel_type: WorkflowSterInputDoelType;
+  doel_sleutel: string;
+  /**
+     * @minimum 0
+     * @maximum 3
+     */
+  sterren: number;
+}
+
+export interface WorkflowAiAdviesReden {
+  sleutel: string;
+  reden: string;
+}
+
+export type WorkflowAiAdviesGroepenItem = {
+  naam: string;
+  sleutels: string[];
+};
+
+export interface WorkflowAiAdvies {
+  groepen: WorkflowAiAdviesGroepenItem[];
+  ontbreekt: WorkflowAiAdviesReden[];
+  kan_wachten: WorkflowAiAdviesReden[];
+  voorstellen: WorkflowAiAdviesReden[];
+}
+
 export type WerkbakItemSoort = typeof WerkbakItemSoort[keyof typeof WerkbakItemSoort];
 
 

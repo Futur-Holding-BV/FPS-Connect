@@ -787,6 +787,10 @@ import type {
   OrgJaarverslagInput,
   OrgVerzekering,
   OrgVerzekeringInput,
+  Overleg,
+  OverlegAgenda,
+  OverlegInput,
+  OverlegResultaat,
   OvernemenSnagstreamSnag201,
   OverwerkSlot,
   PimAfwijzenInput,
@@ -1049,6 +1053,10 @@ import type {
   WeekStaatPatch,
   WerkbakAantal,
   WerkbakItem,
+  WerkbakTaak,
+  WerkbakTaakInput,
+  WerkbakTaakUpdate,
+  WerkbakTeamOverzicht,
   WerkbakWegzettenInput,
   Werkbegroting,
   WerkbegrotingAiVoorstelBeoordeling,
@@ -1066,6 +1074,7 @@ import type {
   WerkgeverSalarisConfig,
   WizardStatus,
   WizardVoortgangInput,
+  WorkflowAiAdvies,
   WorkflowCard,
   WorkflowCardInput,
   WorkflowDefinitie,
@@ -1073,6 +1082,8 @@ import type {
   WorkflowDetail,
   WorkflowLane,
   WorkflowLaneInput,
+  WorkflowLijst,
+  WorkflowSterInput,
   WorkflowTransitieLog,
   Ziekmelding,
   ZiekmeldingenInput,
@@ -91998,4 +92009,663 @@ export function useListWerkbakBewakingDraaien<TData = Awaited<ReturnType<typeof 
 
 
 
+
+export const getMaakWerkbakTaakUrl = () => {
+
+
+
+
+  return `/api/werkbak/taken`
+}
+
+/**
+ * @summary Maak een eigen taak (bron "eigen") — eigenaar en einddatum verplicht, idee mag zonder datum.
+ */
+export const maakWerkbakTaak = async (werkbakTaakInput: WerkbakTaakInput, options?: RequestInit): Promise<WerkbakTaak> => {
+
+  return customFetch<WerkbakTaak>(getMaakWerkbakTaakUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkbakTaakInput)
+  }
+);}
+
+
+
+
+export const getMaakWerkbakTaakMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakWerkbakTaak>>, TError,{data: BodyType<WerkbakTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakWerkbakTaak>>, TError,{data: BodyType<WerkbakTaakInput>}, TContext> => {
+
+const mutationKey = ['maakWerkbakTaak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakWerkbakTaak>>, {data: BodyType<WerkbakTaakInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  maakWerkbakTaak(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakWerkbakTaakMutationResult = NonNullable<Awaited<ReturnType<typeof maakWerkbakTaak>>>
+    export type MaakWerkbakTaakMutationBody = BodyType<WerkbakTaakInput>
+    export type MaakWerkbakTaakMutationError = ErrorType<void>
+
+    /**
+ * @summary Maak een eigen taak (bron "eigen") — eigenaar en einddatum verplicht, idee mag zonder datum.
+ */
+export const useMaakWerkbakTaak = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakWerkbakTaak>>, TError,{data: BodyType<WerkbakTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakWerkbakTaak>>,
+        TError,
+        {data: BodyType<WerkbakTaakInput>},
+        TContext
+      > => {
+      return useMutation(getMaakWerkbakTaakMutationOptions(options));
+    }
+
+export const getWerkWerkbakTaakBijUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkbak/taken/${id}`
+}
+
+/**
+ * @summary Werk een eigen taak bij (eigenaar of meewerker; afronden alleen via afhandelen).
+ */
+export const werkWerkbakTaakBij = async (id: number,
+    werkbakTaakUpdate: WerkbakTaakUpdate, options?: RequestInit): Promise<WerkbakTaak> => {
+
+  return customFetch<WerkbakTaak>(getWerkWerkbakTaakBijUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkbakTaakUpdate)
+  }
+);}
+
+
+
+
+export const getWerkWerkbakTaakBijMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof werkWerkbakTaakBij>>, TError,{id: number;data: BodyType<WerkbakTaakUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof werkWerkbakTaakBij>>, TError,{id: number;data: BodyType<WerkbakTaakUpdate>}, TContext> => {
+
+const mutationKey = ['werkWerkbakTaakBij'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof werkWerkbakTaakBij>>, {id: number;data: BodyType<WerkbakTaakUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  werkWerkbakTaakBij(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WerkWerkbakTaakBijMutationResult = NonNullable<Awaited<ReturnType<typeof werkWerkbakTaakBij>>>
+    export type WerkWerkbakTaakBijMutationBody = BodyType<WerkbakTaakUpdate>
+    export type WerkWerkbakTaakBijMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werk een eigen taak bij (eigenaar of meewerker; afronden alleen via afhandelen).
+ */
+export const useWerkWerkbakTaakBij = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof werkWerkbakTaakBij>>, TError,{id: number;data: BodyType<WerkbakTaakUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof werkWerkbakTaakBij>>,
+        TError,
+        {id: number;data: BodyType<WerkbakTaakUpdate>},
+        TContext
+      > => {
+      return useMutation(getWerkWerkbakTaakBijMutationOptions(options));
+    }
+
+export const getGetWerkbakTeamUrl = () => {
+
+
+
+
+  return `/api/werkbak/team`
+}
+
+/**
+ * @summary Teamoverzicht (personeel of planning niveau 2) — taken plus werk-signalen, nooit persoonlijke items.
+ */
+export const getWerkbakTeam = async ( options?: RequestInit): Promise<WerkbakTeamOverzicht> => {
+
+  return customFetch<WerkbakTeamOverzicht>(getGetWerkbakTeamUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkbakTeamQueryKey = () => {
+    return [
+    `/api/werkbak/team`
+    ] as const;
+    }
+
+
+export const getGetWerkbakTeamQueryOptions = <TData = Awaited<ReturnType<typeof getWerkbakTeam>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbakTeam>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkbakTeamQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkbakTeam>>> = ({ signal }) => getWerkbakTeam({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkbakTeam>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkbakTeamQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkbakTeam>>>
+export type GetWerkbakTeamQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Teamoverzicht (personeel of planning niveau 2) — taken plus werk-signalen, nooit persoonlijke items.
+ */
+
+export function useGetWerkbakTeam<TData = Awaited<ReturnType<typeof getWerkbakTeam>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbakTeam>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkbakTeamQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOverlegAgendaUrl = () => {
+
+
+
+
+  return `/api/overleg/agenda`
+}
+
+/**
+ * @summary Agenda voor het wekelijkse overleg in vaste blokvolgorde.
+ */
+export const getOverlegAgenda = async ( options?: RequestInit): Promise<OverlegAgenda> => {
+
+  return customFetch<OverlegAgenda>(getGetOverlegAgendaUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOverlegAgendaQueryKey = () => {
+    return [
+    `/api/overleg/agenda`
+    ] as const;
+    }
+
+
+export const getGetOverlegAgendaQueryOptions = <TData = Awaited<ReturnType<typeof getOverlegAgenda>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOverlegAgenda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOverlegAgendaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOverlegAgenda>>> = ({ signal }) => getOverlegAgenda({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOverlegAgenda>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOverlegAgendaQueryResult = NonNullable<Awaited<ReturnType<typeof getOverlegAgenda>>>
+export type GetOverlegAgendaQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Agenda voor het wekelijkse overleg in vaste blokvolgorde.
+ */
+
+export function useGetOverlegAgenda<TData = Awaited<ReturnType<typeof getOverlegAgenda>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOverlegAgenda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOverlegAgendaQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOverleggenUrl = () => {
+
+
+
+
+  return `/api/overleggen`
+}
+
+/**
+ * @summary Vastgelegde overleggen (nieuwste eerst).
+ */
+export const listOverleggen = async ( options?: RequestInit): Promise<Overleg[]> => {
+
+  return customFetch<Overleg[]>(getListOverleggenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOverleggenQueryKey = () => {
+    return [
+    `/api/overleggen`
+    ] as const;
+    }
+
+
+export const getListOverleggenQueryOptions = <TData = Awaited<ReturnType<typeof listOverleggen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOverleggen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOverleggenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOverleggen>>> = ({ signal }) => listOverleggen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOverleggen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOverleggenQueryResult = NonNullable<Awaited<ReturnType<typeof listOverleggen>>>
+export type ListOverleggenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Vastgelegde overleggen (nieuwste eerst).
+ */
+
+export function useListOverleggen<TData = Awaited<ReturnType<typeof listOverleggen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOverleggen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOverleggenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getLegOverlegVastUrl = () => {
+
+
+
+
+  return `/api/overleggen`
+}
+
+/**
+ * @summary Leg het overleg vast en zet in één handeling de afgesproken taken weg.
+ */
+export const legOverlegVast = async (overlegInput: OverlegInput, options?: RequestInit): Promise<OverlegResultaat> => {
+
+  return customFetch<OverlegResultaat>(getLegOverlegVastUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(overlegInput)
+  }
+);}
+
+
+
+
+export const getLegOverlegVastMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legOverlegVast>>, TError,{data: BodyType<OverlegInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof legOverlegVast>>, TError,{data: BodyType<OverlegInput>}, TContext> => {
+
+const mutationKey = ['legOverlegVast'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof legOverlegVast>>, {data: BodyType<OverlegInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  legOverlegVast(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LegOverlegVastMutationResult = NonNullable<Awaited<ReturnType<typeof legOverlegVast>>>
+    export type LegOverlegVastMutationBody = BodyType<OverlegInput>
+    export type LegOverlegVastMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Leg het overleg vast en zet in één handeling de afgesproken taken weg.
+ */
+export const useLegOverlegVast = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legOverlegVast>>, TError,{data: BodyType<OverlegInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof legOverlegVast>>,
+        TError,
+        {data: BodyType<OverlegInput>},
+        TContext
+      > => {
+      return useMutation(getLegOverlegVastMutationOptions(options));
+    }
+
+export const getGetWorkflowUrl = () => {
+
+
+
+
+  return `/api/workflow`
+}
+
+/**
+ * @summary Persoonlijke workflow — ster > einddatum > gewicht > ouderdom, elke plaats met uitlegregel.
+ */
+export const getWorkflow = async ( options?: RequestInit): Promise<WorkflowLijst> => {
+
+  return customFetch<WorkflowLijst>(getGetWorkflowUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkflowQueryKey = () => {
+    return [
+    `/api/workflow`
+    ] as const;
+    }
+
+
+export const getGetWorkflowQueryOptions = <TData = Awaited<ReturnType<typeof getWorkflow>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkflow>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkflowQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkflow>>> = ({ signal }) => getWorkflow({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkflow>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkflowQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkflow>>>
+export type GetWorkflowQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Persoonlijke workflow — ster > einddatum > gewicht > ouderdom, elke plaats met uitlegregel.
+ */
+
+export function useGetWorkflow<TData = Awaited<ReturnType<typeof getWorkflow>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkflow>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkflowQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getZetWorkflowSterUrl = () => {
+
+
+
+
+  return `/api/workflow/ster`
+}
+
+/**
+ * @summary Zet of verwijder een persoonlijke ster (0-3) op een werkbak-item of mailconversatie.
+ */
+export const zetWorkflowSter = async (workflowSterInput: WorkflowSterInput, options?: RequestInit): Promise<WorkflowSterInput> => {
+
+  return customFetch<WorkflowSterInput>(getZetWorkflowSterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowSterInput)
+  }
+);}
+
+
+
+
+export const getZetWorkflowSterMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetWorkflowSter>>, TError,{data: BodyType<WorkflowSterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof zetWorkflowSter>>, TError,{data: BodyType<WorkflowSterInput>}, TContext> => {
+
+const mutationKey = ['zetWorkflowSter'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof zetWorkflowSter>>, {data: BodyType<WorkflowSterInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  zetWorkflowSter(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ZetWorkflowSterMutationResult = NonNullable<Awaited<ReturnType<typeof zetWorkflowSter>>>
+    export type ZetWorkflowSterMutationBody = BodyType<WorkflowSterInput>
+    export type ZetWorkflowSterMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Zet of verwijder een persoonlijke ster (0-3) op een werkbak-item of mailconversatie.
+ */
+export const useZetWorkflowSter = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetWorkflowSter>>, TError,{data: BodyType<WorkflowSterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof zetWorkflowSter>>,
+        TError,
+        {data: BodyType<WorkflowSterInput>},
+        TContext
+      > => {
+      return useMutation(getZetWorkflowSterMutationOptions(options));
+    }
+
+export const getVraagWorkflowAiAdviesUrl = () => {
+
+
+
+
+  return `/api/workflow/ai-advies`
+}
+
+/**
+ * @summary AI-advies naast de lijst — groepeert, meldt wat ontbreekt (uit de gegevens) en wat kan wachten; herordent nooit.
+ */
+export const vraagWorkflowAiAdvies = async ( options?: RequestInit): Promise<WorkflowAiAdvies> => {
+
+  return customFetch<WorkflowAiAdvies>(getVraagWorkflowAiAdviesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVraagWorkflowAiAdviesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>, TError,void, TContext> => {
+
+const mutationKey = ['vraagWorkflowAiAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>, void> = () => {
+
+
+          return  vraagWorkflowAiAdvies(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VraagWorkflowAiAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>>
+
+    export type VraagWorkflowAiAdviesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-advies naast de lijst — groepeert, meldt wat ontbreekt (uit de gegevens) en wat kan wachten; herordent nooit.
+ */
+export const useVraagWorkflowAiAdvies = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vraagWorkflowAiAdvies>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getVraagWorkflowAiAdviesMutationOptions(options));
+    }
 

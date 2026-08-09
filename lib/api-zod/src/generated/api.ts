@@ -32798,3 +32798,285 @@ export const ListWerkbakBewakingDraaienResponseItem = zod.object({
 export const ListWerkbakBewakingDraaienResponse = zod.array(ListWerkbakBewakingDraaienResponseItem)
 
 
+/**
+ * @summary Maak een eigen taak (bron "eigen") — eigenaar en einddatum verplicht, idee mag zonder datum.
+ */
+export const MaakWerkbakTaakBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "soort": zod.enum(['doen', 'idee']).optional(),
+  "eigenaar_id": zod.number(),
+  "deadline": zod.string().nullish().describe('jjjj-mm-dd; verplicht behalve bij idee'),
+  "meewerker_ids": zod.array(zod.number()).optional(),
+  "overleg_id": zod.number().nullish()
+})
+
+export const MaakWerkbakTaakResponse = zod.void()
+
+
+/**
+ * @summary Werk een eigen taak bij (eigenaar of meewerker; afronden alleen via afhandelen).
+ */
+export const WerkWerkbakTaakBijParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WerkWerkbakTaakBijBody = zod.object({
+  "titel": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "deadline": zod.string().optional(),
+  "meewerker_ids": zod.array(zod.number()).optional()
+})
+
+export const WerkWerkbakTaakBijResponse = zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Teamoverzicht (personeel of planning niveau 2) — taken plus werk-signalen, nooit persoonlijke items.
+ */
+export const GetWerkbakTeamResponse = zod.object({
+  "taken": zod.array(zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})),
+  "signalen": zod.array(zod.object({
+  "id": zod.number(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Agenda voor het wekelijkse overleg in vaste blokvolgorde.
+ */
+export const GetOverlegAgendaResponse = zod.object({
+  "vorig_overleg": zod.object({
+  "id": zod.number().optional(),
+  "datum": zod.string().optional(),
+  "aanwezigen": zod.array(zod.string()).optional()
+}).nullish(),
+  "blok1_afgesproken": zod.array(zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})),
+  "blok2_loopt_vast": zod.array(zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})),
+  "blok3_nieuw": zod.object({
+  "taken": zod.array(zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})),
+  "signalen": zod.array(zod.object({
+  "id": zod.number(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+}))
+}),
+  "blok4_ideeen": zod.array(zod.object({
+  "id": zod.number(),
+  "soort": zod.string(),
+  "bron": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "deadline": zod.string().nullish(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "meewerker_ids": zod.array(zod.number()),
+  "meewerker_namen": zod.array(zod.string()).optional(),
+  "overleg_id": zod.number().nullish(),
+  "gewicht": zod.number().optional(),
+  "actie_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Vastgelegde overleggen (nieuwste eerst).
+ */
+export const ListOverleggenResponseItem = zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "aanwezigen": zod.array(zod.string()),
+  "besproken": zod.record(zod.string(), zod.unknown()).nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOverleggenResponse = zod.array(ListOverleggenResponseItem)
+
+
+/**
+ * @summary Leg het overleg vast en zet in één handeling de afgesproken taken weg.
+ */
+export const LegOverlegVastBody = zod.object({
+  "datum": zod.string().optional(),
+  "aanwezigen": zod.array(zod.string()),
+  "besproken": zod.record(zod.string(), zod.unknown()).nullish(),
+  "taken": zod.array(zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "soort": zod.enum(['doen', 'idee']).optional(),
+  "eigenaar_id": zod.number(),
+  "deadline": zod.string().nullish().describe('jjjj-mm-dd; verplicht behalve bij idee'),
+  "meewerker_ids": zod.array(zod.number()).optional(),
+  "overleg_id": zod.number().nullish()
+})).optional()
+})
+
+export const LegOverlegVastResponse = zod.void()
+
+
+/**
+ * @summary Persoonlijke workflow — ster > einddatum > gewicht > ouderdom, elke plaats met uitlegregel.
+ */
+export const GetWorkflowResponse = zod.object({
+  "rijen": zod.array(zod.object({
+  "soort_rij": zod.enum(['werkbak', 'mail']),
+  "sleutel": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bron": zod.string(),
+  "sterren": zod.number(),
+  "deadline": zod.string().nullish(),
+  "gewicht": zod.number(),
+  "actie_pad": zod.string().nullish(),
+  "uitleg": zod.string(),
+  "aangemaakt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Zet of verwijder een persoonlijke ster (0-3) op een werkbak-item of mailconversatie.
+ */
+export const zetWorkflowSterBodySterrenMin = 0;
+export const zetWorkflowSterBodySterrenMax = 3;
+
+
+
+export const ZetWorkflowSterBody = zod.object({
+  "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
+  "doel_sleutel": zod.string(),
+  "sterren": zod.number().min(zetWorkflowSterBodySterrenMin).max(zetWorkflowSterBodySterrenMax)
+})
+
+export const zetWorkflowSterResponseSterrenMin = 0;
+export const zetWorkflowSterResponseSterrenMax = 3;
+
+
+
+export const ZetWorkflowSterResponse = zod.object({
+  "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
+  "doel_sleutel": zod.string(),
+  "sterren": zod.number().min(zetWorkflowSterResponseSterrenMin).max(zetWorkflowSterResponseSterrenMax)
+})
+
+
+/**
+ * @summary AI-advies naast de lijst — groepeert, meldt wat ontbreekt (uit de gegevens) en wat kan wachten; herordent nooit.
+ */
+export const VraagWorkflowAiAdviesResponse = zod.object({
+  "groepen": zod.array(zod.object({
+  "naam": zod.string(),
+  "sleutels": zod.array(zod.string())
+})),
+  "ontbreekt": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "reden": zod.string()
+})),
+  "kan_wachten": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "reden": zod.string()
+})),
+  "voorstellen": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "reden": zod.string()
+}))
+})
+
+

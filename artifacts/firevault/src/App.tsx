@@ -151,6 +151,8 @@ import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
 import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
 import DocumentStudioPagina from "@/pages/organisatie/studio";
 import WorkflowDesignerPagina from "@/pages/workflow/index";
+import WorkflowPagina from "@/pages/workflow";
+import TeamOverlegPagina from "@/pages/team-overleg";
 import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
 import CredieurenInboxPagina from "@/pages/financieel/crediteuren/index";
 import OnderhandenWerkPagina from "@/pages/financieel/onderhanden-werk/index";
@@ -468,6 +470,10 @@ function ConnectPortal() {
         <Route path="/werk-inbox" component={WerkInboxPagina} />
         <Route path="/assistent" component={AssistentPagina} />
 
+        {/* ── WERKBAK_02: persoonlijke workflow + team & overleg ── */}
+        <Route path="/workflow" component={WorkflowPagina} />
+        <Route path="/team-overleg" component={TeamOverlegPagina} />
+
         {/* ── Personeel ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
@@ -533,7 +539,7 @@ function ConnectPortal() {
         <Route path="/organisatie/jaarverslagen" component={JaarverslagenPagina} />
         <Route path="/organisatie/bedrijfsdocumenten" component={BedrijfsdocumentenPagina} />
         <Route path="/organisatie/studio" component={DocumentStudioPagina} />
-        <Route path="/workflow" component={WorkflowDesignerPagina} />
+        <Route path="/workflow-designer" component={WorkflowDesignerPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />

@@ -32,6 +32,7 @@ import {
   UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
+  Users2, Star,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -139,6 +140,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
   const magGoedkeurenActies = heeftNiveau("goedkeuring", 3);
+  // WERKBAK_02: team & overleg = personeel≥2 of planning≥2 (of hoofdbeheerder).
+  // Workflow = elke kantoorgebruiker (niet klant).
+  const toonTeamOverleg = heeftNiveau("personeel", 2) || heeftNiveau("planning", 2);
+  const toonWorkflow = rol !== "klant";
 
   const { data: openGoedkeuringen } = useListGoedkeuringAanvragen(
     { alleen_mijn_acties: true, status: "ingediend" },
@@ -751,6 +756,32 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
+                        {toonWorkflow && (
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/workflow" || location.startsWith("/workflow/")}
+                            >
+                              <Link href="/workflow">
+                                <Star />
+                                <span>Workflow</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonTeamOverleg && (
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/team-overleg" || location.startsWith("/team-overleg/")}
+                            >
+                              <Link href="/team-overleg">
+                                <Users2 />
+                                <span>Team &amp; overleg</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
                       </SidebarMenu>
               </InklapbaarHoofdstuk>
 
@@ -1278,11 +1309,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
-                        isActive={location === "/workflow" || location.startsWith("/workflow")}
+                        isActive={location === "/workflow-designer" || location.startsWith("/workflow-designer")}
                       >
-                        <Link href="/workflow">
+                        <Link href="/workflow-designer">
                           <GitBranch />
-                          <span>Workflow</span>
+                          <span>Workflow-designer</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

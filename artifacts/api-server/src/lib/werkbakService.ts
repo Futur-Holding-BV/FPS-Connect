@@ -24,6 +24,11 @@ export type WerkbakInvoer = {
   herkomstType: string;
   herkomstId?: number | null;
   dedupSleutel: string;
+  // WERKBAK_02 — alleen voor bron "eigen": verplichte einddatum, meewerkers
+  // (bijwerken maar niet afronden) en de koppeling aan het overleg.
+  deadline?: string | null;
+  meewerkerIds?: number[];
+  overlegId?: number | null;
 };
 
 // Vaste bronnenlijst (§5 WERKBAK_01). Niets erin buiten deze lijst om —
@@ -62,6 +67,12 @@ export const WERKBAK_BRONNEN = [
   "tvt_opname_herinnering",
   // UREN_01 §6b: urenregel "staat niet in de begroting" → signaal aan werkvoorbereider (cc projectleider).
   "uren_niet_in_begroting",
+  // WERKBAK_02 §4: door een mens aangemaakte taak — altijd één eigenaar + datum.
+  "eigen",
+  // WERKBAK_02 §3.1: spot met een openstaande status, ouder dan de drempel → uitvoerder + werkvoorbereider.
+  "voorziening_openstaand",
+  // WERKBAK_02 §3.2: actieve regie-opdracht met niet-gefactureerde regels → werkvoorbereider.
+  "regie_openstaand",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
@@ -85,6 +96,9 @@ export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
       herkomstType: invoer.herkomstType,
       herkomstId: invoer.herkomstId ?? null,
       dedupSleutel: invoer.dedupSleutel,
+      deadline: invoer.deadline ?? null,
+      meewerkerIds: invoer.meewerkerIds ?? [],
+      overlegId: invoer.overlegId ?? null,
     })
     .onConflictDoNothing()
     .returning({ id: werkbakItemsTable.id });

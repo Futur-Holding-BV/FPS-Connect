@@ -475,7 +475,7 @@ export default function HerstelDashboard() {
             Naar Back-up & Herstel
           </Button>
         </Link>
-        <Link href="/workflow">
+        <Link href="/workflow-designer">
           <Button variant="outline" size="sm" className="gap-1.5">
             <GitBranch className="h-3.5 w-3.5" />
             Naar Workflow Designer

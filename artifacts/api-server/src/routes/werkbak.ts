@@ -15,7 +15,8 @@ function zichtbaarVoor(req: Request, item: WerkbakItem): boolean {
   const p = req.permissies;
   if (!p || p.isKlant) return false;
   if (p.isHoofdbeheerder) return true;
-  if (item.gebruikerId != null) return item.gebruikerId === req.session.userId;
+  // WERKBAK_02: meewerkers van een eigen taak zien de taak ook.
+  if (item.gebruikerId != null) return item.gebruikerId === req.session.userId || item.meewerkerIds.includes(req.session.userId!);
   if (item.alleenHoofdbeheerder) return false;
   if (item.vereisteModule) return p.heeftModuleRecht(item.vereisteModule, item.vereistNiveau ?? 1);
   return false;
@@ -85,6 +86,12 @@ router.post("/werkbak/:id/afhandelen", requireAuth, async (req, res): Promise<vo
     const item = await laadItem(req);
     if (!item || !zichtbaarVoor(req, item)) { res.status(404).json({ error: "Item niet gevonden" }); return; }
     if (item.status !== "open") { res.status(409).json({ error: "Item is al afgehandeld of weggezet" }); return; }
+    // WERKBAK_02 §4: bij een eigen taak rondt alleen de eigenaar af —
+    // meewerkers mogen bijwerken, niet afronden.
+    if (item.bron === "eigen" && item.gebruikerId !== req.session.userId && !req.permissies?.isHoofdbeheerder) {
+      res.status(403).json({ error: "Alleen de eigenaar kan deze taak afronden" });
+      return;
+    }
     const [bijgewerkt] = await db
       .update(werkbakItemsTable)
       .set({ status: "afgehandeld", afgehandeldDoorId: req.session.userId, afgehandeldOp: new Date(), bijgewerktOp: new Date() })
@@ -105,6 +112,12 @@ router.post("/werkbak/:id/wegzetten", requireAuth, async (req, res): Promise<voi
     const item = await laadItem(req);
     if (!item || !zichtbaarVoor(req, item)) { res.status(404).json({ error: "Item niet gevonden" }); return; }
     if (item.status !== "open") { res.status(409).json({ error: "Item is al afgehandeld of weggezet" }); return; }
+    // WERKBAK_02 §4: wegzetten sluit een taak net zo goed af als afronden —
+    // dus ook hier: bij een eigen taak alleen de eigenaar (of hoofdbeheerder).
+    if (item.bron === "eigen" && item.gebruikerId !== req.session.userId && !req.permissies?.isHoofdbeheerder) {
+      res.status(403).json({ error: "Alleen de eigenaar kan deze taak wegzetten" });
+      return;
+    }
     const [bijgewerkt] = await db
       .update(werkbakItemsTable)
       .set({ status: "weggezet", weggezetReden: reden, afgehandeldDoorId: req.session.userId, afgehandeldOp: new Date(), bijgewerktOp: new Date() })

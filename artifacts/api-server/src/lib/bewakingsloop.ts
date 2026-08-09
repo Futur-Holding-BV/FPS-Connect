@@ -34,6 +34,9 @@ import {
   gereedschappenTable,
   inspectiesTable,
   gebouwenTable,
+  voorzieningenTable,
+  opdrachtenTable,
+  regieMaterialenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
@@ -725,6 +728,105 @@ async function voedMailAntwoorden(): Promise<{ nieuw: number; afgehandeld: numbe
   return syncBron("mail_antwoord", items);
 }
 
+// ── WERKBAK_02 §3.1 — openstaande voorzieningen (dekt "meterkasten") ─────────
+// Spots met een status die aangeeft dat er nog werk aan is, ouder dan de
+// drempel (instelbaar via WERKBAK_VOORZIENING_DAGEN, standaard 14 dagen).
+// Gebruikte statuswaarden (gemeld aan René, status is een vrije tekstkolom):
+// voorbereid · in_uitvoering · wacht_op_akkoord · meerwerk_financieel.
+// "concept" telt bewust niet mee (nog geen werkafspraak), afgeronde statussen
+// (opgeleverd/goedgekeurd/vervallen/…) evenmin. Ontvanger: uitvoerder en
+// werkvoorbereider (functietitels, zelfde adressering als BOUW_01).
+const VOORZIENING_OPEN_STATUSSEN = ["voorbereid", "in_uitvoering", "wacht_op_akkoord", "meerwerk_financieel"];
+
+async function voedOpenstaandeVoorzieningen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const drempelDagen = Number(process.env.WERKBAK_VOORZIENING_DAGEN) || 14;
+  const drempel = new Date(Date.now() - drempelDagen * 86_400_000);
+  const rijen = await db
+    .select({
+      id: voorzieningenTable.id,
+      status: voorzieningenTable.status,
+      objectnummer: voorzieningenTable.objectnummer,
+      gebouwId: voorzieningenTable.gebouwId,
+      gebouwNaam: gebouwenTable.naam,
+      bijgewerktOp: voorzieningenTable.bijgewerktOp,
+    })
+    .from(voorzieningenTable)
+    .innerJoin(gebouwenTable, eq(gebouwenTable.id, voorzieningenTable.gebouwId))
+    .where(and(
+      inArray(voorzieningenTable.status, VOORZIENING_OPEN_STATUSSEN),
+      eq(voorzieningenTable.gearchiveerd, false),
+      lte(voorzieningenTable.bijgewerktOp, drempel),
+    ));
+  const [uitvoerderIds, wvbIds] = await Promise.all([
+    vindGebruikersMetFunctietitel("Uitvoerder"),
+    vindGebruikersMetFunctietitel("Werkvoorbereider"),
+  ]);
+  const ontvangers = [...new Set([...uitvoerderIds, ...wvbIds])];
+  const items: WerkbakInvoer[] = rijen.flatMap((v): WerkbakInvoer[] => {
+    const basis = {
+      soort: "doen" as const,
+      bron: "voorziening_openstaand",
+      titel: `Spot ${v.objectnummer ?? `#${v.id}`} (${v.gebouwNaam}) staat al ${drempelDagen}+ dagen op "${v.status}"`,
+      omschrijving: `Laatste wijziging ${v.bijgewerktOp.toISOString().slice(0, 10)}. Openstaand werk mag niet stilliggen zonder eigenaar.`,
+      gewicht: 30,
+      actiePad: `/gebouwen/${v.gebouwId}?spot=${v.id}`,
+      herkomstType: "voorziening",
+      herkomstId: v.id,
+    };
+    if (ontvangers.length === 0) {
+      // Vangnet: niemand met de functietitel → bevoegdheidsgroep projecten≥3.
+      return [{ ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `voorziening-openstaand:${v.id}:groep` }];
+    }
+    return ontvangers.map((gebruikerId) => ({ ...basis, gebruikerId, dedupSleutel: `voorziening-openstaand:${v.id}:${gebruikerId}` }));
+  });
+  return syncBron("voorziening_openstaand", items);
+}
+
+// ── WERKBAK_02 §3.2 — openstaand regiewerk ───────────────────────────────────
+// Criterium (gemeld aan René): actieve regie-opdracht (opdrachten.type=regie,
+// status=actief) met materiaalregels die nog niet gefactureerd zijn (status
+// concept of goedgekeurd). Een expliciet klantakkoord-veld bestaat niet in de
+// vier regie-tabellen — dat is als afwijking gemeld, niet stilzwijgend
+// bijverzonnen. Ontvanger: werkvoorbereider.
+async function voedRegieOpenstaand(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const rijen = await db
+    .select({
+      opdrachtId: opdrachtenTable.id,
+      titel: opdrachtenTable.titel,
+      aantalOpen: sql<number>`count(${regieMaterialenTable.id})::int`,
+    })
+    .from(opdrachtenTable)
+    .innerJoin(regieMaterialenTable, eq(regieMaterialenTable.opdrachtId, opdrachtenTable.id))
+    .where(and(
+      eq(opdrachtenTable.type, "regie"),
+      eq(opdrachtenTable.status, "actief"),
+      inArray(regieMaterialenTable.status, ["concept", "goedgekeurd"]),
+    ))
+    .groupBy(opdrachtenTable.id, opdrachtenTable.titel);
+  const wvbIds = await vindGebruikersMetFunctietitel("Werkvoorbereider");
+  const items: WerkbakInvoer[] = rijen.flatMap((r): WerkbakInvoer[] => {
+    const basis = {
+      soort: "doen" as const,
+      bron: "regie_openstaand",
+      titel: `Regiewerk "${r.titel}" heeft ${r.aantalOpen} niet-gefactureerde regel(s)`,
+      omschrijving: "Regiewerk zonder afronding: materiaalregels staan nog op concept of goedgekeurd maar zijn niet gefactureerd.",
+      gewicht: 25,
+      actiePad: `/opdrachten/${r.opdrachtId}`,
+      herkomstType: "opdracht",
+      herkomstId: r.opdrachtId,
+    };
+    if (wvbIds.length === 0) {
+      return [{ ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `regie-openstaand:${r.opdrachtId}:groep` }];
+    }
+    return wvbIds.map((gebruikerId) => ({ ...basis, gebruikerId, dedupSleutel: `regie-openstaand:${r.opdrachtId}:${gebruikerId}` }));
+  });
+  return syncBron("regie_openstaand", items);
+}
+
+// WERKBAK_02 §3.3 — restwoningen: BEWUST OVERGESLAGEN. Deze bron komt uit
+// PLANNER_01 §8 en kan pas gebouwd worden als de planner geïntegreerd is.
+// Dit is expliciet gemeld (geen stille weglating).
+
 // ── De loop zelf ──────────────────────────────────────────────────────────────
 
 let _loopBezig = false;
@@ -776,6 +878,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["mail_antwoorden", voedMailAntwoorden],
     ["weekstaat_controle", voedWeekstaatControle],
     ["tvt_opname", voedTvtOpname],
+    ["voorzieningen_openstaand", voedOpenstaandeVoorzieningen],
+    ["regie_openstaand", voedRegieOpenstaand],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

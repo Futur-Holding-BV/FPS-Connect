@@ -26274,8 +26274,330 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/BewakingDraai' }
 
+  # ── WERKBAK_02: eigen taken, teamoverzicht, overleg en workflow ─────────────
+  /werkbak/taken:
+    post:
+      operationId: maakWerkbakTaak
+      tags: [werkbak]
+      summary: Maak een eigen taak (bron "eigen") — eigenaar en einddatum verplicht, idee mag zonder datum.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WerkbakTaakInput' }
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakTaak' }
+        "422":
+          description: Eigenaar en einddatum verplicht — suggestie gebouwnotitie.
+
+  /werkbak/taken/{id}:
+    patch:
+      operationId: werkWerkbakTaakBij
+      tags: [werkbak]
+      summary: Werk een eigen taak bij (eigenaar of meewerker; afronden alleen via afhandelen).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WerkbakTaakUpdate' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakTaak' }
+
+  /werkbak/team:
+    get:
+      operationId: getWerkbakTeam
+      tags: [werkbak]
+      summary: Teamoverzicht (personeel of planning niveau 2) — taken plus werk-signalen, nooit persoonlijke items.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WerkbakTeamOverzicht' }
+
+  /overleg/agenda:
+    get:
+      operationId: getOverlegAgenda
+      tags: [werkbak]
+      summary: Agenda voor het wekelijkse overleg in vaste blokvolgorde.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OverlegAgenda' }
+
+  /overleggen:
+    get:
+      operationId: listOverleggen
+      tags: [werkbak]
+      summary: Vastgelegde overleggen (nieuwste eerst).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Overleg' }
+    post:
+      operationId: legOverlegVast
+      tags: [werkbak]
+      summary: Leg het overleg vast en zet in één handeling de afgesproken taken weg.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OverlegInput' }
+      responses:
+        "201":
+          description: Vastgelegd
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OverlegResultaat' }
+
+  /workflow:
+    get:
+      operationId: getWorkflow
+      tags: [werkbak]
+      summary: Persoonlijke workflow — ster > einddatum > gewicht > ouderdom, elke plaats met uitlegregel.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowLijst' }
+
+  /workflow/ster:
+    post:
+      operationId: zetWorkflowSter
+      tags: [werkbak]
+      summary: Zet of verwijder een persoonlijke ster (0-3) op een werkbak-item of mailconversatie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkflowSterInput' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowSterInput' }
+
+  /workflow/ai-advies:
+    post:
+      operationId: vraagWorkflowAiAdvies
+      tags: [werkbak]
+      summary: AI-advies naast de lijst — groepeert, meldt wat ontbreekt (uit de gegevens) en wat kan wachten; herordent nooit.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowAiAdvies' }
+
 components:
   schemas:
+    WerkbakTaakInput:
+      type: object
+      required: [titel, eigenaar_id]
+      properties:
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        soort: { type: string, enum: [doen, idee] }
+        eigenaar_id: { type: integer }
+        deadline: { type: string, nullable: true, description: "jjjj-mm-dd; verplicht behalve bij idee" }
+        meewerker_ids: { type: array, items: { type: integer } }
+        overleg_id: { type: integer, nullable: true }
+
+    WerkbakTaakUpdate:
+      type: object
+      properties:
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        deadline: { type: string }
+        meewerker_ids: { type: array, items: { type: integer } }
+
+    WerkbakTaak:
+      type: object
+      required: [id, soort, bron, titel, status, meewerker_ids, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        soort: { type: string }
+        bron: { type: string }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        status: { type: string }
+        deadline: { type: string, nullable: true }
+        eigenaar_id: { type: integer, nullable: true }
+        eigenaar_naam: { type: string, nullable: true }
+        meewerker_ids: { type: array, items: { type: integer } }
+        meewerker_namen: { type: array, items: { type: string } }
+        overleg_id: { type: integer, nullable: true }
+        gewicht: { type: integer }
+        actie_pad: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    WerkbakTeamSignaal:
+      type: object
+      required: [id, bron, titel, gewicht, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        bron: { type: string }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        gewicht: { type: integer }
+        actie_pad: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+
+    WerkbakTeamOverzicht:
+      type: object
+      required: [taken, signalen]
+      properties:
+        taken:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTaak' }
+        signalen:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTeamSignaal' }
+
+    Overleg:
+      type: object
+      required: [id, datum, aanwezigen, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        datum: { type: string }
+        aanwezigen: { type: array, items: { type: string } }
+        besproken: { type: object, additionalProperties: true, nullable: true }
+        aangemaakt_op: { type: string }
+
+    OverlegInput:
+      type: object
+      required: [aanwezigen]
+      properties:
+        datum: { type: string }
+        aanwezigen: { type: array, items: { type: string } }
+        besproken: { type: object, additionalProperties: true, nullable: true }
+        taken:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTaakInput' }
+
+    OverlegResultaat:
+      type: object
+      required: [id, datum, aanwezigen, taken_aangemaakt]
+      properties:
+        id: { type: integer }
+        datum: { type: string }
+        aanwezigen: { type: array, items: { type: string } }
+        taken_aangemaakt: { type: integer }
+
+    OverlegAgenda:
+      type: object
+      required: [blok1_afgesproken, blok2_loopt_vast, blok3_nieuw, blok4_ideeen]
+      properties:
+        vorig_overleg:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            datum: { type: string }
+            aanwezigen: { type: array, items: { type: string } }
+        blok1_afgesproken:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTaak' }
+        blok2_loopt_vast:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTaak' }
+        blok3_nieuw:
+          type: object
+          required: [taken, signalen]
+          properties:
+            taken:
+              type: array
+              items: { $ref: '#/components/schemas/WerkbakTaak' }
+            signalen:
+              type: array
+              items: { $ref: '#/components/schemas/WerkbakTeamSignaal' }
+        blok4_ideeen:
+          type: array
+          items: { $ref: '#/components/schemas/WerkbakTaak' }
+
+    WorkflowRij:
+      type: object
+      required: [soort_rij, sleutel, titel, bron, sterren, gewicht, uitleg, aangemaakt_op]
+      properties:
+        soort_rij: { type: string, enum: [werkbak, mail] }
+        sleutel: { type: string }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        bron: { type: string }
+        sterren: { type: integer }
+        deadline: { type: string, nullable: true }
+        gewicht: { type: integer }
+        actie_pad: { type: string, nullable: true }
+        uitleg: { type: string }
+        aangemaakt_op: { type: string }
+
+    WorkflowLijst:
+      type: object
+      required: [rijen]
+      properties:
+        rijen:
+          type: array
+          items: { $ref: '#/components/schemas/WorkflowRij' }
+
+    WorkflowSterInput:
+      type: object
+      required: [doel_type, doel_sleutel, sterren]
+      properties:
+        doel_type: { type: string, enum: [werkbak, mail_conversatie] }
+        doel_sleutel: { type: string }
+        sterren: { type: integer, minimum: 0, maximum: 3 }
+
+    WorkflowAiAdviesReden:
+      type: object
+      required: [sleutel, reden]
+      properties:
+        sleutel: { type: string }
+        reden: { type: string }
+
+    WorkflowAiAdvies:
+      type: object
+      required: [groepen, ontbreekt, kan_wachten, voorstellen]
+      properties:
+        groepen:
+          type: array
+          items:
+            type: object
+            required: [naam, sleutels]
+            properties:
+              naam: { type: string }
+              sleutels: { type: array, items: { type: string } }
+        ontbreekt:
+          type: array
+          items: { $ref: '#/components/schemas/WorkflowAiAdviesReden' }
+        kan_wachten:
+          type: array
+          items: { $ref: '#/components/schemas/WorkflowAiAdviesReden' }
+        voorstellen:
+          type: array
+          items: { $ref: '#/components/schemas/WorkflowAiAdviesReden' }
+
     WerkbakItem:
       type: object
       required: [id, soort, bron, titel, gewicht, herkomst_type, status, aangemaakt_op]

@@ -41,6 +41,12 @@ export const werkbakItemsTable = pgTable(
     afgehandeldDoorId: integer("afgehandeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
     afgehandeldOp: timestamp("afgehandeld_op"),
     weggezetReden: text("weggezet_reden"),
+    // WERKBAK_02 — eigen taken: verplichte einddatum (jjjj-mm-dd), meewerkers
+    // (bijwerken maar niet afronden; alleen de eigenaar rondt af) en de
+    // koppeling aan het overleg waarop de taak is weggezet (voedt blok 1).
+    deadline: text("deadline"),
+    meewerkerIds: integer("meewerker_ids").array().notNull().default(sql`'{}'::integer[]`),
+    overlegId: integer("overleg_id").references(() => overleggenTable.id, { onDelete: "set null" }),
     aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
     bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   },
@@ -65,5 +71,37 @@ export const bewakingDraaienTable = pgTable("bewaking_draaien", {
   fout: text("fout"),
 });
 
+// WERKBAK_02 — het wekelijkse overleg wordt vastgelegd: niet als notulen om te
+// lezen, maar zodat blok 1 de week erna kan tonen wat er is afgesproken.
+export const overleggenTable = pgTable("overleggen", {
+  id: serial("id").primaryKey(),
+  datum: text("datum").notNull(),
+  aanwezigen: text("aanwezigen").array().notNull().default(sql`'{}'::text[]`),
+  // Per blok wat er besproken is: { blok1: string, blok2: string, ... }
+  besproken: jsonb("besproken"),
+  aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// WERKBAK_02 §7.3 — de ster is persoonlijk en privé: alleen voor de eigen
+// volgorde in de workflow. Geen signaal naar collega's, geen invloed op
+// gewicht. Voor mail hangt de ster aan de conversatie (conversation_id).
+export const workflowSterrenTable = pgTable(
+  "workflow_sterren",
+  {
+    id: serial("id").primaryKey(),
+    gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    // 'werkbak' | 'mail_conversatie'
+    doelType: text("doel_type").notNull(),
+    doelSleutel: text("doel_sleutel").notNull(),
+    sterren: integer("sterren").notNull(),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+    bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("workflow_sterren_uidx").on(t.gebruikerId, t.doelType, t.doelSleutel)],
+);
+
 export type WerkbakItem = typeof werkbakItemsTable.$inferSelect;
 export type BewakingDraai = typeof bewakingDraaienTable.$inferSelect;
+export type Overleg = typeof overleggenTable.$inferSelect;
+export type WorkflowSter = typeof workflowSterrenTable.$inferSelect;

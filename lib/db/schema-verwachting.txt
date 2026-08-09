@@ -307,6 +307,7 @@ INDEX|opnames|opnames_pkey
 INDEX|org_bedrijfsdocumenten|org_bedrijfsdocumenten_pkey
 INDEX|org_jaarverslagen|org_jaarverslagen_pkey
 INDEX|org_verzekeringen|org_verzekeringen_pkey
+INDEX|overleggen|overleggen_pkey
 INDEX|overwerk_sloten|overwerk_sloten_pkey
 INDEX|overwerk_sloten|overwerk_sloten_project_idx
 INDEX|pbm_inspecties|pbm_inspecties_pkey
@@ -448,6 +449,8 @@ INDEX|workflow_definities|workflow_definities_pkey
 INDEX|workflow_lanes|workflow_lanes_pkey
 INDEX|workflow_rechten|workflow_rechten_module_status_idx
 INDEX|workflow_rechten|workflow_rechten_pkey
+INDEX|workflow_sterren|workflow_sterren_pkey
+INDEX|workflow_sterren|workflow_sterren_uidx
 INDEX|workflow_transitie_log|workflow_transitie_log_pkey
 INDEX|ziekmeldingen|ziekmeldingen_pkey
 INDEX|zzp_overeenkomsten|zzp_overeenkomsten_pkey
@@ -3343,6 +3346,12 @@ KOLOM|org_verzekeringen|premie|numeric|YES|
 KOLOM|org_verzekeringen|status|text|NO|'actief'::text
 KOLOM|org_verzekeringen|type|text|NO|
 KOLOM|org_verzekeringen|vervaldatum|text|YES|
+KOLOM|overleggen|aangemaakt_door|integer|YES|
+KOLOM|overleggen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|overleggen|aanwezigen|ARRAY|NO|'{}'::text[]
+KOLOM|overleggen|besproken|jsonb|YES|
+KOLOM|overleggen|datum|text|NO|
+KOLOM|overleggen|id|integer|NO|nextval('overleggen_id_seq'::regclass)
 KOLOM|overwerk_sloten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|overwerk_sloten|aangevraagd_door_id|integer|YES|
 KOLOM|overwerk_sloten|aangevraagd_op|timestamp without time zone|YES|
@@ -4612,13 +4621,16 @@ KOLOM|werkbak_items|afgehandeld_op|timestamp without time zone|YES|
 KOLOM|werkbak_items|alleen_hoofdbeheerder|boolean|NO|false
 KOLOM|werkbak_items|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|werkbak_items|bron|text|NO|
+KOLOM|werkbak_items|deadline|text|YES|
 KOLOM|werkbak_items|dedup_sleutel|text|NO|
 KOLOM|werkbak_items|gebruiker_id|integer|YES|
 KOLOM|werkbak_items|gewicht|integer|NO|0
 KOLOM|werkbak_items|herkomst_id|integer|YES|
 KOLOM|werkbak_items|herkomst_type|text|NO|
 KOLOM|werkbak_items|id|integer|NO|nextval('werkbak_items_id_seq'::regclass)
+KOLOM|werkbak_items|meewerker_ids|ARRAY|NO|'{}'::integer[]
 KOLOM|werkbak_items|omschrijving|text|YES|
+KOLOM|werkbak_items|overleg_id|integer|YES|
 KOLOM|werkbak_items|soort|text|NO|
 KOLOM|werkbak_items|status|text|NO|'open'::text
 KOLOM|werkbak_items|titel|text|NO|
@@ -4757,6 +4769,13 @@ KOLOM|workflow_rechten|min_niveau_vereist|integer|NO|1
 KOLOM|workflow_rechten|module_id|text|NO|
 KOLOM|workflow_rechten|rol_filter|text|YES|
 KOLOM|workflow_rechten|workflow_status|text|NO|
+KOLOM|workflow_sterren|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|workflow_sterren|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|workflow_sterren|doel_sleutel|text|NO|
+KOLOM|workflow_sterren|doel_type|text|NO|
+KOLOM|workflow_sterren|gebruiker_id|integer|NO|
+KOLOM|workflow_sterren|id|integer|NO|nextval('workflow_sterren_id_seq'::regclass)
+KOLOM|workflow_sterren|sterren|integer|NO|
 KOLOM|workflow_transitie_log|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|workflow_transitie_log|entity_id|integer|NO|
 KOLOM|workflow_transitie_log|entity_type|text|NO|
