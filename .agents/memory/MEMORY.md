@@ -135,4 +135,5 @@
 - [Bevoegdheden in de app-laag](app-bevoegdheden-laag.md) — server stuurt effectieve bevoegdheden (login+/auth/me via requireAuth voor bearer); menu verbergt (nooit grijs); /mijn/-routes = basisrecht zonder module.
 - [FIE wat-als-scenario's](fie-scenarios.md) — scenario-begrotingen (status scenario) altijd uitfilteren in lijst/aggregatie/fallback-queries; nooit een tweede rekenmodel naast de FIE-motor.
 - [Urenverhouding afronding](uren-splitsing-afronding.md) — dekking/percentage uit ruwe sommen, afronden alleen voor weergave; één gedeelde berekenfunctie voor bevinding én tabel; datum=tekst → substr, geen extract.
+- [Projecten-sleutel & bedragen-strip](projecten-sleutel.md) — projecten: 1=lezen zonder bedragen/2=mét/3=schrijven; nieuwe lees-routes moeten strippen of op niveau 2; meldingen via bouwMeldingen.ts.
 - [Module-gating opname/projecten/workflow](module-gating-opname-projecten-workflow.md) — geen eigen modules; sub-resource-delete=3/entiteit=4-conventie; autorisatie-middleware moet req.permissies (impersonatie) honoreren.
