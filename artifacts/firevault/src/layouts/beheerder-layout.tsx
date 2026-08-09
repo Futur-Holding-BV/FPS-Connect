@@ -1407,6 +1407,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/jaarkalender"}
+                          >
+                            <Link href="/personeel/jaarkalender">
+                              <CalendarRange />
+                              <span>Jaarkalender</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {isHoofdbeheerder && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton

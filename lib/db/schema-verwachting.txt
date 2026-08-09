@@ -52,6 +52,8 @@ INDEX|chat_deelnemers|chat_deelnemers_gesprek_gebruiker
 INDEX|chat_deelnemers|chat_deelnemers_pkey
 INDEX|chat_gesprekken|chat_gesprekken_pkey
 INDEX|clusters|clusters_pkey
+INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_pkey
+INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_uniek
 INDEX|compliance_signalen|compliance_signalen_dedup_idx
 INDEX|compliance_signalen|compliance_signalen_entiteit_idx
 INDEX|compliance_signalen|compliance_signalen_open_dedup_uq
@@ -210,6 +212,7 @@ INDEX|inspectie_bevindingen|inspectie_bevindingen_pkey
 INDEX|inspecties|inspecties_gebouw_type_idx
 INDEX|inspecties|inspecties_pkey
 INDEX|jaarafsluiting_regels|jaarafsluiting_regels_pkey
+INDEX|kalender_afspraken|kalender_afspraken_pkey
 INDEX|kantoor_releases|kantoor_releases_pkey
 INDEX|label_applicaties|label_applicaties_label_id_type_code_unique
 INDEX|label_applicaties|label_applicaties_pkey
@@ -380,6 +383,7 @@ INDEX|verlof_aanvraag_log|verlof_aanvraag_log_pkey
 INDEX|verlof_correcties|verlof_correcties_pkey
 INDEX|verlof_instellingen|verlof_instellingen_pkey
 INDEX|verlof_saldi|verlof_saldi_pkey
+INDEX|verlofaanvragen|verlofaanvragen_collectieve_dag_medewerker_uidx
 INDEX|verlofaanvragen|verlofaanvragen_pkey
 INDEX|verlofsoorten|verlofsoorten_pkey
 INDEX|vge_effectiviteitslog|idx_vge_log_visual_spot_stap
@@ -956,6 +960,15 @@ KOLOM|clusters|kleur|text|YES|
 KOLOM|clusters|naam|text|NO|
 KOLOM|clusters|type|text|YES|
 KOLOM|clusters|verdieping_id|integer|YES|
+KOLOM|collectieve_vrije_dagen|aangemaakt_door_id|integer|YES|
+KOLOM|collectieve_vrije_dagen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|collectieve_vrije_dagen|afboek_rapport|jsonb|YES|
+KOLOM|collectieve_vrije_dagen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|collectieve_vrije_dagen|datum|text|NO|
+KOLOM|collectieve_vrije_dagen|id|integer|NO|nextval('collectieve_vrije_dagen_id_seq'::regclass)
+KOLOM|collectieve_vrije_dagen|naam|text|NO|
+KOLOM|collectieve_vrije_dagen|verlofsoort_id|integer|NO|
+KOLOM|collectieve_vrije_dagen|werkgever_id|integer|YES|
 KOLOM|compliance_signalen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|compliance_signalen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|compliance_signalen|dedup_sleutel|text|NO|
@@ -2387,6 +2400,16 @@ KOLOM|jaarafsluiting_regels|uitgevoerd_door_id|integer|YES|
 KOLOM|jaarafsluiting_regels|uitgevoerd_op|timestamp without time zone|YES|
 KOLOM|jaarafsluiting_regels|verlofsoort_id|integer|YES|
 KOLOM|jaarafsluiting_regels|werkgever_id|integer|YES|
+KOLOM|kalender_afspraken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|kalender_afspraken|aantal_herhalingen|integer|YES|
+KOLOM|kalender_afspraken|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|kalender_afspraken|eind_datum|text|YES|
+KOLOM|kalender_afspraken|herhaling|text|NO|'jaarlijks'::text
+KOLOM|kalender_afspraken|id|integer|NO|nextval('kalender_afspraken_id_seq'::regclass)
+KOLOM|kalender_afspraken|omschrijving|text|YES|
+KOLOM|kalender_afspraken|start_datum|text|NO|
+KOLOM|kalender_afspraken|titel|text|NO|
+KOLOM|kalender_afspraken|werkgever_id|integer|YES|
 KOLOM|kantoor_releases|aangemaakt_op|timestamp with time zone|NO|now()
 KOLOM|kantoor_releases|bekende_beperkingen_json|text|YES|
 KOLOM|kantoor_releases|build_geslaagd|boolean|YES|
@@ -4249,6 +4272,7 @@ KOLOM|verlofaanvragen|bezetting_overschreden|boolean|NO|false
 KOLOM|verlofaanvragen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|verlofaanvragen|boekhouder_verwerkt_door_id|integer|YES|
 KOLOM|verlofaanvragen|boekhouder_verwerkt_op|timestamp without time zone|YES|
+KOLOM|verlofaanvragen|collectieve_dag_id|integer|YES|
 KOLOM|verlofaanvragen|eind_datum|text|NO|
 KOLOM|verlofaanvragen|id|integer|NO|nextval('verlofaanvragen_id_seq'::regclass)
 KOLOM|verlofaanvragen|medewerker_id|integer|NO|

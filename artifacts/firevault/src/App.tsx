@@ -116,6 +116,7 @@ import UitzendbureauKoppelingenPagina from "@/pages/personeel/uitzendbureaus";
 import OnboardenPagina from "@/pages/personeel/onboarden";
 import HrmIntegriteitstools from "@/pages/personeel/hrm-integriteitstools";
 import JaarplanningPagina from "@/pages/personeel/jaarplanning";
+import JaarkalenderPagina from "@/pages/personeel/jaarkalender";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import WagenparkPagina from "@/pages/wagenpark/index";
@@ -481,6 +482,7 @@ function ConnectPortal() {
         <Route path="/personeel/uitzendbureaus" component={UitzendbureauKoppelingenPagina} />
         <Route path="/personeel/contracten" component={ContractbewakingPagina} />
         <Route path="/personeel/jaarplanning" component={JaarplanningPagina} />
+        <Route path="/personeel/jaarkalender" component={JaarkalenderPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />

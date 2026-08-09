@@ -146,13 +146,18 @@ import type {
   ClusterMonteurInput,
   ClusterUpdate,
   CodeInput,
+  CollectieveVrijeDag,
   ConstructieTemplate,
   ConstructieTemplateInput,
   CreateActiepuntBody,
   CreateBevindingHerstel201,
+  CreateCollectieveVrijeDagen201,
+  CreateCollectieveVrijeDagenBody,
   CreateFactuurRegel201,
   CreateFactuurTermijn201,
   CreateIndirecteWerkzaamheidBody,
+  CreateKalenderAfspraak201,
+  CreateKalenderAfspraakBody,
   CreateSaldoCorrectie200,
   CreateToebehorenAanvraag201,
   CreateToebehorenAanvraagBody,
@@ -191,6 +196,7 @@ import type {
   DeclaratieInput,
   Declaratiebeleid,
   DeclaratiebeleidInput,
+  DeleteCollectieveVrijeDag200,
   DeleteEenheidsprijs200,
   DirectiecockpitResponse,
   Document,
@@ -381,6 +387,8 @@ import type {
   GetFinancieelMeerjarenoverzichtParams,
   GetGebouwGevelbeeld200,
   GetJarrekeningOnderhandenWerkParams,
+  GetKalender200,
+  GetKalenderParams,
   GetLoonOutputParams,
   GetMagazijnStellingsscanUploadUrl200,
   GetMagazijnToebehorenVerbruikParams,
@@ -493,6 +501,7 @@ import type {
   JaarAfsluitingResultaat,
   JarrekeningOnderhandenWerk,
   KaartEmbed,
+  KalenderAfspraak,
   KbBedrijfsstandaard,
   KbBedrijfsstandaardInput,
   KbBedrijfsstandaardPatch,
@@ -528,6 +537,7 @@ import type {
   ListBiaeComplianceSignalenParams,
   ListBiaeEventsParams,
   ListBrandstofImportenParams,
+  ListCollectieveVrijeDagenParams,
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
   ListCrmRelatievoorstellenParams,
@@ -54814,6 +54824,531 @@ export const useDeleteActiepunt = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteActiepuntMutationOptions(options));
+    }
+
+export const getGetKalenderUrl = (params?: GetKalenderParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/kalender?${stringifiedParams}` : `/api/kalender`
+}
+
+/**
+ * @summary Jaarkalender-inhoud, server-side gescoopt op rechten (KALENDER_01)
+ */
+export const getKalender = async (params?: GetKalenderParams, options?: RequestInit): Promise<GetKalender200> => {
+
+  return customFetch<GetKalender200>(getGetKalenderUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKalenderQueryKey = (params?: GetKalenderParams,) => {
+    return [
+    `/api/kalender`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetKalenderQueryOptions = <TData = Awaited<ReturnType<typeof getKalender>>, TError = ErrorType<unknown>>(params?: GetKalenderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKalender>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKalenderQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKalender>>> = ({ signal }) => getKalender(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKalender>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKalenderQueryResult = NonNullable<Awaited<ReturnType<typeof getKalender>>>
+export type GetKalenderQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarkalender-inhoud, server-side gescoopt op rechten (KALENDER_01)
+ */
+
+export function useGetKalender<TData = Awaited<ReturnType<typeof getKalender>>, TError = ErrorType<unknown>>(
+ params?: GetKalenderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKalender>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKalenderQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListCollectieveVrijeDagenUrl = (params?: ListCollectieveVrijeDagenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/collectieve-vrije-dagen?${stringifiedParams}` : `/api/collectieve-vrije-dagen`
+}
+
+/**
+ * @summary Collectieve vrije dagen in een jaar
+ */
+export const listCollectieveVrijeDagen = async (params?: ListCollectieveVrijeDagenParams, options?: RequestInit): Promise<CollectieveVrijeDag[]> => {
+
+  return customFetch<CollectieveVrijeDag[]>(getListCollectieveVrijeDagenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCollectieveVrijeDagenQueryKey = (params?: ListCollectieveVrijeDagenParams,) => {
+    return [
+    `/api/collectieve-vrije-dagen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListCollectieveVrijeDagenQueryOptions = <TData = Awaited<ReturnType<typeof listCollectieveVrijeDagen>>, TError = ErrorType<unknown>>(params?: ListCollectieveVrijeDagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCollectieveVrijeDagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCollectieveVrijeDagenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCollectieveVrijeDagen>>> = ({ signal }) => listCollectieveVrijeDagen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCollectieveVrijeDagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCollectieveVrijeDagenQueryResult = NonNullable<Awaited<ReturnType<typeof listCollectieveVrijeDagen>>>
+export type ListCollectieveVrijeDagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Collectieve vrije dagen in een jaar
+ */
+
+export function useListCollectieveVrijeDagen<TData = Awaited<ReturnType<typeof listCollectieveVrijeDagen>>, TError = ErrorType<unknown>>(
+ params?: ListCollectieveVrijeDagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCollectieveVrijeDagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCollectieveVrijeDagenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCollectieveVrijeDagenUrl = () => {
+
+
+
+
+  return `/api/collectieve-vrije-dagen`
+}
+
+/**
+ * @summary Collectieve vrije dagen vastleggen en direct afboeken (personeel niveau 2)
+ */
+export const createCollectieveVrijeDagen = async (createCollectieveVrijeDagenBody: CreateCollectieveVrijeDagenBody, options?: RequestInit): Promise<CreateCollectieveVrijeDagen201> => {
+
+  return customFetch<CreateCollectieveVrijeDagen201>(getCreateCollectieveVrijeDagenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createCollectieveVrijeDagenBody)
+  }
+);}
+
+
+
+
+export const getCreateCollectieveVrijeDagenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCollectieveVrijeDagen>>, TError,{data: BodyType<CreateCollectieveVrijeDagenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCollectieveVrijeDagen>>, TError,{data: BodyType<CreateCollectieveVrijeDagenBody>}, TContext> => {
+
+const mutationKey = ['createCollectieveVrijeDagen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCollectieveVrijeDagen>>, {data: BodyType<CreateCollectieveVrijeDagenBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCollectieveVrijeDagen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCollectieveVrijeDagenMutationResult = NonNullable<Awaited<ReturnType<typeof createCollectieveVrijeDagen>>>
+    export type CreateCollectieveVrijeDagenMutationBody = BodyType<CreateCollectieveVrijeDagenBody>
+    export type CreateCollectieveVrijeDagenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Collectieve vrije dagen vastleggen en direct afboeken (personeel niveau 2)
+ */
+export const useCreateCollectieveVrijeDagen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCollectieveVrijeDagen>>, TError,{data: BodyType<CreateCollectieveVrijeDagenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCollectieveVrijeDagen>>,
+        TError,
+        {data: BodyType<CreateCollectieveVrijeDagenBody>},
+        TContext
+      > => {
+      return useMutation(getCreateCollectieveVrijeDagenMutationOptions(options));
+    }
+
+export const getDeleteCollectieveVrijeDagUrl = (id: number,) => {
+
+
+
+
+  return `/api/collectieve-vrije-dagen/${id}`
+}
+
+/**
+ * @summary Collectieve vrije dag terugdraaien (aanvragen intrekken, saldi terugboeken)
+ */
+export const deleteCollectieveVrijeDag = async (id: number, options?: RequestInit): Promise<DeleteCollectieveVrijeDag200> => {
+
+  return customFetch<DeleteCollectieveVrijeDag200>(getDeleteCollectieveVrijeDagUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCollectieveVrijeDagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCollectieveVrijeDag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCollectieveVrijeDag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCollectieveVrijeDagMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>>
+
+    export type DeleteCollectieveVrijeDagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Collectieve vrije dag terugdraaien (aanvragen intrekken, saldi terugboeken)
+ */
+export const useDeleteCollectieveVrijeDag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCollectieveVrijeDag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCollectieveVrijeDagMutationOptions(options));
+    }
+
+export const getListKalenderAfsprakenUrl = () => {
+
+
+
+
+  return `/api/kalender-afspraken`
+}
+
+/**
+ * @summary Eigen terugkerende kalenderafspraken
+ */
+export const listKalenderAfspraken = async ( options?: RequestInit): Promise<KalenderAfspraak[]> => {
+
+  return customFetch<KalenderAfspraak[]>(getListKalenderAfsprakenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListKalenderAfsprakenQueryKey = () => {
+    return [
+    `/api/kalender-afspraken`
+    ] as const;
+    }
+
+
+export const getListKalenderAfsprakenQueryOptions = <TData = Awaited<ReturnType<typeof listKalenderAfspraken>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKalenderAfspraken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListKalenderAfsprakenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listKalenderAfspraken>>> = ({ signal }) => listKalenderAfspraken({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listKalenderAfspraken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListKalenderAfsprakenQueryResult = NonNullable<Awaited<ReturnType<typeof listKalenderAfspraken>>>
+export type ListKalenderAfsprakenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen terugkerende kalenderafspraken
+ */
+
+export function useListKalenderAfspraken<TData = Awaited<ReturnType<typeof listKalenderAfspraken>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKalenderAfspraken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListKalenderAfsprakenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateKalenderAfspraakUrl = () => {
+
+
+
+
+  return `/api/kalender-afspraken`
+}
+
+/**
+ * @summary Terugkerende afspraak toevoegen (personeel niveau 2)
+ */
+export const createKalenderAfspraak = async (createKalenderAfspraakBody: CreateKalenderAfspraakBody, options?: RequestInit): Promise<CreateKalenderAfspraak201> => {
+
+  return customFetch<CreateKalenderAfspraak201>(getCreateKalenderAfspraakUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createKalenderAfspraakBody)
+  }
+);}
+
+
+
+
+export const getCreateKalenderAfspraakMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKalenderAfspraak>>, TError,{data: BodyType<CreateKalenderAfspraakBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createKalenderAfspraak>>, TError,{data: BodyType<CreateKalenderAfspraakBody>}, TContext> => {
+
+const mutationKey = ['createKalenderAfspraak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKalenderAfspraak>>, {data: BodyType<CreateKalenderAfspraakBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createKalenderAfspraak(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateKalenderAfspraakMutationResult = NonNullable<Awaited<ReturnType<typeof createKalenderAfspraak>>>
+    export type CreateKalenderAfspraakMutationBody = BodyType<CreateKalenderAfspraakBody>
+    export type CreateKalenderAfspraakMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Terugkerende afspraak toevoegen (personeel niveau 2)
+ */
+export const useCreateKalenderAfspraak = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKalenderAfspraak>>, TError,{data: BodyType<CreateKalenderAfspraakBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createKalenderAfspraak>>,
+        TError,
+        {data: BodyType<CreateKalenderAfspraakBody>},
+        TContext
+      > => {
+      return useMutation(getCreateKalenderAfspraakMutationOptions(options));
+    }
+
+export const getDeleteKalenderAfspraakUrl = (id: number,) => {
+
+
+
+
+  return `/api/kalender-afspraken/${id}`
+}
+
+/**
+ * @summary Terugkerende afspraak verwijderen (personeel niveau 2)
+ */
+export const deleteKalenderAfspraak = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteKalenderAfspraakUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteKalenderAfspraakMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKalenderAfspraak>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteKalenderAfspraak>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteKalenderAfspraak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteKalenderAfspraak>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteKalenderAfspraak(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteKalenderAfspraakMutationResult = NonNullable<Awaited<ReturnType<typeof deleteKalenderAfspraak>>>
+
+    export type DeleteKalenderAfspraakMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Terugkerende afspraak verwijderen (personeel niveau 2)
+ */
+export const useDeleteKalenderAfspraak = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKalenderAfspraak>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteKalenderAfspraak>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteKalenderAfspraakMutationOptions(options));
     }
 
 export const getListIndirecteWerkzaamhedenUrl = () => {

@@ -6,6 +6,7 @@ import {
   planningItemsTable,
   planningAfwezigheidTable,
   bedrijfssluitingenTable,
+  collectieveVrijeDagenTable,
   feestdagenTable,
   medewerkersTable,
   gebouwenTable,
@@ -474,7 +475,7 @@ router.get("/modules/planning/gesloten-dagen", lezenPlanning, async (req, res): 
     const jaarTot = parseInt(tot.slice(0, 4), 10);
     const jaren = Array.from({ length: jaarTot - jaarVan + 1 }, (_, i) => jaarVan + i);
 
-    const [feestdagen, sluitingen] = await Promise.all([
+    const [feestdagen, sluitingen, collectieveDagen] = await Promise.all([
       db.select({ datum: feestdagenTable.datum, naam: feestdagenTable.naam })
         .from(feestdagenTable)
         .where(and(
@@ -494,12 +495,23 @@ router.get("/modules/planning/gesloten-dagen", lezenPlanning, async (req, res): 
           lte(bedrijfssluitingenTable.datumStart, tot),
           gte(bedrijfssluitingenTable.datumEind, van),
         )),
+      // KALENDER_01 §4: collectieve vrije dagen zijn niet inplanbaar.
+      db.select({ datum: collectieveVrijeDagenTable.datum, naam: collectieveVrijeDagenTable.naam })
+        .from(collectieveVrijeDagenTable)
+        .where(and(
+          gte(collectieveVrijeDagenTable.datum, van),
+          lte(collectieveVrijeDagenTable.datum, tot),
+        )),
     ]);
 
     const resultaten: { datum: string; naam: string; type: string | null; bron: string; sluiting_id: number | null }[] = [];
 
     for (const f of feestdagen) {
       resultaten.push({ datum: f.datum, naam: f.naam, type: "feestdag", bron: "feestdag", sluiting_id: null });
+    }
+
+    for (const c of collectieveDagen) {
+      resultaten.push({ datum: c.datum, naam: c.naam, type: "collectief", bron: "collectieve_vrije_dag", sluiting_id: null });
     }
 
     // Vouw bedrijfssluitingen uit per dag

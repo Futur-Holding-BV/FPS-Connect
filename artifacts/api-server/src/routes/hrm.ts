@@ -83,6 +83,7 @@ function parseId(v: unknown): number {
 
 // UREN_01 §3: CAO-instellingen (incl. ADV-drempel/max) staan centraal in lib/caoInstellingen.ts.
 import { CAO_OPTIES } from "../lib/caoInstellingen";
+import { verwerkCollectieveDagenVoorNieuweMedewerker } from "./kalender";
 
 // ── Werkgevers (FPS-werkmaatschappijen als hoofdentiteit) ────────────────────
 // De werkgever is leidend voor CAO, briefpapier/logo en personeelsbeleid. Het
@@ -965,8 +966,22 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       await maakVerlofprofielAan({ medewerkerId: m.id, caoOptie, contracturenPerWeek: uren, verlofsoortIds: ids, jaar: saldoJaar }, db);
     }
 
+    // KALENDER_01 §4.4.2: al vastgelegde collectieve vrije dagen op of na de
+    // indiensttreding alsnog aanmaken voor deze medewerker.
+    let collectieveDagenWaarschuwing: string | null = null;
+    try {
+      await verwerkCollectieveDagenVoorNieuweMedewerker(req, m.id);
+    } catch (err) {
+      // Nooit stil laten mislukken: de medewerker is aangemaakt, maar de
+      // collectieve dagen zijn niet afgeboekt — meld dat expliciet terug.
+      req.log.error({ err }, "Collectieve dagen aanmaken voor nieuwe medewerker mislukt");
+      collectieveDagenWaarschuwing =
+        "Medewerker is aangemaakt, maar het afboeken van al vastgelegde collectieve vrije dagen is mislukt. Controleer de jaarkalender en boek zo nodig handmatig af.";
+    }
+
     invalideerContext("medewerker", m.id);
-    res.status(201).json(await medewerkerNaarJson(m));
+    const json = await medewerkerNaarJson(m);
+    res.status(201).json(collectieveDagenWaarschuwing ? { ...json, waarschuwing: collectieveDagenWaarschuwing } : json);
   } catch (err) {
     // Race met gelijktijdige onboarding: de unieke index op gebruiker_id is de
     // laatste wacht; vertaal een unique-violation naar hetzelfde 409-contract.

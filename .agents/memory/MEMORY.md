@@ -137,4 +137,5 @@
 - [Urenverhouding afronding](uren-splitsing-afronding.md) — dekking/percentage uit ruwe sommen, afronden alleen voor weergave; één gedeelde berekenfunctie voor bevinding én tabel; datum=tekst → substr, geen extract.
 - [Projecten-sleutel & bedragen-strip](projecten-sleutel.md) — projecten: 1=lezen zonder bedragen/2=mét/3=schrijven; nieuwe lees-routes moeten strippen of op niveau 2; meldingen via bouwMeldingen.ts.
 - [Module-gating opname/projecten/workflow](module-gating-opname-projecten-workflow.md) — geen eigen modules; sub-resource-delete=3/entiteit=4-conventie; autorisatie-middleware moet req.permissies (impersonatie) honoreren.
+- [Jaarkalender KALENDER_01](jaarkalender.md) — kalender=afgeleide view zonder kopieën; collectieve dagen alleen via de verlofmotor; rapporten achter personeel:1; FK set-null-valkuil bij bewijs.
 - [UREN_01 ADV/overwerkslot/weekcontrole](uren-overwerkslot.md) — CAO-namen exact; slotverbruik atomair; §6b uurcode-eis alleen bij opdracht-uren, PATCH boekt alleen delta; werkbak-bron eerst whitelisten.

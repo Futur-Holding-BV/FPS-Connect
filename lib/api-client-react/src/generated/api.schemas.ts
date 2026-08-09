@@ -9260,6 +9260,84 @@ export interface WbAdviesUpdate {
   notitie?: string | null;
 }
 
+export type KalenderItemSoort = typeof KalenderItemSoort[keyof typeof KalenderItemSoort];
+
+
+export const KalenderItemSoort = {
+  feestdag: 'feestdag',
+  collectief: 'collectief',
+  vakantie: 'vakantie',
+  keuring: 'keuring',
+  verjaardag: 'verjaardag',
+  afspraak: 'afspraak',
+} as const;
+
+export interface KalenderItem {
+  datum: string;
+  soort: KalenderItemSoort;
+  titel: string;
+  omschrijving?: string | null;
+  bron: string;
+  link?: string | null;
+  werkgever_id?: number | null;
+}
+
+export type AfboekRapportUrenPerMedewerkerItem = {
+  medewerker_id: number;
+  naam: string;
+  uren: number;
+};
+
+export type AfboekRapportNegatiefItem = {
+  naam: string;
+  saldo_uren: number;
+};
+
+export type AfboekRapportMisluktItem = {
+  naam: string;
+  reden: string;
+};
+
+export interface AfboekRapport {
+  verwerkt: number;
+  uren_per_medewerker: AfboekRapportUrenPerMedewerkerItem[];
+  zonder_saldo_rij: string[];
+  negatief: AfboekRapportNegatiefItem[];
+  mislukt: AfboekRapportMisluktItem[];
+}
+
+export interface CollectieveVrijeDag {
+  id: number;
+  datum: string;
+  naam: string;
+  werkgever_id?: number | null;
+  werkgever_naam?: string | null;
+  verlofsoort_id: number;
+  verlofsoort_naam?: string | null;
+  afboek_rapport?: AfboekRapport | null;
+}
+
+export type KalenderAfspraakHerhaling = typeof KalenderAfspraakHerhaling[keyof typeof KalenderAfspraakHerhaling];
+
+
+export const KalenderAfspraakHerhaling = {
+  geen: 'geen',
+  jaarlijks: 'jaarlijks',
+  halfjaarlijks: 'halfjaarlijks',
+  kwartaal: 'kwartaal',
+} as const;
+
+export interface KalenderAfspraak {
+  id: number;
+  titel: string;
+  omschrijving?: string | null;
+  start_datum: string;
+  herhaling: KalenderAfspraakHerhaling;
+  eind_datum?: string | null;
+  aantal_herhalingen?: number | null;
+  werkgever_id?: number | null;
+}
+
 export interface Actiepunt {
   id: number;
   titel: string;
@@ -16159,6 +16237,77 @@ export type UpdateActiepuntBody = {
   omschrijving?: string | null;
   categorie?: string;
   status?: UpdateActiepuntBodyStatus;
+};
+
+export type GetKalenderParams = {
+jaar?: number;
+werkgever_id?: number;
+};
+
+export type GetKalender200 = {
+  jaar: number;
+  items: KalenderItem[];
+};
+
+export type ListCollectieveVrijeDagenParams = {
+jaar?: number;
+};
+
+export type CreateCollectieveVrijeDagenBodyDagenItem = {
+  datum: string;
+  naam: string;
+};
+
+export type CreateCollectieveVrijeDagenBody = {
+  dagen: CreateCollectieveVrijeDagenBodyDagenItem[];
+  verlofsoort_id: number;
+  werkgever_id?: number | null;
+};
+
+export type CreateCollectieveVrijeDagen201DagenItem = {
+  id: number;
+  datum: string;
+  naam: string;
+  rapport: AfboekRapport;
+};
+
+export type CreateCollectieveVrijeDagen201 = {
+  dagen: CreateCollectieveVrijeDagen201DagenItem[];
+  beperking: string;
+};
+
+export type DeleteCollectieveVrijeDag200TeruggedraaidItem = {
+  naam: string;
+  uren: number;
+};
+
+export type DeleteCollectieveVrijeDag200 = {
+  verwijderd: boolean;
+  teruggedraaid: DeleteCollectieveVrijeDag200TeruggedraaidItem[];
+};
+
+export type CreateKalenderAfspraakBodyHerhaling = typeof CreateKalenderAfspraakBodyHerhaling[keyof typeof CreateKalenderAfspraakBodyHerhaling];
+
+
+export const CreateKalenderAfspraakBodyHerhaling = {
+  geen: 'geen',
+  jaarlijks: 'jaarlijks',
+  halfjaarlijks: 'halfjaarlijks',
+  kwartaal: 'kwartaal',
+} as const;
+
+export type CreateKalenderAfspraakBody = {
+  titel: string;
+  omschrijving?: string | null;
+  start_datum: string;
+  herhaling?: CreateKalenderAfspraakBodyHerhaling;
+  eind_datum?: string | null;
+  aantal_herhalingen?: number | null;
+  werkgever_id?: number | null;
+};
+
+export type CreateKalenderAfspraak201 = {
+  id: number;
 };
 
 export type CreateIndirecteWerkzaamheidBody = {

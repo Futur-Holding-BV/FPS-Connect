@@ -31,6 +31,9 @@ import {
   sepaBestandenTable,
   werkInboxMailsTable,
   werkInboxMailboxenTable,
+  gereedschappenTable,
+  inspectiesTable,
+  gebouwenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
@@ -355,6 +358,63 @@ async function voedVerloopdatums(): Promise<{ nieuw: number; afgehandeld: number
       herkomstType: "document",
       herkomstId: d.docId,
       dedupSleutel: `voertuigdoc:${d.docId}`,
+    });
+  }
+
+  // KALENDER_01 §6: gereedschapskeuringen (30 dagen venster, zelfde aanpak).
+  const gereedschappen = await db
+    .select()
+    .from(gereedschappenTable)
+    .where(eq(gereedschappenTable.keuringsplichtig, true));
+  for (const g of gereedschappen) {
+    const datum = g.keuringVervalDatum?.toISOString().slice(0, 10)
+      ?? (g.volgendeKeuring ? String(g.volgendeKeuring).slice(0, 10) : null);
+    if (!datum || !/^\d{4}-\d{2}-\d{2}$/.test(datum)) continue;
+    const dagen = dagenTot(datum);
+    if (dagen > 30) continue;
+    const naam = g.omschrijving ?? g.volgnummer;
+    items.push({
+      soort: "weten",
+      bron: "verloopdatum",
+      titel: dagen < 0
+        ? `Keuring van ${naam} is verlopen`
+        : `Keuring van ${naam} verloopt over ${dagen} dagen`,
+      omschrijving: `Keuringsdatum ${datum}${g.keuringNorm ? ` (${g.keuringNorm})` : ""}.`,
+      vereisteModule: "gereedschappen",
+      vereistNiveau: 2,
+      gewicht: dagen < 0 ? 75 : dagen <= 7 ? 65 : 40,
+      actiePad: `/gereedschappen/${g.id}`,
+      herkomstType: "gereedschap",
+      herkomstId: g.id,
+      dedupSleutel: `gereedschap:${g.id}:keuring`,
+    });
+  }
+
+  // KALENDER_01 §6: geplande (gebouw)inspecties die binnen 30 dagen moeten
+  // gebeuren of over hun geplande datum heen zijn.
+  const inspecties = await db
+    .select({ i: inspectiesTable, gebouwNaam: gebouwenTable.naam })
+    .from(inspectiesTable)
+    .leftJoin(gebouwenTable, eq(inspectiesTable.gebouwId, gebouwenTable.id))
+    .where(and(eq(inspectiesTable.status, "gepland"), isNotNull(inspectiesTable.geplandeDatum)));
+  for (const { i, gebouwNaam } of inspecties) {
+    if (!i.geplandeDatum || !/^\d{4}-\d{2}-\d{2}/.test(i.geplandeDatum)) continue;
+    const dagen = dagenTot(i.geplandeDatum.slice(0, 10));
+    if (dagen > 30) continue;
+    items.push({
+      soort: "weten",
+      bron: "verloopdatum",
+      titel: dagen < 0
+        ? `Geplande inspectie${gebouwNaam ? ` bij ${gebouwNaam}` : ""} is over de datum`
+        : `Inspectie${gebouwNaam ? ` bij ${gebouwNaam}` : ""} gepland over ${dagen} dagen`,
+      omschrijving: `Geplande datum ${i.geplandeDatum.slice(0, 10)} (${i.type}).`,
+      vereisteModule: "gebouwen",
+      vereistNiveau: 2,
+      gewicht: dagen < 0 ? 70 : dagen <= 7 ? 55 : 35,
+      actiePad: i.gebouwId ? `/gebouwen/${i.gebouwId}` : "/gebouwen",
+      herkomstType: "inspectie",
+      herkomstId: i.id,
+      dedupSleutel: `inspectie:${i.id}:gepland`,
     });
   }
 

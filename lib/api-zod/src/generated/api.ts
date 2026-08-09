@@ -19259,6 +19259,137 @@ export const DeleteActiepuntResponse = zod.void()
 
 
 /**
+ * @summary Jaarkalender-inhoud, server-side gescoopt op rechten (KALENDER_01)
+ */
+export const GetKalenderQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const GetKalenderResponse = zod.object({
+  "jaar": zod.number(),
+  "items": zod.array(zod.object({
+  "datum": zod.string(),
+  "soort": zod.enum(['feestdag', 'collectief', 'vakantie', 'keuring', 'verjaardag', 'afspraak']),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bron": zod.string(),
+  "link": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish()
+}))
+})
+
+
+/**
+ * @summary Collectieve vrije dagen in een jaar
+ */
+export const ListCollectieveVrijeDagenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const ListCollectieveVrijeDagenResponseItem = zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "naam": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "afboek_rapport": zod.object({
+  "verwerkt": zod.number(),
+  "uren_per_medewerker": zod.array(zod.object({
+  "medewerker_id": zod.number(),
+  "naam": zod.string(),
+  "uren": zod.number()
+})),
+  "zonder_saldo_rij": zod.array(zod.string()),
+  "negatief": zod.array(zod.object({
+  "naam": zod.string(),
+  "saldo_uren": zod.number()
+})),
+  "mislukt": zod.array(zod.object({
+  "naam": zod.string(),
+  "reden": zod.string()
+}))
+}).nullish()
+})
+export const ListCollectieveVrijeDagenResponse = zod.array(ListCollectieveVrijeDagenResponseItem)
+
+
+/**
+ * @summary Collectieve vrije dagen vastleggen en direct afboeken (personeel niveau 2)
+ */
+export const CreateCollectieveVrijeDagenBody = zod.object({
+  "dagen": zod.array(zod.object({
+  "datum": zod.string(),
+  "naam": zod.string()
+})),
+  "verlofsoort_id": zod.number(),
+  "werkgever_id": zod.number().nullish()
+})
+
+export const CreateCollectieveVrijeDagenResponse = zod.void()
+
+
+/**
+ * @summary Collectieve vrije dag terugdraaien (aanvragen intrekken, saldi terugboeken)
+ */
+export const DeleteCollectieveVrijeDagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCollectieveVrijeDagResponse = zod.object({
+  "verwijderd": zod.boolean(),
+  "teruggedraaid": zod.array(zod.object({
+  "naam": zod.string(),
+  "uren": zod.number()
+}))
+})
+
+
+/**
+ * @summary Eigen terugkerende kalenderafspraken
+ */
+export const ListKalenderAfsprakenResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "herhaling": zod.enum(['geen', 'jaarlijks', 'halfjaarlijks', 'kwartaal']),
+  "eind_datum": zod.string().nullish(),
+  "aantal_herhalingen": zod.number().nullish(),
+  "werkgever_id": zod.number().nullish()
+})
+export const ListKalenderAfsprakenResponse = zod.array(ListKalenderAfsprakenResponseItem)
+
+
+/**
+ * @summary Terugkerende afspraak toevoegen (personeel niveau 2)
+ */
+export const CreateKalenderAfspraakBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "herhaling": zod.enum(['geen', 'jaarlijks', 'halfjaarlijks', 'kwartaal']).optional(),
+  "eind_datum": zod.string().nullish(),
+  "aantal_herhalingen": zod.number().nullish(),
+  "werkgever_id": zod.number().nullish()
+})
+
+export const CreateKalenderAfspraakResponse = zod.void()
+
+
+/**
+ * @summary Terugkerende afspraak verwijderen (personeel niveau 2)
+ */
+export const DeleteKalenderAfspraakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteKalenderAfspraakResponse = zod.void()
+
+
+/**
  * @summary Alle indirecte werkzaamheden (beheerlijst, inclusief inactieve)
  */
 export const ListIndirecteWerkzaamhedenResponseItem = zod.object({

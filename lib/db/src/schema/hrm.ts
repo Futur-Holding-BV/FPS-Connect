@@ -298,6 +298,11 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   // de loonstrook; daarna verdwijnt hij uit zijn openstaande lijst (nooit dubbel).
   boekhouderVerwerktOp: timestamp("boekhouder_verwerkt_op"),
   boekhouderVerwerktDoorId: integer("boekhouder_verwerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // KALENDER_01: gezet als deze aanvraag hoort bij een collectieve vrije dag,
+  // zodat terugdraaien exact weet welke aanvragen ingetrokken moeten worden.
+  // Geen .references() — de kalendertabel leeft in kalender.ts (import-cyclus);
+  // de FK staat in migratie 0032.
+  collectieveDagId: integer("collectieve_dag_id"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

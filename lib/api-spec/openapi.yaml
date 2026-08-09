@@ -15989,6 +15989,160 @@ paths:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         '204': { description: Verwijderd }
+  /kalender:
+    get:
+      operationId: getKalender
+      summary: Jaarkalender-inhoud, server-side gescoopt op rechten (KALENDER_01)
+      tags: [Kalender]
+      parameters:
+        - { name: jaar, in: query, required: false, schema: { type: integer } }
+        - { name: werkgever_id, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jaar, items]
+                properties:
+                  jaar: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/KalenderItem' }
+  /collectieve-vrije-dagen:
+    get:
+      operationId: listCollectieveVrijeDagen
+      summary: Collectieve vrije dagen in een jaar
+      tags: [Kalender]
+      parameters:
+        - { name: jaar, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CollectieveVrijeDag' }
+    post:
+      operationId: createCollectieveVrijeDagen
+      summary: Collectieve vrije dagen vastleggen en direct afboeken (personeel niveau 2)
+      tags: [Kalender]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dagen, verlofsoort_id]
+              properties:
+                dagen:
+                  type: array
+                  items:
+                    type: object
+                    required: [datum, naam]
+                    properties:
+                      datum: { type: string }
+                      naam: { type: string }
+                verlofsoort_id: { type: integer }
+                werkgever_id: { type: integer, nullable: true }
+      responses:
+        '201':
+          description: Vastgelegd en afgeboekt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dagen, beperking]
+                properties:
+                  dagen:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, datum, naam, rapport]
+                      properties:
+                        id: { type: integer }
+                        datum: { type: string }
+                        naam: { type: string }
+                        rapport: { $ref: '#/components/schemas/AfboekRapport' }
+                  beperking: { type: string }
+  /collectieve-vrije-dagen/{id}:
+    delete:
+      operationId: deleteCollectieveVrijeDag
+      summary: Collectieve vrije dag terugdraaien (aanvragen intrekken, saldi terugboeken)
+      tags: [Kalender]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Teruggedraaid
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verwijderd, teruggedraaid]
+                properties:
+                  verwijderd: { type: boolean }
+                  teruggedraaid:
+                    type: array
+                    items:
+                      type: object
+                      required: [naam, uren]
+                      properties:
+                        naam: { type: string }
+                        uren: { type: number }
+  /kalender-afspraken:
+    get:
+      operationId: listKalenderAfspraken
+      summary: Eigen terugkerende kalenderafspraken
+      tags: [Kalender]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/KalenderAfspraak' }
+    post:
+      operationId: createKalenderAfspraak
+      summary: Terugkerende afspraak toevoegen (personeel niveau 2)
+      tags: [Kalender]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [titel, start_datum]
+              properties:
+                titel: { type: string }
+                omschrijving: { type: string, nullable: true }
+                start_datum: { type: string }
+                herhaling: { type: string, enum: [geen, jaarlijks, halfjaarlijks, kwartaal] }
+                eind_datum: { type: string, nullable: true }
+                aantal_herhalingen: { type: integer, nullable: true }
+                werkgever_id: { type: integer, nullable: true }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: integer }
+  /kalender-afspraken/{id}:
+    delete:
+      operationId: deleteKalenderAfspraak
+      summary: Terugkerende afspraak verwijderen (personeel niveau 2)
+      tags: [Kalender]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Verwijderd }
   /indirecte-werkzaamheden:
     get:
       operationId: listIndirecteWerkzaamheden
@@ -38503,6 +38657,77 @@ components:
           type: string
           nullable: true
 
+    KalenderItem:
+      type: object
+      required: [datum, soort, titel, bron]
+      properties:
+        datum: { type: string }
+        soort: { type: string, enum: [feestdag, collectief, vakantie, keuring, verjaardag, afspraak] }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        bron: { type: string }
+        link: { type: string, nullable: true }
+        werkgever_id: { type: integer, nullable: true }
+    AfboekRapport:
+      type: object
+      required: [verwerkt, uren_per_medewerker, zonder_saldo_rij, negatief, mislukt]
+      properties:
+        verwerkt: { type: integer }
+        uren_per_medewerker:
+          type: array
+          items:
+            type: object
+            required: [medewerker_id, naam, uren]
+            properties:
+              medewerker_id: { type: integer }
+              naam: { type: string }
+              uren: { type: number }
+        zonder_saldo_rij:
+          type: array
+          items: { type: string }
+        negatief:
+          type: array
+          items:
+            type: object
+            required: [naam, saldo_uren]
+            properties:
+              naam: { type: string }
+              saldo_uren: { type: number }
+        mislukt:
+          type: array
+          items:
+            type: object
+            required: [naam, reden]
+            properties:
+              naam: { type: string }
+              reden: { type: string }
+    CollectieveVrijeDag:
+      type: object
+      required: [id, datum, naam, verlofsoort_id]
+      properties:
+        id: { type: integer }
+        datum: { type: string }
+        naam: { type: string }
+        werkgever_id: { type: integer, nullable: true }
+        werkgever_naam: { type: string, nullable: true }
+        verlofsoort_id: { type: integer }
+        verlofsoort_naam: { type: string, nullable: true }
+        afboek_rapport:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AfboekRapport'
+    KalenderAfspraak:
+      type: object
+      required: [id, titel, start_datum, herhaling]
+      properties:
+        id: { type: integer }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        start_datum: { type: string }
+        herhaling: { type: string, enum: [geen, jaarlijks, halfjaarlijks, kwartaal] }
+        eind_datum: { type: string, nullable: true }
+        aantal_herhalingen: { type: integer, nullable: true }
+        werkgever_id: { type: integer, nullable: true }
     Actiepunt:
       type: object
       required: [id, titel, categorie, status, volgorde, aangemaakt_op]

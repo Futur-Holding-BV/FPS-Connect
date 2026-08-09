@@ -73,3 +73,4 @@ export * from "./compliance";
 export * from "./declaraties";
 export * from "./algemene-inkoop";
 export * from "./actiepunten";
+export * from "./kalender";
