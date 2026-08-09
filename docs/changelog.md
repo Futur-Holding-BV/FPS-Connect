@@ -1,3 +1,9 @@
+## 2026-08-09 — Sidebar start altijd ingeklapt
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen UI-voorkeursgedrag)
+
+Op verzoek van René starten alle hoofdstukken in de Connect-sidebar voortaan ingeklapt bij het openen van Connect. Open/dicht-klikken werkt gewoon binnen de sessie, maar wordt niet meer over herlaadbeurten heen onthouden; de zelf gekozen vólgorde van hoofdstukken blijft wél bewaard.
+
 ## 2026-08-09 — App QR-code robuust + opschoning HRM-integriteitstools
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (kleine UI/route-aanpassingen)

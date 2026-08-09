@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 
 /**
@@ -17,10 +17,11 @@ export function useSidebarHoofdstukken(sleutelPrefix: string, standaardVolgorde:
     `${sleutelPrefix}_volgorde`,
     standaardVolgorde,
   );
-  const [openStatus, setOpenStatus, wisOpenStatus] = useVoorkeur<Record<string, boolean>>(
-    `${sleutelPrefix}_open`,
-    {},
-  );
+  // Open/dicht-status is bewust NIET persistent: bij elke start van Connect
+  // beginnen alle hoofdstukken ingeklapt (verzoek René, 2026-08-09). Binnen
+  // een sessie werken open/dicht-klikken gewoon; alleen de volgorde wordt
+  // blijvend bewaard.
+  const [openStatus, setOpenStatus] = useState<Record<string, boolean>>({});
 
   // Voegt nieuwe hoofdstukken (nog niet in de bewaarde volgorde) toe aan het
   // eind, en filtert verwijderde hoofdstukken eruit — zo blijft een bewaarde
@@ -33,8 +34,7 @@ export function useSidebarHoofdstukken(sleutelPrefix: string, standaardVolgorde:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opgeslagenVolgorde, JSON.stringify(standaardVolgorde)]);
 
-  const isAangepast =
-    volgorde.join("|") !== standaardVolgorde.join("|") || Object.keys(openStatus).length > 0;
+  const isAangepast = volgorde.join("|") !== standaardVolgorde.join("|");
 
   const hoofdstukPositie = useCallback(
     (sleutel: string) => {
@@ -61,7 +61,7 @@ export function useSidebarHoofdstukken(sleutelPrefix: string, standaardVolgorde:
   );
 
   const hoofdstukOpen = useCallback(
-    (sleutel: string, standaard = true) => openStatus[sleutel] ?? standaard,
+    (sleutel: string, standaard = false) => openStatus[sleutel] ?? standaard,
     [openStatus],
   );
 
@@ -74,8 +74,8 @@ export function useSidebarHoofdstukken(sleutelPrefix: string, standaardVolgorde:
 
   const herstelStandaard = useCallback(() => {
     wisVolgorde();
-    wisOpenStatus();
-  }, [wisVolgorde, wisOpenStatus]);
+    setOpenStatus({});
+  }, [wisVolgorde]);
 
   return {
     volgorde,
