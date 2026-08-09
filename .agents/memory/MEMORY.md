@@ -1,7 +1,7 @@
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
 - [PRIJS_01 prijsafspraken](prijsafspraken.md) — EXCLUDE-overlap in DB; rollback=markeren; afspraak=ÍNKOOPprijs (nooit het verkooptarief vervangen); web_search+JSON-mode=400; marktspiegel fail-closed op vindplaats.
 - [PANEEL_01 banen & voorkeuren](paneel-banen.md) — gebruiker_voorkeuren = hét ene voorkeurenmechanisme (MENU_01 §4.3); banen-remount via generatie-key; routes in connect-routes.tsx (nooit terug naar App.tsx).
-- [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: grep onder set -e altijd || true.
+- [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: élke pipe naar head/grep onder set -e/pipefail altijd || true (ook ls|head, exit 141/SIGPIPE).
 - [Playwright/e2e-valkuilen](e2e-playwright-valkuilen.md) — verzamelindex van 8 e2e-valkuil-topicfiles (selectors, routes, multipart, RNW-modal, Reanimated, onboarding).
 - [OpenAPI/Orval-valkuilen](openapi-orval-valkuilen.md) — verzamelindex van 5 codegen-valkuilen (index-fix, queryKey, $ref-bodies, padprefix).
 - [auth.ts terugkerende mangeling](auth-ts-mangling.md) — merges mangelen routes (auth.ts, 2x opname.ts): bodies onder verkeerde koppen; tsc=enige detector; herstel via checkout uit laatst geverifieerde commit; CI check-dubbele-routes vangt duplicaten.

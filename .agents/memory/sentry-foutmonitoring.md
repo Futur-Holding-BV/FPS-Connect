@@ -10,3 +10,5 @@ description: Hoe de Sentry-koppeling van de productie-API in elkaar zit en welke
 - **Peer-split valstrik:** `@sentry/node` brengt `@opentelemetry/api` mee; drizzle-orm peert daar optioneel op → twee drizzle-instanties → duizenden TS2769-fouten. Fix: `@opentelemetry/api` expliciet als dependency in ELKE workspace die drizzle-orm gebruikt (lib/db, scripts, api-server).
 - Sourcemap-upload = stap 5b in `scripts/deploy-production.sh`, niet-blokkerend; release móet exact `${GIT_COMMIT}` zijn. **Valstrik:** onder `set -euo pipefail` stopt een grep-zonder-treffer in een command substitution de hele deploy — altijd `|| true` binnen de substitutie.
 - `SENTRY_DSN`/`SENTRY_AUTH_TOKEN` staan alleen in `deploy/.env.production` op de VPS (bewust niet in VERPLICHTE_VARS).
+
+**SIGPIPE in deploy-production.sh (aug 2026):** onder `set -o pipefail` faalt élke `iets | head -1`-substitutie met exit 141 zodra de producer meer schrijft dan head leest (bv. `ls -t deploy/db-backups/*.sql.gz | head -1` zodra er veel back-ups staan). Regel: in dit script (en deploy.yml) elke pipe naar head/grep afsluiten met `|| true` en het echte foutgeval apart checken.
