@@ -1,3 +1,9 @@
+## 2026-08-09 — Instellingen-knop verplaatst naar onderkant sidebar
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen plaats in de navigatie)
+
+De Instellingen-ingang stond los tussen de hoofdstukken onderin het Connect-menu; op verzoek van René staat hij nu vast onderin de sidebar-voet, boven "Wat is nieuw?". Zichtbaarheid ongewijzigd (alleen voor wie gebruikers-, systeem- of bibliotheekrechten heeft, of hoofdbeheerder is).
+
 ## 2026-08-09 — Sidebar start altijd ingeklapt
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen UI-voorkeursgedrag)

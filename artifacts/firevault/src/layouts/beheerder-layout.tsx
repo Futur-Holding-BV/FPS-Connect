@@ -1574,33 +1574,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </InklapbaarHoofdstuk>
               )}
 
-              {(toonGebruikers || toonSysteem || toonBibliotheek || isHoofdbeheerder) && (
-                <SidebarGroup>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={
-                            location === "/instellingen" ||
-                            location.startsWith("/beheer/") ||
-                            location === "/gebruikers" ||
-                            location.startsWith("/gebruikers/") ||
-                            location === "/toolbox" ||
-                            location.startsWith("/toolbox/") ||
-                            location === "/personeel/verlof-instellingen"
-                          }
-                        >
-                          <Link href="/instellingen">
-                            <Settings2 />
-                            <span>Instellingen</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
             </>
           )}
 
@@ -1671,6 +1644,28 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         <SidebarFooter style={{ paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 0.25rem)' }}>
           <PwaInstalleerKnop />
           <SidebarMenu>
+            {actieveOmgeving === "connect" &&
+              (toonGebruikers || toonSysteem || toonBibliotheek || isHoofdbeheerder) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      location === "/instellingen" ||
+                      location.startsWith("/beheer/") ||
+                      location === "/gebruikers" ||
+                      location.startsWith("/gebruikers/") ||
+                      location === "/toolbox" ||
+                      location.startsWith("/toolbox/") ||
+                      location === "/personeel/verlof-instellingen"
+                    }
+                  >
+                    <Link href="/instellingen">
+                      <Settings2 />
+                      <span>Instellingen</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={location === "/release-notes"}>
                 <Link href="/release-notes">
