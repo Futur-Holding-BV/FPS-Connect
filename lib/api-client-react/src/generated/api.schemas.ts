@@ -12164,6 +12164,16 @@ export interface WagenparkAvgLogboekRegel {
   bijzonderheden?: string | null;
 }
 
+export interface WagenparkWerktijdvenster {
+  id: number;
+  voertuig_id?: number | null;
+  kenteken?: string | null;
+  werkdagen: number[];
+  start_tijd: string;
+  eind_tijd: string;
+  actief: boolean;
+  bijgewerkt_op: string;
+}
 export type BrandstofImportAiSignalenItem = {
   type: string;
   omschrijving: string;
@@ -16003,6 +16013,10 @@ van?: string;
 tot?: string;
 };
 
+export type GetWagenparkBuitenWerktijdRapportParams = {
+van?: string;
+tot?: string;
+};
 export type ListBrandstofImportenParams = {
 status?: string;
 };
@@ -16234,3 +16248,39 @@ export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
 
+
+export interface WagenparkBuitenWerktijdVoertuig {
+  voertuig_id: number;
+  kenteken: string;
+  merk: string;
+  type: string;
+  venster_bron: string;
+  aantal_ritten_totaal: number;
+  aantal_buiten_venster: number;
+  km_buiten_venster: number;
+  ritten_buiten: WagenparkBuitenWerktijdRit[];
+}
+
+export interface WagenparkWerktijdvensterInput {
+  voertuig_id?: number | null;
+  werkdagen: number[];
+  start_tijd: string;
+  eind_tijd: string;
+  actief?: boolean;
+}
+
+export interface WagenparkBuitenWerktijdRit {
+  id: number;
+  start_datum: string;
+  eind_datum?: string | null;
+  afstand_km?: number | null;
+  bron: string;
+}
+
+export interface WagenparkBuitenWerktijdRapport {
+  geconfigureerd: boolean;
+  van: string;
+  tot: string;
+  voertuigen: WagenparkBuitenWerktijdVoertuig[];
+  privacy_tekst: string;
+}

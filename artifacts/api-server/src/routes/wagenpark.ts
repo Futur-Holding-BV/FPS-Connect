@@ -12,6 +12,7 @@ import {
   wagenparkRittenTable,
   wagenparkSyncLogTable,
   wagenparkAvgLogboekTable,
+  wagenparkWerktijdvenstersTable,
   wagenparkMeldingenTable,
   documentenTable,
   documentKoppelingenTable,
@@ -934,6 +935,236 @@ router.get("/avg-logboek", beheer, async (req, res): Promise<void> => {
       bijzonderheden: r.bijzonderheden ?? null,
     })),
   );
+});
+
+// ══════════════════════════════════════════════════════════
+// Werktijdvensters & rapport ritten buiten werktijd
+// Voertuiggericht (nooit per persoon); raadpleging wordt AVG-gelogd.
+// ══════════════════════════════════════════════════════════
+
+const TIJD_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function mapWerktijdvenster(
+  w: typeof wagenparkWerktijdvenstersTable.$inferSelect,
+  kenteken?: string | null,
+) {
+  return {
+    id:           w.id,
+    voertuig_id:  w.voertuigId ?? null,
+    kenteken:     kenteken ?? null,
+    werkdagen:    w.werkdagen,
+    start_tijd:   w.startTijd,
+    eind_tijd:    w.eindTijd,
+    actief:       w.actief,
+    bijgewerkt_op: w.bijgewerktOp.toISOString(),
+  };
+}
+
+// Lokale weekdag + "HH:MM" in Europe/Amsterdam voor een tijdstip.
+function lokaalMoment(d: Date): { weekdag: number; tijd: string } {
+  const delen = new Intl.DateTimeFormat("nl-NL", {
+    timeZone: "Europe/Amsterdam",
+    weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const wd  = delen.find((p) => p.type === "weekday")?.value ?? "";
+  const uur = delen.find((p) => p.type === "hour")?.value ?? "00";
+  const min = delen.find((p) => p.type === "minute")?.value ?? "00";
+  const WEEKDAGEN: Record<string, number> = { zo: 0, ma: 1, di: 2, wo: 3, do: 4, vr: 5, za: 6 };
+  return { weekdag: WEEKDAGEN[wd] ?? 0, tijd: `${uur}:${min}` };
+}
+
+// UTC-offset (minuten) van Europe/Amsterdam op een gegeven moment (CET/CEST).
+function amsterdamOffsetMin(d: Date): number {
+  const naam = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Amsterdam", timeZoneName: "longOffset",
+  }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "GMT+00:00";
+  const m = /GMT([+-])(\d{2}):(\d{2})/.exec(naam);
+  if (!m) return 0;
+  return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
+}
+
+// Begin (of exclusief einde) van een kalenderdag in Europe/Amsterdam, als UTC-instant.
+// `eind=true` geeft het begin van de vólgende dag (exclusieve bovengrens),
+// zodat de beheerder exact de gekozen lokale kalenderdagen rapporteert —
+// onafhankelijk van de servertijdzone en correct rond DST-overgangen.
+function amsterdamDagGrens(datum: string, eind: boolean): Date {
+  const basis = new Date(`${datum}T00:00:00Z`);
+  if (isNaN(basis.getTime())) return basis;
+  if (eind) basis.setUTCDate(basis.getUTCDate() + 1);
+  // Lokale middernacht = UTC-middernacht minus offset; tweede pass vangt
+  // een offsetwissel (DST) precies op de grens af.
+  let d = new Date(basis.getTime() - amsterdamOffsetMin(basis) * 60_000);
+  d = new Date(basis.getTime() - amsterdamOffsetMin(d) * 60_000);
+  return d;
+}
+
+function isBuitenVenster(
+  start: Date,
+  venster: { werkdagen: number[]; startTijd: string; eindTijd: string },
+): boolean {
+  const { weekdag, tijd } = lokaalMoment(start);
+  if (!venster.werkdagen.includes(weekdag)) return true;
+  return tijd < venster.startTijd || tijd >= venster.eindTijd;
+}
+
+router.get("/werktijdvensters", beheer, async (_req, res): Promise<void> => {
+  const rijen = await db
+    .select({ venster: wagenparkWerktijdvenstersTable, kenteken: voertuigenTable.kenteken })
+    .from(wagenparkWerktijdvenstersTable)
+    .leftJoin(voertuigenTable, eq(wagenparkWerktijdvenstersTable.voertuigId, voertuigenTable.id))
+    .orderBy(wagenparkWerktijdvenstersTable.voertuigId);
+
+  res.json(rijen.map((r) => mapWerktijdvenster(r.venster, r.kenteken)));
+});
+
+router.put("/werktijdvensters", beheer, async (req, res): Promise<void> => {
+  const body = req.body;
+  const voertuigId: number | null = body.voertuig_id ?? null;
+
+  const werkdagen: number[] = Array.isArray(body.werkdagen) ? body.werkdagen : [];
+  if (
+    werkdagen.length === 0 ||
+    werkdagen.some((d: unknown) => typeof d !== "number" || !Number.isInteger(d) || d < 0 || d > 6)
+  ) {
+    return void res.status(400).json({ fout: "werkdagen moet 1–7 waarden 0–6 bevatten" });
+  }
+  if (!TIJD_REGEX.test(body.start_tijd) || !TIJD_REGEX.test(body.eind_tijd)) {
+    return void res.status(400).json({ fout: "start_tijd/eind_tijd moeten HH:MM zijn" });
+  }
+  if (body.start_tijd >= body.eind_tijd) {
+    return void res.status(400).json({ fout: "start_tijd moet vóór eind_tijd liggen" });
+  }
+  if (voertuigId !== null) {
+    const [v] = await db.select({ id: voertuigenTable.id }).from(voertuigenTable)
+      .where(eq(voertuigenTable.id, voertuigId));
+    if (!v) return void res.status(404).json({ fout: "Voertuig niet gevonden" });
+  }
+
+  const waarden = {
+    voertuigId,
+    werkdagen:   Array.from(new Set(werkdagen)).sort(),
+    startTijd:   body.start_tijd,
+    eindTijd:    body.eind_tijd,
+    actief:      body.actief ?? true,
+    bijgewerktOp: new Date(),
+  };
+
+  // Upsert per scope (partiële unieke indexes; select-then-write volstaat hier
+  // omdat beheer-configuratie geen concurrent pad heeft).
+  const [bestaand] = await db.select().from(wagenparkWerktijdvenstersTable)
+    .where(voertuigId === null
+      ? isNull(wagenparkWerktijdvenstersTable.voertuigId)
+      : eq(wagenparkWerktijdvenstersTable.voertuigId, voertuigId));
+
+  const [rij] = bestaand
+    ? await db.update(wagenparkWerktijdvenstersTable).set(waarden)
+        .where(eq(wagenparkWerktijdvenstersTable.id, bestaand.id)).returning()
+    : await db.insert(wagenparkWerktijdvenstersTable).values(waarden).returning();
+
+  res.status(bestaand ? 200 : 201).json(mapWerktijdvenster(rij));
+});
+
+router.delete("/werktijdvensters/:id", beheer, async (req, res): Promise<void> => {
+  const id = Number(req.params["id"]);
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig ID" });
+
+  const [verwijderd] = await db.delete(wagenparkWerktijdvenstersTable)
+    .where(eq(wagenparkWerktijdvenstersTable.id, id)).returning();
+  if (!verwijderd) return void res.status(404).json({ fout: "Niet gevonden" });
+  res.status(204).end();
+});
+
+router.get("/rapportage/buiten-werktijd", beheer, async (req, res): Promise<void> => {
+  // Periode = hele kalenderdagen in Europe/Amsterdam (van t/m tot, inclusief).
+  const nu = new Date();
+  const vanStr = (req.query["van"] as string | undefined)
+    ?? new Date(nu.getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const totStr = (req.query["tot"] as string | undefined) ?? nu.toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(vanStr) || !/^\d{4}-\d{2}-\d{2}$/.test(totStr) || vanStr > totStr) {
+    return void res.status(400).json({ fout: "Ongeldige periode (van t/m tot, YYYY-MM-DD)" });
+  }
+  const van = amsterdamDagGrens(vanStr, false);
+  const tot = amsterdamDagGrens(totStr, true);   // exclusieve bovengrens
+  if (isNaN(van.getTime()) || isNaN(tot.getTime())) {
+    return void res.status(400).json({ fout: "Ongeldige datum" });
+  }
+
+  const vensters = await db.select().from(wagenparkWerktijdvenstersTable)
+    .where(eq(wagenparkWerktijdvenstersTable.actief, true));
+  const orgVenster = vensters.find((v) => v.voertuigId === null) ?? null;
+  const perVoertuig = new Map(vensters.filter((v) => v.voertuigId !== null).map((v) => [v.voertuigId, v]));
+
+  if (!orgVenster && perVoertuig.size === 0) {
+    return void res.json({
+      geconfigureerd: false,
+      van: van.toISOString(),
+      tot: tot.toISOString(),
+      voertuigen: [],
+      privacy_tekst: PRIVACY_TEKST,
+    });
+  }
+
+  const voertuigen = await db.select().from(voertuigenTable)
+    .where(eq(voertuigenTable.gearchiveerd, false));
+  const ritten = await db.select().from(wagenparkRittenTable)
+    .where(and(
+      gte(wagenparkRittenTable.startDatum, van),
+      sql`${wagenparkRittenTable.startDatum} < ${tot}`,
+    ));
+
+  const rittenPerVoertuig = new Map<number, typeof ritten>();
+  for (const r of ritten) {
+    const lijst = rittenPerVoertuig.get(r.voertuigId) ?? [];
+    lijst.push(r);
+    rittenPerVoertuig.set(r.voertuigId, lijst);
+  }
+
+  const rapport = voertuigen.flatMap((v) => {
+    const venster = perVoertuig.get(v.id) ?? orgVenster;
+    if (!venster) return [];
+
+    const vRitten = rittenPerVoertuig.get(v.id) ?? [];
+    const buiten  = vRitten.filter((r) => isBuitenVenster(r.startDatum, venster));
+    const kmBuiten = buiten.reduce((som, r) => som + (r.afstandKm ?? 0), 0);
+
+    return [{
+      voertuig_id:          v.id,
+      kenteken:             v.kenteken,
+      merk:                 v.merk,
+      type:                 v.type,
+      venster_bron:         perVoertuig.has(v.id) ? "voertuig" : "organisatie",
+      aantal_ritten_totaal: vRitten.length,
+      aantal_buiten_venster: buiten.length,
+      km_buiten_venster:    Math.round(kmBuiten * 10) / 10,
+      // Voertuiggericht: alleen tijdstippen en afstand — bewust geen
+      // adressen en geen persoonsgegevens in dit rapport.
+      ritten_buiten: buiten
+        .sort((a, b) => b.startDatum.getTime() - a.startDatum.getTime())
+        .slice(0, 25)
+        .map((r) => ({
+          id:          r.id,
+          start_datum: r.startDatum.toISOString(),
+          eind_datum:  r.eindDatum?.toISOString() ?? null,
+          afstand_km:  r.afstandKm ?? null,
+          bron:        r.bron,
+        })),
+    }];
+  }).sort((a, b) => b.aantal_buiten_venster - a.aantal_buiten_venster);
+
+  // AVG-log: raadpleging van het buiten-werktijdrapport (privacygevoelige inzage).
+  await logAvg(
+    "inzage", null, req.session?.["userId"] ?? null,
+    `rapport ritten buiten werktijd geraadpleegd (periode ${vanStr} t/m ${totStr})`,
+    "ritten",
+  );
+
+  res.json({
+    geconfigureerd: true,
+    van: van.toISOString(),
+    tot: tot.toISOString(),
+    voertuigen: rapport,
+    privacy_tekst: PRIVACY_TEKST,
+  });
 });
 
 // ══════════════════════════════════════════════════════════

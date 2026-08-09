@@ -414,6 +414,29 @@ export type PushTokenInsert = z.infer<typeof pushTokenInsertSchema>;
 export type PushToken = typeof pushTokensTable.$inferSelect;
 
 // ═══════════════════════════════════════════════════════════
+// Werktijdvensters — configureerbaar per organisatie (voertuig_id NULL)
+// of per voertuig. Voertuiggericht rapport van ritten buiten venster;
+// bewust géén persoonsgerichte controle (privacy-by-design).
+// ═══════════════════════════════════════════════════════════
+
+export const wagenparkWerktijdvenstersTable = pgTable("wagenpark_werktijdvensters", {
+  id:          serial("id").primaryKey(),
+  // NULL = organisatiestandaard; anders voertuigspecifieke uitzondering.
+  voertuigId:  integer("voertuig_id").references(() => voertuigenTable.id, { onDelete: "cascade" }),
+
+  // Weekdagen waarop gewerkt wordt: 0=zondag … 6=zaterdag.
+  werkdagen:   integer("werkdagen").array().notNull().default([1, 2, 3, 4, 5]),
+  startTijd:   text("start_tijd").notNull().default("07:00"),   // "HH:MM" lokale tijd (Europe/Amsterdam)
+  eindTijd:    text("eind_tijd").notNull().default("18:00"),
+  actief:      boolean("actief").notNull().default(true),
+
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type WagenparkWerktijdvenster = typeof wagenparkWerktijdvenstersTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
 
 export const wagenparkAvgLogboekTable = pgTable("wagenpark_avg_logboek", {
   id:          serial("id").primaryKey(),

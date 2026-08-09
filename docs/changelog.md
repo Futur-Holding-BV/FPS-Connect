@@ -2963,6 +2963,12 @@ Vervolg op NUMMER_01: het berekende kenmerk (hét communicatienummer richting kl
 
 **Bewijs (GEMETEN, dev 8 aug):** `scripts/src/bewijs-task824-routebeveiliging.ts` — tijdelijk account zonder enig module-recht krijgt op alle 29 routes 403; account met niveau 4 overal werkt ongewijzigd (200/204/400/404, geen autorisatiefout); hoofdbeheerder die via "Bekijken als" (X-Gebruiker-Override) een rechteloze medewerker nabootst krijgt óók overal 403 (`requireEnigeBevoegdheid` honoreert nu net als `requireBevoegdheid` de effectieve permissies). Accounts worden in `finally` opgeruimd.
 
+
+## 2026-08-09 — WAGENPARK: ritten buiten werktijd zichtbaar (met privacy-waarborg) (Taak #842)
+
+- **Uitvoering:** volledig, 17/17 acceptatiechecks groen via bewijsscript (incl. lokale-kalenderdag-grenzen en DST-overgang) | **Kwaliteit:** hoog | **Risico:** laag (additief; rapport alleen voor wagenpark-niveau 4, AVG-gelogd)
+
+Beheerders kunnen nu werktijdvensters instellen (één organisatiestandaard plus optionele voertuigspecifieke uitzonderingen: werkdagen + tijden, Europe/Amsterdam) en per voertuig zien welke ritten buiten dat venster vielen — mogelijk privégebruik van de bedrijfsbussen. Het rapport is bewust voertuiggericht: het toont per voertuig aantallen, kilometers en de tijdstippen van de ritten buiten het venster, maar géén adressen en géén persoonsgegevens (privacy-by-design uit WAGENPARK_01 blijft intact). Elke raadpleging van het rapport wordt vastgelegd in het AVG-logboek (actie "inzage", datatype "ritten", met de opgevraagde periode). Nieuwe pagina in Connect: Wagenpark → "Buiten werktijd" (alleen zichtbaar/toegankelijk op niveau 4). Bewijsscript: `scripts/src/verificatie-buiten-werktijd.ts`. Migratie `0023_wagenpark-werktijdvensters.sql`.
 ## 2026-08-09 — Taak #844: AI-afstootadvies wagenpark (eigen cijfers eerst)
 
 - **Uitvoering:** volledig, bewijsscript groen (login+advies+geen-wijziging) | **Kwaliteit:** hoog | **Risico:** laag (nieuw, losstaand advies-endpoint; niets automatisch)

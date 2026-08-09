@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import {
   Truck, AlertTriangle, Wrench, CheckCircle, RefreshCw,
-  ShieldAlert, Sparkles, Search, Plus, Eye, FileInput, FileText,
+  ShieldAlert, Sparkles, Search, Plus, Eye, FileInput, FileText, Clock,
 } from "lucide-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -86,6 +86,7 @@ export default function WagenparkPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven  = heeftNiveau("wagenpark", 2);
   const magAanmaken   = heeftNiveau("wagenpark", 3);
+  const magBeheer     = heeftNiveau("wagenpark", 4);
 
   const [zoek,          setZoek]          = useState("");
   const [statusFilter,  setStatusFilter]  = useState<string>("alle");
@@ -162,6 +163,14 @@ export default function WagenparkPagina() {
               Brandstof importeren
             </Link>
           </Button>
+          {magBeheer && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/wagenpark/buiten-werktijd">
+                <Clock className="h-4 w-4 mr-2" />
+                Buiten werktijd
+              </Link>
+            </Button>
+          )}
           {magSchrijven && (
             <Button asChild variant="outline" size="sm">
               <Link href="/wagenpark/documentsoorten">

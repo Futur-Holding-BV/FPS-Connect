@@ -21244,6 +21244,89 @@ paths:
         '401': { description: Niet ingelogd }
         '403': { description: Geen toegang }
 
+  /wagenpark/werktijdvensters:
+    get:
+      operationId: listWagenparkWerktijdvensters
+      tags: [wagenpark]
+      summary: Werktijdvensters (organisatiestandaard + voertuigspecifiek)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkWerktijdvenster'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+    put:
+      operationId: upsertWagenparkWerktijdvenster
+      tags: [wagenpark]
+      summary: Werktijdvenster instellen (organisatie of per voertuig)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WagenparkWerktijdvensterInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkWerktijdvenster'
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkWerktijdvenster'
+        '400': { description: Ongeldige invoer }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Voertuig niet gevonden }
+
+  /wagenpark/werktijdvensters/{id}:
+    delete:
+      operationId: deleteWagenparkWerktijdvenster
+      tags: [wagenpark]
+      summary: Werktijdvenster verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Verwijderd }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+
+  /wagenpark/rapportage/buiten-werktijd:
+    get:
+      operationId: getWagenparkBuitenWerktijdRapport
+      tags: [wagenpark]
+      summary: Voertuiggericht rapport van ritten buiten het werktijdvenster (raadpleging wordt AVG-gelogd)
+      parameters:
+        - in: query
+          name: van
+          schema: { type: string, format: date }
+        - in: query
+          name: tot
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkBuitenWerktijdRapport'
+        '400': { description: Ongeldige datum }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
   /wagenpark/brandstof-import:
     get:
       operationId: listBrandstofImporten
@@ -43290,6 +43373,73 @@ components:
         datatype:       { type: string, nullable: true }
         bewaartermijn:  { type: string, nullable: true }
         bijzonderheden: { type: string, nullable: true }
+
+    WagenparkWerktijdvenster:
+      type: object
+      required: [id, werkdagen, start_tijd, eind_tijd, actief, bijgewerkt_op]
+      properties:
+        id:            { type: integer }
+        voertuig_id:   { type: integer, nullable: true }
+        kenteken:      { type: string, nullable: true }
+        werkdagen:
+          type: array
+          items: { type: integer }
+        start_tijd:    { type: string }
+        eind_tijd:     { type: string }
+        actief:        { type: boolean }
+        bijgewerkt_op: { type: string, format: date-time }
+
+    WagenparkWerktijdvensterInput:
+      type: object
+      required: [werkdagen, start_tijd, eind_tijd]
+      properties:
+        voertuig_id:   { type: integer, nullable: true }
+        werkdagen:
+          type: array
+          items: { type: integer }
+        start_tijd:    { type: string }
+        eind_tijd:     { type: string }
+        actief:        { type: boolean }
+
+    WagenparkBuitenWerktijdRit:
+      type: object
+      required: [id, start_datum, bron]
+      properties:
+        id:          { type: integer }
+        start_datum: { type: string, format: date-time }
+        eind_datum:  { type: string, format: date-time, nullable: true }
+        afstand_km:  { type: number, nullable: true }
+        bron:        { type: string }
+
+    WagenparkBuitenWerktijdVoertuig:
+      type: object
+      required: [voertuig_id, kenteken, merk, type, venster_bron, aantal_ritten_totaal, aantal_buiten_venster, km_buiten_venster, ritten_buiten]
+      properties:
+        voertuig_id:           { type: integer }
+        kenteken:              { type: string }
+        merk:                  { type: string }
+        type:                  { type: string }
+        venster_bron:          { type: string }
+        aantal_ritten_totaal:  { type: integer }
+        aantal_buiten_venster: { type: integer }
+        km_buiten_venster:     { type: number }
+        ritten_buiten:
+          type: array
+          items:
+            $ref: '#/components/schemas/WagenparkBuitenWerktijdRit'
+
+    WagenparkBuitenWerktijdRapport:
+      type: object
+      required: [geconfigureerd, van, tot, voertuigen, privacy_tekst]
+      properties:
+        geconfigureerd: { type: boolean }
+        van:            { type: string, format: date-time }
+        tot:            { type: string, format: date-time }
+        voertuigen:
+          type: array
+          items:
+            $ref: '#/components/schemas/WagenparkBuitenWerktijdVoertuig'
+        privacy_tekst:  { type: string }
 
     BrandstofImport:
       type: object

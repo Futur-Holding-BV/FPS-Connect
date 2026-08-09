@@ -11,3 +11,4 @@ description: WAGENPARK_01-beslissingen — voertuigdocumenten, mijn-auto scoping
 - Bewakingsloop-signalen wagenpark (documenten/APK/km/bandenwissel/sync-uitgebleven) = module wagenpark **niveau 3** (§5.3-fallbackbesluit).
 - Garagemail §6.1: mail éérst, status `doorgezet_garage` pas na succes; falen = 502/503 + werkbak-item bron `wagenpark_garagemail` dedup `garagemail:<id>`.
 - Dev-mail is GECONFIGUREERD (Graph): doorzetten-garage slaagt in dev echt; faalpad alleen testbaar door mail-config te breken.
+- Buiten-werktijdrapport = bewuste privacygrens: voertuiggericht, nooit adressen/personen in de respons, en elke raadpleging AVG-loggen; alle dag/tijd-classificatie en periodegrenzen in Europe/Amsterdam (niet servertijd), anders kloppen randritten en DST-overgangen niet.

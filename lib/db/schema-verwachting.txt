@@ -397,6 +397,9 @@ INDEX|wagenpark_onderhoud|wagenpark_onderhoud_pkey
 INDEX|wagenpark_ritten|wagenpark_ritten_pkey
 INDEX|wagenpark_ritten|wagenpark_ritten_provider_rit_id_uniek
 INDEX|wagenpark_sync_log|wagenpark_sync_log_pkey
+INDEX|wagenpark_werktijdvensters|wagenpark_werktijdvensters_org_uniek
+INDEX|wagenpark_werktijdvensters|wagenpark_werktijdvensters_pkey
+INDEX|wagenpark_werktijdvensters|wagenpark_werktijdvensters_voertuig_uniek
 INDEX|week_staten|week_staten_pkey
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_mailbox_idx
 INDEX|werk_inbox_koppelingen|werk_inbox_koppelingen_message_idx
@@ -4407,6 +4410,14 @@ KOLOM|wagenpark_sync_log|id|integer|NO|nextval('wagenpark_sync_log_id_seq'::regc
 KOLOM|wagenpark_sync_log|provider|text|NO|'traxgo'::text
 KOLOM|wagenpark_sync_log|status|text|NO|
 KOLOM|wagenpark_sync_log|voltooid_op|timestamp without time zone|YES|
+KOLOM|wagenpark_werktijdvensters|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|wagenpark_werktijdvensters|actief|boolean|NO|true
+KOLOM|wagenpark_werktijdvensters|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|wagenpark_werktijdvensters|eind_tijd|text|NO|'18:00'::text
+KOLOM|wagenpark_werktijdvensters|id|integer|NO|nextval('wagenpark_werktijdvensters_id_seq'::regclass)
+KOLOM|wagenpark_werktijdvensters|start_tijd|text|NO|'07:00'::text
+KOLOM|wagenpark_werktijdvensters|voertuig_id|integer|YES|
+KOLOM|wagenpark_werktijdvensters|werkdagen|ARRAY|NO|'{1,2,3,4,5}'::integer[]
 KOLOM|week_staten|aangemaakt_door_id|integer|YES|
 KOLOM|week_staten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|week_staten|adv_uren|real|YES|

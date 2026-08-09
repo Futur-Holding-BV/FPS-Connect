@@ -119,6 +119,7 @@ import WagenparkPagina from "@/pages/wagenpark/index";
 import WagenparkDetailPagina from "@/pages/wagenpark/detail";
 import WagenparkBrandstofImportPagina from "@/pages/wagenpark/brandstof-import";
 import WagenparkMeldingenPagina from "@/pages/wagenpark/meldingen";
+import WagenparkBuitenWerktijdPagina from "@/pages/wagenpark/buiten-werktijd";
 import WagenparkDocumentsoortenPagina from "@/pages/wagenpark/documentsoorten";
 import WagenparkFormPagina from "@/pages/wagenpark/form";
 import MagazijnDashboardPagina from "@/pages/magazijn/dashboard";
@@ -482,6 +483,7 @@ function ConnectPortal() {
         <Route path="/wagenpark" component={WagenparkPagina} />
         <Route path="/wagenpark/brandstof-import" component={WagenparkBrandstofImportPagina} />
         <Route path="/wagenpark/meldingen" component={WagenparkMeldingenPagina} />
+        <Route path="/wagenpark/buiten-werktijd" component={WagenparkBuitenWerktijdPagina} />
         <Route path="/wagenpark/documentsoorten" component={WagenparkDocumentsoortenPagina} />
         <Route path="/wagenpark/nieuw" component={WagenparkFormPagina} />
         <Route path="/wagenpark/:id/bewerken" component={WagenparkFormPagina} />
