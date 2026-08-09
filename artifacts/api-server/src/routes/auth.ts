@@ -721,7 +721,7 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   }
 });
 
-// Bron van waarheid voor de installatielink van de monteur-app.
+// Bron van waarheid voor de installatielinks van de monteur-app.
 function appStoreUrl(): string {
   return (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
 }
@@ -743,7 +743,7 @@ function bepaalAppInstallatieUrl(): string {
 
 // GET /auth/app-installatie-info — publieke info voor de installatiepagina /app.
 // Bewust zonder login: de pagina wordt per WhatsApp naar medewerkers gestuurd
-// die nog geen account hebben. Bevat uitsluitend de (publieke) store-links.
+// die nog geen account hebben. Bevat uitsluitend de (publieke) store-link.
 router.get("/auth/app-installatie-info", async (req, res): Promise<void> => {
   try {
     res.json({
@@ -760,12 +760,9 @@ router.get("/auth/app-installatie-info", async (req, res): Promise<void> => {
 router.get("/auth/app-qr", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
-    // Doel van de QR, in volgorde van voorkeur:
-    // 1. MONTEUR_APP_STORE_URL — de App Store-link zodra de app gepubliceerd is (productie).
-    // 2. Expo Go dev-domein — alleen in de ontwikkelomgeving beschikbaar.
-    // 3. De publieke installatiepagina /app — bestaat altijd, legt uit hoe het
-    //    zit en verwijst automatisch door zodra de store-link is ingesteld.
-    // Met ?platform=ios|android wordt de QR expliciet op één store gericht.
+    // Optioneel ?platform=ios|android voor een platform-specifieke QR.
+    // Zonder platform: voorkeursvolgorde uit bepaalAppInstallatieUrl()
+    // (App Store → Google Play → Expo-dev-domein → publieke /app-pagina).
     const platform = typeof req.query.platform === "string" ? req.query.platform : "";
     let url: string;
     if (platform === "ios") {

@@ -7,6 +7,25 @@ const router = Router();
 
 const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
 
+// Een account dat al eerder succesvol heeft ingelogd (laatst_online gezet) of
+// 2FA al heeft ingeschakeld, is aantoonbaar in gebruik. Een activatielink mag
+// zo'n account nooit heropenen — ook niet als uitnodigingStatus om historische
+// redenen niet op "geaccepteerd" staat.
+const AL_IN_GEBRUIK_MELDING =
+  "Dit account is al in gebruik — log gewoon in via de inlogpagina.";
+
+function isAccountAlInGebruik(g: {
+  uitnodigingStatus: string;
+  laatstOnline: Date | null;
+  tweeFactorIngeschakeld: boolean;
+}): boolean {
+  return (
+    g.uitnodigingStatus === "geaccepteerd" ||
+    g.laatstOnline !== null ||
+    g.tweeFactorIngeschakeld
+  );
+}
+
 // GET /uitnodiging/:token — token verifiëren en markeren als geopend (publiek)
 router.get("/uitnodiging/:token", async (req, res): Promise<void> => {
   try {
@@ -19,8 +38,8 @@ router.get("/uitnodiging/:token", async (req, res): Promise<void> => {
     if (!g) {
       return void res.status(404).json({ error: "Uitnodiging niet gevonden" });
     }
-    if (g.uitnodigingStatus === "geaccepteerd") {
-      return void res.status(409).json({ error: "Account is al geactiveerd" });
+    if (isAccountAlInGebruik(g)) {
+      return void res.status(409).json({ error: AL_IN_GEBRUIK_MELDING });
     }
     if (g.uitnodigingVerlooptOp && g.uitnodigingVerlooptOp < new Date()) {
       return void res.status(410).json({ error: "Uitnodiging verlopen" });
@@ -62,8 +81,8 @@ router.post("/uitnodiging/:token/activeren", async (req, res): Promise<void> => 
       .where(eq(gebruikersTable.uitnodigingToken, token));
 
     if (!g) return void res.status(404).json({ error: "Uitnodiging niet gevonden" });
-    if (g.uitnodigingStatus === "geaccepteerd") {
-      return void res.status(409).json({ error: "Account is al geactiveerd" });
+    if (isAccountAlInGebruik(g)) {
+      return void res.status(409).json({ error: AL_IN_GEBRUIK_MELDING });
     }
     if (g.uitnodigingVerlooptOp && g.uitnodigingVerlooptOp < new Date()) {
       return void res.status(410).json({ error: "Uitnodiging verlopen" });

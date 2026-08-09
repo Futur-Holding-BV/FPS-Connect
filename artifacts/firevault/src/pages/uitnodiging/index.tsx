@@ -177,9 +177,10 @@ export default function ActivatiePagina({ token }: Props) {
           {stap === "al_actief" && (
             <div className="p-8 text-center">
               <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
-              <h2 className="font-semibold text-zinc-900 mb-1">Account al geactiveerd</h2>
+              <h2 className="font-semibold text-zinc-900 mb-1">Account al in gebruik</h2>
               <p className="text-zinc-500 text-sm mb-4">
-                Uw account is al actief. U kunt inloggen via de inlogpagina.
+                Dit account is al in gebruik — log gewoon in via de inlogpagina. Deze
+                activatielink is niet meer nodig.
               </p>
               <Button
                 className="bg-primary hover:bg-primary/90 text-white"

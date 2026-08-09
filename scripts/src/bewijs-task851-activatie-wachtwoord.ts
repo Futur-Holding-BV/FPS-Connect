@@ -185,6 +185,50 @@ async function main(): Promise<void> {
       .where(eq(gebruikersTable.id, userId));
     check("wachtwoord ongewijzigd na stale poging", await bcrypt.compare(NIEUW_WACHTWOORD, rijNa!.wachtwoord ?? ""));
     check("TOTP-secret ongewijzigd na stale poging", rijNa!.totpSecret === rijVoor!.totpSecret);
+
+    console.log("Stap 4 (task 852): al-in-gebruik account weigert activatielink met 409");
+    // Simuleer een historisch inconsistente rij: account heeft al ingelogd
+    // (laatst_online gezet) en 2FA aan, maar uitnodigingStatus staat nog op
+    // "verzonden" met een geldige, niet-verlopen token.
+    await db
+      .update(gebruikersTable)
+      .set({
+        uitnodigingStatus: "verzonden",
+        uitnodigingToken: token,
+        uitnodigingVerlooptOp: new Date(Date.now() + 60 * 60 * 1000),
+        laatstOnline: new Date(),
+      })
+      .where(eq(gebruikersTable.id, userId));
+
+    const get852 = await new Sessie().fetch(`/uitnodiging/${token}`);
+    const get852Json = (await get852.json()) as { error?: string };
+    check("GET /uitnodiging/:token geeft 409 voor al-in-gebruik account", get852.status === 409, `status=${get852.status}`);
+    check(
+      "409-melding verwijst naar gewoon inloggen",
+      (get852Json.error ?? "").toLowerCase().includes("al in gebruik"),
+      `error=${get852Json.error}`,
+    );
+    const post852 = await new Sessie().fetch(`/uitnodiging/${token}/activeren`, {
+      method: "POST",
+      body: JSON.stringify({ wachtwoord: "AanvallerWachtwoord!2026", taal: "nl" }),
+    });
+    check("POST /uitnodiging/:token/activeren geeft 409 voor al-in-gebruik account", post852.status === 409, `status=${post852.status}`);
+
+    // Ook alleen 2FA-aan (zonder laatst_online) moet weigeren.
+    await db
+      .update(gebruikersTable)
+      .set({ laatstOnline: null })
+      .where(eq(gebruikersTable.id, userId));
+    const [rij852] = await db
+      .select({ tweeFactorIngeschakeld: gebruikersTable.tweeFactorIngeschakeld })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, userId));
+    check("2FA staat aan na afgeronde activatie", rij852!.tweeFactorIngeschakeld === true);
+    const get852b = await new Sessie().fetch(`/uitnodiging/${token}`);
+    check("GET geeft ook 409 op alleen-2FA-aan account", get852b.status === 409, `status=${get852b.status}`);
+
+    const hashNa852 = await dbHash(userId);
+    check("wachtwoord onaangetast na 852-pogingen", await bcrypt.compare(NIEUW_WACHTWOORD, hashNa852));
   } finally {
     await db.delete(gebruikersTable).where(eq(gebruikersTable.id, userId));
     console.log("Opruimen: wegwerpaccount verwijderd.");
