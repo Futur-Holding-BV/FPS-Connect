@@ -41,6 +41,18 @@ export const E2E_WEB_ADMIN_EMAIL = "e2e-web-admin@fps.local";
 export const E2E_WEB_ADMIN_WACHTWOORD = "E2eWebAdmin!2026";
 export const E2E_WEB_ADMIN_TOTP_SECRET = "GJ3XA2LDN5UW45DF";
 
+// Vaste accounts voor de bedragen-strip-e2e (web-bedragen-strip.spec.ts):
+// een monteur-achtig account met projecten:1 (lezen ZONDER bedragen) en een
+// kantooraccount met projecten:2 (lezen MET bedragen). Bewust aparte accounts
+// zodat de bevoegdheden exact overeenkomen met de matrix uit BOUW_01 §1.
+export const E2E_BEDRAGEN1_EMAIL = "e2e-web-bedragen1@fps.local";
+export const E2E_BEDRAGEN1_WACHTWOORD = "E2eBedragen1!2026";
+export const E2E_BEDRAGEN1_TOTP_SECRET = "MFRGGZDFMZTWQ2LK";
+
+export const E2E_BEDRAGEN2_EMAIL = "e2e-web-bedragen2@fps.local";
+export const E2E_BEDRAGEN2_WACHTWOORD = "E2eBedragen2!2026";
+export const E2E_BEDRAGEN2_TOTP_SECRET = "NBSWY3DPO5XXE3DE";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -65,11 +77,15 @@ async function maakOfUpdateE2eAccount(opties: {
   wachtwoord: string;
   totpSecret: string;
   rol?: "gebruiker" | "hoofdbeheerder";
+  // Optionele expliciete bevoegdheden-matrix. Zonder opgave krijgt het account
+  // niveau 4 op alle modules (het historische gedrag van de bestaande accounts).
+  bevoegdheden?: Record<string, number>;
 }): Promise<number> {
   weigerBuitenDev();
   const rol = opties.rol ?? "gebruiker";
   const hash = await bcrypt.hash(opties.wachtwoord, 10);
-  const bevoegdheden = Object.fromEntries(MODULE_IDS.map((m) => [m, 4]));
+  const bevoegdheden =
+    opties.bevoegdheden ?? Object.fromEntries(MODULE_IDS.map((m) => [m, 4]));
 
   const [bestaand] = await db
     .select({ id: gebruikersTable.id })
@@ -178,6 +194,29 @@ export async function setupE2eWebAdminAccount(): Promise<number> {
   });
 }
 
+// Vaste accounts voor de bedragen-strip-suite (web-bedragen-strip.spec.ts).
+// projecten:1 = lezen zonder bedragen; projecten:2 = lezen mét bedragen.
+export async function setupE2eBedragenAccounts(): Promise<{
+  niveau1Id: number;
+  niveau2Id: number;
+}> {
+  const niveau1Id = await maakOfUpdateE2eAccount({
+    email: E2E_BEDRAGEN1_EMAIL,
+    naam: "E2E Bedragen Niveau1",
+    wachtwoord: E2E_BEDRAGEN1_WACHTWOORD,
+    totpSecret: E2E_BEDRAGEN1_TOTP_SECRET,
+    bevoegdheden: { projecten: 1 },
+  });
+  const niveau2Id = await maakOfUpdateE2eAccount({
+    email: E2E_BEDRAGEN2_EMAIL,
+    naam: "E2E Bedragen Niveau2",
+    wachtwoord: E2E_BEDRAGEN2_WACHTWOORD,
+    totpSecret: E2E_BEDRAGEN2_TOTP_SECRET,
+    bevoegdheden: { projecten: 2 },
+  });
+  return { niveau1Id, niveau2Id };
+}
+
 // Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het
 // niet zichtbaar blijft in Gebruikersbeheer en niet kan inloggen buiten een
 // test om. De eerstvolgende testrun zet het via de setup-functie (idempotent)
@@ -199,6 +238,11 @@ export async function archiveerE2eWebAccount(): Promise<void> {
 
 export async function archiveerE2eWebAdminAccount(): Promise<void> {
   await archiveerAccount(E2E_WEB_ADMIN_EMAIL);
+}
+
+export async function archiveerE2eBedragenAccounts(): Promise<void> {
+  await archiveerAccount(E2E_BEDRAGEN1_EMAIL);
+  await archiveerAccount(E2E_BEDRAGEN2_EMAIL);
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
