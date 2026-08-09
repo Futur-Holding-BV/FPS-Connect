@@ -238,6 +238,7 @@ INDEX|medewerker_documenten|medewerker_documenten_pkey
 INDEX|medewerker_opleidingen|medewerker_opleidingen_pkey
 INDEX|medewerkers|medewerkers_gebruiker_id_unique
 INDEX|medewerkers|medewerkers_pkey
+INDEX|migratie_0025_leverancier_rapport|migratie_0025_leverancier_rapport_pkey
 INDEX|mod_calc_adviezen|mod_calc_adviezen_pkey
 INDEX|mod_calc_artikelen|mod_calc_artikelen_pkey
 INDEX|mod_calc_bronbestanden|mod_calc_bronbestanden_pkey
@@ -2452,6 +2453,7 @@ KOLOM|leveranciers|contact_functie|text|YES|
 KOLOM|leveranciers|contact_mobiel|text|YES|
 KOLOM|leveranciers|contact_telefoon|text|YES|
 KOLOM|leveranciers|contactpersoon|text|YES|
+KOLOM|leveranciers|crm_relatie_id|integer|YES|
 KOLOM|leveranciers|email|text|YES|
 KOLOM|leveranciers|factuur_categorie|text|YES|
 KOLOM|leveranciers|g_rekening_iban|text|YES|
@@ -2704,6 +2706,13 @@ KOLOM|medewerkers|werkgever_id|integer|YES|
 KOLOM|medewerkers|werkmaatschappij|text|NO|'FPS Brandpreventie'::text
 KOLOM|medewerkers|wizard_voortgang|jsonb|YES|
 KOLOM|medewerkers|woonplaats|text|YES|
+KOLOM|migratie_0025_leverancier_rapport|crm_naam|text|YES|
+KOLOM|migratie_0025_leverancier_rapport|factuur_id|integer|NO|
+KOLOM|migratie_0025_leverancier_rapport|gemigreerd_op|timestamp without time zone|NO|now()
+KOLOM|migratie_0025_leverancier_rapport|id|integer|NO|nextval('migratie_0025_leverancier_rapport_id_seq'::regclass)
+KOLOM|migratie_0025_leverancier_rapport|nieuwe_leverancier_id|integer|YES|
+KOLOM|migratie_0025_leverancier_rapport|oude_crm_id|integer|YES|
+KOLOM|migratie_0025_leverancier_rapport|uitkomst|text|NO|
 KOLOM|mod_calc_adviezen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_adviezen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_adviezen|calculatie_id|integer|NO|

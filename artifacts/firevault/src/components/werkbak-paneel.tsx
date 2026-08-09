@@ -38,6 +38,7 @@ const BRON_LABELS: Record<string, string> = {
   verloopdatum: "Verloopdatum",
   verlofverjaring: "Verlofverjaring",
   factuursignaal: "Factuursignaal",
+  factuur_zonder_leverancier: "Leverancier",
   contract_verlenging: "Contract",
   bewakingsloop: "Systeem",
 };

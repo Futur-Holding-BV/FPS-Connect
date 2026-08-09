@@ -489,6 +489,8 @@ import type {
   KbOpdrachtgeverVoorkeur,
   KbOpdrachtgeverVoorkeurInput,
   KlantReactieInput,
+  KoppelFactuurLeverancier200,
+  KoppelFactuurLeverancierBody,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -63719,6 +63721,77 @@ export const useWijsFactuurAfStroom = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getWijsFactuurAfStroomMutationOptions(options));
+    }
+
+export const getKoppelFactuurLeverancierUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/leverancier-koppelen`
+}
+
+/**
+ * @summary Koppel een factuur handmatig aan een bestaande leverancier uit het leveranciersregister (LEVERANCIER_01)
+ */
+export const koppelFactuurLeverancier = async (id: number,
+    koppelFactuurLeverancierBody: KoppelFactuurLeverancierBody, options?: RequestInit): Promise<KoppelFactuurLeverancier200> => {
+
+  return customFetch<KoppelFactuurLeverancier200>(getKoppelFactuurLeverancierUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(koppelFactuurLeverancierBody)
+  }
+);}
+
+
+
+
+export const getKoppelFactuurLeverancierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelFactuurLeverancier>>, TError,{id: number;data: BodyType<KoppelFactuurLeverancierBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelFactuurLeverancier>>, TError,{id: number;data: BodyType<KoppelFactuurLeverancierBody>}, TContext> => {
+
+const mutationKey = ['koppelFactuurLeverancier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelFactuurLeverancier>>, {id: number;data: BodyType<KoppelFactuurLeverancierBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  koppelFactuurLeverancier(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelFactuurLeverancierMutationResult = NonNullable<Awaited<ReturnType<typeof koppelFactuurLeverancier>>>
+    export type KoppelFactuurLeverancierMutationBody = BodyType<KoppelFactuurLeverancierBody>
+    export type KoppelFactuurLeverancierMutationError = ErrorType<void>
+
+    /**
+ * @summary Koppel een factuur handmatig aan een bestaande leverancier uit het leveranciersregister (LEVERANCIER_01)
+ */
+export const useKoppelFactuurLeverancier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelFactuurLeverancier>>, TError,{id: number;data: BodyType<KoppelFactuurLeverancierBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelFactuurLeverancier>>,
+        TError,
+        {id: number;data: BodyType<KoppelFactuurLeverancierBody>},
+        TContext
+      > => {
+      return useMutation(getKoppelFactuurLeverancierMutationOptions(options));
     }
 
 export const getBevestigFactuurInkoopUrl = (id: number,) => {

@@ -23065,6 +23065,24 @@ export const WijsFactuurAfStroomResponse = zod.unknown()
 
 
 /**
+ * @summary Koppel een factuur handmatig aan een bestaande leverancier uit het leveranciersregister (LEVERANCIER_01)
+ */
+export const KoppelFactuurLeverancierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KoppelFactuurLeverancierBody = zod.object({
+  "leverancier_id": zod.number()
+})
+
+export const KoppelFactuurLeverancierResponse = zod.object({
+  "ok": zod.boolean(),
+  "leverancier_id": zod.number(),
+  "leverancier_naam": zod.string()
+})
+
+
+/**
  * @summary Inkoper bevestigt dat de factuur klopt met de bestelling (FACTUUR_02, §5)
  */
 export const BevestigFactuurInkoopParams = zod.object({
@@ -27623,6 +27641,7 @@ export const ListLeveranciersResponseItem = zod.object({
   "relatiecode": zod.string().nullish(),
   "factuur_categorie": zod.string().nullish(),
   "auto_akkoord_drempel_cents": zod.number().nullish(),
+  "crm_relatie_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -27666,7 +27685,8 @@ export const CreateLeverancierBody = zod.object({
   "btw_code_default": zod.string().optional(),
   "relatiecode": zod.string().optional(),
   "factuur_categorie": zod.string().optional(),
-  "auto_akkoord_drempel_cents": zod.number().optional()
+  "auto_akkoord_drempel_cents": zod.number().optional(),
+  "crm_relatie_id": zod.number().nullish()
 })
 
 export const CreateLeverancierResponse = zod.void()
@@ -27717,6 +27737,7 @@ export const GetLeverancierResponse = zod.object({
   "relatiecode": zod.string().nullish(),
   "factuur_categorie": zod.string().nullish(),
   "auto_akkoord_drempel_cents": zod.number().nullish(),
+  "crm_relatie_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -27763,7 +27784,8 @@ export const PatchLeverancierBody = zod.object({
   "btw_code_default": zod.string().optional(),
   "relatiecode": zod.string().optional(),
   "factuur_categorie": zod.string().optional(),
-  "auto_akkoord_drempel_cents": zod.number().optional()
+  "auto_akkoord_drempel_cents": zod.number().optional(),
+  "crm_relatie_id": zod.number().nullish()
 })
 
 export const PatchLeverancierResponse = zod.object({
@@ -27804,6 +27826,7 @@ export const PatchLeverancierResponse = zod.object({
   "relatiecode": zod.string().nullish(),
   "factuur_categorie": zod.string().nullish(),
   "auto_akkoord_drempel_cents": zod.number().nullish(),
+  "crm_relatie_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

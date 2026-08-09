@@ -5,9 +5,11 @@
 //   - verwerkFactuurmails: claim/dedupe op werk_inbox_mails
 //   - bijlage → analyseerFactuurVoorStroom (echte AI-extractie via de gateway)
 //   - PDF-opslag in object storage, factuurrij + AI-voorstel + tijdlijn
-//   - leverancier→CRM-koppeling en routering: inkoper via inkoopbon (over de
-//     naam-brug leveranciers↔crm_klanten), anders directie; bij onzekerheid
-//     controle door administratie
+//   - leverancierherkenning in het LEVERANCIERSREGISTER (LEVERANCIER_01) en
+//     routering: inkoper via inkoopbon (directe id-vergelijking op
+//     leverancier_id), anders directie; bij onzekerheid controle door
+//     administratie. crm_klanten wordt bewust NIET aangeraakt; het script
+//     bewijst dat de telling van crm_klanten voor/na gelijk blijft.
 //   - §8: leveranciersreactie in dezelfde mailthread (conversationId) heropent
 //     een afgewezen factuur
 //
@@ -17,7 +19,7 @@
 //
 // Draaien: pnpm --filter @workspace/api-server exec tsx src/verificatie-mail-naar-factuur.ts
 import PDFDocument from "pdfkit";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import {
   db,
   facturenTable,
@@ -94,7 +96,7 @@ async function maakFactuurPdf(): Promise<Buffer> {
 // ── Seeds & cleanup ──────────────────────────────────────────────────────────
 
 let leverancierId = 0;
-let oudeLeverancierId = 0;
+let crmAantalVoor = -1;
 let opdrachtId = 0;
 let inkoopbonId = 0;
 let mailboxId = 0;
@@ -144,8 +146,7 @@ async function cleanup(): Promise<void> {
   if (mailboxId) await db.delete(werkInboxMailboxenTable).where(eq(werkInboxMailboxenTable.id, mailboxId));
   if (inkoopbonId) await db.delete(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, inkoopbonId));
   if (opdrachtId) await db.delete(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId));
-  if (oudeLeverancierId) await db.delete(leveranciersTable).where(eq(leveranciersTable.id, oudeLeverancierId));
-  if (leverancierId) await db.delete(crmKlantenTable).where(eq(crmKlantenTable.id, leverancierId));
+  if (leverancierId) await db.delete(leveranciersTable).where(eq(leveranciersTable.id, leverancierId));
 }
 
 async function main(): Promise<void> {
@@ -159,28 +160,17 @@ async function main(): Promise<void> {
     const uid = admin.id;
     seedGebruikerId = uid;
 
-    const [lev] = await db.insert(crmKlantenTable)
-      .values({ naam: LEVERANCIER_NAAM, type: "leverancier" })
-      .returning({ id: crmKlantenTable.id });
-    leverancierId = lev.id;
+    // LEVERANCIER_01: de testleverancier staat in het LEVERANCIERSREGISTER,
+    // bewust NIET in crm_klanten — acceptatie: een factuur van een leverancier
+    // die wél in leveranciers maar níét in crm_klanten staat, koppelt correct.
+    // De telling van crm_klanten moet voor/na de run gelijk blijven.
+    const [{ aantal: crmVoor }] = await db.select({ aantal: count() }).from(crmKlantenTable);
+    crmAantalVoor = Number(crmVoor);
 
-    // Inkoperroute-seeds: de routering vindt de inkoper via de naam-brug
-    // (crm_klanten.naam ↔ leveranciers.naam ↔ inkoopbonnen.leverancier) — de
-    // id's van beide tabellen verschillen hier bewust, zodat de brug bewezen
-    // wordt en niet een toevallige id-gelijkheid.
-    const [oudeLev] = await db.insert(leveranciersTable)
+    const [lev] = await db.insert(leveranciersTable)
       .values({ naam: LEVERANCIER_NAAM, bron: "handmatig" })
       .returning({ id: leveranciersTable.id });
-    oudeLeverancierId = oudeLev.id;
-    if (oudeLeverancierId === leverancierId) {
-      // Toevallig gelijke id's zouden het bewijs waardeloos maken (dan zou de
-      // oude id-koppeling óók matchen) — schuif de leveranciers-sequence op.
-      const [tweede] = await db.insert(leveranciersTable)
-        .values({ naam: LEVERANCIER_NAAM, bron: "handmatig" })
-        .returning({ id: leveranciersTable.id });
-      await db.delete(leveranciersTable).where(eq(leveranciersTable.id, oudeLeverancierId));
-      oudeLeverancierId = tweede.id;
-    }
+    leverancierId = lev.id;
 
     const [opdr] = await db.insert(opdrachtenTable)
       .values({ titel: `${MARK} opdracht inkoperroute` })
@@ -190,7 +180,7 @@ async function main(): Promise<void> {
     const [bon] = await db.insert(inkoopbonnenTable).values({
       opdrachtId,
       leverancier: LEVERANCIER_NAAM,
-      leverancierId: oudeLeverancierId,
+      leverancierId,
       status: "goedgekeurd",
       goedgekeurdDoorId: uid,
       goedgekeurdOp: new Date(),
@@ -243,8 +233,8 @@ async function main(): Promise<void> {
     eis(!!factuur.aiVoorstelStroom, "stap 2 AI-voorstel", "aiVoorstelStroom is leeg");
     eis(factuur.factuurnummer === FACTUURNUMMER, "stap 2 factuurnummer",
       `AI las "${factuur.factuurnummer}", verwacht "${FACTUURNUMMER}"`);
-    eis(factuur.leverancierId === leverancierId, "stap 2 CRM-koppeling",
-      `leverancierId=${factuur.leverancierId}, verwacht ${leverancierId}`);
+    eis(factuur.leverancierId === leverancierId, "stap 2 leveranciersregister-koppeling",
+      `leverancierId=${factuur.leverancierId}, verwacht ${leverancierId} (uit leveranciers, niet crm_klanten)`);
     eis(factuur.pdfUrl != null && factuur.pdfUrl.includes("/api/storage/files"), "stap 2 PDF-opslag", String(factuur.pdfUrl));
 
     // Deterministisch routeringsbewijs: de PDF is bewust volledig en eenduidig,
@@ -256,7 +246,7 @@ async function main(): Promise<void> {
       `status=${factuur.status}, onzekere velden: [${onzeker.join(", ")}] (verwacht wacht_op_inkoper via inkoopbon)`);
     eis(factuur.inkoperId === uid, "stap 2 inkoper-id",
       `inkoperId=${factuur.inkoperId}, verwacht ${uid} (goedkeurder van de geseedde inkoopbon)`);
-    console.log(`Stap 2: factuur #${factuur.id} → inkoperroute (inkoper via inkoopbon-naam-brug, wacht op bevestiging)`);
+    console.log(`Stap 2: factuur #${factuur.id} → inkoperroute (inkoper via directe leverancier_id-match op de inkoopbon, wacht op bevestiging)`);
 
     const tijdlijn1 = await db.select().from(factuurTijdlijnTable)
       .where(eq(factuurTijdlijnTable.factuurId, factuur.id));
@@ -320,6 +310,12 @@ async function main(): Promise<void> {
     eis(signalen.some((s) => /gereageerd op de afgewezen factuur/i.test(s.omschrijving)),
       "stap 3 signaal", JSON.stringify(signalen.map((s) => s.omschrijving)));
     console.log("Stap 3: reactie in dezelfde mailthread heropende de afgewezen factuur (controle administratie) — met tijdlijn, correspondentie en signaal.");
+
+    // ── Stap 4 (LEVERANCIER_01 acceptatie): klantenregister onaangeroerd ─────
+    const [{ aantal: crmNa }] = await db.select({ aantal: count() }).from(crmKlantenTable);
+    eis(Number(crmNa) === crmAantalVoor, "stap 4 crm_klanten intact",
+      `crm_klanten voor=${crmAantalVoor}, na=${Number(crmNa)} — de pijplijn mag het klantenregister niet raken`);
+    console.log(`Stap 4: crm_klanten-telling voor/na gelijk (${crmAantalVoor}) — klantenregister onaangeroerd.`);
 
     console.log("\nALLE STAPPEN GESLAAGD — mail-naar-factuur-pijplijn bewezen (Graph-randje gesimuleerd, rest productiecode).");
   } finally {

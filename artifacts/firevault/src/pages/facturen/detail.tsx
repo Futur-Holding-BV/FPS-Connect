@@ -24,7 +24,10 @@ import {
   useWijsFactuurAfStroom,
   useBevestigFactuurInkoop,
   useKeurFactuurGoedStroom,
+  useKoppelFactuurLeverancier,
+  useListLeveranciers,
 } from "@workspace/api-client-react";
+import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
 import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -149,6 +152,10 @@ export default function FactuurDetailPagina() {
   const [stroomAfwijzenOpen, setStroomAfwijzenOpen] = useState(false);
   const [stroomRedenCode, setStroomRedenCode] = useState<string>("");
 
+  // LEVERANCIER_01 — handmatig koppelen aan het leveranciersregister
+  const [leverancierKeuze, setLeverancierKeuze] = useState<string>("");
+  const [nieuweLeverancierOpen, setNieuweLeverancierOpen] = useState(false);
+
   // Incasso
   const [incassoOpen, setIncassoOpen] = useState(false);
   const [incassoRef, setIncassoRef] = useState("");
@@ -162,6 +169,18 @@ export default function FactuurDetailPagina() {
     queryClient.invalidateQueries({ queryKey: ["factuur-opmerkingen", id] });
     queryClient.invalidateQueries({ queryKey: ["factuur-proceslog", id] });
   };
+
+  const { data: leveranciers = [] } = useListLeveranciers(undefined, { query: { queryKey: ["leveranciers"] } });
+  const { mutate: koppelLeverancier, isPending: koppeltLeverancier } = useKoppelFactuurLeverancier({
+    mutation: {
+      onSuccess: (r) => {
+        toast({ title: `Factuur gekoppeld aan ${r.leverancier_naam}` });
+        setLeverancierKeuze("");
+        invalideer();
+      },
+      onError: () => toast({ title: "Koppelen mislukt", variant: "destructive" }),
+    },
+  });
 
   const { data: factuur, isLoading } = useGetFactuur(
     id,
@@ -667,6 +686,47 @@ export default function FactuurDetailPagina() {
               {f.relatienaam ?? "—"}
               {f.relatie_code && <span className="ml-2 font-mono text-xs text-muted-foreground">({f.relatie_code})</span>}
             </Veld>
+            {f.type === "inkoop" && (
+              f.leverancier_id ? (
+                <Veld label="Leverancier (register)">
+                  {leveranciers.find((l) => l.id === f.leverancier_id)?.naam ?? `#${f.leverancier_id}`}
+                </Veld>
+              ) : (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+                  <p className="text-xs font-medium text-amber-800">
+                    Nog niet gekoppeld aan een leverancier uit het leveranciersregister.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Select value={leverancierKeuze} onValueChange={setLeverancierKeuze}>
+                      <SelectTrigger className="h-8 flex-1" data-testid="select-leverancier-koppelen">
+                        <SelectValue placeholder="Kies een leverancier…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leveranciers.filter((l) => l.actief).map((l) => (
+                          <SelectItem key={l.id} value={String(l.id)}>{l.naam}{l.stad ? ` — ${l.stad}` : ""}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      disabled={!leverancierKeuze || koppeltLeverancier}
+                      onClick={() => koppelLeverancier({ id, data: { leverancier_id: Number(leverancierKeuze) } })}
+                      data-testid="button-leverancier-koppelen"
+                    >
+                      Koppelen
+                    </Button>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setNieuweLeverancierOpen(true)} data-testid="button-nieuwe-leverancier">
+                    Leverancier staat er niet bij? Nieuwe leverancier aanmaken
+                  </Button>
+                  <NieuweLeverancierDialoog
+                    open={nieuweLeverancierOpen}
+                    onOpenChange={setNieuweLeverancierOpen}
+                    onAangemaakt={(lev) => koppelLeverancier({ id, data: { leverancier_id: lev.id } })}
+                  />
+                </div>
+              )
+            )}
             {f.relatie_adres && <Veld label="Adres">{f.relatie_adres}</Veld>}
             <Veld label="Omschrijving">{f.omschrijving ?? "—"}</Veld>
             {f.gebouw_naam && <Veld label="Gekoppeld gebouw">{f.gebouw_naam}</Veld>}

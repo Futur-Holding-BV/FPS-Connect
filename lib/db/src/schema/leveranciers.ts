@@ -66,6 +66,11 @@ export const leveranciersTable = pgTable("leveranciers", {
   // worden goedgekeurd (status → klaar_voor_boeking, geen handmatige controle).
   autoAkkoordDrempelCents: integer("auto_akkoord_drempel_cents"),
 
+  // LEVERANCIER_01 §3.5 — optionele verwijzing naar een crm-relatie wanneer
+  // dezelfde partij ook klant is. Niet verplicht, niet automatisch gevuld;
+  // de registers blijven gescheiden. FK in DB via migratie 0025.
+  crmRelatieId: integer("crm_relatie_id"),
+
   // Meta
   notities: text("notities"),
   actief: boolean("actief").notNull().default(true),

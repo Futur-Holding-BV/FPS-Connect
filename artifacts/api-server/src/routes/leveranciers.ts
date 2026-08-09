@@ -2,11 +2,14 @@ import { Router } from "express";
 import { db, leveranciersTable, artikelenTable } from "@workspace/db";
 import { eq, ilike, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireEnigeBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
-const lezen    = requireBevoegdheid("magazijn", 1);
+// LEVERANCIER_01: het factuurdetail (financieel niveau 2) moet de lijst kunnen
+// tonen om een factuur handmatig te koppelen — lezen is daarom ook toegestaan
+// met financiële rechten. Schrijven/aanmaken blijft magazijn-only.
+const lezen    = requireEnigeBevoegdheid([["magazijn", 1], ["financieel", 2]]);
 const schrijven = requireBevoegdheid("magazijn", 2);
 const aanmaken = requireBevoegdheid("magazijn", 3);
 const beheer   = requireBevoegdheid("magazijn", 4);
@@ -168,6 +171,9 @@ function maakLeverancierValues(body: Record<string, unknown>, bron?: string) {
     autoAkkoordDrempelCents: typeof body.auto_akkoord_drempel_cents === "number"
       ? body.auto_akkoord_drempel_cents
       : null,
+    // LEVERANCIER_01 §3.5: optionele verwijzing naar een crm-relatie (zelfde
+    // partij ook klant). Nooit automatisch gevuld.
+    crmRelatieId: num(body.crm_relatie_id),
     ...(bron ? { bron } : {}),
   };
 }
@@ -213,6 +219,7 @@ function mapLeverancier(r: LeverancierRij) {
     relatiecode: r.relatiecode ?? null,
     factuur_categorie: r.factuurCategorie ?? null,
     auto_akkoord_drempel_cents: r.autoAkkoordDrempelCents ?? null,
+    crm_relatie_id: r.crmRelatieId ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

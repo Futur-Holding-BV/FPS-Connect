@@ -12549,6 +12549,8 @@ export interface Leverancier {
   factuur_categorie?: string | null;
   /** @nullable */
   auto_akkoord_drempel_cents?: number | null;
+  /** @nullable */
+  crm_relatie_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -12588,6 +12590,8 @@ export interface LeverancierInput {
   relatiecode?: string;
   factuur_categorie?: string;
   auto_akkoord_drempel_cents?: number;
+  /** @nullable */
+  crm_relatie_id?: number | null;
 }
 
 export interface Artikel {
@@ -16069,6 +16073,16 @@ export const ListFactuurSignalenStatus = {
   open: 'open',
   afgehandeld: 'afgehandeld',
 } as const;
+
+export type KoppelFactuurLeverancierBody = {
+  leverancier_id: number;
+};
+
+export type KoppelFactuurLeverancier200 = {
+  ok: boolean;
+  leverancier_id: number;
+  leverancier_naam: string;
+};
 
 export type UpdateFactuurCorrespondentie200 = {
   id?: number;

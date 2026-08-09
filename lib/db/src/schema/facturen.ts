@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
+import { leveranciersTable } from "./leveranciers";
 
 // ── AccountView instellingen (singleton per installatie) ──────────────────────
 // NUMMER_01 §4.6 — fiscale factuurreeks per BV: teller onder slot, toegekend
@@ -81,7 +82,9 @@ export const facturenTable = pgTable("facturen", {
 
   // Koppelingen
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
-  leverancierId: integer("leverancier_id"),
+  // LEVERANCIER_01: wijst naar het leveranciersregister (inkooprelaties),
+  // nooit naar crm_klanten (commerciële relaties). FK in DB via migratie 0025.
+  leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
   projectId: integer("project_id"),
 
   // AI-uitgelezen metadata
@@ -240,7 +243,7 @@ export const FACTUUR_SIGNAAL_TYPES = [
   "uitgaand_onbetaald",    // 6. uitgaande factuur niet betaald
   "rekeningnummer_gewijzigd", // 7. fraude-indicator — mag nooit stil afgehandeld worden
   "loondeel_onzeker",      // 8. loondeel niet gevonden/onwaarschijnlijk bij uitzendbureau
-  "onbekende_leverancier", // 9. nog niet in crm_klanten, of type onbepaald
+  "onbekende_leverancier", // 9. nog niet in het leveranciersregister
   // AANVRAAG_01 — reactietijdbewaking van prijsaanvragen (zelfde mechanisme, geen tweede dashboard)
   "aanvraag_antwoord_te_laat",  // conceptantwoord nog niet verstuurd binnen de instelbare termijn
   "aanvraag_niet_opgepakt",     // projectkans staat na de instelbare termijn nog in fase 'signaal'

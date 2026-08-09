@@ -689,6 +689,8 @@ export * from './kbOpdrachtgeverVoorkeur';
 export * from './kbOpdrachtgeverVoorkeurInput';
 export * from './klantReactieInput';
 export * from './klantReactieInputReactieType';
+export * from './koppelFactuurLeverancier200';
+export * from './koppelFactuurLeverancierBody';
 export * from './koppelingDoelType';
 export * from './laadBrandstofImport200';
 export * from './label';

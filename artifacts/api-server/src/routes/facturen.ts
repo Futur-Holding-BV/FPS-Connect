@@ -729,6 +729,31 @@ router.post("/facturen/:id/afwijzen-stroom", requireBevoegdheid("financieel", 2)
   res.json({ ok: true, status: "afgekeurd", afwijsreden_code: code, concept_correspondentie_id: concept.id });
 });
 
+// ── POST /facturen/:id/leverancier-koppelen — LEVERANCIER_01 §3.3 ─────────────
+// Handmatig koppelen aan een bestaande leverancier wanneer de automatische
+// herkenning niets vond. Er wordt hier nooit een leverancier aangemaakt; dat
+// loopt via het leveranciersregister zelf (René besluit, Jacqueline legt vast).
+router.post("/facturen/:id/leverancier-koppelen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const leverancierId = Number((req.body as { leverancier_id?: unknown })?.leverancier_id);
+  if (!Number.isInteger(leverancierId) || leverancierId <= 0) {
+    res.status(422).json({ error: "leverancier_id is verplicht" }); return;
+  }
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  const [lev] = await db.select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
+    .from(leveranciersTable).where(eq(leveranciersTable.id, leverancierId)).limit(1);
+  if (!lev) { res.status(404).json({ error: "Leverancier niet gevonden" }); return; }
+  const userId = sessionUserId(req);
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  await db.update(facturenTable).set({
+    leverancierId: lev.id,
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id));
+  await schrijfTijdlijn(id, `${wie?.naam ?? "Een medewerker"} heeft de factuur gekoppeld aan leverancier ${lev.naam}.`, wie?.naam ?? null);
+  res.json({ ok: true, leverancier_id: lev.id, leverancier_naam: lev.naam });
+});
+
 // ── POST /facturen/:id/bevestig-inkoop — stap van de inkoper (§5) ──────────────
 router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);

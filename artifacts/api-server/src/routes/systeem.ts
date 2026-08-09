@@ -36,9 +36,13 @@ router.get("/meting-leverancier-registers", async (req, res): Promise<void> => {
     const norm = (kol: string) =>
       `lower(regexp_replace(${kol}, '\\s*(b\\.?\\s?v\\.?|v\\.?o\\.?f\\.?|n\\.?v\\.?)\\s*$', '', 'i'))`;
     const sqls = {
+      // LEVERANCIER_01 is doorgevoerd (migratie 0025): facturen.leverancier_id
+      // wijst nu per FK naar `leveranciers`. Deze meting rapporteert de
+      // post-migratie werkelijkheid; de pre-migratie uitkomst staat blijvend in
+      // migratie_0025_leverancier_rapport.
       registers: `SELECT 'leveranciers' AS register, count(*)::int AS aantal FROM leveranciers UNION ALL SELECT 'crm_klanten', count(*)::int FROM crm_klanten`,
-      factuur_verwijzingen: `SELECT count(*) FILTER (WHERE f.leverancier_id IS NOT NULL)::int AS gevuld, count(*) FILTER (WHERE f.leverancier_id IS NOT NULL AND k.id IS NOT NULL)::int AS wijst_naar_bestaande_crm, count(*) FILTER (WHERE f.leverancier_id IS NOT NULL AND k.id IS NULL)::int AS wijst_nergens_naar FROM facturen f LEFT JOIN crm_klanten k ON k.id = f.leverancier_id`,
-      crm_doelen_feitelijk_leverancier: `WITH crm_doelen AS (SELECT DISTINCT k.id, k.naam FROM facturen f JOIN crm_klanten k ON k.id = f.leverancier_id) SELECT count(*)::int AS crm_doelen_totaal, count(*) FILTER (WHERE EXISTS (SELECT 1 FROM leveranciers l WHERE ${norm("l.naam")} = ${norm("crm_doelen.naam")}))::int AS ook_in_leveranciers FROM crm_doelen`,
+      factuur_verwijzingen: `SELECT count(*) FILTER (WHERE f.leverancier_id IS NOT NULL)::int AS gevuld, count(*) FILTER (WHERE f.leverancier_id IS NOT NULL AND l.id IS NOT NULL)::int AS wijst_naar_bestaande_leverancier, count(*) FILTER (WHERE f.leverancier_id IS NOT NULL AND l.id IS NULL)::int AS wijst_nergens_naar FROM facturen f LEFT JOIN leveranciers l ON l.id = f.leverancier_id`,
+      migratierapport_0025: `SELECT uitkomst, count(*)::int AS aantal FROM migratie_0025_leverancier_rapport GROUP BY uitkomst ORDER BY 1`,
       omvang_probleem: `SELECT count(*)::int AS onnodig_handmatig FROM facturen f WHERE f.leverancier_id IS NULL AND coalesce(f.relatienaam,'') <> '' AND EXISTS (SELECT 1 FROM leveranciers l WHERE ${norm("l.naam")} = ${norm("f.relatienaam")})`,
       omvang_probleem_namen: `SELECT DISTINCT f.relatienaam FROM facturen f WHERE f.leverancier_id IS NULL AND coalesce(f.relatienaam,'') <> '' AND EXISTS (SELECT 1 FROM leveranciers l WHERE ${norm("l.naam")} = ${norm("f.relatienaam")}) ORDER BY 1 LIMIT 100`,
       crm_vervuiling: `SELECT count(*) FILTER (WHERE k.type = 'leverancier')::int AS crm_type_leverancier, count(*) FILTER (WHERE coalesce(k.bron,'') = 'import')::int AS crm_bron_import, count(*) FILTER (WHERE EXISTS (SELECT 1 FROM leveranciers l WHERE ${norm("l.naam")} = ${norm("k.naam")}))::int AS crm_naam_ook_leverancier FROM crm_klanten k`,

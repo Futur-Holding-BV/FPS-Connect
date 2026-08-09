@@ -461,6 +461,34 @@ async function voedFactuursignalen(): Promise<{ nieuw: number; afgehandeld: numb
   return syncBron("factuursignaal", items);
 }
 
+// LEVERANCIER_01 §3.3 — inkoopfacturen in de actieve stroom zonder koppeling
+// aan het leveranciersregister. Er wordt nooit automatisch een leverancier
+// aangemaakt: het item vraagt om een menselijke keuze (koppelen of aanmaken).
+async function voedFacturenZonderLeverancier(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const facturen = await db
+    .select({ id: facturenTable.id, relatienaam: facturenTable.relatienaam, factuurnummer: facturenTable.factuurnummer })
+    .from(facturenTable)
+    .where(and(
+      eq(facturenTable.type, "inkoop"),
+      isNull(facturenTable.leverancierId),
+      inArray(facturenTable.status, ["ontvangen", "ai_gelezen", "controle_nodig", "te_beoordelen_pl", "wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling", "klaar_voor_boeking"]),
+    ));
+  const items: WerkbakInvoer[] = facturen.map((f) => ({
+    soort: "doen" as const,
+    bron: "factuur_zonder_leverancier" as const,
+    titel: `Factuur${f.factuurnummer ? ` ${f.factuurnummer}` : ""}${f.relatienaam ? ` van ${f.relatienaam}` : ""} is nog niet gekoppeld aan een leverancier`,
+    omschrijving: "Koppel de factuur aan een bestaande leverancier of maak eerst een nieuwe leverancier aan in het leveranciersregister.",
+    vereisteModule: "financieel",
+    vereistNiveau: 2,
+    gewicht: 50,
+    actiePad: `/facturen/${f.id}`,
+    herkomstType: "factuur",
+    herkomstId: f.id,
+    dedupSleutel: `factuur_zonder_leverancier:${f.id}`,
+  }));
+  return syncBron("factuur_zonder_leverancier", items);
+}
+
 // §5 Doen-bronnen: goedkeuringsaanvragen, verlofaanvragen, factuur ter
 // goedkeuring, betaalbatch, conceptantwoord, mail die antwoord nodig heeft,
 // nieuwe leverancier (via factuursignaal onbekende_leverancier hierboven al
@@ -655,6 +683,7 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["wagenpark_sync", voedWagenparkSync],
     ["verlofverjaring", voedVerlofverjaring],
     ["factuursignalen", voedFactuursignalen],
+    ["facturen_zonder_leverancier", voedFacturenZonderLeverancier],
     ["goedkeuringsaanvragen", voedGoedkeuringsaanvragen],
     ["verlofaanvragen", voedVerlofaanvragen],
     ["facturen_ter_goedkeuring", voedFacturenTerGoedkeuring],

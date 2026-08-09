@@ -75,6 +75,8 @@ export interface Leverancier {
   factuur_categorie?: string | null;
   /** @nullable */
   auto_akkoord_drempel_cents?: number | null;
+  /** @nullable */
+  crm_relatie_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

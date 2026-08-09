@@ -18399,6 +18399,44 @@ paths:
         "409":
           description: Al afgewezen
 
+  /facturen/{id}/leverancier-koppelen:
+    post:
+      operationId: koppelFactuurLeverancier
+      summary: Koppel een factuur handmatig aan een bestaande leverancier uit het leveranciersregister (LEVERANCIER_01)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leverancier_id]
+              properties:
+                leverancier_id:
+                  type: integer
+      responses:
+        "200":
+          description: Gekoppeld
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, leverancier_id, leverancier_naam]
+                properties:
+                  ok: { type: boolean }
+                  leverancier_id: { type: integer }
+                  leverancier_naam: { type: string }
+        "404":
+          description: Factuur of leverancier niet gevonden
+        "422":
+          description: leverancier_id ontbreekt
+
   /facturen/{id}/bevestig-inkoop:
     post:
       operationId: bevestigFactuurInkoop
@@ -43935,6 +43973,7 @@ components:
         relatiecode:              { type: ["string", "null"] }
         factuur_categorie:        { type: ["string", "null"] }
         auto_akkoord_drempel_cents: { type: ["integer", "null"] }
+        crm_relatie_id:           { type: ["integer", "null"] }
         aangemaakt_op:            { type: string }
         bijgewerkt_op:            { type: string }
 
@@ -43976,6 +44015,7 @@ components:
         relatiecode:              { type: string }
         factuur_categorie:        { type: string }
         auto_akkoord_drempel_cents: { type: integer }
+        crm_relatie_id:           { type: ["integer", "null"] }
 
     # ── ARTIKELEN ──────────────────────────────────────────────────────────────
 

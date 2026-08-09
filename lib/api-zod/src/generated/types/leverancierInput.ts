@@ -41,4 +41,6 @@ export interface LeverancierInput {
   relatiecode?: string;
   factuur_categorie?: string;
   auto_akkoord_drempel_cents?: number;
+  /** @nullable */
+  crm_relatie_id?: number | null;
 }

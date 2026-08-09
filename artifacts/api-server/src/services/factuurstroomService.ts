@@ -16,7 +16,7 @@ import {
   factuurSignalenTable,
   factuurTijdlijnTable,
   factuurCorrespondentieTable,
-  crmKlantenTable,
+  leveranciersTable,
   algemeneInkopenTable,
   gebruikersTable,
   werkInboxMailboxenTable,
@@ -108,17 +108,23 @@ export function bepaalBv(tenaamstelling: string | null): string | null {
 function normaliseerBedrijfsnaam(naam: string): string {
   return naam.trim().toLowerCase().replace(/\s*(b\.?v\.?|v\.?o\.?f\.?|n\.?v\.?)\s*$/i, "").trim();
 }
-async function zoekLeverancier(naam: string | null): Promise<{ id: number; naam: string; type: string | null } | null> {
+// LEVERANCIER_01: een leveranciersfactuur wordt opgezocht in het
+// leveranciersregister — nooit in crm_klanten (commerciële relaties).
+async function zoekLeverancier(naam: string | null): Promise<{ id: number; naam: string; gRekening: boolean } | null> {
   if (!naam) return null;
   const genorm = normaliseerBedrijfsnaam(naam);
   if (genorm.length < 3) return null;
-  const kandidaten = await db.select({ id: crmKlantenTable.id, naam: crmKlantenTable.naam, type: crmKlantenTable.type })
-    .from(crmKlantenTable)
-    .where(sql`lower(${crmKlantenTable.naam}) LIKE ${"%" + genorm + "%"} OR ${sql.raw("lower(" + '"crm_klanten"."naam"' + ")")} = ${genorm}`);
-  // Alleen bij exact één plausibele match koppelen — nooit gokken
+  const kandidaten = await db.select({
+    id: leveranciersTable.id,
+    naam: leveranciersTable.naam,
+    gRekening: leveranciersTable.gRekeningVanToepassing,
+  })
+    .from(leveranciersTable)
+    .where(sql`lower(${leveranciersTable.naam}) LIKE ${"%" + genorm + "%"}`);
+  // Alleen bij exact één genormaliseerd-identieke match koppelen — nooit gokken
+  // op een losse LIKE-treffer (die gaat via de werkbak naar een mens).
   const exact = kandidaten.filter((k) => normaliseerBedrijfsnaam(k.naam) === genorm);
   if (exact.length === 1) return exact[0];
-  if (kandidaten.length === 1) return kandidaten[0];
   return null;
 }
 
@@ -302,7 +308,7 @@ async function verwerkFactuurBijlage(
 
   const onzeker = [...v.onzekere_velden];
 
-  // Leverancier → CRM (§3)
+  // Leverancier → leveranciersregister (LEVERANCIER_01)
   const leverancier = await zoekLeverancier(v.leverancier_naam);
   const bv = bepaalBv(v.tenaamstelling);
   if (!bv && v.tenaamstelling) onzeker.push("tenaamstelling_bv");
@@ -336,8 +342,11 @@ async function verwerkFactuurBijlage(
     }
   }
 
-  // Uitzendbureau-controle (bouwt op FACTUUR_01: crm_klanten.type)
-  const isUitzendbureau = leverancier?.type === "uitzendbureau" || leverancier?.type === "inlener";
+  // Loondeel-controle: leveranciers met G-rekening-verplichting (uitzendbureaus,
+  // onderaannemers) horen het loondeel op de factuur te vermelden. Sinds
+  // LEVERANCIER_01 komt dit signaal uit leveranciers.g_rekening_van_toepassing,
+  // niet meer uit crm_klanten.type.
+  const isUitzendbureau = leverancier?.gRekening === true;
   const loondeelOntbreekt = isUitzendbureau && (!v.loondeel_vermeld || v.loondeel_bedrag == null);
 
   // ── Alle databasestappen in één transactie: bij een crash halverwege blijft
@@ -557,42 +566,21 @@ async function routeerNaVerwerking(
   }
 
   // Inkoper zoeken via recente inkooporders bij deze leverancier.
-  // Let op: `leverancierId` is een crm_klanten-id, terwijl inkoopbonnen.leverancier_id
-  // naar de oude `leveranciers`-tabel verwijst. De brug loopt via de (genormaliseerde)
-  // bedrijfsnaam: crm_klanten.naam ↔ leveranciers.naam ↔ inkoopbonnen.leverancier (tekst).
+  // LEVERANCIER_01: factuur.leverancier_id en inkoopbonnen.leverancier_id wijzen
+  // naar hetzelfde register (leveranciers) — een directe id-vergelijking dus,
+  // zonder naambrug.
   let inkoperId: number | null = null;
   if (leverancierId) {
     try {
-      const { inkoopbonnenTable, leveranciersTable } = await import("@workspace/db");
-      const [crmKlant] = await uitvoerder.select({ naam: crmKlantenTable.naam })
-        .from(crmKlantenTable).where(eq(crmKlantenTable.id, leverancierId)).limit(1);
-      const genorm = crmKlant ? normaliseerBedrijfsnaam(crmKlant.naam) : "";
-      if (genorm.length >= 3) {
-        // Brug 1: leveranciers-rijen met (genormaliseerd) dezelfde naam
-        const levKandidaten = await uitvoerder.select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
-          .from(leveranciersTable)
-          .where(sql`lower(${leveranciersTable.naam}) LIKE ${"%" + genorm + "%"}`);
-        const levIds = levKandidaten.filter((l) => normaliseerBedrijfsnaam(l.naam) === genorm).map((l) => l.id);
-        // Brug 2: inkoopbonnen dragen de leveranciersnaam ook als tekstveld
-        const bonnen = await uitvoerder.select({
-          id: inkoopbonnenTable.id,
-          leverancier: inkoopbonnenTable.leverancier,
-          bonLeverancierId: inkoopbonnenTable.leverancierId,
-          goedgekeurdDoorId: inkoopbonnenTable.goedgekeurdDoorId,
-        })
-          .from(inkoopbonnenTable)
-          .where(and(
-            isNotNull(inkoopbonnenTable.goedgekeurdDoorId),
-            levIds.length > 0
-              ? sql`(${inArray(inkoopbonnenTable.leverancierId, levIds)} OR lower(${inkoopbonnenTable.leverancier}) LIKE ${"%" + genorm + "%"})`
-              : sql`lower(${inkoopbonnenTable.leverancier}) LIKE ${"%" + genorm + "%"}`,
-          ))
-          .orderBy(desc(inkoopbonnenTable.id)).limit(25);
-        const bon = bonnen.find((b) =>
-          (b.bonLeverancierId != null && levIds.includes(b.bonLeverancierId)) ||
-          normaliseerBedrijfsnaam(b.leverancier) === genorm);
-        inkoperId = bon?.goedgekeurdDoorId ?? null;
-      }
+      const { inkoopbonnenTable } = await import("@workspace/db");
+      const [bon] = await uitvoerder.select({ goedgekeurdDoorId: inkoopbonnenTable.goedgekeurdDoorId })
+        .from(inkoopbonnenTable)
+        .where(and(
+          eq(inkoopbonnenTable.leverancierId, leverancierId),
+          isNotNull(inkoopbonnenTable.goedgekeurdDoorId),
+        ))
+        .orderBy(desc(inkoopbonnenTable.id)).limit(1);
+      inkoperId = bon?.goedgekeurdDoorId ?? null;
     } catch { /* inkoopmodule niet beschikbaar → geen inkoper */ }
   }
 
