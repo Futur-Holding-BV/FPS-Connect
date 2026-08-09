@@ -52,6 +52,8 @@ const STROOM_STATUSSEN = new Set(["wacht_op_inkoper", "wacht_op_goedkeuring", "k
 const STROOM_MELDING = "Deze factuur zit in de factuurstroom. Gebruik de stroomacties (inkoper bevestigen, goedkeuren of afwijzen) op de factuurdetailpagina.";
 import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
 import { schrijfTijdlijn, maakAfwijsMailTekst } from "../services/factuurstroomService";
+import { verwerkMandagstaatVoorFactuur } from "../lib/mandagstaat";
+import { PermissieService } from "../lib/permissie-service";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -159,6 +161,37 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
+}
+
+// UREN_01 §6c.2/§9.16 — mandagstaat-koppeling aan de verkoopfactuur.
+// Genereert de mandagsta(a)t(en) voor een verkoopfactuur op een mandagstaat-
+// vereiste opdracht en slaat die op in object storage NAAST de factuur, zodat
+// aantoonbaar is dat hij met de factuur meegaat. De centrale policy
+// (magMandagstaatGenereren) bepaalt of de acterende gebruiker dit mag; zonder
+// recht komt er GEEN bijlage maar een niet-blokkerende waarschuwing. Factureren
+// wordt NOOIT geblokkeerd (§7). BSN blijft binnen het PDF-document (§6c.3).
+async function mandagstatenVoorVerkoopfactuur(
+  factuur: typeof facturenTable.$inferSelect,
+  perm: PermissieService,
+  gebruikerId: number | null,
+): Promise<{ paden: string[]; waarschuwing: string | null }> {
+  if (factuur.type !== "verkoop" || !factuur.opdrachtId) return { paden: [], waarschuwing: null };
+  const [opdracht] = await db
+    .select({ id: opdrachtenTable.id, mandagstaatVereist: opdrachtenTable.mandagstaatVereist, gebouwId: opdrachtenTable.gebouwId, werknummer: opdrachtenTable.werknummer })
+    .from(opdrachtenTable)
+    .where(eq(opdrachtenTable.id, factuur.opdrachtId))
+    .limit(1);
+  if (!opdracht) return { paden: [], waarschuwing: null };
+
+  return verwerkMandagstaatVoorFactuur({
+    factuurId: factuur.id,
+    opdracht,
+    perm,
+    gebruikerId,
+    // Geen expliciete factuurperiode → generator kiest laatst goedgekeurde week.
+    van: null,
+    tot: null,
+  });
 }
 
 // ── GET /facturen/upload-url ───────────────────────────────────────────────────
@@ -351,7 +384,16 @@ router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), asy
     return;
   }
 
-  res.json(await mapFactuur(resultaat));
+  // §6c.2/§9.16: mandagstaat bij het definitief maken. De PDF('s) worden naast de
+  // factuur in object storage opgeslagen zodat ze aantoonbaar met de factuur
+  // meegaan; de paden komen terug in de respons. Nooit blokkerend — ontbreken
+  // (geen uren of geen personeelsrecht) levert alleen een waarschuwing.
+  const { paden, waarschuwing } = await mandagstatenVoorVerkoopfactuur(resultaat, req.permissies!, sessionUserId(req));
+  res.json({
+    ...(await mapFactuur(resultaat)),
+    mandagstaat_waarschuwing: waarschuwing,
+    mandagstaat_paden: paden,
+  });
 });
 
 // ── GET /facturen/historisch-archief/excel ─────────────────────────────────────
@@ -1543,6 +1585,9 @@ router.post("/facturen/:id/correspondentie/:cid/verzenden", requireBevoegdheid("
   if (!rij.ontvangerEmail?.trim()) { res.status(422).json({ error: "Geen ontvanger-e-mailadres ingevuld" }); return; }
   if (!mailIsGeconfigureerd()) { res.status(503).json({ error: "E-mail is niet geconfigureerd" }); return; }
 
+  // NB: dit is uitsluitend de leveranciers-afkeurmail (inkoop). De mandagstaat
+  // hoort NIET bij deze mail — die wordt bij het definitief maken van de
+  // verkoopfactuur naast de factuur in object storage opgeslagen (§6c.2).
   const html = rij.bericht.split("\n").map((r) => r.length ? `<p>${r.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "<br>").join("");
   try {
     await verstuurMail({
@@ -1568,7 +1613,11 @@ router.post("/facturen/:id/correspondentie/:cid/verzenden", requireBevoegdheid("
     foutmelding: null,
     bijgewerktOp: new Date(),
   }).where(eq(factuurCorrespondentieTable.id, cid)).returning();
-  res.json({ id: updated?.id, status: "verzonden", verzonden_op: updated?.verzondenOp?.toISOString() ?? null });
+  res.json({
+    id: updated?.id,
+    status: "verzonden",
+    verzonden_op: updated?.verzondenOp?.toISOString() ?? null,
+  });
 });
 
 // ── GET /facturen/:id/categorisatie-voorstel ──────────────────────────────────

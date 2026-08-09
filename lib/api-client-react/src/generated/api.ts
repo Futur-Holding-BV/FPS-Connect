@@ -405,6 +405,7 @@ import type {
   GetLoonOutputParams,
   GetMagazijnStellingsscanUploadUrl200,
   GetMagazijnToebehorenVerbruikParams,
+  GetMandagstaatParams,
   GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
   GetMijnVoorkeuren200,
@@ -42686,6 +42687,96 @@ export const useUpdateOpdracht = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateOpdrachtMutationOptions(options));
     }
+
+export const getGetMandagstaatUrl = (id: number,
+    params: GetMandagstaatParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/opdrachten/${id}/mandagstaat?${stringifiedParams}` : `/api/opdrachten/${id}/mandagstaat`
+}
+
+/**
+ * Genereert server-side de mandagstaat-PDF met per medewerker de dagelijkse (goedgekeurde) uren, naam, geboortedatum en BSN. Autorisatie via de centrale policy: opdracht.mandagstaat_vereist moet true zijn (anders 422), klant nooit, personeel niveau ≥ 2 én toegang tot de opdracht/het gebouw. Alleen goedgekeurde uren tellen mee; zijn die er niet, dan 422.
+ * @summary Mandagstaat-PDF voor een opdracht + ISO-week (UREN_01 §6c)
+ */
+export const getMandagstaat = async (id: number,
+    params: GetMandagstaatParams, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetMandagstaatUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMandagstaatQueryKey = (id: number,
+    params?: GetMandagstaatParams,) => {
+    return [
+    `/api/opdrachten/${id}/mandagstaat`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMandagstaatQueryOptions = <TData = Awaited<ReturnType<typeof getMandagstaat>>, TError = ErrorType<void>>(id: number,
+    params: GetMandagstaatParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMandagstaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMandagstaatQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMandagstaat>>> = ({ signal }) => getMandagstaat(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMandagstaat>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMandagstaatQueryResult = NonNullable<Awaited<ReturnType<typeof getMandagstaat>>>
+export type GetMandagstaatQueryError = ErrorType<void>
+
+
+/**
+ * @summary Mandagstaat-PDF voor een opdracht + ISO-week (UREN_01 §6c)
+ */
+
+export function useGetMandagstaat<TData = Awaited<ReturnType<typeof getMandagstaat>>, TError = ErrorType<void>>(
+ id: number,
+    params: GetMandagstaatParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMandagstaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMandagstaatQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetWerkbegrotingUrl = (id: number,) => {
 

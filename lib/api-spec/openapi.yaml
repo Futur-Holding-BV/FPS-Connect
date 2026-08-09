@@ -12197,6 +12197,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/Opdracht"
 
+  /opdrachten/{id}/mandagstaat:
+    get:
+      operationId: getMandagstaat
+      tags: [opdrachten]
+      summary: "Mandagstaat-PDF voor een opdracht + ISO-week (UREN_01 §6c)"
+      description: >
+        Genereert server-side de mandagstaat-PDF met per medewerker de dagelijkse
+        (goedgekeurde) uren, naam, geboortedatum en BSN. Autorisatie via de
+        centrale policy: opdracht.mandagstaat_vereist moet true zijn (anders 422),
+        klant nooit, personeel niveau ≥ 2 én toegang tot de opdracht/het gebouw.
+        Alleen goedgekeurde uren tellen mee; zijn die er niet, dan 422.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: jaar
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: week
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: De mandagstaat als PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Geen recht (klant, onvoldoende personeelsrecht of geen opdrachttoegang)
+        "422":
+          description: Mandagstaat niet vereist op deze opdracht, of geen goedgekeurde uren
+
   /opdrachten/{id}/werkbegroting:
     get:
       operationId: getWerkbegroting
@@ -36062,6 +36102,9 @@ components:
         ai_fase:
           type: ["string", "null"]
           description: "AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
+        mandagstaat_vereist:
+          type: boolean
+          description: "UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false)"
         uitvoering_stap_actief:
           type: ["integer", "null"]
           description: "Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)"
@@ -36087,6 +36130,9 @@ components:
           type: string
         werknummer:
           type: string
+        mandagstaat_vereist:
+          type: boolean
+          description: "UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten"
 
     AanvraagInput:
       type: object
@@ -42658,6 +42704,15 @@ components:
       properties:
         bron:               { type: ["string", "null"] }
         import_id:          { type: ["integer", "null"] }
+        mandagstaat_waarschuwing:
+          type: string
+          nullable: true
+          description: "UREN_01 §6c.2/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend."
+        mandagstaat_paden:
+          type: array
+          items:
+            type: string
+          description: "UREN_01 §6c.2: storage-URL's van de bij het definitief maken opgeslagen mandagstaat-PDF's (gaan aantoonbaar met de factuur mee)."
         id:
           type: integer
         type:

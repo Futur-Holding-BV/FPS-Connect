@@ -20,3 +20,10 @@ description: CAO-instellingen centraal, overwerkslot-toets in uren-routes, weekc
 - PATCH van uren boekt alleen de TOENAME van het boven-grensdeel op het slot (oude bijdrage herberekend met negeerRegistratieId); afname wordt bewust niet teruggegeven. DELETE geeft niets terug — transactionaliteit/race is bewust doorgeschoven (taak voorgesteld).
 - GET /opdrachten/:id/uurcodes en /uren-per-uurcode vereisen projecten:1 (uren, geen bedragen).
 **Waarom:** review-ronde vond dubbeltelling bij ongewijzigd PATCH-opslaan en open object-access op de uurcodelijst.
+
+## §6c — mandagstaat (2026-08-09)
+- BSN mag UITSLUITEND op de mandagstaat-pdf: één centrale policy `magMandagstaatGenereren` (vereist-vlag aan + personeel≥2 + magBijGebouw + nooit klant) afgedwongen op ÉLKE genereerweg — GET-route én factuurweg. Review vond dat de factuurweg eerst alleen financieel-recht checkte: elke nieuwe uitvoerweg voor gevoelige pdf's moet door dezelfde policy.
+- Alleen goedgekeurde/vergrendelde weekstaten leveren regels; weekselectie voor de factuur met hetzelfde filter (anders claimt de helper weken met alleen concepturen).
+- Bijlage hoort bij /definitief van de verkoopfactuur (object storage `facturen/{id}/mandagstaten/`, paden in respons), NIET bij de leveranciers-afkeurmail; ontbreken = waarschuwing, nooit blokkade.
+- Weekstaat-detail lekte medewerker_bsn/geboortedatum (ongebruikt) — verwijderd; HRM-profiel toont geboortedatum als bestaand HRM-gedrag (gemeld, niet gewijzigd).
+- Inkomende mandagstaten van eigen onderaannemers = bewust eigen opdracht (niet gebouwd).

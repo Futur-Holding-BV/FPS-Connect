@@ -12,6 +12,10 @@ export interface Factuur {
   bron?: string | null;
   /** @nullable */
   import_id?: number | null;
+  /** UREN_01 §6c.2/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend. */
+  mandagstaat_waarschuwing?: string | null;
+  /** UREN_01 §6c.2: storage-URL's van de bij het definitief maken opgeslagen mandagstaat-PDF's (gaan aantoonbaar met de factuur mee). */
+  mandagstaat_paden?: string[];
   id: number;
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */

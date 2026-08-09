@@ -86,6 +86,8 @@ function mapOpdracht(
     begroting_status: begrotingStatus,
     begroting_totaal_arbeid_uren: begrotingUren,
     ai_fase: o.aiFase ?? null,
+    // UREN_01 §6c.2: instelbaar of een mandagstaat met de factuur meegaat.
+    mandagstaat_vereist: o.mandagstaatVereist,
     uitvoering_stap_actief: uitvoeringStapActief ?? null,
   };
 }
@@ -420,7 +422,9 @@ router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
   try {
-    const { status, omschrijving, werknummer } = req.body as Record<string, string | undefined>;
+    const { status, omschrijving, werknummer, mandagstaat_vereist } = req.body as {
+      status?: string; omschrijving?: string; werknummer?: string; mandagstaat_vereist?: boolean;
+    };
 
     // Status via de WorkflowEngine
     if (status !== undefined) {
@@ -440,6 +444,8 @@ router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
     const update: Partial<typeof opdrachtenTable.$inferInsert> = { bijgewerktOp: new Date() };
     if (omschrijving !== undefined) update.omschrijving = omschrijving;
     if (werknummer !== undefined) update.werknummer = werknummer;
+    // §6c.2: alleen beheer-schrijfrecht (deze route eist al 'projecten':3).
+    if (mandagstaat_vereist !== undefined) update.mandagstaatVereist = mandagstaat_vereist === true;
 
     const [updated] = await db.update(opdrachtenTable).set(update).where(eq(opdrachtenTable.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }

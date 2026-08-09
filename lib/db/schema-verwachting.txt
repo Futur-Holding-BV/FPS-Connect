@@ -240,6 +240,8 @@ INDEX|magazijn_snoozes|magazijn_snoozes_artikel_id_unique
 INDEX|magazijn_snoozes|magazijn_snoozes_pkey
 INDEX|magazijn_stellingscans|magazijn_stellingscans_pkey
 INDEX|mail_logboek|mail_logboek_pkey
+INDEX|mandagstaat_logs|mandagstaat_logs_opdracht_idx
+INDEX|mandagstaat_logs|mandagstaat_logs_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_onderwerp_idx
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_status_idx
@@ -2684,6 +2686,14 @@ KOLOM|mail_logboek|onderwerp|text|NO|
 KOLOM|mail_logboek|soort|text|NO|
 KOLOM|mail_logboek|status|text|NO|
 KOLOM|mail_logboek|verstuurd_door_id|integer|YES|
+KOLOM|mandagstaat_logs|gegenereerd_door_id|integer|YES|
+KOLOM|mandagstaat_logs|gegenereerd_op|timestamp without time zone|NO|now()
+KOLOM|mandagstaat_logs|id|integer|NO|nextval('mandagstaat_logs_id_seq'::regclass)
+KOLOM|mandagstaat_logs|jaar|integer|NO|
+KOLOM|mandagstaat_logs|medewerker_aantal|integer|NO|0
+KOLOM|mandagstaat_logs|opdracht_id|integer|NO|
+KOLOM|mandagstaat_logs|uren_totaal|numeric|NO|0
+KOLOM|mandagstaat_logs|week_nummer|integer|NO|
 KOLOM|marktspiegel_onderzoeken|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|marktspiegel_onderzoeken|aangevraagd_door|integer|YES|
 KOLOM|marktspiegel_onderzoeken|aanleiding|text|NO|'handmatig'::text
@@ -3258,6 +3268,7 @@ KOLOM|opdrachten|budget_uren|real|YES|
 KOLOM|opdrachten|calculatie_id|integer|YES|
 KOLOM|opdrachten|gebouw_id|integer|YES|
 KOLOM|opdrachten|id|integer|NO|nextval('opdrachten_id_seq'::regclass)
+KOLOM|opdrachten|mandagstaat_vereist|boolean|NO|false
 KOLOM|opdrachten|offerte_id|integer|YES|
 KOLOM|opdrachten|omschrijving|text|YES|
 KOLOM|opdrachten|opdrachtgever|text|YES|

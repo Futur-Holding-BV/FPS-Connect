@@ -1,3 +1,9 @@
+## 2026-08-09 — UREN_01 §6c: de mandagstaat
+
+- **Uitvoering:** volledig (§6c.4 inkomende mandagstaten van eigen onderaannemers = eigen opdracht, gemeld) | **Kwaliteit:** hoog | **Risico:** laag-middel (migratie 0042 additief; BSN-uitvoer juist verkleind)
+
+Voor opdrachten waar FPS als onderaannemer werkt genereert Connect nu de **mandagstaat** (ketenaansprakelijkheid): per week, per werk, per medewerker, per dag de uren — met naam, geboortedatum en BSN en handtekeningvelden voor opdrachtgever en onderaannemer. Per opdracht instelbaar ("Mandagstaat vereist", standaard uit); genereren via de opdrachtpagina met weekkiezer. **Alleen goedgekeurde uren** komen erop (concept-weekstaten geven 422); elke generatie wordt vastgelegd (wie, wanneer, welk werk — tabel `mandagstaat_logs`). Bij het definitief maken/verzenden van een verkoopfactuur op zo'n opdracht gaat de mandagstaat als bijlage mee; ontbreekt hij (geen goedgekeurde uren) dan volgt een **melding, geen blokkade**. **BSN-hygiëne:** het BSN staat uitsluitend op de mandagstaat zelf — de bestaande BSN- en geboortedatum-uitvoer in het weekstaat-detail is verwijderd. Bewijs: `scripts/src/bewijs-uren01c.ts` (§9.14-17 groen, incl. Adastraat-week-9-voorbeeld met 4,25 uur op maandag) + regressie `bewijs-uren01.ts` (§9.1-13 nog groen).
+
 ## 2026-08-09 — ADVIES_01: een adviesrapport inlezen en de calculatie ernaar inrichten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (migraties 0040-0041, beide additief; bestaande regels krijgen default soort='regel' en geen enkel totaal is herrekend)

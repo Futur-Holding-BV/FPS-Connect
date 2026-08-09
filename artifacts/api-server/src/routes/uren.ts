@@ -13,6 +13,7 @@ import {
 import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { medewerkerIdVoorGebruiker, medewerkerVoorId } from "../services/medewerker-lookup";
+import { genereerMandagstaat, logMandagstaatGeneratie, magMandagstaatGenereren } from "../lib/mandagstaat";
 import {
   overwerkSlotenTable,
   projectenTable,
@@ -1058,8 +1059,9 @@ router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
     .select({
       ws: weekStatenTable,
       medewerkerNaam: medewerkersTable.naam,
-      medewerkerBsn: sql<string | null>`${medewerkersTable}.bsn`,
-      medewerkerGeboortedatum: medewerkersTable.geboortedatum,
+      // UREN_01 §6c.3/§9.15: BSN én geboortedatum zijn hier bewust VERWIJDERD.
+      // Deze bijzondere persoonsgegevens mogen uitsluitend op de mandagstaat zelf
+      // verschijnen — nergens anders in de uitvoer van Connect.
       goedgekeurdDoorNaam: gebruikersTable.naam,
     })
     .from(weekStatenTable)
@@ -1100,13 +1102,65 @@ router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
       medewerkerNaam: row.medewerkerNaam,
       goedgekeurdDoorNaam: row.goedgekeurdDoorNaam,
     }),
-    medewerker_bsn: row.medewerkerBsn,
-    medewerker_geboortedatum: row.medewerkerGeboortedatum,
     datum_van: van,
     datum_tot: tot,
     uren: urenRows.map((r) => mapUren(r.uren, { gebouwNaam: r.gebouwNaam })),
     verlof,
   });
+});
+
+// ── GET /opdrachten/:id/mandagstaat?jaar=&week= ───────────────────────────────
+// UREN_01 §6c: server-side PDF-mandagstaat voor één opdracht + ISO-week.
+//
+// Autorisatie via de centrale policy magMandagstaatGenereren (lib/mandagstaat):
+// opdracht.mandagstaat_vereist === true (anders 422 met uitleg), klant nooit,
+// personeel ≥ 2 ÉN opdracht/gebouwtoegang (magBijGebouw), hoofdbeheerder mag
+// altijd. Dezelfde policy wordt op de factuurweg gebruikt.
+router.get("/opdrachten/:id/mandagstaat", requireAuth, async (req, res): Promise<void> => {
+  const opdrachtId = Number(req.params.id);
+  if (Number.isNaN(opdrachtId)) return void res.status(400).json({ error: "Ongeldig id" });
+
+  const perm = req.permissies!;
+
+  const jaar = Number(req.query.jaar);
+  const week = Number(req.query.week);
+  if (!jaar || !week) return void res.status(400).json({ error: "jaar en week zijn verplicht" });
+
+  const [opdracht] = await db
+    .select({ gebouwId: opdrachtenTable.gebouwId, titel: opdrachtenTable.titel, werknummer: opdrachtenTable.werknummer, mandagstaatVereist: opdrachtenTable.mandagstaatVereist })
+    .from(opdrachtenTable)
+    .where(eq(opdrachtenTable.id, opdrachtId))
+    .limit(1);
+  if (!opdracht) return void res.status(404).json({ error: "Opdracht niet gevonden" });
+
+  // Centrale policy: vlag-vereist + klant/rechten/gebouwtoegang in één.
+  const toegang = magMandagstaatGenereren(perm, { mandagstaatVereist: opdracht.mandagstaatVereist, gebouwId: opdracht.gebouwId });
+  if (!toegang.toegestaan) {
+    // Vlag uit → 422 (mandagstaat is niet van toepassing); anders 403 (geen recht).
+    const status = toegang.reden === "niet_vereist" ? 422 : 403;
+    return void res.status(status).json({ error: toegang.boodschap });
+  }
+
+  const resultaat = await genereerMandagstaat(opdrachtId, jaar, week);
+  if (!resultaat.ok || !resultaat.pdf) {
+    // §9.17: geen goedgekeurde uren → 422 (concept/ingediend telt niet mee).
+    return void res.status(422).json({ error: "geen goedgekeurde uren", detail: resultaat.reden ?? "geen goedgekeurde uren" });
+  }
+
+  // §6c.3: elke generatie vastleggen (wie/wanneer/welk werk). GEEN BSN in de log.
+  await logMandagstaatGeneratie({
+    opdrachtId,
+    jaar,
+    week,
+    gebruikerId: req.session.userId ?? null,
+    medewerkerAantal: resultaat.medewerkerAantal,
+    urenTotaal: resultaat.urenTotaal,
+  });
+
+  const bestandsnaam = `mandagstaat-${(opdracht.werknummer ?? opdrachtId)}-${jaar}-week${week}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${bestandsnaam}"`);
+  res.send(resultaat.pdf);
 });
 
 // ── PATCH /weekstaten/:id ─────────────────────────────────────────────────────

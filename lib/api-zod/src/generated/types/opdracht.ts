@@ -47,6 +47,8 @@ export interface Opdracht {
      * @nullable
      */
   ai_fase?: string | null;
+  /** UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false) */
+  mandagstaat_vereist?: boolean;
   /**
      * Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)
      * @nullable

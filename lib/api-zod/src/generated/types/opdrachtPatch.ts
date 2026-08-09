@@ -10,4 +10,6 @@ export interface OpdrachtPatch {
   status?: string;
   omschrijving?: string;
   werknummer?: string;
+  /** UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten */
+  mandagstaat_vereist?: boolean;
 }

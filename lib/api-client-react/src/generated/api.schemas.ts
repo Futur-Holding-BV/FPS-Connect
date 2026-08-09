@@ -7142,6 +7142,8 @@ export interface Opdracht {
      * @nullable
      */
   ai_fase?: string | null;
+  /** UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false) */
+  mandagstaat_vereist?: boolean;
   /**
      * Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)
      * @nullable
@@ -7160,6 +7162,8 @@ export interface OpdrachtPatch {
   status?: string;
   omschrijving?: string;
   werknummer?: string;
+  /** UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten */
+  mandagstaat_vereist?: boolean;
 }
 
 /**
@@ -11269,6 +11273,10 @@ export interface Factuur {
   bron?: string | null;
   /** @nullable */
   import_id?: number | null;
+  /** UREN_01 §6c.2/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend. */
+  mandagstaat_waarschuwing?: string | null;
+  /** UREN_01 §6c.2: storage-URL's van de bij het definitief maken opgeslagen mandagstaat-PDF's (gaan aantoonbaar met de factuur mee). */
+  mandagstaat_paden?: string[];
   id: number;
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
@@ -16961,6 +16969,11 @@ status?: string;
  * Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)
  */
 mijn?: boolean;
+};
+
+export type GetMandagstaatParams = {
+jaar: number;
+week: number;
 };
 
 export type CreateToebehorenAanvraagBody = {

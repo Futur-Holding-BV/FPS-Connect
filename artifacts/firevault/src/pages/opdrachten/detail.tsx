@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import {
   useGetOpdracht,
+  useUpdateOpdracht,
   useGetWerkbegroting,
   useVaststellenWerkbegroting,
   useAiAnalyseWerkbegroting,
@@ -35,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +49,7 @@ import {
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, CalendarDays, FileDown,
 } from "lucide-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import {
@@ -425,6 +428,141 @@ const FASE_ALIAS: Record<string, string> = {
   nacalculatie: "oplevering",
 };
 
+// ── Mandagstaat-kaart (UREN_01 §6c) ─────────────────────────────────────────────
+// Toont de instelling "Mandagstaat vereist" (alleen te wijzigen met beheer-
+// schrijfrecht = projecten niveau 3) en een week-picker die de PDF downloadt.
+function huidigeIsoJaarWeek(): { jaar: number; week: number } {
+  const nu = new Date();
+  const d = new Date(Date.UTC(nu.getFullYear(), nu.getMonth(), nu.getDate()));
+  const dag = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dag);
+  const jaarStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - jaarStart.getTime()) / 86400000 + 1) / 7);
+  return { jaar: d.getUTCFullYear(), week };
+}
+
+function MandagstaatKaart({
+  opdrachtId,
+  werknummer,
+  mandagstaatVereist,
+  magBeheer,
+}: {
+  opdrachtId: number;
+  werknummer: string | null | undefined;
+  mandagstaatVereist: boolean;
+  magBeheer: boolean;
+}) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const start = huidigeIsoJaarWeek();
+  const [jaar, setJaar] = useState(String(start.jaar));
+  const [week, setWeek] = useState(String(start.week));
+  const [bezig, setBezig] = useState(false);
+
+  const updateMut = useUpdateOpdracht({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Opdracht bijgewerkt" });
+      },
+      onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+    },
+  });
+
+  async function downloadMandagstaat() {
+    const j = parseInt(jaar, 10);
+    const w = parseInt(week, 10);
+    if (!j || !w) { toast({ title: "Vul jaar en week in", variant: "destructive" }); return; }
+    setBezig(true);
+    try {
+      // Handgeschreven download-route (buiten OpenAPI). Sessiecookie wordt
+      // automatisch meegestuurd in de webapp.
+      const resp = await fetch(`/api/opdrachten/${opdrachtId}/mandagstaat?jaar=${j}&week=${w}`, {
+        credentials: "include",
+      });
+      if (resp.status === 422) {
+        toast({ title: "Geen goedgekeurde uren", description: "Er zijn geen goedgekeurde uren voor deze week.", variant: "destructive" });
+        return;
+      }
+      if (!resp.ok) {
+        toast({ title: "Genereren mislukt", variant: "destructive" });
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mandagstaat-${werknummer ?? opdrachtId}-${j}-week${w}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Genereren mislukt", variant: "destructive" });
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <Card className="print:hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <CalendarDays className="h-4 w-4" /> Mandagstaat
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="mandagstaat-vereist"
+            checked={mandagstaatVereist}
+            disabled={!magBeheer || updateMut.isPending}
+            onCheckedChange={(checked) =>
+              updateMut.mutate({ id: opdrachtId, data: { mandagstaat_vereist: checked } })
+            }
+          />
+          <Label htmlFor="mandagstaat-vereist" className="text-sm">
+            Mandagstaat vereist bij facturatie
+          </Label>
+        </div>
+        {!magBeheer && (
+          <p className="text-xs text-muted-foreground">
+            Alleen met beheer-schrijfrecht te wijzigen.
+          </p>
+        )}
+        <div className="flex items-end gap-2 flex-wrap">
+          <div>
+            <Label htmlFor="mandagstaat-jaar" className="text-xs">Jaar</Label>
+            <Input
+              id="mandagstaat-jaar"
+              type="number"
+              value={jaar}
+              onChange={(e) => setJaar(e.target.value)}
+              className="h-8 w-24 text-sm"
+            />
+          </div>
+          <div>
+            <Label htmlFor="mandagstaat-week" className="text-xs">Week</Label>
+            <Input
+              id="mandagstaat-week"
+              type="number"
+              min={1}
+              max={53}
+              value={week}
+              onChange={(e) => setWeek(e.target.value)}
+              className="h-8 w-20 text-sm"
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={downloadMandagstaat} disabled={bezig}>
+            <FileDown className="h-4 w-4 mr-1.5" />
+            Mandagstaat (week)
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Hoofdpagina ────────────────────────────────────────────────────────────────
 export default function OpdrachtDetailPagina() {
   const { heeftNiveau } = useBevoegdheid();
@@ -679,6 +817,16 @@ export default function OpdrachtDetailPagina() {
           />
         </div>
       )}
+
+      {/* Mandagstaat (UREN_01 §6c) */}
+      <div className="print:hidden">
+        <MandagstaatKaart
+          opdrachtId={opdrachtId}
+          werknummer={opdracht.werknummer}
+          mandagstaatVereist={opdracht.mandagstaat_vereist ?? false}
+          magBeheer={heeftNiveau("projecten", 3)}
+        />
+      </div>
 
       {/* Overzichtkaart */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">

@@ -866,6 +866,8 @@ export const ListGebouwFacturenParams = zod.object({
 export const ListGebouwFacturenResponseItem = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -14750,6 +14752,7 @@ export const ListOpdrachtenResponseItem = zod.object({
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
   "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "mandagstaat_vereist": zod.boolean().optional().describe('UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false)'),
   "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
 export const ListOpdrachtenResponse = zod.array(ListOpdrachtenResponseItem)
@@ -14784,6 +14787,7 @@ export const GetOpdrachtResponse = zod.object({
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
   "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "mandagstaat_vereist": zod.boolean().optional().describe('UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false)'),
   "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
 
@@ -14798,7 +14802,8 @@ export const UpdateOpdrachtParams = zod.object({
 export const UpdateOpdrachtBody = zod.object({
   "status": zod.string().optional(),
   "omschrijving": zod.string().optional(),
-  "werknummer": zod.string().optional()
+  "werknummer": zod.string().optional(),
+  "mandagstaat_vereist": zod.boolean().optional().describe('UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten')
 })
 
 export const UpdateOpdrachtResponse = zod.object({
@@ -14823,8 +14828,25 @@ export const UpdateOpdrachtResponse = zod.object({
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
   "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "mandagstaat_vereist": zod.boolean().optional().describe('UREN_01 §6c.2: of een mandagstaat met de factuur moet worden meegestuurd (standaard false)'),
   "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
+
+
+/**
+ * Genereert server-side de mandagstaat-PDF met per medewerker de dagelijkse (goedgekeurde) uren, naam, geboortedatum en BSN. Autorisatie via de centrale policy: opdracht.mandagstaat_vereist moet true zijn (anders 422), klant nooit, personeel niveau ≥ 2 én toegang tot de opdracht/het gebouw. Alleen goedgekeurde uren tellen mee; zijn die er niet, dan 422.
+ * @summary Mandagstaat-PDF voor een opdracht + ISO-week (UREN_01 §6c)
+ */
+export const GetMandagstaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMandagstaatQueryParams = zod.object({
+  "jaar": zod.coerce.number(),
+  "week": zod.coerce.number()
+})
+
+export const GetMandagstaatResponse = zod.unknown()
 
 
 /**
@@ -23154,6 +23176,8 @@ export const ListFacturenQueryParams = zod.object({
 export const ListFacturenResponseItem = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23268,6 +23292,8 @@ export const GetFactuurUploadUrlResponse = zod.object({
 export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23405,6 +23431,8 @@ export const GetFactuurParams = zod.object({
 export const GetFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23502,6 +23530,8 @@ export const UpdateFactuurBody = zod.object({
 export const UpdateFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23588,6 +23618,8 @@ export const AiUitlezenFactuurParams = zod.object({
 export const AiUitlezenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23664,6 +23696,8 @@ export const AccorderenFactuurParams = zod.object({
 export const AccorderenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23741,6 +23775,8 @@ export const DefinitiefMakenFactuurParams = zod.object({
 export const DefinitiefMakenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -23939,6 +23975,8 @@ export const BlokkerenFactuurBody = zod.object({
 export const BlokkerenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24061,6 +24099,8 @@ export const AfkeurenFactuurBody = zod.object({
 export const AfkeurenFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24339,6 +24379,8 @@ export const BeoordelenFactuurPLBody = zod.object({
 export const BeoordelenFactuurPLResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24420,6 +24462,8 @@ export const BeoordelenFactuurWVBBody = zod.object({
 export const BeoordelenFactuurWVBResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24501,6 +24545,8 @@ export const DoorstuurenFactuurMedewerkerBody = zod.object({
 export const DoorstuurenFactuurMedewerkerResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24582,6 +24628,8 @@ export const BeoordelenFactuurMedewerkerBody = zod.object({
 export const BeoordelenFactuurMedewerkerResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
@@ -24780,6 +24828,8 @@ export const IncassoFactuurBody = zod.object({
 export const IncassoFactuurResponse = zod.object({
   "bron": zod.string().nullish(),
   "import_id": zod.number().nullish(),
+  "mandagstaat_waarschuwing": zod.string().nullish().describe('UREN_01 §6c.2\/§9.16: gezet bij definitief maken van een verkoopfactuur met mandagstaat-plicht als er geen (volledige) mandagstaat gegenereerd kon worden (geen goedgekeurde uren of geen personeelsrecht). Nooit blokkerend.'),
+  "mandagstaat_paden": zod.array(zod.string()).optional().describe('UREN_01 §6c.2: storage-URL\'s van de bij het definitief maken opgeslagen mandagstaat-PDF\'s (gaan aantoonbaar met de factuur mee).'),
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),

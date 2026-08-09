@@ -582,6 +582,7 @@ export * from './getKalenderParams';
 export * from './getLoonOutputParams';
 export * from './getMagazijnStellingsscanUploadUrl200';
 export * from './getMagazijnToebehorenVerbruikParams';
+export * from './getMandagstaatParams';
 export * from './getMedewerkerDocumentDownloadUrl200';
 export * from './getMijnLmraStatusParams';
 export * from './getMijnVoorkeuren200';
