@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 // Digitale Uitvoerder — AI-chatscherm voor monteur
 // Monteur stelt vragen + foto, AI geeft uitvoeringsadvies, monteur legt aanpak vast
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +24,7 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { uploadFoto } from "@/lib/upload";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 type Rol = "monteur" | "ai";
 

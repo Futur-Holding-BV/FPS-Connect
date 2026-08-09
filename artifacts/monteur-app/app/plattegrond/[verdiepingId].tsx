@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import {
   useAddFoto,
   useAiSpotvoorstel,
@@ -73,7 +74,7 @@ const LEEG = {
   locatie_omschrijving: "",
 };
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 // AI-voorstel kleurconventie (geel/amber tot bevestigd); web-equivalent amber-100/300/700.
 const AMBER_BG = "#FEF3C7";

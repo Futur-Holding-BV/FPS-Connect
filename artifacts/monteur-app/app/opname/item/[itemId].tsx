@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import { Ionicons } from "@expo/vector-icons";
 import {
   useGetOpnameItem,
@@ -859,7 +860,7 @@ export default function OpnameItemDetail() {
                 {fotos.map((foto) => (
                   <View key={foto.id} style={{ position: "relative" }}>
                     <Image
-                      source={{ uri: `https://${process.env.EXPO_PUBLIC_DOMAIN}${foto.url ?? ""}` }}
+                      source={{ uri: `https://${API_DOMEIN}${foto.url ?? ""}` }}
                       style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: c.muted }}
                       resizeMode="cover"
                     />

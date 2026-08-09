@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 // Materiaal Aanvraag — monteur meldt artikel dat op/beschadigd/nodig is
 // AI herkent het artikel, zoekt prijs/leverancier en toetst aan werkbegroting
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +22,7 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { uploadFoto } from "@/lib/upload";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 type Reden = "op" | "beschadigd" | "nodig";
 

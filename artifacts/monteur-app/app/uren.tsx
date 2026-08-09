@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import { useState, useCallback } from "react";
 import {
   useGetMijnWeekUren,
@@ -310,7 +311,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     setVrijeInvoer(false);
     // Skip LMRA check bij bewerkingen van bestaande registraties
     if (bestaand) return;
-    const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    const basis = `https://${API_DOMEIN}`;
     fetch(`${basis}/api/mijn/lmra-status?gebouw_id=${gId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -340,7 +341,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     if (!lmraPendingGebouwId) return;
     setLmraAiLaden(true);
     try {
-      const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+      const basis = `https://${API_DOMEIN}`;
       const resp = await fetch(`${basis}/api/veiligheid/lmras/ai-voorstel`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -374,7 +375,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     }
     setLmraOpslaanBezig(true);
     try {
-      const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+      const basis = `https://${API_DOMEIN}`;
       const resp = await fetch(`${basis}/api/veiligheid/lmras`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

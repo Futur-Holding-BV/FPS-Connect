@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -32,7 +33,7 @@ import {
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+setBaseUrl(`https://${API_DOMEIN}`);
 setAuthTokenGetter(() => getHuidigToken());
 
 SplashScreen.preventAutoHideAsync();

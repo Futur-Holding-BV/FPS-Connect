@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -51,7 +52,7 @@ const SLIJTAGE_KLEUR: Record<string, string> = {
   ernstig: "#dc2626",
 };
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 function datumLabel(d: string | null | undefined) {
   if (!d) return "—";

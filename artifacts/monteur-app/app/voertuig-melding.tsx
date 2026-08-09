@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 // Voertuig melding — monteur meldt storing of schade aan zijn auto
 // Foto's + omschrijving → AI diagnose + oplossing → vastleggen
 // Extensies: schade_locatie / storing_type pickers, offline-draft opslaan,
@@ -23,7 +24,7 @@ import { uploadFoto } from "@/lib/upload";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { useColors } from "@/hooks/useColors";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 type Stap = "invullen" | "laden" | "resultaat" | "opgeslagen" | "offline_opgeslagen";
 

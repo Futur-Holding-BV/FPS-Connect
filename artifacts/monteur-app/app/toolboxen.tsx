@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -384,7 +385,7 @@ function DetailModal({
                 {/* PDF knop */}
                 {heeftPdf && (
                   <Pressable
-                    onPress={() => Linking.openURL(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/storage${(detail as any).pdf_pad}`)}
+                    onPress={() => Linking.openURL(`https://${API_DOMEIN}/api/storage${(detail as any).pdf_pad}`)}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",

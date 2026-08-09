@@ -1,8 +1,9 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 /**
  * Vraagt toestemming voor pushberichten en registreert het Expo-pushtoken

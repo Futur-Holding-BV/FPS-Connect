@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActionSheetIOS,
@@ -37,7 +38,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 import { uploadFoto } from "@/lib/upload";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN as string;
+const DOMEIN = API_DOMEIN;
 
 function opslagUrl(objectPath: string): string {
   return `https://${DOMEIN}/api/storage${objectPath}`;

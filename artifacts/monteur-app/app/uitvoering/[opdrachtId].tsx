@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import {
   useGetHuidigePimUitvoeringStap,
   useListPimUitvoeringStappen,
@@ -44,7 +45,7 @@ import { UitvoeringThemeProvider } from "@/context/UitvoeringThemeContext";
 import { UitvoeringLayout } from "@/screens/uitvoering/layout";
 
 const CACHE_VERSIE = "v1";
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 function cacheSleutel(opdrachtId: number) {
   return `pim_stap_${opdrachtId}_${CACHE_VERSIE}`;
 }

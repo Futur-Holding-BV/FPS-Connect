@@ -1,9 +1,10 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import { useState, useCallback } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Modal, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/auth";
 
-const DOMEIN = process.env["EXPO_PUBLIC_DOMAIN"] ?? "";
+const DOMEIN = API_DOMEIN;
 
 type DeclaratieStatus = "concept" | "ingediend" | "goedgekeurd" | "afgekeurd" | "verwerkt";
 

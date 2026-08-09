@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import React from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import {
@@ -7,7 +8,7 @@ import type { Label } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 interface Props {
   typeCode: string;

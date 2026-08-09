@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 // Kwartaalcontrole — monteur fotografeert dashboard, AI leest kilometerstand
 // en eventuele waarschuwingslampjes af, monteur bevestigt en dient in.
 // Offline fallback: als de uiteindelijke POST mislukt wordt de melding in de
@@ -23,7 +24,7 @@ import { uploadFoto } from "@/lib/upload";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { useColors } from "@/hooks/useColors";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 type Stap =
   | "instructie"

@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 // Loonstrookjes & jaaropgaven — medewerker-self-service in de monteur-app.
 // Toont eigen gepubliceerde salarisdocumenten en maakt downloaden/openen mogelijk.
 
@@ -64,7 +65,7 @@ export default function LoonstrookjesScherm() {
     if (!token) return;
     setLaadenId(id);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"] ?? "";
+      const domain = API_DOMEIN;
       const base = domain ? `https://${domain}` : "";
       const cacheUri = `${FileSystem.cacheDirectory ?? ""}loonstrookje_${id}.pdf`;
 

@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import {
   useGetWerkdagItem,
   useUpdateWerkdagItemStatus,
@@ -168,7 +169,7 @@ export default function WerkdagDetailScherm() {
   // Check of er een open kwartaalcontrole-cyclus klaarstaat voor dit voertuig
   useEffect(() => {
     if (!token || !isOnline) return;
-    const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? ""}`;
+    const basis = `https://${API_DOMEIN}`;
     void fetch(`${basis}/api/wagenpark/kwartaalcontrole/mijn`, {
       headers: { Authorization: `Bearer ${token}` },
     })

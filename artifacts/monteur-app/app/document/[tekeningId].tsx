@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -16,7 +17,7 @@ import { bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 const BEELD_EXT = ["jpg", "jpeg", "png", "webp", "gif", "bmp"];
 
 type Status = "laden" | "gereed" | "openen" | "fout";
