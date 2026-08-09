@@ -108,7 +108,10 @@ ${COMPOSE} --profile backup run --rm -T backup
 
 # Verifieer dat er daadwerkelijk een bruikbare back-up is weggeschreven:
 # een deploy zonder werkende back-up mag niet doorgaan.
-NIEUWSTE_BACKUP="$(ls -t deploy/db-backups/*.sql.gz 2>/dev/null | head -1)"
+# Let op: onder set -o pipefail geeft `ls | head` exit 141 (SIGPIPE) zodra er
+# veel back-ups staan — head sluit de pipe na de eerste regel. Daarom || true;
+# de lege-string-check hieronder vangt het echte foutgeval af.
+NIEUWSTE_BACKUP="$(ls -t deploy/db-backups/*.sql.gz 2>/dev/null | head -1 || true)"
 if [ -z "${NIEUWSTE_BACKUP}" ] || [ ! -s "${NIEUWSTE_BACKUP}" ]; then
   echo "FOUT: geen (niet-lege) back-up gevonden in deploy/db-backups/." >&2
   exit 1
@@ -171,7 +174,7 @@ else
   SENTRY_TMP="$(mktemp -d)"
   SENTRY_CID=""
   set +e
-  API_IMAGE="$(${COMPOSE} images -q api | head -1)"
+  API_IMAGE="$(${COMPOSE} images -q api | head -1 || true)"
   if [ -z "${API_IMAGE}" ]; then
     echo "WAARSCHUWING: api-image niet gevonden — sourcemap-upload overgeslagen."
   else
