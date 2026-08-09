@@ -579,6 +579,19 @@ export default function Gebruikers() {
     }
   }
 
+  function kopieerInstallatielink() {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const link = `${window.location.origin}${base}/app`;
+    navigator.clipboard.writeText(link).then(() => {
+      toast({
+        title: "Installatielink gekopieerd",
+        description: `${link} — stuur deze bijvoorbeeld via WhatsApp naar de medewerker.`,
+      });
+    }).catch(() => {
+      toast({ title: "Kopiëren mislukt", description: link, variant: "destructive" });
+    });
+  }
+
   function openWachtwoordReset(g: Gebruiker) {
     setWwResetTarget(g);
     setWwResetMethode("link");
@@ -923,6 +936,16 @@ export default function Gebruikers() {
                 >
                   <QrCode className="h-3 w-3 mr-1 flex-shrink-0" />
                   App QR-code
+                </button>
+              )}
+              {isHoofd && !g.gearchiveerd && (
+                <button
+                  type="button"
+                  className="mt-1.5 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                  onClick={kopieerInstallatielink}
+                >
+                  <Link2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                  App-installatielink kopiëren
                 </button>
               )}
             </div>
@@ -1593,6 +1616,12 @@ export default function Gebruikers() {
               <li>Volg de link om de app te openen of te installeren</li>
               <li>Log in met het e-mailadres <strong>{appQrGebruiker?.email}</strong></li>
             </ol>
+            <p className="text-xs text-muted-foreground">
+              Kan de medewerker niet scannen? Kopieer de installatielink en stuur hem via WhatsApp:
+            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={kopieerInstallatielink}>
+              <Link2 className="h-4 w-4 mr-1.5" /> Installatielink kopiëren
+            </Button>
             <DialogFooter>
               <Button
                 variant="outline"

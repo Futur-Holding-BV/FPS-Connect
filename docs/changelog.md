@@ -1,3 +1,9 @@
+## 2026-08-09 — App-installatielink voor WhatsApp + 2FA instellen op de telefoon zelf
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe publieke pagina + UI-aanvullingen)
+
+Twee problemen uit de praktijk opgelost. **1) Installatielink:** er is nu een vaste publieke pagina `/app` (bijv. `https://connect.fps-one.nl/app`) die beheerders per WhatsApp naar medewerkers kunnen sturen — in Gebruikersbeheer staat op elke personeelskaart én in de QR-dialoog een knop "App-installatielink kopiëren". De pagina legt nu uit dat de app eraan komt en verwijst automatisch naar de App Store zodra `MONTEUR_APP_STORE_URL` is ingesteld; de link blijft dus altijd geldig. De QR-code en downloadknop coderen dezelfde link en werken daardoor ook weer altijd. **2) Tweestapsverificatie op de telefoon:** wie de uitnodiging op zijn telefoon opent, kan de QR-code niet met diezelfde telefoon scannen. De activatie- en first-install-schermen tonen nu (net als het loginscherm) de handmatige sleutel met kopieerknop en op telefoons een knop "Direct openen in uw authenticator-app".
+
 ## 2026-08-09 — NP_INKOOP_01: Algemene inkoop (niet-projectgebonden) met A-nummerreeks
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe module + koppeling factuurstroom, projectinkoop ongewijzigd)

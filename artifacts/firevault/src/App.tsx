@@ -16,6 +16,7 @@ import { WeergaveProvider } from "@/context/weergave-context";
 import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
 import InstallatiePagina from "@/pages/installatie/index";
+import AppInstallatiePagina from "@/pages/app-installatie/index";
 import WachtwoordVergetenPagina from "@/pages/auth/wachtwoord-vergeten";
 import WachtwoordResetPagina from "@/pages/auth/wachtwoord-reset";
 import PortaalPagina from "@/pages/portaal/index";
@@ -849,6 +850,7 @@ function Gate() {
   const isSpeciaalPad =
     pad.startsWith("/uitnodiging/") ||
     pad.startsWith("/portaal/") ||
+    pad === "/app" ||
     pad === "/first-install" ||
     pad === "/wachtwoord-vergeten" ||
     pad === "/wachtwoord-reset";
@@ -865,6 +867,9 @@ function Gate() {
   if (pad.startsWith("/portaal/")) {
     const token = pad.replace("/portaal/", "");
     return <PortaalPagina token={token} />;
+  }
+  if (pad === "/app") {
+    return <AppInstallatiePagina />;
   }
   if (pad === "/first-install") {
     return <InstallatiePagina />;

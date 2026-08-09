@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle, Copy, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,9 @@ export default function ActivatiePagina({ token }: Props) {
   const bevestigRef = useRef<HTMLInputElement>(null);
 
   const [qrCode, setQrCode] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [otpauthUrl, setOtpauthUrl] = useState("");
+  const [secretGekopieerd, setSecretGekopieerd] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpFout, setOtpFout] = useState("");
 
@@ -96,6 +99,8 @@ export default function ActivatiePagina({ token }: Props) {
         if (qrRes.ok) {
           const qrData = await qrRes.json();
           setQrCode(qrData.qr_code);
+          setTotpSecret(qrData.secret ?? "");
+          setOtpauthUrl(qrData.otpauth_url ?? "");
           setStap("tweeStap");
         } else {
           setFoutmelding("Kon 2FA-setup niet starten. Probeer opnieuw.");
@@ -294,6 +299,42 @@ export default function ActivatiePagina({ token }: Props) {
                     alt="QR-code voor authenticator-app"
                     className="w-44 h-44 border border-zinc-200 rounded-lg"
                   />
+                </div>
+              )}
+              {totpSecret && (
+                <div className="mb-5 space-y-1.5">
+                  <p className="text-center text-xs font-medium text-zinc-400">
+                    Kunt u niet scannen (bijv. op deze telefoon)? Voer de sleutel handmatig in:
+                  </p>
+                  <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+                    <code className="min-w-0 flex-1 break-all font-mono text-sm text-zinc-700">{totpSecret}</code>
+                    <button
+                      type="button"
+                      title="Sleutel kopiëren"
+                      aria-label="Sleutel kopiëren"
+                      className="shrink-0 rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+                      onClick={() => {
+                        navigator.clipboard.writeText(totpSecret).then(() => {
+                          setSecretGekopieerd(true);
+                          setTimeout(() => setSecretGekopieerd(false), 2000);
+                        }).catch(() => {});
+                      }}
+                    >
+                      {secretGekopieerd ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {secretGekopieerd && (
+                    <p className="text-center text-xs text-green-600">Gekopieerd — plak de sleutel in uw authenticator-app.</p>
+                  )}
+                  {otpauthUrl && navigator.maxTouchPoints > 0 && (
+                    <a
+                      href={otpauthUrl}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100"
+                    >
+                      <Smartphone className="h-4 w-4 shrink-0" />
+                      Direct openen in uw authenticator-app
+                    </a>
+                  )}
                 </div>
               )}
               <div className="space-y-4">

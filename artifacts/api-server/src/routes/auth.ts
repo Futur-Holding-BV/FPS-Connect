@@ -659,6 +659,29 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   }
 });
 
+// Bron van waarheid voor de installatielink van de monteur-app.
+function bepaalAppInstallatieUrl(): string {
+  const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
+  if (storeUrl) return storeUrl;
+  const expoDomain = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
+  if (expoDomain) return `exp://${expoDomain}`;
+  const basis = publiekeAppUrl();
+  return basis ? `${basis}/app` : "";
+}
+
+// GET /auth/app-installatie-info — publieke info voor de installatiepagina /app.
+// Bewust zonder login: de pagina wordt per WhatsApp naar medewerkers gestuurd
+// die nog geen account hebben. Bevat uitsluitend de (publieke) store-link.
+router.get("/auth/app-installatie-info", async (req, res): Promise<void> => {
+  try {
+    const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
+    res.json({ store_url: storeUrl || null });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // GET /auth/app-qr — QR-code afbeelding voor FPS Monteur-app via Expo Go (alleen ingelogd)
 router.get("/auth/app-qr", async (req, res): Promise<void> => {
   try {
@@ -666,12 +689,10 @@ router.get("/auth/app-qr", async (req, res): Promise<void> => {
     // Doel van de QR, in volgorde van voorkeur:
     // 1. MONTEUR_APP_STORE_URL — de App Store-link zodra de app gepubliceerd is (productie).
     // 2. Expo Go dev-domein — alleen in de ontwikkelomgeving beschikbaar.
-    // Geen van beide? Dan 404 zodat de frontend een duidelijke uitleg kan tonen
-    // in plaats van een kapotte afbeelding.
-    const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
-    const expoDomain = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
-    const url = storeUrl || (expoDomain ? `exp://${expoDomain}` : "");
-    if (!url) return void res.status(404).json({ error: "De monteur-app is nog niet gepubliceerd; er is nog geen installatielink beschikbaar." });
+    // 3. De publieke installatiepagina /app — bestaat altijd, legt uit hoe het
+    //    zit en verwijst automatisch door zodra de store-link is ingesteld.
+    const url = bepaalAppInstallatieUrl();
+    if (!url) return void res.status(404).json({ error: "Er is nog geen installatielink beschikbaar." });
     const qrBuffer = await QRCode.toBuffer(url, {
       type: "png",
       width: 360,
