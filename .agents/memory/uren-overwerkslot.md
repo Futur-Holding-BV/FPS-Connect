@@ -13,3 +13,10 @@ description: CAO-instellingen centraal, overwerkslot-toets in uren-routes, weekc
 - **TvT**: geaccepteerd overwerk geeft alleen een `overwerk.tvt_voorstel` in de POST /uren-respons; vastleggen doet de medewerker zelf via de bestaande TvT-route. Herinnering na 31 dagen via voeder, geen verval.
 - Slot openen/sluiten: alleen hoofdbeheerder of functietitel "Projectleider" (via `vindGebruikersMetFunctietitel`), altijd met einddatum + reden.
 - Bewijs: `scripts/src/bewijs-uren01.ts` (mobile-login-patroon + eigen testdata + opruimen).
+
+## §6b — uurcodes (2026-08-09)
+- Uren op een opdracht vereisen precies één keuze: normtijd uit de werkbegroting | indirecte werkzaamheid (actief) | niet_in_begroting+omschrijving → anders 400 UURCODE_VEREIST. Kantoor/magazijn-uren blijven vrij.
+- "Niet in begroting" is nooit een blokkade; het plaatst een werkbak-signaal (bron `uren_niet_in_begroting`) bij WVB+cc PL. Nieuwe werkbak-bron = eerst whitelisten in werkbakService (gesloten lijst gooit anders 500).
+- PATCH van uren boekt alleen de TOENAME van het boven-grensdeel op het slot (oude bijdrage herberekend met negeerRegistratieId); afname wordt bewust niet teruggegeven. DELETE geeft niets terug — transactionaliteit/race is bewust doorgeschoven (taak voorgesteld).
+- GET /opdrachten/:id/uurcodes en /uren-per-uurcode vereisen projecten:1 (uren, geen bedragen).
+**Waarom:** review-ronde vond dubbeltelling bij ongewijzigd PATCH-opslaan en open object-access op de uurcodelijst.
