@@ -663,9 +663,15 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
 router.get("/auth/app-qr", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
+    // Doel van de QR, in volgorde van voorkeur:
+    // 1. MONTEUR_APP_STORE_URL — de App Store-link zodra de app gepubliceerd is (productie).
+    // 2. Expo Go dev-domein — alleen in de ontwikkelomgeving beschikbaar.
+    // Geen van beide? Dan 404 zodat de frontend een duidelijke uitleg kan tonen
+    // in plaats van een kapotte afbeelding.
+    const storeUrl = (process.env.MONTEUR_APP_STORE_URL ?? "").trim();
     const expoDomain = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
-    if (!expoDomain) return void res.status(503).json({ error: "Expo-domein niet geconfigureerd" });
-    const url = `exp://${expoDomain}`;
+    const url = storeUrl || (expoDomain ? `exp://${expoDomain}` : "");
+    if (!url) return void res.status(404).json({ error: "De monteur-app is nog niet gepubliceerd; er is nog geen installatielink beschikbaar." });
     const qrBuffer = await QRCode.toBuffer(url, {
       type: "png",
       width: 360,

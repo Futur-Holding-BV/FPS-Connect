@@ -333,6 +333,9 @@ export default function Gebruikers() {
   const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
   const [herkomstToepassenTarget, setHerkomstToepassenTarget] = useState<Gebruiker | null>(null);
   const [appQrGebruiker, setAppQrGebruiker] = useState<Gebruiker | null>(null);
+  // QR-afbeelding kan ontbreken (app nog niet gepubliceerd → 404); dan tonen we
+  // een duidelijke uitleg in plaats van een kapot plaatje.
+  const [appQrFout, setAppQrFout] = useState(false);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -1546,7 +1549,7 @@ export default function Gebruikers() {
       </Dialog>
 
       {/* Dialoog: App QR-code voor Expo Go */}
-      <Dialog open={!!appQrGebruiker} onOpenChange={(o) => { if (!o) setAppQrGebruiker(null); }}>
+      <Dialog open={!!appQrGebruiker} onOpenChange={(o) => { if (!o) { setAppQrGebruiker(null); setAppQrFout(false); } }}>
         <DialogContent className="max-w-sm" aria-describedby="app-qr-beschr">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1554,12 +1557,26 @@ export default function Gebruikers() {
             </DialogTitle>
           </DialogHeader>
           <p id="app-qr-beschr" className="sr-only">
-            QR-code om de FPS Monteur-app te openen via Expo Go op een telefoon.
+            QR-code om de FPS Monteur-app te installeren op een telefoon.
           </p>
+          {appQrFout ? (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground" data-testid="text-app-qr-onbeschikbaar">
+                Er is nog geen installatielink voor de monteur-app beschikbaar in deze omgeving.
+                Zodra de app in de App Store gepubliceerd is en de installatielink is ingesteld,
+                verschijnt hier automatisch een scanbare QR-code.
+              </p>
+              <DialogFooter>
+                <Button variant="ghost" size="sm" onClick={() => { setAppQrGebruiker(null); setAppQrFout(false); }}>
+                  Sluiten
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Scan deze code met de <strong>Expo Go</strong>-app op de telefoon van{" "}
-              <strong>{appQrGebruiker?.naam}</strong>. De app opent direct zonder handmatige installatie.
+              Laat <strong>{appQrGebruiker?.naam}</strong> deze code scannen met de camera van de
+              telefoon om de FPS Monteur-app te openen.
             </p>
             <div className="flex justify-center">
               <img
@@ -1568,32 +1585,46 @@ export default function Gebruikers() {
                 className="rounded-lg border border-border shadow-sm"
                 width={240}
                 height={240}
+                onError={() => setAppQrFout(true)}
               />
             </div>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Installeer <strong>Expo Go</strong> via de App Store of Google Play</li>
-              <li>Open Expo Go en tik op <em>Scan QR-code</em></li>
-              <li>Scan bovenstaande code — de app start direct</li>
+              <li>Scan bovenstaande code met de camera van de telefoon</li>
+              <li>Volg de link om de app te openen of te installeren</li>
               <li>Log in met het e-mailadres <strong>{appQrGebruiker?.email}</strong></li>
             </ol>
             <DialogFooter>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = "/api/auth/app-qr";
-                  a.download = `fps-app-qr-${appQrGebruiker?.naam?.toLowerCase().replace(/\s+/g, "-") ?? "code"}.png`;
-                  a.click();
+                onClick={async () => {
+                  try {
+                    const antwoord = await fetch("/api/auth/app-qr", { credentials: "include" });
+                    if (!antwoord.ok) throw new Error(`status ${antwoord.status}`);
+                    const blob = await antwoord.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `fps-app-qr-${appQrGebruiker?.naam?.toLowerCase().replace(/\s+/g, "-") ?? "code"}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    toast({
+                      title: "Downloaden mislukt",
+                      description: "Er is nog geen installatielink beschikbaar in deze omgeving.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
               >
                 <Download className="h-4 w-4 mr-1.5" /> Downloaden
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setAppQrGebruiker(null)}>
+              <Button variant="ghost" size="sm" onClick={() => { setAppQrGebruiker(null); setAppQrFout(false); }}>
                 Sluiten
               </Button>
             </DialogFooter>
           </div>
+          )}
         </DialogContent>
       </Dialog>
 
