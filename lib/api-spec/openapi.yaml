@@ -15923,6 +15923,72 @@ paths:
                         naam: { type: string }
                         geschreven_uren: { type: number }
                   niet_in_begroting_uren: { type: number }
+  /actiepunten:
+    get:
+      operationId: listActiepunten
+      summary: Actiepuntenlijst van de hoofdbeheerder (zijrand)
+      tags: [Actiepunten]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Actiepunt' }
+    post:
+      operationId: createActiepunt
+      summary: Actiepunt toevoegen
+      tags: [Actiepunten]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [titel]
+              properties:
+                titel: { type: string }
+                omschrijving: { type: string, nullable: true }
+                categorie: { type: string }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Actiepunt' }
+  /actiepunten/{id}:
+    patch:
+      operationId: updateActiepunt
+      summary: Actiepunt bijwerken (afvinken, heropenen, tekst)
+      tags: [Actiepunten]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titel: { type: string }
+                omschrijving: { type: string, nullable: true }
+                categorie: { type: string }
+                status: { type: string, enum: [open, afgerond] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Actiepunt' }
+    delete:
+      operationId: deleteActiepunt
+      summary: Actiepunt verwijderen
+      tags: [Actiepunten]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Verwijderd }
   /indirecte-werkzaamheden:
     get:
       operationId: listIndirecteWerkzaamheden
@@ -38437,6 +38503,18 @@ components:
           type: string
           nullable: true
 
+    Actiepunt:
+      type: object
+      required: [id, titel, categorie, status, volgorde, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        titel: { type: string }
+        omschrijving: { type: string, nullable: true }
+        categorie: { type: string }
+        status: { type: string }
+        volgorde: { type: integer }
+        afgerond_op: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
     IndirecteWerkzaamheid:
       type: object
       required: [id, naam, actief, volgorde]

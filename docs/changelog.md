@@ -1,3 +1,9 @@
+## 2026-08-09 — Actiepuntenlijst voor de hoofdbeheerder in de zijrand + review-fixes uurcodes
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe losse lijst + drie gerichte fixes)
+
+Nieuw derde tabblad **Actiepunten** in de rechterzijrand van Connect (alleen zichtbaar voor de hoofdbeheerder): een afvinklijst met acties waar het platform op een mens wacht. Vooraf gevuld (migratie 0031) met de bekende wachtpunten — GitHub Actions-secrets voor de dagelijkse token-gezondheidscheck (die faalt nu elke dag), Azure send-as/Mail.Send-machtiging, mailing end-to-end testen, VPS-configuratie, en Apple/Google developer-accounts voor de app-stores. Eigen punten toevoegen, afvinken, heropenen en verwijderen kan direct in het paneel; afgeronde punten blijven doorgestreept zichtbaar onderaan. Daarnaast drie review-fixes op de uurcode-registratie van vanochtend: een wijziging van een urenregel boekt voortaan alleen de TOENAME van het boven-grensdeel op het overwerkslot (ongewijzigd opslaan verbruikt niets dubbel meer), de uurcode-keuzelijst per opdracht vereist nu het projectenrecht in plaats van alleen inloggen, en het begroot-versus-geschreven-overzicht haalt namen van vervallen uurcodes in één query op.
+
 ## 2026-08-09 — UREN_01 §6b: uren boeken op uurcodes uit de werkbegroting
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe verplichte keuze bij projecturen, migratie 0030, web+mobiel aangepast)

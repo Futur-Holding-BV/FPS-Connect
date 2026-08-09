@@ -7,6 +7,7 @@ INDEX|accountview_export_logs|accountview_export_logs_pkey
 INDEX|accountview_instellingen|accountview_instellingen_pkey
 INDEX|accountview_project_mapping|accountview_project_mapping_pkey
 INDEX|accountview_relatie_mapping|accountview_relatie_mapping_pkey
+INDEX|actiepunten|actiepunten_pkey
 INDEX|activiteiten|activiteiten_gebouw_tijdstip_idx
 INDEX|activiteiten|activiteiten_pkey
 INDEX|ai_aanroepen|ai_aanroepen_pkey
@@ -552,6 +553,15 @@ KOLOM|accountview_relatie_mapping|connect_relatienaam|text|NO|
 KOLOM|accountview_relatie_mapping|id|integer|NO|nextval('accountview_relatie_mapping_id_seq'::regclass)
 KOLOM|accountview_relatie_mapping|opmerking|text|YES|
 KOLOM|accountview_relatie_mapping|type|text|NO|'crediteur'::text
+KOLOM|actiepunten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|actiepunten|afgerond_op|timestamp without time zone|YES|
+KOLOM|actiepunten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|actiepunten|categorie|text|NO|'overig'::text
+KOLOM|actiepunten|id|integer|NO|nextval('actiepunten_id_seq'::regclass)
+KOLOM|actiepunten|omschrijving|text|YES|
+KOLOM|actiepunten|status|text|NO|'open'::text
+KOLOM|actiepunten|titel|text|NO|
+KOLOM|actiepunten|volgorde|integer|NO|0
 KOLOM|activiteiten|gebouw_id|integer|YES|
 KOLOM|activiteiten|gebouw_naam|text|YES|
 KOLOM|activiteiten|gebruiker_id|integer|YES|

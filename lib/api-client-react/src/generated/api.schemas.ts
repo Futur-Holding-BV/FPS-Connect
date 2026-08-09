@@ -9260,6 +9260,17 @@ export interface WbAdviesUpdate {
   notitie?: string | null;
 }
 
+export interface Actiepunt {
+  id: number;
+  titel: string;
+  omschrijving?: string | null;
+  categorie: string;
+  status: string;
+  volgorde: number;
+  afgerond_op?: string | null;
+  aangemaakt_op: string;
+}
+
 export interface IndirecteWerkzaamheid {
   id: number;
   naam: string;
@@ -15266,6 +15277,24 @@ export type ToebehorenVerbruikPerPeriodeItem = {
   aantal: number;
   kosten: number;
 };
+
+export type ToebehorenVerbruikPerArtikelItem = {
+  artikel_id: number;
+  naam: string;
+  eenheid: string;
+  aantal: number;
+  kosten: number;
+};
+
+export interface ToebehorenVerbruik {
+  totaal_aantal: number;
+  totaal_kosten: number;
+  per_periode: ToebehorenVerbruikPerPeriodeItem[];
+  per_artikel: ToebehorenVerbruikPerArtikelItem[];
+  /** Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld) */
+  onbekende_prijs_aantal: number;
+}
+
 export interface DuplicaatCheckInput {
   naam?: string;
   email?: string;
@@ -16111,6 +16140,27 @@ export type GetUrenPerUurcode200 = {
   niet_in_begroting_uren: number;
 };
 
+export type CreateActiepuntBody = {
+  titel: string;
+  omschrijving?: string | null;
+  categorie?: string;
+};
+
+export type UpdateActiepuntBodyStatus = typeof UpdateActiepuntBodyStatus[keyof typeof UpdateActiepuntBodyStatus];
+
+
+export const UpdateActiepuntBodyStatus = {
+  open: 'open',
+  afgerond: 'afgerond',
+} as const;
+
+export type UpdateActiepuntBody = {
+  titel?: string;
+  omschrijving?: string | null;
+  categorie?: string;
+  status?: UpdateActiepuntBodyStatus;
+};
+
 export type CreateIndirecteWerkzaamheidBody = {
   naam: string;
   volgorde?: number;
@@ -16506,6 +16556,7 @@ van?: string;
  */
 tot?: string;
 };
+
 export type ListVoorraadParams = {
 artikel_id?: number;
 locatie_id?: number;
@@ -16674,20 +16725,3 @@ export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
 };
 
-
-export interface ToebehorenVerbruik {
-  totaal_aantal: number;
-  totaal_kosten: number;
-  per_periode: ToebehorenVerbruikPerPeriodeItem[];
-  per_artikel: ToebehorenVerbruikPerArtikelItem[];
-  /** Uitgegeven hoeveelheid waarvoor geen inkoopprijs bekend is (niet in kosten meegeteld) */
-  onbekende_prijs_aantal: number;
-}
-
-export type ToebehorenVerbruikPerArtikelItem = {
-  artikel_id: number;
-  naam: string;
-  eenheid: string;
-  aantal: number;
-  kosten: number;
-};

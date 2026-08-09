@@ -5,12 +5,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Inbox, Bot, X } from "lucide-react";
+import { Inbox, Bot, X, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WerkbakInhoud, useWerkbakAantal } from "@/components/werkbak-paneel";
 import { AssistentInhoud } from "@/components/assistent-inhoud";
+import { ActiepuntenInhoud } from "@/components/actiepunten-inhoud";
+import { useAuth } from "@/context/auth-context";
 
-type ZijrandTab = "werkbak" | "assistent";
+type ZijrandTab = "werkbak" | "assistent" | "actiepunten";
 
 const OPSLAG_OPEN = "fps.zijrand.open";
 const OPSLAG_TAB = "fps.zijrand.tab";
@@ -19,7 +21,7 @@ function leesOpen(): boolean {
   try { return localStorage.getItem(OPSLAG_OPEN) === "1"; } catch { return false; }
 }
 function leesTab(): ZijrandTab {
-  try { return localStorage.getItem(OPSLAG_TAB) === "werkbak" ? "werkbak" : "assistent"; } catch { return "assistent"; }
+  try { const t = localStorage.getItem(OPSLAG_TAB); return t === "werkbak" || t === "actiepunten" ? t : "assistent"; } catch { return "assistent"; }
 }
 
 /**
@@ -31,6 +33,8 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
   const [open, setOpen] = useState<boolean>(leesOpen);
   const [tab, setTab] = useState<ZijrandTab>(metWerkbak ? leesTab : () => "assistent");
   const werkbakAantal = useWerkbakAantal();
+  const { gebruiker } = useAuth();
+  const isHoofdbeheerder = gebruiker?.rol === "hoofdbeheerder";
 
   useEffect(() => {
     try { localStorage.setItem(OPSLAG_OPEN, open ? "1" : "0"); } catch { /* privé-modus */ }
@@ -126,6 +130,19 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
           >
             <Bot className="h-3.5 w-3.5" /> Assistent
           </button>
+          {metWerkbak && isHoofdbeheerder && (
+            <button
+              type="button"
+              onClick={() => setTab("actiepunten")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium",
+                tab === "actiepunten" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+              data-testid="tab-zijrand-actiepunten"
+            >
+              <ListTodo className="h-3.5 w-3.5" /> Actiepunten
+            </button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -145,6 +162,11 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
         <div className={cn("flex-1 min-h-0 flex-col", tab === "assistent" ? "flex" : "hidden")}>
           <AssistentInhoud />
         </div>
+        {metWerkbak && isHoofdbeheerder && tab === "actiepunten" && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <ActiepuntenInhoud />
+          </div>
+        )}
       </div>}
     </>
   );

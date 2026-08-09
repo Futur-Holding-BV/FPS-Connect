@@ -849,11 +849,22 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
       project_id: patchProjectId,
     });
   }
-  // Ook bij een wijziging wordt het boven-deel atomair op het slot geboekt
-  // (bewust conservatief: eerder geboekt verbruik van de oude versie wordt
-  // niet teruggegeven — het plafond kan zo hooguit strenger uitvallen).
-  if (patchToets.slot_id != null && patchToets.boven_uren > 0) {
-    const geboekt = await boekSlotVerbruik(patchToets.slot_id, patchToets.boven_uren);
+  // Bij een wijziging wordt alleen de TOENAME van het boven-grensdeel op het
+  // slot bijgeboekt: het oude boven-deel van deze regel is bij de eerdere
+  // POST/PATCH al verbruikt. Ongewijzigd opslaan boekt zo niets dubbel.
+  // Afname wordt bewust niet teruggegeven (conservatief: plafond kan hooguit
+  // strenger uitvallen, nooit stilzwijgend ruimer).
+  const oudeToets = await toetsOverwerkSlot({
+    medewerkerId: bestaand.medewerkerId,
+    datum: bestaand.datum,
+    nettoUren: bestaand.nettoUren,
+    projectId: bestaand.projectId,
+    cao: patchMedewerker?.cao ?? null,
+    negeerRegistratieId: bestaand.id,
+  });
+  const bovenDelta = patchToets.boven_uren - (oudeToets.toegestaan ? oudeToets.boven_uren : 0);
+  if (patchToets.slot_id != null && bovenDelta > 0) {
+    const geboekt = await boekSlotVerbruik(patchToets.slot_id, bovenDelta);
     if (!geboekt) {
       return void res.status(422).json({
         code: "OVERWERK_SLOT_DICHT",
@@ -1481,7 +1492,7 @@ router.post("/projecten/:id/overwerk-toestemming", requireAuth, async (req, res)
 // Keuzelijst voor uren op een opdracht: de uurcodes uit de werkbegroting van
 // DIE opdracht (niet de hele normtijdenlijst) + de actieve indirecte
 // werkzaamheden als aparte groep.
-router.get("/opdrachten/:id/uurcodes", requireAuth, async (req, res): Promise<void> => {
+router.get("/opdrachten/:id/uurcodes", requireBevoegdheid("projecten", 1), async (req, res): Promise<void> => {
   const opdrachtId = Number(req.params.id);
   if (!Number.isFinite(opdrachtId)) return void res.status(400).json({ error: "Ongeldige opdracht-id" });
   const begrotingsCodes = await db
@@ -1543,11 +1554,17 @@ router.get("/opdrachten/:id/uren-per-uurcode", requireBevoegdheid("projecten", 1
     begroot_uren: Math.round(Number(b.uren) * 100) / 100,
     geschreven_uren: Math.round((geschrevenPerCode.get(b.normtijd_id) ?? 0) * 100) / 100,
   }));
-  // Geschreven op een code die niet (meer) begroot is, blijft zichtbaar.
-  for (const [nid, uren] of geschrevenPerCode) {
-    if (nid == null || codes.some((c) => c.normtijd_id === nid)) continue;
-    const [nt] = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.id, nid)).limit(1);
-    codes.push({ normtijd_id: nid, code: nt?.code ?? "?", omschrijving: nt?.omschrijving ?? "Onbekende uurcode", begroot_uren: 0, geschreven_uren: Math.round(uren * 100) / 100 });
+  // Geschreven op een code die niet (meer) begroot is, blijft zichtbaar —
+  // namen in één set-query (geen query per code).
+  const wezenIds = [...geschrevenPerCode.keys()].filter(
+    (nid): nid is number => nid != null && !codes.some((c) => c.normtijd_id === nid),
+  );
+  if (wezenIds.length) {
+    const wezen = await db.select().from(modCalcNormtijdenTable).where(inArray(modCalcNormtijdenTable.id, wezenIds));
+    for (const nid of wezenIds) {
+      const nt = wezen.find((w) => w.id === nid);
+      codes.push({ normtijd_id: nid, code: nt?.code ?? "?", omschrijving: nt?.omschrijving ?? "Onbekende uurcode", begroot_uren: 0, geschreven_uren: Math.round((geschrevenPerCode.get(nid) ?? 0) * 100) / 100 });
+    }
   }
 
   // Indirect + niet-in-begroting apart — dat is juist de informatie.
