@@ -9191,6 +9191,157 @@ export interface ModCalcRegelInput {
   toepassing_tekst?: string | null;
 }
 
+/**
+ * Multipart-invoer voor de plak-analyse. Ten minste 'tekst' of 'bestand' is nodig.
+ */
+export interface CalcPlakAnalyseInput {
+  /** Optioneel — geplakte schermafdruk (afbeelding) of productblad (pdf) */
+  bestand?: Blob;
+  /** Geplakte productbeschrijving */
+  tekst?: string;
+  /** Lengte in meters (voor m2-/m-hoeveelheid) */
+  lengte?: number;
+  /** Hoogte in meters (voor m2-hoeveelheid) */
+  hoogte?: number;
+  /** Vrije notities van de calculator */
+  bijzonderheden?: string;
+}
+
+export interface CalcPlakVeldCorrectieInput {
+  /** Whitelist: calc_plak.omschrijving | .hoeveelheid | .eenheid | .tarief | .mu_per_eenheid | .normtijd | .artikel */
+  veld_naam: string;
+  ai_voorstel: string;
+  gekozen: string;
+  hash?: string;
+  tekst_fragment?: string;
+}
+
+export interface CalcPlakHerkendProduct {
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  aanduiding?: string | null;
+  /** @nullable */
+  soort?: string | null;
+  /** m2 | st | m */
+  eenheid: string;
+  /** @nullable */
+  eigenschappen?: string | null;
+  /** @nullable */
+  hoeveelheid?: number | null;
+  /** @nullable */
+  hoeveelheid_toelichting?: string | null;
+}
+
+export interface CalcPlakArtikel {
+  id: number;
+  /** @nullable */
+  artikelcode?: string | null;
+  omschrijving: string;
+  eenheid: string;
+  /** @nullable */
+  leverancier_naam?: string | null;
+  /** @nullable */
+  categorie?: string | null;
+}
+
+export interface CalcPlakNormtijd {
+  id: number;
+  code: string;
+  omschrijving: string;
+  eenheid: string;
+  uren_per_eenheid: number;
+}
+
+/**
+ * Voorgestelde calculatieregel. Prijs/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (niet 0).
+ */
+export interface CalcPlakConceptregel {
+  hoofdstuk?: string;
+  categorie?: string;
+  omschrijving: string;
+  eenheid: string;
+  /** @nullable */
+  hoeveelheid?: number | null;
+  /**
+     * Materiaalprijs uit eigen artikel; null als geen artikel gekoppeld
+     * @nullable
+     */
+  tarief?: number | null;
+  /**
+     * Arbeidsnorm uit eigen normtijd; null als geen normtijd gekoppeld
+     * @nullable
+     */
+  mu_per_eenheid?: number | null;
+  /** @nullable */
+  arbeids_tarief?: number | null;
+  arbeids_tarief_ontbreekt?: boolean;
+  /** @nullable */
+  normtijd_id?: number | null;
+}
+
+export type CalcPlakProductUitkomst = typeof CalcPlakProductUitkomst[keyof typeof CalcPlakProductUitkomst];
+
+
+export const CalcPlakProductUitkomst = {
+  volledig: 'volledig',
+  alleen_artikel: 'alleen_artikel',
+  alleen_normtijd: 'alleen_normtijd',
+  ongekoppeld: 'ongekoppeld',
+} as const;
+
+/**
+ * Voorstel om zelf een artikel aan te leggen (ongekoppeld). ZONDER prijs — §3.5.
+ */
+export type CalcPlakProductArtikelVoorstel = {
+  /** @nullable */
+  leverancier?: string | null;
+  /** @nullable */
+  artikelcode?: string | null;
+  omschrijving?: string;
+  eenheid?: string;
+  categorie?: string;
+  prijs_ontbreekt?: boolean;
+} | null;
+
+export interface CalcPlakProduct {
+  uitkomst: CalcPlakProductUitkomst;
+  herkend: CalcPlakHerkendProduct;
+  artikel?: CalcPlakArtikel | null;
+  normtijd?: CalcPlakNormtijd | null;
+  conceptregel?: CalcPlakConceptregel | null;
+  /** Vervolgvraag bij alleen_artikel (welke normtijd?) */
+  vraag?: string;
+  normtijd_kandidaten?: CalcPlakNormtijd[];
+  /** Voorstel om zelf een artikel aan te leggen (ongekoppeld). ZONDER prijs — §3.5. */
+  artikel_voorstel?: CalcPlakProductArtikelVoorstel;
+  prijs_ontbreekt: boolean;
+  mu_ontbreekt: boolean;
+}
+
+export type CalcPlakAnalyseInvoerSoort = typeof CalcPlakAnalyseInvoerSoort[keyof typeof CalcPlakAnalyseInvoerSoort];
+
+
+export const CalcPlakAnalyseInvoerSoort = {
+  tekst: 'tekst',
+  afbeelding: 'afbeelding',
+  pdf: 'pdf',
+} as const;
+
+export type CalcPlakAnalyseTelling = {
+  herkend: number;
+  gekoppeld_beide: number;
+  alleen_artikel: number;
+  alleen_normtijd: number;
+  ongekoppeld: number;
+};
+
+export interface CalcPlakAnalyse {
+  invoer_soort: CalcPlakAnalyseInvoerSoort;
+  producten: CalcPlakProduct[];
+  telling: CalcPlakAnalyseTelling;
+}
+
 export interface EnkImportAnalyseInput {
   bestand: Blob;
 }

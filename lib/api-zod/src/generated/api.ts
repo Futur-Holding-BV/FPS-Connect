@@ -18522,6 +18522,104 @@ export const AiModCalcRegelsResponse = zod.object({
 
 
 /**
+ * @summary CALC_INVOER_01 — geplakt product (tekst/afbeelding/pdf) herkennen en koppelen aan eigen artikel/normtijd (voorstel, wordt niet opgeslagen)
+ */
+export const PlakAnalyseCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PlakAnalyseCalculatieBody = zod.object({
+  "bestand": zod.instanceof(File).optional().describe('Optioneel — geplakte schermafdruk (afbeelding) of productblad (pdf)'),
+  "tekst": zod.string().optional().describe('Geplakte productbeschrijving'),
+  "lengte": zod.number().optional().describe('Lengte in meters (voor m2-\/m-hoeveelheid)'),
+  "hoogte": zod.number().optional().describe('Hoogte in meters (voor m2-hoeveelheid)'),
+  "bijzonderheden": zod.string().optional().describe('Vrije notities van de calculator')
+}).describe('Multipart-invoer voor de plak-analyse. Ten minste \'tekst\' of \'bestand\' is nodig.')
+
+export const PlakAnalyseCalculatieResponse = zod.object({
+  "invoer_soort": zod.enum(['tekst', 'afbeelding', 'pdf']),
+  "producten": zod.array(zod.object({
+  "uitkomst": zod.enum(['volledig', 'alleen_artikel', 'alleen_normtijd', 'ongekoppeld']),
+  "herkend": zod.object({
+  "fabrikant": zod.string().nullish(),
+  "aanduiding": zod.string().nullish(),
+  "soort": zod.string().nullish(),
+  "eenheid": zod.string().describe('m2 | st | m'),
+  "eigenschappen": zod.string().nullish(),
+  "hoeveelheid": zod.number().nullish(),
+  "hoeveelheid_toelichting": zod.string().nullish()
+}),
+  "artikel": zod.union([zod.object({
+  "id": zod.number(),
+  "artikelcode": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "leverancier_naam": zod.string().nullish(),
+  "categorie": zod.string().nullish()
+}),zod.null()]).optional(),
+  "normtijd": zod.union([zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number()
+}),zod.null()]).optional(),
+  "conceptregel": zod.union([zod.object({
+  "hoofdstuk": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "tarief": zod.number().nullish().describe('Materiaalprijs uit eigen artikel; null als geen artikel gekoppeld'),
+  "mu_per_eenheid": zod.number().nullish().describe('Arbeidsnorm uit eigen normtijd; null als geen normtijd gekoppeld'),
+  "arbeids_tarief": zod.number().nullish(),
+  "arbeids_tarief_ontbreekt": zod.boolean().optional(),
+  "normtijd_id": zod.number().nullish()
+}).describe('Voorgestelde calculatieregel. Prijs\/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (niet 0).'),zod.null()]).optional(),
+  "vraag": zod.string().optional().describe('Vervolgvraag bij alleen_artikel (welke normtijd?)'),
+  "normtijd_kandidaten": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number()
+})).optional(),
+  "artikel_voorstel": zod.object({
+  "leverancier": zod.string().nullish(),
+  "artikelcode": zod.string().nullish(),
+  "omschrijving": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "prijs_ontbreekt": zod.boolean().optional()
+}).nullish().describe('Voorstel om zelf een artikel aan te leggen (ongekoppeld). ZONDER prijs — §3.5.'),
+  "prijs_ontbreekt": zod.boolean(),
+  "mu_ontbreekt": zod.boolean()
+})),
+  "telling": zod.object({
+  "herkend": zod.number(),
+  "gekoppeld_beide": zod.number(),
+  "alleen_artikel": zod.number(),
+  "alleen_normtijd": zod.number(),
+  "ongekoppeld": zod.number()
+})
+})
+
+
+/**
+ * @summary CALC_INVOER_01 — AI-veldvoorstel vs. keuze van de calculator vastleggen (leerbron)
+ */
+export const CalcPlakVeldCorrectieBody = zod.object({
+  "veld_naam": zod.string().describe('Whitelist: calc_plak.omschrijving | .hoeveelheid | .eenheid | .tarief | .mu_per_eenheid | .normtijd | .artikel'),
+  "ai_voorstel": zod.string(),
+  "gekozen": zod.string(),
+  "hash": zod.string().optional(),
+  "tekst_fragment": zod.string().optional()
+})
+
+export const CalcPlakVeldCorrectieResponse = zod.void()
+
+
+/**
  * @summary AI-chatgesprek over een calculatie (technische uitvoering, volledigheid, eenheden)
  */
 export const AiChatCalculatieParams = zod.object({

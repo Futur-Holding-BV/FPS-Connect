@@ -94,7 +94,7 @@ export interface ExtractieResultaat {
   paginaTeksten: string[];
 }
 
-async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string): Promise<ExtractieResultaat> {
+export async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string): Promise<ExtractieResultaat> {
   const naam = bestandsnaam.toLowerCase();
   if (mime === "application/pdf") {
     try {
@@ -1091,6 +1091,51 @@ export async function analyseerAanvraagVoorStroom(input: {
   } catch {
     return { ok: false, is_aanvraag: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };
   }
+}
+
+// ── CALC_INVOER_01: geplakt productmateriaal → tekst + vision-invoer ──────────
+// Zet een geplakte schermafdruk (afbeelding) of een productblad (pdf) om naar
+// leesbare tekst (indien aanwezig) én — als het beeldmateriaal is — naar
+// base64-JPEG's voor een vision-aanroep. Hergebruikt de bestaande interne
+// helpers (extraheerTekst / renderPdfPaginas / resizeAfbeelding); er wordt geen
+// classificatielogica gedupliceerd. Haalt NOOIT externe URL's op.
+export interface PlakInvoerResultaat {
+  tekst: string | null;                                       // machineleesbare tekst uit pdf, of null
+  afbeeldingen: Array<{ paginaNummer: number; base64: string }>; // vision-invoer (leeg bij platte tekst)
+  bron: "afbeelding" | "pdf" | "geen";
+}
+
+export async function haalPlakInvoerBeeld(input: {
+  buffer: Buffer;
+  mime: string;
+  bestandsnaam: string;
+}): Promise<PlakInvoerResultaat> {
+  const mime = input.mime || "application/octet-stream";
+  // Afbeelding (geplakte schermafdruk): resize zoals documentIntelligence en
+  // altijd via vision uitlezen — een screenshot heeft geen tekstlaag.
+  if (mime.startsWith("image/") && !["image/svg+xml", "image/tiff", "image/bmp"].includes(mime)) {
+    const base64 = await resizeAfbeelding(input.buffer);
+    return base64
+      ? { tekst: null, afbeeldingen: [{ paginaNummer: 1, base64 }], bron: "afbeelding" }
+      : { tekst: null, afbeeldingen: [], bron: "geen" };
+  }
+  // Productblad (pdf): eerst de tekstlaag proberen; is die er niet of te dun,
+  // dan de eerste pagina's renderen voor vision (max 5, zoals DOCUMENT_01 §3.5).
+  if (mime === "application/pdf" || input.bestandsnaam.toLowerCase().endsWith(".pdf")) {
+    const extractie = await extraheerTekst(input.buffer, "application/pdf", input.bestandsnaam);
+    const heeftTekst = !!extractie.tekst && extractie.tekst.trim().length > 80;
+    let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+    if (!heeftTekst) {
+      try {
+        const aantal = Math.min(Math.max(extractie.paginaAantal ?? 3, 1), 5);
+        afbeeldingen = await renderPdfPaginas(input.buffer, Array.from({ length: aantal }, (_, i) => i + 1));
+      } catch (err) {
+        logger.warn({ err }, "documentIntelligence: plak-invoer PDF-rendering mislukt");
+      }
+    }
+    return { tekst: heeftTekst ? extractie.tekst : null, afbeeldingen, bron: "pdf" };
+  }
+  return { tekst: null, afbeeldingen: [], bron: "geen" };
 }
 
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).

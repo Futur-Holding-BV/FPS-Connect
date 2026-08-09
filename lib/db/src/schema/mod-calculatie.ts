@@ -173,6 +173,25 @@ export const modCalcAdviezenTable = pgTable("mod_calc_adviezen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// CALC_INVOER_01 §4 — koppelgraadmeting van de plak-analyse.
+// Eén rij per plakhandeling: soort invoer, aantal herkende producten en de
+// verdeling over de vier koppeluitkomsten (§3.3). herkendeProducten bewaart de
+// herkende gegevens voor de meting "welke producten het vaakst niet te koppelen
+// waren". Dit is puur meting/log — nooit een calculatieregel.
+export const modCalcPlakAnalysesTable = pgTable("calc_plak_analyses", {
+  id: serial("id").primaryKey(),
+  calculatieId: integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  invoerSoort: text("invoer_soort").notNull(), // tekst | afbeelding | pdf
+  herkendAantal: integer("herkend_aantal").notNull().default(0),
+  gekoppeldBeide: integer("gekoppeld_beide").notNull().default(0),
+  alleenArtikel: integer("alleen_artikel").notNull().default(0),
+  alleenNormtijd: integer("alleen_normtijd").notNull().default(0),
+  ongekoppeld: integer("ongekoppeld").notNull().default(0),
+  herkendeProducten: jsonb("herkende_producten").$type<unknown[]>(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
 // Calculatie inkoopitems / RFQ — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
 export const modCalcInkoopItemsTable = pgTable("mod_calc_inkoop_items", {
   id:                    serial("id").primaryKey(),

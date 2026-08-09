@@ -37,6 +37,7 @@ import {
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
+import { PlakInvoer } from "./plak-invoer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -2985,6 +2986,8 @@ export default function ModulesCalculatieDetail() {
                 </Button>
               </div>
             )}
+            {/* CALC_INVOER_01 — plakken van leverancier */}
+            <PlakInvoer calculatieId={id} onOvergenomen={invalidate} />
           </div>
 
           {/* Kostopbouw */}

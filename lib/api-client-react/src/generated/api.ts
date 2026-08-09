@@ -125,6 +125,9 @@ import type {
   CalcAdviesUpdate,
   CalcEenheid,
   CalcEenheidInput,
+  CalcPlakAnalyse,
+  CalcPlakAnalyseInput,
+  CalcPlakVeldCorrectieInput,
   Calculatie,
   CalculatieDetail,
   CalculatieInput,
@@ -53212,6 +53215,163 @@ export const useAiModCalcRegels = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiModCalcRegelsMutationOptions(options));
+    }
+
+export const getPlakAnalyseCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/plak-analyse`
+}
+
+/**
+ * @summary CALC_INVOER_01 — geplakt product (tekst/afbeelding/pdf) herkennen en koppelen aan eigen artikel/normtijd (voorstel, wordt niet opgeslagen)
+ */
+export const plakAnalyseCalculatie = async (id: number,
+    calcPlakAnalyseInput: CalcPlakAnalyseInput, options?: RequestInit): Promise<CalcPlakAnalyse> => {
+    const formData = new FormData();
+if(calcPlakAnalyseInput.bestand !== undefined) {
+ formData.append(`bestand`, calcPlakAnalyseInput.bestand);
+ }
+if(calcPlakAnalyseInput.tekst !== undefined) {
+ formData.append(`tekst`, calcPlakAnalyseInput.tekst);
+ }
+if(calcPlakAnalyseInput.lengte !== undefined) {
+ formData.append(`lengte`, calcPlakAnalyseInput.lengte.toString())
+ }
+if(calcPlakAnalyseInput.hoogte !== undefined) {
+ formData.append(`hoogte`, calcPlakAnalyseInput.hoogte.toString())
+ }
+if(calcPlakAnalyseInput.bijzonderheden !== undefined) {
+ formData.append(`bijzonderheden`, calcPlakAnalyseInput.bijzonderheden);
+ }
+
+  return customFetch<CalcPlakAnalyse>(getPlakAnalyseCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPlakAnalyseCalculatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof plakAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcPlakAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof plakAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcPlakAnalyseInput>}, TContext> => {
+
+const mutationKey = ['plakAnalyseCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof plakAnalyseCalculatie>>, {id: number;data: BodyType<CalcPlakAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  plakAnalyseCalculatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlakAnalyseCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof plakAnalyseCalculatie>>>
+    export type PlakAnalyseCalculatieMutationBody = BodyType<CalcPlakAnalyseInput>
+    export type PlakAnalyseCalculatieMutationError = ErrorType<void>
+
+    /**
+ * @summary CALC_INVOER_01 — geplakt product (tekst/afbeelding/pdf) herkennen en koppelen aan eigen artikel/normtijd (voorstel, wordt niet opgeslagen)
+ */
+export const usePlakAnalyseCalculatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof plakAnalyseCalculatie>>, TError,{id: number;data: BodyType<CalcPlakAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof plakAnalyseCalculatie>>,
+        TError,
+        {id: number;data: BodyType<CalcPlakAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getPlakAnalyseCalculatieMutationOptions(options));
+    }
+
+export const getCalcPlakVeldCorrectieUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/veld-correctie`
+}
+
+/**
+ * @summary CALC_INVOER_01 — AI-veldvoorstel vs. keuze van de calculator vastleggen (leerbron)
+ */
+export const calcPlakVeldCorrectie = async (calcPlakVeldCorrectieInput: CalcPlakVeldCorrectieInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCalcPlakVeldCorrectieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calcPlakVeldCorrectieInput)
+  }
+);}
+
+
+
+
+export const getCalcPlakVeldCorrectieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calcPlakVeldCorrectie>>, TError,{data: BodyType<CalcPlakVeldCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof calcPlakVeldCorrectie>>, TError,{data: BodyType<CalcPlakVeldCorrectieInput>}, TContext> => {
+
+const mutationKey = ['calcPlakVeldCorrectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof calcPlakVeldCorrectie>>, {data: BodyType<CalcPlakVeldCorrectieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  calcPlakVeldCorrectie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CalcPlakVeldCorrectieMutationResult = NonNullable<Awaited<ReturnType<typeof calcPlakVeldCorrectie>>>
+    export type CalcPlakVeldCorrectieMutationBody = BodyType<CalcPlakVeldCorrectieInput>
+    export type CalcPlakVeldCorrectieMutationError = ErrorType<void>
+
+    /**
+ * @summary CALC_INVOER_01 — AI-veldvoorstel vs. keuze van de calculator vastleggen (leerbron)
+ */
+export const useCalcPlakVeldCorrectie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calcPlakVeldCorrectie>>, TError,{data: BodyType<CalcPlakVeldCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof calcPlakVeldCorrectie>>,
+        TError,
+        {data: BodyType<CalcPlakVeldCorrectieInput>},
+        TContext
+      > => {
+      return useMutation(getCalcPlakVeldCorrectieMutationOptions(options));
     }
 
 export const getAiChatCalculatieUrl = (id: number,) => {

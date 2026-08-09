@@ -13,6 +13,8 @@ import {
   modCalcInkoopItemsTable,
   modCalcAdviezenTable,
   modCalcEenhedenTable,
+  modCalcPlakAnalysesTable,
+  aiVeldCorrectiesTable,
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
@@ -24,15 +26,61 @@ import {
   offerteRegelsTable,
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
+import multer from "multer";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
-import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
+import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT, CALCULATIE_PLAK_HERKEN_PROMPT, CALCULATIE_PLAK_KOPPEL_PROMPT } from "../lib/aiPrompts";
+import { haalPlakInvoerBeeld } from "../lib/documentIntelligence";
 import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
 import { kenmerkVoorModCalc } from "../lib/kenmerk";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
+
+// CALC_INVOER_01: geplakt bestand (schermafdruk/productblad) via multipart.
+// Allowlist op MIME-type; de echte inhoud wordt daarna nog magic-byte-gecontroleerd.
+const PLAK_TOEGESTANE_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const plakUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (PLAK_TOEGESTANE_MIMES.has(file.mimetype)) return cb(null, true);
+    cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+  },
+});
+
+// Magic-byte-controle: valideert dat de buffer echt het opgegeven type is.
+// Voorkomt dat een omgedoopt/gespooft bestand alsnog verwerkt wordt.
+function detecteerBestandssoort(buf: Buffer): "image/jpeg" | "image/png" | "image/webp" | "application/pdf" | null {
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (
+    buf.length >= 12 &&
+    buf.toString("ascii", 0, 4) === "RIFF" &&
+    buf.toString("ascii", 8, 12) === "WEBP"
+  ) return "image/webp";
+  if (buf.length >= 5 && buf.toString("ascii", 0, 5) === "%PDF-") return "application/pdf";
+  return null;
+}
+
+// Wrapt de multer-middleware zodat upload-fouten nette statuscodes geven
+// (413 bij te groot, 400 bij onverwacht/verkeerd veld) i.p.v. een generieke 500.
+function plakUploadMiddleware(req: import("express").Request, res: import("express").Response, next: import("express").NextFunction): void {
+  plakUpload.single("bestand")(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return void res.status(413).json({ error: "Bestand is te groot (max 20 MB)." });
+      }
+      if (err.code === "LIMIT_UNEXPECTED_FILE") {
+        return void res.status(400).json({ error: "Ongeldig of niet-toegestaan bestand. Alleen JPEG, PNG, WEBP of PDF." });
+      }
+      return void res.status(400).json({ error: "Uploadfout." });
+    }
+    if (err) return void res.status(400).json({ error: "Uploadfout." });
+    next();
+  });
+}
 
 const lezenCalc = requireBevoegdheid("calculaties", 1);
 const schrijvenCalc = requireBevoegdheid("calculaties", 2);
@@ -2088,6 +2136,462 @@ router.patch("/modules/calculaties/:id/adviezen/:adviesId", lezenCalc, async (re
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── CALC_INVOER_01: geplakt product → conceptregel-voorstel ─────────────────
+// Plakt de calculator een productbeschrijving (tekst), schermafdruk (afbeelding)
+// of productblad (pdf) + lengte/hoogte + bijzonderheden, dan herkent de AI de
+// producten en koppelt de server ze aan EIGEN artikelen en normtijden. De
+// uitkomst is een VOORSTEL — er wordt niets automatisch opgeslagen (§3.4).
+// Autorisatie: lezenCalc, gelijk aan de ai-regels-route: dit is een voorstel,
+// geen schrijfactie op de calculatie.
+router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddleware, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI is niet beschikbaar in deze omgeving." });
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const tekstInvoer = typeof body.tekst === "string" ? body.tekst.trim() : "";
+    const lengte = body.lengte !== undefined && body.lengte !== "" ? Number(body.lengte) : null;
+    const hoogte = body.hoogte !== undefined && body.hoogte !== "" ? Number(body.hoogte) : null;
+    const bijzonderheden = typeof body.bijzonderheden === "string" ? body.bijzonderheden.trim() : "";
+
+    // ── a. Invoer → tekst + eventueel vision-beeld ──────────────────────────
+    let invoerSoort: "tekst" | "afbeelding" | "pdf" = "tekst";
+    let extraTekst: string | null = null;
+    let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+
+    if (req.file) {
+      // Magic-byte-controle: de echte inhoud moet overeenkomen met een toegestaan
+      // type én met het opgegeven MIME-type (allowlist is al door multer afgedwongen).
+      const werkelijk = detecteerBestandssoort(req.file.buffer);
+      if (!werkelijk || werkelijk !== req.file.mimetype) {
+        return void res.status(422).json({ error: "Bestandsinhoud komt niet overeen met het formaat. Alleen echte JPEG-, PNG-, WEBP- of PDF-bestanden." });
+      }
+      const plak = await haalPlakInvoerBeeld({
+        buffer: req.file.buffer,
+        mime: req.file.mimetype,
+        bestandsnaam: req.file.originalname ?? "geplakt",
+      });
+      if (plak.bron === "afbeelding") invoerSoort = "afbeelding";
+      else if (plak.bron === "pdf") invoerSoort = "pdf";
+      extraTekst = plak.tekst;
+      afbeeldingen = plak.afbeeldingen;
+      if (plak.bron === "geen" && !tekstInvoer) {
+        return void res.status(400).json({ error: "Geplakt bestand kon niet gelezen worden. Plak tekst of een leesbare schermafdruk/pdf." });
+      }
+    } else if (!tekstInvoer) {
+      return void res.status(400).json({ error: "Plak een productbeschrijving, schermafdruk of productblad." });
+    }
+
+    // ── b. HERKEN-prompt ────────────────────────────────────────────────────
+    const maatInfo = [
+      lengte != null && !Number.isNaN(lengte) ? `Lengte: ${lengte} m` : null,
+      hoogte != null && !Number.isNaN(hoogte) ? `Hoogte: ${hoogte} m` : null,
+      bijzonderheden ? `Bijzonderheden: ${bijzonderheden}` : null,
+    ].filter(Boolean).join("\n") || "Geen maatvoering opgegeven.";
+
+    const herkenTekstBlok = [
+      tekstInvoer ? `Geplakte productbeschrijving:\n${tekstInvoer.slice(0, 6000)}` : null,
+      extraTekst ? `Tekst uit geplakt productblad:\n${extraTekst.trim().slice(0, 6000)}` : null,
+      maatInfo,
+    ].filter(Boolean).join("\n\n");
+
+    type HerkenBlock =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string; detail: "high" } };
+    const herkenContent: HerkenBlock[] = [{ type: "text", text: herkenTekstBlok }];
+    for (const afb of afbeeldingen) {
+      herkenContent.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "high" } });
+    }
+
+    // Slot: vision-aanroep bij beeld (gpt-4o-patroon), anders "default" met ruim budget.
+    const herkenSlot = afbeeldingen.length > 0 ? "vision" : "default";
+    const herkenResultaat = await aiGateway.chat(
+      herkenSlot,
+      {
+        response_format: { type: "json_object" },
+        max_tokens: 1500,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: "system", content: CALCULATIE_PLAK_HERKEN_PROMPT.tekst }, { role: "user", content: herkenContent } as any],
+      },
+      undefined,
+      { module: "calculaties", functie: "plak_herken" },
+    );
+
+    if (!herkenResultaat.ok || !herkenResultaat.inhoud) {
+      return void res.status(502).json({ error: "AI-herkenning mislukt", detail: herkenResultaat.ok ? "leeg antwoord" : herkenResultaat.fout });
+    }
+
+    type HerkendProduct = {
+      fabrikant: string | null;
+      aanduiding: string | null;
+      soort: string | null;
+      eenheid: string;
+      eigenschappen: string | null;
+      hoeveelheid: number | null;
+      hoeveelheid_toelichting: string | null;
+    };
+    let herkendeProducten: HerkendProduct[] = [];
+    try {
+      const parsed = JSON.parse(herkenResultaat.inhoud) as Record<string, unknown>;
+      const arr = Array.isArray(parsed.producten) ? (parsed.producten as unknown[]) : [];
+      const geldigeEenheden = new Set(["m2", "st", "m"]);
+      herkendeProducten = arr
+        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+        .map((p) => {
+          const eenheidRuw = typeof p.eenheid === "string" ? p.eenheid.toLowerCase().trim() : "st";
+          const eenheid = geldigeEenheden.has(eenheidRuw) ? eenheidRuw : "st";
+          const hv = typeof p.hoeveelheid === "number" && Number.isFinite(p.hoeveelheid) ? p.hoeveelheid : null;
+          return {
+            fabrikant: typeof p.fabrikant === "string" && p.fabrikant.trim() ? p.fabrikant.trim() : null,
+            aanduiding: typeof p.aanduiding === "string" && p.aanduiding.trim() ? p.aanduiding.trim() : null,
+            soort: typeof p.soort === "string" && p.soort.trim() ? p.soort.trim() : null,
+            eenheid,
+            eigenschappen: typeof p.eigenschappen === "string" && p.eigenschappen.trim() ? p.eigenschappen.trim() : null,
+            hoeveelheid: hv,
+            hoeveelheid_toelichting: typeof p.hoeveelheid_toelichting === "string" && p.hoeveelheid_toelichting.trim() ? p.hoeveelheid_toelichting.trim() : null,
+          };
+        });
+    } catch {
+      return void res.status(502).json({ error: "AI-antwoord was geen geldige JSON" });
+    }
+
+    if (herkendeProducten.length === 0) {
+      // Niets herkend: log en geef leeg voorstel terug.
+      await db.insert(modCalcPlakAnalysesTable).values({
+        calculatieId: id,
+        gebruikerId: req.session.userId ?? null,
+        invoerSoort,
+        herkendAantal: 0,
+        gekoppeldBeide: 0,
+        alleenArtikel: 0,
+        alleenNormtijd: 0,
+        ongekoppeld: 0,
+        herkendeProducten: [],
+      });
+      return void res.json({ invoer_soort: invoerSoort, producten: [], telling: { herkend: 0, gekoppeld_beide: 0, alleen_artikel: 0, alleen_normtijd: 0, ongekoppeld: 0 } });
+    }
+
+    // ── c. KOPPELEN — server-side kandidaten zoeken ─────────────────────────
+    // Normtijden: kleine tabel — volledig ophalen.
+    const alleNormtijden = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true));
+
+    // Standaard arbeidstarief uit de bestaande tarievenlogica (zoals ai-regels).
+    const tarieven = await db.select().from(modCalcTarievenTable).where(eq(modCalcTarievenTable.actief, true));
+    const standaardArbeidstarief = tarieven.find((t) => t.categorie === "arbeid")?.tarief ?? null;
+
+    // Per product artikelkandidaten zoeken: exact op artikelcode (case-insensitief),
+    // anders ILIKE op omschrijving/leverancier. Max ~30 kandidaten per product.
+    type Artikel = typeof modCalcArtekelenTable.$inferSelect & { leverancierNaam: string | null };
+    const artikelKandidatenPerProduct: Artikel[][] = [];
+    for (const p of herkendeProducten) {
+      const zoektermen = [p.aanduiding, p.fabrikant, p.soort].filter((s): s is string => !!s && s.length > 1);
+      let kandidaten: Artikel[] = [];
+
+      // 1) exacte artikelcode-match (case-insensitief) op de aanduiding.
+      if (p.aanduiding) {
+        const exact = await db
+          .select({
+            id: modCalcArtekelenTable.id, leverancierId: modCalcArtekelenTable.leverancierId,
+            artikelcode: modCalcArtekelenTable.artikelcode, omschrijving: modCalcArtekelenTable.omschrijving,
+            eenheid: modCalcArtekelenTable.eenheid, inkoopprijs: modCalcArtekelenTable.inkoopprijs,
+            verkoopprijs: modCalcArtekelenTable.verkoopprijs, categorie: modCalcArtekelenTable.categorie,
+            actief: modCalcArtekelenTable.actief, aangemaaktOp: modCalcArtekelenTable.aangemaaktOp,
+            bijgewerktOp: modCalcArtekelenTable.bijgewerktOp,
+            leverancierNaam: modCalcLeveranciersTable.naam,
+          })
+          .from(modCalcArtekelenTable)
+          .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
+          .where(and(eq(modCalcArtekelenTable.actief, true), ilike(modCalcArtekelenTable.artikelcode, p.aanduiding)))
+          .limit(30);
+        kandidaten = exact as Artikel[];
+      }
+
+      // 2) geen exacte code → ILIKE op omschrijving/leverancier per zoekterm.
+      if (kandidaten.length === 0 && zoektermen.length > 0) {
+        const orFilters = zoektermen.flatMap((t) => [
+          ilike(modCalcArtekelenTable.omschrijving, `%${t}%`),
+          ilike(modCalcLeveranciersTable.naam, `%${t}%`),
+        ]);
+        const ilikeResult = await db
+          .select({
+            id: modCalcArtekelenTable.id, leverancierId: modCalcArtekelenTable.leverancierId,
+            artikelcode: modCalcArtekelenTable.artikelcode, omschrijving: modCalcArtekelenTable.omschrijving,
+            eenheid: modCalcArtekelenTable.eenheid, inkoopprijs: modCalcArtekelenTable.inkoopprijs,
+            verkoopprijs: modCalcArtekelenTable.verkoopprijs, categorie: modCalcArtekelenTable.categorie,
+            actief: modCalcArtekelenTable.actief, aangemaaktOp: modCalcArtekelenTable.aangemaaktOp,
+            bijgewerktOp: modCalcArtekelenTable.bijgewerktOp,
+            leverancierNaam: modCalcLeveranciersTable.naam,
+          })
+          .from(modCalcArtekelenTable)
+          .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
+          .where(and(eq(modCalcArtekelenTable.actief, true), or(...orFilters)))
+          .limit(30);
+        kandidaten = ilikeResult as Artikel[];
+      }
+
+      artikelKandidatenPerProduct.push(kandidaten);
+    }
+
+    // ── Tweede AI-aanroep ("default"): kiest per product artikel_id/normtijd_id ─
+    // Krijgt ALLEEN de kandidatenlijsten met id's, geen prijzen/uren als keuzegrond.
+    const koppelContext = herkendeProducten.map((p, i) => {
+      const arts = artikelKandidatenPerProduct[i]!;
+      const artLijst = arts.length > 0
+        ? arts.map((a) => `  - artikel_id ${a.id}: [${a.artikelcode ?? "geen code"}] ${a.omschrijving} (${a.eenheid})${a.leverancierNaam ? ` — leverancier: ${a.leverancierNaam}` : ""}`).join("\n")
+        : "  (geen kandidaat-artikelen)";
+      const ntLijst = alleNormtijden.length > 0
+        ? alleNormtijden.map((n) => `  - normtijd_id ${n.id}: [${n.code}] ${n.omschrijving} (${n.eenheid}, categorie ${n.categorie})`).join("\n")
+        : "  (geen normtijden beschikbaar)";
+      const beschrijving = [p.fabrikant, p.aanduiding, p.soort].filter(Boolean).join(" ") || "onbekend product";
+      return `Product ${i} (index ${i}): ${beschrijving} — eenheid ${p.eenheid}${p.eigenschappen ? `; eigenschappen: ${p.eigenschappen}` : ""}\nKANDIDAAT-ARTIKELEN:\n${artLijst}\nKANDIDAAT-NORMTIJDEN:\n${ntLijst}`;
+    }).join("\n\n");
+
+    const koppelResultaat = await aiGateway.chat(
+      "default",
+      {
+        response_format: { type: "json_object" },
+        max_tokens: 1500,
+        messages: [
+          { role: "system", content: CALCULATIE_PLAK_KOPPEL_PROMPT.tekst },
+          { role: "user", content: koppelContext },
+        ],
+      },
+      undefined,
+      { module: "calculaties", functie: "plak_koppel" },
+    );
+
+    // Parse de koppelkeuzes; ontbreekt/faalt → alles null (fail-closed).
+    const gekozenPerIndex = new Map<number, { artikelId: number | null; normtijdId: number | null }>();
+    if (koppelResultaat.ok && koppelResultaat.inhoud) {
+      try {
+        const parsed = JSON.parse(koppelResultaat.inhoud) as Record<string, unknown>;
+        const arr = Array.isArray(parsed.koppelingen) ? (parsed.koppelingen as unknown[]) : [];
+        for (const k of arr) {
+          if (typeof k !== "object" || k === null) continue;
+          const rec = k as Record<string, unknown>;
+          const idx = typeof rec.product_index === "number" ? rec.product_index : null;
+          if (idx === null) continue;
+          const artikelId = typeof rec.artikel_id === "number" ? rec.artikel_id : null;
+          const normtijdId = typeof rec.normtijd_id === "number" ? rec.normtijd_id : null;
+          gekozenPerIndex.set(idx, { artikelId, normtijdId });
+        }
+      } catch {
+        // fail-closed: geen koppelingen
+      }
+    }
+
+    // ── d. Respons per product opbouwen (§3.3) — fail-closed id-verificatie ──
+    const normtijdOpId = new Map(alleNormtijden.map((n) => [n.id, n] as const));
+    const rnd = (n: number) => Math.round(n * 100) / 100;
+
+    let telGekoppeldBeide = 0, telAlleenArtikel = 0, telAlleenNormtijd = 0, telOngekoppeld = 0;
+
+    const producten = herkendeProducten.map((p, i) => {
+      const kandidaten = artikelKandidatenPerProduct[i]!;
+      const keuze = gekozenPerIndex.get(i) ?? { artikelId: null, normtijdId: null };
+
+      // Verifieer dat gekozen artikel_id echt in de kandidatenlijst van dit product zit.
+      const artikel = keuze.artikelId != null
+        ? kandidaten.find((a) => a.id === keuze.artikelId) ?? null
+        : null;
+      // Verifieer dat gekozen normtijd_id een bestaande actieve normtijd is.
+      const normtijd = keuze.normtijdId != null ? normtijdOpId.get(keuze.normtijdId) ?? null : null;
+
+      const heeftArtikel = !!artikel;
+      const heeftNormtijd = !!normtijd;
+
+      // Top-normtijd-kandidaten voor de keuzelijst (klein: hele lijst, max 8 gefilterd op eenheid indien mogelijk).
+      const topNormtijden = alleNormtijden
+        .filter((n) => !p.eenheid || n.eenheid === p.eenheid || alleNormtijden.every((x) => x.eenheid !== p.eenheid))
+        .slice(0, 8)
+        .map((n) => ({ id: n.id, code: n.code, omschrijving: n.omschrijving, eenheid: n.eenheid, categorie: n.categorie }));
+
+      const herkend = {
+        fabrikant: p.fabrikant,
+        aanduiding: p.aanduiding,
+        soort: p.soort,
+        eenheid: p.eenheid,
+        eigenschappen: p.eigenschappen,
+        hoeveelheid: p.hoeveelheid,
+        hoeveelheid_toelichting: p.hoeveelheid_toelichting,
+      };
+
+      // Basis-conceptregelvelden (prijs/uren UITSLUITEND uit DB-rijen).
+      const hoeveelheid = p.hoeveelheid ?? null;
+
+      if (heeftArtikel && heeftNormtijd) {
+        telGekoppeldBeide++;
+        return {
+          uitkomst: "volledig" as const,
+          herkend,
+          artikel: { id: artikel!.id, artikelcode: artikel!.artikelcode, omschrijving: artikel!.omschrijving, eenheid: artikel!.eenheid, leverancier_naam: artikel!.leverancierNaam, categorie: artikel!.categorie },
+          normtijd: { id: normtijd!.id, code: normtijd!.code, omschrijving: normtijd!.omschrijving, eenheid: normtijd!.eenheid, uren_per_eenheid: normtijd!.urenPerEenheid },
+          conceptregel: {
+            hoofdstuk: "Overige werkzaamheden",
+            categorie: "materiaal",
+            omschrijving: artikel!.omschrijving,
+            eenheid: artikel!.eenheid,
+            hoeveelheid,
+            tarief: artikel!.verkoopprijs,                 // materiaalprijs uit DB-artikel
+            mu_per_eenheid: normtijd!.urenPerEenheid,      // arbeidsnorm uit DB-normtijd
+            arbeids_tarief: standaardArbeidstarief,        // uit tarievenlogica; null indien onbekend
+            arbeids_tarief_ontbreekt: standaardArbeidstarief == null,
+            normtijd_id: normtijd!.id,
+          },
+          prijs_ontbreekt: false,
+          mu_ontbreekt: false,
+        };
+      }
+
+      if (heeftArtikel && !heeftNormtijd) {
+        telAlleenArtikel++;
+        return {
+          uitkomst: "alleen_artikel" as const,
+          herkend,
+          artikel: { id: artikel!.id, artikelcode: artikel!.artikelcode, omschrijving: artikel!.omschrijving, eenheid: artikel!.eenheid, leverancier_naam: artikel!.leverancierNaam, categorie: artikel!.categorie },
+          normtijd: null,
+          conceptregel: {
+            hoofdstuk: "Overige werkzaamheden",
+            categorie: "materiaal",
+            omschrijving: artikel!.omschrijving,
+            eenheid: artikel!.eenheid,
+            hoeveelheid,
+            tarief: artikel!.verkoopprijs,
+            mu_per_eenheid: null,                          // arbeid ontbreekt — expliciet, niet 0
+            arbeids_tarief: null,
+            normtijd_id: null,
+          },
+          mu_ontbreekt: true,
+          vraag: "Welke normtijd hoort bij dit product?",
+          normtijd_kandidaten: topNormtijden,
+          prijs_ontbreekt: false,
+        };
+      }
+
+      if (!heeftArtikel && heeftNormtijd) {
+        telAlleenNormtijd++;
+        return {
+          uitkomst: "alleen_normtijd" as const,
+          herkend,
+          artikel: null,
+          normtijd: { id: normtijd!.id, code: normtijd!.code, omschrijving: normtijd!.omschrijving, eenheid: normtijd!.eenheid, uren_per_eenheid: normtijd!.urenPerEenheid },
+          conceptregel: {
+            hoofdstuk: "Overige werkzaamheden",
+            categorie: "arbeid",
+            omschrijving: normtijd!.omschrijving,
+            eenheid: normtijd!.eenheid,
+            hoeveelheid,
+            tarief: null,                                  // materiaal ontbreekt — expliciet, niet 0
+            mu_per_eenheid: normtijd!.urenPerEenheid,
+            arbeids_tarief: standaardArbeidstarief,
+            arbeids_tarief_ontbreekt: standaardArbeidstarief == null,
+            normtijd_id: normtijd!.id,
+          },
+          prijs_ontbreekt: true,                           // materiaalprijs ontbreekt, gemarkeerd
+          mu_ontbreekt: false,
+        };
+      }
+
+      // Geen van beide: geen regel, wel herkende gegevens + aanbod artikel aan te leggen.
+      telOngekoppeld++;
+      return {
+        uitkomst: "ongekoppeld" as const,
+        herkend,
+        artikel: null,
+        normtijd: null,
+        conceptregel: null,                                // §3.3: geen regel
+        artikel_voorstel: {
+          // ZONDER prijs — §3.5: prijs komt nooit van de website.
+          leverancier: p.fabrikant,
+          artikelcode: p.aanduiding,
+          omschrijving: [p.fabrikant, p.aanduiding, p.soort].filter(Boolean).join(" ") || "Onbekend product",
+          eenheid: p.eenheid,
+          categorie: "materiaal",
+          prijs_ontbreekt: true,
+        },
+        prijs_ontbreekt: true,
+        mu_ontbreekt: true,
+      };
+    });
+
+    // ── e. Telling loggen in calc_plak_analyses (§4) ────────────────────────
+    // Bewaar UITSLUITEND minimale meetdata per product (geen vrije eigenschappen-
+    // teksten of grote dumps), begrensd tot max 20 producten.
+    const meetProducten = producten.slice(0, 20).map((p) => ({
+      fabrikant: p.herkend.fabrikant,
+      aanduiding: p.herkend.aanduiding,
+      eenheid: p.herkend.eenheid,
+      uitkomst: p.uitkomst,
+    }));
+    await db.insert(modCalcPlakAnalysesTable).values({
+      calculatieId: id,
+      gebruikerId: req.session.userId ?? null,
+      invoerSoort,
+      herkendAantal: herkendeProducten.length,
+      gekoppeldBeide: telGekoppeldBeide,
+      alleenArtikel: telAlleenArtikel,
+      alleenNormtijd: telAlleenNormtijd,
+      ongekoppeld: telOngekoppeld,
+      herkendeProducten: meetProducten,
+    });
+
+    res.json({
+      invoer_soort: invoerSoort,
+      producten,
+      telling: {
+        herkend: herkendeProducten.length,
+        gekoppeld_beide: telGekoppeldBeide,
+        alleen_artikel: telAlleenArtikel,
+        alleen_normtijd: telAlleenNormtijd,
+        ongekoppeld: telOngekoppeld,
+      },
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Plak-analyse mislukt" });
+  }
+});
+
+// ── CALC_INVOER_01 §3.4: leerbron — voorgestelde regel vs. wat de calculator ──
+// ervan maakte, vastgelegd in ai_veld_correcties (AI_01). Autorisatie: schrijvenCalc.
+const CALC_PLAK_VELDEN = [
+  "calc_plak.omschrijving",
+  "calc_plak.hoeveelheid",
+  "calc_plak.eenheid",
+  "calc_plak.tarief",
+  "calc_plak.mu_per_eenheid",
+  "calc_plak.normtijd",
+  "calc_plak.artikel",
+] as const;
+
+router.post("/modules/calculaties/veld-correctie", schrijvenCalc, async (req, res): Promise<void> => {
+  try {
+    const { veld_naam, ai_voorstel, gekozen, hash, tekst_fragment } = req.body as Record<string, unknown>;
+    if (!veld_naam || ai_voorstel === undefined || ai_voorstel === null || gekozen === undefined || gekozen === null) {
+      return void res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
+    }
+    if (!(CALC_PLAK_VELDEN as readonly string[]).includes(String(veld_naam))) {
+      return void res.status(400).json({ error: "Ongeldig veld" });
+    }
+    await db.insert(aiVeldCorrectiesTable).values({
+      hash: hash ? String(hash) : null,
+      tekstFragment: tekst_fragment ? String(tekst_fragment) : null,
+      veldNaam: String(veld_naam),
+      aiVoorstel: String(ai_voorstel),
+      gekozen: String(gekozen),
+    });
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
   }
 });
 

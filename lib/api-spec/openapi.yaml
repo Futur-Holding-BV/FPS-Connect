@@ -15464,6 +15464,56 @@ paths:
         '404':
           description: Calculatie niet gevonden
 
+  /modules/calculaties/{id}/plak-analyse:
+    post:
+      operationId: plakAnalyseCalculatie
+      summary: CALC_INVOER_01 — geplakt product (tekst/afbeelding/pdf) herkennen en koppelen aan eigen artikel/normtijd (voorstel, wordt niet opgeslagen)
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalcPlakAnalyseInput'
+      responses:
+        '200':
+          description: Voorstel met herkende producten en koppelingen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcPlakAnalyse'
+        '400':
+          description: Ongeldige of ontbrekende invoer
+        '404':
+          description: Calculatie niet gevonden
+        '502':
+          description: AI-herkenning mislukt
+        '503':
+          description: AI niet beschikbaar
+
+  /modules/calculaties/veld-correctie:
+    post:
+      operationId: calcPlakVeldCorrectie
+      summary: CALC_INVOER_01 — AI-veldvoorstel vs. keuze van de calculator vastleggen (leerbron)
+      tags: [CalulatieModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcPlakVeldCorrectieInput'
+      responses:
+        '204':
+          description: Opgeslagen
+        '400':
+          description: Ongeldige invoer
+
   /modules/calculaties/{id}/ai-chat:
     post:
       operationId: aiChatCalculatie
@@ -38579,6 +38629,153 @@ components:
         toepassing_tekst:
           type: string
           nullable: true
+
+    CalcPlakAnalyseInput:
+      type: object
+      description: >-
+        Multipart-invoer voor de plak-analyse. Ten minste 'tekst' of 'bestand' is nodig.
+      properties:
+        bestand:
+          type: string
+          format: binary
+          description: Optioneel — geplakte schermafdruk (afbeelding) of productblad (pdf)
+        tekst:
+          type: string
+          description: Geplakte productbeschrijving
+        lengte:
+          type: number
+          description: Lengte in meters (voor m2-/m-hoeveelheid)
+        hoogte:
+          type: number
+          description: Hoogte in meters (voor m2-hoeveelheid)
+        bijzonderheden:
+          type: string
+          description: Vrije notities van de calculator
+
+    CalcPlakVeldCorrectieInput:
+      type: object
+      required: [veld_naam, ai_voorstel, gekozen]
+      properties:
+        veld_naam:
+          type: string
+          description: >-
+            Whitelist: calc_plak.omschrijving | .hoeveelheid | .eenheid | .tarief |
+            .mu_per_eenheid | .normtijd | .artikel
+        ai_voorstel:
+          type: string
+        gekozen:
+          type: string
+        hash:
+          type: string
+        tekst_fragment:
+          type: string
+
+    CalcPlakHerkendProduct:
+      type: object
+      required: [eenheid]
+      properties:
+        fabrikant:      { type: ["string", "null"] }
+        aanduiding:     { type: ["string", "null"] }
+        soort:          { type: ["string", "null"] }
+        eenheid:        { type: string, description: 'm2 | st | m' }
+        eigenschappen:  { type: ["string", "null"] }
+        hoeveelheid:    { type: ["number", "null"] }
+        hoeveelheid_toelichting: { type: ["string", "null"] }
+
+    CalcPlakArtikel:
+      type: object
+      required: [id, omschrijving, eenheid]
+      properties:
+        id:              { type: integer }
+        artikelcode:     { type: ["string", "null"] }
+        omschrijving:    { type: string }
+        eenheid:         { type: string }
+        leverancier_naam: { type: ["string", "null"] }
+        categorie:       { type: ["string", "null"] }
+
+    CalcPlakNormtijd:
+      type: object
+      required: [id, code, omschrijving, eenheid, uren_per_eenheid]
+      properties:
+        id:              { type: integer }
+        code:            { type: string }
+        omschrijving:    { type: string }
+        eenheid:         { type: string }
+        uren_per_eenheid: { type: number }
+
+    CalcPlakConceptregel:
+      type: object
+      description: Voorgestelde calculatieregel. Prijs/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (niet 0).
+      required: [omschrijving, eenheid]
+      properties:
+        hoofdstuk:       { type: string }
+        categorie:       { type: string }
+        omschrijving:    { type: string }
+        eenheid:         { type: string }
+        hoeveelheid:     { type: ["number", "null"] }
+        tarief:          { type: ["number", "null"], description: Materiaalprijs uit eigen artikel; null als geen artikel gekoppeld }
+        mu_per_eenheid:  { type: ["number", "null"], description: Arbeidsnorm uit eigen normtijd; null als geen normtijd gekoppeld }
+        arbeids_tarief:  { type: ["number", "null"] }
+        arbeids_tarief_ontbreekt: { type: boolean }
+        normtijd_id:     { type: ["integer", "null"] }
+
+    CalcPlakProduct:
+      type: object
+      required: [uitkomst, herkend, prijs_ontbreekt, mu_ontbreekt]
+      properties:
+        uitkomst:
+          type: string
+          enum: [volledig, alleen_artikel, alleen_normtijd, ongekoppeld]
+        herkend:   { $ref: '#/components/schemas/CalcPlakHerkendProduct' }
+        artikel:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakArtikel'
+            - type: "null"
+        normtijd:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakNormtijd'
+            - type: "null"
+        conceptregel:
+          oneOf:
+            - $ref: '#/components/schemas/CalcPlakConceptregel'
+            - type: "null"
+        vraag:            { type: string, description: Vervolgvraag bij alleen_artikel (welke normtijd?) }
+        normtijd_kandidaten:
+          type: array
+          items: { $ref: '#/components/schemas/CalcPlakNormtijd' }
+        artikel_voorstel:
+          type: object
+          nullable: true
+          description: Voorstel om zelf een artikel aan te leggen (ongekoppeld). ZONDER prijs — §3.5.
+          properties:
+            leverancier:   { type: ["string", "null"] }
+            artikelcode:   { type: ["string", "null"] }
+            omschrijving:  { type: string }
+            eenheid:       { type: string }
+            categorie:     { type: string }
+            prijs_ontbreekt: { type: boolean }
+        prijs_ontbreekt:  { type: boolean }
+        mu_ontbreekt:     { type: boolean }
+
+    CalcPlakAnalyse:
+      type: object
+      required: [invoer_soort, producten, telling]
+      properties:
+        invoer_soort:
+          type: string
+          enum: [tekst, afbeelding, pdf]
+        producten:
+          type: array
+          items: { $ref: '#/components/schemas/CalcPlakProduct' }
+        telling:
+          type: object
+          required: [herkend, gekoppeld_beide, alleen_artikel, alleen_normtijd, ongekoppeld]
+          properties:
+            herkend:         { type: integer }
+            gekoppeld_beide: { type: integer }
+            alleen_artikel:  { type: integer }
+            alleen_normtijd: { type: integer }
+            ongekoppeld:     { type: integer }
 
     EnkImportAnalyseInput:
       type: object

@@ -43,6 +43,8 @@ INDEX|boekhouder_uploads|boekhouder_uploads_pkey
 INDEX|brandstof_importen|brandstof_importen_pkey
 INDEX|brandstof_regels|brandstof_regels_pkey
 INDEX|bruikleen_overeenkomsten|bruikleen_overeenkomsten_pkey
+INDEX|calc_plak_analyses|calc_plak_analyses_calculatie_id_idx
+INDEX|calc_plak_analyses|calc_plak_analyses_pkey
 INDEX|calculatie_regels|calculatie_regels_pkey
 INDEX|calculaties|calculaties_nummer_uniek
 INDEX|calculaties|calculaties_pkey
@@ -916,6 +918,17 @@ KOLOM|bruikleen_overeenkomsten|pdf_url|text|YES|
 KOLOM|bruikleen_overeenkomsten|staat_bij_inname|text|YES|
 KOLOM|bruikleen_overeenkomsten|staat_bij_uitgifte|text|YES|
 KOLOM|bruikleen_overeenkomsten|uitgegever_door_id|integer|YES|
+KOLOM|calc_plak_analyses|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|calc_plak_analyses|alleen_artikel|integer|NO|0
+KOLOM|calc_plak_analyses|alleen_normtijd|integer|NO|0
+KOLOM|calc_plak_analyses|calculatie_id|integer|NO|
+KOLOM|calc_plak_analyses|gebruiker_id|integer|YES|
+KOLOM|calc_plak_analyses|gekoppeld_beide|integer|NO|0
+KOLOM|calc_plak_analyses|herkend_aantal|integer|NO|0
+KOLOM|calc_plak_analyses|herkende_producten|jsonb|YES|
+KOLOM|calc_plak_analyses|id|integer|NO|nextval('calc_plak_analyses_id_seq'::regclass)
+KOLOM|calc_plak_analyses|invoer_soort|text|NO|
+KOLOM|calc_plak_analyses|ongekoppeld|integer|NO|0
 KOLOM|calculatie_regels|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|calculatie_regels|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|calculatie_regels|calculatie_id|integer|NO|
