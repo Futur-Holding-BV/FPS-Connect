@@ -249,7 +249,7 @@ router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<voi
 
     const condities = [
       eq(voorraadMutatiesTable.kostenrubriek, "gereedschap_toebehoren"),
-      eq(voorraadMutatiesTable.type, "uitgifte"),
+      inArray(voorraadMutatiesTable.type, ["uitgifte", "retour"]),
     ];
     if (van) condities.push(gte(voorraadMutatiesTable.aangemaaktOp, van));
     if (tot) condities.push(lte(voorraadMutatiesTable.aangemaaktOp, tot));
@@ -257,7 +257,9 @@ router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<voi
     const mutaties = await db
       .select({
         artikelId: voorraadMutatiesTable.artikelId,
+        type: voorraadMutatiesTable.type,
         hoeveelheid: voorraadMutatiesTable.hoeveelheid,
+        delta: voorraadMutatiesTable.delta,
         aangemaaktOp: voorraadMutatiesTable.aangemaaktOp,
         naam: artikelenTable.naam,
         eenheid: artikelenTable.eenheid,
@@ -277,22 +279,28 @@ router.get("/magazijn/toebehoren-verbruik", lezen, async (req, res): Promise<voi
     let onbekendePrijsAantal = 0;
 
     for (const m of mutaties) {
+      // Saldering: uitgifte telt op, retour telt af. Voor retouren gebruiken we
+      // de werkelijk teruggeplaatste delta (defect/afval heeft delta 0 en
+      // verlaagt de kosten dus terecht niet).
+      const aantal = m.type === "retour" ? -Math.max(0, m.delta) : m.hoeveelheid;
+      if (aantal === 0) continue;
+
       // Prijsbasis: gewogen gemiddelde > laatst bekende inkoop > vaste inkoopprijs > onbekend
       const prijs = m.gemiddeldInkoopprijs ?? m.laatsteInkoopprijs ?? m.inkoopprijs ?? null;
-      const kosten = prijs != null && prijs > 0 ? m.hoeveelheid * prijs : 0;
-      const zonderPrijs = prijs == null || prijs <= 0 ? m.hoeveelheid : 0;
+      const kosten = prijs != null && prijs > 0 ? aantal * prijs : 0;
+      const zonderPrijs = prijs == null || prijs <= 0 ? Math.abs(aantal) : 0;
       onbekendePrijsAantal += zonderPrijs;
 
-      totaalAantal += m.hoeveelheid;
+      totaalAantal += aantal;
       totaalKosten += kosten;
 
       const d = m.aangemaaktOp;
       const periode = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const p = periodeMap.get(periode) ?? { aantal: 0, kosten: 0, aantalZonderPrijs: 0 };
-      periodeMap.set(periode, { aantal: p.aantal + m.hoeveelheid, kosten: p.kosten + kosten, aantalZonderPrijs: p.aantalZonderPrijs + zonderPrijs });
+      periodeMap.set(periode, { aantal: p.aantal + aantal, kosten: p.kosten + kosten, aantalZonderPrijs: p.aantalZonderPrijs + zonderPrijs });
 
       const a = artikelMap.get(m.artikelId) ?? { naam: m.naam ?? "Onbekend artikel", eenheid: m.eenheid ?? "stuks", aantal: 0, kosten: 0, aantalZonderPrijs: 0 };
-      artikelMap.set(m.artikelId, { ...a, aantal: a.aantal + m.hoeveelheid, kosten: a.kosten + kosten, aantalZonderPrijs: a.aantalZonderPrijs + zonderPrijs });
+      artikelMap.set(m.artikelId, { ...a, aantal: a.aantal + aantal, kosten: a.kosten + kosten, aantalZonderPrijs: a.aantalZonderPrijs + zonderPrijs });
     }
 
     res.json({
@@ -1360,11 +1368,16 @@ router.post("/magazijn/retouren", aanmaken, async (req, res): Promise<void> => {
         const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
         const conditie = regel.conditie ?? "goed";
 
+        // BOUW_01 §6: retour zonder opdracht van toebehoren krijgt dezelfde
+        // kostenrubriek als de uitgifte, zodat het verbruiksoverzicht saldeert.
+        const kostenrubriek = await bepaalKostenrubriek(tx, artikelId, opdrachtId);
+
         if (conditie === "goed") {
           // Goede retour: voorraad omhoog
           await bijwerkenVoorraad(tx, artikelId, locatieId, hoeveelheid, "retour", userId,
             opdrachtId ? "opdracht" : null, opdrachtId,
-            `Retour (${conditie}) van ${opdrachtId ? `opdracht ${opdrachtId}` : "onbekend"}`);
+            `Retour (${conditie}) van ${opdrachtId ? `opdracht ${opdrachtId}` : "onbekend"}`,
+            opdrachtId, kostenrubriek);
         } else {
           // Defect/afval: enkel loggen (geen voorraadwijziging)
           await tx.insert(voorraadMutatiesTable).values({
@@ -1377,6 +1390,7 @@ router.post("/magazijn/retouren", aanmaken, async (req, res): Promise<void> => {
             referentieId: opdrachtId,
             gebruikerId: userId ?? null,
             omschrijving: `Retour (${conditie}) — niet teruggeplaatst`,
+            kostenrubriek,
           });
         }
       }

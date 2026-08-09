@@ -3105,6 +3105,11 @@ Vervolg op de activatie-verharding van gisteren: een oude activatielink op ieman
 Uitgiftes van toebehoren-gereedschap (BOUW_01 §6, rubriek `gereedschap_toebehoren`) zijn nu als aparte kostenpost zichtbaar op de pagina **Magazijn → Voorraadwaarde**. Een nieuwe sectie "Kostenpost gereedschap-toebehoren" toont totaal uitgegeven aantal + kostprijs (op basis van gemiddelde/laatst bekende inkoopprijs), uitgesplitst per maand en per artikel, met een van/tot-datumfilter. Hoeveelheden zonder bekende inkoopprijs worden apart geteld en niet stilzwijgend in de kostprijs meegenomen. Bewijs via echte flow: login → gezaaide rubriek-uitgifte (4 stuks à €12,50) → endpoint gaf €50 in de juiste maand en het juiste artikel; datumfilter in de toekomst gaf leeg resultaat. De rubriek-mutaties hebben geen opdracht-koppeling (`referentie_type`/`opdracht_id` null) en verschijnen daardoor aantoonbaar niet in projectkosten/nacalculatie.
 
 
+## 2026-08-09 — Toebehoren-kostenpost saldeert nu retouren
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (retour-route + verbruiksoverzicht, geen schemawijziging)
+
+Het toebehoren-verbruiksoverzicht (BOUW_01 §6) telde alleen uitgiftes, waardoor teruggebracht toebehoren als kosten bleef staan. Retouren zonder opdracht van een toebehoren-artikel krijgen nu dezelfde kostenrubriek `gereedschap_toebehoren` mee, en het overzicht saldeert uitgiftes minus goede retouren (delta-gebaseerd) per periode en artikel — defect/afval-retouren verlagen de kosten terecht níet, want dat materiaal komt niet terug in voorraad. Bewijs: `scripts/src/verificatie-toebehoren-retour.ts` — 9 controles groen (uitgifte 5 → retour 2 goed + 1 defect → netto 3 stuks / €30).
 ## 2026-08-09 — Uren- en overwerkslot-boekingen zijn nu transactioneel bij gelijktijdige invoer
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (zelfde regels, nu race-vast)
