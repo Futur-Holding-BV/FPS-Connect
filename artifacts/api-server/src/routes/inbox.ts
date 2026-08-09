@@ -46,6 +46,7 @@ const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
   snagstream: "snagstream_rapport",
   jaarrekening: "jaarrekening",
   contract: "contract",
+  prijslijst: "prijslijst",
   bibliotheek: "product_certificaat",
   document_sjabloon: "document_sjabloon",
   algemeen: "onbekend",

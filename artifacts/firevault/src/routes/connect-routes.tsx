@@ -59,6 +59,7 @@ import MailboxenBeheer from "@/pages/beheer/mailboxen";
 import BackupBeheer from "@/pages/beheer/backup";
 import HerstelDashboard from "@/pages/beheer/herstel";
 import ImportPagina from "@/pages/beheer/import";
+import PrijsafsprakenBeheerPagina from "@/pages/beheer/prijsafspraken";
 import InstellingenPagina from "@/pages/instellingen/index";
 import LeveranciersPagina from "@/pages/leveranciers/index";
 import LeverancierDetailPagina from "@/pages/leveranciers/detail";
@@ -141,6 +142,7 @@ import MeerjarenoverzichtPagina from "@/pages/financieel/meerjarenoverzicht/inde
 import AkDashboardPagina from "@/pages/financieel/ak-dashboard";
 import ScenariosPagina from "@/pages/financieel/scenarios";
 import ContractenPagina from "@/pages/financieel/contracten/index";
+import MarktspiegelPagina from "@/pages/financieel/marktspiegel/index";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -467,6 +469,8 @@ export function ConnectRoutes() {
         <Route path="/financieel/algemene-kosten" component={AkDashboardPagina} />
         <Route path="/financieel/scenarios" component={ScenariosPagina} />
         <Route path="/financieel/contracten" component={ContractenPagina} />
+        <Route path="/financieel/marktspiegel" component={MarktspiegelPagina} />
+        <Route path="/beheer/prijsafspraken" component={PrijsafsprakenBeheerPagina} />
 
         {/* ── Organisatie ── */}
         <Route path="/organisatie/autopark" component={AutoparkPagina} />

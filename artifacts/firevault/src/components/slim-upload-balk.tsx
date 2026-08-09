@@ -21,6 +21,7 @@ import { useListMedewerkers, useListGebouwen, useListWerkgevers } from "@workspa
 import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
+import { stashPrijslijstBestand } from "@/lib/prijslijst-import-stash";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
   | "personeelsdocument" | "verzekering" | "snagstream" | "jaarrekening" | "contract"
-  | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
+  | "prijslijst" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
 
@@ -269,6 +270,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
   jaarrekening:      { label: "Jaarrekeningen (archief)",      icoon: <Archive className="h-4 w-4" />,      pad: "/documenten",  kleur: "bg-slate-50 text-slate-700 border-slate-200",     omschrijving: "Jaarrekening, jaarverslag of accountantsverklaring" },
   contract:          { label: "Contracten",                    icoon: <FileText className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-lime-50 text-lime-700 border-lime-200",        omschrijving: "Commerciële overeenkomst met klant of leverancier" },
+  prijslijst:        { label: "Prijslijsten (leverancier)",     icoon: <Package className="h-4 w-4" />,      pad: "",             kleur: "bg-emerald-50 text-emerald-700 border-emerald-200", omschrijving: "Jaarprijzen / nettoprijslijst van een leverancier — wordt gearchiveerd én ingelezen als prijsafspraken" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
   document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/studio", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
   algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
@@ -1323,6 +1325,26 @@ export function SlimUploadBalk() {
           variant: ok ? undefined : "destructive",
         });
       });
+    } else if (cat === "prijslijst") {
+      // PRIJS_01 §4: prijslijst wordt WÉL gearchiveerd in de bibliotheek (anders
+      // dan jaarrekening), maar de tabelinhoud gaat door naar de importstroom voor
+      // prijsafspraken. We stashen de File in-memory zodat de importpagina de
+      // prijzen kan analyseren zonder opnieuw kiezen, archiveren, en navigeren.
+      stashPrijslijstBestand(bestand);
+      void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {
+        toast({
+          title: ok ? "Prijslijst gearchiveerd" : "Opslaan mislukt",
+          description: ok
+            ? `${bestand.name} staat in Documenten. Verwerk nu de prijzen in de importstroom.`
+            : status === 401 || status === 403
+              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
+              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+          variant: ok ? undefined : "destructive",
+        });
+      });
+      // Ongeacht de archiveringsuitkomst dóór naar de importstroom: de gebruiker
+      // heeft de File nog (gestasht) en kan daar de prijzen bevestigen.
+      setTimeout(() => navigate("/beheer/import?type=prijsafspraken&bron=slim-upload"), 300);
     } else {
       // Lever het bestand direct aan bij de documentbibliotheek (fire and forget)
       void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {

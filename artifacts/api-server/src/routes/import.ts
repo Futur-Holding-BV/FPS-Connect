@@ -15,8 +15,12 @@ import {
   eenheidsprijzenTable,
   facturenTable,
   gebruikersTable,
+  prijsafsprakenTable,
+  modCalcArtekelenTable,
 } from "@workspace/db";
 import { eq, isNotNull, isNull, and } from "drizzle-orm";
+import { vergelijkMetVorige } from "../services/prijsAfspraken";
+import { stelPrijslijstVoorstel } from "../lib/documentIntelligence";
 import { logger } from "../lib/logger";
 import { requireEnigeBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau, type ModuleId } from "@workspace/permissies";
@@ -38,6 +42,7 @@ export const IMPORT_TYPE_MODULES: Record<string, ModuleId> = {
   gebouwen: "gebouwen" as ModuleId,
   historische_projecten: "gebouwen" as ModuleId,
   eenheidsprijzen: "calculaties" as ModuleId,
+  prijsafspraken: "calculaties" as ModuleId,
   historische_facturen: "financieel" as ModuleId,
 };
 const HOOGSTE_NIVEAU = 4;
@@ -154,6 +159,63 @@ router.post(
   },
 );
 
+// ── POST /import/prijslijst-voorstel (PRIJS_01 §4) ────────────────────────────
+// Analyseert een geüploade leveranciers-prijslijst (excel/csv/pdf) en stelt
+// leverancier/periode/valuta + kolomkoppeling voor, mét proefregels. Vult niets
+// definitief in — de gebruiker bevestigt in /import/controleren + /import/uitvoeren.
+// Zelfde recht als de reguliere import voor calculaties (type prijsafspraken).
+router.post(
+  "/import/prijslijst-voorstel",
+  upload.single("bestand"),
+  async (req, res): Promise<void> => {
+    try {
+      if (!req.file) return void res.status(400).json({ error: "Geen bestand ontvangen" });
+
+      const fout = await importRechtFout(req, "prijsafspraken");
+      if (fout) return void res.status(fout.status).json({ error: fout.error });
+
+      // Leveranciers ophalen voor naam→id matching (geen artikelen aanmaken).
+      const leveranciers = await db
+        .select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
+        .from(leveranciersTable);
+      const matchLeverancier = (naam: string): number | null => {
+        const genormaliseerd = naam.trim().toLowerCase();
+        if (!genormaliseerd) return null;
+        const exact = leveranciers.find((l) => (l.naam ?? "").trim().toLowerCase() === genormaliseerd);
+        if (exact) return exact.id;
+        const deel = leveranciers.find(
+          (l) =>
+            (l.naam ?? "").trim().toLowerCase().includes(genormaliseerd) ||
+            genormaliseerd.includes((l.naam ?? "").trim().toLowerCase()),
+        );
+        return deel ? deel.id : null;
+      };
+
+      const voorstel = await stelPrijslijstVoorstel({
+        buffer: req.file.buffer,
+        bestandsnaam: req.file.originalname,
+        mime: req.file.mimetype || "application/octet-stream",
+        matchLeverancier,
+      });
+
+      res.json({
+        bestandssoort: voorstel.bestandssoort,
+        leverancier_voorstel: voorstel.leverancier_voorstel,
+        periode_voorstel: voorstel.periode_voorstel,
+        valuta_voorstel: voorstel.valuta_voorstel,
+        kolomkoppeling_voorstel: voorstel.kolomkoppeling_voorstel,
+        kolommen: voorstel.kolommen,
+        proefregels: voorstel.proefregels,
+        niet_leesbaar: voorstel.niet_leesbaar,
+        waarschuwing: voorstel.waarschuwing,
+      });
+    } catch (err) {
+      req.log.error({ err }, "prijslijst-voorstel mislukt");
+      res.status(500).json({ error: "Fout bij analyseren prijslijst" });
+    }
+  },
+);
+
 // ── Herkenningssleutels per type (IMPORT_01 §2.2) ─────────────────────────────
 // Gekozen op basis van wat er werkelijk in de gegevens bestaat; gemeld in
 // docs/antwoorden/IMPORT_01.md.
@@ -167,6 +229,7 @@ export const SLEUTEL_OMSCHRIJVING: Record<string, string> = {
   gebouwen: "werknummer of projectnummer, anders naam + adres",
   historische_projecten: "werknummer of projectnummer, anders naam + adres",
   eenheidsprijzen: "code (uniek in de database)",
+  prijsafspraken: "leverancier + artikelcode + staffel + geldig van/tot (overlappende perioden worden geweigerd)",
   historische_facturen: "factuurnummer + soort (in-/verkoop); zonder factuurnummer geen herkenning",
 };
 
@@ -176,17 +239,27 @@ const of = (...vals: Array<string | null | undefined>) => {
   return "";
 };
 
+// Optionele importcontext: sommige typen (prijsafspraken) hebben DB-gegevens
+// nodig om te mappen/valideren (leverancier resolven, artikelcode matchen,
+// overlap detecteren). Die worden éénmaal per request opgehaald en meegegeven.
+type ImportContext = Record<string, unknown>;
+
 type TypeConfig = {
-  map: (rij: Record<string, string>, kop: Record<string, string>) => Record<string, unknown>;
+  map: (rij: Record<string, string>, kop: Record<string, string>, ctx?: ImportContext) => Record<string, unknown>;
   // null = deze rij heeft geen bruikbare herkenningssleutel (telt als nieuw)
   sleutel: (values: Record<string, unknown>) => string | null;
   // reden waarom een rij onbruikbaar is, of null als bruikbaar
-  onbruikbaar: (values: Record<string, unknown>, rij: Record<string, string>, kop: Record<string, string>) => string | null;
+  onbruikbaar: (values: Record<string, unknown>, rij: Record<string, string>, kop: Record<string, string>, ctx?: ImportContext) => string | null;
   bestaandeSleutels: () => Promise<Set<string>>;
   insert: (values: Record<string, unknown>, importId: number) => Promise<void>;
   verwijderQuery: {
     tabel: typeof leveranciersTable;
   } | null;
+  // Optioneel: bouwt de importcontext (leveranciers/artikelen/bestaande regels).
+  context?: () => Promise<ImportContext>;
+  // Optioneel: terugdraaien dat records niet verwijdert maar markeert
+  // (prijsafspraken: teruggedraaid_op zetten zodat de historie traceerbaar blijft).
+  terugdraaien?: (importId: number) => Promise<{ verwijderd: number; niet_verwijderd: Array<{ id: number; reden: string }> }>;
 };
 
 const s = (v: unknown) => (typeof v === "string" ? v : "");
@@ -293,6 +366,34 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     insert: async (v, importId) => { await db.insert(eenheidsprijzenTable).values({ ...(v as typeof eenheidsprijzenTable.$inferInsert), bron: "import", importId }); },
     verwijderQuery: { tabel: eenheidsprijzenTable as unknown as typeof leveranciersTable },
   },
+  prijsafspraken: {
+    context: prijsafsprakenContext,
+    map: (rij, kop, ctx) => koppelPrijsafspraak(rij, kop, ctx as PrijsafsprakenContext | undefined),
+    // Elke geldige rij is een nieuwe regel: een prijsafspraak wordt nooit
+    // overschreven (§9). Herkenning gebeurt niet op "bestaat al" maar op
+    // overlap (die wordt geweigerd als fout, niet als dubbel).
+    sleutel: () => null,
+    onbruikbaar: (v, _rij, _kop, ctx) => prijsafspraakOnbruikbaar(v, ctx as PrijsafsprakenContext | undefined),
+    bestaandeSleutels: async () => new Set<string>(),
+    insert: async (v, importId) => {
+      await db.insert(prijsafsprakenTable).values({
+        ...(v as typeof prijsafsprakenTable.$inferInsert),
+        bron: "import",
+        importId,
+      });
+    },
+    // Rollback markeert i.p.v. verwijderen: teruggedraaid_op wordt gezet zodat
+    // de historie traceerbaar blijft (PRIJS_01 §4 — gemeld in het rapport).
+    verwijderQuery: { tabel: prijsafsprakenTable as unknown as typeof leveranciersTable },
+    terugdraaien: async (importId) => {
+      const rijen = await db
+        .update(prijsafsprakenTable)
+        .set({ teruggedraaidOp: new Date() })
+        .where(and(eq(prijsafsprakenTable.importId, importId), isNull(prijsafsprakenTable.teruggedraaidOp)))
+        .returning({ id: prijsafsprakenTable.id });
+      return { verwijderd: rijen.length, niet_verwijderd: [] };
+    },
+  },
   historische_facturen: {
     map: koppelHistorischeFactuur,
     sleutel: (v) => (norm(s(v.factuurnummer)) ? `f:${norm(s(v.type))}|${norm(s(v.factuurnummer))}` : null),
@@ -351,20 +452,46 @@ router.post("/import/controleren", async (req, res): Promise<void> => {
     if (!config) return void res.status(400).json({ error: "Ongeldig importtype" });
 
     const bestaand = await config.bestaandeSleutels();
+    const ctx = config.context ? await config.context() : undefined;
+    const prijsDefaults = type === "prijsafspraken" ? leesPrijsafsprakenDefaults(req.body) : null;
     const gezienInBestand = new Set<string>();
     const perRij: NonNullable<CacheEntry["controle"]>["perRij"] = [];
     const onbruikbaarRedenen: Array<{ rij: number; reden: string }> = [];
     let nieuw = 0, dubbel = 0, onbruikbaar = 0;
 
+    // PRIJS_01 §4: extra controle-informatie voor prijsafspraken —
+    // niet-koppelbare regels (artikelcode zonder eigen artikel) en de
+    // vergelijking met de vorige afspraak per leverancier.
+    const nietKoppelbaarRedenen: Array<{ rij: number; reden: string }> = [];
+    let nietKoppelbaar = 0;
+    const nieuweRegelsPerLeverancier = new Map<number, Array<{ artikelId: number | null; leverancierArtikelcode: string | null; prijs: number }>>();
+
     for (let i = 0; i < gecached.rijen.length; i++) {
       const rij = gecached.rijen[i]!;
-      const values = config.map(rij, kolomkoppeling ?? {});
-      const reden = config.onbruikbaar(values, rij, kolomkoppeling ?? {});
+      const values = config.map(rij, kolomkoppeling ?? {}, ctx);
+      if (prijsDefaults) pasPrijsafsprakenDefaultsToe(values, prijsDefaults, ctx as PrijsafsprakenContext | undefined);
+      const reden = config.onbruikbaar(values, rij, kolomkoppeling ?? {}, ctx);
       if (reden) {
         onbruikbaar++;
         perRij.push({ status: "onbruikbaar", reden, sleutel: null });
         if (onbruikbaarRedenen.length < 50) onbruikbaarRedenen.push({ rij: i + 2, reden });
         continue;
+      }
+      if (type === "prijsafspraken") {
+        if (values.artikelId == null) {
+          nietKoppelbaar++;
+          if (nietKoppelbaarRedenen.length < 50) {
+            nietKoppelbaarRedenen.push({ rij: i + 2, reden: `geen match op artikelcode '${String(values.leverancierArtikelcode ?? "")}' — bewaard als leverancierscode, niet gekoppeld` });
+          }
+        }
+        const levId = values.leverancierId as number;
+        const lijst = nieuweRegelsPerLeverancier.get(levId) ?? [];
+        lijst.push({
+          artikelId: (values.artikelId as number | null) ?? null,
+          leverancierArtikelcode: (values.leverancierArtikelcode as string | null) ?? null,
+          prijs: values.prijs != null ? parseFloat(String(values.prijs)) : 0,
+        });
+        nieuweRegelsPerLeverancier.set(levId, lijst);
       }
       const sleutel = config.sleutel(values);
       if (sleutel && (bestaand.has(sleutel) || gezienInBestand.has(sleutel))) {
@@ -385,14 +512,35 @@ router.post("/import/controleren", async (req, res): Promise<void> => {
       onbruikbaar,
     };
 
-    res.json({
+    const respons: Record<string, unknown> = {
       totaal_rijen: gecached.rijen.length,
       nieuw,
       dubbel,
       onbruikbaar,
       onbruikbaar_redenen: onbruikbaarRedenen,
       sleutel_omschrijving: SLEUTEL_OMSCHRIJVING[type] ?? null,
-    });
+    };
+
+    if (type === "prijsafspraken") {
+      // Vergelijking per leverancier samenvoegen tot één totaal (§4-controlescherm).
+      let duurder = 0, goedkoper = 0, gelijk = 0, nieuweArtikelen = 0;
+      const alleVerschillen: Awaited<ReturnType<typeof vergelijkMetVorige>>["topVerschillen"] = [];
+      for (const [levId, regels] of nieuweRegelsPerLeverancier) {
+        const v = await vergelijkMetVorige(regels, levId);
+        duurder += v.duurder;
+        goedkoper += v.goedkoper;
+        gelijk += v.gelijk;
+        nieuweArtikelen += v.nieuw;
+        alleVerschillen.push(...v.topVerschillen);
+      }
+      const topVerschillen = alleVerschillen
+        .sort((a, b) => Math.abs(b.verschilPct) - Math.abs(a.verschilPct))
+        .slice(0, 10);
+      respons.vergelijking = { duurder, goedkoper, gelijk, nieuw: nieuweArtikelen, top_verschillen: topVerschillen };
+      respons.niet_koppelbaar = { aantal: nietKoppelbaar, redenen: nietKoppelbaarRedenen };
+    }
+
+    res.json(respons);
   } catch (err) {
     req.log.error({ err }, "import controleren mislukt");
     res.status(500).json({ error: "Fout bij controleren bestand" });
@@ -480,6 +628,49 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
     // Hercontrole vlak vóór het schrijven: records die ná de controle-stap door
     // iemand anders zijn toegevoegd, mogen niet alsnog dubbel binnenkomen.
     const bestaandNu = await config.bestaandeSleutels();
+    // Verse context vlak vóór het schrijven (leverancier-/artikelresolutie).
+    const ctxUit = config.context ? await config.context() : undefined;
+    const prijsDefaultsUit = type === "prijsafspraken" ? leesPrijsafsprakenDefaults(req.body) : null;
+
+    // PRIJS_01 §8.2 — trigger "prijsverhoging bij inladen": vóór het schrijven de
+    // nieuwe prijzen vergelijken met de vorige afspraak per leverancier. Wordt na
+    // afloop van de import gebruikt om een 'weten'-werkbakitem te melden dat naar
+    // de marktspiegel verwijst als er artikelen duurder werden. Vóór het insert
+    // uitgevoerd zodat de vorige prijs nog niet is vervuild door de nieuwe regels.
+    const prijsverhogingPerLeverancier = new Map<number, number>();
+    if (type === "prijsafspraken") {
+      const nieuweRegelsPerLeverancier = new Map<number, Array<{ artikelId: number | null; leverancierArtikelcode: string | null; prijs: number }>>();
+      for (let i = 0; i < rijen.length; i++) {
+        const rijStatus = controle.perRij[i];
+        if (!rijStatus || rijStatus.status === "onbruikbaar") continue;
+        if (rijStatus.status === "dubbel" && keuze_dubbelen === "overslaan") continue;
+        try {
+          const values = config.map(rijen[i]!, kolomkoppeling ?? {}, ctxUit) as Record<string, unknown>;
+          if (prijsDefaultsUit) pasPrijsafsprakenDefaultsToe(values, prijsDefaultsUit, ctxUit as PrijsafsprakenContext | undefined);
+          const levId = typeof values.leverancierId === "number" ? values.leverancierId : Number(values.leverancierId);
+          const prijs = parseFloat(String(values.prijs));
+          const staffel = Number(values.staffelVanaf ?? 0);
+          if (!Number.isFinite(levId) || levId <= 0 || !Number.isFinite(prijs) || staffel !== 0) continue;
+          const lijst = nieuweRegelsPerLeverancier.get(levId) ?? [];
+          lijst.push({
+            artikelId: typeof values.artikelId === "number" ? values.artikelId : null,
+            leverancierArtikelcode: typeof values.leverancierArtikelcode === "string" ? values.leverancierArtikelcode : null,
+            prijs,
+          });
+          nieuweRegelsPerLeverancier.set(levId, lijst);
+        } catch {
+          // Onbruikbare rij overslaan voor de vergelijking; de import zelf meldt de fout.
+        }
+      }
+      for (const [levId, nieuweRegels] of nieuweRegelsPerLeverancier) {
+        try {
+          const uitkomst = await vergelijkMetVorige(nieuweRegels, levId);
+          if (uitkomst.duurder > 0) prijsverhogingPerLeverancier.set(levId, uitkomst.duurder);
+        } catch (err) {
+          req.log.warn({ err, levId }, "prijsverhoging-vergelijking bij import mislukt (niet blokkerend)");
+        }
+      }
+    }
 
     for (let i = 0; i < rijen.length; i++) {
       const rijStatus = controle.perRij[i];
@@ -507,7 +698,8 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
         continue;
       }
       try {
-        const values = config.map(rijen[i]!, kolomkoppeling ?? {});
+        const values = config.map(rijen[i]!, kolomkoppeling ?? {}, ctxUit);
+        if (prijsDefaultsUit) pasPrijsafsprakenDefaultsToe(values, prijsDefaultsUit, ctxUit as PrijsafsprakenContext | undefined);
         await config.insert(values, log.id);
         verwerkt++;
       } catch (err) {
@@ -525,6 +717,37 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
         bestandPad,
       })
       .where(eq(importLogsTable.id, log.id));
+
+    // PRIJS_01 §8.2 — meld per leverancier één 'weten'-werkbakitem als er bij het
+    // inladen artikelen duurder werden. Dedup per importId (log.id). GEEN
+    // automatische marktspiegel-run: het item verwijst er alleen tekstueel naar.
+    if (type === "prijsafspraken" && prijsverhogingPerLeverancier.size > 0) {
+      try {
+        const { meldWerkbakItem } = await import("../lib/werkbakService");
+        for (const [levId, aantalDuurder] of prijsverhogingPerLeverancier) {
+          const [lev] = await db
+            .select({ naam: leveranciersTable.naam })
+            .from(leveranciersTable)
+            .where(eq(leveranciersTable.id, levId));
+          const naam = lev?.naam ?? `leverancier #${levId}`;
+          await meldWerkbakItem({
+            soort: "weten",
+            bron: "prijsverhoging_import",
+            titel: `Prijsverhoging bij ${naam} — overweeg de marktspiegel`,
+            omschrijving: `Bij het inladen van de nieuwe prijslijst werden ${aantalDuurder} artikel(en) duurder ten opzichte van de vorige afspraak. Raadpleeg de marktspiegel om te weten hoe dit zich tot de markt verhoudt.`,
+            vereisteModule: "financieel",
+            vereistNiveau: 1,
+            gewicht: 45,
+            actiePad: "/financieel/marktspiegel",
+            herkomstType: "import_log",
+            herkomstId: log.id,
+            dedupSleutel: `prijsverhoging_import:${log.id}:${levId}`,
+          });
+        }
+      } catch (err) {
+        req.log.warn({ err }, "prijsverhoging-werkbakitem melden mislukt (niet blokkerend)");
+      }
+    }
 
     bestandCache.delete(bestand_id);
 
@@ -614,7 +837,7 @@ router.post("/import/logs/:id/terugdraaien", async (req, res): Promise<void> => 
       return void res.status(409).json({ error: "Deze import is al teruggedraaid" });
     }
     const config = TYPE_CONFIG[log.type];
-    if (!config?.verwijderQuery) {
+    if (!config?.verwijderQuery && !config?.terugdraaien) {
       return void res.status(400).json({ error: "Dit importtype kan niet worden teruggedraaid" });
     }
 
@@ -629,7 +852,19 @@ router.post("/import/logs/:id/terugdraaien", async (req, res): Promise<void> => 
       return void res.status(409).json({ error: "Deze import is al teruggedraaid" });
     }
 
-    const tabel = config.verwijderQuery.tabel;
+    // PRIJS_01 §4: sommige typen draaien terug door te markeren i.p.v. verwijderen,
+    // zodat de historie traceerbaar blijft (prijsafspraken → teruggedraaid_op).
+    if (config.terugdraaien) {
+      const { verwijderd, niet_verwijderd } = await config.terugdraaien(id);
+      const detail = { verwijderd, niet_verwijderd };
+      await db
+        .update(importLogsTable)
+        .set({ terugdraaiDetail: detail as unknown as typeof importLogsTable.$inferInsert["terugdraaiDetail"] })
+        .where(eq(importLogsTable.id, id));
+      return void res.json({ log_id: id, verwijderd, niet_verwijderd, volledig: niet_verwijderd.length === 0 });
+    }
+
+    const tabel = config.verwijderQuery!.tabel;
     const rijen = await db
       .select({ id: tabel.id, aangemaaktOp: tabel.aangemaaktOp, bijgewerktOp: tabel.bijgewerktOp })
       .from(tabel)
@@ -842,6 +1077,192 @@ function koppelEenheidsprijs(rij: Record<string, string>, kop: Record<string, st
   };
 }
 
+// ── PRIJS_01 §4 — importtype 'prijsafspraken' ───────────────────────────────
+// Onbekend artikel wordt NOOIT aangemaakt (§9): geen match → de leverancierscode
+// en omschrijving worden bewaard, artikel_id blijft null en de rij telt als
+// "niet gekoppeld" in de controle-respons. Overlappen (binnen het bestand of
+// met bestaande regels) worden geweigerd als regel-fout, niet stil opgelost.
+type PrijsafsprakenBestaandeRegel = {
+  artikelId: number | null;
+  leverancierArtikelcode: string | null;
+  staffelVanaf: number;
+  geldigVan: string;
+  geldigTot: string;
+};
+type PrijsafsprakenContext = {
+  leveranciersOpNaam: Map<string, number>;
+  leverancierIds: Set<number>;
+  artikelenOpCode: Map<string, number>;
+  // per leverancier_id: reeds geldende regels (uit DB) + tijdens deze controle
+  // geaccepteerde regels, om overlap te detecteren.
+  bestaandPerLeverancier: Map<number, PrijsafsprakenBestaandeRegel[]>;
+};
+
+async function prijsafsprakenContext(): Promise<PrijsafsprakenContext> {
+  const leveranciers = await db
+    .select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
+    .from(leveranciersTable);
+  const leveranciersOpNaam = new Map<string, number>();
+  const leverancierIds = new Set<number>();
+  for (const l of leveranciers) {
+    leveranciersOpNaam.set(norm(l.naam), l.id);
+    leverancierIds.add(l.id);
+  }
+
+  const artikelen = await db
+    .select({ id: modCalcArtekelenTable.id, code: modCalcArtekelenTable.artikelcode })
+    .from(modCalcArtekelenTable);
+  const artikelenOpCode = new Map<string, number>();
+  for (const a of artikelen) {
+    if (a.code && norm(a.code)) artikelenOpCode.set(norm(a.code), a.id);
+  }
+
+  const bestaande = await db
+    .select({
+      leverancierId: prijsafsprakenTable.leverancierId,
+      artikelId: prijsafsprakenTable.artikelId,
+      leverancierArtikelcode: prijsafsprakenTable.leverancierArtikelcode,
+      staffelVanaf: prijsafsprakenTable.staffelVanaf,
+      geldigVan: prijsafsprakenTable.geldigVan,
+      geldigTot: prijsafsprakenTable.geldigTot,
+    })
+    .from(prijsafsprakenTable)
+    .where(isNull(prijsafsprakenTable.teruggedraaidOp));
+  const bestaandPerLeverancier = new Map<number, PrijsafsprakenBestaandeRegel[]>();
+  for (const r of bestaande) {
+    const lijst = bestaandPerLeverancier.get(r.leverancierId) ?? [];
+    lijst.push({
+      artikelId: r.artikelId,
+      leverancierArtikelcode: r.leverancierArtikelcode,
+      staffelVanaf: r.staffelVanaf,
+      geldigVan: r.geldigVan,
+      geldigTot: r.geldigTot,
+    });
+    bestaandPerLeverancier.set(r.leverancierId, lijst);
+  }
+
+  return { leveranciersOpNaam, leverancierIds, artikelenOpCode, bestaandPerLeverancier };
+}
+
+function koppelPrijsafspraak(rij: Record<string, string>, kop: Record<string, string>, ctx?: PrijsafsprakenContext) {
+  const parseNum = (v: string) => parseFloat(v.replace(",", "."));
+  const levWaarde = haal(rij, kop, "leverancier") || haal(rij, kop, "leverancier_id");
+  // Leverancier resolven: numeriek = id, anders naam.
+  let leverancierId: number | null = null;
+  if (ctx && levWaarde) {
+    const alsId = parseInt(levWaarde, 10);
+    if (!isNaN(alsId) && ctx.leverancierIds.has(alsId)) leverancierId = alsId;
+    else leverancierId = ctx.leveranciersOpNaam.get(norm(levWaarde)) ?? null;
+  }
+
+  const artikelcode = haal(rij, kop, "artikelcode") || haal(rij, kop, "leverancier_artikelcode");
+  const artikelId = ctx && artikelcode ? (ctx.artikelenOpCode.get(norm(artikelcode)) ?? null) : null;
+
+  const prijs = parseNum(haal(rij, kop, "prijs"));
+  const staffel = haal(rij, kop, "staffel_vanaf");
+  const exclBtwRaw = haal(rij, kop, "excl_btw").toLowerCase();
+
+  return {
+    leverancierId,
+    artikelId,
+    // Niet gekoppeld → leverancierscode + omschrijving bewaren (nooit artikel aanmaken).
+    leverancierArtikelcode: artikelcode || null,
+    leverancierOmschrijving: haal(rij, kop, "omschrijving") || null,
+    prijs: isNaN(prijs) ? null : String(prijs),
+    eenheid: haal(rij, kop, "eenheid") || null,
+    exclBtw: exclBtwRaw ? !["nee", "false", "0", "incl", "inclusief"].includes(exclBtwRaw) : true,
+    geldigVan: haal(rij, kop, "geldig_van") || null,
+    geldigTot: haal(rij, kop, "geldig_tot") || null,
+    staffelVanaf: staffel ? (parseNum(staffel) || 0) : 0,
+    valuta: "EUR",
+    toeslagen: [] as unknown[],
+  };
+}
+
+function overlaptPeriode(aVan: string, aTot: string, bVan: string, bTot: string): boolean {
+  // Inclusieve grenzen: aVan <= bTot && aTot >= bVan
+  return aVan <= bTot && aTot >= bVan;
+}
+
+// PRIJS_01 §4: defaults uit het import-voorstelscherm (leverancier/periode/valuta).
+// De gebruiker corrigeert die daar; ze vullen alléén lege velden aan zodat een
+// prijslijst zonder eigen leverancier-/datumkolom toch geldig wordt. Nooit
+// overschrijven wat wél in het bestand staat.
+type PrijsafsprakenDefaults = {
+  leverancier_id?: number | null;
+  geldig_van?: string | null;
+  geldig_tot?: string | null;
+  valuta?: string | null;
+};
+
+function leesPrijsafsprakenDefaults(body: unknown): PrijsafsprakenDefaults {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const d = (b.defaults ?? {}) as Record<string, unknown>;
+  const num = (v: unknown): number | null => {
+    const n = typeof v === "number" ? v : parseInt(String(v ?? ""), 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const str = (v: unknown): string | null => {
+    const s2 = typeof v === "string" ? v.trim() : "";
+    return s2 ? s2 : null;
+  };
+  return {
+    leverancier_id: num(d.leverancier_id),
+    geldig_van: str(d.geldig_van),
+    geldig_tot: str(d.geldig_tot),
+    valuta: str(d.valuta),
+  };
+}
+
+function pasPrijsafsprakenDefaultsToe(
+  values: Record<string, unknown>,
+  defaults: PrijsafsprakenDefaults,
+  ctx?: PrijsafsprakenContext,
+): void {
+  if (values.leverancierId == null && defaults.leverancier_id != null) {
+    if (!ctx || ctx.leverancierIds.has(defaults.leverancier_id)) {
+      values.leverancierId = defaults.leverancier_id;
+    }
+  }
+  if (!values.geldigVan && defaults.geldig_van) values.geldigVan = defaults.geldig_van;
+  if (!values.geldigTot && defaults.geldig_tot) values.geldigTot = defaults.geldig_tot;
+  if (defaults.valuta) values.valuta = defaults.valuta;
+}
+
+function prijsafspraakOnbruikbaar(v: Record<string, unknown>, ctx?: PrijsafsprakenContext): string | null {
+  if (v.leverancierId == null) return "leverancier onbekend (naam/id niet gevonden)";
+  if (v.prijs == null) return "prijs ontbreekt of ongeldig";
+  if (!v.eenheid) return "eenheid ontbreekt";
+  if (!v.geldigVan || !v.geldigTot) return "geldig_van of geldig_tot ontbreekt";
+  if (String(v.geldigVan) > String(v.geldigTot)) return "geldig_van ligt na geldig_tot";
+  // artikel_id mag null zijn (niet gekoppeld) mits er een leverancier_artikelcode is.
+  if (v.artikelId == null && !v.leverancierArtikelcode) return "artikelcode ontbreekt (geen koppeling mogelijk)";
+
+  if (!ctx) return null;
+  // Overlap-controle: tegen bestaande regels én tegen eerder in dit bestand
+  // geaccepteerde regels. Overlap = regel-fout (weigeren, niet stil oplossen).
+  const leverancierId = v.leverancierId as number;
+  const artikelId = (v.artikelId as number | null) ?? null;
+  const code = (v.leverancierArtikelcode as string | null) ?? null;
+  const staffel = (v.staffelVanaf as number) ?? 0;
+  const van = String(v.geldigVan);
+  const tot = String(v.geldigTot);
+  const lijst = ctx.bestaandPerLeverancier.get(leverancierId) ?? [];
+  for (const b of lijst) {
+    const zelfdeSleutel =
+      b.staffelVanaf === staffel &&
+      (artikelId != null ? b.artikelId === artikelId : (b.artikelId == null && (b.leverancierArtikelcode ?? "") === (code ?? "")));
+    if (zelfdeSleutel && overlaptPeriode(van, tot, b.geldigVan, b.geldigTot)) {
+      return "overlappende geldigheidsperiode met een bestaande of eerdere regel";
+    }
+  }
+  // Deze rij accepteren en toevoegen aan de lijst zodat latere rijen in hetzelfde
+  // bestand ertegen worden gecontroleerd.
+  lijst.push({ artikelId, leverancierArtikelcode: code, staffelVanaf: staffel, geldigVan: van, geldigTot: tot });
+  ctx.bestaandPerLeverancier.set(leverancierId, lijst);
+  return null;
+}
+
 function koppelContactpersoon(rij: Record<string, string>, kop: Record<string, string>) {
   return {
     naam: haal(rij, kop, "naam") || "Onbekend",
@@ -915,6 +1336,7 @@ router.get("/import/template/:type", async (req, res): Promise<void> => {
     contactpersonen: ["naam", "functie", "email", "telefoon", "mobiel", "beslisrol", "opmerkingen"],
     magazijn_artikelen: ["naam", "code", "omschrijving", "eenheid", "inkoopprijs", "categorie"],
     eenheidsprijzen: ["code", "omschrijving", "categorie", "eenheid", "materiaalcomponent", "arbeidscomponent", "normtijd", "kostprijs", "verkoopprijs", "marge", "btw_code", "inclusies", "exclusies", "opmerkingen"],
+    prijsafspraken: ["leverancier", "artikelcode", "omschrijving", "prijs", "eenheid", "geldig_van", "geldig_tot", "staffel_vanaf", "excl_btw"],
     historische_facturen: ["factuurnummer", "type", "factuurdatum", "vervaldatum", "relatienaam", "relatie_code", "bedrag_excl_btw", "btw_bedrag", "bedrag_incl_btw", "btw_code", "grootboekrekening", "kostenplaats", "dagboek", "betaalstatus", "omschrijving", "bestandsnaam"],
     historische_projecten: ["naam", "werknummer", "projectnummer", "adres", "postcode", "stad", "gebouw_type", "aantal_verdiepingen", "omschrijving"],
   };

@@ -24,7 +24,10 @@ import {
   opnameItemsTable,
   offertesTable,
   offerteRegelsTable,
+  prijsafsprakenTable,
+  leveranciersTable,
 } from "@workspace/db";
+import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import multer from "multer";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
@@ -34,6 +37,7 @@ import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE
 import { haalPlakInvoerBeeld } from "../lib/documentIntelligence";
 import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
 import { kenmerkVoorModCalc } from "../lib/kenmerk";
+import { vindGeldigeAfspraak } from "../services/prijsAfspraken";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -640,12 +644,104 @@ router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res): Promis
     }
 
     const rows = await query.orderBy(asc(modCalcArtekelenTable.omschrijving)).limit(200);
-    res.json(rows);
+
+    // PRIJS_01 §5 — verrijk elk artikel met de geldige prijsafspraak op de
+    // peildatum (calculatiedatum indien meegegeven, anders vandaag). We schrijven
+    // NOOIT naar mod_calc_artikelen.inkoopprijs; dit is puur verrijking bij het
+    // uitserveren. Eén batch-query op de geldende afspraken van de betrokken
+    // artikelen, i.p.v. N losse lookups.
+    const peildatum = typeof req.query["datum"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query["datum"])
+      ? req.query["datum"]
+      : new Date().toISOString().slice(0, 10);
+    const artikelIds = rows.map((r) => r.id);
+    const verrijkt = await verrijkArtikelenMetAfspraak(rows, artikelIds, peildatum);
+    res.json(verrijkt);
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
   }
 });
+
+// PRIJS_01 §5 — helper: verrijkt artikelen met de geldige prijsafspraak op een
+// peildatum. Voegt afgesproken_prijs, afspraak_id, afspraak_leverancier,
+// afspraak_periode {van,tot} en prijs_bron ('afspraak' | 'catalogus') toe.
+// Schrijft nooit naar het artikel zelf (§5/§9).
+type ArtikelBasis = { id: number; inkoopprijs?: unknown } & Record<string, unknown>;
+async function verrijkArtikelenMetAfspraak<T extends ArtikelBasis>(
+  artikelen: T[],
+  artikelIds: number[],
+  peildatum: string,
+): Promise<Array<T & {
+  afgesproken_prijs: number | null;
+  afspraak_id: number | null;
+  afspraak_leverancier: string | null;
+  afspraak_periode: { van: string; tot: string } | null;
+  prijs_bron: "afspraak" | "catalogus";
+}>> {
+  if (artikelIds.length === 0) {
+    return artikelen.map((a) => ({
+      ...a,
+      afgesproken_prijs: null,
+      afspraak_id: null,
+      afspraak_leverancier: null,
+      afspraak_periode: null,
+      prijs_bron: "catalogus" as const,
+    }));
+  }
+  // Geldende afspraken (basisstaffel: staffel_vanaf 0) voor deze artikelen op de peildatum.
+  const afsprakenRijen = await db
+    .select({
+      id: prijsafsprakenTable.id,
+      artikelId: prijsafsprakenTable.artikelId,
+      leverancierId: prijsafsprakenTable.leverancierId,
+      prijs: prijsafsprakenTable.prijs,
+      geldigVan: prijsafsprakenTable.geldigVan,
+      geldigTot: prijsafsprakenTable.geldigTot,
+      staffelVanaf: prijsafsprakenTable.staffelVanaf,
+      leverancierNaam: leveranciersTable.naam,
+    })
+    .from(prijsafsprakenTable)
+    .leftJoin(leveranciersTable, eq(prijsafsprakenTable.leverancierId, leveranciersTable.id))
+    .where(and(
+      isNull(prijsafsprakenTable.teruggedraaidOp),
+      lte(prijsafsprakenTable.geldigVan, peildatum),
+      gte(prijsafsprakenTable.geldigTot, peildatum),
+      eq(prijsafsprakenTable.staffelVanaf, 0),
+      inArray(prijsafsprakenTable.artikelId, artikelIds),
+    ));
+
+  // Per artikel: laagste prijs wint (kan meerdere leveranciers hebben).
+  const perArtikel = new Map<number, typeof afsprakenRijen[number]>();
+  for (const rij of afsprakenRijen) {
+    if (rij.artikelId == null) continue;
+    const huidig = perArtikel.get(rij.artikelId);
+    if (!huidig || parseFloat(rij.prijs) < parseFloat(huidig.prijs)) {
+      perArtikel.set(rij.artikelId, rij);
+    }
+  }
+
+  return artikelen.map((a) => {
+    const afspraak = perArtikel.get(a.id) ?? null;
+    if (!afspraak) {
+      return {
+        ...a,
+        afgesproken_prijs: null,
+        afspraak_id: null,
+        afspraak_leverancier: null,
+        afspraak_periode: null,
+        prijs_bron: "catalogus" as const,
+      };
+    }
+    return {
+      ...a,
+      afgesproken_prijs: parseFloat(afspraak.prijs),
+      afspraak_id: afspraak.id,
+      afspraak_leverancier: afspraak.leverancierNaam ?? null,
+      afspraak_periode: { van: afspraak.geldigVan, tot: afspraak.geldigTot },
+      prijs_bron: "afspraak" as const,
+    };
+  });
+}
 
 router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res): Promise<void> => {
   try {
@@ -2392,6 +2488,68 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
     const normtijdOpId = new Map(alleNormtijden.map((n) => [n.id, n] as const));
     const rnd = (n: number) => Math.round(n * 100) / 100;
 
+    // PRIJS_01 §5/§11.4: voor elk gekoppeld artikel bepalen we de geldige
+    // prijsafspraak (jaarprijs) op vandaag. Dit is een INKOOPprijs van de
+    // leverancier — het is PURE HERKOMST-INFO, niet het conceptregel-tarief.
+    // Het conceptregel-tarief blijft altijd de verkoopprijs richting de klant;
+    // een jaarprijs mag de offerteprijs nooit stil verlagen.
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const gekozenArtikelIds = new Set<number>();
+    for (const [i] of herkendeProducten.entries()) {
+      const kandidaten = artikelKandidatenPerProduct[i]!;
+      const keuze = gekozenPerIndex.get(i) ?? { artikelId: null, normtijdId: null };
+      const art = keuze.artikelId != null ? kandidaten.find((a) => a.id === keuze.artikelId) ?? null : null;
+      if (art) gekozenArtikelIds.add(art.id);
+    }
+    type ArtikelAfspraak = {
+      afgesproken_prijs: number;
+      afspraak_id: number;
+      leverancierId: number;
+      afspraak_geldig_tot: string;
+    };
+    const afspraakPerArtikel = new Map<number, ArtikelAfspraak>();
+    for (const artikelId of gekozenArtikelIds) {
+      const { afspraak } = await vindGeldigeAfspraak({ artikelId, datum: vandaag });
+      if (afspraak) {
+        afspraakPerArtikel.set(artikelId, {
+          afgesproken_prijs: parseFloat(afspraak.prijs),
+          afspraak_id: afspraak.id,
+          leverancierId: afspraak.leverancierId,
+          afspraak_geldig_tot: afspraak.geldigTot,
+        });
+      }
+    }
+    // Leveranciernamen ophalen voor de gevonden afspraken (§5: herkomst tonen).
+    const leverancierIdsVoorAfspraak = [...new Set([...afspraakPerArtikel.values()].map((a) => a.leverancierId))];
+    const leverancierNaamOpId = new Map<number, string>();
+    if (leverancierIdsVoorAfspraak.length > 0) {
+      const levRijen = await db
+        .select({ id: leveranciersTable.id, naam: leveranciersTable.naam })
+        .from(leveranciersTable)
+        .where(inArray(leveranciersTable.id, leverancierIdsVoorAfspraak));
+      for (const l of levRijen) leverancierNaamOpId.set(l.id, l.naam);
+    }
+    // Inkoop-herkomst voor de productrespons: ligt de KOSTPRIJS van dit artikel
+    // vast in een jaarprijs ('afspraak' + bedrag + leverancier + geldig t/m) of
+    // niet ('catalogus')? Bepaalt NIET het conceptregel-tarief.
+    function inkoopHerkomstVoorArtikel(artikelId: number): {
+      inkoop_bron: "afspraak" | "catalogus";
+      afgesproken_inkoopprijs: number | null;
+      afspraak_leverancier: string | null;
+      afspraak_geldig_tot: string | null;
+    } {
+      const a = afspraakPerArtikel.get(artikelId);
+      if (a) {
+        return {
+          inkoop_bron: "afspraak",
+          afgesproken_inkoopprijs: a.afgesproken_prijs,
+          afspraak_leverancier: leverancierNaamOpId.get(a.leverancierId) ?? null,
+          afspraak_geldig_tot: a.afspraak_geldig_tot,
+        };
+      }
+      return { inkoop_bron: "catalogus", afgesproken_inkoopprijs: null, afspraak_leverancier: null, afspraak_geldig_tot: null };
+    }
+
     let telGekoppeldBeide = 0, telAlleenArtikel = 0, telAlleenNormtijd = 0, telOngekoppeld = 0;
 
     const producten = herkendeProducten.map((p, i) => {
@@ -2429,6 +2587,8 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
 
       if (heeftArtikel && heeftNormtijd) {
         telGekoppeldBeide++;
+        // PRIJS_01 §5: inkoop-herkomst tonen; tarief blijft verkoopprijs.
+        const inkoop = inkoopHerkomstVoorArtikel(artikel!.id);
         return {
           uitkomst: "volledig" as const,
           herkend,
@@ -2440,12 +2600,16 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
             omschrijving: artikel!.omschrijving,
             eenheid: artikel!.eenheid,
             hoeveelheid,
-            tarief: artikel!.verkoopprijs,                 // materiaalprijs uit DB-artikel
+            tarief: artikel!.verkoopprijs,                 // verkoopprijs richting klant — NIET de jaarprijs
             mu_per_eenheid: normtijd!.urenPerEenheid,      // arbeidsnorm uit DB-normtijd
             arbeids_tarief: standaardArbeidstarief,        // uit tarievenlogica; null indien onbekend
             arbeids_tarief_ontbreekt: standaardArbeidstarief == null,
             normtijd_id: normtijd!.id,
           },
+          inkoop_bron: inkoop.inkoop_bron,                 // §5: ligt de kostprijs vast in een jaarprijs?
+          afgesproken_inkoopprijs: inkoop.afgesproken_inkoopprijs,
+          afspraak_leverancier: inkoop.afspraak_leverancier,
+          afspraak_geldig_tot: inkoop.afspraak_geldig_tot,
           prijs_ontbreekt: false,
           mu_ontbreekt: false,
         };
@@ -2453,6 +2617,8 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
 
       if (heeftArtikel && !heeftNormtijd) {
         telAlleenArtikel++;
+        // PRIJS_01 §5: inkoop-herkomst tonen; tarief blijft verkoopprijs.
+        const inkoop = inkoopHerkomstVoorArtikel(artikel!.id);
         return {
           uitkomst: "alleen_artikel" as const,
           herkend,
@@ -2464,11 +2630,15 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
             omschrijving: artikel!.omschrijving,
             eenheid: artikel!.eenheid,
             hoeveelheid,
-            tarief: artikel!.verkoopprijs,
+            tarief: artikel!.verkoopprijs,                 // verkoopprijs richting klant — NIET de jaarprijs
             mu_per_eenheid: null,                          // arbeid ontbreekt — expliciet, niet 0
             arbeids_tarief: null,
             normtijd_id: null,
           },
+          inkoop_bron: inkoop.inkoop_bron,                 // §5: ligt de kostprijs vast in een jaarprijs?
+          afgesproken_inkoopprijs: inkoop.afgesproken_inkoopprijs,
+          afspraak_leverancier: inkoop.afspraak_leverancier,
+          afspraak_geldig_tot: inkoop.afspraak_geldig_tot,
           mu_ontbreekt: true,
           vraag: "Welke normtijd hoort bij dit product?",
           normtijd_kandidaten: topNormtijden,

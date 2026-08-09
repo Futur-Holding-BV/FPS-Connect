@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, integer, timestamp, doublePrecision, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, integer, timestamp, doublePrecision, numeric, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -93,6 +93,12 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   // AANVRAAG_01 — instelbare reactietijdgrenzen (bedrijfskeuze, nooit in code vastleggen).
   aanvraagReactietermijnUren: integer("aanvraag_reactietermijn_uren").notNull().default(24),
   aanvraagOppakTermijnUren: integer("aanvraag_oppak_termijn_uren").notNull().default(72),
+  // PRIJS_01 §6 — instelbare marge voor de factuurcontrole tegen prijsafspraken
+  // (procentpunten). Boven deze marge levert een factuurregel een prijsafwijking op.
+  prijsafwijkingMargePct: real("prijsafwijking_marge_pct").notNull().default(2),
+  // PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een
+  // werkbak-item oplevert. Standaard 60 dagen.
+  prijsafspraakBewakingDagen: integer("prijsafspraak_bewaking_dagen").notNull().default(60),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

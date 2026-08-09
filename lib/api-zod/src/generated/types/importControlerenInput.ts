@@ -7,9 +7,11 @@
  */
 import type { ImportControlerenInputKolomkoppeling } from './importControlerenInputKolomkoppeling';
 import type { ImportControlerenInputType } from './importControlerenInputType';
+import type { PrijsafsprakenDefaults } from './prijsafsprakenDefaults';
 
 export interface ImportControlerenInput {
   bestand_id: string;
   type: ImportControlerenInputType;
   kolomkoppeling: ImportControlerenInputKolomkoppeling;
+  defaults?: PrijsafsprakenDefaults;
 }

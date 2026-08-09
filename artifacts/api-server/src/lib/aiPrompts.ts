@@ -1385,3 +1385,85 @@ Geef uitsluitend geldige JSON in dit formaat:
   "samenvatting": "<1-2 zinnen samenvatting in het Nederlands>"
 }`.trim(),
 };
+
+// ── PRIJS_01 §4 — prijslijst inladen (Slim Upload → importstroom) ──────────────
+// Twee prompts: (1) de kop/metadata + kolomkoppeling voorstellen, (2) uit een
+// pdf-tekst betrouwbare tabelrijen destilleren. Nooit gokken; onzekere rijen
+// worden weggelaten en geteld als 'niet leesbaar'.
+
+export const PRIJSLIJST_VOORSTEL_PROMPT: AiPrompt = {
+  naam: "prijslijst-voorstel",
+  versie: "1.0.0",
+  tekst: `Je analyseert de kop en de eerste rijen van een leveranciers-prijslijst (jaarprijzen/nettoprijslijst) die FPS wil inladen.
+Bepaal UITSLUITEND op basis van wat er werkelijk in de aangeleverde koppen en rijen staat:
+1. De leverancier (naam zoals bovenaan het document vermeld). Verzin geen naam.
+2. De geldigheidsperiode (geldig_van en geldig_tot in formaat JJJJ-MM-DD) als die op het document staat, anders null.
+3. De valuta (bijv. "EUR"), als vermeld; anders null.
+4. Een kolomkoppeling: koppel elke kolomKOP (exact zoals aangeleverd) aan één doelveld uit deze lijst:
+   artikelcode, omschrijving, prijs, eenheid, geldig_van, geldig_tot, staffel_vanaf, excl_btw.
+   Koppel alleen als je redelijk zeker bent. Onbekende/ongebruikte kolommen krijgen doelveld "" (leeg = overslaan).
+
+Geef uitsluitend geldige JSON met exact deze sleutels:
+{
+  "leverancier_naam": string|null,
+  "geldig_van": "JJJJ-MM-DD"|null,
+  "geldig_tot": "JJJJ-MM-DD"|null,
+  "valuta": string|null,
+  "kolomkoppeling": [ { "kolom": "<exacte kolomkop>", "doelveld": "<doelveld of lege string>" } ]
+}
+Neem GEEN redenering of extra tekst op. Alleen JSON.`,
+};
+
+export const PRIJSLIJST_PDF_TABEL_PROMPT: AiPrompt = {
+  naam: "prijslijst-pdf-tabel",
+  versie: "1.0.0",
+  tekst: `Je krijgt de platte tekst van een pdf-prijslijst van een leverancier. Destilleer hieruit de tabelrijen met artikelen.
+Elke rij bevat, voor zover leesbaar: artikelcode, omschrijving, prijs, eenheid, en eventueel staffel_vanaf.
+HARDE REGELS:
+- Neem ALLEEN rijen op die je met redelijke zekerheid kunt parsen. Twijfel = weglaten.
+- Verzin nooit een prijs, code of eenheid. Wat niet leesbaar is, laat je weg.
+- Tel het aantal rijen dat je herkende als tabelregel maar NIET betrouwbaar kon parsen ("niet_leesbaar").
+Geef uitsluitend geldige JSON met exact deze sleutels:
+{
+  "kolommen": ["artikelcode","omschrijving","prijs","eenheid","staffel_vanaf"],
+  "rijen": [ { "artikelcode": string|null, "omschrijving": string|null, "prijs": string|null, "eenheid": string|null, "staffel_vanaf": string|null } ],
+  "niet_leesbaar": number
+}
+Alleen JSON, geen extra tekst.`,
+};
+
+// ── Marktspiegel (PRIJS_01 §8) ────────────────────────────────────────────────
+// Achtergronddienst die naar buiten kijkt: "dit betaal je, dit vraagt de markt".
+// Draait via de web_search-Responses-API ('default'-slot). Twee harde regels die
+// dit kunnen maken of breken (§8.3), server-side nogmaals afgedwongen:
+//   1. Elke vergelijking draagt VERPLICHT een vindplaats (bron-URL) en datum.
+//      Wat niet gevonden is blijft leeg — nooit geschat, nooit geïnterpoleerd.
+//   2. Het doel is weten, niet wisselen. NOOIT een advies om over te stappen.
+export const MARKTSPIEGEL_PROMPT: AiPrompt = {
+  naam: "marktspiegel",
+  versie: "1.0.0",
+  tekst: `Je bent een inkoop-marktverkenner voor een Nederlands brandpreventie- en bouwbedrijf (FPS). Je zoekt op internet naar wat ANDERE partijen voor een vergelijkbaar artikel, contract of dienst vragen, zodat FPS weet hoe de eigen (interne) prijs zich verhoudt tot de markt.
+
+DOEL: het is een marktspiegel — "dit betaal je, dit vraagt de markt". Het doel is WETEN, niet wisselen.
+
+HARDE REGELS (deze bepalen of het bruikbaar is):
+1. Elke vergelijking MOET een vindplaats (bron-URL) en de datum van vandaag dragen. Heb je geen concrete, publiek raadpleegbare bron-URL, neem die vergelijking dan NIET op. Verzin, schat of interpoleer NOOIT een prijs — wat je niet vindt, laat je weg.
+2. Geef GEEN advies om van leverancier te wisselen of over te stappen. Gebruik nooit woorden als "overstappen", "wisselen", "switch" of "kies een andere leverancier". De samenvatting beschrijft alleen wat FPS betaalt versus wat de markt vraagt.
+3. Gebruik uitsluitend openbare zakelijke bronnen (webshops, prijslijsten, leverancierssites, marktplaatsen voor zakelijke inkoop).
+
+Geef UITSLUITEND geldige JSON terug met exact deze structuur:
+{
+  "vergelijkingen": [
+    {
+      "aanbieder": "naam van de aanbieder/bron",
+      "indicatie_prijs": "prijs of bandbreedte als tekst, bv. '€ 12,50' of '€ 10 – € 15'",
+      "eenheid": "eenheid of null",
+      "vindplaats_url": "https://... (VERPLICHT, publiek raadpleegbaar)",
+      "gevonden_op": "JJJJ-MM-DD (datum van vandaag)",
+      "toelichting": "korte Nederlandse toelichting of null"
+    }
+  ],
+  "samenvatting": "korte Nederlandse samenvatting: dit betaalt FPS, dit vraagt de markt. Geen wisseladvies."
+}
+Vind je niets met een bron, geef dan een lege "vergelijkingen"-array en zeg dat in de samenvatting. Alleen JSON, geen extra tekst.`,
+};

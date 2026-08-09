@@ -37,6 +37,14 @@ function fmtGetal(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 3 }).format(n);
 }
 
+// PRIJS_01 §5: datum uit een prijsafspraak (JJJJ-MM-DD) → NL-notatie.
+function fmtDatum(d: string | null | undefined) {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" }).format(dt);
+}
+
 // AI-geel voor voorgestelde velden
 const AI_VELD =
   "border-amber-200 bg-amber-50 focus-visible:ring-amber-400 focus-visible:border-amber-400";
@@ -544,6 +552,31 @@ function TellingBalk({ analyse }: { analyse: CalcPlakAnalyse }) {
   );
 }
 
+// ─── Inkoop-herkomst (PRIJS_01 §5/§11.4) ─────────────────────────────────────
+// Toont een feit over de INKOOPkant — NIET de AI/amber-stijl, en bepaalt niet het
+// (verkoop)tarief. Bij 'afspraak': jaarprijs + leverancier + bedrag + geldig t/m;
+// bij 'catalogus': subtiel "geen afgesproken inkoopprijs". Alleen zichtbaar wanneer
+// de server een inkoop-herkomst gaf (dus bij een gekoppeld artikel).
+function PrijsHerkomst({ product }: { product: CalcPlakProduct }) {
+  const bron = product.inkoop_bron;
+  if (!bron) return null;
+  if (bron === "afspraak") {
+    const lev = product.afspraak_leverancier;
+    const tot = fmtDatum(product.afspraak_geldig_tot);
+    const bedrag = fmtBedrag(product.afgesproken_inkoopprijs);
+    return (
+      <div>
+        <Badge variant="secondary" className="text-[10px] font-normal">
+          Inkoop: jaarprijs{lev ? ` ${lev}` : ""} {bedrag} · t/m {tot}
+        </Badge>
+      </div>
+    );
+  }
+  return (
+    <p className="text-[10px] text-muted-foreground">geen afgesproken inkoopprijs</p>
+  );
+}
+
 // ─── AMBER-markering ──────────────────────────────────────────────────────────
 
 function AmberMelding({ tekst }: { tekst: string }) {
@@ -732,6 +765,10 @@ function ProductKaart({
                 </div>
               </div>
             </div>
+
+            {/* PRIJS_01 §5/§11.4 — inkoop-herkomst (feit, geen AI-suggestie: secondary/
+                muted, nooit amber). Losstaand van het tariefveld; bepaalt niet het tarief. */}
+            <PrijsHerkomst product={product} />
 
             {/* AMBER-markeringen per stand */}
             {product.uitkomst === "alleen_artikel" && (

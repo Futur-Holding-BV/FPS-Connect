@@ -26,6 +26,8 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         heatmap_tracking_ingeschakeld: false,
         ai_leren_van_correcties_ingeschakeld: true,
         ai_kostendrempel_eur: null,
+        prijsafwijking_marge_pct: 2,
+        prijsafspraak_bewaking_dagen: 60,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
         bijgewerkt_door_naam: null,
@@ -56,6 +58,8 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       ai_maandelijkse_export_email: instelling.aiMaandelijkseExportEmail,
       aanvraag_reactietermijn_uren: instelling.aanvraagReactietermijnUren,
       aanvraag_oppak_termijn_uren: instelling.aanvraagOppakTermijnUren,
+      prijsafwijking_marge_pct: instelling.prijsafwijkingMargePct,
+      prijsafspraak_bewaking_dagen: instelling.prijsafspraakBewakingDagen,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
       bijgewerkt_door_naam: bijgewerktDoorNaam,
@@ -86,6 +90,8 @@ router.put(
         ai_maandelijkse_export_email,
         aanvraag_reactietermijn_uren,
         aanvraag_oppak_termijn_uren,
+        prijsafwijking_marge_pct,
+        prijsafspraak_bewaking_dagen,
       } = req.body as {
           support_email?: string;
           support_telefoon?: string;
@@ -100,6 +106,8 @@ router.put(
           ai_maandelijkse_export_email?: string | null;
           aanvraag_reactietermijn_uren?: number;
           aanvraag_oppak_termijn_uren?: number;
+          prijsafwijking_marge_pct?: number;
+          prijsafspraak_bewaking_dagen?: number;
         };
       const gebruikerId = req.session.userId!;
 
@@ -172,6 +180,20 @@ router.put(
         }
         payload.aanvraagOppakTermijnUren = uren;
       }
+      if (prijsafwijking_marge_pct !== undefined) {
+        const marge = Number(prijsafwijking_marge_pct);
+        if (!Number.isFinite(marge) || marge < 0 || marge > 100) {
+          return void res.status(400).json({ error: "prijsafwijking_marge_pct moet tussen 0 en 100 liggen" });
+        }
+        payload.prijsafwijkingMargePct = marge;
+      }
+      if (prijsafspraak_bewaking_dagen !== undefined) {
+        const dagen = Math.round(Number(prijsafspraak_bewaking_dagen));
+        if (!Number.isFinite(dagen) || dagen < 1 || dagen > 365) {
+          return void res.status(400).json({ error: "prijsafspraak_bewaking_dagen moet tussen 1 en 365 liggen" });
+        }
+        payload.prijsafspraakBewakingDagen = dagen;
+      }
 
       let result;
       if (bestaand) {
@@ -204,6 +226,8 @@ router.put(
         ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,
         aanvraag_reactietermijn_uren: result.aanvraagReactietermijnUren,
         aanvraag_oppak_termijn_uren: result.aanvraagOppakTermijnUren,
+        prijsafwijking_marge_pct: result.prijsafwijkingMargePct,
+        prijsafspraak_bewaking_dagen: result.prijsafspraakBewakingDagen,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
         bijgewerkt_door_naam: null,

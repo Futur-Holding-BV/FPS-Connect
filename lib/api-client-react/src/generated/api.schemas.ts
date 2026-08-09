@@ -4446,6 +4446,10 @@ export interface AppInstellingen {
   aanvraag_reactietermijn_uren?: number;
   /** Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal. */
   aanvraag_oppak_termijn_uren?: number;
+  /** PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs voordat een prijsafwijking wordt gemeld. */
+  prijsafwijking_marge_pct?: number;
+  /** PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60. */
+  prijsafspraak_bewaking_dagen?: number;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
@@ -4485,6 +4489,10 @@ export interface AppInstellingenInput {
   ai_maandelijkse_export_email?: string | null;
   aanvraag_reactietermijn_uren?: number;
   aanvraag_oppak_termijn_uren?: number;
+  /** PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs (0-100). */
+  prijsafwijking_marge_pct?: number;
+  /** PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken. */
+  prijsafspraak_bewaking_dagen?: number;
 }
 
 export interface AiDrempelStatus {
@@ -4629,6 +4637,28 @@ export interface DocumentAanleverenInput {
   bestand?: Blob;
 }
 
+export type DocumentAanleverResultaatDoorschakelingNaar = typeof DocumentAanleverResultaatDoorschakelingNaar[keyof typeof DocumentAanleverResultaatDoorschakelingNaar];
+
+
+export const DocumentAanleverResultaatDoorschakelingNaar = {
+  import: 'import',
+} as const;
+
+export type DocumentAanleverResultaatDoorschakeling = {
+  naar: DocumentAanleverResultaatDoorschakelingNaar;
+  import_type: string;
+  reden: string;
+};
+
+export type GetestVoor = typeof GetestVoor[keyof typeof GetestVoor];
+
+
+export const GetestVoor = {
+  wand: 'wand',
+  plafond: 'plafond',
+  beide: 'beide',
+} as const;
+
 export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
 
 
@@ -4640,20 +4670,6 @@ export const DocumentStatus = {
   ingetrokken: 'ingetrokken',
 } as const;
 
-export type GetestVoor = typeof GetestVoor[keyof typeof GetestVoor];
-
-
-export const GetestVoor = {
-  wand: 'wand',
-  plafond: 'plafond',
-  beide: 'beide',
-} as const;
-
-/**
- * @nullable
- */
-export type DocumentAiMetadata = { [key: string]: unknown } | null;
-
 export type GoedkeuringStatus = typeof GoedkeuringStatus[keyof typeof GoedkeuringStatus];
 
 
@@ -4663,6 +4679,11 @@ export const GoedkeuringStatus = {
   goedgekeurd: 'goedgekeurd',
   afgekeurd: 'afgekeurd',
 } as const;
+
+/**
+ * @nullable
+ */
+export type DocumentAiMetadata = { [key: string]: unknown } | null;
 
 export interface Document {
   id: number;
@@ -4704,6 +4725,13 @@ export interface Document {
   goedkeuring_status: GoedkeuringStatus;
   toepassing_ids: number[];
 }
+
+/**
+ * Document plus optionele doorschakeling naar de importstroom (PRIJS_01 §4, prijslijst).
+ */
+export type DocumentAanleverResultaat = Document & {
+  doorschakeling?: DocumentAanleverResultaatDoorschakeling;
+};
 
 export interface OpleverrapportNaarDmsInput {
   /** objectPath van het geüploade PDF-bestand (bv. /objects/uploads/<uuid>) */
@@ -9291,6 +9319,17 @@ export const CalcPlakProductUitkomst = {
 } as const;
 
 /**
+ * PRIJS_01 §5 — herkomst van de INKOOPprijs (kostprijs) van dit artikel. 'afspraak' = de kostprijs ligt vast in een geldige jaarprijs (afgesproken_inkoopprijs is gevuld); 'catalogus' = geen geldige afspraak. Beïnvloedt NIET het conceptregel-tarief (dat blijft de verkoopprijs). Alleen aanwezig bij een gekoppeld artikel (volledig/alleen_artikel).
+ */
+export type CalcPlakProductInkoopBron = typeof CalcPlakProductInkoopBron[keyof typeof CalcPlakProductInkoopBron];
+
+
+export const CalcPlakProductInkoopBron = {
+  afspraak: 'afspraak',
+  catalogus: 'catalogus',
+} as const;
+
+/**
  * Voorstel om zelf een artikel aan te leggen (ongekoppeld). ZONDER prijs — §3.5.
  */
 export type CalcPlakProductArtikelVoorstel = {
@@ -9310,6 +9349,23 @@ export interface CalcPlakProduct {
   artikel?: CalcPlakArtikel | null;
   normtijd?: CalcPlakNormtijd | null;
   conceptregel?: CalcPlakConceptregel | null;
+  /** PRIJS_01 §5 — herkomst van de INKOOPprijs (kostprijs) van dit artikel. 'afspraak' = de kostprijs ligt vast in een geldige jaarprijs (afgesproken_inkoopprijs is gevuld); 'catalogus' = geen geldige afspraak. Beïnvloedt NIET het conceptregel-tarief (dat blijft de verkoopprijs). Alleen aanwezig bij een gekoppeld artikel (volledig/alleen_artikel). */
+  inkoop_bron?: CalcPlakProductInkoopBron;
+  /**
+     * De afgesproken inkoopprijs (jaarprijs) van de leverancier (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afgesproken_inkoopprijs?: number | null;
+  /**
+     * Leverancier van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afspraak_leverancier?: string | null;
+  /**
+     * Einddatum (JJJJ-MM-DD) van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afspraak_geldig_tot?: string | null;
   /** Vervolgvraag bij alleen_artikel (welke normtijd?) */
   vraag?: string;
   normtijd_kandidaten?: CalcPlakNormtijd[];
@@ -10996,6 +11052,74 @@ export interface AccountviewInstellingenInput {
   grootboek_voorraad?: string | null;
   grootboek_inkoop_kosten?: string | null;
   magazijn_export_actief?: boolean;
+}
+
+export type FactuurPrijscontroleRegelUitkomst = typeof FactuurPrijscontroleRegelUitkomst[keyof typeof FactuurPrijscontroleRegelUitkomst];
+
+
+export const FactuurPrijscontroleRegelUitkomst = {
+  klopt: 'klopt',
+  afwijking: 'afwijking',
+  geen_afspraak: 'geen_afspraak',
+  niet_te_toetsen: 'niet_te_toetsen',
+} as const;
+
+export interface FactuurPrijscontroleRegel {
+  regel_id: number;
+  regelnummer: number;
+  omschrijving: string;
+  /** @nullable */
+  hoeveelheid?: number | null;
+  /** @nullable */
+  factuur_stukprijs?: number | null;
+  uitkomst: FactuurPrijscontroleRegelUitkomst;
+  /** @nullable */
+  afgesproken_prijs?: number | null;
+  /** @nullable */
+  afspraak_id?: number | null;
+  /** @nullable */
+  afspraak_leverancier?: string | null;
+  /** @nullable */
+  verschil_per_stuk?: number | null;
+  /** @nullable */
+  verschil_totaal?: number | null;
+  marge_pct: number;
+}
+
+export interface FactuurPrijscontrole {
+  factuur_id: number;
+  getoetst_op: string;
+  marge_pct: number;
+  aantal_regels: number;
+  aantal_afwijkingen: number;
+  aantal_niet_te_toetsen: number;
+  totaal_meer_betaald: number;
+  regels: FactuurPrijscontroleRegel[];
+}
+
+export interface FactuurPrijscontroleMaandtotaalRegel {
+  factuur_id: number;
+  /** @nullable */
+  factuurnummer?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  afgesproken_prijs?: number | null;
+  /** @nullable */
+  factuur_stukprijs?: number | null;
+  /** @nullable */
+  verschil_per_stuk?: number | null;
+  /** @nullable */
+  verschil_totaal?: number | null;
+  /** @nullable */
+  afspraak_leverancier?: string | null;
+}
+
+export interface FactuurPrijscontroleMaandtotaal {
+  maand: string;
+  totaal_meer_betaald: number;
+  aantal_afwijkingen: number;
+  regels: FactuurPrijscontroleMaandtotaalRegel[];
 }
 
 export type FactuurAiMetadata = { [key: string]: unknown } | null;
@@ -13109,6 +13233,189 @@ export interface LeverancierInput {
   crm_relatie_id?: number | null;
 }
 
+export type PrijsafspraakToeslagSoort = typeof PrijsafspraakToeslagSoort[keyof typeof PrijsafspraakToeslagSoort];
+
+
+export const PrijsafspraakToeslagSoort = {
+  transport: 'transport',
+  spoed: 'spoed',
+  kleine_order: 'kleine_order',
+  anders: 'anders',
+} as const;
+
+export interface PrijsafspraakToeslag {
+  soort: PrijsafspraakToeslagSoort;
+  bedrag: number;
+  eenheid?: string;
+}
+
+export interface Prijsafspraak {
+  id: number;
+  leverancier_id: number;
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  leverancier_artikelcode?: string | null;
+  /** @nullable */
+  leverancier_omschrijving?: string | null;
+  prijs: number;
+  eenheid: string;
+  excl_btw: boolean;
+  valuta: string;
+  geldig_van: string;
+  geldig_tot: string;
+  staffel_vanaf: number;
+  toeslagen: PrijsafspraakToeslag[];
+  /** @nullable */
+  bron_prijslijst?: string | null;
+  /** @nullable */
+  bron_datum?: string | null;
+  bron: string;
+  /** @nullable */
+  import_id?: number | null;
+  /** @nullable */
+  teruggedraaid_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface PrijsafspraakInput {
+  leverancier_id: number;
+  /** @nullable */
+  artikel_id?: number | null;
+  leverancier_artikelcode?: string;
+  leverancier_omschrijving?: string;
+  prijs: number;
+  eenheid: string;
+  excl_btw?: boolean;
+  valuta?: string;
+  geldig_van: string;
+  geldig_tot: string;
+  staffel_vanaf?: number;
+  toeslagen?: PrijsafspraakToeslag[];
+  bron_prijslijst?: string;
+  bron_datum?: string;
+}
+
+/**
+ * Alleen niet-prijsvelden. Prijs of periode wijzigen levert een 422 op.
+ */
+export interface PrijsafspraakPatch {
+  /** @nullable */
+  bron_prijslijst?: string | null;
+  /** @nullable */
+  bron_datum?: string | null;
+  bron?: string;
+  /** @nullable */
+  leverancier_omschrijving?: string | null;
+  toeslagen?: PrijsafspraakToeslag[];
+}
+
+export interface PrijsafspraakConflict {
+  error: string;
+  botsende_regel?: Prijsafspraak;
+}
+
+export interface GeldigePrijsafspraak {
+  afspraak: Prijsafspraak | null;
+  kandidaten: Prijsafspraak[];
+}
+
+export interface MarktspiegelVergelijking {
+  aanbieder: string;
+  indicatie_prijs: string;
+  /** @nullable */
+  eenheid?: string | null;
+  /** Verplichte bron-URL; regels zonder bron worden weggegooid (§8.3) */
+  vindplaats_url: string;
+  gevonden_op: string;
+  /** @nullable */
+  toelichting?: string | null;
+}
+
+export interface MarktspiegelResultaat {
+  vergelijkingen: MarktspiegelVergelijking[];
+  samenvatting: string;
+}
+
+export type MarktspiegelOnderzoekOnderwerpType = typeof MarktspiegelOnderzoekOnderwerpType[keyof typeof MarktspiegelOnderzoekOnderwerpType];
+
+
+export const MarktspiegelOnderzoekOnderwerpType = {
+  prijsafspraak: 'prijsafspraak',
+  financieel_contract: 'financieel_contract',
+  vrij: 'vrij',
+} as const;
+
+export type MarktspiegelOnderzoekStatus = typeof MarktspiegelOnderzoekStatus[keyof typeof MarktspiegelOnderzoekStatus];
+
+
+export const MarktspiegelOnderzoekStatus = {
+  bezig: 'bezig',
+  klaar: 'klaar',
+  fout: 'fout',
+} as const;
+
+export type MarktspiegelOnderzoekAanleiding = typeof MarktspiegelOnderzoekAanleiding[keyof typeof MarktspiegelOnderzoekAanleiding];
+
+
+export const MarktspiegelOnderzoekAanleiding = {
+  afloop: 'afloop',
+  prijsverhoging: 'prijsverhoging',
+  handmatig: 'handmatig',
+} as const;
+
+export interface MarktspiegelOnderzoek {
+  id: number;
+  onderwerp_type: MarktspiegelOnderzoekOnderwerpType;
+  /** @nullable */
+  onderwerp_id?: number | null;
+  vraag: string;
+  status: MarktspiegelOnderzoekStatus;
+  resultaat?: MarktspiegelResultaat | null;
+  /** @nullable */
+  fout?: string | null;
+  /** @nullable */
+  aangevraagd_door?: number | null;
+  aanleiding: MarktspiegelOnderzoekAanleiding;
+  aangemaakt_op: string;
+  /** @nullable */
+  klaar_op?: string | null;
+}
+
+export type MarktspiegelOnderzoekInputOnderwerpType = typeof MarktspiegelOnderzoekInputOnderwerpType[keyof typeof MarktspiegelOnderzoekInputOnderwerpType];
+
+
+export const MarktspiegelOnderzoekInputOnderwerpType = {
+  prijsafspraak: 'prijsafspraak',
+  financieel_contract: 'financieel_contract',
+  vrij: 'vrij',
+} as const;
+
+export type MarktspiegelOnderzoekInputAanleiding = typeof MarktspiegelOnderzoekInputAanleiding[keyof typeof MarktspiegelOnderzoekInputAanleiding];
+
+
+export const MarktspiegelOnderzoekInputAanleiding = {
+  afloop: 'afloop',
+  prijsverhoging: 'prijsverhoging',
+  handmatig: 'handmatig',
+} as const;
+
+export interface MarktspiegelOnderzoekInput {
+  onderwerp_type: MarktspiegelOnderzoekInputOnderwerpType;
+  /**
+     * Verplicht bij onderwerp_type prijsafspraak of financieel_contract
+     * @nullable
+     */
+  onderwerp_id?: number | null;
+  /**
+     * Verplicht bij onderwerp_type vrij
+     * @nullable
+     */
+  vraag?: string | null;
+  aanleiding?: MarktspiegelOnderzoekInputAanleiding;
+}
+
 export interface Artikel {
   /** @nullable */
   import_id?: number | null;
@@ -13617,12 +13924,58 @@ export const ImportUploadBestandType = {
   gebouwen: 'gebouwen',
   historische_projecten: 'historische_projecten',
   eenheidsprijzen: 'eenheidsprijzen',
+  prijsafspraken: 'prijsafspraken',
   historische_facturen: 'historische_facturen',
 } as const;
 
 export interface ImportUploadBestand {
   bestand: Blob;
   type: ImportUploadBestandType;
+}
+
+export interface PrijslijstVoorstelBestand {
+  bestand: Blob;
+}
+
+export type PrijslijstVoorstelBestandssoort = typeof PrijslijstVoorstelBestandssoort[keyof typeof PrijslijstVoorstelBestandssoort];
+
+
+export const PrijslijstVoorstelBestandssoort = {
+  excel: 'excel',
+  csv: 'csv',
+  pdf: 'pdf',
+} as const;
+
+export type PrijslijstVoorstelLeverancierVoorstel = {
+  /** @nullable */
+  naam: string | null;
+  /** @nullable */
+  leverancier_id: number | null;
+};
+
+export type PrijslijstVoorstelPeriodeVoorstel = {
+  /** @nullable */
+  geldig_van: string | null;
+  /** @nullable */
+  geldig_tot: string | null;
+};
+
+export type PrijslijstVoorstelKolomkoppelingVoorstel = {[key: string]: string};
+
+export type PrijslijstVoorstelProefregelsItem = {[key: string]: string};
+
+export interface PrijslijstVoorstel {
+  bestandssoort: PrijslijstVoorstelBestandssoort;
+  leverancier_voorstel: PrijslijstVoorstelLeverancierVoorstel;
+  periode_voorstel: PrijslijstVoorstelPeriodeVoorstel;
+  /** @nullable */
+  valuta_voorstel: string | null;
+  kolomkoppeling_voorstel: PrijslijstVoorstelKolomkoppelingVoorstel;
+  kolommen: string[];
+  proefregels: PrijslijstVoorstelProefregelsItem[];
+  niet_leesbaar: number;
+  /** @nullable */
+  waarschuwing?: string | null;
 }
 
 export type ImportPreviewRijenItem = {[key: string]: string | null};
@@ -13649,20 +14002,62 @@ export const ImportControlerenInputType = {
   gebouwen: 'gebouwen',
   historische_projecten: 'historische_projecten',
   eenheidsprijzen: 'eenheidsprijzen',
+  prijsafspraken: 'prijsafspraken',
   historische_facturen: 'historische_facturen',
 } as const;
 
 export type ImportControlerenInputKolomkoppeling = {[key: string]: string};
 
+/**
+ * PRIJS_01 §4 — defaults uit het import-voorstelscherm; vullen alleen lege velden aan (prijsafspraken).
+ */
+export interface PrijsafsprakenDefaults {
+  /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
+  geldig_van?: string | null;
+  /** @nullable */
+  geldig_tot?: string | null;
+  /** @nullable */
+  valuta?: string | null;
+}
+
 export interface ImportControlerenInput {
   bestand_id: string;
   type: ImportControlerenInputType;
   kolomkoppeling: ImportControlerenInputKolomkoppeling;
+  defaults?: PrijsafsprakenDefaults;
 }
 
 export type ImportControleResultaatOnbruikbaarRedenenItem = {
   rij: number;
   reden: string;
+};
+
+export type ImportControleResultaatVergelijkingTopVerschillenItem = { [key: string]: unknown };
+
+/**
+ * PRIJS_01 §4 — vergelijking met de vorige geldige afspraak (alleen prijsafspraken).
+ */
+export type ImportControleResultaatVergelijking = {
+  duurder: number;
+  goedkoper: number;
+  gelijk: number;
+  nieuw: number;
+  top_verschillen: ImportControleResultaatVergelijkingTopVerschillenItem[];
+};
+
+export type ImportControleResultaatNietKoppelbaarRedenenItem = {
+  rij: number;
+  reden: string;
+};
+
+/**
+ * PRIJS_01 §4 — regels zonder match op een eigen artikel (bewaard als leverancierscode).
+ */
+export type ImportControleResultaatNietKoppelbaar = {
+  aantal: number;
+  redenen: ImportControleResultaatNietKoppelbaarRedenenItem[];
 };
 
 export interface ImportControleResultaat {
@@ -13673,6 +14068,10 @@ export interface ImportControleResultaat {
   onbruikbaar_redenen?: ImportControleResultaatOnbruikbaarRedenenItem[];
   /** @nullable */
   sleutel_omschrijving?: string | null;
+  /** PRIJS_01 §4 — vergelijking met de vorige geldige afspraak (alleen prijsafspraken). */
+  vergelijking?: ImportControleResultaatVergelijking;
+  /** PRIJS_01 §4 — regels zonder match op een eigen artikel (bewaard als leverancierscode). */
+  niet_koppelbaar?: ImportControleResultaatNietKoppelbaar;
 }
 
 export type ImportUitvoerenInputType = typeof ImportUitvoerenInputType[keyof typeof ImportUitvoerenInputType];
@@ -13688,6 +14087,7 @@ export const ImportUitvoerenInputType = {
   gebouwen: 'gebouwen',
   historische_projecten: 'historische_projecten',
   eenheidsprijzen: 'eenheidsprijzen',
+  prijsafspraken: 'prijsafspraken',
   historische_facturen: 'historische_facturen',
 } as const;
 
@@ -13710,6 +14110,7 @@ export interface ImportUitvoerenInput {
   kolomkoppeling: ImportUitvoerenInputKolomkoppeling;
   /** @nullable */
   keuze_dubbelen?: ImportUitvoerenInputKeuzeDubbelen;
+  defaults?: PrijsafsprakenDefaults;
 }
 
 export type ImportResultaatFoutenItem = {
@@ -16793,6 +17194,20 @@ export type GetFactuurUploadUrl200 = {
   object_path: string;
 };
 
+export type GetFactuurPrijscontroleMaandtotaalParams = {
+/**
+ * Maand als YYYY-MM.
+ */
+maand: string;
+};
+
+export type GetFactuurPrijscontroleParams = {
+/**
+ * Indien true wordt opnieuw getoetst i.p.v. de cache getoond.
+ */
+verse?: boolean;
+};
+
 export type ListFactuurSignalenParams = {
 status?: ListFactuurSignalenStatus;
 };
@@ -17214,5 +17629,27 @@ export type DraaiWerkbakBewaking200Samenvatting = { [key: string]: unknown };
 
 export type DraaiWerkbakBewaking200 = {
   samenvatting?: DraaiWerkbakBewaking200Samenvatting;
+};
+
+export type ListPrijsafsprakenParams = {
+leverancier_id?: number;
+artikel_id?: number;
+/**
+ * Indien true, alleen op vandaag geldige afspraken.
+ */
+actueel?: boolean;
+zoek?: string;
+};
+
+export type GetGeldigePrijsafspraakParams = {
+artikel_id?: number;
+leverancier_id?: number;
+leverancier_artikelcode?: string;
+datum?: string;
+hoeveelheid?: number;
+};
+
+export type BeeindigPrijsafspraakBody = {
+  geldig_tot: string;
 };
 

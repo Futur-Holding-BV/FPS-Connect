@@ -59,6 +59,10 @@ tags:
     description: Leveranciersbeheer — volledige leverancierskaarten met contactgegevens en bankgegevens
   - name: artikelen
     description: Artikelencatalogus — inkoopartikelen gekoppeld aan leveranciers
+  - name: prijsafspraken
+    description: Prijsafspraken — jaarprijzen, staffels en toeslagen per leverancier met geldigheidsperioden (PRIJS_01)
+  - name: marktspiegel
+    description: Marktspiegel — op aanvraag naar buiten kijken (dit betaal je, dit vraagt de markt); nooit doorlopend, nooit een wisseladvies (PRIJS_01 §8)
   - name: import
     description: ENK-importmodule
   - name: magazijn
@@ -3354,7 +3358,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Document"
+                $ref: "#/components/schemas/DocumentAanleverResultaat"
         "400":
           description: Ongeldige invoer
         "422":
@@ -18817,6 +18821,53 @@ paths:
                 items:
                   $ref: "#/components/schemas/Factuur"
 
+  /facturen/prijscontrole/maandtotaal:
+    get:
+      operationId: getFactuurPrijscontroleMaandtotaal
+      summary: Maandtotaal van prijsafwijkingen t.o.v. de jaarprijzen (PRIJS_01 §6)
+      tags: [Facturen]
+      parameters:
+        - name: maand
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Maand als YYYY-MM.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurPrijscontroleMaandtotaal"
+
+  /facturen/{id}/prijscontrole:
+    get:
+      operationId: getFactuurPrijscontrole
+      summary: Prijscontrole van de factuurregels tegen de prijsafspraken (PRIJS_01 §6)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: verse
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Indien true wordt opnieuw getoetst i.p.v. de cache getoond.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurPrijscontrole"
+        "404":
+          description: Niet gevonden
+
   /facturen/{id}:
     get:
       operationId: getFactuur
@@ -24056,6 +24107,29 @@ paths:
         "400":
           description: Ongeldig bestandsformaat
 
+  /import/prijslijst-voorstel:
+    post:
+      operationId: importPrijslijstVoorstel
+      tags: [import]
+      summary: Leveranciers-prijslijst analyseren (PRIJS_01 §4) — voorstel voor leverancier/periode/valuta + kolomkoppeling met proefregels
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PrijslijstVoorstelBestand"
+      responses:
+        "200":
+          description: Voorstel met proefregels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrijslijstVoorstel"
+        "400":
+          description: Geen bestand ontvangen
+        "403":
+          description: Geen toegang
+
   /import/controleren:
     post:
       operationId: importControleren
@@ -26521,6 +26595,222 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WorkflowAiAdvies' }
+
+  # ── PRIJSAFSPRAKEN (PRIJS_01) ─────────────────────────────────────────────
+  /prijsafspraken:
+    get:
+      operationId: listPrijsafspraken
+      tags: [prijsafspraken]
+      summary: Prijsafspraken ophalen (niet-teruggedraaid)
+      parameters:
+        - in: query
+          name: leverancier_id
+          schema:
+            type: integer
+        - in: query
+          name: artikel_id
+          schema:
+            type: integer
+        - in: query
+          name: actueel
+          schema:
+            type: boolean
+          description: Indien true, alleen op vandaag geldige afspraken.
+        - in: query
+          name: zoek
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prijsafspraak"
+    post:
+      operationId: createPrijsafspraak
+      tags: [prijsafspraken]
+      summary: Nieuwe prijsafspraak vastleggen (nooit overschrijven; overlap wordt geweigerd)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrijsafspraakInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prijsafspraak"
+        "409":
+          description: Overlappende geldigheidsperiode geweigerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrijsafspraakConflict"
+        "422":
+          description: Ongeldige invoer
+
+  /prijsafspraken/geldig:
+    get:
+      operationId: getGeldigePrijsafspraak
+      tags: [prijsafspraken]
+      summary: Geldige prijsafspraak op een datum (voor calculatie en factuurcontrole)
+      parameters:
+        - in: query
+          name: artikel_id
+          schema:
+            type: integer
+        - in: query
+          name: leverancier_id
+          schema:
+            type: integer
+        - in: query
+          name: leverancier_artikelcode
+          schema:
+            type: string
+        - in: query
+          name: datum
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: hoeveelheid
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeldigePrijsafspraak"
+
+  /prijsafspraken/{id}:
+    patch:
+      operationId: updatePrijsafspraak
+      tags: [prijsafspraken]
+      summary: Niet-prijsvelden bijwerken (bron/notities/toeslagen); prijs of periode wijzigen = nieuwe afspraak
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrijsafspraakPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prijsafspraak"
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Poging tot wijzigen van een prijs- of periodeveld
+
+  /prijsafspraken/{id}/beeindigen:
+    post:
+      operationId: beeindigPrijsafspraak
+      tags: [prijsafspraken]
+      summary: Afspraak inkorten (nieuwe geldig_tot); alleen inkorten, nooit verlengen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geldig_tot]
+              properties:
+                geldig_tot:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prijsafspraak"
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Afspraak is teruggedraaid
+        "422":
+          description: Ongeldige inkorting (verlengen niet toegestaan)
+
+  /marktspiegel:
+    get:
+      operationId: listMarktspiegelOnderzoeken
+      tags: [marktspiegel]
+      summary: Marktspiegel-onderzoeken ophalen (recent eerst)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarktspiegelOnderzoek"
+    post:
+      operationId: startMarktspiegelOnderzoek
+      tags: [marktspiegel]
+      summary: Een marktspiegel-onderzoek starten (alleen op aanvraag; draait asynchroon)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarktspiegelOnderzoekInput"
+      responses:
+        "201":
+          description: Onderzoek aangemaakt en gestart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarktspiegelOnderzoek"
+        "422":
+          description: Ongeldige invoer
+        "503":
+          description: AI niet geconfigureerd
+
+  /marktspiegel/{id}:
+    get:
+      operationId: getMarktspiegelOnderzoek
+      tags: [marktspiegel]
+      summary: Eén marktspiegel-onderzoek ophalen (voor polling zolang 'bezig')
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarktspiegelOnderzoek"
+        "404":
+          description: Niet gevonden
 
 components:
   schemas:
@@ -32055,6 +32345,12 @@ components:
         aanvraag_oppak_termijn_uren:
           type: integer
           description: Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.
+        prijsafwijking_marge_pct:
+          type: number
+          description: PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs voordat een prijsafwijking wordt gemeld.
+        prijsafspraak_bewaking_dagen:
+          type: integer
+          description: PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -32098,6 +32394,12 @@ components:
           type: integer
         aanvraag_oppak_termijn_uren:
           type: integer
+        prijsafwijking_marge_pct:
+          type: number
+          description: PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs (0-100).
+        prijsafspraak_bewaking_dagen:
+          type: integer
+          description: PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken.
 
     AiDrempelStatus:
       type: object
@@ -32365,6 +32667,24 @@ components:
         bestand:
           type: string
           format: binary
+
+    DocumentAanleverResultaat:
+      description: Document plus optionele doorschakeling naar de importstroom (PRIJS_01 §4, prijslijst).
+      allOf:
+        - $ref: "#/components/schemas/Document"
+        - type: object
+          properties:
+            doorschakeling:
+              type: object
+              required: [naar, import_type, reden]
+              properties:
+                naar:
+                  type: string
+                  enum: [import]
+                import_type:
+                  type: string
+                reden:
+                  type: string
 
     DocumentStatus:
       type: string
@@ -38739,6 +39059,24 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CalcPlakConceptregel'
             - type: "null"
+        inkoop_bron:
+          type: string
+          enum: [afspraak, catalogus]
+          description: >-
+            PRIJS_01 §5 — herkomst van de INKOOPprijs (kostprijs) van dit artikel.
+            'afspraak' = de kostprijs ligt vast in een geldige jaarprijs
+            (afgesproken_inkoopprijs is gevuld); 'catalogus' = geen geldige afspraak.
+            Beïnvloedt NIET het conceptregel-tarief (dat blijft de verkoopprijs).
+            Alleen aanwezig bij een gekoppeld artikel (volledig/alleen_artikel).
+        afgesproken_inkoopprijs:
+          type: ["number", "null"]
+          description: De afgesproken inkoopprijs (jaarprijs) van de leverancier (alleen bij inkoop_bron 'afspraak').
+        afspraak_leverancier:
+          type: ["string", "null"]
+          description: Leverancier van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
+        afspraak_geldig_tot:
+          type: ["string", "null"]
+          description: Einddatum (JJJJ-MM-DD) van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
         vraag:            { type: string, description: Vervolgvraag bij alleen_artikel (welke normtijd?) }
         normtijd_kandidaten:
           type: array
@@ -42099,6 +42437,66 @@ components:
         magazijn_export_actief:
           type: boolean
 
+    FactuurPrijscontroleRegel:
+      type: object
+      required: [regel_id, regelnummer, omschrijving, uitkomst, marge_pct]
+      properties:
+        regel_id:            { type: integer }
+        regelnummer:         { type: integer }
+        omschrijving:        { type: string }
+        hoeveelheid:         { type: ["number", "null"] }
+        factuur_stukprijs:   { type: ["number", "null"] }
+        uitkomst:
+          type: string
+          enum: [klopt, afwijking, geen_afspraak, niet_te_toetsen]
+        afgesproken_prijs:   { type: ["number", "null"] }
+        afspraak_id:         { type: ["integer", "null"] }
+        afspraak_leverancier: { type: ["string", "null"] }
+        verschil_per_stuk:   { type: ["number", "null"] }
+        verschil_totaal:     { type: ["number", "null"] }
+        marge_pct:           { type: number }
+
+    FactuurPrijscontrole:
+      type: object
+      required: [factuur_id, getoetst_op, marge_pct, aantal_regels, aantal_afwijkingen, aantal_niet_te_toetsen, totaal_meer_betaald, regels]
+      properties:
+        factuur_id:              { type: integer }
+        getoetst_op:             { type: string }
+        marge_pct:               { type: number }
+        aantal_regels:           { type: integer }
+        aantal_afwijkingen:      { type: integer }
+        aantal_niet_te_toetsen:  { type: integer }
+        totaal_meer_betaald:     { type: number }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/FactuurPrijscontroleRegel"
+
+    FactuurPrijscontroleMaandtotaalRegel:
+      type: object
+      required: [factuur_id]
+      properties:
+        factuur_id:          { type: integer }
+        factuurnummer:       { type: ["string", "null"] }
+        omschrijving:        { type: ["string", "null"] }
+        afgesproken_prijs:   { type: ["number", "null"] }
+        factuur_stukprijs:   { type: ["number", "null"] }
+        verschil_per_stuk:   { type: ["number", "null"] }
+        verschil_totaal:     { type: ["number", "null"] }
+        afspraak_leverancier: { type: ["string", "null"] }
+
+    FactuurPrijscontroleMaandtotaal:
+      type: object
+      required: [maand, totaal_meer_betaald, aantal_afwijkingen, regels]
+      properties:
+        maand:               { type: string }
+        totaal_meer_betaald: { type: number }
+        aantal_afwijkingen:  { type: integer }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/FactuurPrijscontroleMaandtotaalRegel"
+
     Factuur:
       type: object
       required: [id, type, status, geblokkeerd, geaccordeerd, aangemaakt_op]
@@ -45357,6 +45755,149 @@ components:
         auto_akkoord_drempel_cents: { type: integer }
         crm_relatie_id:           { type: ["integer", "null"] }
 
+    # ── PRIJSAFSPRAKEN (PRIJS_01) ───────────────────────────────────────────────
+
+    PrijsafspraakToeslag:
+      type: object
+      required: [soort, bedrag]
+      properties:
+        soort:  { type: string, enum: [transport, spoed, kleine_order, anders] }
+        bedrag: { type: number }
+        eenheid: { type: string }
+
+    Prijsafspraak:
+      type: object
+      required: [id, leverancier_id, prijs, eenheid, excl_btw, valuta, geldig_van, geldig_tot, staffel_vanaf, toeslagen, bron, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                       { type: integer }
+        leverancier_id:           { type: integer }
+        artikel_id:               { type: ["integer", "null"] }
+        leverancier_artikelcode:  { type: ["string", "null"] }
+        leverancier_omschrijving: { type: ["string", "null"] }
+        prijs:                    { type: number }
+        eenheid:                  { type: string }
+        excl_btw:                 { type: boolean }
+        valuta:                   { type: string }
+        geldig_van:               { type: string, format: date }
+        geldig_tot:               { type: string, format: date }
+        staffel_vanaf:            { type: number }
+        toeslagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrijsafspraakToeslag"
+        bron_prijslijst:          { type: ["string", "null"] }
+        bron_datum:               { type: ["string", "null"] }
+        bron:                     { type: string }
+        import_id:                { type: ["integer", "null"] }
+        teruggedraaid_op:         { type: ["string", "null"] }
+        aangemaakt_op:            { type: string }
+        bijgewerkt_op:            { type: string }
+
+    PrijsafspraakInput:
+      type: object
+      required: [leverancier_id, prijs, eenheid, geldig_van, geldig_tot]
+      properties:
+        leverancier_id:           { type: integer }
+        artikel_id:               { type: ["integer", "null"] }
+        leverancier_artikelcode:  { type: string }
+        leverancier_omschrijving: { type: string }
+        prijs:                    { type: number }
+        eenheid:                  { type: string }
+        excl_btw:                 { type: boolean }
+        valuta:                   { type: string }
+        geldig_van:               { type: string, format: date }
+        geldig_tot:               { type: string, format: date }
+        staffel_vanaf:            { type: number }
+        toeslagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrijsafspraakToeslag"
+        bron_prijslijst:          { type: string }
+        bron_datum:               { type: string, format: date }
+
+    PrijsafspraakPatch:
+      type: object
+      description: Alleen niet-prijsvelden. Prijs of periode wijzigen levert een 422 op.
+      properties:
+        bron_prijslijst:          { type: ["string", "null"] }
+        bron_datum:               { type: ["string", "null"] }
+        bron:                     { type: string }
+        leverancier_omschrijving: { type: ["string", "null"] }
+        toeslagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrijsafspraakToeslag"
+
+    PrijsafspraakConflict:
+      type: object
+      required: [error]
+      properties:
+        error:          { type: string }
+        botsende_regel:
+          $ref: "#/components/schemas/Prijsafspraak"
+
+    GeldigePrijsafspraak:
+      type: object
+      required: [afspraak, kandidaten]
+      properties:
+        afspraak:
+          oneOf:
+            - $ref: "#/components/schemas/Prijsafspraak"
+            - type: "null"
+        kandidaten:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prijsafspraak"
+
+    MarktspiegelVergelijking:
+      type: object
+      required: [aanbieder, indicatie_prijs, vindplaats_url, gevonden_op]
+      properties:
+        aanbieder:       { type: string }
+        indicatie_prijs: { type: string }
+        eenheid:         { type: ["string", "null"] }
+        vindplaats_url:  { type: string, description: "Verplichte bron-URL; regels zonder bron worden weggegooid (§8.3)" }
+        gevonden_op:     { type: string, format: date }
+        toelichting:     { type: ["string", "null"] }
+
+    MarktspiegelResultaat:
+      type: object
+      required: [vergelijkingen, samenvatting]
+      properties:
+        vergelijkingen:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarktspiegelVergelijking"
+        samenvatting:    { type: string }
+
+    MarktspiegelOnderzoek:
+      type: object
+      required: [id, onderwerp_type, vraag, status, aanleiding, aangemaakt_op]
+      properties:
+        id:               { type: integer }
+        onderwerp_type:   { type: string, enum: [prijsafspraak, financieel_contract, vrij] }
+        onderwerp_id:     { type: ["integer", "null"] }
+        vraag:            { type: string }
+        status:           { type: string, enum: [bezig, klaar, fout] }
+        resultaat:
+          oneOf:
+            - $ref: "#/components/schemas/MarktspiegelResultaat"
+            - type: "null"
+        fout:             { type: ["string", "null"] }
+        aangevraagd_door: { type: ["integer", "null"] }
+        aanleiding:       { type: string, enum: [afloop, prijsverhoging, handmatig] }
+        aangemaakt_op:    { type: string }
+        klaar_op:         { type: ["string", "null"] }
+
+    MarktspiegelOnderzoekInput:
+      type: object
+      required: [onderwerp_type]
+      properties:
+        onderwerp_type: { type: string, enum: [prijsafspraak, financieel_contract, vrij] }
+        onderwerp_id:   { type: ["integer", "null"], description: "Verplicht bij onderwerp_type prijsafspraak of financieel_contract" }
+        vraag:          { type: ["string", "null"], description: "Verplicht bij onderwerp_type vrij" }
+        aanleiding:     { type: string, enum: [afloop, prijsverhoging, handmatig], default: handmatig }
+
     # ── ARTIKELEN ──────────────────────────────────────────────────────────────
 
     Artikel:
@@ -45841,7 +46382,69 @@ components:
           format: binary
         type:
           type: string
-          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, prijsafspraken, historische_facturen]
+
+    PrijslijstVoorstelBestand:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary
+
+    PrijslijstVoorstel:
+      type: object
+      required:
+        [
+          bestandssoort,
+          leverancier_voorstel,
+          periode_voorstel,
+          valuta_voorstel,
+          kolomkoppeling_voorstel,
+          kolommen,
+          proefregels,
+          niet_leesbaar,
+        ]
+      properties:
+        bestandssoort:
+          type: string
+          enum: [excel, csv, pdf]
+        leverancier_voorstel:
+          type: object
+          required: [naam, leverancier_id]
+          properties:
+            naam:
+              type: ["string", "null"]
+            leverancier_id:
+              type: ["integer", "null"]
+        periode_voorstel:
+          type: object
+          required: [geldig_van, geldig_tot]
+          properties:
+            geldig_van:
+              type: ["string", "null"]
+            geldig_tot:
+              type: ["string", "null"]
+        valuta_voorstel:
+          type: ["string", "null"]
+        kolomkoppeling_voorstel:
+          type: object
+          additionalProperties:
+            type: string
+        kolommen:
+          type: array
+          items:
+            type: string
+        proefregels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        niet_leesbaar:
+          type: integer
+        waarschuwing:
+          type: ["string", "null"]
 
     ImportPreview:
       type: object
@@ -45872,11 +46475,26 @@ components:
           type: string
         type:
           type: string
-          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, prijsafspraken, historische_facturen]
         kolomkoppeling:
           type: object
           additionalProperties:
             type: string
+        defaults:
+          $ref: "#/components/schemas/PrijsafsprakenDefaults"
+
+    PrijsafsprakenDefaults:
+      type: object
+      description: PRIJS_01 §4 — defaults uit het import-voorstelscherm; vullen alleen lege velden aan (prijsafspraken).
+      properties:
+        leverancier_id:
+          type: ["integer", "null"]
+        geldig_van:
+          type: ["string", "null"]
+        geldig_tot:
+          type: ["string", "null"]
+        valuta:
+          type: ["string", "null"]
 
     ImportControleResultaat:
       type: object
@@ -45896,6 +46514,34 @@ components:
               reden: { type: string }
         sleutel_omschrijving:
           type: ["string", "null"]
+        vergelijking:
+          type: object
+          description: PRIJS_01 §4 — vergelijking met de vorige geldige afspraak (alleen prijsafspraken).
+          required: [duurder, goedkoper, gelijk, nieuw, top_verschillen]
+          properties:
+            duurder:   { type: integer }
+            goedkoper: { type: integer }
+            gelijk:    { type: integer }
+            nieuw:     { type: integer }
+            top_verschillen:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+        niet_koppelbaar:
+          type: object
+          description: PRIJS_01 §4 — regels zonder match op een eigen artikel (bewaard als leverancierscode).
+          required: [aantal, redenen]
+          properties:
+            aantal: { type: integer }
+            redenen:
+              type: array
+              items:
+                type: object
+                required: [rij, reden]
+                properties:
+                  rij:   { type: integer }
+                  reden: { type: string }
 
     ImportUitvoerenInput:
       type: object
@@ -45905,7 +46551,7 @@ components:
           type: string
         type:
           type: string
-          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, historische_facturen]
+          enum: [leveranciers, klanten, contactpersonen, artikelen, magazijn_artikelen, medewerkers, gebouwen, historische_projecten, eenheidsprijzen, prijsafspraken, historische_facturen]
         kolomkoppeling:
           type: object
           additionalProperties:
@@ -45913,6 +46559,8 @@ components:
         keuze_dubbelen:
           type: ["string", "null"]
           enum: [overslaan, als_nieuw, null]
+        defaults:
+          $ref: "#/components/schemas/PrijsafsprakenDefaults"
 
     ImportResultaat:
       type: object

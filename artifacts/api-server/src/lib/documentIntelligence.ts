@@ -20,6 +20,8 @@ import { renderPdfPagina, renderPdfPaginas, haalPdfTekst, resizeAfbeelding, VISI
 import { extraheerPdfTekst } from "./pdfTekst";
 import { inspecteerDocument } from "./documentInspectie";
 import { logger } from "./logger";
+import * as XLSX from "xlsx";
+import { PRIJSLIJST_VOORSTEL_PROMPT, PRIJSLIJST_PDF_TABEL_PROMPT } from "./aiPrompts";
 
 // ── Canonieke categorie-taxonomie ─────────────────────────────────────────────
 // Superset gebruikt door de engine zelf; elke route mapt dit naar zijn eigen
@@ -40,6 +42,7 @@ export const DOC_CATEGORIEEN = [
   "snagstream",
   "jaarrekening",
   "contract",
+  "prijslijst",
   "bibliotheek",
   "document_sjabloon",
   "algemeen",
@@ -221,6 +224,7 @@ export const CATEGORIE_MODULE: Record<DocCategorie, string> = {
   snagstream: "Snagstream",
   jaarrekening: "Financieel",
   contract: "CRM",
+  prijslijst: "Productbibliotheek",
   bibliotheek: "Productbibliotheek",
   document_sjabloon: "DMS",
   algemeen: "DMS",
@@ -240,6 +244,14 @@ function bepaalOpslaglocatie(
   }
   if (categorie === "verzekering") {
     return jaar ? `${module} → Verzekeringen → ${jaar}` : `${module} → Verzekeringen`;
+  }
+  if (categorie === "prijslijst") {
+    // Prijslijsten worden gearchiveerd in een eigen bibliotheek-map; de tabelinhoud
+    // gaat via de importstroom naar prijsafspraken (PRIJS_01 §4).
+    if (organisatie) {
+      return jaar ? `${module} → Prijslijsten → ${organisatie} → ${jaar}` : `${module} → Prijslijsten → ${organisatie}`;
+    }
+    return jaar ? `${module} → Prijslijsten → ${jaar}` : `${module} → Prijslijsten`;
   }
   if (organisatie) {
     return `${module} → ${organisatie}`;
@@ -282,6 +294,9 @@ CATEGORIEËN:
                         onderneming. Zet subtype "geconsolideerd" als het over een groep/holding met dochters gaat
                         (bijv. "geconsolideerde jaarrekening", "groepsmaatschappijen").
 "contract"           — Commerciële overeenkomst met een klant of leverancier (geen personeelscontract).
+"prijslijst"         — Jaarprijslijst, nettoprijslijst, bruto prijslijst of staffelprijslijst van een leverancier: een
+                        tabel met artikelcodes, omschrijvingen, prijzen en eenheden. Zet in gevonden_gegevens indien
+                        aanwezig: organisatie (leverancier), jaar, geldig_van, geldig_tot, valuta.
 "bibliotheek"         — Overige technische brandveiligheidsdocumenten.
 "document_sjabloon"  — Lege/visuele PDF met bedrijfslogo of huisstijl, bedoeld als briefpapier of onderlegger.
 "algemeen"           — Correspondentie, notulen, presentaties, interne memo's.
@@ -464,6 +479,9 @@ const SLEUTELWOORDEN: Array<{ categorie: DocCategorie; woorden: string[] }> = [
   { categorie: "testrapport", woorden: ["testrapport", "classificatierapport", "brandproef", "fire test"] },
   { categorie: "certificaat", woorden: ["certificaat", "komo", "kiwa", "brl "] },
   { categorie: "productdocument", woorden: ["productblad", "verwerkingsvoorschrift", "technical data sheet"] },
+  // prijslijst staat VÓÓR offerte: "nettoprijslijst"/"jaarprijzen" zijn sterker
+  // dan het generieke "prijsopgave" dat ook bij een offerte hoort.
+  { categorie: "prijslijst", woorden: ["prijslijst", "jaarprijzen", "nettoprijslijst", "bruto prijslijst", "price list", "staffel"] },
   { categorie: "offerte", woorden: ["offerte", "aanbieding", "prijsopgave", "quotation", "geldig tot"] },
   { categorie: "factuur", woorden: ["factuur", "invoice", "creditnota", "btw-bedrag", "betalingstermijn"] },
   { categorie: "aanvraag", woorden: ["offerteaanvraag", "rfq", "bestek", "aanvraag"] },
@@ -1138,5 +1156,265 @@ export async function haalPlakInvoerBeeld(input: {
   return { tekst: null, afbeeldingen: [], bron: "geen" };
 }
 
+// ── PRIJS_01 §4: prijslijst → importstroom-voorstel ───────────────────────────
+// Hoort bewust hiér (de ene documentherkenner). Leest een geüploade prijslijst
+// (excel/csv/pdf), stelt leverancier/periode/valuta + kolomkoppeling voor en
+// geeft proefregels terug. Vult NIETS in — de gebruiker bevestigt in de import-UI.
+// Er wordt nooit gegokt: bij pdf worden onzeker-parsebare rijen weggelaten en
+// geteld als 'niet leesbaar'.
+
+// Doelvelden van het importtype 'prijsafspraken' (zie routes/import.ts TYPE_CONFIG).
+export const PRIJSLIJST_DOELVELDEN = [
+  "artikelcode",
+  "omschrijving",
+  "prijs",
+  "eenheid",
+  "geldig_van",
+  "geldig_tot",
+  "staffel_vanaf",
+  "excl_btw",
+] as const;
+
+export type PrijslijstBestandssoort = "excel" | "csv" | "pdf";
+
+export interface PrijslijstVoorstel {
+  bestandssoort: PrijslijstBestandssoort;
+  leverancier_voorstel: { naam: string | null; leverancier_id: number | null };
+  periode_voorstel: { geldig_van: string | null; geldig_tot: string | null };
+  valuta_voorstel: string | null;
+  // map van kolomkop (excel/csv) of gedestilleerde kolomnaam (pdf) → doelveld.
+  kolomkoppeling_voorstel: Record<string, string>;
+  kolommen: string[];
+  proefregels: Array<Record<string, string>>;
+  niet_leesbaar: number;
+  waarschuwing: string | null;
+}
+
+function bepaalBestandssoort(mime: string, bestandsnaam: string): PrijslijstBestandssoort {
+  const naam = bestandsnaam.toLowerCase();
+  if (mime === "application/pdf" || naam.endsWith(".pdf")) return "pdf";
+  if (mime === "text/csv" || naam.endsWith(".csv")) return "csv";
+  return "excel";
+}
+
+/**
+ * Parseert een excel/csv-buffer naar koppen + rijen (dezelfde route als de
+ * importstroom gebruikt via XLSX). Geeft de kolomkoppen en de eerste `max` rijen
+ * als string-maps terug.
+ */
+function parseTabelBestand(buffer: Buffer, max: number): { kolommen: string[]; rijen: Array<Record<string, string>> } {
+  const workbook = XLSX.read(buffer, { type: "buffer", raw: false });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]!];
+  if (!sheet) return { kolommen: [], rijen: [] };
+  const ruw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "", raw: false });
+  const rijen = ruw.map((rij) =>
+    Object.fromEntries(Object.entries(rij).map(([k, v]) => [k.trim(), String(v ?? "").trim()])),
+  );
+  const kolommen = rijen.length > 0 ? Object.keys(rijen[0]!) : [];
+  return { kolommen, rijen: rijen.slice(0, max) };
+}
+
+/** Deterministische kolomkoppeling op basis van kolomnaam (fallback zonder AI). */
+function heuristischeKolomkoppeling(kolommen: string[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const kol of kolommen) {
+    const k = kol.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (/artikelcode|artcode|code|artikelnr|artikelnummer/.test(k)) map[kol] = "artikelcode";
+    else if (/omschrijving|omschr|beschrijving|naam|artikel/.test(k)) map[kol] = "omschrijving";
+    else if (/prijs|price|nettoprijs|bedrag/.test(k)) map[kol] = "prijs";
+    else if (/eenheid|unit|verpakking/.test(k)) map[kol] = "eenheid";
+    else if (/geldigvan|ingangsdatum|vanaf|startdatum/.test(k)) map[kol] = "geldig_van";
+    else if (/geldigtot|einddatum|tot|vervaldatum/.test(k)) map[kol] = "geldig_tot";
+    else if (/staffel|vanafaantal|minimumaantal/.test(k)) map[kol] = "staffel_vanaf";
+    else if (/exclbtw|exbtw|exclusiefbtw|btw/.test(k)) map[kol] = "excl_btw";
+  }
+  return map;
+}
+
+/**
+ * AI-voorstel voor leverancier/periode/valuta + kolomkoppeling op basis van de
+ * koppen en de eerste rijen. Valt terug op de heuristiek als AI niet beschikbaar
+ * is of faalt. Geeft NOOIT een reasoning-veld terug.
+ */
+async function aiPrijslijstKop(
+  kolommen: string[],
+  eersteRijen: Array<Record<string, string>>,
+  toegestaneDoelvelden: readonly string[],
+): Promise<{
+  leverancier_naam: string | null;
+  geldig_van: string | null;
+  geldig_tot: string | null;
+  valuta: string | null;
+  kolomkoppeling: Record<string, string>;
+}> {
+  const heuristiek = heuristischeKolomkoppeling(kolommen);
+  if (!heeftGateway()) {
+    return { leverancier_naam: null, geldig_van: null, geldig_tot: null, valuta: null, kolomkoppeling: heuristiek };
+  }
+  const bericht =
+    `Kolomkoppen: ${JSON.stringify(kolommen)}\n` +
+    `Eerste rijen (max 5):\n${JSON.stringify(eersteRijen.slice(0, 5), null, 0)}\n` +
+    `Toegestane doelvelden: ${JSON.stringify(toegestaneDoelvelden)}`;
+  const resultaat = await aiGateway.chat(
+    "fast",
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 800,
+      messages: [
+        { role: "system", content: PRIJSLIJST_VOORSTEL_PROMPT.tekst },
+        { role: "user", content: bericht },
+      ],
+    },
+    undefined,
+    { module: "import", functie: "prijslijst_kop" },
+  );
+  if (!resultaat.ok || !resultaat.inhoud) {
+    return { leverancier_naam: null, geldig_van: null, geldig_tot: null, valuta: null, kolomkoppeling: heuristiek };
+  }
+  try {
+    const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
+    const s = (k: string): string | null =>
+      typeof json[k] === "string" && (json[k] as string).trim() !== "" ? (json[k] as string).trim() : null;
+    const map: Record<string, string> = { ...heuristiek };
+    if (Array.isArray(json.kolomkoppeling)) {
+      for (const item of json.kolomkoppeling as unknown[]) {
+        if (item && typeof item === "object") {
+          const kol = (item as Record<string, unknown>).kolom;
+          const doel = (item as Record<string, unknown>).doelveld;
+          if (typeof kol === "string" && kolommen.includes(kol) && typeof doel === "string") {
+            if (doel && (toegestaneDoelvelden as readonly string[]).includes(doel)) map[kol] = doel;
+            else delete map[kol];
+          }
+        }
+      }
+    }
+    return {
+      leverancier_naam: s("leverancier_naam"),
+      geldig_van: s("geldig_van"),
+      geldig_tot: s("geldig_tot"),
+      valuta: s("valuta"),
+      kolomkoppeling: map,
+    };
+  } catch {
+    return { leverancier_naam: null, geldig_van: null, geldig_tot: null, valuta: null, kolomkoppeling: heuristiek };
+  }
+}
+
+/** Uit pdf-tekst betrouwbare tabelrijen destilleren; onzekere rijen worden geteld. */
+async function aiPrijslijstPdfTabel(tekst: string): Promise<{
+  kolommen: string[];
+  rijen: Array<Record<string, string>>;
+  niet_leesbaar: number;
+}> {
+  if (!heeftGateway()) {
+    return { kolommen: [], rijen: [], niet_leesbaar: 0 };
+  }
+  const resultaat = await aiGateway.chat(
+    "fast",
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 2500,
+      messages: [
+        { role: "system", content: PRIJSLIJST_PDF_TABEL_PROMPT.tekst },
+        { role: "user", content: tekst.slice(0, 12000) },
+      ],
+    },
+    undefined,
+    { module: "import", functie: "prijslijst_pdf_tabel" },
+  );
+  if (!resultaat.ok || !resultaat.inhoud) {
+    return { kolommen: [], rijen: [], niet_leesbaar: 0 };
+  }
+  try {
+    const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
+    const kolommen = Array.isArray(json.kolommen)
+      ? (json.kolommen as unknown[]).filter((k): k is string => typeof k === "string")
+      : ["artikelcode", "omschrijving", "prijs", "eenheid", "staffel_vanaf"];
+    const rijen = Array.isArray(json.rijen)
+      ? (json.rijen as unknown[])
+          .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
+          .map((r) =>
+            Object.fromEntries(
+              Object.entries(r).map(([k, v]) => [k, v == null ? "" : String(v).trim()]),
+            ),
+          )
+      : [];
+    const niet_leesbaar = typeof json.niet_leesbaar === "number" && Number.isFinite(json.niet_leesbaar)
+      ? Math.max(0, Math.round(json.niet_leesbaar))
+      : 0;
+    return { kolommen, rijen, niet_leesbaar };
+  } catch {
+    return { kolommen: [], rijen: [], niet_leesbaar: 0 };
+  }
+}
+
+/**
+ * Hoofdfunctie voor POST /import/prijslijst-voorstel. `matchLeverancier` mapt de
+ * voorgestelde leveranciersnaam naar een bestaand leverancier_id (of null) —
+ * die DB-toegang blijft in de route zodat deze lib DB-onafhankelijk blijft voor
+ * dit pad.
+ */
+export async function stelPrijslijstVoorstel(input: {
+  buffer: Buffer;
+  bestandsnaam: string;
+  mime: string;
+  matchLeverancier: (naam: string) => number | null;
+}): Promise<PrijslijstVoorstel> {
+  const bestandssoort = bepaalBestandssoort(input.mime, input.bestandsnaam);
+  const MAX_PROEF = 20;
+
+  let kolommen: string[] = [];
+  let alleRijen: Array<Record<string, string>> = [];
+  let niet_leesbaar = 0;
+  let waarschuwing: string | null = null;
+
+  if (bestandssoort === "pdf") {
+    waarschuwing = "kolomherkenning bij pdf is foutgevoeliger";
+    let tekst: string | null = null;
+    try {
+      const ext = await extraheerPdfTekst(input.buffer);
+      tekst = ext.tekst;
+    } catch (err) {
+      logger.warn({ err }, "prijslijst-voorstel: PDF-tekstextractie mislukt");
+    }
+    if (tekst && tekst.trim().length > 0) {
+      const tabel = await aiPrijslijstPdfTabel(tekst);
+      kolommen = tabel.kolommen;
+      alleRijen = tabel.rijen;
+      niet_leesbaar = tabel.niet_leesbaar;
+    }
+  } else {
+    const geparsed = parseTabelBestand(input.buffer, 1000);
+    kolommen = geparsed.kolommen;
+    alleRijen = geparsed.rijen;
+  }
+
+  const kop = await aiPrijslijstKop(kolommen, alleRijen.slice(0, 5), PRIJSLIJST_DOELVELDEN);
+
+  // Voor pdf leveren we de gedestilleerde koppen (die zijn al de doelveldnamen);
+  // laat de kolomkoppeling dan 1-op-1 zijn tenzij AI iets anders voorstelt.
+  let kolomkoppeling = kop.kolomkoppeling;
+  if (bestandssoort === "pdf" && Object.keys(kolomkoppeling).length === 0) {
+    kolomkoppeling = {};
+    for (const kol of kolommen) {
+      if ((PRIJSLIJST_DOELVELDEN as readonly string[]).includes(kol)) kolomkoppeling[kol] = kol;
+    }
+  }
+
+  const leverancierId = kop.leverancier_naam ? input.matchLeverancier(kop.leverancier_naam) : null;
+
+  return {
+    bestandssoort,
+    leverancier_voorstel: { naam: kop.leverancier_naam, leverancier_id: leverancierId },
+    periode_voorstel: { geldig_van: kop.geldig_van, geldig_tot: kop.geldig_tot },
+    valuta_voorstel: kop.valuta ?? "EUR",
+    kolomkoppeling_voorstel: kolomkoppeling,
+    kolommen,
+    proefregels: alleRijen.slice(0, MAX_PROEF),
+    niet_leesbaar,
+    waarschuwing,
+  };
+}
+
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).
-export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, bevatGeconsolideerd, CATEGORIE_MODULE };
+export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, bevatGeconsolideerd, heuristischeKolomkoppeling, bepaalBestandssoort, CATEGORIE_MODULE };

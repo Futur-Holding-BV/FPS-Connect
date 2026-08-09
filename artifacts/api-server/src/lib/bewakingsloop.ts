@@ -50,6 +50,9 @@ import {
   werkbegrotingRegelsTable,
   inkoopplannenTable,
   inkoopplanRegelsTable,
+  prijsafsprakenTable,
+  leveranciersTable,
+  appInstellingenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
@@ -567,6 +570,112 @@ async function voedFacturenZonderLeverancier(): Promise<{ nieuw: number; afgehan
     dedupSleutel: `factuur_zonder_leverancier:${f.id}`,
   }));
   return syncBron("factuur_zonder_leverancier", items);
+}
+
+// ── PRIJS_01 §7 — bewaking van prijsafspraken (jaarprijzen) ──────────────────
+// (a) Afspraken die binnen N dagen aflopen (N = app_instellingen.prijsafspraak_
+//     bewaking_dagen, standaard 60) → 'doen'-item bij financieel (niveau 2), met
+//     verwijzing naar de marktspiegel om tijdig een nieuwe jaarprijs af te spreken.
+// (b) Leveranciers waarvan ALLE afspraken zijn verlopen, maar met facturen in de
+//     laatste 90 dagen → 'weten'-item: er wordt nog wél ingekocht zonder geldende
+//     afspraak.
+async function voedPrijsafsprakenVerlopen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const [inst] = await db
+    .select({ dagen: appInstellingenTable.prijsafspraakBewakingDagen })
+    .from(appInstellingenTable)
+    .orderBy(appInstellingenTable.id)
+    .limit(1);
+  const bewakingDagen = inst?.dagen ?? 60;
+
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const grens = new Date();
+  grens.setDate(grens.getDate() + bewakingDagen);
+  const grensIso = grens.toISOString().slice(0, 10);
+
+  // Niet-teruggedraaide afspraken met leveranciernaam.
+  const afspraken = await db
+    .select({
+      id: prijsafsprakenTable.id,
+      leverancierId: prijsafsprakenTable.leverancierId,
+      leverancierNaam: leveranciersTable.naam,
+      leverancierOmschrijving: prijsafsprakenTable.leverancierOmschrijving,
+      leverancierArtikelcode: prijsafsprakenTable.leverancierArtikelcode,
+      geldigTot: prijsafsprakenTable.geldigTot,
+    })
+    .from(prijsafsprakenTable)
+    .leftJoin(leveranciersTable, eq(prijsafsprakenTable.leverancierId, leveranciersTable.id))
+    .where(isNull(prijsafsprakenTable.teruggedraaidOp));
+
+  const items: WerkbakInvoer[] = [];
+
+  // (a) Aflopende afspraken (nog geldig vandaag, maar geldig_tot binnen N dagen).
+  for (const a of afspraken) {
+    if (a.geldigTot < vandaag) continue;      // al verlopen — valt onder (b)
+    if (a.geldigTot > grensIso) continue;     // nog ruim geldig
+    const dagen = dagenTot(a.geldigTot);
+    const wat = a.leverancierArtikelcode ?? a.leverancierOmschrijving ?? "artikel";
+    items.push({
+      soort: "doen",
+      bron: "prijsafspraak_verloopt",
+      titel: `Jaarprijs ${a.leverancierNaam ?? "leverancier"} (${wat}) loopt ${dagen <= 0 ? "vandaag" : `over ${dagen} dag(en)`} af`,
+      omschrijving: `De prijsafspraak is geldig t/m ${a.geldigTot}. Spreek tijdig een nieuwe jaarprijs af; raadpleeg de marktspiegel om de nieuwe prijs te onderbouwen.`,
+      vereisteModule: "financieel",
+      vereistNiveau: 2,
+      gewicht: 50 + Math.max(0, bewakingDagen - Math.max(0, dagen)),
+      actiePad: `/beheer/prijsafspraken`,
+      herkomstType: "prijsafspraak",
+      herkomstId: a.id,
+      dedupSleutel: `prijsafspraak_verloopt:${a.id}`,
+    });
+  }
+
+  // (b) Leveranciers met uitsluitend verlopen afspraken, maar recente facturen.
+  const perLeverancier = new Map<number, { naam: string | null; alleVerlopen: boolean; heeftAfspraak: boolean }>();
+  for (const a of afspraken) {
+    const huidig = perLeverancier.get(a.leverancierId) ?? { naam: a.leverancierNaam, alleVerlopen: true, heeftAfspraak: false };
+    huidig.heeftAfspraak = true;
+    if (a.geldigTot >= vandaag) huidig.alleVerlopen = false;
+    perLeverancier.set(a.leverancierId, huidig);
+  }
+  const kandidaatLeveranciers = [...perLeverancier.entries()].filter(([, v]) => v.heeftAfspraak && v.alleVerlopen).map(([id, v]) => ({ id, naam: v.naam }));
+
+  if (kandidaatLeveranciers.length > 0) {
+    const negentigDagenGeleden = new Date();
+    negentigDagenGeleden.setDate(negentigDagenGeleden.getDate() - 90);
+    const recenteFacturen = await db
+      .select({ leverancierId: facturenTable.leverancierId })
+      .from(facturenTable)
+      .where(and(
+        eq(facturenTable.type, "inkoop"),
+        inArray(facturenTable.leverancierId, kandidaatLeveranciers.map((k) => k.id)),
+        gte(facturenTable.aangemaaktOp, negentigDagenGeleden),
+      ));
+    const metRecenteFactuur = new Set(recenteFacturen.map((f) => f.leverancierId).filter((x): x is number => x != null));
+    for (const lev of kandidaatLeveranciers) {
+      if (!metRecenteFactuur.has(lev.id)) continue;
+      items.push({
+        soort: "weten",
+        bron: "leverancier_afspraak_verlopen",
+        titel: `Alle jaarprijzen van ${lev.naam ?? "leverancier"} zijn verlopen`,
+        omschrijving: "Er wordt bij deze leverancier nog wél ingekocht (factuur in de laatste 90 dagen), maar er is geen geldende prijsafspraak meer. Overweeg een nieuwe jaarprijs vast te leggen.",
+        vereisteModule: "financieel",
+        vereistNiveau: 2,
+        gewicht: 40,
+        actiePad: `/beheer/prijsafspraken?leverancier_id=${lev.id}`,
+        herkomstType: "leverancier",
+        herkomstId: lev.id,
+        dedupSleutel: `leverancier_afspraak_verlopen:${lev.id}`,
+      });
+    }
+  }
+
+  // Twee bronnen samen synchroniseren zou de niet-genoemde bron leegvegen; daarom
+  // per bron apart syncen met de bijbehorende deelverzameling.
+  const doenItems = items.filter((i) => i.bron === "prijsafspraak_verloopt");
+  const wetenItems = items.filter((i) => i.bron === "leverancier_afspraak_verlopen");
+  const r1 = await syncBron("prijsafspraak_verloopt", doenItems);
+  const r2 = await syncBron("leverancier_afspraak_verlopen", wetenItems);
+  return { nieuw: r1.nieuw + r2.nieuw, afgehandeld: r1.afgehandeld + r2.afgehandeld };
 }
 
 // §5 Doen-bronnen: goedkeuringsaanvragen, verlofaanvragen, factuur ter
@@ -1418,6 +1527,7 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["verlofverjaring", voedVerlofverjaring],
     ["factuursignalen", voedFactuursignalen],
     ["facturen_zonder_leverancier", voedFacturenZonderLeverancier],
+    ["prijsafspraken_verlopen", voedPrijsafsprakenVerlopen],
     ["goedkeuringsaanvragen", voedGoedkeuringsaanvragen],
     ["verlofaanvragen", voedVerlofaanvragen],
     ["facturen_ter_goedkeuring", voedFacturenTerGoedkeuring],

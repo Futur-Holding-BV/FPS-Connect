@@ -10,6 +10,7 @@ import type { CalcPlakConceptregel } from './calcPlakConceptregel';
 import type { CalcPlakHerkendProduct } from './calcPlakHerkendProduct';
 import type { CalcPlakNormtijd } from './calcPlakNormtijd';
 import type { CalcPlakProductArtikelVoorstel } from './calcPlakProductArtikelVoorstel';
+import type { CalcPlakProductInkoopBron } from './calcPlakProductInkoopBron';
 import type { CalcPlakProductUitkomst } from './calcPlakProductUitkomst';
 
 export interface CalcPlakProduct {
@@ -18,6 +19,23 @@ export interface CalcPlakProduct {
   artikel?: CalcPlakArtikel | null;
   normtijd?: CalcPlakNormtijd | null;
   conceptregel?: CalcPlakConceptregel | null;
+  /** PRIJS_01 §5 — herkomst van de INKOOPprijs (kostprijs) van dit artikel. 'afspraak' = de kostprijs ligt vast in een geldige jaarprijs (afgesproken_inkoopprijs is gevuld); 'catalogus' = geen geldige afspraak. Beïnvloedt NIET het conceptregel-tarief (dat blijft de verkoopprijs). Alleen aanwezig bij een gekoppeld artikel (volledig/alleen_artikel). */
+  inkoop_bron?: CalcPlakProductInkoopBron;
+  /**
+     * De afgesproken inkoopprijs (jaarprijs) van de leverancier (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afgesproken_inkoopprijs?: number | null;
+  /**
+     * Leverancier van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afspraak_leverancier?: string | null;
+  /**
+     * Einddatum (JJJJ-MM-DD) van de geldige prijsafspraak (alleen bij inkoop_bron 'afspraak').
+     * @nullable
+     */
+  afspraak_geldig_tot?: string | null;
   /** Vervolgvraag bij alleen_artikel (welke normtijd?) */
   vraag?: string;
   normtijd_kandidaten?: CalcPlakNormtijd[];

@@ -56,6 +56,10 @@ const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
   tekening: "tekening",
   contract: "contract",
   verzekering: "verzekering",
+  // PRIJS_01 §4: prijslijsten worden wél in de bibliotheek gearchiveerd (anders
+  // dan jaarrekeningen), maar de tabelinhoud gaat via de importstroom naar
+  // prijsafspraken. Er is geen eigen DocumentType, dus "overig".
+  prijslijst: "overig",
   bibliotheek: "overig",
   offerte: "overig",
   factuur: "overig",
@@ -714,7 +718,23 @@ router.post(
       }
 
       invalideerContext("document", d.id);
-      return void res.status(201).json(await mapDocument(d));
+      const gemapt = await mapDocument(d);
+      // PRIJS_01 §4: prijslijst is gearchiveerd (hierboven), maar de gebruiker
+      // moet dóór naar de importstroom voor prijsafspraken. We geven een
+      // doorschakel-verwijzing mee zodat de frontend kan redirecten. Het bestand
+      // zelf wordt opnieuw aangeboden aan /import/prijslijst-voorstel (frontend
+      // heeft de File nog); we sturen geen bestand_id vanuit dit pad.
+      if (categorie === "prijslijst") {
+        return void res.status(201).json({
+          ...gemapt,
+          doorschakeling: {
+            naar: "import",
+            import_type: "prijsafspraken",
+            reden: "Prijslijst gearchiveerd — ga verder in de importstroom om de prijzen te verwerken.",
+          },
+        });
+      }
+      return void res.status(201).json(gemapt);
     } catch (err) {
       req.log.error(err);
       return void res.status(500).json({ error: "Interne serverfout" });

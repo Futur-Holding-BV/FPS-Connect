@@ -8,6 +8,7 @@
 import type { ImportUitvoerenInputKeuzeDubbelen } from './importUitvoerenInputKeuzeDubbelen';
 import type { ImportUitvoerenInputKolomkoppeling } from './importUitvoerenInputKolomkoppeling';
 import type { ImportUitvoerenInputType } from './importUitvoerenInputType';
+import type { PrijsafsprakenDefaults } from './prijsafsprakenDefaults';
 
 export interface ImportUitvoerenInput {
   bestand_id: string;
@@ -15,4 +16,5 @@ export interface ImportUitvoerenInput {
   kolomkoppeling: ImportUitvoerenInputKolomkoppeling;
   /** @nullable */
   keuze_dubbelen?: ImportUitvoerenInputKeuzeDubbelen;
+  defaults?: PrijsafsprakenDefaults;
 }

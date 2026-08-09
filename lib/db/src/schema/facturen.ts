@@ -211,6 +211,11 @@ export const facturenTable = pgTable("facturen", {
   // stroom hervat op het punt van afwijzing (§8) — niet opnieuw vooraan.
   statusVoorAfwijzing: text("status_voor_afwijzing"),
 
+  // PRIJS_01 §6 — cache van het laatste toetsresultaat van de factuurregels
+  // tegen de prijsafspraken. Puur informatief naast de factuur; de factuurregel
+  // zelf wordt nooit gewijzigd (§9).
+  prijscontrole: jsonb("prijscontrole"),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [

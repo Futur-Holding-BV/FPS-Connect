@@ -19,5 +19,6 @@ export const ImportUitvoerenInputType = {
   gebouwen: 'gebouwen',
   historische_projecten: 'historische_projecten',
   eenheidsprijzen: 'eenheidsprijzen',
+  prijsafspraken: 'prijsafspraken',
   historische_facturen: 'historische_facturen',
 } as const;

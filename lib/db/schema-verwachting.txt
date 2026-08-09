@@ -240,6 +240,9 @@ INDEX|magazijn_snoozes|magazijn_snoozes_artikel_id_unique
 INDEX|magazijn_snoozes|magazijn_snoozes_pkey
 INDEX|magazijn_stellingscans|magazijn_stellingscans_pkey
 INDEX|mail_logboek|mail_logboek_pkey
+INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_onderwerp_idx
+INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_pkey
+INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_status_idx
 INDEX|materiaal_aanvragen|materiaal_aanvragen_pkey
 INDEX|medewerker_aanstellingen|medewerker_aanstellingen_pkey
 INDEX|medewerker_cao_keuzes|medewerker_cao_keuzes_pkey
@@ -326,6 +329,11 @@ INDEX|planning_meerwerk|planning_meerwerk_pkey
 INDEX|poortwachter_dossiers|poortwachter_dossiers_pkey
 INDEX|poortwachter_dossiers|poortwachter_dossiers_ziekmelding_id_unique
 INDEX|poortwachter_mijlpalen|poortwachter_mijlpalen_pkey
+INDEX|prijsafspraken|prijsafspraken_artikel_idx
+INDEX|prijsafspraken|prijsafspraken_geen_overlap
+INDEX|prijsafspraken|prijsafspraken_import_idx
+INDEX|prijsafspraken|prijsafspraken_leverancier_idx
+INDEX|prijsafspraken|prijsafspraken_pkey
 INDEX|profielen|profielen_naam_unique
 INDEX|profielen|profielen_pkey
 INDEX|project_begrotingen|project_begrotingen_pkey
@@ -703,6 +711,8 @@ KOLOM|app_instellingen|heatmap_tracking_ingeschakeld|boolean|NO|false
 KOLOM|app_instellingen|id|integer|NO|nextval('app_instellingen_id_seq'::regclass)
 KOLOM|app_instellingen|moments_verjaardag_ingeschakeld|boolean|NO|true
 KOLOM|app_instellingen|opdrachtbevestiging_auto_verzenden|boolean|NO|false
+KOLOM|app_instellingen|prijsafspraak_bewaking_dagen|integer|NO|60
+KOLOM|app_instellingen|prijsafwijking_marge_pct|real|NO|2
 KOLOM|app_instellingen|support_email|text|YES|
 KOLOM|app_instellingen|support_telefoon|text|YES|
 KOLOM|app_instellingen|support_website|text|YES|
@@ -1460,6 +1470,7 @@ KOLOM|facturen|opdracht_id|integer|YES|
 KOLOM|facturen|opmerkingen|text|YES|
 KOLOM|facturen|payload_hash|text|YES|
 KOLOM|facturen|pdf_url|text|YES|
+KOLOM|facturen|prijscontrole|jsonb|YES|
 KOLOM|facturen|project_code|text|YES|
 KOLOM|facturen|project_id|integer|YES|
 KOLOM|facturen|relatie_adres|text|YES|
@@ -2673,6 +2684,17 @@ KOLOM|mail_logboek|onderwerp|text|NO|
 KOLOM|mail_logboek|soort|text|NO|
 KOLOM|mail_logboek|status|text|NO|
 KOLOM|mail_logboek|verstuurd_door_id|integer|YES|
+KOLOM|marktspiegel_onderzoeken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|marktspiegel_onderzoeken|aangevraagd_door|integer|YES|
+KOLOM|marktspiegel_onderzoeken|aanleiding|text|NO|'handmatig'::text
+KOLOM|marktspiegel_onderzoeken|fout|text|YES|
+KOLOM|marktspiegel_onderzoeken|id|integer|NO|nextval('marktspiegel_onderzoeken_id_seq'::regclass)
+KOLOM|marktspiegel_onderzoeken|klaar_op|timestamp without time zone|YES|
+KOLOM|marktspiegel_onderzoeken|onderwerp_id|integer|YES|
+KOLOM|marktspiegel_onderzoeken|onderwerp_type|text|NO|
+KOLOM|marktspiegel_onderzoeken|resultaat|jsonb|YES|
+KOLOM|marktspiegel_onderzoeken|status|text|NO|'bezig'::text
+KOLOM|marktspiegel_onderzoeken|vraag|text|NO|
 KOLOM|materiaal_aanvragen|aangemaakt_op|timestamp with time zone|NO|now()
 KOLOM|materiaal_aanvragen|ai_advies|text|YES|
 KOLOM|materiaal_aanvragen|ai_artikel_naam|text|YES|
@@ -3522,6 +3544,27 @@ KOLOM|poortwachter_mijlpalen|dossier_id|integer|NO|
 KOLOM|poortwachter_mijlpalen|id|integer|NO|nextval('poortwachter_mijlpalen_id_seq'::regclass)
 KOLOM|poortwachter_mijlpalen|notitie|text|YES|
 KOLOM|poortwachter_mijlpalen|type|text|NO|
+KOLOM|prijsafspraken|aangemaakt_door|integer|YES|
+KOLOM|prijsafspraken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|prijsafspraken|artikel_id|integer|YES|
+KOLOM|prijsafspraken|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|prijsafspraken|bron_datum|date|YES|
+KOLOM|prijsafspraken|bron_prijslijst|text|YES|
+KOLOM|prijsafspraken|bron|text|NO|'handmatig'::text
+KOLOM|prijsafspraken|eenheid|text|NO|
+KOLOM|prijsafspraken|excl_btw|boolean|NO|true
+KOLOM|prijsafspraken|geldig_tot|date|NO|
+KOLOM|prijsafspraken|geldig_van|date|NO|
+KOLOM|prijsafspraken|id|integer|NO|nextval('prijsafspraken_id_seq'::regclass)
+KOLOM|prijsafspraken|import_id|integer|YES|
+KOLOM|prijsafspraken|leverancier_artikelcode|text|YES|
+KOLOM|prijsafspraken|leverancier_id|integer|NO|
+KOLOM|prijsafspraken|leverancier_omschrijving|text|YES|
+KOLOM|prijsafspraken|prijs|numeric|NO|
+KOLOM|prijsafspraken|staffel_vanaf|real|NO|0
+KOLOM|prijsafspraken|teruggedraaid_op|timestamp without time zone|YES|
+KOLOM|prijsafspraken|toeslagen|jsonb|NO|'[]'::jsonb
+KOLOM|prijsafspraken|valuta|text|NO|'EUR'::text
 KOLOM|profielen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|profielen|bevoegdheden|jsonb|NO|'{}'::jsonb
 KOLOM|profielen|groep|text|YES|

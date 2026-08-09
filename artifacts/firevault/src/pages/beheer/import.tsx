@@ -1,7 +1,8 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useListImportLogs } from "@workspace/api-client-react";
+import { useListImportLogs, useListLeveranciers } from "@workspace/api-client-react";
+import { leesEnWisPrijslijstBestand } from "@/lib/prijslijst-import-stash";
 import { CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw, Download, Undo2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -9,7 +10,7 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
-type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen" | "eenheidsprijzen" | "historische_facturen" | "historische_projecten";
+type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen" | "eenheidsprijzen" | "prijsafspraken" | "historische_facturen" | "historische_projecten";
 
 const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
   leveranciers: "Leveranciers",
@@ -21,6 +22,7 @@ const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
   gebouwen: "Gebouwen",
   historische_projecten: "Historische projecten (archief)",
   eenheidsprijzen: "Eenheidsprijzen",
+  prijsafspraken: "Prijsafspraken (leverancier)",
   historische_facturen: "Historische facturen (archief)",
 };
 
@@ -36,6 +38,7 @@ const IMPORT_TYPE_MODULES: Record<ImportType, string> = {
   gebouwen: "gebouwen",
   historische_projecten: "gebouwen",
   eenheidsprijzen: "calculaties",
+  prijsafspraken: "calculaties",
   historische_facturen: "financieel",
 };
 
@@ -164,6 +167,17 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
     { veld: "omschrijving", label: "Omschrijving / referentie" },
     { veld: "bestandsnaam", label: "Bestandsnaam PDF (optioneel)" },
   ],
+  prijsafspraken: [
+    { veld: "artikelcode", label: "Artikelcode (leverancier)", verplicht: true },
+    { veld: "omschrijving", label: "Omschrijving" },
+    { veld: "prijs", label: "Prijs", verplicht: true },
+    { veld: "eenheid", label: "Eenheid" },
+    { veld: "leverancier", label: "Leverancier (naam of id) — of vul hierboven in" },
+    { veld: "geldig_van", label: "Geldig van (JJJJ-MM-DD) — of vul hierboven in" },
+    { veld: "geldig_tot", label: "Geldig tot (JJJJ-MM-DD) — of vul hierboven in" },
+    { veld: "staffel_vanaf", label: "Staffel vanaf (aantal)" },
+    { veld: "excl_btw", label: "Prijs excl. btw (ja/nee)" },
+  ],
   historische_projecten: [
     { veld: "naam", label: "Projectnaam", verplicht: true },
     { veld: "werknummer", label: "Werknummer" },
@@ -194,6 +208,39 @@ interface ControleData {
   onbruikbaar: number;
   onbruikbaar_redenen: { rij: number; reden: string }[];
   sleutel_omschrijving?: string | null;
+  // PRIJS_01 §4 — alleen voor prijsafspraken
+  vergelijking?: {
+    duurder: number;
+    goedkoper: number;
+    gelijk: number;
+    nieuw: number;
+    top_verschillen: Array<Record<string, unknown>>;
+  };
+  niet_koppelbaar?: {
+    aantal: number;
+    redenen: { rij: number; reden: string }[];
+  };
+}
+
+// PRIJS_01 §4 — respons van /import/prijslijst-voorstel
+interface PrijslijstVoorstelData {
+  bestandssoort: "excel" | "csv" | "pdf";
+  leverancier_voorstel: { naam: string | null; leverancier_id: number | null };
+  periode_voorstel: { geldig_van: string | null; geldig_tot: string | null };
+  valuta_voorstel: string | null;
+  kolomkoppeling_voorstel: Record<string, string>;
+  kolommen: string[];
+  proefregels: Record<string, string>[];
+  niet_leesbaar: number;
+  waarschuwing: string | null;
+}
+
+// Defaults uit het prijslijst-voorstelscherm (leverancier/periode/valuta).
+interface PrijsafsprakenDefaults {
+  leverancier_id: string;
+  geldig_van: string;
+  geldig_tot: string;
+  valuta: string;
 }
 
 interface Resultaat {
@@ -247,11 +294,21 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
   const [resultaat, setResultaat] = useState<Resultaat | null>(null);
   const [bezig, setBezig] = useState(false);
   const [terugdraaiBezig, setTerugdraaiBezig] = useState<number | null>(null);
+  // PRIJS_01 §4 — prijslijst-voorstel + defaults (leverancier/periode/valuta)
+  const [voorstel, setVoorstel] = useState<PrijslijstVoorstelData | null>(null);
+  const [prijsDefaults, setPrijsDefaults] = useState<PrijsafsprakenDefaults>({
+    leverancier_id: "",
+    geldig_van: "",
+    geldig_tot: "",
+    valuta: "EUR",
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { data: logs = [], refetch: refetchLogs } = useListImportLogs();
+  const { data: leveranciers = [] } = useListLeveranciers();
 
   const veldDefs = VELD_DEFINITIES[type];
+  const isPrijsafspraken = type === "prijsafspraken";
 
   async function uploadPreview(bestandFile: File) {
     setBezig(true);
@@ -281,6 +338,63 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
     }
   }
 
+  // PRIJS_01 §4 — voor prijsafspraken analyseren we het bestand eerst met de
+  // AI-voorstelroute (leverancier/periode/valuta + kolomkoppeling + proefregels),
+  // en daarna pas de gewone /import/preview zodat de bestaande koppel- en
+  // controle-stappen ongewijzigd werken. Het voorstel vult niets definitief in;
+  // de gebruiker corrigeert de dropdowns en de velden bovenaan.
+  async function uploadPrijslijstVoorstel(bestandFile: File) {
+    setBezig(true);
+    try {
+      // 1) AI-voorstel ophalen
+      const voorstelForm = new FormData();
+      voorstelForm.append("bestand", bestandFile);
+      const vResp = await fetch("/api/import/prijslijst-voorstel", { method: "POST", body: voorstelForm });
+      if (!vResp.ok) throw new Error((await vResp.json() as { error: string }).error);
+      const vData = await vResp.json() as PrijslijstVoorstelData;
+      setVoorstel(vData);
+      setPrijsDefaults({
+        leverancier_id: vData.leverancier_voorstel.leverancier_id != null ? String(vData.leverancier_voorstel.leverancier_id) : "",
+        geldig_van: vData.periode_voorstel.geldig_van ?? "",
+        geldig_tot: vData.periode_voorstel.geldig_tot ?? "",
+        valuta: vData.valuta_voorstel ?? "EUR",
+      });
+
+      // 2) Gewone preview voor de import-cache (bestand_id) — pdf's parseren daar
+      //    niet, dus voor pdf werken we met de gedestilleerde proefregels: die
+      //    kunnen niet door de reguliere import (die xlsx/csv verwacht). We laten
+      //    de preview toch draaien zodat excel/csv de normale flow volgt.
+      const previewForm = new FormData();
+      previewForm.append("bestand", bestandFile);
+      previewForm.append("type", "prijsafspraken");
+      const pResp = await fetch("/api/import/preview", { method: "POST", body: previewForm });
+      if (!pResp.ok) {
+        // Bij pdf faalt de reguliere parse — meld duidelijk i.p.v. stil door.
+        const fout = (await pResp.json().catch(() => ({}))) as { error?: string };
+        throw new Error(
+          vData.bestandssoort === "pdf"
+            ? "Een pdf-prijslijst kan niet automatisch als tabel worden ingelezen. Zet de prijslijst om naar Excel of CSV en probeer opnieuw."
+            : fout.error ?? "Bestand kon niet worden gelezen",
+        );
+      }
+      const pData = await pResp.json() as PreviewData;
+      setPreview(pData);
+
+      // 3) Voorgestelde kolomkoppeling omzetten van {kolom: doelveld} naar
+      //    {doelveld: kolom} (de structuur die de koppel-stap gebruikt).
+      const autoKoppeling: Record<string, string> = {};
+      for (const [kolom, doelveld] of Object.entries(vData.kolomkoppeling_voorstel)) {
+        if (doelveld && pData.kolommen.includes(kolom)) autoKoppeling[doelveld] = kolom;
+      }
+      setKoppeling(autoKoppeling);
+      setStap("koppeling");
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Analyse mislukt", variant: "destructive" });
+    } finally {
+      setBezig(false);
+    }
+  }
+
   async function controleren() {
     if (!preview) return;
     setBezig(true);
@@ -288,7 +402,12 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
       const resp = await fetch("/api/import/controleren", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bestand_id: preview.bestand_id, type, kolomkoppeling: koppeling }),
+        body: JSON.stringify({
+          bestand_id: preview.bestand_id,
+          type,
+          kolomkoppeling: koppeling,
+          ...(isPrijsafspraken ? { defaults: prijsDefaultsPayload() } : {}),
+        }),
       });
       if (!resp.ok) throw new Error((await resp.json() as { error: string }).error);
       const data = await resp.json() as ControleData;
@@ -299,6 +418,17 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
     } finally {
       setBezig(false);
     }
+  }
+
+  // Defaults naar de server: leverancier_id als getal, lege velden als null.
+  function prijsDefaultsPayload() {
+    const id = parseInt(prijsDefaults.leverancier_id, 10);
+    return {
+      leverancier_id: Number.isFinite(id) ? id : null,
+      geldig_van: prijsDefaults.geldig_van.trim() || null,
+      geldig_tot: prijsDefaults.geldig_tot.trim() || null,
+      valuta: prijsDefaults.valuta.trim() || null,
+    };
   }
 
   async function uitvoeren() {
@@ -313,6 +443,7 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
           type,
           kolomkoppeling: koppeling,
           ...(controle.dubbel > 0 ? { keuze_dubbelen: keuzeDubbelen } : {}),
+          ...(isPrijsafspraken ? { defaults: prijsDefaultsPayload() } : {}),
         }),
       });
       const data = await resp.json() as Resultaat & { error?: string };
@@ -354,8 +485,31 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
     setKoppeling({});
     setControle(null);
     setResultaat(null);
+    setVoorstel(null);
+    setPrijsDefaults({ leverancier_id: "", geldig_van: "", geldig_tot: "", valuta: "EUR" });
     if (fileRef.current) fileRef.current.value = "";
   }
+
+  // PRIJS_01 §4 — entry vanuit Slim Upload: URL ?type=prijsafspraken&bron=slim-upload.
+  // Het bestand is daar al gearchiveerd én in-memory gestasht; hier pakken we het
+  // op en starten meteen de prijslijst-analyse. Draait één keer bij mount.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlType = params.get("type");
+    if (urlType && (Object.keys(IMPORT_TYPE_LABELS) as ImportType[]).includes(urlType as ImportType)) {
+      setType(urlType as ImportType);
+    }
+    if (urlType === "prijsafspraken" && params.get("bron") === "slim-upload") {
+      const gestasht = leesEnWisPrijslijstBestand();
+      if (gestasht) {
+        setBestand(gestasht);
+        void uploadPrijslijstVoorstel(gestasht);
+      }
+    }
+    // Query-string eenmalig opschonen zodat een refresh niet opnieuw triggert.
+    if (urlType) window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Alleen logs van types die de gebruiker zelf mag importeren zijn relevant;
   // de server geeft leesrecht al breder (module-leesrecht), dus tonen wat er komt.
@@ -413,19 +567,23 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
           >
             <FileSpreadsheet className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
             <p className="font-medium">Klik om een bestand te kiezen</p>
-            <p className="text-sm text-muted-foreground mt-1">Excel (.xlsx) of CSV (.csv) — max 50 MB</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isPrijsafspraken
+                ? "Excel (.xlsx), CSV (.csv) of PDF (.pdf) — max 50 MB"
+                : "Excel (.xlsx) of CSV (.csv) — max 50 MB"}
+            </p>
             {bestand && (
               <p className="text-sm font-medium text-primary mt-2">{bestand.name}</p>
             )}
             <input
               ref={fileRef}
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept={isPrijsafspraken ? ".xlsx,.xls,.csv,.pdf" : ".xlsx,.xls,.csv"}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 setBestand(f);
-                if (f) void uploadPreview(f);
+                if (f) void (isPrijsafspraken ? uploadPrijslijstVoorstel(f) : uploadPreview(f));
               }}
             />
           </div>
@@ -448,6 +606,82 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
               Opnieuw
             </Button>
           </div>
+
+          {/* PRIJS_01 §4 — voorstel-info + defaults + proefregels (alleen prijsafspraken) */}
+          {isPrijsafspraken && voorstel && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge variant="outline" data-testid="voorstel-bestandssoort">
+                  Bestandssoort: {voorstel.bestandssoort.toUpperCase()}
+                </Badge>
+                {voorstel.leverancier_voorstel.naam && (
+                  <Badge variant="outline">Herkende leverancier: {voorstel.leverancier_voorstel.naam}</Badge>
+                )}
+              </div>
+
+              {voorstel.bestandssoort === "pdf" && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/30" data-testid="pdf-waarschuwing">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    Dit is een PDF: {voorstel.waarschuwing ?? "kolomherkenning bij pdf is foutgevoeliger"}.
+                    Controleer de proefregels en kolomkoppeling extra goed.
+                    {voorstel.niet_leesbaar > 0 && ` ${voorstel.niet_leesbaar} regel(s) konden niet betrouwbaar gelezen worden en zijn weggelaten.`}
+                  </p>
+                </div>
+              )}
+
+              {/* Defaults: leverancier / periode / valuta — corrigeerbaar */}
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                <p className="text-sm font-medium">Gegevens voor deze prijslijst (vullen ontbrekende kolommen aan)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Leverancier</label>
+                    <select
+                      value={prijsDefaults.leverancier_id}
+                      onChange={(e) => setPrijsDefaults((p) => ({ ...p, leverancier_id: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
+                      data-testid="default-leverancier"
+                    >
+                      <option value="">— kies leverancier —</option>
+                      {leveranciers.map((l) => (
+                        <option key={l.id} value={String(l.id)}>{l.naam}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Valuta</label>
+                    <input
+                      type="text"
+                      value={prijsDefaults.valuta}
+                      onChange={(e) => setPrijsDefaults((p) => ({ ...p, valuta: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
+                      data-testid="default-valuta"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Geldig van (JJJJ-MM-DD)</label>
+                    <input
+                      type="date"
+                      value={prijsDefaults.geldig_van}
+                      onChange={(e) => setPrijsDefaults((p) => ({ ...p, geldig_van: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
+                      data-testid="default-geldig-van"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Geldig tot (JJJJ-MM-DD)</label>
+                    <input
+                      type="date"
+                      value={prijsDefaults.geldig_tot}
+                      onChange={(e) => setPrijsDefaults((p) => ({ ...p, geldig_tot: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
+                      data-testid="default-geldig-tot"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {veldDefs.map(({ veld, label, verplicht }) => (
@@ -578,6 +812,100 @@ function ImportWizard({ toegestaneTypes }: { toegestaneTypes: ImportType[] }) {
                     <span className="text-destructive">{f.reden}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* PRIJS_01 §4 — vergelijking met vorige afspraak */}
+          {isPrijsafspraken && controle.vergelijking && (
+            <div className="space-y-3" data-testid="prijs-vergelijking">
+              <p className="text-sm font-medium">Vergelijking met de vorige geldige afspraak</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-lg border">
+                  <p className="text-xs text-muted-foreground">Duurder</p>
+                  <p className="text-xl font-semibold text-destructive" data-testid="vergelijking-duurder">{controle.vergelijking.duurder}</p>
+                </div>
+                <div className="p-3 rounded-lg border">
+                  <p className="text-xs text-muted-foreground">Goedkoper</p>
+                  <p className="text-xl font-semibold text-green-600" data-testid="vergelijking-goedkoper">{controle.vergelijking.goedkoper}</p>
+                </div>
+                <div className="p-3 rounded-lg border">
+                  <p className="text-xs text-muted-foreground">Gelijk</p>
+                  <p className="text-xl font-semibold" data-testid="vergelijking-gelijk">{controle.vergelijking.gelijk}</p>
+                </div>
+                <div className="p-3 rounded-lg border">
+                  <p className="text-xs text-muted-foreground">Nieuw artikel</p>
+                  <p className="text-xl font-semibold text-sky-600" data-testid="vergelijking-nieuw">{controle.vergelijking.nieuw}</p>
+                </div>
+              </div>
+              {controle.vergelijking.top_verschillen.length > 0 && (
+                <div className="border rounded-md overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        {Object.keys(controle.vergelijking.top_verschillen[0] ?? {}).map((k) => (
+                          <th key={k} className="px-3 py-2 text-left font-medium whitespace-nowrap">{k}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {controle.vergelijking.top_verschillen.map((rij, i) => (
+                        <tr key={i} className="border-t">
+                          {Object.values(rij).map((v, j) => (
+                            <td key={j} className="px-3 py-1.5 whitespace-nowrap">{v == null ? "" : String(v)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PRIJS_01 §4 — niet-koppelbare regels */}
+          {isPrijsafspraken && controle.niet_koppelbaar && controle.niet_koppelbaar.aantal > 0 && (
+            <div className="space-y-2" data-testid="niet-koppelbaar">
+              <p className="text-sm font-medium">
+                {controle.niet_koppelbaar.aantal} regel(s) zonder match op een eigen artikel
+                <span className="text-muted-foreground font-normal"> — worden bewaard als leverancierscode (geen artikel aangemaakt)</span>
+              </p>
+              <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
+                {controle.niet_koppelbaar.redenen.map((f, i) => (
+                  <div key={i} className="flex gap-3 px-3 py-1.5 text-sm">
+                    <span className="text-muted-foreground shrink-0">Rij {f.rij}</span>
+                    <span>{f.reden}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PRIJS_01 §4 — proefregels PROMINENT vóór uitvoeren */}
+          {isPrijsafspraken && preview.rijen.length > 0 && (
+            <div className="space-y-2" data-testid="proefregels">
+              <p className="text-sm font-semibold">
+                Controleer de eerste {Math.min(20, preview.rijen.length)} regels vóór je importeert
+              </p>
+              <div className="border rounded-md overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      {preview.kolommen.map((k) => (
+                        <th key={k} className="px-3 py-2 text-left font-medium whitespace-nowrap">{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.rijen.slice(0, 20).map((rij, i) => (
+                      <tr key={i} className="border-t">
+                        {preview.kolommen.map((k) => (
+                          <td key={k} className="px-3 py-1.5 whitespace-nowrap">{rij[k] ?? ""}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

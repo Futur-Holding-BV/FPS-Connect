@@ -35,4 +35,8 @@ export interface AppInstellingenInput {
   ai_maandelijkse_export_email?: string | null;
   aanvraag_reactietermijn_uren?: number;
   aanvraag_oppak_termijn_uren?: number;
+  /** PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs (0-100). */
+  prijsafwijking_marge_pct?: number;
+  /** PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken. */
+  prijsafspraak_bewaking_dagen?: number;
 }

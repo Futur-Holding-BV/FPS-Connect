@@ -7717,6 +7717,8 @@ export const GetInfoInstellingenResponse = zod.object({
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "aanvraag_reactietermijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal.'),
   "aanvraag_oppak_termijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.'),
+  "prijsafwijking_marge_pct": zod.number().optional().describe('PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs voordat een prijsafwijking wordt gemeld.'),
+  "prijsafspraak_bewaking_dagen": zod.number().optional().describe('PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish(),
   "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
@@ -7739,7 +7741,9 @@ export const UpdateInfoInstellingenBody = zod.object({
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.'),
   "aanvraag_reactietermijn_uren": zod.number().optional(),
-  "aanvraag_oppak_termijn_uren": zod.number().optional()
+  "aanvraag_oppak_termijn_uren": zod.number().optional(),
+  "prijsafwijking_marge_pct": zod.number().optional().describe('PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs (0-100).'),
+  "prijsafspraak_bewaking_dagen": zod.number().optional().describe('PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken.')
 })
 
 export const UpdateInfoInstellingenResponse = zod.object({
@@ -7757,6 +7761,8 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "aanvraag_reactietermijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een binnengekomen prijsaanvraag beantwoord moet zijn; daarna volgt een signaal.'),
   "aanvraag_oppak_termijn_uren": zod.number().optional().describe('Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal.'),
+  "prijsafwijking_marge_pct": zod.number().optional().describe('PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs voordat een prijsafwijking wordt gemeld.'),
+  "prijsafspraak_bewaking_dagen": zod.number().optional().describe('PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish(),
   "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
@@ -18576,6 +18582,10 @@ export const PlakAnalyseCalculatieResponse = zod.object({
   "arbeids_tarief_ontbreekt": zod.boolean().optional(),
   "normtijd_id": zod.number().nullish()
 }).describe('Voorgestelde calculatieregel. Prijs\/uren komen UITSLUITEND uit eigen DB-rijen; ontbrekend = null (niet 0).'),zod.null()]).optional(),
+  "inkoop_bron": zod.enum(['afspraak', 'catalogus']).optional().describe('PRIJS_01 §5 — herkomst van de INKOOPprijs (kostprijs) van dit artikel. \'afspraak\' = de kostprijs ligt vast in een geldige jaarprijs (afgesproken_inkoopprijs is gevuld); \'catalogus\' = geen geldige afspraak. Beïnvloedt NIET het conceptregel-tarief (dat blijft de verkoopprijs). Alleen aanwezig bij een gekoppeld artikel (volledig\/alleen_artikel).'),
+  "afgesproken_inkoopprijs": zod.number().nullish().describe('De afgesproken inkoopprijs (jaarprijs) van de leverancier (alleen bij inkoop_bron \'afspraak\').'),
+  "afspraak_leverancier": zod.string().nullish().describe('Leverancier van de geldige prijsafspraak (alleen bij inkoop_bron \'afspraak\').'),
+  "afspraak_geldig_tot": zod.string().nullish().describe('Einddatum (JJJJ-MM-DD) van de geldige prijsafspraak (alleen bij inkoop_bron \'afspraak\').'),
   "vraag": zod.string().optional().describe('Vervolgvraag bij alleen_artikel (welke normtijd?)'),
   "normtijd_kandidaten": zod.array(zod.object({
   "id": zod.number(),
@@ -23207,6 +23217,66 @@ export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "incasso_referentie": zod.string().nullish()
 })
 export const ListFacturenKlaarVoorExportResponse = zod.array(ListFacturenKlaarVoorExportResponseItem)
+
+
+/**
+ * @summary Maandtotaal van prijsafwijkingen t.o.v. de jaarprijzen (PRIJS_01 §6)
+ */
+export const GetFactuurPrijscontroleMaandtotaalQueryParams = zod.object({
+  "maand": zod.coerce.string().describe('Maand als YYYY-MM.')
+})
+
+export const GetFactuurPrijscontroleMaandtotaalResponse = zod.object({
+  "maand": zod.string(),
+  "totaal_meer_betaald": zod.number(),
+  "aantal_afwijkingen": zod.number(),
+  "regels": zod.array(zod.object({
+  "factuur_id": zod.number(),
+  "factuurnummer": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "afgesproken_prijs": zod.number().nullish(),
+  "factuur_stukprijs": zod.number().nullish(),
+  "verschil_per_stuk": zod.number().nullish(),
+  "verschil_totaal": zod.number().nullish(),
+  "afspraak_leverancier": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Prijscontrole van de factuurregels tegen de prijsafspraken (PRIJS_01 §6)
+ */
+export const GetFactuurPrijscontroleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurPrijscontroleQueryParams = zod.object({
+  "verse": zod.coerce.boolean().optional().describe('Indien true wordt opnieuw getoetst i.p.v. de cache getoond.')
+})
+
+export const GetFactuurPrijscontroleResponse = zod.object({
+  "factuur_id": zod.number(),
+  "getoetst_op": zod.string(),
+  "marge_pct": zod.number(),
+  "aantal_regels": zod.number(),
+  "aantal_afwijkingen": zod.number(),
+  "aantal_niet_te_toetsen": zod.number(),
+  "totaal_meer_betaald": zod.number(),
+  "regels": zod.array(zod.object({
+  "regel_id": zod.number(),
+  "regelnummer": zod.number(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "factuur_stukprijs": zod.number().nullish(),
+  "uitkomst": zod.enum(['klopt', 'afwijking', 'geen_afspraak', 'niet_te_toetsen']),
+  "afgesproken_prijs": zod.number().nullish(),
+  "afspraak_id": zod.number().nullish(),
+  "afspraak_leverancier": zod.string().nullish(),
+  "verschil_per_stuk": zod.number().nullish(),
+  "verschil_totaal": zod.number().nullish(),
+  "marge_pct": zod.number()
+}))
+})
 
 
 /**
@@ -29793,7 +29863,7 @@ export const KeurMagazijnStellingsscanGoedResponse = zod.object({
  */
 export const ImportPreviewBody = zod.object({
   "bestand": zod.instanceof(File),
-  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen'])
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'prijsafspraken', 'historische_facturen'])
 })
 
 export const ImportPreviewResponse = zod.object({
@@ -29806,12 +29876,44 @@ export const ImportPreviewResponse = zod.object({
 
 
 /**
+ * @summary Leveranciers-prijslijst analyseren (PRIJS_01 §4) — voorstel voor leverancier/periode/valuta + kolomkoppeling met proefregels
+ */
+export const ImportPrijslijstVoorstelBody = zod.object({
+  "bestand": zod.instanceof(File)
+})
+
+export const ImportPrijslijstVoorstelResponse = zod.object({
+  "bestandssoort": zod.enum(['excel', 'csv', 'pdf']),
+  "leverancier_voorstel": zod.object({
+  "naam": zod.string().nullable(),
+  "leverancier_id": zod.number().nullable()
+}),
+  "periode_voorstel": zod.object({
+  "geldig_van": zod.string().nullable(),
+  "geldig_tot": zod.string().nullable()
+}),
+  "valuta_voorstel": zod.string().nullable(),
+  "kolomkoppeling_voorstel": zod.record(zod.string(), zod.string()),
+  "kolommen": zod.array(zod.string()),
+  "proefregels": zod.array(zod.record(zod.string(), zod.string())),
+  "niet_leesbaar": zod.number(),
+  "waarschuwing": zod.string().nullish()
+})
+
+
+/**
  * @summary Controle-overzicht (nieuw/dubbel/onbruikbaar) vóór uitvoeren
  */
 export const ImportControlerenBody = zod.object({
   "bestand_id": zod.string(),
-  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen']),
-  "kolomkoppeling": zod.record(zod.string(), zod.string())
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'prijsafspraken', 'historische_facturen']),
+  "kolomkoppeling": zod.record(zod.string(), zod.string()),
+  "defaults": zod.object({
+  "leverancier_id": zod.number().nullish(),
+  "geldig_van": zod.string().nullish(),
+  "geldig_tot": zod.string().nullish(),
+  "valuta": zod.string().nullish()
+}).optional().describe('PRIJS_01 §4 — defaults uit het import-voorstelscherm; vullen alleen lege velden aan (prijsafspraken).')
 })
 
 export const ImportControlerenResponse = zod.object({
@@ -29823,7 +29925,21 @@ export const ImportControlerenResponse = zod.object({
   "rij": zod.number(),
   "reden": zod.string()
 })).optional(),
-  "sleutel_omschrijving": zod.string().nullish()
+  "sleutel_omschrijving": zod.string().nullish(),
+  "vergelijking": zod.object({
+  "duurder": zod.number(),
+  "goedkoper": zod.number(),
+  "gelijk": zod.number(),
+  "nieuw": zod.number(),
+  "top_verschillen": zod.array(zod.record(zod.string(), zod.unknown()))
+}).optional().describe('PRIJS_01 §4 — vergelijking met de vorige geldige afspraak (alleen prijsafspraken).'),
+  "niet_koppelbaar": zod.object({
+  "aantal": zod.number(),
+  "redenen": zod.array(zod.object({
+  "rij": zod.number(),
+  "reden": zod.string()
+}))
+}).optional().describe('PRIJS_01 §4 — regels zonder match op een eigen artikel (bewaard als leverancierscode).')
 })
 
 
@@ -29832,9 +29948,15 @@ export const ImportControlerenResponse = zod.object({
  */
 export const ImportUitvoerenBody = zod.object({
   "bestand_id": zod.string(),
-  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'historische_facturen']),
+  "type": zod.enum(['leveranciers', 'klanten', 'contactpersonen', 'artikelen', 'magazijn_artikelen', 'medewerkers', 'gebouwen', 'historische_projecten', 'eenheidsprijzen', 'prijsafspraken', 'historische_facturen']),
   "kolomkoppeling": zod.record(zod.string(), zod.string()),
-  "keuze_dubbelen": zod.union([zod.literal('overslaan'),zod.literal('als_nieuw'),zod.literal(null)]).nullish()
+  "keuze_dubbelen": zod.union([zod.literal('overslaan'),zod.literal('als_nieuw'),zod.literal(null)]).nullish(),
+  "defaults": zod.object({
+  "leverancier_id": zod.number().nullish(),
+  "geldig_van": zod.string().nullish(),
+  "geldig_tot": zod.string().nullish(),
+  "valuta": zod.string().nullish()
+}).optional().describe('PRIJS_01 §4 — defaults uit het import-voorstelscherm; vullen alleen lege velden aan (prijsafspraken).')
 })
 
 export const ImportUitvoerenResponse = zod.object({
@@ -33217,6 +33339,301 @@ export const VraagWorkflowAiAdviesResponse = zod.object({
   "sleutel": zod.string(),
   "reden": zod.string()
 }))
+})
+
+
+/**
+ * @summary Prijsafspraken ophalen (niet-teruggedraaid)
+ */
+export const ListPrijsafsprakenQueryParams = zod.object({
+  "leverancier_id": zod.coerce.number().optional(),
+  "artikel_id": zod.coerce.number().optional(),
+  "actueel": zod.coerce.boolean().optional().describe('Indien true, alleen op vandaag geldige afspraken.'),
+  "zoek": zod.coerce.string().optional()
+})
+
+export const ListPrijsafsprakenResponseItem = zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().nullish(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean(),
+  "valuta": zod.string(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})),
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string(),
+  "import_id": zod.number().nullish(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListPrijsafsprakenResponse = zod.array(ListPrijsafsprakenResponseItem)
+
+
+/**
+ * @summary Nieuwe prijsafspraak vastleggen (nooit overschrijven; overlap wordt geweigerd)
+ */
+export const CreatePrijsafspraakBody = zod.object({
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().optional(),
+  "leverancier_omschrijving": zod.string().optional(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean().optional(),
+  "valuta": zod.string().optional(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number().optional(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})).optional(),
+  "bron_prijslijst": zod.string().optional(),
+  "bron_datum": zod.coerce.date().optional()
+})
+
+export const CreatePrijsafspraakResponse = zod.void()
+
+
+/**
+ * @summary Geldige prijsafspraak op een datum (voor calculatie en factuurcontrole)
+ */
+export const GetGeldigePrijsafspraakQueryParams = zod.object({
+  "artikel_id": zod.coerce.number().optional(),
+  "leverancier_id": zod.coerce.number().optional(),
+  "leverancier_artikelcode": zod.coerce.string().optional(),
+  "datum": zod.date().optional(),
+  "hoeveelheid": zod.coerce.number().optional()
+})
+
+export const GetGeldigePrijsafspraakResponse = zod.object({
+  "afspraak": zod.union([zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().nullish(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean(),
+  "valuta": zod.string(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})),
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string(),
+  "import_id": zod.number().nullish(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}),zod.null()]),
+  "kandidaten": zod.array(zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().nullish(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean(),
+  "valuta": zod.string(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})),
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string(),
+  "import_id": zod.number().nullish(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Niet-prijsvelden bijwerken (bron/notities/toeslagen); prijs of periode wijzigen = nieuwe afspraak
+ */
+export const UpdatePrijsafspraakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePrijsafspraakBody = zod.object({
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string().optional(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})).optional()
+}).describe('Alleen niet-prijsvelden. Prijs of periode wijzigen levert een 422 op.')
+
+export const UpdatePrijsafspraakResponse = zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().nullish(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean(),
+  "valuta": zod.string(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})),
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string(),
+  "import_id": zod.number().nullish(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Afspraak inkorten (nieuwe geldig_tot); alleen inkorten, nooit verlengen
+ */
+export const BeeindigPrijsafspraakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BeeindigPrijsafspraakBody = zod.object({
+  "geldig_tot": zod.coerce.date()
+})
+
+export const BeeindigPrijsafspraakResponse = zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "leverancier_artikelcode": zod.string().nullish(),
+  "leverancier_omschrijving": zod.string().nullish(),
+  "prijs": zod.number(),
+  "eenheid": zod.string(),
+  "excl_btw": zod.boolean(),
+  "valuta": zod.string(),
+  "geldig_van": zod.coerce.date(),
+  "geldig_tot": zod.coerce.date(),
+  "staffel_vanaf": zod.number(),
+  "toeslagen": zod.array(zod.object({
+  "soort": zod.enum(['transport', 'spoed', 'kleine_order', 'anders']),
+  "bedrag": zod.number(),
+  "eenheid": zod.string().optional()
+})),
+  "bron_prijslijst": zod.string().nullish(),
+  "bron_datum": zod.string().nullish(),
+  "bron": zod.string(),
+  "import_id": zod.number().nullish(),
+  "teruggedraaid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Marktspiegel-onderzoeken ophalen (recent eerst)
+ */
+export const ListMarktspiegelOnderzoekenResponseItem = zod.object({
+  "id": zod.number(),
+  "onderwerp_type": zod.enum(['prijsafspraak', 'financieel_contract', 'vrij']),
+  "onderwerp_id": zod.number().nullish(),
+  "vraag": zod.string(),
+  "status": zod.enum(['bezig', 'klaar', 'fout']),
+  "resultaat": zod.union([zod.object({
+  "vergelijkingen": zod.array(zod.object({
+  "aanbieder": zod.string(),
+  "indicatie_prijs": zod.string(),
+  "eenheid": zod.string().nullish(),
+  "vindplaats_url": zod.string().describe('Verplichte bron-URL; regels zonder bron worden weggegooid (§8.3)'),
+  "gevonden_op": zod.coerce.date(),
+  "toelichting": zod.string().nullish()
+})),
+  "samenvatting": zod.string()
+}),zod.null()]).optional(),
+  "fout": zod.string().nullish(),
+  "aangevraagd_door": zod.number().nullish(),
+  "aanleiding": zod.enum(['afloop', 'prijsverhoging', 'handmatig']),
+  "aangemaakt_op": zod.string(),
+  "klaar_op": zod.string().nullish()
+})
+export const ListMarktspiegelOnderzoekenResponse = zod.array(ListMarktspiegelOnderzoekenResponseItem)
+
+
+/**
+ * @summary Een marktspiegel-onderzoek starten (alleen op aanvraag; draait asynchroon)
+ */
+export const startMarktspiegelOnderzoekBodyAanleidingDefault = `handmatig`;
+
+export const StartMarktspiegelOnderzoekBody = zod.object({
+  "onderwerp_type": zod.enum(['prijsafspraak', 'financieel_contract', 'vrij']),
+  "onderwerp_id": zod.number().nullish().describe('Verplicht bij onderwerp_type prijsafspraak of financieel_contract'),
+  "vraag": zod.string().nullish().describe('Verplicht bij onderwerp_type vrij'),
+  "aanleiding": zod.enum(['afloop', 'prijsverhoging', 'handmatig']).default(startMarktspiegelOnderzoekBodyAanleidingDefault)
+})
+
+export const StartMarktspiegelOnderzoekResponse = zod.void()
+
+
+/**
+ * @summary Eén marktspiegel-onderzoek ophalen (voor polling zolang 'bezig')
+ */
+export const GetMarktspiegelOnderzoekParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMarktspiegelOnderzoekResponse = zod.object({
+  "id": zod.number(),
+  "onderwerp_type": zod.enum(['prijsafspraak', 'financieel_contract', 'vrij']),
+  "onderwerp_id": zod.number().nullish(),
+  "vraag": zod.string(),
+  "status": zod.enum(['bezig', 'klaar', 'fout']),
+  "resultaat": zod.union([zod.object({
+  "vergelijkingen": zod.array(zod.object({
+  "aanbieder": zod.string(),
+  "indicatie_prijs": zod.string(),
+  "eenheid": zod.string().nullish(),
+  "vindplaats_url": zod.string().describe('Verplichte bron-URL; regels zonder bron worden weggegooid (§8.3)'),
+  "gevonden_op": zod.coerce.date(),
+  "toelichting": zod.string().nullish()
+})),
+  "samenvatting": zod.string()
+}),zod.null()]).optional(),
+  "fout": zod.string().nullish(),
+  "aangevraagd_door": zod.number().nullish(),
+  "aanleiding": zod.enum(['afloop', 'prijsverhoging', 'handmatig']),
+  "aangemaakt_op": zod.string(),
+  "klaar_op": zod.string().nullish()
 })
 
 

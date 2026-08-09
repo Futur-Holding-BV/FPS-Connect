@@ -92,6 +92,7 @@ import type {
   BatchExportResultaat,
   BedrijfsSluiting,
   BedrijfsSluitingInput,
+  BeeindigPrijsafspraakBody,
   BeheerVisual,
   BeheerVisualInput,
   BeheerVisualPatch,
@@ -203,6 +204,7 @@ import type {
   DeleteEenheidsprijs200,
   DirectiecockpitResponse,
   Document,
+  DocumentAanleverResultaat,
   DocumentAanleverenInput,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
@@ -274,6 +276,8 @@ import type {
   FactuurOpmerking,
   FactuurOpmerkingAfhandelenInput,
   FactuurOpmerkingInput,
+  FactuurPrijscontrole,
+  FactuurPrijscontroleMaandtotaal,
   FactuurProceslogRegel,
   FactuurRegel,
   FactuurRegelInput,
@@ -365,6 +369,7 @@ import type {
   GebruikerInput,
   GebruikerUpdate,
   GebruikersAanvullen200,
+  GeldigePrijsafspraak,
   GenerateRfqConceptMail200,
   GenereerCrmRelatievoorstellen503,
   Gereedschap,
@@ -385,10 +390,13 @@ import type {
   GetCapaciteitBezettingParams,
   GetCrmAiCoach503,
   GetDirectiecockpitParams,
+  GetFactuurPrijscontroleMaandtotaalParams,
+  GetFactuurPrijscontroleParams,
   GetFactuurUploadUrl200,
   GetFieNacalculatiesVerouderdAantal200,
   GetFinancieelMeerjarenoverzichtParams,
   GetGebouwGevelbeeld200,
+  GetGeldigePrijsafspraakParams,
   GetJarrekeningOnderhandenWerkParams,
   GetKalender200,
   GetKalenderParams,
@@ -590,6 +598,7 @@ import type {
   ListPlanningItemsParams,
   ListPlanningMedewerkersParams,
   ListPlanningMeerwerkParams,
+  ListPrijsafsprakenParams,
   ListProjectBegrotingenParams,
   ListProjectenParams,
   ListRapportenParams,
@@ -657,6 +666,8 @@ import type {
   MailOpdrachtbevestigingDemoInput,
   MailStatus,
   MailTestmailInput,
+  MarktspiegelOnderzoek,
+  MarktspiegelOnderzoekInput,
   Medewerker,
   MedewerkerAanstelling,
   MedewerkerAanstellingInput,
@@ -845,6 +856,12 @@ import type {
   PortaalOptioneelWerkInput,
   PortaalTrackingInput,
   PortaalVraagInput,
+  Prijsafspraak,
+  PrijsafspraakConflict,
+  PrijsafspraakInput,
+  PrijsafspraakPatch,
+  PrijslijstVoorstel,
+  PrijslijstVoorstelBestand,
   Profiel,
   ProfielAiVoorstelFunctieResultaat,
   ProfielInput,
@@ -11849,7 +11866,7 @@ export const getAanleverenDocumentUrl = () => {
 /**
  * @summary Document direct aanleveren bij de bibliotheek (Slim Upload; komt binnen als ter goedkeuring)
  */
-export const aanleverenDocument = async (documentAanleverenInput: DocumentAanleverenInput, options?: RequestInit): Promise<Document> => {
+export const aanleverenDocument = async (documentAanleverenInput: DocumentAanleverenInput, options?: RequestInit): Promise<DocumentAanleverResultaat> => {
     const formData = new FormData();
 formData.append(`categorie`, documentAanleverenInput.categorie);
 if(documentAanleverenInput.toelichting !== undefined) {
@@ -11859,7 +11876,7 @@ if(documentAanleverenInput.bestand !== undefined) {
  formData.append(`bestand`, documentAanleverenInput.bestand);
  }
 
-  return customFetch<Document>(getAanleverenDocumentUrl(),
+  return customFetch<DocumentAanleverResultaat>(getAanleverenDocumentUrl(),
   {
     ...options,
     method: 'POST'
@@ -65098,6 +65115,179 @@ export function useListFacturenKlaarVoorExport<TData = Awaited<ReturnType<typeof
 
 
 
+export const getGetFactuurPrijscontroleMaandtotaalUrl = (params: GetFactuurPrijscontroleMaandtotaalParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/facturen/prijscontrole/maandtotaal?${stringifiedParams}` : `/api/facturen/prijscontrole/maandtotaal`
+}
+
+/**
+ * @summary Maandtotaal van prijsafwijkingen t.o.v. de jaarprijzen (PRIJS_01 §6)
+ */
+export const getFactuurPrijscontroleMaandtotaal = async (params: GetFactuurPrijscontroleMaandtotaalParams, options?: RequestInit): Promise<FactuurPrijscontroleMaandtotaal> => {
+
+  return customFetch<FactuurPrijscontroleMaandtotaal>(getGetFactuurPrijscontroleMaandtotaalUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurPrijscontroleMaandtotaalQueryKey = (params?: GetFactuurPrijscontroleMaandtotaalParams,) => {
+    return [
+    `/api/facturen/prijscontrole/maandtotaal`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetFactuurPrijscontroleMaandtotaalQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>, TError = ErrorType<unknown>>(params: GetFactuurPrijscontroleMaandtotaalParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurPrijscontroleMaandtotaalQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>> = ({ signal }) => getFactuurPrijscontroleMaandtotaal(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurPrijscontroleMaandtotaalQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>>
+export type GetFactuurPrijscontroleMaandtotaalQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Maandtotaal van prijsafwijkingen t.o.v. de jaarprijzen (PRIJS_01 §6)
+ */
+
+export function useGetFactuurPrijscontroleMaandtotaal<TData = Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>, TError = ErrorType<unknown>>(
+ params: GetFactuurPrijscontroleMaandtotaalParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontroleMaandtotaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurPrijscontroleMaandtotaalQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFactuurPrijscontroleUrl = (id: number,
+    params?: GetFactuurPrijscontroleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/facturen/${id}/prijscontrole?${stringifiedParams}` : `/api/facturen/${id}/prijscontrole`
+}
+
+/**
+ * @summary Prijscontrole van de factuurregels tegen de prijsafspraken (PRIJS_01 §6)
+ */
+export const getFactuurPrijscontrole = async (id: number,
+    params?: GetFactuurPrijscontroleParams, options?: RequestInit): Promise<FactuurPrijscontrole> => {
+
+  return customFetch<FactuurPrijscontrole>(getGetFactuurPrijscontroleUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurPrijscontroleQueryKey = (id: number,
+    params?: GetFactuurPrijscontroleParams,) => {
+    return [
+    `/api/facturen/${id}/prijscontrole`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetFactuurPrijscontroleQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurPrijscontrole>>, TError = ErrorType<void>>(id: number,
+    params?: GetFactuurPrijscontroleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontrole>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurPrijscontroleQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurPrijscontrole>>> = ({ signal }) => getFactuurPrijscontrole(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontrole>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurPrijscontroleQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurPrijscontrole>>>
+export type GetFactuurPrijscontroleQueryError = ErrorType<void>
+
+
+/**
+ * @summary Prijscontrole van de factuurregels tegen de prijsafspraken (PRIJS_01 §6)
+ */
+
+export function useGetFactuurPrijscontrole<TData = Awaited<ReturnType<typeof getFactuurPrijscontrole>>, TError = ErrorType<void>>(
+ id: number,
+    params?: GetFactuurPrijscontroleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurPrijscontrole>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurPrijscontroleQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetFactuurUrl = (id: number,) => {
 
 
@@ -83787,6 +83977,78 @@ export const useImportPreview = <TError = ErrorType<void>,
       return useMutation(getImportPreviewMutationOptions(options));
     }
 
+export const getImportPrijslijstVoorstelUrl = () => {
+
+
+
+
+  return `/api/import/prijslijst-voorstel`
+}
+
+/**
+ * @summary Leveranciers-prijslijst analyseren (PRIJS_01 §4) — voorstel voor leverancier/periode/valuta + kolomkoppeling met proefregels
+ */
+export const importPrijslijstVoorstel = async (prijslijstVoorstelBestand: PrijslijstVoorstelBestand, options?: RequestInit): Promise<PrijslijstVoorstel> => {
+    const formData = new FormData();
+formData.append(`bestand`, prijslijstVoorstelBestand.bestand);
+
+  return customFetch<PrijslijstVoorstel>(getImportPrijslijstVoorstelUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getImportPrijslijstVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPrijslijstVoorstel>>, TError,{data: BodyType<PrijslijstVoorstelBestand>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importPrijslijstVoorstel>>, TError,{data: BodyType<PrijslijstVoorstelBestand>}, TContext> => {
+
+const mutationKey = ['importPrijslijstVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importPrijslijstVoorstel>>, {data: BodyType<PrijslijstVoorstelBestand>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importPrijslijstVoorstel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportPrijslijstVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof importPrijslijstVoorstel>>>
+    export type ImportPrijslijstVoorstelMutationBody = BodyType<PrijslijstVoorstelBestand>
+    export type ImportPrijslijstVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary Leveranciers-prijslijst analyseren (PRIJS_01 §4) — voorstel voor leverancier/periode/valuta + kolomkoppeling met proefregels
+ */
+export const useImportPrijslijstVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importPrijslijstVoorstel>>, TError,{data: BodyType<PrijslijstVoorstelBestand>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importPrijslijstVoorstel>>,
+        TError,
+        {data: BodyType<PrijslijstVoorstelBestand>},
+        TContext
+      > => {
+      return useMutation(getImportPrijslijstVoorstelMutationOptions(options));
+    }
+
 export const getImportControlerenUrl = () => {
 
 
@@ -93049,4 +93311,608 @@ export const useVraagWorkflowAiAdvies = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVraagWorkflowAiAdviesMutationOptions(options));
     }
+
+export const getListPrijsafsprakenUrl = (params?: ListPrijsafsprakenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/prijsafspraken?${stringifiedParams}` : `/api/prijsafspraken`
+}
+
+/**
+ * @summary Prijsafspraken ophalen (niet-teruggedraaid)
+ */
+export const listPrijsafspraken = async (params?: ListPrijsafsprakenParams, options?: RequestInit): Promise<Prijsafspraak[]> => {
+
+  return customFetch<Prijsafspraak[]>(getListPrijsafsprakenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPrijsafsprakenQueryKey = (params?: ListPrijsafsprakenParams,) => {
+    return [
+    `/api/prijsafspraken`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPrijsafsprakenQueryOptions = <TData = Awaited<ReturnType<typeof listPrijsafspraken>>, TError = ErrorType<unknown>>(params?: ListPrijsafsprakenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrijsafspraken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPrijsafsprakenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrijsafspraken>>> = ({ signal }) => listPrijsafspraken(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrijsafspraken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPrijsafsprakenQueryResult = NonNullable<Awaited<ReturnType<typeof listPrijsafspraken>>>
+export type ListPrijsafsprakenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Prijsafspraken ophalen (niet-teruggedraaid)
+ */
+
+export function useListPrijsafspraken<TData = Awaited<ReturnType<typeof listPrijsafspraken>>, TError = ErrorType<unknown>>(
+ params?: ListPrijsafsprakenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrijsafspraken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPrijsafsprakenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePrijsafspraakUrl = () => {
+
+
+
+
+  return `/api/prijsafspraken`
+}
+
+/**
+ * @summary Nieuwe prijsafspraak vastleggen (nooit overschrijven; overlap wordt geweigerd)
+ */
+export const createPrijsafspraak = async (prijsafspraakInput: PrijsafspraakInput, options?: RequestInit): Promise<Prijsafspraak> => {
+
+  return customFetch<Prijsafspraak>(getCreatePrijsafspraakUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(prijsafspraakInput)
+  }
+);}
+
+
+
+
+export const getCreatePrijsafspraakMutationOptions = <TError = ErrorType<PrijsafspraakConflict | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrijsafspraak>>, TError,{data: BodyType<PrijsafspraakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPrijsafspraak>>, TError,{data: BodyType<PrijsafspraakInput>}, TContext> => {
+
+const mutationKey = ['createPrijsafspraak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPrijsafspraak>>, {data: BodyType<PrijsafspraakInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPrijsafspraak(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePrijsafspraakMutationResult = NonNullable<Awaited<ReturnType<typeof createPrijsafspraak>>>
+    export type CreatePrijsafspraakMutationBody = BodyType<PrijsafspraakInput>
+    export type CreatePrijsafspraakMutationError = ErrorType<PrijsafspraakConflict | void>
+
+    /**
+ * @summary Nieuwe prijsafspraak vastleggen (nooit overschrijven; overlap wordt geweigerd)
+ */
+export const useCreatePrijsafspraak = <TError = ErrorType<PrijsafspraakConflict | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrijsafspraak>>, TError,{data: BodyType<PrijsafspraakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPrijsafspraak>>,
+        TError,
+        {data: BodyType<PrijsafspraakInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePrijsafspraakMutationOptions(options));
+    }
+
+export const getGetGeldigePrijsafspraakUrl = (params?: GetGeldigePrijsafspraakParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/prijsafspraken/geldig?${stringifiedParams}` : `/api/prijsafspraken/geldig`
+}
+
+/**
+ * @summary Geldige prijsafspraak op een datum (voor calculatie en factuurcontrole)
+ */
+export const getGeldigePrijsafspraak = async (params?: GetGeldigePrijsafspraakParams, options?: RequestInit): Promise<GeldigePrijsafspraak> => {
+
+  return customFetch<GeldigePrijsafspraak>(getGetGeldigePrijsafspraakUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGeldigePrijsafspraakQueryKey = (params?: GetGeldigePrijsafspraakParams,) => {
+    return [
+    `/api/prijsafspraken/geldig`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetGeldigePrijsafspraakQueryOptions = <TData = Awaited<ReturnType<typeof getGeldigePrijsafspraak>>, TError = ErrorType<unknown>>(params?: GetGeldigePrijsafspraakParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGeldigePrijsafspraak>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGeldigePrijsafspraakQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeldigePrijsafspraak>>> = ({ signal }) => getGeldigePrijsafspraak(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGeldigePrijsafspraak>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGeldigePrijsafspraakQueryResult = NonNullable<Awaited<ReturnType<typeof getGeldigePrijsafspraak>>>
+export type GetGeldigePrijsafspraakQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geldige prijsafspraak op een datum (voor calculatie en factuurcontrole)
+ */
+
+export function useGetGeldigePrijsafspraak<TData = Awaited<ReturnType<typeof getGeldigePrijsafspraak>>, TError = ErrorType<unknown>>(
+ params?: GetGeldigePrijsafspraakParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGeldigePrijsafspraak>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGeldigePrijsafspraakQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdatePrijsafspraakUrl = (id: number,) => {
+
+
+
+
+  return `/api/prijsafspraken/${id}`
+}
+
+/**
+ * @summary Niet-prijsvelden bijwerken (bron/notities/toeslagen); prijs of periode wijzigen = nieuwe afspraak
+ */
+export const updatePrijsafspraak = async (id: number,
+    prijsafspraakPatch: PrijsafspraakPatch, options?: RequestInit): Promise<Prijsafspraak> => {
+
+  return customFetch<Prijsafspraak>(getUpdatePrijsafspraakUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(prijsafspraakPatch)
+  }
+);}
+
+
+
+
+export const getUpdatePrijsafspraakMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrijsafspraak>>, TError,{id: number;data: BodyType<PrijsafspraakPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePrijsafspraak>>, TError,{id: number;data: BodyType<PrijsafspraakPatch>}, TContext> => {
+
+const mutationKey = ['updatePrijsafspraak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePrijsafspraak>>, {id: number;data: BodyType<PrijsafspraakPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePrijsafspraak(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePrijsafspraakMutationResult = NonNullable<Awaited<ReturnType<typeof updatePrijsafspraak>>>
+    export type UpdatePrijsafspraakMutationBody = BodyType<PrijsafspraakPatch>
+    export type UpdatePrijsafspraakMutationError = ErrorType<void>
+
+    /**
+ * @summary Niet-prijsvelden bijwerken (bron/notities/toeslagen); prijs of periode wijzigen = nieuwe afspraak
+ */
+export const useUpdatePrijsafspraak = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrijsafspraak>>, TError,{id: number;data: BodyType<PrijsafspraakPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePrijsafspraak>>,
+        TError,
+        {id: number;data: BodyType<PrijsafspraakPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdatePrijsafspraakMutationOptions(options));
+    }
+
+export const getBeeindigPrijsafspraakUrl = (id: number,) => {
+
+
+
+
+  return `/api/prijsafspraken/${id}/beeindigen`
+}
+
+/**
+ * @summary Afspraak inkorten (nieuwe geldig_tot); alleen inkorten, nooit verlengen
+ */
+export const beeindigPrijsafspraak = async (id: number,
+    beeindigPrijsafspraakBody: BeeindigPrijsafspraakBody, options?: RequestInit): Promise<Prijsafspraak> => {
+
+  return customFetch<Prijsafspraak>(getBeeindigPrijsafspraakUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beeindigPrijsafspraakBody)
+  }
+);}
+
+
+
+
+export const getBeeindigPrijsafspraakMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beeindigPrijsafspraak>>, TError,{id: number;data: BodyType<BeeindigPrijsafspraakBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beeindigPrijsafspraak>>, TError,{id: number;data: BodyType<BeeindigPrijsafspraakBody>}, TContext> => {
+
+const mutationKey = ['beeindigPrijsafspraak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beeindigPrijsafspraak>>, {id: number;data: BodyType<BeeindigPrijsafspraakBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  beeindigPrijsafspraak(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeeindigPrijsafspraakMutationResult = NonNullable<Awaited<ReturnType<typeof beeindigPrijsafspraak>>>
+    export type BeeindigPrijsafspraakMutationBody = BodyType<BeeindigPrijsafspraakBody>
+    export type BeeindigPrijsafspraakMutationError = ErrorType<void>
+
+    /**
+ * @summary Afspraak inkorten (nieuwe geldig_tot); alleen inkorten, nooit verlengen
+ */
+export const useBeeindigPrijsafspraak = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beeindigPrijsafspraak>>, TError,{id: number;data: BodyType<BeeindigPrijsafspraakBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beeindigPrijsafspraak>>,
+        TError,
+        {id: number;data: BodyType<BeeindigPrijsafspraakBody>},
+        TContext
+      > => {
+      return useMutation(getBeeindigPrijsafspraakMutationOptions(options));
+    }
+
+export const getListMarktspiegelOnderzoekenUrl = () => {
+
+
+
+
+  return `/api/marktspiegel`
+}
+
+/**
+ * @summary Marktspiegel-onderzoeken ophalen (recent eerst)
+ */
+export const listMarktspiegelOnderzoeken = async ( options?: RequestInit): Promise<MarktspiegelOnderzoek[]> => {
+
+  return customFetch<MarktspiegelOnderzoek[]>(getListMarktspiegelOnderzoekenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarktspiegelOnderzoekenQueryKey = () => {
+    return [
+    `/api/marktspiegel`
+    ] as const;
+    }
+
+
+export const getListMarktspiegelOnderzoekenQueryOptions = <TData = Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarktspiegelOnderzoekenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>> = ({ signal }) => listMarktspiegelOnderzoeken({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarktspiegelOnderzoekenQueryResult = NonNullable<Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>>
+export type ListMarktspiegelOnderzoekenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Marktspiegel-onderzoeken ophalen (recent eerst)
+ */
+
+export function useListMarktspiegelOnderzoeken<TData = Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarktspiegelOnderzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarktspiegelOnderzoekenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getStartMarktspiegelOnderzoekUrl = () => {
+
+
+
+
+  return `/api/marktspiegel`
+}
+
+/**
+ * @summary Een marktspiegel-onderzoek starten (alleen op aanvraag; draait asynchroon)
+ */
+export const startMarktspiegelOnderzoek = async (marktspiegelOnderzoekInput: MarktspiegelOnderzoekInput, options?: RequestInit): Promise<MarktspiegelOnderzoek> => {
+
+  return customFetch<MarktspiegelOnderzoek>(getStartMarktspiegelOnderzoekUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marktspiegelOnderzoekInput)
+  }
+);}
+
+
+
+
+export const getStartMarktspiegelOnderzoekMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>, TError,{data: BodyType<MarktspiegelOnderzoekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>, TError,{data: BodyType<MarktspiegelOnderzoekInput>}, TContext> => {
+
+const mutationKey = ['startMarktspiegelOnderzoek'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>, {data: BodyType<MarktspiegelOnderzoekInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startMarktspiegelOnderzoek(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartMarktspiegelOnderzoekMutationResult = NonNullable<Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>>
+    export type StartMarktspiegelOnderzoekMutationBody = BodyType<MarktspiegelOnderzoekInput>
+    export type StartMarktspiegelOnderzoekMutationError = ErrorType<void>
+
+    /**
+ * @summary Een marktspiegel-onderzoek starten (alleen op aanvraag; draait asynchroon)
+ */
+export const useStartMarktspiegelOnderzoek = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>, TError,{data: BodyType<MarktspiegelOnderzoekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startMarktspiegelOnderzoek>>,
+        TError,
+        {data: BodyType<MarktspiegelOnderzoekInput>},
+        TContext
+      > => {
+      return useMutation(getStartMarktspiegelOnderzoekMutationOptions(options));
+    }
+
+export const getGetMarktspiegelOnderzoekUrl = (id: number,) => {
+
+
+
+
+  return `/api/marktspiegel/${id}`
+}
+
+/**
+ * @summary Eén marktspiegel-onderzoek ophalen (voor polling zolang 'bezig')
+ */
+export const getMarktspiegelOnderzoek = async (id: number, options?: RequestInit): Promise<MarktspiegelOnderzoek> => {
+
+  return customFetch<MarktspiegelOnderzoek>(getGetMarktspiegelOnderzoekUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMarktspiegelOnderzoekQueryKey = (id: number,) => {
+    return [
+    `/api/marktspiegel/${id}`
+    ] as const;
+    }
+
+
+export const getGetMarktspiegelOnderzoekQueryOptions = <TData = Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMarktspiegelOnderzoekQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>> = ({ signal }) => getMarktspiegelOnderzoek(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMarktspiegelOnderzoekQueryResult = NonNullable<Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>>
+export type GetMarktspiegelOnderzoekQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eén marktspiegel-onderzoek ophalen (voor polling zolang 'bezig')
+ */
+
+export function useGetMarktspiegelOnderzoek<TData = Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarktspiegelOnderzoek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMarktspiegelOnderzoekQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

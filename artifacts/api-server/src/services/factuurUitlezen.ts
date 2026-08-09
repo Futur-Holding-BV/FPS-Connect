@@ -225,6 +225,17 @@ export async function leesFactuurUitMetAi(factuurId: number, log: Logger): Promi
       bijgewerktOp: new Date(),
     }).where(eq(facturenTable.id, factuurId)).returning();
 
+    // PRIJS_01 §6 — toets de zojuist ingelezen regels tegen de prijsafspraken en
+    // cache de uitkomst. Geen request-actor in deze AI-stroom, dus geen
+    // goedkeuringsaanvraag hier; die volgt bij de (gebruikersgestuurde)
+    // inkoper-bevestiging. Nooit ophouden op een falende toets.
+    try {
+      const { controleerFactuurRegels } = await import("./factuurPrijscontrole");
+      await controleerFactuurRegels(factuurId, null);
+    } catch (err) {
+      log.error(err);
+    }
+
     return {
       ok: true,
       factuur: updated,

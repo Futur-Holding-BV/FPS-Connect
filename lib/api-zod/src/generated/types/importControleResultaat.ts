@@ -5,7 +5,9 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { ImportControleResultaatNietKoppelbaar } from './importControleResultaatNietKoppelbaar';
 import type { ImportControleResultaatOnbruikbaarRedenenItem } from './importControleResultaatOnbruikbaarRedenenItem';
+import type { ImportControleResultaatVergelijking } from './importControleResultaatVergelijking';
 
 export interface ImportControleResultaat {
   totaal_rijen: number;
@@ -15,4 +17,8 @@ export interface ImportControleResultaat {
   onbruikbaar_redenen?: ImportControleResultaatOnbruikbaarRedenenItem[];
   /** @nullable */
   sleutel_omschrijving?: string | null;
+  /** PRIJS_01 §4 — vergelijking met de vorige geldige afspraak (alleen prijsafspraken). */
+  vergelijking?: ImportControleResultaatVergelijking;
+  /** PRIJS_01 §4 — regels zonder match op een eigen artikel (bewaard als leverancierscode). */
+  niet_koppelbaar?: ImportControleResultaatNietKoppelbaar;
 }

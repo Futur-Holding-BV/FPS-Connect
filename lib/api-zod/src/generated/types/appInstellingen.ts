@@ -43,6 +43,10 @@ export interface AppInstellingen {
   aanvraag_reactietermijn_uren?: number;
   /** Grens (uren) waarbinnen een geaccepteerde aanvraag inhoudelijk opgepakt moet zijn (fase voorbij Signaal); daarna volgt een signaal. */
   aanvraag_oppak_termijn_uren?: number;
+  /** PRIJS_01 §5 — toegestane afwijkingsmarge (%) tussen factuurprijs en afgesproken jaarprijs voordat een prijsafwijking wordt gemeld. */
+  prijsafwijking_marge_pct?: number;
+  /** PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60. */
+  prijsafspraak_bewaking_dagen?: number;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;

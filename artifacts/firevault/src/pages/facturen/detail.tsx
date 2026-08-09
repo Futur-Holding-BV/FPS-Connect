@@ -26,7 +26,9 @@ import {
   useKeurFactuurGoedStroom,
   useKoppelFactuurLeverancier,
   useListLeveranciers,
+  useGetFactuurPrijscontrole,
 } from "@workspace/api-client-react";
+import { Badge } from "@/components/ui/badge";
 import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
 import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1645,6 +1647,14 @@ function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
   const { data: regels, isLoading } = useListFactuurRegels(factuurId, {
     query: { queryKey: ["factuur-regels", factuurId] },
   });
+  // PRIJS_01 §6 — stille prijscontrole tegen de jaarprijzen. Toont per regel
+  // rustig een afwijking; niets bij 'klopt'/'geen afspraak'. Blokkeert niets.
+  const { data: prijscontrole } = useGetFactuurPrijscontrole(factuurId, undefined, {
+    query: { queryKey: ["factuur-prijscontrole", factuurId] },
+  });
+  const controlePerRegel = new Map<number, NonNullable<typeof prijscontrole>["regels"][number]>();
+  for (const r of prijscontrole?.regels ?? []) controlePerRegel.set(r.regel_id, r);
+  const nf = (n: number | null | undefined) => (n == null ? "" : `€ ${n.toFixed(2)}`);
   if (isLoading) return null;
   if (!regels || regels.length === 0) return null;
   return (
@@ -1672,10 +1682,22 @@ function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
               </tr>
             </thead>
             <tbody>
-              {regels.map((r) => (
+              {regels.map((r) => {
+                const c = controlePerRegel.get(r.id);
+                return (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
                   <td className="px-3 py-2 text-muted-foreground">{r.regelnummer}</td>
-                  <td className="px-3 py-2">{r.omschrijving ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    {r.omschrijving ?? "—"}
+                    {c?.uitkomst === "afwijking" && (
+                      <span
+                        className="ml-2 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-200"
+                        title={`Jaarprijs${c.afspraak_leverancier ? ` ${c.afspraak_leverancier}` : ""}: ${nf(c.afgesproken_prijs)} — factuur ${nf(c.factuur_stukprijs)} (+${nf(c.verschil_per_stuk)}/stuk${c.verschil_totaal != null ? `, +${nf(c.verschil_totaal)} totaal` : ""})`}
+                      >
+                        boven jaarprijs {c.verschil_per_stuk != null ? `+${nf(c.verschil_per_stuk)}` : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right font-mono text-xs">
                     {r.hoeveelheid != null ? `${r.hoeveelheid}${r.eenheid ? ` ${r.eenheid}` : ""}` : "—"}
                   </td>
@@ -1692,10 +1714,26 @@ function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.grootboekrekening ?? "—"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
+        {prijscontrole && prijscontrole.aantal_afwijkingen > 0 && (
+          <div className="px-3 py-2 border-t bg-amber-50/50 text-xs text-amber-800 flex items-center gap-2">
+            <FileWarning className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {prijscontrole.aantal_afwijkingen} regel{prijscontrole.aantal_afwijkingen !== 1 ? "s" : ""} boven de afgesproken jaarprijs
+              {prijscontrole.totaal_meer_betaald > 0 ? ` — samen € ${prijscontrole.totaal_meer_betaald.toFixed(2)} meer dan afgesproken` : ""}.
+              {" "}Dit is een signaal, geen fout; de directie beoordeelt de afwijking.
+            </span>
+          </div>
+        )}
+        {prijscontrole && prijscontrole.aantal_niet_te_toetsen > 0 && (
+          <div className="px-3 py-1.5 border-t text-[11px] text-muted-foreground">
+            {prijscontrole.aantal_niet_te_toetsen} regel{prijscontrole.aantal_niet_te_toetsen !== 1 ? "s" : ""} kon niet tegen een jaarprijs worden getoetst.
+          </div>
+        )}
       </CardContent>
     </Card>
   );

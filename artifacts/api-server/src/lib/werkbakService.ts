@@ -83,6 +83,13 @@ export const WERKBAK_BRONNEN = [
   "ai_hrm_capaciteit",
   // AI_01 §3.5: actieve opdracht met materiaalregels zonder leverancier/inkoopkoppeling → werkvoorbereider.
   "ai_werkvoorbereiding_signaal",
+  // PRIJS_01 §7: prijsafspraak (jaarprijs) loopt binnenkort af → financieel (doen),
+  // en leverancier met uitsluitend verlopen afspraken maar recente facturen → financieel (weten).
+  "prijsafspraak_verloopt",
+  "leverancier_afspraak_verlopen",
+  // PRIJS_01 §8.2: bij het inladen van een nieuwe prijslijst werden artikelen
+  // duurder → 'weten'-item dat naar de marktspiegel verwijst (geen automatische run).
+  "prijsverhoging_import",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

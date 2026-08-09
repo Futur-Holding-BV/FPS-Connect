@@ -45,6 +45,7 @@ import {
   maakGoedkeuringActor,
 } from "../services/goedkeuring-engine";
 import { leesFactuurUitMetAi } from "../services/factuurUitlezen";
+import { controleerFactuurRegels, type FactuurPrijscontrole } from "../services/factuurPrijscontrole";
 // FACTUUR_02 §2/§5 — facturen in de mailstroom hebben eigen statussen; de oude
 // accordeer-/goedkeuringspaden mogen die stroom nooit passeren.
 const STROOM_STATUSSEN = new Set(["wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling"]);
@@ -766,6 +767,14 @@ router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 1)
     return;
   }
   const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  // PRIJS_01 §6 — hertoets de regels tegen de prijsafspraken vóór de statuswissel.
+  // Alleen rapporteren/indienen bij de goedkeuringsmotor; nooit ophouden.
+  try {
+    const actor = await maakGoedkeuringActor(req as { session: { userId?: number | null } }, db);
+    await controleerFactuurRegels(id, actor);
+  } catch (err) {
+    req.log.error(err);
+  }
   await db.update(facturenTable).set({
     status: "wacht_op_goedkeuring",
     inkoperBevestigdOp: new Date(),
@@ -809,6 +818,68 @@ router.post("/facturen/:id/goedkeuren-stroom", requireBevoegdheid("financieel", 
   }).where(eq(facturenTable.id, id));
   await schrijfTijdlijn(id, `${wie?.naam ?? "De directie"} heeft de factuur goedgekeurd en de betaling vrijgegeven. De factuur staat klaar voor betaling.`, wie?.naam ?? null);
   res.json({ ok: true, status: "klaar_voor_betaling" });
+});
+
+// ── PRIJS_01 §6 — GET /facturen/prijscontrole/maandtotaal ────────────────────
+// MOET vóór /facturen/:id staan (wildcard-volgorde). Sommeert het "te veel
+// betaald" over facturen met een factuurdatum in de gevraagde maand, op basis
+// van de gecachete prijscontrole. Puur rapporterend; nooit blokkerend.
+router.get("/facturen/prijscontrole/maandtotaal", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const maand = typeof req.query["maand"] === "string" ? req.query["maand"] : "";
+  if (!/^\d{4}-\d{2}$/.test(maand)) {
+    res.status(400).json({ error: "maand moet YYYY-MM zijn" });
+    return;
+  }
+  const rijen = await db
+    .select({ id: facturenTable.id, factuurnummer: facturenTable.factuurnummer, leverancierId: facturenTable.leverancierId, prijscontrole: facturenTable.prijscontrole })
+    .from(facturenTable)
+    .where(and(isNotNull(facturenTable.prijscontrole), sql`${facturenTable.factuurdatum} LIKE ${maand + "-%"}`));
+
+  let totaalMeerBetaald = 0;
+  let aantalAfwijkingen = 0;
+  const regels: Array<Record<string, unknown>> = [];
+  for (const rij of rijen) {
+    const pc = rij.prijscontrole as unknown as FactuurPrijscontrole | null;
+    if (!pc || !Array.isArray(pc.regels)) continue;
+    for (const r of pc.regels) {
+      if (r.uitkomst !== "afwijking") continue;
+      aantalAfwijkingen++;
+      if (r.verschil_totaal != null && r.verschil_totaal > 0) totaalMeerBetaald += r.verschil_totaal;
+      regels.push({
+        factuur_id: rij.id,
+        factuurnummer: rij.factuurnummer,
+        omschrijving: r.omschrijving,
+        afgesproken_prijs: r.afgesproken_prijs,
+        factuur_stukprijs: r.factuur_stukprijs,
+        verschil_per_stuk: r.verschil_per_stuk,
+        verschil_totaal: r.verschil_totaal,
+        afspraak_leverancier: r.afspraak_leverancier,
+      });
+    }
+  }
+  res.json({
+    maand,
+    totaal_meer_betaald: Math.round(totaalMeerBetaald * 100) / 100,
+    aantal_afwijkingen: aantalAfwijkingen,
+    regels,
+  });
+});
+
+// ── PRIJS_01 §6 — GET /facturen/:id/prijscontrole ────────────────────────────
+// Geeft de laatste toetsing van de factuurregels tegen de prijsafspraken. Toetst
+// desgevraagd opnieuw (verse=1). Nooit blokkerend.
+router.get("/facturen/:id/prijscontrole", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [rij] = await db.select({ id: facturenTable.id, prijscontrole: facturenTable.prijscontrole }).from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  const verse = req.query["verse"] === "1" || req.query["verse"] === "true";
+  if (verse || !rij.prijscontrole) {
+    const actor = await maakGoedkeuringActor(req as { session: { userId?: number | null } }, db);
+    const resultaat = await controleerFactuurRegels(id, actor);
+    res.json(resultaat);
+    return;
+  }
+  res.json(rij.prijscontrole);
 });
 
 // ── GET /facturen/:id ──────────────────────────────────────────────────────────

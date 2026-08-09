@@ -43,6 +43,8 @@ export * from "./werkbak";
 export * from "./werkvoorbereiding";
 export * from "./leveranciers";
 export * from "./artikelen";
+export * from "./prijsafspraken";
+export * from "./marktspiegel";
 export * from "./import_logs";
 export * from "./onderhanden-werk";
 export * from "./financieel-jaarrekeningen";

@@ -38,6 +38,12 @@ type Artikel = {
   id: number; leverancier_id: number | null; leverancier_naam: string | null;
   artikelcode: string | null; omschrijving: string; eenheid: string;
   inkoopprijs: number; verkoopprijs: number; categorie: string; actief: boolean;
+  // PRIJS_01 §5 — verrijking uit de geldige prijsafspraak (afspraak-herkomst).
+  afgesproken_prijs?: number | null;
+  afspraak_id?: number | null;
+  afspraak_leverancier?: string | null;
+  afspraak_periode?: { van: string; tot: string } | null;
+  prijs_bron?: "afspraak" | "catalogus";
 };
 
 const LEGE_LEVERANCIER = { naam: "", contactpersoon: "", email: "", telefoon: "", website: "", notities: "" };
@@ -47,6 +53,14 @@ const CATEGORIEEN = ["materiaal", "arbeid", "onderaanneming", "materieel", "over
 
 function formatBedrag(n: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
+}
+
+// PRIJS_01 §5: datum uit een prijsafspraak (JJJJ-MM-DD) → NL-notatie.
+function formatDatum(d: string | null | undefined) {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" }).format(dt);
 }
 
 export default function ModulesCalculatieLeveranciers() {
@@ -385,7 +399,25 @@ export default function ModulesCalculatieLeveranciers() {
                         <td className="px-4 py-2">
                           <Badge variant="outline" className="text-xs capitalize">{a.categorie}</Badge>
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums">{formatBedrag(a.inkoopprijs)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">
+                          {a.prijs_bron === "afspraak" && a.afgesproken_prijs != null ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium">{formatBedrag(a.afgesproken_prijs)}</span>
+                                {a.afgesproken_prijs !== a.inkoopprijs && (
+                                  <span className="text-xs text-muted-foreground line-through">{formatBedrag(a.inkoopprijs)}</span>
+                                )}
+                              </div>
+                              {/* Feit, geen AI: secondary/muted, nooit amber (PRIJS_01 §5/§11.4). */}
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                Jaarprijs{a.afspraak_leverancier ? ` ${a.afspraak_leverancier}` : ""}
+                                {a.afspraak_periode?.tot ? ` · t/m ${formatDatum(a.afspraak_periode.tot)}` : ""}
+                              </Badge>
+                            </div>
+                          ) : (
+                            <span title="Geen afgesproken inkoopprijs">{formatBedrag(a.inkoopprijs)}</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-right tabular-nums font-medium">{formatBedrag(a.verkoopprijs)}</td>
                         <td className="px-4 py-2 text-muted-foreground">{a.eenheid}</td>
                         <td className="px-4 py-2">

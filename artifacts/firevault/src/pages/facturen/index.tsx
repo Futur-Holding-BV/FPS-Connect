@@ -6,6 +6,7 @@ import {
   useDeleteFactuur,
   useAiUitlezenFactuur,
   useListGebouwen,
+  useGetFactuurPrijscontroleMaandtotaal,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,30 @@ const STATUS_ICOON: Record<string, React.ReactNode> = {
 function euro(v?: string | null) {
   if (!v) return "—";
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(parseFloat(v));
+}
+
+// PRIJS_01 §6 — rustige maandkaart met het totaal "te veel betaald" t.o.v. de
+// afgesproken jaarprijzen. Toont niets als er geen afwijkingen zijn.
+function PrijsafwijkingMaandkaart() {
+  const now = new Date();
+  const maand = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const { data } = useGetFactuurPrijscontroleMaandtotaal(
+    { maand },
+    { query: { queryKey: ["factuur-prijscontrole-maandtotaal", maand] } },
+  );
+  if (!data || data.aantal_afwijkingen === 0) return null;
+  const bedrag = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(data.totaal_meer_betaald);
+  return (
+    <Card className="border-amber-200 bg-amber-50/40">
+      <CardContent className="py-3 px-4 flex items-center gap-3">
+        <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="text-sm text-amber-900">
+          <span className="font-medium">{bedrag} boven de jaarprijzen deze maand</span>
+          <span className="text-amber-700"> — {data.aantal_afwijkingen} factuurregel{data.aantal_afwijkingen !== 1 ? "s" : ""} boven de afgesproken prijs. Een signaal, geen fout.</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function FacturenPagina() {
@@ -139,6 +164,9 @@ export default function FacturenPagina() {
           </Button>
         </div>
       </div>
+
+      {/* PRIJS_01 §6 — maandtotaal prijsafwijkingen t.o.v. de jaarprijzen */}
+      <PrijsafwijkingMaandkaart />
 
       {/* Status-tabs */}
       <div className="flex items-center justify-between gap-4">

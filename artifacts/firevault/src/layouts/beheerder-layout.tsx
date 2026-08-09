@@ -1111,6 +1111,28 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/financieel/marktspiegel"}
+                        >
+                          <Link href="/financieel/marktspiegel">
+                            <ScanSearch />
+                            <span>Marktspiegel</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/beheer/prijsafspraken"}
+                        >
+                          <Link href="/beheer/prijsafspraken">
+                            <Handshake />
+                            <span>Prijsafspraken</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                       {heeftNiveau("financieel_vertrouwelijk", 1) && (
                         <>
                           <SidebarMenuItem className="pl-5">
