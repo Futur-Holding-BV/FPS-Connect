@@ -16004,6 +16004,109 @@ paths:
         '204':
           description: Verwijderd
 
+  /projecten/{id}/overwerkslot:
+    get:
+      operationId: getOverwerkslot
+      summary: Overwerkslot-status van een project (UREN_01 §4)
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sloten]
+                properties:
+                  open_slot:
+                    nullable: true
+                    allOf: [{ $ref: '#/components/schemas/OverwerkSlot' }]
+                  sloten:
+                    type: array
+                    items: { $ref: '#/components/schemas/OverwerkSlot' }
+
+  /projecten/{id}/overwerkslot/openen:
+    post:
+      operationId: openOverwerkslot
+      summary: Overwerkslot openzetten (projectleider of hoofdbeheerder; altijd met einde)
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geldig_tot, reden]
+              properties:
+                geldig_van: { type: string, nullable: true }
+                geldig_tot: { type: string }
+                uren_plafond: { type: number, nullable: true }
+                reden: { type: string }
+                aanvraag_id: { type: integer, nullable: true }
+      responses:
+        '201':
+          description: Slot geopend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OverwerkSlot' }
+
+  /projecten/{id}/overwerkslot/sluiten:
+    post:
+      operationId: sluitOverwerkslot
+      summary: Overwerkslot sluiten
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Gesloten
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gesloten]
+                properties:
+                  gesloten: { type: integer }
+
+  /projecten/{id}/overwerk-toestemming:
+    post:
+      operationId: vraagOverwerkToestemming
+      summary: Toestemming vragen voor overwerk boven de weekgrens (naar projectleider en René)
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [datum, uren]
+              properties:
+                datum: { type: string }
+                uren: { type: number }
+                toelichting: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Aanvraag geplaatst
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status]
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  meldingen_geplaatst: { type: integer }
+
   /weekstaten:
     get:
       operationId: listWeekStaten
@@ -38176,6 +38279,21 @@ components:
       type: object
       required: [id, datum, medewerker_id, begin_tijd, eind_tijd, pauze_minuten, netto_uren, status, afgewezen, aangemaakt_op, bijgewerkt_op]
       properties:
+        overwerk:
+          nullable: true
+          description: UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.
+          type: object
+          properties:
+            boven_uren: { type: number }
+            grens: { type: number }
+            slot_id: { type: integer, nullable: true }
+            tvt_voorstel:
+              type: object
+              properties:
+                start_datum: { type: string }
+                eind_datum: { type: string }
+                aantal_uren: { type: number }
+                reden: { type: string }
         id:
           type: integer
         datum:
@@ -38457,6 +38575,33 @@ components:
           type: number
         adv_uren:
           type: number
+        adv_reden:
+          type: string
+          nullable: true
+          description: Waarom er geen ADV wordt opgebouwd (bv. "geen ADV-opbouw (CAO)"); null als er wél opbouw is.
+        overwerk_grens:
+          type: number
+          nullable: true
+          description: Weekgrens (CAO-drempel + ADV) waarboven een open overwerkslot vereist is.
+
+    OverwerkSlot:
+      type: object
+      required: [id, project_id, status, verbruikte_uren]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        status: { type: string, enum: [aangevraagd, open, gesloten] }
+        geldig_van: { type: string, nullable: true }
+        geldig_tot: { type: string, nullable: true }
+        uren_plafond: { type: number, nullable: true }
+        verbruikte_uren: { type: number }
+        reden: { type: string, nullable: true }
+        motivatie_aanvraag: { type: string, nullable: true }
+        geopend_door_id: { type: integer, nullable: true }
+        geopend_door_naam: { type: string, nullable: true }
+        geopend_op: { type: string, nullable: true }
+        gesloten_op: { type: string, nullable: true }
+        aangevraagd_op: { type: string, nullable: true }
 
     Gereedschap:
       type: object

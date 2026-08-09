@@ -1,9 +1,12 @@
 import { useState, useRef } from "react";
 import {
   useListUren, useListMedewerkers, useCreateUrenRegistratie,
-  useListOpdrachten, useGetMijnWerk,
+  useListOpdrachten, useGetMijnWerk, useGetMijnWeekUren,
+  useVraagOverwerkToestemming,
+  ApiError,
 } from "@workspace/api-client-react";
 import type { Opdracht } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card, CardContent,
 } from "@/components/ui/card";
@@ -245,7 +248,12 @@ function UrenInvoerDialog({
   const [form, setForm] = useState(LEEG_FORM);
   const [opdracht, setOpdracht] = useState<Opdracht | null>(null);
   const [fout, setFout] = useState<string | null>(null);
+  // Bij een dichte-overwerkslot-fout: gegevens om toestemming te vragen.
+  const [overwerkFout, setOverwerkFout] = useState<{ project_id: number; boven_uren: number } | null>(null);
+  const [toestemmingGevraagd, setToestemmingGevraagd] = useState(false);
   const aanmaken = useCreateUrenRegistratie();
+  const toestemmingVragen = useVraagOverwerkToestemming();
+  const { toast } = useToast();
 
   function set(k: keyof typeof LEEG_FORM, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -260,6 +268,8 @@ function UrenInvoerDialog({
 
   async function opslaan() {
     setFout(null);
+    setOverwerkFout(null);
+    setToestemmingGevraagd(false);
     if (!form.datum || !form.begin_tijd || !form.eind_tijd) {
       setFout("Datum, begintijd en eindtijd zijn verplicht.");
       return;
@@ -287,8 +297,50 @@ function UrenInvoerDialog({
       setOpdracht(null);
       onOpgeslagen();
       onClose();
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        const data = err.data as {
+          code?: string;
+          error?: string;
+          boven_uren?: number;
+          grens?: number;
+          project_id?: number;
+        } | null;
+        if (data?.code === "OVERWERK_SLOT_DICHT") {
+          const uitleg = data.error
+            ?? "Het weektotaal komt boven de grens uit en dit project heeft geen open overwerkslot. Vraag de projectleider om overwerk toe te staan.";
+          setFout(uitleg);
+          const projectId = opdracht?.project_id ?? (typeof data.project_id === "number" ? data.project_id : null);
+          if (projectId != null) {
+            setOverwerkFout({ project_id: projectId, boven_uren: data.boven_uren ?? 0 });
+          }
+          toast({
+            title: "Overwerk niet toegestaan",
+            description: uitleg,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       setFout("Opslaan mislukt. Probeer het opnieuw.");
+    }
+  }
+
+  async function vraagToestemming() {
+    if (!overwerkFout) return;
+    try {
+      await toestemmingVragen.mutateAsync({
+        id: overwerkFout.project_id,
+        data: {
+          datum: form.datum,
+          uren: overwerkFout.boven_uren,
+          toelichting: form.opmerkingen || undefined,
+        },
+      });
+      setToestemmingGevraagd(true);
+      toast({ title: "Toestemmingsvraag verstuurd naar de projectleider" });
+    } catch {
+      toast({ title: "Versturen mislukt", description: "Probeer het opnieuw.", variant: "destructive" });
     }
   }
 
@@ -373,7 +425,21 @@ function UrenInvoerDialog({
             />
           </div>
 
-          {fout && <p className="text-sm text-destructive">{fout}</p>}
+          {fout && (
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">{fout}</p>
+              {overwerkFout && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={vraagToestemming}
+                  disabled={toestemmingVragen.isPending || toestemmingGevraagd}
+                >
+                  {toestemmingGevraagd ? "Toestemming gevraagd" : "Toestemming vragen"}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -457,6 +523,11 @@ function UrenOverzichtTab({ onNieuw }: { onNieuw: () => void }) {
     status: statusFilter !== "alle" ? statusFilter : undefined,
   } as Parameters<typeof useListUren>[0]);
 
+  // Eigen weekoverzicht: reden waarom er geen ADV wordt opgebouwd (bv. CAO).
+  const { data: mijnWeek } = useGetMijnWeekUren({ jaar, week });
+  const toonAdvReden =
+    mijnWeek != null && (mijnWeek.adv_uren ?? 0) === 0 && !!mijnWeek.adv_reden;
+
   const uren = categorieFilter === "alle"
     ? urenRaw
     : urenRaw.filter((u) => u.werkzaamheid_categorie === categorieFilter);
@@ -526,6 +597,10 @@ function UrenOverzichtTab({ onNieuw }: { onNieuw: () => void }) {
           <p className="text-2xl font-bold text-orange-600">{openstaand}</p>
         </CardContent></Card>
       </div>
+
+      {toonAdvReden && (
+        <p className="text-xs text-muted-foreground -mt-1">{mijnWeek?.adv_reden}</p>
+      )}
 
       <Card>
         <CardContent className="p-0">

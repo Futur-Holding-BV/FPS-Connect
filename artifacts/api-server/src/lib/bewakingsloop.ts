@@ -36,6 +36,8 @@ import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { syncBron, meldWerkbakItem, type WerkbakInvoer } from "./werkbakService";
+import { beoordeelVorigeWeek, bouwWeekControleItems, bouwTvtOpnameItems } from "./weekControle";
+import { vindGebruikersMetFunctietitel } from "./bouwMeldingen";
 import { voerContractBewakingUit } from "../routes/contract-bewaking";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
@@ -667,6 +669,29 @@ async function voedMailAntwoorden(): Promise<{ nieuw: number; afgehandeld: numbe
 
 let _loopBezig = false;
 
+// UREN_01 §6: wekelijkse volledigheidscontrole — maandagochtend over de week
+// ervoor (dedup per medewerker+week; de loop draait dagelijks 06:30).
+async function voedWeekstaatControle(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const resultaten = await beoordeelVorigeWeek();
+  const items = bouwWeekControleItems(resultaten);
+  let nieuw = 0;
+  for (const item of items) {
+    if (await meldWerkbakItem(item)) nieuw += 1;
+  }
+  return { nieuw, afgehandeld: 0 };
+}
+
+// UREN_01 §5: tijd-voor-tijd langer dan een maand open → herinnering (geen verval).
+async function voedTvtOpname(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const plIds = await vindGebruikersMetFunctietitel("Projectleider");
+  const items = await bouwTvtOpnameItems(plIds);
+  let nieuw = 0;
+  for (const item of items) {
+    if (await meldWerkbakItem(item)) nieuw += 1;
+  }
+  return { nieuw, afgehandeld: 0 };
+}
+
 export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: number; afgehandeld: number } | { fout: string }>> {
   // Overlap-guard: een tweede (handmatige) draai tijdens een lopende draai kan
   // via reconciliatie een halfgesynchroniseerde set als stale afsluiten.
@@ -690,6 +715,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["betaalbatches", voedBetaalbatches],
     ["conceptantwoorden", voedConceptantwoorden],
     ["mail_antwoorden", voedMailAntwoorden],
+    ["weekstaat_controle", voedWeekstaatControle],
+    ["tvt_opname", voedTvtOpname],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

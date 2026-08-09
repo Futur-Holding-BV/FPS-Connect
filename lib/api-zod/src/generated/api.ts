@@ -19163,6 +19163,17 @@ export const ListUrenQueryParams = zod.object({
 })
 
 export const ListUrenResponseItem = zod.object({
+  "overwerk": zod.object({
+  "boven_uren": zod.number().optional(),
+  "grens": zod.number().optional(),
+  "slot_id": zod.number().nullish(),
+  "tvt_voorstel": zod.object({
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional(),
+  "aantal_uren": zod.number().optional(),
+  "reden": zod.string().optional()
+}).optional()
+}).nullish().describe('UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.'),
   "id": zod.number(),
   "datum": zod.string(),
   "medewerker_id": zod.number(),
@@ -19232,6 +19243,17 @@ export const GetMijnWeekUrenResponse = zod.object({
   "datum_van": zod.string(),
   "datum_tot": zod.string(),
   "uren": zod.array(zod.object({
+  "overwerk": zod.object({
+  "boven_uren": zod.number().optional(),
+  "grens": zod.number().optional(),
+  "slot_id": zod.number().nullish(),
+  "tvt_voorstel": zod.object({
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional(),
+  "aantal_uren": zod.number().optional(),
+  "reden": zod.string().optional()
+}).optional()
+}).nullish().describe('UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.'),
   "id": zod.number(),
   "datum": zod.string(),
   "medewerker_id": zod.number(),
@@ -19281,7 +19303,9 @@ export const GetMijnWeekUrenResponse = zod.object({
   "eind_tijd": zod.string().nullish()
 })),
   "totaal_uren": zod.number(),
-  "adv_uren": zod.number()
+  "adv_uren": zod.number(),
+  "adv_reden": zod.string().nullish().describe('Waarom er geen ADV wordt opgebouwd (bv. \"geen ADV-opbouw (CAO)\"); null als er wél opbouw is.'),
+  "overwerk_grens": zod.number().nullish().describe('Weekgrens (CAO-drempel + ADV) waarboven een open overwerkslot vereist is.')
 })
 
 
@@ -19306,6 +19330,17 @@ export const GetUrenRegistratieParams = zod.object({
 })
 
 export const GetUrenRegistratieResponse = zod.object({
+  "overwerk": zod.object({
+  "boven_uren": zod.number().optional(),
+  "grens": zod.number().optional(),
+  "slot_id": zod.number().nullish(),
+  "tvt_voorstel": zod.object({
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional(),
+  "aantal_uren": zod.number().optional(),
+  "reden": zod.string().optional()
+}).optional()
+}).nullish().describe('UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.'),
   "id": zod.number(),
   "datum": zod.string(),
   "medewerker_id": zod.number(),
@@ -19361,6 +19396,17 @@ export const UpdateUrenRegistratieBody = zod.object({
 })
 
 export const UpdateUrenRegistratieResponse = zod.object({
+  "overwerk": zod.object({
+  "boven_uren": zod.number().optional(),
+  "grens": zod.number().optional(),
+  "slot_id": zod.number().nullish(),
+  "tvt_voorstel": zod.object({
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional(),
+  "aantal_uren": zod.number().optional(),
+  "reden": zod.string().optional()
+}).optional()
+}).nullish().describe('UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.'),
   "id": zod.number(),
   "datum": zod.string(),
   "medewerker_id": zod.number(),
@@ -19399,6 +19445,95 @@ export const DeleteUrenRegistratieParams = zod.object({
 })
 
 export const DeleteUrenRegistratieResponse = zod.void()
+
+
+/**
+ * @summary Overwerkslot-status van een project (UREN_01 §4)
+ */
+export const GetOverwerkslotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOverwerkslotResponse = zod.object({
+  "open_slot": zod.object({
+  "id": zod.number(),
+  "project_id": zod.number(),
+  "status": zod.enum(['aangevraagd', 'open', 'gesloten']),
+  "geldig_van": zod.string().nullish(),
+  "geldig_tot": zod.string().nullish(),
+  "uren_plafond": zod.number().nullish(),
+  "verbruikte_uren": zod.number(),
+  "reden": zod.string().nullish(),
+  "motivatie_aanvraag": zod.string().nullish(),
+  "geopend_door_id": zod.number().nullish(),
+  "geopend_door_naam": zod.string().nullish(),
+  "geopend_op": zod.string().nullish(),
+  "gesloten_op": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish()
+}).nullish(),
+  "sloten": zod.array(zod.object({
+  "id": zod.number(),
+  "project_id": zod.number(),
+  "status": zod.enum(['aangevraagd', 'open', 'gesloten']),
+  "geldig_van": zod.string().nullish(),
+  "geldig_tot": zod.string().nullish(),
+  "uren_plafond": zod.number().nullish(),
+  "verbruikte_uren": zod.number(),
+  "reden": zod.string().nullish(),
+  "motivatie_aanvraag": zod.string().nullish(),
+  "geopend_door_id": zod.number().nullish(),
+  "geopend_door_naam": zod.string().nullish(),
+  "geopend_op": zod.string().nullish(),
+  "gesloten_op": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Overwerkslot openzetten (projectleider of hoofdbeheerder; altijd met einde)
+ */
+export const OpenOverwerkslotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OpenOverwerkslotBody = zod.object({
+  "geldig_van": zod.string().nullish(),
+  "geldig_tot": zod.string(),
+  "uren_plafond": zod.number().nullish(),
+  "reden": zod.string(),
+  "aanvraag_id": zod.number().nullish()
+})
+
+export const OpenOverwerkslotResponse = zod.void()
+
+
+/**
+ * @summary Overwerkslot sluiten
+ */
+export const SluitOverwerkslotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SluitOverwerkslotResponse = zod.object({
+  "gesloten": zod.number()
+})
+
+
+/**
+ * @summary Toestemming vragen voor overwerk boven de weekgrens (naar projectleider en René)
+ */
+export const VraagOverwerkToestemmingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VraagOverwerkToestemmingBody = zod.object({
+  "datum": zod.string(),
+  "uren": zod.number(),
+  "toelichting": zod.string().nullish()
+})
+
+export const VraagOverwerkToestemmingResponse = zod.void()
 
 
 /**

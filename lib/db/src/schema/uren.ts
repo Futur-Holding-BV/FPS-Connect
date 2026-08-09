@@ -74,3 +74,28 @@ export const weekStatenTable = pgTable("week_staten", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// UREN_01 §4 — Overwerkslot per project. Standaard dicht: boven de weekgrens
+// (CAO-drempel + ADV, doorgaans 40u) mag alleen geschreven worden op een
+// project waarvan het slot op de datum van de urenregel open stond.
+// status: aangevraagd (toestemming gevraagd, nog dicht) → open → gesloten.
+// Een slot zonder einddatum bestaat niet; het plafond sluit het slot vanzelf.
+export const overwerkSlotenTable = pgTable("overwerk_sloten", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projectenTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("aangevraagd"),
+  geldigVan: text("geldig_van"),
+  geldigTot: text("geldig_tot"),
+  urenPlafond: real("uren_plafond"),
+  verbruikteUren: real("verbruikte_uren").notNull().default(0),
+  reden: text("reden"),
+  aangevraagdDoorId: integer("aangevraagd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangevraagdOp: timestamp("aangevraagd_op"),
+  motivatieAanvraag: text("motivatie_aanvraag"),
+  geopendDoorId: integer("geopend_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  geopendOp: timestamp("geopend_op"),
+  geslotenDoorId: integer("gesloten_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  geslotenOp: timestamp("gesloten_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});

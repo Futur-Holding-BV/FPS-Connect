@@ -65,6 +65,7 @@ import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
 import PimUitvoeringTab, { StappenOverzicht } from "./pim-uitvoering-tab";
 import PimOpleveringTab from "./pim-oplevering-tab";
+import { OverwerkslotKaart } from "./overwerkslot-kaart";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -1106,6 +1107,9 @@ export default function OpdrachtDetailPagina() {
         {/* ── Fase 3: Planning (uitvoeringsplan + geboekte uren) ── */}
         <TabsContent value="planning" className="space-y-6 mt-4">
           <UitvoeringsplanningTab opdrachtId={opdrachtId} />
+          {opdracht?.project_id != null && (
+            <OverwerkslotKaart projectId={opdracht.project_id} />
+          )}
         </TabsContent>
 
         {/* ── Fase 5: Oplevering & nacalculatie ── */}

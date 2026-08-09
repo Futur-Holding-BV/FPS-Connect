@@ -13,6 +13,10 @@ import {
 import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { medewerkerIdVoorGebruiker, medewerkerVoorId } from "../services/medewerker-lookup";
+import { overwerkSlotenTable, projectenTable } from "@workspace/db/schema";
+import { vindGebruikersMetFunctietitel } from "../lib/bouwMeldingen";
+import { berekenAdvVoorMedewerker, overwerkGrens } from "../lib/caoInstellingen";
+import { meldWerkbakItem } from "../lib/werkbakService";
 
 const router = Router();
 
@@ -46,15 +50,102 @@ function berekenNettoUren(begin: string, eind: string, pauzeMin: number): number
   return Math.max(0, Math.round(((totMin - pauzeMin) / 60) * 10) / 10);
 }
 
-const ADV_FACTOR = 2 / 40;
+// UREN_01 §3: ADV = min(max, max(0, gewerkt − drempel)) uit de CAO-instelling
+// (lib/caoInstellingen.ts) — geen vrije-tekstmatch en geen factor in de code.
 function berekenAdv(medewerker: { cao: string | null; dienstverband: string }, gewerktUren: number): number {
-  if (
-    (medewerker.cao ?? "").toLowerCase().includes("metaal") &&
-    medewerker.dienstverband === "vast"
-  ) {
-    return Math.round(gewerktUren * ADV_FACTOR * 100) / 100;
+  return berekenAdvVoorMedewerker(medewerker, gewerktUren).adv_uren;
+}
+
+// ── UREN_01 §4: overwerkslot-toets ───────────────────────────────────────────
+// Weektotaal boven de grens (CAO-drempel + ADV, doorgaans 40) is alleen
+// toegestaan voor zover de uren bóven de grens geschreven zijn op een project
+// waarvan het slot op de DATUM VAN DE URENREGEL open stond (niet het moment
+// van invoeren). Niets wordt stil geweigerd of afgekapt: de toets geeft een
+// duidelijke melding terug plus de mogelijkheid toestemming te vragen.
+interface OverwerkToets {
+  toegestaan: boolean;
+  boven_uren: number;          // deel van deze regel boven de weekgrens
+  grens: number;
+  slot_id: number | null;      // gebruikt slot bij acceptatie
+  weigering: string | null;
+}
+
+async function toetsOverwerkSlot(opts: {
+  medewerkerId: number;
+  datum: string;
+  nettoUren: number;
+  projectId: number | null;
+  cao: string | null;
+  negeerRegistratieId?: number; // bij PATCH: eigen rij niet dubbel tellen
+}): Promise<OverwerkToets> {
+  const grens = overwerkGrens(opts.cao);
+  const d = new Date(opts.datum + "T00:00:00Z");
+  const { van, tot } = weekGrenzen(d.getUTCFullYear(), isoWeekNummer(d));
+  // Valt de datum door jaarovergang buiten die grenzen, herbereken via de week zelf.
+  const week = isoWeekNummer(d);
+  const jaar = opts.datum >= van && opts.datum <= tot ? d.getUTCFullYear()
+    : (week > 50 ? d.getUTCFullYear() - 1 : d.getUTCFullYear() + 1);
+  const grenzen = weekGrenzen(jaar, week);
+
+  const rows = await db
+    .select({ id: urenRegistratiesTable.id, nettoUren: urenRegistratiesTable.nettoUren })
+    .from(urenRegistratiesTable)
+    .where(and(
+      eq(urenRegistratiesTable.medewerkerId, opts.medewerkerId),
+      gte(urenRegistratiesTable.datum, grenzen.van),
+      lte(urenRegistratiesTable.datum, grenzen.tot),
+    ));
+  const overig = rows
+    .filter((r) => r.id !== opts.negeerRegistratieId)
+    .reduce((acc, r) => acc + r.nettoUren, 0);
+  const nieuwTotaal = overig + opts.nettoUren;
+  const boven = Math.round((nieuwTotaal - grens) * 100) / 100;
+  if (boven <= 0) return { toegestaan: true, boven_uren: 0, grens, slot_id: null, weigering: null };
+
+  const bovenVanRegel = Math.min(opts.nettoUren, boven);
+  if (!opts.projectId) {
+    return {
+      toegestaan: false, boven_uren: bovenVanRegel, grens, slot_id: null,
+      weigering: `U komt hiermee ${bovenVanRegel} uur boven de ${grens} uur per week uit. Overwerk kan alleen op een project met een open overwerkslot; deze regel is niet aan een project gekoppeld.`,
+    };
   }
-  return 0;
+
+  // Slot moet open zijn op de datum van de urenregel én binnen het plafond blijven.
+  const sloten = await db
+    .select()
+    .from(overwerkSlotenTable)
+    .where(and(
+      eq(overwerkSlotenTable.projectId, opts.projectId),
+      eq(overwerkSlotenTable.status, "open"),
+    ));
+  const slot = sloten.find((s) =>
+    s.geldigVan != null && s.geldigTot != null &&
+    opts.datum >= s.geldigVan && opts.datum <= s.geldigTot &&
+    (s.urenPlafond == null || s.verbruikteUren + bovenVanRegel <= s.urenPlafond + 1e-9)
+  );
+  if (!slot) {
+    const plafondVol = sloten.some((s) =>
+      s.geldigVan != null && s.geldigTot != null &&
+      opts.datum >= s.geldigVan && opts.datum <= s.geldigTot);
+    return {
+      toegestaan: false, boven_uren: bovenVanRegel, grens, slot_id: null,
+      weigering: plafondVol
+        ? `U komt hiermee ${bovenVanRegel} uur boven de ${grens} uur per week uit. Het overwerkslot op dit project heeft onvoldoende ruimte binnen het urenplafond.`
+        : `U komt hiermee ${bovenVanRegel} uur boven de ${grens} uur per week uit en het overwerkslot van dit project staat op ${opts.datum} niet open.`,
+    };
+  }
+  return { toegestaan: true, boven_uren: bovenVanRegel, grens, slot_id: slot.id, weigering: null };
+}
+
+// Verhoog het slotverbruik en sluit het slot vanzelf zodra het plafond is bereikt.
+async function boekSlotVerbruik(slotId: number, uren: number): Promise<void> {
+  const [slot] = await db.select().from(overwerkSlotenTable).where(eq(overwerkSlotenTable.id, slotId)).limit(1);
+  if (!slot) return;
+  const nieuw = Math.round((slot.verbruikteUren + uren) * 100) / 100;
+  const vol = slot.urenPlafond != null && nieuw >= slot.urenPlafond - 1e-9;
+  await db.update(overwerkSlotenTable)
+    .set({ verbruikteUren: nieuw, status: vol ? "gesloten" : slot.status, geslotenOp: vol ? new Date() : slot.geslotenOp, bijgewerktOp: new Date() })
+    .where(eq(overwerkSlotenTable.id, slotId));
 }
 
 function mapUren(
@@ -301,7 +392,10 @@ router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
     .limit(1);
 
   const totaalUren = rows.reduce((acc, r) => acc + r.uren.nettoUren, 0);
-  const advUren = medewerker ? berekenAdv(medewerker, totaalUren) : 0;
+  const advUitkomst = medewerker
+    ? berekenAdvVoorMedewerker(medewerker, totaalUren)
+    : { adv_uren: 0, adv_reden: "geen medewerkersprofiel" };
+  const advUren = advUitkomst.adv_uren;
   const verlof = await verlofVoorWeek(mid, van, tot);
 
   res.json({
@@ -323,6 +417,8 @@ router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
     verlof,
     totaal_uren: Math.round(totaalUren * 100) / 100,
     adv_uren: advUren,
+    adv_reden: advUitkomst.adv_reden,
+    overwerk_grens: overwerkGrens(medewerker?.cao ?? null),
   });
 });
 
@@ -430,6 +526,25 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
     return void res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
+  // UREN_01 §4: boven de weekgrens alleen op een project met open slot.
+  const medewerkerCao = await medewerkerVoorId(mid, db);
+  const toets = await toetsOverwerkSlot({
+    medewerkerId: mid,
+    datum,
+    nettoUren,
+    projectId: project_id ? Number(project_id) : null,
+    cao: medewerkerCao?.cao ?? null,
+  });
+  if (!toets.toegestaan) {
+    return void res.status(422).json({
+      code: "OVERWERK_SLOT_DICHT",
+      error: toets.weigering,
+      boven_uren: toets.boven_uren,
+      grens: toets.grens,
+      project_id: project_id ? Number(project_id) : null,
+    });
+  }
+
   const [rij] = await db
     .insert(urenRegistratiesTable)
     .values({
@@ -453,7 +568,26 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(mapUren(rij));
+  if (toets.slot_id != null && toets.boven_uren > 0) {
+    await boekSlotVerbruik(toets.slot_id, toets.boven_uren);
+  }
+
+  // UREN_01 §5: geaccepteerd overwerk levert een VOORSTEL voor tijd-voor-tijd
+  // op — getoond aan de medewerker, nooit stilzwijgend aangemaakt.
+  res.status(201).json({
+    ...mapUren(rij),
+    overwerk: toets.boven_uren > 0 ? {
+      boven_uren: toets.boven_uren,
+      grens: toets.grens,
+      slot_id: toets.slot_id,
+      tvt_voorstel: {
+        start_datum: datum,
+        eind_datum: datum,
+        aantal_uren: toets.boven_uren,
+        reden: `Overwerk ${datum}${project_naam ? ` op ${project_naam}` : ""} (tijd voor tijd)`,
+      },
+    } : null,
+  });
 });
 
 // ── GET /uren/:id ─────────────────────────────────────────────────────────────
@@ -532,6 +666,29 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
   const nieuwEind = eind_tijd ?? bestaand.eindTijd;
   const nieuwPauze = pauze_minuten !== undefined ? Number(pauze_minuten) : bestaand.pauzeMinuten;
   const nettoUren = berekenNettoUren(nieuwBegin, nieuwEind, nieuwPauze);
+
+  // UREN_01 §4: ook een wijziging mag niet ongetoetst boven de weekgrens uitkomen.
+  const patchProjectId = project_id !== undefined
+    ? (project_id ? Number(project_id) : null)
+    : bestaand.projectId;
+  const patchMedewerker = await medewerkerVoorId(bestaand.medewerkerId, db);
+  const patchToets = await toetsOverwerkSlot({
+    medewerkerId: bestaand.medewerkerId,
+    datum: datum ?? bestaand.datum,
+    nettoUren,
+    projectId: patchProjectId,
+    cao: patchMedewerker?.cao ?? null,
+    negeerRegistratieId: bestaand.id,
+  });
+  if (!patchToets.toegestaan) {
+    return void res.status(422).json({
+      code: "OVERWERK_SLOT_DICHT",
+      error: patchToets.weigering,
+      boven_uren: patchToets.boven_uren,
+      grens: patchToets.grens,
+      project_id: patchProjectId,
+    });
+  }
 
   const [rij] = await db
     .update(urenRegistratiesTable)
@@ -974,6 +1131,162 @@ router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res): Promi
     .returning();
 
   res.json(mapWeekStaat(rij));
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UREN_01 §4 — Overwerkslot per project
+// Openzetten mag alleen door de projectleider en René (hoofdbeheerder) —
+// besloten door René, 9 aug 2026. Altijd met einde; plafond optioneel.
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function isProjectleiderOfHoofdbeheerder(req: import("express").Request): Promise<boolean> {
+  if (req.permissies?.isHoofdbeheerder) return true;
+  const userId = req.session.userId!;
+  const [rij] = await db
+    .select({ id: gebruikersTable.id })
+    .from(gebruikersTable)
+    .where(sql`${gebruikersTable.id} = ${userId} AND ${sql.raw("functietitels")} @> ARRAY['Projectleider']::text[]`);
+  return !!rij;
+}
+
+function mapSlot(s: typeof overwerkSlotenTable.$inferSelect, extra?: { geopendDoorNaam?: string | null }) {
+  return {
+    id: s.id,
+    project_id: s.projectId,
+    status: s.status,
+    geldig_van: s.geldigVan,
+    geldig_tot: s.geldigTot,
+    uren_plafond: s.urenPlafond,
+    verbruikte_uren: s.verbruikteUren,
+    reden: s.reden,
+    motivatie_aanvraag: s.motivatieAanvraag,
+    geopend_door_id: s.geopendDoorId,
+    geopend_door_naam: extra?.geopendDoorNaam ?? null,
+    geopend_op: s.geopendOp?.toISOString() ?? null,
+    gesloten_op: s.geslotenOp?.toISOString() ?? null,
+    aangevraagd_op: s.aangevraagdOp?.toISOString() ?? null,
+  };
+}
+
+// Huidige en recente sloten van een project — leesbaar voor iedere ingelogde
+// urenschrijver zodat de app kan tonen of het slot openstaat.
+router.get("/projecten/:id/overwerkslot", requireAuth, async (req, res): Promise<void> => {
+  const projectId = Number(req.params.id);
+  const rows = await db
+    .select({ slot: overwerkSlotenTable, geopendDoorNaam: gebruikersTable.naam })
+    .from(overwerkSlotenTable)
+    .leftJoin(gebruikersTable, eq(overwerkSlotenTable.geopendDoorId, gebruikersTable.id))
+    .where(eq(overwerkSlotenTable.projectId, projectId))
+    .orderBy(desc(overwerkSlotenTable.id));
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const open = rows.find((r) =>
+    r.slot.status === "open" && r.slot.geldigVan != null && r.slot.geldigTot != null &&
+    vandaag >= r.slot.geldigVan && vandaag <= r.slot.geldigTot);
+  res.json({
+    open_slot: open ? mapSlot(open.slot, { geopendDoorNaam: open.geopendDoorNaam }) : null,
+    sloten: rows.slice(0, 20).map((r) => mapSlot(r.slot, { geopendDoorNaam: r.geopendDoorNaam })),
+  });
+});
+
+// Openzetten: einde verplicht (default: zondag van de lopende week bepaalt de
+// client), reden verplicht (één regel), plafond optioneel. Wie/wanneer/waarom
+// wordt vastgelegd. Achteraf openzetten mag, maar is daardoor zichtbaar.
+router.post("/projecten/:id/overwerkslot/openen", requireAuth, async (req, res): Promise<void> => {
+  if (!(await isProjectleiderOfHoofdbeheerder(req))) {
+    return void res.status(403).json({ error: "Alleen de projectleider of de hoofdbeheerder kan het overwerkslot openzetten" });
+  }
+  const projectId = Number(req.params.id);
+  const { geldig_van, geldig_tot, uren_plafond, reden, aanvraag_id } = req.body ?? {};
+  if (!geldig_tot) return void res.status(400).json({ error: "Een slot zonder einddatum bestaat niet: geldig_tot is verplicht" });
+  if (!reden || !String(reden).trim()) return void res.status(400).json({ error: "Een reden (één regel) is verplicht bij het openzetten" });
+
+  const [project] = await db.select({ id: projectenTable.id }).from(projectenTable).where(eq(projectenTable.id, projectId)).limit(1);
+  if (!project) return void res.status(404).json({ error: "Project niet gevonden" });
+
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const van = typeof geldig_van === "string" && geldig_van ? geldig_van : vandaag;
+  if (String(geldig_tot) < van) return void res.status(400).json({ error: "geldig_tot ligt vóór geldig_van" });
+
+  const userId = req.session.userId!;
+  if (aanvraag_id) {
+    // Toestemming-aanvraag omzetten naar een open slot.
+    const [aanvraag] = await db.select().from(overwerkSlotenTable)
+      .where(and(eq(overwerkSlotenTable.id, Number(aanvraag_id)), eq(overwerkSlotenTable.projectId, projectId))).limit(1);
+    if (!aanvraag || aanvraag.status !== "aangevraagd") {
+      return void res.status(409).json({ error: "Aanvraag niet gevonden of al behandeld" });
+    }
+    const [rij] = await db.update(overwerkSlotenTable)
+      .set({ status: "open", geldigVan: van, geldigTot: String(geldig_tot),
+             urenPlafond: uren_plafond != null ? Number(uren_plafond) : null,
+             reden: String(reden).trim(), geopendDoorId: userId, geopendOp: new Date(), bijgewerktOp: new Date() })
+      .where(eq(overwerkSlotenTable.id, aanvraag.id)).returning();
+    return void res.status(200).json(mapSlot(rij));
+  }
+
+  const [rij] = await db.insert(overwerkSlotenTable).values({
+    projectId, status: "open", geldigVan: van, geldigTot: String(geldig_tot),
+    urenPlafond: uren_plafond != null ? Number(uren_plafond) : null,
+    reden: String(reden).trim(), geopendDoorId: userId, geopendOp: new Date(), bijgewerktOp: new Date(),
+  }).returning();
+  res.status(201).json(mapSlot(rij));
+});
+
+router.post("/projecten/:id/overwerkslot/sluiten", requireAuth, async (req, res): Promise<void> => {
+  if (!(await isProjectleiderOfHoofdbeheerder(req))) {
+    return void res.status(403).json({ error: "Alleen de projectleider of de hoofdbeheerder kan het overwerkslot sluiten" });
+  }
+  const projectId = Number(req.params.id);
+  const userId = req.session.userId!;
+  const rijen = await db.update(overwerkSlotenTable)
+    .set({ status: "gesloten", geslotenDoorId: userId, geslotenOp: new Date(), bijgewerktOp: new Date() })
+    .where(and(eq(overwerkSlotenTable.projectId, projectId), eq(overwerkSlotenTable.status, "open")))
+    .returning();
+  res.json({ gesloten: rijen.length });
+});
+
+// UREN_01 §4.3 — de monteur die boven de grens uitkomt vraagt met één
+// handeling toestemming; de vraag landt bij de projectleider en bij René.
+router.post("/projecten/:id/overwerk-toestemming", requireAuth, async (req, res): Promise<void> => {
+  const projectId = Number(req.params.id);
+  const userId = req.session.userId!;
+  const { datum, uren, toelichting } = req.body ?? {};
+  if (!datum || uren == null) return void res.status(400).json({ error: "datum en uren zijn verplicht" });
+
+  const [project] = await db.select({ id: projectenTable.id, titel: projectenTable.naam })
+    .from(projectenTable).where(eq(projectenTable.id, projectId)).limit(1);
+  if (!project) return void res.status(404).json({ error: "Project niet gevonden" });
+
+  const [aanvraag] = await db.insert(overwerkSlotenTable).values({
+    projectId, status: "aangevraagd",
+    aangevraagdDoorId: userId, aangevraagdOp: new Date(),
+    motivatieAanvraag: `${uren} uur overwerk op ${datum}${toelichting ? ` — ${String(toelichting).trim()}` : ""}`,
+    bijgewerktOp: new Date(),
+  }).returning();
+
+  const [naamRij] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1);
+  const titel = `Overwerk-toestemming gevraagd: ${naamRij?.naam ?? "medewerker"} — ${project.titel ?? `project ${projectId}`}`;
+  const omschrijving = `${naamRij?.naam ?? "Een medewerker"} vraagt toestemming voor ${uren} uur boven de weekgrens op ${datum}.${toelichting ? ` Toelichting: ${String(toelichting).trim()}` : ""} Zet het overwerkslot open (altijd met einddatum) of wijs de vraag af.`;
+
+  // Doen-item bij elke projectleider; René (hoofdbeheerder) krijgt hem ook als doen-item.
+  const plIds = await vindGebruikersMetFunctietitel("Projectleider");
+  let geplaatst = 0;
+  for (const plId of plIds) {
+    if (await meldWerkbakItem({
+      soort: "doen", bron: "overwerk_toestemming", titel, omschrijving,
+      gebruikerId: plId, gewicht: 55, actiePad: `/projecten`,
+      herkomstType: "overwerk_slot", herkomstId: aanvraag.id,
+      dedupSleutel: `overwerk_toestemming:${aanvraag.id}:pl:${plId}`,
+    })) geplaatst++;
+  }
+  if (await meldWerkbakItem({
+    soort: "doen", bron: "overwerk_toestemming", titel, omschrijving,
+    alleenHoofdbeheerder: true, gewicht: 55, actiePad: `/projecten`,
+    herkomstType: "overwerk_slot", herkomstId: aanvraag.id,
+    dedupSleutel: `overwerk_toestemming:${aanvraag.id}:hb`,
+  })) geplaatst++;
+
+  res.status(201).json({ id: aanvraag.id, status: aanvraag.status, meldingen_geplaatst: geplaatst });
 });
 
 export default router;

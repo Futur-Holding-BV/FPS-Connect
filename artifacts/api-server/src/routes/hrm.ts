@@ -81,31 +81,8 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
-// Bekende CAO's met normuren — bron voor de onboardingcontrole en de
-// verlofopbouw (pro-rata bij parttime). Geen salaris, alleen arbeidsduur.
-const CAO_OPTIES = [
-  {
-    naam: "Metaal & Techniek",
-    standaard_uren_per_week: 38,
-    adv_uren_per_week: 0,
-    toelichting:
-      "CAO Metaal & Techniek (Technisch Installatiebedrijf). Normweek 38 uur; bij een 40-urige werkweek wordt het verschil als ADV/roostervrije tijd opgebouwd.",
-  },
-  {
-    naam: "Bouw & Infra",
-    standaard_uren_per_week: 40,
-    adv_uren_per_week: 3.8,
-    toelichting:
-      "CAO Bouw & Infra. Normweek 40 uur met opbouw van roostervrije (ADV-)dagen volgens het bouwplaatsrooster.",
-  },
-  {
-    naam: "Geen CAO / individueel",
-    standaard_uren_per_week: 40,
-    adv_uren_per_week: 0,
-    toelichting:
-      "Geen toepasselijke bedrijfstak-CAO; arbeidsvoorwaarden volgen de individuele arbeidsovereenkomst.",
-  },
-] as const;
+// UREN_01 §3: CAO-instellingen (incl. ADV-drempel/max) staan centraal in lib/caoInstellingen.ts.
+import { CAO_OPTIES } from "../lib/caoInstellingen";
 
 // ── Werkgevers (FPS-werkmaatschappijen als hoofdentiteit) ────────────────────
 // De werkgever is leidend voor CAO, briefpapier/logo en personeelsbeleid. Het

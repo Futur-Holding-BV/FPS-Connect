@@ -302,6 +302,8 @@ INDEX|opnames|opnames_pkey
 INDEX|org_bedrijfsdocumenten|org_bedrijfsdocumenten_pkey
 INDEX|org_jaarverslagen|org_jaarverslagen_pkey
 INDEX|org_verzekeringen|org_verzekeringen_pkey
+INDEX|overwerk_sloten|overwerk_sloten_pkey
+INDEX|overwerk_sloten|overwerk_sloten_project_idx
 INDEX|pbm_inspecties|pbm_inspecties_pkey
 INDEX|pbm_items|pbm_items_pkey
 INDEX|pim_foto_analyses|pim_foto_analyses_pkey
@@ -3301,6 +3303,23 @@ KOLOM|org_verzekeringen|premie|numeric|YES|
 KOLOM|org_verzekeringen|status|text|NO|'actief'::text
 KOLOM|org_verzekeringen|type|text|NO|
 KOLOM|org_verzekeringen|vervaldatum|text|YES|
+KOLOM|overwerk_sloten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|overwerk_sloten|aangevraagd_door_id|integer|YES|
+KOLOM|overwerk_sloten|aangevraagd_op|timestamp without time zone|YES|
+KOLOM|overwerk_sloten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|overwerk_sloten|geldig_tot|text|YES|
+KOLOM|overwerk_sloten|geldig_van|text|YES|
+KOLOM|overwerk_sloten|geopend_door_id|integer|YES|
+KOLOM|overwerk_sloten|geopend_op|timestamp without time zone|YES|
+KOLOM|overwerk_sloten|gesloten_door_id|integer|YES|
+KOLOM|overwerk_sloten|gesloten_op|timestamp without time zone|YES|
+KOLOM|overwerk_sloten|id|integer|NO|nextval('overwerk_sloten_id_seq'::regclass)
+KOLOM|overwerk_sloten|motivatie_aanvraag|text|YES|
+KOLOM|overwerk_sloten|project_id|integer|NO|
+KOLOM|overwerk_sloten|reden|text|YES|
+KOLOM|overwerk_sloten|status|text|NO|'aangevraagd'::text
+KOLOM|overwerk_sloten|uren_plafond|real|YES|
+KOLOM|overwerk_sloten|verbruikte_uren|real|NO|0
 KOLOM|pbm_inspecties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|pbm_inspecties|ai_aanbeveling|text|YES|
 KOLOM|pbm_inspecties|ai_beoordeling|text|YES|

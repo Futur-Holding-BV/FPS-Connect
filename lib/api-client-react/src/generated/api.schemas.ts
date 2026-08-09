@@ -9260,7 +9260,26 @@ export interface WbAdviesUpdate {
   notitie?: string | null;
 }
 
+export type UrenRegistratieOverwerkTvtVoorstel = {
+  start_datum?: string;
+  eind_datum?: string;
+  aantal_uren?: number;
+  reden?: string;
+};
+
+/**
+ * UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.
+ */
+export type UrenRegistratieOverwerk = {
+  boven_uren?: number;
+  grens?: number;
+  slot_id?: number | null;
+  tvt_voorstel?: UrenRegistratieOverwerkTvtVoorstel;
+} | null;
+
 export interface UrenRegistratie {
+  /** UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt. */
+  overwerk?: UrenRegistratieOverwerk;
   id: number;
   datum: string;
   medewerker_id: number;
@@ -9383,6 +9402,36 @@ export interface WeekSamenvatting {
   planning_items: WeekSamenvattingPlanningItemsItem[];
   totaal_uren: number;
   adv_uren: number;
+  /** Waarom er geen ADV wordt opgebouwd (bv. "geen ADV-opbouw (CAO)"); null als er wél opbouw is. */
+  adv_reden?: string | null;
+  /** Weekgrens (CAO-drempel + ADV) waarboven een open overwerkslot vereist is. */
+  overwerk_grens?: number | null;
+}
+
+export type OverwerkSlotStatus = typeof OverwerkSlotStatus[keyof typeof OverwerkSlotStatus];
+
+
+export const OverwerkSlotStatus = {
+  aangevraagd: 'aangevraagd',
+  open: 'open',
+  gesloten: 'gesloten',
+} as const;
+
+export interface OverwerkSlot {
+  id: number;
+  project_id: number;
+  status: OverwerkSlotStatus;
+  geldig_van?: string | null;
+  geldig_tot?: string | null;
+  uren_plafond?: number | null;
+  verbruikte_uren: number;
+  reden?: string | null;
+  motivatie_aanvraag?: string | null;
+  geopend_door_id?: number | null;
+  geopend_door_naam?: string | null;
+  geopend_op?: string | null;
+  gesloten_op?: string | null;
+  aangevraagd_op?: string | null;
 }
 
 export interface Gereedschap {
@@ -16015,6 +16064,35 @@ gebouw_id?: number;
 export type GetMijnWeekUrenParams = {
 jaar?: number;
 week?: number;
+};
+
+export type GetOverwerkslot200 = {
+  open_slot?: OverwerkSlot | null;
+  sloten: OverwerkSlot[];
+};
+
+export type OpenOverwerkslotBody = {
+  geldig_van?: string | null;
+  geldig_tot: string;
+  uren_plafond?: number | null;
+  reden: string;
+  aanvraag_id?: number | null;
+};
+
+export type SluitOverwerkslot200 = {
+  gesloten: number;
+};
+
+export type VraagOverwerkToestemmingBody = {
+  datum: string;
+  uren: number;
+  toelichting?: string | null;
+};
+
+export type VraagOverwerkToestemming201 = {
+  id: number;
+  status: string;
+  meldingen_geplaatst?: number;
 };
 
 export type ListWeekStatenParams = {

@@ -52,6 +52,14 @@ export const WERKBAK_BRONNEN = [
   "materiaal_afwijking",
   // BOUW_01 §6: toebehoren-aanvraag (verbruik, kostenrubriek gereedschap-toebehoren) → werkvoorbereider.
   "toebehoren_aanvraag",
+  // UREN_01 §4.3: monteur vraagt toestemming voor overwerk → projectleider + René.
+  "overwerk_toestemming",
+  // UREN_01 §6: wekelijkse volledigheidscontrole — eerst de medewerker, dan HRM.
+  "weekstaat_onvolledig",
+  // UREN_01 §6.3: meer dan norm+2 zonder open slot → HRM en René.
+  "weekstaat_overwerk_overtreding",
+  // UREN_01 §5: tijd-voor-tijd staat langer dan een maand open (herinnering, geen verval).
+  "tvt_opname_herinnering",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

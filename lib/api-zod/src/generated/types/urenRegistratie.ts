@@ -5,8 +5,11 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { UrenRegistratieOverwerk } from './urenRegistratieOverwerk';
 
 export interface UrenRegistratie {
+  /** UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt. */
+  overwerk?: UrenRegistratieOverwerk;
   id: number;
   datum: string;
   medewerker_id: number;

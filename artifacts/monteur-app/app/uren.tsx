@@ -9,8 +9,11 @@ import {
   useWeekStaatIndienen,
   useListWeekStaten,
   useListGebouwen,
+  useVraagOverwerkToestemming,
+  useCreateTijdVoorTijdAanvraag,
+  ApiError,
 } from "@workspace/api-client-react";
-import type { UrenRegistratie } from "@workspace/api-client-react";
+import type { UrenRegistratie, UrenRegistratieOverwerk } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
@@ -281,8 +284,19 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
 
   const aanmaken = useCreateUrenRegistratie();
   const bijwerken = useUpdateUrenRegistratie();
+  const overwerkToestemming = useVraagOverwerkToestemming();
+  const tvtAanvraag = useCreateTijdVoorTijdAanvraag();
   const { isOnline } = useOffline();
   const { herlaadAantal } = useSync();
+
+  // UREN_01 — overwerkslot dicht (422) melding
+  const [slotDicht, setSlotDicht] = useState<{
+    boodschap: string;
+    boven_uren: number;
+    grens: number;
+    project_id: number | null;
+  } | null>(null);
+  const [toestemmingBezig, setToestemmingBezig] = useState(false);
 
   function berekendUren(): number {
     const [bH, bM] = begin.split(":").map(Number);
@@ -415,9 +429,11 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
       gebouw_id: urenType === "project" ? (gebouwId ?? null) : null,
     };
 
+    setSlotDicht(null);
+
     if (bestaand) {
       if (!isOnline) {
-        // Offline: bijwerken queuen voor later
+        // Offline: bijwerken queuen voor later — geen slot-toets in de app zelf
         await voegToeAanWachtrij({
           type: "update_uren",
           urenId: bestaand.id,
@@ -427,10 +443,16 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
         onOpgeslagen();
         return;
       }
-      bijwerken.mutate({ id: bestaand.id, data: payload }, { onSuccess: onOpgeslagen });
+      try {
+        const resultaat = await bijwerken.mutateAsync({ id: bestaand.id, data: payload });
+        afhandelenOpslaanResultaat(resultaat?.overwerk ?? null);
+      } catch (e) {
+        if (verwerkSlotDicht(e)) return;
+        Alert.alert("Fout", "Kon de uren niet opslaan. Probeer opnieuw.");
+      }
     } else {
       if (!isOnline) {
-        // Offline: lokaal opslaan en queuen
+        // Offline: lokaal opslaan en queuen — geen slot-toets in de app zelf
         const offlineEntry = await voegOfflineUrenToe(
           datum,
           payload,
@@ -446,11 +468,118 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
         onOpgeslagen();
         return;
       }
-      aanmaken.mutate({ data: payload }, { onSuccess: onOpgeslagen });
+      try {
+        const resultaat = await aanmaken.mutateAsync({ data: payload });
+        afhandelenOpslaanResultaat(resultaat?.overwerk ?? null);
+      } catch (e) {
+        if (verwerkSlotDicht(e)) return;
+        Alert.alert("Fout", "Kon de uren niet opslaan. Probeer opnieuw.");
+      }
     }
   }
 
-  const isBusy = aanmaken.isPending || bijwerken.isPending;
+  // UREN_01 — 422 OVERWERK_SLOT_DICHT netjes tonen i.p.v. stil falen
+  function verwerkSlotDicht(e: unknown): boolean {
+    if (e instanceof ApiError && e.status === 422) {
+      const body = (e.data ?? {}) as {
+        code?: string;
+        error?: string;
+        boven_uren?: number;
+        grens?: number;
+        project_id?: number | null;
+      };
+      if (body.code === "OVERWERK_SLOT_DICHT") {
+        setSlotDicht({
+          boodschap: body.error ?? "Het weektotaal komt boven de grens uit zonder open overwerkslot op dit project.",
+          boven_uren: body.boven_uren ?? 0,
+          grens: body.grens ?? 0,
+          project_id: body.project_id ?? gebouwId ?? null,
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // UREN_01 — tijd-voor-tijd VOORSTEL: medewerker bevestigt expliciet
+  function afhandelenOpslaanResultaat(overwerk: UrenRegistratieOverwerk) {
+    const voorstel = overwerk?.tvt_voorstel;
+    if (
+      voorstel &&
+      voorstel.start_datum &&
+      voorstel.eind_datum &&
+      typeof voorstel.aantal_uren === "number" &&
+      voorstel.aantal_uren > 0
+    ) {
+      const uren = voorstel.aantal_uren;
+      Alert.alert(
+        "Overwerk vastleggen?",
+        `${formatUren(uren)} overwerk als tijd voor tijd vastleggen?`,
+        [
+          { text: "Nu niet", style: "cancel", onPress: () => onOpgeslagen() },
+          {
+            text: "Bevestigen",
+            onPress: async () => {
+              try {
+                await tvtAanvraag.mutateAsync({
+                  data: {
+                    start_datum: voorstel.start_datum!,
+                    eind_datum: voorstel.eind_datum!,
+                    aantal_uren: uren,
+                    reden: voorstel.reden || undefined,
+                  },
+                });
+                Alert.alert("Vastgelegd", "Tijd-voor-tijd aanvraag is aangemaakt.");
+              } catch {
+                Alert.alert(
+                  "Aanvragen mislukt",
+                  "Controleer of er een tijd-voor-tijd verlofsoort is ingesteld.",
+                );
+              } finally {
+                onOpgeslagen();
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+    onOpgeslagen();
+  }
+
+  async function vraagOverwerkToestemming() {
+    if (!slotDicht) return;
+    if (!slotDicht.project_id) {
+      Alert.alert(
+        "Geen project",
+        "Toestemming vragen kan alleen voor een gekozen project/gebouw.",
+      );
+      return;
+    }
+    setToestemmingBezig(true);
+    try {
+      await overwerkToestemming.mutateAsync({
+        id: slotDicht.project_id,
+        data: {
+          datum,
+          uren: slotDicht.boven_uren,
+          toelichting: opmerkingen || undefined,
+        },
+      });
+      setSlotDicht(null);
+      Alert.alert(
+        "Verstuurd",
+        "Toestemmingsvraag verstuurd naar de projectleider.",
+        [{ text: "OK", onPress: () => onSluiten() }],
+      );
+    } catch {
+      Alert.alert("Fout", "Kon de toestemmingsvraag niet versturen. Probeer opnieuw.");
+    } finally {
+      setToestemmingBezig(false);
+    }
+  }
+
+  const isBusy = aanmaken.isPending || bijwerken.isPending || tvtAanvraag.isPending;
   const nettoUren = berekendUren();
   // Weektotaal inclusief deze invoer (bij bewerken: oude uren eraf, nieuwe erbij)
   const oudeUren = bestaand?.netto_uren ?? 0;
@@ -833,6 +962,46 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
           />
         </View>
 
+        {/* UREN_01 — Overwerkslot dicht (422) */}
+        {slotDicht && (
+          <View style={{
+            backgroundColor: "#92400e18",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#d97706",
+            padding: 14,
+            gap: 10,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="warning-outline" size={18} color="#d97706" />
+              <Text style={{ color: "#b45309", fontSize: 14, fontFamily: "Inter_700Bold", flex: 1 }}>
+                Overwerk niet toegestaan
+              </Text>
+            </View>
+            <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              {slotDicht.boodschap}
+            </Text>
+            <Pressable
+              onPress={vraagOverwerkToestemming}
+              disabled={toestemmingBezig}
+              style={{
+                backgroundColor: toestemmingBezig ? c.muted : "#d97706",
+                borderRadius: 10,
+                paddingVertical: 12,
+                alignItems: "center",
+              }}
+            >
+              {toestemmingBezig ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}>
+                  Toestemming vragen
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+
         {/* Acties */}
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
@@ -1117,6 +1286,7 @@ export default function UrenScherm() {
 
   const totaalUren = data?.totaal_uren ?? 0;
   const advUren = data?.adv_uren ?? 0;
+  const advReden = data?.adv_reden ?? null;
 
   const { van, tot } = weekGrenzen(jaar, week);
   const maxWeek = isoWeekNummer(new Date(jaar, 11, 28));
@@ -1237,6 +1407,14 @@ export default function UrenScherm() {
                 <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>deze week ADV opgebouwd</Text>
                 <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_700Bold" }}>
                   {formatUren(advUren)}
+                </Text>
+              </View>
+            )}
+            {advUren === 0 && advReden && (
+              <View style={{ justifyContent: "center" }}>
+                <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>ADV</Text>
+                <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                  {advReden}
                 </Text>
               </View>
             )}

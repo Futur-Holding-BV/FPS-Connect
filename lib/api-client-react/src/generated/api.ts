@@ -384,6 +384,7 @@ import type {
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
   GetOfferteKlantContractUploadUrl200,
+  GetOverwerkslot200,
   GetPlanningNacalculatieParams,
   GetPortaalAiUitleg200,
   GetRecenteActiviteitParams,
@@ -740,6 +741,7 @@ import type {
   OpdrachtMateriaal,
   OpdrachtNacalculatie,
   OpdrachtPatch,
+  OpenOverwerkslotBody,
   Opleiding,
   OpleidingInput,
   OpleidingenVoorstelResultaat,
@@ -769,6 +771,7 @@ import type {
   OrgVerzekering,
   OrgVerzekeringInput,
   OvernemenSnagstreamSnag201,
+  OverwerkSlot,
   PimAfwijzenInput,
   PimAnalyseerInput,
   PimAnalyseerResultaat,
@@ -863,6 +866,7 @@ import type {
   SepaBestandPatch,
   SepaUploadInput,
   SessiesBeeindigenOutput,
+  SluitOverwerkslot200,
   SnagstreamOvernemenInput,
   SnagstreamRapport,
   SnagstreamRapportInput,
@@ -997,6 +1001,8 @@ import type {
   VoorzieningTypeInput,
   VoorzieningTypeUpdate,
   VoorzieningUpdate,
+  VraagOverwerkToestemming201,
+  VraagOverwerkToestemmingBody,
   WachtwoordResetInput,
   WachtwoordResettenInput,
   WachtwoordResettenOutput,
@@ -54882,6 +54888,295 @@ export const useDeleteUrenRegistratie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteUrenRegistratieMutationOptions(options));
+    }
+
+export const getGetOverwerkslotUrl = (id: number,) => {
+
+
+
+
+  return `/api/projecten/${id}/overwerkslot`
+}
+
+/**
+ * @summary Overwerkslot-status van een project (UREN_01 §4)
+ */
+export const getOverwerkslot = async (id: number, options?: RequestInit): Promise<GetOverwerkslot200> => {
+
+  return customFetch<GetOverwerkslot200>(getGetOverwerkslotUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOverwerkslotQueryKey = (id: number,) => {
+    return [
+    `/api/projecten/${id}/overwerkslot`
+    ] as const;
+    }
+
+
+export const getGetOverwerkslotQueryOptions = <TData = Awaited<ReturnType<typeof getOverwerkslot>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOverwerkslot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOverwerkslotQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOverwerkslot>>> = ({ signal }) => getOverwerkslot(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOverwerkslot>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOverwerkslotQueryResult = NonNullable<Awaited<ReturnType<typeof getOverwerkslot>>>
+export type GetOverwerkslotQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Overwerkslot-status van een project (UREN_01 §4)
+ */
+
+export function useGetOverwerkslot<TData = Awaited<ReturnType<typeof getOverwerkslot>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOverwerkslot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOverwerkslotQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getOpenOverwerkslotUrl = (id: number,) => {
+
+
+
+
+  return `/api/projecten/${id}/overwerkslot/openen`
+}
+
+/**
+ * @summary Overwerkslot openzetten (projectleider of hoofdbeheerder; altijd met einde)
+ */
+export const openOverwerkslot = async (id: number,
+    openOverwerkslotBody: OpenOverwerkslotBody, options?: RequestInit): Promise<OverwerkSlot> => {
+
+  return customFetch<OverwerkSlot>(getOpenOverwerkslotUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(openOverwerkslotBody)
+  }
+);}
+
+
+
+
+export const getOpenOverwerkslotMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openOverwerkslot>>, TError,{id: number;data: BodyType<OpenOverwerkslotBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof openOverwerkslot>>, TError,{id: number;data: BodyType<OpenOverwerkslotBody>}, TContext> => {
+
+const mutationKey = ['openOverwerkslot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof openOverwerkslot>>, {id: number;data: BodyType<OpenOverwerkslotBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  openOverwerkslot(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OpenOverwerkslotMutationResult = NonNullable<Awaited<ReturnType<typeof openOverwerkslot>>>
+    export type OpenOverwerkslotMutationBody = BodyType<OpenOverwerkslotBody>
+    export type OpenOverwerkslotMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Overwerkslot openzetten (projectleider of hoofdbeheerder; altijd met einde)
+ */
+export const useOpenOverwerkslot = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openOverwerkslot>>, TError,{id: number;data: BodyType<OpenOverwerkslotBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof openOverwerkslot>>,
+        TError,
+        {id: number;data: BodyType<OpenOverwerkslotBody>},
+        TContext
+      > => {
+      return useMutation(getOpenOverwerkslotMutationOptions(options));
+    }
+
+export const getSluitOverwerkslotUrl = (id: number,) => {
+
+
+
+
+  return `/api/projecten/${id}/overwerkslot/sluiten`
+}
+
+/**
+ * @summary Overwerkslot sluiten
+ */
+export const sluitOverwerkslot = async (id: number, options?: RequestInit): Promise<SluitOverwerkslot200> => {
+
+  return customFetch<SluitOverwerkslot200>(getSluitOverwerkslotUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSluitOverwerkslotMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sluitOverwerkslot>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sluitOverwerkslot>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['sluitOverwerkslot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sluitOverwerkslot>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  sluitOverwerkslot(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SluitOverwerkslotMutationResult = NonNullable<Awaited<ReturnType<typeof sluitOverwerkslot>>>
+
+    export type SluitOverwerkslotMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Overwerkslot sluiten
+ */
+export const useSluitOverwerkslot = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sluitOverwerkslot>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sluitOverwerkslot>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSluitOverwerkslotMutationOptions(options));
+    }
+
+export const getVraagOverwerkToestemmingUrl = (id: number,) => {
+
+
+
+
+  return `/api/projecten/${id}/overwerk-toestemming`
+}
+
+/**
+ * @summary Toestemming vragen voor overwerk boven de weekgrens (naar projectleider en René)
+ */
+export const vraagOverwerkToestemming = async (id: number,
+    vraagOverwerkToestemmingBody: VraagOverwerkToestemmingBody, options?: RequestInit): Promise<VraagOverwerkToestemming201> => {
+
+  return customFetch<VraagOverwerkToestemming201>(getVraagOverwerkToestemmingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(vraagOverwerkToestemmingBody)
+  }
+);}
+
+
+
+
+export const getVraagOverwerkToestemmingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagOverwerkToestemming>>, TError,{id: number;data: BodyType<VraagOverwerkToestemmingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vraagOverwerkToestemming>>, TError,{id: number;data: BodyType<VraagOverwerkToestemmingBody>}, TContext> => {
+
+const mutationKey = ['vraagOverwerkToestemming'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vraagOverwerkToestemming>>, {id: number;data: BodyType<VraagOverwerkToestemmingBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  vraagOverwerkToestemming(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VraagOverwerkToestemmingMutationResult = NonNullable<Awaited<ReturnType<typeof vraagOverwerkToestemming>>>
+    export type VraagOverwerkToestemmingMutationBody = BodyType<VraagOverwerkToestemmingBody>
+    export type VraagOverwerkToestemmingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toestemming vragen voor overwerk boven de weekgrens (naar projectleider en René)
+ */
+export const useVraagOverwerkToestemming = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagOverwerkToestemming>>, TError,{id: number;data: BodyType<VraagOverwerkToestemmingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vraagOverwerkToestemming>>,
+        TError,
+        {id: number;data: BodyType<VraagOverwerkToestemmingBody>},
+        TContext
+      > => {
+      return useMutation(getVraagOverwerkToestemmingMutationOptions(options));
     }
 
 export const getListWeekStatenUrl = (params?: ListWeekStatenParams,) => {

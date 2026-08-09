@@ -20,4 +20,8 @@ export interface WeekSamenvatting {
   planning_items: WeekSamenvattingPlanningItemsItem[];
   totaal_uren: number;
   adv_uren: number;
+  /** Waarom er geen ADV wordt opgebouwd (bv. "geen ADV-opbouw (CAO)"); null als er wél opbouw is. */
+  adv_reden?: string | null;
+  /** Weekgrens (CAO-drempel + ADV) waarboven een open overwerkslot vereist is. */
+  overwerk_grens?: number | null;
 }
