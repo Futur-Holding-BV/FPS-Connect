@@ -297,7 +297,7 @@ export default function LoginPagina() {
         {/* Logo + introductie */}
         <div className="mb-8 flex flex-col items-center text-center">
           <img
-            src="/logo-fps-one.png"
+            src={`${import.meta.env.BASE_URL}logo-fps-one.png`}
             alt="FPS One"
             className="mb-5 h-14 w-auto drop-shadow-[0_0_24px_rgba(242,59,13,0.4)] object-contain"
           />
@@ -402,7 +402,7 @@ export default function LoginPagina() {
 
                 <div className="text-center">
                   <a
-                    href="/wachtwoord-vergeten"
+                    href={`${import.meta.env.BASE_URL}wachtwoord-vergeten`}
                     className="text-sm text-white/35 transition-colors hover:text-white/60"
                   >
                     {t("auth.wachtwoordVergeten")}

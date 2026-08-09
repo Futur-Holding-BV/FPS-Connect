@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link } from "wouter";
 
 export default function WachtwoordVergetenPagina() {
   const { t } = useTranslation();
@@ -39,7 +38,7 @@ export default function WachtwoordVergetenPagina() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="bg-white rounded-2xl shadow-lg px-6 py-3 mb-4">
-            <img src="/logo-fps-one.png" alt="FPS One" className="h-16 w-auto object-contain" />
+            <img src={`${import.meta.env.BASE_URL}logo-fps-one.png`} alt="FPS One" className="h-16 w-auto object-contain" />
           </div>
           <p className="text-sm text-slate-400">{t("auth.ondertitel")}</p>
         </div>
@@ -88,15 +87,17 @@ export default function WachtwoordVergetenPagina() {
             </>
           )}
           <div className="px-6 pb-5">
-            <Link href="/">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                {t("auth.terugnaarInloggen")}
-              </button>
-            </Link>
+            {/* Deze pagina wordt buiten de wouter-router gerenderd (speciaal pad
+                in App.tsx); een router-Link verandert dan alleen de URL zonder
+                herrender. Een gewone <a> forceert een volledige navigatie. */}
+            <a
+              href={import.meta.env.BASE_URL}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="link-terug-naar-inloggen"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t("auth.terugnaarInloggen")}
+            </a>
           </div>
         </Card>
       </div>

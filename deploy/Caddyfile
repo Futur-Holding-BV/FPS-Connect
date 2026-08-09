@@ -36,8 +36,12 @@ connect.fps-one.nl {
 
     # Statische bestanden: deterministisch op pad en extensie gematcht,
     # geen file-existence check, geen try_files, geen not file.
+    # LET OP: meerdere matcher-soorten binnen één named matcher worden door
+    # Caddy ge-AND. Eén path_regexp op extensie is hier voldoende én dekt alles
+    # (assets, icons, favicon*, manifest*, sw.js, losse logo's in de root);
+    # een extra `path`-regel zou juist bestanden buiten die lijst (zoals
+    # /logo-fps-one.png) per ongeluk naar de SPA-fallback sturen.
     @static {
-        path /assets/* /icons/* /favicon* /manifest* /sw.js
         path_regexp ext \.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml)$
     }
 

@@ -1,3 +1,9 @@
+## 2026-08-09 — Wachtwoord-vergeten: logo en "Terug naar inloggen" gerepareerd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (statische-bestanden-matcher + twee auth-schermen)
+
+Op productie was het FPS One-logo op de wachtwoord-vergeten/reset-schermen kapot en deed "Terug naar inloggen" niets. Twee oorzaken: **1)** in de Caddy-configuratie werden de `path`- en `path_regexp`-regels binnen de `@static`-matcher ge-AND, waardoor bestanden buiten de padlijst (zoals `/logo-fps-one.png`) als HTML via de SPA-fallback werden geserveerd — de matcher werkt nu puur op extensie. **2)** de wachtwoord-schermen worden buiten de router gerenderd, dus de router-`Link` veranderde alleen de URL zonder de pagina te verversen — vervangen door een echte link die volledig navigeert. Logo-verwijzingen op login/vergeten/reset zijn ook base-path-bewust gemaakt zodat ze in elke omgeving werken.
+
 ## 2026-08-09 — LEVERANCIER_01: één leveranciersregister voor de hele factuurstroom
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (FK-migratie op facturen + wijziging leverancierherkenning in de mailstroom)
