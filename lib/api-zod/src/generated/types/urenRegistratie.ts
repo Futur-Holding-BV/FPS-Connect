@@ -8,6 +8,11 @@
 import type { UrenRegistratieOverwerk } from './urenRegistratieOverwerk';
 
 export interface UrenRegistratie {
+  opdracht_id?: number | null;
+  normtijd_id?: number | null;
+  indirecte_werkzaamheid_id?: number | null;
+  niet_in_begroting?: boolean;
+  niet_in_begroting_omschrijving?: string | null;
   /** UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt. */
   overwerk?: UrenRegistratieOverwerk;
   id: number;

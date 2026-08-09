@@ -60,6 +60,8 @@ export const WERKBAK_BRONNEN = [
   "weekstaat_overwerk_overtreding",
   // UREN_01 §5: tijd-voor-tijd staat langer dan een maand open (herinnering, geen verval).
   "tvt_opname_herinnering",
+  // UREN_01 §6b: urenregel "staat niet in de begroting" → signaal aan werkvoorbereider (cc projectleider).
+  "uren_niet_in_begroting",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

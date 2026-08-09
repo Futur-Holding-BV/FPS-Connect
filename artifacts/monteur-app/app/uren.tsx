@@ -11,6 +11,10 @@ import {
   useListGebouwen,
   useVraagOverwerkToestemming,
   useCreateTijdVoorTijdAanvraag,
+  useGetOpdrachtUurcodes,
+  useListIndirecteWerkzaamheden,
+  getGetOpdrachtUurcodesQueryKey,
+  getListIndirecteWerkzaamhedenQueryKey,
   ApiError,
 } from "@workspace/api-client-react";
 import type { UrenRegistratie, UrenRegistratieOverwerk } from "@workspace/api-client-react";
@@ -208,6 +212,7 @@ type PlanningItemBrief = {
   omschrijving?: string | null;
   begin_tijd?: string | null;
   eind_tijd?: string | null;
+  opdracht_id?: number | null;
 };
 
 type UrenFormulierProps = {
@@ -254,6 +259,26 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const [pauze, setPauze] = useState(startPauze);
   const [opmerkingen, setOpmerkingen] = useState(bestaand?.opmerkingen ?? "");
   const [toontWerkzOpties, setToontWerkzOpties] = useState(false);
+
+  // UREN_01 §6b: Uurcodes velden
+  const [normtijdId, setNormtijdId] = useState<number | null>(bestaand?.normtijd_id ?? null);
+  const [indirecteId, setIndirecteId] = useState<number | null>(bestaand?.indirecte_werkzaamheid_id ?? null);
+  const [nietInBegroting, setNietInBegroting] = useState(bestaand?.niet_in_begroting ?? false);
+  const [nietInBegrotingOmschrijving, setNietInBegrotingOmschrijving] = useState(bestaand?.niet_in_begroting_omschrijving ?? "");
+  const [uurcodeFout, setUurcodeFout] = useState<string | null>(null);
+
+  // Bepaal de effectieve opdracht_id voor uurcodes (bestaand, dan planning, of via server fallback)
+  const effectieveOpdrachtId = bestaand?.opdracht_id ?? planningItem?.opdracht_id ?? null;
+  const heeftOpdracht = effectieveOpdrachtId != null;
+
+  // Haal uurcodes op indien we een opdracht hebben
+  const { data: opdrachtUurcodes, isError: offlineUurcodes } = useGetOpdrachtUurcodes(
+    effectieveOpdrachtId!,
+    { query: { enabled: heeftOpdracht, queryKey: getGetOpdrachtUurcodesQueryKey(effectieveOpdrachtId!) } }
+  );
+  
+  // Haal globale indirecte werkzaamheden op voor als er geen opdracht is, maar wel indirect geselecteerd
+  const { data: globaleIndirect } = useListIndirecteWerkzaamheden({ query: { enabled: !heeftOpdracht, queryKey: getListIndirecteWerkzaamhedenQueryKey() } });
 
   // Alle gebouwen die aan de monteur zijn toegewezen
   const { data: gebouwen } = useListGebouwen();
@@ -414,6 +439,23 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   }
 
   async function opslaan() {
+    setUurcodeFout(null);
+    if (heeftOpdracht) {
+      const gekozen = [normtijdId != null, indirecteId != null, nietInBegroting].filter(Boolean).length;
+      if (gekozen === 0) {
+        setUurcodeFout("Uren op een opdracht vereisen een werksoort. Kies een uurcode, een indirecte werkzaamheid, of 'Staat niet in de begroting'.");
+        return;
+      }
+      if (gekozen > 1) {
+        setUurcodeFout("Kies precies één werksoort (uurcode, indirect, of niet in begroting).");
+        return;
+      }
+      if (nietInBegroting && !nietInBegrotingOmschrijving.trim()) {
+        setUurcodeFout("Vul een korte omschrijving in voor werkzaamheden buiten de begroting.");
+        return;
+      }
+    }
+
     const payload = {
       datum,
       begin_tijd: begin,
@@ -427,6 +469,10 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
       opmerkingen: opmerkingen || null,
       planning_item_id: planningItem?.id ?? null,
       gebouw_id: urenType === "project" ? (gebouwId ?? null) : null,
+      normtijd_id: normtijdId,
+      indirecte_werkzaamheid_id: indirecteId,
+      niet_in_begroting: nietInBegroting,
+      niet_in_begroting_omschrijving: nietInBegroting ? nietInBegrotingOmschrijving : null,
     };
 
     setSlotDicht(null);
@@ -480,6 +526,13 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
 
   // UREN_01 — 422 OVERWERK_SLOT_DICHT netjes tonen i.p.v. stil falen
   function verwerkSlotDicht(e: unknown): boolean {
+    if (e instanceof ApiError && e.status === 400) {
+      const body = (e.data ?? {}) as { code?: string; error?: string; };
+      if (body.code === "UURCODE_VEREIST") {
+        setUurcodeFout(body.error ?? "Een uurcode is verplicht.");
+        return true;
+      }
+    }
     if (e instanceof ApiError && e.status === 422) {
       const body = (e.data ?? {}) as {
         code?: string;
@@ -827,36 +880,186 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
           </View>
         )}
 
-        {/* Categorie */}
-        <View>
-          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
-            Categorie
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {(urenType === "intern" ? INTERN_CATEGORIEEN : PROJECT_CATEGORIEEN).map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => setWerkzaamheidCategorie(werkzaamheidCategorie === opt ? "" : opt)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 20,
-                  backgroundColor: werkzaamheidCategorie === opt ? c.primary : c.accent,
-                  borderWidth: 1,
-                  borderColor: werkzaamheidCategorie === opt ? c.primary : c.border,
-                }}
-              >
-                <Text style={{
-                  color: werkzaamheidCategorie === opt ? "#fff" : c.foreground,
-                  fontSize: 13,
-                  fontFamily: werkzaamheidCategorie === opt ? "Inter_600SemiBold" : "Inter_400Regular",
-                }}>
-                  {opt}
+        {/* Uurcode/Categorie */}
+        {heeftOpdracht ? (
+          <View>
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+              Uurcode (vanuit opdracht)
+            </Text>
+
+            {uurcodeFout && (
+              <View style={{ backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <Text style={{ color: "#991b1b", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                  {uurcodeFout}
                 </Text>
-              </Pressable>
-            ))}
+              </View>
+            )}
+
+            {!opdrachtUurcodes && !offlineUurcodes ? (
+              <ActivityIndicator size="small" color={c.primary} style={{ alignSelf: "flex-start", marginBottom: 12 }} />
+            ) : (
+              <View style={{ gap: 16 }}>
+                {(opdrachtUurcodes?.begroting.length ?? 0) > 0 && (
+                  <View>
+                    <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>
+                      Uit de werkbegroting
+                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {opdrachtUurcodes?.begroting.map((opt) => (
+                        <Pressable
+                          key={opt.normtijd_id}
+                          onPress={() => {
+                            setNormtijdId(normtijdId === opt.normtijd_id ? null : opt.normtijd_id);
+                            if (normtijdId !== opt.normtijd_id) {
+                              setIndirecteId(null);
+                              setNietInBegroting(false);
+                            }
+                          }}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            backgroundColor: normtijdId === opt.normtijd_id ? c.primary : c.accent,
+                            borderWidth: 1,
+                            borderColor: normtijdId === opt.normtijd_id ? c.primary : c.border,
+                          }}
+                        >
+                          <Text style={{
+                            color: normtijdId === opt.normtijd_id ? "#fff" : c.foreground,
+                            fontSize: 13,
+                            fontFamily: normtijdId === opt.normtijd_id ? "Inter_600SemiBold" : "Inter_400Regular",
+                          }}>
+                            {opt.code} – {opt.omschrijving}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {((opdrachtUurcodes?.indirect.length ?? 0) > 0 || (globaleIndirect?.length ?? 0) > 0) && (
+                  <View>
+                    <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>
+                      Indirecte werkzaamheden
+                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {(opdrachtUurcodes?.indirect ?? globaleIndirect ?? []).map((opt) => (
+                        <Pressable
+                          key={opt.id}
+                          onPress={() => {
+                            setIndirecteId(indirecteId === opt.id ? null : opt.id);
+                            if (indirecteId !== opt.id) {
+                              setNormtijdId(null);
+                              setNietInBegroting(false);
+                            }
+                          }}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            backgroundColor: indirecteId === opt.id ? c.primary : c.accent,
+                            borderWidth: 1,
+                            borderColor: indirecteId === opt.id ? c.primary : c.border,
+                          }}
+                        >
+                          <Text style={{
+                            color: indirecteId === opt.id ? "#fff" : c.foreground,
+                            fontSize: 13,
+                            fontFamily: indirecteId === opt.id ? "Inter_600SemiBold" : "Inter_400Regular",
+                          }}>
+                            {opt.naam}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <View>
+                  <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>
+                    Overig
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setNietInBegroting(!nietInBegroting);
+                      if (!nietInBegroting) {
+                        setNormtijdId(null);
+                        setIndirecteId(null);
+                      }
+                    }}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: nietInBegroting ? c.primary : c.accent,
+                      borderWidth: 1,
+                      borderColor: nietInBegroting ? c.primary : c.border,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    <Text style={{
+                      color: nietInBegroting ? "#fff" : c.foreground,
+                      fontSize: 13,
+                      fontFamily: nietInBegroting ? "Inter_600SemiBold" : "Inter_400Regular",
+                    }}>
+                      Staat niet in de begroting
+                    </Text>
+                  </Pressable>
+
+                  {nietInBegroting && (
+                    <TextInput
+                      value={nietInBegrotingOmschrijving}
+                      onChangeText={setNietInBegrotingOmschrijving}
+                      placeholder="Korte omschrijving (verplicht)"
+                      placeholderTextColor={c.mutedForeground}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: c.border,
+                        borderRadius: 10,
+                        padding: 12,
+                        marginTop: 8,
+                        fontSize: 14,
+                        fontFamily: "Inter_400Regular",
+                        color: c.foreground,
+                        backgroundColor: c.card,
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            )}
           </View>
-        </View>
+        ) : (
+          <View>
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+              Categorie
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {(urenType === "intern" ? INTERN_CATEGORIEEN : PROJECT_CATEGORIEEN).map((opt) => (
+                <Pressable
+                  key={opt}
+                  onPress={() => setWerkzaamheidCategorie(werkzaamheidCategorie === opt ? "" : opt)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: werkzaamheidCategorie === opt ? c.primary : c.accent,
+                    borderWidth: 1,
+                    borderColor: werkzaamheidCategorie === opt ? c.primary : c.border,
+                  }}
+                >
+                  <Text style={{
+                    color: werkzaamheidCategorie === opt ? "#fff" : c.foreground,
+                    fontSize: 13,
+                    fontFamily: werkzaamheidCategorie === opt ? "Inter_600SemiBold" : "Inter_400Regular",
+                  }}>
+                    {opt}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Ruimte — alleen bij project */}
         {urenType === "project" && (

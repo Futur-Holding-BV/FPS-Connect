@@ -297,6 +297,13 @@ export default function InstellingenPagina() {
           zichtbaar: isHoofdbeheerder,
         },
         {
+          label: "Indirecte werkzaamheden",
+          pad: "/beheer/indirecte-werkzaamheden",
+          icoon: Activity,
+          beschrijving: "Lijst met indirecte urencodes beheren (zoals Reistijd, Overleg)",
+          zichtbaar: isHoofdbeheerder,
+        },
+        {
           label: "Kantoor Release",
           pad: "/beheer/kantoor-release",
           icoon: Package,

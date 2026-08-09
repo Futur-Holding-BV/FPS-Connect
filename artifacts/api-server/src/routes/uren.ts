@@ -11,10 +11,19 @@ import {
   verlofsoortenTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { medewerkerIdVoorGebruiker, medewerkerVoorId } from "../services/medewerker-lookup";
-import { overwerkSlotenTable, projectenTable } from "@workspace/db/schema";
-import { vindGebruikersMetFunctietitel } from "../lib/bouwMeldingen";
+import {
+  overwerkSlotenTable,
+  projectenTable,
+  indirecteWerkzaamhedenTable,
+  werkbegrotingRegelsTable,
+  projectBegrotingenTable,
+  modCalcNormtijdenTable,
+  opdrachtenTable,
+} from "@workspace/db/schema";
+import { vindGebruikersMetFunctietitel, meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
+
 import { berekenAdvVoorMedewerker, overwerkGrens } from "../lib/caoInstellingen";
 import { meldWerkbakItem } from "../lib/werkbakService";
 
@@ -178,6 +187,11 @@ function mapUren(
     opmerkingen: u.opmerkingen ?? null,
     status: u.status,
     planning_item_id: u.planningItemId ?? null,
+    opdracht_id: u.opdrachtId ?? null,
+    normtijd_id: u.normtijdId ?? null,
+    indirecte_werkzaamheid_id: u.indirecteWerkzaamheidId ?? null,
+    niet_in_begroting: u.nietInBegroting,
+    niet_in_begroting_omschrijving: u.nietInBegrotingOmschrijving ?? null,
     ingediend_op: u.ingediendOp?.toISOString() ?? null,
     goedgekeurd_door_id: u.goedgekeurdDoorId ?? null,
     goedgekeurd_door_naam: extra?.goedgekeurdDoorNaam ?? null,
@@ -493,6 +507,83 @@ router.post("/uren/tijd-voor-tijd-aanvraag", requireAuth, async (req, res): Prom
   });
 });
 
+
+// ── UREN_01 §6b: uurcode op de urenregel ─────────────────────────────────────
+// Uren op een OPDRACHT vereisen precies één van: een uurcode uit de
+// werkbegroting van die opdracht, een actieve indirecte werkzaamheid, of de
+// expliciete keuze "staat niet in de begroting" (met korte omschrijving —
+// informatie, geen fout: dat wordt een signaal naar de werkvoorbereider).
+// Uren zonder opdracht (kantoor, magazijn) kennen geen verplichting; een
+// indirecte werkzaamheid mag daar wél gekozen worden.
+type UurcodeInvoer = {
+  opdrachtId: number | null;
+  normtijdId: number | null;
+  indirecteId: number | null;
+  nietInBegroting: boolean;
+  nietInBegrotingOmschrijving: string | null;
+};
+
+async function bepaalOpdrachtId(body: Record<string, unknown>, planningItemId: number | null): Promise<number | null> {
+  if (body["opdracht_id"] !== undefined) {
+    return body["opdracht_id"] ? Number(body["opdracht_id"]) : null;
+  }
+  if (planningItemId != null) {
+    const [pi] = await db.select({ opdrachtId: planningItemsTable.opdrachtId })
+      .from(planningItemsTable).where(eq(planningItemsTable.id, planningItemId)).limit(1);
+    return pi?.opdrachtId ?? null;
+  }
+  return null;
+}
+
+async function toetsUurcode(inv: UurcodeInvoer): Promise<{ ok: true } | { ok: false; fout: string }> {
+  const gekozen = [inv.normtijdId != null, inv.indirecteId != null, inv.nietInBegroting].filter(Boolean).length;
+  if (gekozen > 1) {
+    return { ok: false, fout: "Kies één werksoort: een uurcode uit de begroting, een indirecte werkzaamheid, óf 'staat niet in de begroting'" };
+  }
+  if (inv.indirecteId != null) {
+    const [iw] = await db.select().from(indirecteWerkzaamhedenTable)
+      .where(eq(indirecteWerkzaamhedenTable.id, inv.indirecteId)).limit(1);
+    if (!iw) return { ok: false, fout: "Onbekende indirecte werkzaamheid" };
+    if (!iw.actief) return { ok: false, fout: `Indirecte werkzaamheid '${iw.naam}' is inactief en kan niet meer gekozen worden` };
+  }
+  if (inv.opdrachtId == null) return { ok: true };
+  if (gekozen === 0) {
+    return { ok: false, fout: "Uren op een opdracht vereisen een werksoort: kies een uurcode uit de werkbegroting, een indirecte werkzaamheid, of 'staat niet in de begroting'" };
+  }
+  if (inv.nietInBegroting && !(inv.nietInBegrotingOmschrijving ?? "").trim()) {
+    return { ok: false, fout: "Geef een korte omschrijving van de werkzaamheid die niet in de begroting staat" };
+  }
+  if (inv.normtijdId != null) {
+    const rijen = await db.select({ id: werkbegrotingRegelsTable.id })
+      .from(werkbegrotingRegelsTable)
+      .innerJoin(projectBegrotingenTable, eq(werkbegrotingRegelsTable.begrotingId, projectBegrotingenTable.id))
+      .where(and(
+        eq(projectBegrotingenTable.opdrachtId, inv.opdrachtId),
+        eq(werkbegrotingRegelsTable.normtijdId, inv.normtijdId)
+      )).limit(1);
+    if (rijen.length === 0) {
+      return { ok: false, fout: "Deze uurcode komt niet voor in de werkbegroting van deze opdracht" };
+    }
+  }
+  return { ok: true };
+}
+
+// Signaal naar de werkvoorbereider wanneer werk niet op een begrotingscode past
+// — dat betekent meestal meerwerk of een begroting die niet klopt.
+async function meldNietInBegroting(regelId: number, opdrachtId: number, medewerkerNaam: string | null, omschrijving: string): Promise<void> {
+  const [opdracht] = await db.select({ titel: opdrachtenTable.titel })
+    .from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
+  await meldAanWerkvoorbereiderMetCcProjectleider({
+    bron: "uren_niet_in_begroting",
+    titel: `Uren buiten de begroting op ${opdracht?.titel ?? `opdracht #${opdrachtId}`}`,
+    omschrijving: `${medewerkerNaam ?? "Een medewerker"} schreef uren op werk dat niet op een begrotingscode past: "${omschrijving}". Meestal meerwerk of een begroting die niet klopt.`,
+    actiePad: `/opdrachten/${opdrachtId}`,
+    herkomstType: "uren_registratie",
+    herkomstId: regelId,
+    dedupBasis: `uren-niet-in-begroting:${regelId}`,
+  });
+}
+
 // ── POST /uren ────────────────────────────────────────────────────────────────
 router.post("/uren", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
@@ -512,10 +603,28 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
     pauze_minuten = 30,
     opmerkingen,
     planning_item_id,
+    normtijd_id,
+    indirecte_werkzaamheid_id,
+    niet_in_begroting,
+    niet_in_begroting_omschrijving,
   } = req.body;
 
   if (!datum || !begin_tijd || !eind_tijd) {
     return void res.status(400).json({ error: "datum, begin_tijd en eind_tijd zijn verplicht" });
+  }
+
+  // UREN_01 §6b: uurcode verplicht bij uren op een opdracht.
+  const uurcodeOpdrachtId = await bepaalOpdrachtId(req.body, planning_item_id ? Number(planning_item_id) : null);
+  const uurcodeInvoer: UurcodeInvoer = {
+    opdrachtId: uurcodeOpdrachtId,
+    normtijdId: normtijd_id ? Number(normtijd_id) : null,
+    indirecteId: indirecte_werkzaamheid_id ? Number(indirecte_werkzaamheid_id) : null,
+    nietInBegroting: niet_in_begroting === true,
+    nietInBegrotingOmschrijving: niet_in_begroting_omschrijving ?? null,
+  };
+  const uurcodeToets = await toetsUurcode(uurcodeInvoer);
+  if (!uurcodeToets.ok) {
+    return void res.status(400).json({ code: "UURCODE_VEREIST", error: uurcodeToets.fout });
   }
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
@@ -585,10 +694,21 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
       nettoUren,
       opmerkingen: opmerkingen ?? null,
       planningItemId: planning_item_id ? Number(planning_item_id) : null,
+      opdrachtId: uurcodeOpdrachtId,
+      normtijdId: uurcodeInvoer.normtijdId,
+      indirecteWerkzaamheidId: uurcodeInvoer.indirecteId,
+      nietInBegroting: uurcodeInvoer.nietInBegroting,
+      nietInBegrotingOmschrijving: uurcodeInvoer.nietInBegroting ? (niet_in_begroting_omschrijving ?? "").trim() : null,
       aangemaaktDoorId: userId,
       bijgewerktOp: new Date(),
     })
     .returning();
+
+  // §6b: "staat niet in de begroting" is informatie, geen fout → signaal WVB.
+  if (uurcodeInvoer.nietInBegroting && uurcodeOpdrachtId != null) {
+    const naamRij = await medewerkerVoorId(mid, db);
+    await meldNietInBegroting(rij.id, uurcodeOpdrachtId, naamRij?.naam ?? null, (niet_in_begroting_omschrijving ?? "").trim());
+  }
 
   // UREN_01 §5: geaccepteerd overwerk levert een VOORSTEL voor tijd-voor-tijd
   // op — getoond aan de medewerker, nooit stilzwijgend aangemaakt.
@@ -678,7 +798,29 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
     eind_tijd,
     pauze_minuten,
     opmerkingen,
+    normtijd_id,
+    indirecte_werkzaamheid_id,
+    niet_in_begroting,
+    niet_in_begroting_omschrijving,
   } = req.body;
+
+  // UREN_01 §6b: ook een wijziging moet de uurcode-eis blijven halen.
+  const patchOpdrachtId = req.body["opdracht_id"] !== undefined || req.body["planning_item_id"] !== undefined
+    ? await bepaalOpdrachtId(req.body, req.body["planning_item_id"] !== undefined
+        ? (req.body["planning_item_id"] ? Number(req.body["planning_item_id"]) : null)
+        : bestaand.planningItemId)
+    : bestaand.opdrachtId;
+  const patchUurcode: UurcodeInvoer = {
+    opdrachtId: patchOpdrachtId,
+    normtijdId: normtijd_id !== undefined ? (normtijd_id ? Number(normtijd_id) : null) : bestaand.normtijdId,
+    indirecteId: indirecte_werkzaamheid_id !== undefined ? (indirecte_werkzaamheid_id ? Number(indirecte_werkzaamheid_id) : null) : bestaand.indirecteWerkzaamheidId,
+    nietInBegroting: niet_in_begroting !== undefined ? niet_in_begroting === true : bestaand.nietInBegroting,
+    nietInBegrotingOmschrijving: niet_in_begroting_omschrijving !== undefined ? (niet_in_begroting_omschrijving ?? null) : bestaand.nietInBegrotingOmschrijving,
+  };
+  const patchUurcodeToets = await toetsUurcode(patchUurcode);
+  if (!patchUurcodeToets.ok) {
+    return void res.status(400).json({ code: "UURCODE_VEREIST", error: patchUurcodeToets.fout });
+  }
 
   const nieuwBegin = begin_tijd ?? bestaand.beginTijd;
   const nieuwEind = eind_tijd ?? bestaand.eindTijd;
@@ -739,10 +881,21 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
       pauzeMinuten: nieuwPauze,
       nettoUren,
       opmerkingen: opmerkingen !== undefined ? opmerkingen : bestaand.opmerkingen,
+      opdrachtId: patchOpdrachtId,
+      normtijdId: patchUurcode.normtijdId,
+      indirecteWerkzaamheidId: patchUurcode.indirecteId,
+      nietInBegroting: patchUurcode.nietInBegroting,
+      nietInBegrotingOmschrijving: patchUurcode.nietInBegroting ? patchUurcode.nietInBegrotingOmschrijving : null,
       bijgewerktOp: new Date(),
     })
     .where(eq(urenRegistratiesTable.id, id))
     .returning();
+
+  // §6b: alleen melden wanneer de keuze "niet in begroting" NIEUW is.
+  if (patchUurcode.nietInBegroting && !bestaand.nietInBegroting && patchOpdrachtId != null) {
+    const naamRij = await medewerkerVoorId(bestaand.medewerkerId, db);
+    await meldNietInBegroting(rij.id, patchOpdrachtId, naamRij?.naam ?? null, (patchUurcode.nietInBegrotingOmschrijving ?? "").trim());
+  }
 
   res.json(mapUren(rij));
 });
@@ -1320,6 +1473,155 @@ router.post("/projecten/:id/overwerk-toestemming", requireAuth, async (req, res)
   })) geplaatst++;
 
   res.status(201).json({ id: aanvraag.id, status: aanvraag.status, meldingen_geplaatst: geplaatst });
+});
+
+
+// ── UREN_01 §6b: uurcodes & indirecte werkzaamheden ──────────────────────────
+
+// Keuzelijst voor uren op een opdracht: de uurcodes uit de werkbegroting van
+// DIE opdracht (niet de hele normtijdenlijst) + de actieve indirecte
+// werkzaamheden als aparte groep.
+router.get("/opdrachten/:id/uurcodes", requireAuth, async (req, res): Promise<void> => {
+  const opdrachtId = Number(req.params.id);
+  if (!Number.isFinite(opdrachtId)) return void res.status(400).json({ error: "Ongeldige opdracht-id" });
+  const begrotingsCodes = await db
+    .selectDistinct({
+      normtijd_id: werkbegrotingRegelsTable.normtijdId,
+      code: modCalcNormtijdenTable.code,
+      omschrijving: modCalcNormtijdenTable.omschrijving,
+      eenheid: modCalcNormtijdenTable.eenheid,
+    })
+    .from(werkbegrotingRegelsTable)
+    .innerJoin(projectBegrotingenTable, eq(werkbegrotingRegelsTable.begrotingId, projectBegrotingenTable.id))
+    .innerJoin(modCalcNormtijdenTable, eq(werkbegrotingRegelsTable.normtijdId, modCalcNormtijdenTable.id))
+    .where(eq(projectBegrotingenTable.opdrachtId, opdrachtId));
+  const indirect = await db.select().from(indirecteWerkzaamhedenTable)
+    .where(eq(indirecteWerkzaamhedenTable.actief, true))
+    .orderBy(indirecteWerkzaamhedenTable.volgorde, indirecteWerkzaamhedenTable.naam);
+  res.json({
+    begroting: begrotingsCodes
+      .filter((c) => c.normtijd_id != null)
+      .sort((a, b) => (a.code ?? "").localeCompare(b.code ?? "")),
+    indirect: indirect.map((i) => ({ id: i.id, naam: i.naam })),
+  });
+});
+
+// Begroot tegenover geschreven per uurcode — nacalculatie op werksoort.
+router.get("/opdrachten/:id/uren-per-uurcode", requireBevoegdheid("projecten", 1), async (req, res): Promise<void> => {
+  const opdrachtId = Number(req.params.id);
+  if (!Number.isFinite(opdrachtId)) return void res.status(400).json({ error: "Ongeldige opdracht-id" });
+
+  // Begroot: hoeveelheid × uren_per_eenheid per uurcode uit de werkbegroting.
+  const begroot = await db
+    .select({
+      normtijd_id: werkbegrotingRegelsTable.normtijdId,
+      code: modCalcNormtijdenTable.code,
+      omschrijving: modCalcNormtijdenTable.omschrijving,
+      uren: sql<number>`coalesce(sum(${werkbegrotingRegelsTable.hoeveelheid} * ${modCalcNormtijdenTable.urenPerEenheid}), 0)`,
+    })
+    .from(werkbegrotingRegelsTable)
+    .innerJoin(projectBegrotingenTable, eq(werkbegrotingRegelsTable.begrotingId, projectBegrotingenTable.id))
+    .innerJoin(modCalcNormtijdenTable, eq(werkbegrotingRegelsTable.normtijdId, modCalcNormtijdenTable.id))
+    .where(eq(projectBegrotingenTable.opdrachtId, opdrachtId))
+    .groupBy(werkbegrotingRegelsTable.normtijdId, modCalcNormtijdenTable.code, modCalcNormtijdenTable.omschrijving);
+
+  // Geschreven: netto-uren per uurcode op deze opdracht.
+  const geschreven = await db
+    .select({
+      normtijd_id: urenRegistratiesTable.normtijdId,
+      uren: sql<number>`coalesce(sum(${urenRegistratiesTable.nettoUren}), 0)`,
+    })
+    .from(urenRegistratiesTable)
+    .where(eq(urenRegistratiesTable.opdrachtId, opdrachtId))
+    .groupBy(urenRegistratiesTable.normtijdId);
+  const geschrevenPerCode = new Map(geschreven.map((g) => [g.normtijd_id, Number(g.uren)]));
+
+  const codes = begroot.map((b) => ({
+    normtijd_id: b.normtijd_id,
+    code: b.code,
+    omschrijving: b.omschrijving,
+    begroot_uren: Math.round(Number(b.uren) * 100) / 100,
+    geschreven_uren: Math.round((geschrevenPerCode.get(b.normtijd_id) ?? 0) * 100) / 100,
+  }));
+  // Geschreven op een code die niet (meer) begroot is, blijft zichtbaar.
+  for (const [nid, uren] of geschrevenPerCode) {
+    if (nid == null || codes.some((c) => c.normtijd_id === nid)) continue;
+    const [nt] = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.id, nid)).limit(1);
+    codes.push({ normtijd_id: nid, code: nt?.code ?? "?", omschrijving: nt?.omschrijving ?? "Onbekende uurcode", begroot_uren: 0, geschreven_uren: Math.round(uren * 100) / 100 });
+  }
+
+  // Indirect + niet-in-begroting apart — dat is juist de informatie.
+  const indirectGeschreven = await db
+    .select({
+      id: indirecteWerkzaamhedenTable.id,
+      naam: indirecteWerkzaamhedenTable.naam,
+      uren: sql<number>`coalesce(sum(${urenRegistratiesTable.nettoUren}), 0)`,
+    })
+    .from(urenRegistratiesTable)
+    .innerJoin(indirecteWerkzaamhedenTable, eq(urenRegistratiesTable.indirecteWerkzaamheidId, indirecteWerkzaamhedenTable.id))
+    .where(eq(urenRegistratiesTable.opdrachtId, opdrachtId))
+    .groupBy(indirecteWerkzaamhedenTable.id, indirecteWerkzaamhedenTable.naam);
+
+  const [nietInBegroting] = await db
+    .select({ uren: sql<number>`coalesce(sum(${urenRegistratiesTable.nettoUren}), 0)` })
+    .from(urenRegistratiesTable)
+    .where(and(eq(urenRegistratiesTable.opdrachtId, opdrachtId), eq(urenRegistratiesTable.nietInBegroting, true)));
+
+  res.json({
+    codes: codes.sort((a, b) => (a.code ?? "").localeCompare(b.code ?? "")),
+    indirect: indirectGeschreven.map((i) => ({ id: i.id, naam: i.naam, geschreven_uren: Math.round(Number(i.uren) * 100) / 100 })),
+    niet_in_begroting_uren: Math.round(Number(nietInBegroting?.uren ?? 0) * 100) / 100,
+  });
+});
+
+// Beheer van indirecte werkzaamheden — in een scherm, niet in code (§6b.3).
+const mapIndirect = (i: typeof indirecteWerkzaamhedenTable.$inferSelect) => ({
+  id: i.id, naam: i.naam, actief: i.actief, volgorde: i.volgorde,
+});
+
+router.get("/indirecte-werkzaamheden", requireAuth, async (_req, res): Promise<void> => {
+  const rijen = await db.select().from(indirecteWerkzaamhedenTable)
+    .orderBy(indirecteWerkzaamhedenTable.volgorde, indirecteWerkzaamhedenTable.naam);
+  res.json(rijen.map(mapIndirect));
+});
+
+router.post("/indirecte-werkzaamheden", requireBevoegdheid("projecten", 3), async (req, res): Promise<void> => {
+  const { naam, volgorde } = req.body;
+  if (!naam || !String(naam).trim()) return void res.status(400).json({ error: "naam is verplicht" });
+  const [rij] = await db.insert(indirecteWerkzaamhedenTable)
+    .values({ naam: String(naam).trim(), volgorde: volgorde != null ? Number(volgorde) : 0, bijgewerktOp: new Date() })
+    .returning();
+  res.status(201).json(mapIndirect(rij));
+});
+
+router.patch("/indirecte-werkzaamheden/:id", requireBevoegdheid("projecten", 3), async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const [bestaand] = await db.select().from(indirecteWerkzaamhedenTable).where(eq(indirecteWerkzaamhedenTable.id, id)).limit(1);
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
+  const { naam, actief, volgorde } = req.body;
+  const [rij] = await db.update(indirecteWerkzaamhedenTable)
+    .set({
+      naam: naam !== undefined ? String(naam).trim() : bestaand.naam,
+      actief: actief !== undefined ? actief === true : bestaand.actief,
+      volgorde: volgorde !== undefined ? Number(volgorde) : bestaand.volgorde,
+      bijgewerktOp: new Date(),
+    })
+    .where(eq(indirecteWerkzaamhedenTable.id, id))
+    .returning();
+  res.json(mapIndirect(rij));
+});
+
+// Verwijderen mag alleen als de code nooit gebruikt is; anders inactief zetten.
+router.delete("/indirecte-werkzaamheden/:id", requireBevoegdheid("projecten", 3), async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const [gebruikt] = await db.select({ id: urenRegistratiesTable.id })
+    .from(urenRegistratiesTable)
+    .where(eq(urenRegistratiesTable.indirecteWerkzaamheidId, id)).limit(1);
+  if (gebruikt) {
+    return void res.status(409).json({ error: "Deze werkzaamheid is al gebruikt op urenregels en kan niet worden verwijderd; zet haar op inactief" });
+  }
+  await db.delete(indirecteWerkzaamhedenTable).where(eq(indirecteWerkzaamhedenTable.id, id));
+  res.status(204).end();
 });
 
 export default router;

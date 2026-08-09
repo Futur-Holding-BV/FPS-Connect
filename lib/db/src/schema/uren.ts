@@ -6,10 +6,22 @@ import { planningItemsTable } from "./planning";
 import { documentenTable } from "./documenten";
 import { projectenTable } from "./projecten";
 import { opdrachtenTable } from "./opdrachten";
+import { modCalcNormtijdenTable } from "./mod-calculatie";
 
 // Dagelijkse urenregistraties — één rij per medewerker per dagdeel/project.
 // Meerdere rijen per dag zijn mogelijk (bijv. ochtend project A, middag project B).
 // status: concept → ingediend → goedgekeurd | afgewezen
+// UREN_01 §6b: indirecte werkzaamheden — beheerd in een scherm, niet in code.
+// Een gebruikte code wordt nooit verwijderd, alleen op inactief gezet.
+export const indirecteWerkzaamhedenTable = pgTable("indirecte_werkzaamheden", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  actief: boolean("actief").notNull().default(true),
+  volgorde: integer("volgorde").notNull().default(0),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const urenRegistratiesTable = pgTable("uren_registraties", {
   id: serial("id").primaryKey(),
   datum: text("datum").notNull(),                                         // "YYYY-MM-DD"
@@ -30,6 +42,14 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   status: text("status").notNull().default("concept"),                     // concept | ingediend | goedgekeurd | afgewezen
   planningItemId: integer("planning_item_id").references(() => planningItemsTable.id, { onDelete: "set null" }),
   opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
+  // UREN_01 §6b: uurcode uit de werkbegroting van de opdracht — vervangt de
+  // vrije tekst werkzaamheid_categorie voor uren op een opdracht.
+  normtijdId: integer("normtijd_id").references(() => modCalcNormtijdenTable.id, { onDelete: "set null" }),
+  // óf een beheerbare indirecte werkzaamheid (opruimen, reistijd, …)
+  indirecteWerkzaamheidId: integer("indirecte_werkzaamheid_id").references(() => indirecteWerkzaamhedenTable.id, { onDelete: "set null" }),
+  // óf: werk past niet op een begrotingscode — informatie, geen fout (signaal WVB)
+  nietInBegroting: boolean("niet_in_begroting").notNull().default(false),
+  nietInBegrotingOmschrijving: text("niet_in_begroting_omschrijving"),
   ingediendOp: timestamp("ingediend_op"),
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   goedgekeurdOp: timestamp("goedgekeurd_op"),

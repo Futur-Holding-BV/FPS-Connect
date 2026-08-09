@@ -15852,6 +15852,142 @@ paths:
                   ok:
                     type: boolean
 
+  /opdrachten/{id}/uurcodes:
+    get:
+      operationId: getOpdrachtUurcodes
+      summary: Keuzelijst uurcodes voor uren op deze opdracht (werkbegroting + indirecte werkzaamheden)
+      tags: [Uren]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [begroting, indirect]
+                properties:
+                  begroting:
+                    type: array
+                    items:
+                      type: object
+                      required: [normtijd_id, code, omschrijving]
+                      properties:
+                        normtijd_id: { type: integer }
+                        code: { type: string }
+                        omschrijving: { type: string }
+                        eenheid: { type: string, nullable: true }
+                  indirect:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, naam]
+                      properties:
+                        id: { type: integer }
+                        naam: { type: string }
+  /opdrachten/{id}/uren-per-uurcode:
+    get:
+      operationId: getUrenPerUurcode
+      summary: Begroot tegenover geschreven uren per uurcode op deze opdracht
+      tags: [Uren]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codes, indirect, niet_in_begroting_uren]
+                properties:
+                  codes:
+                    type: array
+                    items:
+                      type: object
+                      required: [normtijd_id, code, omschrijving, begroot_uren, geschreven_uren]
+                      properties:
+                        normtijd_id: { type: integer, nullable: true }
+                        code: { type: string }
+                        omschrijving: { type: string }
+                        begroot_uren: { type: number }
+                        geschreven_uren: { type: number }
+                  indirect:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, naam, geschreven_uren]
+                      properties:
+                        id: { type: integer }
+                        naam: { type: string }
+                        geschreven_uren: { type: number }
+                  niet_in_begroting_uren: { type: number }
+  /indirecte-werkzaamheden:
+    get:
+      operationId: listIndirecteWerkzaamheden
+      summary: Alle indirecte werkzaamheden (beheerlijst, inclusief inactieve)
+      tags: [Uren]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/IndirecteWerkzaamheid' }
+    post:
+      operationId: createIndirecteWerkzaamheid
+      summary: Indirecte werkzaamheid toevoegen
+      tags: [Uren]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [naam]
+              properties:
+                naam: { type: string }
+                volgorde: { type: integer }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IndirecteWerkzaamheid' }
+  /indirecte-werkzaamheden/{id}:
+    patch:
+      operationId: updateIndirecteWerkzaamheid
+      summary: Indirecte werkzaamheid hernoemen, herordenen of (in)actief zetten
+      tags: [Uren]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                naam: { type: string }
+                actief: { type: boolean }
+                volgorde: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IndirecteWerkzaamheid' }
+    delete:
+      operationId: deleteIndirecteWerkzaamheid
+      summary: Verwijderen kan alleen als de code nooit gebruikt is (anders 409)
+      tags: [Uren]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Verwijderd }
+        '409': { description: Al gebruikt — op inactief zetten in plaats van verwijderen }
   /uren:
     get:
       operationId: listUren
@@ -38275,10 +38411,23 @@ components:
           type: string
           nullable: true
 
+    IndirecteWerkzaamheid:
+      type: object
+      required: [id, naam, actief, volgorde]
+      properties:
+        id: { type: integer }
+        naam: { type: string }
+        actief: { type: boolean }
+        volgorde: { type: integer }
     UrenRegistratie:
       type: object
       required: [id, datum, medewerker_id, begin_tijd, eind_tijd, pauze_minuten, netto_uren, status, afgewezen, aangemaakt_op, bijgewerkt_op]
       properties:
+        opdracht_id: { type: integer, nullable: true }
+        normtijd_id: { type: integer, nullable: true }
+        indirecte_werkzaamheid_id: { type: integer, nullable: true }
+        niet_in_begroting: { type: boolean }
+        niet_in_begroting_omschrijving: { type: string, nullable: true }
         overwerk:
           nullable: true
           description: UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt.
@@ -38408,6 +38557,20 @@ components:
           nullable: true
         planning_item_id:
           type: integer
+          nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
+        normtijd_id:
+          type: integer
+          nullable: true
+        indirecte_werkzaamheid_id:
+          type: integer
+          nullable: true
+        niet_in_begroting:
+          type: boolean
+        niet_in_begroting_omschrijving:
+          type: string
           nullable: true
 
     WeekStaat:

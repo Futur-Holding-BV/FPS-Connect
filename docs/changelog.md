@@ -1,3 +1,9 @@
+## 2026-08-09 — UREN_01 §6b: uren boeken op uurcodes uit de werkbegroting
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (nieuwe verplichte keuze bij projecturen, migratie 0030, web+mobiel aangepast)
+
+Uren op een opdracht worden voortaan op een **uurcode** geschreven in plaats van vrije tekst. De keuzelijst toont precies de uurcodes uit de werkbegroting van díe opdracht (werkbegrotingsregels dragen nu de normtijd-verwijzing mee vanuit de calculatie, met terugwerkende vulling), plus een tweede groep **indirecte werkzaamheden** (startlijst van 8, o.a. reistijd/keet/uitproberen) die beheerders in een eigen scherm bijhouden — hernoemen en inactief zetten kan altijd, verwijderen alleen als de code nooit gebruikt is (anders 409 met uitleg). Wie iets doet dat niet in de begroting staat kiest **"staat niet in de begroting"** met een korte omschrijving: de uren worden gewoon geaccepteerd (nooit een blokkade) én er gaat automatisch een signaal naar de werkvoorbereider met cc projectleider (nieuwe werkbak-bron `uren_niet_in_begroting`). Zonder keuze weigert de server projecturen met een duidelijke melding (`UURCODE_VEREIST`); kantoor- en magazijnuren blijven zonder uurcode werken. Op de opdrachtpagina (oplevering) staat nu **begroot tegenover geschreven per uurcode** (begroot = hoeveelheid × norm), met de indirecte uren en niet-in-begroting-uren apart zichtbaar. Web (uren-dialoog, beheerscherm, opdracht-overzicht) en monteur-app (keuzelijst met beide groepen, offline meegenomen in de wachtrij) zijn aangepast. Bewijs: `scripts/src/bewijs-uren01b.ts` — 23 controles groen (acceptaties 11, 12, 12b, 13, 14).
+
 ## 2026-08-09 — BOUW_01: telefoon voor de bouwplaats (monteur, uitvoerder, werkvoorbereider, projectleider)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (rechten-splitsing + nieuwe app-schermen + 3 migraties)

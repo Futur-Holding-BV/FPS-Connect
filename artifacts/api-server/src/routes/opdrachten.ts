@@ -236,6 +236,9 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
           return {
             begrotingId: begroting.id,
             calcRegelId: r.id,
+            // UREN_01 §6b: uurcode direct meekopiëren — afleiden via twee
+            // stappen breekt zodra iemand handmatig een regel toevoegt.
+            normtijdId: r.normtijdId ?? null,
             categorie: r.categorie,
             omschrijving: r.omschrijving,
             eenheid: r.eenheid,

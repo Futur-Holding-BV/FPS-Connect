@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import {
   useListUren, useListMedewerkers, useCreateUrenRegistratie,
   useListOpdrachten, useGetMijnWerk, useGetMijnWeekUren,
-  useVraagOverwerkToestemming,
+  useVraagOverwerkToestemming, useGetOpdrachtUurcodes,
+  getGetOpdrachtUurcodesQueryKey,
   ApiError,
 } from "@workspace/api-client-react";
 import type { Opdracht } from "@workspace/api-client-react";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  SelectGroup, SelectLabel, SelectSeparator,
 } from "@/components/ui/select";
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
@@ -247,7 +249,17 @@ function UrenInvoerDialog({
 }) {
   const [form, setForm] = useState(LEEG_FORM);
   const [opdracht, setOpdracht] = useState<Opdracht | null>(null);
+  const [uurcodeSelectie, setUurcodeSelectie] = useState<string>("");
+  const [nietInBegrotingOmschrijving, setNietInBegrotingOmschrijving] = useState("");
   const [fout, setFout] = useState<string | null>(null);
+
+  const { data: uurcodes } = useGetOpdrachtUurcodes(opdracht?.id ?? 0, {
+    query: {
+      enabled: !!opdracht?.id,
+      queryKey: getGetOpdrachtUurcodesQueryKey(opdracht?.id ?? 0),
+    }
+  });
+
   // Bij een dichte-overwerkslot-fout: gegevens om toestemming te vragen.
   const [overwerkFout, setOverwerkFout] = useState<{ project_id: number; boven_uren: number } | null>(null);
   const [toestemmingGevraagd, setToestemmingGevraagd] = useState(false);
@@ -279,25 +291,54 @@ function UrenInvoerDialog({
       return;
     }
     try {
+      // Decode uurcodeSelectie
+      let normtijd_id = null;
+      let indirecte_werkzaamheid_id = null;
+      let niet_in_begroting = false;
+
+      if (opdracht?.id && uurcodeSelectie) {
+        if (uurcodeSelectie.startsWith("begroting_")) {
+          normtijd_id = Number(uurcodeSelectie.replace("begroting_", ""));
+        } else if (uurcodeSelectie.startsWith("indirect_")) {
+          indirecte_werkzaamheid_id = Number(uurcodeSelectie.replace("indirect_", ""));
+        } else if (uurcodeSelectie === "niet_in_begroting") {
+          niet_in_begroting = true;
+        }
+      }
+
       await aanmaken.mutateAsync({
         data: {
           datum: form.datum,
           begin_tijd: form.begin_tijd,
           eind_tijd: form.eind_tijd,
           pauze_minuten: parseInt(form.pauze_minuten) || 0,
-          werkzaamheid_categorie: form.werkzaamheid_categorie || null,
+          werkzaamheid_categorie: !opdracht?.id ? (form.werkzaamheid_categorie || null) : null,
           werkzaamheden: form.werkzaamheden || null,
           opmerkingen: form.opmerkingen || null,
           gebouw_id: opdracht?.gebouw_id ?? null,
           project_id: opdracht?.project_id ?? null,
           project_naam: opdracht?.titel ?? null,
+          opdracht_id: opdracht?.id ?? null,
+          normtijd_id,
+          indirecte_werkzaamheid_id,
+          niet_in_begroting,
+          niet_in_begroting_omschrijving: niet_in_begroting ? nietInBegrotingOmschrijving : null,
         },
       });
       setForm(LEEG_FORM);
       setOpdracht(null);
+      setUurcodeSelectie("");
+      setNietInBegrotingOmschrijving("");
       onOpgeslagen();
       onClose();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        const data = err.data as { code?: string; error?: string } | null;
+        if (data?.code === "UURCODE_VEREIST") {
+          setFout(data.error ?? "Selecteer een uurcode uit de begroting of een indirecte werkzaamheid.");
+          return;
+        }
+      }
       if (err instanceof ApiError && err.status === 422) {
         const data = err.data as {
           code?: string;
@@ -388,22 +429,83 @@ function UrenInvoerDialog({
 
           <div className="grid gap-1.5">
             <Label>Opdracht</Label>
-            <OpdrachtCombobox value={opdracht} onChange={setOpdracht} />
+            <OpdrachtCombobox value={opdracht} onChange={(o) => {
+              setOpdracht(o);
+              if (!o) {
+                setUurcodeSelectie("");
+                setNietInBegrotingOmschrijving("");
+              } else {
+                set("werkzaamheid_categorie", "");
+              }
+            }} />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label>Categorie</Label>
-            <Select value={form.werkzaamheid_categorie} onValueChange={(v) => set("werkzaamheid_categorie", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kies een categorie (optioneel)" />
-              </SelectTrigger>
-              <SelectContent>
-                {WERKZAAMHEID_CATEGORIEEN.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {opdracht ? (
+            <>
+              <div className="grid gap-1.5">
+                <Label>Uurcode / Werkzaamheid</Label>
+                <Select value={uurcodeSelectie} onValueChange={setUurcodeSelectie}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies een uurcode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uurcodes?.begroting && uurcodes.begroting.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Uit de werkbegroting</SelectLabel>
+                        {uurcodes.begroting.map((b) => (
+                          <SelectItem key={`begroting_${b.normtijd_id}`} value={`begroting_${b.normtijd_id}`}>
+                            {b.code} — {b.omschrijving}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {uurcodes?.indirect && uurcodes.indirect.length > 0 && (
+                      <SelectGroup>
+                        {uurcodes.begroting && uurcodes.begroting.length > 0 && <SelectSeparator />}
+                        <SelectLabel>Indirecte werkzaamheden</SelectLabel>
+                        {uurcodes.indirect.map((i) => (
+                          <SelectItem key={`indirect_${i.id}`} value={`indirect_${i.id}`}>
+                            {i.naam}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    <SelectGroup>
+                      {(uurcodes?.begroting?.length || uurcodes?.indirect?.length) ? <SelectSeparator /> : null}
+                      <SelectItem value="niet_in_begroting">Staat niet in de begroting</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              {uurcodeSelectie === "niet_in_begroting" && (
+                <div className="grid gap-1.5 pl-4 border-l-2 border-primary/20">
+                  <Label>Omschrijving ontbrekende werkzaamheid</Label>
+                  <Input
+                    placeholder="Waarom staat dit niet in de begroting?"
+                    value={nietInBegrotingOmschrijving}
+                    onChange={(e) => setNietInBegrotingOmschrijving(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Dit geeft een signaal aan de werkvoorbereider dat er een begrotingsregel ontbreekt.
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="grid gap-1.5">
+              <Label>Categorie</Label>
+              <Select value={form.werkzaamheid_categorie} onValueChange={(v) => set("werkzaamheid_categorie", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een categorie (optioneel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WERKZAAMHEID_CATEGORIEEN.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label>Werkzaamheden</Label>

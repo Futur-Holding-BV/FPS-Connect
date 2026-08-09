@@ -150,6 +150,7 @@ import type {
   CreateBevindingHerstel201,
   CreateFactuurRegel201,
   CreateFactuurTermijn201,
+  CreateIndirecteWerkzaamheidBody,
   CreateSaldoCorrectie200,
   CreateToebehorenAanvraag201,
   CreateToebehorenAanvraagBody,
@@ -384,6 +385,7 @@ import type {
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
   GetOfferteKlantContractUploadUrl200,
+  GetOpdrachtUurcodes200,
   GetOverwerkslot200,
   GetPlanningNacalculatieParams,
   GetPortaalAiUitleg200,
@@ -393,6 +395,7 @@ import type {
   GetSalarisarchiefDocumentenParams,
   GetScabMailsParams,
   GetToolboxComplianceParams,
+  GetUrenPerUurcode200,
   GetVeiligheidIncidentenUploadUrl200,
   GetVeiligheidLmrasUploadUrl200,
   GetVeiligheidMeldingenUploadUrl200,
@@ -456,6 +459,7 @@ import type {
   InboxOfferteverwerkingResultaat,
   InboxStats,
   InboxVerplaatsenBody,
+  IndirecteWerkzaamheid,
   Inkoopbon,
   InkoopbonAiSuggestieResultaat,
   InkoopbonInput,
@@ -932,6 +936,7 @@ import type {
   UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
   UpdateFactuurTermijn200,
+  UpdateIndirecteWerkzaamheidBody,
   UpdateMijnInitialen200,
   UpdateMijnInitialenBody,
   UploadAlgemeneInkoopBonBody,
@@ -54362,6 +54367,448 @@ export const useDeleteEenheidsprijs = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteEenheidsprijsMutationOptions(options));
+    }
+
+export const getGetOpdrachtUurcodesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/uurcodes`
+}
+
+/**
+ * @summary Keuzelijst uurcodes voor uren op deze opdracht (werkbegroting + indirecte werkzaamheden)
+ */
+export const getOpdrachtUurcodes = async (id: number, options?: RequestInit): Promise<GetOpdrachtUurcodes200> => {
+
+  return customFetch<GetOpdrachtUurcodes200>(getGetOpdrachtUurcodesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpdrachtUurcodesQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/uurcodes`
+    ] as const;
+    }
+
+
+export const getGetOpdrachtUurcodesQueryOptions = <TData = Awaited<ReturnType<typeof getOpdrachtUurcodes>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtUurcodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpdrachtUurcodesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpdrachtUurcodes>>> = ({ signal }) => getOpdrachtUurcodes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtUurcodes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpdrachtUurcodesQueryResult = NonNullable<Awaited<ReturnType<typeof getOpdrachtUurcodes>>>
+export type GetOpdrachtUurcodesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Keuzelijst uurcodes voor uren op deze opdracht (werkbegroting + indirecte werkzaamheden)
+ */
+
+export function useGetOpdrachtUurcodes<TData = Awaited<ReturnType<typeof getOpdrachtUurcodes>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtUurcodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpdrachtUurcodesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetUrenPerUurcodeUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/uren-per-uurcode`
+}
+
+/**
+ * @summary Begroot tegenover geschreven uren per uurcode op deze opdracht
+ */
+export const getUrenPerUurcode = async (id: number, options?: RequestInit): Promise<GetUrenPerUurcode200> => {
+
+  return customFetch<GetUrenPerUurcode200>(getGetUrenPerUurcodeUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUrenPerUurcodeQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/uren-per-uurcode`
+    ] as const;
+    }
+
+
+export const getGetUrenPerUurcodeQueryOptions = <TData = Awaited<ReturnType<typeof getUrenPerUurcode>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUrenPerUurcode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUrenPerUurcodeQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUrenPerUurcode>>> = ({ signal }) => getUrenPerUurcode(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUrenPerUurcode>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUrenPerUurcodeQueryResult = NonNullable<Awaited<ReturnType<typeof getUrenPerUurcode>>>
+export type GetUrenPerUurcodeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Begroot tegenover geschreven uren per uurcode op deze opdracht
+ */
+
+export function useGetUrenPerUurcode<TData = Awaited<ReturnType<typeof getUrenPerUurcode>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUrenPerUurcode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUrenPerUurcodeQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListIndirecteWerkzaamhedenUrl = () => {
+
+
+
+
+  return `/api/indirecte-werkzaamheden`
+}
+
+/**
+ * @summary Alle indirecte werkzaamheden (beheerlijst, inclusief inactieve)
+ */
+export const listIndirecteWerkzaamheden = async ( options?: RequestInit): Promise<IndirecteWerkzaamheid[]> => {
+
+  return customFetch<IndirecteWerkzaamheid[]>(getListIndirecteWerkzaamhedenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIndirecteWerkzaamhedenQueryKey = () => {
+    return [
+    `/api/indirecte-werkzaamheden`
+    ] as const;
+    }
+
+
+export const getListIndirecteWerkzaamhedenQueryOptions = <TData = Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIndirecteWerkzaamhedenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>> = ({ signal }) => listIndirecteWerkzaamheden({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIndirecteWerkzaamhedenQueryResult = NonNullable<Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>>
+export type ListIndirecteWerkzaamhedenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle indirecte werkzaamheden (beheerlijst, inclusief inactieve)
+ */
+
+export function useListIndirecteWerkzaamheden<TData = Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIndirecteWerkzaamheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIndirecteWerkzaamhedenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateIndirecteWerkzaamheidUrl = () => {
+
+
+
+
+  return `/api/indirecte-werkzaamheden`
+}
+
+/**
+ * @summary Indirecte werkzaamheid toevoegen
+ */
+export const createIndirecteWerkzaamheid = async (createIndirecteWerkzaamheidBody: CreateIndirecteWerkzaamheidBody, options?: RequestInit): Promise<IndirecteWerkzaamheid> => {
+
+  return customFetch<IndirecteWerkzaamheid>(getCreateIndirecteWerkzaamheidUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createIndirecteWerkzaamheidBody)
+  }
+);}
+
+
+
+
+export const getCreateIndirecteWerkzaamheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>, TError,{data: BodyType<CreateIndirecteWerkzaamheidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>, TError,{data: BodyType<CreateIndirecteWerkzaamheidBody>}, TContext> => {
+
+const mutationKey = ['createIndirecteWerkzaamheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>, {data: BodyType<CreateIndirecteWerkzaamheidBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createIndirecteWerkzaamheid(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIndirecteWerkzaamheidMutationResult = NonNullable<Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>>
+    export type CreateIndirecteWerkzaamheidMutationBody = BodyType<CreateIndirecteWerkzaamheidBody>
+    export type CreateIndirecteWerkzaamheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Indirecte werkzaamheid toevoegen
+ */
+export const useCreateIndirecteWerkzaamheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>, TError,{data: BodyType<CreateIndirecteWerkzaamheidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIndirecteWerkzaamheid>>,
+        TError,
+        {data: BodyType<CreateIndirecteWerkzaamheidBody>},
+        TContext
+      > => {
+      return useMutation(getCreateIndirecteWerkzaamheidMutationOptions(options));
+    }
+
+export const getUpdateIndirecteWerkzaamheidUrl = (id: number,) => {
+
+
+
+
+  return `/api/indirecte-werkzaamheden/${id}`
+}
+
+/**
+ * @summary Indirecte werkzaamheid hernoemen, herordenen of (in)actief zetten
+ */
+export const updateIndirecteWerkzaamheid = async (id: number,
+    updateIndirecteWerkzaamheidBody: UpdateIndirecteWerkzaamheidBody, options?: RequestInit): Promise<IndirecteWerkzaamheid> => {
+
+  return customFetch<IndirecteWerkzaamheid>(getUpdateIndirecteWerkzaamheidUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateIndirecteWerkzaamheidBody)
+  }
+);}
+
+
+
+
+export const getUpdateIndirecteWerkzaamheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>, TError,{id: number;data: BodyType<UpdateIndirecteWerkzaamheidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>, TError,{id: number;data: BodyType<UpdateIndirecteWerkzaamheidBody>}, TContext> => {
+
+const mutationKey = ['updateIndirecteWerkzaamheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>, {id: number;data: BodyType<UpdateIndirecteWerkzaamheidBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateIndirecteWerkzaamheid(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIndirecteWerkzaamheidMutationResult = NonNullable<Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>>
+    export type UpdateIndirecteWerkzaamheidMutationBody = BodyType<UpdateIndirecteWerkzaamheidBody>
+    export type UpdateIndirecteWerkzaamheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Indirecte werkzaamheid hernoemen, herordenen of (in)actief zetten
+ */
+export const useUpdateIndirecteWerkzaamheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>, TError,{id: number;data: BodyType<UpdateIndirecteWerkzaamheidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIndirecteWerkzaamheid>>,
+        TError,
+        {id: number;data: BodyType<UpdateIndirecteWerkzaamheidBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateIndirecteWerkzaamheidMutationOptions(options));
+    }
+
+export const getDeleteIndirecteWerkzaamheidUrl = (id: number,) => {
+
+
+
+
+  return `/api/indirecte-werkzaamheden/${id}`
+}
+
+/**
+ * @summary Verwijderen kan alleen als de code nooit gebruikt is (anders 409)
+ */
+export const deleteIndirecteWerkzaamheid = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteIndirecteWerkzaamheidUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteIndirecteWerkzaamheidMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteIndirecteWerkzaamheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteIndirecteWerkzaamheid(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteIndirecteWerkzaamheidMutationResult = NonNullable<Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>>
+
+    export type DeleteIndirecteWerkzaamheidMutationError = ErrorType<void>
+
+    /**
+ * @summary Verwijderen kan alleen als de code nooit gebruikt is (anders 409)
+ */
+export const useDeleteIndirecteWerkzaamheid = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteIndirecteWerkzaamheid>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteIndirecteWerkzaamheidMutationOptions(options));
     }
 
 export const getListUrenUrl = (params?: ListUrenParams,) => {

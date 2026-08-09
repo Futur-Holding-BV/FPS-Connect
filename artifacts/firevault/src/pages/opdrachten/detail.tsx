@@ -65,6 +65,7 @@ import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
 import PimUitvoeringTab, { StappenOverzicht } from "./pim-uitvoering-tab";
 import PimOpleveringTab from "./pim-oplevering-tab";
+import { UrenPerUurcodeSectie } from "./uren-per-uurcode-sectie";
 import { OverwerkslotKaart } from "./overwerkslot-kaart";
 
 function euro(n: number | null | undefined) {
@@ -1115,6 +1116,9 @@ export default function OpdrachtDetailPagina() {
         {/* ── Fase 5: Oplevering & nacalculatie ── */}
         <TabsContent value="oplevering" className="mt-4 space-y-6">
           <PimOpleveringTab opdrachtId={opdrachtId} />
+          
+          <UrenPerUurcodeSectie opdrachtId={opdrachtId} />
+
           {!nacalculatie ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (

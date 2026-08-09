@@ -197,6 +197,7 @@ INDEX|hrm_onboarding_taken|hrm_onboarding_taken_pkey
 INDEX|import_logs|import_logs_pkey
 INDEX|inbox_audit_log|inbox_audit_log_pkey
 INDEX|inbox_items|inbox_items_pkey
+INDEX|indirecte_werkzaamheden|indirecte_werkzaamheden_pkey
 INDEX|inkoop_versies|inkoop_versies_bron_tabel_bron_id_herziening_key
 INDEX|inkoop_versies|inkoop_versies_pkey
 INDEX|inkoopbon_regels|inkoopbon_regels_pkey
@@ -2254,6 +2255,12 @@ KOLOM|inbox_items|snagstream_rapporttype|text|YES|
 KOLOM|inbox_items|snagstream_status|text|YES|
 KOLOM|inbox_items|status|text|NO|'nieuw'::text
 KOLOM|inbox_items|verplaatst_op|timestamp without time zone|YES|
+KOLOM|indirecte_werkzaamheden|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|indirecte_werkzaamheden|actief|boolean|NO|true
+KOLOM|indirecte_werkzaamheden|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|indirecte_werkzaamheden|id|integer|NO|nextval('indirecte_werkzaamheden_id_seq'::regclass)
+KOLOM|indirecte_werkzaamheden|naam|text|NO|
+KOLOM|indirecte_werkzaamheden|volgorde|integer|NO|0
 KOLOM|inkoop_versies|aangemaakt_door_id|integer|YES|
 KOLOM|inkoop_versies|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|inkoop_versies|bron_id|integer|NO|
@@ -4013,9 +4020,13 @@ KOLOM|uren_registraties|gebouw_id|integer|YES|
 KOLOM|uren_registraties|goedgekeurd_door_id|integer|YES|
 KOLOM|uren_registraties|goedgekeurd_op|timestamp without time zone|YES|
 KOLOM|uren_registraties|id|integer|NO|nextval('uren_registraties_id_seq'::regclass)
+KOLOM|uren_registraties|indirecte_werkzaamheid_id|integer|YES|
 KOLOM|uren_registraties|ingediend_op|timestamp without time zone|YES|
 KOLOM|uren_registraties|medewerker_id|integer|NO|
 KOLOM|uren_registraties|netto_uren|real|NO|
+KOLOM|uren_registraties|niet_in_begroting_omschrijving|text|YES|
+KOLOM|uren_registraties|niet_in_begroting|boolean|NO|false
+KOLOM|uren_registraties|normtijd_id|integer|YES|
 KOLOM|uren_registraties|object_omschrijving|text|YES|
 KOLOM|uren_registraties|opdracht_id|integer|YES|
 KOLOM|uren_registraties|opmerkingen|text|YES|
@@ -4602,6 +4613,7 @@ KOLOM|werkbegroting_regels|eenheid|text|NO|'uur'::text
 KOLOM|werkbegroting_regels|hoeveelheid|real|NO|0
 KOLOM|werkbegroting_regels|hoofdstuk|text|NO|'Overige werkzaamheden'::text
 KOLOM|werkbegroting_regels|id|integer|NO|nextval('werkbegroting_regels_id_seq'::regclass)
+KOLOM|werkbegroting_regels|normtijd_id|integer|YES|
 KOLOM|werkbegroting_regels|omschrijving|text|NO|
 KOLOM|werkbegroting_regels|tarief|real|NO|0
 KOLOM|werkbegroting_regels|totaal|real|NO|0

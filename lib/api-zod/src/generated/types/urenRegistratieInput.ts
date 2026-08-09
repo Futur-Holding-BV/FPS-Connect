@@ -21,4 +21,9 @@ export interface UrenRegistratieInput {
   pauze_minuten?: number;
   opmerkingen?: string | null;
   planning_item_id?: number | null;
+  opdracht_id?: number | null;
+  normtijd_id?: number | null;
+  indirecte_werkzaamheid_id?: number | null;
+  niet_in_begroting?: boolean;
+  niet_in_begroting_omschrijving?: string | null;
 }

@@ -106,6 +106,7 @@ import MedewerkerDetailPagina from "@/pages/personeel/detail";
 import ContractbewakingPagina from "@/pages/personeel/contracten";
 import VerlofOverzichtPagina from "@/pages/personeel/verlof-overzicht";
 import VerlofInstellingenPagina from "@/pages/personeel/verlof-instellingen";
+import IndirecteWerkzaamhedenPagina from "@/pages/beheer/indirecte-werkzaamheden";
 import JaarAfsluitingPagina from "@/pages/personeel/jaarafsluiting";
 import CapaciteitsplanningPagina from "@/pages/personeel/capaciteitsplanning";
 import UitboardenPagina from "@/pages/personeel/uitboarden";
@@ -469,6 +470,7 @@ function ConnectPortal() {
         {/* ── Personeel ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
+        <Route path="/beheer/indirecte-werkzaamheden" component={IndirecteWerkzaamhedenPagina} />
         <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
         <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
         <Route path="/personeel/onboarden" component={featureFlags.wizardOnboarding ? OnboardenPagina : WizardNietBeschikbaar} />

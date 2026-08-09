@@ -4,7 +4,7 @@ import { gebruikersTable } from "./gebruikers";
 import { medewerkersTable } from "./hrm";
 import { projectenTable } from "./projecten";
 import { opdrachtenTable } from "./opdrachten";
-import { modCalcHeadersTable, modCalcRegelsTable } from "./mod-calculatie";
+import { modCalcNormtijdenTable, modCalcHeadersTable, modCalcRegelsTable } from "./mod-calculatie";
 
 export const planningItemsTable = pgTable("planning_items", {
   id: serial("id").primaryKey(),
@@ -99,6 +99,10 @@ export const werkbegrotingRegelsTable = pgTable("werkbegroting_regels", {
   id: serial("id").primaryKey(),
   begrotingId: integer("begroting_id").notNull(),
   calcRegelId: integer("calc_regel_id").references(() => modCalcRegelsTable.id, { onDelete: "set null" }),
+  // UREN_01 §6b: uurcode direct op de begrotingsregel (gekopieerd uit de
+  // calculatieregel bij het opstellen; afleiden via twee stappen breekt zodra
+  // iemand handmatig een regel toevoegt).
+  normtijdId: integer("normtijd_id").references(() => modCalcNormtijdenTable.id, { onDelete: "set null" }),
   categorie: text("categorie").notNull().default("arbeid"),
   omschrijving: text("omschrijving").notNull(),
   eenheid: text("eenheid").notNull().default("uur"),

@@ -19150,6 +19150,105 @@ export const DeleteEenheidsprijsResponse = zod.object({
 
 
 /**
+ * @summary Keuzelijst uurcodes voor uren op deze opdracht (werkbegroting + indirecte werkzaamheden)
+ */
+export const GetOpdrachtUurcodesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOpdrachtUurcodesResponse = zod.object({
+  "begroting": zod.array(zod.object({
+  "normtijd_id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string().nullish()
+})),
+  "indirect": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string()
+}))
+})
+
+
+/**
+ * @summary Begroot tegenover geschreven uren per uurcode op deze opdracht
+ */
+export const GetUrenPerUurcodeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUrenPerUurcodeResponse = zod.object({
+  "codes": zod.array(zod.object({
+  "normtijd_id": zod.number().nullable(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "begroot_uren": zod.number(),
+  "geschreven_uren": zod.number()
+})),
+  "indirect": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "geschreven_uren": zod.number()
+})),
+  "niet_in_begroting_uren": zod.number()
+})
+
+
+/**
+ * @summary Alle indirecte werkzaamheden (beheerlijst, inclusief inactieve)
+ */
+export const ListIndirecteWerkzaamhedenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number()
+})
+export const ListIndirecteWerkzaamhedenResponse = zod.array(ListIndirecteWerkzaamhedenResponseItem)
+
+
+/**
+ * @summary Indirecte werkzaamheid toevoegen
+ */
+export const CreateIndirecteWerkzaamheidBody = zod.object({
+  "naam": zod.string(),
+  "volgorde": zod.number().optional()
+})
+
+export const CreateIndirecteWerkzaamheidResponse = zod.void()
+
+
+/**
+ * @summary Indirecte werkzaamheid hernoemen, herordenen of (in)actief zetten
+ */
+export const UpdateIndirecteWerkzaamheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateIndirecteWerkzaamheidBody = zod.object({
+  "naam": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const UpdateIndirecteWerkzaamheidResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number()
+})
+
+
+/**
+ * @summary Verwijderen kan alleen als de code nooit gebruikt is (anders 409)
+ */
+export const DeleteIndirecteWerkzaamheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteIndirecteWerkzaamheidResponse = zod.void()
+
+
+/**
  * @summary Lijst urenregistraties
  */
 export const ListUrenQueryParams = zod.object({
@@ -19163,6 +19262,11 @@ export const ListUrenQueryParams = zod.object({
 })
 
 export const ListUrenResponseItem = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish(),
   "overwerk": zod.object({
   "boven_uren": zod.number().optional(),
   "grens": zod.number().optional(),
@@ -19222,7 +19326,12 @@ export const CreateUrenRegistratieBody = zod.object({
   "eind_tijd": zod.string(),
   "pauze_minuten": zod.number().optional(),
   "opmerkingen": zod.string().nullish(),
-  "planning_item_id": zod.number().nullish()
+  "planning_item_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish()
 })
 
 export const CreateUrenRegistratieResponse = zod.void()
@@ -19243,6 +19352,11 @@ export const GetMijnWeekUrenResponse = zod.object({
   "datum_van": zod.string(),
   "datum_tot": zod.string(),
   "uren": zod.array(zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish(),
   "overwerk": zod.object({
   "boven_uren": zod.number().optional(),
   "grens": zod.number().optional(),
@@ -19330,6 +19444,11 @@ export const GetUrenRegistratieParams = zod.object({
 })
 
 export const GetUrenRegistratieResponse = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish(),
   "overwerk": zod.object({
   "boven_uren": zod.number().optional(),
   "grens": zod.number().optional(),
@@ -19392,10 +19511,20 @@ export const UpdateUrenRegistratieBody = zod.object({
   "eind_tijd": zod.string(),
   "pauze_minuten": zod.number().optional(),
   "opmerkingen": zod.string().nullish(),
-  "planning_item_id": zod.number().nullish()
+  "planning_item_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish()
 })
 
 export const UpdateUrenRegistratieResponse = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "normtijd_id": zod.number().nullish(),
+  "indirecte_werkzaamheid_id": zod.number().nullish(),
+  "niet_in_begroting": zod.boolean().optional(),
+  "niet_in_begroting_omschrijving": zod.string().nullish(),
   "overwerk": zod.object({
   "boven_uren": zod.number().optional(),
   "grens": zod.number().optional(),

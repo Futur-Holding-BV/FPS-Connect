@@ -9260,6 +9260,13 @@ export interface WbAdviesUpdate {
   notitie?: string | null;
 }
 
+export interface IndirecteWerkzaamheid {
+  id: number;
+  naam: string;
+  actief: boolean;
+  volgorde: number;
+}
+
 export type UrenRegistratieOverwerkTvtVoorstel = {
   start_datum?: string;
   eind_datum?: string;
@@ -9278,6 +9285,11 @@ export type UrenRegistratieOverwerk = {
 } | null;
 
 export interface UrenRegistratie {
+  opdracht_id?: number | null;
+  normtijd_id?: number | null;
+  indirecte_werkzaamheid_id?: number | null;
+  niet_in_begroting?: boolean;
+  niet_in_begroting_omschrijving?: string | null;
   /** UREN_01 — gevuld wanneer deze regel geaccepteerd overwerk boven de weekgrens bevat; bevat een tijd-voor-tijd-VOORSTEL dat de medewerker zelf bevestigt. */
   overwerk?: UrenRegistratieOverwerk;
   id: number;
@@ -9327,6 +9339,11 @@ export interface UrenRegistratieInput {
   pauze_minuten?: number;
   opmerkingen?: string | null;
   planning_item_id?: number | null;
+  opdracht_id?: number | null;
+  normtijd_id?: number | null;
+  indirecte_werkzaamheid_id?: number | null;
+  niet_in_begroting?: boolean;
+  niet_in_begroting_omschrijving?: string | null;
 }
 
 export interface VerlofInWeek {
@@ -16049,6 +16066,54 @@ actief?: string;
 
 export type DeleteEenheidsprijs200 = {
   ok?: boolean;
+};
+
+export type GetOpdrachtUurcodes200BegrotingItem = {
+  normtijd_id: number;
+  code: string;
+  omschrijving: string;
+  eenheid?: string | null;
+};
+
+export type GetOpdrachtUurcodes200IndirectItem = {
+  id: number;
+  naam: string;
+};
+
+export type GetOpdrachtUurcodes200 = {
+  begroting: GetOpdrachtUurcodes200BegrotingItem[];
+  indirect: GetOpdrachtUurcodes200IndirectItem[];
+};
+
+export type GetUrenPerUurcode200CodesItem = {
+  normtijd_id: number | null;
+  code: string;
+  omschrijving: string;
+  begroot_uren: number;
+  geschreven_uren: number;
+};
+
+export type GetUrenPerUurcode200IndirectItem = {
+  id: number;
+  naam: string;
+  geschreven_uren: number;
+};
+
+export type GetUrenPerUurcode200 = {
+  codes: GetUrenPerUurcode200CodesItem[];
+  indirect: GetUrenPerUurcode200IndirectItem[];
+  niet_in_begroting_uren: number;
+};
+
+export type CreateIndirecteWerkzaamheidBody = {
+  naam: string;
+  volgorde?: number;
+};
+
+export type UpdateIndirecteWerkzaamheidBody = {
+  naam?: string;
+  actief?: boolean;
+  volgorde?: number;
 };
 
 export type ListUrenParams = {
