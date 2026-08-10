@@ -2566,9 +2566,11 @@ function AccountStap({
 }) {
   const { toast } = useToast();
   const maakAccount = useCreateOnboardingAccount();
+  const { data: profielen } = useListProfielen();
   const [naam, setNaam] = useState("");
   const [email, setEmail] = useState("");
   const [telefoon, setTelefoon] = useState("");
+  const [profielId, setProfielId] = useState<string>("geen");
   const [uitnodigen, setUitnodigen] = useState(true);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
@@ -2596,6 +2598,7 @@ function AccountStap({
           email: email.trim(),
           telefoon: telefoon.trim() || undefined,
           uitnodigen,
+          profiel_id: profielId === "geen" ? undefined : Number(profielId),
         },
       });
       if (nieuw.uitnodiging_verstuurd) {
@@ -2623,10 +2626,11 @@ function AccountStap({
         setBezig(false);
         return;
       }
+      const serverFout = err?.response?.data?.error ?? err?.data?.error;
       setFout(
         status === 403
-          ? "Geen toegang: voor het aanmaken van een account is Personeel-schrijfrecht (niveau 2) nodig."
-          : err?.response?.data?.error ?? err?.message ?? "Onbekende fout bij het aanmaken van het account.",
+          ? (serverFout ?? "Geen toegang: voor het aanmaken van een account is Personeel-schrijfrecht (niveau 2) nodig.")
+          : serverFout ?? err?.message ?? "Onbekende fout bij het aanmaken van het account.",
       );
       setBezig(false);
     }
@@ -2656,6 +2660,26 @@ function AccountStap({
             <div className="space-y-1.5">
               <Label htmlFor="acc-telefoon">Telefoon</Label>
               <Input id="acc-telefoon" value={telefoon} onChange={(e) => setTelefoon(e.target.value)} placeholder="Optioneel" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-profiel">Rechtenprofiel (optioneel)</Label>
+              <Select value={profielId} onValueChange={setProfielId}>
+                <SelectTrigger id="acc-profiel">
+                  <SelectValue placeholder="Geen — rechten volgen uit de functie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen — rechten volgen uit de functie</SelectItem>
+                  {(profielen ?? []).map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.naam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Koppel direct een rechtenprofiel zodat de medewerker meteen bij de juiste modules kan.
+                Zonder keuze volgen de rechten later uit het standaardprofiel van de gekozen functie.
+              </p>
             </div>
             <label className="flex items-start gap-2 cursor-pointer">
               <Checkbox checked={uitnodigen} onCheckedChange={(v) => setUitnodigen(v === true)} className="mt-0.5" />

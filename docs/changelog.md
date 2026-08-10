@@ -3199,6 +3199,12 @@ Nieuwe wervingsmodule onder Personeel → Werving: lichte registratie van sollic
 
 Productietelling (door René aangeleverd) toonde alle inkoopstromen op nul; René koos model A. Een goedgekeurde materiaal-aanvraag (soort materiaal, mét opdracht) maakt nu binnen dezelfde transactie automatisch een **concept-inkoopbon** op de opdracht via een gedeeld aanmaakpad met de handmatige route (geen vierde bestelpad; I-nummer uit de gedeelde reeks, kenmerk O…/I…). De aanvraag houdt een verwijzing (`inkoopbon_id`); her-goedkeuren maakt nooit een tweede bon; "wijkt af van opdracht" staat als LET OP in de bon-opmerkingen; leverancier/prijs komen bewust niet uit AI (inkoper werkt het concept af). Werkvoorbereiding toont na goedkeuring direct het bon-kenmerk. INKOOP_01 en NUMMER_01 §4.5 zijn gedeblokkeerd (vastgelegd in docs/antwoorden/MATERIAAL_01.md). Bewijs: `scripts/src/bewijs-materiaal01-fase3.ts` (14 checks groen (incl. parallelle dubbelgoedkeuring: 1×200 + 1×409, precies één bon)).
 
+
+## 2026-08-10 — Taak 891: accountstap onboarding kan direct een rechtenprofiel koppelen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; zonder profielkeuze blijft het gedrag exact ongewijzigd)
+
+De accountstap van de één-flow onboarding (Personeel → Onboarden) heeft nu een optionele keuze "Rechtenprofiel". Zonder keuze blijft het account least-privilege (lege matrix; rechten volgen later uit functie→profiel). Mét keuze krijgt het nieuwe account direct de profiel-matrix, een `gebruiker_profielen`-koppeling en `herkomst_profiel_id` — zodat een net-geonboarde medewerker meteen bij de juiste modules kan. Server-side geldt dezelfde zelf-escalatiebeveiliging als in Beheer → Gebruikers: wie geen hoofdbeheerder is en geen gebruikers:4 heeft, kan geen profiel koppelen met hogere moduleniveaus dan de eigen rechten (403, fail-closed: geen account aangemaakt). Beheer → Gebruikers is onaangeroerd. Bewijs: `scripts/src/bewijs-task891-onboarding-profiel.ts` (5 stappen groen: regressie zonder profiel, koppeling+herkomst met profiel, 400 bij onbestaand profiel, 403 zelf-escalatie zonder account, beperkt account kan zonder profiel door).
 ## 2026-08-10 — Post-merge stabiel: migratieketen i.p.v. drizzle-push (+ migratie 0045)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

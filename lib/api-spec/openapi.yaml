@@ -8935,7 +8935,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/OnboardingAccountResultaat"
         "400":
-          description: naam en email zijn verplicht
+          description: naam en email zijn verplicht, of ongeldig/onbestaand profiel_id
+        "403":
+          description: Zelf-escalatie geweigerd - het gekozen profiel bevat hogere moduleniveaus dan de eigen rechten
         "409":
           description: E-mailadres al in gebruik; bevat doorstart-informatie over het bestaande account
           content:
@@ -34331,7 +34333,7 @@ components:
     OnboardingAccountInput:
       type: object
       required: [naam, email]
-      description: Invoer voor de accountstap van de één-flow onboarding; het account wordt altijd least-privilege aangemaakt (rol "gebruiker", lege bevoegdheden).
+      description: Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol "gebruiker". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).
       properties:
         naam:
           type: string
@@ -34342,6 +34344,9 @@ components:
         uitnodigen:
           type: boolean
           description: Verstuur direct een activatie-uitnodiging per e-mail.
+        profiel_id:
+          type: ["integer", "null"]
+          description: Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.
 
     OnboardingAccountResultaat:
       type: object

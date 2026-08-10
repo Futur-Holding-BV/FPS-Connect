@@ -41,6 +41,8 @@ import {
   poortwachterMijlpalenTable,
   medewerkerCaoKeuzesTable,
   salarisMutatiesTable,
+  profielenTable,
+  gebruikerProfielenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
@@ -1051,24 +1053,62 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
 
 // Eén-flow onboarding, stap 0: gebruikersaccount aanmaken vanuit de wizard.
 // Bewust gegate op personeel:2 (dezelfde bevoegdheid als de rest van de
-// onboarding) en LEAST-PRIVILEGE: het account krijgt altijd rol "gebruiker",
-// een lege bevoegdhedenmatrix en geen profielen — er valt dus niets te
-// escaleren. Rechten volgen later uit de functie→profiel-koppeling via het
-// reguliere gebruikersbeheer (gebruikers:4).
+// onboarding) en LEAST-PRIVILEGE: het account krijgt altijd rol "gebruiker".
+// Zonder profiel_id blijft de bevoegdhedenmatrix leeg (rechten volgen later
+// uit functie→profiel); mét profiel_id wordt het profiel gekoppeld onder de
+// zelfde zelf-escalatiebeveiliging als het reguliere gebruikersbeheer.
 router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, email, telefoon, uitnodigen } = req.body ?? {};
+    const { naam, email, telefoon, uitnodigen, profiel_id } = req.body ?? {};
     if (typeof naam !== "string" || !naam.trim() || typeof email !== "string" || !email.trim()) {
       return void res.status(400).json({ error: "naam en email zijn verplicht" });
     }
+    // Optioneel rechtenprofiel: zonder profiel blijft het account least-privilege
+    // (lege matrix); rechten volgen dan later uit de functie→profiel-koppeling.
+    // Mét profiel geldt DEZELFDE zelf-escalatiebeveiliging als in het reguliere
+    // gebruikersbeheer: niemand mag hogere moduleniveaus toekennen dan de eigen
+    // matrix, tenzij hoofdbeheerder of volledig gebruikersbeheer (gebruikers:4).
+    let profielBevoegdheden: Record<string, number> = {};
+    let profielId: number | null = null;
+    if (profiel_id !== undefined && profiel_id !== null) {
+      if (typeof profiel_id !== "number" || !Number.isInteger(profiel_id)) {
+        return void res.status(400).json({ error: "profiel_id moet een geheel profiel-id zijn" });
+      }
+      const [profiel] = await db
+        .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
+        .from(profielenTable)
+        .where(eq(profielenTable.id, profiel_id));
+      if (!profiel) {
+        return void res.status(400).json({ error: "Het gekozen profiel bestaat niet" });
+      }
+      profielBevoegdheden = (profiel.bevoegdheden as Record<string, number> | null) ?? {};
+      profielId = profiel.id;
+      const heeftVolledigGebruikersbeheer = req.permissies!.heeftModuleRecht("gebruikers", 4);
+      if (!req.permissies!.isHoofdbeheerder && !heeftVolledigGebruikersbeheer) {
+        for (const [mod, lvl] of Object.entries(profielBevoegdheden)) {
+          if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
+            return void res.status(403).json({
+              error: `Geen toegang: u kunt niveau ${lvl} voor module '${mod}' niet toewijzen omdat uw eigen toegangsniveau lager is. Vraag een beheerder met volledige gebruikersbeheer-rechten om dit profiel te koppelen.`,
+            });
+          }
+        }
+      }
+    }
     let gebruiker;
     try {
-      gebruiker = await maakGebruikerAan(db, {
-        naam: naam.trim(),
-        email: email.trim(),
-        rol: "gebruiker",
-        telefoon: typeof telefoon === "string" && telefoon.trim() ? telefoon.trim() : null,
-        bevoegdheden: {},
+      gebruiker = await db.transaction(async (tx) => {
+        const nieuw = await maakGebruikerAan(tx, {
+          naam: naam.trim(),
+          email: email.trim(),
+          rol: "gebruiker",
+          telefoon: typeof telefoon === "string" && telefoon.trim() ? telefoon.trim() : null,
+          bevoegdheden: profielBevoegdheden,
+          herkomstProfielId: profielId,
+        });
+        if (profielId != null) {
+          await tx.insert(gebruikerProfielenTable).values({ gebruikerId: nieuw.id, profielId });
+        }
+        return nieuw;
       });
     } catch (err) {
       if (isEmailConflictFout(err)) {
@@ -1147,7 +1187,7 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
       entiteit: "gebruiker",
       entiteitId: gebruiker.id,
       oudeWaarde: null,
-      nieuweWaarde: { naam: gebruiker.naam, uitnodiging_verstuurd: uitnodigingVerstuurd },
+      nieuweWaarde: { naam: gebruiker.naam, uitnodiging_verstuurd: uitnodigingVerstuurd, profiel_id: profielId },
     });
     res.status(201).json({
       id: gebruiker.id,

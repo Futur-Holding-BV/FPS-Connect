@@ -11091,8 +11091,9 @@ export const CreateOnboardingAccountBody = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "telefoon": zod.string().nullish(),
-  "uitnodigen": zod.boolean().optional().describe('Verstuur direct een activatie-uitnodiging per e-mail.')
-}).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt altijd least-privilege aangemaakt (rol \"gebruiker\", lege bevoegdheden).')
+  "uitnodigen": zod.boolean().optional().describe('Verstuur direct een activatie-uitnodiging per e-mail.'),
+  "profiel_id": zod.number().nullish().describe('Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.')
+}).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol \"gebruiker\". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).')
 
 export const CreateOnboardingAccountResponse = zod.void()
 
