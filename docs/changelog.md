@@ -1,3 +1,9 @@
+## 2026-08-10 — Onboarding in één flow: accountstap in de wizard + altijd zichtbare startknop
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuw least-privilege endpoint, gegate op dezelfde bevoegdheid als de wizard)
+
+De medewerker-onboarding start nu in één flow: op /personeel (tab Medewerkers) staat een altijd zichtbare knop **"Nieuwe medewerker onboarden"** (ook bij 0 wachtende accounts — lege-staat-vindbaarheid), en de wizard `/personeel/onboarden` opent zonder `userId` met een nieuwe eerste stap **Account** (naam, e-mail, telefoon, keuze "uitnodiging direct versturen"). Die stap gebruikt het nieuwe `POST /medewerkers/onboarding-account` — gegate op **personeel niveau 2** (dezelfde bevoegdheid als de rest van de wizard, dus wie de knop ziet kan de stap ook afronden) en bewust **least-privilege**: het account krijgt altijd rol "gebruiker", een lege bevoegdhedenmatrix en geen profielen; rechten volgen later via functie→profiel in het reguliere gebruikersbeheer (gebruikers:4). Mislukt de uitnodigingsmail, dan blijft het account aangemaakt maar wordt de status nooit stilzwijgend "uitgenodigd" (fout zichtbaar in de wizard). Daarna gaat de flow naadloos verder via `?userId=…` met de bestaande stappen (type kiezen, functie/werkmaatschappij/CAO/uren, AI-voorstel-flow ongewijzigd). De bestaande route vanuit de kaart "Gebruikers zonder medewerkerprofiel" blijft werken en slaat de accountstap over. Feature-flag `VITE_FEATURE_WIZARD_ONBOARDING` blijft gerespecteerd. Bewijs: e2e-tests in `web-hrm-wizard.spec.ts` — accountstap-UI zonder userId, API-test met personeel-recht (201, least-privilege in DB, context direct bruikbaar, dubbele e-mail → 409) én geweigerde rol zonder personeel-recht (403).
+
 ## 2026-08-10 — VORM_01 F6: alle schermen op het ontwerpsysteem + donker palet AAN
 
 - **Uitvoering:** volledig (58 schermen + 22 componenten) | **Kwaliteit:** hoog | **Risico:** middel (breed geraakt, alleen stijlen)

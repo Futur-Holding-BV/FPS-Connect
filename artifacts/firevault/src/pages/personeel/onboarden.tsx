@@ -20,6 +20,7 @@ import {
   useGetOnboardingContext,
   getGetOnboardingContextQueryKey,
   useDuplicateCheckMedewerker,
+  useCreateOnboardingAccount,
 } from "@workspace/api-client-react";
 import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus, OnboardingContext } from "@workspace/api-client-react";
 import { leesEnWisCvOnboarding, type CvOnboardingStash } from "@/lib/cv-onboarding-stash";
@@ -2550,6 +2551,124 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
 
 // ─── Hoofdcomponent ───────────────────────────────────────────────────────────
 
+// ─── Stap 0: Account aanmaken (één-flow onboarding) ──────────────────────────
+//
+// Maakt het gebruikersaccount aan als onderdeel van de onboarding, zodat
+// niemand eerst via Beheer → Gebruikers hoeft. Gebruikt het speciale
+// least-privilege endpoint (personeel niveau 2, rol "gebruiker", lege
+// bevoegdheden) zodat wie de wizard mag gebruiken deze stap ook kan afronden.
+function AccountStap({
+  onAangemaakt,
+  onTerug,
+}: {
+  onAangemaakt: (userId: number) => void;
+  onTerug: () => void;
+}) {
+  const { toast } = useToast();
+  const maakAccount = useCreateOnboardingAccount();
+  const [naam, setNaam] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefoon, setTelefoon] = useState("");
+  const [uitnodigen, setUitnodigen] = useState(true);
+  const [fout, setFout] = useState<string | null>(null);
+  const [bezig, setBezig] = useState(false);
+
+  async function verstuur(e: React.FormEvent) {
+    e.preventDefault();
+    setFout(null);
+    if (!naam.trim() || !email.trim()) {
+      setFout("Naam en e-mailadres zijn verplicht.");
+      return;
+    }
+    setBezig(true);
+    try {
+      const nieuw = await maakAccount.mutateAsync({
+        data: {
+          naam: naam.trim(),
+          email: email.trim(),
+          telefoon: telefoon.trim() || undefined,
+          uitnodigen,
+        },
+      });
+      if (nieuw.uitnodiging_verstuurd) {
+        toast({ title: "Uitnodiging verstuurd", description: `${naam.trim()} ontvangt een e-mail om het account te activeren.` });
+      } else if (uitnodigen && nieuw.uitnodiging_fout) {
+        // Account is wél aangemaakt: onboarding kan gewoon door; uitnodigen
+        // kan later opnieuw vanuit Beheer → Gebruikers.
+        toast({
+          title: "Uitnodiging versturen mislukt",
+          description: nieuw.uitnodiging_fout,
+          variant: "destructive",
+        });
+      }
+      onAangemaakt(nieuw.id);
+    } catch (err: any) {
+      const status = err?.response?.status ?? err?.status;
+      setFout(
+        status === 403
+          ? "Geen toegang: voor het aanmaken van een account is Personeel-schrijfrecht (niveau 2) nodig."
+          : err?.response?.data?.error ?? err?.message ?? "Onbekende fout bij het aanmaken van het account.",
+      );
+      setBezig(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-xl">
+      <WizardStapIndicator huidigStap={1} stappen={["Account", "Onboarding"]} />
+      <Card>
+        <CardContent className="p-4">
+          <form onSubmit={verstuur} className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold">Nieuwe medewerker onboarden</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Maak eerst het gebruikersaccount aan. Daarna gaat de wizard direct verder met de
+                onboardingstappen (functie, werkmaatschappij, CAO en uren).
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-naam">Naam *</Label>
+              <Input id="acc-naam" value={naam} onChange={(e) => setNaam(e.target.value)} placeholder="Voor- en achternaam" autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-email">E-mailadres *</Label>
+              <Input id="acc-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="naam@bedrijf.nl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-telefoon">Telefoon</Label>
+              <Input id="acc-telefoon" value={telefoon} onChange={(e) => setTelefoon(e.target.value)} placeholder="Optioneel" />
+            </div>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <Checkbox checked={uitnodigen} onCheckedChange={(v) => setUitnodigen(v === true)} className="mt-0.5" />
+              <span className="text-sm">
+                Uitnodiging direct versturen
+                <span className="block text-xs text-muted-foreground">
+                  De medewerker ontvangt een e-mail om zelf een wachtwoord in te stellen.
+                </span>
+              </span>
+            </label>
+            {fout && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2.5 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{fout}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1">
+              <Button type="button" variant="ghost" onClick={onTerug} disabled={bezig}>
+                <ArrowLeft className="h-4 w-4" /> Terug
+              </Button>
+              <Button type="submit" disabled={bezig}>
+                {bezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                Account aanmaken en verder
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function OnboardenPagina() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -2563,13 +2682,6 @@ export default function OnboardenPagina() {
   const userIdParam = new URLSearchParams(zoekString).get("userId");
   const userId = userIdParam !== null && /^\d+$/.test(userIdParam.trim()) ? Number(userIdParam.trim()) : null;
   const userIdOngeldig = userIdParam !== null && userId === null;
-
-  // Zonder userId is onboarding niet bereikbaar: terug naar de medewerkerslijst.
-  useEffect(() => {
-    if (userIdParam === null) {
-      navigate("/personeel?tab=medewerkers", { replace: true });
-    }
-  }, [userIdParam, navigate]);
 
   const contextQuery = useGetOnboardingContext(userId ?? 0, {
     query: {
@@ -2595,8 +2707,17 @@ export default function OnboardenPagina() {
     await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
   }
 
+  // Zonder userId start de wizard met de accountstap: het gebruikersaccount
+  // wordt in dezelfde flow aangemaakt, daarna gaat de wizard verder met de
+  // bestaande stappen via ?userId=… (bestaande route vanuit de kaart
+  // "Gebruikers zonder medewerkerprofiel" slaat deze stap over).
   if (userIdParam === null) {
-    return null;
+    return (
+      <AccountStap
+        onAangemaakt={(id) => navigate(`/personeel/onboarden?userId=${id}`, { replace: true })}
+        onTerug={() => navigate("/personeel?tab=medewerkers")}
+      />
+    );
   }
 
   const foutStatus =

@@ -1057,6 +1057,8 @@ export * from './offerteVervolgOpties';
 export * from './offerteVerzendenInput';
 export * from './offerteVraag';
 export * from './offerteVraagAntwoordInput';
+export * from './onboardingAccountInput';
+export * from './onboardingAccountResultaat';
 export * from './onboardingContext';
 export * from './onboardingFout';
 export * from './onboardingVoorstelInvoer';

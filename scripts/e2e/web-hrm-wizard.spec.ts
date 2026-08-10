@@ -27,10 +27,15 @@ import {
   E2E_WEB_ADMIN_WACHTWOORD,
   E2E_WEB_ADMIN_TOTP_SECRET,
   setupE2eWebAdminAccount,
+  E2E_BEDRAGEN1_EMAIL,
+  E2E_BEDRAGEN1_WACHTWOORD,
+  E2E_BEDRAGEN1_TOTP_SECRET,
+  setupE2eBedragenAccounts,
 } from "../src/e2e-monteur-testaccount";
 import {
   maakWegwerpOnboardingGebruiker,
   verwijderWegwerpOnboardingGebruikers,
+  E2E_ONBOARDING_GEBRUIKER_DOMEIN,
 } from "../src/e2e-onboarding-testgebruikers";
 import { authenticator } from "otplib";
 
@@ -712,16 +717,81 @@ async function mockToegangsApi(
   });
 }
 
-test("UI: /personeel/onboarden zonder userId → redirect naar medewerkerslijst", async ({ page }) => {
+// ── Eén-flow onboarding: accountstap (POST /medewerkers/onboarding-account) ──
+
+test("API: onboarding-account — personeel-schrijfrecht maakt least-privilege account en context is direct bruikbaar", async ({ page }) => {
+  await apiLogin(page);
+  const uniek = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const naam = `${TEST_NAAM_PREFIX} Accountstap ${uniek}`;
+  const email = `accountstap-${uniek}@${E2E_ONBOARDING_GEBRUIKER_DOMEIN}`;
+
+  const res = await page.request.post("/api/medewerkers/onboarding-account", {
+    data: { naam, email, uitnodigen: false },
+  });
+  expect(res.status()).toBe(201);
+  const body = await res.json();
+  expect(typeof body.id).toBe("number");
+  expect(body.naam).toBe(naam);
+  expect(body.uitnodiging_verstuurd).toBe(false);
+
+  // Least-privilege: rol "gebruiker", lege bevoegdheden, niet uitgenodigd.
+  const rijen = await db.execute(
+    sql`SELECT rol, bevoegdheden, uitnodiging_status FROM gebruikers WHERE id = ${body.id}`,
+  );
+  const rij = (rijen as unknown as { rows: Array<Record<string, unknown>> }).rows?.[0] ?? (rijen as unknown as Array<Record<string, unknown>>)[0];
+  expect(rij.rol).toBe("gebruiker");
+  expect(rij.uitnodiging_status).toBe("niet_uitgenodigd");
+  expect(Object.keys((rij.bevoegdheden as Record<string, number>) ?? {})).toHaveLength(0);
+
+  // Naadloze overgang naar de bestaande wizard: de context is direct opvraagbaar.
+  const ctx = await page.request.get(`/api/medewerkers/onboarding-context/${body.id}`);
+  expect(ctx.status()).toBe(200);
+  const ctxBody = await ctx.json();
+  expect(ctxBody.gebruiker_id).toBe(body.id);
+  expect(ctxBody.naam).toBe(naam);
+
+  // Dubbel e-mailadres → 409 (geen tweede account).
+  const dubbel = await page.request.post("/api/medewerkers/onboarding-account", {
+    data: { naam: `${naam} dubbel`, email, uitnodigen: false },
+  });
+  expect(dubbel.status()).toBe(409);
+});
+
+test("API: onboarding-account — zonder personeel-recht → 403", async ({ page }) => {
+  await setupE2eBedragenAccounts(); // bedragen1 heeft alléén projecten:1, geen personeel
+  const res1 = await page.request.post("/api/auth/login", {
+    data: { email: E2E_BEDRAGEN1_EMAIL, wachtwoord: E2E_BEDRAGEN1_WACHTWOORD },
+  });
+  expect(res1.status()).toBe(200);
+  let ingelogd = false;
+  for (let p = 1; p <= 3 && !ingelogd; p++) {
+    const code = authenticator.generate(E2E_BEDRAGEN1_TOTP_SECRET);
+    const res2 = await page.request.post("/api/auth/2fa/verify", { data: { code } });
+    if (res2.status() === 200) ingelogd = true;
+    else if (p < 3) await new Promise((r) => setTimeout(r, 32_000));
+  }
+  expect(ingelogd).toBe(true);
+
+  const res = await page.request.post("/api/medewerkers/onboarding-account", {
+    data: { naam: "Mag Niet", email: `mag-niet-${Date.now()}@${E2E_ONBOARDING_GEBRUIKER_DOMEIN}`, uitnodigen: false },
+  });
+  expect(res.status()).toBe(403);
+});
+
+test("UI: /personeel/onboarden zonder userId → accountstap (één-flow onboarding)", async ({ page }) => {
   await apiLogin(page);
   const meData = await (await page.request.get("/api/auth/me")).json();
   await mockToegangsApi(page, meData, null);
 
   await page.goto("/personeel/onboarden");
 
-  // De pagina moet client-side doorsturen naar de medewerkerslijst
-  await page.waitForURL(/\/personeel\?tab=medewerkers/, { timeout: 15_000 });
-  expect(page.url()).toContain("/personeel?tab=medewerkers");
+  // Zonder userId toont de wizard de nieuwe eerste stap "Account" waarin het
+  // gebruikersaccount in dezelfde flow wordt aangemaakt (geen redirect meer).
+  await expect(page.getByRole("heading", { name: "Nieuwe medewerker onboarden" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel("Naam *")).toBeVisible();
+  await expect(page.getByLabel("E-mailadres *")).toBeVisible();
+  await expect(page.getByText("Uitnodiging direct versturen")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account aanmaken en verder" })).toBeVisible();
 });
 
 test("UI: onbekend userId → 'Gebruiker niet gevonden'-scherm", async ({ page }) => {

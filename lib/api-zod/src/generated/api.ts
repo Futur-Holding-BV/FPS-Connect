@@ -11085,6 +11085,19 @@ export const GetOnboardingContextResponse = zod.object({
 
 
 /**
+ * @summary Eén-flow onboarding stap 0 - least-privilege gebruikersaccount aanmaken (personeel niveau 2)
+ */
+export const CreateOnboardingAccountBody = zod.object({
+  "naam": zod.string(),
+  "email": zod.string(),
+  "telefoon": zod.string().nullish(),
+  "uitnodigen": zod.boolean().optional().describe('Verstuur direct een activatie-uitnodiging per e-mail.')
+}).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt altijd least-privilege aangemaakt (rol \"gebruiker\", lege bevoegdheden).')
+
+export const CreateOnboardingAccountResponse = zod.void()
+
+
+/**
  * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
  */
 export const ListUitzendbureauKoppelingenResponse = zod.object({

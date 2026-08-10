@@ -55,6 +55,10 @@ import { analyseerCvBestand, analyseerOnboardingTekst } from "../lib/cvAnalyse";
 import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
 import { logAudit } from "../lib/audit";
+import crypto from "node:crypto";
+import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
+import { stuurUitnodigingsmail, MailFout, MAIL_FOUT_OMSCHRIJVING } from "../services/email";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const hrmStorage = new ObjectStorageService();
@@ -1038,6 +1042,93 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
       email: g.email ?? null,
       telefoon: g.telefoon ?? null,
       concept_medewerker_id: gekoppeld?.id ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Eén-flow onboarding, stap 0: gebruikersaccount aanmaken vanuit de wizard.
+// Bewust gegate op personeel:2 (dezelfde bevoegdheid als de rest van de
+// onboarding) en LEAST-PRIVILEGE: het account krijgt altijd rol "gebruiker",
+// een lege bevoegdhedenmatrix en geen profielen — er valt dus niets te
+// escaleren. Rechten volgen later uit de functie→profiel-koppeling via het
+// reguliere gebruikersbeheer (gebruikers:4).
+router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Promise<void> => {
+  try {
+    const { naam, email, telefoon, uitnodigen } = req.body ?? {};
+    if (typeof naam !== "string" || !naam.trim() || typeof email !== "string" || !email.trim()) {
+      return void res.status(400).json({ error: "naam en email zijn verplicht" });
+    }
+    let gebruiker;
+    try {
+      gebruiker = await maakGebruikerAan(db, {
+        naam: naam.trim(),
+        email: email.trim(),
+        rol: "gebruiker",
+        telefoon: typeof telefoon === "string" && telefoon.trim() ? telefoon.trim() : null,
+        bevoegdheden: {},
+      });
+    } catch (err) {
+      if (isEmailConflictFout(err)) {
+        return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+      }
+      throw err;
+    }
+    // Uitnodiging is een bijeffect: falen daarvan mag de accountaanmaak niet
+    // terugdraaien, maar mag ook nooit stilzwijgend als "uitgenodigd" boeken.
+    let uitnodigingVerstuurd = false;
+    let uitnodigingFout: string | null = null;
+    if (uitnodigen === true) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const basis = publiekeAppUrl()?.replace(/^https?:\/\//, "") || "localhost";
+      try {
+        await stuurUitnodigingsmail({
+          naarEmail: gebruiker.email,
+          naarNaam: gebruiker.naam,
+          activatieLink: `https://${basis}/uitnodiging/${token}`,
+          verstuurdDoorId: req.session.userId ?? null,
+        });
+        await db
+          .update(gebruikersTable)
+          .set({
+            uitnodigingStatus: "uitgenodigd",
+            uitnodigingVerstuurdOp: new Date(),
+            uitnodigingToken: token,
+            uitnodigingVerlooptOp: verlooptOp,
+            uitnodigingGeopendOp: null,
+            uitnodigingOpnieuwVerstuurdOp: null,
+          })
+          .where(eq(gebruikersTable.id, gebruiker.id));
+        uitnodigingVerstuurd = true;
+      } catch (mailErr) {
+        req.log.error(mailErr, "Uitnodigingsmail vanuit onboarding mislukt");
+        uitnodigingFout =
+          mailErr instanceof MailFout
+            ? MAIL_FOUT_OMSCHRIJVING[mailErr.categorie]
+            : "De uitnodiging kon niet worden verzonden. Verstuur deze later opnieuw via Beheer → Gebruikers.";
+      }
+    }
+    logAudit({
+      gebruikerId: req.session.userId ?? null,
+      gebruikerNaam: null,
+      ipAdres: req.ip ?? null,
+      sessieId: null,
+      module: "personeel",
+      actie: "onboarding_account_aangemaakt",
+      entiteit: "gebruiker",
+      entiteitId: gebruiker.id,
+      oudeWaarde: null,
+      nieuweWaarde: { naam: gebruiker.naam, uitnodiging_verstuurd: uitnodigingVerstuurd },
+    });
+    res.status(201).json({
+      id: gebruiker.id,
+      naam: gebruiker.naam,
+      email: gebruiker.email,
+      uitnodiging_verstuurd: uitnodigingVerstuurd,
+      uitnodiging_fout: uitnodigingFout,
     });
   } catch (err) {
     req.log.error(err);

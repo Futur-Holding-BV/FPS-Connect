@@ -754,6 +754,8 @@ import type {
   OfferteVerzendenInput,
   OfferteVraag,
   OfferteVraagAntwoordInput,
+  OnboardingAccountInput,
+  OnboardingAccountResultaat,
   OnboardingContext,
   OnboardingFout,
   OnboardingVoorstelInvoer,
@@ -31026,6 +31028,76 @@ export function useGetOnboardingContext<TData = Awaited<ReturnType<typeof getOnb
 
 
 
+
+export const getCreateOnboardingAccountUrl = () => {
+
+
+
+
+  return `/api/medewerkers/onboarding-account`
+}
+
+/**
+ * @summary Eén-flow onboarding stap 0 - least-privilege gebruikersaccount aanmaken (personeel niveau 2)
+ */
+export const createOnboardingAccount = async (onboardingAccountInput: OnboardingAccountInput, options?: RequestInit): Promise<OnboardingAccountResultaat> => {
+
+  return customFetch<OnboardingAccountResultaat>(getCreateOnboardingAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onboardingAccountInput)
+  }
+);}
+
+
+
+
+export const getCreateOnboardingAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext> => {
+
+const mutationKey = ['createOnboardingAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOnboardingAccount>>, {data: BodyType<OnboardingAccountInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOnboardingAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOnboardingAccountMutationResult = NonNullable<Awaited<ReturnType<typeof createOnboardingAccount>>>
+    export type CreateOnboardingAccountMutationBody = BodyType<OnboardingAccountInput>
+    export type CreateOnboardingAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Eén-flow onboarding stap 0 - least-privilege gebruikersaccount aanmaken (personeel niveau 2)
+ */
+export const useCreateOnboardingAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOnboardingAccount>>,
+        TError,
+        {data: BodyType<OnboardingAccountInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOnboardingAccountMutationOptions(options));
+    }
 
 export const getListUitzendbureauKoppelingenUrl = () => {
 

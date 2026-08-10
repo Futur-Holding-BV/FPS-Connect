@@ -8916,6 +8916,29 @@ paths:
         "409":
           description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
 
+  /medewerkers/onboarding-account:
+    post:
+      operationId: createOnboardingAccount
+      tags: [personeel]
+      summary: Eén-flow onboarding stap 0 - least-privilege gebruikersaccount aanmaken (personeel niveau 2)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingAccountInput"
+      responses:
+        "201":
+          description: Account aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingAccountResultaat"
+        "400":
+          description: naam en email zijn verplicht
+        "409":
+          description: E-mailadres al in gebruik
+
   /uitzendbureau-koppelingen:
     get:
       operationId: listUitzendbureauKoppelingen
@@ -34300,6 +34323,37 @@ components:
         jaar:
           type: integer
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
+
+    OnboardingAccountInput:
+      type: object
+      required: [naam, email]
+      description: Invoer voor de accountstap van de één-flow onboarding; het account wordt altijd least-privilege aangemaakt (rol "gebruiker", lege bevoegdheden).
+      properties:
+        naam:
+          type: string
+        email:
+          type: string
+        telefoon:
+          type: ["string", "null"]
+        uitnodigen:
+          type: boolean
+          description: Verstuur direct een activatie-uitnodiging per e-mail.
+
+    OnboardingAccountResultaat:
+      type: object
+      required: [id, naam, email, uitnodiging_verstuurd]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        uitnodiging_verstuurd:
+          type: boolean
+        uitnodiging_fout:
+          type: ["string", "null"]
+          description: Gevuld wanneer het account is aangemaakt maar de uitnodigingsmail niet kon worden verzonden.
 
     OnboardingContext:
       type: object

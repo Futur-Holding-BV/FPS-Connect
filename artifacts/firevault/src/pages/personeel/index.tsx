@@ -597,6 +597,17 @@ export default function PersoneelPagina() {
         </TabsContent>
 
         <TabsContent value="medewerkers" className="space-y-4">
+          {magSchrijven && featureFlags.wizardOnboarding && (
+            <div className="flex justify-end">
+              {/* Altijd zichtbaar (ook bij 0 wachtende accounts): onboarding start
+                  in één flow en maakt zelf het gebruikersaccount aan. */}
+              <Button asChild>
+                <Link href="/personeel/onboarden">
+                  <UserPlus className="h-4 w-4" /> Nieuwe medewerker onboarden
+                </Link>
+              </Button>
+            </div>
+          )}
           {magSchrijven && ongekoppeld.length > 0 && (
             <Card>
               <CardContent className="p-4 space-y-3">

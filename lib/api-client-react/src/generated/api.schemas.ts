@@ -5676,6 +5676,30 @@ export interface MedewerkerInput {
 }
 
 /**
+ * Invoer voor de accountstap van de één-flow onboarding; het account wordt altijd least-privilege aangemaakt (rol "gebruiker", lege bevoegdheden).
+ */
+export interface OnboardingAccountInput {
+  naam: string;
+  email: string;
+  /** @nullable */
+  telefoon?: string | null;
+  /** Verstuur direct een activatie-uitnodiging per e-mail. */
+  uitnodigen?: boolean;
+}
+
+export interface OnboardingAccountResultaat {
+  id: number;
+  naam: string;
+  email: string;
+  uitnodiging_verstuurd: boolean;
+  /**
+     * Gevuld wanneer het account is aangemaakt maar de uitnodigingsmail niet kon worden verzonden.
+     * @nullable
+     */
+  uitnodiging_fout?: string | null;
+}
+
+/**
  * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
  */
 export interface OnboardingContext {
