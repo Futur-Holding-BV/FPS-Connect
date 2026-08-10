@@ -11,7 +11,7 @@
 //      + telling is hoofdbeheerder-only (403 voor anderen).
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-materiaal01.ts
 import bcrypt from "bcryptjs";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";
 import { db, gebruikersTable } from "@workspace/db";
 import { materiaalAanvragenTable, werkbakItemsTable } from "@workspace/db/schema";
@@ -120,6 +120,76 @@ async function main(): Promise<void> {
   const secties = ["t1_inkoopbonnen_per_status_maand","t2_magazijn_inkooporders_per_status_maand","t3_inkoopplannen","t4_reserveringen_per_status","t5_materiaal_aanvragen","t6_goedgekeurd_ouderdom","t7_mod_calc_inkoop_items","t8_onderaannemer_orders_per_status","t9_algemene_inkopen_per_soort","t10_aanmakers_per_profiel","herstelronde_openstaand"];
   for (const s of secties) check(`§7.4 telling bevat ${s}`, s in m, Object.keys(m));
   check("§7.4 t5 bevat de bewijsaanvragen", Array.isArray(m["t5_materiaal_aanvragen"]) && (m["t5_materiaal_aanvragen"] as unknown[]).length >= 1);
+
+  // ── Taak 884: twee behandelaars tegelijk laten nooit een half signaal achter ──
+
+  // (1) PATCH met ongewijzigde terminale status → 200, maar géén dubbele
+  // sluiting: een (kunstmatig her)open item blijft open omdat er geen échte
+  // overgang plaatsvindt.
+  const b1 = await maakAanvraagMetSignaal("goedgekeurd");
+  r = await fetch(`${BASIS}/materiaal-aanvragen/${b1.aanvraagId}`, { method: "PATCH", headers: wvb, body: JSON.stringify({ status: "goedgekeurd", behandel_notitie: "nogmaals" }) });
+  check("884.1 PATCH ongewijzigde terminale status slaagt (200, geen conflict)", r.status === 200, r.status);
+  check("884.1 geen dubbele sluiting: open item blijft OPEN bij no-op terminale PATCH", (await itemStatus(b1.itemId)) === "open");
+  // Opruimen buiten de bewijsscope: dit item hoort niet in de herstelronde-idempotentiecheck hierboven te lekken (die is al gedraaid).
+
+  // (2) Fout ná de status-update → volledige rollback: geen terminale aanvraag
+  // met open werkbakitem. We injecteren de fout met een tijdelijke DB-trigger
+  // die de werkbaksluiting van precies dít item laat ontploffen.
+  const b2 = await maakAanvraagMetSignaal("nieuw");
+  await db.execute(sql`
+    CREATE OR REPLACE FUNCTION bewijs884_ontplof() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.status = 'afgehandeld' THEN
+        RAISE EXCEPTION 'bewijs884: geforceerde fout na status-update';
+      END IF;
+      RETURN NEW;
+    END $$ LANGUAGE plpgsql`);
+  await db.execute(sql.raw(`
+    CREATE TRIGGER bewijs884_trigger BEFORE UPDATE ON werkbak_items
+    FOR EACH ROW WHEN (OLD.id = ${b2.itemId}) EXECUTE FUNCTION bewijs884_ontplof()`));
+  try {
+    r = await fetch(`${BASIS}/materiaal-aanvragen/${b2.aanvraagId}`, { method: "PATCH", headers: wvb, body: JSON.stringify({ status: "goedgekeurd" }) });
+    check("884.2 fout na status-update → geen 200", r.status !== 200, r.status);
+    const [na] = await db.select({ status: materiaalAanvragenTable.status }).from(materiaalAanvragenTable).where(eq(materiaalAanvragenTable.id, b2.aanvraagId));
+    check("884.2 rollback: aanvraag NIET terminaal (status blijft 'nieuw')", na?.status === "nieuw", na);
+    check("884.2 rollback: werkbakitem blijft open (geen half signaal)", (await itemStatus(b2.itemId)) === "open");
+  } finally {
+    await db.execute(sql`DROP TRIGGER IF EXISTS bewijs884_trigger ON werkbak_items`);
+    await db.execute(sql`DROP FUNCTION IF EXISTS bewijs884_ontplof()`);
+  }
+
+  // (3) Twee concurrerende PATCHes: één wint, de ander krijgt 409.
+  // Deterministisch: we houden de rij vergrendeld in een eigen transactie
+  // (= de "winnende" behandelaar die net gecommit heeft nadat de verliezer
+  // zijn verouderde beeld las), zodat de verliezende PATCH gegarandeerd op
+  // het rijslot blokkeert en na commit 0 rijen matcht → 409.
+  const b3 = await maakAanvraagMetSignaal("nieuw");
+  let verliezer: Promise<Response> | null = null;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(materiaalAanvragenTable)
+      .set({ status: "goedgekeurd", bijgewerktOp: new Date() })
+      .where(eq(materiaalAanvragenTable.id, b3.aanvraagId));
+    // Verliezer start nu: leest nog status 'nieuw' (onze tx is niet gecommit),
+    // en blokkeert vervolgens op het rijslot tot wij committen.
+    verliezer = fetch(`${BASIS}/materiaal-aanvragen/${b3.aanvraagId}`, { method: "PATCH", headers: wvb, body: JSON.stringify({ status: "afgewezen" }) });
+    await new Promise((klaar) => setTimeout(klaar, 2000));
+  });
+  const rv = await verliezer!;
+  check("884.3 concurrerende PATCH verliest met 409", rv.status === 409, rv.status);
+  const [b3na] = await db.select({ status: materiaalAanvragenTable.status }).from(materiaalAanvragenTable).where(eq(materiaalAanvragenTable.id, b3.aanvraagId));
+  check("884.3 winnaar bepaalt de status (goedgekeurd, niet afgewezen)", b3na?.status === "goedgekeurd", b3na);
+  check("884.3 verliezer sloot niets: item onaangeroerd (open)", (await itemStatus(b3.itemId)) === "open");
+
+  // Slot-invariant over alle bewijsdata: geen terminale aanvraag mét open item,
+  // behalve de bewust kunstmatig geconstrueerde (b1 no-op en b3 winnaar-via-DB).
+  const kunstmatig = new Set([b1.aanvraagId, a3.aanvraagId, b3.aanvraagId]);
+  const halve = await db
+    .select({ id: materiaalAanvragenTable.id })
+    .from(materiaalAanvragenTable)
+    .innerJoin(werkbakItemsTable, eq(werkbakItemsTable.herkomstId, materiaalAanvragenTable.id))
+    .where(sql`${materiaalAanvragenTable.status} IN ('goedgekeurd','afgewezen') AND ${werkbakItemsTable.herkomstType} = 'materiaal_aanvraag' AND ${werkbakItemsTable.status} = 'open' AND ${inArray(materiaalAanvragenTable.id, aangemaakt.aanvragen)}`);
+  check("884 invariant: geen half signaal via de API-route ontstaan", halve.every((h) => kunstmatig.has(h.id)), halve);
 }
 
 main()
