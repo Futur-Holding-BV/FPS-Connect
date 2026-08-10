@@ -759,6 +759,14 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promis
         { role: "system", content: STUDIO_GENEREER_JSON_PROMPT.tekst },
         { role: "user",   content: prompt },
       ],
+    }, undefined, {
+      module: "studio",
+      functie: "genereerTemplate",
+      gebruikerId: (req.session.userId as number | undefined) ?? null,
+      entiteitstype: "documentStudioModel",
+      entiteitId: id,
+      promptNaam: STUDIO_GENEREER_JSON_PROMPT.naam,
+      promptVersie: STUDIO_GENEREER_JSON_PROMPT.versie,
     });
 
     const tekst = genereerResultaat.ok ? genereerResultaat.inhoud.trim() : "";
@@ -823,6 +831,14 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res): Promis
         { role: "system", content: STUDIO_BIJSTUUR_JSON_PROMPT.tekst },
         { role: "user",   content: `Huidig template:\n${rij.model.connectTemplateJson}\n\nBijstuur-instructie: ${instructie.trim()}\n\nRetourneer de volledige verbeterde JSON.` },
       ],
+    }, undefined, {
+      module: "studio",
+      functie: "bijstuurTemplate",
+      gebruikerId: (req.session.userId as number | undefined) ?? null,
+      entiteitstype: "documentStudioModel",
+      entiteitId: id,
+      promptNaam: STUDIO_BIJSTUUR_JSON_PROMPT.naam,
+      promptVersie: STUDIO_BIJSTUUR_JSON_PROMPT.versie,
     });
 
     const tekst = bijstuurResultaat.ok ? bijstuurResultaat.inhoud.trim() : "";
@@ -909,6 +925,14 @@ router.post("/studio/modellen/:id/huisstijl-analyse", schrijven, async (req, res
         { role: "system", content: STUDIO_HUISSTIJL_ANALYSE_PROMPT.tekst },
         { role: "user", content } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       ],
+    }, undefined, {
+      module: "studio",
+      functie: "huisstijlAnalyse",
+      gebruikerId: (req.session.userId as number | undefined) ?? null,
+      entiteitstype: "documentStudioModel",
+      entiteitId: id,
+      promptNaam: STUDIO_HUISSTIJL_ANALYSE_PROMPT.naam,
+      promptVersie: STUDIO_HUISSTIJL_ANALYSE_PROMPT.versie,
     });
 
     if (!analyseResultaat.ok || !analyseResultaat.inhoud.trim()) {

@@ -189,12 +189,15 @@ export interface AiContextBron {
 
 export interface LogContext {
   // ── Basale log-velden ──────────────────────────────────────────────────────
+  /** Module-id (bv. "offertes", "crm", "documenten") — verplicht (AI_01 §6.4). */
   module: string;
-  functie?: string;
+  /** Functienaam binnen de module (bv. "genereerSamenvatting") — verplicht. */
+  functie: string;
   gebruikerId?: number | null;
   entiteitstype?: string | null;
   entiteitId?: number | null;
-  promptNaam?: string | null;
+  /** Naam van de gebruikte prompt (bv. constante uit aiPrompts.ts) — verplicht (AI_01 §6.4). */
+  promptNaam: string;
   promptVersie?: string | null;
 
   // ── Flat businesscontext-velden ────────────────────────────────────────────
@@ -361,9 +364,10 @@ class AiGatewayService {
   async chat(
     slot: ModelSlot,
     params: ChatParams,
-    timeoutMs: number = STANDAARD_TIMEOUT_MS,
-    logCtx?: LogContext,
+    timeoutMs: number | undefined,
+    logCtx: LogContext,
   ): Promise<ChatResultaat> {
+    timeoutMs ??= STANDAARD_TIMEOUT_MS;
     // ── Punt 25: begrenzing per gebruiker + dagplafond ───────────────────────
     if (!binnenGebruikersLimiet(logCtx?.gebruikerId)) {
       logger.warn({ gebruikerId: logCtx?.gebruikerId, module: logCtx?.module }, "AI-aanroep geblokkeerd: gebruikerslimiet per minuut");
@@ -519,9 +523,10 @@ class AiGatewayService {
   async responses(
     slot: ModelSlot,
     params: ResponsesParams,
-    timeoutMs: number = STANDAARD_TIMEOUT_MS,
-    logCtx?: LogContext,
+    timeoutMs: number | undefined,
+    logCtx: LogContext,
   ): Promise<ChatResultaat> {
+    timeoutMs ??= STANDAARD_TIMEOUT_MS;
     const model = MODEL_REGISTRY[slot];
     const contextJson = bouwContextJson(logCtx);
     let pogingen = 0;

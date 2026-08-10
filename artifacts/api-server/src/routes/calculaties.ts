@@ -497,6 +497,15 @@ Alleen het JSON object, geen uitleg.`;
     const calcAiResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1500,
+    }, undefined, {
+      module: "calculaties",
+      functie: "aiRegels",
+      entiteitstype: "calculatie",
+      entiteitId: calcId,
+      calculatie_id: calcId,
+      gebruikerId: (req.session as { userId?: number }).userId ?? null,
+      promptNaam: "calculatie-begroting-suggesties",
+      promptVersie: "1.0.0",
     });
 
     let regels: object[] = [];

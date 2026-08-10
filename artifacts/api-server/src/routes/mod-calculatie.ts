@@ -1576,6 +1576,11 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res): P
         { role: "user", content: vullenContext },
       ],
       max_completion_tokens: 2000,
+    }, undefined, {
+      module: "calculaties",
+      functie: "calculatie_vullen",
+      promptNaam: CALCULATIE_VULLEN_BASE_PROMPT.naam,
+      promptVersie: CALCULATIE_VULLEN_BASE_PROMPT.versie,
     });
 
     const raw = (calcRegelResultaat.ok ? calcRegelResultaat.inhoud : "{}").trim();
@@ -2064,6 +2069,11 @@ router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrij
         { role: "user", content: inkoopMailContext + mailEigenCijfers },
       ],
       max_completion_tokens: 600,
+    }, undefined, {
+      module: "calculaties",
+      functie: "inkoop_mail",
+      promptNaam: CALCULATIE_INKOOP_MAIL_PROMPT.naam,
+      promptVersie: CALCULATIE_INKOOP_MAIL_PROMPT.versie,
     });
 
     const conceptMail = (antwoord.ok ? antwoord.inhoud : "").trim();
@@ -2209,6 +2219,11 @@ router.post("/modules/calculaties/:id/ai-chat", lezenCalc, async (req, res): Pro
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: messages as any,
       max_completion_tokens: 2000,
+    }, undefined, {
+      module: "calculaties",
+      functie: "calculatie_chat",
+      promptNaam: CALCULATIE_CHAT_BASE_PROMPT.naam,
+      promptVersie: CALCULATIE_CHAT_BASE_PROMPT.versie,
     });
 
     const antwoord = calcChatResultaat.ok ? calcChatResultaat.inhoud : "Geen antwoord ontvangen.";
@@ -2339,7 +2354,12 @@ router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req,
         { role: "user", content: "Analyseer de calculatie en retourneer de JSON-array met adviezen." },
       ],
       max_completion_tokens: 3000,
-    } as any);
+    } as any, undefined, {
+      module: "calculaties",
+      functie: "calculatie_analyse",
+      promptNaam: CALCULATIE_ANALYSE_BASE_PROMPT.naam,
+      promptVersie: CALCULATIE_ANALYSE_BASE_PROMPT.versie,
+    });
 
     let adviezen: Array<{ type: string; prioriteit: string; titel: string; uitleg: string }> = [];
     if (aiResultaat.ok) {
@@ -2561,7 +2581,7 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
         messages: [{ role: "system", content: CALCULATIE_PLAK_HERKEN_PROMPT.tekst }, { role: "user", content: herkenContent } as any],
       },
       undefined,
-      { module: "calculaties", functie: "plak_herken" },
+      { module: "calculaties", functie: "plak_herken", promptNaam: CALCULATIE_PLAK_HERKEN_PROMPT.naam, promptVersie: CALCULATIE_PLAK_HERKEN_PROMPT.versie },
     );
 
     if (!herkenResultaat.ok || !herkenResultaat.inhoud) {
@@ -2704,7 +2724,7 @@ router.post("/modules/calculaties/:id/plak-analyse", lezenCalc, plakUploadMiddle
         ],
       },
       undefined,
-      { module: "calculaties", functie: "plak_koppel" },
+      { module: "calculaties", functie: "plak_koppel", promptNaam: CALCULATIE_PLAK_KOPPEL_PROMPT.naam, promptVersie: CALCULATIE_PLAK_KOPPEL_PROMPT.versie },
     );
 
     // Parse de koppelkeuzes; ontbreekt/faalt → alles null (fail-closed).
@@ -3115,7 +3135,7 @@ router.post("/modules/calculaties/:id/adviesrapport-analyse", schrijvenCalc, asy
         messages: [{ role: "system", content: CALCULATIE_ADVIES_PUNTEN_PROMPT.tekst }, { role: "user", content: puntContent } as any],
       },
       undefined,
-      { module: "calculaties", functie: "advies_punten" },
+      { module: "calculaties", functie: "advies_punten", promptNaam: CALCULATIE_ADVIES_PUNTEN_PROMPT.naam, promptVersie: CALCULATIE_ADVIES_PUNTEN_PROMPT.versie },
     );
 
     if (!puntResultaat.ok || !puntResultaat.inhoud) {
@@ -3226,7 +3246,7 @@ router.post("/modules/calculaties/:id/adviesrapport-analyse", schrijvenCalc, asy
         ],
       },
       undefined,
-      { module: "calculaties", functie: "advies_koppel" },
+      { module: "calculaties", functie: "advies_koppel", promptNaam: CALCULATIE_ADVIES_KOPPEL_PROMPT.naam, promptVersie: CALCULATIE_ADVIES_KOPPEL_PROMPT.versie },
     );
 
     type SoortVoorstel = "werkzaamheden" | "geen_werkzaamheden" | "niet_te_beoordelen";

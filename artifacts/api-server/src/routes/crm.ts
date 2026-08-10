@@ -508,6 +508,12 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res): Promise<voi
     tools: [{ type: "web_search_preview" }],
     input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
     text: { format: { type: "json_object" } },
+  }, undefined, {
+    module: "crm",
+    functie: "concurrentProfiel",
+    gebruikerId: req.session.userId ?? null,
+    promptNaam: CRM_CONCURRENT_PROFIEL_PROMPT.naam,
+    promptVersie: CRM_CONCURRENT_PROFIEL_PROMPT.versie,
   });
   if (webResultaatProfiel.ok) {
     let data: Record<string, string | null> = {};
@@ -525,6 +531,12 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res): Promise<voi
         { role: "user", content: gebruikerPrompt },
       ],
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "crm",
+      functie: "concurrentProfiel",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: CRM_CONCURRENT_PROFIEL_PROMPT.naam,
+      promptVersie: CRM_CONCURRENT_PROFIEL_PROMPT.versie,
     });
     const tekst = crmProfielResultaat.ok ? crmProfielResultaat.inhoud : "{}";
     let data: Record<string, string | null> = {};
@@ -571,6 +583,12 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
     tools: [{ type: "web_search_preview" }],
     input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
     text: { format: { type: "json_object" } },
+  }, undefined, {
+    module: "crm",
+    functie: "marktintelligentieScan",
+    gebruikerId: req.session.userId ?? null,
+    promptNaam: "crm-marktintelligentie-scan",
+    promptVersie: "1.0.0",
   });
   if (webResultaatScan.ok) {
     try {
@@ -592,6 +610,12 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
         { role: "user", content: gebruikerPrompt },
       ],
       max_tokens: 2000,
+    }, undefined, {
+      module: "crm",
+      functie: "marktintelligentieScan",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: "crm-marktintelligentie-scan",
+      promptVersie: "1.0.0",
     });
     const tekst = crmScanResultaat.ok ? crmScanResultaat.inhoud : "{}";
     const parsed = JSON.parse(tekst);
@@ -808,6 +832,12 @@ Geef coaching voor deze gebruiker.`;
         { role: "user", content: gebruikerPrompt },
       ],
       max_tokens: 900,
+    }, undefined, {
+      module: "crm",
+      functie: "commercieelCoach",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: "crm-commercieel-coach",
+      promptVersie: "1.0.0",
     });
     const tekst = crmCoachResultaat.ok ? crmCoachResultaat.inhoud : "{}";
     let parsed: Record<string, unknown> = {};
@@ -1031,6 +1061,15 @@ router.post("/crm/relatievoorstellen/genereer", schrijven, async (req, res): Pro
       tools: [{ type: "web_search_preview" }],
       input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
       text: { format: { type: "json_object" } },
+    }, undefined, {
+      module: "crm",
+      functie: "relatievoorstellenGenereer",
+      entiteitstype: "crm_organisatie",
+      entiteitId: organisatieId,
+      klant_id: organisatieId,
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: CRM_RELATIEVOORSTEL_PROMPT.naam,
+      promptVersie: CRM_RELATIEVOORSTEL_PROMPT.versie,
     });
     if (web.ok) {
       try { voorstellenRuw = (JSON.parse(web.inhoud).voorstellen as Array<Record<string, unknown>>) ?? []; } catch { voorstellenRuw = []; }
@@ -1043,6 +1082,15 @@ router.post("/crm/relatievoorstellen/genereer", schrijven, async (req, res): Pro
           { role: "system", content: systeemPrompt },
           { role: "user", content: gebruikerPrompt },
         ],
+      }, undefined, {
+        module: "crm",
+        functie: "relatievoorstellenGenereer",
+        entiteitstype: "crm_organisatie",
+        entiteitId: organisatieId,
+        klant_id: organisatieId,
+        gebruikerId: req.session.userId ?? null,
+        promptNaam: CRM_RELATIEVOORSTEL_PROMPT.naam,
+        promptVersie: CRM_RELATIEVOORSTEL_PROMPT.versie,
       });
       if (chat.ok) {
         try { voorstellenRuw = (JSON.parse(chat.inhoud).voorstellen as Array<Record<string, unknown>>) ?? []; } catch { voorstellenRuw = []; }

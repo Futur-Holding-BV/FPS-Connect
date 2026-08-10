@@ -1115,7 +1115,7 @@ router.post("/fie/ak-adviezen/genereer", schrijven, async (req: Request, res: Re
           ],
           response_format: { type: "json_object" },
           max_tokens: 2500,
-        }, undefined, { module: "financieel", functie: "ak-adviezen", gebruikerId: req.session.userId ?? null });
+        }, undefined, { module: "financieel", functie: "ak-adviezen", gebruikerId: req.session.userId ?? null, promptNaam: FINANCIEEL_AK_ADVIES_PROMPT.naam, promptVersie: FINANCIEEL_AK_ADVIES_PROMPT.versie });
         if (resultaat.ok) {
           const parsed = JSON.parse(resultaat.inhoud) as { adviezen?: Array<{ dedup_sleutel?: string; advies?: string; vervolgstap?: string | null }> };
           for (const a of parsed.adviezen ?? []) {

@@ -558,6 +558,12 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promi
           ],
         },
       ],
+    }, undefined, {
+      module: "gereedschappen",
+      functie: "fotoAnalyse",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: GEREEDSCHAP_FOTO_ANALYSE_PROMPT.naam,
+      promptVersie: GEREEDSCHAP_FOTO_ANALYSE_PROMPT.versie,
     });
 
     const rawText = gereedschapChatResultaat.ok ? gereedschapChatResultaat.inhoud : "{}";

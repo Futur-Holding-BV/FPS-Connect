@@ -810,6 +810,8 @@ Neem ELK voertuig uit de lijst op in adviezen.`;
     module: "wagenpark",
     functie: "afstoot-advies",
     gebruikerId: userId ?? null,
+    promptNaam: "wagenpark-afstoot-advies",
+    promptVersie: "1.0.0",
   });
 
   if (!resultaat.ok) {

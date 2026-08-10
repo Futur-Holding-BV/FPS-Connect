@@ -407,6 +407,11 @@ export async function parseEnkMetAi(tekst: string): Promise<EnkParseResultaat | 
       { role: "user", content: tekst.slice(0, 24000) },
     ],
     max_completion_tokens: 4000,
+  }, undefined, {
+    module: "calculaties",
+    functie: "enkImportParser",
+    promptNaam: "enk-import-parser",
+    promptVersie: "1.0.0",
   });
   if (!resultaat.ok) return null;
   const raw = resultaat.inhoud.trim();

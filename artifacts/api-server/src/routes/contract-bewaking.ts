@@ -629,6 +629,15 @@ Schrijf alles in het Nederlands.`;
     const contractResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1000,
+    }, undefined, {
+      module: "personeel",
+      functie: "contractGespreksvoorbereiding",
+      entiteitstype: "contract",
+      entiteitId: contractId,
+      medewerker_id: medewerkerId,
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: "contract-gespreksvoorbereiding",
+      promptVersie: "1.0.0",
     });
     const samenvatting = contractResultaat.ok ? contractResultaat.inhoud : "Geen samenvatting beschikbaar.";
 

@@ -182,6 +182,12 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
           content: `Controleer de salarismutaties voor ${werkmaatschappij}, periode ${periodeLabel}:\n${JSON.stringify(invoer, null, 2)}`,
         },
       ],
+    }, undefined, {
+      module: "salaris",
+      functie: "controleerSalarisMutaties",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: SALARIS_MUTATIES_CONTROLE_PROMPT.naam,
+      promptVersie: SALARIS_MUTATIES_CONTROLE_PROMPT.versie,
     });
     if (!scabControlResultaat.ok) {
       return void res.json(analyseerZonderAi());

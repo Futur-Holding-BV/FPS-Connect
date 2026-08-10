@@ -418,7 +418,7 @@ async function aiContentAnalyse(
       messages: [{ role: "system", content: SYSTEEM_PROMPT }, { role: "user", content } as any],
     },
     undefined,
-    { module: "document-intelligence", functie: "classificeer" },
+    { module: "document-intelligence", functie: "classificeer", promptNaam: "document-classificatie", promptVersie: "1.0.0" },
   );
 
   if (!resultaat.ok || !resultaat.inhoud) {
@@ -1002,7 +1002,7 @@ export async function analyseerFactuurVoorStroom(input: {
       messages: [{ role: "system", content: FACTUUR_STROOM_PROMPT }, { role: "user", content } as any],
     },
     undefined,
-    { module: "facturen", functie: "factuurstroom_extractie" },
+    { module: "facturen", functie: "factuurstroom_extractie", promptNaam: "factuurstroom-extractie", promptVersie: "1.0.0" },
   );
   if (!resultaat.ok) {
     return { ok: false, is_factuur: false, velden: null, fout: resultaat.fout };
@@ -1093,7 +1093,7 @@ export async function analyseerAanvraagVoorStroom(input: {
       messages: [{ role: "system", content: AANVRAAG_STROOM_PROMPT }, { role: "user", content: tekst }],
     },
     undefined,
-    { module: "crm", functie: "aanvraagstroom_extractie" },
+    { module: "crm", functie: "aanvraagstroom_extractie", promptNaam: "aanvraagstroom-extractie", promptVersie: "1.0.0" },
   );
   if (!resultaat.ok) {
     return { ok: false, is_aanvraag: false, velden: null, fout: resultaat.fout };
@@ -1277,7 +1277,7 @@ async function aiPrijslijstKop(
       ],
     },
     undefined,
-    { module: "import", functie: "prijslijst_kop" },
+    { module: "import", functie: "prijslijst_kop", promptNaam: PRIJSLIJST_VOORSTEL_PROMPT.naam, promptVersie: PRIJSLIJST_VOORSTEL_PROMPT.versie },
   );
   if (!resultaat.ok || !resultaat.inhoud) {
     return { leverancier_naam: null, geldig_van: null, geldig_tot: null, valuta: null, kolomkoppeling: heuristiek };
@@ -1331,7 +1331,7 @@ async function aiPrijslijstPdfTabel(tekst: string): Promise<{
       ],
     },
     undefined,
-    { module: "import", functie: "prijslijst_pdf_tabel" },
+    { module: "import", functie: "prijslijst_pdf_tabel", promptNaam: PRIJSLIJST_PDF_TABEL_PROMPT.naam, promptVersie: PRIJSLIJST_PDF_TABEL_PROMPT.versie },
   );
   if (!resultaat.ok || !resultaat.inhoud) {
     return { kolommen: [], rijen: [], niet_leesbaar: 0 };

@@ -144,3 +144,4 @@
 - [Jaarkalender KALENDER_01](jaarkalender.md) — kalender=afgeleide view zonder kopieën; collectieve dagen alleen via de verlofmotor; rapporten achter personeel:1; FK set-null-valkuil bij bewijs.
 - [Herschik/reorder-endpoint patroon](herschik-endpoint-patroon.md) — lezen→herschikken→hertellen in één tx + pg_advisory_xact_lock per parent; anders dubbele volgordes bij gelijktijdig gebruik (review-afwijzing).
 - [UREN_01 ADV/overwerkslot/weekcontrole](uren-overwerkslot.md) — CAO-namen exact; slotverbruik atomair; §6b uurcode-eis alleen bij opdracht-uren, PATCH boekt alleen delta; werkbak-bron eerst whitelisten.
+- [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.

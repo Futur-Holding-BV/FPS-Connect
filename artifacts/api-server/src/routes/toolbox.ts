@@ -370,6 +370,13 @@ async function voerAiAnalyseUit(): Promise<number> {
             content: `Titel: ${r.titel}\n\n${r.inhoud}\n\nIs dit bericht blijvend belangrijk?`,
           },
         ],
+      }, undefined, {
+        module: "toolbox",
+        functie: "beoordeelToolboxBericht",
+        entiteitstype: "toolboxBericht",
+        entiteitId: r.id,
+        promptNaam: TOOLBOX_BEOORDEEL_PROMPT.naam,
+        promptVersie: TOOLBOX_BEOORDEEL_PROMPT.versie,
       });
 
       const tekst = (antwoord.ok ? antwoord.inhoud : "").toLowerCase().trim();

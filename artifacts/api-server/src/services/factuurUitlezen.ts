@@ -96,6 +96,13 @@ export async function leesFactuurUitMetAi(factuurId: number, log: Logger): Promi
           ],
         },
       ],
+    }, undefined, {
+      module: "facturen",
+      functie: "leesFactuurUitMetAi",
+      entiteitstype: "factuur",
+      entiteitId: factuurId,
+      promptNaam: FACTUUR_UITLEZEN_PROMPT.naam,
+      promptVersie: FACTUUR_UITLEZEN_PROMPT.versie,
     });
 
     const rawText = facturenChatResultaat.ok ? facturenChatResultaat.inhoud : "{}";

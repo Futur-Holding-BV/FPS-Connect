@@ -3177,6 +3177,12 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res): Promis
         { role: "system", content: systeemPrompt },
         { role: "user", content: gebruikersTekst },
       ],
+    }, undefined, {
+      module: "personeel",
+      functie: "capaciteitAnalyse",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: HRM_CAPACITEIT_SIGNALEN_PROMPT.naam,
+      promptVersie: HRM_CAPACITEIT_SIGNALEN_PROMPT.versie,
     });
 
     const parsed = JSON.parse(voltooiing.ok ? voltooiing.inhoud : "{}") as { signalen?: unknown[] };
@@ -4152,6 +4158,13 @@ Schrijf ALLEEN de brieftekst. Begin direct met de datum. Gebruik formeel Nederla
     const getuigenisResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1200,
+    }, undefined, {
+      module: "personeel",
+      functie: "arbeidsgetuigenisAi",
+      gebruikerId: req.session.userId ?? null,
+      medewerker_id: id,
+      promptNaam: "hrm-arbeidsgetuigenis",
+      promptVersie: "1.0.0",
     });
     if (!getuigenisResultaat.ok) {
       return void res.status(503).json({ error: "AI-aanroep mislukt. Probeer opnieuw." });
@@ -4515,6 +4528,12 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
       messages: [{ role: "user", content: prompt }],
       max_tokens: 400,
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "personeel",
+      functie: "contractAnalyse",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: "hrm-contract-analyse",
+      promptVersie: "1.0.0",
     });
     if (!contractResultaat.ok) {
       return void res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
@@ -4861,6 +4880,13 @@ JSON-formaat:
 }`,
         },
       ],
+    }, undefined, {
+      module: "personeel",
+      functie: "zzpOvereenkomstVullen",
+      gebruikerId: req.session.userId ?? null,
+      medewerker_id: Number(medewerker_id),
+      promptNaam: ZZP_JURIDISCH_PROMPT.naam,
+      promptVersie: ZZP_JURIDISCH_PROMPT.versie,
     });
 
     if (!zzpResultaat.ok) {

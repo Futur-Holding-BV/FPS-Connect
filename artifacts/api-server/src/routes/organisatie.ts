@@ -490,6 +490,12 @@ router.post(
           { role: "user", content: gebruikerTekst },
         ],
         response_format: { type: "json_object" },
+      }, undefined, {
+        module: "organisatie",
+        functie: "documentAnalyse",
+        gebruikerId: req.session.userId ?? null,
+        promptNaam: ORGANISATIE_DOCUMENT_ANALYSE_PROMPT.naam,
+        promptVersie: ORGANISATIE_DOCUMENT_ANALYSE_PROMPT.versie,
       });
 
       let velden: Record<string, string | null> = {};
@@ -741,6 +747,12 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res): Promise<voi
     tools: [{ type: "web_search_preview" }],
     input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
     text: { format: { type: "json_object" } },
+  }, undefined, {
+    module: "organisatie",
+    functie: "aiInvullenWebSearch",
+    gebruikerId: req.session.userId ?? null,
+    promptNaam: ORGANISATIE_INVULLEN_PROMPT.naam,
+    promptVersie: ORGANISATIE_INVULLEN_PROMPT.versie,
   });
   if (webResultaatOrgInvullen.ok) {
     let data: Record<string, string | null> = {};
@@ -758,6 +770,12 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res): Promise<voi
         { role: "user", content: gebruikerPrompt },
       ],
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "organisatie",
+      functie: "aiInvullen",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: ORGANISATIE_INVULLEN_PROMPT.naam,
+      promptVersie: ORGANISATIE_INVULLEN_PROMPT.versie,
     });
     const tekst = aiInvullenResultaat.ok ? aiInvullenResultaat.inhoud : "{}";
     let data: Record<string, string | null> = {};
@@ -791,6 +809,12 @@ router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, r
         },
       ],
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "organisatie",
+      functie: "verzekeringSuggesties",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: ORGANISATIE_VERZEKERING_SUGGESTIES_PROMPT.naam,
+      promptVersie: ORGANISATIE_VERZEKERING_SUGGESTIES_PROMPT.versie,
     });
     const tekst = verzResultaat.ok ? verzResultaat.inhoud : "{}";
     let data: { suggesties?: unknown[] } = {};
@@ -844,6 +868,12 @@ router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res): Promise
         },
       ],
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "organisatie",
+      functie: "bedrijfsscan",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: ORGANISATIE_BEDRIJFSSCAN_PROMPT.naam,
+      promptVersie: ORGANISATIE_BEDRIJFSSCAN_PROMPT.versie,
     });
     const tekst = scanResultaat.ok ? scanResultaat.inhoud : "{}";
     let data: Record<string, unknown> = {};

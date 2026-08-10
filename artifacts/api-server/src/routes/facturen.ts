@@ -1508,6 +1508,13 @@ router.post("/facturen/:id/afkeur-concept", requireBevoegdheid("financieel", 4),
     const res2 = await aiGateway.chat("default", {
       max_tokens: 700,
       messages: [{ role: "user", content: prompt }],
+    }, undefined, {
+      module: "facturen",
+      functie: "afkeurEmail",
+      entiteitstype: "factuur",
+      entiteitId: id,
+      promptNaam: "factuur-afkeur-email",
+      promptVersie: "1.0.0",
     });
     if (res2.ok) {
       bericht = res2.inhoud.trim();

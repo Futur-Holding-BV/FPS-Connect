@@ -7,7 +7,7 @@
 // deze module maakt nooit zelf een medewerker of gebruiker aan en stelt
 // nooit rechten, rollen of bevoegdheden voor.
 import { extraheerPdfTekst } from "./pdfTekst";
-import { aiGateway, heeftGateway } from "./aiGateway";
+import { aiGateway, heeftGateway, type LogContext } from "./aiGateway";
 
 export type CvAnalyseVelden = {
   naam: string | null;
@@ -43,6 +43,7 @@ const alsTekst = (v: unknown): string | null =>
 /** Vraag de AI-gateway om een JSON-object op basis van een prompt. */
 async function vraagAiJson(
   prompt: string,
+  logCtx: LogContext,
 ): Promise<
   | { ok: true; ruw: Record<string, unknown> }
   | { ok: false; status: 500 | 503; fout: string }
@@ -54,7 +55,7 @@ async function vraagAiJson(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 600,
     response_format: { type: "json_object" },
-  });
+  }, undefined, logCtx);
   if (!res.ok) {
     return { ok: false, status: 503, fout: "AI-analyse mislukt. Probeer opnieuw." };
   }
@@ -119,7 +120,12 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
   "ai_toelichting": "opmerking over leesbaarheid of null (max 1 zin)"
 }`;
 
-  const r = await vraagAiJson(extractiePrompt);
+  const r = await vraagAiJson(extractiePrompt, {
+    module: "personeel",
+    functie: "cvExtractie",
+    promptNaam: "cv-extractie",
+    promptVersie: "1.0.0",
+  });
   if (!r.ok) return r;
   return { ok: true, resultaat: velddenUitCv(r.ruw) };
 }
@@ -196,7 +202,12 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
 
 Stel NOOIT rechten, rollen of bevoegdheden voor; die volgen later uit de gekozen functie.`;
 
-  const r = await vraagAiJson(onboardingPrompt);
+  const r = await vraagAiJson(onboardingPrompt, {
+    module: "personeel",
+    functie: "onboardingTekstAnalyse",
+    promptNaam: "onboarding-tekst-analyse",
+    promptVersie: "1.0.0",
+  });
   if (!r.ok) return r;
   return { ok: true, resultaat: velddenUitCv(r.ruw) };
 }

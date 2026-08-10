@@ -163,7 +163,7 @@ async function schrijfConceptAntwoord(input: {
       ],
     },
     undefined,
-    { module: "crm", functie: "aanvraagstroom_concept" },
+    { module: "crm", functie: "aanvraagstroom_concept", promptNaam: "aanvraagstroom-concept-antwoord", promptVersie: "1.0.0" },
   );
   return { tekst: resultaat.ok && resultaat.inhoud.trim().length > 40 ? resultaat.inhoud.trim() : fallback, vorm };
 }

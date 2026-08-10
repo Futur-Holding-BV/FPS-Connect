@@ -137,6 +137,12 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
             content: `Schrijf de volledige inhoud (ALLEEN de body, geen onderwerp) van een e-mail aan SCAB voor salarismutaties van ${werkmaatschappij} voor de periode ${periodeLabel}.\n\nMutaties:\n${JSON.stringify(mutatiesJson, null, 2)}`,
           },
         ],
+      }, undefined, {
+        module: "salaris",
+        functie: "genereerScabMail",
+        gebruikerId: sess.userId ?? null,
+        promptNaam: SCAB_MAIL_GENERATIE_PROMPT.naam,
+        promptVersie: SCAB_MAIL_GENERATIE_PROMPT.versie,
       });
 
       if (scabResultaat.ok) inhoud = scabResultaat.inhoud;

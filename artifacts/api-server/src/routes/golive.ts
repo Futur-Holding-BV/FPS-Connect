@@ -516,6 +516,12 @@ Antwoord ALLEEN met geldige JSON.`;
   const goLiveAdviesResultaat = await aiGateway.chat("default", {
     messages: [{ role: "user", content: prompt }],
     max_tokens: 800,
+  }, undefined, {
+    module: "golive",
+    functie: "adviesGenereer",
+    gebruikerId: req.session.userId ?? null,
+    promptNaam: "golive-implementatie-advies",
+    promptVersie: "1.0.0",
   });
 
   let parsed: Record<string, unknown>;

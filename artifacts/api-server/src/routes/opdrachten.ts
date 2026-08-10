@@ -572,6 +572,13 @@ Geef je analyse als JSON met deze structuur:
         { role: "system", content: BEGROTING_ANALYSE_PROMPT.tekst },
         { role: "user", content: prompt },
       ],
+    }, undefined, {
+      module: "opdrachten",
+      functie: "werkbegroting-ai-analyse",
+      entiteitstype: "opdracht",
+      entiteitId: opdrachtId,
+      promptNaam: BEGROTING_ANALYSE_PROMPT.naam,
+      promptVersie: BEGROTING_ANALYSE_PROMPT.versie,
     });
 
     if (begrotingAnalyseResultaat.ok) {
@@ -1067,6 +1074,14 @@ router.post("/opdrachten/:id/werkbegroting/ai-chat", schrijven, async (req, res)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: messages as any,
       max_completion_tokens: 2000,
+    }, undefined, {
+      module: "opdrachten",
+      functie: "werkbegroting-chat",
+      gebruikerId: req.session.userId ?? null,
+      entiteitstype: "opdracht",
+      entiteitId: id,
+      promptNaam: WERKBEGROTING_CHAT_BASE_PROMPT.naam,
+      promptVersie: WERKBEGROTING_CHAT_BASE_PROMPT.versie,
     });
 
     const antwoord = opdrachtChatResultaat.ok ? opdrachtChatResultaat.inhoud : "Geen antwoord ontvangen.";
@@ -1184,6 +1199,13 @@ Geef 3–10 adviezen. Geen JSON buiten de array.`;
           { role: "user", content: prompt },
         ] as any,
         max_completion_tokens: 3000,
+      }, undefined, {
+        module: "opdrachten",
+        functie: "werkvoorbereiding-adviezen",
+        entiteitstype: "opdracht",
+        entiteitId: id,
+        promptNaam: WERKVOORBEREIDING_ADVIES_PROMPT.naam,
+        promptVersie: WERKVOORBEREIDING_ADVIES_PROMPT.versie,
       });
 
       if (resultaat.ok) {

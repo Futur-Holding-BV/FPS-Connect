@@ -171,6 +171,13 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
           content: userContent,
         },
       ],
+    }, undefined, {
+      module: "materiaal-aanvragen",
+      functie: "materiaalAanvraagAnalyse",
+      entiteitstype: "materiaal-aanvraag",
+      entiteitId: aanvraagId,
+      promptNaam: MATERIAAL_AANVRAAG_ANALYSE_PROMPT.naam,
+      promptVersie: MATERIAAL_AANVRAAG_ANALYSE_PROMPT.versie,
     });
 
     const rawText = materiaalChatResultaat.ok ? materiaalChatResultaat.inhoud : "{}";

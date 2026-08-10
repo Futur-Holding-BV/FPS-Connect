@@ -1188,6 +1188,12 @@ Regels:
     const werkInboxResultaat = await aiGateway.chat("default", {
       max_completion_tokens: 600,
       messages: [{ role: "user", content: prompt }],
+    }, undefined, {
+      module: "werk-inbox",
+      functie: "analyseerMail",
+      gebruikerId: uid ?? null,
+      promptNaam: "werk-inbox-mail-analyse",
+      promptVersie: "1.0.0",
     });
 
     const raw = werkInboxResultaat.ok ? werkInboxResultaat.inhoud : "{}";

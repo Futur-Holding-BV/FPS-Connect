@@ -68,7 +68,7 @@ router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
             { role: "user", content: `Type: ${type}\nUrgentie: ${urgentie}\nPagina: ${pagina ?? "onbekend"}\nOmschrijving: ${omschrijving}` },
           ],
           max_tokens: 300,
-        }, 30_000, { module: "meldingen", functie: "eerste-reactie", gebruikerId: sess?.gebruikerId ?? null });
+        }, 30_000, { module: "meldingen", functie: "eerste-reactie", gebruikerId: sess?.gebruikerId ?? null, promptNaam: MELDINGEN_EERSTE_REACTIE_PROMPT.naam, promptVersie: MELDINGEN_EERSTE_REACTIE_PROMPT.versie });
 
         let classificatie = type === "bug" ? "ui-bug" : type === "vraag" ? "vraag" : "feature-request";
         if (resultaat.ok) {

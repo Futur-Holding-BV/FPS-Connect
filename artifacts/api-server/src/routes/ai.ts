@@ -215,6 +215,11 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
     tools: [{ type: "web_search_preview" }],
     input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
     text: { format: { type: "json_object" } },
+  }, undefined, {
+    module: "ai",
+    functie: "invullen",
+    promptNaam: AI_INVULLEN_PROMPT.naam,
+    promptVersie: AI_INVULLEN_PROMPT.versie,
   });
   if (webResultaatInvullen.ok) {
     let data: Record<string, string | null> = {};

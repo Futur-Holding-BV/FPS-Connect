@@ -254,6 +254,14 @@ Hoeveelheid: ${regel.aantal} ${regel.eenheid}`;
     const portaalResultaat = await aiGateway.chat("default", {
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
+    }, undefined, {
+      module: "portaal",
+      functie: "offerteRegelUitleg",
+      entiteitstype: "offerteregel",
+      entiteitId: regelId,
+      offerte_id: tokenRecord.offerteId,
+      promptNaam: "portaal-offerteregel-uitleg",
+      promptVersie: "1.0.0",
     });
 
     const uitleg = portaalResultaat.ok ? portaalResultaat.inhoud.trim() : "Geen uitleg beschikbaar.";

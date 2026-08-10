@@ -445,6 +445,14 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
           content: `Analyseer deze veiligheidstoolbox en geef JSON terug:\n\n${bronTekst}\n\nFormaat:\n{\n  "samenvatting": "max 300 tekens",\n  "risicos": ["risico 1","risico 2","risico 3"],\n  "maatregelen": ["maatregel 1","maatregel 2","maatregel 3"],\n  "fouten": ["fout 1","fout 2"],\n  "stoppen": "Wanneer direct stoppen met werk",\n  "geschatte_leestijd": 3,\n  "zoekwoorden": ["woord1","woord2"],\n  "tags": ["tag1","tag2"],\n  "vragen": [\n    {\n      "vraag": "Vraag tekst?",\n      "opties": [\n        {"tekst": "Optie A", "correct": true},\n        {"tekst": "Optie B", "correct": false},\n        {"tekst": "Optie C", "correct": false}\n      ],\n      "uitleg": "Toelichting op het juiste antwoord"\n    }\n  ]\n}\n\nGenereer 4-6 meerkeuzevragen over de belangrijkste veiligheidspunten.`,
         },
       ],
+    }, undefined, {
+      module: "veiligheid",
+      functie: "analyseerToolbox",
+      gebruikerId: req.session.userId ?? null,
+      entiteitstype: "veiligheidToolbox",
+      entiteitId: id,
+      promptNaam: TOOLBOX_ANALYSE_PROMPT.naam,
+      promptVersie: TOOLBOX_ANALYSE_PROMPT.versie,
     });
 
     const raw = toolboxAnalyseResultaat.ok ? toolboxAnalyseResultaat.inhoud : "{}";
@@ -693,6 +701,12 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
           content: `Werkzaamheid: "${werkzaamheid}"\n\nCatalogus:\n${catalogusTekst}\n\nSelecteer 3-6 relevante toolboxen. Formaat:\n{"suggesties":[{"id":1,"titel":"...","categorie":"...","reden":"kort waarom relevant"}]}`,
         },
       ],
+    }, undefined, {
+      module: "veiligheid",
+      functie: "toolboxKoppelingSuggestie",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: TOOLBOX_KOPPELING_PROMPT.naam,
+      promptVersie: TOOLBOX_KOPPELING_PROMPT.versie,
     });
 
     const raw = koppelingResultaat.ok ? koppelingResultaat.inhoud : "{}";
@@ -931,6 +945,15 @@ veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (r
         },
         { role: "user", content: `Gebouwinformatie:\n${context}` },
       ],
+    }, undefined, {
+      module: "veiligheid",
+      functie: "lmraVoorstel",
+      gebruikerId: req.session.userId ?? null,
+      entiteitstype: "gebouw",
+      entiteitId: Number(gebouw_id),
+      gebouw_id: Number(gebouw_id),
+      promptNaam: LMRA_VOORSTEL_PROMPT.naam,
+      promptVersie: LMRA_VOORSTEL_PROMPT.versie,
     });
 
     const raw = lmraResultaat.ok ? lmraResultaat.inhoud : "{}";
@@ -2123,6 +2146,12 @@ veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, asy
         },
         { role: "user", content: `Incidentinformatie:\n${context}` },
       ],
+    }, undefined, {
+      module: "veiligheid",
+      functie: "incidentRegistratieVoorstel",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: INCIDENT_REGISTRATIE_PROMPT.naam,
+      promptVersie: INCIDENT_REGISTRATIE_PROMPT.versie,
     });
 
     const raw = incidentResultaat.ok ? incidentResultaat.inhoud : "{}";
@@ -2337,6 +2366,12 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
 }]`,
           },
         ],
+      }, undefined, {
+        module: "veiligheid",
+        functie: "genereerToolboxenBatch",
+        gebruikerId: req.session.userId ?? null,
+        promptNaam: TOOLBOX_GENEREER_PROMPT.naam,
+        promptVersie: TOOLBOX_GENEREER_PROMPT.versie,
       });
       const raw = deelResultaat.ok ? deelResultaat.inhoud : "";
       let deelItems: ToolboxItem[] = [];

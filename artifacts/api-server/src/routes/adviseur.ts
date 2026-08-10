@@ -357,7 +357,7 @@ Onderstaande systeemgegevens over dit object zijn opgehaald binnen de rechten va
       max_tokens: 1200,
       messages: gesprek,
       tools: DATA_TOOLS.map((t) => t.definitie),
-    }, undefined, { module: "adviseur", functie: "assistent_vraag", gebruikerId: userId });
+    }, undefined, { module: "adviseur", functie: "assistent_vraag", gebruikerId: userId, promptNaam: "adviseur-assistent", promptVersie: "1.0.0" });
 
     let rondes = 0;
     while (resultaat.ok && resultaat.toolCalls && resultaat.toolCalls.length > 0 && rondes < 3) {
@@ -381,7 +381,7 @@ Onderstaande systeemgegevens over dit object zijn opgehaald binnen de rechten va
         max_tokens: 1200,
         messages: gesprek,
         tools: DATA_TOOLS.map((t) => t.definitie),
-      }, undefined, { module: "adviseur", functie: "assistent_vraag_vervolg", gebruikerId: userId });
+      }, undefined, { module: "adviseur", functie: "assistent_vraag_vervolg", gebruikerId: userId, promptNaam: "adviseur-assistent", promptVersie: "1.0.0" });
     }
 
     // Na 3 rondes nog steeds tool-aanroepen of leeg antwoord → gecontroleerd

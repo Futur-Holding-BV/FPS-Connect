@@ -202,6 +202,8 @@ export async function analyseerPolisDocument(
       gebruikerId: opties.gebruikerId ?? undefined,
       entiteitstype: "financieel-contract",
       entiteitId: opties.contractId ?? undefined,
+      promptNaam: "contract-polisanalyse",
+      promptVersie: "1.0.0",
     },
   );
 
@@ -438,6 +440,8 @@ export async function contractCoach(
       gebruikerId: opties.gebruikerId ?? undefined,
       entiteitstype: "financieel-contract",
       entiteitId: contract.id,
+      promptNaam: "contract-coach",
+      promptVersie: "1.0.0",
     },
   );
 

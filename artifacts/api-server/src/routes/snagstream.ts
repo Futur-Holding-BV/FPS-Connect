@@ -176,6 +176,15 @@ router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwe
           ],
         },
       ],
+    }, undefined, {
+      module: "gebouwen",
+      functie: "analyseerSnagstreamRapport",
+      gebruikerId: sessionUserId(req),
+      entiteitstype: "gebouw",
+      entiteitId: rapport.gebouwId ?? null,
+      gebouw_id: rapport.gebouwId ?? null,
+      promptNaam: SNAGSTREAM_RAPPORT_ANALYSE_PROMPT.naam,
+      promptVersie: SNAGSTREAM_RAPPORT_ANALYSE_PROMPT.versie,
     });
 
     const rawText = snagstreamChatResultaat.ok ? snagstreamChatResultaat.inhoud : "{}";

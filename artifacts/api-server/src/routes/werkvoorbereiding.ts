@@ -760,6 +760,8 @@ Geef uitsluitend geldige JSON:
       functie: "inkoopcoach-advies",
       gebruikerId: req.session.userId ?? null,
       project_id: id,
+      promptNaam: INKOOP_PROMPT.naam,
+      promptVersie: INKOOP_PROMPT.versie,
     });
 
     if (!aiResultaat.ok) {
@@ -932,6 +934,8 @@ Geef je analyse als JSON:
           functie: "inkoopplanning-genereer",
           gebruikerId: req.session.userId ?? null,
           project_id: id,
+          promptNaam: INKOOP_PROMPT.naam,
+          promptVersie: INKOOP_PROMPT.versie,
         });
         if (inkoopResultaat.ok) {
           aiResultaat = JSON.parse(inkoopResultaat.inhoud) as AiInkoopResult;
@@ -1438,6 +1442,8 @@ Geef je suggestie als JSON:
           functie: "inkoopbon-genereer",
           gebruikerId: req.session.userId ?? null,
           project_id: id,
+          promptNaam: INKOOP_PROMPT.naam,
+          promptVersie: INKOOP_PROMPT.versie,
         });
         if (bonResultaat.ok) {
           const parsed = JSON.parse(bonResultaat.inhoud) as { bonnen?: AiSuggestieBon[] };
@@ -1967,6 +1973,8 @@ Geef je planning als JSON:
           functie: "uitvoeringsplan-genereer",
           gebruikerId: req.session.userId ?? null,
           project_id: id,
+          promptNaam: UITVOERINGSPLAN_PROMPT.naam,
+          promptVersie: UITVOERINGSPLAN_PROMPT.versie,
         });
         if (uitvoerResultaat.ok) {
           aiResultaat = JSON.parse(uitvoerResultaat.inhoud) as AiUitvoeringsResult;

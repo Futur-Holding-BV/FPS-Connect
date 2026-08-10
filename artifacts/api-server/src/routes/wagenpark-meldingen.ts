@@ -179,6 +179,11 @@ async function voerAiAnalyseUit(
       max_tokens: 600,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: [{ role: "user", content } as any],
+    }, undefined, {
+      module: "wagenpark",
+      functie: "analyseerMelding",
+      promptNaam: "wagenpark-melding-analyse",
+      promptVersie: "1.0.0",
     });
 
     const raw = resultaat.ok ? resultaat.inhoud : "";
@@ -416,6 +421,14 @@ router.post("/kwartaalcontrole/foto-check", requireAuth, async (req, res): Promi
       max_tokens: 400,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: [{ role: "user", content } as any],
+    }, undefined, {
+      module: "wagenpark",
+      functie: "kwartaalcontroleFotoCheck",
+      gebruikerId,
+      entiteitstype: "voertuig",
+      entiteitId: voertuig.id,
+      promptNaam: "wagenpark-kwartaalcontrole-foto-check",
+      promptVersie: "1.0.0",
     });
 
     const raw = resultaat.ok ? resultaat.inhoud : "";

@@ -691,6 +691,11 @@ Geef JSON terug met exact deze velden:
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       max_completion_tokens: 800,
+    }, undefined, {
+      module: "inbox",
+      functie: "extraheerAanvraagVelden",
+      promptNaam: "inbox-aanvraag-extractie",
+      promptVersie: "1.0.0",
     });
     const tekst = inboxResultaat.ok ? inboxResultaat.inhoud : "{}";
     return JSON.parse(tekst) as AiAanvraagExtractie;

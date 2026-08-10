@@ -117,6 +117,11 @@ ${artikelTekst}`;
       response_format: { type: "json_object" },
       messages: [{ role: "user", content: prompt }],
       max_tokens: 3000,
+    }, undefined, {
+      module: "scout",
+      functie: "filterEnClassificeer",
+      promptNaam: "scout-marktsignalen",
+      promptVersie: "1.0.0",
     });
     const tekst = scoutResultaat.ok ? scoutResultaat.inhoud : "{}";
     const parsed = JSON.parse(tekst) as { signalen?: AiSignaal[] };

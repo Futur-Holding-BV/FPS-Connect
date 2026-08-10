@@ -1757,6 +1757,9 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res): Promise<void
           userText = "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.";
         }
 
+        const magazijnScanPrompt = isRetour
+          ? MAGAZIJN_RETOUR_SCAN_BASE_PROMPT
+          : MAGAZIJN_STELLING_SCAN_BASE_PROMPT;
         const magazijnChatResultaat = await aiGateway.chat("default", {
           max_tokens: 3000,
           response_format: { type: "json_object" },
@@ -1770,6 +1773,12 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res): Promise<void
               ],
             },
           ],
+        }, undefined, {
+          module: "magazijn",
+          functie: isRetour ? "retourScanAnalyse" : "stellingScanAnalyse",
+          gebruikerId: req.session.userId ?? null,
+          promptNaam: magazijnScanPrompt.naam,
+          promptVersie: magazijnScanPrompt.versie,
         });
 
         const rawText = magazijnChatResultaat.ok ? magazijnChatResultaat.inhoud : "{}";
@@ -2898,6 +2907,12 @@ router.post("/ai-bestelsuggesties", requireBevoegdheid("magazijn", 1), async (re
     const aiResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1500,
+    }, undefined, {
+      module: "magazijn",
+      functie: "bestelsuggesties",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: MAGAZIJN_BESTELSUGGESTIE_PROMPT.naam,
+      promptVersie: MAGAZIJN_BESTELSUGGESTIE_PROMPT.versie,
     });
 
     let parsed: { suggesties: Array<{ artikel_id: number; gesuggereerde_hoeveelheid: number; urgentie: string; reden: string }>; samenvatting: string };

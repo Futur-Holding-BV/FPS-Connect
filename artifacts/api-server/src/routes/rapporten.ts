@@ -692,6 +692,13 @@ router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapportenOf
                   },
                 ],
                 max_tokens: 600,
+              }, undefined, {
+                module: "rapporten",
+                functie: "bijlageSamenvatting",
+                gebruikerId: req.session.userId ?? null,
+                document_id: doc.id,
+                promptNaam: RAPPORT_SAMENVATTING_PROMPT.naam,
+                promptVersie: RAPPORT_SAMENVATTING_PROMPT.versie,
               });
               samenvatting = samenvattingResultaat.ok ? samenvattingResultaat.inhoud : "";
             } catch (aiErr) {

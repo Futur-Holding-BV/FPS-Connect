@@ -336,7 +336,7 @@ async function analyserenInhoudAI(
         ],
       },
       undefined,
-      { module: "security", functie: "inhoud-analyse" },
+      { module: "security", functie: "inhoud-analyse", promptNaam: "security-inhoud-analyse", promptVersie: "1.0.0" },
     );
     if (!resultaat.ok) return null;
     const parsed = JSON.parse(resultaat.inhoud) as { risico_score: number; samenvatting: string };

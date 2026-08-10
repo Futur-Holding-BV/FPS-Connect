@@ -381,6 +381,12 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
       max_tokens: 400,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: [{ role: "user", content } as any],
+    }, undefined, {
+      module: "pbm",
+      functie: "fotoInspectie",
+      gebruikerId: req.session.userId ?? null,
+      promptNaam: "pbm-foto-inspectie",
+      promptVersie: "1.0.0",
     });
 
     const raw = pbmChatResultaat.ok ? pbmChatResultaat.inhoud : "";

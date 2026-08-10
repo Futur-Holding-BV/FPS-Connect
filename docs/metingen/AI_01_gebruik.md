@@ -3,9 +3,9 @@
 Meetmoment: 2026-08-09 · Bron: **ontwikkelomgeving (Replit dev-database)** · Opdracht: AI_01_van_reactief_naar_meedenkend
 
 > **Belangrijkste bevinding vooraf — de meting zelf heeft een gat.** Van de
-> 130 geregistreerde aanroepen in deze database hebben er
-> **123 geen promptnaam** en staan er
-> **89 op module "onbekend"**. §6.4 ("elke aanroep wordt
+> 140 geregistreerde aanroepen in deze database hebben er
+> **132 geen promptnaam** en staan er
+> **98 op module "onbekend"**. §6.4 ("elke aanroep wordt
 > gelogd met promptnaam en -versie") wordt dus nog niet nageleefd: de gateway
 > kán het loggen, maar de meeste aanroepende plekken geven de logcontext niet
 > mee. Zolang dat zo is, is elke gebruiks- en nul-keer-meting een ondergrens.
@@ -19,7 +19,7 @@ Meetmoment: 2026-08-09 · Bron: **ontwikkelomgeving (Replit dev-database)** · O
 
 | module | functie | d30 | d90 | gebruikers |
 | --- | --- | --- | --- | --- |
-| onbekend | (leeg) | 75 | 89 | 0 |
+| onbekend | (leeg) | 83 | 98 | 0 |
 | adviseur | assistent_vraag | 12 | 12 | 3 |
 | document-intelligence | classificeer | 8 | 8 | 0 |
 | adviseur | assistent_vraag_vervolg | 6 | 6 | 2 |
@@ -29,6 +29,7 @@ Meetmoment: 2026-08-09 · Bron: **ontwikkelomgeving (Replit dev-database)** · O
 | gebouwen | gebouw-extractie | 0 | 2 | 0 |
 | gebouwen | gebouw-vision | 0 | 2 | 0 |
 | verificatie | limiettest | 2 | 2 | 1 |
+| beheer | taak869Bewijs | 1 | 1 | 0 |
 | meldingen | eerste-reactie | 0 | 1 | 0 |
 
 
@@ -36,7 +37,7 @@ Meetmoment: 2026-08-09 · Bron: **ontwikkelomgeving (Replit dev-database)** · O
 
 | module | functie | aanroepen | tokens | kosten_eur |
 | --- | --- | --- | --- | --- |
-| onbekend | (leeg) | 89 | 400811 | 1.2991 |
+| onbekend | (leeg) | 98 | 404649 | 1.3000 |
 | adviseur | assistent_vraag | 12 | 27418 | 0.0736 |
 | document-intelligence | classificeer | 8 | 453851 | 0.0687 |
 | gebouwen | gebouw-vision | 2 | 7468 | 0.0565 |
@@ -46,6 +47,7 @@ Meetmoment: 2026-08-09 · Bron: **ontwikkelomgeving (Replit dev-database)** · O
 | werkbak | (leeg) | 2 | 1014 | 0.0037 |
 | gebouwen | gebouw-extractie | 2 | 760 | 0.0002 |
 | meldingen | eerste-reactie | 1 | 256 | 0.0001 |
+| beheer | taak869Bewijs | 1 | 23 | 0.0000 |
 | verificatie | limiettest | 2 | 26 | 0.0000 |
 
 
@@ -67,7 +69,7 @@ Totaal: 0 · overgenomen: 0 · gecorrigeerd: 0
 
 ## 4. Prompts zonder enige geregistreerde aanroep
 
-63 promptconstanten in `aiPrompts.ts`; hieronder de 60 waarvoor
+65 promptconstanten in `aiPrompts.ts`; hieronder de 62 waarvoor
 geen enkele aanroep herleidbaar is (op naam- of functie-overeenkomst). Door het
 logginggat hierboven betekent "niet herleidbaar" niet automatisch "nooit
 gebruikt" — het betekent dat het gebruik **niet meetbaar** is.
@@ -123,6 +125,8 @@ gebruikt" — het betekent dat het gebruik **niet meetbaar** is.
 - `CALCULATIE_CHAT_BASE_PROMPT`
 - `CALCULATIE_ANALYSE_BASE_PROMPT`
 - `CALCULATIE_VULLEN_BASE_PROMPT`
+- `CALCULATIE_PLAK_HERKEN_PROMPT`
+- `CALCULATIE_PLAK_KOPPEL_PROMPT`
 - `CALCULATIE_INKOOP_MAIL_PROMPT`
 - `WERKBEGROTING_CHAT_BASE_PROMPT`
 - `PIM_AANVRAAG_ANALYSE_PROMPT`

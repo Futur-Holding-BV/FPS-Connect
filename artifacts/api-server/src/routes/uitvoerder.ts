@@ -260,6 +260,15 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res): Promise<void>
       max_tokens: 600,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: gptMessages as any,
+    }, undefined, {
+      module: "uitvoerder",
+      functie: "uitvoerderChat",
+      gebruikerId,
+      entiteitstype: "uitvoerderSessie",
+      entiteitId: sessieId,
+      project_id: sessie.opdrachtId ?? null,
+      promptNaam: UITVOERDER_CHAT_BASE_PROMPT.naam,
+      promptVersie: UITVOERDER_CHAT_BASE_PROMPT.versie,
     });
 
     const aiTekst = uitvoerderChatResultaat.ok ? uitvoerderChatResultaat.inhoud.trim() : "Geen antwoord ontvangen.";

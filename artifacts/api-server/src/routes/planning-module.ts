@@ -933,6 +933,8 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
     }, undefined, {
       module: "planning",
       functie: "reistijd-schatting",
+      promptNaam: PLANNING_REISTIJD_PROMPT.naam,
+      promptVersie: PLANNING_REISTIJD_PROMPT.versie,
       gebruikerId: (req as { session?: { userId?: number } }).session?.userId ?? null,
       // planning_item_id is niet beschikbaar: reistijd-schatting is een algemeen
       // hulpmiddel op basis van twee locatiestrings, niet gekoppeld aan een specifiek

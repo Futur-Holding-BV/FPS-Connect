@@ -522,7 +522,7 @@ router.post("/workflow/ai-advies", requireAuth, async (req, res): Promise<void> 
       ],
       max_tokens: 1200,
       response_format: { type: "json_object" },
-    }, undefined, { gebruikerId: uid, module: "werkbak" });
+    }, undefined, { gebruikerId: uid, module: "werkbak", functie: "werkbakAdvies", promptNaam: "werkbak-ai-advies", promptVersie: "1.0.0" });
     if (!resultaat.ok) { res.status(502).json({ error: resultaat.fout }); return; }
     // AI-uitvoer hardenen: alleen sleutels die echt in de bundel zitten.
     const geldig = new Set(bundel.map((b) => b.sleutel));

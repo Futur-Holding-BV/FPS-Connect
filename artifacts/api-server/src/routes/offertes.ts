@@ -1490,6 +1490,8 @@ Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's
     }, undefined, {
       module: "offertes",
       functie: "sectie-genereren",
+      promptNaam: OFFERTE_SECTIE_SCHRIJVEN_PROMPT.naam,
+      promptVersie: OFFERTE_SECTIE_SCHRIJVEN_PROMPT.versie,
       gebruikerId: req.session.userId ?? null,
       offerte_id: sectie.offerteId,
       klant_id: offerte?.klantId ?? null,
@@ -1577,6 +1579,8 @@ Als geen enkel beeld past, antwoord met {"keuzes":[]}.`;
     }, undefined, {
       module: "offertes",
       functie: "sectie-fotos-voorstel",
+      promptNaam: "offerte-sectie-fotos-voorstel",
+      promptVersie: "1.0.0",
       gebruikerId: req.session.userId ?? null,
       offerte_id: sectie.offerteId,
       klant_id: offerte?.klantId ?? null,
@@ -2105,6 +2109,8 @@ Geef als JSON terug (geen extra tekst):
     }, undefined, {
       module: "offertes",
       functie: "e-mail-voorstel",
+      promptNaam: OFFERTE_MAIL_PROMPT.naam,
+      promptVersie: OFFERTE_MAIL_PROMPT.versie,
       gebruikerId: req.session.userId ?? null,
       offerte_id: offerteId,
       klant_id: offerte.klantId ?? null,
@@ -2625,6 +2631,8 @@ router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, a
     }, undefined, {
       module: "offertes",
       functie: "contract-advies",
+      promptNaam: CONTRACT_ADVIES_PROMPT.naam,
+      promptVersie: CONTRACT_ADVIES_PROMPT.versie,
       gebruikerId: req.session.userId ?? null,
       offerte_id: offerteId,
     });

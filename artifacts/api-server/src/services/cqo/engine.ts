@@ -44,6 +44,8 @@ async function beoordeelSpecialist(
         gebruikerId,
         entiteitId: runId,
         entiteitstype: "cqo_run",
+        promptNaam: `cqo-specialist-${specialist.id}`,
+        promptVersie: "1.0.0",
       }
     );
 

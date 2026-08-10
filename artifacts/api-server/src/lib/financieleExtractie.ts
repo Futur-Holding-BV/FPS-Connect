@@ -279,7 +279,7 @@ async function extraheerViaAi(tekst: string, gebruikerId: number | null): Promis
       ],
     },
     undefined,
-    { module: "financiele-extractie", functie: "extraheer-kerncijfers", gebruikerId: gebruikerId ?? undefined },
+    { module: "financiele-extractie", functie: "extraheer-kerncijfers", gebruikerId: gebruikerId ?? undefined, promptNaam: "financiele-kerncijfers-extractie", promptVersie: "1.0.0" },
   );
 
   if (!resultaat.ok || !resultaat.inhoud) return null;
