@@ -96,6 +96,7 @@
 - [AI Context Service](ai-context-service.md) — centrale contextbundel-motor (§4.1) in lib/aiContext; scoping via PermissieService nooit rolnaam; autorisatiegrens stopt graaf-expansie; sinds 10 juli 2026 aangesloten op analyseerSpot (bewezen via echte flow).
 - [AI Decision Engine (Fase 0)](ai-decision-engine.md) — passthrough-laag boven aiGateway; passthrough==directe gateway, human-in-the-loop via token; token-endpoints fail-closed op module-matrix.
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
+- [EAS Update OTA valkuilen](eas-update-ota.md) — eas update bakt EXPO_PUBLIC_* zelf in (build.env geldt niet!); babel-preset SDK-matched als directe dep; hermesc private-properties-fout = stale Metro-cache → --clear-cache.
 - [Deploy-failure alerting](deploy-failure-alerting.md) — deploy.yml faalmelding via Graph client-credentials direct vanuit Actions runner (geen app-server nodig); GitHub secrets nodig, apart van Replit env.
 - [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext(type,id) wired into 8 core entities' primary mutation routes; sub-resources not in resolvers.ts payload deliberately skipped, re-check before assuming coverage.
 - [Klant-poort](klant-poort.md) — rol klant = dicht tenzij open via allowlist in klantPoort.ts; nieuwe klantroute vergt handler-begrenzing + allowlist + klant-poort-check groen.

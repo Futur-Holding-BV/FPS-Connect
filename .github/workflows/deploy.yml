@@ -377,6 +377,46 @@ jobs:
           fi
           echo "Smoketest geslaagd (${GESLAAGD}/${TOTAAL} checks)."
 
+      # ─── OTA-update monteur-app (EAS Update) ───────────────────────────────
+      # Na een geslaagde deploy + smoketest wordt de monteur-app automatisch
+      # bijgewerkt via EAS Update (kanaal production). Zo krijgen monteurs
+      # nooit een verouderde app doordat iemand vergeet handmatig
+      # `eas update` te draaien. Native wijzigingen (nieuwe modules,
+      # SDK-upgrade) vergen nog steeds een nieuwe APK — zie
+      # docs/monteur-app-apk.md.
+      # Vereist GitHub Secret: EXPO_TOKEN (Expo access token, account
+      # futur-holding). Ontbreekt het token, dan wordt deze stap met een
+      # duidelijke waarschuwing overgeslagen; de deploy zelf faalt daar
+      # bewust niet op (web/API staan dan al correct live).
+      - name: OTA-update monteur-app (EAS Update, kanaal production)
+        id: eas_update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # EXPO_PUBLIC_* wordt bij het exporteren van de update-bundle
+          # ingebakken; zonder deze variabele zou de OTA-bundle geen
+          # productiedomein hebben (eas.json 'build.env' geldt alleen voor
+          # EAS Build, niet voor eas update). Zelfde waarde als het
+          # production-buildprofiel.
+          EXPO_PUBLIC_DOMAIN: connect.fps-one.nl
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "::warning::EXPO_TOKEN ontbreekt als GitHub Actions secret — OTA-update naar monteurs wordt OVERGESLAGEN. Voeg het token toe (Settings -> Secrets -> Actions) of draai handmatig: cd artifacts/monteur-app && npx eas-cli update --channel production."
+            exit 0
+          fi
+
+          COMMIT_KORT="${GITHUB_SHA:0:7}"
+          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+
+          cd artifacts/monteur-app
+          npx eas-cli update \
+            --channel production \
+            --non-interactive \
+            --message "deploy ${COMMIT_KORT}: ${COMMIT_MSG}"
+
+          echo "OTA-update gepubliceerd op kanaal production (commit ${COMMIT_KORT})."
+
       # ─── Meldingen bij falen ────────────────────────────────────────────────
       # René moet een kapotte release direct horen, niet later ontdekken via de
       # Actions-tab. Verstuurt via dezelfde Microsoft 365/Graph-mailkoppeling

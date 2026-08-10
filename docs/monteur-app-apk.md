@@ -65,7 +65,9 @@ De buildpagina op expo.dev toont na afloop een **downloadlink naar de APK**. Ver
 
 ## Bijwerken zonder herinstallatie (EAS Update)
 
-JS/inhoudelijke wijzigingen (geen nieuwe native modules):
+**Automatisch (standaard):** elke productie-deploy via GitHub Actions (`.github/workflows/deploy.yml`) publiceert na een geslaagde deploy + smoketest automatisch een OTA-update op het `production`-kanaal (`npx eas-cli update --channel production --non-interactive`). Hiervoor moet het GitHub Actions secret `EXPO_TOKEN` (Expo-account `futur-holding`) zijn ingesteld; ontbreekt het, dan wordt de stap met een waarschuwing overgeslagen en moet handmatig gepusht worden.
+
+**Handmatig (fallback):** JS/inhoudelijke wijzigingen (geen nieuwe native modules):
 
 ```bash
 cd artifacts/monteur-app

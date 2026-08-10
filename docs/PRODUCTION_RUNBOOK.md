@@ -43,6 +43,9 @@ GitHub Actions (`deploy.yml`) SSHt naar de VPS om `deploy-production.sh` te draa
 | `PROD_SSH_PORT` | `22` (optioneel; standaard 22) | Nee |
 | `SMOKETEST_EMAIL` | E-mailadres smoketest-account | Nee |
 | `SMOKETEST_PASSWORD` | Wachtwoord smoketest-account | Nee |
+| `EXPO_TOKEN` | Expo access token (account `futur-holding`) voor de automatische OTA-update van de monteur-app na elke deploy | Nee* |
+
+\* Zonder `EXPO_TOKEN` slaagt de deploy gewoon, maar wordt de OTA-update-stap met een waarschuwing overgeslagen — monteurs krijgen dan geen automatische app-update en er moet handmatig `npx eas-cli update --channel production` gedraaid worden (zie `docs/monteur-app-apk.md`).
 
 Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflow onmiddellijk met een foutmelding maar mislukt de _merge_ er niet door.
 
@@ -153,6 +156,8 @@ Na elke deploy via `deploy.yml` voert de workflow automatisch drie API-checks ui
 3. `GET /api/gebruikers` met die sessie → verwacht een niet-lege lijst
 
 Bij falen stuurt de workflow automatisch een e-mail naar René (via de Graph/mail-koppeling). Bij succes geen e-mail.
+
+**Automatische OTA-update monteur-app:** na een geslaagde deploy + smoketest publiceert `deploy.yml` automatisch een EAS Update op kanaal `production` (`npx eas-cli update --channel production --non-interactive`), zodat monteurs bij de volgende app-start de nieuwste JS-code krijgen. Vereist GitHub Secret `EXPO_TOKEN`; ontbreekt dat, dan wordt deze stap met een waarschuwing overgeslagen (de deploy faalt er niet op). Native wijzigingen vergen nog steeds een nieuwe APK — zie `docs/monteur-app-apk.md`.
 
 **Benodigde GitHub Secrets voor de smoketest:**
 - `SMOKETEST_EMAIL` — e-mailadres van het smoketest-account
