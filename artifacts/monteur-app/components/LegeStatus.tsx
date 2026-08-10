@@ -80,7 +80,8 @@ export function LegeStatus({
             <Pressable
               onPress={actieOnPress}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? "#d63400" : "#F23B0D",
+                backgroundColor: c.primary,
+                opacity: pressed ? 0.85 : 1,
                 paddingHorizontal: 20,
                 paddingVertical: 10,
                 borderRadius: 8,
@@ -88,7 +89,7 @@ export function LegeStatus({
             >
               <Text
                 style={{
-                  color: "#fff",
+                  color: c.primaryForeground,
                   fontSize: 14,
                   fontFamily: "Inter_600SemiBold",
                 }}

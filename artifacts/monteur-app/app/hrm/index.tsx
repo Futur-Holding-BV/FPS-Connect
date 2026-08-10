@@ -34,13 +34,15 @@ export default function HrmDashboard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { inhoudMaxBreedte } = useResponsive();
-  const { token, gebruiker } = useAuth();
+  const { token, gebruiker, bezigLaden } = useAuth();
   // APP_01 §4 — teamstatistieken (andermans gegevens) alleen met de module
   // `personeel`; de eigen onderdelen hieronder zijn een basisrecht.
   const magPersoneel = heeftBevoegdheid(gebruiker, { module: "personeel", niveau: 1 });
   const { data: stats, isLoading } = useGetHrmStats({ query: { enabled: magPersoneel } } as any);
   const { data: certificaten } = useGetMijnCertificaten();
 
+  // Deep-link-race: niet redirecten zolang het token nog hersteld wordt.
+  if (bezigLaden) return null;
   if (!token) return <Redirect href="/login" />;
 
   const statItems = [

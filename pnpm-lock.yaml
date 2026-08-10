@@ -493,6 +493,9 @@ importers:
       '@workspace/object-storage-web':
         specifier: workspace:*
         version: link:../../lib/object-storage-web
+      '@workspace/ontwerp':
+        specifier: workspace:*
+        version: link:../../lib/ontwerp
       '@workspace/permissies':
         specifier: workspace:*
         version: link:../../lib/permissies
@@ -830,6 +833,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/ontwerp':
+        specifier: workspace:*
+        version: link:../../lib/ontwerp
       babel-plugin-react-compiler:
         specifier: ^19.0.0-beta-e993439-20250117
         version: 19.0.0-beta-ebf51a3-20250411
@@ -989,6 +995,8 @@ importers:
         specifier: 'catalog:'
         version: 19.2.17
 
+  lib/ontwerp: {}
+
   lib/permissies: {}
 
   scripts:
@@ -999,6 +1007,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../lib/db
+      '@workspace/ontwerp':
+        specifier: workspace:*
+        version: link:../lib/ontwerp
       '@workspace/permissies':
         specifier: workspace:*
         version: link:../lib/permissies
@@ -15915,7 +15926,7 @@ snapshots:
 
   vite@7.3.5(@types/node@25.9.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0):
     dependencies:
-      esbuild: 0.28.1
+      esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
       postcss: 8.5.15

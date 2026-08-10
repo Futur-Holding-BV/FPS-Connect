@@ -236,17 +236,25 @@ function LocatiePill({
   );
 }
 
+// Toegangsguard in een wrapper zodat de hook-volgorde in het scherm zelf
+// constant blijft (een vroege return vóór latere hooks crasht React zodra het
+// token alsnog hersteld is).
 export default function WerkdagScherm() {
+  const { token, bezigLaden } = useAuth();
+  // Deep-link-race: niet redirecten zolang het token nog hersteld wordt.
+  if (bezigLaden) return null;
+  if (!token) return <Redirect href="/login" />;
+  return <WerkdagSchermInhoud />;
+}
+
+function WerkdagSchermInhoud() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
   const { isOnline } = useOffline();
 
   const [gecachedWerkorders, setGecachedWerkorders] = useState<WerkdagItem[]>([]);
   const [gecachedLocaties, setGecachedLocaties] = useState<MijnWerkGebouw[]>([]);
-
-  if (!token) return <Redirect href="/login" />;
 
   const {
     data: werkorders = [],

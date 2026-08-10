@@ -3,22 +3,19 @@ import { useColorScheme } from "react-native";
 import colors from "@/constants/colors";
 
 /**
- * Returns the design tokens for the current color scheme.
+ * Geeft de ontwerptokens (kleuren) voor het actieve kleurschema, plus
+ * schema-onafhankelijke waarden zoals `radius`.
  *
- * The returned object contains all color tokens for the active palette
- * plus scheme-independent values like `radius`.
- *
- * Falls back to the light palette when no dark key is defined in
- * constants/colors.ts (the scaffold ships light-only by default).
- * When a sibling web artifact's dark tokens are synced into a `dark`
- * key, this hook will automatically switch palettes based on the
- * device's appearance setting.
+ * Sinds VORM_01 heeft de gedeelde tokenbron een volwaardig donker palet
+ * (WCAG AA gemeten). Het volgen van de systeeminstelling staat bewust nog
+ * UIT tot F6: zolang schermen nog ~1.200 hardgecodeerde kleuren bevatten
+ * (nulmeting) zou donker een onleesbare mengvorm opleveren. Zet
+ * DONKER_ACTIEF op true zodra F6 (schermmigratie) is afgerond.
  */
+const DONKER_ACTIEF = false;
+
 export function useColors() {
   const scheme = useColorScheme();
-  const palette =
-    scheme === "dark" && "dark" in colors
-      ? (colors as Record<string, typeof colors.light>).dark
-      : colors.light;
+  const palette = DONKER_ACTIEF && scheme === "dark" ? colors.dark : colors.light;
   return { ...palette, radius: colors.radius };
 }

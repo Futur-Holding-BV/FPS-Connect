@@ -1,19 +1,23 @@
 import { useGetMijnWerk } from "@workspace/api-client-react";
 import type { MijnWerkGebouw, MijnWerkSpot } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import { beweging, ruimte } from "@workspace/ontwerp";
+import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  SectionList,
-  Text,
-  View,
-} from "react-native";
+import { Platform, Pressable, SectionList, Text, View } from "react-native";
+import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import {
+  Kaart,
+  Ladenstaat,
+  LegeStaat,
+  LijstFout,
+  Statusmerk,
+  bovenInset,
+  tekstStijl,
+} from "@/components/ui";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
@@ -36,15 +40,16 @@ const TYPEN: Record<string, string> = {
   samengesteld: "Samengesteld",
 };
 
-const STATUSKLEUR: Record<string, string> = {
-  concept: "#6b7280",
-  voorbereid: "#cbd5e1",
-  geplaatst: "#2563eb",
-  goedgekeurd: "#16a34a",
-  afgekeurd: "#dc2626",
-  ter_inspectie: "#d97706",
-  hersteld: "#0891b2",
-  vervangen: "#7c3aed",
+// Statussen → soort Statusmerk (kleur komt uit het palet, niet uit dit bestand).
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  concept: "neutraal",
+  voorbereid: "neutraal",
+  geplaatst: "primair",
+  goedgekeurd: "succes",
+  afgekeurd: "fout",
+  ter_inspectie: "waarschuwing",
+  hersteld: "succes",
+  vervangen: "primair",
 };
 
 const STATUSLABEL: Record<string, string> = {
@@ -62,8 +67,9 @@ export default function MijnWerkScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, bezigLaden } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
+  const rustig = useReducedMotion();
 
   const { syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } =
     useSync();
@@ -72,6 +78,10 @@ export default function MijnWerkScherm() {
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
+  // Niet redirecten zolang het token nog uit de opslag hersteld wordt: anders
+  // verliest elke deep-link (web-URL, pushnotificatie) de race en eindigt op
+  // /login → /menu.
+  if (bezigLaden) return null;
   if (!token) return <Redirect href="/login" />;
 
   const secties = (data ?? []).map((g: MijnWerkGebouw) => ({
@@ -91,29 +101,30 @@ export default function MijnWerkScherm() {
     0,
   );
 
+  const verschijn = (volgorde: number) =>
+    rustig || Platform.OS === "web"
+      ? undefined
+      : FadeInDown.duration(beweging.normaal).delay(Math.min(volgorde, 8) * (beweging.snel / 3));
+
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View
+      <LinearGradient
+        colors={[c.dark, c.darkMuted + "33", c.dark]}
+        locations={[0, 0.85, 1]}
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
-              ‹ Terug
-            </Text>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.tint)}>‹ Terug</Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
-            Mijn werk
-          </Text>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>Mijn werk</Text>
           {!isLoading && !isError && (
-            <Text
-              style={{ color: c.darkMuted, fontSize: 13, marginTop: 4, fontFamily: "Inter_400Regular" }}
-            >
+            <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
               {totaalSpots === 0
                 ? "Geen spots aan u toegewezen"
                 : `${totaalSpots} spot${totaalSpots !== 1 ? "s" : ""} in ${(data ?? []).length} gebouw${(data ?? []).length !== 1 ? "en" : ""}`}
@@ -122,7 +133,7 @@ export default function MijnWerkScherm() {
                 : ""}
             </Text>
           )}
-          <View style={{ marginTop: 10 }}>
+          <View style={{ marginTop: ruimte.s + 2 }}>
             <SyncStatusBadge
               status={syncStatus}
               aantalWachtend={aantalWachtend}
@@ -136,11 +147,19 @@ export default function MijnWerkScherm() {
             />
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View
+          style={{
+            flex: 1,
+            padding: ruimte.xl,
+            width: "100%",
+            maxWidth: inhoudMaxBreedte,
+            alignSelf: "center",
+          }}
+        >
+          <Ladenstaat regels={5} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -148,47 +167,16 @@ export default function MijnWerkScherm() {
           onOpnieuw={() => refetch()}
         />
       ) : secties.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 14 }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: c.accent,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="checkmark-circle-outline" size={38} color={c.primary} />
-          </View>
-          <Text
-            style={{
-              color: c.foreground,
-              fontSize: 18,
-              fontFamily: "Inter_700Bold",
-              textAlign: "center",
-            }}
-          >
-            Geen openstaand werk
-          </Text>
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              textAlign: "center",
-              lineHeight: 21,
-            }}
-          >
-            Er zijn momenteel geen spots aan u toegewezen. Zodra een beheerder u een spot
-            toewijst, verschijnt die hier.
-          </Text>
-        </View>
+        <LegeStaat
+          icoon="checkmark-circle-outline"
+          titel="Geen openstaand werk"
+          beschrijving="Er zijn momenteel geen spots aan u toegewezen. Zodra een beheerder u een spot toewijst, verschijnt die hier."
+        />
       ) : (
         <SectionList
           sections={secties}
           keyExtractor={(spot: MijnWerkSpot) => String(spot.id)}
-          contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 24 }}
+          contentContainerStyle={{ padding: ruimte.m + 2, paddingBottom: insets.bottom + ruimte.xl }}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
             <GebouwKop
@@ -198,16 +186,18 @@ export default function MijnWerkScherm() {
               inhoudMaxBreedte={inhoudMaxBreedte}
             />
           )}
-          renderItem={({ item: spot }) => (
-            <SpotRij
-              spot={spot}
-              gebouw={secties.find((s) => s.data.includes(spot))?.gebouw}
-              router={router}
-              c={c}
-              inhoudMaxBreedte={inhoudMaxBreedte}
-            />
+          renderItem={({ item: spot, index }) => (
+            <Animated.View entering={verschijn(index)}>
+              <SpotRij
+                spot={spot}
+                gebouw={secties.find((s) => s.data.includes(spot))?.gebouw}
+                router={router}
+                c={c}
+                inhoudMaxBreedte={inhoudMaxBreedte}
+              />
+            </Animated.View>
           )}
-          SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
+          SectionSeparatorComponent={() => <View style={{ height: ruimte.l }} />}
         />
       )}
     </View>
@@ -232,7 +222,7 @@ function GebouwKop({
         width: "100%",
         maxWidth: inhoudMaxBreedte,
         alignSelf: "center",
-        marginBottom: 6,
+        marginBottom: ruimte.xs + 2,
       }}
     >
       <View
@@ -240,45 +230,34 @@ function GebouwKop({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingHorizontal: 4,
-          paddingBottom: 6,
+          paddingHorizontal: ruimte.xs,
+          paddingBottom: ruimte.xs + 2,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
-          marginBottom: 4,
+          marginBottom: ruimte.xs,
         }}
       >
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold" }}>
-            {gebouw.gebouw_naam}
-          </Text>
+          <Text style={tekstStijl("nadruk", c.foreground)}>{gebouw.gebouw_naam}</Text>
           {gebouw.adres ? (
-            <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 12,
-                fontFamily: "Inter_400Regular",
-                marginTop: 1,
-              }}
-            >
+            <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: 1 }]}>
               {gebouw.adres}
               {gebouw.stad ? `, ${gebouw.stad}` : ""}
             </Text>
           ) : null}
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs }}>
           <View
             style={{
-              backgroundColor: c.primary + "22",
-              borderRadius: 12,
-              paddingHorizontal: 10,
-              paddingVertical: 3,
+              backgroundColor: c.accent,
+              borderRadius: c.radius - 2,
+              paddingHorizontal: ruimte.s + 2,
+              paddingVertical: ruimte.xs - 1,
             }}
           >
-            <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_700Bold" }}>
-              {gebouw.spots.length}
-            </Text>
+            <Text style={tekstStijl("bijschrift", c.accentForeground)}>{gebouw.spots.length}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+          <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
         </View>
       </View>
     </Pressable>
@@ -298,8 +277,6 @@ function SpotRij({
   c: ReturnType<typeof useColors>;
   inhoudMaxBreedte: number | undefined;
 }) {
-  const statusKleur = STATUSKLEUR[spot.status] ?? c.mutedForeground;
-
   function navigeer() {
     if (spot.verdieping_id) {
       router.push({
@@ -318,83 +295,50 @@ function SpotRij({
   return (
     <Pressable
       onPress={navigeer}
-      style={{
+      style={({ pressed }) => ({
         width: "100%",
         maxWidth: inhoudMaxBreedte,
         alignSelf: "center",
-        marginBottom: 6,
-      }}
+        marginBottom: ruimte.xs + 2,
+        opacity: pressed ? 0.8 : 1,
+      })}
     >
-      <View
-        style={{
-          backgroundColor: c.card,
-          borderRadius: c.radius,
-          borderWidth: 1,
-          borderColor: c.border,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: statusKleur,
-            flexShrink: 0,
-            marginTop: 1,
-          }}
-        />
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-            }}
-          >
-            <Text
+      <Kaart stijl={{ paddingHorizontal: ruimte.m + 2, paddingVertical: ruimte.m }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m }}>
+          <View style={{ flex: 1 }}>
+            <View
               style={{
-                color: c.foreground,
-                fontSize: 14,
-                fontFamily: "Inter_600SemiBold",
-                flexShrink: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: ruimte.s,
               }}
+            >
+              <Text style={[tekstStijl("nadruk", c.foreground), { flexShrink: 1 }]} numberOfLines={1}>
+                {spot.objectnummer || "—"}
+              </Text>
+              <Statusmerk
+                label={STATUSLABEL[spot.status] ?? spot.status}
+                soort={STATUS_SOORT[spot.status] ?? "neutraal"}
+              />
+            </View>
+            <Text
+              style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}
               numberOfLines={1}
             >
-              {spot.objectnummer || "—"}
-            </Text>
-            <Text
-              style={{
-                color: statusKleur,
-                fontSize: 11,
-                fontFamily: "Inter_600SemiBold",
-                flexShrink: 0,
-              }}
-            >
-              {STATUSLABEL[spot.status] ?? spot.status}
+              {TYPEN[spot.type] ?? spot.type}
+              {spot.ruimte ? ` · ${spot.ruimte}` : ""}
+              {spot.verdieping_naam ? ` · ${spot.verdieping_naam}` : ""}
             </Text>
           </View>
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 12,
-              fontFamily: "Inter_400Regular",
-              marginTop: 2,
-            }}
-            numberOfLines={1}
-          >
-            {TYPEN[spot.type] ?? spot.type}
-            {spot.ruimte ? ` · ${spot.ruimte}` : ""}
-            {spot.verdieping_naam ? ` · ${spot.verdieping_naam}` : ""}
-          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={ruimte.l}
+            color={c.mutedForeground}
+            style={{ flexShrink: 0 }}
+          />
         </View>
-        <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} style={{ flexShrink: 0 }} />
-      </View>
+      </Kaart>
     </Pressable>
   );
 }

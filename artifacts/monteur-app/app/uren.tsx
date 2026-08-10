@@ -1479,7 +1479,7 @@ export default function UrenScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, bezigLaden } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
 
   const nu = new Date();
@@ -1497,6 +1497,8 @@ export default function UrenScherm() {
   const { data: weekstatenData = [] } = useListWeekStaten({ jaar, week } as Parameters<typeof useListWeekStaten>[0]);
   const huidigWeekstaat = weekstatenData[0];
 
+  // Deep-link-race: niet redirecten zolang het token nog hersteld wordt.
+  if (bezigLaden) return null;
   if (!token) return <Redirect href="/login" />;
 
   const totaalUren = data?.totaal_uren ?? 0;
