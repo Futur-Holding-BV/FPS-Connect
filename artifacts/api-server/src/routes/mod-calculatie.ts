@@ -229,6 +229,15 @@ function mapHeader(
   };
 }
 
+// Groepsgrens van een calculatieregel: sectie (bouwplaats/staart), eenheid en
+// hoofdstuk. Een materiaalkind moet in dezelfde groep zitten als zijn ouder,
+// anders zou herschikken het kind over een hoofdstuk-/eenheidgrens meeslepen.
+function calcRegelGroep(r: { isStaartkosten: boolean | null; isBouwplaatskosten: boolean | null; eenheidId: number | null; hoofdstuk: string | null }): string {
+  return r.isStaartkosten ? "staart"
+    : r.isBouwplaatskosten ? "bouwplaats"
+    : `direct|${r.eenheidId ?? ""}|${r.hoofdstuk ?? "Overige werkzaamheden"}`;
+}
+
 function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: string | null) {
   const hv = r.hoeveelheid ?? 0;
   const t  = r.tarief ?? 0;
@@ -1189,6 +1198,24 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res): 
       soort = "regel", optioneel = false, ouder_regel_id } = body;
     if (!omschrijving) return void res.status(400).json({ error: "omschrijving is verplicht" });
 
+    // Ouder-kindconsistentie: een kind moet in dezelfde calculatie én dezelfde
+    // groep (hoofdstuk/eenheid/sectie) zitten als zijn ouder.
+    if (ouder_regel_id) {
+      const [ouder] = await db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, Number(ouder_regel_id)));
+      if (!ouder || ouder.calculatieId !== id) {
+        return void res.status(400).json({ error: "ouder_regel_id verwijst niet naar een regel in deze calculatie" });
+      }
+      const kindGroep = calcRegelGroep({
+        isStaartkosten: Boolean(is_staartkosten),
+        isBouwplaatskosten: Boolean(is_bouwplaatskosten),
+        eenheidId: eenheid_id ? Number(eenheid_id) : null,
+        hoofdstuk: hoofdstuk != null ? String(hoofdstuk) : null,
+      });
+      if (kindGroep !== calcRegelGroep(ouder)) {
+        return void res.status(400).json({ error: "ouder_regel_id verwijst naar een regel in een ander hoofdstuk, andere eenheid of andere sectie" });
+      }
+    }
+
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
 
     const [row] = await db.insert(modCalcRegelsTable).values({
@@ -1234,6 +1261,29 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     const [existing] = await db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, regelId));
     if (!existing) return void res.status(404).json({ error: "Niet gevonden" });
 
+    // Ouder-kindconsistentie: effectieve waarden ná deze update mogen niet naar
+    // een ouder buiten dezelfde calculatie/groep (hoofdstuk/eenheid/sectie) wijzen.
+    const effOuderId = body.ouder_regel_id !== undefined
+      ? (body.ouder_regel_id ? Number(body.ouder_regel_id) : null)
+      : existing.ouderRegelId;
+    const raaktGroep = body.ouder_regel_id !== undefined || body.hoofdstuk !== undefined
+      || body.eenheid_id !== undefined || body.is_staartkosten !== undefined || body.is_bouwplaatskosten !== undefined;
+    if (effOuderId != null && raaktGroep) {
+      const [ouder] = await db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, effOuderId));
+      if (!ouder || ouder.calculatieId !== existing.calculatieId) {
+        return void res.status(400).json({ error: "ouder_regel_id verwijst niet naar een regel in deze calculatie" });
+      }
+      const kindGroep = calcRegelGroep({
+        isStaartkosten: body.is_staartkosten !== undefined ? Boolean(body.is_staartkosten) : existing.isStaartkosten,
+        isBouwplaatskosten: body.is_bouwplaatskosten !== undefined ? Boolean(body.is_bouwplaatskosten) : existing.isBouwplaatskosten,
+        eenheidId: body.eenheid_id !== undefined ? (body.eenheid_id ? Number(body.eenheid_id) : null) : existing.eenheidId,
+        hoofdstuk: body.hoofdstuk !== undefined ? String(body.hoofdstuk) : existing.hoofdstuk,
+      });
+      if (kindGroep !== calcRegelGroep(ouder)) {
+        return void res.status(400).json({ error: "ouder_regel_id verwijst naar een regel in een ander hoofdstuk, andere eenheid of andere sectie" });
+      }
+    }
+
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body, existing as any);
 
     const update: Partial<typeof modCalcRegelsTable.$inferInsert> = { bijgewerktOp: new Date() };
@@ -1264,6 +1314,112 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
 
     const [row] = await db.update(modCalcRegelsTable).set(update).where(eq(modCalcRegelsTable.id, regelId)).returning();
     res.json(mapRegel(row));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// Herschikken: regel omhoog/omlaag binnen zijn hoofdstuk-groep verplaatsen.
+// Materiaalkinderen (ouder_regel_id) verhuizen altijd mee met hun ouder; de hele
+// calculatie wordt daarna herteld zodat 'volgorde' consistent en uniek is.
+router.post("/modules/calculaties/:id/regels/:regelId/herschik", schrijvenCalc, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params["id"]);
+    const regelId = parseId(req.params["regelId"]);
+    const richting = (req.body as Record<string, unknown> | undefined)?.["richting"];
+    if (richting !== "omhoog" && richting !== "omlaag") {
+      return void res.status(400).json({ error: 'richting moet "omhoog" of "omlaag" zijn' });
+    }
+
+    // Alles (lezen → herschikken → hertellen) in ÉÉN transactie, geserialiseerd
+    // per calculatie via een transactie-advisory-lock: gelijktijdige herschik-
+    // verzoeken op dezelfde calculatie kunnen elkaars hertelling niet doorkruisen.
+    const uitkomst = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(873001, ${id})`);
+
+    const alle = await tx.select().from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, id))
+      .orderBy(asc(modCalcRegelsTable.volgorde), asc(modCalcRegelsTable.id));
+    const doel = alle.find((r) => r.id === regelId);
+    if (!doel) return { status: 404 as const };
+
+    const groepVan = calcRegelGroep;
+
+    // Een regel telt alleen als kind wanneer zijn ouder in DEZELFDE groep zit;
+    // een (legacy) kind in een ander hoofdstuk/eenheid/sectie blijft in zijn
+    // eigen groep staan en verhuist NIET mee over die grens heen.
+    const perId = new Map(alle.map((r) => [r.id, r]));
+    const isKind = (r: typeof doel) => {
+      if (r.ouderRegelId == null) return false;
+      const ouder = perId.get(r.ouderRegelId);
+      return !!ouder && groepVan(ouder) === groepVan(r);
+    };
+
+    // Kinderen per ouder, in huidige volgorde
+    const kinderenVan = new Map<number, typeof alle>();
+    const topRegels: typeof alle = [];
+    for (const r of alle) {
+      if (isKind(r)) {
+        const lijst = kinderenVan.get(r.ouderRegelId as number) ?? [];
+        lijst.push(r);
+        kinderenVan.set(r.ouderRegelId as number, lijst);
+      } else {
+        topRegels.push(r);
+      }
+    }
+
+    let verplaatst = false;
+    if (isKind(doel)) {
+      // Kind verplaatsen binnen de kinderen van dezelfde ouder
+      const broers = kinderenVan.get(doel.ouderRegelId as number)!;
+      const idx = broers.findIndex((r) => r.id === doel.id);
+      const nieuw = richting === "omhoog" ? idx - 1 : idx + 1;
+      if (nieuw >= 0 && nieuw < broers.length) {
+        [broers[idx], broers[nieuw]] = [broers[nieuw]!, broers[idx]!];
+        verplaatst = true;
+      }
+    } else {
+      // Topregel (blok incl. kinderen in dezelfde groep) verplaatsen binnen zijn groep.
+      const doelGroep = groepVan(doel);
+      const groepIdx = topRegels
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => groepVan(r) === doelGroep)
+        .map(({ i }) => i);
+      const pos = groepIdx.findIndex((i) => topRegels[i]!.id === doel.id);
+      const nieuwPos = richting === "omhoog" ? pos - 1 : pos + 1;
+      if (nieuwPos >= 0 && nieuwPos < groepIdx.length) {
+        const a = groepIdx[pos]!;
+        const b = groepIdx[nieuwPos]!;
+        [topRegels[a], topRegels[b]] = [topRegels[b]!, topRegels[a]!];
+        verplaatst = true;
+      }
+    }
+
+    if (verplaatst) {
+      // Volledige hertelling: kinderen krijgen volgordes direct na hun ouder.
+      const nieuweVolgorde: Array<{ id: number; volgorde: number }> = [];
+      let teller = 1;
+      for (const top of topRegels) {
+        nieuweVolgorde.push({ id: top.id, volgorde: teller++ });
+        for (const kind of kinderenVan.get(top.id) ?? []) {
+          nieuweVolgorde.push({ id: kind.id, volgorde: teller++ });
+        }
+      }
+      const huidige = new Map(alle.map((r) => [r.id, r.volgorde]));
+      for (const { id: rid, volgorde } of nieuweVolgorde) {
+        if (huidige.get(rid) === volgorde) continue;
+        await tx.update(modCalcRegelsTable)
+          .set({ volgorde, bijgewerktOp: new Date() })
+          .where(eq(modCalcRegelsTable.id, rid));
+      }
+    }
+
+    return { status: 200 as const, verplaatst };
+    });
+
+    if (uitkomst.status === 404) return void res.status(404).json({ error: "Regel niet gevonden" });
+    res.json({ verplaatst: uitkomst.verplaatst });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

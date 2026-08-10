@@ -707,6 +707,8 @@ import type {
   ModCalcNormtijd,
   ModCalcNormtijdInput,
   ModCalcRegel,
+  ModCalcRegelHerschikInput,
+  ModCalcRegelHerschikResultaat,
   ModCalcRegelInput,
   ModCalcTarief,
   ModCalcTariefInput,
@@ -53255,6 +53257,79 @@ export const useDeleteModCalcRegel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteModCalcRegelMutationOptions(options));
+    }
+
+export const getHerschikModCalcRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/regels/${regelId}/herschik`
+}
+
+/**
+ * @summary Calculatieregel omhoog/omlaag verplaatsen binnen zijn hoofdstuk (kinderen verhuizen mee)
+ */
+export const herschikModCalcRegel = async (id: number,
+    regelId: number,
+    modCalcRegelHerschikInput: ModCalcRegelHerschikInput, options?: RequestInit): Promise<ModCalcRegelHerschikResultaat> => {
+
+  return customFetch<ModCalcRegelHerschikResultaat>(getHerschikModCalcRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcRegelHerschikInput)
+  }
+);}
+
+
+
+
+export const getHerschikModCalcRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herschikModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelHerschikInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herschikModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelHerschikInput>}, TContext> => {
+
+const mutationKey = ['herschikModCalcRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herschikModCalcRegel>>, {id: number;regelId: number;data: BodyType<ModCalcRegelHerschikInput>}> = (props) => {
+          const {id,regelId,data} = props ?? {};
+
+          return  herschikModCalcRegel(id,regelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerschikModCalcRegelMutationResult = NonNullable<Awaited<ReturnType<typeof herschikModCalcRegel>>>
+    export type HerschikModCalcRegelMutationBody = BodyType<ModCalcRegelHerschikInput>
+    export type HerschikModCalcRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatieregel omhoog/omlaag verplaatsen binnen zijn hoofdstuk (kinderen verhuizen mee)
+ */
+export const useHerschikModCalcRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herschikModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelHerschikInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herschikModCalcRegel>>,
+        TError,
+        {id: number;regelId: number;data: BodyType<ModCalcRegelHerschikInput>},
+        TContext
+      > => {
+      return useMutation(getHerschikModCalcRegelMutationOptions(options));
     }
 
 export const getAiModCalcRegelsUrl = (id: number,) => {

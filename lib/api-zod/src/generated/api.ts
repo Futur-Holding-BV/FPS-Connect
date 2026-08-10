@@ -18544,6 +18544,23 @@ export const DeleteModCalcRegelResponse = zod.void()
 
 
 /**
+ * @summary Calculatieregel omhoog/omlaag verplaatsen binnen zijn hoofdstuk (kinderen verhuizen mee)
+ */
+export const HerschikModCalcRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const HerschikModCalcRegelBody = zod.object({
+  "richting": zod.enum(['omhoog', 'omlaag']).describe('Richting waarin de regel binnen zijn hoofdstuk verplaatst wordt.')
+})
+
+export const HerschikModCalcRegelResponse = zod.object({
+  "verplaatst": zod.boolean().describe('false wanneer de regel al aan de rand van zijn hoofdstuk stond.')
+})
+
+
+/**
  * @summary AI-voorstel calculatieregels genereren
  */
 export const AiModCalcRegelsParams = zod.object({

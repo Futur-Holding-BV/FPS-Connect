@@ -9239,6 +9239,27 @@ export interface ModCalcRegelInput {
 }
 
 /**
+ * Richting waarin de regel binnen zijn hoofdstuk verplaatst wordt.
+ */
+export type ModCalcRegelHerschikInputRichting = typeof ModCalcRegelHerschikInputRichting[keyof typeof ModCalcRegelHerschikInputRichting];
+
+
+export const ModCalcRegelHerschikInputRichting = {
+  omhoog: 'omhoog',
+  omlaag: 'omlaag',
+} as const;
+
+export interface ModCalcRegelHerschikInput {
+  /** Richting waarin de regel binnen zijn hoofdstuk verplaatst wordt. */
+  richting: ModCalcRegelHerschikInputRichting;
+}
+
+export interface ModCalcRegelHerschikResultaat {
+  /** false wanneer de regel al aan de rand van zijn hoofdstuk stond. */
+  verplaatst: boolean;
+}
+
+/**
  * Multipart-invoer voor de plak-analyse. Ten minste 'tekst' of 'bestand' is nodig.
  */
 export interface CalcPlakAnalyseInput {

@@ -9,6 +9,7 @@ import {
   useListOffertes,
   useCreateModCalcRegel,
   useUpdateModCalcRegel,
+  useHerschikModCalcRegel,
   useDeleteModCalcRegel,
   useListModCalcNormtijden,
   useListModCalcTarieven,
@@ -350,6 +351,24 @@ function ouderOptiesVoor(siblings: RegelRow[], eigenId: number): Array<{ id: num
     .map((x) => ({ id: x.id, omschrijving: x.omschrijving }));
 }
 
+// Herschik-weergave: materiaalkinderen visueel direct onder hun ouder tonen,
+// ook wanneer hun 'volgorde' (nog) niet aansluitend is.
+function ordenKinderenOnderOuder(rs: RegelRow[]): RegelRow[] {
+  const ids = new Set(rs.map((r) => r.id));
+  const kinderen = new Map<number, RegelRow[]>();
+  const top: RegelRow[] = [];
+  for (const r of rs) {
+    if (r.ouder_regel_id != null && ids.has(r.ouder_regel_id)) {
+      const lijst = kinderen.get(r.ouder_regel_id) ?? [];
+      lijst.push(r);
+      kinderen.set(r.ouder_regel_id, lijst);
+    } else {
+      top.push(r);
+    }
+  }
+  return top.flatMap((p) => [p, ...(kinderen.get(p.id) ?? [])]);
+}
+
 const SOORT_OPTIES = [
   { value: "regel",     label: "Regel" },
   { value: "materiaal", label: "Materiaal (onder ouderregel)" },
@@ -406,6 +425,9 @@ function SpreadsheetRegelRij({
   toonOnderaanneming,
   tarieven,
   ouderOpties = [],
+  kanOmhoog = false,
+  kanOmlaag = false,
+  onHerschik,
 }: {
   rij: RegelRow;
   weergave: Weergave;
@@ -417,6 +439,9 @@ function SpreadsheetRegelRij({
   toonOnderaanneming: boolean;
   tarieven: Array<{ id: number; naam: string; tarief: number; categorie: string }>;
   ouderOpties?: Array<{ id: number; omschrijving: string }>;
+  kanOmhoog?: boolean;
+  kanOmlaag?: boolean;
+  onHerschik?: (richting: "omhoog" | "omlaag") => void;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [editing, setEditing] = useState(false);
@@ -808,6 +833,22 @@ function SpreadsheetRegelRij({
       {weergave === "intern" && (
         <td className="px-1 py-0 w-12 text-center">
           <div className="flex items-center gap-0 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {onHerschik && (
+              <>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                  title="Omhoog verplaatsen" tabIndex={-1} disabled={!kanOmhoog || bezig}
+                  data-testid={`knop-regel-omhoog-${rij.id}`}
+                  onClick={(e) => { e.stopPropagation(); onHerschik("omhoog"); }}>
+                  <ChevronUp className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                  title="Omlaag verplaatsen" tabIndex={-1} disabled={!kanOmlaag || bezig}
+                  data-testid={`knop-regel-omlaag-${rij.id}`}
+                  onClick={(e) => { e.stopPropagation(); onHerschik("omlaag"); }}>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </>
+            )}
             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground"
               title="Dupliceren" tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onDuplicate(rij); }}>
@@ -2273,6 +2314,12 @@ export default function ModulesCalculatieDetail() {
   const createRegelMut = useCreateModCalcRegel({ mutation: { onSuccess: invalidate } });
   const updateRegelMut = useUpdateModCalcRegel({ mutation: { onSuccess: invalidate } });
   const deleteRegelMut = useDeleteModCalcRegel({ mutation: { onSuccess: invalidate } });
+  const herschikRegelMut = useHerschikModCalcRegel({
+    mutation: {
+      onSuccess: invalidate,
+      onError: () => toast({ title: "Verplaatsen mislukt", variant: "destructive" }),
+    },
+  });
   const aiMut = useAiModCalcRegels({
     mutation: {
       onSuccess: (d) => {
@@ -2571,18 +2618,35 @@ export default function ModulesCalculatieDetail() {
 
   const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
 
+  // Herschikken: knoppen verplaatsen een regel binnen zijn hoofdstuk-groep;
+  // de server verplaatst materiaalkinderen mee en hertelt 'volgorde'.
+  const herschikProps = (groep: RegelRow[], r: RegelRow) => {
+    const ids = new Set(groep.map((g) => g.id));
+    const isKind = r.ouder_regel_id != null && ids.has(r.ouder_regel_id);
+    const peers = isKind
+      ? groep.filter((g) => g.ouder_regel_id === r.ouder_regel_id)
+      : groep.filter((g) => !(g.ouder_regel_id != null && ids.has(g.ouder_regel_id)));
+    const idx = peers.findIndex((g) => g.id === r.id);
+    return {
+      kanOmhoog: idx > 0,
+      kanOmlaag: idx >= 0 && idx < peers.length - 1,
+      onHerschik: (richting: "omhoog" | "omlaag") =>
+        herschikRegelMut.mutate({ id, regelId: r.id, data: { richting } }),
+    };
+  };
+
   // Groepeer directe regels per hoofdstuk (in volgorde van HOOFDSTUK_OPTIES)
   const regelsByHoofdstuk = HOOFDSTUK_OPTIES
-    .map((h) => ({ hoofdstuk: h, regels: directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+    .map((h) => ({ hoofdstuk: h, regels: ordenKinderenOnderOuder(directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h)) }))
     .filter((g) => g.regels.length > 0);
 
   // Groepeer directe regels per calculatie-eenheid
   const regelsByEenheid = eenheden.map((e) => {
     const eRegels = directeRegels.filter((r) => r.eenheid_id === e.id);
     const regelsPerHoofdstuk = HOOFDSTUK_OPTIES
-      .map((h) => ({ hoofdstuk: h, regels: eRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+      .map((h) => ({ hoofdstuk: h, regels: ordenKinderenOnderOuder(eRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h)) }))
       .filter((g) => g.regels.length > 0);
-    const overigeRegels = eRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""));
+    const overigeRegels = ordenKinderenOnderOuder(eRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")));
     const totaalMat  = rnd(eRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
     const totaalArb  = rnd(eRegels.reduce((s, r) => s + r.arbeidsloon, 0));
     const totaalOa   = rnd(eRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
@@ -2593,9 +2657,11 @@ export default function ModulesCalculatieDetail() {
   // Regels zonder eenheid (backward compat)
   const regelsZonderEenheid = directeRegels.filter((r) => !r.eenheid_id);
   const regelsZonderEenheidByHoofdstuk = HOOFDSTUK_OPTIES
-    .map((h) => ({ hoofdstuk: h, regels: regelsZonderEenheid.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+    .map((h) => ({ hoofdstuk: h, regels: ordenKinderenOnderOuder(regelsZonderEenheid.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h)) }))
     .filter((g) => g.regels.length > 0);
-  const regelsZonderEenheidOverig = regelsZonderEenheid.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""));
+  const regelsZonderEenheidOverig = ordenKinderenOnderOuder(regelsZonderEenheid.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")));
+  const bouwplaatsWeergave = ordenKinderenOnderOuder(bouwplaatsRegels);
+  const staartWeergave = ordenKinderenOnderOuder(staartRegels);
 
   // Aantal kolommen voor HoofdstukBalk colSpan
   // intern: # + omschrijving + W/P + toepassing + aantal + eenh + mat/stk + mat.tot + norm + arb.tarief + arb.tot + [OA?] + totaal + acties
@@ -2903,6 +2969,7 @@ export default function ModulesCalculatieDetail() {
                                   toonOnderaanneming={toonOnderaanneming}
                                   tarieven={[]}
                                   ouderOpties={ouderOptiesVoor(hRegels, r.id)}
+                                  {...herschikProps(hRegels, r)}
                                 />
                               ))}
                             </React.Fragment>
@@ -2928,6 +2995,7 @@ export default function ModulesCalculatieDetail() {
                                   toonOnderaanneming={toonOnderaanneming}
                                   tarieven={[]}
                                   ouderOpties={ouderOptiesVoor(overigeRegels, r.id)}
+                                  {...herschikProps(overigeRegels, r)}
                                 />
                               ))}
                             </>
@@ -2959,6 +3027,7 @@ export default function ModulesCalculatieDetail() {
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
                           ouderOpties={ouderOptiesVoor(hRegels, r.id)}
+                          {...herschikProps(hRegels, r)}
                         />
                       ))}
                     </React.Fragment>
@@ -2966,7 +3035,7 @@ export default function ModulesCalculatieDetail() {
 
                   {/* Overige directe regels zonder hoofdstuk en zonder eenheid */}
                   {(eenheden.length === 0
-                    ? directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
+                    ? ordenKinderenOnderOuder(directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")))
                     : regelsZonderEenheidOverig
                   ).length > 0 && (
                     <>
@@ -2977,7 +3046,7 @@ export default function ModulesCalculatieDetail() {
                         onToevoegen={() => nieuweRegel({ hoofdstuk: "Overige werkzaamheden" })}
                       />
                       {(eenheden.length === 0
-                        ? directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
+                        ? ordenKinderenOnderOuder(directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")))
                         : regelsZonderEenheidOverig
                       ).map((r) => (
                         <SpreadsheetRegelRij
@@ -2992,6 +3061,12 @@ export default function ModulesCalculatieDetail() {
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
                           ouderOpties={ouderOptiesVoor(directeRegels, r.id)}
+                          {...herschikProps(
+                            eenheden.length === 0
+                              ? directeRegels.filter((x) => !HOOFDSTUK_OPTIES.includes(x.hoofdstuk ?? ""))
+                              : regelsZonderEenheidOverig,
+                            r
+                          )}
                         />
                       ))}
                     </>
@@ -3006,7 +3081,7 @@ export default function ModulesCalculatieDetail() {
                         weergave={weergave}
                         onToevoegen={() => nieuweRegel({ is_bouwplaatskosten: true })}
                       />
-                      {bouwplaatsRegels.map((r) => (
+                      {bouwplaatsWeergave.map((r) => (
                         <SpreadsheetRegelRij
                           key={r.id}
                           rij={r}
@@ -3019,6 +3094,7 @@ export default function ModulesCalculatieDetail() {
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
                           ouderOpties={ouderOptiesVoor(bouwplaatsRegels, r.id)}
+                          {...herschikProps(bouwplaatsWeergave, r)}
                         />
                       ))}
                     </>
@@ -3033,7 +3109,7 @@ export default function ModulesCalculatieDetail() {
                         weergave={weergave}
                         onToevoegen={() => nieuweRegel({ is_staartkosten: true })}
                       />
-                      {staartRegels.map((r) => (
+                      {staartWeergave.map((r) => (
                         <SpreadsheetRegelRij
                           key={r.id}
                           rij={r}
@@ -3046,6 +3122,7 @@ export default function ModulesCalculatieDetail() {
                           toonOnderaanneming={toonOnderaanneming}
                           tarieven={[]}
                           ouderOpties={ouderOptiesVoor(staartRegels, r.id)}
+                          {...herschikProps(staartWeergave, r)}
                         />
                       ))}
                     </>

@@ -15477,6 +15477,36 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/calculaties/{id}/regels/{regelId}/herschik:
+    post:
+      operationId: herschikModCalcRegel
+      summary: Calculatieregel omhoog/omlaag verplaatsen binnen zijn hoofdstuk (kinderen verhuizen mee)
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcRegelHerschikInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcRegelHerschikResultaat'
+
   /modules/calculaties/{id}/ai-regels:
     post:
       operationId: aiModCalcRegels
@@ -39058,6 +39088,23 @@ components:
           type: integer
           nullable: true
           description: 'Bij soort "materiaal": de bovenliggende regel.'
+
+    ModCalcRegelHerschikInput:
+      type: object
+      required: [richting]
+      properties:
+        richting:
+          type: string
+          enum: [omhoog, omlaag]
+          description: Richting waarin de regel binnen zijn hoofdstuk verplaatst wordt.
+
+    ModCalcRegelHerschikResultaat:
+      type: object
+      required: [verplaatst]
+      properties:
+        verplaatst:
+          type: boolean
+          description: false wanneer de regel al aan de rand van zijn hoofdstuk stond.
 
     CalcPlakAnalyseInput:
       type: object
