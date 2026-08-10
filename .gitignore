@@ -61,3 +61,4 @@ artifacts/monteur-app/.env
 
 # Broncode-exportpakketten (lokaal gegenereerd)
 exports/
+dist-bewijs
