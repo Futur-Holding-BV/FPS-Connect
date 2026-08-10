@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Updates from "expo-updates";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -321,6 +322,93 @@ function AiDrempelBanner() {
   );
 }
 
+function UpdateBanner() {
+  const c = useColors();
+  const [gesloten, setGesloten] = useState(false);
+  const [bezigHerstart, setBezigHerstart] = useState(false);
+  const { isUpdateAvailable, isUpdatePending } = Updates.useUpdates();
+
+  // Alleen in de productie-app: expo-updates moet actief zijn (dus niet in Expo Go
+  // of dev-modus) én de build moet op het EAS-kanaal "production" staan, zodat
+  // interne preview-builds nooit updates pollen of de banner tonen.
+  const isProductieApp =
+    Updates.isEnabled && !__DEV__ && Updates.channel === "production";
+
+  // Controleer periodiek op nieuwe updates zolang de app open staat,
+  // zodat een monteur niet hoeft te wachten tot de volgende app-start.
+  useEffect(() => {
+    if (!isProductieApp) return;
+    const timer = setInterval(() => {
+      Updates.checkForUpdateAsync().catch(() => undefined);
+    }, 15 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [isProductieApp]);
+
+  if (!isProductieApp) return null;
+  if (gesloten) return null;
+  if (!isUpdateAvailable && !isUpdatePending) return null;
+
+  async function herstart() {
+    if (bezigHerstart) return;
+    setBezigHerstart(true);
+    try {
+      if (!isUpdatePending) {
+        await Updates.fetchUpdateAsync();
+      }
+      await Updates.reloadAsync();
+    } catch {
+      // Herstart mislukt — banner blijft staan zodat de monteur het later opnieuw kan proberen
+      setBezigHerstart(false);
+    }
+  }
+
+  return (
+    <View style={{
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 998,
+      backgroundColor: c.dark,
+      borderTopWidth: 1,
+      borderTopColor: c.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: ruimte.m + 2,
+      paddingVertical: ruimte.m,
+      gap: ruimte.s + 2,
+    }}>
+      <Ionicons name="cloud-download-outline" size={20} color={c.primary} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: c.darkForeground, fontSize: 13, fontWeight: "700" }}>
+          Nieuwe versie beschikbaar
+        </Text>
+        <Text style={{ color: c.darkMuted, fontSize: 12, marginTop: 2 }}>
+          Herstart de app om de update te gebruiken
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => void herstart()}
+        disabled={bezigHerstart}
+        style={{
+          backgroundColor: c.primary,
+          borderRadius: 8,
+          paddingHorizontal: ruimte.m,
+          paddingVertical: ruimte.s + 1,
+          opacity: bezigHerstart ? 0.6 : 1,
+        }}
+      >
+        <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 13 }}>
+          {bezigHerstart ? "Bezig..." : "Herstart"}
+        </Text>
+      </Pressable>
+      <Pressable onPress={() => setGesloten(true)} hitSlop={10}>
+        <Ionicons name="close" size={20} color={c.darkMuted} />
+      </Pressable>
+    </View>
+  );
+}
+
 function AiDrempelBewaker() {
   const { token, gebruiker } = useAuth();
   if (!token || gebruiker?.rol !== "hoofdbeheerder") return null;
@@ -414,6 +502,7 @@ function RootLayoutNav() {
       <LmraBewaker />
       <ToolboxPopupBewaker />
       <PicklijstBewaker />
+      <UpdateBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
