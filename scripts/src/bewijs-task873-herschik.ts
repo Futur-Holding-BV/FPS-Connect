@@ -7,7 +7,9 @@ import { eq, inArray, like } from "drizzle-orm";
 import { authenticator } from "otplib";
 import { db, gebruikersTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
 
-const BASIS = `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
+// Overschrijfbaar door de validatie-runner (bewijs-herschik-run.ts) die een
+// eigen api-server op een aparte poort start, los van de gedeelde 8080.
+const BASIS = process.env.BEWIJS_API_BASIS ?? `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
 const TOTP = authenticator.generateSecret();
 const WW = `${randomBytes(12).toString("base64url")}Aa1!`;
 const EMAIL = "bewijs-task873@fps.local";

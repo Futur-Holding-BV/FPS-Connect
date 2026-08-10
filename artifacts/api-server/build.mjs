@@ -11,7 +11,9 @@ globalThis.require = createRequire(import.meta.url);
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
-  const distDir = path.resolve(artifactDir, "dist");
+  // API_BUILD_OUTDIR laat validatie-runners naar een eigen map bouwen, zodat
+  // parallelle runs elkaars draaiende dist/ niet wissen (rm hieronder).
+  const distDir = path.resolve(artifactDir, process.env.API_BUILD_OUTDIR ?? "dist");
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({

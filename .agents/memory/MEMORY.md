@@ -67,6 +67,7 @@
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [E2E TOTP login timing](e2e-totp-timing.md) — runTest cold-load verloopt TOTP-code; genereer next-window code (Date.now()+30000) na vensgrens voor ~90s; vast e2e-account via scripts/e2e-monteur-testaccount; Expo buiten /api-proxy.
 - [E2e-testaccount lifecycle](e2e-testaccount-lifecycle.md) — runners archiveren vaste e2e-accounts in finally (ook bij falen); seeders heractiveren idempotent; e2e-menu-account gedeeld tussen suites = klein concurrency-risico.
+- [Parallelle validatie-races (poort 8080/dist)](validatie-parallel-races.md) — bewijsrunners: eigen vrije poort + eigen build-outdir (API_BUILD_OUTDIR), gereedheid aan eigen kind binden.
 - [E2E menu-test validatiestap](e2e-validatie-runner.md) — validatiestap `e2e-menu` (e2e-monteur-ci wrapper) boot api-server+expo zelf (health-poll, detached spawn, kill alleen self-started); CI heeft geen restart_workflow.
 - [Playwright op NixOS](playwright-nixos.md) — meegeleverde Playwright-chromium draait niet op NixOS (prebuilt binary, ontbrekende libs); gebruik Nix-chromium via executablePath (which chromium).
 - [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.

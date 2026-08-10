@@ -24,6 +24,10 @@ args = "e2e-menu"
 task = "workflow.run"
 args = "e2e-web"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "bewijs-herschik"
+
 [[workflows.workflow]]
 name = "e2e-menu"
 author = "agent"
@@ -42,6 +46,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/scripts run e2e-web-ci"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "bewijs-herschik"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/scripts run bewijs-herschik-ci"
 
 [workflows.workflow.metadata]
 isValidation = true
