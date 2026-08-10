@@ -77,3 +77,4 @@ export * from "./algemene-inkoop";
 export * from "./actiepunten";
 export * from "./kalender";
 export * from "./voorkeuren";
+export * from "./werving";

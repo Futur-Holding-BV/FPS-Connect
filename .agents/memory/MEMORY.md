@@ -145,6 +145,7 @@
 - [Module-gating opname/projecten/workflow](module-gating-opname-projecten-workflow.md) — geen eigen modules; sub-resource-delete=3/entiteit=4-conventie; autorisatie-middleware moet req.permissies (impersonatie) honoreren.
 - [Jaarkalender KALENDER_01](jaarkalender.md) — kalender=afgeleide view zonder kopieën; collectieve dagen alleen via de verlofmotor; rapporten achter personeel:1; FK set-null-valkuil bij bewijs.
 - [Herschik/reorder-endpoint patroon](herschik-endpoint-patroon.md) — lezen→herschikken→hertellen in één tx + pg_advisory_xact_lock per parent; anders dubbele volgordes bij gelijktijdig gebruik (review-afwijzing).
+- [Wervingsmodule privacy-hardening](werving-privacy-filter.md) — AI-uitvoer over personen altijd deterministisch server-side filteren op beschermde kenmerken + oordelen; prompt-verbod alleen is onvoldoende (review-afwijzing).
 - [UREN_01 ADV/overwerkslot/weekcontrole](uren-overwerkslot.md) — CAO-namen exact; slotverbruik atomair; §6b uurcode-eis alleen bij opdracht-uren, PATCH boekt alleen delta; werkbak-bron eerst whitelisten.
 - [Materiaal-aanvraagketen](materiaal-aanvraag-keten.md) — werkbaksluiting via handelHerkomstAf in de PATCH-transactie; fase 3 (aanvraag→bestelling) bewust niet gebouwd tot René A/B/C kiest; prod-meting via hoofdbeheerder-beheerpagina.
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.

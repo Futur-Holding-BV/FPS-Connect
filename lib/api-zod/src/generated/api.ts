@@ -10575,6 +10575,301 @@ export const KoppelOpleidingAanFunctieResponse = zod.void()
 
 
 /**
+ * @summary Sollicitatiekandidaten ophalen
+ */
+export const ListWervingKandidatenResponseItem = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "functie_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kanaal": zod.string(),
+  "status": zod.enum(['ontvangen', 'uitgenodigd', 'gesproken', 'afgewezen', 'aangenomen']),
+  "toestemming_bewaring": zod.boolean().describe('Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding).'),
+  "procedure_afgerond_op": zod.string().nullish(),
+  "cv_bestandsnaam": zod.string().nullish(),
+  "heeft_cv": zod.boolean(),
+  "toetsing": zod.array(zod.object({
+  "categorie": zod.enum(['taken', 'verantwoordelijkheden', 'competenties', 'opleidingsvereisten']),
+  "eis": zod.string(),
+  "stand": zod.enum(['aantoonbaar_aanwezig', 'niet_genoemd', 'onduidelijk']),
+  "vindplaats": zod.string().nullish().describe('Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).'),
+  "toelichting": zod.string().nullish()
+})).nullish(),
+  "toetsing_op": zod.string().nullish(),
+  "eindconclusie": zod.string().nullish().describe('Door de mens vastgelegd, nooit door AI voorgesteld.'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListWervingKandidatenResponse = zod.array(ListWervingKandidatenResponseItem)
+
+
+/**
+ * @summary Kandidaat toevoegen (met optioneel cv-bestand)
+ */
+export const CreateWervingKandidaatBody = zod.object({
+  "naam": zod.string(),
+  "functie_id": zod.string(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "kanaal": zod.string().optional(),
+  "toestemming_bewaring": zod.string().optional(),
+  "cv": zod.instanceof(File).optional()
+})
+
+export const CreateWervingKandidaatResponse = zod.void()
+
+
+/**
+ * @summary Kandidaat met vragenlijst ophalen
+ */
+export const GetWervingKandidaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWervingKandidaatResponse = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "functie_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kanaal": zod.string(),
+  "status": zod.enum(['ontvangen', 'uitgenodigd', 'gesproken', 'afgewezen', 'aangenomen']),
+  "toestemming_bewaring": zod.boolean().describe('Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding).'),
+  "procedure_afgerond_op": zod.string().nullish(),
+  "cv_bestandsnaam": zod.string().nullish(),
+  "heeft_cv": zod.boolean(),
+  "toetsing": zod.array(zod.object({
+  "categorie": zod.enum(['taken', 'verantwoordelijkheden', 'competenties', 'opleidingsvereisten']),
+  "eis": zod.string(),
+  "stand": zod.enum(['aantoonbaar_aanwezig', 'niet_genoemd', 'onduidelijk']),
+  "vindplaats": zod.string().nullish().describe('Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).'),
+  "toelichting": zod.string().nullish()
+})).nullish(),
+  "toetsing_op": zod.string().nullish(),
+  "eindconclusie": zod.string().nullish().describe('Door de mens vastgelegd, nooit door AI voorgesteld.'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "vragen": zod.array(zod.object({
+  "id": zod.number(),
+  "kandidaat_id": zod.number(),
+  "volgorde": zod.number(),
+  "bron": zod.enum(['kern', 'cv', 'handmatig']),
+  "vraag": zod.string(),
+  "aantekening": zod.string().nullish()
+})),
+  "cv_bron": zod.string().optional()
+}))
+
+
+/**
+ * @summary Kandidaat bijwerken (status, kanaal, toestemming, eindconclusie)
+ */
+export const UpdateWervingKandidaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWervingKandidaatBody = zod.object({
+  "naam": zod.string().optional(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kanaal": zod.string().optional(),
+  "status": zod.enum(['ontvangen', 'uitgenodigd', 'gesproken', 'afgewezen', 'aangenomen']).optional(),
+  "toestemming_bewaring": zod.boolean().optional(),
+  "eindconclusie": zod.string().nullish()
+})
+
+export const UpdateWervingKandidaatResponse = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "functie_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kanaal": zod.string(),
+  "status": zod.enum(['ontvangen', 'uitgenodigd', 'gesproken', 'afgewezen', 'aangenomen']),
+  "toestemming_bewaring": zod.boolean().describe('Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding).'),
+  "procedure_afgerond_op": zod.string().nullish(),
+  "cv_bestandsnaam": zod.string().nullish(),
+  "heeft_cv": zod.boolean(),
+  "toetsing": zod.array(zod.object({
+  "categorie": zod.enum(['taken', 'verantwoordelijkheden', 'competenties', 'opleidingsvereisten']),
+  "eis": zod.string(),
+  "stand": zod.enum(['aantoonbaar_aanwezig', 'niet_genoemd', 'onduidelijk']),
+  "vindplaats": zod.string().nullish().describe('Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).'),
+  "toelichting": zod.string().nullish()
+})).nullish(),
+  "toetsing_op": zod.string().nullish(),
+  "eindconclusie": zod.string().nullish().describe('Door de mens vastgelegd, nooit door AI voorgesteld.'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Kandidaat verwijderen (inclusief cv-bestand)
+ */
+export const DeleteWervingKandidaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWervingKandidaatResponse = zod.void()
+
+
+/**
+ * @summary AI-voorbereiding — cv-toetsing per functie-eis + vragenlijst (zonder oordeel of score)
+ */
+export const BereidWervingKandidaatVoorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BereidWervingKandidaatVoorResponse = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "functie_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kanaal": zod.string(),
+  "status": zod.enum(['ontvangen', 'uitgenodigd', 'gesproken', 'afgewezen', 'aangenomen']),
+  "toestemming_bewaring": zod.boolean().describe('Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding).'),
+  "procedure_afgerond_op": zod.string().nullish(),
+  "cv_bestandsnaam": zod.string().nullish(),
+  "heeft_cv": zod.boolean(),
+  "toetsing": zod.array(zod.object({
+  "categorie": zod.enum(['taken', 'verantwoordelijkheden', 'competenties', 'opleidingsvereisten']),
+  "eis": zod.string(),
+  "stand": zod.enum(['aantoonbaar_aanwezig', 'niet_genoemd', 'onduidelijk']),
+  "vindplaats": zod.string().nullish().describe('Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).'),
+  "toelichting": zod.string().nullish()
+})).nullish(),
+  "toetsing_op": zod.string().nullish(),
+  "eindconclusie": zod.string().nullish().describe('Door de mens vastgelegd, nooit door AI voorgesteld.'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "vragen": zod.array(zod.object({
+  "id": zod.number(),
+  "kandidaat_id": zod.number(),
+  "volgorde": zod.number(),
+  "bron": zod.enum(['kern', 'cv', 'handmatig']),
+  "vraag": zod.string(),
+  "aantekening": zod.string().nullish()
+})),
+  "cv_bron": zod.string().optional()
+}))
+
+
+/**
+ * @summary Vraag toevoegen aan de gespreksvragenlijst
+ */
+export const CreateWervingVraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateWervingVraagBody = zod.object({
+  "vraag": zod.string()
+})
+
+export const CreateWervingVraagResponse = zod.void()
+
+
+/**
+ * @summary Vraag of gespreksaantekening bijwerken
+ */
+export const UpdateWervingVraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWervingVraagBody = zod.object({
+  "vraag": zod.string().optional(),
+  "aantekening": zod.string().nullish(),
+  "volgorde": zod.number().optional()
+})
+
+export const UpdateWervingVraagResponse = zod.object({
+  "id": zod.number(),
+  "kandidaat_id": zod.number(),
+  "volgorde": zod.number(),
+  "bron": zod.enum(['kern', 'cv', 'handmatig']),
+  "vraag": zod.string(),
+  "aantekening": zod.string().nullish()
+})
+
+
+/**
+ * @summary Vraag verwijderen
+ */
+export const DeleteWervingVraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWervingVraagResponse = zod.void()
+
+
+/**
+ * @summary Vaste kernvragen van een functie ophalen
+ */
+export const ListFunctieKernvragenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFunctieKernvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "volgorde": zod.number(),
+  "vraag": zod.string()
+})
+export const ListFunctieKernvragenResponse = zod.array(ListFunctieKernvragenResponseItem)
+
+
+/**
+ * @summary Vaste kernvragen van een functie vervangen (mens bevestigt)
+ */
+export const SetFunctieKernvragenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetFunctieKernvragenBody = zod.object({
+  "vragen": zod.array(zod.string())
+})
+
+export const SetFunctieKernvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "functie_id": zod.number(),
+  "volgorde": zod.number(),
+  "vraag": zod.string()
+})
+export const SetFunctieKernvragenResponse = zod.array(SetFunctieKernvragenResponseItem)
+
+
+/**
+ * @summary AI-voorstel voor kernvragen (alleen voorstel — mens bewaart via PUT)
+ */
+export const StelFunctieKernvragenVoorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const StelFunctieKernvragenVoorResponse = zod.object({
+  "vragen": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Overzicht per wervingskanaal (aantallen per status)
+ */
+export const GetWervingKanalenOverzichtResponseItem = zod.object({
+  "kanaal": zod.string(),
+  "totaal": zod.number(),
+  "per_status": zod.record(zod.string(), zod.number())
+})
+export const GetWervingKanalenOverzichtResponse = zod.array(GetWervingKanalenOverzichtResponseItem)
+
+
+/**
  * @summary Opleidingen/certificeringen ophalen
  */
 export const ListOpleidingenResponseItem = zod.object({

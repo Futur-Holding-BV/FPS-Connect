@@ -24,6 +24,8 @@ export const avgOpschoonLogTable = pgTable("avg_opschoon_log", {
   id: serial("id").primaryKey(),
   activiteitenVerwijderd: integer("activiteiten_verwijderd").notNull().default(0),
   accountsGeanonimiseerd: integer("accounts_geanonimiseerd").notNull().default(0),
+  // WERVING_01: aantal sollicitatiekandidaten (rij + cv-bestand) verwijderd.
+  kandidatenVerwijderd: integer("kandidaten_verwijderd").notNull().default(0),
   uitgevoerdOp: timestamp("uitgevoerd_op").notNull().defaultNow(),
 });
 

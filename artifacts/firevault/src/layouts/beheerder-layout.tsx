@@ -29,7 +29,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound, Link2,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
+  UserMinus, UserPlus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
   Users2, Star,
@@ -1431,6 +1431,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/personeel">
                               <Users />
                               <span>Personeel</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.startsWith("/personeel/werving")}
+                          >
+                            <Link href="/personeel/werving">
+                              <UserPlus />
+                              <span>Werving</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

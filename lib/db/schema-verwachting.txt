@@ -154,6 +154,8 @@ INDEX|fps_visual_annotaties|fps_visual_annotaties_pkey
 INDEX|fps_visuals|fps_visuals_pkey
 INDEX|fps_visuals|idx_fps_visuals_spot_type
 INDEX|fps_visuals|idx_fps_visuals_visual_type_actief
+INDEX|functie_kernvragen|functie_kernvragen_functie_idx
+INDEX|functie_kernvragen|functie_kernvragen_pkey
 INDEX|functie_opleidingen|functie_opleidingen_pkey
 INDEX|functies|functies_pkey
 INDEX|gebouw_email_bijlagen|gebouw_email_bijlagen_pkey
@@ -458,6 +460,10 @@ INDEX|werkbonnen|werkbonnen_pkey
 INDEX|werkbonnen|werkbonnen_werkbonnummer_unique
 INDEX|werkgevers|werkgevers_naam_unique
 INDEX|werkgevers|werkgevers_pkey
+INDEX|werving_kandidaten|werving_kandidaten_functie_idx
+INDEX|werving_kandidaten|werving_kandidaten_pkey
+INDEX|werving_vragen|werving_vragen_kandidaat_idx
+INDEX|werving_vragen|werving_vragen_pkey
 INDEX|workflow_cards|workflow_cards_pkey
 INDEX|workflow_definities|workflow_definities_pkey
 INDEX|workflow_lanes|workflow_lanes_pkey
@@ -803,6 +809,7 @@ KOLOM|avg_inzageverzoeken|type|text|NO|'inzage'::text
 KOLOM|avg_opschoon_log|accounts_geanonimiseerd|integer|NO|0
 KOLOM|avg_opschoon_log|activiteiten_verwijderd|integer|NO|0
 KOLOM|avg_opschoon_log|id|integer|NO|nextval('avg_opschoon_log_id_seq'::regclass)
+KOLOM|avg_opschoon_log|kandidaten_verwijderd|integer|NO|0
 KOLOM|avg_opschoon_log|uitgevoerd_op|timestamp without time zone|NO|now()
 KOLOM|avg_verwerkers|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|avg_verwerkers|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -1843,6 +1850,12 @@ KOLOM|fps_visuals|spot_type|ARRAY|NO|'{}'::text[]
 KOLOM|fps_visuals|taal|text|NO|'nl'::text
 KOLOM|fps_visuals|thumbnail_path|text|YES|
 KOLOM|fps_visuals|visual_type|text|NO|
+KOLOM|functie_kernvragen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|functie_kernvragen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|functie_kernvragen|functie_id|integer|NO|
+KOLOM|functie_kernvragen|id|integer|NO|nextval('functie_kernvragen_id_seq'::regclass)
+KOLOM|functie_kernvragen|volgorde|integer|NO|0
+KOLOM|functie_kernvragen|vraag|text|NO|
 KOLOM|functie_opleidingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|functie_opleidingen|functie_id|integer|NO|
 KOLOM|functie_opleidingen|id|integer|NO|nextval('functie_opleidingen_id_seq'::regclass)
@@ -4798,6 +4811,31 @@ KOLOM|werkgevers|telefoon|text|YES|
 KOLOM|werkgevers|voettekst_positie|text|YES|
 KOLOM|werkgevers|voettekst|text|YES|
 KOLOM|werkgevers|website|text|YES|
+KOLOM|werving_kandidaten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werving_kandidaten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werving_kandidaten|cv_bestandsnaam|text|YES|
+KOLOM|werving_kandidaten|cv_mime|text|YES|
+KOLOM|werving_kandidaten|cv_object_path|text|YES|
+KOLOM|werving_kandidaten|eindconclusie|text|YES|
+KOLOM|werving_kandidaten|email|text|YES|
+KOLOM|werving_kandidaten|functie_id|integer|NO|
+KOLOM|werving_kandidaten|id|integer|NO|nextval('werving_kandidaten_id_seq'::regclass)
+KOLOM|werving_kandidaten|kanaal|text|NO|'onbekend'::text
+KOLOM|werving_kandidaten|naam|text|NO|
+KOLOM|werving_kandidaten|procedure_afgerond_op|timestamp without time zone|YES|
+KOLOM|werving_kandidaten|status|text|NO|'ontvangen'::text
+KOLOM|werving_kandidaten|telefoon|text|YES|
+KOLOM|werving_kandidaten|toestemming_bewaring|boolean|NO|false
+KOLOM|werving_kandidaten|toetsing_op|timestamp without time zone|YES|
+KOLOM|werving_kandidaten|toetsing|jsonb|YES|
+KOLOM|werving_vragen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werving_vragen|aantekening|text|YES|
+KOLOM|werving_vragen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werving_vragen|bron|text|NO|'handmatig'::text
+KOLOM|werving_vragen|id|integer|NO|nextval('werving_vragen_id_seq'::regclass)
+KOLOM|werving_vragen|kandidaat_id|integer|NO|
+KOLOM|werving_vragen|volgorde|integer|NO|0
+KOLOM|werving_vragen|vraag|text|NO|
 KOLOM|workflow_cards|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|workflow_cards|actief|boolean|NO|true
 KOLOM|workflow_cards|ai_acties|ARRAY|NO|'{}'::text[]

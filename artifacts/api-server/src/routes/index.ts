@@ -126,6 +126,7 @@ import biaeRouter from "./biae";
 import werkbakRouter from "./werkbak";
 import werkstroomRouter from "./werkstroom";
 import "../services/workflow-configs";
+import wervingRouter from "./werving";
 
 const router: IRouter = Router();
 
@@ -208,6 +209,7 @@ router.use(werkInboxRouter);
 router.use(veiligheidRouter);
 router.use(opdrachtenRouter);
 router.use(werkvoorbereidingRouter);
+router.use(wervingRouter);
 router.use(snagstreamRouter);
 router.use(facturenRouter);
 router.use(instellingenAccountviewRouter);

@@ -167,6 +167,7 @@ import type {
   CreateSaldoCorrectie200,
   CreateToebehorenAanvraag201,
   CreateToebehorenAanvraagBody,
+  CreateWervingVraagBody,
   CrmCoachAntwoord,
   CrmCoachInput,
   CrmCommercieel,
@@ -347,6 +348,7 @@ import type {
   FpsVisualItem,
   Functie,
   FunctieInput,
+  FunctieKernvraag,
   Gebouw,
   GebouwAiAnalyseInput,
   GebouwAiAnalyseResultaat,
@@ -913,6 +915,7 @@ import type {
   SepaBestandPatch,
   SepaUploadInput,
   SessiesBeeindigenOutput,
+  SetFunctieKernvragenBody,
   SluitOverwerkslot200,
   SnagstreamOvernemenInput,
   SnagstreamRapport,
@@ -933,6 +936,7 @@ import type {
   SpotsInzicht,
   StatusUpdate,
   StatusVerdeling,
+  StelFunctieKernvragenVoor200,
   StudioBijstuurInput,
   StudioGenereerInput,
   StudioHuisstijlAnalyseResponse,
@@ -1098,6 +1102,13 @@ import type {
   Werkgever,
   WerkgeverInput,
   WerkgeverSalarisConfig,
+  WervingKanaalOverzicht,
+  WervingKandidaat,
+  WervingKandidaatDetail,
+  WervingKandidaatInput,
+  WervingKandidaatUpdate,
+  WervingVraag,
+  WervingVraagUpdate,
   WizardStatus,
   WizardVoortgangInput,
   WorkflowAiAdvies,
@@ -29543,6 +29554,966 @@ export const useKoppelOpleidingAanFunctie = <TError = ErrorType<void>,
       > => {
       return useMutation(getKoppelOpleidingAanFunctieMutationOptions(options));
     }
+
+export const getListWervingKandidatenUrl = () => {
+
+
+
+
+  return `/api/werving/kandidaten`
+}
+
+/**
+ * @summary Sollicitatiekandidaten ophalen
+ */
+export const listWervingKandidaten = async ( options?: RequestInit): Promise<WervingKandidaat[]> => {
+
+  return customFetch<WervingKandidaat[]>(getListWervingKandidatenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWervingKandidatenQueryKey = () => {
+    return [
+    `/api/werving/kandidaten`
+    ] as const;
+    }
+
+
+export const getListWervingKandidatenQueryOptions = <TData = Awaited<ReturnType<typeof listWervingKandidaten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWervingKandidaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWervingKandidatenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWervingKandidaten>>> = ({ signal }) => listWervingKandidaten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWervingKandidaten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWervingKandidatenQueryResult = NonNullable<Awaited<ReturnType<typeof listWervingKandidaten>>>
+export type ListWervingKandidatenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Sollicitatiekandidaten ophalen
+ */
+
+export function useListWervingKandidaten<TData = Awaited<ReturnType<typeof listWervingKandidaten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWervingKandidaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWervingKandidatenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWervingKandidaatUrl = () => {
+
+
+
+
+  return `/api/werving/kandidaten`
+}
+
+/**
+ * @summary Kandidaat toevoegen (met optioneel cv-bestand)
+ */
+export const createWervingKandidaat = async (wervingKandidaatInput: WervingKandidaatInput, options?: RequestInit): Promise<WervingKandidaat> => {
+    const formData = new FormData();
+formData.append(`naam`, wervingKandidaatInput.naam);
+formData.append(`functie_id`, wervingKandidaatInput.functie_id);
+if(wervingKandidaatInput.email !== undefined) {
+ formData.append(`email`, wervingKandidaatInput.email);
+ }
+if(wervingKandidaatInput.telefoon !== undefined) {
+ formData.append(`telefoon`, wervingKandidaatInput.telefoon);
+ }
+if(wervingKandidaatInput.kanaal !== undefined) {
+ formData.append(`kanaal`, wervingKandidaatInput.kanaal);
+ }
+if(wervingKandidaatInput.toestemming_bewaring !== undefined) {
+ formData.append(`toestemming_bewaring`, wervingKandidaatInput.toestemming_bewaring);
+ }
+if(wervingKandidaatInput.cv !== undefined) {
+ formData.append(`cv`, wervingKandidaatInput.cv);
+ }
+
+  return customFetch<WervingKandidaat>(getCreateWervingKandidaatUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getCreateWervingKandidaatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWervingKandidaat>>, TError,{data: BodyType<WervingKandidaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWervingKandidaat>>, TError,{data: BodyType<WervingKandidaatInput>}, TContext> => {
+
+const mutationKey = ['createWervingKandidaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWervingKandidaat>>, {data: BodyType<WervingKandidaatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWervingKandidaat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWervingKandidaatMutationResult = NonNullable<Awaited<ReturnType<typeof createWervingKandidaat>>>
+    export type CreateWervingKandidaatMutationBody = BodyType<WervingKandidaatInput>
+    export type CreateWervingKandidaatMutationError = ErrorType<void>
+
+    /**
+ * @summary Kandidaat toevoegen (met optioneel cv-bestand)
+ */
+export const useCreateWervingKandidaat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWervingKandidaat>>, TError,{data: BodyType<WervingKandidaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWervingKandidaat>>,
+        TError,
+        {data: BodyType<WervingKandidaatInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWervingKandidaatMutationOptions(options));
+    }
+
+export const getGetWervingKandidaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/kandidaten/${id}`
+}
+
+/**
+ * @summary Kandidaat met vragenlijst ophalen
+ */
+export const getWervingKandidaat = async (id: number, options?: RequestInit): Promise<WervingKandidaatDetail> => {
+
+  return customFetch<WervingKandidaatDetail>(getGetWervingKandidaatUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWervingKandidaatQueryKey = (id: number,) => {
+    return [
+    `/api/werving/kandidaten/${id}`
+    ] as const;
+    }
+
+
+export const getGetWervingKandidaatQueryOptions = <TData = Awaited<ReturnType<typeof getWervingKandidaat>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWervingKandidaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWervingKandidaatQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWervingKandidaat>>> = ({ signal }) => getWervingKandidaat(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWervingKandidaat>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWervingKandidaatQueryResult = NonNullable<Awaited<ReturnType<typeof getWervingKandidaat>>>
+export type GetWervingKandidaatQueryError = ErrorType<void>
+
+
+/**
+ * @summary Kandidaat met vragenlijst ophalen
+ */
+
+export function useGetWervingKandidaat<TData = Awaited<ReturnType<typeof getWervingKandidaat>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWervingKandidaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWervingKandidaatQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateWervingKandidaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/kandidaten/${id}`
+}
+
+/**
+ * @summary Kandidaat bijwerken (status, kanaal, toestemming, eindconclusie)
+ */
+export const updateWervingKandidaat = async (id: number,
+    wervingKandidaatUpdate: WervingKandidaatUpdate, options?: RequestInit): Promise<WervingKandidaat> => {
+
+  return customFetch<WervingKandidaat>(getUpdateWervingKandidaatUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wervingKandidaatUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateWervingKandidaatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWervingKandidaat>>, TError,{id: number;data: BodyType<WervingKandidaatUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWervingKandidaat>>, TError,{id: number;data: BodyType<WervingKandidaatUpdate>}, TContext> => {
+
+const mutationKey = ['updateWervingKandidaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWervingKandidaat>>, {id: number;data: BodyType<WervingKandidaatUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWervingKandidaat(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWervingKandidaatMutationResult = NonNullable<Awaited<ReturnType<typeof updateWervingKandidaat>>>
+    export type UpdateWervingKandidaatMutationBody = BodyType<WervingKandidaatUpdate>
+    export type UpdateWervingKandidaatMutationError = ErrorType<void>
+
+    /**
+ * @summary Kandidaat bijwerken (status, kanaal, toestemming, eindconclusie)
+ */
+export const useUpdateWervingKandidaat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWervingKandidaat>>, TError,{id: number;data: BodyType<WervingKandidaatUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWervingKandidaat>>,
+        TError,
+        {id: number;data: BodyType<WervingKandidaatUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateWervingKandidaatMutationOptions(options));
+    }
+
+export const getDeleteWervingKandidaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/kandidaten/${id}`
+}
+
+/**
+ * @summary Kandidaat verwijderen (inclusief cv-bestand)
+ */
+export const deleteWervingKandidaat = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWervingKandidaatUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWervingKandidaatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWervingKandidaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWervingKandidaat>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWervingKandidaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWervingKandidaat>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWervingKandidaat(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWervingKandidaatMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWervingKandidaat>>>
+
+    export type DeleteWervingKandidaatMutationError = ErrorType<void>
+
+    /**
+ * @summary Kandidaat verwijderen (inclusief cv-bestand)
+ */
+export const useDeleteWervingKandidaat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWervingKandidaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWervingKandidaat>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWervingKandidaatMutationOptions(options));
+    }
+
+export const getBereidWervingKandidaatVoorUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/kandidaten/${id}/voorbereiden`
+}
+
+/**
+ * @summary AI-voorbereiding — cv-toetsing per functie-eis + vragenlijst (zonder oordeel of score)
+ */
+export const bereidWervingKandidaatVoor = async (id: number, options?: RequestInit): Promise<WervingKandidaatDetail> => {
+
+  return customFetch<WervingKandidaatDetail>(getBereidWervingKandidaatVoorUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBereidWervingKandidaatVoorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['bereidWervingKandidaatVoor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  bereidWervingKandidaatVoor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BereidWervingKandidaatVoorMutationResult = NonNullable<Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>>
+
+    export type BereidWervingKandidaatVoorMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-voorbereiding — cv-toetsing per functie-eis + vragenlijst (zonder oordeel of score)
+ */
+export const useBereidWervingKandidaatVoor = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bereidWervingKandidaatVoor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBereidWervingKandidaatVoorMutationOptions(options));
+    }
+
+export const getCreateWervingVraagUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/kandidaten/${id}/vragen`
+}
+
+/**
+ * @summary Vraag toevoegen aan de gespreksvragenlijst
+ */
+export const createWervingVraag = async (id: number,
+    createWervingVraagBody: CreateWervingVraagBody, options?: RequestInit): Promise<WervingVraag> => {
+
+  return customFetch<WervingVraag>(getCreateWervingVraagUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createWervingVraagBody)
+  }
+);}
+
+
+
+
+export const getCreateWervingVraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWervingVraag>>, TError,{id: number;data: BodyType<CreateWervingVraagBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWervingVraag>>, TError,{id: number;data: BodyType<CreateWervingVraagBody>}, TContext> => {
+
+const mutationKey = ['createWervingVraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWervingVraag>>, {id: number;data: BodyType<CreateWervingVraagBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createWervingVraag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWervingVraagMutationResult = NonNullable<Awaited<ReturnType<typeof createWervingVraag>>>
+    export type CreateWervingVraagMutationBody = BodyType<CreateWervingVraagBody>
+    export type CreateWervingVraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Vraag toevoegen aan de gespreksvragenlijst
+ */
+export const useCreateWervingVraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWervingVraag>>, TError,{id: number;data: BodyType<CreateWervingVraagBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWervingVraag>>,
+        TError,
+        {id: number;data: BodyType<CreateWervingVraagBody>},
+        TContext
+      > => {
+      return useMutation(getCreateWervingVraagMutationOptions(options));
+    }
+
+export const getUpdateWervingVraagUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/vragen/${id}`
+}
+
+/**
+ * @summary Vraag of gespreksaantekening bijwerken
+ */
+export const updateWervingVraag = async (id: number,
+    wervingVraagUpdate: WervingVraagUpdate, options?: RequestInit): Promise<WervingVraag> => {
+
+  return customFetch<WervingVraag>(getUpdateWervingVraagUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wervingVraagUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateWervingVraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWervingVraag>>, TError,{id: number;data: BodyType<WervingVraagUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWervingVraag>>, TError,{id: number;data: BodyType<WervingVraagUpdate>}, TContext> => {
+
+const mutationKey = ['updateWervingVraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWervingVraag>>, {id: number;data: BodyType<WervingVraagUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWervingVraag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWervingVraagMutationResult = NonNullable<Awaited<ReturnType<typeof updateWervingVraag>>>
+    export type UpdateWervingVraagMutationBody = BodyType<WervingVraagUpdate>
+    export type UpdateWervingVraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Vraag of gespreksaantekening bijwerken
+ */
+export const useUpdateWervingVraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWervingVraag>>, TError,{id: number;data: BodyType<WervingVraagUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWervingVraag>>,
+        TError,
+        {id: number;data: BodyType<WervingVraagUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateWervingVraagMutationOptions(options));
+    }
+
+export const getDeleteWervingVraagUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/vragen/${id}`
+}
+
+/**
+ * @summary Vraag verwijderen
+ */
+export const deleteWervingVraag = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWervingVraagUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWervingVraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWervingVraag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWervingVraag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWervingVraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWervingVraag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWervingVraag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWervingVraagMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWervingVraag>>>
+
+    export type DeleteWervingVraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Vraag verwijderen
+ */
+export const useDeleteWervingVraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWervingVraag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWervingVraag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWervingVraagMutationOptions(options));
+    }
+
+export const getListFunctieKernvragenUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/functies/${id}/kernvragen`
+}
+
+/**
+ * @summary Vaste kernvragen van een functie ophalen
+ */
+export const listFunctieKernvragen = async (id: number, options?: RequestInit): Promise<FunctieKernvraag[]> => {
+
+  return customFetch<FunctieKernvraag[]>(getListFunctieKernvragenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFunctieKernvragenQueryKey = (id: number,) => {
+    return [
+    `/api/werving/functies/${id}/kernvragen`
+    ] as const;
+    }
+
+
+export const getListFunctieKernvragenQueryOptions = <TData = Awaited<ReturnType<typeof listFunctieKernvragen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFunctieKernvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFunctieKernvragenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFunctieKernvragen>>> = ({ signal }) => listFunctieKernvragen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFunctieKernvragen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFunctieKernvragenQueryResult = NonNullable<Awaited<ReturnType<typeof listFunctieKernvragen>>>
+export type ListFunctieKernvragenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Vaste kernvragen van een functie ophalen
+ */
+
+export function useListFunctieKernvragen<TData = Awaited<ReturnType<typeof listFunctieKernvragen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFunctieKernvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFunctieKernvragenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSetFunctieKernvragenUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/functies/${id}/kernvragen`
+}
+
+/**
+ * @summary Vaste kernvragen van een functie vervangen (mens bevestigt)
+ */
+export const setFunctieKernvragen = async (id: number,
+    setFunctieKernvragenBody: SetFunctieKernvragenBody, options?: RequestInit): Promise<FunctieKernvraag[]> => {
+
+  return customFetch<FunctieKernvraag[]>(getSetFunctieKernvragenUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(setFunctieKernvragenBody)
+  }
+);}
+
+
+
+
+export const getSetFunctieKernvragenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setFunctieKernvragen>>, TError,{id: number;data: BodyType<SetFunctieKernvragenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setFunctieKernvragen>>, TError,{id: number;data: BodyType<SetFunctieKernvragenBody>}, TContext> => {
+
+const mutationKey = ['setFunctieKernvragen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setFunctieKernvragen>>, {id: number;data: BodyType<SetFunctieKernvragenBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setFunctieKernvragen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetFunctieKernvragenMutationResult = NonNullable<Awaited<ReturnType<typeof setFunctieKernvragen>>>
+    export type SetFunctieKernvragenMutationBody = BodyType<SetFunctieKernvragenBody>
+    export type SetFunctieKernvragenMutationError = ErrorType<void>
+
+    /**
+ * @summary Vaste kernvragen van een functie vervangen (mens bevestigt)
+ */
+export const useSetFunctieKernvragen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setFunctieKernvragen>>, TError,{id: number;data: BodyType<SetFunctieKernvragenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setFunctieKernvragen>>,
+        TError,
+        {id: number;data: BodyType<SetFunctieKernvragenBody>},
+        TContext
+      > => {
+      return useMutation(getSetFunctieKernvragenMutationOptions(options));
+    }
+
+export const getStelFunctieKernvragenVoorUrl = (id: number,) => {
+
+
+
+
+  return `/api/werving/functies/${id}/kernvragen-voorstel`
+}
+
+/**
+ * @summary AI-voorstel voor kernvragen (alleen voorstel — mens bewaart via PUT)
+ */
+export const stelFunctieKernvragenVoor = async (id: number, options?: RequestInit): Promise<StelFunctieKernvragenVoor200> => {
+
+  return customFetch<StelFunctieKernvragenVoor200>(getStelFunctieKernvragenVoorUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStelFunctieKernvragenVoorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['stelFunctieKernvragenVoor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  stelFunctieKernvragenVoor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StelFunctieKernvragenVoorMutationResult = NonNullable<Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>>
+
+    export type StelFunctieKernvragenVoorMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-voorstel voor kernvragen (alleen voorstel — mens bewaart via PUT)
+ */
+export const useStelFunctieKernvragenVoor = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stelFunctieKernvragenVoor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getStelFunctieKernvragenVoorMutationOptions(options));
+    }
+
+export const getGetWervingKanalenOverzichtUrl = () => {
+
+
+
+
+  return `/api/werving/kanalen`
+}
+
+/**
+ * @summary Overzicht per wervingskanaal (aantallen per status)
+ */
+export const getWervingKanalenOverzicht = async ( options?: RequestInit): Promise<WervingKanaalOverzicht[]> => {
+
+  return customFetch<WervingKanaalOverzicht[]>(getGetWervingKanalenOverzichtUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWervingKanalenOverzichtQueryKey = () => {
+    return [
+    `/api/werving/kanalen`
+    ] as const;
+    }
+
+
+export const getGetWervingKanalenOverzichtQueryOptions = <TData = Awaited<ReturnType<typeof getWervingKanalenOverzicht>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWervingKanalenOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWervingKanalenOverzichtQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWervingKanalenOverzicht>>> = ({ signal }) => getWervingKanalenOverzicht({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWervingKanalenOverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWervingKanalenOverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getWervingKanalenOverzicht>>>
+export type GetWervingKanalenOverzichtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Overzicht per wervingskanaal (aantallen per status)
+ */
+
+export function useGetWervingKanalenOverzicht<TData = Awaited<ReturnType<typeof getWervingKanalenOverzicht>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWervingKanalenOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWervingKanalenOverzichtQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListOpleidingenUrl = () => {
 

@@ -220,6 +220,8 @@ import OneRapporten from "@/pages/one/rapporten";
 import OneAbonnementen from "@/pages/one/abonnementen";
 import OneAdviescentrum from "@/pages/one/adviescentrum";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
+import WervingPagina from "@/pages/personeel/werving";
+import WervingDetailPagina from "@/pages/personeel/werving-detail";
 
 const WeekstatenPagina = () => <WeekstatenPaginaComponent />;
 
@@ -428,6 +430,8 @@ export function ConnectRoutes() {
         <Route path="/personeel/contracten" component={ContractbewakingPagina} />
         <Route path="/personeel/jaarplanning" component={JaarplanningPagina} />
         <Route path="/personeel/jaarkalender" component={JaarkalenderPagina} />
+        <Route path="/personeel/werving/:id" component={WervingDetailPagina} />
+        <Route path="/personeel/werving" component={WervingPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />

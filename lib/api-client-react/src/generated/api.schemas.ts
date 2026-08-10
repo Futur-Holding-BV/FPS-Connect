@@ -5235,6 +5235,161 @@ export interface FunctieInput {
   minimale_bezetting?: number | null;
 }
 
+export type WervingToetsingItemCategorie = typeof WervingToetsingItemCategorie[keyof typeof WervingToetsingItemCategorie];
+
+
+export const WervingToetsingItemCategorie = {
+  taken: 'taken',
+  verantwoordelijkheden: 'verantwoordelijkheden',
+  competenties: 'competenties',
+  opleidingsvereisten: 'opleidingsvereisten',
+} as const;
+
+export type WervingToetsingItemStand = typeof WervingToetsingItemStand[keyof typeof WervingToetsingItemStand];
+
+
+export const WervingToetsingItemStand = {
+  aantoonbaar_aanwezig: 'aantoonbaar_aanwezig',
+  niet_genoemd: 'niet_genoemd',
+  onduidelijk: 'onduidelijk',
+} as const;
+
+export interface WervingToetsingItem {
+  categorie: WervingToetsingItemCategorie;
+  eis: string;
+  stand: WervingToetsingItemStand;
+  /**
+     * Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).
+     * @nullable
+     */
+  vindplaats?: string | null;
+  /** @nullable */
+  toelichting?: string | null;
+}
+
+export type WervingKandidaatStatus = typeof WervingKandidaatStatus[keyof typeof WervingKandidaatStatus];
+
+
+export const WervingKandidaatStatus = {
+  ontvangen: 'ontvangen',
+  uitgenodigd: 'uitgenodigd',
+  gesproken: 'gesproken',
+  afgewezen: 'afgewezen',
+  aangenomen: 'aangenomen',
+} as const;
+
+export interface WervingKandidaat {
+  id: number;
+  functie_id: number;
+  /** @nullable */
+  functie_naam?: string | null;
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  kanaal: string;
+  status: WervingKandidaatStatus;
+  /** Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding). */
+  toestemming_bewaring: boolean;
+  /** @nullable */
+  procedure_afgerond_op?: string | null;
+  /** @nullable */
+  cv_bestandsnaam?: string | null;
+  heeft_cv: boolean;
+  /** @nullable */
+  toetsing?: WervingToetsingItem[] | null;
+  /** @nullable */
+  toetsing_op?: string | null;
+  /**
+     * Door de mens vastgelegd, nooit door AI voorgesteld.
+     * @nullable
+     */
+  eindconclusie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type WervingVraagBron = typeof WervingVraagBron[keyof typeof WervingVraagBron];
+
+
+export const WervingVraagBron = {
+  kern: 'kern',
+  cv: 'cv',
+  handmatig: 'handmatig',
+} as const;
+
+export interface WervingVraag {
+  id: number;
+  kandidaat_id: number;
+  volgorde: number;
+  bron: WervingVraagBron;
+  vraag: string;
+  /** @nullable */
+  aantekening?: string | null;
+}
+
+export type WervingKandidaatDetail = WervingKandidaat & {
+  vragen: WervingVraag[];
+  cv_bron?: string;
+};
+
+export interface WervingKandidaatInput {
+  naam: string;
+  functie_id: string;
+  email?: string;
+  telefoon?: string;
+  kanaal?: string;
+  toestemming_bewaring?: string;
+  cv?: Blob;
+}
+
+export type WervingKandidaatUpdateStatus = typeof WervingKandidaatUpdateStatus[keyof typeof WervingKandidaatUpdateStatus];
+
+
+export const WervingKandidaatUpdateStatus = {
+  ontvangen: 'ontvangen',
+  uitgenodigd: 'uitgenodigd',
+  gesproken: 'gesproken',
+  afgewezen: 'afgewezen',
+  aangenomen: 'aangenomen',
+} as const;
+
+export interface WervingKandidaatUpdate {
+  naam?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  kanaal?: string;
+  status?: WervingKandidaatUpdateStatus;
+  toestemming_bewaring?: boolean;
+  /** @nullable */
+  eindconclusie?: string | null;
+}
+
+export interface WervingVraagUpdate {
+  vraag?: string;
+  /** @nullable */
+  aantekening?: string | null;
+  volgorde?: number;
+}
+
+export interface FunctieKernvraag {
+  id: number;
+  functie_id: number;
+  volgorde: number;
+  vraag: string;
+}
+
+export type WervingKanaalOverzichtPerStatus = {[key: string]: number};
+
+export interface WervingKanaalOverzicht {
+  kanaal: string;
+  totaal: number;
+  per_status: WervingKanaalOverzichtPerStatus;
+}
+
 /**
  * opleiding (diplomagericht) of cursus (korte training/certificering)
  */
@@ -16886,6 +17041,18 @@ bestemming?: string;
  * Filter op inbox-items die via een offerte aan dit gebouw gekoppeld zijn
  */
 gebouw_id?: number;
+};
+
+export type CreateWervingVraagBody = {
+  vraag: string;
+};
+
+export type SetFunctieKernvragenBody = {
+  vragen: string[];
+};
+
+export type StelFunctieKernvragenVoor200 = {
+  vragen: string[];
 };
 
 export type CreateSaldoCorrectie200 = {

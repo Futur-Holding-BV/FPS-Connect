@@ -8488,6 +8488,303 @@ paths:
         "404":
           description: Functie of opleiding niet gevonden
 
+  # ── WERVING_01: wervingsmodule — kandidaten, cv-toetsing, vragenlijst ────────
+  # De AI oordeelt nooit (geen score/cijfer/rangschikking/geschiktheid); zij
+  # bereidt uitsluitend voor en structureert.
+
+  /werving/kandidaten:
+    get:
+      operationId: listWervingKandidaten
+      tags: [werving]
+      summary: Sollicitatiekandidaten ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WervingKandidaat"
+    post:
+      operationId: createWervingKandidaat
+      tags: [werving]
+      summary: Kandidaat toevoegen (met optioneel cv-bestand)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/WervingKandidaatInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingKandidaat"
+        "422":
+          description: Ongeldige invoer
+
+  /werving/kandidaten/{id}:
+    get:
+      operationId: getWervingKandidaat
+      tags: [werving]
+      summary: Kandidaat met vragenlijst ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingKandidaatDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateWervingKandidaat
+      tags: [werving]
+      summary: Kandidaat bijwerken (status, kanaal, toestemming, eindconclusie)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WervingKandidaatUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingKandidaat"
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Ongeldige invoer
+    delete:
+      operationId: deleteWervingKandidaat
+      tags: [werving]
+      summary: Kandidaat verwijderen (inclusief cv-bestand)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /werving/kandidaten/{id}/voorbereiden:
+    post:
+      operationId: bereidWervingKandidaatVoor
+      tags: [werving]
+      summary: AI-voorbereiding — cv-toetsing per functie-eis + vragenlijst (zonder oordeel of score)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Voorbereiding gereed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingKandidaatDetail"
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Geen cv of lege functieomschrijving
+        "503":
+          description: AI niet beschikbaar
+
+  /werving/kandidaten/{id}/vragen:
+    post:
+      operationId: createWervingVraag
+      tags: [werving]
+      summary: Vraag toevoegen aan de gespreksvragenlijst
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vraag]
+              properties:
+                vraag:
+                  type: string
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingVraag"
+        "404":
+          description: Kandidaat niet gevonden
+
+  /werving/vragen/{id}:
+    patch:
+      operationId: updateWervingVraag
+      tags: [werving]
+      summary: Vraag of gespreksaantekening bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WervingVraagUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WervingVraag"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteWervingVraag
+      tags: [werving]
+      summary: Vraag verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /werving/functies/{id}/kernvragen:
+    get:
+      operationId: listFunctieKernvragen
+      tags: [werving]
+      summary: Vaste kernvragen van een functie ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FunctieKernvraag"
+    put:
+      operationId: setFunctieKernvragen
+      tags: [werving]
+      summary: Vaste kernvragen van een functie vervangen (mens bevestigt)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vragen]
+              properties:
+                vragen:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Vervangen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FunctieKernvraag"
+        "404":
+          description: Functie niet gevonden
+
+  /werving/functies/{id}/kernvragen-voorstel:
+    post:
+      operationId: stelFunctieKernvragenVoor
+      tags: [werving]
+      summary: AI-voorstel voor kernvragen (alleen voorstel — mens bewaart via PUT)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Voorstel
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [vragen]
+                properties:
+                  vragen:
+                    type: array
+                    items:
+                      type: string
+        "404":
+          description: Functie niet gevonden
+        "503":
+          description: AI niet beschikbaar
+
+  /werving/kanalen:
+    get:
+      operationId: getWervingKanalenOverzicht
+      tags: [werving]
+      summary: Overzicht per wervingskanaal (aantallen per status)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WervingKanaalOverzicht"
+
   /opleidingen:
     get:
       operationId: listOpleidingen
@@ -33522,6 +33819,178 @@ components:
           type: boolean
         minimale_bezetting:
           type: ["integer", "null"]
+
+    # ── WERVING_01 ───────────────────────────────────────────────────────────
+    # De toetsing bevat per functie-eis uitsluitend een stand met vindplaats —
+    # nooit een score, cijfer, rangschikking of geschiktheidsoordeel.
+
+    WervingToetsingItem:
+      type: object
+      required: [categorie, eis, stand]
+      properties:
+        categorie:
+          type: string
+          enum: [taken, verantwoordelijkheden, competenties, opleidingsvereisten]
+        eis:
+          type: string
+        stand:
+          type: string
+          enum: [aantoonbaar_aanwezig, niet_genoemd, onduidelijk]
+        vindplaats:
+          type: ["string", "null"]
+          description: Waar in het cv dit staat. Verplicht bij aantoonbaar_aanwezig (fail-closed).
+        toelichting:
+          type: ["string", "null"]
+
+    WervingKandidaat:
+      type: object
+      required: [id, functie_id, naam, kanaal, status, toestemming_bewaring, heeft_cv, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        functie_id:
+          type: integer
+        functie_naam:
+          type: ["string", "null"]
+        naam:
+          type: string
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        kanaal:
+          type: string
+        status:
+          type: string
+          enum: [ontvangen, uitgenodigd, gesproken, afgewezen, aangenomen]
+        toestemming_bewaring:
+          type: boolean
+          description: Uitdrukkelijke toestemming om gegevens 1 jaar te bewaren (anders 4 weken na afronding).
+        procedure_afgerond_op:
+          type: ["string", "null"]
+        cv_bestandsnaam:
+          type: ["string", "null"]
+        heeft_cv:
+          type: boolean
+        toetsing:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/WervingToetsingItem"
+        toetsing_op:
+          type: ["string", "null"]
+        eindconclusie:
+          type: ["string", "null"]
+          description: Door de mens vastgelegd, nooit door AI voorgesteld.
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WervingKandidaatDetail:
+      allOf:
+        - $ref: "#/components/schemas/WervingKandidaat"
+        - type: object
+          required: [vragen]
+          properties:
+            vragen:
+              type: array
+              items:
+                $ref: "#/components/schemas/WervingVraag"
+            cv_bron:
+              type: string
+
+    WervingKandidaatInput:
+      type: object
+      required: [naam, functie_id]
+      properties:
+        naam:
+          type: string
+        functie_id:
+          type: string
+        email:
+          type: string
+        telefoon:
+          type: string
+        kanaal:
+          type: string
+        toestemming_bewaring:
+          type: string
+        cv:
+          type: string
+          format: binary
+
+    WervingKandidaatUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        kanaal:
+          type: string
+        status:
+          type: string
+          enum: [ontvangen, uitgenodigd, gesproken, afgewezen, aangenomen]
+        toestemming_bewaring:
+          type: boolean
+        eindconclusie:
+          type: ["string", "null"]
+
+    WervingVraag:
+      type: object
+      required: [id, kandidaat_id, volgorde, bron, vraag]
+      properties:
+        id:
+          type: integer
+        kandidaat_id:
+          type: integer
+        volgorde:
+          type: integer
+        bron:
+          type: string
+          enum: [kern, cv, handmatig]
+        vraag:
+          type: string
+        aantekening:
+          type: ["string", "null"]
+
+    WervingVraagUpdate:
+      type: object
+      properties:
+        vraag:
+          type: string
+        aantekening:
+          type: ["string", "null"]
+        volgorde:
+          type: integer
+
+    FunctieKernvraag:
+      type: object
+      required: [id, functie_id, volgorde, vraag]
+      properties:
+        id:
+          type: integer
+        functie_id:
+          type: integer
+        volgorde:
+          type: integer
+        vraag:
+          type: string
+
+    WervingKanaalOverzicht:
+      type: object
+      required: [kanaal, totaal, per_status]
+      properties:
+        kanaal:
+          type: string
+        totaal:
+          type: integer
+        per_status:
+          type: object
+          additionalProperties:
+            type: integer
 
     Opleiding:
       type: object
