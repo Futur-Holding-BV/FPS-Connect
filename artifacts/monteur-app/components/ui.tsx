@@ -400,6 +400,9 @@ export function Statusmerk({
     <View
       style={{
         alignSelf: "flex-start",
+        // Regel: de chip wordt nooit platgedrukt door lange buurteksten —
+        // de buurtekst kapt af (of loopt door op een tweede regel), niet de status.
+        flexShrink: 0,
         flexDirection: "row",
         alignItems: "center",
         gap: ruimte.xs + 2,
@@ -412,6 +415,30 @@ export function Statusmerk({
       <View style={{ width: ruimte.s, height: ruimte.s, borderRadius: ruimte.xs, backgroundColor: kleur }} />
       <Text style={tekstStijl("bijschrift", c.foreground)}>{label}</Text>
     </View>
+  );
+}
+
+/**
+ * netteWaarde — toont een ruwe (database)waarde netjes wanneer er geen
+ * labelvertaling bestaat: underscores/streepjes worden spaties, eerste letter
+ * een hoofdletter. Regel: rauwe enumwaarden komen nooit kaal in beeld.
+ */
+export function netteWaarde(ruw: string): string {
+  const tekst = ruw.replace(/[_-]+/g, " ").trim();
+  return tekst.charAt(0).toUpperCase() + tekst.slice(1);
+}
+
+/**
+ * Onderregel — de secundaire informatieregel onder een titel (type · ruimte ·
+ * verdieping). Regel: loopt door op een tweede regel in plaats van essentiële
+ * informatie midden in een woord af te kappen.
+ */
+export function Onderregel({ children, regels = 2 }: { children: React.ReactNode; regels?: number }) {
+  const c = useColors();
+  return (
+    <Text style={tekstStijl("klein", c.mutedForeground)} numberOfLines={regels}>
+      {children}
+    </Text>
   );
 }
 

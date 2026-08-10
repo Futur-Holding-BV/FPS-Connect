@@ -1,3 +1,9 @@
+## 2026-08-10 — VORM_01 referentiescherm-punten + ingang Mijn werk (akkoord F6 ontvangen)
+
+- **Uitvoering:** volledig (2 schermregels + menu-ingang) | **Kwaliteit:** hoog | **Risico:** laag
+
+Na het F6-akkoord van René zijn de twee referentiescherm-punten als **bouwsteenregels** opgelost (het patroon wordt 58× herhaald): nieuwe bouwsteen `Onderregel` (secundaire regel loopt door op een tweede regel — geen "Begane gr…" meer) + `Statusmerk` krijgt `flexShrink: 0` (chip wordt nooit platgedrukt), en nieuwe helper `netteWaarde()` toont onbekende enumwaarden netjes (underscores eruit, hoofdletter voorop) zodat "brandwerende_deur" nooit meer kaal in beeld komt. **Ingang Mijn werk:** 18e radiaalmenu-item met `vereist: {voorzieningen, 1}` (besluit René, optie A); afweging over het requireAuth-only eindpunt in `docs/antwoorden/VORM_01.md` §0b.3. **Gemelde opruimtaak (niet in VORM_01):** vaste typelijst voor `voorzieningen.type` + migratie van dubbele spellingen (branddeur/brandwerende_deur, doorvoering/doorvoer, coating/brandwerende_coating).
+
 ## 2026-08-10 — VORM_01 herbewijs-ronde: gevuld bewijsscherm, accent terug in lege toestand
 
 - **Uitvoering:** volledig (3 punten René) | **Kwaliteit:** hoog | **Risico:** laag (alleen testdata-script, 1 kleurherstel, screenshots)

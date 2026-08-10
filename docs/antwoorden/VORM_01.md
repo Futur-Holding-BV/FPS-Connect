@@ -11,6 +11,12 @@
    - **Optie B — ingang vanaf Mijn werkdag.** De regel "N locaties vandaag" (die zijn teller nu al uit `/mijn-werk`-data haalt) wordt aanklikbaar en opent Mijn werk. Voordeel: nul extra menudrukte, de ingang staat precies waar de monteur al kijkt, en de bestaande teller krijgt betekenis. Nadeel: één tik dieper dan het menu.
    - **Afweging/advies: optie B** — laagste menudruk, logische plek (werkdag verwijst er al impliciet naar), geen wijziging aan het radiaalmenu.
 
+## 0b. Tweede beoordelingsronde (10-08, akkoord F6 met twee referentiescherm-punten)
+
+1. **Afkappen midden in een woord opgelost als bouwsteenregel:** nieuwe bouwsteen `Onderregel` (secundaire informatieregel, loopt door op een tweede regel) + regel in `Statusmerk` (`flexShrink: 0` — de chip wordt nooit platgedrukt). Zichtbaar in de nieuwe ná-afdruk: "Begane grond" en "1e verdieping" staan er volledig.
+2. **Rauwe databasewaarden:** nieuwe helper `netteWaarde()` in de bouwstenen (underscores → spaties, hoofdletter voorop) als vangnet wanneer een labelvertaling ontbreekt; `mijn-werk` gebruikt hem. **Gemelde opruimtaak (buiten VORM_01):** `voorzieningen.type` is een vrije tekstkolom met twee spellingen door elkaar (branddeur vs brandwerende_deur, doorvoering vs doorvoer, coating vs brandwerende_coating) — vergt één vaste typelijst + migratie van de afwijkende waarden.
+3. **Ingang Mijn werk = optie A** (besluit René): 18e radiaalmenu-item "Mijn werk" met `vereist: { module: "voorzieningen", niveau: 1 }`. **Toetsing backend:** `GET /mijn-werk` heeft alleen `requireAuth`, geen module-check. Mijn oordeel: dat volstaat hier — het eindpunt filtert hard op `monteur_id = ingelogde gebruiker` en geeft dus per definitie alleen eigen toegewezen werk terug; iemand zonder voorzieningen-recht kan er via deep-link hooguit een lege lijst zien (spots worden alleen aan monteurs toegewezen). Wil men de gordel-én-bretels-lijn van de module-matrix, dan is `requireBevoegdheid("voorzieningen", 1)` een kleine toevoeging — gemeld, niet eigenmachtig gedaan omdat het menu-item de afgesproken plek van de bevoegdheid is.
+
 ## Fase-overzicht
 
 | Fase | Resultaat |

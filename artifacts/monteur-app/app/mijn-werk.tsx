@@ -14,8 +14,10 @@ import {
   Ladenstaat,
   LegeStaat,
   LijstFout,
+  Onderregel,
   Statusmerk,
   bovenInset,
+  netteWaarde,
   tekstStijl,
 } from "@/components/ui";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
@@ -322,14 +324,13 @@ function SpotRij({
                 soort={STATUS_SOORT[spot.status] ?? "neutraal"}
               />
             </View>
-            <Text
-              style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}
-              numberOfLines={1}
-            >
-              {TYPEN[spot.type] ?? spot.type}
-              {spot.ruimte ? ` · ${spot.ruimte}` : ""}
-              {spot.verdieping_naam ? ` · ${spot.verdieping_naam}` : ""}
-            </Text>
+            <View style={{ marginTop: 2 }}>
+              <Onderregel>
+                {TYPEN[spot.type] ?? netteWaarde(spot.type)}
+                {spot.ruimte ? ` · ${spot.ruimte}` : ""}
+                {spot.verdieping_naam ? ` · ${spot.verdieping_naam}` : ""}
+              </Onderregel>
+            </View>
           </View>
           <Ionicons
             name="chevron-forward"

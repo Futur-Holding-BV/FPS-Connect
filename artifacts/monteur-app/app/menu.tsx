@@ -145,6 +145,7 @@ export default function MenuScherm() {
   type MenuActie = RadiaalActie & { vereist?: Vereiste };
   const acties: RadiaalActie[] = ([
     { sleutel: "werkdag", label: "Mijn werkdag", icoon: "today", onPress: () => router.push("/werkdag") },
+    { sleutel: "mijn_werk", label: "Mijn werk", icoon: "construct-outline", vereist: { module: "voorzieningen", niveau: 1 }, onPress: () => router.push("/mijn-werk") },
     { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", vereist: { module: "gebouwen", niveau: 1 }, onPress: () => router.push("/gebouwen") },
     { sleutel: "projecten", label: "Projecten", icoon: "briefcase-outline", vereist: { module: "projecten", niveau: 1 }, onPress: () => router.push("/projecten") },
     { sleutel: "verlof", label: "Verlof", icoon: "calendar-outline", onPress: () => router.push("/hrm/verlof") },
