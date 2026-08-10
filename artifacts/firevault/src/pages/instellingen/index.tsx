@@ -69,6 +69,13 @@ export default function InstellingenPagina() {
           beschrijving: "Gebouw- en objectspecifieke toegangsrechten instellen",
           zichtbaar: isHoofdbeheerder,
         },
+        {
+          label: "Meting inkoopgebruik",
+          pad: "/beheer/metingen-materiaal",
+          icoon: ShieldCheck,
+          beschrijving: "MATERIAAL_01: telling van alle inkoopsporen + werkbak-herstelronde",
+          zichtbaar: isHoofdbeheerder,
+        },
       ],
     },
     {

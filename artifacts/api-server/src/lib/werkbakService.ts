@@ -130,6 +130,44 @@ export async function handelBronAf(dedupSleutel: string): Promise<void> {
     .where(and(eq(werkbakItemsTable.dedupSleutel, dedupSleutel), eq(werkbakItemsTable.status, "open")));
 }
 
+// MATERIAAL_01 fase 1: bron-afhandeling op herkomst (type + id). Sluit alle
+// open items die uit dezelfde bronentiteit voortkwamen, ongeacht dedup-sleutel
+// (materiaal-afwijking én toebehoren delen herkomstType "materiaal_aanvraag").
+// Systeemafhandeling: geen afgehandeldDoorId, net als handelBronAf.
+export async function handelHerkomstAf(
+  herkomstType: string,
+  herkomstId: number,
+  uitvoerder: Pick<typeof db, "update"> = db,
+): Promise<number> {
+  const rijen = await uitvoerder
+    .update(werkbakItemsTable)
+    .set({ status: "afgehandeld", afgehandeldOp: new Date(), bijgewerktOp: new Date() })
+    .where(and(
+      eq(werkbakItemsTable.herkomstType, herkomstType),
+      eq(werkbakItemsTable.herkomstId, herkomstId),
+      eq(werkbakItemsTable.status, "open"),
+    ))
+    .returning({ id: werkbakItemsTable.id });
+  return rijen.length;
+}
+
+// Set-based variant voor herstelrondes: sluit in één keer alle open items van
+// meerdere herkomst-id's. Zelfde semantiek als handelHerkomstAf (alleen status
+// 'open', systeemafhandeling zonder afgehandeldDoorId); idempotent.
+export async function handelHerkomstenAf(herkomstType: string, herkomstIds: number[]): Promise<number> {
+  if (herkomstIds.length === 0) return 0;
+  const rijen = await db
+    .update(werkbakItemsTable)
+    .set({ status: "afgehandeld", afgehandeldOp: new Date(), bijgewerktOp: new Date() })
+    .where(and(
+      eq(werkbakItemsTable.herkomstType, herkomstType),
+      inArray(werkbakItemsTable.herkomstId, herkomstIds),
+      eq(werkbakItemsTable.status, "open"),
+    ))
+    .returning({ id: werkbakItemsTable.id });
+  return rijen.length;
+}
+
 // Reconciliatie per bron: alles wat open staat in de werkbak maar waarvan de
 // bron niet meer in de actuele open-set zit, wordt afgehandeld gemarkeerd.
 export async function reconcilieerBron(bron: string, actueleSleutels: string[]): Promise<number> {

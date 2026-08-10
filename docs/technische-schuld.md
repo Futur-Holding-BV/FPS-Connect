@@ -1,6 +1,6 @@
 # Technische Schuld — FPS Connect (Top 100)
 
-**Datum:** 3 juli 2026  
+**Datum:** 3 juli 2026 (opgesteld) · samenvattingstabel herrekend 10 augustus 2026  
 **Methode:** Statische analyse, codebase-scan, runtime-patronen.  
 **Kolommen:** Impact (1–5), Risico (1–5), Oplostijd (uren), Prioriteit (P1–P4)
 
@@ -174,13 +174,23 @@
 
 ## Samenvatting
 
+_Herrekend op 10 augustus 2026 uit de werkelijke markeringen in de tabellen hierboven (per rij ✅/opgelost vs P1/P2/P3/P4; uren = som van de Uren-kolom per prioriteit)._
+
 | Prioriteit | Aantal items | Totaal uren |
 |-----------|-------------|------------|
-| **P1 — Nu** | 17 | ~100 |
-| **P2 — Sprint** | 36 | ~180 |
-| **P3 — Kwartaal** | 37 | ~290 |
-| **P4 — Backlog** | 4 | ~10 |
-| **Opgelost** | 2 | — |
-| **Totaal** | **96** | **~580 uur** |
+| **P1 — Nu** | 0 | — |
+| **P2 — Sprint** | 41 | ~213 |
+| **P3 — Kwartaal** | 35 | ~264 |
+| **P4 — Backlog** | 3 | ~8 |
+| **Opgelost** | 22 | — |
+| **Totaal** | **101** | **~485 uur** |
 
 > De zwaarste schuld zit in de ontbrekende productie-migratiehistorie (#98), de N+1-queries op de kernlijsten (#45–48), ontbrekende transacties op juridisch relevante paden (#14–16), en de ontbrekende backup-alerting (#83).
+>
+> _Historische noot: de openstaande P1-punten uit de oorspronkelijke opname (juli 2026) zijn inmiddels allemaal opgelost of anders geprioriteerd — er staat op 10 augustus 2026 geen P1 meer open._
+
+---
+
+## Bijwerkplicht
+
+Elke opdracht die een schuldpunt oplost, markeert de betreffende rij (✅ + korte opgelost-notitie met datum) **én** herrekent de samenvattingstabel hierboven — beide in dezelfde commit. Zo blijft de telling altijd gelijklopen met de werkelijke markeringen in de tabellen.

@@ -17,15 +17,18 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
+import { handelHerkomstAf } from "../lib/werkbakService";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 
-// BOUW_01: behandelen van aanvragen hoort bij de projecten-sleutel
-// (2 = inzien mét bedragen/AI-advies, 3 = behandelen).
-const lezen    = requireBevoegdheid("projecten", 2);
-const schrijven = requireBevoegdheid("projecten", 3);
+// BOUW_01 + MATERIAAL_01 fase 2: alles in deze module (inzien, behandelen én
+// heranalyseren) draait op projecten-niveau 2. Een besluit mag nooit lichter
+// beveiligd zijn dan een handeling die niets beslist; heranalyseren is daarom
+// omlaag gezet naar hetzelfde niveau als behandelen (niet behandelen omhoog,
+// zodat niemand toegang verliest).
+const niveauInzienEnBehandelen = requireBevoegdheid("projecten", 2);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -220,7 +223,7 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
 // ── GET /materiaal-aanvragen ────────────────────────────────────────────────
 // Alle aanvragen zichtbaar voor werkvoorbereider (status-filter optioneel)
 
-router.get("/materiaal-aanvragen", lezen, async (req, res): Promise<void> => {
+router.get("/materiaal-aanvragen", niveauInzienEnBehandelen, async (req, res): Promise<void> => {
   const { status, opdracht_id } = req.query as { status?: string; opdracht_id?: string };
 
   const aanvragen = await db
@@ -385,7 +388,7 @@ router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
 // ── PATCH /materiaal-aanvragen/:id ─────────────────────────────────────────
 // Werkvoorbereider behandelt aanvraag (status + notitie)
 
-router.patch("/materiaal-aanvragen/:id", lezen, async (req, res): Promise<void> => {
+router.patch("/materiaal-aanvragen/:id", niveauInzienEnBehandelen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const gebruikerId = req.session.userId;
 
@@ -405,15 +408,41 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res): Promise<void> 
     return void res.status(400).json({ error: "Ongeldige status" });
   }
 
-  await db
-    .update(materiaalAanvragenTable)
-    .set({
-      ...(status ? { status } : {}),
-      ...(behandel_notitie !== undefined ? { behandelNotitie: behandel_notitie } : {}),
-      ...(status && status !== "nieuw" ? { behandeldDoorId: gebruikerId } : {}),
-      bijgewerktOp: new Date(),
-    })
-    .where(eq(materiaalAanvragenTable.id, id));
+  // MATERIAAL_01 fase 1: statuswijziging en werkbaksluiting in ÉÉN transactie,
+  // met een conditionele overgang (WHERE status = gelezen status). Zo kan een
+  // concurrerende PATCH nooit een werkbakitem sluiten terwijl de aanvraag
+  // uiteindelijk niet terminaal is, en laat een fout na de update geen
+  // terminale aanvraag met een open signaal achter.
+  const conflict = await db.transaction(async (tx) => {
+    const bijgewerkt = await tx
+      .update(materiaalAanvragenTable)
+      .set({
+        ...(status ? { status } : {}),
+        ...(behandel_notitie !== undefined ? { behandelNotitie: behandel_notitie } : {}),
+        ...(status && status !== "nieuw" ? { behandeldDoorId: gebruikerId } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(and(
+        eq(materiaalAanvragenTable.id, id),
+        eq(materiaalAanvragenTable.status, bestaand.status),
+      ))
+      .returning({ id: materiaalAanvragenTable.id });
+    if (bijgewerkt.length === 0) return true; // status is intussen gewijzigd
+
+    // Alleen bij een échte overgang naar goedgekeurd/afgewezen het levende
+    // werkbaksignaal systeem-afhandelen; in_behandeling blijft open.
+    const wordtTerminaal = (status === "goedgekeurd" || status === "afgewezen") && bestaand.status !== status;
+    if (wordtTerminaal && status) {
+      const gesloten = await handelHerkomstAf("materiaal_aanvraag", id, tx);
+      if (gesloten > 0) {
+        logger.info({ aanvraagId: id, status, gesloten }, "Werkbakitems afgehandeld bij behandelde materiaal-aanvraag");
+      }
+    }
+    return false;
+  });
+  if (conflict) {
+    return void res.status(409).json({ error: "Aanvraag is intussen door iemand anders gewijzigd; ververs en probeer opnieuw" });
+  }
 
   const [updated] = await db
     .select()
@@ -426,7 +455,7 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res): Promise<void> 
 // ── POST /materiaal-aanvragen/:id/heranalyseer ─────────────────────────────
 // Handmatig AI heranalyse triggeren
 
-router.post("/materiaal-aanvragen/:id/heranalyseer", schrijven, async (req, res): Promise<void> => {
+router.post("/materiaal-aanvragen/:id/heranalyseer", niveauInzienEnBehandelen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
   if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
