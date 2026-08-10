@@ -2,6 +2,15 @@
 
 **Datum: 10 augustus 2026 · status: F0 t/m F5 gereed, wacht op akkoord René vóór F6.**
 
+## 0. Herbewijs-ronde (na eerste beoordeling René, 10-08)
+
+1. **Bewijs opnieuw met gevulde gegevens:** nieuw script `scripts/src/vorm01-testdata.ts` zet 7 representatieve spots (2 gebouwen, 6 verschillende statussen) op het e2e-account (idempotent, prefix `VORM01-`, `MODUS=weg` ruimt op). Vóór/ná van `mijn-werk` is opnieuw gemaakt **mét inhoud**: Kaart, Rij, Statusmerk, SchermKop en de sectiekoppen zijn nu zichtbaar te vergelijken. Voor de vóór-afdruk is de oude schermversie tijdelijk teruggezet met alléén de (stijl-neutrale) `bezigLaden`-guard erin — zonder die guard verliest de oude build elke deep-link.
+2. **Accentverlies lege toestand teruggedraaid:** `LegeStatus` toont het pictogram weer in merkkleur op een zacht-oranje cirkel (`c.primary` op `c.accent`), zoals vóór de omzetting. Gecontroleerd op systematiek: dit was de enige plek waar accent door grijs was vervangen; `Statusmerk` gebruikt bewust een gekleurd bolletje + neutrale tekst (AA-afweging §1.6) en de overige bouwstenen gebruiken gedempte kleur alleen voor ondergeschikte tekst/pictogrammen, zoals ook vóór VORM_01.
+3. **Mijn werk — voorstel voor de ingang (nog niet gebouwd, keuze aan René):**
+   - **Optie A — 18e radiaalmenu-item.** Voordeel: overal bereikbaar. Nadeel: het radiaalmenu is al vol; een extra item verhoogt de menudrukte voor iets dat inhoudelijk bij de werkdag hoort.
+   - **Optie B — ingang vanaf Mijn werkdag.** De regel "N locaties vandaag" (die zijn teller nu al uit `/mijn-werk`-data haalt) wordt aanklikbaar en opent Mijn werk. Voordeel: nul extra menudrukte, de ingang staat precies waar de monteur al kijkt, en de bestaande teller krijgt betekenis. Nadeel: één tik dieper dan het menu.
+   - **Afweging/advies: optie B** — laagste menudruk, logische plek (werkdag verwijst er al impliciet naar), geen wijziging aan het radiaalmenu.
+
 ## Fase-overzicht
 
 | Fase | Resultaat |

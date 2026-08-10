@@ -1,3 +1,9 @@
+## 2026-08-10 — VORM_01 herbewijs-ronde: gevuld bewijsscherm, accent terug in lege toestand
+
+- **Uitvoering:** volledig (3 punten René) | **Kwaliteit:** hoog | **Risico:** laag (alleen testdata-script, 1 kleurherstel, screenshots)
+
+Op verzoek van René is het F5-bewijs overgedaan **mét inhoud**: `scripts/src/vorm01-testdata.ts` zet 7 spots (2 gebouwen, 6 statussen) op het e2e-account, en de vóór/ná-afdrukken van `mijn-werk` tonen nu Kaart, Rij, Statusmerk en sectiekoppen naast elkaar (voor de vóór-afdruk is de oude schermversie tijdelijk teruggezet). **Accent hersteld:** `LegeStatus` toont het pictogram weer in merkkleur op de zacht-oranje cirkel; gecontroleerd dat dit de enige plek was waar accent door grijs was vervangen (Statusmerk-bolletje + neutrale tekst is de bewuste AA-keuze en blijft). **Mijn werk-ingang:** voorstel met afweging in `docs/antwoorden/VORM_01.md` §0.3 (advies: aanklikbare "N locaties vandaag"-regel op Mijn werkdag i.p.v. een 18e menu-item) — keuze aan René, nog niet gebouwd. F6 blijft wachten op akkoord.
+
 ## 2026-08-10 — VORM_01 F0–F5: één ontwerpsysteem — tokens, gedeelde bron, bouwstenen, bewijs op Mijn werk
 
 - **Uitvoering:** F0 t/m F5 volledig; **F6 (58 schermen omzetten) bewust niet gestart — wacht op akkoord René** conform §fasering | **Kwaliteit:** hoog | **Risico:** laag-middel (geen migraties; donkere stand wordt systeembreed actief voor alles wat al via `useColors()` loopt)

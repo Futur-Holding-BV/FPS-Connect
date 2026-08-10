@@ -40,13 +40,13 @@ export function LegeStatus({
             width: 64,
             height: 64,
             borderRadius: 32,
-            backgroundColor: c.border,
+            backgroundColor: c.accent,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 16,
           }}
         >
-          <Ionicons name={icoon} size={28} color={c.mutedForeground} />
+          <Ionicons name={icoon} size={28} color={c.primary} />
         </View>
       )}
       <Text

@@ -60,7 +60,10 @@ async function main(): Promise<void> {
   const [werkdag] = (await db.execute(sql`SELECT id FROM planning_items ORDER BY id DESC LIMIT 1`)).rows as { id: number }[];
   const [gebouw] = (await db.execute(sql`SELECT id FROM gebouwen WHERE gearchiveerd IS NOT TRUE ORDER BY id LIMIT 1`)).rows as { id: number }[];
 
-  const SCHERMEN: { naam: string; pad: string; klikLabel?: string }[] = [
+  // Optioneel filter: SCHERMEN=mijn-werk,uren draait alleen die schermen.
+  const filter = (process.env["SCHERMEN"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  const ALLE_SCHERMEN: { naam: string; pad: string; klikLabel?: string }[] = [
     { naam: "mijn-werk", pad: "/mijn-werk" },
     { naam: "menu", pad: "/menu" },
     // Dev-database heeft 0 planning_items (gemeten): dan valt werkdag/[id]
@@ -72,6 +75,7 @@ async function main(): Promise<void> {
     ...(gebouw ? [{ naam: "gebouw-id", pad: `/gebouw/${gebouw.id}` }] : []),
     { naam: "hrm-index", pad: "/hrm" },
   ];
+  const SCHERMEN = filter.length ? ALLE_SCHERMEN.filter((s) => filter.includes(s.naam)) : ALLE_SCHERMEN;
 
   const executablePath = execSync("which chromium").toString().trim();
   const browser = await chromium.launch({ executablePath });
@@ -93,7 +97,15 @@ async function main(): Promise<void> {
         await page.goto(BASIS + s.pad);
       }
       await page.waitForTimeout(5000); // data + animaties tot rust laten komen
-      const url = new URL(page.url());
+      let url = new URL(page.url());
+      // Oude builds zonder bezigLaden-guard verliezen de eerste deep-link-race
+      // (redirect naar /menu); een tweede navigatie slaagt omdat het token dan
+      // al hersteld is.
+      for (let poging = 0; poging < 2 && !url.pathname.startsWith(s.pad === "/menu" ? "/menu" : s.pad); poging++) {
+        await page.goto(BASIS + s.pad);
+        await page.waitForTimeout(5000);
+        url = new URL(page.url());
+      }
       if (!url.pathname.startsWith(s.pad === "/menu" ? "/menu" : s.pad)) {
         console.warn(`⚠ ${s.naam}: verwacht ${s.pad}, staat op ${url.pathname}`);
       }
