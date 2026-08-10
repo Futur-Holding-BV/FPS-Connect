@@ -135,47 +135,49 @@ jobs:
               ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH verlopen — automatische deploy GEPAUZEERD"
               BERICHT="De GITHUB_TOKEN_PUSH die FPS Connect gebruikt om code naar GitHub te pushen is verlopen of ontbreekt.
 
-Status: ${TOKEN_STATUS}
-Actions-run: ${RUN_URL}
+              Status: ${TOKEN_STATUS}
+              Actions-run: ${RUN_URL}
 
-Automatische deploys naar connect.fps-one.nl zijn GEPAUZEERD totdat het token vernieuwd is.
+              Automatische deploys naar connect.fps-one.nl zijn GEPAUZEERD totdat het token vernieuwd is.
 
-Stappen om te herstellen:
-1. Ga naar https://github.com/settings/personal-access-tokens
-2. Maak een nieuw PAT aan (of verleng het bestaande) met 'Contents: Write' scope op de fps-one repo
-3. Kopieer het nieuwe token
-4. Update Replit: open de Replit-editor > Secrets > GITHUB_TOKEN_PUSH (vervang de waarde)
-5. Update GitHub: ga naar github.com/vinkrene-jpg/fps-one > Settings > Secrets and variables > Actions > GITHUB_TOKEN_PUSH (vervang de waarde)
-6. Verifieer: open een Replit-shell en voer uit: curl -sS -H \"Authorization: token JOUWTOKEN\" https://api.github.com/user
+              Stappen om te herstellen:
+              1. Ga naar https://github.com/settings/personal-access-tokens
+              2. Maak een nieuw PAT aan (of verleng het bestaande) met 'Contents: Write' scope op de fps-one repo
+              3. Kopieer het nieuwe token
+              4. Update Replit: open de Replit-editor > Secrets > GITHUB_TOKEN_PUSH (vervang de waarde)
+              5. Update GitHub: ga naar github.com/vinkrene-jpg/fps-one > Settings > Secrets and variables > Actions > GITHUB_TOKEN_PUSH (vervang de waarde)
+              6. Verifieer: open een Replit-shell en voer uit: curl -sS -H \"Authorization: token JOUWTOKEN\" https://api.github.com/user
 
-Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
+              Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
               ;;
             verloopt_binnenkort)
               ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH verloopt binnenkort — actie vereist"
               BERICHT="De GITHUB_TOKEN_PUSH verloopt binnenkort. Vernieuw het token om een onderbreking in de automatische deploy-keten te voorkomen.
 
-Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
-Actions-run: ${RUN_URL}
+              Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
+              Actions-run: ${RUN_URL}
 
-Stappen:
-1. Ga naar https://github.com/settings/personal-access-tokens
-2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de fps-one repo
-3. Update Replit Secrets: GITHUB_TOKEN_PUSH
-4. Update GitHub Actions Secrets: GITHUB_TOKEN_PUSH
+              Stappen:
+              1. Ga naar https://github.com/settings/personal-access-tokens
+              2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de fps-one repo
+              3. Update Replit Secrets: GITHUB_TOKEN_PUSH
+              4. Update GitHub Actions Secrets: GITHUB_TOKEN_PUSH
 
-Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
+              Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
               ;;
             *)
               ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH status onbekend — controleer handmatig"
               BERICHT="De dagelijkse token-gezondheidscheck kon de status van GITHUB_TOKEN_PUSH niet bepalen.
 
-Status: ${TOKEN_STATUS}
-Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
-Actions-run: ${RUN_URL}
+              Status: ${TOKEN_STATUS}
+              Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
+              Actions-run: ${RUN_URL}
 
-Controleer handmatig of de automatische deploy-keten nog werkt via de GitHub Actions-tab."
+              Controleer handmatig of de automatische deploy-keten nog werkt via de GitHub Actions-tab."
               ;;
           esac
+          # Inspringing (nodig voor geldige YAML-blokscalar) weer verwijderen
+          BERICHT=$(printf '%s\n' "$BERICHT" | sed 's/^              //')
 
           PAYLOAD=$(MAIL_ONDERWERP="$ONDERWERP" MAIL_BERICHT="$BERICHT" node -e "
             const body = {
