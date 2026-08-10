@@ -68,7 +68,7 @@ integrations = ["github:1.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 180000
+timeoutMs = 420000
 
 [[ports]]
 localPort = 8080
