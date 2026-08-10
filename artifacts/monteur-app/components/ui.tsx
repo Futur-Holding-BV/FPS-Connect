@@ -553,7 +553,12 @@ export function Ladenstaat({ regels = 3 }: { regels?: number }) {
     puls.value = withRepeat(
       withTiming(0.45, {
         duration: beweging.traag * 2,
-        easing: Easing.bezier(...beweging.versnelling),
+        easing: Easing.bezier(
+          beweging.versnelling[0],
+          beweging.versnelling[1],
+          beweging.versnelling[2],
+          beweging.versnelling[3],
+        ),
       }),
       -1,
       true,
