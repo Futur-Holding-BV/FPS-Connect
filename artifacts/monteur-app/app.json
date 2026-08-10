@@ -17,10 +17,17 @@
       "supportsTablet": false
     },
     "android": {
+      "package": "nl.fpsone.monteur",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#F23B0D"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bcb7fa55-571f-4162-a080-3a3f4761c8d9"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -45,6 +52,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bcb7fa55-571f-4162-a080-3a3f4761c8d9"
+      }
+    },
+    "owner": "futur-holding"
   }
 }

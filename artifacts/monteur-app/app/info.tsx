@@ -11,9 +11,14 @@ import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
+import Constants from "expo-constants";
+import { API_DOMEIN } from "@/lib/apiDomein";
 
-const APP_VERSIE = "1.0.0";
-const APP_UITGEBRACHT_OP = "2026-06-08";
+const APP_VERSIE = Constants.expoConfig?.version ?? "1.0.0";
+const APP_BOUWDATUM: string =
+  typeof Constants.expoConfig?.extra?.bouwdatum === "string"
+    ? Constants.expoConfig.extra.bouwdatum
+    : "2026-06-08";
 const APP_NAAM = "FPS Monteur";
 const APP_LEVERANCIER = "FPS Brandpreventie";
 
@@ -390,10 +395,18 @@ export default function InfoScherm() {
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={tekstStijl("klein", c.mutedForeground)}>
-                Uitgebracht op
+                Bouwdatum
               </Text>
               <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
-                {formatDatum(APP_UITGEBRACHT_OP)}
+                {formatDatum(APP_BOUWDATUM)}
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>
+                Server
+              </Text>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
+                {API_DOMEIN}
               </Text>
             </View>
           </View>
