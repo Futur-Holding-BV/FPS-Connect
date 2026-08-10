@@ -79,8 +79,29 @@ op basis van de **productie**meting.
 
 ---
 
-## Meting productie (connect.fps-one.nl) — NOG UIT TE VOEREN
+## 2026-08-10 · productie (connect.fps-one.nl) · commit `f7e2d643` — telling door René aangeleverd
 
-Na deploy: René logt in als hoofdbeheerder → Instellingen → **Meting inkoopgebruik** → "Telling draaien"
-→ "Kopieer als markdown" → uitvoer hier onder een nieuwe datumkop plakken (of aan de agent geven).
-Deze telling deblokkeert drie dingen tegelijk: MATERIAAL_01 fase 3, INKOOP_01 en NUMMER_01 §4.5.
+Gemeten op 2026-08-10T11:59:25Z via Instellingen → Meting inkoopgebruik.
+
+| Telling | Uitkomst |
+|---|---|
+| T1 — inkoopbonnen per status/maand (12 mnd) | 0 rijen |
+| T2 — magazijn-inkooporders per status/maand (12 mnd) | 0 rijen |
+| T3 — inkoopplannen (totaal / met inkoopbon) | 0 / 0 |
+| T4 — reserveringen per status | 0 rijen |
+| T5 — materiaal-aanvragen per status × soort × volgens_opdracht | 0 rijen |
+| T6 — goedgekeurde aanvragen: ouderdom | geen (0 goedgekeurd, 0 ouder dan 30 dagen) |
+| T7 — calculatie-inkoopitems (totaal / offerte ontvangen) | 0 / 0 |
+| T8 — onderaannemer-orders per status | 0 rijen |
+| T9 — algemene inkopen per soort | 0 rijen |
+| T10 — wie maakt ze aan (per functie) | 0 rijen |
+| Werkbak — open items bij afgehandelde aanvragen | 0 |
+
+**Duiding (besluit René, 2026-08-10): alle inkoopstromen zijn in productie volledig ongebruikt.**
+Gevolgen:
+- **MATERIAAL_01 fase 3 = keuze A** — goedgekeurde materiaal-aanvraag → automatisch concept-inkoopbon
+  op de opdracht. Grond: B veronderstelt een voorraadadministratie die er niet is (reserveringen 0,
+  magazijn-inkooporders 0). B en C blijven open voor als het magazijn in gebruik komt.
+- **INKOOP_01 en NUMMER_01 §4.5 zijn gedeblokkeerd**: de blokkade "eerst weten welk model gebruikt
+  wordt" is opgeheven — geen enkel model wordt gebruikt, dus geen gegevensmigratie en geen
+  gebruikers te verstoren.

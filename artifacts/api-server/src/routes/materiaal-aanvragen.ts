@@ -12,12 +12,14 @@ import {
   medewerkersTable,
   planningItemsTable,
 } from "@workspace/db";
-import { eq, and, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, isNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
 import { handelHerkomstAf } from "../lib/werkbakService";
+import { maakConceptInkoopbon } from "../lib/inkoopbonService";
+import { kenmerkVoorProjectinkoop } from "../lib/kenmerk";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
@@ -29,6 +31,12 @@ const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 // omlaag gezet naar hetzelfde niveau als behandelen (niet behandelen omhoog,
 // zodat niemand toegang verliest).
 const niveauInzienEnBehandelen = requireBevoegdheid("projecten", 2);
+
+// MATERIAAL_01 fase 3: signaal dat de bon-claim verloor van een concurrente
+// goedkeuring — rolt de transactie terug en wordt als 409 beantwoord.
+class BonClaimConflict extends Error {
+  constructor() { super("inkoopbon-claim verloren"); }
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +69,7 @@ function mapAanvraag(
     behandeld_door_id: row.behandeldDoorId ?? null,
     behandeld_door_naam: row.behandeld_naam ?? null,
     behandel_notitie: row.behandelNotitie ?? null,
+    inkoopbon_id: row.inkoopbonId ?? null,
     aangemaakt_op: iso(row.aangemaaktOp),
     bijgewerkt_op: iso(row.bijgewerktOp),
   };
@@ -413,7 +422,11 @@ router.patch("/materiaal-aanvragen/:id", niveauInzienEnBehandelen, async (req, r
   // concurrerende PATCH nooit een werkbakitem sluiten terwijl de aanvraag
   // uiteindelijk niet terminaal is, en laat een fout na de update geen
   // terminale aanvraag met een open signaal achter.
-  const conflict = await db.transaction(async (tx) => {
+  type BonInfo = { id: number; nummer: number; offerteId: number | null; herziening: number };
+  let nieuweBon: BonInfo | null = null;
+  let conflict: boolean;
+  try {
+    conflict = await db.transaction(async (tx) => {
     const bijgewerkt = await tx
       .update(materiaalAanvragenTable)
       .set({
@@ -438,8 +451,62 @@ router.patch("/materiaal-aanvragen/:id", niveauInzienEnBehandelen, async (req, r
         logger.info({ aanvraagId: id, status, gesloten }, "Werkbakitems afgehandeld bij behandelde materiaal-aanvraag");
       }
     }
+
+    // MATERIAAL_01 fase 3 (keuze A, 2026-08-10): een échte overgang naar
+    // goedgekeurd maakt automatisch een concept-inkoopbon op de opdracht,
+    // via het gedeelde aanmaakpad (geen vierde bestelpad). Alleen voor
+    // materiaal-aanvragen mét opdracht en zonder eerdere bon (idempotent —
+    // her-goedkeuren na afwijzing maakt nooit een tweede bon).
+    const maaktBon = wordtTerminaal && status === "goedgekeurd"
+      && bestaand.soort === "materiaal"
+      && bestaand.opdrachtId != null
+      && bestaand.inkoopbonId == null;
+    if (maaktBon && bestaand.opdrachtId != null) {
+      const opmerkingen = [
+        bestaand.volgensOpdracht === "wijkt_af"
+          ? "LET OP: aanvraag wijkt af van de opdracht." : null,
+        `Automatisch aangemaakt uit materiaal-aanvraag #${id} (${bestaand.reden}).`,
+        bestaand.aiLeverancier
+          ? `AI-suggestie leverancier (ter controle): ${bestaand.aiLeverancier}.` : null,
+        behandel_notitie ? `Behandelnotitie: ${behandel_notitie}` : null,
+      ].filter(Boolean).join(" ");
+
+      const bon = await maakConceptInkoopbon({
+        opdrachtId: bestaand.opdrachtId,
+        // Leverancier en prijs zijn bewust NIET uit AI-velden overgenomen
+        // (inkoop-eigen-cijfers): de inkoper vult het concept aan.
+        leverancier: "Nog te bepalen",
+        opmerkingen,
+        regels: [{
+          omschrijving: bestaand.aiArtikelNaam ?? bestaand.omschrijving ?? bestaand.reden,
+          hoeveelheid: 1,
+          eenheid: "st",
+          prijs: null,
+        }],
+      }, tx);
+
+      // Conditionele claim: alleen koppelen als er nog écht geen bon hangt.
+      // Faalt de claim (concurrente goedkeuring), dan gooien we — de hele
+      // transactie (inclusief de zojuist aangemaakte bon) rolt dan terug,
+      // zodat er nooit een tweede of wees-bon overblijft.
+      const geclaimd = await tx.update(materiaalAanvragenTable)
+        .set({ inkoopbonId: bon.id })
+        .where(and(
+          eq(materiaalAanvragenTable.id, id),
+          isNull(materiaalAanvragenTable.inkoopbonId),
+        ))
+        .returning({ id: materiaalAanvragenTable.id });
+      if (geclaimd.length === 0) throw new BonClaimConflict();
+      nieuweBon = { id: bon.id, nummer: bon.nummer, offerteId: bon.offerteId ?? null, herziening: bon.herziening };
+    }
     return false;
   });
+  } catch (err) {
+    if (err instanceof BonClaimConflict) {
+      return void res.status(409).json({ error: "Aanvraag is intussen door iemand anders goedgekeurd; ververs en probeer opnieuw" });
+    }
+    throw err;
+  }
   if (conflict) {
     return void res.status(409).json({ error: "Aanvraag is intussen door iemand anders gewijzigd; ververs en probeer opnieuw" });
   }
@@ -449,7 +516,14 @@ router.patch("/materiaal-aanvragen/:id", niveauInzienEnBehandelen, async (req, r
     .from(materiaalAanvragenTable)
     .where(eq(materiaalAanvragenTable.id, id));
 
-  return void res.json(mapAanvraag(updated as Parameters<typeof mapAanvraag>[0]));
+  const basis = mapAanvraag(updated as Parameters<typeof mapAanvraag>[0]);
+  if (nieuweBon) {
+    const b: BonInfo = nieuweBon;
+    const kenmerk = await kenmerkVoorProjectinkoop(b.offerteId, b.nummer, b.herziening);
+    logger.info({ aanvraagId: id, inkoopbonId: b.id, kenmerk }, "Concept-inkoopbon automatisch aangemaakt uit goedgekeurde materiaal-aanvraag");
+    return void res.json({ ...basis, inkoopbon: { id: b.id, kenmerk } });
+  }
+  return void res.json(basis);
 });
 
 // ── POST /materiaal-aanvragen/:id/heranalyseer ─────────────────────────────

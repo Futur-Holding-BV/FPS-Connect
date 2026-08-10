@@ -247,6 +247,7 @@ INDEX|mandagstaat_logs|mandagstaat_logs_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_onderwerp_idx
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_status_idx
+INDEX|materiaal_aanvragen|materiaal_aanvragen_inkoopbon_id_uniek
 INDEX|materiaal_aanvragen|materiaal_aanvragen_pkey
 INDEX|medewerker_aanstellingen|medewerker_aanstellingen_pkey
 INDEX|medewerker_cao_keuzes|medewerker_cao_keuzes_pkey
@@ -2732,6 +2733,7 @@ KOLOM|materiaal_aanvragen|bijgewerkt_op|timestamp with time zone|NO|now()
 KOLOM|materiaal_aanvragen|foto_pad|text|YES|
 KOLOM|materiaal_aanvragen|id|integer|NO|nextval('materiaal_aanvragen_id_seq'::regclass)
 KOLOM|materiaal_aanvragen|ingediend_door_id|integer|YES|
+KOLOM|materiaal_aanvragen|inkoopbon_id|integer|YES|
 KOLOM|materiaal_aanvragen|omschrijving|text|YES|
 KOLOM|materiaal_aanvragen|opdracht_id|integer|YES|
 KOLOM|materiaal_aanvragen|reden|text|NO|

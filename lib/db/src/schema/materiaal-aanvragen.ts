@@ -1,6 +1,7 @@
 import { pgTable, serial, integer, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
+import { inkoopbonnenTable } from "./werkvoorbereiding";
 
 export const materiaalAanvragenTable = pgTable("materiaal_aanvragen", {
   id: serial("id").primaryKey(),
@@ -31,6 +32,12 @@ export const materiaalAanvragenTable = pgTable("materiaal_aanvragen", {
     () => gebruikersTable.id, { onDelete: "set null" }
   ),
   behandelNotitie: text("behandel_notitie"),
+  // MATERIAAL_01 fase 3 (keuze A): verwijzing naar de automatisch aangemaakte
+  // concept-inkoopbon bij goedkeuring. SET NULL zodat een verwijderde bon de
+  // aanvraaghistorie niet meesleept.
+  inkoopbonId: integer("inkoopbon_id").references(
+    () => inkoopbonnenTable.id, { onDelete: "set null" }
+  ),
   aangemaaktOp: timestamp("aangemaakt_op", { withTimezone: true }).notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op", { withTimezone: true }).notNull().defaultNow(),
 });

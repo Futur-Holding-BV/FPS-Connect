@@ -70,3 +70,46 @@ mede op basis van T10 (wie beslist dat vandaag).
 
 Geen tabellen samengevoegd, `mod_calc_leveranciers` niet aangeraakt, toebehoren-tak ongewijzigd,
 AI-verrijking niet uitgebreid.
+
+
+---
+
+## Aanvulling 2026-08-10 — productietelling binnen, fase 3 gebouwd (keuze A)
+
+De productietelling (zie `docs/metingen/MATERIAAL_01_gebruik.md`, datumkop 2026-08-10 productie) gaf
+op alle tien tellingen nul: **geen enkel inkoopmodel wordt in productie gebruikt**. René koos daarop
+expliciet **A**: goedgekeurd → concept-inkoopbon op de opdracht. B (reservering) en C (behandelaar
+kiest) blijven open voor wanneer het magazijn in gebruik komt.
+
+### Wat is gebouwd
+
+- **Gedeeld aanmaakpad** (`api-server/src/lib/inkoopbonService.ts`): de bestaande handmatige
+  POST-route én de automatische aanmaak lopen door dezelfde `maakConceptInkoopbon()` — er is
+  géén vierde bestelpad bijgekomen (§7.5). I-nummer uit de gedeelde DB-sequence, offerte-koppeling
+  van de opdracht (NUMMER_01 §4.5), status altijd `concept`.
+- **Automatiek in de goedkeurings-transactie** (PATCH materiaal-aanvraag): alleen bij een échte
+  overgang naar `goedgekeurd`, alleen soort `materiaal` mét opdracht, en alleen als er nog geen bon
+  hangt (idempotent — her-goedkeuren maakt nooit een tweede bon). Toebehoren-aanvragen (projectloos)
+  krijgen bewust geen bon.
+- **Aanvraag houdt verwijzing naar het resultaat** (§7.5): nieuwe kolom
+  `materiaal_aanvragen.inkoopbon_id` (migratie `0044`, FK SET NULL).
+- **`volgens_opdracht = wijkt_af` loopt zichtbaar mee** (§7.5): de bon-opmerkingen beginnen dan met
+  "LET OP: aanvraag wijkt af van de opdracht." plus aanvraag-nummer, reden en behandelnotitie.
+- **Leverancier en prijs komen bewust NIET uit de AI-velden** (inkoop-eigen-cijfers): leverancier
+  staat op "Nog te bepalen", de AI-suggestie staat alleen als controle-tekst in de opmerkingen;
+  de inkoper werkt het concept af via Inkoop.
+- **Zichtbaarheid**: de werkvoorbereidingspagina meldt na goedkeuring direct het bon-kenmerk
+  (anders verdwijnt de kaart en lijkt er niets gebeurd).
+
+### Betekenis voor INKOOP_01 en NUMMER_01 §4.5
+
+De blokkade "eerst weten welk model gebruikt wordt" is **opgeheven**: er is geen bestaand gebruik,
+dus geen gegevensmigratie en geen te verstoren gebruikers. INKOOP_01 kan op het inkoopbon-model
+doorbouwen; de NUMMER_01 §4.5-keuze (projectinkoop hangt aan de offerte van de opdracht, gedeelde
+I-reeks) is hiermee definitief in gebruik genomen door het automatische pad.
+
+### Bewijs
+
+`scripts/src/bewijs-materiaal01-fase3.ts` — 14 checks groen (incl. parallelle dubbelgoedkeuring: 1×200 + 1×409, precies één bon): bon ontstaat als concept met I-kenmerk
+en verwijzing; her-goedkeuren maakt geen tweede bon; afwijzen en toebehoren maken geen bon;
+het handmatige pad werkt ongewijzigd via hetzelfde gedeelde aanmaakpad.

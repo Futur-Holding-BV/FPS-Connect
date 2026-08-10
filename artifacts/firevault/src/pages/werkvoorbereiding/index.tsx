@@ -25,6 +25,7 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -108,6 +109,7 @@ function tijdGeleden(iso: string | null): string {
 
 function MateriaalAanvraagKaart({ aanvraag, onBehandeld }: { aanvraag: MateriaalAanvraag; onBehandeld: () => void }) {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [notitie, setNotitie] = useState(aanvraag.behandel_notitie ?? "");
   const [uitgevouwen, setUitgevouwen] = useState(false);
   const [heranalyseer, setHeranalyseer] = useState(false);
@@ -121,8 +123,18 @@ function MateriaalAanvraagKaart({ aanvraag, onBehandeld }: { aanvraag: Materiaal
         credentials: "include",
       });
       if (!resp.ok) throw new Error("Status bijwerken mislukt");
+      return (await resp.json()) as { inkoopbon?: { id: number; kenmerk: string | null } };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // MATERIAAL_01 fase 3 (keuze A): goedkeuring maakt automatisch een
+      // concept-inkoopbon aan — meld dat zichtbaar, anders lijkt er niets
+      // te gebeuren nadat de kaart uit de lijst verdwijnt.
+      if (data?.inkoopbon) {
+        toast({
+          title: "Aanvraag goedgekeurd",
+          description: `Concept-inkoopbon ${data.inkoopbon.kenmerk ?? `#${data.inkoopbon.id}`} aangemaakt op de opdracht — af te werken via Inkoop.`,
+        });
+      }
       void qc.invalidateQueries({ queryKey: ["materiaal-aanvragen"] });
       onBehandeld();
     },

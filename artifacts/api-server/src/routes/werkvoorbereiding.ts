@@ -26,6 +26,7 @@ import { eq, and, asc, inArray, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { formatNummer, herzieningsLetter, kenmerkVoorProjectinkoop } from "../lib/kenmerk";
+import { maakConceptInkoopbon } from "../lib/inkoopbonService";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
@@ -1297,51 +1298,15 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req
   }
 
   try {
-    const [plan] = await db.select().from(inkoopplannenTable)
-      .where(eq(inkoopplannenTable.opdrachtId, id));
-
-    // NUMMER_01 §4.5: projectinkoop hangt aan de offerte van de opdracht.
-    const [opdrachtRij] = await db
-      .select({ offerteId: opdrachtenTable.offerteId })
-      .from(opdrachtenTable)
-      .where(eq(opdrachtenTable.id, id));
-
-    const inputRegels = body.regels ?? [];
-    const totaalBedrag = inputRegels.reduce((acc, r) => {
-      return acc + (r.prijs ?? 0) * r.hoeveelheid;
-    }, 0);
-
-    let [bon] = await db.insert(inkoopbonnenTable).values({
-      inkoopplanId: plan?.id ?? null,
+    // MATERIAAL_01 fase 3: gedeeld aanmaakpad (ook gebruikt door de
+    // automatische bon bij een goedgekeurde materiaal-aanvraag).
+    const bon = await maakConceptInkoopbon({
       opdrachtId: id,
-      offerteId: opdrachtRij?.offerteId ?? null,
       leverancier: body.leverancier,
       gewensteLeverdatum: body.gewenste_leverdatum ?? null,
-      totaalBedrag: totaalBedrag > 0 ? totaalBedrag : null,
-      status: "concept",
       opmerkingen: body.opmerkingen ?? null,
-    }).returning();
-
-    // Legacy weergaveveld meezetten op basis van het echte sequencenummer.
-    [bon] = await db.update(inkoopbonnenTable)
-      .set({ bonNummer: formatNummer("I", bon.nummer) })
-      .where(eq(inkoopbonnenTable.id, bon.id))
-      .returning();
-
-    if (inputRegels.length > 0) {
-      await db.insert(inkoopbonRegelsTable).values(
-        inputRegels.map((r, i) => ({
-          inkoopbonId: bon.id,
-          inkoopplanRegelId: r.inkoopplan_regel_id ?? null,
-          omschrijving: r.omschrijving,
-          hoeveelheid: r.hoeveelheid,
-          eenheid: r.eenheid,
-          prijs: r.prijs ?? null,
-          totaal: r.prijs != null ? r.hoeveelheid * r.prijs : null,
-          volgorde: i,
-        }))
-      );
-    }
+      regels: body.regels ?? [],
+    });
 
     const regels = await db.select().from(inkoopbonRegelsTable)
       .where(eq(inkoopbonRegelsTable.inkoopbonId, bon.id))
