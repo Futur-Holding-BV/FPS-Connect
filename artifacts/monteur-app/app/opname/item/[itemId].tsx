@@ -23,7 +23,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { bovenInset } from "@/components/ui";
+import { tekstStijl, bovenInset } from "@/components/ui";
+// `ruimte` wordt hier als state-variabele gebruikt; de ontwerp-spacingtokens
+// importeren we daarom onder het alias `sp`.
+import { ruimte as sp } from "@workspace/ontwerp";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
@@ -362,23 +365,23 @@ export default function OpnameItemDetail() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingTop: bovenInset(insets) + sp.m,
+          paddingHorizontal: sp.xl,
+          paddingBottom: sp.l,
         }}
       >
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 8 }}>
-          <Text style={{ color: c.primary, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: sp.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("sectiekop", c.darkForeground)}>
               {typeInfo?.label ?? spotType}
             </Text>
             {(huidigItem as typeof item)?.ruimte ? (
-              <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+              <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: sp.xs / 2 }]}>
                 {(huidigItem as typeof item)?.ruimte}
               </Text>
             ) : null}
@@ -389,19 +392,19 @@ export default function OpnameItemDetail() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 6,
-              backgroundColor: afgerond ? "#DCFCE7" : "rgba(255,255,255,0.1)",
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 10,
+              gap: sp.xs + 2,
+              backgroundColor: afgerond ? c.success + "22" : c.darkForeground + "1A",
+              paddingHorizontal: sp.m,
+              paddingVertical: sp.s,
+              borderRadius: sp.s + 2,
             }}
           >
             <Ionicons
               name={afgerond ? "checkmark-circle" : "radio-button-off-outline"}
               size={18}
-              color={afgerond ? "#166534" : c.darkMuted}
+              color={afgerond ? c.success : c.darkMuted}
             />
-            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: afgerond ? "#166534" : c.darkMuted }}>
+            <Text style={[tekstStijl("bijschrift", afgerond ? c.success : c.darkMuted), { fontFamily: "Inter_600SemiBold" }]}>
               {afgerond ? "Afgerond" : "Open"}
             </Text>
           </Pressable>
@@ -410,47 +413,47 @@ export default function OpnameItemDetail() {
 
       <OfflineBanner stijl="compact" />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: sp.l, paddingBottom: sp.xxl * 3 + sp.xs }} keyboardShouldPersistTaps="handled">
         {isLoading && !gecachedItem ? (
-          <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={c.primary} style={{ marginTop: sp.xxl + sp.s }} />
         ) : (
           <>
             {/* Offline-cache melding */}
             {!isOnline && gecachedItem && !item ? (
               <View
                 style={{
-                  backgroundColor: "rgba(234,179,8,0.1)",
-                  borderRadius: 8,
-                  padding: 10,
+                  backgroundColor: c.warning + "1A",
+                  borderRadius: sp.s,
+                  padding: sp.s + 2,
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 6,
-                  marginBottom: 14,
+                  gap: sp.xs + 2,
+                  marginBottom: sp.m + 2,
                 }}
               >
-                <Ionicons name="time-outline" size={14} color="#facc15" />
-                <Text style={{ color: "#facc15", fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 }}>
+                <Ionicons name="time-outline" size={14} color={c.warning} />
+                <Text style={[tekstStijl("bijschrift", c.warning), { flex: 1 }]}>
                   Gegevens uit lokale cache — wijzigingen worden gesynchroniseerd bij verbinding
                 </Text>
               </View>
             ) : null}
 
             {/* Type */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
               Type voorziening
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: sp.l }} contentContainerStyle={{ gap: sp.s }}>
               {SPOT_TYPEN.map((t) => (
                 <Pressable
                   key={t.waarde}
                   onPress={() => { setSpotType(t.waarde); markeerGewijzigd(); }}
                   style={{
-                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1,
+                    paddingHorizontal: sp.m + 2, paddingVertical: sp.s, borderRadius: sp.s, borderWidth: 1,
                     borderColor: spotType === t.waarde ? t.kleur : c.border,
                     backgroundColor: spotType === t.waarde ? t.kleur + "22" : c.card,
                   }}
                 >
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: spotType === t.waarde ? t.kleur : c.foreground }}>
+                  <Text style={[tekstStijl("klein", spotType === t.waarde ? t.kleur : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                     {t.label}
                   </Text>
                 </Pressable>
@@ -458,21 +461,21 @@ export default function OpnameItemDetail() {
             </ScrollView>
 
             {/* Actie */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
               Vereiste actie
             </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp.s, marginBottom: sp.l }}>
               {ACTIES.map((a) => (
                 <Pressable
                   key={a.waarde}
                   onPress={() => { setActie(a.waarde); markeerGewijzigd(); }}
                   style={{
-                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1,
+                    paddingHorizontal: sp.m, paddingVertical: sp.xs + 3, borderRadius: sp.s, borderWidth: 1,
                     borderColor: actie === a.waarde ? c.primary : c.border,
                     backgroundColor: actie === a.waarde ? c.accent : c.card,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: actie === a.waarde ? c.primary : c.foreground }}>
+                  <Text style={[tekstStijl("bijschrift", actie === a.waarde ? c.primary : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                     {a.label}
                   </Text>
                 </Pressable>
@@ -480,21 +483,21 @@ export default function OpnameItemDetail() {
             </View>
 
             {/* Bereikbaarheid */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
               Bereikbaarheid
             </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", gap: sp.s, marginBottom: sp.l }}>
               {BEREIKBAARHEID.map((b) => (
                 <Pressable
                   key={b.waarde}
                   onPress={() => { setBereikbaarheid(b.waarde); markeerGewijzigd(); }}
                   style={{
-                    flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", borderWidth: 1,
+                    flex: 1, paddingVertical: sp.s, borderRadius: sp.s, alignItems: "center", borderWidth: 1,
                     borderColor: bereikbaarheid === b.waarde ? b.kleur : c.border,
                     backgroundColor: bereikbaarheid === b.waarde ? b.kleur + "22" : c.card,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: bereikbaarheid === b.waarde ? b.kleur : c.foreground }}>
+                  <Text style={[tekstStijl("bijschrift", bereikbaarheid === b.waarde ? b.kleur : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                     {b.label}
                   </Text>
                 </Pressable>
@@ -502,21 +505,21 @@ export default function OpnameItemDetail() {
             </View>
 
             {/* Prioriteit */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
               Prioriteit
             </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", gap: sp.s, marginBottom: sp.l }}>
               {PRIORITEITEN.map((p) => (
                 <Pressable
                   key={p.waarde}
                   onPress={() => { setPrioriteit(p.waarde); markeerGewijzigd(); }}
                   style={{
-                    flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", borderWidth: 1,
+                    flex: 1, paddingVertical: sp.s, borderRadius: sp.s, alignItems: "center", borderWidth: 1,
                     borderColor: prioriteit === p.waarde ? c.primary : c.border,
                     backgroundColor: prioriteit === p.waarde ? c.accent : c.card,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: prioriteit === p.waarde ? c.primary : c.foreground }}>
+                  <Text style={[tekstStijl("bijschrift", prioriteit === p.waarde ? c.primary : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                     {p.label}
                   </Text>
                 </Pressable>
@@ -524,9 +527,9 @@ export default function OpnameItemDetail() {
             </View>
 
             {/* Ruimte + Aantal */}
-            <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
+            <View style={{ flexDirection: "row", gap: sp.m, marginBottom: sp.m + 2 }}>
               <View style={{ flex: 3 }}>
-                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+                <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                   Ruimte / locatie
                 </Text>
                 <TextInput
@@ -534,24 +537,24 @@ export default function OpnameItemDetail() {
                   onChangeText={(v) => { setRuimte(v); markeerGewijzigd(); }}
                   placeholder="Gang, serverruimte..."
                   placeholderTextColor={c.mutedForeground}
-                  style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.card }}
+                  style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.card }]}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+                <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                   Aantal
                 </Text>
                 <TextInput
                   value={aantal}
                   onChangeText={(v) => { setAantal(v); markeerGewijzigd(); }}
                   keyboardType="numeric"
-                  style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.card }}
+                  style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.card }]}
                 />
               </View>
             </View>
 
             {/* Afmetingen */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
               Afmetingen
             </Text>
             <TextInput
@@ -559,11 +562,11 @@ export default function OpnameItemDetail() {
               onChangeText={(v) => { setAfmetingen(v); markeerGewijzigd(); }}
               placeholder="Bijv. 900×2100 mm"
               placeholderTextColor={c.mutedForeground}
-              style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.card, marginBottom: 14 }}
+              style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.card, marginBottom: sp.m + 2 }]}
             />
 
             {/* Beschrijving */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
               Situatie / bevinding
             </Text>
             <TextInput
@@ -573,11 +576,11 @@ export default function OpnameItemDetail() {
               placeholderTextColor={c.mutedForeground}
               multiline
               numberOfLines={3}
-              style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.card, marginBottom: 14, textAlignVertical: "top", minHeight: 72 }}
+              style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.card, marginBottom: sp.m + 2, textAlignVertical: "top", minHeight: sp.xxl + sp.xxl + sp.s }]}
             />
 
             {/* Notities */}
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
               Notities (intern)
             </Text>
             <TextInput
@@ -587,7 +590,7 @@ export default function OpnameItemDetail() {
               placeholderTextColor={c.mutedForeground}
               multiline
               numberOfLines={2}
-              style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.card, marginBottom: 20, textAlignVertical: "top", minHeight: 56 }}
+              style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.card, marginBottom: sp.xl, textAlignVertical: "top", minHeight: sp.xxl + sp.xl + sp.s }]}
             />
 
             {/* Opslaan knop */}
@@ -595,12 +598,12 @@ export default function OpnameItemDetail() {
               <Pressable
                 onPress={() => void opslaan()}
                 disabled={bijwerken.isPending}
-                style={{ backgroundColor: c.primary, padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 24 }}
+                style={{ backgroundColor: c.primary, padding: sp.m + 2, borderRadius: c.radius, alignItems: "center", marginBottom: sp.xl }}
               >
                 {bijwerken.isPending ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={c.primaryForeground} />
                 ) : (
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_700Bold" }]}>
                     {!isOnline ? "Lokaal opslaan (sync later)" : "Wijzigingen opslaan"}
                   </Text>
                 )}
@@ -608,8 +611,8 @@ export default function OpnameItemDetail() {
             )}
 
             {/* Foto's sectie */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: wachtrijFotos.length > 0 ? 8 : 12 }}>
-              <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: wachtrijFotos.length > 0 ? sp.s : sp.m }}>
+              <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_700Bold" }]}>
                 Foto's {(fotos.length + lokaleFotos.length) > 0 ? `(${fotos.length + lokaleFotos.length})` : ""}
               </Text>
               <Pressable
@@ -618,11 +621,11 @@ export default function OpnameItemDetail() {
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 6,
+                  gap: sp.xs + 2,
                   backgroundColor: c.accent,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 10,
+                  paddingHorizontal: sp.m + 2,
+                  paddingVertical: sp.s,
+                  borderRadius: sp.s + 2,
                 }}
               >
                 {isUploading ? (
@@ -630,7 +633,7 @@ export default function OpnameItemDetail() {
                 ) : (
                   <Ionicons name="camera-outline" size={16} color={c.primary} />
                 )}
-                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.primary }}>
+                <Text style={[tekstStijl("klein", c.primary), { fontFamily: "Inter_600SemiBold" }]}>
                   {isUploading ? (isOnline ? "Uploaden..." : "Opslaan...") : "Foto toevoegen"}
                 </Text>
               </Pressable>
@@ -638,41 +641,35 @@ export default function OpnameItemDetail() {
 
             {/* Wachtrij foto-meldingen (pending en mislukt) */}
             {wachtrijFotos.length > 0 ? (
-              <View style={{ gap: 6, marginBottom: 12 }}>
+              <View style={{ gap: sp.xs + 2, marginBottom: sp.m }}>
                 {wachtrijFotos.map((item) => {
                   const isMislukt = item.pogingen >= MAX_POGINGEN;
                   return (
                     <View
                       key={item.id}
                       style={{
-                        backgroundColor: isMislukt
-                          ? "rgba(239,68,68,0.08)"
-                          : "rgba(234,179,8,0.08)",
+                        backgroundColor: (isMislukt ? c.destructive : c.warning) + "14",
                         borderWidth: 1,
-                        borderColor: isMislukt
-                          ? "rgba(239,68,68,0.3)"
-                          : "rgba(234,179,8,0.3)",
-                        borderRadius: 10,
-                        padding: 10,
+                        borderColor: (isMislukt ? c.destructive : c.warning) + "4D",
+                        borderRadius: sp.s + 2,
+                        padding: sp.s + 2,
                         flexDirection: "row",
                         alignItems: "flex-start",
-                        gap: 8,
+                        gap: sp.s,
                       }}
                     >
                       <Ionicons
                         name={isMislukt ? "warning-outline" : "time-outline"}
                         size={15}
-                        color={isMislukt ? "#ef4444" : "#facc15"}
+                        color={isMislukt ? c.destructive : c.warning}
                         style={{ marginTop: 1 }}
                       />
                       <View style={{ flex: 1 }}>
                         <Text
-                          style={{
-                            color: isMislukt ? "#ef4444" : "#facc15",
-                            fontSize: 12,
-                            fontFamily: "Inter_600SemiBold",
-                            marginBottom: 2,
-                          }}
+                          style={[
+                            tekstStijl("bijschrift", isMislukt ? c.destructive : c.warning),
+                            { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs / 2 },
+                          ]}
                         >
                           {isMislukt
                             ? `Foto uploaden mislukt (${item.pogingen}\u00d7 geprobeerd)`
@@ -680,19 +677,14 @@ export default function OpnameItemDetail() {
                         </Text>
                         {item.fout ? (
                           <Text
-                            style={{
-                              color: "#ef4444",
-                              fontSize: 11,
-                              fontFamily: "Inter_400Regular",
-                              marginBottom: 6,
-                            }}
+                            style={[tekstStijl("bijschrift", c.destructive), { marginBottom: sp.xs + 2 }]}
                             numberOfLines={2}
                           >
                             {item.fout}
                           </Text>
                         ) : null}
                         {isMislukt ? (
-                          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                          <View style={{ flexDirection: "row", gap: sp.s, marginTop: sp.xs }}>
                             <Pressable
                               onPress={async () => {
                                 await herprobeeerEnkel(item.id);
@@ -700,22 +692,16 @@ export default function OpnameItemDetail() {
                               }}
                               style={({ pressed }) => ({
                                 flex: 1,
-                                backgroundColor: pressed
-                                  ? "rgba(242,59,13,0.2)"
-                                  : "rgba(242,59,13,0.1)",
-                                borderRadius: 7,
-                                paddingVertical: 6,
+                                backgroundColor: c.primary + (pressed ? "33" : "1A"),
+                                borderRadius: sp.s - 1,
+                                paddingVertical: sp.xs + 2,
                                 alignItems: "center",
                                 borderWidth: 1,
-                                borderColor: "rgba(242,59,13,0.3)",
+                                borderColor: c.primary + "4D",
                               })}
                             >
                               <Text
-                                style={{
-                                  color: "#F23B0D",
-                                  fontSize: 12,
-                                  fontFamily: "Inter_600SemiBold",
-                                }}
+                                style={[tekstStijl("bijschrift", c.primary), { fontFamily: "Inter_600SemiBold" }]}
                               >
                                 Opnieuw proberen
                               </Text>
@@ -727,22 +713,16 @@ export default function OpnameItemDetail() {
                               }}
                               style={({ pressed }) => ({
                                 flex: 1,
-                                backgroundColor: pressed
-                                  ? "rgba(239,68,68,0.15)"
-                                  : "transparent",
-                                borderRadius: 7,
-                                paddingVertical: 6,
+                                backgroundColor: pressed ? c.destructive + "26" : "transparent",
+                                borderRadius: sp.s - 1,
+                                paddingVertical: sp.xs + 2,
                                 alignItems: "center",
                                 borderWidth: 1,
-                                borderColor: "rgba(239,68,68,0.3)",
+                                borderColor: c.destructive + "4D",
                               })}
                             >
                               <Text
-                                style={{
-                                  color: "#f87171",
-                                  fontSize: 12,
-                                  fontFamily: "Inter_600SemiBold",
-                                }}
+                                style={[tekstStijl("bijschrift", c.destructive), { fontFamily: "Inter_600SemiBold" }]}
                               >
                                 Verwijderen
                               </Text>
@@ -760,23 +740,23 @@ export default function OpnameItemDetail() {
             {uploadFout ? (
               <View
                 style={{
-                  backgroundColor: "rgba(239,68,68,0.1)",
+                  backgroundColor: c.destructive + "1A",
                   borderWidth: 1,
-                  borderColor: "#ef4444",
-                  borderRadius: 10,
-                  padding: 12,
-                  marginBottom: 12,
+                  borderColor: c.destructive,
+                  borderRadius: sp.s + 2,
+                  padding: sp.m,
+                  marginBottom: sp.m,
                   flexDirection: "row",
                   alignItems: "flex-start",
-                  gap: 10,
+                  gap: sp.s + 2,
                 }}
               >
-                <Ionicons name="alert-circle-outline" size={18} color="#ef4444" style={{ marginTop: 1 }} />
+                <Ionicons name="alert-circle-outline" size={18} color={c.destructive} style={{ marginTop: 1 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#ef4444", fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 6 }}>
+                  <Text style={[tekstStijl("klein", c.destructive), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                     Foto uploaden mislukt
                   </Text>
-                  <Text style={{ color: "#ef4444", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 10 }}>
+                  <Text style={[tekstStijl("bijschrift", c.destructive), { marginBottom: sp.s + 2 }]}>
                     {uploadFout.bericht}
                   </Text>
                   {uploadFout.type === "bestandstype" ? (
@@ -784,51 +764,51 @@ export default function OpnameItemDetail() {
                       onPress={() => void voegFotoToe()}
                       style={{
                         alignSelf: "flex-start",
-                        backgroundColor: "#ef4444",
-                        paddingHorizontal: 12,
-                        paddingVertical: 7,
-                        borderRadius: 8,
+                        backgroundColor: c.destructive,
+                        paddingHorizontal: sp.m,
+                        paddingVertical: sp.xs + 3,
+                        borderRadius: sp.s,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                      <Text style={[tekstStijl("bijschrift", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                         Ander bestand kiezen
                       </Text>
                     </Pressable>
                   ) : (
-                    <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flexDirection: "row", gap: sp.s }}>
                       <Pressable
                         onPress={() => void opnieuwProberen()}
                         disabled={isUploading}
                         style={{
-                          backgroundColor: "#ef4444",
-                          paddingHorizontal: 12,
-                          paddingVertical: 7,
-                          borderRadius: 8,
+                          backgroundColor: c.destructive,
+                          paddingHorizontal: sp.m,
+                          paddingVertical: sp.xs + 3,
+                          borderRadius: sp.s,
                           flexDirection: "row",
                           alignItems: "center",
-                          gap: 5,
+                          gap: sp.xs + 1,
                         }}
                       >
                         {isUploading ? (
-                          <ActivityIndicator size="small" color="#fff" />
+                          <ActivityIndicator size="small" color={c.primaryForeground} />
                         ) : (
-                          <Ionicons name="refresh-outline" size={13} color="#fff" />
+                          <Ionicons name="refresh-outline" size={13} color={c.primaryForeground} />
                         )}
-                        <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                        <Text style={[tekstStijl("bijschrift", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                           Opnieuw proberen
                         </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setUploadFout(null)}
                         style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 7,
-                          borderRadius: 8,
+                          paddingHorizontal: sp.m,
+                          paddingVertical: sp.xs + 3,
+                          borderRadius: sp.s,
                           borderWidth: 1,
-                          borderColor: "#ef4444",
+                          borderColor: c.destructive,
                         }}
                       >
-                        <Text style={{ color: "#ef4444", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                        <Text style={[tekstStijl("bijschrift", c.destructive), { fontFamily: "Inter_600SemiBold" }]}>
                           Sluiten
                         </Text>
                       </Pressable>
@@ -845,40 +825,40 @@ export default function OpnameItemDetail() {
                   borderColor: c.border,
                   borderStyle: "dashed",
                   borderRadius: c.radius,
-                  padding: 30,
+                  padding: sp.xl + sp.xs + 2,
                   alignItems: "center",
                 }}
               >
                 <Ionicons name="camera-outline" size={32} color={c.mutedForeground} />
-                <Text style={{ color: c.mutedForeground, marginTop: 8, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: sp.s }]}>
                   Nog geen foto's — gebruik de knop hierboven
                 </Text>
               </View>
             ) : (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp.s + 2 }}>
                 {/* Server-foto's */}
                 {fotos.map((foto) => (
                   <View key={foto.id} style={{ position: "relative" }}>
                     <Image
                       source={{ uri: `https://${API_DOMEIN}${foto.url ?? ""}` }}
-                      style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: c.muted }}
+                      style={{ width: sp.xxl * 3 + 4, height: sp.xxl * 3 + 4, borderRadius: sp.s + 2, backgroundColor: c.muted }}
                       resizeMode="cover"
                     />
                     <Pressable
                       onPress={() => bevestigVerwijderFoto(foto.id)}
                       style={{
                         position: "absolute",
-                        top: 4,
-                        right: 4,
-                        backgroundColor: "rgba(0,0,0,0.6)",
-                        borderRadius: 10,
-                        padding: 4,
+                        top: sp.xs,
+                        right: sp.xs,
+                        backgroundColor: c.dark + "99",
+                        borderRadius: sp.s + 2,
+                        padding: sp.xs,
                       }}
                     >
-                      <Ionicons name="trash-outline" size={14} color="#fff" />
+                      <Ionicons name="trash-outline" size={14} color={c.darkForeground} />
                     </Pressable>
                     {foto.bijschrift ? (
-                      <Text style={{ fontSize: 10, color: c.mutedForeground, marginTop: 3, width: 100, fontFamily: "Inter_400Regular" }} numberOfLines={1}>
+                      <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: sp.xs - 1, width: sp.xxl * 3 + 4 }]} numberOfLines={1}>
                         {foto.bijschrift}
                       </Text>
                     ) : null}
@@ -889,21 +869,21 @@ export default function OpnameItemDetail() {
                   <View key={pad} style={{ position: "relative" }}>
                     <Image
                       source={{ uri: pad }}
-                      style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: c.muted, opacity: 0.85 }}
+                      style={{ width: sp.xxl * 3 + 4, height: sp.xxl * 3 + 4, borderRadius: sp.s + 2, backgroundColor: c.muted, opacity: 0.85 }}
                       resizeMode="cover"
                     />
                     <View
                       style={{
                         position: "absolute",
-                        bottom: 4,
-                        left: 4,
-                        backgroundColor: "rgba(234,179,8,0.85)",
-                        borderRadius: 6,
-                        paddingHorizontal: 5,
-                        paddingVertical: 2,
+                        bottom: sp.xs,
+                        left: sp.xs,
+                        backgroundColor: c.warning + "D9",
+                        borderRadius: sp.xs + 2,
+                        paddingHorizontal: sp.xs + 1,
+                        paddingVertical: sp.xs / 2,
                       }}
                     >
-                      <Text style={{ color: "#000", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>Lokaal</Text>
+                      <Text style={[tekstStijl("bijschrift", c.dark), { fontFamily: "Inter_600SemiBold" }]}>Lokaal</Text>
                     </View>
                   </View>
                 ))}
@@ -924,19 +904,19 @@ export default function OpnameItemDetail() {
             backgroundColor: c.card,
             borderTopWidth: 1,
             borderTopColor: c.border,
-            padding: 16,
-            paddingBottom: 16 + insets.bottom,
+            padding: sp.l,
+            paddingBottom: sp.l + insets.bottom,
           }}
         >
           <Pressable
             onPress={() => void opslaan()}
             disabled={bijwerken.isPending}
-            style={{ backgroundColor: c.primary, padding: 14, borderRadius: 12, alignItems: "center" }}
+            style={{ backgroundColor: c.primary, padding: sp.m + 2, borderRadius: c.radius, alignItems: "center" }}
           >
             {bijwerken.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={c.primaryForeground} />
             ) : (
-              <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+              <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_700Bold" }]}>
                 {!isOnline ? "Lokaal opslaan" : "Wijzigingen opslaan"}
               </Text>
             )}

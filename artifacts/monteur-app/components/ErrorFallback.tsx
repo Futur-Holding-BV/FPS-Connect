@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -58,7 +59,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           style={({ pressed }) => [
             styles.topButton,
             {
-              top: insets.top + 16,
+              top: insets.top + ruimte.l,
               backgroundColor: colors.card,
               opacity: pressed ? 0.8 : 1,
             },
@@ -106,7 +107,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           transparent={true}
           onRequestClose={() => setIsModalVisible(false)}
         >
-          <View style={styles.modalOverlay}>
+          <View style={[styles.modalOverlay, { backgroundColor: colors.dark + "80" }]}>
             <View
               style={[
                 styles.modalContainer,
@@ -139,7 +140,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
                 style={styles.modalScrollView}
                 contentContainerStyle={[
                   styles.modalScrollContent,
-                  { paddingBottom: insets.bottom + 16 },
+                  { paddingBottom: insets.bottom + ruimte.l },
                 ]}
                 showsVerticalScrollIndicator
               >
@@ -178,12 +179,12 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: ruimte.xl,
   },
   content: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: ruimte.l,
     width: "100%",
     maxWidth: 600,
   },
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   topButton: {
     position: "absolute",
-    right: 16,
+    right: ruimte.l,
     width: 44,
     height: 44,
     borderRadius: 8,
@@ -210,9 +211,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   button: {
-    paddingVertical: 16,
+    paddingVertical: ruimte.l,
     borderRadius: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: ruimte.xl,
     minWidth: 200,
     shadowColor: "#000",
     shadowOffset: {
@@ -230,7 +231,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
   modalContainer: {
@@ -243,9 +243,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: ruimte.l,
+    paddingTop: ruimte.l,
+    paddingBottom: ruimte.m,
     borderBottomWidth: 1,
   },
   modalTitle: {
@@ -262,13 +262,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScrollContent: {
-    padding: 16,
+    padding: ruimte.l,
   },
   errorContainer: {
     width: "100%",
     borderRadius: 8,
     overflow: "hidden",
-    padding: 16,
+    padding: ruimte.l,
   },
   errorText: {
     fontSize: 12,

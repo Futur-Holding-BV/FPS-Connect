@@ -18,8 +18,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { Ladenstaat, LegeStaat, LijstFout, Statusmerk, tekstStijl, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
@@ -41,14 +42,15 @@ const ACTIE_LABELS: Record<string, string> = {
   "niet-brandwerend-afwerken": "Niet-brandwerend afwerken",
 };
 
-const STATUS_KLEUREN: Record<string, { bg: string; text: string; label: string }> = {
-  concept: { bg: "#FEF9C3", text: "#854D0E", label: "Concept" },
-  definitief: { bg: "#DCFCE7", text: "#166534", label: "Definitief" },
+// Opnamestatus op het statuspalet: concept = waarschuwing (geel), definitief = succes (groen).
+const STATUS_SOORT: Record<string, { soort: "waarschuwing" | "succes"; label: string }> = {
+  concept: { soort: "waarschuwing", label: "Concept" },
+  definitief: { soort: "succes", label: "Definitief" },
 };
 
 function OpnameKaart({ item, onPress }: { item: any; onPress: () => void }) {
   const c = useColors();
-  const status = STATUS_KLEUREN[item.status] ?? STATUS_KLEUREN.concept;
+  const status = STATUS_SOORT[item.status] ?? STATUS_SOORT.concept;
   return (
     <Pressable
       onPress={onPress}
@@ -57,44 +59,40 @@ function OpnameKaart({ item, onPress }: { item: any; onPress: () => void }) {
         borderRadius: c.radius,
         borderWidth: 1,
         borderColor: c.border,
-        padding: 16,
-        marginBottom: 10,
+        padding: ruimte.l,
+        marginBottom: ruimte.s + 2,
       }}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: c.foreground }}>
+        <View style={{ flex: 1, marginRight: ruimte.m }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
             {item.naam}
           </Text>
           {item.gebouw_naam ? (
-            <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
               {item.gebouw_naam}
             </Text>
           ) : null}
         </View>
-        <View style={{ backgroundColor: status.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-          <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: status.text }}>
-            {status.label}
-          </Text>
-        </View>
+        <Statusmerk label={status.label} soort={status.soort} />
       </View>
-      <View style={{ flexDirection: "row", gap: 16, marginTop: 10, alignItems: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+      <View style={{ flexDirection: "row", gap: ruimte.l, marginTop: ruimte.s + 2, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 1 }}>
           <Ionicons name="calendar-outline" size={13} color={c.mutedForeground} />
-          <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
             {item.datum}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 1 }}>
           <Ionicons name="list-outline" size={13} color={c.mutedForeground} />
-          <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
             {item.aantal_items} {item.aantal_items === 1 ? "item" : "items"}
           </Text>
         </View>
         {item.aangemaakt_door_naam ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 1 }}>
             <Ionicons name="person-outline" size={13} color={c.mutedForeground} />
-            <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
               {item.aangemaakt_door_naam}
             </Text>
           </View>
@@ -155,32 +153,32 @@ export default function OpnameLijst() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 14,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
-        <Pressable onPress={() => router.push("/menu")} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.push("/menu")} style={{ marginBottom: ruimte.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Menu
           </Text>
         </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("schermtitel", c.darkForeground)}>
           Opname
         </Text>
-        <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+        <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs / 2 }]}>
           Veldopnames voor de calculatiefase
         </Text>
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "rgba(255,255,255,0.08)",
+            backgroundColor: c.darkForeground + "14",
             borderRadius: c.radius,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            marginTop: 12,
-            gap: 8,
+            paddingHorizontal: ruimte.m,
+            paddingVertical: ruimte.s,
+            marginTop: ruimte.m,
+            gap: ruimte.s,
           }}
         >
           <Ionicons name="search-outline" size={16} color={c.darkMuted} />
@@ -189,20 +187,15 @@ export default function OpnameLijst() {
             onChangeText={setZoek}
             placeholder="Zoek opname of gebouw..."
             placeholderTextColor={c.darkMuted}
-            style={{
-              flex: 1,
-              color: c.darkForeground,
-              fontFamily: "Inter_400Regular",
-              fontSize: 14,
-            }}
+            style={[tekstStijl("standaard", c.darkForeground), { flex: 1 }]}
           />
         </View>
       </View>
 
       {/* Lijst */}
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -213,16 +206,16 @@ export default function OpnameLijst() {
         <FlatList
           data={gefilterd}
           keyExtractor={(o) => String(o.id)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: ruimte.l, paddingBottom: ruimte.xxl * 3 + ruimte.xs }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />
           }
           ListEmptyComponent={
-            <View style={{ alignItems: "center", paddingTop: 60 }}>
-              <Ionicons name="clipboard-outline" size={40} color={c.mutedForeground} />
-              <Text style={{ color: c.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
-                {zoek ? "Geen resultaten gevonden" : "Nog geen opnames aangemaakt"}
-              </Text>
+            <View style={{ paddingTop: ruimte.xxl + ruimte.xl }}>
+              <LegeStaat
+                icoon="clipboard-outline"
+                titel={zoek ? "Geen resultaten gevonden" : "Nog geen opnames aangemaakt"}
+              />
             </View>
           }
           renderItem={({ item }) => (
@@ -236,12 +229,12 @@ export default function OpnameLijst() {
         onPress={() => setToonNieuw(true)}
         style={{
           position: "absolute",
-          bottom: 28 + insets.bottom,
-          right: 24,
+          bottom: ruimte.xl + ruimte.xs + insets.bottom,
+          right: ruimte.xl,
           backgroundColor: c.primary,
-          width: 58,
-          height: 58,
-          borderRadius: 29,
+          width: ruimte.xxl + ruimte.xl + 2,
+          height: ruimte.xxl + ruimte.xl + 2,
+          borderRadius: (ruimte.xxl + ruimte.xl + 2) / 2,
           alignItems: "center",
           justifyContent: "center",
           shadowColor: "#000",
@@ -251,30 +244,30 @@ export default function OpnameLijst() {
           elevation: 6,
         }}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={30} color={c.primaryForeground} />
       </Pressable>
 
       {/* Nieuw opname modal */}
       <Modal visible={toonNieuw} transparent animationType="slide" onRequestClose={() => setToonNieuw(false)}>
         <Pressable
           onPress={() => setToonNieuw(false)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "flex-end" }}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={{
               backgroundColor: c.card,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 24,
-              paddingBottom: 24 + insets.bottom,
+              borderTopLeftRadius: ruimte.xl,
+              borderTopRightRadius: ruimte.xl,
+              padding: ruimte.xl,
+              paddingBottom: ruimte.xl + insets.bottom,
             }}
           >
-            <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: c.foreground, marginBottom: 18 }}>
+            <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: ruimte.l }]}>
               Nieuwe opname
             </Text>
 
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs + 2 }]}>
               Naam
             </Text>
             <TextInput
@@ -282,20 +275,20 @@ export default function OpnameLijst() {
               onChangeText={setNieuwNaam}
               placeholder="Bijv. Begane grond inventarisatie"
               placeholderTextColor={c.mutedForeground}
-              style={{
-                borderWidth: 1,
-                borderColor: c.border,
-                borderRadius: 10,
-                padding: 12,
-                fontSize: 15,
-                fontFamily: "Inter_400Regular",
-                color: c.foreground,
-                backgroundColor: c.background,
-                marginBottom: 14,
-              }}
+              style={[
+                tekstStijl("nadruk", c.foreground),
+                {
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  borderRadius: c.radius / 2,
+                  padding: ruimte.m,
+                  backgroundColor: c.background,
+                  marginBottom: ruimte.m + 2,
+                },
+              ]}
             />
 
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs + 2 }]}>
               Datum
             </Text>
             <TextInput
@@ -303,47 +296,46 @@ export default function OpnameLijst() {
               onChangeText={setNieuwDatum}
               placeholder="JJJJ-MM-DD"
               placeholderTextColor={c.mutedForeground}
-              style={{
-                borderWidth: 1,
-                borderColor: c.border,
-                borderRadius: 10,
-                padding: 12,
-                fontSize: 15,
-                fontFamily: "Inter_400Regular",
-                color: c.foreground,
-                backgroundColor: c.background,
-                marginBottom: 14,
-              }}
+              style={[
+                tekstStijl("nadruk", c.foreground),
+                {
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  borderRadius: c.radius / 2,
+                  padding: ruimte.m,
+                  backgroundColor: c.background,
+                  marginBottom: ruimte.m + 2,
+                },
+              ]}
             />
 
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs + 2 }]}>
               Gebouw
             </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ marginBottom: 20 }}
-              contentContainerStyle={{ gap: 8 }}
+              style={{ marginBottom: ruimte.xl }}
+              contentContainerStyle={{ gap: ruimte.s }}
             >
               {(gebouwen ?? []).map((g) => (
                 <Pressable
                   key={g.id}
                   onPress={() => setNieuwGebouwId(g.id)}
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 8,
+                    paddingHorizontal: ruimte.m + 2,
+                    paddingVertical: ruimte.s,
+                    borderRadius: ruimte.s,
                     borderWidth: 1,
                     borderColor: nieuwGebouwId === g.id ? c.primary : c.border,
                     backgroundColor: nieuwGebouwId === g.id ? c.accent : c.background,
                   }}
                 >
                   <Text
-                    style={{
-                      fontSize: 13,
-                      fontFamily: "Inter_500Medium",
-                      color: nieuwGebouwId === g.id ? c.primary : c.foreground,
-                    }}
+                    style={[
+                      tekstStijl("klein", nieuwGebouwId === g.id ? c.primary : c.foreground),
+                      { fontFamily: "Inter_500Medium" },
+                    ]}
                   >
                     {g.naam}
                   </Text>
@@ -356,15 +348,15 @@ export default function OpnameLijst() {
               disabled={!nieuwNaam.trim() || !nieuwGebouwId || maakAan.isPending}
               style={{
                 backgroundColor: !nieuwNaam.trim() || !nieuwGebouwId ? c.muted : c.primary,
-                padding: 14,
-                borderRadius: 12,
+                padding: ruimte.m + 2,
+                borderRadius: c.radius,
                 alignItems: "center",
               }}
             >
               {maakAan.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_700Bold" }]}>
                   Opname aanmaken
                 </Text>
               )}

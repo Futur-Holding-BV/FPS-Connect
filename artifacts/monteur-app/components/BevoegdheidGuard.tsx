@@ -5,7 +5,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { ruimte } from "@workspace/ontwerp";
 
+import { tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { heeftBevoegdheid, type Vereiste } from "@/lib/bevoegdheden";
@@ -24,21 +26,21 @@ export function BevoegdheidGuard({
   if (heeftBevoegdheid(gebruiker, vereiste)) return <>{children}</>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: c.muted, alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+    <View style={{ flex: 1, backgroundColor: c.background, alignItems: "center", justifyContent: "center", padding: ruimte.xxl }}>
+      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: c.muted, alignItems: "center", justifyContent: "center", marginBottom: ruimte.l + ruimte.xs }}>
         <Ionicons name="lock-closed-outline" size={34} color={c.mutedForeground} />
       </View>
-      <Text style={{ color: c.foreground, fontSize: 18, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>
+      <Text style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center", marginBottom: ruimte.s }]}>
         Geen toegang tot dit onderdeel
       </Text>
-      <Text style={{ color: c.mutedForeground, fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 24 }}>
+      <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", lineHeight: 20, marginBottom: ruimte.xl }]}>
         Je huidige profiel geeft geen toegang tot dit scherm. Denk je dat dit niet klopt, vraag het dan na bij de beheerder.
       </Text>
       <Pressable
         onPress={() => (router.canGoBack() ? router.back() : router.replace("/menu"))}
-        style={{ backgroundColor: c.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+        style={{ backgroundColor: c.primary, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.m, borderRadius: c.radius }}
       >
-        <Text style={{ color: "#fff", fontWeight: "600" }}>Terug naar het menu</Text>
+        <Text style={{ color: c.primaryForeground, fontWeight: "600" }}>Terug naar het menu</Text>
       </Pressable>
     </View>
   );

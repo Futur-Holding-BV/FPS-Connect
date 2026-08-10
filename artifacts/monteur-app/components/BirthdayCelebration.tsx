@@ -8,7 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ruimte } from "@workspace/ontwerp";
 
+import { useColors } from "@/hooks/useColors";
+
+// Bewuste feestkleuren: de confetti-kleuren zijn beeldbepalend voor de viering
+// (VORM_01) en blijven bewust letterlijk; gewone UI-kleuren (overlay, tekst)
+// lopen via het palet.
 const CONFETTI_CONFIG = [
   { x: -110, startY: -80, kleur: "#F23B0D" },
   { x: -70, startY: -60, kleur: "#FFD700" },
@@ -66,6 +72,7 @@ export function BirthdayCelebration({
   naam: string;
   onDismiss: () => void;
 }) {
+  const c = useColors();
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textY = useRef(new Animated.Value(20)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -89,7 +96,7 @@ export function BirthdayCelebration({
 
   return (
     <Modal transparent animationType="none" onRequestClose={onDismiss}>
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+      <Animated.View style={[styles.overlay, { backgroundColor: c.dark + "EB", opacity: overlayOpacity }]}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onDismiss} />
 
         {CONFETTI_CONFIG.map((cfg, idx) => (
@@ -101,8 +108,8 @@ export function BirthdayCelebration({
             <Text style={styles.taartEmoji}>🎂</Text>
           </Animated.View>
           <Animated.View style={{ opacity: textOpacity, transform: [{ translateY: textY }] }}>
-            <Text style={styles.felicitatie}>Gefeliciteerd, {naam}!</Text>
-            <Text style={styles.subTekst}>Het hele team van FPS Connect wenst je een fijne verjaardag toe.</Text>
+            <Text style={[styles.felicitatie, { color: c.darkForeground }]}>Gefeliciteerd, {naam}!</Text>
+            <Text style={[styles.subTekst, { color: c.darkMuted }]}>Het hele team van FPS Connect wenst je een fijne verjaardag toe.</Text>
           </Animated.View>
         </View>
       </Animated.View>
@@ -113,7 +120,6 @@ export function BirthdayCelebration({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 18, 26, 0.92)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -127,22 +133,20 @@ const styles = StyleSheet.create({
   },
   inhoud: {
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: ruimte.xxl,
   },
   taartEmoji: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: ruimte.l,
     textAlign: "center",
   },
   felicitatie: {
-    color: "#ffffff",
     fontSize: 22,
     fontFamily: "Inter_700Bold",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: ruimte.s,
   },
   subTekst: {
-    color: "#9ca3af",
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     textAlign: "center",

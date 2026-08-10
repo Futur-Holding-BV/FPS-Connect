@@ -23,7 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegeStatus } from "@/components/LegeStatus";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { Knop, LijstFout, bovenInset, onderInset } from "@/components/ui";
+import { Knop, LijstFout, Statusmerk, tekstStijl, bovenInset, onderInset } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useColors } from "@/hooks/useColors";
@@ -55,14 +56,18 @@ const MELDING_STATUS_LABELS: Record<string, string> = {
   afgewezen_duplicaat: "Afgewezen (duplicaat)",
 };
 
-const MELDING_STATUS_KLEUR: Record<string, string> = {
-  nieuw: "#2563eb",
-  in_beoordeling: "#d97706",
-  actie_nodig: "#dc2626",
-  ingepland: "#7c3aed",
-  doorgezet_garage: "#0891b2",
-  opgelost: "#16a34a",
-  afgewezen_duplicaat: "#6b7280",
+// Meldingstatus op het statuspalet van het ontwerpsysteem. De oorspronkelijke
+// per-status kleuren (blauw/oranje/rood/paars/cyaan/groen/grijs) bestaan niet
+// als aparte tokens; ze worden op de dichtstbijzijnde semantische soort gemapt.
+type MeldingSoort = "neutraal" | "succes" | "waarschuwing" | "fout" | "primair";
+const MELDING_STATUS_SOORT: Record<string, MeldingSoort> = {
+  nieuw: "primair",
+  in_beoordeling: "waarschuwing",
+  actie_nodig: "fout",
+  ingepland: "primair",
+  doorgezet_garage: "primair",
+  opgelost: "succes",
+  afgewezen_duplicaat: "neutraal",
 };
 
 const MELDING_TYPE_LABELS: Record<string, string> = {
@@ -268,11 +273,11 @@ export default function MijnAutoScherm() {
                     borderRadius: c.radius,
                     borderWidth: 1,
                     borderColor: c.border,
-                    padding: 18,
-                    gap: 12,
+                    padding: ruimte.l,
+                    gap: ruimte.m,
                   }}
                 >
-                  <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_700Bold" }}>
+                  <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_700Bold" }]}>
                     Eerstvolgend onderhoud
                   </Text>
                   {voertuig.volgend_onderhoud_km != null ? (
@@ -293,8 +298,8 @@ export default function MijnAutoScherm() {
               ) : null}
 
               {/* Meldingen */}
-              <View style={{ gap: 10 }}>
-                <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_700Bold", marginTop: 4 }}>
+              <View style={{ gap: ruimte.s + 2 }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_700Bold", marginTop: ruimte.xs }]}>
                   Mijn meldingen
                 </Text>
                 {meldingen.length === 0 ? (
@@ -304,10 +309,10 @@ export default function MijnAutoScherm() {
                       borderRadius: c.radius,
                       borderWidth: 1,
                       borderColor: c.border,
-                      padding: 18,
+                      padding: ruimte.l,
                     }}
                   >
-                    <Text style={{ fontSize: 14, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                    <Text style={tekstStijl("standaard", c.mutedForeground)}>
                       Je hebt nog geen meldingen gemaakt voor deze auto.
                     </Text>
                   </View>
@@ -317,7 +322,7 @@ export default function MijnAutoScherm() {
               </View>
 
               {/* Melding maken */}
-              <View style={{ marginTop: 6 }}>
+              <View style={{ marginTop: ruimte.xs }}>
                 <Knop
                   titel="Melding maken"
                   onPress={() => router.push("/voertuig-melding")}
@@ -325,13 +330,7 @@ export default function MijnAutoScherm() {
                 />
                 {!isOnline ? (
                   <Text
-                    style={{
-                      fontSize: 13,
-                      color: c.mutedForeground,
-                      textAlign: "center",
-                      marginTop: 8,
-                      fontFamily: "Inter_400Regular",
-                    }}
+                    style={[tekstStijl("klein", c.mutedForeground), { textAlign: "center", marginTop: ruimte.s }]}
                   >
                     Je bekijkt de laatst bekende gegevens (offline).
                   </Text>
@@ -348,21 +347,24 @@ export default function MijnAutoScherm() {
 // ─── Deelcomponenten ──────────────────────────────────────────────────────────
 function Kentekenplaat({ kenteken }: { kenteken: string }) {
   return (
+    // NB: de kleuren van de kentekenplaat (geel/blauw/wit) zijn de wettelijke
+    // NL-plaatkleuren en geen ontwerptokens — daarom bewust als letterlijke
+    // kleuren behouden (geen paletequivalent).
     <View
       style={{
         flexDirection: "row",
         alignItems: "stretch",
-        borderRadius: 8,
+        borderRadius: ruimte.s,
         overflow: "hidden",
         borderWidth: 1.5,
         borderColor: "#111827",
         backgroundColor: "#F5C518",
       }}
     >
-      <View style={{ backgroundColor: "#0B4EA2", paddingHorizontal: 6, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ backgroundColor: "#0B4EA2", paddingHorizontal: ruimte.s - 2, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" }}>NL</Text>
       </View>
-      <View style={{ paddingHorizontal: 10, paddingVertical: 6, justifyContent: "center" }}>
+      <View style={{ paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.s - 2, justifyContent: "center" }}>
         <Text
           style={{
             color: "#111827",
@@ -391,17 +393,17 @@ function GegevensRij({
 }) {
   const c = useColors();
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: ruimte.m }}>
       <Ionicons name={icoon} size={20} color={c.mutedForeground} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+        <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
           {label}
         </Text>
-        <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold", marginTop: 1 }}>
+        <Text style={[tekstStijl("nadruk", c.foreground), { marginTop: 1 }]}>
           {waarde}
         </Text>
         {subtekst ? (
-          <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
             {subtekst}
           </Text>
         ) : null}
@@ -429,7 +431,7 @@ function ApkRij({ datum }: { datum: string | null | undefined }) {
         : "";
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: ruimte.m }}>
       <Ionicons
         name={waarschuwing ? "alert-circle-outline" : "shield-checkmark-outline"}
         size={20}
@@ -437,26 +439,15 @@ function ApkRij({ datum }: { datum: string | null | undefined }) {
         style={{ marginTop: 1 }}
       />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+        <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
           APK-vervaldatum
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 1 }}>
-          <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: ruimte.s, marginTop: 1 }}>
+          <Text style={tekstStijl("nadruk", c.foreground)}>
             {geformatteerd ?? "Onbekend"}
           </Text>
           {waarschuwing ? (
-            <View
-              style={{
-                backgroundColor: badgeKleur,
-                borderRadius: 20,
-                paddingHorizontal: 10,
-                paddingVertical: 3,
-              }}
-            >
-              <Text style={{ fontSize: 12, color: "#fff", fontFamily: "Inter_600SemiBold" }}>
-                {badgeTekst}
-              </Text>
-            </View>
+            <Statusmerk label={badgeTekst} soort={verlopen ? "fout" : "waarschuwing"} />
           ) : null}
         </View>
       </View>
@@ -467,7 +458,7 @@ function ApkRij({ datum }: { datum: string | null | undefined }) {
 function MeldingKaart({ melding }: { melding: MijnAutoMelding }) {
   const c = useColors();
   const statusLabel = MELDING_STATUS_LABELS[melding.status] ?? melding.status;
-  const statusKleur = MELDING_STATUS_KLEUR[melding.status] ?? c.mutedForeground;
+  const statusSoort = MELDING_STATUS_SOORT[melding.status] ?? "neutraal";
   const typeLabel = MELDING_TYPE_LABELS[melding.type] ?? melding.type;
   const datum = formatteerDatum(melding.aangemaakt_op);
 
@@ -478,29 +469,18 @@ function MeldingKaart({ melding }: { melding: MijnAutoMelding }) {
         borderRadius: c.radius,
         borderWidth: 1,
         borderColor: c.border,
-        padding: 16,
-        gap: 8,
+        padding: ruimte.l,
+        gap: ruimte.s,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Text style={{ fontSize: 14, color: c.mutedForeground, fontFamily: "Inter_500Medium" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ruimte.s + 2 }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { fontFamily: "Inter_500Medium" }]}>
           {typeLabel}
           {datum ? ` · ${datum}` : ""}
         </Text>
-        <View
-          style={{
-            backgroundColor: statusKleur,
-            borderRadius: 20,
-            paddingHorizontal: 10,
-            paddingVertical: 3,
-          }}
-        >
-          <Text style={{ fontSize: 12, color: "#fff", fontFamily: "Inter_600SemiBold" }}>
-            {statusLabel}
-          </Text>
-        </View>
+        <Statusmerk label={statusLabel} soort={statusSoort} />
       </View>
-      <Text style={{ fontSize: 15, color: c.foreground, fontFamily: "Inter_400Regular", lineHeight: 21 }}>
+      <Text style={tekstStijl("standaard", c.foreground)}>
         {melding.omschrijving}
       </Text>
     </View>

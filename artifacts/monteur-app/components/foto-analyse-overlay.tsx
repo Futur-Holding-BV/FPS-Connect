@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import React from "react";
 import { Image, Text, View } from "react-native";
 
 import { useUitvoeringTheme } from "@/context/UitvoeringThemeContext";
+import { useColors } from "@/hooks/useColors";
 
 export type FotoAnalyseStatus = "wachtend" | "bezig" | "akkoord" | "aandacht" | "herstel";
 
@@ -27,23 +29,18 @@ type FotoAnalyseOverlayProps = {
 };
 
 function StatusBalk({ status }: { status: FotoAnalyseStatus }) {
+  const c = useColors();
   const kleur =
     status === "akkoord"
-      ? "#16A34A"
+      ? c.success
       : status === "aandacht"
-        ? "#D97706"
+        ? c.warning
         : status === "herstel"
-          ? "#DC2626"
-          : "#6B7280";
+          ? c.destructive
+          : c.mutedForeground;
 
-  const achtergrond =
-    status === "akkoord"
-      ? "#F0FDF4"
-      : status === "aandacht"
-        ? "#FFFBEB"
-        : status === "herstel"
-          ? "#FEF2F2"
-          : "#F9FAFB";
+  // Zachte statusachtergrond = dezelfde statuskleur met lage opacity.
+  const achtergrond = kleur + "14";
 
   const icoon: keyof typeof Ionicons.glyphMap =
     status === "akkoord"
@@ -67,15 +64,15 @@ function StatusBalk({ status }: { status: FotoAnalyseStatus }) {
     <View
       style={{
         backgroundColor: achtergrond,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        borderRadius: c.radius,
+        paddingHorizontal: ruimte.m,
+        paddingVertical: ruimte.s,
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
+        gap: ruimte.s,
         borderWidth: 1,
         borderColor: kleur + "44",
-        marginTop: 8,
+        marginTop: ruimte.s,
       }}
     >
       <Ionicons name={icoon} size={18} color={kleur} />
@@ -110,22 +107,23 @@ export function FotoAnalyseOverlay({
   breedte,
   hoogte = 260,
 }: FotoAnalyseOverlayProps) {
+  const c = useColors();
   const { theme } = useUitvoeringTheme();
 
   const randKleur =
     status === "akkoord"
-      ? "#16A34A"
+      ? c.success
       : status === "aandacht"
-        ? "#D97706"
+        ? c.warning
         : status === "herstel"
-          ? "#DC2626"
+          ? c.destructive
           : theme.rand;
 
   return (
     <View>
       <View
         style={{
-          borderRadius: 12,
+          borderRadius: c.radius,
           overflow: "hidden",
           borderWidth: 2,
           borderColor: randKleur,
@@ -176,21 +174,21 @@ export function FotoAnalyseOverlay({
           <View
             style={{
               position: "absolute",
-              top: 8,
-              right: 8,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              borderRadius: 16,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
+              top: ruimte.s,
+              right: ruimte.s,
+              backgroundColor: c.dark + "99",
+              borderRadius: c.radius,
+              paddingHorizontal: ruimte.s + 2,
+              paddingVertical: ruimte.xs + 1,
               flexDirection: "row",
               alignItems: "center",
-              gap: 6,
+              gap: ruimte.xs + 2,
             }}
           >
-            <Ionicons name="hourglass-outline" size={12} color="#fff" />
+            <Ionicons name="hourglass-outline" size={12} color={c.darkForeground} />
             <Text
               style={{
-                color: "#fff",
+                color: c.darkForeground,
                 fontSize: 11,
                 fontFamily: "Inter_600SemiBold",
               }}

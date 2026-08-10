@@ -23,6 +23,8 @@ import { useAuth } from "@/context/auth";
 import { uploadFoto } from "@/lib/upload";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { useColors } from "@/hooks/useColors";
+import { tekstStijl } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 
 const DOMEIN = API_DOMEIN;
 
@@ -51,11 +53,17 @@ const STORING_TYPEN: { waarde: string; label: string }[] = [
   { waarde: "overige", label: "Overig" },
 ];
 
-const ERNST_CONFIG: Record<string, { bg: string; tekst: string; label: string }> = {
-  licht: { bg: "#fef3c7", tekst: "#92400e", label: "Licht" },
-  matig: { bg: "#ffedd5", tekst: "#c2410c", label: "Matig" },
-  ernstig: { bg: "#fee2e2", tekst: "#dc2626", label: "Ernstig" },
-};
+// Ernst-indicatie op het statuspalet. Het palet kent geen aparte "oranje/matig"
+// kleur; licht en matig delen daarom het waarschuwingstoken (matig iets sterker),
+// ernstig gebruikt het fouttoken. Achtergrond = token met alpha-suffix.
+type ErnstStijl = { bg: string; tekst: string; label: string };
+function ernstStijl(c: ReturnType<typeof useColors>): Record<string, ErnstStijl> {
+  return {
+    licht: { bg: c.warning + "22", tekst: c.warning, label: "Licht" },
+    matig: { bg: c.warning + "33", tekst: c.warning, label: "Matig" },
+    ernstig: { bg: c.destructive + "22", tekst: c.destructive, label: "Ernstig" },
+  };
+}
 
 interface MeldingResultaat {
   id: number;
@@ -194,30 +202,28 @@ export default function VoertuigMeldingScherm() {
 
   const toggleBtn = (actief: boolean) => ({
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: ruimte.s + 2,
+    borderRadius: c.radius / 2,
     borderWidth: 1.5,
     borderColor: actief ? c.primary : c.border,
     backgroundColor: actief ? `${c.primary}15` : c.card,
     alignItems: "center" as const,
   });
   const toggleTekst = (actief: boolean) => ({
-    fontSize: 14,
+    ...tekstStijl("standaard", actief ? c.primary : c.foreground),
     fontFamily: actief ? "Inter_700Bold" : "Inter_400Regular",
-    color: actief ? c.primary : c.foreground,
   });
   const chip = (actief: boolean) => ({
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: ruimte.m,
+    paddingVertical: ruimte.xs + 2,
+    borderRadius: ruimte.xl - 4,
     borderWidth: 1.5,
     borderColor: actief ? c.primary : c.border,
     backgroundColor: actief ? `${c.primary}18` : c.card,
   });
   const chipTekst = (actief: boolean) => ({
-    fontSize: 13,
+    ...tekstStijl("klein", actief ? c.primary : c.foreground),
     fontFamily: actief ? "Inter_600SemiBold" : "Inter_400Regular",
-    color: actief ? c.primary : c.foreground,
   });
 
   const s = StyleSheet.create({
@@ -225,40 +231,38 @@ export default function VoertuigMeldingScherm() {
     header: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 12,
-      gap: 12,
+      paddingHorizontal: ruimte.l,
+      paddingTop: ruimte.l,
+      paddingBottom: ruimte.m,
+      gap: ruimte.m,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
       backgroundColor: c.card,
     },
-    titel: { fontSize: 17, fontFamily: "Inter_700Bold", color: c.foreground, flex: 1 },
-    sectie: { marginHorizontal: 16, marginTop: 20 },
-    label: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: c.mutedForeground, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
-    toggleRow: { flexDirection: "row", gap: 10 },
-    chipRij: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    titel: { ...tekstStijl("sectiekop", c.foreground), flex: 1 },
+    sectie: { marginHorizontal: ruimte.l, marginTop: ruimte.xl },
+    label: { ...tekstStijl("bijschrift", c.mutedForeground), fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs + 2, textTransform: "uppercase", letterSpacing: 0.5 },
+    toggleRow: { flexDirection: "row", gap: ruimte.s + 2 },
+    chipRij: { flexDirection: "row", flexWrap: "wrap", gap: ruimte.s },
     invoer: {
+      ...tekstStijl("standaard", c.foreground),
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 14,
-      fontFamily: "Inter_400Regular",
-      color: c.foreground,
-      minHeight: 100,
+      borderRadius: c.radius / 2,
+      paddingHorizontal: ruimte.m + 2,
+      paddingVertical: ruimte.m,
+      minHeight: ruimte.xxl * 3 + ruimte.xs,
       textAlignVertical: "top" as const,
     },
-    fotoRij: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-    fotoThumb: { width: 80, height: 80, borderRadius: 8, overflow: "hidden" as const, position: "relative" as const },
-    fotoThumbImg: { width: 80, height: 80, borderRadius: 8 },
-    verwijderKnop: { position: "absolute" as const, top: 4, right: 4, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10, padding: 2 },
+    fotoRij: { flexDirection: "row", gap: ruimte.s + 2, flexWrap: "wrap" },
+    fotoThumb: { width: ruimte.xxl + ruimte.xxl + ruimte.l, height: ruimte.xxl + ruimte.xxl + ruimte.l, borderRadius: ruimte.s, overflow: "hidden" as const, position: "relative" as const },
+    fotoThumbImg: { width: ruimte.xxl + ruimte.xxl + ruimte.l, height: ruimte.xxl + ruimte.xxl + ruimte.l, borderRadius: ruimte.s },
+    verwijderKnop: { position: "absolute" as const, top: ruimte.xs, right: ruimte.xs, backgroundColor: c.dark + "99", borderRadius: ruimte.s + 2, padding: ruimte.xs / 2 },
     fotoToevoegen: {
-      width: 80,
-      height: 80,
-      borderRadius: 8,
+      width: ruimte.xxl + ruimte.xxl + ruimte.l,
+      height: ruimte.xxl + ruimte.xxl + ruimte.l,
+      borderRadius: ruimte.s,
       borderWidth: 1.5,
       borderColor: c.border,
       borderStyle: "dashed" as const,
@@ -267,39 +271,39 @@ export default function VoertuigMeldingScherm() {
       backgroundColor: c.card,
     },
     verstuurKnop: {
-      marginHorizontal: 16,
-      marginTop: 28,
-      marginBottom: 24,
+      marginHorizontal: ruimte.l,
+      marginTop: ruimte.xl + ruimte.xs,
+      marginBottom: ruimte.xl,
       backgroundColor: c.primary,
-      borderRadius: 12,
-      paddingVertical: 14,
+      borderRadius: c.radius,
+      paddingVertical: ruimte.m + 2,
       alignItems: "center" as const,
     },
-    verstuurTekst: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
+    verstuurTekst: { ...tekstStijl("nadruk", c.primaryForeground), fontFamily: "Inter_700Bold" },
     fout: {
-      marginHorizontal: 16,
-      marginTop: 12,
-      backgroundColor: "#fee2e2",
-      borderRadius: 8,
-      padding: 12,
+      marginHorizontal: ruimte.l,
+      marginTop: ruimte.m,
+      backgroundColor: c.destructive + "22",
+      borderRadius: ruimte.s,
+      padding: ruimte.m,
     },
-    foutTekst: { color: "#dc2626", fontSize: 13, fontFamily: "Inter_400Regular" },
-    ladenContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: 16 },
-    ladenTekst: { fontSize: 14, fontFamily: "Inter_400Regular", color: c.mutedForeground },
-    resultaatKaart: { margin: 16, backgroundColor: c.card, borderRadius: 12, borderWidth: 1, borderColor: c.border, overflow: "hidden" as const },
-    resultaatKop: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border, flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
-    resultaatKopTekst: { fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground },
-    resultaatRij: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
-    resultaatLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: c.mutedForeground, textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: 4 },
-    resultaatTekst: { fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, lineHeight: 20 },
-    kostenBadge: { marginTop: 8, backgroundColor: "#fef3c7", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, alignSelf: "flex-start" as const },
-    kostenTekst: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#92400e" },
+    foutTekst: { ...tekstStijl("klein", c.destructive) },
+    ladenContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: ruimte.l },
+    ladenTekst: { ...tekstStijl("standaard", c.mutedForeground) },
+    resultaatKaart: { margin: ruimte.l, backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, overflow: "hidden" as const },
+    resultaatKop: { paddingHorizontal: ruimte.l, paddingVertical: ruimte.m, borderBottomWidth: 1, borderBottomColor: c.border, flexDirection: "row" as const, alignItems: "center" as const, gap: ruimte.s },
+    resultaatKopTekst: { ...tekstStijl("nadruk", c.foreground), fontFamily: "Inter_700Bold" },
+    resultaatRij: { paddingHorizontal: ruimte.l, paddingVertical: ruimte.m, borderBottomWidth: 1, borderBottomColor: c.border },
+    resultaatLabel: { ...tekstStijl("bijschrift", c.mutedForeground), fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: ruimte.xs },
+    resultaatTekst: { ...tekstStijl("standaard", c.foreground) },
+    kostenBadge: { marginTop: ruimte.s, backgroundColor: c.warning + "22", borderRadius: ruimte.xs + 2, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs + 2, alignSelf: "flex-start" as const },
+    kostenTekst: { ...tekstStijl("klein", c.warning), fontFamily: "Inter_600SemiBold" },
     klaarKnop: {
-      marginHorizontal: 16,
-      marginTop: 12,
-      marginBottom: 24,
-      borderRadius: 12,
-      paddingVertical: 14,
+      marginHorizontal: ruimte.l,
+      marginTop: ruimte.m,
+      marginBottom: ruimte.xl,
+      borderRadius: c.radius,
+      paddingVertical: ruimte.m + 2,
       alignItems: "center" as const,
       borderWidth: 1,
       borderColor: c.border,
@@ -333,17 +337,17 @@ export default function VoertuigMeldingScherm() {
           <Text style={s.titel}>Voertuig melden</Text>
         </View>
         <ScrollView>
-          <View style={{ marginHorizontal: 16, marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#fef3c7", borderRadius: 10, padding: 14 }}>
-            <Ionicons name="cloud-offline-outline" size={20} color="#d97706" style={{ marginTop: 1 }} />
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.xl, flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2, backgroundColor: c.warning + "22", borderRadius: c.radius / 2, padding: ruimte.m + 2 }}>
+            <Ionicons name="cloud-offline-outline" size={20} color={c.warning} style={{ marginTop: 1 }} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#92400e" }}>Melding opgeslagen (offline)</Text>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#a16207", marginTop: 4, lineHeight: 18 }}>
+              <Text style={[tekstStijl("standaard", c.warning), { fontFamily: "Inter_700Bold" }]}>Melding opgeslagen (offline)</Text>
+              <Text style={[tekstStijl("klein", c.warning), { marginTop: ruimte.xs }]}>
                 Uw melding is lokaal opgeslagen en wordt automatisch verzonden zodra de verbinding hersteld is.
               </Text>
             </View>
           </View>
           <Pressable style={s.klaarKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Sluiten</Text>
+            <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>Sluiten</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -354,7 +358,7 @@ export default function VoertuigMeldingScherm() {
   if ((stap === "resultaat" || stap === "opgeslagen") && resultaat) {
     const voertuigLabel = [resultaat.voertuig_merk, resultaat.voertuig_type_naam, resultaat.voertuig_kenteken ? `(${resultaat.voertuig_kenteken})` : null]
       .filter(Boolean).join(" ");
-    const ernstConfig = resultaat.ai_ernst_indicatie ? ERNST_CONFIG[resultaat.ai_ernst_indicatie] : null;
+    const ernstConfig = resultaat.ai_ernst_indicatie ? ernstStijl(c)[resultaat.ai_ernst_indicatie] : null;
     const heeftWaarschuwingen = (resultaat.ai_gelezen_waarschuwingen?.length ?? 0) > 0;
 
     return (
@@ -367,11 +371,11 @@ export default function VoertuigMeldingScherm() {
         </View>
         <ScrollView>
           {/* Bevestiging */}
-          <View style={{ marginHorizontal: 16, marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#dcfce7", borderRadius: 10, padding: 14 }}>
-            <Ionicons name="checkmark-circle" size={20} color="#16a34a" style={{ marginTop: 1 }} />
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.xl, flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2, backgroundColor: c.success + "22", borderRadius: c.radius / 2, padding: ruimte.m + 2 }}>
+            <Ionicons name="checkmark-circle" size={20} color={c.success} style={{ marginTop: 1 }} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#14532d" }}>Melding vastgelegd</Text>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#166534", marginTop: 2 }}>
+              <Text style={[tekstStijl("standaard", c.success), { fontFamily: "Inter_700Bold" }]}>Melding vastgelegd</Text>
+              <Text style={[tekstStijl("klein", c.success), { marginTop: ruimte.xs / 2 }]}>
                 {voertuigLabel || "Uw voertuig"} — {resultaat.type === "schade" ? "Schademelding" : "Storing"}
               </Text>
             </View>
@@ -379,9 +383,9 @@ export default function VoertuigMeldingScherm() {
 
           {/* Duplicaat waarschuwing */}
           {resultaat.ai_mogelijk_duplicaat_van_id != null && (
-            <View style={{ marginHorizontal: 16, marginTop: 12, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#fff7ed", borderRadius: 10, padding: 14, borderWidth: 1, borderColor: "#fed7aa" }}>
-              <Ionicons name="warning-outline" size={18} color="#ea580c" style={{ marginTop: 1 }} />
-              <Text style={{ flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: "#9a3412", lineHeight: 18 }}>
+            <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.m, flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2, backgroundColor: c.warning + "18", borderRadius: c.radius / 2, padding: ruimte.m + 2, borderWidth: 1, borderColor: c.warning + "55" }}>
+              <Ionicons name="warning-outline" size={18} color={c.warning} style={{ marginTop: 1 }} />
+              <Text style={[tekstStijl("klein", c.warning), { flex: 1 }]}>
                 Er bestaat mogelijk al een openstaande melding voor deze schadelocatie. De administratie beoordeelt of dit een duplicaat is.
               </Text>
             </View>
@@ -393,8 +397,8 @@ export default function VoertuigMeldingScherm() {
               <Ionicons name="sparkles" size={16} color={c.primary} />
               <Text style={s.resultaatKopTekst}>AI analyse</Text>
               {ernstConfig && (
-                <View style={{ marginLeft: "auto", backgroundColor: ernstConfig.bg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: ernstConfig.tekst }}>{ernstConfig.label}</Text>
+                <View style={{ marginLeft: "auto", backgroundColor: ernstConfig.bg, borderRadius: ruimte.xs + 2, paddingHorizontal: ruimte.s, paddingVertical: ruimte.xs - 1 }}>
+                  <Text style={[tekstStijl("bijschrift", ernstConfig.tekst), { fontFamily: "Inter_600SemiBold" }]}>{ernstConfig.label}</Text>
                 </View>
               )}
             </View>
@@ -414,26 +418,26 @@ export default function VoertuigMeldingScherm() {
               <View style={s.resultaatRij}>
                 <Text style={s.resultaatLabel}>Zichtbare waarschuwingen op foto</Text>
                 {(resultaat.ai_gelezen_waarschuwingen ?? []).map((w, i) => (
-                  <Text key={i} style={[s.resultaatTekst, { marginTop: i > 0 ? 4 : 0 }]}>
+                  <Text key={i} style={[s.resultaatTekst, { marginTop: i > 0 ? ruimte.xs : 0 }]}>
                     {"\u2022"} {w}
                   </Text>
                 ))}
               </View>
             )}
             {resultaat.ai_kosten_indicatie && (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.m }}>
                 <Text style={s.resultaatLabel}>Kosteninschatting</Text>
                 <View style={s.kostenBadge}>
                   <Text style={s.kostenTekst}>{resultaat.ai_kosten_tekst ?? "Kosten verwacht — administratie wordt genotificeerd"}</Text>
                 </View>
-                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: c.mutedForeground, marginTop: 8 }}>
+                <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.s }]}>
                   De administratie ontvangt deze melding voor verdere afhandeling.
                 </Text>
               </View>
             )}
             {!resultaat.ai_diagnose && !resultaat.ai_oplossing && (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: c.mutedForeground, fontStyle: "italic" }}>
+              <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.m }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { fontStyle: "italic" }]}>
                   AI analyse niet beschikbaar — melding is wel opgeslagen.
                 </Text>
               </View>
@@ -441,7 +445,7 @@ export default function VoertuigMeldingScherm() {
           </View>
 
           <Pressable style={s.klaarKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Sluiten</Text>
+            <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>Sluiten</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -540,7 +544,7 @@ export default function VoertuigMeldingScherm() {
               <View key={i} style={s.fotoThumb}>
                 <Image source={{ uri }} style={s.fotoThumbImg} />
                 <Pressable style={s.verwijderKnop} onPress={() => verwijderFoto(i)}>
-                  <Ionicons name="close" size={12} color="#fff" />
+                  <Ionicons name="close" size={12} color={c.darkForeground} />
                 </Pressable>
               </View>
             ))}
@@ -556,7 +560,7 @@ export default function VoertuigMeldingScherm() {
                 }
               >
                 <Ionicons name="camera-outline" size={24} color={c.mutedForeground} />
-                <Text style={{ fontSize: 10, color: c.mutedForeground, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs }]}>
                   Foto
                 </Text>
               </Pressable>

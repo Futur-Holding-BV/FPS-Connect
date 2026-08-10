@@ -8,15 +8,15 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { LijstFout, Ladenstaat, Statusmerk, tekstStijl, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { heeftBevoegdheid } from "@/lib/bevoegdheden";
 import { useColors } from "@/hooks/useColors";
@@ -57,29 +57,29 @@ export default function GebouwDetail() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("schermtitel", c.darkForeground)}>
           {gebouw?.naam ?? "Gebouw"}
         </Text>
-        <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+        <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
           Kies een verdieping om de plattegrond te openen
         </Text>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -93,24 +93,21 @@ export default function GebouwDetail() {
           keyExtractor={(v) => String(v.id)}
           numColumns={kolommen}
           columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m, paddingBottom: insets.bottom + ruimte.xl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.l }]}>
               Dit gebouw heeft nog geen verdiepingen.
             </Text>
           }
           ListFooterComponent={
-            <View style={{ gap: 12 }}>
+            <View style={{ gap: ruimte.m }}>
             {magProjecten && opdrachten.length > 0 ? (
-              <View style={{ marginTop: 12, gap: 10 }}>
+              <View style={{ marginTop: ruimte.m, gap: ruimte.s + 2 }}>
                 <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontSize: 13,
-                    fontFamily: "Inter_600SemiBold",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
+                  style={[
+                    tekstStijl("bijschrift", c.mutedForeground),
+                    { textTransform: "uppercase", letterSpacing: 0.5 },
+                  ]}
                 >
                   Opdrachten
                 </Text>
@@ -123,32 +120,32 @@ export default function GebouwDetail() {
                       borderRadius: c.radius,
                       borderWidth: 1,
                       borderColor: c.border,
-                      padding: 16,
+                      padding: ruimte.l,
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 14,
+                      gap: ruimte.m + 2,
                       opacity: pressed ? 0.85 : 1,
                     })}
                   >
                     <View
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 10,
+                        width: ruimte.xl + ruimte.xl,
+                        height: ruimte.xl + ruimte.xl,
+                        borderRadius: c.radius / 2,
                         backgroundColor: c.secondary,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                      <Text style={[tekstStijl("bijschrift", c.mutedForeground), { fontFamily: "Inter_700Bold" }]}>
                         {o.werknummer ?? `#${o.id}`}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold" }} numberOfLines={1}>
+                      <Text style={tekstStijl("nadruk", c.foreground)} numberOfLines={1}>
                         {o.titel}
                       </Text>
-                      <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                      <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                         {o.status}
                       </Text>
                     </View>
@@ -157,15 +154,12 @@ export default function GebouwDetail() {
               </View>
             ) : null}
             {documenten.length > 0 ? (
-              <View style={{ marginTop: 12, gap: 10 }}>
+              <View style={{ marginTop: ruimte.m, gap: ruimte.s + 2 }}>
                 <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontSize: 13,
-                    fontFamily: "Inter_600SemiBold",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
+                  style={[
+                    tekstStijl("bijschrift", c.mutedForeground),
+                    { textTransform: "uppercase", letterSpacing: 0.5 },
+                  ]}
                 >
                   Documenten
                 </Text>
@@ -186,35 +180,35 @@ export default function GebouwDetail() {
                       borderRadius: c.radius,
                       borderWidth: 1,
                       borderColor: c.border,
-                      padding: 16,
+                      padding: ruimte.l,
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 14,
+                      gap: ruimte.m + 2,
                       opacity: pressed ? 0.85 : 1,
                     })}
                   >
                     <View
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 10,
+                        width: ruimte.xl + ruimte.xl,
+                        height: ruimte.xl + ruimte.xl,
+                        borderRadius: c.radius / 2,
                         backgroundColor: c.secondary,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                      <Text style={[tekstStijl("bijschrift", c.mutedForeground), { fontFamily: "Inter_700Bold" }]}>
                         {ext || "DOC"}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text
-                        style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold" }}
+                        style={tekstStijl("nadruk", c.foreground)}
                         numberOfLines={1}
                       >
                         {t.naam}
                       </Text>
-                      <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                      <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                         Tik om te openen
                       </Text>
                     </View>
@@ -239,54 +233,40 @@ export default function GebouwDetail() {
                   borderRadius: c.radius,
                   borderWidth: 1,
                   borderColor: c.border,
-                  padding: 18,
+                  padding: ruimte.l,
                   width: itemBreedte,
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 14,
+                  gap: ruimte.m + 2,
                   opacity: pressed ? 0.85 : 1,
                 })}
               >
                 <View
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
+                    width: ruimte.xxl + ruimte.l,
+                    height: ruimte.xxl + ruimte.l,
+                    borderRadius: c.radius,
                     backgroundColor: c.accent,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Text style={{ color: c.accentForeground, fontSize: 18, fontFamily: "Inter_700Bold" }}>
+                  <Text style={tekstStijl("sectiekop", c.accentForeground)}>
                     {item.niveau}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 17, color: c.foreground, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={tekstStijl("sectiekop", c.foreground)}>
                     {item.naam}
                   </Text>
-                  <Text style={{ fontSize: 14, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                  <Text style={[tekstStijl("standaard", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                     {item.totaal_voorzieningen ?? 0} voorzieningen
                   </Text>
                 </View>
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: 8,
-                    backgroundColor: heeftPlan ? "rgba(34,160,107,0.15)" : c.secondary,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontFamily: "Inter_600SemiBold",
-                      color: heeftPlan ? c.success : c.mutedForeground,
-                    }}
-                  >
-                    {heeftPlan ? "Plattegrond" : "Geen plan"}
-                  </Text>
-                </View>
+                <Statusmerk
+                  label={heeftPlan ? "Plattegrond" : "Geen plan"}
+                  soort={heeftPlan ? "succes" : "neutraal"}
+                />
               </Pressable>
             );
           }}

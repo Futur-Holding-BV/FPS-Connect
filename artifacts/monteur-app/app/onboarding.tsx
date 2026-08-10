@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
+import { tekstStijl } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 
 export const ONBOARDING_KEY = "fps_onboarding_voltooid";
@@ -124,15 +126,10 @@ function StapInhoud({ stap }: { stap: Stap }) {
   if (typeof stap.inhoud === "string") {
     return (
       <Text
-        style={{
-          fontSize: 15,
-          fontFamily: "Inter_400Regular",
-          color: c.mutedForeground,
-          textAlign: "center",
-          lineHeight: 24,
-          marginTop: 12,
-          paddingHorizontal: 8,
-        }}
+        style={[
+          tekstStijl("standaard", c.mutedForeground),
+          { textAlign: "center", lineHeight: 24, marginTop: ruimte.m, paddingHorizontal: ruimte.s },
+        ]}
       >
         {stap.inhoud}
       </Text>
@@ -141,7 +138,7 @@ function StapInhoud({ stap }: { stap: Stap }) {
 
   return (
     <ScrollView
-      style={{ marginTop: 12, width: "100%" }}
+      style={{ marginTop: ruimte.m, width: "100%" }}
       showsVerticalScrollIndicator={false}
     >
       {stap.inhoud.map((item, i) => (
@@ -151,29 +148,17 @@ function StapInhoud({ stap }: { stap: Stap }) {
             backgroundColor: c.card,
             borderWidth: 1,
             borderColor: c.border,
-            borderRadius: 10,
-            padding: 14,
-            marginBottom: 8,
+            borderRadius: c.radius,
+            padding: ruimte.m + 2,
+            marginBottom: ruimte.s,
           }}
         >
           <Text
-            style={{
-              fontSize: 14,
-              fontFamily: "Inter_600SemiBold",
-              color: c.foreground,
-              marginBottom: 4,
-            }}
+            style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs }]}
           >
             {item.titel}
           </Text>
-          <Text
-            style={{
-              fontSize: 13,
-              fontFamily: "Inter_400Regular",
-              color: c.mutedForeground,
-              lineHeight: 20,
-            }}
-          >
+          <Text style={tekstStijl("klein", c.mutedForeground)}>
             {item.tekst}
           </Text>
         </View>
@@ -229,18 +214,12 @@ export default function OnboardingScherm() {
         style={{
           flexDirection: "row",
           justifyContent: "flex-end",
-          paddingHorizontal: 20,
-          paddingTop: 12,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingTop: ruimte.m,
         }}
       >
         <Pressable onPress={sla_over}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              color: c.mutedForeground,
-            }}
-          >
+          <Text style={tekstStijl("standaard", c.mutedForeground)}>
             Overslaan
           </Text>
         </Pressable>
@@ -251,7 +230,7 @@ export default function OnboardingScherm() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          paddingHorizontal: 28,
+          paddingHorizontal: ruimte.xl + ruimte.xs,
         }}
       >
         <View
@@ -259,23 +238,17 @@ export default function OnboardingScherm() {
             width: 80,
             height: 80,
             borderRadius: 40,
-            backgroundColor: "#FEE8E1",
+            backgroundColor: c.accent,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 20,
+            marginBottom: ruimte.l,
           }}
         >
-          <Ionicons name={actieveStap.icoon} size={36} color="#F23B0D" />
+          <Ionicons name={actieveStap.icoon} size={36} color={c.primary} />
         </View>
 
         <Text
-          style={{
-            fontSize: 22,
-            fontFamily: "Inter_700Bold",
-            color: c.foreground,
-            textAlign: "center",
-            marginBottom: 4,
-          }}
+          style={[tekstStijl("schermtitel", c.foreground), { textAlign: "center", marginBottom: ruimte.xs }]}
         >
           {actieveStap.titel}
         </Text>
@@ -289,8 +262,8 @@ export default function OnboardingScherm() {
         style={{
           flexDirection: "row",
           justifyContent: "center",
-          gap: 6,
-          marginBottom: 16,
+          gap: ruimte.xs + 2,
+          marginBottom: ruimte.l,
         }}
       >
         {STAPPEN.map((_, i) => (
@@ -300,7 +273,7 @@ export default function OnboardingScherm() {
               width: i === actieveIndex ? 20 : 6,
               height: 6,
               borderRadius: 3,
-              backgroundColor: i === actieveIndex ? "#F23B0D" : c.border,
+              backgroundColor: i === actieveIndex ? c.primary : c.border,
             }}
           />
         ))}
@@ -309,9 +282,9 @@ export default function OnboardingScherm() {
       <View
         style={{
           flexDirection: "row",
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          gap: 10,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingBottom: ruimte.m,
+          gap: ruimte.s + 2,
         }}
       >
         {actieveIndex > 0 && (
@@ -319,21 +292,15 @@ export default function OnboardingScherm() {
             onPress={vorige}
             style={({ pressed }) => ({
               flex: 1,
-              paddingVertical: 14,
-              borderRadius: 10,
+              paddingVertical: ruimte.m + 2,
+              borderRadius: c.radius,
               borderWidth: 1,
               borderColor: c.border,
               alignItems: "center",
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Text
-              style={{
-                fontSize: 15,
-                fontFamily: "Inter_500Medium",
-                color: c.foreground,
-              }}
-            >
+            <Text style={tekstStijl("nadruk", c.foreground)}>
               Vorige
             </Text>
           </Pressable>
@@ -343,19 +310,14 @@ export default function OnboardingScherm() {
           onPress={volgende}
           style={({ pressed }) => ({
             flex: 1,
-            paddingVertical: 14,
-            borderRadius: 10,
-            backgroundColor: pressed ? "#d63400" : "#F23B0D",
+            paddingVertical: ruimte.m + 2,
+            borderRadius: c.radius,
+            backgroundColor: c.primary,
+            opacity: pressed ? 0.85 : 1,
             alignItems: "center",
           })}
         >
-          <Text
-            style={{
-              fontSize: 15,
-              fontFamily: "Inter_600SemiBold",
-              color: "#fff",
-            }}
-          >
+          <Text style={tekstStijl("nadruk", c.primaryForeground)}>
             {isLaatste ? "Start werkdag" : "Volgende"}
           </Text>
         </Pressable>

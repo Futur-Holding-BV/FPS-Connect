@@ -12,9 +12,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { LijstFout, bovenInset } from "@/components/ui";
+import { LijstFout, Ladenstaat, LegeStaat, tekstStijl, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useColors } from "@/hooks/useColors";
@@ -74,30 +75,27 @@ export default function PlanningScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+              <Text style={tekstStijl("schermtitel", c.darkForeground)}>
                 Routeplanning
               </Text>
               <Text
-                style={{
-                  color: c.darkMuted,
-                  fontSize: 13,
-                  marginTop: 4,
-                  fontFamily: "Inter_400Regular",
-                  textTransform: "capitalize",
-                }}
+                style={[
+                  tekstStijl("klein", c.darkMuted),
+                  { marginTop: ruimte.xs, textTransform: "capitalize" },
+                ]}
               >
                 {vandaag}
               </Text>
@@ -110,13 +108,13 @@ export default function PlanningScherm() {
                 style={({ pressed }) => ({
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 5,
-                  backgroundColor: pressed ? "rgba(242,59,13,0.3)" : "rgba(242,59,13,0.15)",
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 10,
+                  gap: ruimte.xs + 1,
+                  backgroundColor: pressed ? c.primary + "4D" : c.primary + "26",
+                  paddingHorizontal: ruimte.m,
+                  paddingVertical: ruimte.s,
+                  borderRadius: c.radius / 2,
                   opacity: isDownloading ? 0.6 : 1,
-                  marginTop: 4,
+                  marginTop: ruimte.xs,
                 })}
               >
                 {isDownloading ? (
@@ -124,7 +122,7 @@ export default function PlanningScherm() {
                 ) : (
                   <Ionicons name="download-outline" size={15} color={c.primary} />
                 )}
-                <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={tekstStijl("bijschrift", c.primary)}>
                   {isDownloading ? "Laden..." : "Offline opslaan"}
                 </Text>
               </Pressable>
@@ -137,16 +135,16 @@ export default function PlanningScherm() {
       {isOfflineCache ? (
         <View
           style={{
-            backgroundColor: "rgba(234,179,8,0.08)",
-            paddingHorizontal: 16,
-            paddingVertical: 6,
+            backgroundColor: c.warning + "14",
+            paddingHorizontal: ruimte.l,
+            paddingVertical: ruimte.s - 2,
             flexDirection: "row",
             alignItems: "center",
-            gap: 6,
+            gap: ruimte.s - 2,
           }}
         >
-          <Ionicons name="time-outline" size={13} color="#facc15" />
-          <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
+          <Ionicons name="time-outline" size={13} color={c.warning} />
+          <Text style={tekstStijl("bijschrift", c.warning)}>
             Routeplanning uit lokale cache
             {gecachedOp ? ` (geladen op ${new Date(gecachedOp).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })})` : ""}
           </Text>
@@ -154,8 +152,8 @@ export default function PlanningScherm() {
       ) : null}
 
       {isLoading && !cachedPlanning ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError && !cachedPlanning ? (
         <LijstFout
@@ -163,71 +161,27 @@ export default function PlanningScherm() {
           onOpnieuw={() => void refetch()}
         />
       ) : gesorteerd.length === 0 ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 32,
-            gap: 14,
-          }}
-        >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: c.accent,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="calendar-outline" size={38} color={c.primary} />
-          </View>
-          <Text
-            style={{
-              color: c.foreground,
-              fontSize: 18,
-              fontFamily: "Inter_700Bold",
-              textAlign: "center",
-            }}
-          >
-            Geen gepland werk
-          </Text>
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              textAlign: "center",
-              lineHeight: 21,
-            }}
-          >
-            Er zijn geen spots aan u toegewezen. Uw routeplanning wordt automatisch
-            samengesteld op basis van toegewezen werk.
-          </Text>
-        </View>
+        <LegeStaat
+          icoon="calendar-outline"
+          titel="Geen gepland werk"
+          beschrijving="Er zijn geen spots aan u toegewezen. Uw routeplanning wordt automatisch samengesteld op basis van toegewezen werk."
+        />
       ) : (
         <>
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 8,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
+              gap: ruimte.s,
+              paddingHorizontal: ruimte.xl,
+              paddingVertical: ruimte.s + 2,
               borderBottomWidth: 1,
               borderBottomColor: c.border,
             }}
           >
-            <Ionicons name="information-circle-outline" size={16} color={c.mutedForeground} />
+            <Ionicons name="information-circle-outline" size={ruimte.l} color={c.mutedForeground} />
             <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 12,
-                fontFamily: "Inter_400Regular",
-                flex: 1,
-              }}
+              style={[tekstStijl("bijschrift", c.mutedForeground), { flex: 1 }]}
             >
               {gesorteerd.length} locatie{gesorteerd.length !== 1 ? "s" : ""} gesorteerd op adres.
               Tik op een adres om navigatie te openen.
@@ -238,9 +192,9 @@ export default function PlanningScherm() {
             data={gesorteerd}
             keyExtractor={(g: MijnWerkGebouw) => String(g.gebouw_id)}
             contentContainerStyle={{
-              padding: 14,
-              paddingBottom: insets.bottom + 24,
-              gap: 10,
+              padding: ruimte.m + 2,
+              paddingBottom: insets.bottom + ruimte.xl,
+              gap: ruimte.s + 2,
             }}
             renderItem={({ item: g, index }) => (
               <RouteKaart
@@ -294,38 +248,33 @@ function RouteKaart({
         overflow: "hidden",
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m, padding: ruimte.m + 2 }}>
         <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            width: ruimte.xxl + ruimte.xs,
+            height: ruimte.xxl + ruimte.xs,
+            borderRadius: (ruimte.xxl + ruimte.xs) / 2,
             backgroundColor: c.primary,
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}>
+          <Text style={[tekstStijl("standaard", c.primaryForeground), { fontFamily: "Inter_700Bold" }]}>
             {volgorde}
           </Text>
         </View>
 
         <View style={{ flex: 1 }}>
           <Text
-            style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold" }}
+            style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_700Bold" }]}
             numberOfLines={1}
           >
             {gebouw.gebouw_naam}
           </Text>
           {hasAdres ? (
             <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 12,
-                fontFamily: "Inter_400Regular",
-                marginTop: 2,
-              }}
+              style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}
               numberOfLines={1}
             >
               {gebouw.adres}
@@ -334,21 +283,21 @@ function RouteKaart({
           ) : null}
         </View>
 
-        <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <View style={{ alignItems: "flex-end", gap: ruimte.xs }}>
           <View
             style={{
               backgroundColor: c.primary + "22",
-              borderRadius: 10,
-              paddingHorizontal: 9,
-              paddingVertical: 3,
+              borderRadius: c.radius / 2,
+              paddingHorizontal: ruimte.s + 1,
+              paddingVertical: ruimte.xs - 1,
             }}
           >
-            <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_700Bold" }}>
+            <Text style={[tekstStijl("bijschrift", c.primary), { fontFamily: "Inter_700Bold" }]}>
               {gebouw.spots.length} spot{gebouw.spots.length !== 1 ? "s" : ""}
             </Text>
           </View>
           {openKleur > 0 ? (
-            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
               {openKleur} open
             </Text>
           ) : null}
@@ -363,14 +312,14 @@ function RouteKaart({
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            gap: 6,
-            paddingVertical: 10,
+            gap: ruimte.s - 2,
+            paddingVertical: ruimte.s + 2,
             borderRightWidth: hasAdres ? 1 : 0,
             borderRightColor: c.border,
           }}
         >
           <Ionicons name="business-outline" size={15} color={c.primary} />
-          <Text style={{ color: c.primary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={[tekstStijl("klein", c.primary), { fontFamily: "Inter_600SemiBold" }]}>
             Gebouw openen
           </Text>
         </Pressable>
@@ -383,12 +332,12 @@ function RouteKaart({
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: 6,
-              paddingVertical: 10,
+              gap: ruimte.s - 2,
+              paddingVertical: ruimte.s + 2,
             }}
           >
             <Ionicons name="navigate-outline" size={15} color={c.primary} />
-            <Text style={{ color: c.primary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={[tekstStijl("klein", c.primary), { fontFamily: "Inter_600SemiBold" }]}>
               Navigeren
             </Text>
           </Pressable>
@@ -396,8 +345,8 @@ function RouteKaart({
       </View>
 
       {volgorde < totaal ? (
-        <View style={{ alignItems: "center", paddingVertical: 6, backgroundColor: c.muted }}>
-          <Ionicons name="arrow-down" size={14} color={c.mutedForeground} />
+        <View style={{ alignItems: "center", paddingVertical: ruimte.s - 2, backgroundColor: c.muted }}>
+          <Ionicons name="arrow-down" size={ruimte.m + 2} color={c.mutedForeground} />
         </View>
       ) : null}
     </View>

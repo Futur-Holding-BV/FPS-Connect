@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { useFocusEffect } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,6 +28,13 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
+import {
+  Kaart,
+  Ladenstaat,
+  Statusmerk,
+  Waarschuwvlak,
+  tekstStijl,
+} from "@/components/ui";
 
 const STANDAARD_RISICOS = [
   "Val van hoogte",
@@ -222,69 +230,61 @@ function LmraPagina() {
     });
   };
 
+  // Invoerveld-stijl — hergebruikt door de tekstvelden in het formulier.
+  const invoerStijl = {
+    backgroundColor: c.card, color: c.foreground, borderRadius: c.radius,
+    borderWidth: 1, borderColor: c.border,
+    paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2, fontSize: 15,
+    fontFamily: "Inter_400Regular" as const,
+  };
+
   const renderItem = ({ item }: { item: VeiligheidLmra }) => (
-    <View style={{
-      backgroundColor: c.card,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: c.border,
+    <Kaart stijl={{
+      padding: ruimte.m + 2,
+      marginBottom: ruimte.s + 2,
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: 10,
+      gap: ruimte.m,
     }}>
       <View style={{
-        width: 28, height: 28, borderRadius: 14,
-        backgroundColor: item.veilig_voor_aanvang ? "#d1fae5" : "#fee2e2",
+        width: ruimte.xl + ruimte.xs, height: ruimte.xl + ruimte.xs, borderRadius: c.radius,
+        backgroundColor: c.secondary,
         alignItems: "center", justifyContent: "center", marginTop: 2,
       }}>
         <Ionicons
           name={item.veilig_voor_aanvang ? "checkmark-circle" : "close-circle"}
-          size={18}
-          color={item.veilig_voor_aanvang ? "#059669" : "#dc2626"}
+          size={ruimte.l + 2}
+          color={item.veilig_voor_aanvang ? c.success : c.destructive}
         />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: c.foreground, fontWeight: "600", fontSize: 15 }}>
+        <Text style={tekstStijl("nadruk", c.foreground)}>
           {item.locatie_omschrijving}
         </Text>
         {item.gebouw_naam && (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 4,
-            backgroundColor: "#f0fdf4", borderRadius: 6,
-            paddingHorizontal: 7, paddingVertical: 3, marginTop: 4,
-            alignSelf: "flex-start",
-          }}>
-            <Ionicons name="business-outline" size={11} color="#059669" />
-            <Text style={{ color: "#059669", fontSize: 11, fontWeight: "500" }}>
-              {item.gebouw_naam}
-            </Text>
+          <View style={{ marginTop: ruimte.xs, alignSelf: "flex-start" }}>
+            <Statusmerk label={item.gebouw_naam} soort="succes" />
           </View>
         )}
-        <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 4 }} numberOfLines={2}>
+        <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs }]} numberOfLines={2}>
           {item.werkzaamheden}
         </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.xs + 2, marginTop: ruimte.xs + 2, alignItems: "center" }}>
           {item.medewerker_naam && (
-            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{item.medewerker_naam}</Text>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{item.medewerker_naam}</Text>
           )}
           {(item.opdracht_naam ?? item.project_naam) && (
-            <View style={{ backgroundColor: "#dbeafe", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: "#1d4ed8", fontSize: 11, fontWeight: "500" }}>
-                {item.opdracht_naam ?? item.project_naam}
-              </Text>
-            </View>
+            <Statusmerk label={(item.opdracht_naam ?? item.project_naam) as string} soort="primair" />
           )}
-          <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{datumLabel(item.aangemaakt_op)}</Text>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{datumLabel(item.aangemaakt_op)}</Text>
         </View>
         {(item.risicos?.length ?? 0) > 0 && (
-          <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 4 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs }]}>
             {item.risicos!.length} risico{item.risicos!.length !== 1 ? "'s" : ""}
           </Text>
         )}
       </View>
-    </View>
+    </Kaart>
   );
 
   return (
@@ -292,44 +292,44 @@ function LmraPagina() {
       {/* Header */}
       <View style={{
         backgroundColor: c.dark,
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingTop: insets.top + ruimte.m,
+        paddingHorizontal: ruimte.l,
+        paddingBottom: ruimte.m,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
       }}>
         <View>
-          <Text style={{ color: c.foreground, fontSize: 20, fontWeight: "700" }}>LMRA</Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Laatste Minuut Risico Analyse</Text>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>LMRA</Text>
+          <Text style={tekstStijl("klein", c.darkMuted)}>Laatste Minuut Risico Analyse</Text>
         </View>
         <Pressable
           onPress={openDialoog}
           style={{
             backgroundColor: c.primary,
-            borderRadius: 22, width: 44, height: 44,
+            borderRadius: c.radius + ruimte.s, width: ruimte.xxl + ruimte.m, height: ruimte.xxl + ruimte.m,
             alignItems: "center", justifyContent: "center",
           }}
         >
-          <Ionicons name="add" size={24} color="white" />
+          <Ionicons name="add" size={ruimte.l + ruimte.s} color={c.primaryForeground} />
         </Pressable>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={c.primary} size="large" />
+        <View style={{ flex: 1, backgroundColor: c.background, padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : (lmras?.length ?? 0) === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Ionicons name="clipboard-outline" size={48} color={c.mutedForeground} style={{ marginBottom: 12, opacity: 0.5 }} />
-          <Text style={{ color: c.mutedForeground, textAlign: "center" }}>
+        <View style={{ flex: 1, backgroundColor: c.background, alignItems: "center", justifyContent: "center", paddingHorizontal: ruimte.xxl }}>
+          <Ionicons name="clipboard-outline" size={ruimte.xxl + ruimte.l} color={c.mutedForeground} style={{ marginBottom: ruimte.m, opacity: 0.5 }} />
+          <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}>
             Nog geen LMRA's. Registreer de eerste voor aanvang van werkzaamheden.
           </Text>
           <Pressable
             onPress={openDialoog}
-            style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16 }}
+            style={{ backgroundColor: c.primary, borderRadius: c.radius, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.s + 2, marginTop: ruimte.l }}
           >
-            <Text style={{ color: "white", fontWeight: "600" }}>Eerste LMRA registreren</Text>
+            <Text style={tekstStijl("nadruk", c.primaryForeground)}>Eerste LMRA registreren</Text>
           </Pressable>
         </View>
       ) : (
@@ -337,7 +337,8 @@ function LmraPagina() {
           data={lmras ?? []}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 16 }}
+          style={{ backgroundColor: c.background }}
+          contentContainerStyle={{ padding: ruimte.l }}
           refreshing={isLoading}
           onRefresh={refetch}
         />
@@ -347,34 +348,34 @@ function LmraPagina() {
       <Modal visible={dialoogOpen} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: c.dark }}>
           <View style={{
-            paddingTop: insets.top + 12,
-            paddingHorizontal: 16,
-            paddingBottom: 12,
+            paddingTop: insets.top + ruimte.m,
+            paddingHorizontal: ruimte.l,
+            paddingBottom: ruimte.m,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
             borderBottomWidth: 1,
             borderBottomColor: c.border,
           }}>
-            <Text style={{ color: c.foreground, fontSize: 18, fontWeight: "700" }}>Nieuwe LMRA</Text>
+            <Text style={tekstStijl("sectiekop", c.darkForeground)}>Nieuwe LMRA</Text>
             <Pressable onPress={() => setDialoogOpen(false)}>
-              <Ionicons name="close" size={24} color={c.foreground} />
+              <Ionicons name="close" size={ruimte.l + ruimte.s} color={c.darkForeground} />
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+          <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l }}>
 
             {/* Smart gebouw koppeling */}
             {gebouwenVandaag.length > 0 && (
               <View style={{
-                backgroundColor: formulier.gebouwId ? "#f0fdf4" : c.card,
-                borderRadius: 12, padding: 12,
+                backgroundColor: formulier.gebouwId ? c.secondary : c.card,
+                borderRadius: c.radius, padding: ruimte.m,
                 borderWidth: 1,
-                borderColor: formulier.gebouwId ? "#86efac" : c.border,
+                borderColor: formulier.gebouwId ? c.success : c.border,
               }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <Ionicons name="business-outline" size={14} color={formulier.gebouwId ? "#059669" : c.mutedForeground} />
-                  <Text style={{ color: formulier.gebouwId ? "#059669" : c.mutedForeground, fontSize: 13, fontWeight: "500" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2, marginBottom: ruimte.s }}>
+                  <Ionicons name="business-outline" size={ruimte.m + 2} color={formulier.gebouwId ? c.success : c.mutedForeground} />
+                  <Text style={tekstStijl("klein", formulier.gebouwId ? c.success : c.mutedForeground)}>
                     {formulier.gebouwId
                       ? "Gebouw automatisch gekoppeld"
                       : gebouwenVandaag.length === 1
@@ -385,30 +386,30 @@ function LmraPagina() {
 
                 {formulier.gebouwId ? (
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                    <Text style={{ color: "#166534", fontWeight: "600", fontSize: 15, flex: 1 }}>
+                    <Text style={[tekstStijl("nadruk", c.foreground), { flex: 1 }]}>
                       {formulier.gebouwNaam}
                     </Text>
                     <Pressable
                       onPress={wisGebouw}
-                      style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                      style={{ paddingHorizontal: ruimte.s, paddingVertical: ruimte.xs }}
                     >
-                      <Text style={{ color: "#059669", fontSize: 13 }}>Wijzigen</Text>
+                      <Text style={tekstStijl("klein", c.success)}>Wijzigen</Text>
                     </Pressable>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s }}>
                     {gebouwenVandaag.map((g) => (
                       <Pressable
                         key={g.id}
                         onPress={() => kiesGebouw(g)}
                         style={{
-                          backgroundColor: c.dark, borderRadius: 8, borderWidth: 1,
-                          borderColor: c.border, paddingHorizontal: 12, paddingVertical: 8,
-                          flexDirection: "row", alignItems: "center", gap: 6,
+                          backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1,
+                          borderColor: c.border, paddingHorizontal: ruimte.m, paddingVertical: ruimte.s,
+                          flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2,
                         }}
                       >
-                        <Ionicons name="location-outline" size={13} color={c.primary} />
-                        <Text style={{ color: c.foreground, fontSize: 14 }}>{g.naam}</Text>
+                        <Ionicons name="location-outline" size={ruimte.m + 1} color={c.primary} />
+                        <Text style={tekstStijl("standaard", c.foreground)}>{g.naam}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -418,7 +419,7 @@ function LmraPagina() {
 
             {/* Locatie */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs }]}>
                 Locatie / werkplek *
               </Text>
               <TextInput
@@ -426,17 +427,13 @@ function LmraPagina() {
                 onChangeText={(v) => setFormulier((f) => ({ ...f, locatieOmschrijving: v }))}
                 placeholder="Beschrijf de locatie of het werkgebied"
                 placeholderTextColor={c.mutedForeground}
-                style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
-                  borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
-                }}
+                style={invoerStijl}
               />
             </View>
 
             {/* Werkzaamheden */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs }]}>
                 Werkzaamheden *
               </Text>
               <TextInput
@@ -446,61 +443,54 @@ function LmraPagina() {
                 placeholderTextColor={c.mutedForeground}
                 multiline
                 numberOfLines={3}
-                style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
-                  borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
-                  minHeight: 80, textAlignVertical: "top",
-                }}
+                style={[invoerStijl, { minHeight: ruimte.xxl * 2 + ruimte.l, textAlignVertical: "top" }]}
               />
             </View>
 
             {/* Opdracht koppeling */}
             {opdrachtOpties.length > 0 && (
               <View style={{
-                backgroundColor: formulier.opdrachtId ? "#eff6ff" : c.card,
-                borderRadius: 12, padding: 12,
+                backgroundColor: formulier.opdrachtId ? c.secondary : c.card,
+                borderRadius: c.radius, padding: ruimte.m,
                 borderWidth: 1,
-                borderColor: formulier.opdrachtId ? "#93c5fd" : c.border,
+                borderColor: formulier.opdrachtId ? c.tint : c.border,
               }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <Ionicons name="briefcase-outline" size={14} color={formulier.opdrachtId ? "#2563eb" : c.mutedForeground} />
-                  <Text style={{ color: formulier.opdrachtId ? "#2563eb" : c.mutedForeground, fontSize: 13, fontWeight: "500" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2, marginBottom: ruimte.s }}>
+                  <Ionicons name="briefcase-outline" size={ruimte.m + 2} color={formulier.opdrachtId ? c.tint : c.mutedForeground} />
+                  <Text style={tekstStijl("klein", formulier.opdrachtId ? c.tint : c.mutedForeground)}>
                     {formulier.opdrachtId ? "Opdracht gekoppeld" : "Kies opdracht / project"}
                   </Text>
                 </View>
                 {formulier.opdrachtId ? (
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                    <Text style={{ color: "#1d4ed8", fontWeight: "600", fontSize: 15, flex: 1 }}>
+                    <Text style={[tekstStijl("nadruk", c.foreground), { flex: 1 }]}>
                       {formulier.opdrachtNaam}
                     </Text>
-                    <Pressable onPress={wisOpdracht} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-                      <Text style={{ color: "#2563eb", fontSize: 13 }}>Wijzigen</Text>
+                    <Pressable onPress={wisOpdracht} style={{ paddingHorizontal: ruimte.s, paddingVertical: ruimte.xs }}>
+                      <Text style={tekstStijl("klein", c.tint)}>Wijzigen</Text>
                     </Pressable>
                   </View>
                 ) : (
-                  <View style={{ gap: 6 }}>
+                  <View style={{ gap: ruimte.xs + 2 }}>
                     {opdrachtOpties.map((o) => (
                       <Pressable
                         key={o.opdracht_id}
                         onPress={() => kiesOpdracht(o)}
                         style={{
-                          backgroundColor: c.dark, borderRadius: 8, borderWidth: 1,
-                          borderColor: c.border, paddingHorizontal: 12, paddingVertical: 10,
-                          flexDirection: "row", alignItems: "center", gap: 8,
+                          backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1,
+                          borderColor: c.border, paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2,
+                          flexDirection: "row", alignItems: "center", gap: ruimte.s,
                         }}
                       >
-                        <Ionicons name="briefcase-outline" size={13} color={c.primary} />
+                        <Ionicons name="briefcase-outline" size={ruimte.m + 1} color={c.primary} />
                         <View style={{ flex: 1 }}>
-                          <Text style={{ color: c.foreground, fontSize: 14, fontWeight: "500" }}>{o.opdracht_naam}</Text>
+                          <Text style={tekstStijl("nadruk", c.foreground)}>{o.opdracht_naam}</Text>
                           {o.gebouw_naam && (
-                            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{o.gebouw_naam}</Text>
+                            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{o.gebouw_naam}</Text>
                           )}
                         </View>
                         {o.dwingend && (
-                          <View style={{ backgroundColor: "#fee2e2", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
-                            <Text style={{ color: "#dc2626", fontSize: 10, fontWeight: "600" }}>Vereist</Text>
-                          </View>
+                          <Statusmerk label="Vereist" soort="fout" />
                         )}
                       </Pressable>
                     ))}
@@ -511,8 +501,8 @@ function LmraPagina() {
 
             {/* Risico's */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Risico's</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.s }]}>Risico's</Text>
+              <View style={{ flexDirection: "row", gap: ruimte.s }}>
                 <TextInput
                   value={risicoInput}
                   onChangeText={setRisicoInput}
@@ -520,41 +510,37 @@ function LmraPagina() {
                   placeholderTextColor={c.mutedForeground}
                   onSubmitEditing={() => voegRisicoToe(risicoInput)}
                   returnKeyType="done"
-                  style={{
-                    flex: 1, backgroundColor: c.card, color: c.foreground, borderRadius: 8,
-                    borderWidth: 1, borderColor: c.border,
-                    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
-                  }}
+                  style={[invoerStijl, { flex: 1 }]}
                 />
                 <Pressable
                   onPress={() => voegRisicoToe(risicoInput)}
                   style={{
-                    backgroundColor: c.primary, borderRadius: 8, width: 44,
+                    backgroundColor: c.primary, borderRadius: c.radius, width: ruimte.xxl + ruimte.m,
                     alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="add" size={20} color="white" />
+                  <Ionicons name="add" size={ruimte.l + ruimte.xs} color={c.primaryForeground} />
                 </Pressable>
               </View>
               {formulier.risicos.map((r, i) => (
                 <View key={i} style={{
                   flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                  backgroundColor: c.card, borderRadius: 8, paddingHorizontal: 10,
-                  paddingVertical: 8, marginTop: 6,
+                  backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: ruimte.s + 2,
+                  paddingVertical: ruimte.s, marginTop: ruimte.xs + 2,
                 }}>
-                  <Text style={{ color: c.foreground, fontSize: 14, flex: 1 }}>{r}</Text>
+                  <Text style={[tekstStijl("standaard", c.foreground), { flex: 1 }]}>{r}</Text>
                   <Pressable onPress={() => setFormulier((f) => ({ ...f, risicos: f.risicos.filter((_, j) => j !== i) }))}>
-                    <Ionicons name="trash-outline" size={16} color={c.mutedForeground} />
+                    <Ionicons name="trash-outline" size={ruimte.l} color={c.mutedForeground} />
                   </Pressable>
                 </View>
               ))}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.xs + 2, marginTop: ruimte.s }}>
                 {STANDAARD_RISICOS.filter((s) => !formulier.risicos.includes(s)).slice(0, 4).map((s) => (
                   <Pressable key={s} onPress={() => voegRisicoToe(s)} style={{
-                    backgroundColor: c.card, borderRadius: 16, paddingHorizontal: 10,
-                    paddingVertical: 5, borderWidth: 1, borderColor: c.border,
+                    backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: ruimte.s + 2,
+                    paddingVertical: ruimte.xs + 1, borderWidth: 1, borderColor: c.border,
                   }}>
-                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>+ {s}</Text>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>+ {s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -562,8 +548,8 @@ function LmraPagina() {
 
             {/* Maatregelen */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Beheersmaatregelen</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.s }]}>Beheersmaatregelen</Text>
+              <View style={{ flexDirection: "row", gap: ruimte.s }}>
                 <TextInput
                   value={maatregelInput}
                   onChangeText={setMaatregelInput}
@@ -571,41 +557,37 @@ function LmraPagina() {
                   placeholderTextColor={c.mutedForeground}
                   onSubmitEditing={() => voegMaatregelToe(maatregelInput)}
                   returnKeyType="done"
-                  style={{
-                    flex: 1, backgroundColor: c.card, color: c.foreground, borderRadius: 8,
-                    borderWidth: 1, borderColor: c.border,
-                    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
-                  }}
+                  style={[invoerStijl, { flex: 1 }]}
                 />
                 <Pressable
                   onPress={() => voegMaatregelToe(maatregelInput)}
                   style={{
-                    backgroundColor: c.primary, borderRadius: 8, width: 44,
+                    backgroundColor: c.primary, borderRadius: c.radius, width: ruimte.xxl + ruimte.m,
                     alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="add" size={20} color="white" />
+                  <Ionicons name="add" size={ruimte.l + ruimte.xs} color={c.primaryForeground} />
                 </Pressable>
               </View>
               {formulier.maatregelen.map((m, i) => (
                 <View key={i} style={{
                   flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                  backgroundColor: c.card, borderRadius: 8, paddingHorizontal: 10,
-                  paddingVertical: 8, marginTop: 6,
+                  backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: ruimte.s + 2,
+                  paddingVertical: ruimte.s, marginTop: ruimte.xs + 2,
                 }}>
-                  <Text style={{ color: c.foreground, fontSize: 14, flex: 1 }}>{m}</Text>
+                  <Text style={[tekstStijl("standaard", c.foreground), { flex: 1 }]}>{m}</Text>
                   <Pressable onPress={() => setFormulier((f) => ({ ...f, maatregelen: f.maatregelen.filter((_, j) => j !== i) }))}>
-                    <Ionicons name="trash-outline" size={16} color={c.mutedForeground} />
+                    <Ionicons name="trash-outline" size={ruimte.l} color={c.mutedForeground} />
                   </Pressable>
                 </View>
               ))}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.xs + 2, marginTop: ruimte.s }}>
                 {STANDAARD_MAATREGELEN.filter((s) => !formulier.maatregelen.includes(s)).slice(0, 4).map((s) => (
                   <Pressable key={s} onPress={() => voegMaatregelToe(s)} style={{
-                    backgroundColor: c.card, borderRadius: 16, paddingHorizontal: 10,
-                    paddingVertical: 5, borderWidth: 1, borderColor: c.border,
+                    backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: ruimte.s + 2,
+                    paddingVertical: ruimte.xs + 1, borderWidth: 1, borderColor: c.border,
                   }}>
-                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>+ {s}</Text>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>+ {s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -614,54 +596,49 @@ function LmraPagina() {
             {/* Veilig voor aanvang */}
             <View style={{
               flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-              backgroundColor: c.card, borderRadius: 12, padding: 14,
+              backgroundColor: c.card, borderRadius: c.radius, padding: ruimte.m + 2,
               borderWidth: 1, borderColor: c.border,
             }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: c.foreground, fontWeight: "600" }}>Veilig om te beginnen?</Text>
-                <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2 }}>
+                <Text style={tekstStijl("nadruk", c.foreground)}>Veilig om te beginnen?</Text>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                   Zijn alle risico's beheersbaar?
                 </Text>
               </View>
               <Switch
                 value={formulier.veiligVoorAanvang}
                 onValueChange={(v) => setFormulier((f) => ({ ...f, veiligVoorAanvang: v }))}
-                trackColor={{ true: "#f97316", false: "#6b7280" }}
-                thumbColor="white"
+                trackColor={{ true: c.primary, false: c.mutedForeground }}
+                thumbColor={c.card}
               />
             </View>
 
             {!formulier.veiligVoorAanvang && (
-              <View style={{
-                backgroundColor: "#fee2e2", borderRadius: 10, padding: 12,
-                flexDirection: "row", gap: 8, alignItems: "flex-start",
-              }}>
-                <Ionicons name="close-circle" size={18} color="#dc2626" style={{ marginTop: 1 }} />
-                <Text style={{ color: "#dc2626", fontSize: 13, flex: 1 }}>
-                  Werkzaamheden mogen niet starten. Raadpleeg de leidinggevende.
-                </Text>
-              </View>
+              <Waarschuwvlak
+                soort="fout"
+                tekst="Werkzaamheden mogen niet starten. Raadpleeg de leidinggevende."
+              />
             )}
 
             {/* Bevestiging */}
             <Pressable
               onPress={() => setFormulier((f) => ({ ...f, bevestigd: !f.bevestigd }))}
               style={{
-                flexDirection: "row", gap: 10, alignItems: "flex-start",
-                backgroundColor: c.card, borderRadius: 12, padding: 14,
+                flexDirection: "row", gap: ruimte.s + 2, alignItems: "flex-start",
+                backgroundColor: c.card, borderRadius: c.radius, padding: ruimte.m + 2,
                 borderWidth: 1, borderColor: formulier.bevestigd ? c.primary : c.border,
               }}
             >
               <View style={{
-                width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+                width: ruimte.l + ruimte.xs + 2, height: ruimte.l + ruimte.xs + 2, borderRadius: c.radius / 2, borderWidth: 2,
                 borderColor: formulier.bevestigd ? c.primary : c.mutedForeground,
                 backgroundColor: formulier.bevestigd ? c.primary : "transparent",
                 alignItems: "center", justifyContent: "center",
                 marginTop: 1,
               }}>
-                {formulier.bevestigd && <Ionicons name="checkmark" size={14} color="white" />}
+                {formulier.bevestigd && <Ionicons name="checkmark" size={ruimte.m + 2} color={c.primaryForeground} />}
               </View>
-              <Text style={{ color: c.foreground, fontSize: 13, flex: 1, lineHeight: 18 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { flex: 1, lineHeight: 18 }]}>
                 Ik bevestig dat ik de werkplek heb gecontroleerd, de risico's heb
                 beoordeeld en de beheersmaatregelen heb doorgevoerd of gecommuniceerd.
               </Text>
@@ -672,14 +649,14 @@ function LmraPagina() {
               disabled={isBezigOpslaan}
               style={{
                 backgroundColor: isBezigOpslaan ? c.mutedForeground : c.primary,
-                borderRadius: 10, padding: 14,
-                alignItems: "center", marginBottom: 16,
+                borderRadius: c.radius, padding: ruimte.m + 2,
+                alignItems: "center", marginBottom: ruimte.l,
               }}
             >
               {isBezigOpslaan ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>LMRA registreren</Text>
+                <Text style={tekstStijl("sectiekop", c.primaryForeground)}>LMRA registreren</Text>
               )}
             </Pressable>
           </ScrollView>

@@ -62,6 +62,14 @@ const TYPE_KLEUREN: Record<string, { kleur: string }> = Object.fromEntries(
 
 const STANDAARD_CLUSTERKLEUR = "#6366f1";
 
+// Bewuste canvas-renderkleuren (VORM_01): de plattegrond wordt in een WebView
+// getekend. Alle kleuren in de HTML/JS-template hieronder (spot-, cluster-,
+// scheidings- en crosshair-kleuren) horen bij die render-engine en zijn géén
+// gewone app-UI; ze blijven bewust letterlijk zodat de tekening ongewijzigd
+// blijft. De achtergrond van het WebView-vlak moet exact gelijk zijn aan de
+// canvas-achtergrond, daarom staat die kleur hier als gedeelde constante.
+const CANVAS_ACHTERGROND = "#2b303b";
+
 function bouwHtml(domein: string, token: string, url: string | null): string {
   const cfg = {
     domein: `https://${domein}`,
@@ -80,7 +88,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
-  html,body { height:100%; width:100%; background:#2b303b; overflow:hidden; font-family:-apple-system,system-ui,sans-serif; }
+  html,body { height:100%; width:100%; background:${CANVAS_ACHTERGROND}; overflow:hidden; font-family:-apple-system,system-ui,sans-serif; }
   #stage { position:absolute; inset:0; overflow:hidden; touch-action:none; }
   #wrap { position:absolute; top:0; left:0; transform-origin:0 0; }
   canvas { display:block; }
@@ -569,5 +577,5 @@ export const PdfPlattegrond = forwardRef<PdfPlattegrondHandle, Props>(function P
 });
 
 const styles = StyleSheet.create({
-  vlak: { flex: 1, backgroundColor: "#2b303b" },
+  vlak: { flex: 1, backgroundColor: CANVAS_ACHTERGROND },
 });

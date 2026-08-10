@@ -5,7 +5,8 @@ import React, { useState } from "react";
 import { Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
@@ -143,17 +144,10 @@ export default function InfoScherm() {
           borderRadius: c.radius,
           borderWidth: 1,
           borderColor: c.border,
-          padding: 18,
+          padding: ruimte.l,
         }}
       >
-        <Text
-          style={{
-            color: c.foreground,
-            fontSize: 16,
-            fontFamily: "Inter_700Bold",
-            marginBottom: 10,
-          }}
-        >
+        <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_700Bold", marginBottom: ruimte.s + 2 }]}>
           {titel}
         </Text>
         {children}
@@ -163,15 +157,7 @@ export default function InfoScherm() {
 
   function Alinea({ children }: { children: React.ReactNode }) {
     return (
-      <Text
-        style={{
-          color: c.mutedForeground,
-          fontSize: 14,
-          lineHeight: 21,
-          fontFamily: "Inter_400Regular",
-          marginBottom: 10,
-        }}
-      >
+      <Text style={[tekstStijl("standaard", c.mutedForeground), { marginBottom: ruimte.s + 2 }]}>
         {children}
       </Text>
     );
@@ -182,24 +168,24 @@ export default function InfoScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m + 2 }}>
           <View
             style={{
-              backgroundColor: "#fff",
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
+              backgroundColor: c.primaryForeground,
+              borderRadius: c.radius / 2,
+              paddingHorizontal: ruimte.s + 2,
+              paddingVertical: ruimte.xs + 2,
             }}
           >
             <Image
@@ -209,10 +195,10 @@ export default function InfoScherm() {
             />
           </View>
           <View>
-            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("sectiekop", c.darkForeground)}>
               App-informatie
             </Text>
-            <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs / 2 }]}>
               v{APP_VERSIE}
             </Text>
           </View>
@@ -221,27 +207,27 @@ export default function InfoScherm() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
+        contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m + 2, paddingBottom: insets.bottom + ruimte.xxl, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
       >
         <Kaart titel="Synchronisatie">
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: ruimte.s + 2 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                 Status
               </Text>
               <Text
-                style={{
-                  fontSize: 13,
-                  fontFamily: "Inter_600SemiBold",
-                  color:
+                style={[
+                  tekstStijl("klein",
                     syncStatus === "gesynchroniseerd"
-                      ? "#16a34a"
+                      ? c.success
                       : syncStatus === "mislukt"
-                      ? "#dc2626"
+                      ? c.destructive
                       : syncStatus === "synchroniseert"
                       ? c.primary
-                      : "#d97706",
-                }}
+                      : c.warning,
+                  ),
+                  { fontFamily: "Inter_600SemiBold" },
+                ]}
               >
                 {syncStatus === "gesynchroniseerd"
                   ? "Gesynchroniseerd"
@@ -256,9 +242,7 @@ export default function InfoScherm() {
             </View>
 
             {aantalWachtend > 0 || aantalMisluktSync > 0 ? (
-              <Text
-                style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}
-              >
+              <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                 {aantalWachtend > 0
                   ? `${aantalWachtend} item${aantalWachtend !== 1 ? "s" : ""} wachten op synchronisatie. `
                   : ""}
@@ -268,20 +252,20 @@ export default function InfoScherm() {
               </Text>
             ) : null}
 
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: ruimte.s }}>
               <Pressable
                 onPress={syncNu}
                 disabled={bezigSync || isSyncing}
                 style={{
                   flex: 1,
                   backgroundColor: c.primary,
-                  borderRadius: 8,
-                  paddingVertical: 9,
+                  borderRadius: ruimte.s,
+                  paddingVertical: ruimte.s + 1,
                   alignItems: "center",
                   opacity: bezigSync || isSyncing ? 0.6 : 1,
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={[tekstStijl("klein", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                   {isSyncing ? "Bezig..." : "Nu synchroniseren"}
                 </Text>
               </Pressable>
@@ -292,14 +276,14 @@ export default function InfoScherm() {
                   style={{
                     flex: 1,
                     backgroundColor: c.accent,
-                    borderRadius: 8,
+                    borderRadius: ruimte.s,
                     borderWidth: 1,
                     borderColor: c.border,
-                    paddingVertical: 9,
+                    paddingVertical: ruimte.s + 1,
                     alignItems: "center",
                   }}
                 >
-                  <Text style={{ color: "#dc2626", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("klein", c.destructive), { fontFamily: "Inter_600SemiBold" }]}>
                     Wis mislukte items
                   </Text>
                 </Pressable>
@@ -309,28 +293,20 @@ export default function InfoScherm() {
         </Kaart>
 
         <Kaart titel="Beveiliging">
-          <View style={{ gap: 14 }}>
+          <View style={{ gap: ruimte.m + 2 }}>
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12,
+                gap: ruimte.m,
               }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                   Snel ontgrendelen
                 </Text>
-                <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontSize: 13,
-                    lineHeight: 19,
-                    fontFamily: "Inter_400Regular",
-                    marginTop: 2,
-                  }}
-                >
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                   {Platform.OS === "web"
                     ? "Snel ontgrendelen is alleen beschikbaar in de native app op een iOS- of Android-toestel."
                     : biometrieBeschikbaar
@@ -343,7 +319,7 @@ export default function InfoScherm() {
                 onValueChange={wisselBiometrie}
                 disabled={!biometrieBeschikbaar || bezigBio}
                 trackColor={{ false: c.border, true: c.primary }}
-                thumbColor="#fff"
+                thumbColor={c.primaryForeground}
               />
             </View>
 
@@ -355,24 +331,24 @@ export default function InfoScherm() {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                paddingVertical: 2,
+                paddingVertical: ruimte.xs / 2,
               }}
             >
               <View>
-                <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                   Wachtwoord wijzigen
                 </Text>
-                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                   Stel een nieuw wachtwoord in voor uw account
                 </Text>
               </View>
-              <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_400Regular" }}>›</Text>
+              <Text style={[tekstStijl("sectiekop", c.primary), { fontFamily: "Inter_400Regular" }]}>›</Text>
             </Pressable>
           </View>
         </Kaart>
 
         <Kaart titel="Rondleiding">
-          <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20, marginBottom: 12 }}>
+          <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.m }]}>
             Bekijk de introductierondleiding opnieuw om vertrouwd te raken met alle functies van de app.
           </Text>
           <Pressable
@@ -381,42 +357,42 @@ export default function InfoScherm() {
               router.push("/onboarding");
             }}
             style={({ pressed }) => ({
-              backgroundColor: pressed ? "#d63400" : "#F23B0D",
-              borderRadius: 8,
-              paddingVertical: 10,
-              paddingHorizontal: 16,
+              backgroundColor: pressed ? c.primary + "E6" : c.primary,
+              borderRadius: ruimte.s,
+              paddingVertical: ruimte.s + 2,
+              paddingHorizontal: ruimte.l,
               alignItems: "center",
             })}
           >
-            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={[tekstStijl("standaard", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
               Rondleiding opnieuw bekijken
             </Text>
           </Pressable>
         </Kaart>
 
         <Kaart titel="Over de applicatie">
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: ruimte.s }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>
                 Applicatie
               </Text>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                 {APP_NAAM}
               </Text>
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>
                 Versie
               </Text>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                 v{APP_VERSIE}
               </Text>
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>
                 Uitgebracht op
               </Text>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                 {formatDatum(APP_UITGEBRACHT_OP)}
               </Text>
             </View>
@@ -480,48 +456,47 @@ export default function InfoScherm() {
 
         <Kaart titel="Ondersteuning">
           {heeftSupportInfo ? (
-            <View style={{ gap: 10 }}>
+            <View style={{ gap: ruimte.s + 2 }}>
               {instellingen?.support_email ? (
                 <Pressable onPress={() => Linking.openURL(`mailto:${instellingen.support_email}`)}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                     E-mail
                   </Text>
-                  <Text style={{ color: c.primary, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("nadruk", c.primary), { fontFamily: "Inter_600SemiBold" }]}>
                     {instellingen.support_email}
                   </Text>
                 </Pressable>
               ) : null}
               {instellingen?.support_telefoon ? (
                 <Pressable onPress={() => Linking.openURL(`tel:${instellingen.support_telefoon}`)}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                     Telefoon
                   </Text>
-                  <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                     {instellingen.support_telefoon}
                   </Text>
                 </Pressable>
               ) : null}
               {instellingen?.support_website ? (
                 <Pressable onPress={() => Linking.openURL(instellingen.support_website!)}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                     Website
                   </Text>
-                  <Text style={{ color: c.primary, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("nadruk", c.primary), { fontFamily: "Inter_600SemiBold" }]}>
                     {instellingen.support_website}
                   </Text>
                 </Pressable>
               ) : null}
               {instellingen?.extra_disclaimer ? (
                 <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontSize: 13,
-                    lineHeight: 20,
-                    fontFamily: "Inter_400Regular",
-                    paddingTop: 6,
-                    borderTopWidth: 1,
-                    borderTopColor: c.border,
-                  }}
+                  style={[
+                    tekstStijl("klein", c.mutedForeground),
+                    {
+                      paddingTop: ruimte.xs + 2,
+                      borderTopWidth: 1,
+                      borderTopColor: c.border,
+                    },
+                  ]}
                 >
                   {instellingen.extra_disclaimer}
                 </Text>
@@ -535,29 +510,24 @@ export default function InfoScherm() {
         </Kaart>
 
         <Kaart titel="Versiebeheer">
-          <View style={{ gap: 16 }}>
+          <View style={{ gap: ruimte.l }}>
             {WIJZIGINGSLOGBOEK.map((wijziging) => (
               <View
                 key={wijziging.versie}
-                style={{ borderLeftWidth: 2, borderLeftColor: c.primary, paddingLeft: 12 }}
+                style={{ borderLeftWidth: 2, borderLeftColor: c.primary, paddingLeft: ruimte.m }}
               >
-                <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_700Bold" }}>
+                <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_700Bold" }]}>
                   v{wijziging.versie}
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                     {"  "}
                     {formatDatum(wijziging.datum)}
                   </Text>
                 </Text>
-                <View style={{ marginTop: 6, gap: 4 }}>
+                <View style={{ marginTop: ruimte.xs + 2, gap: ruimte.xs }}>
                   {wijziging.punten.map((punt, i) => (
                     <Text
                       key={i}
-                      style={{
-                        color: c.mutedForeground,
-                        fontSize: 13,
-                        lineHeight: 19,
-                        fontFamily: "Inter_400Regular",
-                      }}
+                      style={tekstStijl("klein", c.mutedForeground)}
                     >
                       {"\u2022  "}
                       {punt}
@@ -570,13 +540,7 @@ export default function InfoScherm() {
         </Kaart>
 
         <Text
-          style={{
-            textAlign: "center",
-            color: c.mutedForeground,
-            fontSize: 12,
-            fontFamily: "Inter_400Regular",
-            paddingTop: 4,
-          }}
+          style={[tekstStijl("bijschrift", c.mutedForeground), { textAlign: "center", paddingTop: ruimte.xs }]}
         >
           © {new Date().getFullYear()} {APP_LEVERANCIER} · v{APP_VERSIE}
         </Text>
@@ -599,34 +563,34 @@ export default function InfoScherm() {
           <View
             style={{
               backgroundColor: c.card,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 24,
-              paddingBottom: insets.bottom + 24,
+              borderTopLeftRadius: ruimte.xl,
+              borderTopRightRadius: ruimte.xl,
+              padding: ruimte.xl,
+              paddingBottom: insets.bottom + ruimte.xl,
               borderTopWidth: 1,
               borderTopColor: c.border,
-              gap: 16,
+              gap: ruimte.l,
             }}
           >
-            <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("sectiekop", c.foreground)}>
               Wachtwoord wijzigen
             </Text>
 
             {wwGedaan ? (
-              <View style={{ gap: 14 }}>
+              <View style={{ gap: ruimte.m + 2 }}>
                 <View
                   style={{
-                    backgroundColor: "#f0fdf4",
-                    borderRadius: 10,
-                    padding: 14,
+                    backgroundColor: c.success + "18",
+                    borderRadius: c.radius / 2,
+                    padding: ruimte.m + 2,
                     borderWidth: 1,
-                    borderColor: "#bbf7d0",
+                    borderColor: c.success + "55",
                   }}
                 >
-                  <Text style={{ color: "#15803d", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("standaard", c.success), { fontFamily: "Inter_600SemiBold" }]}>
                     Wachtwoord succesvol gewijzigd
                   </Text>
-                  <Text style={{ color: "#166534", fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+                  <Text style={[tekstStijl("klein", c.success), { marginTop: ruimte.xs }]}>
                     Gebruik uw nieuwe wachtwoord bij de volgende aanmelding.
                   </Text>
                 </View>
@@ -634,20 +598,20 @@ export default function InfoScherm() {
                   onPress={() => { setWwOpen(false); resetWwModal(); }}
                   style={{
                     backgroundColor: c.primary,
-                    borderRadius: 10,
-                    paddingVertical: 13,
+                    borderRadius: c.radius / 2,
+                    paddingVertical: ruimte.m + 1,
                     alignItems: "center",
                   }}
                 >
-                  <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     Sluiten
                   </Text>
                 </Pressable>
               </View>
             ) : (
-              <View style={{ gap: 14 }}>
-                <View style={{ gap: 6 }}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <View style={{ gap: ruimte.m + 2 }}>
+                <View style={{ gap: ruimte.xs + 2 }}>
+                  <Text style={[tekstStijl("klein", c.mutedForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     Huidig wachtwoord
                   </Text>
                   <TextInput
@@ -657,22 +621,22 @@ export default function InfoScherm() {
                     autoComplete="current-password"
                     placeholder="Voer huidig wachtwoord in"
                     placeholderTextColor={c.mutedForeground}
-                    style={{
-                      backgroundColor: c.accent,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: c.border,
-                      paddingHorizontal: 12,
-                      paddingVertical: 11,
-                      color: c.foreground,
-                      fontSize: 15,
-                      fontFamily: "Inter_400Regular",
-                    }}
+                    style={[
+                      tekstStijl("nadruk", c.foreground),
+                      {
+                        backgroundColor: c.accent,
+                        borderRadius: ruimte.s,
+                        borderWidth: 1,
+                        borderColor: c.border,
+                        paddingHorizontal: ruimte.m,
+                        paddingVertical: ruimte.m - 1,
+                      },
+                    ]}
                   />
                 </View>
 
-                <View style={{ gap: 6 }}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <View style={{ gap: ruimte.xs + 2 }}>
+                  <Text style={[tekstStijl("klein", c.mutedForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     Nieuw wachtwoord
                   </Text>
                   <TextInput
@@ -682,22 +646,22 @@ export default function InfoScherm() {
                     autoComplete="new-password"
                     placeholder="Minimaal 8 tekens"
                     placeholderTextColor={c.mutedForeground}
-                    style={{
-                      backgroundColor: c.accent,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: c.border,
-                      paddingHorizontal: 12,
-                      paddingVertical: 11,
-                      color: c.foreground,
-                      fontSize: 15,
-                      fontFamily: "Inter_400Regular",
-                    }}
+                    style={[
+                      tekstStijl("nadruk", c.foreground),
+                      {
+                        backgroundColor: c.accent,
+                        borderRadius: ruimte.s,
+                        borderWidth: 1,
+                        borderColor: c.border,
+                        paddingHorizontal: ruimte.m,
+                        paddingVertical: ruimte.m - 1,
+                      },
+                    ]}
                   />
                 </View>
 
-                <View style={{ gap: 6 }}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <View style={{ gap: ruimte.xs + 2 }}>
+                  <Text style={[tekstStijl("klein", c.mutedForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     Bevestig nieuw wachtwoord
                   </Text>
                   <TextInput
@@ -707,40 +671,40 @@ export default function InfoScherm() {
                     autoComplete="new-password"
                     placeholder="Herhaal nieuw wachtwoord"
                     placeholderTextColor={c.mutedForeground}
-                    style={{
-                      backgroundColor: c.accent,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: c.border,
-                      paddingHorizontal: 12,
-                      paddingVertical: 11,
-                      color: c.foreground,
-                      fontSize: 15,
-                      fontFamily: "Inter_400Regular",
-                    }}
+                    style={[
+                      tekstStijl("nadruk", c.foreground),
+                      {
+                        backgroundColor: c.accent,
+                        borderRadius: ruimte.s,
+                        borderWidth: 1,
+                        borderColor: c.border,
+                        paddingHorizontal: ruimte.m,
+                        paddingVertical: ruimte.m - 1,
+                      },
+                    ]}
                   />
                 </View>
 
                 {wwFout ? (
-                  <Text style={{ color: "#dc2626", fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("klein", c.destructive)}>
                     {wwFout}
                   </Text>
                 ) : null}
 
-                <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flexDirection: "row", gap: ruimte.s + 2 }}>
                   <Pressable
                     onPress={() => { setWwOpen(false); resetWwModal(); }}
                     style={{
                       flex: 1,
                       backgroundColor: c.accent,
-                      borderRadius: 10,
+                      borderRadius: c.radius / 2,
                       borderWidth: 1,
                       borderColor: c.border,
-                      paddingVertical: 13,
+                      paddingVertical: ruimte.m + 1,
                       alignItems: "center",
                     }}
                   >
-                    <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                       Annuleren
                     </Text>
                   </Pressable>
@@ -750,13 +714,13 @@ export default function InfoScherm() {
                     style={{
                       flex: 2,
                       backgroundColor: c.primary,
-                      borderRadius: 10,
-                      paddingVertical: 13,
+                      borderRadius: c.radius / 2,
+                      paddingVertical: ruimte.m + 1,
                       alignItems: "center",
                       opacity: wachtwoordWijzigen.isPending ? 0.6 : 1,
                     }}
                   >
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                       {wachtwoordWijzigen.isPending ? "Bezig..." : "Wachtwoord wijzigen"}
                     </Text>
                   </Pressable>

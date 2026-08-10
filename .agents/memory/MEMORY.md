@@ -1,4 +1,4 @@
-- [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker palet AA maar UIT tot F6; web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
+- [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
 - [ADVIES_01 regelsoorten](advies-regelsoorten.md) — somplekken filteren op soort+!optioneel (helpers teltMeeRegel/berekenOfferteTotalen); elk rapportpunt krijgt fail-closed een voorstel; koppel-whitelist synchroon met DB-CHECK.
 - [PRIJS_01 prijsafspraken](prijsafspraken.md) — EXCLUDE-overlap in DB; rollback=markeren; afspraak=ÍNKOOPprijs (nooit het verkooptarief vervangen); web_search+JSON-mode=400; marktspiegel fail-closed op vindplaats.

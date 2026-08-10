@@ -1,3 +1,9 @@
+## 2026-08-10 — VORM_01 F6: alle schermen op het ontwerpsysteem + donker palet AAN
+
+- **Uitvoering:** volledig (58 schermen + 22 componenten) | **Kwaliteit:** hoog | **Risico:** middel (breed geraakt, alleen stijlen)
+
+Alle resterende schermen en componenten van de monteur-app zijn omgezet naar de tokens (@workspace/ontwerp) en bouwstenen (components/ui): kleuren via useColors, maten via ruimte, typografie via tekstStijl, status-chips via Statusmerk, kaarten/lijsten/lege- en laadstaten via Kaart/Rij/LegeStaat/Ladenstaat, rauwe enumwaarden via netteWaarde. Structuur, gedrag en teksten ongewijzigd. Daarna is `DONKER_ACTIEF` aangezet: de app volgt nu de systeeminstelling licht/donker (AA-gemeten donker palet). Logo-vlakken (menu/login/vergrendeld) bewust altijd wit (`kleuren.light.card`) omdat het beeldmerk donkere tekst heeft. Bewuste uitzonderingen op "geen letterlijke kleuren": plattegrond-/PDF-renderkleuren (gesynchroniseerd met web), opname-typelegenda, toolbox-categoriekleuren, feest-/confettikleuren, handtekening-inkt en het radiaalmenu-merkverloop — elk als gedocumenteerde constante. Bewijs: `docs/metingen/vorm01/na/` en `docs/metingen/vorm01/donker/` (schermafdrukscript kent nu `DONKER=1`).
+
 ## 2026-08-10 — VORM_01 referentiescherm-punten + ingang Mijn werk (akkoord F6 ontvangen)
 
 - **Uitvoering:** volledig (2 schermregels + menu-ingang) | **Kwaliteit:** hoog | **Risico:** laag

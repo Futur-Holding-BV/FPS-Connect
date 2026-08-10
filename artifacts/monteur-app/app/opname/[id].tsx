@@ -22,7 +22,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { LegeStaat, LijstFout, Statusmerk, tekstStijl, bovenInset } from "@/components/ui";
+// `ruimte` wordt in dit scherm als state-variabele gebruikt; de ontwerp-spacingtokens
+// importeren we daarom onder het alias `sp` om naamconflicten te voorkomen.
+import { ruimte as sp } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 
 const SPOT_TYPEN = [
@@ -58,25 +61,25 @@ const PRIORITEITEN = [
 ];
 
 function ActieBadge({ actie }: { actie: string }) {
-  const kleurMap: Record<string, { bg: string; text: string }> = {
-    vervangen: { bg: "#FEE2E2", text: "#991B1B" },
-    opwaarderen: { bg: "#FEF9C3", text: "#854D0E" },
-    controleren: { bg: "#EFF6FF", text: "#1D4ED8" },
-    "niet-brandwerend-afwerken": { bg: "#F0FDF4", text: "#166534" },
+  // Actie op het statuspalet: vervangen = fout, opwaarderen = waarschuwing,
+  // controleren = primair, niet-brandwerend-afwerken = succes.
+  const soortMap: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+    vervangen: "fout",
+    opwaarderen: "waarschuwing",
+    controleren: "primair",
+    "niet-brandwerend-afwerken": "succes",
   };
-  const stijl = kleurMap[actie] ?? { bg: "#F3F4F6", text: "#374151" };
+  const soort = soortMap[actie] ?? "neutraal";
   const label = ACTIES.find((a) => a.waarde === actie)?.label ?? actie;
-  return (
-    <View style={{ backgroundColor: stijl.bg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5 }}>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: stijl.text }}>{label}</Text>
-    </View>
-  );
+  return <Statusmerk label={label} soort={soort} />;
 }
 
 function ItemRij({ item, onPress, onVerwijder }: { item: any; onPress: () => void; onVerwijder: () => void }) {
   const c = useColors();
   const type = SPOT_TYPEN.find((t) => t.waarde === item.spot_type);
-  const kleur = type?.kleur ?? "#6b7280";
+  // De spot-type kleuren zijn categorische data-kleuren zonder paletequivalent;
+  // ze blijven bewust behouden. De fallback valt terug op een ontwerptoken.
+  const kleur = type?.kleur ?? c.mutedForeground;
   const label = type?.label ?? item.spot_type;
 
   return (
@@ -87,19 +90,19 @@ function ItemRij({ item, onPress, onVerwijder }: { item: any; onPress: () => voi
         borderRadius: c.radius,
         borderWidth: 1,
         borderColor: c.border,
-        padding: 14,
-        marginBottom: 8,
+        padding: sp.m + 2,
+        marginBottom: sp.s,
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        gap: sp.m,
         opacity: item.afgerond ? 0.7 : 1,
       }}
     >
       <View
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
+          width: sp.xxl + 4,
+          height: sp.xxl + 4,
+          borderRadius: sp.s,
           backgroundColor: kleur + "22",
           alignItems: "center",
           justifyContent: "center",
@@ -108,28 +111,28 @@ function ItemRij({ item, onPress, onVerwijder }: { item: any; onPress: () => voi
         <Ionicons name="construct-outline" size={18} color={kleur} />
       </View>
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.foreground }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: sp.s, flexWrap: "wrap" }}>
+          <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
             {label}
           </Text>
           {item.afgerond && (
             <Ionicons name="checkmark-circle" size={15} color={c.success} />
           )}
         </View>
-        <View style={{ flexDirection: "row", gap: 6, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: sp.xs + 2, marginTop: sp.xs, flexWrap: "wrap", alignItems: "center" }}>
           <ActieBadge actie={item.actie} />
           {item.ruimte ? (
-            <Text style={{ fontSize: 11, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
               {item.ruimte}
             </Text>
           ) : null}
-          <Text style={{ fontSize: 11, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
             {item.aantal}x
           </Text>
           {item.fotos?.length > 0 && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: sp.xs - 1 }}>
               <Ionicons name="camera-outline" size={12} color={c.mutedForeground} />
-              <Text style={{ fontSize: 11, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+              <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                 {item.fotos.length}
               </Text>
             </View>
@@ -139,7 +142,7 @@ function ItemRij({ item, onPress, onVerwijder }: { item: any; onPress: () => voi
       <Pressable
         onPress={onVerwijder}
         hitSlop={12}
-        style={{ padding: 6 }}
+        style={{ padding: sp.xs + 2 }}
       >
         <Ionicons name="trash-outline" size={18} color={c.destructive} />
       </Pressable>
@@ -272,13 +275,13 @@ export default function OpnameDetail() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingTop: bovenInset(insets) + sp.m,
+          paddingHorizontal: sp.xl,
+          paddingBottom: sp.l,
         }}
       >
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 8 }}>
-          <Text style={{ color: c.primary, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: sp.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
@@ -287,19 +290,19 @@ export default function OpnameDetail() {
         ) : (
           <>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              <View style={{ flex: 1, marginRight: sp.s }}>
+                <Text style={tekstStijl("sectiekop", c.darkForeground)}>
                   {opname?.naam}
                 </Text>
-                <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: sp.xs / 2 }]}>
                   {opname?.gebouw_naam} — {opname?.datum}
                 </Text>
               </View>
-              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+              <View style={{ flexDirection: "row", gap: sp.s, alignItems: "center" }}>
                 {!isDefinitief && (
                   <Pressable
                     onPress={bevestigDefinitief}
-                    style={{ backgroundColor: c.primary + "22", padding: 8, borderRadius: 8 }}
+                    style={{ backgroundColor: c.primary + "22", padding: sp.s, borderRadius: sp.s }}
                   >
                     <Ionicons name="lock-closed-outline" size={18} color={c.primary} />
                   </Pressable>
@@ -307,26 +310,16 @@ export default function OpnameDetail() {
                 {!isDefinitief && (
                   <Pressable
                     onPress={bevestigVerwijder}
-                    style={{ backgroundColor: c.destructive + "22", padding: 8, borderRadius: 8 }}
+                    style={{ backgroundColor: c.destructive + "22", padding: sp.s, borderRadius: sp.s }}
                   >
                     <Ionicons name="trash-outline" size={18} color={c.destructive} />
                   </Pressable>
                 )}
               </View>
             </View>
-            <View style={{ flexDirection: "row", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
-              <View style={{
-                backgroundColor: isDefinitief ? "#DCFCE7" : "#FEF9C3",
-                paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6,
-              }}>
-                <Text style={{
-                  fontSize: 12, fontFamily: "Inter_600SemiBold",
-                  color: isDefinitief ? "#166534" : "#854D0E",
-                }}>
-                  {isDefinitief ? "Definitief" : "Concept"}
-                </Text>
-              </View>
-              <Text style={{ color: c.darkMuted, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+            <View style={{ flexDirection: "row", gap: sp.m, marginTop: sp.s + 2, flexWrap: "wrap", alignItems: "center" }}>
+              <Statusmerk label={isDefinitief ? "Definitief" : "Concept"} soort={isDefinitief ? "succes" : "waarschuwing"} />
+              <Text style={tekstStijl("bijschrift", c.darkMuted)}>
                 {items.length} items  •  {afgerond} afgerond
               </Text>
             </View>
@@ -341,14 +334,15 @@ export default function OpnameDetail() {
         <FlatList
           data={items}
           keyExtractor={(item: any) => String(item.id)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: sp.l, paddingBottom: sp.xxl * 3 + sp.xs }}
           ListEmptyComponent={
             !isLoading ? (
-              <View style={{ alignItems: "center", paddingTop: 60 }}>
-                <Ionicons name="construct-outline" size={40} color={c.mutedForeground} />
-                <Text style={{ color: c.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
-                  Nog geen items — voeg spots toe via de knop hieronder
-                </Text>
+              <View style={{ paddingTop: sp.xxl + sp.xl }}>
+                <LegeStaat
+                  icoon="construct-outline"
+                  titel="Nog geen items"
+                  beschrijving="Voeg spots toe via de knop hieronder."
+                />
               </View>
             ) : null
           }
@@ -368,12 +362,12 @@ export default function OpnameDetail() {
           onPress={() => setToonNieuwItem(true)}
           style={{
             position: "absolute",
-            bottom: 28 + insets.bottom,
-            right: 24,
+            bottom: sp.xl + sp.xs + insets.bottom,
+            right: sp.xl,
             backgroundColor: c.primary,
-            width: 58,
-            height: 58,
-            borderRadius: 29,
+            width: sp.xxl + sp.xl + 2,
+            height: sp.xxl + sp.xl + 2,
+            borderRadius: (sp.xxl + sp.xl + 2) / 2,
             alignItems: "center",
             justifyContent: "center",
             shadowColor: "#000",
@@ -383,7 +377,7 @@ export default function OpnameDetail() {
             elevation: 6,
           }}
         >
-          <Ionicons name="add" size={30} color="#fff" />
+          <Ionicons name="add" size={30} color={c.primaryForeground} />
         </Pressable>
       )}
 
@@ -391,35 +385,35 @@ export default function OpnameDetail() {
       <Modal visible={toonNieuwItem} transparent animationType="slide" onRequestClose={() => setToonNieuwItem(false)}>
         <Pressable
           onPress={() => setToonNieuwItem(false)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "flex-end" }}
         >
           <Pressable onPress={(e) => e.stopPropagation()}>
             <ScrollView
-              style={{ backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%" }}
-              contentContainerStyle={{ padding: 22, paddingBottom: 24 + insets.bottom }}
+              style={{ backgroundColor: c.card, borderTopLeftRadius: sp.xl, borderTopRightRadius: sp.xl, maxHeight: "90%" }}
+              contentContainerStyle={{ padding: sp.xl, paddingBottom: sp.xl + insets.bottom }}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: c.foreground, marginBottom: 18 }}>
+              <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: sp.l }]}>
                 Nieuw item toevoegen
               </Text>
 
               {/* Spot type */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
                 Type voorziening
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: sp.l }} contentContainerStyle={{ gap: sp.s }}>
                 {SPOT_TYPEN.map((t) => (
                   <Pressable
                     key={t.waarde}
                     onPress={() => setSpotType(t.waarde)}
                     style={{
-                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+                      paddingHorizontal: sp.m + 2, paddingVertical: sp.s, borderRadius: sp.s,
                       borderWidth: 1,
                       borderColor: spotType === t.waarde ? t.kleur : c.border,
                       backgroundColor: spotType === t.waarde ? t.kleur + "22" : c.background,
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: spotType === t.waarde ? t.kleur : c.foreground }}>
+                    <Text style={[tekstStijl("klein", spotType === t.waarde ? t.kleur : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                       {t.label}
                     </Text>
                   </Pressable>
@@ -427,22 +421,22 @@ export default function OpnameDetail() {
               </ScrollView>
 
               {/* Actie */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
                 Vereiste actie
               </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp.s, marginBottom: sp.l }}>
                 {ACTIES.map((a) => (
                   <Pressable
                     key={a.waarde}
                     onPress={() => setActie(a.waarde)}
                     style={{
-                      paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8,
+                      paddingHorizontal: sp.m, paddingVertical: sp.xs + 3, borderRadius: sp.s,
                       borderWidth: 1,
                       borderColor: actie === a.waarde ? c.primary : c.border,
                       backgroundColor: actie === a.waarde ? c.accent : c.background,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: actie === a.waarde ? c.primary : c.foreground }}>
+                    <Text style={[tekstStijl("bijschrift", actie === a.waarde ? c.primary : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                       {a.label}
                     </Text>
                   </Pressable>
@@ -450,22 +444,22 @@ export default function OpnameDetail() {
               </View>
 
               {/* Bereikbaarheid */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
                 Bereikbaarheid
               </Text>
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", gap: sp.s, marginBottom: sp.l }}>
                 {BEREIKBAARHEID.map((b) => (
                   <Pressable
                     key={b.waarde}
                     onPress={() => setBereikbaarheid(b.waarde)}
                     style={{
-                      flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center",
+                      flex: 1, paddingVertical: sp.s, borderRadius: sp.s, alignItems: "center",
                       borderWidth: 1,
                       borderColor: bereikbaarheid === b.waarde ? b.kleur : c.border,
                       backgroundColor: bereikbaarheid === b.waarde ? b.kleur + "22" : c.background,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: bereikbaarheid === b.waarde ? b.kleur : c.foreground }}>
+                    <Text style={[tekstStijl("bijschrift", bereikbaarheid === b.waarde ? b.kleur : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                       {b.label}
                     </Text>
                   </Pressable>
@@ -473,7 +467,7 @@ export default function OpnameDetail() {
               </View>
 
               {/* Ruimte */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                 Ruimte / locatie
               </Text>
               <TextInput
@@ -481,29 +475,29 @@ export default function OpnameDetail() {
                 onChangeText={setRuimte}
                 placeholder="Bijv. Gang 1e verdieping, serverruimte..."
                 placeholderTextColor={c.mutedForeground}
-                style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.background, marginBottom: 14 }}
+                style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.background, marginBottom: sp.m + 2 }]}
               />
 
               {/* Verdieping */}
               {(verdiepingen ?? []).length > 0 && (
                 <>
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
+                  <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.s }]}>
                     Verdieping
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }} contentContainerStyle={{ gap: 8 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: sp.m + 2 }} contentContainerStyle={{ gap: sp.s }}>
                     <Pressable
                       onPress={() => setVerdiepingId(null)}
-                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: verdiepingId === null ? c.primary : c.border, backgroundColor: verdiepingId === null ? c.accent : c.background }}
+                      style={{ paddingHorizontal: sp.m, paddingVertical: sp.xs + 3, borderRadius: sp.s, borderWidth: 1, borderColor: verdiepingId === null ? c.primary : c.border, backgroundColor: verdiepingId === null ? c.accent : c.background }}
                     >
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: verdiepingId === null ? c.primary : c.foreground }}>Geen</Text>
+                      <Text style={tekstStijl("bijschrift", verdiepingId === null ? c.primary : c.foreground)}>Geen</Text>
                     </Pressable>
                     {(verdiepingen ?? []).map((v) => (
                       <Pressable
                         key={v.id}
                         onPress={() => setVerdiepingId(v.id)}
-                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: verdiepingId === v.id ? c.primary : c.border, backgroundColor: verdiepingId === v.id ? c.accent : c.background }}
+                        style={{ paddingHorizontal: sp.m, paddingVertical: sp.xs + 3, borderRadius: sp.s, borderWidth: 1, borderColor: verdiepingId === v.id ? c.primary : c.border, backgroundColor: verdiepingId === v.id ? c.accent : c.background }}
                       >
-                        <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: verdiepingId === v.id ? c.primary : c.foreground }}>
+                        <Text style={[tekstStijl("bijschrift", verdiepingId === v.id ? c.primary : c.foreground), { fontFamily: "Inter_500Medium" }]}>
                           {v.naam}
                         </Text>
                       </Pressable>
@@ -513,20 +507,20 @@ export default function OpnameDetail() {
               )}
 
               {/* Aantal + Afmetingen */}
-              <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
+              <View style={{ flexDirection: "row", gap: sp.m, marginBottom: sp.m + 2 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+                  <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                     Aantal
                   </Text>
                   <TextInput
                     value={aantal}
                     onChangeText={setAantal}
                     keyboardType="numeric"
-                    style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.background }}
+                    style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.background }]}
                   />
                 </View>
                 <View style={{ flex: 2 }}>
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+                  <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                     Afmetingen
                   </Text>
                   <TextInput
@@ -534,13 +528,13 @@ export default function OpnameDetail() {
                     onChangeText={setAfmetingen}
                     placeholder="Bijv. 900×2100 mm"
                     placeholderTextColor={c.mutedForeground}
-                    style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.background }}
+                    style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.background }]}
                   />
                 </View>
               </View>
 
               {/* Beschrijving */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                 Situatie / bevinding
               </Text>
               <TextInput
@@ -550,11 +544,11 @@ export default function OpnameDetail() {
                 placeholderTextColor={c.mutedForeground}
                 multiline
                 numberOfLines={3}
-                style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.background, marginBottom: 14, textAlignVertical: "top", minHeight: 72 }}
+                style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.background, marginBottom: sp.m + 2, textAlignVertical: "top", minHeight: sp.xxl + sp.xxl + sp.s }]}
               />
 
               {/* Notities */}
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+              <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: sp.xs + 2 }]}>
                 Notities (intern)
               </Text>
               <TextInput
@@ -564,18 +558,18 @@ export default function OpnameDetail() {
                 placeholderTextColor={c.mutedForeground}
                 multiline
                 numberOfLines={2}
-                style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, backgroundColor: c.background, marginBottom: 20, textAlignVertical: "top", minHeight: 56 }}
+                style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: sp.s + 2, padding: sp.m, backgroundColor: c.background, marginBottom: sp.xl, textAlignVertical: "top", minHeight: sp.xxl + sp.xl + sp.s }]}
               />
 
               <Pressable
                 onPress={itemOpslaan}
                 disabled={maakItem.isPending}
-                style={{ backgroundColor: c.primary, padding: 14, borderRadius: 12, alignItems: "center" }}
+                style={{ backgroundColor: c.primary, padding: sp.m + 2, borderRadius: c.radius, alignItems: "center" }}
               >
                 {maakItem.isPending ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={c.primaryForeground} />
                 ) : (
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_700Bold" }]}>
                     Item toevoegen
                   </Text>
                 )}

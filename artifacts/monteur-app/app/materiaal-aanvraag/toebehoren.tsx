@@ -4,6 +4,7 @@ import { API_DOMEIN } from "@/lib/apiDomein";
 // magazijn-gereedschap-toebehoren, niet op een project. Gaat naar de
 // werkvoorbereider.
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -21,7 +22,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { Waarschuwvlak, bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { uploadFoto } from "@/lib/upload";
@@ -117,31 +118,31 @@ export default function ToebehorenAanvraag() {
 
   if (verzonden) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
+      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: ruimte.xxl }}>
         <View
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: "#16a34a22",
+            width: ruimte.xxl * 2,
+            height: ruimte.xxl * 2,
+            borderRadius: ruimte.xxl,
+            backgroundColor: c.accent,
             justifyContent: "center",
             alignItems: "center",
-            marginBottom: 20,
+            marginBottom: ruimte.l + ruimte.xs,
           }}
         >
-          <Ionicons name="checkmark-circle" size={36} color="#16a34a" />
+          <Ionicons name="checkmark-circle" size={36} color={c.success} />
         </View>
-        <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold", textAlign: "center", marginBottom: 8 }}>
+        <Text style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center", marginBottom: ruimte.s }]}>
           Aanvraag verzonden
         </Text>
-        <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20, marginBottom: 32 }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginBottom: ruimte.xxl }]}>
           De werkvoorbereider ontvangt uw aanvraag voor toebehoren gereedschap. De kosten komen op de rubriek magazijn-gereedschap-toebehoren, niet op een project.
         </Text>
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: c.tint, borderRadius: 10, paddingHorizontal: 28, paddingVertical: 12 }}
+          style={({ pressed }) => ({ backgroundColor: c.tint, borderRadius: c.radius, paddingHorizontal: ruimte.xl + ruimte.xs, paddingVertical: ruimte.m, opacity: pressed ? 0.85 : 1 })}
         >
-          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Terug</Text>
+          <Text style={tekstStijl("nadruk", c.primaryForeground)}>Terug</Text>
         </Pressable>
       </View>
     );
@@ -154,23 +155,23 @@ export default function ToebehorenAanvraag() {
         style={{
           backgroundColor: c.card,
           paddingTop: bovenInset(insets),
-          paddingBottom: 14,
-          paddingHorizontal: 16,
+          paddingBottom: ruimte.m + 2,
+          paddingHorizontal: ruimte.l,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
-          <Ionicons name="chevron-back" size={22} color={c.foreground} />
+        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: ruimte.xs }}>
+          <Ionicons name="chevron-back" size={ruimte.xl} color={c.foreground} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("sectiekop", c.foreground)}>
             Toebehoren gereedschap
           </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+          <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
             Zaagjes, boortjes, schijven — verbruik
           </Text>
         </View>
@@ -179,37 +180,24 @@ export default function ToebehorenAanvraag() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={insets.top + 8}
+        keyboardVerticalOffset={insets.top + ruimte.s}
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l, paddingBottom: ruimte.xxl + ruimte.s }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Uitleg */}
-          <View
-            style={{
-              backgroundColor: "#2563eb18",
-              borderWidth: 1,
-              borderColor: "#2563eb55",
-              borderRadius: 10,
-              padding: 14,
-              flexDirection: "row",
-              gap: 10,
-              alignItems: "flex-start",
-            }}
-          >
-            <Ionicons name="information-circle-outline" size={18} color="#2563eb" style={{ marginTop: 1 }} />
-            <Text style={{ flex: 1, color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
-              Deze aanvraag gaat naar de werkvoorbereider. De kosten komen op de rubriek magazijn-gereedschap-toebehoren en niet op een project.
-            </Text>
-          </View>
+          <Waarschuwvlak
+            soort="info"
+            tekst="Deze aanvraag gaat naar de werkvoorbereider. De kosten komen op de rubriek magazijn-gereedschap-toebehoren en niet op een project."
+          />
 
           {/* Omschrijving */}
           <View>
-            <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
               Omschrijving
-              <Text style={{ color: "#dc2626", fontFamily: "Inter_400Regular" }}> *</Text>
+              <Text style={tekstStijl("standaard", c.destructive)}> *</Text>
             </Text>
             <TextInput
               value={omschrijving}
@@ -218,38 +206,38 @@ export default function ToebehorenAanvraag() {
               placeholderTextColor={c.mutedForeground}
               multiline
               numberOfLines={3}
-              style={{
-                backgroundColor: c.card,
-                borderWidth: 1,
-                borderColor: c.border,
-                borderRadius: 10,
-                padding: 12,
-                color: c.foreground,
-                fontSize: 14,
-                fontFamily: "Inter_400Regular",
-                minHeight: 80,
-                textAlignVertical: "top",
-              }}
+              style={[
+                tekstStijl("klein", c.foreground),
+                {
+                  backgroundColor: c.card,
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  borderRadius: c.radius,
+                  padding: ruimte.m,
+                  minHeight: ruimte.xxl * 2 + ruimte.l,
+                  textAlignVertical: "top",
+                },
+              ]}
             />
           </View>
 
           {/* Foto (optioneel) */}
           <View>
-            <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s + 2 }]}>
               Foto (optioneel)
             </Text>
             {fotoUri ? (
               <View>
                 <Image
                   source={{ uri: fotoUri }}
-                  style={{ width: "100%", height: 220, borderRadius: 10, backgroundColor: c.muted }}
+                  style={{ width: "100%", height: 220, borderRadius: c.radius, backgroundColor: c.muted }}
                   resizeMode="cover"
                 />
                 <Pressable
                   onPress={() => setFotoUri(null)}
-                  style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#000000aa", borderRadius: 20, padding: 6 }}
+                  style={{ position: "absolute", top: ruimte.s, right: ruimte.s, backgroundColor: c.dark + "aa", borderRadius: ruimte.l + ruimte.xs, padding: ruimte.xs + 2 }}
                 >
-                  <Ionicons name="close" size={16} color="#fff" />
+                  <Ionicons name="close" size={ruimte.l} color={c.primaryForeground} />
                 </Pressable>
               </View>
             ) : (
@@ -260,15 +248,15 @@ export default function ToebehorenAanvraag() {
                   borderWidth: 2,
                   borderStyle: "dashed",
                   borderColor: c.border,
-                  borderRadius: 10,
+                  borderRadius: c.radius,
                   backgroundColor: c.card,
                   justifyContent: "center",
                   alignItems: "center",
-                  gap: 8,
+                  gap: ruimte.s,
                 }}
               >
-                <Ionicons name="camera-outline" size={32} color={c.mutedForeground} />
-                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                <Ionicons name="camera-outline" size={ruimte.xxl} color={c.mutedForeground} />
+                <Text style={tekstStijl("klein", c.mutedForeground)}>
                   Foto toevoegen
                 </Text>
               </Pressable>
@@ -281,28 +269,23 @@ export default function ToebehorenAanvraag() {
             disabled={bezig || !omschrijving.trim()}
             style={({ pressed }) => ({
               backgroundColor:
-                !omschrijving.trim() ? c.muted : pressed ? "#c93009" : c.tint,
-              borderRadius: 10,
-              paddingVertical: 14,
+                !omschrijving.trim() ? c.muted : c.tint,
+              opacity: pressed && omschrijving.trim() ? 0.85 : 1,
+              borderRadius: c.radius,
+              paddingVertical: ruimte.m + 2,
               alignItems: "center",
               flexDirection: "row",
               justifyContent: "center",
-              gap: 8,
-              marginTop: 8,
+              gap: ruimte.s,
+              marginTop: ruimte.s,
             })}
           >
             {bezig ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={c.primaryForeground} />
             ) : (
-              <Ionicons name="send-outline" size={16} color={!omschrijving.trim() ? c.mutedForeground : "#fff"} />
+              <Ionicons name="send-outline" size={ruimte.l} color={!omschrijving.trim() ? c.mutedForeground : c.primaryForeground} />
             )}
-            <Text
-              style={{
-                color: !omschrijving.trim() ? c.mutedForeground : "#fff",
-                fontSize: 14,
-                fontFamily: "Inter_600SemiBold",
-              }}
-            >
+            <Text style={tekstStijl("nadruk", !omschrijving.trim() ? c.mutedForeground : c.primaryForeground)}>
               {bezig ? "Verzenden..." : "Aanvraag verzenden"}
             </Text>
           </Pressable>

@@ -31,7 +31,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { bovenInset, LijstFout } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
+import { bovenInset, LijstFout, Kaart, tekstStijl } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
@@ -103,7 +104,7 @@ function TabKnop({
             justifyContent: "center",
           }}
         >
-          <Text style={{ fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" }}>
+          <Text style={{ fontSize: 9, fontFamily: "Inter_700Bold", color: c.primaryForeground }}>
             {badge > 99 ? "99+" : badge}
           </Text>
         </View>
@@ -182,7 +183,7 @@ function GebruikerKiezerModal({
                 borderRadius: 8,
               }}
             >
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.primaryForeground }}>
                 Starten
               </Text>
             </Pressable>
@@ -231,7 +232,7 @@ function GebruikerKiezerModal({
                     paddingVertical: 12,
                     borderBottomWidth: 1,
                     borderBottomColor: c.border,
-                    backgroundColor: isGesel ? c.primary + "10" : "transparent",
+                    backgroundColor: isGesel ? c.accent : "transparent",
                   }}
                 >
                   <View
@@ -239,7 +240,7 @@ function GebruikerKiezerModal({
                       width: 36,
                       height: 36,
                       borderRadius: 18,
-                      backgroundColor: c.primary + "20",
+                      backgroundColor: c.accent,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -427,15 +428,15 @@ export default function BerichtenScherm() {
         </Text>
 
         {bevestigFout ? (
-          <Text style={{ fontSize: 13, color: "#dc2626", fontFamily: "Inter_400Regular", marginBottom: 12, textAlign: "center" }}>
+          <Text style={{ fontSize: 13, color: c.destructive, fontFamily: "Inter_400Regular", marginBottom: ruimte.m, textAlign: "center" }}>
             {bevestigFout}
           </Text>
         ) : null}
 
         {geselecteerdToolbox.mijn_bevestiging ? (
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#f0fdf4", borderRadius: 10, borderWidth: 1, borderColor: "#bbf7d0", padding: 14 }}>
-            <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
-            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#15803d" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: ruimte.s, backgroundColor: c.secondary, borderRadius: c.radius, borderWidth: 1, borderColor: c.success, padding: ruimte.m + 2 }}>
+            <Ionicons name="checkmark-circle" size={20} color={c.success} />
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.success }}>
               Gelezen en begrepen op{" "}
               {new Date(geselecteerdToolbox.mijn_bevestiging.bevestigd_op).toLocaleDateString("nl-NL")}
             </Text>
@@ -444,9 +445,9 @@ export default function BerichtenScherm() {
           <Pressable
             onPress={() => bevestig(geselecteerdToolbox)}
             disabled={bezigBevestigen}
-            style={{ backgroundColor: c.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", opacity: bezigBevestigen ? 0.6 : 1 }}
+            style={{ backgroundColor: c.primary, borderRadius: c.radius, paddingVertical: ruimte.m + 2, alignItems: "center", opacity: bezigBevestigen ? 0.6 : 1 }}
           >
-            <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" }}>
+            <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.primaryForeground }}>
               {bezigBevestigen ? "Bezig..." : "Gelezen en begrepen"}
             </Text>
           </Pressable>
@@ -471,9 +472,9 @@ export default function BerichtenScherm() {
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color={c.darkForeground} />
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" }}>
+          <Text style={{ flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: c.darkForeground }}>
             Berichten
           </Text>
           {activeTab === "chat" && (
@@ -484,31 +485,31 @@ export default function BerichtenScherm() {
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: "rgba(255,255,255,0.15)",
+                backgroundColor: c.darkMuted,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="add" size={20} color="#fff" />
+              <Ionicons name="add" size={20} color={c.darkForeground} />
             </Pressable>
           )}
         </View>
 
         {/* Tabs */}
-        <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)" }}>
+        <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: c.darkMuted }}>
           <TabKnop
             label="Toolbox"
             actief={activeTab === "toolbox"}
             badge={openstaandToolbox.length}
             onPress={() => setActiveTab("toolbox")}
-            c={{ ...c, primary: "#fff", mutedForeground: "rgba(255,255,255,0.6)" } as any}
+            c={{ ...c, primary: c.darkForeground, mutedForeground: c.darkMuted } as any}
           />
           <TabKnop
             label="Chat"
             actief={activeTab === "chat"}
             badge={totalOngelezen}
             onPress={() => setActiveTab("chat")}
-            c={{ ...c, primary: "#fff", mutedForeground: "rgba(255,255,255,0.6)" } as any}
+            c={{ ...c, primary: c.darkForeground, mutedForeground: c.darkMuted } as any}
           />
         </View>
       </View>
@@ -554,13 +555,13 @@ export default function BerichtenScherm() {
                 onPress={() => setGeselecteerdToolbox(item)}
                 style={{
                   backgroundColor: c.card,
-                  borderRadius: 12,
+                  borderRadius: c.radius,
                   borderWidth: 1,
-                  borderColor: isBevestigd ? c.border : c.primary + "44",
-                  padding: 14,
+                  borderColor: isBevestigd ? c.border : c.primary,
+                  padding: ruimte.m + 2,
                   flexDirection: "row",
                   alignItems: "flex-start",
-                  gap: 12,
+                  gap: ruimte.m,
                 }}
               >
                 <View
@@ -568,7 +569,7 @@ export default function BerichtenScherm() {
                     width: 36,
                     height: 36,
                     borderRadius: 18,
-                    backgroundColor: isBevestigd ? "#f0fdf4" : c.primary + "18",
+                    backgroundColor: isBevestigd ? c.secondary : c.accent,
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
@@ -577,7 +578,7 @@ export default function BerichtenScherm() {
                   <Ionicons
                     name={isBevestigd ? "checkmark-circle" : "document-text-outline"}
                     size={20}
-                    color={isBevestigd ? "#16a34a" : c.primary}
+                    color={isBevestigd ? c.success : c.primary}
                   />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -586,8 +587,8 @@ export default function BerichtenScherm() {
                       {item.titel}
                     </Text>
                     {!isBevestigd && (
-                      <View style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
-                        <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+                      <View style={{ backgroundColor: c.primary, borderRadius: c.radius / 2, paddingHorizontal: 7, paddingVertical: 2 }}>
+                        <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: c.primaryForeground }}>
                           Te bevestigen
                         </Text>
                       </View>
@@ -600,7 +601,7 @@ export default function BerichtenScherm() {
                     {item.inhoud}
                   </Text>
                   {isBevestigd && item.mijn_bevestiging ? (
-                    <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: "#16a34a", marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: c.success, marginTop: 4 }}>
                       Bevestigd op{" "}
                       {new Date(item.mijn_bevestiging.bevestigd_op).toLocaleDateString("nl-NL")}
                     </Text>
@@ -646,9 +647,9 @@ export default function BerichtenScherm() {
                 </Text>
                 <Pressable
                   onPress={() => setKiezerOpen(true)}
-                  style={{ marginTop: 8, backgroundColor: c.primary, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 }}
+                  style={{ marginTop: ruimte.s, backgroundColor: c.primary, borderRadius: c.radius, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.s + 2 }}
                 >
-                  <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+                  <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.primaryForeground }}>
                     Nieuw gesprek
                   </Text>
                 </Pressable>
@@ -663,13 +664,13 @@ export default function BerichtenScherm() {
                 onPress={() => router.push(`/gesprek/${g.id}` as any)}
                 style={{
                   backgroundColor: c.card,
-                  borderRadius: 12,
+                  borderRadius: c.radius,
                   borderWidth: 1,
-                  borderColor: heeftOngelezen ? c.primary + "44" : c.border,
-                  padding: 14,
+                  borderColor: heeftOngelezen ? c.primary : c.border,
+                  padding: ruimte.m + 2,
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 12,
+                  gap: ruimte.m,
                 }}
               >
                 <View
@@ -677,14 +678,14 @@ export default function BerichtenScherm() {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: g.type === "groep" ? "#dbeafe" : c.primary + "18",
+                    backgroundColor: c.accent,
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
                   }}
                 >
                   {g.type === "groep" ? (
-                    <Ionicons name="people-outline" size={20} color="#3b82f6" />
+                    <Ionicons name="people-outline" size={20} color={c.primary} />
                   ) : (
                     <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: c.primary }}>
                       {naam.charAt(0).toUpperCase()}
@@ -731,7 +732,7 @@ export default function BerichtenScherm() {
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" }}>
+                        <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: c.primaryForeground }}>
                           {g.ongelezen_aantal > 99 ? "99+" : g.ongelezen_aantal}
                         </Text>
                       </View>

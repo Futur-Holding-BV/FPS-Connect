@@ -16,6 +16,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Modal, Pressable, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
+
+import { useColors } from "@/hooks/useColors";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, getHuidigToken, useAuth } from "@/context/auth";
@@ -41,6 +44,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function LmraBewaker() {
+  const c = useColors();
   const { token } = useAuth();
   const router = useRouter();
   const { data: openstaand, refetch } = useGetMijnLmraOpenstaand();
@@ -60,55 +64,55 @@ function LmraBewaker() {
     <Modal visible animationType="fade" transparent statusBarTranslucent>
       <View style={{
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.88)",
+        backgroundColor: c.dark + "E0",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: ruimte.xl,
       }}>
         <View style={{
-          backgroundColor: "#1c1c1e",
-          borderRadius: 16,
-          padding: 24,
+          backgroundColor: c.dark,
+          borderRadius: c.radius,
+          padding: ruimte.xl,
           width: "100%",
           maxWidth: 360,
         }}>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
+          <View style={{ alignItems: "center", marginBottom: ruimte.l }}>
             <View style={{
               width: 56, height: 56, borderRadius: 28,
-              backgroundColor: "#fee2e2",
+              backgroundColor: c.destructive + "26",
               alignItems: "center", justifyContent: "center",
-              marginBottom: 12,
+              marginBottom: ruimte.m,
             }}>
-              <Ionicons name="warning" size={28} color="#dc2626" />
+              <Ionicons name="warning" size={28} color={c.destructive} />
             </View>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", textAlign: "center" }}>
+            <Text style={{ color: c.darkForeground, fontSize: 18, fontWeight: "700", textAlign: "center" }}>
               LMRA vereist
             </Text>
           </View>
-          <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", marginBottom: 6, lineHeight: 20 }}>
+          <Text style={{ color: c.darkMuted, fontSize: 14, textAlign: "center", marginBottom: ruimte.xs + 2, lineHeight: 20 }}>
             {`Je werkt ${eerste.dagen_openstaand} dag${eerste.dagen_openstaand !== 1 ? "en" : ""} op`}
           </Text>
-          <Text style={{ color: "#f3f4f6", fontWeight: "600", fontSize: 15, textAlign: "center", marginBottom: 6 }}>
+          <Text style={{ color: c.darkForeground, fontWeight: "600", fontSize: 15, textAlign: "center", marginBottom: ruimte.xs + 2 }}>
             {eerste.opdracht_naam}
           </Text>
-          <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 20 }}>
+          <Text style={{ color: c.darkMuted, fontSize: 14, textAlign: "center", marginBottom: ruimte.l + ruimte.xs, lineHeight: 20 }}>
             zonder geregistreerde LMRA.{"\n"}Vul je LMRA in voor aanvang van werkzaamheden.
           </Text>
           {dwingendItems.length > 1 && (
-            <Text style={{ color: "#6b7280", fontSize: 12, textAlign: "center", marginBottom: 16 }}>
+            <Text style={{ color: c.darkMuted, fontSize: 12, textAlign: "center", marginBottom: ruimte.l }}>
               {`+ ${dwingendItems.length - 1} ander${dwingendItems.length - 1 !== 1 ? "e" : ""} project${dwingendItems.length - 1 !== 1 ? "en" : ""}`}
             </Text>
           )}
           <Pressable
             onPress={() => router.push("/lmra")}
             style={{
-              backgroundColor: "#f97316",
-              borderRadius: 10,
-              padding: 14,
+              backgroundColor: c.primary,
+              borderRadius: c.radius,
+              padding: ruimte.m + 2,
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>LMRA invullen</Text>
+            <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 16 }}>LMRA invullen</Text>
           </Pressable>
         </View>
       </View>
@@ -117,6 +121,7 @@ function LmraBewaker() {
 }
 
 function ToolboxPopupBewaker() {
+  const c = useColors();
   const { token } = useAuth();
   const router = useRouter();
   const { data: opdracht, refetch } = useGetMijnToolboxMaandopdracht();
@@ -152,56 +157,56 @@ function ToolboxPopupBewaker() {
     <Modal visible animationType="fade" transparent statusBarTranslucent>
       <View style={{
         flex: 1,
-        backgroundColor: kanUitstellen ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.92)",
+        backgroundColor: kanUitstellen ? c.dark + "BF" : c.dark + "EB",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: ruimte.xl,
       }}>
         <View style={{
-          backgroundColor: "#1c1c1e",
-          borderRadius: 16,
-          padding: 24,
+          backgroundColor: c.dark,
+          borderRadius: c.radius,
+          padding: ruimte.xl,
           width: "100%",
           maxWidth: 360,
         }}>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
+          <View style={{ alignItems: "center", marginBottom: ruimte.l }}>
             <View style={{
               width: 56, height: 56, borderRadius: 28,
-              backgroundColor: "#fef3c7",
+              backgroundColor: c.warning + "26",
               alignItems: "center", justifyContent: "center",
-              marginBottom: 12,
+              marginBottom: ruimte.m,
             }}>
-              <Ionicons name="book-outline" size={28} color="#d97706" />
+              <Ionicons name="book-outline" size={28} color={c.warning} />
             </View>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", textAlign: "center" }}>
+            <Text style={{ color: c.darkForeground, fontSize: 18, fontWeight: "700", textAlign: "center" }}>
               Verplichte maandtoolbox
             </Text>
             {maand != null && (
-              <Text style={{ color: "#6b7280", fontSize: 12, textAlign: "center", marginTop: 4 }}>
+              <Text style={{ color: c.darkMuted, fontSize: 12, textAlign: "center", marginTop: ruimte.xs }}>
                 {maandLabel} {jaar}
               </Text>
             )}
           </View>
-          <Text style={{ color: "#f3f4f6", fontWeight: "600", fontSize: 15, textAlign: "center", marginBottom: 6 }}>
+          <Text style={{ color: c.darkForeground, fontWeight: "600", fontSize: 15, textAlign: "center", marginBottom: ruimte.xs + 2 }}>
             {toolboxTitel}
           </Text>
-          <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 20 }}>
+          <Text style={{ color: c.darkMuted, fontSize: 14, textAlign: "center", marginBottom: ruimte.l + ruimte.xs, lineHeight: 20 }}>
             {kanUitstellen
               ? "Rond deze toolbox zo snel mogelijk af. Je kunt hem nog een dag uitstellen."
               : "De uitstelperiode is verstreken. Voltooi deze toolbox om door te gaan."}
           </Text>
           <Pressable
             onPress={() => router.push("/toolboxen")}
-            style={{ backgroundColor: "#d97706", borderRadius: 10, padding: 14, alignItems: "center", marginBottom: kanUitstellen ? 10 : 0 }}
+            style={{ backgroundColor: c.warning, borderRadius: c.radius, padding: ruimte.m + 2, alignItems: "center", marginBottom: kanUitstellen ? ruimte.s + 2 : 0 }}
           >
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>Toolbox nu doen</Text>
+            <Text style={{ color: c.warningForeground, fontWeight: "700", fontSize: 16 }}>Toolbox nu doen</Text>
           </Pressable>
           {kanUitstellen && (
             <Pressable
               onPress={() => void uitstellen()}
-              style={{ borderRadius: 10, padding: 12, alignItems: "center" }}
+              style={{ borderRadius: c.radius, padding: ruimte.m, alignItems: "center" }}
             >
-              <Text style={{ color: "#6b7280", fontSize: 14 }}>Uitstellen tot morgen</Text>
+              <Text style={{ color: c.darkMuted, fontSize: 14 }}>Uitstellen tot morgen</Text>
             </Pressable>
           )}
         </View>
@@ -223,6 +228,7 @@ function huidigeJaarMaand(): string {
 }
 
 function AiDrempelBanner() {
+  const c = useColors();
   const { token } = useAuth();
   const [gesloten, setGesloten] = useState(false);
   const { data, refetch } = useGetAiDrempelStatus();
@@ -293,23 +299,23 @@ function AiDrempelBanner() {
       left: 0,
       right: 0,
       zIndex: 999,
-      backgroundColor: "#7c2d12",
+      backgroundColor: c.destructive,
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: ruimte.m + 2,
+      paddingVertical: ruimte.s + 2,
     }}>
-      <Ionicons name="warning-outline" size={18} color="#fca5a5" style={{ marginRight: 8 }} />
+      <Ionicons name="warning-outline" size={18} color={c.destructiveForeground} style={{ marginRight: ruimte.s }} />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: "#fef2f2", fontSize: 13, fontWeight: "700" }}>
+        <Text style={{ color: c.destructiveForeground, fontSize: 13, fontWeight: "700" }}>
           AI-kostendrempel overschreden
         </Text>
-        <Text style={{ color: "#fca5a5", fontSize: 12, marginTop: 2 }}>
+        <Text style={{ color: c.destructiveForeground + "CC", fontSize: 12, marginTop: 2 }}>
           {`Maandkosten ${kostenLabel} (drempel ${drempelLabel})`}
         </Text>
       </View>
       <Pressable onPress={() => void sluit()} hitSlop={10}>
-        <Ionicons name="close" size={20} color="#fca5a5" />
+        <Ionicons name="close" size={20} color={c.destructiveForeground} />
       </Pressable>
     </View>
   );

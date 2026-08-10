@@ -24,7 +24,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { uploadFoto } from "@/lib/upload";
@@ -143,31 +144,31 @@ export default function MeerwerkMelden() {
 
   if (verzonden) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
+      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: ruimte.xxl }}>
         <View
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: "#16a34a22",
+            width: ruimte.xxl + ruimte.xxl,
+            height: ruimte.xxl + ruimte.xxl,
+            borderRadius: ruimte.xxl,
+            backgroundColor: c.success + "22",
             justifyContent: "center",
             alignItems: "center",
-            marginBottom: 20,
+            marginBottom: ruimte.xl,
           }}
         >
-          <Ionicons name="checkmark-circle" size={36} color="#16a34a" />
+          <Ionicons name="checkmark-circle" size={36} color={c.success} />
         </View>
-        <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold", textAlign: "center", marginBottom: 8 }}>
+        <Text style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center", marginBottom: ruimte.s }]}>
           Melding verzonden
         </Text>
-        <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20, marginBottom: 32 }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginBottom: ruimte.xxl }]}>
           Gemeld bij werkvoorbereiding, cc projectleider.
         </Text>
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: c.tint, borderRadius: 10, paddingHorizontal: 28, paddingVertical: 12 }}
+          style={{ backgroundColor: c.tint, borderRadius: c.radius / 2, paddingHorizontal: ruimte.xl + ruimte.xs, paddingVertical: ruimte.m }}
         >
-          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Terug</Text>
+          <Text style={[tekstStijl("standaard", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>Terug</Text>
         </Pressable>
       </View>
     );
@@ -180,19 +181,19 @@ export default function MeerwerkMelden() {
         style={{
           backgroundColor: c.card,
           paddingTop: bovenInset(insets),
-          paddingBottom: 14,
-          paddingHorizontal: 16,
+          paddingBottom: ruimte.m + 2,
+          paddingHorizontal: ruimte.l,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: ruimte.xs }}>
           <Ionicons name="chevron-back" size={22} color={c.foreground} />
         </Pressable>
-        <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("sectiekop", c.foreground)}>
           Meer-/minderwerk melden
         </Text>
       </View>
@@ -200,12 +201,12 @@ export default function MeerwerkMelden() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, gap: 18, paddingBottom: 40, width: "100%", maxWidth: formMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l + 2, paddingBottom: ruimte.xxl + ruimte.s, width: "100%", maxWidth: formMaxBreedte, alignSelf: "center" }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Type */}
           <Veld label="Type" ontbreekt={poging && ontbreekt.type}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: ruimte.s }}>
               {(["meerwerk", "minderwerk"] as Type[]).map((t) => {
                 const gesel = type === t;
                 return (
@@ -215,19 +216,18 @@ export default function MeerwerkMelden() {
                     style={{
                       flex: 1,
                       alignItems: "center",
-                      paddingVertical: 14,
-                      borderRadius: 10,
+                      paddingVertical: ruimte.m + 2,
+                      borderRadius: c.radius / 2,
                       borderWidth: 1.5,
                       borderColor: gesel ? c.primary : c.border,
                       backgroundColor: gesel ? c.primary + "18" : c.card,
                     }}
                   >
                     <Text
-                      style={{
-                        color: gesel ? c.primary : c.foreground,
-                        fontSize: 14,
-                        fontFamily: gesel ? "Inter_600SemiBold" : "Inter_400Regular",
-                      }}
+                      style={[
+                        tekstStijl("standaard", gesel ? c.primary : c.foreground),
+                        { fontFamily: gesel ? "Inter_600SemiBold" : "Inter_400Regular" },
+                      ]}
                     >
                       {t === "meerwerk" ? "Meerwerk" : "Minderwerk"}
                     </Text>
@@ -239,35 +239,35 @@ export default function MeerwerkMelden() {
 
           {/* Foto's */}
           <Veld label="Foto's (minimaal 1)" ontbreekt={poging && ontbreekt.fotos}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s + 2 }}>
               {fotoUris.map((uri, i) => (
                 <View key={`${uri}-${i}`}>
-                  <Image source={{ uri }} style={{ width: 96, height: 96, borderRadius: 10, backgroundColor: c.muted }} resizeMode="cover" />
+                  <Image source={{ uri }} style={{ width: ruimte.xxl * 3, height: ruimte.xxl * 3, borderRadius: c.radius / 2, backgroundColor: c.muted }} resizeMode="cover" />
                   <Pressable
                     onPress={() => setFotoUris((h) => h.filter((_, idx) => idx !== i))}
-                    style={{ position: "absolute", top: 4, right: 4, backgroundColor: "#000000aa", borderRadius: 20, padding: 4 }}
+                    style={{ position: "absolute", top: ruimte.xs, right: ruimte.xs, backgroundColor: c.dark + "AA", borderRadius: ruimte.xl - 4, padding: ruimte.xs }}
                   >
-                    <Ionicons name="close" size={14} color="#fff" />
+                    <Ionicons name="close" size={14} color={c.darkForeground} />
                   </Pressable>
                 </View>
               ))}
               <Pressable
                 onPress={() => void voegFotoToe()}
                 style={{
-                  width: 96,
-                  height: 96,
+                  width: ruimte.xxl * 3,
+                  height: ruimte.xxl * 3,
                   borderWidth: 2,
                   borderStyle: "dashed",
                   borderColor: c.border,
-                  borderRadius: 10,
+                  borderRadius: c.radius / 2,
                   backgroundColor: c.card,
                   justifyContent: "center",
                   alignItems: "center",
-                  gap: 4,
+                  gap: ruimte.xs,
                 }}
               >
                 <Ionicons name="camera-outline" size={26} color={c.mutedForeground} />
-                <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>Toevoegen</Text>
+                <Text style={tekstStijl("bijschrift", c.mutedForeground)}>Toevoegen</Text>
               </Pressable>
             </View>
           </Veld>
@@ -309,7 +309,7 @@ export default function MeerwerkMelden() {
             />
           </Veld>
 
-          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textAlign: "center" }]}>
             Alle velden zijn verplicht. Een ruwe schatting is genoeg, leeg laten niet.
           </Text>
 
@@ -318,27 +318,26 @@ export default function MeerwerkMelden() {
             onPress={() => void verzend()}
             disabled={bezig}
             style={({ pressed }) => ({
-              backgroundColor: !compleet ? c.muted : pressed ? "#c93009" : c.tint,
-              borderRadius: 10,
-              paddingVertical: 14,
+              backgroundColor: !compleet ? c.muted : pressed ? c.primary : c.tint,
+              borderRadius: c.radius / 2,
+              paddingVertical: ruimte.m + 2,
               alignItems: "center",
               flexDirection: "row",
               justifyContent: "center",
-              gap: 8,
+              gap: ruimte.s,
               opacity: bezig ? 0.7 : 1,
             })}
           >
             {bezig ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={c.primaryForeground} />
             ) : (
-              <Ionicons name="send-outline" size={16} color={!compleet ? c.mutedForeground : "#fff"} />
+              <Ionicons name="send-outline" size={16} color={!compleet ? c.mutedForeground : c.primaryForeground} />
             )}
             <Text
-              style={{
-                color: !compleet ? c.mutedForeground : "#fff",
-                fontSize: 14,
-                fontFamily: "Inter_600SemiBold",
-              }}
+              style={[
+                tekstStijl("standaard", !compleet ? c.mutedForeground : c.primaryForeground),
+                { fontFamily: "Inter_600SemiBold" },
+              ]}
             >
               {bezig ? "Verzenden..." : "Melding verzenden"}
             </Text>
@@ -353,15 +352,15 @@ function Veld({ label, ontbreekt, children }: { label: string; ontbreekt: boolea
   const c = useColors();
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-        <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: ruimte.s }}>
+        <Text style={[tekstStijl("bijschrift", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
           {label}
-          <Text style={{ color: "#dc2626", fontFamily: "Inter_400Regular" }}> *</Text>
+          <Text style={tekstStijl("bijschrift", c.destructive)}> *</Text>
         </Text>
       </View>
       {children}
       {ontbreekt ? (
-        <Text style={{ color: "#dc2626", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 6 }}>
+        <Text style={[tekstStijl("bijschrift", c.destructive), { marginTop: ruimte.s - 2 }]}>
           Dit veld is verplicht — een ruwe schatting is genoeg, leeg laten niet.
         </Text>
       ) : null}
@@ -389,18 +388,18 @@ function Invoer({
       placeholderTextColor={c.mutedForeground}
       multiline={meerregelig}
       numberOfLines={meerregelig ? 3 : 1}
-      style={{
-        backgroundColor: c.card,
-        borderWidth: 1,
-        borderColor: c.border,
-        borderRadius: 10,
-        padding: 12,
-        color: c.foreground,
-        fontSize: 14,
-        fontFamily: "Inter_400Regular",
-        minHeight: meerregelig ? 80 : undefined,
-        textAlignVertical: meerregelig ? "top" : "center",
-      }}
+      style={[
+        tekstStijl("standaard", c.foreground),
+        {
+          backgroundColor: c.card,
+          borderWidth: 1,
+          borderColor: c.border,
+          borderRadius: c.radius / 2,
+          padding: ruimte.m,
+          minHeight: meerregelig ? ruimte.xxl + ruimte.xxl + ruimte.l : undefined,
+          textAlignVertical: meerregelig ? "top" : "center",
+        },
+      ]}
     />
   );
 }

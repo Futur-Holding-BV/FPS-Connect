@@ -1,42 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import React, { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ConflictModal } from "@/components/ConflictModal";
 import { SyncStatus } from "@/context/sync";
+import { useColors } from "@/hooks/useColors";
 import { WachtrijItem } from "@/lib/syncQueue";
 
-const CONFIG: Record<
-  SyncStatus,
-  { label: string; achtergrond: string; tekst: string; laden?: boolean }
-> = {
-  gesynchroniseerd: {
-    label: "Gesynchroniseerd",
-    achtergrond: "rgba(34,197,94,0.18)",
-    tekst: "#4ade80",
-  },
-  opgeslagen: {
-    label: "Opgeslagen, wacht op sync",
-    achtergrond: "rgba(234,179,8,0.18)",
-    tekst: "#facc15",
-  },
-  synchroniseert: {
-    label: "Synchroniseert...",
-    achtergrond: "rgba(59,130,246,0.18)",
-    tekst: "#60a5fa",
-    laden: true,
-  },
-  wacht_op_verbinding: {
-    label: "Wacht op verbinding",
-    achtergrond: "rgba(156,163,175,0.18)",
-    tekst: "#9ca3af",
-  },
-  mislukt: {
-    label: "Sync mislukt",
-    achtergrond: "rgba(239,68,68,0.18)",
-    tekst: "#f87171",
-  },
-};
+// Status → palet-token. De zachte achtergrond is dezelfde kleur met opacity.
+function bouwConfig(
+  c: ReturnType<typeof useColors>,
+): Record<SyncStatus, { label: string; tekst: string; laden?: boolean }> {
+  return {
+    gesynchroniseerd: { label: "Gesynchroniseerd", tekst: c.success },
+    opgeslagen: { label: "Opgeslagen, wacht op sync", tekst: c.warning },
+    synchroniseert: { label: "Synchroniseert...", tekst: c.tint, laden: true },
+    wacht_op_verbinding: { label: "Wacht op verbinding", tekst: c.mutedForeground },
+    mislukt: { label: "Sync mislukt", tekst: c.destructive },
+  };
+}
 
 type Props = {
   status: SyncStatus;
@@ -61,8 +44,9 @@ export function SyncStatusBadge({
   onHerprobeeerItem,
   onHerprobeeerAlle,
 }: Props) {
+  const c = useColors();
   const [conflictZichtbaar, setConflictZichtbaar] = useState(false);
-  const cfg = CONFIG[status];
+  const cfg = bouwConfig(c)[status];
   const heeftMislukte = (aantalMislukt ?? 0) > 0;
 
   const label =
@@ -79,10 +63,10 @@ export function SyncStatusBadge({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
-        backgroundColor: cfg.achtergrond,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
+        gap: ruimte.xs + 2,
+        backgroundColor: cfg.tekst + "2E",
+        paddingHorizontal: ruimte.s + 2,
+        paddingVertical: ruimte.xs + 1,
         borderRadius: 20,
       }}
     >

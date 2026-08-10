@@ -5,6 +5,7 @@ import {
   useCreateMagazijnBestelbon,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState, useMemo } from "react";
 import {
@@ -20,7 +21,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import {
+  Kaart,
+  Ladenstaat,
+  LegeStaat,
+  Waarschuwvlak,
+  bovenInset,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
@@ -150,27 +158,27 @@ function MagazijnInkoopScherm() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#f3f4f6" }}
+      style={{ flex: 1, backgroundColor: c.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={{ flex: 1 }}>
         <View
           style={{
-            backgroundColor: "#212631",
-            paddingTop: bovenInset(insets) + 12,
-            paddingHorizontal: 20,
-            paddingBottom: 18,
+            backgroundColor: c.dark,
+            paddingTop: bovenInset(insets) + ruimte.m,
+            paddingHorizontal: ruimte.l + ruimte.xs,
+            paddingBottom: ruimte.l + 2,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m }}>
             <Pressable onPress={() => router.back()} hitSlop={12}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
+              <Ionicons name="arrow-back" size={ruimte.xl} color={c.darkForeground} />
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>
+              <Text style={tekstStijl("sectiekop", c.darkForeground)}>
                 Inkoop aanvragen
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 1 }]}>
                 Artikelen onder minimumvoorraad
               </Text>
             </View>
@@ -178,115 +186,90 @@ function MagazijnInkoopScherm() {
         </View>
 
         {isLoading ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator size="large" color="#F23B0D" />
-            <Text style={{ marginTop: 12, color: "#6b7280", fontFamily: "Inter_400Regular" }}>
-              Voorraadstatus laden...
-            </Text>
+          <View style={{ flex: 1, padding: ruimte.l }}>
+            <Ladenstaat regels={5} />
           </View>
         ) : groepen.length === 0 ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-            <Ionicons name="checkmark-circle-outline" size={56} color="#16a34a" />
-            <Text style={{ marginTop: 16, fontSize: 17, fontFamily: "Inter_700Bold", color: "#111827", textAlign: "center" }}>
-              Voorraad op orde
-            </Text>
-            <Text style={{ marginTop: 8, fontSize: 14, color: "#6b7280", fontFamily: "Inter_400Regular", textAlign: "center" }}>
-              Er zijn geen artikelen onder het minimumvoorraadniveau.
-            </Text>
-          </View>
+          <LegeStaat
+            icoon="checkmark-circle-outline"
+            titel="Voorraad op orde"
+            beschrijving="Er zijn geen artikelen onder het minimumvoorraadniveau."
+          />
         ) : (
           <ScrollView
-            contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 24 }}
+            contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l, paddingBottom: insets.bottom + ruimte.xl }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View
-              style={{
-                backgroundColor: "#fef3c7",
-                borderRadius: 10,
-                padding: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Ionicons name="warning-outline" size={18} color="#d97706" />
-              <Text style={{ flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: "#92400e" }}>
-                {groepen.reduce((s, g) => s + g.regels.length, 0)} artikel{groepen.reduce((s, g) => s + g.regels.length, 0) !== 1 ? "en" : ""} staan onder minimumvoorraad. Pas de aantallen aan en verstuur de bestelbon.
-              </Text>
-            </View>
+            <Waarschuwvlak
+              tekst={`${groepen.reduce((s, g) => s + g.regels.length, 0)} artikel${groepen.reduce((s, g) => s + g.regels.length, 0) !== 1 ? "en" : ""} staan onder minimumvoorraad. Pas de aantallen aan en verstuur de bestelbon.`}
+            />
 
             <View>
-              <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textTransform: "uppercase", letterSpacing: 0.5, marginBottom: ruimte.xs + 2 }]}>
                 Opmerkingen (optioneel)
               </Text>
               <TextInput
                 value={notities}
                 onChangeText={setNotities}
                 placeholder="Bijzonderheden voor de leverancier..."
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={c.mutedForeground}
                 multiline
                 numberOfLines={2}
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#e5e7eb",
-                  borderRadius: 10,
-                  padding: 12,
-                  fontSize: 14,
-                  fontFamily: "Inter_400Regular",
-                  color: "#111827",
-                  backgroundColor: "#fff",
-                  minHeight: 60,
-                  textAlignVertical: "top",
-                }}
+                style={[
+                  tekstStijl("klein", c.foreground),
+                  {
+                    borderWidth: 1,
+                    borderColor: c.border,
+                    borderRadius: c.radius,
+                    padding: ruimte.m,
+                    backgroundColor: c.card,
+                    minHeight: ruimte.xxl + ruimte.xl,
+                    textAlignVertical: "top",
+                  },
+                ]}
               />
             </View>
 
             {groepen.map((groep) => (
-              <View
+              <Kaart
                 key={String(groep.leverancier_id)}
-                style={{
-                  backgroundColor: "#fff",
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: "#e5e7eb",
-                  overflow: "hidden",
-                }}
+                stijl={{ padding: 0, overflow: "hidden" }}
               >
                 <View
                   style={{
-                    backgroundColor: "#f9fafb",
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
+                    backgroundColor: c.muted,
+                    paddingHorizontal: ruimte.l,
+                    paddingVertical: ruimte.m,
                     borderBottomWidth: 1,
-                    borderBottomColor: "#e5e7eb",
+                    borderBottomColor: c.border,
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 10,
+                    gap: ruimte.s + 2,
                   }}
                 >
                   <View
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      backgroundColor: "#fff3ef",
+                      width: ruimte.xxl,
+                      height: ruimte.xxl,
+                      borderRadius: c.radius / 2,
+                      backgroundColor: c.accent,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Ionicons name="business-outline" size={18} color="#F23B0D" />
+                    <Ionicons name="business-outline" size={ruimte.l + 2} color={c.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: "#111827" }}>
+                    <Text style={tekstStijl("nadruk", c.foreground)}>
                       {groep.leverancier_naam}
                     </Text>
                     {groep.email ? (
-                      <Text style={{ fontSize: 12, color: "#6b7280", fontFamily: "Inter_400Regular" }}>
+                      <Text style={tekstStijl("klein", c.mutedForeground)}>
                         {groep.email}
                       </Text>
                     ) : (
-                      <Text style={{ fontSize: 12, color: "#d97706", fontFamily: "Inter_400Regular" }}>
+                      <Text style={tekstStijl("klein", c.warning)}>
                         Geen e-mailadres — bestelbon intern opgeslagen
                       </Text>
                     )}
@@ -299,41 +282,41 @@ function MagazijnInkoopScherm() {
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
+                      paddingHorizontal: ruimte.l,
+                      paddingVertical: ruimte.m,
                       borderBottomWidth: 1,
-                      borderBottomColor: "#f3f4f6",
-                      gap: 12,
+                      borderBottomColor: c.border,
+                      gap: ruimte.m,
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#111827" }}>
+                      <Text style={tekstStijl("nadruk", c.foreground)}>
                         {regel.naam}
                       </Text>
-                      <Text style={{ fontSize: 12, color: "#6b7280", fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                      <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                         Vrij: {regel.vrij} {eenheidLabel(regel.eenheid)} · Gewenst: {regel.gewenst}
                       </Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s }}>
                       <TextInput
                         value={getHoeveelheid(regel)}
                         onChangeText={(v) => setHoeveelheid(regel.artikel_id, v)}
                         keyboardType="decimal-pad"
-                        style={{
-                          width: 64,
-                          borderWidth: 1,
-                          borderColor: "#e5e7eb",
-                          borderRadius: 8,
-                          paddingHorizontal: 8,
-                          paddingVertical: 6,
-                          fontSize: 15,
-                          fontFamily: "Inter_700Bold",
-                          color: "#111827",
-                          backgroundColor: "#f9fafb",
-                          textAlign: "center",
-                        }}
+                        style={[
+                          tekstStijl("nadruk", c.foreground),
+                          {
+                            width: ruimte.xxl * 2,
+                            borderWidth: 1,
+                            borderColor: c.border,
+                            borderRadius: c.radius / 2,
+                            paddingHorizontal: ruimte.s,
+                            paddingVertical: ruimte.xs + 2,
+                            backgroundColor: c.muted,
+                            textAlign: "center",
+                          },
+                        ]}
                       />
-                      <Text style={{ fontSize: 12, color: "#6b7280", fontFamily: "Inter_400Regular" }}>
+                      <Text style={tekstStijl("klein", c.mutedForeground)}>
                         {eenheidLabel(regel.eenheid)}
                       </Text>
                     </View>
@@ -344,27 +327,28 @@ function MagazijnInkoopScherm() {
                   onPress={() => verstuurGroep(groep)}
                   disabled={bezigId === groep.leverancier_id}
                   style={({ pressed }) => ({
-                    margin: 12,
-                    paddingVertical: 12,
-                    borderRadius: 10,
+                    margin: ruimte.m,
+                    paddingVertical: ruimte.m,
+                    borderRadius: c.radius,
                     backgroundColor:
-                      bezigId === groep.leverancier_id ? "#d1d5db" : (pressed ? "#c2360a" : "#F23B0D"),
+                      bezigId === groep.leverancier_id ? c.muted : c.primary,
+                    opacity: pressed && bezigId !== groep.leverancier_id ? 0.85 : 1,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 8,
+                    gap: ruimte.s,
                   })}
                 >
                   {bezigId === groep.leverancier_id ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={c.primaryForeground} />
                   ) : (
                     <Ionicons
                       name={groep.email ? "mail-outline" : "save-outline"}
-                      size={18}
-                      color="#fff"
+                      size={ruimte.l + 2}
+                      color={c.primaryForeground}
                     />
                   )}
-                  <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }}>
+                  <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                     {bezigId === groep.leverancier_id
                       ? "Versturen..."
                       : groep.email
@@ -372,7 +356,7 @@ function MagazijnInkoopScherm() {
                       : `Bestelbon opslaan (${groep.regels.length} art.)`}
                   </Text>
                 </Pressable>
-              </View>
+              </Kaart>
             ))}
           </ScrollView>
         )}

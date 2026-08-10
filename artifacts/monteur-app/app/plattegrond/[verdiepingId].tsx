@@ -39,9 +39,11 @@ import {
   Knop,
   SectieLabel,
   TekstVeld,
+  tekstStijl,
   bovenInset,
   onderInset,
 } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 import {
   PdfPlattegrond,
   type PdfPlattegrondHandle,
@@ -165,7 +167,7 @@ export default function Plattegrond() {
     borderColor: AMBER_BORDER,
     backgroundColor: AMBER_BG,
     borderRadius: c.radius,
-    padding: 8,
+    padding: ruimte.s,
   } as const;
 
   const spots: PlattegrondSpot[] = (voorzieningen ?? []).map((v) => ({
@@ -428,7 +430,7 @@ export default function Plattegrond() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#2b303b" }}>
+    <View style={{ flex: 1, backgroundColor: c.dark }}>
       <PdfPlattegrond
         ref={plattegrondRef}
         plattegrondUrl={verdieping?.plattegrond_url ?? null}
@@ -454,23 +456,23 @@ export default function Plattegrond() {
           top: 0,
           left: 0,
           right: 0,
-          paddingTop: bovenInset(insets) + 8,
-          paddingHorizontal: 16,
-          paddingBottom: 12,
-          backgroundColor: "rgba(33,38,49,0.92)",
+          paddingTop: bovenInset(insets) + ruimte.s,
+          paddingHorizontal: ruimte.l,
+          paddingBottom: ruimte.m,
+          backgroundColor: c.dark + "EB",
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Text style={{ color: c.primary, fontSize: 26, fontFamily: "Inter_700Bold" }}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_700Bold" }} numberOfLines={1}>
+          <Text style={[tekstStijl("nadruk", c.darkForeground), { fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
             {naam || "Plattegrond"}
           </Text>
-          <Text style={{ color: "#9AA3B2", fontSize: 13, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("klein", c.darkMuted)}>
             {spots.length} voorzieningen · knijp om te zoomen
           </Text>
         </View>
@@ -492,16 +494,16 @@ export default function Plattegrond() {
         <View
           style={{
             position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: onderInset(insets) + 96,
+            left: ruimte.l,
+            right: ruimte.l,
+            bottom: onderInset(insets) + ruimte.xxl * 3,
             backgroundColor: c.primary,
             borderRadius: c.radius,
-            paddingVertical: 14,
-            paddingHorizontal: 18,
+            paddingVertical: ruimte.m + 2,
+            paddingHorizontal: ruimte.l + 2,
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>
+          <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_600SemiBold", textAlign: "center" }]}>
             Tik op de plattegrond om een voorziening te plaatsen
           </Text>
         </View>
@@ -512,15 +514,15 @@ export default function Plattegrond() {
         onPress={() => setPlaatsModus((v) => !v)}
         style={{
           position: "absolute",
-          right: 20,
-          bottom: onderInset(insets) + 24,
-          height: 64,
-          paddingHorizontal: 22,
-          borderRadius: 32,
+          right: ruimte.l + 4,
+          bottom: onderInset(insets) + ruimte.xl,
+          height: ruimte.xxl * 2,
+          paddingHorizontal: ruimte.xl - 2,
+          borderRadius: ruimte.xxl,
           backgroundColor: plaatsModus ? c.destructive : c.primary,
           flexDirection: "row",
           alignItems: "center",
-          gap: 10,
+          gap: ruimte.s + 2,
           shadowColor: "#000",
           shadowOpacity: 0.3,
           shadowRadius: 8,
@@ -528,10 +530,10 @@ export default function Plattegrond() {
           elevation: 6,
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 24, fontFamily: "Inter_700Bold" }}>
+        <Text style={{ color: c.primaryForeground, fontSize: 24, fontFamily: "Inter_700Bold" }}>
           {plaatsModus ? "✕" : "+"}
         </Text>
-        <Text style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_600SemiBold" }}>
+        <Text style={[tekstStijl("nadruk", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
           {plaatsModus ? "Annuleren" : "Voorziening"}
         </Text>
       </Pressable>
@@ -545,24 +547,24 @@ export default function Plattegrond() {
           <View
             style={{
               backgroundColor: c.dark,
-              paddingTop: bovenInset(insets) + 10,
-              paddingHorizontal: 20,
-              paddingBottom: 16,
+              paddingTop: bovenInset(insets) + ruimte.s + 2,
+              paddingHorizontal: ruimte.xl,
+              paddingBottom: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("schermtitel", c.darkForeground)}>
               Nieuwe voorziening
             </Text>
             <Pressable onPress={() => setFormOpen(false)} hitSlop={10}>
-              <Text style={{ color: "#9AA3B2", fontSize: 22, fontFamily: "Inter_600SemiBold" }}>✕</Text>
+              <Text style={{ color: c.darkMuted, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>✕</Text>
             </Pressable>
           </View>
 
           <ScrollView
-            contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40, width: "100%", maxWidth: formMaxBreedte, alignSelf: "center" }}
+            contentContainerStyle={{ padding: ruimte.xl, gap: ruimte.l + 2, paddingBottom: ruimte.xxl + ruimte.s, width: "100%", maxWidth: formMaxBreedte, alignSelf: "center" }}
             keyboardShouldPersistTaps="handled"
           >
             <TekstVeld
@@ -676,8 +678,8 @@ export default function Plattegrond() {
               )}
             </View>
 
-            <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ gap: ruimte.s }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s }}>
                 <SectieLabel>Applicatie (type)</SectieLabel>
                 {isAi("type") && <AiBadge />}
               </View>
@@ -695,8 +697,8 @@ export default function Plattegrond() {
             </View>
 
             {form.type !== "" && (
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ gap: ruimte.s }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s }}>
                   <SectieLabel>Toepassing (optioneel)</SectieLabel>
                   {isAi("toepassing") && <AiBadge />}
                 </View>
@@ -718,8 +720,8 @@ export default function Plattegrond() {
               </View>
             )}
 
-            <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ gap: ruimte.s }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s }}>
                 <SectieLabel>Wand of plafond</SectieLabel>
                 {isAi("wand_of_plafond") && <AiBadge />}
               </View>
@@ -738,7 +740,7 @@ export default function Plattegrond() {
               </View>
             </View>
 
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: ruimte.s }}>
               <SectieLabel>Status</SectieLabel>
               <ChipRij
                 opties={STATUS_VOLGORDE.map((s) => ({
@@ -767,12 +769,12 @@ export default function Plattegrond() {
               style={{ minHeight: 70, textAlignVertical: "top" }}
             />
 
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: ruimte.s }}>
               <SectieLabel>Fabrikant- en systeeminformatie (optioneel)</SectieLabel>
               <FabrikantSectie />
             </View>
 
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: ruimte.s }}>
               <Knop titel="Voorziening opslaan" onPress={bewaar} bezig={opslaan} groot />
             </View>
           </ScrollView>
@@ -787,15 +789,15 @@ export default function Plattegrond() {
         onRequestClose={() => setDetailId(null)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
+          style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
           onPress={() => setDetailId(null)}
         >
           <Pressable
             style={{
               backgroundColor: c.background,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              paddingBottom: onderInset(insets) + 20,
+              borderTopLeftRadius: ruimte.xl,
+              borderTopRightRadius: ruimte.xl,
+              paddingBottom: onderInset(insets) + ruimte.xl - 4,
               maxHeight: "82%",
               width: "100%",
               maxWidth: isTablet ? 560 : undefined,
@@ -834,15 +836,15 @@ export default function Plattegrond() {
         onRequestClose={() => setClusterDetailId(null)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
+          style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
           onPress={() => setClusterDetailId(null)}
         >
           <Pressable
             style={{
               backgroundColor: c.background,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              paddingBottom: onderInset(insets) + 20,
+              borderTopLeftRadius: ruimte.xl,
+              borderTopRightRadius: ruimte.xl,
+              paddingBottom: onderInset(insets) + ruimte.xl - 4,
               maxHeight: "82%",
               width: "100%",
               maxWidth: isTablet ? 560 : undefined,
@@ -872,15 +874,15 @@ export default function Plattegrond() {
         onRequestClose={() => setGroepSpotIds(null)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
+          style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
           onPress={() => setGroepSpotIds(null)}
         >
           <Pressable
             style={{
               backgroundColor: c.background,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              paddingBottom: onderInset(insets) + 20,
+              borderTopLeftRadius: ruimte.xl,
+              borderTopRightRadius: ruimte.xl,
+              paddingBottom: onderInset(insets) + ruimte.xl - 4,
               maxHeight: "82%",
               width: "100%",
               maxWidth: isTablet ? 560 : undefined,
@@ -924,14 +926,14 @@ function OverlappendeSpots({
   const c = useColors();
 
   return (
-    <View style={{ paddingTop: 4 }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    <View style={{ paddingTop: ruimte.xs }}>
+      <View style={{ paddingHorizontal: ruimte.xl - 2, paddingTop: ruimte.l + 2, paddingBottom: ruimte.s }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("schermtitel", c.foreground)}>
               Overlappende spots
             </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("standaard", c.mutedForeground)}>
               {spots.length} spots op deze plek · kies er een om te openen
             </Text>
           </View>
@@ -943,18 +945,18 @@ function OverlappendeSpots({
           <Pressable
             onPress={onZoom}
             style={{
-              marginTop: 12,
+              marginTop: ruimte.m,
               alignSelf: "flex-start",
               flexDirection: "row",
               alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-              borderRadius: 10,
+              gap: ruimte.xs + 2,
+              paddingHorizontal: ruimte.m + 2,
+              paddingVertical: ruimte.s + 1,
+              borderRadius: ruimte.s + 2,
               backgroundColor: c.primary,
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={[tekstStijl("standaard", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
               Inzoomen op dit gebied
             </Text>
           </Pressable>
@@ -963,9 +965,9 @@ function OverlappendeSpots({
 
       <View style={{ height: 1, backgroundColor: c.border }} />
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingVertical: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: ruimte.xl - 2, paddingVertical: ruimte.s }}>
         {spots.length === 0 ? (
-          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 20, textAlign: "center" }}>
+          <Text style={[tekstStijl("standaard", c.mutedForeground), { paddingVertical: ruimte.xl - 4, textAlign: "center" }]}>
             Geen spots gevonden.
           </Text>
         ) : (
@@ -979,23 +981,23 @@ function OverlappendeSpots({
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 12,
-                  paddingVertical: 12,
+                  gap: ruimte.m,
+                  paddingVertical: ruimte.m,
                   borderBottomWidth: 1,
                   borderBottomColor: c.border,
                 }}
               >
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: ti.kleur }} />
+                <View style={{ width: ruimte.m + 2, height: ruimte.m + 2, borderRadius: (ruimte.m + 2) / 2, backgroundColor: ti.kleur }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                     {s.objectnummer}
                   </Text>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("klein", c.mutedForeground)}>
                     {ti.label}
                   </Text>
                 </View>
-                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
-                  <Text style={{ color: voorbereidSpot ? "#1e293b" : "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs + 1, borderRadius: ruimte.s }}>
+                  <Text style={[tekstStijl("bijschrift", voorbereidSpot ? c.dark : c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     {statusLabel(s.status)}
                   </Text>
                 </View>
@@ -1020,6 +1022,8 @@ function ClusterSpots({
   onSluit: () => void;
 }) {
   const c = useColors();
+  // Clusterkleuren zijn categorische, door de gebruiker/data bepaalde kleuren zonder
+  // paletequivalent; de fallback is een vaste indigo-tint (bewust behouden).
   const kleur =
     typeof cluster.kleur === "string" && /^#[0-9a-fA-F]{3,8}$/.test(cluster.kleur)
       ? cluster.kleur
@@ -1031,15 +1035,15 @@ function ClusterSpots({
   const voorbereid = Number(cluster.voorbereid_aantal) || 0;
 
   return (
-    <View style={{ paddingTop: 4 }}>
-      <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: kleur }} />
+    <View style={{ paddingTop: ruimte.xs }}>
+      <View style={{ paddingHorizontal: ruimte.xl - 2, paddingTop: ruimte.l + 2, paddingBottom: ruimte.s }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m }}>
+          <View style={{ width: ruimte.l, height: ruimte.l, borderRadius: ruimte.s, backgroundColor: kleur }} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("schermtitel", c.foreground)}>
               {cluster.naam}
             </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("standaard", c.mutedForeground)}>
               {monteurNaam ? monteurNaam : "Niet toegewezen"}
               {voorbereid > 0 ? ` · ${voorbereid} voorbereid` : ""}
             </Text>
@@ -1052,9 +1056,9 @@ function ClusterSpots({
 
       <View style={{ height: 1, backgroundColor: c.border }} />
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingVertical: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: ruimte.xl - 2, paddingVertical: ruimte.s }}>
         {spots.length === 0 ? (
-          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 20, textAlign: "center" }}>
+          <Text style={[tekstStijl("standaard", c.mutedForeground), { paddingVertical: ruimte.xl - 4, textAlign: "center" }]}>
             Geen spots in dit cluster.
           </Text>
         ) : (
@@ -1068,23 +1072,23 @@ function ClusterSpots({
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 12,
-                  paddingVertical: 12,
+                  gap: ruimte.m,
+                  paddingVertical: ruimte.m,
                   borderBottomWidth: 1,
                   borderBottomColor: c.border,
                 }}
               >
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: ti.kleur }} />
+                <View style={{ width: ruimte.m + 2, height: ruimte.m + 2, borderRadius: (ruimte.m + 2) / 2, backgroundColor: ti.kleur }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                     {s.objectnummer}
                   </Text>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                  <Text style={tekstStijl("klein", c.mutedForeground)}>
                     {ti.label}
                   </Text>
                 </View>
-                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
-                  <Text style={{ color: voorbereidSpot ? "#1e293b" : "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs + 1, borderRadius: ruimte.s }}>
+                  <Text style={[tekstStijl("bijschrift", voorbereidSpot ? c.dark : c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
                     {statusLabel(s.status)}
                   </Text>
                 </View>
@@ -1118,9 +1122,9 @@ function FotoSectie({
 }) {
   const c = useColors();
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: ruimte.s + 2 }}>
       <SectieLabel>{titel}</SectieLabel>
-      <View style={{ flexDirection: "row", gap: 10 }}>
+      <View style={{ flexDirection: "row", gap: ruimte.s + 2 }}>
         <Pressable
           onPress={onCamera}
           disabled={bezig}
@@ -1128,13 +1132,13 @@ function FotoSectie({
             flex: 1,
             backgroundColor: c.secondary,
             borderRadius: c.radius,
-            paddingVertical: 14,
+            paddingVertical: ruimte.m + 2,
             alignItems: "center",
             borderWidth: 1.5,
             borderColor: c.border,
           }}
         >
-          <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
             Camera
           </Text>
         </Pressable>
@@ -1146,50 +1150,50 @@ function FotoSectie({
               flex: 1,
               backgroundColor: c.secondary,
               borderRadius: c.radius,
-              paddingVertical: 14,
+              paddingVertical: ruimte.m + 2,
               alignItems: "center",
               borderWidth: 1.5,
               borderColor: c.border,
             }}
           >
-            <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
               Galerij
             </Text>
           </Pressable>
         )}
       </View>
       {(fotos.length > 0 || bezig) && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ruimte.s + 2 }}>
           {fotos.map((p, i) => (
             <View key={`${p}-${i}`}>
               <Image
                 source={{ uri: `https://${DOMEIN}/api/storage${p}`, headers: { Authorization: `Bearer ${token}` } }}
-                style={{ width: 90, height: 90, borderRadius: 10, backgroundColor: c.muted }}
+                style={{ width: ruimte.xxl * 3 - 6, height: ruimte.xxl * 3 - 6, borderRadius: ruimte.s + 2, backgroundColor: c.muted }}
               />
               <Pressable
                 onPress={() => onVerwijder(i)}
                 style={{
                   position: "absolute",
-                  top: -6,
-                  right: -6,
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
+                  top: -ruimte.xs - 2,
+                  right: -ruimte.xs - 2,
+                  width: ruimte.l + ruimte.s,
+                  height: ruimte.l + ruimte.s,
+                  borderRadius: (ruimte.l + ruimte.s) / 2,
                   backgroundColor: c.destructive,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}>✕</Text>
+                <Text style={{ color: c.primaryForeground, fontSize: 14, fontFamily: "Inter_700Bold" }}>✕</Text>
               </Pressable>
             </View>
           ))}
           {bezig && (
             <View
               style={{
-                width: 90,
-                height: 90,
-                borderRadius: 10,
+                width: ruimte.xxl * 3 - 6,
+                height: ruimte.xxl * 3 - 6,
+                borderRadius: ruimte.s + 2,
                 backgroundColor: c.muted,
                 alignItems: "center",
                 justifyContent: "center",
@@ -1258,7 +1262,7 @@ function SpotDetail({
     borderColor: AMBER_BORDER,
     backgroundColor: AMBER_BG,
     borderRadius: c.radius,
-    padding: 8,
+    padding: ruimte.s,
   } as const;
 
   function bevestigArchiveren() {
@@ -1389,61 +1393,62 @@ function SpotDetail({
   const ti = typeInfo(spot.type);
   const voor = (fotos ?? []).filter((f) => f.fase === "voor");
   const na = (fotos ?? []).filter((f) => f.fase === "na");
-  const badgeTekstKleur = isVoorbereid ? "#1e293b" : "#fff";
+  // Contrasttekst op de statusbadge: donker op de lichte "voorbereid"-kleur, anders licht.
+  const badgeTekstKleur = isVoorbereid ? c.dark : c.primaryForeground;
 
   const Rij = ({ label, waarde }: { label: string; waarde?: string | null }) =>
     waarde ? (
-      <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
-        <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular" }}>{label}</Text>
-        <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{waarde}</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: ruimte.s }}>
+        <Text style={tekstStijl("standaard", c.mutedForeground)}>{label}</Text>
+        <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>{waarde}</Text>
       </View>
     ) : null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 22, gap: 4 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
-        <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: ti.kleur }} />
+    <ScrollView contentContainerStyle={{ padding: ruimte.xl - 2, gap: ruimte.xs }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m, marginBottom: ruimte.s }}>
+        <View style={{ width: ruimte.l, height: ruimte.l, borderRadius: ruimte.s, backgroundColor: ti.kleur }} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.foreground)}>
             {spot.objectnummer}
           </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("standaard", c.mutedForeground)}>
             {ti.label}
           </Text>
         </View>
-        <View style={{ backgroundColor: statusKleur(spot.status), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
-          <Text style={{ color: badgeTekstKleur, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+        <View style={{ backgroundColor: statusKleur(spot.status), paddingHorizontal: ruimte.m, paddingVertical: ruimte.xs + 2, borderRadius: ruimte.s }}>
+          <Text style={[tekstStijl("klein", badgeTekstKleur), { fontFamily: "Inter_600SemiBold" }]}>
             {statusLabel(spot.status)}
           </Text>
         </View>
       </View>
 
-      <View style={{ height: 1, backgroundColor: c.border, marginVertical: 6 }} />
+      <View style={{ height: 1, backgroundColor: c.border, marginVertical: ruimte.xs + 2 }} />
 
       <Rij label="Wand/plafond" waarde={spot.wand_of_plafond} />
       <Rij label="Ruimte" waarde={spot.ruimte} />
       <Rij label="Locatie" waarde={spot.locatie_omschrijving} />
 
       {(spot.labels ?? []).length > 0 && (
-        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: ruimte.s }}>
+          <Text style={tekstStijl("standaard", c.mutedForeground)}>
             {isVoorbereid ? "Verwachte toepassing" : "Toepassing"}
           </Text>
-          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1, textAlign: "right" }}>
+          <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold", flex: 1, textAlign: "right" }]}>
             {(spot.labels ?? []).map((l) => l.naam).join(", ")}
           </Text>
         </View>
       )}
 
       {voor.length > 0 && (
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: ruimte.m }}>
           <SectieLabel>Foto's vóór</SectieLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, marginTop: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ruimte.s + 2, marginTop: ruimte.s }}>
             {voor.map((f) => (
               <Image
                 key={f.id}
                 source={{ uri: `https://${DOMEIN}/api/storage${f.url}`, headers: { Authorization: `Bearer ${token}` } }}
-                style={{ width: 120, height: 120, borderRadius: 10, backgroundColor: c.muted }}
+                style={{ width: ruimte.xxl * 3 + ruimte.xl, height: ruimte.xxl * 3 + ruimte.xl, borderRadius: ruimte.s + 2, backgroundColor: c.muted }}
               />
             ))}
           </ScrollView>
@@ -1451,14 +1456,14 @@ function SpotDetail({
       )}
 
       {na.length > 0 && (
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: ruimte.m }}>
           <SectieLabel>Foto's ná</SectieLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, marginTop: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ruimte.s + 2, marginTop: ruimte.s }}>
             {na.map((f) => (
               <Image
                 key={f.id}
                 source={{ uri: `https://${DOMEIN}/api/storage${f.url}`, headers: { Authorization: `Bearer ${token}` } }}
-                style={{ width: 120, height: 120, borderRadius: 10, backgroundColor: c.muted }}
+                style={{ width: ruimte.xxl * 3 + ruimte.xl, height: ruimte.xxl * 3 + ruimte.xl, borderRadius: ruimte.s + 2, backgroundColor: c.muted }}
               />
             ))}
           </ScrollView>
@@ -1466,29 +1471,29 @@ function SpotDetail({
       )}
 
       {isVoorbereid && afwerken && (
-        <View style={{ marginTop: 16, gap: 12 }}>
-          <View style={{ height: 1, backgroundColor: c.border, marginBottom: 2 }} />
+        <View style={{ marginTop: ruimte.l, gap: ruimte.m }}>
+          <View style={{ height: 1, backgroundColor: c.border, marginBottom: ruimte.xs / 2 }} />
           <SectieLabel>Spot afwerken</SectieLabel>
 
           <View>
-            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 6 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs + 2 }]}>
               Foto ná de afwerking
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ruimte.s + 2 }}>
               {naFotos.map((url) => (
                 <Image
                   key={url}
                   source={{ uri: `https://${DOMEIN}/api/storage${url}`, headers: { Authorization: `Bearer ${token}` } }}
-                  style={{ width: 90, height: 90, borderRadius: 10, backgroundColor: c.muted }}
+                  style={{ width: ruimte.xxl * 3 - 6, height: ruimte.xxl * 3 - 6, borderRadius: ruimte.s + 2, backgroundColor: c.muted }}
                 />
               ))}
               {fotoBezig && (
-                <View style={{ width: 90, height: 90, borderRadius: 10, backgroundColor: c.muted, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: ruimte.xxl * 3 - 6, height: ruimte.xxl * 3 - 6, borderRadius: ruimte.s + 2, backgroundColor: c.muted, alignItems: "center", justifyContent: "center" }}>
                   <ActivityIndicator color={c.primary} />
                 </View>
               )}
             </ScrollView>
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <View style={{ flexDirection: "row", gap: ruimte.s + 2, marginTop: ruimte.s + 2 }}>
               <View style={{ flex: 1 }}>
                 <Knop titel="Camera" onPress={() => kiesNaFoto("camera")} variant="secundair" />
               </View>
@@ -1512,7 +1517,7 @@ function SpotDetail({
           )}
 
           <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s, marginBottom: ruimte.xs + 2 }}>
               <SectieLabel>Toepassing bevestigen</SectieLabel>
               {aiLabelGevuld && <AiBadge />}
             </View>
@@ -1539,7 +1544,7 @@ function SpotDetail({
       )}
 
       {!afwerken && (
-        <View style={{ marginTop: 20, gap: 10 }}>
+        <View style={{ marginTop: ruimte.xl - 4, gap: ruimte.s + 2 }}>
           {isVoorbereid && (
             <Knop titel="Afwerken" onPress={() => setAfwerken(true)} groot />
           )}

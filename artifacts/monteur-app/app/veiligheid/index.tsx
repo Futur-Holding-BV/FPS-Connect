@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { Kaart, bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
@@ -69,13 +70,13 @@ function VeiligheidHub() {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <View
         style={{
-          paddingTop: bovenInset(insets) + 8,
-          paddingBottom: 14,
-          paddingHorizontal: 20,
+          paddingTop: bovenInset(insets) + ruimte.s,
+          paddingBottom: ruimte.m + 2,
+          paddingHorizontal: ruimte.xl,
           backgroundColor: c.dark,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <Pressable
@@ -83,78 +84,77 @@ function VeiligheidHub() {
           hitSlop={12}
           style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
         >
-          <Ionicons name="arrow-back" size={22} color={c.darkForeground} />
+          <Ionicons name="arrow-back" size={ruimte.l + ruimte.xs} color={c.darkForeground} />
         </Pressable>
         <View>
-          <Text style={{ color: c.darkForeground, fontSize: 19, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("sectiekop", c.darkForeground)}>
             Veiligheid
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("klein", c.darkMuted)}>
             LMRA, toolboxen en instructies
           </Text>
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, gap: 14 }}
+        contentContainerStyle={{ padding: ruimte.xl, gap: ruimte.m + 2 }}
         showsVerticalScrollIndicator={false}
       >
         {KAARTEN.map((kaart) => (
           <Pressable
             key={kaart.sleutel}
             onPress={() => router.push(kaart.pad as Parameters<typeof router.push>[0])}
-            style={({ pressed }) => ({
-              backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 14,
-              padding: 18,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 16,
-              borderWidth: 1,
-              borderColor: c.border,
-              opacity: kaart.binnenkort ? 0.6 : 1,
-            })}
+            style={({ pressed }) => ({ opacity: kaart.binnenkort ? 0.6 : pressed ? 0.8 : 1 })}
           >
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                backgroundColor: `${c.primary}18`,
+            <Kaart
+              stijl={{
+                padding: ruimte.l + 2,
+                flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                gap: ruimte.l,
               }}
             >
-              <Ionicons name={kaart.icoon} size={24} color={c.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: c.foreground }}>
-                  {kaart.titel}
-                </Text>
-                {kaart.binnenkort && (
-                  <View
-                    style={{
-                      backgroundColor: c.muted,
-                      borderRadius: 6,
-                      paddingHorizontal: 7,
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: c.mutedForeground }}>
-                      Binnenkort
-                    </Text>
-                  </View>
-                )}
+              <View
+                style={{
+                  width: ruimte.xxl + ruimte.l + 4,
+                  height: ruimte.xxl + ruimte.l + 4,
+                  borderRadius: c.radius + ruimte.m,
+                  backgroundColor: c.accent,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Ionicons name={kaart.icoon} size={ruimte.xl} color={c.primary} />
               </View>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: c.mutedForeground, lineHeight: 19 }}>
-                {kaart.omschrijving}
-              </Text>
-            </View>
-            {!kaart.binnenkort && (
-              <Ionicons name="chevron-forward" size={18} color={c.mutedForeground} />
-            )}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s, marginBottom: 3 }}>
+                  <Text style={tekstStijl("sectiekop", c.foreground)}>
+                    {kaart.titel}
+                  </Text>
+                  {kaart.binnenkort && (
+                    <View
+                      style={{
+                        backgroundColor: c.muted,
+                        borderRadius: c.radius / 2,
+                        paddingHorizontal: ruimte.s - 1,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
+                        Binnenkort
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={tekstStijl("klein", c.mutedForeground)}>
+                  {kaart.omschrijving}
+                </Text>
+              </View>
+              {!kaart.binnenkort && (
+                <Ionicons name="chevron-forward" size={ruimte.l + 2} color={c.mutedForeground} />
+              )}
+            </Kaart>
           </Pressable>
         ))}
       </ScrollView>

@@ -38,7 +38,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { ruimte as spatie } from "@workspace/ontwerp";
+
+import { bovenInset, netteWaarde } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
@@ -116,12 +118,16 @@ const PAUZE_OPTIES = [
   { label: "60 min", minuten: 60 },
 ];
 
-const STATUS_KLEUREN: Record<string, string> = {
-  concept: "#94a3b8",
-  ingediend: "#f59e0b",
-  goedgekeurd: "#10b981",
-  afgewezen: "#ef4444",
-};
+// Statuskleuren via het palet (geen kleurliteralen). concept → neutraal,
+// ingediend → waarschuwing, goedgekeurd → succes, afgewezen → fout.
+function statusKleuren(c: ReturnType<typeof useColors>): Record<string, string> {
+  return {
+    concept: c.mutedForeground,
+    ingediend: c.warning,
+    goedgekeurd: c.success,
+    afgewezen: c.destructive,
+  };
+}
 
 const STATUS_LABELS: Record<string, string> = {
   concept: "Concept",
@@ -659,7 +665,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
         {/* Planning-hint */}
         {planningItem && (
           <View style={{
-            backgroundColor: c.primary + "15",
+            backgroundColor: c.accent,
             borderRadius: 10,
             padding: 12,
             borderLeftWidth: 3,
@@ -697,7 +703,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                 }}
               >
                 <Text style={{
-                  color: urenType === t ? "#fff" : c.foreground,
+                  color: urenType === t ? c.primaryForeground : c.foreground,
                   fontSize: 14,
                   fontFamily: urenType === t ? "Inter_700Bold" : "Inter_400Regular",
                 }}>
@@ -734,7 +740,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                 }}
               >
                 <Text style={{
-                  color: pauze === opt.minuten ? "#fff" : c.foreground,
+                  color: pauze === opt.minuten ? c.primaryForeground : c.foreground,
                   fontSize: 13,
                   fontFamily: pauze === opt.minuten ? "Inter_600SemiBold" : "Inter_400Regular",
                 }}>
@@ -818,7 +824,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                     }}
                   >
                     <Text numberOfLines={1} style={{
-                      color: geselecteerd ? "#fff" : c.foreground,
+                      color: geselecteerd ? c.primaryForeground : c.foreground,
                       fontSize: 13,
                       fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
                     }}>
@@ -851,7 +857,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                 }}
               >
                 <Text style={{
-                  color: vrijeInvoer ? "#fff" : c.mutedForeground,
+                  color: vrijeInvoer ? c.primaryForeground : c.mutedForeground,
                   fontSize: 13,
                   fontFamily: vrijeInvoer ? "Inter_600SemiBold" : "Inter_400Regular",
                 }}>
@@ -890,19 +896,19 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
             </Text>
 
             {uurcodeFout && (
-              <View style={{ backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginBottom: 12 }}>
-                <Text style={{ color: "#991b1b", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <View style={{ backgroundColor: c.secondary, padding: spatie.m, borderRadius: c.radius, marginBottom: spatie.m }}>
+                <Text style={{ color: c.destructive, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
                   {uurcodeFout}
                 </Text>
               </View>
             )}
 
             {uurcodesGeenRecht ? (
-              <View style={{ backgroundColor: "#fef3c7", padding: 12, borderRadius: 10, marginBottom: 12 }}>
-                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 }}>
+              <View style={{ backgroundColor: c.secondary, padding: spatie.m, borderRadius: c.radius, marginBottom: spatie.m }}>
+                <Text style={{ color: c.warning, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: spatie.xs }}>
                   Geen toegang tot de uurcodelijst
                 </Text>
-                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                <Text style={{ color: c.warning, fontSize: 13, fontFamily: "Inter_400Regular" }}>
                   Je account mist het projectenrecht (Projecten: lezen). Vraag je
                   beheerder om dit recht, dan kun je hier uren op de opdracht schrijven.
                 </Text>
@@ -937,7 +943,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                           }}
                         >
                           <Text style={{
-                            color: normtijdId === opt.normtijd_id ? "#fff" : c.foreground,
+                            color: normtijdId === opt.normtijd_id ? c.primaryForeground : c.foreground,
                             fontSize: 13,
                             fontFamily: normtijdId === opt.normtijd_id ? "Inter_600SemiBold" : "Inter_400Regular",
                           }}>
@@ -975,7 +981,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                           }}
                         >
                           <Text style={{
-                            color: indirecteId === opt.id ? "#fff" : c.foreground,
+                            color: indirecteId === opt.id ? c.primaryForeground : c.foreground,
                             fontSize: 13,
                             fontFamily: indirecteId === opt.id ? "Inter_600SemiBold" : "Inter_400Regular",
                           }}>
@@ -1010,7 +1016,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                     }}
                   >
                     <Text style={{
-                      color: nietInBegroting ? "#fff" : c.foreground,
+                      color: nietInBegroting ? c.primaryForeground : c.foreground,
                       fontSize: 13,
                       fontFamily: nietInBegroting ? "Inter_600SemiBold" : "Inter_400Regular",
                     }}>
@@ -1061,7 +1067,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
                   }}
                 >
                   <Text style={{
-                    color: werkzaamheidCategorie === opt ? "#fff" : c.foreground,
+                    color: werkzaamheidCategorie === opt ? c.primaryForeground : c.foreground,
                     fontSize: 13,
                     fontFamily: werkzaamheidCategorie === opt ? "Inter_600SemiBold" : "Inter_400Regular",
                   }}>
@@ -1180,16 +1186,16 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
         {/* UREN_01 — Overwerkslot dicht (422) */}
         {slotDicht && (
           <View style={{
-            backgroundColor: "#92400e18",
-            borderRadius: 12,
+            backgroundColor: c.secondary,
+            borderRadius: c.radius,
             borderWidth: 1,
-            borderColor: "#d97706",
-            padding: 14,
-            gap: 10,
+            borderColor: c.warning,
+            padding: spatie.m + 2,
+            gap: spatie.s + 2,
           }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="warning-outline" size={18} color="#d97706" />
-              <Text style={{ color: "#b45309", fontSize: 14, fontFamily: "Inter_700Bold", flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spatie.s }}>
+              <Ionicons name="warning-outline" size={18} color={c.warning} />
+              <Text style={{ color: c.warning, fontSize: 14, fontFamily: "Inter_700Bold", flex: 1 }}>
                 Overwerk niet toegestaan
               </Text>
             </View>
@@ -1200,16 +1206,16 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
               onPress={vraagOverwerkToestemming}
               disabled={toestemmingBezig}
               style={{
-                backgroundColor: toestemmingBezig ? c.muted : "#d97706",
-                borderRadius: 10,
-                paddingVertical: 12,
+                backgroundColor: toestemmingBezig ? c.muted : c.warning,
+                borderRadius: c.radius,
+                paddingVertical: spatie.m,
                 alignItems: "center",
               }}
             >
               {toestemmingBezig ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}>
+                <Text style={{ color: c.primaryForeground, fontSize: 14, fontFamily: "Inter_700Bold" }}>
                   Toestemming vragen
                 </Text>
               )}
@@ -1246,9 +1252,9 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
             }}
           >
             {isBusy ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={c.primaryForeground} />
             ) : (
-              <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+              <Text style={{ color: c.primaryForeground, fontSize: 15, fontFamily: "Inter_700Bold" }}>
                 {bestaand ? "Opslaan" : "Registreren"}
               </Text>
             )}
@@ -1284,6 +1290,7 @@ function DagKaart({
   onVerwijderen: (id: number) => void;
   onPlanningBevestigen: (planning: any) => void;
 }) {
+  const STATUS_KLEUREN = statusKleuren(c);
   const dagTotaal = urenLijst.reduce((acc, u) => acc + u.netto_uren, 0);
   const dagLabel_ = dagLabel(datum);
   const vandaag = new Date().toISOString().slice(0, 10) === datum;
@@ -1307,7 +1314,7 @@ function DagKaart({
         justifyContent: "space-between",
         paddingHorizontal: 14,
         paddingVertical: 10,
-        backgroundColor: vandaag ? c.primary + "12" : "transparent",
+        backgroundColor: vandaag ? c.accent : "transparent",
         borderBottomWidth: 1,
         borderBottomColor: c.border,
       }}>
@@ -1319,7 +1326,7 @@ function DagKaart({
               paddingHorizontal: 6,
               paddingVertical: 2,
             }}>
-              <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>VANDAAG</Text>
+              <Text style={{ color: c.primaryForeground, fontSize: 10, fontFamily: "Inter_700Bold" }}>VANDAAG</Text>
             </View>
           )}
           <Text style={{
@@ -1344,7 +1351,7 @@ function DagKaart({
                 width: 30,
                 height: 30,
                 borderRadius: 15,
-                backgroundColor: c.primary + "20",
+                backgroundColor: c.accent,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -1371,7 +1378,7 @@ function DagKaart({
               paddingVertical: 10,
               borderBottomWidth: 1,
               borderBottomColor: c.border,
-              backgroundColor: c.primary + "08",
+              backgroundColor: c.accent,
             }}
           >
             <Ionicons name="calendar-outline" size={16} color={c.primary} />
@@ -1391,7 +1398,7 @@ function DagKaart({
               paddingHorizontal: 10,
               paddingVertical: 5,
             }}>
-              <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={{ color: c.primaryForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
                 Bevestigen
               </Text>
             </View>
@@ -1422,7 +1429,7 @@ function DagKaart({
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: STATUS_KLEUREN[u.status] ?? "#94a3b8",
+            backgroundColor: STATUS_KLEUREN[u.status] ?? c.mutedForeground,
           }} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_500Medium" }} numberOfLines={1}>
@@ -1477,6 +1484,7 @@ function DagKaart({
 
 export default function UrenScherm() {
   const c = useColors();
+  const STATUS_KLEUREN = statusKleuren(c);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token, bezigLaden } = useAuth();
@@ -1582,17 +1590,21 @@ export default function UrenScherm() {
             </Text>
             {huidigWeekstaat && (
               <View style={{
-                backgroundColor: STATUS_KLEUREN[huidigWeekstaat.status] + "30",
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spatie.xs + 2,
+                backgroundColor: c.darkMuted,
+                borderRadius: c.radius,
+                paddingHorizontal: spatie.s + 2,
+                paddingVertical: spatie.xs,
               }}>
+                <View style={{ width: spatie.s, height: spatie.s, borderRadius: spatie.xs, backgroundColor: STATUS_KLEUREN[huidigWeekstaat.status] }} />
                 <Text style={{
-                  color: STATUS_KLEUREN[huidigWeekstaat.status],
+                  color: c.darkForeground,
                   fontSize: 12,
                   fontFamily: "Inter_600SemiBold",
                 }}>
-                  {STATUS_LABELS[huidigWeekstaat.status]}
+                  {STATUS_LABELS[huidigWeekstaat.status] ?? netteWaarde(huidigWeekstaat.status)}
                 </Text>
               </View>
             )}
@@ -1642,15 +1654,15 @@ export default function UrenScherm() {
             <View style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 8,
-              marginTop: 12,
-              backgroundColor: "#92400e20",
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              gap: spatie.s,
+              marginTop: spatie.m,
+              backgroundColor: c.darkMuted,
+              borderRadius: c.radius / 2,
+              paddingHorizontal: spatie.m,
+              paddingVertical: spatie.s,
             }}>
-              <Ionicons name="lock-closed" size={15} color="#d97706" />
-              <Text style={{ color: "#d97706", fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
+              <Ionicons name="lock-closed" size={15} color={c.warning} />
+              <Text style={{ color: c.warning, fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
                 Deze week is vergrendeld door HRM
               </Text>
             </View>
@@ -1707,7 +1719,7 @@ export default function UrenScherm() {
               elevation: 4,
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>
+            <Text style={{ color: c.primaryForeground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
               Week indienen ter goedkeuring
             </Text>
           </Pressable>

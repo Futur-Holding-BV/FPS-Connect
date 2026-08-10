@@ -3,10 +3,10 @@ import {
   type MagazijnInkooporder,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   Text,
@@ -14,7 +14,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import {
+  Kaart,
+  Ladenstaat,
+  LegeStaat,
+  Statusmerk,
+  bovenInset,
+  netteWaarde,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
@@ -27,12 +35,13 @@ const STATUS_LABELS: Record<string, string> = {
   geannuleerd: "Geannuleerd",
 };
 
-const STATUS_KLEUREN: Record<string, string> = {
-  concept: "#6b7280",
-  verstuurd: "#3b82f6",
-  bevestigd: "#f59e0b",
-  ontvangen: "#22c55e",
-  geannuleerd: "#ef4444",
+// Statussen → soort Statusmerk (kleur komt uit het palet, niet uit dit bestand).
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  concept: "neutraal",
+  verstuurd: "primair",
+  bevestigd: "waarschuwing",
+  ontvangen: "succes",
+  geannuleerd: "fout",
 };
 
 function formatDatum(iso: string | null | undefined): string {
@@ -43,78 +52,63 @@ function formatDatum(iso: string | null | undefined): string {
 
 function InkooporderKaart({ item }: { item: MagazijnInkooporder }) {
   const c = useColors();
-  const kleur = STATUS_KLEUREN[item.status] ?? "#6b7280";
-  const label = STATUS_LABELS[item.status] ?? item.status;
 
   return (
-    <View
-      style={{
-        backgroundColor: c.card,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: c.border,
-      }}
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        <View style={{ flex: 1, marginRight: 10 }}>
-          <Text style={{ color: c.text, fontWeight: "700", fontSize: 15 }}>
+    <Kaart stijl={{ padding: ruimte.l, marginBottom: ruimte.s + 2 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: ruimte.s + 2, gap: ruimte.s }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { flexShrink: 1 }]} numberOfLines={1}>
             {item.nummer ?? `Order #${item.id}`}
           </Text>
           {item.leverancier_naam ? (
-            <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
               {item.leverancier_naam}
             </Text>
           ) : null}
         </View>
-        <View style={{
-          backgroundColor: kleur + "22",
-          borderRadius: 6,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-        }}>
-          <Text style={{ color: kleur, fontSize: 12, fontWeight: "600" }}>{label}</Text>
-        </View>
+        <Statusmerk
+          label={STATUS_LABELS[item.status] ?? netteWaarde(item.status)}
+          soort={STATUS_SOORT[item.status] ?? "neutraal"}
+        />
       </View>
 
-      <View style={{ gap: 4 }}>
+      <View style={{ gap: ruimte.xs }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Artikelen</Text>
-          <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>
+          <Text style={tekstStijl("klein", c.mutedForeground)}>Artikelen</Text>
+          <Text style={tekstStijl("nadruk", c.foreground)}>
             {item.totaal_regels}
           </Text>
         </View>
         {item.verwachte_leverdatum ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Verwachte levering</Text>
-            <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>Verwachte levering</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>
               {formatDatum(item.verwachte_leverdatum)}
             </Text>
           </View>
         ) : null}
         {item.werkelijke_leverdatum ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Ontvangen op</Text>
-            <Text style={{ color: "#22c55e", fontSize: 13, fontWeight: "600" }}>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>Ontvangen op</Text>
+            <Text style={tekstStijl("nadruk", c.success)}>
               {formatDatum(item.werkelijke_leverdatum)}
             </Text>
           </View>
         ) : null}
         {item.referentie ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Referentie</Text>
-            <Text style={{ color: c.text, fontSize: 13 }}>{item.referentie}</Text>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>Referentie</Text>
+            <Text style={tekstStijl("klein", c.foreground)}>{item.referentie}</Text>
           </View>
         ) : null}
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Aangemaakt</Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>
+          <Text style={tekstStijl("klein", c.mutedForeground)}>Aangemaakt</Text>
+          <Text style={tekstStijl("klein", c.mutedForeground)}>
             {formatDatum(item.aangemaakt_op)}
           </Text>
         </View>
       </View>
-    </View>
+    </Kaart>
   );
 }
 
@@ -146,59 +140,57 @@ function InkoopordersScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ paddingTop: bovenInset(insets), paddingHorizontal: 16, paddingBottom: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 4 }}>
+      <View style={{ paddingTop: bovenInset(insets), paddingHorizontal: ruimte.l, paddingBottom: ruimte.m }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s + 2, paddingTop: ruimte.xs }}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color={c.text} />
+            <Ionicons name="arrow-back" size={ruimte.xl} color={c.foreground} />
           </Pressable>
-          <Text style={{ color: c.text, fontSize: 20, fontWeight: "700", flex: 1 }}>
+          <Text style={[tekstStijl("schermtitel", c.foreground), { flex: 1 }]}>
             Inkooporders
           </Text>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
-          {filterOpties.map((k) => (
-            <Pressable
-              key={k.sleutel}
-              onPress={() => setStatusFilter(k.sleutel)}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 20,
-                backgroundColor: statusFilter === k.sleutel ? "#f97316" : c.card,
-                borderWidth: 1,
-                borderColor: statusFilter === k.sleutel ? "#f97316" : c.border,
-              }}
-            >
-              <Text style={{
-                color: statusFilter === k.sleutel ? "#fff" : c.mutedForeground,
-                fontSize: 13,
-                fontWeight: "600",
-              }}>
-                {k.label}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={{ flexDirection: "row", gap: ruimte.s - 2, marginTop: ruimte.m + 2, flexWrap: "wrap" }}>
+          {filterOpties.map((k) => {
+            const actief = statusFilter === k.sleutel;
+            return (
+              <Pressable
+                key={k.sleutel}
+                onPress={() => setStatusFilter(k.sleutel)}
+                style={{
+                  paddingHorizontal: ruimte.m,
+                  paddingVertical: ruimte.s - 2,
+                  borderRadius: c.radius,
+                  backgroundColor: actief ? c.primary : c.card,
+                  borderWidth: 1,
+                  borderColor: actief ? c.primary : c.border,
+                }}
+              >
+                <Text style={tekstStijl("klein", actief ? c.primaryForeground : c.mutedForeground)}>
+                  {k.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#f97316" />
+        <View style={{ flex: 1, padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : gefilterd.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Ionicons name="cube-outline" size={48} color={c.mutedForeground} />
-          <Text style={{ color: c.mutedForeground, fontSize: 15, marginTop: 12, textAlign: "center" }}>
-            Geen inkooporders gevonden
-          </Text>
-        </View>
+        <LegeStaat
+          icoon="cube-outline"
+          titel="Geen inkooporders"
+          beschrijving="Er zijn geen inkooporders gevonden."
+        />
       ) : (
         <FlatList
           data={gefilterd}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => <InkooporderKaart item={item} />}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ paddingHorizontal: ruimte.l, paddingBottom: insets.bottom + ruimte.xl }}
           onRefresh={() => void refetch()}
           refreshing={isLoading}
         />

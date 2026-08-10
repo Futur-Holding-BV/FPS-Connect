@@ -68,7 +68,7 @@ export function Knop({
       ? c.foreground
       : variant === "omlijnd"
         ? c.foreground
-        : "#FFFFFF";
+        : c.primaryForeground;
   const isUit = disabled || bezig;
 
   return (
@@ -262,13 +262,13 @@ export function ChipRij({
                   borderRadius: 6,
                   backgroundColor: o.kleur,
                   borderWidth: 1,
-                  borderColor: "#ffffff",
+                  borderColor: c.primaryForeground,
                 }}
               />
             )}
             <Text
               style={{
-                color: actief ? "#FFFFFF" : c.foreground,
+                color: actief ? c.primaryForeground : c.foreground,
                 fontFamily: "Inter_500Medium",
                 fontSize: 15,
               }}

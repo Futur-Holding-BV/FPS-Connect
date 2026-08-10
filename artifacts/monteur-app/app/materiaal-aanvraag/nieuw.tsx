@@ -2,6 +2,7 @@ import { API_DOMEIN } from "@/lib/apiDomein";
 // Materiaal Aanvraag — monteur meldt artikel dat op/beschadigd/nodig is
 // AI herkent het artikel, zoekt prijs/leverancier en toetst aan werkbegroting
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -17,7 +18,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { uploadFoto } from "@/lib/upload";
@@ -26,11 +27,12 @@ const DOMEIN = API_DOMEIN;
 
 type Reden = "op" | "beschadigd" | "nodig";
 type VolgensOpdracht = "ja" | "wijkt_af" | "weet_niet";
+type RedenSoort = "fout" | "waarschuwing" | "primair";
 
-const REDEN_OPTIES: { waarde: Reden; label: string; icoon: keyof typeof Ionicons.glyphMap; kleur: string }[] = [
-  { waarde: "op", label: "Op / verbruikt", icoon: "warning-outline", kleur: "#dc2626" },
-  { waarde: "beschadigd", label: "Beschadigd", icoon: "construct-outline", kleur: "#d97706" },
-  { waarde: "nodig", label: "Nodig voor werk", icoon: "bag-add-outline", kleur: "#2563eb" },
+const REDEN_OPTIES: { waarde: Reden; label: string; icoon: keyof typeof Ionicons.glyphMap; soort: RedenSoort }[] = [
+  { waarde: "op", label: "Op / verbruikt", icoon: "warning-outline", soort: "fout" },
+  { waarde: "beschadigd", label: "Beschadigd", icoon: "construct-outline", soort: "waarschuwing" },
+  { waarde: "nodig", label: "Nodig voor werk", icoon: "bag-add-outline", soort: "primair" },
 ];
 
 const VOLGENS_OPDRACHT_OPTIES: { waarde: VolgensOpdracht; label: string }[] = [
@@ -45,6 +47,10 @@ export default function MateriaalAanvraagNieuw() {
   const router = useRouter();
   const { token } = useAuth();
   const params = useLocalSearchParams<{ werkdag_id?: string; titel?: string; werknummer?: string }>();
+
+  // Redensoort → paletkleur (geen letterlijke kleuren in dit bestand).
+  const redenKleur = (soort: RedenSoort) =>
+    soort === "fout" ? c.destructive : soort === "waarschuwing" ? c.warning : c.tint;
 
   const werkdagId = params.werkdag_id ? parseInt(params.werkdag_id, 10) : null;
   const opdrachtTitel = params.titel ?? null;
@@ -152,51 +158,51 @@ export default function MateriaalAanvraagNieuw() {
 
   if (verzonden) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
+      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center", padding: ruimte.xxl }}>
         <View
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: "#16a34a22",
+            width: ruimte.xxl * 2,
+            height: ruimte.xxl * 2,
+            borderRadius: ruimte.xxl,
+            backgroundColor: c.accent,
             justifyContent: "center",
             alignItems: "center",
-            marginBottom: 20,
+            marginBottom: ruimte.l + ruimte.xs,
           }}
         >
-          <Ionicons name="checkmark-circle" size={36} color="#16a34a" />
+          <Ionicons name="checkmark-circle" size={36} color={c.success} />
         </View>
-        <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold", textAlign: "center", marginBottom: 8 }}>
+        <Text style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center", marginBottom: ruimte.s }]}>
           Melding verzonden
         </Text>
-        <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20, marginBottom: 32 }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginBottom: ruimte.xxl }]}>
           De werkvoorbereider ontvangt uw melding. AI analyseert het artikel en controleert de werkbegroting.
         </Text>
         {(verzondenVolgensOpdracht === "wijkt_af" || verzondenVolgensOpdracht === "weet_niet") && (
           <View
             style={{
-              backgroundColor: "#d9770618",
+              backgroundColor: c.secondary,
               borderWidth: 1,
-              borderColor: "#d9770655",
-              borderRadius: 10,
-              padding: 14,
-              marginBottom: 32,
+              borderColor: c.warning,
+              borderRadius: c.radius,
+              padding: ruimte.m + 2,
+              marginBottom: ruimte.xxl,
               flexDirection: "row",
-              gap: 10,
+              gap: ruimte.s + 2,
               alignItems: "flex-start",
             }}
           >
-            <Ionicons name="information-circle-outline" size={18} color="#d97706" style={{ marginTop: 1 }} />
-            <Text style={{ flex: 1, color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+            <Ionicons name="information-circle-outline" size={ruimte.l + 2} color={c.warning} style={{ marginTop: 1 }} />
+            <Text style={[tekstStijl("klein", c.foreground), { flex: 1 }]}>
               Omdat dit afwijkt van of niet zeker volgens de opdracht is, gaat de aanvraag eerst langs de werkvoorbereider ter controle.
             </Text>
           </View>
         )}
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: c.tint, borderRadius: 10, paddingHorizontal: 28, paddingVertical: 12 }}
+          style={({ pressed }) => ({ backgroundColor: c.tint, borderRadius: c.radius, paddingHorizontal: ruimte.xl + ruimte.xs, paddingVertical: ruimte.m, opacity: pressed ? 0.85 : 1 })}
         >
-          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Terug naar werkdag</Text>
+          <Text style={tekstStijl("nadruk", c.primaryForeground)}>Terug naar werkdag</Text>
         </Pressable>
       </View>
     );
@@ -209,28 +215,28 @@ export default function MateriaalAanvraagNieuw() {
         style={{
           backgroundColor: c.card,
           paddingTop: bovenInset(insets),
-          paddingBottom: 14,
-          paddingHorizontal: 16,
+          paddingBottom: ruimte.m + 2,
+          paddingHorizontal: ruimte.l,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
-          style={{ padding: 4 }}
+          style={{ padding: ruimte.xs }}
         >
-          <Ionicons name="chevron-back" size={22} color={c.foreground} />
+          <Ionicons name="chevron-back" size={ruimte.xl} color={c.foreground} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("sectiekop", c.foreground)}>
             Materiaal melden
           </Text>
           {(opdrachtTitel ?? werknummer) ? (
-            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
               {[werknummer, opdrachtTitel].filter(Boolean).join(" — ")}
             </Text>
           ) : null}
@@ -239,17 +245,18 @@ export default function MateriaalAanvraagNieuw() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l, paddingBottom: ruimte.xxl + ruimte.s }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Reden */}
         <View>
-          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s + 2 }]}>
             Reden
           </Text>
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: ruimte.s }}>
             {REDEN_OPTIES.map((opt) => {
               const geselecteerd = reden === opt.waarde;
+              const kleur = redenKleur(opt.soort);
               return (
                 <Pressable
                   key={opt.waarde}
@@ -257,37 +264,31 @@ export default function MateriaalAanvraagNieuw() {
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 12,
-                    backgroundColor: geselecteerd ? opt.kleur + "18" : c.card,
+                    gap: ruimte.m,
+                    backgroundColor: geselecteerd ? c.accent : c.card,
                     borderWidth: 1.5,
-                    borderColor: geselecteerd ? opt.kleur : c.border,
-                    borderRadius: 10,
-                    padding: 14,
+                    borderColor: geselecteerd ? kleur : c.border,
+                    borderRadius: c.radius,
+                    padding: ruimte.m + 2,
                   }}
                 >
                   <View
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      backgroundColor: opt.kleur + "22",
+                      width: ruimte.xxl,
+                      height: ruimte.xxl,
+                      borderRadius: c.radius / 2,
+                      backgroundColor: c.secondary,
                       justifyContent: "center",
                       alignItems: "center",
                     }}
                   >
-                    <Ionicons name={opt.icoon} size={18} color={opt.kleur} />
+                    <Ionicons name={opt.icoon} size={ruimte.l + 2} color={kleur} />
                   </View>
-                  <Text
-                    style={{
-                      color: geselecteerd ? opt.kleur : c.foreground,
-                      fontSize: 14,
-                      fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
-                    }}
-                  >
+                  <Text style={tekstStijl(geselecteerd ? "nadruk" : "standaard", geselecteerd ? kleur : c.foreground)}>
                     {opt.label}
                   </Text>
                   {geselecteerd && (
-                    <Ionicons name="checkmark-circle" size={18} color={opt.kleur} style={{ marginLeft: "auto" }} />
+                    <Ionicons name="checkmark-circle" size={ruimte.l + 2} color={kleur} style={{ marginLeft: "auto" }} />
                   )}
                 </Pressable>
               );
@@ -297,14 +298,14 @@ export default function MateriaalAanvraagNieuw() {
 
         {/* Is dit volgens de opdracht? */}
         <View>
-          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.xs }]}>
             Is dit volgens de opdracht?
-            <Text style={{ color: "#dc2626", fontFamily: "Inter_400Regular" }}> *</Text>
+            <Text style={tekstStijl("standaard", c.destructive)}> *</Text>
           </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 10 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginBottom: ruimte.s + 2 }]}>
             Verplicht. "Weet ik niet" is een geldig antwoord.
           </Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", gap: ruimte.s }}>
             {VOLGENS_OPDRACHT_OPTIES.map((opt) => {
               const geselecteerd = volgensOpdracht === opt.waarde;
               return (
@@ -313,24 +314,17 @@ export default function MateriaalAanvraagNieuw() {
                   onPress={() => setVolgensOpdracht(opt.waarde)}
                   style={{
                     flex: 1,
-                    backgroundColor: geselecteerd ? c.tint + "18" : c.card,
+                    backgroundColor: geselecteerd ? c.accent : c.card,
                     borderWidth: 1.5,
                     borderColor: geselecteerd ? c.tint : c.border,
-                    borderRadius: 10,
-                    paddingVertical: 14,
-                    paddingHorizontal: 8,
+                    borderRadius: c.radius,
+                    paddingVertical: ruimte.m + 2,
+                    paddingHorizontal: ruimte.s,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Text
-                    style={{
-                      color: geselecteerd ? c.tint : c.foreground,
-                      fontSize: 13,
-                      fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
-                      textAlign: "center",
-                    }}
-                  >
+                  <Text style={[tekstStijl(geselecteerd ? "nadruk" : "standaard", geselecteerd ? c.tint : c.foreground), { textAlign: "center" }]}>
                     {opt.label}
                   </Text>
                 </Pressable>
@@ -338,7 +332,7 @@ export default function MateriaalAanvraagNieuw() {
             })}
           </View>
           {!volgensOpdracht && (
-            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 6 }}>
+            <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs + 2 }]}>
               Zonder antwoord kunt u de melding niet indienen.
             </Text>
           )}
@@ -346,22 +340,22 @@ export default function MateriaalAanvraagNieuw() {
 
         {/* Foto */}
         <View>
-          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s + 2 }]}>
             Foto
-            <Text style={{ color: "#dc2626", fontFamily: "Inter_400Regular" }}> *</Text>
+            <Text style={tekstStijl("standaard", c.destructive)}> *</Text>
           </Text>
           {fotoUri ? (
             <View>
               <Image
                 source={{ uri: fotoUri }}
-                style={{ width: "100%", height: 220, borderRadius: 10, backgroundColor: c.muted }}
+                style={{ width: "100%", height: 220, borderRadius: c.radius, backgroundColor: c.muted }}
                 resizeMode="cover"
               />
               <Pressable
                 onPress={() => setFotoUri(null)}
-                style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#000000aa", borderRadius: 20, padding: 6 }}
+                style={{ position: "absolute", top: ruimte.s, right: ruimte.s, backgroundColor: c.dark + "aa", borderRadius: ruimte.l + ruimte.xs, padding: ruimte.xs + 2 }}
               >
-                <Ionicons name="close" size={16} color="#fff" />
+                <Ionicons name="close" size={ruimte.l} color={c.primaryForeground} />
               </Pressable>
             </View>
           ) : (
@@ -372,15 +366,15 @@ export default function MateriaalAanvraagNieuw() {
                 borderWidth: 2,
                 borderStyle: "dashed",
                 borderColor: c.border,
-                borderRadius: 10,
+                borderRadius: c.radius,
                 backgroundColor: c.card,
                 justifyContent: "center",
                 alignItems: "center",
-                gap: 8,
+                gap: ruimte.s,
               }}
             >
-              <Ionicons name="camera-outline" size={32} color={c.mutedForeground} />
-              <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Ionicons name="camera-outline" size={ruimte.xxl} color={c.mutedForeground} />
+              <Text style={tekstStijl("klein", c.mutedForeground)}>
                 Foto toevoegen
               </Text>
             </Pressable>
@@ -389,7 +383,7 @@ export default function MateriaalAanvraagNieuw() {
 
         {/* Omschrijving */}
         <View>
-          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
             Toelichting (optioneel)
           </Text>
           <TextInput
@@ -399,20 +393,20 @@ export default function MateriaalAanvraagNieuw() {
             placeholderTextColor={c.mutedForeground}
             multiline
             numberOfLines={3}
-            style={{
-              backgroundColor: c.card,
-              borderWidth: 1,
-              borderColor: c.border,
-              borderRadius: 10,
-              padding: 12,
-              color: c.foreground,
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              minHeight: 80,
-              textAlignVertical: "top",
-            }}
+            style={[
+              tekstStijl("klein", c.foreground),
+              {
+                backgroundColor: c.card,
+                borderWidth: 1,
+                borderColor: c.border,
+                borderRadius: c.radius,
+                padding: ruimte.m,
+                minHeight: ruimte.xxl * 2 + ruimte.l,
+                textAlignVertical: "top",
+              },
+            ]}
           />
-          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs }]}>
             AI analyseert het artikel op basis van foto en toelichting.
           </Text>
         </View>
@@ -423,33 +417,28 @@ export default function MateriaalAanvraagNieuw() {
           disabled={bezig || !reden || !volgensOpdracht || !fotoUri}
           style={({ pressed }) => ({
             backgroundColor:
-              !reden || !volgensOpdracht || !fotoUri ? c.muted : pressed ? "#c93009" : c.tint,
-            borderRadius: 10,
-            paddingVertical: 14,
+              !reden || !volgensOpdracht || !fotoUri ? c.muted : c.tint,
+            opacity: pressed && reden && volgensOpdracht && fotoUri ? 0.85 : 1,
+            borderRadius: c.radius,
+            paddingVertical: ruimte.m + 2,
             alignItems: "center",
             flexDirection: "row",
             justifyContent: "center",
-            gap: 8,
-            marginTop: 8,
+            gap: ruimte.s,
+            marginTop: ruimte.s,
           })}
         >
           {bezig ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={c.primaryForeground} />
           ) : (
-            <Ionicons name="send-outline" size={16} color={!reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : "#fff"} />
+            <Ionicons name="send-outline" size={ruimte.l} color={!reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : c.primaryForeground} />
           )}
-          <Text
-            style={{
-              color: !reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : "#fff",
-              fontSize: 14,
-              fontFamily: "Inter_600SemiBold",
-            }}
-          >
+          <Text style={tekstStijl("nadruk", !reden || !volgensOpdracht || !fotoUri ? c.mutedForeground : c.primaryForeground)}>
             {bezig ? "Verzenden..." : "Melding verzenden"}
           </Text>
         </Pressable>
 
-        <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 16 }}>
+        <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textAlign: "center" }]}>
           De werkvoorbereider ontvangt de melding direct. AI zoekt het artikel op, vergelijkt met de werkbegroting en geeft advies.
         </Text>
       </ScrollView>

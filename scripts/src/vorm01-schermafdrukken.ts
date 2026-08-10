@@ -21,7 +21,7 @@ import {
 } from "./e2e-monteur-testaccount";
 
 const MODUS = process.env["MODUS"] === "na" ? "na" : "voor";
-const MAP = `../docs/metingen/vorm01/${MODUS}`;
+const MAP = process.env["DONKER"] === "1" ? "../docs/metingen/vorm01/donker" : `../docs/metingen/vorm01/${MODUS}`;
 const BASIS = `https://${process.env["REPLIT_EXPO_DEV_DOMAIN"]}`;
 const MAAT = { width: 402, height: 874 };
 
@@ -80,7 +80,14 @@ async function main(): Promise<void> {
   const executablePath = execSync("which chromium").toString().trim();
   const browser = await chromium.launch({ executablePath });
   try {
-    const context = await browser.newContext({ viewport: MAAT, deviceScaleFactor: 2 });
+    // DONKER=1 emuleert de systeeminstelling donker (prefers-color-scheme),
+    // die react-native-web via useColorScheme volgt sinds DONKER_ACTIEF.
+    const donker = process.env["DONKER"] === "1";
+    const context = await browser.newContext({
+      viewport: MAAT,
+      deviceScaleFactor: 2,
+      colorScheme: donker ? "dark" : "light",
+    });
     const page = await context.newPage();
     await logIn(page);
     for (const s of SCHERMEN) {

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
@@ -26,21 +27,21 @@ export function OfflineBanner({ stijl = "volledig" }: Props) {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          gap: 6,
-          backgroundColor: isOnline ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-          paddingHorizontal: 10,
-          paddingVertical: 5,
+          gap: ruimte.xs + 2,
+          backgroundColor: isOnline ? c.success + "1F" : c.destructive + "1F",
+          paddingHorizontal: ruimte.s + 2,
+          paddingVertical: ruimte.xs + 1,
           borderRadius: 20,
         }}
       >
         <Ionicons
           name={isOnline ? "cloud-done-outline" : "cloud-offline-outline"}
           size={13}
-          color={isOnline ? "#4ade80" : "#f87171"}
+          color={isOnline ? c.success : c.destructive}
         />
         <Text
           style={{
-            color: isOnline ? "#4ade80" : "#f87171",
+            color: isOnline ? c.success : c.destructive,
             fontSize: 11,
             fontFamily: "Inter_500Medium",
           }}
@@ -61,25 +62,25 @@ export function OfflineBanner({ stijl = "volledig" }: Props) {
   return (
     <View
       style={{
-        backgroundColor: isOnline ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+        backgroundColor: isOnline ? c.success + "1A" : c.destructive + "1A",
         borderBottomWidth: 1,
-        borderBottomColor: isOnline ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        borderBottomColor: isOnline ? c.success + "33" : c.destructive + "33",
+        paddingHorizontal: ruimte.l,
+        paddingVertical: ruimte.s + 2,
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: ruimte.s + 2,
       }}
     >
       <Ionicons
         name={isOnline ? "cloud-done-outline" : "cloud-offline-outline"}
         size={18}
-        color={isOnline ? "#4ade80" : "#f87171"}
+        color={isOnline ? c.success : c.destructive}
       />
       <View style={{ flex: 1 }}>
         <Text
           style={{
-            color: isOnline ? "#4ade80" : "#f87171",
+            color: isOnline ? c.success : c.destructive,
             fontSize: 13,
             fontFamily: "Inter_600SemiBold",
           }}
@@ -106,22 +107,22 @@ export function OfflineBanner({ stijl = "volledig" }: Props) {
           style={({ pressed }) => ({
             flexDirection: "row",
             alignItems: "center",
-            gap: 5,
-            backgroundColor: pressed ? "rgba(34,197,94,0.2)" : "rgba(34,197,94,0.12)",
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
+            gap: ruimte.xs + 1,
+            backgroundColor: pressed ? c.success + "33" : c.success + "1F",
+            paddingHorizontal: ruimte.s + 2,
+            paddingVertical: ruimte.xs + 2,
+            borderRadius: c.radius / 2,
             opacity: isDownloading ? 0.6 : 1,
           })}
         >
           {isDownloading ? (
-            <ActivityIndicator size={12} color="#4ade80" />
+            <ActivityIndicator size={12} color={c.success} />
           ) : (
-            <Ionicons name="download-outline" size={14} color="#4ade80" />
+            <Ionicons name="download-outline" size={14} color={c.success} />
           )}
           <Text
             style={{
-              color: "#4ade80",
+              color: c.success,
               fontSize: 12,
               fontFamily: "Inter_600SemiBold",
             }}

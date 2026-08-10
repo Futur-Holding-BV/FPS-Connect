@@ -11,6 +11,14 @@
    - **Optie B — ingang vanaf Mijn werkdag.** De regel "N locaties vandaag" (die zijn teller nu al uit `/mijn-werk`-data haalt) wordt aanklikbaar en opent Mijn werk. Voordeel: nul extra menudrukte, de ingang staat precies waar de monteur al kijkt, en de bestaande teller krijgt betekenis. Nadeel: één tik dieper dan het menu.
    - **Afweging/advies: optie B** — laagste menudruk, logische plek (werkdag verwijst er al impliciet naar), geen wijziging aan het radiaalmenu.
 
+## 0c. F6 afgerond (10-08)
+
+- Alle 58 schermen + 22 componenten omgezet naar tokens/bouwstenen; gedrag, structuur en teksten ongewijzigd; typecheck groen.
+- `DONKER_ACTIEF` staat AAN: de app volgt de systeeminstelling. Donker-bewijs in `docs/metingen/vorm01/donker/` (schermafdrukscript kent `DONKER=1`).
+- Logo-vlakken (menu, login, vergrendeld) blijven bewust altijd wit (`kleuren.light.card`) — het beeldmerk heeft donkere tekst.
+- **Bewuste, gedocumenteerde uitzonderingen op "geen letterlijke kleuren":** plattegrond-/PDF-renderkleuren (handmatig gesynchroniseerd met de web-renderer — hertinten zou web/mobiel uit elkaar trekken), opname-typelegenda (10 typekleuren, gedeeld met web-legenda), toolbox-categoriekleuren, feest-/confettikleuren (Achievement/Birthday), handtekening-inkt (#1a1a1a op wit papier-vlak) en het radiaalmenu-merkverloop. Shadow-`#000` is platformconventie.
+- **Paletgrenzen gemeld door de omzetters:** er is geen blauw/paars/teal-token — spotstatussen als voorbereid/opdracht/inkoop zijn op Statusmerk-soort "primair" gemapt; geen apart scrim-token — modale overlays gebruiken c.dark met alpha. Werkt goed; als René ooit méér statuskleuren wil, hoort dat in de tokenbron, niet per scherm.
+
 ## 0b. Tweede beoordelingsronde (10-08, akkoord F6 met twee referentiescherm-punten)
 
 1. **Afkappen midden in een woord opgelost als bouwsteenregel:** nieuwe bouwsteen `Onderregel` (secundaire informatieregel, loopt door op een tweede regel) + regel in `Statusmerk` (`flexShrink: 0` — de chip wordt nooit platgedrukt). Zichtbaar in de nieuwe ná-afdruk: "Begane grond" en "1e verdieping" staan er volledig.

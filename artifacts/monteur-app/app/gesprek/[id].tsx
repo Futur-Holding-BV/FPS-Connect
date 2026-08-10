@@ -33,6 +33,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ruimte } from "@workspace/ontwerp";
 import { bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
@@ -82,9 +83,9 @@ function BerichtBel({
   const bubbleStijl = {
     maxWidth: "80%" as const,
     backgroundColor: isEigen ? c.primary : c.card,
-    borderRadius: 16,
-    borderBottomRightRadius: isEigen ? 4 : 16,
-    borderBottomLeftRadius: isEigen ? 16 : 4,
+    borderRadius: c.radius,
+    borderBottomRightRadius: isEigen ? ruimte.xs : c.radius,
+    borderBottomLeftRadius: isEigen ? c.radius : ruimte.xs,
     borderWidth: isEigen ? 0 : 1,
     borderColor: c.border,
     overflow: "hidden" as const,
@@ -95,7 +96,7 @@ function BerichtBel({
       style={{
         fontSize: 10,
         fontFamily: "Inter_400Regular",
-        color: isEigen ? "rgba(255,255,255,0.65)" : c.mutedForeground,
+        color: isEigen ? c.primaryForeground : c.mutedForeground,
         textAlign: "right",
         marginTop: 2,
         paddingHorizontal: isAfbeelding || isVideo ? 10 : 0,
@@ -146,7 +147,7 @@ function BerichtBel({
                 style={{
                   fontSize: 14,
                   fontFamily: "Inter_400Regular",
-                  color: isEigen ? "#fff" : c.foreground,
+                  color: isEigen ? c.primaryForeground : c.foreground,
                   paddingHorizontal: 10,
                   paddingTop: 6,
                   lineHeight: 20,
@@ -167,12 +168,12 @@ function BerichtBel({
               paddingVertical: 10,
             }}
           >
-            <Ionicons name="play-circle" size={32} color={isEigen ? "#fff" : c.primary} />
+            <Ionicons name="play-circle" size={32} color={isEigen ? c.primaryForeground : c.primary} />
             <Text
               style={{
                 fontSize: 13,
                 fontFamily: "Inter_400Regular",
-                color: isEigen ? "#fff" : c.foreground,
+                color: isEigen ? c.primaryForeground : c.foreground,
               }}
             >
               Video bekijken
@@ -192,13 +193,13 @@ function BerichtBel({
             <Ionicons
               name="document-outline"
               size={22}
-              color={isEigen ? "#fff" : c.primary}
+              color={isEigen ? c.primaryForeground : c.primary}
             />
             <Text
               style={{
                 fontSize: 13,
                 fontFamily: "Inter_400Regular",
-                color: isEigen ? "#fff" : c.foreground,
+                color: isEigen ? c.primaryForeground : c.foreground,
                 flexShrink: 1,
               }}
               numberOfLines={1}
@@ -212,7 +213,7 @@ function BerichtBel({
               style={{
                 fontSize: 14,
                 fontFamily: "Inter_400Regular",
-                color: isEigen ? "#fff" : c.foreground,
+                color: isEigen ? c.primaryForeground : c.foreground,
                 lineHeight: 20,
               }}
             >
@@ -389,11 +390,11 @@ export default function GesprekScherm() {
         }}
       >
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+          <Ionicons name="arrow-back" size={22} color={c.darkForeground} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text
-            style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" }}
+            style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: c.darkForeground }}
             numberOfLines={1}
           >
             {naam}
@@ -403,7 +404,7 @@ export default function GesprekScherm() {
               style={{
                 fontSize: 11,
                 fontFamily: "Inter_400Regular",
-                color: "rgba(255,255,255,0.7)",
+                color: c.darkMuted,
               }}
             >
               {gesprek.deelnemers.length} deelnemers
@@ -563,9 +564,9 @@ export default function GesprekScherm() {
           }}
         >
           {verzending || uploadBezig ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={c.primaryForeground} />
           ) : (
-            <Ionicons name="send" size={18} color="#fff" />
+            <Ionicons name="send" size={18} color={c.primaryForeground} />
           )}
         </Pressable>
       </View>

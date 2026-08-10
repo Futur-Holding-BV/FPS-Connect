@@ -14,10 +14,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { Ladenstaat, LijstFout, Statusmerk, tekstStijl, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -50,25 +51,25 @@ export default function OpdrachtDetail() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={[tekstStijl("klein", c.darkMuted), { fontFamily: "Inter_600SemiBold" }]}>
             {(opdracht as Opdracht | undefined)?.werknummer ?? `#${opdrachtId}`}
           </Text>
-          <Text style={{ color: c.darkForeground, fontSize: 21, fontFamily: "Inter_700Bold", marginTop: 2 }}>
+          <Text style={[tekstStijl("schermtitel", c.darkForeground), { marginTop: ruimte.xs / 2 }]}>
             {(opdracht as Opdracht | undefined)?.titel ?? "Opdracht"}
           </Text>
           {(opdracht as Opdracht | undefined)?.gebouw_naam ? (
-            <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
               {[(opdracht as Opdracht).gebouw_naam, (opdracht as Opdracht).gebouw_stad].filter(Boolean).join(", ")}
             </Text>
           ) : null}
@@ -77,18 +78,18 @@ export default function OpdrachtDetail() {
           <Pressable
             onPress={() => router.push(`/projecten/${opdrachtId}/meerwerk`)}
             style={({ pressed }) => ({
-              marginTop: 14,
+              marginTop: ruimte.m + 2,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
-              backgroundColor: pressed ? "#c93009" : c.primary,
-              borderRadius: 10,
-              paddingVertical: 12,
+              gap: ruimte.s,
+              backgroundColor: pressed ? c.primary + "E6" : c.primary,
+              borderRadius: c.radius / 2,
+              paddingVertical: ruimte.m,
             })}
           >
-            <Ionicons name="git-compare-outline" size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+            <Ionicons name="git-compare-outline" size={16} color={c.primaryForeground} />
+            <Text style={[tekstStijl("standaard", c.primaryForeground), { fontFamily: "Inter_600SemiBold" }]}>
               Meer-/minderwerk melden
             </Text>
           </Pressable>
@@ -112,18 +113,17 @@ export default function OpdrachtDetail() {
               onPress={() => setTab(t)}
               style={{
                 flex: 1,
-                paddingVertical: 14,
+                paddingVertical: ruimte.m + 2,
                 alignItems: "center",
                 borderBottomWidth: 2,
                 borderBottomColor: actief ? c.primary : "transparent",
               }}
             >
               <Text
-                style={{
-                  color: actief ? c.primary : c.mutedForeground,
-                  fontSize: 14,
-                  fontFamily: actief ? "Inter_700Bold" : "Inter_400Regular",
-                }}
+                style={[
+                  tekstStijl("standaard", actief ? c.primary : c.mutedForeground),
+                  { fontFamily: actief ? "Inter_700Bold" : "Inter_400Regular" },
+                ]}
               >
                 {t === "werkbegroting" ? "Werkbegroting" : "Inkoop"}
               </Text>
@@ -152,8 +152,8 @@ function WerkbegrotingWeergave({ opdrachtId, enabled }: { opdrachtId: number; en
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={c.primary} />
+      <View style={{ padding: ruimte.l }}>
+        <Ladenstaat regels={5} />
       </View>
     );
   }
@@ -191,16 +191,16 @@ function WerkbegrotingWeergave({ opdrachtId, enabled }: { opdrachtId: number; en
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{
-        padding: 16,
-        gap: 14,
-        paddingBottom: insets.bottom + 24,
+        padding: ruimte.l,
+        gap: ruimte.m + 2,
+        paddingBottom: insets.bottom + ruimte.xl,
         width: "100%",
         maxWidth: inhoudMaxBreedte,
         alignSelf: "center",
       }}
     >
       {wb ? (
-        <View style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 14, gap: 4 }}>
+        <View style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: ruimte.m + 2, gap: ruimte.xs }}>
           <RegelRij label="Begrote uren" waarde={`${wb.totaal_arbeid_uren} uur`} />
           {toonBedragen && wb.totaal_materiaal_bedrag != null ? (
             <RegelRij label="Materiaalbedrag" waarde={euro(wb.totaal_materiaal_bedrag)!} />
@@ -209,29 +209,30 @@ function WerkbegrotingWeergave({ opdrachtId, enabled }: { opdrachtId: number; en
       ) : null}
 
       {hoofdstukken.length === 0 ? (
-        <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 32, fontFamily: "Inter_400Regular" }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl }]}>
           Deze werkbegroting heeft nog geen regels.
         </Text>
       ) : (
         hoofdstukken.map((h) => (
-          <View key={h.naam} style={{ gap: 8 }}>
+          <View key={h.naam} style={{ gap: ruimte.s }}>
             <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 13,
-                fontFamily: "Inter_700Bold",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
+              style={[
+                tekstStijl("klein", c.mutedForeground),
+                {
+                  fontFamily: "Inter_700Bold",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                },
+              ]}
             >
               {h.naam}
             </Text>
             {h.regels.map((r) => (
               <View
                 key={r.id}
-                style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 14, gap: 6 }}
+                style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: ruimte.m + 2, gap: ruimte.xs + 2 }}
               >
-                <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
                   {r.omschrijving}
                 </Text>
                 <RegelRij label="Hoeveelheid" waarde={`${r.hoeveelheid} ${r.eenheid}`} />
@@ -257,8 +258,8 @@ function InkoopWeergave({ opdrachtId, enabled }: { opdrachtId: number; enabled: 
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={c.primary} />
+      <View style={{ padding: ruimte.l }}>
+        <Ladenstaat regels={5} />
       </View>
     );
   }
@@ -278,33 +279,29 @@ function InkoopWeergave({ opdrachtId, enabled }: { opdrachtId: number; enabled: 
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{
-        padding: 16,
-        gap: 12,
-        paddingBottom: insets.bottom + 24,
+        padding: ruimte.l,
+        gap: ruimte.m,
+        paddingBottom: insets.bottom + ruimte.xl,
         width: "100%",
         maxWidth: inhoudMaxBreedte,
         alignSelf: "center",
       }}
     >
       {regels.length === 0 ? (
-        <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 32, fontFamily: "Inter_400Regular" }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl }]}>
           Er is nog geen inkoopplanning.
         </Text>
       ) : (
         regels.map((r) => (
           <View
             key={r.id}
-            style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 14, gap: 6 }}
+            style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: ruimte.m + 2, gap: ruimte.xs + 2 }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: ruimte.s }}>
+              <Text style={[tekstStijl("nadruk", c.foreground), { fontFamily: "Inter_600SemiBold", flex: 1 }]}>
                 {r.omschrijving}
               </Text>
-              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: c.secondary }}>
-                <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: c.mutedForeground }}>
-                  {r.status}
-                </Text>
-              </View>
+              <Statusmerk label={r.status} soort="neutraal" />
             </View>
 
             <RegelRij label="Hoeveelheid" waarde={`${r.hoeveelheid} ${r.eenheid}`} />
@@ -336,9 +333,9 @@ function datum(iso: string): string {
 function RegelRij({ label, waarde }: { label: string; waarde: string }) {
   const c = useColors();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-      <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>{label}</Text>
-      <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "right", flexShrink: 1 }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: ruimte.s }}>
+      <Text style={tekstStijl("klein", c.mutedForeground)}>{label}</Text>
+      <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold", textAlign: "right", flexShrink: 1 }]}>
         {waarde}
       </Text>
     </View>

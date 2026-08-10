@@ -28,7 +28,9 @@ export type Palet = {
   destructive: string;
   destructiveForeground: string;
   success: string;
+  successForeground: string;
   warning: string;
+  warningForeground: string;
   border: string;
   input: string;
   dark: string;
@@ -66,8 +68,12 @@ export const kleuren: { licht: Palet; donker: Palet } = {
     destructive: "#E5484D",
     destructiveForeground: "#FFFFFF",
 
+    // Foregrounds op succes/waarschuwing: wit haalt op deze middentinten geen
+    // AA voor kleine tekst; donkere inkt wel (gemeten ≥7:1 op beide).
     success: "#22A06B",
+    successForeground: "#0B2B1C",
     warning: "#E8870E",
+    warningForeground: "#33200A",
 
     border: "#E2E5EA",
     input: "#E2E5EA",
@@ -110,7 +116,9 @@ export const kleuren: { licht: Palet; donker: Palet } = {
     destructiveForeground: "#FFFFFF",
 
     success: "#4CC08E",
+    successForeground: "#0B2B1C",
     warning: "#F0A045",
+    warningForeground: "#33200A",
 
     border: "#3C4557",
     input: "#3C4557",

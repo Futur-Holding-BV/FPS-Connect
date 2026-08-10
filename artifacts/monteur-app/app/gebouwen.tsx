@@ -3,7 +3,6 @@ import { useListGebouwen } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -11,8 +10,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, TekstVeld, bovenInset } from "@/components/ui";
+import { LijstFout, Ladenstaat, TekstVeld, tekstStijl, bovenInset } from "@/components/ui";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -65,92 +65,92 @@ function Gebouwen() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 14,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m + 2,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
         <View>
           <View style={{ width: "100%" }}>
-            <Text style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 1.5, textTransform: "uppercase" }}>
+            <Text style={[tekstStijl("bijschrift", c.primary), { fontFamily: "Inter_700Bold", letterSpacing: 1.5, textTransform: "uppercase" }]}>
               FPS Brandpreventie
             </Text>
-            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("klein", c.darkMuted)}>
               Welkom terug
             </Text>
-            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("sectiekop", c.darkForeground)}>
               {gebruiker?.naam ?? "Monteur"}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center", gap: 8, marginTop: 14 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center", gap: ruimte.s, marginTop: ruimte.m + 2 }}>
             <Pressable
               onPress={() => router.push("/menu")}
               accessibilityLabel="Naar hoofdmenu"
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.12)",
+                gap: ruimte.s - 2,
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s + 1,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.darkForeground + "1F",
               }}
             >
               <Ionicons name="grid" size={15} color={c.darkForeground} />
-              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", c.darkForeground)}>
                 Menu
               </Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/documenten")}
               style={{
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s + 1,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.darkForeground + "1F",
               }}
             >
-              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", c.darkForeground)}>
                 Documenten
               </Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/hrm")}
               style={{
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s + 1,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.darkForeground + "1F",
               }}
             >
-              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", c.darkForeground)}>
                 Personeel
               </Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/info")}
               style={{
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s + 1,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.darkForeground + "1F",
               }}
             >
-              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", c.darkForeground)}>
                 Info
               </Text>
             </Pressable>
             <Pressable
               onPress={uitloggen}
               style={{
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s + 1,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.darkForeground + "1F",
               }}
             >
-              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", c.darkForeground)}>
                 Uitloggen
               </Text>
             </Pressable>
@@ -158,7 +158,7 @@ function Gebouwen() {
         </View>
 
         {/* Sync-statusregel */}
-        <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={{ marginTop: ruimte.s + 2, flexDirection: "row", alignItems: "center", gap: ruimte.s + 2 }}>
           <SyncStatusBadge
             status={syncStatus}
             aantalWachtend={aantalWachtend}
@@ -174,35 +174,35 @@ function Gebouwen() {
             <Pressable
               onPress={forceerSync}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 20,
-                backgroundColor: "rgba(242,59,13,0.18)",
+                paddingHorizontal: ruimte.s + 2,
+                paddingVertical: ruimte.xs + 1,
+                borderRadius: ruimte.xl - 4,
+                backgroundColor: c.primary + "2E",
               }}
             >
-              <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("bijschrift", c.primary)}>
                 Nu synchroniseren
               </Text>
             </Pressable>
           )}
         </View>
 
-        <View style={{ marginTop: 14 }}>
+        <View style={{ marginTop: ruimte.m + 2 }}>
           <TekstVeld
             label=""
             value={zoek}
             onChangeText={setZoek}
             placeholder="Zoek gebouw, adres of stad…"
             autoCapitalize="none"
-            style={{ backgroundColor: "rgba(255,255,255,0.10)", borderColor: "rgba(255,255,255,0.18)", color: "#fff" }}
+            style={{ backgroundColor: c.darkForeground + "1A", borderColor: c.darkForeground + "2E", color: c.darkForeground }}
           />
         </View>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -216,7 +216,7 @@ function Gebouwen() {
           keyExtractor={(g) => String(g.id)}
           numColumns={kolommen}
           columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
-          contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.m, gap: ruimte.s, paddingBottom: insets.bottom + ruimte.xl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching || isSyncing}
@@ -225,7 +225,7 @@ function Gebouwen() {
             />
           }
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.l }]}>
               Geen gebouwen gevonden.
             </Text>
           }
@@ -237,24 +237,24 @@ function Gebouwen() {
                 borderRadius: c.radius,
                 borderWidth: 1,
                 borderColor: c.border,
-                paddingHorizontal: 14,
-                paddingVertical: 11,
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.m - 1,
                 width: itemBreedte,
                 opacity: pressed ? 0.85 : 1,
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 10,
+                gap: ruimte.s + 2,
               })}
             >
               <View style={{ flex: 1 }}>
                 <Text
-                  style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold" }}
+                  style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_700Bold" }]}
                   numberOfLines={1}
                 >
                   {item.projectnummer ? `${item.projectnummer} · ${item.naam}` : item.naam}
                 </Text>
                 <Text
-                  style={{ fontSize: 12, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}
+                  style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}
                   numberOfLines={1}
                 >
                   {item.adres}{item.stad ? `, ${item.stad}` : ""}
@@ -263,17 +263,17 @@ function Gebouwen() {
               <View
                 style={{
                   backgroundColor: c.accent,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  minWidth: 44,
+                  paddingHorizontal: ruimte.s,
+                  paddingVertical: ruimte.xs,
+                  borderRadius: c.radius / 2,
+                  minWidth: ruimte.xxl + ruimte.m,
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: c.accentForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                <Text style={[tekstStijl("bijschrift", c.accentForeground), { fontFamily: "Inter_700Bold" }]}>
                   {item.totaal_voorzieningen ?? 0}
                 </Text>
-                <Text style={{ color: c.accentForeground, fontSize: 9, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("bijschrift", c.accentForeground), { fontSize: 9 }]}>
                   spots
                 </Text>
               </View>

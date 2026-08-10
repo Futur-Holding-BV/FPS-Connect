@@ -3,10 +3,11 @@
 import { useListOpdrachten, type Opdracht } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import React from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { LijstFout, Ladenstaat, Statusmerk, tekstStijl, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -29,29 +30,29 @@ export default function ProjectenLijst() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Projecten
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
             Kies een opdracht om de details te bekijken
           </Text>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -63,15 +64,15 @@ export default function ProjectenLijst() {
           data={opdrachten}
           keyExtractor={(o) => String(o.id)}
           contentContainerStyle={{
-            padding: 16,
-            gap: 12,
-            paddingBottom: insets.bottom + 24,
+            padding: ruimte.l,
+            gap: ruimte.m,
+            paddingBottom: insets.bottom + ruimte.xl,
             width: "100%",
             maxWidth: inhoudMaxBreedte,
             alignSelf: "center",
           }}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.l }]}>
               Er zijn nog geen opdrachten.
             </Text>
           }
@@ -95,33 +96,22 @@ export function OpdrachtKaart({ opdracht }: { opdracht: Opdracht }) {
         borderRadius: c.radius,
         borderWidth: 1,
         borderColor: c.border,
-        padding: 16,
-        gap: 6,
+        padding: ruimte.l,
+        gap: ruimte.s - 2,
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ruimte.s }}>
+        <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
           {kenmerk}
         </Text>
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 8,
-            backgroundColor: c.secondary,
-          }}
-        >
-          <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: c.mutedForeground }}>
-            {opdracht.status}
-          </Text>
-        </View>
+        <Statusmerk label={opdracht.status} />
       </View>
-      <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }} numberOfLines={2}>
+      <Text style={tekstStijl("sectiekop", c.foreground)} numberOfLines={2}>
         {opdracht.titel}
       </Text>
       {gebouw ? (
-        <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }} numberOfLines={1}>
+        <Text style={tekstStijl("standaard", c.mutedForeground)} numberOfLines={1}>
           {gebouw}
         </Text>
       ) : null}

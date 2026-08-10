@@ -27,10 +27,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { Kaart, LijstFout, Statusmerk, bovenInset, netteWaarde, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
+import { ruimte } from "@workspace/ontwerp";
 
 const HUIDIG_JAAR = new Date().getFullYear();
 
@@ -41,18 +42,12 @@ const STATUS_LABELS: Record<string, string> = {
   ingetrokken: "Ingetrokken",
 };
 
-function statusKleur(status: string, c: ReturnType<typeof useColors>) {
-  switch (status) {
-    case "aangevraagd":
-      return { bg: "#fef3c7", tekst: "#92400e" };
-    case "goedgekeurd":
-      return { bg: "#d1fae5", tekst: "#065f46" };
-    case "afgewezen":
-      return { bg: "#fee2e2", tekst: "#991b1b" };
-    default:
-      return { bg: c.muted, tekst: c.mutedForeground };
-  }
-}
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  aangevraagd: "waarschuwing",
+  goedgekeurd: "succes",
+  afgewezen: "fout",
+  ingetrokken: "neutraal",
+};
 
 function datumWeergave(iso: string) {
   if (!iso) return "—";
@@ -408,13 +403,13 @@ export default function VerlofScherm() {
                           width: 36,
                           height: 36,
                           borderRadius: 18,
-                          backgroundColor: positief ? "#d1fae5" : "#fee2e2",
+                          backgroundColor: c.secondary,
                           alignItems: "center",
                           justifyContent: "center",
                           marginTop: 1,
                         }}
                       >
-                        <Text style={{ fontSize: 18, lineHeight: 22, color: positief ? "#065f46" : "#991b1b" }}>
+                        <Text style={{ fontSize: 18, lineHeight: 22, color: positief ? c.success : c.destructive }}>
                           {positief ? "+" : "−"}
                         </Text>
                       </View>
@@ -423,7 +418,7 @@ export default function VerlofScherm() {
                           <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
                             {c2.verlofsoort_naam ?? "Verlof"} {c2.jaar}
                           </Text>
-                          <Text style={{ color: positief ? "#065f46" : "#991b1b", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+                          <Text style={{ color: positief ? c.success : c.destructive, fontSize: 15, fontFamily: "Inter_700Bold" }}>
                             {positief ? "+" : ""}{c2.delta_uren} u
                           </Text>
                         </View>
@@ -458,7 +453,7 @@ export default function VerlofScherm() {
                 opacity: pressed ? 0.8 : 1,
               })}
             >
-              <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={{ color: c.primaryForeground, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
                 + Aanvragen
               </Text>
             </Pressable>
@@ -480,50 +475,29 @@ export default function VerlofScherm() {
               </Text>
             </View>
           ) : (
-            <View style={{ gap: 10 }}>
+            <View style={{ gap: ruimte.m - 2 }}>
               {(aanvragen ?? []).map((a) => {
-                const kleur = statusKleur(a.status, c);
                 return (
-                  <View
-                    key={a.id}
-                    style={{
-                      backgroundColor: c.card,
-                      borderRadius: c.radius,
-                      borderWidth: 1,
-                      borderColor: c.border,
-                      padding: 16,
-                    }}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                      <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1, marginRight: 8 }}>
+                  <Kaart key={a.id} stijl={{ padding: ruimte.l }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: ruimte.xs + 2 }}>
+                      <Text style={[tekstStijl("nadruk", c.foreground), { flex: 1, marginRight: ruimte.s }]}>
                         {a.verlofsoort_naam ?? "Verlof"}
                       </Text>
-                      <View
-                        style={{
-                          backgroundColor: kleur.bg,
-                          borderRadius: 6,
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                        }}
-                      >
-                        <Text style={{ color: kleur.tekst, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
-                          {STATUS_LABELS[a.status] ?? a.status}
-                        </Text>
-                      </View>
+                      <Statusmerk label={STATUS_LABELS[a.status] ?? netteWaarde(a.status)} soort={STATUS_SOORT[a.status] ?? "neutraal"} />
                     </View>
-                    <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                    <Text style={tekstStijl("klein", c.mutedForeground)}>
                       {datumWeergave(a.start_datum)} — {datumWeergave(a.eind_datum)}
                       {a.aantal_uren ? `  ·  ${a.aantal_uren} uur` : ""}
                     </Text>
                     {a.reden ? (
                       <Text
-                        style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 4 }}
+                        style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs }]}
                         numberOfLines={2}
                       >
                         {a.reden}
                       </Text>
                     ) : null}
-                  </View>
+                  </Kaart>
                 );
               })}
             </View>
@@ -535,7 +509,7 @@ export default function VerlofScherm() {
       <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={sluitModal}>
         <View style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={sluitModal}>
-            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+            <View style={{ flex: 1, backgroundColor: c.dark, opacity: 0.45 }} />
           </TouchableWithoutFeedback>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
           <View
@@ -559,8 +533,8 @@ export default function VerlofScherm() {
             </View>
 
             {formulierFout ? (
-              <View testID="verlof-formulier-fout" style={{ backgroundColor: "#fee2e2", borderRadius: 8, padding: 12 }}>
-                <Text style={{ color: "#991b1b", fontSize: 13, fontFamily: "Inter_400Regular" }}>{formulierFout}</Text>
+              <View testID="verlof-formulier-fout" style={{ backgroundColor: c.secondary, borderRadius: c.radius / 2, padding: 12 }}>
+                <Text style={{ color: c.destructive, fontSize: 13, fontFamily: "Inter_400Regular" }}>{formulierFout}</Text>
               </View>
             ) : null}
 
@@ -716,9 +690,9 @@ export default function VerlofScherm() {
               })}
             >
               {bezigIndienen ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>
+                <Text style={{ color: c.primaryForeground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
                   Aanvraag indienen
                 </Text>
               )}
@@ -733,7 +707,7 @@ export default function VerlofScherm() {
         <Modal visible transparent animationType="slide" onRequestClose={() => setActivePicker(null)}>
           <View style={{ flex: 1 }}>
             <TouchableWithoutFeedback onPress={() => setActivePicker(null)}>
-              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+              <View style={{ flex: 1, backgroundColor: c.dark, opacity: 0.45 }} />
             </TouchableWithoutFeedback>
             <View
               style={{
@@ -781,7 +755,7 @@ export default function VerlofScherm() {
       <Modal visible animationType="slide" transparent onRequestClose={() => setSoortPickerOpen(false)}>
         <View style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={() => setSoortPickerOpen(false)}>
-            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+            <View style={{ flex: 1, backgroundColor: c.dark, opacity: 0.45 }} />
           </TouchableWithoutFeedback>
           <View
             style={{
