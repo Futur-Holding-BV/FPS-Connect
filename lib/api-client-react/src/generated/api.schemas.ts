@@ -5699,6 +5699,25 @@ export interface OnboardingAccountResultaat {
   uitnodiging_fout?: string | null;
 }
 
+export type OnboardingAccountConflictCode = typeof OnboardingAccountConflictCode[keyof typeof OnboardingAccountConflictCode];
+
+
+export const OnboardingAccountConflictCode = {
+  EMAIL_ALREADY_EXISTS: 'EMAIL_ALREADY_EXISTS',
+} as const;
+
+/**
+ * 409-antwoord van de onboarding-accountstap wanneer het e-mailadres al bestaat, met doorstart-informatie voor "ga verder met bestaand account".
+ */
+export interface OnboardingAccountConflict {
+  error: string;
+  code: OnboardingAccountConflictCode;
+  /** @nullable */
+  bestaande_gebruiker_id: number | null;
+  /** Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet. */
+  heeft_medewerkerprofiel: boolean;
+}
+
 /**
  * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
  */

@@ -2572,10 +2572,18 @@ function AccountStap({
   const [uitnodigen, setUitnodigen] = useState(true);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
+  // Doorstart-optie bij 409: het e-mailadres bestaat al. Als het bestaande
+  // account nog geen medewerkerprofiel heeft, kan de wizard er direct mee
+  // verdergaan; anders leggen we uit dat er al een profiel is.
+  const [conflict, setConflict] = useState<{
+    bestaandeGebruikerId: number | null;
+    heeftMedewerkerprofiel: boolean;
+  } | null>(null);
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
     setFout(null);
+    setConflict(null);
     if (!naam.trim() || !email.trim()) {
       setFout("Naam en e-mailadres zijn verplicht.");
       return;
@@ -2604,6 +2612,17 @@ function AccountStap({
       onAangemaakt(nieuw.id);
     } catch (err: any) {
       const status = err?.response?.status ?? err?.status;
+      if (status === 409) {
+        const data = err?.data ?? err?.response?.data ?? null;
+        const id = typeof data?.bestaande_gebruiker_id === "number" ? data.bestaande_gebruiker_id : null;
+        setConflict({
+          bestaandeGebruikerId: id,
+          heeftMedewerkerprofiel: data?.heeft_medewerkerprofiel === true,
+        });
+        setFout(data?.error ?? "Dit e-mailadres is al in gebruik bij een andere gebruiker.");
+        setBezig(false);
+        return;
+      }
       setFout(
         status === 403
           ? "Geen toegang: voor het aanmaken van een account is Personeel-schrijfrecht (niveau 2) nodig."
@@ -2651,6 +2670,36 @@ function AccountStap({
               <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2.5 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{fout}</span>
+              </div>
+            )}
+            {conflict && (
+              <div className="rounded-md border p-2.5 space-y-2 text-sm" data-testid="blok-bestaand-account">
+                {conflict.heeftMedewerkerprofiel ? (
+                  <p className="text-muted-foreground">
+                    Het bestaande account met dit e-mailadres heeft al een medewerkerprofiel; een
+                    tweede onboarding is niet mogelijk. Bekijk de medewerker in de medewerkerslijst.
+                  </p>
+                ) : conflict.bestaandeGebruikerId !== null ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      Er bestaat al een gebruikersaccount met dit e-mailadres, maar nog zonder
+                      medewerkerprofiel. U kunt de onboarding direct met dat account voortzetten.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => onAangemaakt(conflict.bestaandeGebruikerId!)}
+                      data-testid="knop-verder-bestaand-account"
+                    >
+                      <ArrowRight className="h-4 w-4" /> Ga verder met dit bestaande account
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Er bestaat al een account met dit e-mailadres. Zoek het op via Beheer →
+                    Gebruikers om de onboarding daarvandaan te starten.
+                  </p>
+                )}
               </div>
             )}
             <div className="flex items-center justify-between pt-1">

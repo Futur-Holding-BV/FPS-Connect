@@ -1072,7 +1072,33 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
       });
     } catch (err) {
       if (isEmailConflictFout(err)) {
-        return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+        // Doorstart-optie: vind het bestaande account bij dit e-mailadres en
+        // vertel de wizard of het al een medewerkerprofiel heeft. Zo kan de
+        // frontend "Ga verder met dit bestaande account" aanbieden i.p.v.
+        // alleen een foutmelding. Least-privilege blijft intact: dit lekt
+        // alleen het id (geen rechten/rollen) en de aanroeper heeft al
+        // personeel:2 (dezelfde gate als de rest van de onboarding).
+        const [bestaande] = await db
+          .select({ id: gebruikersTable.id })
+          .from(gebruikersTable)
+          .where(sql`lower(${gebruikersTable.email}) = lower(${email.trim()})`);
+        // Statusbewust, gelijk aan de onboarding-context: alleen een
+        // niet-concept medewerkerprofiel blokkeert; een conceptprofiel is
+        // juist hervatbaar via de wizard (?userId=…).
+        let heeftMedewerkerprofiel = false;
+        if (bestaande) {
+          const [profiel] = await db
+            .select({ id: medewerkersTable.id, medewerkerStatus: medewerkersTable.medewerkerStatus })
+            .from(medewerkersTable)
+            .where(eq(medewerkersTable.gebruikerId, bestaande.id));
+          heeftMedewerkerprofiel = Boolean(profiel && profiel.medewerkerStatus !== "concept");
+        }
+        return void res.status(409).json({
+          error: "Dit e-mailadres is al in gebruik bij een andere gebruiker.",
+          code: "EMAIL_ALREADY_EXISTS",
+          bestaande_gebruiker_id: bestaande?.id ?? null,
+          heeft_medewerkerprofiel: heeftMedewerkerprofiel,
+        });
       }
       throw err;
     }

@@ -8937,7 +8937,11 @@ paths:
         "400":
           description: naam en email zijn verplicht
         "409":
-          description: E-mailadres al in gebruik
+          description: E-mailadres al in gebruik; bevat doorstart-informatie over het bestaande account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingAccountConflict"
 
   /uitzendbureau-koppelingen:
     get:
@@ -34354,6 +34358,22 @@ components:
         uitnodiging_fout:
           type: ["string", "null"]
           description: Gevuld wanneer het account is aangemaakt maar de uitnodigingsmail niet kon worden verzonden.
+
+    OnboardingAccountConflict:
+      type: object
+      required: [error, code, bestaande_gebruiker_id, heeft_medewerkerprofiel]
+      description: 409-antwoord van de onboarding-accountstap wanneer het e-mailadres al bestaat, met doorstart-informatie voor "ga verder met bestaand account".
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [EMAIL_ALREADY_EXISTS]
+        bestaande_gebruiker_id:
+          type: ["integer", "null"]
+        heeft_medewerkerprofiel:
+          type: boolean
+          description: Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet.
 
     OnboardingContext:
       type: object

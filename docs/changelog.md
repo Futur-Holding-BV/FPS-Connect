@@ -1,3 +1,9 @@
+## 2026-08-10 — Doorstart bij bestaand e-mailadres in de accountstap
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen 409-verrijking + wizard-UI, rechten ongewijzigd)
+
+Als in de accountstap van de onboarding-wizard een e-mailadres wordt ingevuld dat al bestaat, liep de wizard vast op alleen een 409-foutmelding. `POST /medewerkers/onboarding-account` geeft bij een e-mailconflict nu een verrijkte 409 terug (`code: EMAIL_ALREADY_EXISTS`, `bestaande_gebruiker_id`, `heeft_medewerkerprofiel`) — schema `OnboardingAccountConflict` in de OpenAPI-spec. De wizard toont daarop een doorstart-blok: heeft het bestaande account **nog geen** medewerkerprofiel, dan verschijnt de knop **"Ga verder met dit bestaande account"** die direct doorgaat naar `?userId=…`; heeft het al een profiel, dan wordt uitgelegd dat een tweede onboarding niet mogelijk is. Least-privilege blijft intact (alleen het id lekt, de aanroeper heeft al personeel:2 — dezelfde gate als de rest van de wizard). Statusbewust conform de onboarding-context: alleen een **niet-concept** medewerkerprofiel blokkeert; een conceptprofiel is hervatbaar en krijgt gewoon de doorstart-knop. Bewijs: `scripts/src/bewijs-onboarding-409-doorstart.ts` (ingelogde dev-API: zonder profiel → doorstart-id + `heeft_medewerkerprofiel:false`; conceptprofiel → eveneens `false`; actief profiel → `true`).
+
 ## 2026-08-10 — Onboarding in één flow: accountstap in de wizard + altijd zichtbare startknop
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuw least-privilege endpoint, gegate op dezelfde bevoegdheid als de wizard)

@@ -754,6 +754,7 @@ import type {
   OfferteVerzendenInput,
   OfferteVraag,
   OfferteVraagAntwoordInput,
+  OnboardingAccountConflict,
   OnboardingAccountInput,
   OnboardingAccountResultaat,
   OnboardingContext,
@@ -31054,7 +31055,7 @@ export const createOnboardingAccount = async (onboardingAccountInput: Onboarding
 
 
 
-export const getCreateOnboardingAccountMutationOptions = <TError = ErrorType<void>,
+export const getCreateOnboardingAccountMutationOptions = <TError = ErrorType<void | OnboardingAccountConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext> => {
 
@@ -31083,12 +31084,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOnboardingAccountMutationResult = NonNullable<Awaited<ReturnType<typeof createOnboardingAccount>>>
     export type CreateOnboardingAccountMutationBody = BodyType<OnboardingAccountInput>
-    export type CreateOnboardingAccountMutationError = ErrorType<void>
+    export type CreateOnboardingAccountMutationError = ErrorType<void | OnboardingAccountConflict>
 
     /**
  * @summary Eén-flow onboarding stap 0 - least-privilege gebruikersaccount aanmaken (personeel niveau 2)
  */
-export const useCreateOnboardingAccount = <TError = ErrorType<void>,
+export const useCreateOnboardingAccount = <TError = ErrorType<void | OnboardingAccountConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingAccount>>, TError,{data: BodyType<OnboardingAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createOnboardingAccount>>,
