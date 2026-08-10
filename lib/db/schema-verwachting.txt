@@ -315,6 +315,7 @@ INDEX|opleverrapporten|opleverrapporten_pkey
 INDEX|opname_fotos|opname_fotos_pkey
 INDEX|opname_items|opname_items_pkey
 INDEX|opnames|opnames_nummer_uniek
+INDEX|opnames|opnames_nummer_unique
 INDEX|opnames|opnames_pkey
 INDEX|org_bedrijfsdocumenten|org_bedrijfsdocumenten_pkey
 INDEX|org_jaarverslagen|org_jaarverslagen_pkey

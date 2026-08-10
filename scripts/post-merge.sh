@@ -223,33 +223,21 @@ trap '_stuur_faalmelding "$_HUIDIGE_STAP" "$_MERGE_SHA"' ERR
 
 pnpm install --frozen-lockfile
 
-# Stap 1: Additieve schemaherstel — voegt ontbrekende tabellen en kolommen toe
-# via idempotente IF NOT EXISTS SQL-statements. Draait vóór reconcile en push
-# zodat het drizzle-diff klein blijft en geen interactieve prompts triggert.
-_HUIDIGE_STAP="Stap 1: apply-additive (schemaherstel)"
-pnpm --filter @workspace/db run apply-additive
+# Stap 1-3 (SCHEMA_01): genummerde migraties draaien + drift-check.
+# De oude keten apply-additive → reconcile → drizzle-kit push --force is
+# vervallen: push is bevroren sinds SCHEMA_01 en liep in non-TTY merges vast
+# op interactieve prompts (incident taak #890: opnames_nummer_unique).
+# Taak-agenten leveren schemawijzigingen als genummerde migratie in
+# lib/db/src/migrations/; de runner is idempotent en non-interactief.
+_HUIDIGE_STAP="Stap 1: migraties (SCHEMA_01)"
+pnpm --filter @workspace/db run migrate
 
-# Stap 2: Trek Postgres' standaard '<tabel>_<kolom>_key' unique-constraintnamen gelijk met de
-# door Drizzle verwachte '_unique'-conventie. Zonder deze stap breekt 'drizzle-kit push'
-# tijdens een merge (non-TTY) af op de defensieve "truncate?"-prompt bij een naam-mismatch,
-# waardoor geen enkele additieve wijziging wordt toegepast. Hernoemen is niet-destructief.
-_HUIDIGE_STAP="Stap 2: reconcile (constraint-namen)"
-pnpm --filter @workspace/db run reconcile
-
-# Stap 3: --force: sla interactieve data-loss prompts over (non-TTY omgeving). Stale kolommen
-# die Drizzle wil droppen worden vooraf handmatig via directe SQL verwijderd zodat
-# --force nooit onbedoeld echte data verwijdert.
-_HUIDIGE_STAP="Stap 3: push-force (drizzle-kit schema push)"
-pnpm --filter @workspace/db run push-force
-
-# Stap 3b: 'drizzle-kit push --force' kan de handmatig aangemaakte
-# gebruiker_profielen-UNIQUE-constraint (en vergelijkbare additieve constraints)
-# als "drift" beschouwen en droppen. apply-additive is idempotent (IF NOT EXISTS /
-# DO-block met pg_constraint-check), dus opnieuw draaien ná de push herstelt dit
-# zonder gevolgen als er niets ontbreekt. Voorkomt dat elke merge opnieuw handmatig
-# hersteld moet worden.
-_HUIDIGE_STAP="Stap 3b: apply-additive (post-push herstel constraints)"
-pnpm --filter @workspace/db run apply-additive
+# Drift-check waarschuwt (niet-fataal) als schema en database uiteenlopen —
+# dat betekent dat een merge een drizzle-schemawijziging zonder migratie
+# meebracht; de agent moet die dan alsnog als migratie aanleveren.
+_HUIDIGE_STAP="Stap 2: drift-check"
+pnpm --filter @workspace/db run drift-check || \
+  echo "WAARSCHUWING: schema-drift gedetecteerd — schemawijziging zonder genummerde migratie in de merge? Agent moet 'm aanvullen." >&2
 
 # Stap 4: Schema-healthcheck — voert een lees-only SELECT uit op de kerntabellen om te
 # bevestigen dat alle kritieke kolommen daadwerkelijk aanwezig zijn in de database.

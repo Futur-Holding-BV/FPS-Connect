@@ -3192,3 +3192,9 @@ Nieuwe wervingsmodule onder Personeel → Werving: lichte registratie van sollic
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (migratie 0044 additief; automatiek alleen bij échte overgang naar goedgekeurd)
 
 Productietelling (door René aangeleverd) toonde alle inkoopstromen op nul; René koos model A. Een goedgekeurde materiaal-aanvraag (soort materiaal, mét opdracht) maakt nu binnen dezelfde transactie automatisch een **concept-inkoopbon** op de opdracht via een gedeeld aanmaakpad met de handmatige route (geen vierde bestelpad; I-nummer uit de gedeelde reeks, kenmerk O…/I…). De aanvraag houdt een verwijzing (`inkoopbon_id`); her-goedkeuren maakt nooit een tweede bon; "wijkt af van opdracht" staat als LET OP in de bon-opmerkingen; leverancier/prijs komen bewust niet uit AI (inkoper werkt het concept af). Werkvoorbereiding toont na goedkeuring direct het bon-kenmerk. INKOOP_01 en NUMMER_01 §4.5 zijn gedeblokkeerd (vastgelegd in docs/antwoorden/MATERIAAL_01.md). Bewijs: `scripts/src/bewijs-materiaal01-fase3.ts` (14 checks groen (incl. parallelle dubbelgoedkeuring: 1×200 + 1×409, precies één bon)).
+
+## 2026-08-10 — Post-merge stabiel: migratieketen i.p.v. drizzle-push (+ migratie 0045)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De post-merge van taak #890 liep vast: drizzle-kit push wachtte in een niet-interactieve omgeving op een prompt (ontbrekende unieke constraint op opnames.nummer). Het post-merge-script gebruikt nu de genummerde-migratieketen (migrate + drift-check, conform SCHEMA_01) in plaats van apply-additive/reconcile/push-force. De ontbrekende constraint is als migratie `0045_opnames-nummer-unique.sql` aangeleverd (additief; nummers komen uit een sequence, geen duplicaten).

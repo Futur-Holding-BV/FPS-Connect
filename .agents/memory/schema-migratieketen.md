@@ -13,3 +13,5 @@ description: Hoe DB-schemawijzigingen sinds 7 aug 2026 moeten — migratierunner
 3. `lib/db/schema.sql` is het prod-nulpunt van 7 aug 2026 — niet handmatig bijwerken.
 4. Restdrift dev↔prod is per 7 aug 2026 volledig opgelost (migratie 0007); drift-check draait schoon op dev én prod. Documentatie over "bekende drift" van vóór die datum is stale — altijd live verifiëren (prod-schemadump diffen tegen schema-verwachting.txt) vóór je een drift-fix bouwt.
 5. Handmatig een migratie op prod toepassen kan veilig door het runner-patroon na te bootsen: SQL + INSERT in schema_migraties (naam + sha256-checksum van het repo-bestand) in één transactie; de deploy-runner slaat 'm daarna over.
+
+- Post-merge (2026-08-10): scripts/post-merge.sh draait nu migrate + drift-check i.p.v. apply-additive/reconcile/push-force; drizzle push in non-TTY liep vast op interactieve prompt (incident: opnames_nummer_unique ontbrak in DB terwijl schema .unique() had → migratie 0045). Drift na merge = taak-agent leverde schemawijziging zonder genummerde migratie; agent vult 'm aan.
