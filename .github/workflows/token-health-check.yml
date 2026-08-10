@@ -8,12 +8,13 @@ name: GitHub push-token gezondheidscheck
 # verloopt.
 #
 # Benodigde GitHub Secrets (dezelfde als deploy.yml):
-#   GITHUB_TOKEN_PUSH  — het PAT dat post-merge.sh gebruikt voor de push
+#   FPS_PUSH_TOKEN  — hetzelfde PAT als Replit-secret GITHUB_TOKEN_PUSH
+#                     (Actions-secretnamen mogen niet met GITHUB_ beginnen)
 #   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET  — voor Graph-mail
 #   MAIL_FROM / MAIL_MAILBOX / RENE_ALERT_EMAIL
 #
-# Let op: GITHUB_TOKEN_PUSH moet ook als GitHub Actions secret zijn ingesteld
-# (naast het Replit-secret dat post-merge.sh gebruikt). Zie PRODUCTION_RUNBOOK.md.
+# Let op: het PAT moet als Actions-secret FPS_PUSH_TOKEN zijn ingesteld
+# (naast het Replit-secret GITHUB_TOKEN_PUSH). Zie PRODUCTION_RUNBOOK.md.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -31,7 +32,9 @@ jobs:
       - name: Token valideren via GitHub API
         id: token-check
         env:
-          GITHUB_TOKEN_PUSH: ${{ secrets.GITHUB_TOKEN_PUSH }}
+          # Let op: Actions-secretnamen mogen niet met GITHUB_ beginnen; daarom heet
+          # de Actions-secret FPS_PUSH_TOKEN (zelfde PAT als Replit-secret GITHUB_TOKEN_PUSH).
+          GITHUB_TOKEN_PUSH: ${{ secrets.FPS_PUSH_TOKEN }}
         run: |
           set -euo pipefail
 
