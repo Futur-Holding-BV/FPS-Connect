@@ -3122,6 +3122,11 @@ Code-review-bevinding op UREN_01 opgelost: weekgrens-toets, slotreservering en h
 De sectie "Kostenpost gereedschap-toebehoren" op **Magazijn → Voorraadwaarde** heeft nu een eigen knop **Exporteren als CSV**. De export bevat het gekozen van/tot-filter, de totalen, en de tabellen "Toebehoren per maand" en "Toebehoren per artikel". Hoeveelheden zonder bekende inkoopprijs staan per rij zichtbaar gemarkeerd ("LET OP: zonder inkoopprijs, niet in kostprijs meegeteld") — daarvoor levert het endpoint `GET /magazijn/toebehoren-verbruik` nu per periode én per artikel het veld `aantal_zonder_prijs` mee. Bewijs via echte flow: `scripts/src/verificatie-toebehoren-csv.ts` — login → gezaaide uitgiftes (4 st à €2,50 mét prijs, 3 st zónder prijs) → endpoint gaf per artikel de juiste markering (3 zonder prijs, kosten €10), toekomst-filter leeg, ongeldige datum 400.
 
 
+## 2026-08-09 — ADVIES_01: nulmeting koppelgraad adviesrapport → artikelen/normtijden
+
+- **Uitvoering:** volledig (gecontroleerde nulmeting; echte rapporten stonden nog nergens in het systeem) | **Kwaliteit:** hoog | **Risico:** laag (alleen meetscript + meetdata, geen productcode gewijzigd)
+
+Zes realistische FPS-adviesrapporten (Grundel/Cityflat-stijl) zijn via de échte route `POST /modules/calculaties/:id/adviesrapport-analyse` met echte AI door de analyse gehaald, tegen de huidige bibliotheek (15 normtijden, 0 artikelen). Resultaat (36 punten): 21 werkzaamheden-voorstellen — **alle 21 "alleen normtijd", 0 volledig** omdat de artikelenbibliotheek leeg is; 8× correct "geen werkzaamheden aannemer"; 7× fail-closed "niet te beoordelen" (o.a. brandwerend kitten, brandwerend glas, inbouwdoos-bekleding: normtijd ontbreekt). Herkenning en soortkeuze foutloos; het knelpunt is bibliotheekdekking (artikelen vullen via ENK-import, drie normtijden toevoegen). Volledig verslag: `docs/metingen/ADVIES_01_koppelgraad.md`; meetscript `scripts/src/meting-advies01-koppelgraad.ts`; analyses naspeurbaar in `calc_plak_analyses` (invoer_soort='adviesrapport', calc ADVIES01-METING 1…6).
 ## 2026-08-09 — Calculatieregels herschikken binnen een hoofdstuk (Task #873)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief endpoint + knoppen, bestaande data ongewijzigd)
