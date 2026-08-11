@@ -1680,6 +1680,14 @@ function VastFormulier({
                   ) : (
                     <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
                   )}
+                  {context.account_profiel_naam ? (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Let op: dit account heeft al het rechtenprofiel{" "}
+                      <span className="font-medium">{context.account_profiel_naam}</span>. De rechten
+                      van deze functie komen daar additief bovenop — per module geldt het hoogste
+                      niveau.
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).</p>
                 </>
               ) : (

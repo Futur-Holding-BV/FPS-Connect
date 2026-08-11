@@ -6,3 +6,5 @@ Een untracked `artifacts/monteur-app/.env` met `EXPO_PUBLIC_DOMAIN=<oud domein>`
 
 **Why:** Expo laadt .env bij bundelen; het bestand was ooit handmatig aangemaakt en bleef achter na domeinrotatie (aug 2026, 3x CI-faal op login).
 **How to apply:** bij consistente "Failed to fetch" in de monteur-app eerst de fetch-URL in Playwright request-log vergelijken met $REPLIT_DEV_DOMAIN; verschilt het host-suffix → zoek naar stale .env / gecachte bundle en verwijder die. Curl-bewijs dat de API werkt sluit dit NIET uit. Bevestigd (10 aug 2026): `rm artifacts/monteur-app/.env` maakte e2e-menu direct weer groen na 3 opeenvolgende login-faalruns.
+
+**Herbevestigd (11 aug 2026):** bestand dook opnieuw op (datum 22 jun) en brak e2e-menu 2x in validatie; `rm` maakte de run direct groen.

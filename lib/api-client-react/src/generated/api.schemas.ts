@@ -5738,6 +5738,16 @@ export interface OnboardingContext {
      * @nullable
      */
   concept_medewerker_id?: number | null;
+  /**
+     * Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
+     * @nullable
+     */
+  account_profiel_id?: number | null;
+  /**
+     * Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.
+     * @nullable
+     */
+  account_profiel_naam?: string | null;
 }
 
 export interface MedewerkerAanstelling {
@@ -18137,4 +18147,3 @@ hoeveelheid?: number;
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
 };
-

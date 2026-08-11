@@ -34519,6 +34519,12 @@ components:
         concept_medewerker_id:
           type: ["integer", "null"]
           description: Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
+        account_profiel_id:
+          type: ["integer", "null"]
+          description: Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
+        account_profiel_naam:
+          type: ["string", "null"]
+          description: Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.
 
     MedewerkerAanstelling:
       type: object

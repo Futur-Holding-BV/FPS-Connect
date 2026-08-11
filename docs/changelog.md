@@ -3220,3 +3220,9 @@ De accountstap van de één-flow onboarding (Personeel → Onboarden) heeft nu e
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
 De post-merge van taak #890 liep vast: drizzle-kit push wachtte in een niet-interactieve omgeving op een prompt (ontbrekende unieke constraint op opnames.nummer). Het post-merge-script gebruikt nu de genummerde-migratieketen (migrate + drift-check, conform SCHEMA_01) in plaats van apply-additive/reconcile/push-force. De ontbrekende constraint is als migratie `0045_opnames-nummer-unique.sql` aangeleverd (additief; nummers komen uit een sequence, geen duplicaten).
+
+## 2026-08-11 — Waarschuwing in de functiestap bij al gekoppeld rechtenprofiel
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen informatieve velden + wizard-UI, rechtenberekening ongewijzigd)
+
+Wie in de accountstap al een rechtenprofiel koos en daarna een functie met een eigen standaardprofiel selecteert, zag nergens dat de effectieve rechten additief ruimer worden. `GET /medewerkers/onboarding-context/:gebruikerId` geeft nu ook `account_profiel_id` en `account_profiel_naam` terug (uit `gebruikers.herkomst_profiel_id`, opgezocht in profielen). De functiestap van de onboarding-wizard toont bij een gekozen functie mét standaardprofiel een amberkleurige melding: "dit account heeft al profiel X; de functie-rechten komen daar additief bovenop — per module geldt het hoogste niveau". Geen enkele wijziging in de rechtenberekening zelf. Bewijs: `scripts/src/bewijs-onboarding-context-profiel.ts` (ingelogde dev-API: wegwerpgebruiker met herkomst_profiel_id → context bevat correct profiel-id en -naam).

@@ -1021,6 +1021,7 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
         telefoon: gebruikersTable.telefoon,
         rol: gebruikersTable.rol,
         actief: gebruikersTable.actief,
+        herkomstProfielId: gebruikersTable.herkomstProfielId,
       })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, gebruikerId));
@@ -1038,12 +1039,26 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
         medewerker_id: gekoppeld.id,
       });
     }
+    // Rechtenprofiel dat al aan het account is gekoppeld (bv. gekozen in de
+    // accountstap). De wizard toont hiermee in de functiestap dat functie-
+    // rechten additief bovenop dit profiel komen — puur informatief, de
+    // rechtenberekening zelf verandert niet.
+    let accountProfielNaam: string | null = null;
+    if (g.herkomstProfielId != null) {
+      const [profiel] = await db
+        .select({ naam: profielenTable.naam })
+        .from(profielenTable)
+        .where(eq(profielenTable.id, g.herkomstProfielId));
+      accountProfielNaam = profiel?.naam ?? null;
+    }
     res.json({
       gebruiker_id: g.id,
       naam: g.naam,
       email: g.email ?? null,
       telefoon: g.telefoon ?? null,
       concept_medewerker_id: gekoppeld?.id ?? null,
+      account_profiel_id: g.herkomstProfielId ?? null,
+      account_profiel_naam: accountProfielNaam,
     });
   } catch (err) {
     req.log.error(err);
