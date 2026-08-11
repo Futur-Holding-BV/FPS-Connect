@@ -28,3 +28,5 @@ Vóór de splitsing is er geen bouwwerk nodig. Maar als een nieuwe projectleider
 1. Controleer welke verantwoordelijkheden van René's gecombineerde functie naar wie overgaan.
 2. Pas notificatie-targeting aan (niet langer alleen `offertes:2+`, maar mogelijk op rol/functie-basis).
 3. Bespreek met de gebruiker of dit via de bevoegdhedenmatrix (preset) of via een aparte attribuutkolom moet.
+
+Besluit 11-08-2026 (AKKOORD_01 §6.2): géén aparte Bedrijfsleider-preset; bedrijfsleider = hoofdbeheerder tot er echt een aparte bedrijfsleider wordt aangesteld. De €10k-goedkeuringsregel (goedkeuring:3, vier-ogen) staat wel al aan.

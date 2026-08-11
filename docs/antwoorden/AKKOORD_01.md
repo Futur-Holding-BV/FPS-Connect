@@ -29,4 +29,4 @@
 
 ### Besluit nodig van René (niet zelf ingevuld)
 
-- **§6.2 preset "Bedrijfsleider"** — voorstel voor de bevoegdheden (op basis van de bestaande presets Projectleider en Directie): projecten 2 (lezen mét bedragen), offertes 3, calculatie 2, inkoop 3, personeel 1, financieel 1, goedkeuring 3 (vereist om te mogen goedkeuren, `goedkeuring-engine.ts` r.499-531), overige modules 0. **Wordt pas gebouwd/geactiveerd na akkoord.** Tot die tijd wordt de €10.000-beleidsregel voorbereid maar niet gezaaid.
+- **§6.2 preset "Bedrijfsleider"** — **besluit René (11-08-2026): geen aparte preset.** Voor nu is de bedrijfsleider gelijk aan de hoofdbeheerder; komt er later echt een aparte bedrijfsleider in dienst, dan wordt dan pas een eigen rechtenprofiel ingericht (het eerdere voorstel — projecten 2, offertes 3, calculatie 2, inkoop 3, personeel 1, financieel 1, goedkeuring 3, rest 0 — blijft hier staan als startpunt). De €10.000-beleidsregel is wél al actief (migratie `0047`, goedkeurder = goedkeuring-niveau 3, vier-ogen); de hoofdbeheerder voldoet daaraan.
