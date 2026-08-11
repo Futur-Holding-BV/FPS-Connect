@@ -28,6 +28,9 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         ai_kostendrempel_eur: null,
         prijsafwijking_marge_pct: 2,
         prijsafspraak_bewaking_dagen: 60,
+        offerte_reactie_bewaking_dagen: 7,
+        offerte_bekeken_bewaking_dagen: 5,
+        opname_calculatie_bewaking_dagen: 14,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
         bijgewerkt_door_naam: null,
@@ -60,6 +63,9 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       aanvraag_oppak_termijn_uren: instelling.aanvraagOppakTermijnUren,
       prijsafwijking_marge_pct: instelling.prijsafwijkingMargePct,
       prijsafspraak_bewaking_dagen: instelling.prijsafspraakBewakingDagen,
+      offerte_reactie_bewaking_dagen: instelling.offerteReactieBewakingDagen,
+      offerte_bekeken_bewaking_dagen: instelling.offerteBekekenBewakingDagen,
+      opname_calculatie_bewaking_dagen: instelling.opnameCalculatieBewakingDagen,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
       bijgewerkt_door_naam: bijgewerktDoorNaam,
@@ -92,6 +98,9 @@ router.put(
         aanvraag_oppak_termijn_uren,
         prijsafwijking_marge_pct,
         prijsafspraak_bewaking_dagen,
+        offerte_reactie_bewaking_dagen,
+        offerte_bekeken_bewaking_dagen,
+        opname_calculatie_bewaking_dagen,
       } = req.body as {
           support_email?: string;
           support_telefoon?: string;
@@ -108,6 +117,9 @@ router.put(
           aanvraag_oppak_termijn_uren?: number;
           prijsafwijking_marge_pct?: number;
           prijsafspraak_bewaking_dagen?: number;
+          offerte_reactie_bewaking_dagen?: number;
+          offerte_bekeken_bewaking_dagen?: number;
+          opname_calculatie_bewaking_dagen?: number;
         };
       const gebruikerId = req.session.userId!;
 
@@ -121,11 +133,13 @@ router.put(
         .orderBy(appInstellingenTable.id)
         .limit(1);
 
+      // Patch-semantiek: alleen meegestuurde velden bijwerken (lege string = leegmaken),
+      // zodat een drempel-only update de supportgegevens niet stilzwijgend wist.
       const payload: Record<string, unknown> = {
-        supportEmail: support_email ?? null,
-        supportTelefoon: support_telefoon ?? null,
-        supportWebsite: support_website ?? null,
-        extraDisclaimer: extra_disclaimer ?? null,
+        ...(support_email !== undefined ? { supportEmail: support_email || null } : {}),
+        ...(support_telefoon !== undefined ? { supportTelefoon: support_telefoon || null } : {}),
+        ...(support_website !== undefined ? { supportWebsite: support_website || null } : {}),
+        ...(extra_disclaimer !== undefined ? { extraDisclaimer: extra_disclaimer || null } : {}),
         bijgewerktOp: new Date(),
         bijgewerktDoorId: gebruikerId,
         ...(typeof opdrachtbevestiging_auto_verzenden === "boolean"
@@ -194,6 +208,27 @@ router.put(
         }
         payload.prijsafspraakBewakingDagen = dagen;
       }
+      if (offerte_reactie_bewaking_dagen !== undefined) {
+        const dagen = Math.round(Number(offerte_reactie_bewaking_dagen));
+        if (!Number.isFinite(dagen) || dagen < 1 || dagen > 365) {
+          return void res.status(400).json({ error: "offerte_reactie_bewaking_dagen moet tussen 1 en 365 liggen" });
+        }
+        payload.offerteReactieBewakingDagen = dagen;
+      }
+      if (offerte_bekeken_bewaking_dagen !== undefined) {
+        const dagen = Math.round(Number(offerte_bekeken_bewaking_dagen));
+        if (!Number.isFinite(dagen) || dagen < 1 || dagen > 365) {
+          return void res.status(400).json({ error: "offerte_bekeken_bewaking_dagen moet tussen 1 en 365 liggen" });
+        }
+        payload.offerteBekekenBewakingDagen = dagen;
+      }
+      if (opname_calculatie_bewaking_dagen !== undefined) {
+        const dagen = Math.round(Number(opname_calculatie_bewaking_dagen));
+        if (!Number.isFinite(dagen) || dagen < 1 || dagen > 365) {
+          return void res.status(400).json({ error: "opname_calculatie_bewaking_dagen moet tussen 1 en 365 liggen" });
+        }
+        payload.opnameCalculatieBewakingDagen = dagen;
+      }
 
       let result;
       if (bestaand) {
@@ -228,6 +263,9 @@ router.put(
         aanvraag_oppak_termijn_uren: result.aanvraagOppakTermijnUren,
         prijsafwijking_marge_pct: result.prijsafwijkingMargePct,
         prijsafspraak_bewaking_dagen: result.prijsafspraakBewakingDagen,
+        offerte_reactie_bewaking_dagen: result.offerteReactieBewakingDagen,
+        offerte_bekeken_bewaking_dagen: result.offerteBekekenBewakingDagen,
+        opname_calculatie_bewaking_dagen: result.opnameCalculatieBewakingDagen,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
         bijgewerkt_door_naam: null,

@@ -32905,6 +32905,15 @@ components:
         prijsafspraak_bewaking_dagen:
           type: integer
           description: PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60.
+        offerte_reactie_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — termijn (dagen) waarbinnen op een verzonden offerte een klantreactie verwacht wordt. Standaard 7.
+        offerte_bekeken_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — termijn (dagen) waarbinnen een bezorgde offerte door de klant bekeken moet zijn. Standaard 5.
+        opname_calculatie_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — termijn (dagen) waarbinnen na een opname een calculatie gestart moet zijn. Standaard 14.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -32954,6 +32963,15 @@ components:
         prijsafspraak_bewaking_dagen:
           type: integer
           description: PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken.
+        offerte_reactie_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — bewakingstermijn (dagen, 1-365) voor klantreactie op verzonden offertes.
+        offerte_bekeken_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — bewakingstermijn (dagen, 1-365) voor het bekijken van bezorgde offertes.
+        opname_calculatie_bewaking_dagen:
+          type: integer
+          description: BEWAKING_02 — bewakingstermijn (dagen, 1-365) tussen opname en start calculatie.
 
     AiDrempelStatus:
       type: object

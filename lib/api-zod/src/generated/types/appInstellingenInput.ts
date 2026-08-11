@@ -39,4 +39,10 @@ export interface AppInstellingenInput {
   prijsafwijking_marge_pct?: number;
   /** PRIJS_01 §7 — bewakingstermijn (dagen, 1-365) voor aflopende prijsafspraken. */
   prijsafspraak_bewaking_dagen?: number;
+  /** BEWAKING_02 — bewakingstermijn (dagen, 1-365) voor klantreactie op verzonden offertes. */
+  offerte_reactie_bewaking_dagen?: number;
+  /** BEWAKING_02 — bewakingstermijn (dagen, 1-365) voor het bekijken van bezorgde offertes. */
+  offerte_bekeken_bewaking_dagen?: number;
+  /** BEWAKING_02 — bewakingstermijn (dagen, 1-365) tussen opname en start calculatie. */
+  opname_calculatie_bewaking_dagen?: number;
 }

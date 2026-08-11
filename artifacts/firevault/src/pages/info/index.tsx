@@ -68,10 +68,12 @@ export default function InfoPagina() {
   async function opslaan() {
     await updateInstellingen.mutateAsync({
       data: {
-        support_email: velden.support_email || undefined,
-        support_telefoon: velden.support_telefoon || undefined,
-        support_website: velden.support_website || undefined,
-        extra_disclaimer: velden.extra_disclaimer || undefined,
+        // Lege string expliciet meesturen zodat een veld ook leeggemaakt kan worden
+        // (het endpoint hanteert patch-semantiek: weggelaten velden blijven staan).
+        support_email: velden.support_email,
+        support_telefoon: velden.support_telefoon,
+        support_website: velden.support_website,
+        extra_disclaimer: velden.extra_disclaimer,
       },
     });
     queryClient.invalidateQueries();
@@ -87,12 +89,37 @@ export default function InfoPagina() {
 
   const [reactieUren, setReactieUren] = useState<string>("");
   const [oppakUren, setOppakUren] = useState<string>("");
+  const [offerteReactieDagen, setOfferteReactieDagen] = useState<string>("");
+  const [offerteBekekenDagen, setOfferteBekekenDagen] = useState<string>("");
+  const [opnameCalculatieDagen, setOpnameCalculatieDagen] = useState<string>("");
   useEffect(() => {
     if (instellingen) {
       setReactieUren(String(instellingen.aanvraag_reactietermijn_uren ?? 24));
       setOppakUren(String(instellingen.aanvraag_oppak_termijn_uren ?? 72));
+      setOfferteReactieDagen(String(instellingen.offerte_reactie_bewaking_dagen ?? 7));
+      setOfferteBekekenDagen(String(instellingen.offerte_bekeken_bewaking_dagen ?? 5));
+      setOpnameCalculatieDagen(String(instellingen.opname_calculatie_bewaking_dagen ?? 14));
     }
   }, [instellingen]);
+
+  function geldigDagen(waarde: string): boolean {
+    const n = Number(waarde);
+    return Number.isFinite(n) && n >= 1 && n <= 365;
+  }
+
+  async function bewakingsdrempelsOpslaan() {
+    if (!geldigDagen(offerteReactieDagen) || !geldigDagen(offerteBekekenDagen) || !geldigDagen(opnameCalculatieDagen)) {
+      return;
+    }
+    await updateInstellingen.mutateAsync({
+      data: {
+        offerte_reactie_bewaking_dagen: Math.round(Number(offerteReactieDagen)),
+        offerte_bekeken_bewaking_dagen: Math.round(Number(offerteBekekenDagen)),
+        opname_calculatie_bewaking_dagen: Math.round(Number(opnameCalculatieDagen)),
+      },
+    });
+    queryClient.invalidateQueries();
+  }
 
   async function termijnenOpslaan() {
     const reactie = Number(reactieUren);
@@ -514,6 +541,64 @@ export default function InfoPagina() {
             </div>
             <Button size="sm" onClick={termijnenOpslaan} disabled={updateInstellingen.isPending}>
               <Save className="mr-1 h-4 w-4" /> Termijnen opslaan
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Commerciële bewakingsdrempels (BEWAKING_02) */}
+      {isHoofdBeheerder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              Commerciële bewaking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground max-w-md">
+              Drempels voor de commerciële bewakingsdraai. Bij overschrijding verschijnt automatisch een signaal in de bewaking.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label>Offerte-reactie (dagen)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="mt-1"
+                  value={offerteReactieDagen}
+                  onChange={(e) => setOfferteReactieDagen(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Binnen dit aantal dagen wordt een klantreactie op een verzonden offerte verwacht.</p>
+              </div>
+              <div>
+                <Label>Offerte bekeken (dagen)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="mt-1"
+                  value={offerteBekekenDagen}
+                  onChange={(e) => setOfferteBekekenDagen(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Binnen dit aantal dagen moet een bezorgde offerte door de klant bekeken zijn.</p>
+              </div>
+              <div>
+                <Label>Opname → calculatie (dagen)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="mt-1"
+                  value={opnameCalculatieDagen}
+                  onChange={(e) => setOpnameCalculatieDagen(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Binnen dit aantal dagen na een opname moet de calculatie gestart zijn.</p>
+              </div>
+            </div>
+            <Button size="sm" onClick={bewakingsdrempelsOpslaan} disabled={updateInstellingen.isPending}>
+              <Save className="mr-1 h-4 w-4" /> Drempels opslaan
             </Button>
           </CardContent>
         </Card>

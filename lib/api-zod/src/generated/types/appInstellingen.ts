@@ -47,6 +47,12 @@ export interface AppInstellingen {
   prijsafwijking_marge_pct?: number;
   /** PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een werkbak-item oplevert. Standaard 60. */
   prijsafspraak_bewaking_dagen?: number;
+  /** BEWAKING_02 — termijn (dagen) waarbinnen op een verzonden offerte een klantreactie verwacht wordt. Standaard 7. */
+  offerte_reactie_bewaking_dagen?: number;
+  /** BEWAKING_02 — termijn (dagen) waarbinnen een bezorgde offerte door de klant bekeken moet zijn. Standaard 5. */
+  offerte_bekeken_bewaking_dagen?: number;
+  /** BEWAKING_02 — termijn (dagen) waarbinnen na een opname een calculatie gestart moet zijn. Standaard 14. */
+  opname_calculatie_bewaking_dagen?: number;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
