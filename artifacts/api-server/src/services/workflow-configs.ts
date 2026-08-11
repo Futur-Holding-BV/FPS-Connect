@@ -218,7 +218,14 @@ const offerteConfig: WorkflowConfig<Offerte> = {
       label: "Afwijzen",
       bevoegdheid: ["offertes", 2],
     },
-    { van: "afgewezen", naar: "concept", label: "Heropenen als concept", bevoegdheid: ["offertes", 2] },
+    {
+      van: "afgewezen",
+      naar: "concept",
+      label: "Heropenen als concept",
+      // AKKOORD_01 §1.4/§8: terugzetten is een uitzonderlijke correctie —
+      // alleen de hoofdbeheerder (bewuste keuze, geen module-bevoegdheid).
+      magUitvoeren: async (_e, ctx) => ctx.isHoofdbeheerder === true,
+    },
     {
       van: ["verzonden", "bekeken"],
       naar: "ingetrokken",
@@ -231,7 +238,13 @@ const offerteConfig: WorkflowConfig<Offerte> = {
         return null;
       },
     },
-    { van: "ingetrokken", naar: "concept", label: "Heropenen als concept", bevoegdheid: ["offertes", 2] },
+    {
+      van: "ingetrokken",
+      naar: "concept",
+      label: "Heropenen als concept",
+      // AKKOORD_01 §8: idem — alleen hoofdbeheerder.
+      magUitvoeren: async (_e, ctx) => ctx.isHoofdbeheerder === true,
+    },
   ],
 };
 

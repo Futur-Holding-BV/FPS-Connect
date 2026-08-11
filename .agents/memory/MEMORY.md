@@ -15,6 +15,7 @@
 - [Changelog verplichting](changelog-verplichting.md) — docs/changelog.md bijhouden na elke fix/bouw; gebruiker heeft expliciet gevraagd dit altijd bij te werken.
 - [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
+- [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.

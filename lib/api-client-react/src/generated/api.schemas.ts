@@ -7354,6 +7354,90 @@ export interface Opdracht {
   uitvoering_stap_actief?: number | null;
 }
 
+export type OpdrachtAkkoordAkkoordGrond = typeof OpdrachtAkkoordAkkoordGrond[keyof typeof OpdrachtAkkoordAkkoordGrond] | null;
+
+
+export const OpdrachtAkkoordAkkoordGrond = {
+  ondertekening: 'ondertekening',
+  opdrachtbevestiging: 'opdrachtbevestiging',
+  vrijgave_pl: 'vrijgave_pl',
+} as const;
+
+export interface OpdrachtAkkoord {
+  akkoord_grond: OpdrachtAkkoordAkkoordGrond;
+  akkoord_door_id: number | null;
+  akkoord_op: string | null;
+  akkoord_document_id: number | null;
+  akkoord_herkomst: string | null;
+  conditie_betaaltermijn_dagen: number | null;
+  conditie_garantietermijn: string | null;
+  conditie_meerwerk: string | null;
+  conditie_oplevering: string | null;
+  conditie_boete_korting: string | null;
+  conditie_voorwaarden_set_id: number | null;
+  conditie_voorwaarden_tekst: string | null;
+}
+
+export type AkkoordVastleggenInputGrond = typeof AkkoordVastleggenInputGrond[keyof typeof AkkoordVastleggenInputGrond];
+
+
+export const AkkoordVastleggenInputGrond = {
+  ondertekening: 'ondertekening',
+  opdrachtbevestiging: 'opdrachtbevestiging',
+  vrijgave_pl: 'vrijgave_pl',
+} as const;
+
+export type AkkoordVastleggenInputCondities = {
+  betaaltermijn_dagen?: number | null;
+  garantietermijn?: string | null;
+  meerwerk?: string | null;
+  oplevering?: string | null;
+  boete_korting?: string | null;
+  voorwaarden_set_id?: number | null;
+  voorwaarden_tekst?: string | null;
+};
+
+export interface AkkoordVastleggenInput {
+  grond: AkkoordVastleggenInputGrond;
+  document_id?: number | null;
+  herkomst?: string | null;
+  condities?: AkkoordVastleggenInputCondities;
+}
+
+export interface OpdrachtConditiesPatch {
+  betaaltermijn_dagen?: number | null;
+  garantietermijn?: string | null;
+  meerwerk?: string | null;
+  oplevering?: string | null;
+  boete_korting?: string | null;
+  voorwaarden_set_id?: number | null;
+  voorwaarden_tekst?: string | null;
+}
+
+export type AkkoordAiVoorstelVoorstelVindplaatsen = {[key: string]: string};
+
+export type AkkoordAiVoorstelVoorstel = {
+  opdrachtgever: string | null;
+  opdrachtnummer: string | null;
+  offerte_referentie: string | null;
+  bedrag: number | null;
+  bedrag_incl_btw: boolean | null;
+  datum: string | null;
+  betaaltermijn_dagen: number | null;
+  garantietermijn: string | null;
+  meerwerk: string | null;
+  oplevering: string | null;
+  boete_korting: string | null;
+  voorwaarden_tekst: string | null;
+  vindplaatsen: AkkoordAiVoorstelVoorstelVindplaatsen;
+  onzekere_velden: string[];
+} | null;
+
+export interface AkkoordAiVoorstel {
+  is_opdrachtbevestiging: boolean;
+  voorstel: AkkoordAiVoorstelVoorstel;
+}
+
 export interface MaakOpdrachtInput {
   calculatie_id?: number;
   titel?: string;
@@ -17211,6 +17295,14 @@ status?: string;
 mijn?: boolean;
 };
 
+export type TrekAkkoordInBody = {
+  reden: string;
+};
+
+export type AkkoordAiVoorstelBody = {
+  document_id: number;
+};
+
 export type GetMandagstaatParams = {
 jaar: number;
 week: number;
@@ -18045,3 +18137,4 @@ hoeveelheid?: number;
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
 };
+

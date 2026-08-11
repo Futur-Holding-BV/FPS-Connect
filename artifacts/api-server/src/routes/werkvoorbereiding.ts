@@ -27,6 +27,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { formatNummer, herzieningsLetter, kenmerkVoorProjectinkoop } from "../lib/kenmerk";
 import { maakConceptInkoopbon } from "../lib/inkoopbonService";
+import { GeenAkkoordFout } from "../lib/akkoordPoort";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
@@ -1314,6 +1315,11 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req
 
     res.status(201).json(mapInkoopbon(bon, regels, await kenmerkVoorProjectinkoop(bon.offerteId, bon.nummer, bon.herziening)));
   } catch (err) {
+    if (err instanceof GeenAkkoordFout) {
+      // AKKOORD_01 §3.3: heldere weigering, geen kale serverfout.
+      res.status(422).json({ code: "AKKOORD_ONTBREEKT", error: err.message });
+      return;
+    }
     logger.error({ err }, "createInkoopbon fout");
     res.status(500).json({ error: "Serverfout" });
   }

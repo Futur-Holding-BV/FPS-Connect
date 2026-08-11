@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { formatNummer } from "./kenmerk";
+import { heeftAkkoord, GeenAkkoordFout } from "./akkoordPoort";
 
 type Uitvoerder = Pick<typeof db, "select" | "insert" | "update">;
 
@@ -39,6 +40,12 @@ export async function maakConceptInkoopbon(
   invoer: ConceptBonInvoer,
   uitvoerder: Uitvoerder = db,
 ): Promise<typeof inkoopbonnenTable.$inferSelect> {
+  // AKKOORD_01 §3.3: geen inkoopbon zonder vastgelegd akkoord op de opdracht.
+  // Dit is de ENE poort — hij dekt daarmee zowel de handmatige POST als de
+  // automatische bon uit een goedgekeurde materiaal-aanvraag.
+  const toets = await heeftAkkoord(invoer.opdrachtId, uitvoerder);
+  if (!toets.akkoord) throw new GeenAkkoordFout(toets.melding);
+
   const [plan] = await uitvoerder.select().from(inkoopplannenTable)
     .where(eq(inkoopplannenTable.opdrachtId, invoer.opdrachtId));
 

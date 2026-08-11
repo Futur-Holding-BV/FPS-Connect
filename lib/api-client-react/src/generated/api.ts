@@ -68,6 +68,9 @@ import type {
   AiTaakInvoer,
   AiTaakResultaat,
   AiVoorstelFunctieInput,
+  AkkoordAiVoorstel,
+  AkkoordAiVoorstelBody,
+  AkkoordVastleggenInput,
   AlgemeneInkoop,
   AlgemeneInkoopInput,
   AlgemeneInkoopUpdate,
@@ -777,9 +780,11 @@ import type {
   OnlineGebruiker,
   OnvoldoendeVoorraadFout,
   Opdracht,
+  OpdrachtAkkoord,
   OpdrachtChecklistItem,
   OpdrachtChecklistItemInput,
   OpdrachtChecklistItemPatch,
+  OpdrachtConditiesPatch,
   OpdrachtMateriaal,
   OpdrachtNacalculatie,
   OpdrachtPatch,
@@ -973,6 +978,7 @@ import type {
   ToolboxMaandopdracht,
   ToolboxMaandopdrachtInput,
   ToolboxReviewInput,
+  TrekAkkoordInBody,
   TweeFactorSetup,
   UitgifteInput,
   UitnodigingActiveren,
@@ -43732,6 +43738,367 @@ export const useUpdateOpdracht = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateOpdrachtMutationOptions(options));
+    }
+
+export const getGetOpdrachtAkkoordUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/akkoord`
+}
+
+/**
+ * @summary AKKOORD_01: akkoordstatus + condities van een opdracht
+ */
+export const getOpdrachtAkkoord = async (id: number, options?: RequestInit): Promise<OpdrachtAkkoord> => {
+
+  return customFetch<OpdrachtAkkoord>(getGetOpdrachtAkkoordUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpdrachtAkkoordQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/akkoord`
+    ] as const;
+    }
+
+
+export const getGetOpdrachtAkkoordQueryOptions = <TData = Awaited<ReturnType<typeof getOpdrachtAkkoord>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtAkkoord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpdrachtAkkoordQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpdrachtAkkoord>>> = ({ signal }) => getOpdrachtAkkoord(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtAkkoord>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpdrachtAkkoordQueryResult = NonNullable<Awaited<ReturnType<typeof getOpdrachtAkkoord>>>
+export type GetOpdrachtAkkoordQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AKKOORD_01: akkoordstatus + condities van een opdracht
+ */
+
+export function useGetOpdrachtAkkoord<TData = Awaited<ReturnType<typeof getOpdrachtAkkoord>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtAkkoord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpdrachtAkkoordQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getLegAkkoordVastUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/akkoord`
+}
+
+/**
+ * @summary AKKOORD_01: akkoord vastleggen (grond A/B/C)
+ */
+export const legAkkoordVast = async (id: number,
+    akkoordVastleggenInput: AkkoordVastleggenInput, options?: RequestInit): Promise<OpdrachtAkkoord> => {
+
+  return customFetch<OpdrachtAkkoord>(getLegAkkoordVastUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(akkoordVastleggenInput)
+  }
+);}
+
+
+
+
+export const getLegAkkoordVastMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legAkkoordVast>>, TError,{id: number;data: BodyType<AkkoordVastleggenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof legAkkoordVast>>, TError,{id: number;data: BodyType<AkkoordVastleggenInput>}, TContext> => {
+
+const mutationKey = ['legAkkoordVast'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof legAkkoordVast>>, {id: number;data: BodyType<AkkoordVastleggenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  legAkkoordVast(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LegAkkoordVastMutationResult = NonNullable<Awaited<ReturnType<typeof legAkkoordVast>>>
+    export type LegAkkoordVastMutationBody = BodyType<AkkoordVastleggenInput>
+    export type LegAkkoordVastMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AKKOORD_01: akkoord vastleggen (grond A/B/C)
+ */
+export const useLegAkkoordVast = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legAkkoordVast>>, TError,{id: number;data: BodyType<AkkoordVastleggenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof legAkkoordVast>>,
+        TError,
+        {id: number;data: BodyType<AkkoordVastleggenInput>},
+        TContext
+      > => {
+      return useMutation(getLegAkkoordVastMutationOptions(options));
+    }
+
+export const getTrekAkkoordInUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/akkoord`
+}
+
+/**
+ * @summary AKKOORD_01: akkoord intrekken (alleen hoofdbeheerder, met reden)
+ */
+export const trekAkkoordIn = async (id: number,
+    trekAkkoordInBody: TrekAkkoordInBody, options?: RequestInit): Promise<OpdrachtAkkoord> => {
+
+  return customFetch<OpdrachtAkkoord>(getTrekAkkoordInUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(trekAkkoordInBody)
+  }
+);}
+
+
+
+
+export const getTrekAkkoordInMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof trekAkkoordIn>>, TError,{id: number;data: BodyType<TrekAkkoordInBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof trekAkkoordIn>>, TError,{id: number;data: BodyType<TrekAkkoordInBody>}, TContext> => {
+
+const mutationKey = ['trekAkkoordIn'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof trekAkkoordIn>>, {id: number;data: BodyType<TrekAkkoordInBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  trekAkkoordIn(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TrekAkkoordInMutationResult = NonNullable<Awaited<ReturnType<typeof trekAkkoordIn>>>
+    export type TrekAkkoordInMutationBody = BodyType<TrekAkkoordInBody>
+    export type TrekAkkoordInMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AKKOORD_01: akkoord intrekken (alleen hoofdbeheerder, met reden)
+ */
+export const useTrekAkkoordIn = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof trekAkkoordIn>>, TError,{id: number;data: BodyType<TrekAkkoordInBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof trekAkkoordIn>>,
+        TError,
+        {id: number;data: BodyType<TrekAkkoordInBody>},
+        TContext
+      > => {
+      return useMutation(getTrekAkkoordInMutationOptions(options));
+    }
+
+export const getAkkoordAiVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/akkoord/ai-voorstel`
+}
+
+/**
+ * @summary AKKOORD_01 §5: AI leest een opdrachtbevestiging en stelt velden voor (mens bevestigt)
+ */
+export const akkoordAiVoorstel = async (id: number,
+    akkoordAiVoorstelBody: AkkoordAiVoorstelBody, options?: RequestInit): Promise<AkkoordAiVoorstel> => {
+
+  return customFetch<AkkoordAiVoorstel>(getAkkoordAiVoorstelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(akkoordAiVoorstelBody)
+  }
+);}
+
+
+
+
+export const getAkkoordAiVoorstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof akkoordAiVoorstel>>, TError,{id: number;data: BodyType<AkkoordAiVoorstelBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof akkoordAiVoorstel>>, TError,{id: number;data: BodyType<AkkoordAiVoorstelBody>}, TContext> => {
+
+const mutationKey = ['akkoordAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof akkoordAiVoorstel>>, {id: number;data: BodyType<AkkoordAiVoorstelBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  akkoordAiVoorstel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AkkoordAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof akkoordAiVoorstel>>>
+    export type AkkoordAiVoorstelMutationBody = BodyType<AkkoordAiVoorstelBody>
+    export type AkkoordAiVoorstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AKKOORD_01 §5: AI leest een opdrachtbevestiging en stelt velden voor (mens bevestigt)
+ */
+export const useAkkoordAiVoorstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof akkoordAiVoorstel>>, TError,{id: number;data: BodyType<AkkoordAiVoorstelBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof akkoordAiVoorstel>>,
+        TError,
+        {id: number;data: BodyType<AkkoordAiVoorstelBody>},
+        TContext
+      > => {
+      return useMutation(getAkkoordAiVoorstelMutationOptions(options));
+    }
+
+export const getUpdateOpdrachtConditiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/condities`
+}
+
+/**
+ * @summary AKKOORD_01 §4: condities van een opdracht bijwerken
+ */
+export const updateOpdrachtCondities = async (id: number,
+    opdrachtConditiesPatch: OpdrachtConditiesPatch, options?: RequestInit): Promise<OpdrachtAkkoord> => {
+
+  return customFetch<OpdrachtAkkoord>(getUpdateOpdrachtConditiesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opdrachtConditiesPatch)
+  }
+);}
+
+
+
+
+export const getUpdateOpdrachtConditiesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpdrachtCondities>>, TError,{id: number;data: BodyType<OpdrachtConditiesPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOpdrachtCondities>>, TError,{id: number;data: BodyType<OpdrachtConditiesPatch>}, TContext> => {
+
+const mutationKey = ['updateOpdrachtCondities'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOpdrachtCondities>>, {id: number;data: BodyType<OpdrachtConditiesPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOpdrachtCondities(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOpdrachtConditiesMutationResult = NonNullable<Awaited<ReturnType<typeof updateOpdrachtCondities>>>
+    export type UpdateOpdrachtConditiesMutationBody = BodyType<OpdrachtConditiesPatch>
+    export type UpdateOpdrachtConditiesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AKKOORD_01 §4: condities van een opdracht bijwerken
+ */
+export const useUpdateOpdrachtCondities = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpdrachtCondities>>, TError,{id: number;data: BodyType<OpdrachtConditiesPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOpdrachtCondities>>,
+        TError,
+        {id: number;data: BodyType<OpdrachtConditiesPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateOpdrachtConditiesMutationOptions(options));
     }
 
 export const getGetMandagstaatUrl = (id: number,

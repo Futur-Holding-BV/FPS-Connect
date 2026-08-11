@@ -34,6 +34,14 @@ import { bouwWerkbegrotingEigenCijfersContext } from "../lib/inkoopEigenCijfers"
 import { logger } from "../lib/logger";
 import { berekenEnSlaOpNacalculatie } from "../services/fie-service";
 import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
+import { AKKOORD_GRONDEN, type AkkoordGrond } from "../lib/akkoordPoort";
+import { checkVereistGoedkeuring, haalGoedgekeurdeAanvraag } from "../services/goedkeuring-engine";
+import { logActiviteit } from "../lib/activiteit";
+import { documentenTable } from "@workspace/db";
+import { analyseerOpdrachtbevestiging } from "../lib/documentIntelligence";
+import { ObjectStorageService } from "../lib/objectStorage";
+
+const objectStorage = new ObjectStorageService();
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -154,6 +162,20 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
     const calcId = calculatie_id ?? null;
     const opdrachtTitel = titel ?? offerte.titel ?? `Opdracht ${offerteId}`;
 
+    // AKKOORD_01 §7: de werkomschrijving reist mee — geen body-omschrijving,
+    // dan de kop-omschrijving van de gekoppelde calculatie overnemen.
+    let erfOmschrijving: string | null = omschrijving ?? null;
+    if (!erfOmschrijving && calcId) {
+      const [calc] = await db.select({ omschrijving: modCalcHeadersTable.omschrijving })
+        .from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, calcId));
+      erfOmschrijving = calc?.omschrijving ?? null;
+    }
+
+    // AKKOORD_01 §2 grond A: is de offerte al ondertekend, dan wordt het
+    // akkoord automatisch vastgelegd bij het aanmaken van de opdracht —
+    // er bestaat geen ander aanmaakmoment "bij ondertekening" (gemeten).
+    const autoAkkoord = offerte.status === "ondertekend";
+
     // Bestaande opdracht voor deze offerte ophalen
     const [bestaande] = await db.select().from(opdrachtenTable)
       .where(eq(opdrachtenTable.offerteId, offerteId));
@@ -175,7 +197,16 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
       titel: opdrachtTitel,
       werknummer: werknummer ?? offerte.onsKenmerk ?? null,
       opdrachtgever: offerte.opdrachtgever ?? null,
-      omschrijving: omschrijving ?? null,
+      omschrijving: erfOmschrijving,
+      // AKKOORD_01: grond A automatisch bij ondertekende offerte, condities
+      // uit de offerte zelf (geen tweede voorwaardenopslag — verwijzing + snapshotvelden).
+      ...(autoAkkoord ? {
+        akkoordGrond: "ondertekening" as const,
+        akkoordDoorId: req.session.userId!,
+        akkoordOp: new Date(),
+        conditieBetaaltermijnDagen: offerte.betalingstermijnDagen ?? null,
+        conditieVoorwaardenSetId: offerte.voorwaardenSetId ?? null,
+      } : {}),
       status: "actief",
       aangemaaktDoorId: req.session.userId!,
       bijgewerktOp: new Date(),
@@ -295,6 +326,276 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
     }
     logger.error({ err }, "maak-opdracht fout");
     res.status(500).json({ error: "Serverfout bij aanmaken opdracht" });
+  }
+});
+
+// ── AKKOORD_01: akkoord vastleggen / intrekken / condities ────────────────
+
+function mapAkkoord(o: typeof opdrachtenTable.$inferSelect) {
+  return {
+    akkoord_grond: o.akkoordGrond ?? null,
+    akkoord_door_id: o.akkoordDoorId ?? null,
+    akkoord_op: iso(o.akkoordOp),
+    akkoord_document_id: o.akkoordDocumentId ?? null,
+    akkoord_herkomst: o.akkoordHerkomst ?? null,
+    conditie_betaaltermijn_dagen: o.conditieBetaaltermijnDagen ?? null,
+    conditie_garantietermijn: o.conditieGarantietermijn ?? null,
+    conditie_meerwerk: o.conditieMeerwerk ?? null,
+    conditie_oplevering: o.conditieOplevering ?? null,
+    conditie_boete_korting: o.conditieBoeteKorting ?? null,
+    conditie_voorwaarden_set_id: o.conditieVoorwaardenSetId ?? null,
+    conditie_voorwaarden_tekst: o.conditieVoorwaardenTekst ?? null,
+  };
+}
+
+// GET /opdrachten/:id/akkoord — akkoordstatus + condities (leesrecht volstaat).
+router.get("/opdrachten/:id/akkoord", lezen, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const [o] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+  if (!o) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+  res.json(mapAkkoord(o));
+});
+
+// POST /opdrachten/:id/akkoord — akkoord vastleggen op één van de drie gronden.
+router.post("/opdrachten/:id/akkoord", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const body = req.body as {
+    grond?: string;
+    document_id?: number | null;
+    herkomst?: string | null;
+    condities?: {
+      betaaltermijn_dagen?: number | null;
+      garantietermijn?: string | null;
+      meerwerk?: string | null;
+      oplevering?: string | null;
+      boete_korting?: string | null;
+      voorwaarden_set_id?: number | null;
+      voorwaarden_tekst?: string | null;
+    };
+  };
+
+  const grond = body.grond as AkkoordGrond | undefined;
+  if (!grond || !AKKOORD_GRONDEN.includes(grond)) {
+    res.status(400).json({ error: `Ongeldige grond; kies één van: ${AKKOORD_GRONDEN.join(", ")}` });
+    return;
+  }
+
+  try {
+    const [o] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    if (!o) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+    if (o.akkoordGrond) {
+      res.status(409).json({ error: "Er is al een akkoord vastgelegd op deze opdracht. Intrekken kan alleen door de hoofdbeheerder." });
+      return;
+    }
+
+    // Grondspecifieke eisen (§2): elk akkoord moet herleidbaar zijn.
+    let offerte: typeof offertesTable.$inferSelect | null = null;
+    if (o.offerteId) {
+      const [rij] = await db.select().from(offertesTable).where(eq(offertesTable.id, o.offerteId));
+      offerte = rij ?? null;
+    }
+    if (grond === "ondertekening") {
+      if (!offerte || offerte.status !== "ondertekend") {
+        res.status(422).json({ error: "Grond 'ondertekening' vereist een gekoppelde offerte met status 'ondertekend'." });
+        return;
+      }
+    }
+    if (grond === "opdrachtbevestiging") {
+      const docId = body.document_id ? Number(body.document_id) : null;
+      if (!docId) {
+        res.status(422).json({ error: "Grond 'opdrachtbevestiging' vereist het document van de opdrachtgever (document_id)." });
+        return;
+      }
+      // Reviewpunt: het bewijs voor grond B moet écht een opdrachtbevestiging
+      // zijn — niet een willekeurig bestaand document. Eisen: geregistreerd als
+      // documenttype 'opdrachtbevestiging', mét bestand, niet gearchiveerd.
+      const [doc] = await db
+        .select({
+          id: documentenTable.id,
+          documenttype: documentenTable.documenttype,
+          pdfUrl: documentenTable.pdfUrl,
+          gearchiveerd: documentenTable.gearchiveerd,
+        })
+        .from(documentenTable)
+        .where(eq(documentenTable.id, docId));
+      if (!doc) { res.status(422).json({ error: "Het opgegeven document bestaat niet." }); return; }
+      if (doc.gearchiveerd) { res.status(422).json({ error: "Het opgegeven document is gearchiveerd en kan niet als akkoordbewijs dienen." }); return; }
+      if (!doc.pdfUrl) { res.status(422).json({ error: "Het opgegeven document heeft geen bestand; een opdrachtbevestiging zonder document is geen bewijs." }); return; }
+      if (doc.documenttype !== "opdrachtbevestiging") {
+        res.status(422).json({ error: "Het opgegeven document is niet geregistreerd als opdrachtbevestiging. Registreer of hercategoriseer het document eerst als 'opdrachtbevestiging'." });
+        return;
+      }
+    }
+    if (grond === "vrijgave_pl" && !(body.herkomst ?? "").trim()) {
+      res.status(422).json({ error: "Grond 'vrijgave projectleider' vereist een herkomsttekst: waar komt het akkoord vandaan (mail, telefonisch, mondeling), van wie en wanneer." });
+      return;
+    }
+
+    // §6: boven de beleidsband (≥ €10.000, incl. btw — zelfde maatstaf als de
+    // offerte-haak) is een goedgekeurde formele aanvraag vereist.
+    const bedrag = offerte?.bedragInclBtw ?? null;
+    const { vereist } = await checkVereistGoedkeuring(db, "opdracht_akkoord", bedrag, null);
+    if (vereist) {
+      const goedgekeurd = await haalGoedgekeurdeAanvraag(db, "opdracht_akkoord", id);
+      if (!goedgekeurd) {
+        res.status(422).json({
+          code: "GOEDKEURING_VEREIST",
+          error: "Voor het vastleggen van dit akkoord is op basis van het goedkeuringsbeleid eerst een formele goedkeuringsaanvraag vereist. Dien de aanvraag in via het goedkeuringsproces.",
+        });
+        return;
+      }
+    }
+
+    const c = body.condities ?? {};
+    const [bijgewerkt] = await db.update(opdrachtenTable)
+      .set({
+        akkoordGrond: grond,
+        akkoordDoorId: req.session.userId!,
+        akkoordOp: new Date(),
+        akkoordDocumentId: grond === "opdrachtbevestiging" ? Number(body.document_id) : null,
+        akkoordHerkomst: grond === "vrijgave_pl" ? String(body.herkomst).trim() : null,
+        // Condities: grond A standaard uit de offerte, altijd overschrijfbaar via body.
+        conditieBetaaltermijnDagen: c.betaaltermijn_dagen ?? offerte?.betalingstermijnDagen ?? null,
+        conditieGarantietermijn: c.garantietermijn ?? null,
+        conditieMeerwerk: c.meerwerk ?? null,
+        conditieOplevering: c.oplevering ?? null,
+        conditieBoeteKorting: c.boete_korting ?? null,
+        conditieVoorwaardenSetId: c.voorwaarden_set_id ?? offerte?.voorwaardenSetId ?? null,
+        conditieVoorwaardenTekst: c.voorwaarden_tekst ?? null,
+        bijgewerktOp: new Date(),
+      })
+      // Race-guard: alleen vastleggen zolang er nog géén akkoord staat.
+      .where(and(eq(opdrachtenTable.id, id), isNull(opdrachtenTable.akkoordGrond)))
+      .returning();
+    if (!bijgewerkt) {
+      res.status(409).json({ error: "Er is intussen al een akkoord vastgelegd op deze opdracht." });
+      return;
+    }
+
+    await logActiviteit({
+      type: "opdracht_akkoord",
+      omschrijving: `Akkoord vastgelegd op opdracht '${o.titel}' (grond: ${grond}).`,
+      gebouwId: o.gebouwId ?? null,
+      gebruikerId: req.session.userId!,
+      offerteId: o.offerteId ?? null,
+    });
+    res.status(201).json(mapAkkoord(bijgewerkt));
+  } catch (err) {
+    logger.error({ err }, "akkoord vastleggen fout");
+    res.status(500).json({ error: "Serverfout bij vastleggen akkoord" });
+  }
+});
+
+// POST /opdrachten/:id/akkoord/ai-voorstel — AI leest een opdrachtbevestiging
+// en stelt de akkoord-/conditievelden voor mét vindplaats; de mens bevestigt
+// (AKKOORD_01 §5, zelfde model als de factuurstroom). Slaat NIETS op.
+router.post("/opdrachten/:id/akkoord/ai-voorstel", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const docId = Number((req.body as { document_id?: number })?.document_id);
+  if (!docId || isNaN(docId)) { res.status(400).json({ error: "document_id is verplicht" }); return; }
+
+  try {
+    const [o] = await db.select({ id: opdrachtenTable.id }).from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    if (!o) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+    const [doc] = await db.select().from(documentenTable).where(eq(documentenTable.id, docId));
+    if (!doc || !doc.pdfUrl) { res.status(404).json({ error: "Document niet gevonden of zonder bestand" }); return; }
+    if (doc.gearchiveerd) { res.status(422).json({ error: "Het opgegeven document is gearchiveerd." }); return; }
+
+    const file = await objectStorage.getObjectEntityFile(doc.pdfUrl);
+    const stream = file.createReadStream();
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on("data", (chunk: unknown) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as ArrayBufferLike)));
+      stream.on("end", () => resolve(Buffer.concat(chunks)));
+      stream.on("error", (err: Error) => reject(err));
+    });
+
+    const analyse = await analyseerOpdrachtbevestiging({
+      buffer,
+      bestandsnaam: doc.naam,
+      mime: "application/pdf",
+    });
+    if (!analyse.ok) {
+      res.status(502).json({ error: `Analyse mislukt: ${analyse.fout}` });
+      return;
+    }
+    res.json({
+      is_opdrachtbevestiging: analyse.is_opdrachtbevestiging,
+      voorstel: analyse.velden,
+    });
+  } catch (err) {
+    logger.error({ err }, "akkoord ai-voorstel fout");
+    res.status(500).json({ error: "Serverfout bij analyseren opdrachtbevestiging" });
+  }
+});
+
+// DELETE /opdrachten/:id/akkoord — intrekken; alleen hoofdbeheerder, met reden (auditspoor).
+router.delete("/opdrachten/:id/akkoord", requireBevoegdheid("projecten", 1), async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  if (!req.permissies?.isHoofdbeheerder) {
+    res.status(403).json({ error: "Alleen de hoofdbeheerder kan een vastgelegd akkoord intrekken." });
+    return;
+  }
+  const reden = String((req.body as { reden?: string })?.reden ?? "").trim();
+  if (!reden) { res.status(400).json({ error: "Een reden is verplicht bij het intrekken van een akkoord." }); return; }
+
+  try {
+    const [o] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    if (!o) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+    if (!o.akkoordGrond) { res.status(409).json({ error: "Deze opdracht heeft geen vastgelegd akkoord." }); return; }
+
+    const [bijgewerkt] = await db.update(opdrachtenTable)
+      .set({
+        akkoordGrond: null, akkoordDoorId: null, akkoordOp: null,
+        akkoordDocumentId: null, akkoordHerkomst: null,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(opdrachtenTable.id, id))
+      .returning();
+
+    await logActiviteit({
+      type: "opdracht_akkoord_ingetrokken",
+      omschrijving: `Akkoord (grond: ${o.akkoordGrond}) op opdracht '${o.titel}' ingetrokken door hoofdbeheerder. Reden: ${reden}`,
+      gebouwId: o.gebouwId ?? null,
+      gebruikerId: req.session.userId!,
+      offerteId: o.offerteId ?? null,
+    });
+    res.json(mapAkkoord(bijgewerkt!));
+  } catch (err) {
+    logger.error({ err }, "akkoord intrekken fout");
+    res.status(500).json({ error: "Serverfout bij intrekken akkoord" });
+  }
+});
+
+// PATCH /opdrachten/:id/condities — condities bijwerken (schrijfrecht projecten:3).
+router.patch("/opdrachten/:id/condities", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const b = req.body as Record<string, unknown>;
+  try {
+    const [bijgewerkt] = await db.update(opdrachtenTable)
+      .set({
+        ...(b["betaaltermijn_dagen"] !== undefined ? { conditieBetaaltermijnDagen: b["betaaltermijn_dagen"] == null ? null : Number(b["betaaltermijn_dagen"]) } : {}),
+        ...(b["garantietermijn"] !== undefined ? { conditieGarantietermijn: (b["garantietermijn"] as string | null) } : {}),
+        ...(b["meerwerk"] !== undefined ? { conditieMeerwerk: (b["meerwerk"] as string | null) } : {}),
+        ...(b["oplevering"] !== undefined ? { conditieOplevering: (b["oplevering"] as string | null) } : {}),
+        ...(b["boete_korting"] !== undefined ? { conditieBoeteKorting: (b["boete_korting"] as string | null) } : {}),
+        ...(b["voorwaarden_set_id"] !== undefined ? { conditieVoorwaardenSetId: b["voorwaarden_set_id"] == null ? null : Number(b["voorwaarden_set_id"]) } : {}),
+        ...(b["voorwaarden_tekst"] !== undefined ? { conditieVoorwaardenTekst: (b["voorwaarden_tekst"] as string | null) } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(opdrachtenTable.id, id))
+      .returning();
+    if (!bijgewerkt) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+    res.json(mapAkkoord(bijgewerkt));
+  } catch (err) {
+    logger.error({ err }, "condities bijwerken fout");
+    res.status(500).json({ error: "Serverfout bij bijwerken condities" });
   }
 });
 

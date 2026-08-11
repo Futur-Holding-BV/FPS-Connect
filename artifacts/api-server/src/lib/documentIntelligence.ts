@@ -42,6 +42,7 @@ export const DOC_CATEGORIEEN = [
   "snagstream",
   "jaarrekening",
   "contract",
+  "opdrachtbevestiging",
   "prijslijst",
   "adviesrapport",
   "bibliotheek",
@@ -225,6 +226,8 @@ export const CATEGORIE_MODULE: Record<DocCategorie, string> = {
   snagstream: "Snagstream",
   jaarrekening: "Financieel",
   contract: "CRM",
+  // AKKOORD_01 §5: opdrachtbevestigingen horen bij het project/de opdracht.
+  opdrachtbevestiging: "Projecten",
   prijslijst: "Productbibliotheek",
   adviesrapport: "Calculaties",
   bibliotheek: "Productbibliotheek",
@@ -296,6 +299,11 @@ CATEGORIEËN:
                         onderneming. Zet subtype "geconsolideerd" als het over een groep/holding met dochters gaat
                         (bijv. "geconsolideerde jaarrekening", "groepsmaatschappijen").
 "contract"           — Commerciële overeenkomst met een klant of leverancier (geen personeelscontract).
+"opdrachtbevestiging" — Opdrachtbevestiging, inkooporder of schriftelijke opdracht VAN een opdrachtgever AAN FPS:
+                        de klant bevestigt daarmee dat FPS het werk mag uitvoeren (vaak met opdrachtnummer, bedrag
+                        en verwijzing naar een offerte). Onderscheid van "aanvraag" (verzoek om offerte, nog geen
+                        opdracht) en "offerte" (prijsopgave van FPS zelf). Zet in gevonden_gegevens indien aanwezig:
+                        organisatie (opdrachtgever), opdrachtnummer, offerte_referentie, bedrag, jaar.
 "prijslijst"         — Jaarprijslijst, nettoprijslijst, bruto prijslijst of staffelprijslijst van een leverancier: een
                         tabel met artikelcodes, omschrijvingen, prijzen en eenheden. Zet in gevonden_gegevens indien
                         aanwezig: organisatie (leverancier), jaar, geldig_van, geldig_tot, valuta.
@@ -501,6 +509,9 @@ const SLEUTELWOORDEN: Array<{ categorie: DocCategorie; woorden: string[] }> = [
     "dienstverband", "salaris", "functieomschrijving", "functie beschrijving",
   ] },
   { categorie: "verzekering", woorden: ["polisnummer", "verzekeringspolis", "assurantie", "premie", "dekking"] },
+  // AKKOORD_01 §5: opdrachtbevestiging VÓÓR het generieke "contract" — de
+  // sleutelwoorden zijn specifieker dan het losse woord "overeenkomst".
+  { categorie: "opdrachtbevestiging", woorden: ["opdrachtbevestiging", "inkooporder", "purchase order", "wij bevestigen de opdracht", "opdracht verstrekt", "gunning"] },
   // adviesrapport staat VÓÓR snagstream: een adviesrapport adviseert herstel per
   // genummerd punt; de sleutelwoorden zijn specifieker dan het generieke
   // "inspectierapport"/"bevindingen" dat bij een opleverrapport hoort.
@@ -1033,6 +1044,140 @@ export async function analyseerFactuurVoorStroom(input: {
     return { ok: true, is_factuur: json["is_factuur"] === true, velden, fout: null };
   } catch {
     return { ok: false, is_factuur: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };
+  }
+}
+
+// ── AKKOORD_01 §5: opdrachtbevestiging-extractie voor de akkoordpoort ─────────
+// Zelfde model als de factuur-extractie: AI stelt voor mét vindplaats, de mens
+// bevestigt. Hoort bewust hiér — geen per-route herkenner.
+
+export interface OpdrachtbevestigingVelden {
+  opdrachtgever: string | null;
+  opdrachtnummer: string | null;
+  offerte_referentie: string | null; // ons kenmerk / offertenummer waarnaar verwezen wordt
+  bedrag: number | null;             // opdrachtbedrag zoals vermeld
+  bedrag_incl_btw: boolean | null;   // staat er expliciet incl./excl. btw bij?
+  datum: string | null;              // YYYY-MM-DD
+  betaaltermijn_dagen: number | null;
+  garantietermijn: string | null;
+  meerwerk: string | null;           // afspraak over meer-/minderwerk zoals vermeld
+  oplevering: string | null;         // opleverdatum of doorlooptijd zoals vermeld
+  boete_korting: string | null;      // boete-/kortingsclausule zoals vermeld
+  voorwaarden_tekst: string | null;  // van toepassing verklaarde voorwaarden (bv. "UAV 2012")
+  vindplaatsen: Record<string, string>; // veldnaam → citaat/plek op het document
+  onzekere_velden: string[];
+}
+
+export interface OpdrachtbevestigingAnalyse {
+  ok: boolean;
+  is_opdrachtbevestiging: boolean;
+  velden: OpdrachtbevestigingVelden | null;
+  fout: string | null;
+}
+
+const OPDRACHTBEVESTIGING_PROMPT = `Je leest een Nederlandse opdrachtbevestiging/inkooporder van een opdrachtgever aan een bouwbedrijf (FPS).
+Geef uitsluitend JSON met exact deze sleutels:
+{"is_opdrachtbevestiging":bool,"opdrachtgever":string|null,"opdrachtnummer":string|null,"offerte_referentie":string|null,"bedrag":number|null,"bedrag_incl_btw":bool|null,"datum":"YYYY-MM-DD"|null,"betaaltermijn_dagen":number|null,"garantietermijn":string|null,"meerwerk":string|null,"oplevering":string|null,"boete_korting":string|null,"voorwaarden_tekst":string|null,"vindplaatsen":{"veldnaam":"citaat of plek"},"onzekere_velden":[string]}
+Regels:
+- Alleen wat op het document zelf staat telt; bestandsnaam/mail-context is achtergrond, nooit gegevensbron.
+- vindplaatsen: geef per ingevuld veld een kort citaat of de plek (bv. "onder 'Betaling': 30 dagen na factuurdatum").
+- garantietermijn/meerwerk/oplevering/boete_korting/voorwaarden_tekst: letterlijke of kort samengevatte afspraak zoals vermeld; niet vermeld → null.
+- Is een gegeven niet leesbaar of niet aanwezig → null. Verzin niets.
+- Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden.`;
+
+export async function analyseerOpdrachtbevestiging(input: {
+  buffer: Buffer;
+  bestandsnaam: string;
+  mime: string;
+}): Promise<OpdrachtbevestigingAnalyse> {
+  if (!heeftGateway()) {
+    return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "AI-gateway niet beschikbaar" };
+  }
+  let tekst: string | null = null;
+  let paginaAantal: number | null = null;
+  try {
+    const extractie = await extraheerTekst(input.buffer, input.mime, input.bestandsnaam);
+    tekst = extractie.tekst;
+    paginaAantal = extractie.paginaAantal;
+  } catch {
+    tekst = null;
+  }
+
+  const content: Array<Record<string, unknown>> = [];
+  const context = `Bestandsnaam: ${input.bestandsnaam}`;
+  if (tekst && tekst.trim().length > 80) {
+    content.push({ type: "text", text: `${context}\n\nDocumenttekst:\n${tekst.slice(0, 12000)}` });
+  } else if (input.mime === "application/pdf") {
+    try {
+      const aantal = Math.min(Math.max(paginaAantal ?? 5, 1), 5);
+      const paginas = await renderPdfPaginas(input.buffer, Array.from({ length: aantal }, (_, i) => i + 1));
+      if (paginas.length === 0) {
+        return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "geen leesbare tekst en rendering mislukt" };
+      }
+      content.push({ type: "text", text: context });
+      for (const p of paginas) {
+        content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${p.base64}`, detail: "high" } });
+      }
+    } catch {
+      return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "PDF-rendering niet beschikbaar" };
+    }
+  } else if (input.mime.startsWith("image/")) {
+    const base64 = await resizeAfbeelding(input.buffer);
+    if (!base64) {
+      return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "afbeelding niet leesbaar of niet ondersteund" };
+    }
+    content.push({ type: "text", text: context });
+    content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "high" } });
+  } else {
+    return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "geen leesbare inhoud gevonden" };
+  }
+
+  const slot = content.some((c) => c["type"] === "image_url") ? "vision" : "fast";
+  const resultaat = await aiGateway.chat(
+    slot,
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 1200,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: "system", content: OPDRACHTBEVESTIGING_PROMPT }, { role: "user", content } as any],
+    },
+    undefined,
+    { module: "projecten", functie: "opdrachtbevestiging_extractie", promptNaam: "opdrachtbevestiging-extractie", promptVersie: "1.0.0" },
+  );
+  if (!resultaat.ok) {
+    return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: resultaat.fout };
+  }
+  try {
+    const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
+    const s = (k: string): string | null => (typeof json[k] === "string" && (json[k] as string).trim() !== "" ? (json[k] as string).trim() : null);
+    const n = (k: string): number | null => (typeof json[k] === "number" && Number.isFinite(json[k] as number) ? (json[k] as number) : null);
+    const vindplaatsen: Record<string, string> = {};
+    if (json["vindplaatsen"] && typeof json["vindplaatsen"] === "object") {
+      for (const [k, v] of Object.entries(json["vindplaatsen"] as Record<string, unknown>)) {
+        if (typeof v === "string" && v.trim() !== "") vindplaatsen[k] = v.trim();
+      }
+    }
+    const velden: OpdrachtbevestigingVelden = {
+      opdrachtgever: s("opdrachtgever"),
+      opdrachtnummer: s("opdrachtnummer"),
+      offerte_referentie: s("offerte_referentie"),
+      bedrag: n("bedrag"),
+      bedrag_incl_btw: typeof json["bedrag_incl_btw"] === "boolean" ? (json["bedrag_incl_btw"] as boolean) : null,
+      datum: s("datum"),
+      betaaltermijn_dagen: n("betaaltermijn_dagen"),
+      garantietermijn: s("garantietermijn"),
+      meerwerk: s("meerwerk"),
+      oplevering: s("oplevering"),
+      boete_korting: s("boete_korting"),
+      voorwaarden_tekst: s("voorwaarden_tekst"),
+      vindplaatsen,
+      onzekere_velden: Array.isArray(json["onzekere_velden"])
+        ? (json["onzekere_velden"] as unknown[]).filter((v): v is string => typeof v === "string")
+        : [],
+    };
+    return { ok: true, is_opdrachtbevestiging: json["is_opdrachtbevestiging"] === true, velden, fout: null };
+  } catch {
+    return { ok: false, is_opdrachtbevestiging: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };
   }
 }
 

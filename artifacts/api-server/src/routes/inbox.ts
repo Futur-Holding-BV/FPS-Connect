@@ -46,6 +46,8 @@ const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
   snagstream: "snagstream_rapport",
   jaarrekening: "jaarrekening",
   contract: "contract",
+  // AKKOORD_01 §5: opdrachtbevestiging hoort bij het project/de opdracht.
+  opdrachtbevestiging: "project_document",
   prijslijst: "prijslijst",
   adviesrapport: "adviesrapport",
   bibliotheek: "product_certificaat",

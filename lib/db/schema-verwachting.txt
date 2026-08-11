@@ -3279,9 +3279,21 @@ KOLOM|opdracht_checklist_items|volgorde|integer|NO|0
 KOLOM|opdrachten|aangemaakt_door_id|integer|YES|
 KOLOM|opdrachten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|opdrachten|ai_fase|text|YES|
+KOLOM|opdrachten|akkoord_document_id|integer|YES|
+KOLOM|opdrachten|akkoord_door_id|integer|YES|
+KOLOM|opdrachten|akkoord_grond|text|YES|
+KOLOM|opdrachten|akkoord_herkomst|text|YES|
+KOLOM|opdrachten|akkoord_op|timestamp without time zone|YES|
 KOLOM|opdrachten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|opdrachten|budget_uren|real|YES|
 KOLOM|opdrachten|calculatie_id|integer|YES|
+KOLOM|opdrachten|conditie_betaaltermijn_dagen|integer|YES|
+KOLOM|opdrachten|conditie_boete_korting|text|YES|
+KOLOM|opdrachten|conditie_garantietermijn|text|YES|
+KOLOM|opdrachten|conditie_meerwerk|text|YES|
+KOLOM|opdrachten|conditie_oplevering|text|YES|
+KOLOM|opdrachten|conditie_voorwaarden_set_id|integer|YES|
+KOLOM|opdrachten|conditie_voorwaarden_tekst|text|YES|
 KOLOM|opdrachten|gebouw_id|integer|YES|
 KOLOM|opdrachten|id|integer|NO|nextval('opdrachten_id_seq'::regclass)
 KOLOM|opdrachten|mandagstaat_vereist|boolean|NO|false

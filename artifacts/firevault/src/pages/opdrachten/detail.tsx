@@ -69,6 +69,8 @@ import MateriaaltabTab from "./materiaal-tab";
 import PimUitvoeringTab, { StappenOverzicht } from "./pim-uitvoering-tab";
 import PimOpleveringTab from "./pim-oplevering-tab";
 import { UrenPerUurcodeSectie } from "./uren-per-uurcode-sectie";
+import { AkkoordKaart } from "./akkoord-kaart";
+import { useRol } from "@/context/rol-context";
 import { OverwerkslotKaart } from "./overwerkslot-kaart";
 
 function euro(n: number | null | undefined) {
@@ -566,6 +568,7 @@ function MandagstaatKaart({
 // ── Hoofdpagina ────────────────────────────────────────────────────────────────
 export default function OpdrachtDetailPagina() {
   const { heeftNiveau } = useBevoegdheid();
+  const { rol } = useRol();
   const { id } = useParams<{ id: string }>();
   const opdrachtId = parseInt(id ?? "0", 10);
   const qc = useQueryClient();
@@ -854,6 +857,15 @@ export default function OpdrachtDetailPagina() {
             <p className="text-xl font-semibold">{uren(nacalculatie?.verbruikte_uren)}</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* AKKOORD_01 — akkoordpoort */}
+      <div className="print:hidden">
+        <AkkoordKaart
+          opdrachtId={opdrachtId}
+          kanSchrijven={heeftNiveau("projecten", 3)}
+          isHoofdbeheerder={rol === "hoofdbeheerder"}
+        />
       </div>
 
       {/* AI-projectcontroller */}

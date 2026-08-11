@@ -19,6 +19,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
 import { handelHerkomstAf } from "../lib/werkbakService";
 import { maakConceptInkoopbon } from "../lib/inkoopbonService";
+import { GeenAkkoordFout } from "../lib/akkoordPoort";
 import { kenmerkVoorProjectinkoop } from "../lib/kenmerk";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
@@ -504,6 +505,15 @@ router.patch("/materiaal-aanvragen/:id", niveauInzienEnBehandelen, async (req, r
   } catch (err) {
     if (err instanceof BonClaimConflict) {
       return void res.status(409).json({ error: "Aanvraag is intussen door iemand anders goedgekeurd; ververs en probeer opnieuw" });
+    }
+    if (err instanceof GeenAkkoordFout) {
+      // AKKOORD_01 §3.3 (keuze: weigeren, vastgelegd in docs/antwoorden/AKKOORD_01.md):
+      // een materiaal-aanvraag op een opdracht zonder akkoord kan niet worden
+      // goedgekeurd — de hele transactie (statuswijziging incl.) rolt terug.
+      return void res.status(422).json({
+        code: "AKKOORD_ONTBREEKT",
+        error: `Goedkeuren kan nog niet: ${err.message}`,
+      });
     }
     throw err;
   }

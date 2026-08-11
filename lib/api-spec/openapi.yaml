@@ -12523,6 +12523,129 @@ paths:
               schema:
                 $ref: "#/components/schemas/Opdracht"
 
+  /opdrachten/{id}/akkoord:
+    get:
+      operationId: getOpdrachtAkkoord
+      tags: [opdrachten]
+      summary: "AKKOORD_01: akkoordstatus + condities van een opdracht"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtAkkoord"
+    post:
+      operationId: legAkkoordVast
+      tags: [opdrachten]
+      summary: "AKKOORD_01: akkoord vastleggen (grond A/B/C)"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AkkoordVastleggenInput"
+      responses:
+        "201":
+          description: Akkoord vastgelegd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtAkkoord"
+    delete:
+      operationId: trekAkkoordIn
+      tags: [opdrachten]
+      summary: "AKKOORD_01: akkoord intrekken (alleen hoofdbeheerder, met reden)"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reden]
+              properties:
+                reden:
+                  type: string
+      responses:
+        "200":
+          description: Akkoord ingetrokken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtAkkoord"
+
+  /opdrachten/{id}/akkoord/ai-voorstel:
+    post:
+      operationId: akkoordAiVoorstel
+      tags: [opdrachten]
+      summary: "AKKOORD_01 §5: AI leest een opdrachtbevestiging en stelt velden voor (mens bevestigt)"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [document_id]
+              properties:
+                document_id:
+                  type: integer
+      responses:
+        "200":
+          description: Voorstel (niets opgeslagen)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AkkoordAiVoorstel"
+
+  /opdrachten/{id}/condities:
+    patch:
+      operationId: updateOpdrachtCondities
+      tags: [opdrachten]
+      summary: "AKKOORD_01 §4: condities van een opdracht bijwerken"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpdrachtConditiesPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtAkkoord"
+
   /opdrachten/{id}/mandagstaat:
     get:
       operationId: getMandagstaat
@@ -36686,6 +36809,167 @@ components:
         uitvoering_stap_actief:
           type: ["integer", "null"]
           description: "Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)"
+
+    OpdrachtAkkoord:
+      type: object
+      required: [akkoord_grond, akkoord_door_id, akkoord_op, akkoord_document_id, akkoord_herkomst, conditie_betaaltermijn_dagen, conditie_garantietermijn, conditie_meerwerk, conditie_oplevering, conditie_boete_korting, conditie_voorwaarden_set_id, conditie_voorwaarden_tekst]
+      properties:
+        akkoord_grond:
+          type: string
+          nullable: true
+          enum: [ondertekening, opdrachtbevestiging, vrijgave_pl, null]
+        akkoord_door_id:
+          type: integer
+          nullable: true
+        akkoord_op:
+          type: string
+          nullable: true
+        akkoord_document_id:
+          type: integer
+          nullable: true
+        akkoord_herkomst:
+          type: string
+          nullable: true
+        conditie_betaaltermijn_dagen:
+          type: integer
+          nullable: true
+        conditie_garantietermijn:
+          type: string
+          nullable: true
+        conditie_meerwerk:
+          type: string
+          nullable: true
+        conditie_oplevering:
+          type: string
+          nullable: true
+        conditie_boete_korting:
+          type: string
+          nullable: true
+        conditie_voorwaarden_set_id:
+          type: integer
+          nullable: true
+        conditie_voorwaarden_tekst:
+          type: string
+          nullable: true
+
+    AkkoordVastleggenInput:
+      type: object
+      required: [grond]
+      properties:
+        grond:
+          type: string
+          enum: [ondertekening, opdrachtbevestiging, vrijgave_pl]
+        document_id:
+          type: integer
+          nullable: true
+        herkomst:
+          type: string
+          nullable: true
+        condities:
+          type: object
+          properties:
+            betaaltermijn_dagen:
+              type: integer
+              nullable: true
+            garantietermijn:
+              type: string
+              nullable: true
+            meerwerk:
+              type: string
+              nullable: true
+            oplevering:
+              type: string
+              nullable: true
+            boete_korting:
+              type: string
+              nullable: true
+            voorwaarden_set_id:
+              type: integer
+              nullable: true
+            voorwaarden_tekst:
+              type: string
+              nullable: true
+
+    OpdrachtConditiesPatch:
+      type: object
+      properties:
+        betaaltermijn_dagen:
+          type: integer
+          nullable: true
+        garantietermijn:
+          type: string
+          nullable: true
+        meerwerk:
+          type: string
+          nullable: true
+        oplevering:
+          type: string
+          nullable: true
+        boete_korting:
+          type: string
+          nullable: true
+        voorwaarden_set_id:
+          type: integer
+          nullable: true
+        voorwaarden_tekst:
+          type: string
+          nullable: true
+
+    AkkoordAiVoorstel:
+      type: object
+      required: [is_opdrachtbevestiging, voorstel]
+      properties:
+        is_opdrachtbevestiging:
+          type: boolean
+        voorstel:
+          type: object
+          nullable: true
+          required: [opdrachtgever, opdrachtnummer, offerte_referentie, bedrag, bedrag_incl_btw, datum, betaaltermijn_dagen, garantietermijn, meerwerk, oplevering, boete_korting, voorwaarden_tekst, vindplaatsen, onzekere_velden]
+          properties:
+            opdrachtgever:
+              type: string
+              nullable: true
+            opdrachtnummer:
+              type: string
+              nullable: true
+            offerte_referentie:
+              type: string
+              nullable: true
+            bedrag:
+              type: number
+              nullable: true
+            bedrag_incl_btw:
+              type: boolean
+              nullable: true
+            datum:
+              type: string
+              nullable: true
+            betaaltermijn_dagen:
+              type: integer
+              nullable: true
+            garantietermijn:
+              type: string
+              nullable: true
+            meerwerk:
+              type: string
+              nullable: true
+            oplevering:
+              type: string
+              nullable: true
+            boete_korting:
+              type: string
+              nullable: true
+            voorwaarden_tekst:
+              type: string
+              nullable: true
+            vindplaatsen:
+              type: object
+              additionalProperties:
+                type: string
+            onzekere_velden:
+              type: array
+              items:
+                type: string
 
     MaakOpdrachtInput:
       type: object

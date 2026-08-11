@@ -3,10 +3,16 @@ import { gebruikersTable } from "./gebruikers";
 import { gebouwenTable } from "./gebouwen";
 import { projectenTable } from "./projecten";
 import { modCalcHeadersTable } from "./mod-calculatie";
+import { documentenTable } from "./documenten";
+import { offerteVoorwaardenSetsTable } from "./offertes";
 
 // Opdrachten — brug tussen geaccepteerde offerte en uitvoering.
-// Aangemaakt wanneer offerte status "akkoord" of "ondertekend" wordt.
+// Aangemaakt via POST /offertes/:id/maak-opdracht (handmatig, recht offertes:2);
+// er is géén automatisch aanmaakmoment bij ondertekening (AKKOORD_01, gemeten 2026-08-10).
 // Bevat een auto-gegenereerde werkbegroting (project_begrotingen) zonder opslagen/winst.
+//
+// AKKOORD_01: een opdracht is pas "werkbaar" (uren schrijven, inkoopbonnen)
+// als er een vastgelegd akkoord onder ligt — zie lib/akkoordPoort.ts.
 export const opdrachtenTable = pgTable("opdrachten", {
   id: serial("id").primaryKey(),
   offerteId: integer("offerte_id"),
@@ -30,6 +36,27 @@ export const opdrachtenTable = pgTable("opdrachten", {
   // met de factuur moet worden meegestuurd. Standaard uit — niet elke
   // opdrachtgever vraagt erom.
   mandagstaatVereist: boolean("mandagstaat_vereist").notNull().default(false),
+  // ── AKKOORD_01 §2: het akkoord onder de opdracht ─────────────────────────
+  // Drie gelijkwaardige gronden; null = (nog) geen akkoord vastgelegd.
+  // ondertekening | opdrachtbevestiging | vrijgave_pl
+  akkoordGrond: text("akkoord_grond"),
+  akkoordDoorId: integer("akkoord_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  akkoordOp: timestamp("akkoord_op"),
+  // Verplicht bij grond "opdrachtbevestiging": het document van de opdrachtgever.
+  akkoordDocumentId: integer("akkoord_document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  // Verplicht bij grond "vrijgave_pl": waar komt het akkoord vandaan
+  // (mail / telefonisch / mondeling op locatie), met naam en datum.
+  akkoordHerkomst: text("akkoord_herkomst"),
+  // ── AKKOORD_01 §4: condities/voorwaarden die na akkoord vastliggen ───────
+  conditieBetaaltermijnDagen: integer("conditie_betaaltermijn_dagen"),
+  conditieGarantietermijn: text("conditie_garantietermijn"),
+  conditieMeerwerk: text("conditie_meerwerk"),
+  conditieOplevering: text("conditie_oplevering"),
+  conditieBoeteKorting: text("conditie_boete_korting"),
+  // Bron A/C: verwijzing naar de bestaande voorwaardenbibliotheek (geen tweede opslag);
+  // bron B: de tekstuele voorwaarden uit de opdrachtbevestiging.
+  conditieVoorwaardenSetId: integer("conditie_voorwaarden_set_id").references(() => offerteVoorwaardenSetsTable.id, { onDelete: "set null" }),
+  conditieVoorwaardenTekst: text("conditie_voorwaarden_tekst"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

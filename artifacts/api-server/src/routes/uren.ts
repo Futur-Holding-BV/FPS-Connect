@@ -27,6 +27,7 @@ import { vindGebruikersMetFunctietitel, meldAanWerkvoorbereiderMetCcProjectleide
 
 import { berekenAdvVoorMedewerker, overwerkGrens } from "../lib/caoInstellingen";
 import { meldWerkbakItem } from "../lib/werkbakService";
+import { heeftAkkoord } from "../lib/akkoordPoort";
 
 const router = Router();
 
@@ -151,6 +152,9 @@ class OverwerkGeweigerd extends Error {
 
 // Uurcode-weigering vanuit de PATCH-transactie (rolt alles terug → 400 buiten de tx).
 class UurcodeGeweigerd extends Error {}
+
+// AKKOORD_01 §3.1: akkoord-weigering vanuit de PATCH-transactie (→ 422 buiten de tx).
+class AkkoordGeweigerd extends Error {}
 
 async function toetsOverwerkSlot(opts: {
   medewerkerId: number;
@@ -764,6 +768,15 @@ router.post("/uren", requireAuth, async (req, res): Promise<void> => {
     return void res.status(400).json({ code: "UURCODE_VEREIST", error: uurcodeToets.fout });
   }
 
+  // AKKOORD_01 §3.1: geen uren op een opdracht zonder vastgelegd akkoord.
+  // Uren zónder opdracht blijven bewust toegestaan (§3.2: alleen meten).
+  if (uurcodeOpdrachtId != null) {
+    const akkoord = await heeftAkkoord(uurcodeOpdrachtId);
+    if (!akkoord.akkoord) {
+      return void res.status(422).json({ code: "AKKOORD_ONTBREEKT", error: akkoord.melding });
+    }
+  }
+
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   let mid: number;
 
@@ -1002,6 +1015,18 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
       if (!patchUurcodeToets.ok) {
         throw new UurcodeGeweigerd(patchUurcodeToets.fout ?? "Uurcode vereist");
       }
+      // AKKOORD_01 §3.1: ook een wijziging die de rij aan een opdracht
+      // (her)koppelt moet langs de akkoordpoort. Bestond de koppeling al en
+      // wijzigt hij niet, dan blijft de rij ongemoeid — de poort geldt bij
+      // het aangaan van de verplichting, niet met terugwerkende kracht.
+      if (patchOpdrachtId != null && patchOpdrachtId !== vers.opdrachtId) {
+        // Binnen de transactie toetsen (reviewpunt): anders kan een gelijktijdige
+        // intrekking tussen de check en de schrijfactie vallen.
+        const akkoord = await heeftAkkoord(patchOpdrachtId, tx);
+        if (!akkoord.akkoord) {
+          throw new AkkoordGeweigerd(akkoord.melding);
+        }
+      }
       patchNietInBegrotingNieuw = patchUurcode.nietInBegroting && !vers.nietInBegroting;
       patchOpdrachtIdVoorMelding = patchOpdrachtId;
       patchOmschrijvingVoorMelding = patchUurcode.nietInBegrotingOmschrijving;
@@ -1118,6 +1143,9 @@ router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
     }
     if (e instanceof UurcodeGeweigerd) {
       return void res.status(400).json({ code: "UURCODE_VEREIST", error: e.message });
+    }
+    if (e instanceof AkkoordGeweigerd) {
+      return void res.status(422).json({ code: "AKKOORD_ONTBREEKT", error: e.message });
     }
     if (e instanceof Error && e.message === "VERDWENEN") {
       return void res.status(404).json({ error: "Niet gevonden" });

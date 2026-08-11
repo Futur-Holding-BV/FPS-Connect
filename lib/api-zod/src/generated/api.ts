@@ -15143,6 +15143,146 @@ export const UpdateOpdrachtResponse = zod.object({
 
 
 /**
+ * @summary AKKOORD_01: akkoordstatus + condities van een opdracht
+ */
+export const GetOpdrachtAkkoordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOpdrachtAkkoordResponse = zod.object({
+  "akkoord_grond": zod.union([zod.literal('ondertekening'),zod.literal('opdrachtbevestiging'),zod.literal('vrijgave_pl'),zod.literal(null)]).nullable(),
+  "akkoord_door_id": zod.number().nullable(),
+  "akkoord_op": zod.string().nullable(),
+  "akkoord_document_id": zod.number().nullable(),
+  "akkoord_herkomst": zod.string().nullable(),
+  "conditie_betaaltermijn_dagen": zod.number().nullable(),
+  "conditie_garantietermijn": zod.string().nullable(),
+  "conditie_meerwerk": zod.string().nullable(),
+  "conditie_oplevering": zod.string().nullable(),
+  "conditie_boete_korting": zod.string().nullable(),
+  "conditie_voorwaarden_set_id": zod.number().nullable(),
+  "conditie_voorwaarden_tekst": zod.string().nullable()
+})
+
+
+/**
+ * @summary AKKOORD_01: akkoord vastleggen (grond A/B/C)
+ */
+export const LegAkkoordVastParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const LegAkkoordVastBody = zod.object({
+  "grond": zod.enum(['ondertekening', 'opdrachtbevestiging', 'vrijgave_pl']),
+  "document_id": zod.number().nullish(),
+  "herkomst": zod.string().nullish(),
+  "condities": zod.object({
+  "betaaltermijn_dagen": zod.number().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "meerwerk": zod.string().nullish(),
+  "oplevering": zod.string().nullish(),
+  "boete_korting": zod.string().nullish(),
+  "voorwaarden_set_id": zod.number().nullish(),
+  "voorwaarden_tekst": zod.string().nullish()
+}).optional()
+})
+
+export const LegAkkoordVastResponse = zod.void()
+
+
+/**
+ * @summary AKKOORD_01: akkoord intrekken (alleen hoofdbeheerder, met reden)
+ */
+export const TrekAkkoordInParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const TrekAkkoordInBody = zod.object({
+  "reden": zod.string()
+})
+
+export const TrekAkkoordInResponse = zod.object({
+  "akkoord_grond": zod.union([zod.literal('ondertekening'),zod.literal('opdrachtbevestiging'),zod.literal('vrijgave_pl'),zod.literal(null)]).nullable(),
+  "akkoord_door_id": zod.number().nullable(),
+  "akkoord_op": zod.string().nullable(),
+  "akkoord_document_id": zod.number().nullable(),
+  "akkoord_herkomst": zod.string().nullable(),
+  "conditie_betaaltermijn_dagen": zod.number().nullable(),
+  "conditie_garantietermijn": zod.string().nullable(),
+  "conditie_meerwerk": zod.string().nullable(),
+  "conditie_oplevering": zod.string().nullable(),
+  "conditie_boete_korting": zod.string().nullable(),
+  "conditie_voorwaarden_set_id": zod.number().nullable(),
+  "conditie_voorwaarden_tekst": zod.string().nullable()
+})
+
+
+/**
+ * @summary AKKOORD_01 §5: AI leest een opdrachtbevestiging en stelt velden voor (mens bevestigt)
+ */
+export const AkkoordAiVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AkkoordAiVoorstelBody = zod.object({
+  "document_id": zod.number()
+})
+
+export const AkkoordAiVoorstelResponse = zod.object({
+  "is_opdrachtbevestiging": zod.boolean(),
+  "voorstel": zod.object({
+  "opdrachtgever": zod.string().nullable(),
+  "opdrachtnummer": zod.string().nullable(),
+  "offerte_referentie": zod.string().nullable(),
+  "bedrag": zod.number().nullable(),
+  "bedrag_incl_btw": zod.boolean().nullable(),
+  "datum": zod.string().nullable(),
+  "betaaltermijn_dagen": zod.number().nullable(),
+  "garantietermijn": zod.string().nullable(),
+  "meerwerk": zod.string().nullable(),
+  "oplevering": zod.string().nullable(),
+  "boete_korting": zod.string().nullable(),
+  "voorwaarden_tekst": zod.string().nullable(),
+  "vindplaatsen": zod.record(zod.string(), zod.string()),
+  "onzekere_velden": zod.array(zod.string())
+}).nullable()
+})
+
+
+/**
+ * @summary AKKOORD_01 §4: condities van een opdracht bijwerken
+ */
+export const UpdateOpdrachtConditiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOpdrachtConditiesBody = zod.object({
+  "betaaltermijn_dagen": zod.number().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "meerwerk": zod.string().nullish(),
+  "oplevering": zod.string().nullish(),
+  "boete_korting": zod.string().nullish(),
+  "voorwaarden_set_id": zod.number().nullish(),
+  "voorwaarden_tekst": zod.string().nullish()
+})
+
+export const UpdateOpdrachtConditiesResponse = zod.object({
+  "akkoord_grond": zod.union([zod.literal('ondertekening'),zod.literal('opdrachtbevestiging'),zod.literal('vrijgave_pl'),zod.literal(null)]).nullable(),
+  "akkoord_door_id": zod.number().nullable(),
+  "akkoord_op": zod.string().nullable(),
+  "akkoord_document_id": zod.number().nullable(),
+  "akkoord_herkomst": zod.string().nullable(),
+  "conditie_betaaltermijn_dagen": zod.number().nullable(),
+  "conditie_garantietermijn": zod.string().nullable(),
+  "conditie_meerwerk": zod.string().nullable(),
+  "conditie_oplevering": zod.string().nullable(),
+  "conditie_boete_korting": zod.string().nullable(),
+  "conditie_voorwaarden_set_id": zod.number().nullable(),
+  "conditie_voorwaarden_tekst": zod.string().nullable()
+})
+
+
+/**
  * Genereert server-side de mandagstaat-PDF met per medewerker de dagelijkse (goedgekeurde) uren, naam, geboortedatum en BSN. Autorisatie via de centrale policy: opdracht.mandagstaat_vereist moet true zijn (anders 422), klant nooit, personeel niveau ≥ 2 én toegang tot de opdracht/het gebouw. Alleen goedgekeurde uren tellen mee; zijn die er niet, dan 422.
  * @summary Mandagstaat-PDF voor een opdracht + ISO-week (UREN_01 §6c)
  */
