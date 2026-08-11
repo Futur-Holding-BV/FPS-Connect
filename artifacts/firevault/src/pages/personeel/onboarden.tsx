@@ -2582,6 +2582,23 @@ function AccountStap({
     heeftMedewerkerprofiel: boolean;
   } | null>(null);
 
+  // Rechten-preview bij het gekozen profiel (zelfde stijl als de preview bij de
+  // functiekeuze verderop in de wizard), zodat de invoerder direct ziet welke
+  // module-rechten dit profiel geeft.
+  const gekozenProfiel = useMemo(() => {
+    if (profielId === "geen") return null;
+    return (profielen ?? []).find((p) => p.id === Number(profielId)) ?? null;
+  }, [profielId, profielen]);
+  const profielRechten = useMemo(() => {
+    const bev = gekozenProfiel?.bevoegdheden as Record<string, number> | null | undefined;
+    if (!bev) return [];
+    return MODULES.filter((m) => (bev[m.id] ?? 0) > 0).map((m) => ({
+      id: m.id,
+      label: m.label,
+      niveau: bev[m.id],
+    }));
+  }, [gekozenProfiel]);
+
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
     setFout(null);
@@ -2676,10 +2693,31 @@ function AccountStap({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Koppel direct een rechtenprofiel zodat de medewerker meteen bij de juiste modules kan.
-                Zonder keuze volgen de rechten later uit het standaardprofiel van de gekozen functie.
-              </p>
+              {gekozenProfiel ? (
+                <div className="rounded-md border bg-muted/30 px-4 py-3 space-y-2" data-testid="blok-profiel-rechten">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Rechten bij dit profiel</span>
+                  </div>
+                  {profielRechten.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {profielRechten.map((r) => (
+                        <Badge key={r.id} variant="secondary" className="text-xs font-normal">
+                          {r.label}
+                          <span className="ml-1 text-muted-foreground">{niveauKort(r.niveau)}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Koppel direct een rechtenprofiel zodat de medewerker meteen bij de juiste modules kan.
+                  Zonder keuze volgen de rechten later uit het standaardprofiel van de gekozen functie.
+                </p>
+              )}
             </div>
             <label className="flex items-start gap-2 cursor-pointer">
               <Checkbox checked={uitnodigen} onCheckedChange={(v) => setUitnodigen(v === true)} className="mt-0.5" />
