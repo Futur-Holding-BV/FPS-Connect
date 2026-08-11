@@ -3,15 +3,21 @@
 // laat het akkoord vastleggen, condities bijwerken en (hoofdbeheerder)
 // intrekken. AI leest een opdrachtbevestiging en stelt velden voor met
 // vindplaats — de mens bevestigt (voorstellen-dan-bevestigen).
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import {
   useGetOpdrachtAkkoord,
   useLegAkkoordVast,
   useTrekAkkoordIn,
   useUpdateOpdrachtCondities,
   useAkkoordAiVoorstel,
+  useListDocumenten,
   getGetOpdrachtAkkoordQueryKey,
+  getListDocumentenQueryKey,
 } from "@workspace/api-client-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import type { OpdrachtAkkoord, AkkoordVastleggenInputGrond } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +63,21 @@ export function AkkoordKaart({ opdrachtId, kanSchrijven, isHoofdbeheerder }: {
   const [open, setOpen] = useState(false);
   const [intrekOpen, setIntrekOpen] = useState(false);
   const [reden, setReden] = useState("");
+
+  // AKKOORD_01 §5: doorschakeling vanuit Slim Upload/Inbox — een zojuist
+  // gearchiveerde opdrachtbevestiging staat in ?akkoord_document=<id>. Open dan
+  // direct het vastleggen-dialoog met grond B en dat document voorgeselecteerd.
+  const zoekParams = useSearch();
+  const akkoordDocParam = (() => {
+    const raw = new URLSearchParams(zoekParams).get("akkoord_document");
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const heeftAkkoordNu = !!akkoord?.akkoord_grond;
+  useEffect(() => {
+    if (akkoordDocParam && akkoord && !heeftAkkoordNu && kanSchrijven) setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [akkoordDocParam, !!akkoord]);
 
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: getGetOpdrachtAkkoordQueryKey(opdrachtId) });
@@ -119,6 +140,7 @@ export function AkkoordKaart({ opdrachtId, kanSchrijven, isHoofdbeheerder }: {
       {open && (
         <AkkoordVastleggenDialog
           opdrachtId={opdrachtId}
+          initieelDocumentId={akkoordDocParam}
           onClose={() => setOpen(false)}
           onDone={() => { invalidate(); setOpen(false); }}
         />
@@ -170,12 +192,19 @@ function foutTekst(e: unknown): string {
   return r?.response?.data?.error ?? "Onbekende fout";
 }
 
-function AkkoordVastleggenDialog({ opdrachtId, onClose, onDone }: {
-  opdrachtId: number; onClose: () => void; onDone: () => void;
+function AkkoordVastleggenDialog({ opdrachtId, initieelDocumentId, onClose, onDone }: {
+  opdrachtId: number; initieelDocumentId?: number | null; onClose: () => void; onDone: () => void;
 }) {
   const { toast } = useToast();
   const [grond, setGrond] = useState<AkkoordVastleggenInputGrond>("opdrachtbevestiging");
-  const [documentId, setDocumentId] = useState("");
+  const [documentId, setDocumentId] = useState(initieelDocumentId ? String(initieelDocumentId) : "");
+
+  // Grond B-bewijs: alleen documenten die als opdrachtbevestiging in de
+  // bibliotheek staan (de server dwingt dit ook af — fail-closed).
+  const docParams = { documenttype: "opdrachtbevestiging" as const };
+  const { data: bevestigingsDocs, isLoading: docsLaden } = useListDocumenten(docParams, {
+    query: { queryKey: getListDocumentenQueryKey(docParams), enabled: true },
+  });
   const [herkomst, setHerkomst] = useState("");
   const [condities, setCondities] = useState<Record<ConditieVeld, string>>({
     betaaltermijn_dagen: "", garantietermijn: "", meerwerk: "",
@@ -261,9 +290,22 @@ function AkkoordVastleggenDialog({ opdrachtId, onClose, onDone }: {
 
           {grond === "opdrachtbevestiging" && (
             <div className="space-y-1.5">
-              <Label>Document-ID van de opdrachtbevestiging</Label>
+              <Label>Opdrachtbevestiging (uit de documentbibliotheek)</Label>
               <div className="flex gap-2">
-                <Input value={documentId} onChange={(e) => setDocumentId(e.target.value)} placeholder="bv. 123 (uit de documentbibliotheek)" />
+                <Select value={documentId} onValueChange={setDocumentId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={docsLaden ? "Documenten laden…" : "Kies opdrachtbevestiging…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(bevestigingsDocs ?? [])
+                      .filter((d) => !d.gearchiveerd)
+                      .map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>
+                          {d.naam} (#{d.id})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   type="button" variant="outline" size="sm" className="shrink-0"
                   disabled={isNaN(docIdNum) || aiVoorstel.isPending}
@@ -273,6 +315,13 @@ function AkkoordVastleggenDialog({ opdrachtId, onClose, onDone }: {
                   {aiVoorstel.isPending ? "Analyseren…" : "AI-voorstel"}
                 </Button>
               </div>
+              {!docsLaden && (bevestigingsDocs ?? []).filter((d) => !d.gearchiveerd).length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Er staan nog geen opdrachtbevestigingen in de bibliotheek. Upload het document
+                  van de opdrachtgever via Slim Upload — de AI herkent het en biedt direct de
+                  koppeling naar deze akkoordpoort aan.
+                </p>
+              )}
             </div>
           )}
 

@@ -10,3 +10,4 @@ Een untracked `artifacts/monteur-app/.env` met `EXPO_PUBLIC_DOMAIN=<oud domein>`
 **Herbevestigd (11 aug 2026):** bestand dook opnieuw op (datum 22 jun) en brak e2e-menu 2x in validatie; `rm` maakte de run direct groen.
 
 **3e recidive (11 aug 2026, later op de dag):** zelfde bestand (mtime 22 jun) brak e2e-menu opnieuw 3x in taakvalidatie; `rm` → direct groen. Iets herschept dit bestand of git-checkout brengt het terug — bij elke e2e-menu-faal op login éérst `ls artifacts/monteur-app/.env` checken.
+**4e recidive (11 aug 2026, taak-900-validatie):** zelfde stale bestand brak e2e-menu opnieuw; `rm` → direct groen. Bij elke e2e-menu login-faal standaard eerst `rm artifacts/monteur-app/.env`.

@@ -14,6 +14,7 @@ export const TYPE_LABELS: Record<string, string> = {
   tekening: "Tekening",
   contract: "Contract",
   verzekering: "Verzekering",
+  opdrachtbevestiging: "Opdrachtbevestiging",
   overig: "Overig",
 };
 

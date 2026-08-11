@@ -34,6 +34,7 @@ const TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.tekening]: "Tekening",
   [DocumentType.contract]: "Contract",
   [DocumentType.verzekering]: "Verzekering",
+  [DocumentType.opdrachtbevestiging]: "Opdrachtbevestiging",
   [DocumentType.overig]: "Overig",
 };
 

@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-import { useListMedewerkers, useListGebouwen, useListWerkgevers } from "@workspace/api-client-react";
+import { useListMedewerkers, useListGebouwen, useListWerkgevers, useListOpdrachten, getListOpdrachtenQueryKey } from "@workspace/api-client-react";
 import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
@@ -29,6 +29,7 @@ type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
   | "personeelsdocument" | "verzekering" | "snagstream" | "jaarrekening" | "contract"
+  | "opdrachtbevestiging"
   | "prijslijst" | "adviesrapport" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
@@ -270,6 +271,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
   jaarrekening:      { label: "Jaarrekeningen (archief)",      icoon: <Archive className="h-4 w-4" />,      pad: "/documenten",  kleur: "bg-slate-50 text-slate-700 border-slate-200",     omschrijving: "Jaarrekening, jaarverslag of accountantsverklaring" },
   contract:          { label: "Contracten",                    icoon: <FileText className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-lime-50 text-lime-700 border-lime-200",        omschrijving: "Commerciële overeenkomst met klant of leverancier" },
+  opdrachtbevestiging: { label: "Opdrachtbevestiging → akkoord", icoon: <FileCheck className="h-4 w-4" />,   pad: "",             kleur: "bg-emerald-50 text-emerald-700 border-emerald-200", omschrijving: "Opdrachtbevestiging van de opdrachtgever — koppelbaar als grond B-akkoordbewijs op een opdracht" },
   prijslijst:        { label: "Prijslijsten (leverancier)",     icoon: <Package className="h-4 w-4" />,      pad: "",             kleur: "bg-emerald-50 text-emerald-700 border-emerald-200", omschrijving: "Jaarprijzen / nettoprijslijst van een leverancier — wordt gearchiveerd én ingelezen als prijsafspraken" },
   adviesrapport:     { label: "Adviesrapport → calculatie",     icoon: <ClipboardList className="h-4 w-4" />, pad: "",            kleur: "bg-amber-50 text-amber-700 border-amber-200",     omschrijving: "Adviesrapport met genummerde punten — wordt gearchiveerd én ingelezen om een calculatie in te richten" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
@@ -414,6 +416,8 @@ function BeslisScherm({
   const [aanvraagWerkmaatschappijId, setAanvraagWerkmaatschappijId] = useState("");
   const [aanvraagGebouwId, setAanvraagGebouwId] = useState("");
   const [aanvraagBezig, setAanvraagBezig] = useState(false);
+  const [gekozenOpdrachtId, setGekozenOpdrachtId] = useState("");
+  const [obBezig, setObBezig] = useState(false);
   const { data: medewerkerLijst } = useListMedewerkers();
   const { data: werkgeversLijst } = useListWerkgevers();
   const { data: gebouwenLijst } = useListGebouwen();
@@ -423,6 +427,16 @@ function BeslisScherm({
 
   const { suggestie, fout, status } = item;
   const effectiefeCat = item.gekozenCategorie ?? suggestie?.categorie ?? "algemeen";
+
+  // AKKOORD_01 §5: opdrachtbevestiging direct koppelen als grond B-akkoordbewijs.
+  // Akkoord vastleggen vereist projecten-niveau 3 (server-side afgedwongen).
+  const magAkkoordKoppelen = heeftNiveau("projecten", 3);
+  const { data: opdrachtenLijst } = useListOpdrachten(undefined, {
+    query: {
+      queryKey: getListOpdrachtenQueryKey(),
+      enabled: effectiefeCat === "opdrachtbevestiging" && magAkkoordKoppelen,
+    },
+  });
   const catInfo = CATEGORIE_INFO[effectiefeCat];
 
   // Zonder schrijfrecht personeel (niveau 2) valt een CV terug op de standaard
@@ -524,6 +538,52 @@ function BeslisScherm({
       toast({ title: "Verbindingsfout", description: "Controleer uw internetverbinding.", variant: "destructive" });
     } finally {
       setAanvraagBezig(false);
+    }
+  }
+
+  // AKKOORD_01 §5: archiveer de opdrachtbevestiging en schakel door naar de
+  // akkoordpoort van de gekozen opdracht. Het akkoord zelf wordt dáár vastgelegd
+  // (voorstellen-dan-bevestigen; POST /opdrachten/:id/akkoord blijft de enige weg).
+  async function verzendOpdrachtbevestiging(koppelen: boolean) {
+    if (obBezig) return;
+    setObBezig(true);
+    try {
+      const { ok, status: st, documentId, foutmelding } = await uploadOpdrachtbevestiging(item.bestand, item.toelichting);
+      if (!ok) {
+        toast({
+          title: "Opslaan mislukt",
+          description: st === 401 || st === 403
+            ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
+            : foutmelding ?? `${item.bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      onLogActie?.({
+        bestandsnaam: item.bestand.name,
+        categorie: effectiefeCat,
+        actie: koppelen ? "opdrachtbevestiging_gekoppeld" : "opdrachtbevestiging_gearchiveerd",
+        impactNiveau,
+        bevestigd: true,
+        geweigerd: false,
+      });
+      onBevestigen(effectiefeCat);
+      if (koppelen && gekozenOpdrachtId && documentId != null) {
+        toast({
+          title: "Opdrachtbevestiging gearchiveerd",
+          description: "Controleer en bevestig het akkoord op de opdrachtpagina.",
+        });
+        setTimeout(() => onNavigeer?.(`/opdrachten/${gekozenOpdrachtId}?akkoord_document=${documentId}`), 300);
+      } else {
+        toast({
+          title: "Opgeslagen in Documenten",
+          description: `${item.bestand.name} staat als opdrachtbevestiging in de bibliotheek en is later te koppelen via de akkoordkaart van een opdracht.`,
+        });
+      }
+    } catch {
+      toast({ title: "Verbindingsfout", description: "Controleer uw internetverbinding.", variant: "destructive" });
+    } finally {
+      setObBezig(false);
     }
   }
 
@@ -865,8 +925,73 @@ function BeslisScherm({
         </div>
       )}
 
+      {/* AKKOORD_01 §5: opdrachtbevestiging → koppelen als grond B-akkoordbewijs */}
+      {effectiefeCat === "opdrachtbevestiging" && magUploaden && (
+        <div className="space-y-2 rounded border border-emerald-200 bg-emerald-50/40 p-3">
+          <p className="text-xs font-medium text-foreground">Koppelen als akkoordbewijs (grond B)</p>
+          {(suggestie?.organisatie || suggestie?.gevonden_gegevens?.opdrachtnummer || suggestie?.gevonden_gegevens?.offerte_referentie) && (
+            <p className="text-xs text-muted-foreground">
+              AI herkend:{" "}
+              <span className="font-medium">
+                {[
+                  suggestie?.organisatie,
+                  suggestie?.gevonden_gegevens?.opdrachtnummer ? `opdrachtnr. ${suggestie.gevonden_gegevens.opdrachtnummer}` : null,
+                  suggestie?.gevonden_gegevens?.offerte_referentie ? `offerte ${suggestie.gevonden_gegevens.offerte_referentie}` : null,
+                ].filter(Boolean).join(" — ")}
+              </span>
+            </p>
+          )}
+          {magAkkoordKoppelen ? (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Opdracht</label>
+                <Select value={gekozenOpdrachtId} onValueChange={setGekozenOpdrachtId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Kies opdracht..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(opdrachtenLijst ?? []).map((o) => (
+                      <SelectItem key={o.id} value={String(o.id)} className="text-xs">
+                        {[o.werknummer, o.titel].filter(Boolean).join(" — ") || `Opdracht #${o.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                className="w-full gap-1.5"
+                disabled={!gekozenOpdrachtId || obBezig || (vereistBevestiging && !bevestigdAkkoord)}
+                onClick={() => void verzendOpdrachtbevestiging(true)}
+              >
+                <BadgeCheck className="h-3.5 w-3.5" />
+                {obBezig ? "Verwerken..." : "Archiveer en koppel als akkoordbewijs"}
+              </Button>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Het document wordt gearchiveerd; daarna bevestigt u het akkoord op de opdrachtpagina
+                (grond B staat dan al klaar met dit document).
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              U heeft geen recht om een akkoord vast te leggen (projecten, niveau 3). Het document
+              wordt wel als opdrachtbevestiging gearchiveerd en kan later gekoppeld worden.
+            </p>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            disabled={obBezig || (vereistBevestiging && !bevestigdAkkoord)}
+            onClick={() => void verzendOpdrachtbevestiging(false)}
+          >
+            Alleen archiveren in Documenten
+          </Button>
+        </div>
+      )}
+
       {/* Bevestigknop */}
-      {magUploaden && !isCV && effectiefeCat !== "aanvraag" && (
+      {magUploaden && !isCV && effectiefeCat !== "aanvraag" && effectiefeCat !== "opdrachtbevestiging" && (
         <Button
           size="sm"
           className="w-full gap-1.5"
@@ -1075,6 +1200,39 @@ async function uploadAdviesrapport(
       const body = (await res.json()) as { error?: string; doorschakeling?: { document_id?: number } };
       if (res.ok) {
         documentId = typeof body.doorschakeling?.document_id === "number" ? body.doorschakeling.document_id : null;
+      } else {
+        foutmelding = typeof body.error === "string" ? body.error : null;
+      }
+    } catch { /* geen JSON-body */ }
+    return { ok: res.ok, status: res.status, documentId, foutmelding };
+  } catch {
+    return { ok: false, status: 0, documentId: null, foutmelding: null };
+  }
+}
+
+// AKKOORD_01 §5: archiveer de opdrachtbevestiging in de bibliotheek (documenttype
+// "opdrachtbevestiging") en lees het document_id uit het antwoord, zodat de
+// frontend kan doorschakelen naar de akkoordpoort van de gekozen opdracht.
+async function uploadOpdrachtbevestiging(
+  bestand: File,
+  toelichting?: string,
+): Promise<{ ok: boolean; status: number; documentId: number | null; foutmelding: string | null }> {
+  try {
+    const form = new FormData();
+    form.append("bestand", bestand);
+    form.append("categorie", "opdrachtbevestiging");
+    if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
+    const res = await fetch("/api/documenten/aanleveren", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    let documentId: number | null = null;
+    let foutmelding: string | null = null;
+    try {
+      const body = (await res.json()) as { error?: string; id?: number };
+      if (res.ok) {
+        documentId = typeof body.id === "number" ? body.id : null;
       } else {
         foutmelding = typeof body.error === "string" ? body.error : null;
       }
@@ -1331,9 +1489,10 @@ export function SlimUploadBalk() {
     voegRecentToe(recentItem);
     herlaadRecente();
 
-    if (cat === "aanvraag") {
-      // De BeslisScherm heeft de aanvraag al verwerkt via POST /inbox/offerte-aanvraag.
-      // Geen extra upload naar de documentbibliotheek nodig.
+    if (cat === "aanvraag" || cat === "opdrachtbevestiging") {
+      // De BeslisScherm heeft dit al verwerkt (aanvraag via POST /inbox/offerte-aanvraag,
+      // opdrachtbevestiging via /documenten/aanleveren + doorschakeling naar de
+      // akkoordpoort). Geen extra upload naar de documentbibliotheek nodig.
       setQueue((prev) =>
         prev.map((i) => i.id === itemId ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
       );

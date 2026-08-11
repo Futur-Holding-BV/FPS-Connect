@@ -33207,7 +33207,7 @@ components:
 
     DocumentType:
       type: string
-      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad, opleverrapport, tekening, contract, verzekering, overig]
+      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad, opleverrapport, tekening, contract, verzekering, opdrachtbevestiging, overig]
 
     DocumentAanleverenInput:
       type: object

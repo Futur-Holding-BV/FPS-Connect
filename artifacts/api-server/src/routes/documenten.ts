@@ -59,6 +59,9 @@ const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
   // PRIJS_01 §4: prijslijsten worden wél in de bibliotheek gearchiveerd (anders
   // dan jaarrekeningen), maar de tabelinhoud gaat via de importstroom naar
   // prijsafspraken. Er is geen eigen DocumentType, dus "overig".
+  // AKKOORD_01 §5: opdrachtbevestiging behoudt haar eigen documenttype zodat
+  // ze als grond B-akkoordbewijs aan een opdracht gekoppeld kan worden.
+  opdrachtbevestiging: "opdrachtbevestiging",
   prijslijst: "overig",
   // ADVIES_01 §4.1: het adviesrapport wordt gearchiveerd in de bibliotheek; de
   // inhoud gaat via de doorschakeling door naar "calculatie-inrichten". Geen eigen

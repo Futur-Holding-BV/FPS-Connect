@@ -13,3 +13,5 @@ Eén poortfunctie `heeftAkkoord()` (lib/akkoordPoort.ts) — nooit een tweede ei
 - Intrekken = hoofdbeheerder + reden; uren zonder opdracht blijven bewust toegestaan (§3.2 alleen meten, endpoint /metingen/akkoord01).
 
 **Why:** architect-review wees uit dat een poort die alleen op "grond niet null" toetst met ongeldig/legacy DB-bewijs te openen is.
+
+**Inbox-koppeling (task-900, aug 2026):** documenttype "opdrachtbevestiging" bestaat nu echt (DOCUMENT_TYPES + OpenAPI-enum); Slim Upload archiveert via /documenten/aanleveren en schakelt door naar /opdrachten/:id?akkoord_document=<id>; de akkoordkaart opent dan het dialoog met grond B + document voorgeselecteerd. Akkoord schrijven blijft uitsluitend via POST /opdrachten/:id/akkoord.

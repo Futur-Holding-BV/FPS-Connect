@@ -29,6 +29,9 @@ export const DOCUMENT_TYPES = [
   "tekening",
   "contract",
   "verzekering",
+  // AKKOORD_01 §5: opdrachtbevestiging van de opdrachtgever — dient als grond
+  // B-akkoordbewijs op een opdracht (POST /opdrachten/:id/akkoord).
+  "opdrachtbevestiging",
   "overig",
 ] as const;
 

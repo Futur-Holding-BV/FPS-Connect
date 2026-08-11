@@ -21,5 +21,6 @@ export const DocumentType = {
   tekening: 'tekening',
   contract: 'contract',
   verzekering: 'verzekering',
+  opdrachtbevestiging: 'opdrachtbevestiging',
   overig: 'overig',
 } as const;

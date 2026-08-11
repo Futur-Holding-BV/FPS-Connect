@@ -46,8 +46,10 @@ const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
   snagstream: "snagstream_rapport",
   jaarrekening: "jaarrekening",
   contract: "contract",
-  // AKKOORD_01 §5: opdrachtbevestiging hoort bij het project/de opdracht.
-  opdrachtbevestiging: "project_document",
+  // AKKOORD_01 §5: opdrachtbevestiging behoudt een eigen inbox-categorie zodat
+  // ze herkenbaar blijft als koppelbaar grond B-akkoordbewijs (niet te
+  // verwarren met een aanvraag, die ook "project_document" zou zijn).
+  opdrachtbevestiging: "opdrachtbevestiging",
   prijslijst: "prijslijst",
   adviesrapport: "adviesrapport",
   bibliotheek: "product_certificaat",
@@ -70,6 +72,7 @@ function opslagSubPath(categorie: string, bestandsnaam: string): string {
     oplevering_rapport: "algemeen/inbox/opleveringen",
     contract:           "algemeen/inbox/contracten",
     jaarrekening:       "algemeen/inbox/jaarrekeningen",
+    opdrachtbevestiging: "algemeen/inbox/opdrachtbevestigingen",
     email:              "algemeen/inbox/emails",
   };
   const dir = map[categorie] ?? "algemeen/inbox/overig";
