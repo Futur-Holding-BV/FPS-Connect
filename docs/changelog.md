@@ -3239,6 +3239,12 @@ Bij het goedkeuren van een materiaal-aanvraag wordt in dezelfde transactie autom
 
 Wie in de accountstap al een rechtenprofiel koos en daarna een functie met een eigen standaardprofiel selecteert, zag nergens dat de effectieve rechten additief ruimer worden. `GET /medewerkers/onboarding-context/:gebruikerId` geeft nu ook `account_profiel_id` en `account_profiel_naam` terug (uit `gebruikers.herkomst_profiel_id`, opgezocht in profielen). De functiestap van de onboarding-wizard toont bij een gekozen functie mét standaardprofiel een amberkleurige melding: "dit account heeft al profiel X; de functie-rechten komen daar additief bovenop — per module geldt het hoogste niveau". Geen enkele wijziging in de rechtenberekening zelf. Bewijs: `scripts/src/bewijs-onboarding-context-profiel.ts` (ingelogde dev-API: wegwerpgebruiker met herkomst_profiel_id → context bevat correct profiel-id en -naam).
 
+
+## 2026-08-11 — AKKOORD_01: HTTP-bewijs inkooppoort via echte materiaal-goedkeuringsflow
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen bewijsscript uitgebreid, geen productiecode gewijzigd)
+
+`scripts/src/bewijs-akkoord01.ts` dekte de urenpoort en het akkoord-CRUD via HTTP, maar de inkooppoort (`maakConceptInkoopbon`) was alleen per code-review gedekt. Het script bewijst nu ook de echte goedkeuringsflow: materiaal-aanvraag aanmaken via `POST /materiaal-aanvragen`, goedkeuren zonder akkoord → 422 `AKKOORD_ONTBREEKT` mét rollback-bewijs (aanvraag blijft "nieuw", geen wees-inkoopbon in de DB), daarna akkoord vastleggen (grond C) en opnieuw goedkeuren → 200 mét concept-inkoopbon (status `concept`, juiste opdracht+offerte, aanvraag gekoppeld via `inkoopbonId`). Resultaat: 28/28 controles groen tegen de draaiende dev-API.
 ## 2026-08-11 — Monteur-app: nette uitleg bij weigering door de akkoordpoort
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen sync-foutafhandeling in de mobiele app)

@@ -7,7 +7,7 @@ import { eq, like, inArray } from "drizzle-orm";
 import { authenticator } from "otplib";
 import {
   db, gebruikersTable, medewerkersTable, opdrachtenTable, urenRegistratiesTable,
-  documentenTable, offertesTable,
+  documentenTable, offertesTable, materiaalAanvragenTable, inkoopbonnenTable,
 } from "@workspace/db";
 
 const BASIS = process.env.BEWIJS_API_BASIS ?? `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
@@ -220,6 +220,66 @@ async function main(): Promise<void> {
   const m = j as { t1_totalen_12mnd?: unknown; t4_opdrachten_akkoordstand?: unknown };
   check(r.status === 200 && !!m.t1_totalen_12mnd && !!m.t4_opdrachten_akkoordstand,
     `meetendpoint /metingen/akkoord01 levert tellingen (kreeg ${r.status})`);
+
+  // 16) INKOOPPOORT (§3.3) via de echte goedkeuringsflow: een materiaal-
+  // goedkeuring op een opdracht zonder akkoord moet 422 geven (en de hele
+  // transactie terugrollen), mét akkoord moet er een concept-inkoopbon komen.
+  const [offMat] = await db.insert(offertesTable).values({
+    titel: `${MERK} offerte materiaal`, bedragInclBtw: 700, bedragExclBtw: 579,
+  } as typeof offertesTable.$inferInsert).returning();
+  const [opdrMat] = await db.insert(opdrachtenTable).values({
+    titel: `${MERK} materiaalflow`, status: "actief", type: "aanneem", offerteId: offMat.id,
+  } as typeof opdrachtenTable.$inferInsert).returning();
+
+  r = await fetch(`${BASIS}/materiaal-aanvragen`, {
+    method: "POST", headers: hdrs,
+    body: JSON.stringify({ opdracht_id: opdrMat.id, reden: "nodig", omschrijving: `${MERK} brandkleppen`, volgens_opdracht: "ja" }),
+  });
+  j = await r.json().catch(() => ({}));
+  const aanvraagId = (j as { id?: number }).id;
+  check(r.status === 201 && !!aanvraagId, `materiaal-aanvraag aangemaakt (kreeg ${r.status})`);
+
+  // 16a) goedkeuren zonder akkoord op de opdracht → 422 AKKOORD_ONTBREEKT
+  r = await fetch(`${BASIS}/materiaal-aanvragen/${aanvraagId}`, {
+    method: "PATCH", headers: hdrs, body: JSON.stringify({ status: "goedgekeurd" }),
+  });
+  j = await r.json().catch(() => ({}));
+  check(r.status === 422 && (j as { code?: string }).code === "AKKOORD_ONTBREEKT",
+    `materiaal-goedkeuring zonder akkoord geweigerd met 422 AKKOORD_ONTBREEKT (kreeg ${r.status} ${JSON.stringify(j).slice(0, 120)})`);
+
+  // 16b) rollback-bewijs: de aanvraag staat nog op "nieuw" en er hangt geen bon
+  const [naWeigering] = await db.select().from(materiaalAanvragenTable)
+    .where(eq(materiaalAanvragenTable.id, aanvraagId!));
+  check(naWeigering?.status === "nieuw" && naWeigering?.inkoopbonId == null,
+    `geweigerde goedkeuring is volledig teruggerold (status=${naWeigering?.status}, inkoopbonId=${naWeigering?.inkoopbonId})`);
+  const bonnenZonder = await db.select({ id: inkoopbonnenTable.id }).from(inkoopbonnenTable)
+    .where(eq(inkoopbonnenTable.opdrachtId, opdrMat.id));
+  check(bonnenZonder.length === 0, `geen (wees-)inkoopbon aangemaakt zonder akkoord (vond ${bonnenZonder.length})`);
+
+  // 16c) akkoord vastleggen (grond C, onder de band) → daarna slaagt goedkeuren
+  r = await fetch(`${BASIS}/opdrachten/${opdrMat.id}/akkoord`, {
+    method: "POST", headers: hdrs, body: JSON.stringify({ grond: "vrijgave_pl", herkomst: "telefonisch akkoord materiaalbewijs" }),
+  });
+  check(r.status === 201, `akkoord op materiaalopdracht vastgelegd (kreeg ${r.status})`);
+
+  r = await fetch(`${BASIS}/materiaal-aanvragen/${aanvraagId}`, {
+    method: "PATCH", headers: hdrs, body: JSON.stringify({ status: "goedgekeurd" }),
+  });
+  j = await r.json().catch(() => ({}));
+  const goed = j as { status?: string; inkoopbon?: { id?: number; kenmerk?: string } };
+  check(r.status === 200 && goed.status === "goedgekeurd" && !!goed.inkoopbon?.id && !!goed.inkoopbon?.kenmerk,
+    `goedkeuring mét akkoord levert concept-inkoopbon op (kreeg ${r.status} ${JSON.stringify(j).slice(0, 160)})`);
+
+  // 16d) de bon staat écht als concept op de juiste opdracht, via het ene pad
+  const [bon] = goed.inkoopbon?.id
+    ? await db.select().from(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, goed.inkoopbon.id))
+    : [];
+  check(!!bon && bon.status === "concept" && bon.opdrachtId === opdrMat.id && bon.offerteId === offMat.id,
+    `inkoopbon is concept op de juiste opdracht+offerte (status=${bon?.status}, opdracht=${bon?.opdrachtId}, offerte=${bon?.offerteId})`);
+  const [naGoedkeuring] = await db.select().from(materiaalAanvragenTable)
+    .where(eq(materiaalAanvragenTable.id, aanvraagId!));
+  check(naGoedkeuring?.inkoopbonId === goed.inkoopbon?.id,
+    `aanvraag is gekoppeld aan de aangemaakte bon (inkoopbonId=${naGoedkeuring?.inkoopbonId})`);
 
   await ruimOp();
 
