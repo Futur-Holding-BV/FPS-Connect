@@ -90,6 +90,13 @@ export const WERKBAK_BRONNEN = [
   // PRIJS_01 §8.2: bij het inladen van een nieuwe prijslijst werden artikelen
   // duurder → 'weten'-item dat naar de marktspiegel verwijst (geen automatische run).
   "prijsverhoging_import",
+  // BEWAKING_02 §6: zes voeders op de commerciële keten.
+  "offerte_geen_reactie",           // V1 — verzonden, geen reactie na drempel (doen)
+  "offerte_bekeken_niet_getekend",  // V2 — klant opende portaal, tekende niet (doen)
+  "offerte_verlopen",               // V3 — geldigheid verstreken zonder eindstatus (weten)
+  "opname_zonder_calculatie",       // V4 — opname zonder gekoppelde calculatie (doen)
+  "calculatie_zonder_offerte",      // V5 — definitieve calculatie zonder offerte (weten)
+  "opdracht_zonder_akkoord",        // V6 — actieve opdracht zonder akkoordgrond (weten)
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

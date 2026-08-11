@@ -720,7 +720,10 @@ KOLOM|app_instellingen|extra_disclaimer|text|YES|
 KOLOM|app_instellingen|heatmap_tracking_ingeschakeld|boolean|NO|false
 KOLOM|app_instellingen|id|integer|NO|nextval('app_instellingen_id_seq'::regclass)
 KOLOM|app_instellingen|moments_verjaardag_ingeschakeld|boolean|NO|true
+KOLOM|app_instellingen|offerte_bekeken_bewaking_dagen|integer|NO|5
+KOLOM|app_instellingen|offerte_reactie_bewaking_dagen|integer|NO|7
 KOLOM|app_instellingen|opdrachtbevestiging_auto_verzenden|boolean|NO|false
+KOLOM|app_instellingen|opname_calculatie_bewaking_dagen|integer|NO|14
 KOLOM|app_instellingen|prijsafspraak_bewaking_dagen|integer|NO|60
 KOLOM|app_instellingen|prijsafwijking_marge_pct|real|NO|2
 KOLOM|app_instellingen|support_email|text|YES|

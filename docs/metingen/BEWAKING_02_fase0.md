@@ -21,7 +21,28 @@
 
 ## Productiemeting
 
-_(nog in te vullen na deploy — datum, JSON-uitkomst T1–T7)_
+**11-08-2026 09:17 UTC** (JSON via René, ingelogd op `connect.fps-one.nl`):
+
+- T1: **0 offertes** (lege lijst).
+- T2: log leeg én fallback leeg (geen verzonden/bekeken offertes).
+- T3: 0 verlopen, 0 zonder datum, 0 niet-eindstatus.
+- T4: **0 opnames zonder calculatie**.
+- T5: `mod_calc_headers`: **1 concept, 1 zonder offerte**; `calculaties` leeg.
+- T6: **0 actieve opdrachten** (dus ook 0 zonder offerte/akkoordgrond).
+- T7: **géén enkele entry** in `workflow_transitie_log` op productie — de aanname uit de dev-meting is bevestigd: offerte-statuswissels lopen niet via de WorkflowService.
+
+Ruwe uitkomst: `{"gemeten_op":"2026-08-11T09:17:00.817Z","t1_offertes_per_status":[],"t2_wachttijd_verzonden_bekeken_uit_transitielog":[],"t2_fallback_op_bijgewerkt_op":[],"t3_geldigheid_verstreken":{"verlopen":0,"zonder_datum":0,"totaal_niet_eindstatus":0},"t4_opnames_zonder_calculatie":[],"t5_calculaties_zonder_offerte":[{"tabel":"mod_calc_headers","status":"concept","totaal":1,"zonder_offerte":1}],"t6_actieve_opdrachten":{"actief_totaal":0,"zonder_offerte":0,"offerte_niet_ondertekend":0,"zonder_akkoordgrond":0},"t7_transitielog_entity_types":[]}`
+
+**Conclusie fase 0:** de commerciële keten is op productie nog nagenoeg onbenut (nul is een antwoord). Er zijn geen gemeten wachttijden om drempels uit af te leiden → alle drempels starten op een conservatieve, configureerbare standaard (zie hieronder) en worden bijgesteld zodra er echte doorlooptijden zijn. T7 is op prod bevestigd leeg → conform §5 wordt éérst het verzendmoment vastgelegd, daarna V1/V2.
+
+## Afwijkingen van de opdracht-aannames (§7.8) — gemeld
+
+1. **Het verzendmoment bestond al.** §4 van de opdracht veronderstelde dat alleen `workflow_transitie_log` het moment van verzenden kent. In werkelijkheid schrijft de verzendflow bij élke verzending een `offerte_tracking`-event `bezorgd` en het portaal bij openen `portaal_bekeken`. Er hoefde dus geen verzendmoment bijgebouwd te worden; V1/V2 lezen deze events (fallback: `bijgewerkt_op`).
+2. **`offertes.status` vs. `portaal_status`.** De statusreeks uit §4 (verzonden/bekeken/ondertekend/afgewezen) leeft op `portaal_status`; `offertes.status` blijft bij verzenden ongewijzigd en wordt pas bij ondertekening `geaccepteerd`. De voeders keyen daarom op `portaal_status`. (De T1/T2/T3-queries van dit meetinstrument telden op `status` — op de lege prod-keten maakt dat geen verschil, maar bij een volgende meting hoort `portaal_status` erbij.)
+
+## Uitkomst fase 0 → gekozen startdrempels
+
+Geen gemeten doorlooptijden (keten onbenut) → conservatieve, configureerbare startstanden in `app_instellingen` (migratie `0048`): `offerte_reactie_bewaking_dagen` = **7**, `offerte_bekeken_bewaking_dagen` = **5**, `opname_calculatie_bewaking_dagen` = **14**. V3/V5/V6 hebben geen tijdsdrempel (toestand zelf is het signaal).
 
 ## Waar landt de uitkomst en welk besluit hangt eraan
 

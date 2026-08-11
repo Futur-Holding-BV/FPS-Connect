@@ -99,6 +99,11 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   // PRIJS_01 §7 — termijn (dagen) waarbinnen een aflopende prijsafspraak een
   // werkbak-item oplevert. Standaard 60 dagen.
   prijsafspraakBewakingDagen: integer("prijsafspraak_bewaking_dagen").notNull().default(60),
+  // BEWAKING_02 §7.4 — drempels commerciële keten (dagen). Startstanden zijn
+  // conservatieve standaarden: fase 0 (11-08-2026) mat een nog onbenutte keten.
+  offerteReactieBewakingDagen: integer("offerte_reactie_bewaking_dagen").notNull().default(7),
+  offerteBekekenBewakingDagen: integer("offerte_bekeken_bewaking_dagen").notNull().default(5),
+  opnameCalculatieBewakingDagen: integer("opname_calculatie_bewaking_dagen").notNull().default(14),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

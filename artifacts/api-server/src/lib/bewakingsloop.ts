@@ -53,6 +53,10 @@ import {
   prijsafsprakenTable,
   leveranciersTable,
   appInstellingenTable,
+  offertesTable,
+  offerteTrackingTable,
+  opnamesTable,
+  calculatiesTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
@@ -1510,6 +1514,298 @@ async function voedTvtOpname(): Promise<{ nieuw: number; afgehandeld: number }> 
   return syncBron("tvt_opname_herinnering", items);
 }
 
+// ── BEWAKING_02 — zes voeders op de commerciële keten ────────────────────────
+// Fase 0 (docs/metingen/BEWAKING_02_fase0.md, prod 11-08-2026): keten nog
+// onbenut, transitielog leeg voor offertes. Verzend-/bekeken-momenten komen
+// daarom uit offerte_tracking (events "bezorgd" en "portaal_bekeken") — die
+// worden al bij elke verzending/portaalopening geschreven. Drempels staan in
+// app_instellingen (BEWAKING_02 §7.4), startstanden conservatief.
+
+const OFFERTE_MODULE = "offertes";
+
+async function haalBewaking02Drempels(): Promise<{ reactie: number; bekeken: number; opname: number }> {
+  const [inst] = await db
+    .select({
+      reactie: appInstellingenTable.offerteReactieBewakingDagen,
+      bekeken: appInstellingenTable.offerteBekekenBewakingDagen,
+      opname: appInstellingenTable.opnameCalculatieBewakingDagen,
+    })
+    .from(appInstellingenTable)
+    .orderBy(appInstellingenTable.id)
+    .limit(1);
+  return { reactie: inst?.reactie ?? 7, bekeken: inst?.bekeken ?? 5, opname: inst?.opname ?? 14 };
+}
+
+// §7.2 — rangschikken op consequentie: bedrag telt mee in het gewicht.
+function gewichtMetBedrag(basis: number, bedragInclBtw: number | null): number {
+  return basis + Math.min(40, Math.floor((bedragInclBtw ?? 0) / 2500));
+}
+
+function offerteNaam(o: { offertenummer: string | null; titel: string; id: number }): string {
+  return o.offertenummer ? `Offerte ${o.offertenummer}` : `Offerte "${o.titel}" (#${o.id})`;
+}
+
+// Tracking-moment per offerte voor één eventtype.
+// - V1 gebruikt max("bezorgd"): een hérbezorging is een echte nieuwe actie en
+//   mag de klok resetten.
+// - V2 gebruikt min("portaal_bekeken"): het portaal logt dit event bij élk
+//   bezoek; met max zou iedere heropening het signaal eindeloos uitstellen.
+//   Het eerste bekeken-moment is het semantisch stabiele startpunt.
+async function trackingMomenten(offerteIds: number[], event: string, agg: "min" | "max"): Promise<Map<number, Date>> {
+  if (offerteIds.length === 0) return new Map();
+  const rijen = await db
+    .select({
+      offerteId: offerteTrackingTable.offerteId,
+      moment: agg === "max"
+        ? sql<string>`max(${offerteTrackingTable.aangemaaktOp})`
+        : sql<string>`min(${offerteTrackingTable.aangemaaktOp})`,
+    })
+    .from(offerteTrackingTable)
+    .where(and(inArray(offerteTrackingTable.offerteId, offerteIds), eq(offerteTrackingTable.event, event)))
+    .groupBy(offerteTrackingTable.offerteId);
+  return new Map(rijen.map((r) => [r.offerteId, new Date(r.moment)]));
+}
+
+// Ontvanger per offerte: behandelaar, anders aanmaker — gefilterd op bevoegdheid;
+// niemand over → groepsvangnet offertes≥3.
+async function offerteItems(
+  offertes: Array<{ id: number; offertenummer: string | null; titel: string; behandeldDoorId: number | null; aangemaaktDoorId: number | null; bedragInclBtw: number | null }>,
+  bouw: (o: { id: number; offertenummer: string | null; titel: string; bedragInclBtw: number | null }) => Omit<WerkbakInvoer, "gebruikerId" | "vereisteModule" | "vereistNiveau" | "dedupSleutel">,
+  dedupPrefix: string,
+): Promise<WerkbakInvoer[]> {
+  const kandidaten = [...new Set(offertes.flatMap((o) => [o.behandeldDoorId, o.aangemaaktDoorId].filter((x): x is number => x != null)))];
+  const bevoegd = new Set(await filterOntvangersOpBevoegdheid(kandidaten, OFFERTE_MODULE, 1));
+  return offertes.flatMap((o): WerkbakInvoer[] => {
+    const basis = bouw(o);
+    const ontvanger = [o.behandeldDoorId, o.aangemaaktDoorId].find((x) => x != null && bevoegd.has(x)) ?? null;
+    if (ontvanger == null) {
+      return [{ ...basis, vereisteModule: OFFERTE_MODULE, vereistNiveau: 3, dedupSleutel: `${dedupPrefix}:${o.id}:groep` }];
+    }
+    return [{ ...basis, gebruikerId: ontvanger, dedupSleutel: `${dedupPrefix}:${o.id}:${ontvanger}` }];
+  });
+}
+
+// V1 — verzonden offerte zonder enige reactie na de drempel (doen, opsteller).
+async function voedOfferteGeenReactie(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const { reactie: drempelDagen } = await haalBewaking02Drempels();
+  const grens = new Date(Date.now() - drempelDagen * DAG_MS);
+  const offertes = await db
+    .select({
+      id: offertesTable.id, offertenummer: offertesTable.offertenummer, titel: offertesTable.titel,
+      behandeldDoorId: offertesTable.behandeldDoorId, aangemaaktDoorId: offertesTable.aangemaaktDoorId,
+      bedragInclBtw: offertesTable.bedragInclBtw, bijgewerktOp: offertesTable.bijgewerktOp,
+    })
+    .from(offertesTable)
+    .where(eq(offertesTable.portaalStatus, "verzonden"));
+  const momenten = await trackingMomenten(offertes.map((o) => o.id), "bezorgd", "max");
+  // Onzekerheidsbehandeling: de verzendflow schrijft bij élke verzending een
+  // "bezorgd"-event, dus alleen historische/handmatige rijen missen tracking.
+  // Voor die rijen is bijgewerkt_op het enige beschikbare moment — dat kan het
+  // signaal hooguit uitstellen (edit maakt de rij "jong"), nooit onterecht
+  // openen: de rij staat aantoonbaar op "verzonden" zonder reactie.
+  const oud = offertes.filter((o) => (momenten.get(o.id) ?? o.bijgewerktOp) <= grens);
+  const items = await offerteItems(oud, (o) => ({
+    soort: "doen",
+    bron: "offerte_geen_reactie",
+    titel: `${offerteNaam(o)} staat al ${drempelDagen}+ dagen op "verzonden" zonder reactie`,
+    omschrijving: `De klant heeft de offerte nog niet geopend of beantwoord. Neem contact op of stuur een herinnering — het signaal gaat nooit automatisch naar de klant.`,
+    gewicht: gewichtMetBedrag(40, o.bedragInclBtw),
+    actiePad: `/offertes/${o.id}`,
+    herkomstType: "offerte",
+    herkomstId: o.id,
+  }), "offerte-geen-reactie");
+  return syncBron("offerte_geen_reactie", items);
+}
+
+// V2 — klant opende het portaal maar tekende niet na de drempel (doen, opsteller).
+async function voedOfferteBekekenNietGetekend(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const { bekeken: drempelDagen } = await haalBewaking02Drempels();
+  const grens = new Date(Date.now() - drempelDagen * DAG_MS);
+  const offertes = await db
+    .select({
+      id: offertesTable.id, offertenummer: offertesTable.offertenummer, titel: offertesTable.titel,
+      behandeldDoorId: offertesTable.behandeldDoorId, aangemaaktDoorId: offertesTable.aangemaaktDoorId,
+      bedragInclBtw: offertesTable.bedragInclBtw, bijgewerktOp: offertesTable.bijgewerktOp,
+    })
+    .from(offertesTable)
+    .where(eq(offertesTable.portaalStatus, "bekeken"));
+  // min: het éérste bekeken-moment telt — herhaald portaalbezoek schuift de
+  // drempel niet op (zie trackingMomenten). Fallback bijgewerkt_op alleen voor
+  // historische rijen zonder tracking (kan uitstellen, nooit onterecht openen).
+  const momenten = await trackingMomenten(offertes.map((o) => o.id), "portaal_bekeken", "min");
+  const oud = offertes.filter((o) => (momenten.get(o.id) ?? o.bijgewerktOp) <= grens);
+  const items = await offerteItems(oud, (o) => ({
+    soort: "doen",
+    bron: "offerte_bekeken_niet_getekend",
+    titel: `${offerteNaam(o)} is door de klant bekeken maar na ${drempelDagen}+ dagen niet getekend`,
+    omschrijving: `De klant heeft de offerte geopend en daarna niets gedaan. Dit is hét moment om na te bellen.`,
+    gewicht: gewichtMetBedrag(45, o.bedragInclBtw),
+    actiePad: `/offertes/${o.id}`,
+    herkomstType: "offerte",
+    herkomstId: o.id,
+  }), "offerte-bekeken-niet-getekend");
+  return syncBron("offerte_bekeken_niet_getekend", items);
+}
+
+// V3 — geldigheid (datum + geldigheid_dagen) verstreken zonder eindstatus (weten, opsteller).
+async function voedOfferteVerlopen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
+  const offertes = await db
+    .select({
+      id: offertesTable.id, offertenummer: offertesTable.offertenummer, titel: offertesTable.titel,
+      behandeldDoorId: offertesTable.behandeldDoorId, aangemaaktDoorId: offertesTable.aangemaaktDoorId,
+      bedragInclBtw: offertesTable.bedragInclBtw, datum: offertesTable.datum,
+      geldigheidDagen: offertesTable.geldigheidDagen,
+    })
+    .from(offertesTable)
+    .where(and(
+      inArray(offertesTable.portaalStatus, ["verzonden", "bekeken"]),
+      isNotNull(offertesTable.datum),
+    ));
+  const verlopen = offertes.filter((o) => {
+    if (!o.datum) return false;
+    const eind = new Date(o.datum);
+    if (Number.isNaN(eind.getTime())) return false;
+    eind.setDate(eind.getDate() + (o.geldigheidDagen ?? 30));
+    return eind < vandaag;
+  });
+  const items = await offerteItems(verlopen, (o) => ({
+    soort: "weten",
+    bron: "offerte_verlopen",
+    titel: `${offerteNaam(o)} is verlopen zonder eindstatus`,
+    omschrijving: `De geldigheidstermijn is verstreken en de offerte is niet getekend, afgewezen of ingetrokken. Verleng, trek in of schrijf af.`,
+    gewicht: gewichtMetBedrag(30, o.bedragInclBtw),
+    actiePad: `/offertes/${o.id}`,
+    herkomstType: "offerte",
+    herkomstId: o.id,
+  }), "offerte-verlopen");
+  return syncBron("offerte_verlopen", items);
+}
+
+// V4 — opname zonder gekoppelde calculatie na de drempel (doen, opnemer).
+async function voedOpnameZonderCalculatie(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const { opname: drempelDagen } = await haalBewaking02Drempels();
+  const grens = new Date(Date.now() - drempelDagen * DAG_MS);
+  const rijen = await db
+    .select({
+      id: opnamesTable.id, naam: opnamesTable.naam, nummer: opnamesTable.nummer,
+      aangemaaktDoorId: opnamesTable.aangemaaktDoorId, aangemaaktOp: opnamesTable.aangemaaktOp,
+      gebouwId: opnamesTable.gebouwId,
+    })
+    .from(opnamesTable)
+    .where(and(
+      // "Opname gedaan" (§6 V4) = definitief; een concept is nog werk in
+      // uitvoering en hoort geen actiepunt op te leveren.
+      eq(opnamesTable.status, "definitief"),
+      lte(opnamesTable.aangemaaktOp, grens),
+      sql`NOT EXISTS (SELECT 1 FROM mod_calc_headers h WHERE h.opname_id = ${opnamesTable.id})`,
+      sql`NOT EXISTS (SELECT 1 FROM calculaties c WHERE c.opname_id = ${opnamesTable.id})`,
+    ));
+  const kandidaten = [...new Set(rijen.map((r) => r.aangemaaktDoorId).filter((x): x is number => x != null))];
+  const bevoegd = new Set(await filterOntvangersOpBevoegdheid(kandidaten, "projecten", 1));
+  const items = rijen.map((r): WerkbakInvoer => {
+    const basis = {
+      soort: "doen" as const,
+      bron: "opname_zonder_calculatie",
+      titel: `Opname M${r.nummer} (${r.naam}) heeft na ${drempelDagen}+ dagen nog geen calculatie`,
+      omschrijving: `De opname is gedaan maar er is geen calculatie aan gekoppeld — het werk blijft zo commercieel liggen.`,
+      gewicht: 35,
+      actiePad: r.gebouwId ? `/gebouwen/${r.gebouwId}?tab=opnames` : `/opnames`,
+      herkomstType: "opname",
+      herkomstId: r.id,
+    };
+    if (r.aangemaaktDoorId != null && bevoegd.has(r.aangemaaktDoorId)) {
+      return { ...basis, gebruikerId: r.aangemaaktDoorId, dedupSleutel: `opname-zonder-calculatie:${r.id}:${r.aangemaaktDoorId}` };
+    }
+    return { ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `opname-zonder-calculatie:${r.id}:groep` };
+  });
+  return syncBron("opname_zonder_calculatie", items);
+}
+
+// V5 — definitieve calculatie (niet-concept of verzonden) zonder offerte (weten, opsteller).
+// Beide calculatietabellen (fase 0 aanname 2): mod_calc_headers (ENK, waar
+// offertes.calculatie_id naar wijst) én legacy calculaties. Een legacy-
+// calculatie kán niet aan een offerte gekoppeld worden — het signaal blijft
+// dan staan tot de calculatie in de ENK-module is overgezet of teruggezet
+// naar concept; precies de aandacht die "weten" vraagt.
+async function voedCalculatieZonderOfferte(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const [enk, legacy] = await Promise.all([
+    db.select({
+      id: modCalcHeadersTable.id, naam: modCalcHeadersTable.naam, nummer: modCalcHeadersTable.nummer,
+      aangemaaktDoorId: modCalcHeadersTable.aangemaaktDoorId,
+    })
+      .from(modCalcHeadersTable)
+      .where(and(
+        sql`(${modCalcHeadersTable.status} <> 'concept' OR ${modCalcHeadersTable.verzondenOp} IS NOT NULL)`,
+        sql`NOT EXISTS (SELECT 1 FROM offertes o WHERE o.calculatie_id = ${modCalcHeadersTable.id})`,
+      )),
+    db.select({
+      id: calculatiesTable.id, naam: calculatiesTable.naam, nummer: calculatiesTable.nummer,
+      aangemaaktDoorId: calculatiesTable.aangemaaktDoorId,
+    })
+      .from(calculatiesTable)
+      .where(sql`(${calculatiesTable.status} <> 'concept' OR ${calculatiesTable.verzondenOp} IS NOT NULL)`),
+  ]);
+  const rijen = [
+    ...enk.map((r) => ({ ...r, legacy: false })),
+    ...legacy.map((r) => ({ ...r, legacy: true })),
+  ];
+  const kandidaten = [...new Set(rijen.map((r) => r.aangemaaktDoorId).filter((x): x is number => x != null))];
+  const bevoegd = new Set(await filterOntvangersOpBevoegdheid(kandidaten, "calculaties", 1));
+  const items = rijen.map((r): WerkbakInvoer => {
+    const sleutel = r.legacy ? `legacy-${r.id}` : `${r.id}`;
+    const basis = {
+      soort: "weten" as const,
+      bron: "calculatie_zonder_offerte",
+      titel: `Calculatie C${r.nummer} (${r.naam}) is definitief maar heeft geen offerte`,
+      omschrijving: r.legacy
+        ? `Deze calculatie staat nog in de oude module en kan daar niet aan een offerte gekoppeld worden. Zet haar over naar de ENK-calculatiemodule of leg vast waarom niet.`
+        : `De calculatie is afgerond zonder dat er een offerte uit is voortgekomen. Maak de offerte of leg vast waarom niet.`,
+      gewicht: 30,
+      actiePad: `/calculaties/${r.id}`,
+      herkomstType: r.legacy ? "calculatie_legacy" : "calculatie",
+      herkomstId: r.id,
+    };
+    if (r.aangemaaktDoorId != null && bevoegd.has(r.aangemaaktDoorId)) {
+      return { ...basis, gebruikerId: r.aangemaaktDoorId, dedupSleutel: `calculatie-zonder-offerte:${sleutel}:${r.aangemaaktDoorId}` };
+    }
+    return { ...basis, vereisteModule: "calculaties", vereistNiveau: 2, dedupSleutel: `calculatie-zonder-offerte:${sleutel}:groep` };
+  });
+  return syncBron("calculatie_zonder_offerte", items);
+}
+
+// V6 — actieve opdracht zonder vastgelegde akkoordgrond (weten, projectleider).
+// AKKOORD_01: akkoord_grond bestaat (migratie 0046); de akkoordpoort blokkeert
+// uren/inkoop al — dit signaal maakt de openstaande vastlegging zichtbaar.
+async function voedOpdrachtZonderAkkoord(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const rijen = await db
+    .select({
+      id: opdrachtenTable.id, titel: opdrachtenTable.titel, werknummer: opdrachtenTable.werknummer,
+      offerteBedrag: offertesTable.bedragInclBtw,
+    })
+    .from(opdrachtenTable)
+    .leftJoin(offertesTable, eq(opdrachtenTable.offerteId, offertesTable.id))
+    .where(and(eq(opdrachtenTable.status, "actief"), isNull(opdrachtenTable.akkoordGrond)));
+  const plIds = await filterOntvangersOpBevoegdheid(await vindGebruikersMetFunctietitel("Projectleider"), "projecten", 2);
+  const items = rijen.flatMap((r): WerkbakInvoer[] => {
+    const basis = {
+      soort: "weten" as const,
+      bron: "opdracht_zonder_akkoord",
+      titel: `Opdracht ${r.werknummer ?? `#${r.id}`} (${r.titel}) is actief zonder vastgelegd akkoord`,
+      omschrijving: `Er is geen akkoordgrond vastgelegd (ondertekening, opdrachtbevestiging of vrijgave). Zonder akkoord blijven uren en inkoop geblokkeerd.`,
+      gewicht: gewichtMetBedrag(35, r.offerteBedrag),
+      actiePad: `/opdrachten/${r.id}`,
+      herkomstType: "opdracht",
+      herkomstId: r.id,
+    };
+    if (plIds.length === 0) {
+      return [{ ...basis, vereisteModule: "projecten", vereistNiveau: 3, dedupSleutel: `opdracht-zonder-akkoord:${r.id}:groep` }];
+    }
+    return plIds.map((gebruikerId) => ({ ...basis, gebruikerId, dedupSleutel: `opdracht-zonder-akkoord:${r.id}:${gebruikerId}` }));
+  });
+  return syncBron("opdracht_zonder_akkoord", items);
+}
+
 export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: number; afgehandeld: number } | { fout: string }>> {
   // Overlap-guard: een tweede (handmatige) draai tijdens een lopende draai kan
   // via reconciliatie een halfgesynchroniseerde set als stale afsluiten.
@@ -1544,6 +1840,13 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["ai_magazijn_bestelsuggestie", voedAiMagazijnBestelsuggestie],
     ["ai_hrm_capaciteit", voedAiHrmCapaciteit],
     ["ai_werkvoorbereiding_signaal", voedAiWerkvoorbereidingSignaal],
+    // BEWAKING_02 §6 — de commerciële keten.
+    ["offerte_geen_reactie", voedOfferteGeenReactie],
+    ["offerte_bekeken_niet_getekend", voedOfferteBekekenNietGetekend],
+    ["offerte_verlopen", voedOfferteVerlopen],
+    ["opname_zonder_calculatie", voedOpnameZonderCalculatie],
+    ["calculatie_zonder_offerte", voedCalculatieZonderOfferte],
+    ["opdracht_zonder_akkoord", voedOpdrachtZonderAkkoord],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {
