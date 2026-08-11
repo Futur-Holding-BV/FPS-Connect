@@ -1,3 +1,9 @@
+## 2026-08-11 — KETEN_01: ketenmeting proces 1–11 + varianten (meting, niets gerepareerd)
+
+- **Uitvoering:** volledig (fase 0 einddoelen, fase 1 hoofdlijn, fase 2 varianten, fase 3 eindrapport) | **Kwaliteit:** hoog | **Risico:** geen (alleen meetscripts + rapporten; eigen testdata, opgeruimd)
+
+Hele keten klikkend gemeten met twee Playwright-meetscripts (`scripts/e2e/web-keten-hoofdlijn.spec.ts`, `scripts/e2e/web-keten-varianten.spec.ts`); uitkomsten + schermafdrukken in `scripts/e2e-resultaten/keten01/`, eindrapport in `docs/metingen/KETEN_01_eindrapport.md`. Rug van de keten staat (aanvraag→klant/gebouw→opname→calculatie→offerte→werkbegroting→AI-planning→materiaal→inkoopbon→uren→factuurbeoordeling allemaal doorlopen). Drie echte breuken gevonden: **B1** portaal-ondertekenen kan nooit slagen (canvas op naam-stap ontkoppeld → POST vertrekt nooit, klant krijgt géén fout — "schijnbaar gelukt" in optima forma), **B2** verkoopfactuur samenstellen ontbreekt in de UI (alleen upload), **B3** opdracht afsluiten ontbreekt in de UI (API kent status wel). Weigeringen staan goed: uren zonder akkoord (422), grond B zonder document (knop uit), akkoord boven de band (422 GOEDKEURING_VEREIST) — geen lek gevonden. Twee extra meetafwijkingen gemeld: vangnet-opdracht-seed (5b, wegens B1) en medewerkersprofiel-seed (test-setup).
+
 ## 2026-08-11 — BEWAKING_02: zes voeders op de commerciële keten
 
 - **Uitvoering:** volledig (fase 0-meting op prod + zes voeders) | **Kwaliteit:** hoog | **Risico:** laag (alleen-signaleren; geen statuswijzigingen, geen klantmail)

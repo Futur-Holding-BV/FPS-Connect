@@ -1,0 +1,85 @@
+{
+  "merk": "KETENVAR 1786471676230",
+  "rapport": [
+    {
+      "variant": "Offerte-afloop: afgewezen",
+      "uitkomst": "doorlopen",
+      "detail": "portaal_status=afgewezen, afwijs-event vastgelegd (offerte 64)"
+    },
+    {
+      "variant": "Offerte-afloop: ingetrokken",
+      "uitkomst": "doorlopen",
+      "detail": "status=ingetrokken, portaal_status=verzonden (offerte 65)"
+    },
+    {
+      "variant": "Offerte-afloop: verlopen zonder reactie",
+      "uitkomst": "doorlopen",
+      "detail": "portaal toont 'Uitnodiging verlopen' bij verstreken token; lijststatus 'vervallen' is afgeleid van de vervaldatum"
+    },
+    {
+      "variant": "Offerte-afloop: getekend",
+      "uitkomst": "vastgelopen",
+      "detail": "gemeten in fase 1: 'Definitief akkoord geven' doet niets (canvas op stap 2 ontkoppeld); ondertekenen kan in de web-UI niet voltooid worden"
+    },
+    {
+      "variant": "Akkoordgrond: vrijgave projectleider",
+      "uitkomst": "vastgelopen",
+      "detail": "goedkeuringsbeleid grijpt in: opdracht zonder bekend bedrag valt boven de band → 422 GOEDKEURING_VEREIST, eerst formele goedkeuringsaanvraag nodig. De UI toont dit als nette foutmelding; de grond-C-flow zelf werkt maar komt hier niet doorheen zonder ingerichte goedkeuring"
+    },
+    {
+      "variant": "Akkoordgrond: opdrachtbevestiging zonder document",
+      "uitkomst": "doorlopen",
+      "detail": "weigering zoals bedoeld (knop uitgeschakeld zonder document); grond B eist een echt document"
+    },
+    {
+      "variant": "Akkoordgrond: ondertekende offerte",
+      "uitkomst": "vastgelopen",
+      "detail": "gemeten in fase 1: portaal-ondertekenen komt niet door de web-UI (canvas-ontkoppeling stap 2)"
+    },
+    {
+      "variant": "Uren: opdracht zonder akkoord",
+      "uitkomst": "doorlopen",
+      "detail": "weigering zoals bedoeld: 422 AKKOORD_ONTBREEKT, geen uren-rij (opdracht 104)"
+    },
+    {
+      "variant": "Uren: zonder opdracht",
+      "uitkomst": "doorlopen",
+      "detail": "uren zonder opdracht worden geaccepteerd (201, rij 136) — conform beleid 'alleen meten'"
+    },
+    {
+      "variant": "Terugzetten: akkoord intrekken als hoofdbeheerder",
+      "uitkomst": "doorlopen",
+      "detail": "akkoord verwijderd op opdracht 105"
+    },
+    {
+      "variant": "Terugzetten: als gewone gebruiker",
+      "uitkomst": "niet gemeten",
+      "detail": "vereist een tweede (niet-hoofdbeheerder) websessie; server-side check bestaat (DELETE /opdrachten/:id/akkoord → 403 voor niet-hoofdbeheerder) maar is hier niet klikkend gemeten"
+    },
+    {
+      "variant": "Bedrag: boven tien mille langs de bedrijfsleider",
+      "uitkomst": "doorlopen",
+      "detail": "weigering zoals bedoeld: offerte €12.000 gekoppeld → akkoord-vastleggen geeft 422 GOEDKEURING_VEREIST, geen akkoord ontstaan (opdracht 106). De volledige goedkeuringsronde (tweede beoordelaar) is niet doorlopen (vergt ingericht beleid + tweede account)"
+    },
+    {
+      "variant": "Akkoord zonder offerte (alleen calculatie)",
+      "uitkomst": "vastgelopen",
+      "detail": "geen UI-flow gevonden die akkoord op een kale calculatie vastlegt en alsnog een offerte met prijsafspraak laat ontstaan — einddoel niet haalbaar via de UI"
+    },
+    {
+      "variant": "Materiaal: afwijkend van de opdracht",
+      "uitkomst": "niet gemeten",
+      "detail": "monteur-intake (mobiel) bepaalt volgens_opdracht; web toont dezelfde behandelflow. Afwijkend-pad vergt mobiele meting (zit niet in deze web-suite)"
+    },
+    {
+      "variant": "Bestelweg: uit voorraad",
+      "uitkomst": "niet gemeten",
+      "detail": "inkoopplanning kent prijsbron/status 'Uit voorraad'; volledige voorraad-afboeking vergt gevuld magazijn — apart te meten zodra magazijn in gebruik is"
+    },
+    {
+      "variant": "Prijscontrole: factuurprijs hoger dan afspraak",
+      "uitkomst": "niet gemeten",
+      "detail": "vergt een prijsafspraak + factuurregels via de mailbox-intake; binnenkomst is mailbox-only (fase 1, proces 9a) en regels-seed zou de controle zelf simuleren"
+    }
+  ]
+}

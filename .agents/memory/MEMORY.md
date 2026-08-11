@@ -151,4 +151,5 @@
 - [UREN_01 ADV/overwerkslot/weekcontrole](uren-overwerkslot.md) — CAO-namen exact; slotverbruik atomair; §6b uurcode-eis alleen bij opdracht-uren, PATCH boekt alleen delta; werkbak-bron eerst whitelisten.
 - [Materiaal-aanvraagketen](materiaal-aanvraag-keten.md) — werkbaksluiting via handelHerkomstAf in de PATCH-transactie; fase 3=keuze A gebouwd (goedkeuring→concept-inkoopbon, gedeeld pad, claim+unieke index); prod-meting via hoofdbeheerder-beheerpagina.
 - [BEWAKING_02 commerciële voeders](bewaking02-commerciele-voeders.md) — offerte-momenten uit offerte_tracking (bezorgd=max, bekeken=min), keyen op portaal_status niet status; drempels in app_instellingen.
+- [KETEN_01 ketenmeting lessen](keten-meetlessen.md) — portaal-ondertekenen kapot (canvas-unmount); werkbegroting=project_begrotingen; AI-planning≠planning_items; meetspecs: default-timeout + waitForResponse vóór klik.
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.
