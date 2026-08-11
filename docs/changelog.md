@@ -1,3 +1,7 @@
+## 2026-08-11 — VERVOLG_01: sweep "leidt een knop ergens toe?" (meting, niets gebouwd)
+
+Alle 408 status- en schakelvelden uit de 302 tabellen doorgelicht op geschreven/gelezen/gevolg en geclassificeerd: 2× C (dood veld: `fabrikanten.gearchiveerd`, `wagenpark_sync_log.status`), 2× onbekend, 89× B (verandert alleen zichzelf, waarvan 7 met geld-/veiligheids-/termijnrisico, o.a. `veiligheid_incidenten.gemeld_bij_arbeidsinspectie` en `org_verzekeringen.status`), 315× A. Controle §5 doorstaan: `materiaal_aanvragen.status` komt als A uit de meting. Resultaat: `docs/metingen/VERVOLG_01_sweep.md`.
+
 ## 2026-08-11 — AKKOORD_01: akkoordpoort onder uren en inkoop
 
 - **Uitvoering:** volledig (backend + web-UI; documentcategorie + AI-voorstel meegebouwd) | **Kwaliteit:** hoog | **Risico:** middel (blokkeert bestaande uren-/inkoopflows op opdrachten zonder akkoord)
