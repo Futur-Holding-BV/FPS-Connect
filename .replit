@@ -28,6 +28,10 @@ args = "e2e-web"
 task = "workflow.run"
 args = "bewijs-herschik"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "bewijs-materiaal01-fase3"
+
 [[workflows.workflow]]
 name = "e2e-menu"
 author = "agent"
@@ -60,6 +64,17 @@ args = "pnpm --filter @workspace/scripts run bewijs-herschik-ci"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "bewijs-materiaal01-fase3"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/scripts run bewijs-materiaal01-fase3-ci"
 
 [agent]
 stack = "PNPM_WORKSPACE"

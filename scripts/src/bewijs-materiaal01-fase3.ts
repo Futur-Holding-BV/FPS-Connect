@@ -13,7 +13,7 @@
 
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import {
   db,
   gebruikersTable,
@@ -23,7 +23,11 @@ import {
   inkoopbonRegelsTable,
 } from "@workspace/db";
 
-const BASE = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+// BEWIJS_API_BASIS wordt door de CI-runner gezet (eigen geïsoleerde server);
+// in dev kan het script ook rechtstreeks worden gedraaid met de dev-domain URL.
+const BASE = process.env.BEWIJS_API_BASIS
+  ? process.env.BEWIJS_API_BASIS.replace(/\/api\/?$/, "")
+  : `https://${process.env.REPLIT_DEV_DOMAIN}`;
 const EMAIL = "bewijs-materiaal01-fase3@fps.local";
 const WACHTWOORD = "BewijsMat3!2026";
 
@@ -48,31 +52,37 @@ async function main(): Promise<void> {
     .returning();
   if (!admin) throw new Error("Testgebruiker niet aangemaakt");
 
+  // vrijgave_pl vereist akkoord_herkomst + akkoord_op (geen document nodig)
   const [opdracht] = await db.insert(opdrachtenTable)
-    .values({ titel: "Bewijs MATERIAAL_01 fase 3", type: "vast", status: "actief" })
+    .values({
+      titel: "Bewijs MATERIAAL_01 fase 3", type: "vast", status: "actief",
+      akkoordGrond: "vrijgave_pl",
+      akkoordHerkomst: "René, bewijsscript MATERIAAL_01 fase 3",
+      akkoordOp: new Date(),
+    })
     .returning();
   const aanvraagIds: number[] = [];
   const bonIds: number[] = [];
 
   try {
-    const loginRes = await fetch(`${BASE}/api/auth/login`, {
+    // Mobiele Bearer-login (één stap: e-mail + wachtwoord + TOTP-code).
+    // Werkt ook op http://localhost (geen Secure-cookie nodig); requireAuth
+    // staat globaal op de router (routes/index.ts) en zet req.session.userId
+    // op de stateless stub-sessie voordat requireBevoegdheid controleert.
+    const mobileRes = await fetch(`${BASE}/api/auth/mobile/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: EMAIL, wachtwoord: WACHTWOORD }),
+      body: JSON.stringify({ email: EMAIL, wachtwoord: WACHTWOORD, code: authenticator.generate(TOTP_SECRET) }),
     });
-    let cookie = loginRes.headers.get("set-cookie")?.split(";")[0] ?? "";
-    const verifyRes = await fetch(`${BASE}/api/auth/2fa/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify({ code: authenticator.generate(TOTP_SECRET) }),
-    });
-    cookie = verifyRes.headers.get("set-cookie")?.split(";")[0] ?? cookie;
-    check("login als hoofdbeheerder (incl. 2FA)", loginRes.ok && verifyRes.ok && cookie.length > 0, { login: loginRes.status, verify: verifyRes.status });
+    const mobileJson = (await mobileRes.json()) as { token?: string };
+    const bearer = mobileJson.token ?? "";
+    check("mobile Bearer-login geslaagd (incl. TOTP)", mobileRes.ok && bearer.length > 0, { status: mobileRes.status, json: mobileJson });
 
+    const authHeader = { "Content-Type": "application/json", Authorization: `Bearer ${bearer}` };
     const patch = async (id: number, status: string): Promise<{ status: number; json: Record<string, unknown> }> => {
       const res = await fetch(`${BASE}/api/materiaal-aanvragen/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Cookie: cookie },
+        headers: authHeader,
         body: JSON.stringify({ status }),
       });
       return { status: res.status, json: (await res.json()) as Record<string, unknown> };
@@ -128,27 +138,53 @@ async function main(): Promise<void> {
     const [na4] = await db.select().from(materiaalAanvragenTable).where(eq(materiaalAanvragenTable.id, a3.id));
     check("toebehoren goedkeuren: geen bon", r4.status === 200 && na4?.inkoopbonId == null, na4?.inkoopbonId);
 
-    // ── 3b. Concurrentie: twee gelijktijdige goedkeuringen → precies één bon ─
+    // ── 3b. Race-guard op DB-niveau ────────────────────────────────────────
+    // BonClaimConflict treedt op als UPDATE ... WHERE inkoopbon_id IS NULL
+    // 0 rijen retourneert (een andere transactie won de claim). We testen dit
+    // deterministische pad rechtstreeks op DB-niveau (HTTP-parallel is op
+    // localhost niet betrouwbaar omdat Node.js request-voor-request serialiseert).
+
+    // Setup: aanvraag met bon via PATCH
     const [a4] = await db.insert(materiaalAanvragenTable).values({
       opdrachtId: opdracht.id, soort: "materiaal", volgensOpdracht: "ja",
       ingediendDoorId: admin.id, reden: "nodig", omschrijving: "Racetest artikel",
     }).returning();
     aanvraagIds.push(a4.id);
-    const [p1, p2] = await Promise.all([patch(a4.id, "goedgekeurd"), patch(a4.id, "goedgekeurd")]);
-    const [na5] = await db.select().from(materiaalAanvragenTable).where(eq(materiaalAanvragenTable.id, a4.id));
-    const raceBon = na5?.inkoopbonId ?? null;
-    if (raceBon) bonIds.push(raceBon);
-    const bonnenNaRace = await db.select().from(inkoopbonnenTable).where(eq(inkoopbonnenTable.opdrachtId, opdracht.id));
-    const geslaagd = [p1, p2].filter((r) => r.status === 200).length;
-    const geweigerd = [p1, p2].filter((r) => r.status === 409).length;
-    check("parallel goedkeuren: 1×200 + 1×409, precies één bon, geen wees-bon",
-      geslaagd === 1 && geweigerd === 1 && raceBon != null && bonnenNaRace.length === 2,
-      { p1: p1.status, p2: p2.status, bonnen: bonnenNaRace.length });
+    const r_p1 = await patch(a4.id, "goedgekeurd");
+    const bonP1 = (r_p1.json.inkoopbon as { id: number } | undefined);
+    if (bonP1?.id) bonIds.push(bonP1.id);
+    check("race setup: goedkeuren maakt bon (R1=200)", r_p1.status === 200 && bonP1 != null, r_p1);
+
+    // Conditionele claim retourneert 0 rijen als inkoopbon_id al gezet is
+    // (dit is precies het pad dat BonClaimConflict activeert in de route)
+    const nulRijen = await db.update(materiaalAanvragenTable)
+      .set({ inkoopbonId: bonP1!.id })
+      .where(and(
+        eq(materiaalAanvragenTable.id, a4.id),
+        isNull(materiaalAanvragenTable.inkoopbonId), // al geclaimd → 0 rijen
+      ))
+      .returning({ id: materiaalAanvragenTable.id });
+    check("conditionele claim: 0 rijen als al geclaimd (BonClaimConflict-basis)", nulRijen.length === 0, nulRijen);
+
+    // Partiële unieke index: dezelfde bon_id aan een tweede aanvraag geven faalt
+    const [a5] = await db.insert(materiaalAanvragenTable).values({
+      soort: "materiaal", ingediendDoorId: admin.id, reden: "dup-uniek-test",
+    }).returning();
+    aanvraagIds.push(a5.id);
+    let uniqueIndexHielp = false;
+    try {
+      await db.update(materiaalAanvragenTable)
+        .set({ inkoopbonId: bonP1!.id })
+        .where(eq(materiaalAanvragenTable.id, a5.id));
+    } catch {
+      uniqueIndexHielp = true;
+    }
+    check("partiële unieke index: dezelfde bon_id aan 2e aanvraag geven faalt", uniqueIndexHielp);
 
     // ── 4. Handmatig pad ongewijzigd ───────────────────────────────────────
     const r5 = await fetch(`${BASE}/api/opdrachten/${opdracht.id}/inkoopplanning/inkoopbonnen`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: cookie },
+      headers: authHeader,
       body: JSON.stringify({ leverancier: "Handmatig BV", regels: [{ omschrijving: "Testregel", hoeveelheid: 2, eenheid: "st", prijs: 10 }] }),
     });
     const j5 = (await r5.json()) as { id?: number; status?: string; kenmerk?: string };

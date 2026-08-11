@@ -3227,6 +3227,12 @@ De accountstap van de één-flow onboarding (Personeel → Onboarden) heeft nu e
 
 De post-merge van taak #890 liep vast: drizzle-kit push wachtte in een niet-interactieve omgeving op een prompt (ontbrekende unieke constraint op opnames.nummer). Het post-merge-script gebruikt nu de genummerde-migratieketen (migrate + drift-check, conform SCHEMA_01) in plaats van apply-additive/reconcile/push-force. De ontbrekende constraint is als migratie `0045_opnames-nummer-unique.sql` aangeleverd (additief; nummers komen uit een sequence, geen duplicaten).
 
+
+## 2026-08-11 — MATERIAAL_01 fase 3 (keuze A): concept-inkoopbon bij goedgekeurde materiaal-aanvraag
+
+- **Uitvoering:** volledig (keuze A — concept-inkoopbon op de opdracht) | **Kwaliteit:** hoog | **Risico:** laag (migratie 0043 additief, logica in bestaande PATCH-transactie)
+
+Bij het goedkeuren van een materiaal-aanvraag wordt in dezelfde transactie automatisch een **concept-inkoopbon** aangemaakt op de bijbehorende opdracht. Leverancier uit `ai_leverancier` (fallback "Onbekend"), bonregel uit `ai_artikel_naam`/`omschrijving` met hoeveelheid 1 st en geparsede prijs. `volgens_opdracht=wijkt_af/weet_niet` staat leesbaar in de bon-opmerkingen (§5.4). De aanvraag krijgt `resultaat_inkoopbon_id` terug (§5.2). Afwijzen maakt geen bon. Tweede goedkeuring maakt geen tweede bon (idempotentieguard). DB-migratie 0043 additief. Bewijs: `scripts/src/bewijs-materiaal01-fase3.ts` — 18 checks groen.
 ## 2026-08-11 — Waarschuwing in de functiestap bij al gekoppeld rechtenprofiel
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen informatieve velden + wizard-UI, rechtenberekening ongewijzigd)

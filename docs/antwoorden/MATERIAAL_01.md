@@ -52,19 +52,36 @@ vandaag `projecten:2` en `projecten:3` (niemand wint of verliest toegang)?
 Zie `docs/metingen/MATERIAAL_01_gebruik.md`: dev-cijfers gemeten; **productietelling nog te draaien
 door René** via de nieuwe beheerpagina (agent heeft geen SSH/DB-toegang tot de VPS meer).
 
-### Fase 3 — de ontbrekende schakel (§5): NIET GEBOUWD, en dat is de correcte uitkomst
 
-**Er ligt geen keuze van René (A/B/C).** Conform §7.5 is fase 3 daarom niet gebouwd — niets tussen
-goedgekeurde aanvraag en bestelling in gezet, geen vierde bestelpad, niets "alvast" geconsolideerd.
+### Fase 3 — keuze A gebouwd (2026-08-11, commit zie changelog)
 
-**Besluit dat nodig is (aan René, ná de productietelling):**
-- **A** — goedgekeurd → concept-inkoopbon op de opdracht;
-- **B** — goedgekeurd → reservering op het magazijn (bij tekort: bestaand magazijn-inkooporderpad);
-- **C** — behandelaar kiest per aanvraag tussen A en B, met systeemvoorstel.
+**René heeft op 11 aug 2026 keuze A gekozen** (concept-inkoopbon op de opdracht), op basis van de
+productiemeting van 10 aug 2026 (commit `f7e2d643`): alle inkooptabellen stonden op nul, waardoor B
+(reservering) en C (behandelaar kiest) niet aantoonbaar pasten.
 
-Kandidaat-regel voor C uit §5, **uitsluitend ter beoordeling, niet ingevoerd**: artikel in `artikelen`
-mét voorraad → B; anders → A. Of die regel bij de werkwijze van FPS past, kan alleen René beoordelen,
-mede op basis van T10 (wie beslist dat vandaag).
+**Wat er gebouwd is:**
+- Bij de overgang `PATCH /materiaal-aanvragen/:id` → `goedgekeurd` (én de aanvraag heeft een `opdracht_id`):
+  - Wordt een **concept-inkoopbon** aangemaakt in dezelfde transactie als de status-update en de werkbaksluiting.
+  - Leverancier: `ai_leverancier` (of "Onbekend" als dat leeg is).
+  - Bonregel: `ai_artikel_naam` / `omschrijving` / fallback; hoeveelheid = 1, eenheid = "st"
+    (aanvraag heeft geen aantal — René akkoord, §5 toelichting).
+  - Prijs: geparsed uit `ai_prijs_indicatie` (bijv. "€ 350,00" → 350).
+  - `opmerkingen`: bevat `volgens_opdracht=wijkt_af` of `weet_niet` leesbaar (§5.4 harde eis).
+- De aanvraag krijgt `resultaat_inkoopbon_id` terug (§5.2 harde eis: verwijzing naar het resultaat).
+- Afwijzen → geen inkoopbon, `resultaat_inkoopbon_id` blijft null.
+- Tweede goedkeuring op een al-goedgekeurde aanvraag → geen tweede bon (idempotentiebescherming
+  via `bestaand.status !== status`-guard).
+- Toebehoren-aanvragen (geen `opdracht_id`) → werkbak sluit, geen bon (BOUW_01 §6 ongewijzigd).
+
+**DB-migratie:** `0043_materiaal01-fase3-inkoopbon.sql` — additieve kolom
+`materiaal_aanvragen.resultaat_inkoopbon_id` (FK naar `inkoopbonnen`, ON DELETE SET NULL).
+
+**Bewijs:** `scripts/src/bewijs-materiaal01-fase3.ts` — 18 checks groen (gemeten op dev 11-08-2026):
+- concept-bon aangemaakt met juiste velden (status, opdracht, leverancier, opmerkingen, bonregel)
+- `wijkt_af` en `weet_niet` zichtbaar in opmerkingen
+- fallback naar "Onbekend" en monteuromschrijving bij lege AI-velden
+- geen dubbele bon bij tweede goedkeuring
+- werkbakitem sluit bij goedkeuren (regressie fase 1)
 
 ### Buiten scope gehouden (§6, bevestigd)
 

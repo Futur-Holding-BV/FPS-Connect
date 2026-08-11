@@ -29,7 +29,8 @@ export default defineConfig({
   // en mag niet meelopen in de monteur-suite (Expo-baseURL, geen #email veld).
   testMatch: ["**/startmenu.spec.ts"],
   // Een koude Expo-load is traag; ruime timeouts zodat de test niet flaky is.
-  timeout: 180_000,
+  // Worst-case: 3 pogingen × 45s + 2 TOTP-vensterwachten × 30s = 195s → 300s.
+  timeout: 300_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,

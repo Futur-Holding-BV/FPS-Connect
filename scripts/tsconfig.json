@@ -11,6 +11,9 @@
   "exclude": [
     "src/bewijs-scenario-doorrekening.ts",
     "src/bewijs-uren01c.ts",
-    "src/klant-poort-check.ts"
+    "src/klant-poort-check.ts",
+    // vorm01-contrast.ts importeert @workspace/ontwerp maar de composite-ref
+    // ontbreekt hier; structurele koppeling is een aparte taak.
+    "src/vorm01-contrast.ts"
   ]
 }

@@ -187,12 +187,37 @@ function draaiPlaywright(): Promise<number> {
   });
 }
 
+// Pre-warmt de Expo web-bundle door één keer de rootpagina op te halen.
+// Metro compileert de bundle pas op het eerste verzoek; dat kan 30-60s duren.
+// Door dit vóór Playwright te doen hoeft de test niet te wachten op compilatie.
+async function preWarmExpoBundle(): Promise<void> {
+  if (!expoDomain) return;
+  const url = `https://${expoDomain}/`;
+  log(`Pre-warm Expo web-bundle: ${url}`);
+  const startMs = Date.now();
+  try {
+    await new Promise<void>((resolve) => {
+      const req = https.get(url, { rejectUnauthorized: false, timeout: 90_000 }, (res) => {
+        res.resume(); // body weggooien
+        res.on("end", resolve);
+        res.on("error", () => resolve());
+      });
+      req.on("error", () => resolve());
+      req.on("timeout", () => { req.destroy(); resolve(); });
+    });
+    log(`Pre-warm klaar (${Math.round((Date.now() - startMs) / 1000)}s).`);
+  } catch {
+    log("Pre-warm mislukt (niet fataal).");
+  }
+}
+
 async function main(): Promise<void> {
   let exitCode = 1;
   try {
     for (const service of services) {
       await zorgServiceDraait(service);
     }
+    await preWarmExpoBundle();
     log("Alle services gezond, Playwright starten.");
     exitCode = await draaiPlaywright();
   } catch (err) {
