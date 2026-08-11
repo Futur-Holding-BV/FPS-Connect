@@ -9,3 +9,5 @@ De Project-validatieworkflow draait stappen **parallel**. Drie gevaren voor runn
 
 **Why:** 3 review-afwijzingen/CI-fails bij het registreren van bewijs-herschik (aug 2026).
 **How to apply:** nieuwe bewijsrunners volgen het patroon van `scripts/src/bewijs-herschik-run.ts`: eigen vrije poort (net listen 0), eigen build-outdir via `API_BUILD_OUTDIR` (bv. dist-bewijs, git-ignored), gereedheid gebonden aan het eigen kindproces (elke exit vóór gereed = fout), bewijsscript wijst via `BEWIJS_API_BASIS` naar de eigen instantie, alleen eigen procesgroep killen.
+
+**Suite-mutex (definitieve les):** cross-suite hergebruik van elkaars api-server (8080) is fundamenteel onveilig in CI-validatie — de harnas ruimt bij het einde van een validatiestap de complete procesboom op (ook detached kinderen), waardoor de zustersuite midden in haar run 502's krijgt. Ook "laat de server draaien" of een start-lock lost dat niet op. Oplossing: e2e-suites serialiseren via een mkdir-suite-mutex (/tmp/e2e-suite.lock, stale na 20 min, eigenaar geeft vrij in finally); elke suite start en beheert haar eigen services binnen haar eigen stap.

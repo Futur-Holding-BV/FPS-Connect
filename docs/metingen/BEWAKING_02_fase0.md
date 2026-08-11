@@ -38,14 +38,14 @@ Ruwe uitkomst: `{"gemeten_op":"2026-08-11T09:17:00.817Z","t1_offertes_per_status
 ## Afwijkingen van de opdracht-aannames (§7.8) — gemeld
 
 1. **Het verzendmoment bestond al.** §4 van de opdracht veronderstelde dat alleen `workflow_transitie_log` het moment van verzenden kent. In werkelijkheid schrijft de verzendflow bij élke verzending een `offerte_tracking`-event `bezorgd` en het portaal bij openen `portaal_bekeken`. Er hoefde dus geen verzendmoment bijgebouwd te worden; V1/V2 lezen deze events (fallback: `bijgewerkt_op`).
-2. **`offertes.status` vs. `portaal_status`.** De statusreeks uit §4 (verzonden/bekeken/ondertekend/afgewezen) leeft op `portaal_status`; `offertes.status` blijft bij verzenden ongewijzigd en wordt pas bij ondertekening `geaccepteerd`. De voeders keyen daarom op `portaal_status`. (De T1/T2/T3-queries van dit meetinstrument telden op `status` — op de lege prod-keten maakt dat geen verschil, maar bij een volgende meting hoort `portaal_status` erbij.)
+2. **`offertes.status` vs. `portaal_status`.** De statusreeks uit §4 (verzonden/bekeken/ondertekend/afgewezen) leeft op `portaal_status`; `offertes.status` blijft bij verzenden ongewijzigd en wordt pas bij ondertekening `geaccepteerd`. De voeders keyen daarom op `portaal_status`. Het meetinstrument is hierop bijgewerkt (11-08-2026): T1 telt per `status` én per `portaal_status`; T2 meet op `portaal_status` in ('verzonden','bekeken') met momenten uit `offerte_tracking` (`bezorgd`=max — herbezorging reset de klok; `portaal_bekeken`=min — herhaalbezoek stelt niet uit) i.p.v. `workflow_transitie_log`, met fallback op `bijgewerkt_op`; T3 sluit eindstatussen uit op `status` (ondertekend/afgewezen/ingetrokken) én `portaal_status` (ondertekend/afgewezen/vervallen).
 
 ## Uitkomst fase 0 → gekozen startdrempels
 
-Geen gemeten doorlooptijden (keten onbenut) → conservatieve, configureerbare startstanden in `app_instellingen` (migratie `0048`): `offerte_reactie_bewaking_dagen` = **7**, `offerte_bekeken_bewaking_dagen` = **5**, `opname_calculatie_bewaking_dagen` = **14**. V3/V5/V6 hebben geen tijdsdrempel (toestand zelf is het signaal).
+Geen gemeten doorlooptijden (keten onbenut) → conservatieve, configureerbare startstanden in `app_instellingen` (migratie `0048_bewaking02-drempels.sql`): `offerte_reactie_bewaking_dagen` = **7**, `offerte_bekeken_bewaking_dagen` = **5**, `opname_calculatie_bewaking_dagen` = **14**. V3/V5/V6 hebben geen tijdsdrempel (toestand zelf is het signaal).
 
 ## Waar landt de uitkomst en welk besluit hangt eraan
 
-- **T7 leeg voor offertes op prod** → eerst verzendmoment vastleggen (bijv. transitielog aansluiten op de offerte-statuswissels of een `verzonden_op`-veld) vóórdat V1/V2 gebouwd worden; V3–V6 kunnen wel door (die leunen op `datum+geldigheidDagen`, koppelingen en `akkoord_grond`).
+- **T7 leeg voor offertes op prod** → dit bleek geen blokkade: het verzendmoment bestond al in `offerte_tracking` (event `bezorgd`, zie Afwijkingen §1). V1/V2 én het meetinstrument lezen die events; er is geen apart `verzonden_op`-veld of transitielog-aansluiting nodig.
 - **T2/T4-waarden** → startstand van de configureerbare drempels voor V1/V2/V4.
 - **Nul-uitkomsten** → voeder wordt wél gebouwd (sluiting hoort erbij), drempel start op een conservatieve standaard en wordt gemeld.

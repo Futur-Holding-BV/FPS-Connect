@@ -9,6 +9,7 @@
 //
 // Draaien: pnpm --filter @workspace/scripts run e2e-monteur
 import { spawn, type ChildProcess } from "node:child_process";
+import { mkdirSync, rmSync, statSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 
@@ -97,6 +98,74 @@ async function wachtTotGezond(
 
 const opgestart: ChildProcess[] = [];
 
+// ───────────────────────── Suite-mutex ─────────────────────────
+// E2e-suites (e2e-menu en e2e-web) delen de api-server-poort 8080 en kunnen
+// in CI-validatie parallel starten. Cross-suite hergebruik van elkaars
+// api-server is fundamenteel onveilig: de CI-harnas ruimt bij het einde van
+// een validatiestap de complete procesboom van die stap op (ook detached
+// kinderen), waardoor de zustersuite midden in haar run 502's krijgt.
+// Oplossing: één suite tegelijk. De tweede runner wacht tot de mutex vrij is
+// en start daarna zijn eigen services in zijn eigen procesboom.
+const SUITE_MUTEX_PAD = "/tmp/e2e-suite.lock";
+const SUITE_MUTEX_STALE_MS = 20 * 60_000; // suite duurt ~4 min; 20 min = zeker stale
+const SUITE_MUTEX_WACHT_MS = 15 * 60_000;
+
+let suiteMutexVerkregen = false;
+
+function probeerSuiteMutex(): boolean {
+  try {
+    mkdirSync(SUITE_MUTEX_PAD);
+    return true;
+  } catch {
+    // bestaat al
+  }
+  try {
+    const st = statSync(SUITE_MUTEX_PAD);
+    if (Date.now() - st.mtimeMs > SUITE_MUTEX_STALE_MS) {
+      log(`Suite-mutex ouder dan ${SUITE_MUTEX_STALE_MS / 60_000} min — stale, opruimen.`);
+      rmSync(SUITE_MUTEX_PAD, { recursive: true, force: true });
+      mkdirSync(SUITE_MUTEX_PAD);
+      return true;
+    }
+  } catch {
+    // race met andere runner — volgende poll-poging
+  }
+  return false;
+}
+
+async function verkrijgSuiteMutex(): Promise<void> {
+  const deadline = Date.now() + SUITE_MUTEX_WACHT_MS;
+  let gemeld = false;
+  while (Date.now() < deadline) {
+    if (probeerSuiteMutex()) {
+      suiteMutexVerkregen = true;
+      log("Suite-mutex verkregen.");
+      return;
+    }
+    if (!gemeld) {
+      log("Andere e2e-suite draait — wachten tot die klaar is...");
+      gemeld = true;
+    }
+    await wacht(5_000);
+  }
+  throw new Error(
+    `Suite-mutex niet verkregen binnen ${SUITE_MUTEX_WACHT_MS / 60_000} minuten.`,
+  );
+}
+
+function geefSuiteMutexVrij(): void {
+  if (!suiteMutexVerkregen) return;
+  suiteMutexVerkregen = false;
+  try {
+    rmSync(SUITE_MUTEX_PAD, { recursive: true, force: true });
+  } catch {
+    // best-effort
+  }
+}
+
+
+
+
 // Zorgt dat één service draait. Hergebruikt een al draaiende instantie; start
 // hem anders zelf op en wacht tot hij gezond is.
 // Meerdere pogingen vóórdat we concluderen dat de service niet draait — dit
@@ -120,6 +189,7 @@ async function zorgServiceDraait(service: Service): Promise<void> {
       await wacht(5_000);
     }
   }
+
 
   log(`${service.naam}: niet bereikbaar, opstarten...`);
   const startTijd = Date.now();
@@ -214,6 +284,7 @@ async function preWarmExpoBundle(): Promise<void> {
 async function main(): Promise<void> {
   let exitCode = 1;
   try {
+    await verkrijgSuiteMutex();
     for (const service of services) {
       await zorgServiceDraait(service);
     }
@@ -234,6 +305,7 @@ async function main(): Promise<void> {
       log(`Waarschuwing: opruimen e2e-testaccount mislukt: ${(err as Error).message}`);
     }
     stopOpgestarteServices();
+    geefSuiteMutexVrij();
   }
   process.exit(exitCode);
 }
