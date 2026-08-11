@@ -217,7 +217,7 @@ export function ConflictModal({
                       fontSize: 11,
                       fontFamily: "Inter_400Regular",
                     }}
-                    numberOfLines={2}
+                    numberOfLines={6}
                   >
                     {item.fout}
                   </Text>

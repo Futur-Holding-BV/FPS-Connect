@@ -8,3 +8,5 @@ Een untracked `artifacts/monteur-app/.env` met `EXPO_PUBLIC_DOMAIN=<oud domein>`
 **How to apply:** bij consistente "Failed to fetch" in de monteur-app eerst de fetch-URL in Playwright request-log vergelijken met $REPLIT_DEV_DOMAIN; verschilt het host-suffix → zoek naar stale .env / gecachte bundle en verwijder die. Curl-bewijs dat de API werkt sluit dit NIET uit. Bevestigd (10 aug 2026): `rm artifacts/monteur-app/.env` maakte e2e-menu direct weer groen na 3 opeenvolgende login-faalruns.
 
 **Herbevestigd (11 aug 2026):** bestand dook opnieuw op (datum 22 jun) en brak e2e-menu 2x in validatie; `rm` maakte de run direct groen.
+
+**3e recidive (11 aug 2026, later op de dag):** zelfde bestand (mtime 22 jun) brak e2e-menu opnieuw 3x in taakvalidatie; `rm` → direct groen. Iets herschept dit bestand of git-checkout brengt het terug — bij elke e2e-menu-faal op login éérst `ls artifacts/monteur-app/.env` checken.

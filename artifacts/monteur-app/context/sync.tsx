@@ -22,8 +22,22 @@ import {
   verwijderUitWachtrij,
   verwerkWachtrij,
   wisMislukteItems,
+  PermanenteSyncFout,
 } from "@/lib/syncQueue";
 import { verwijderOfflineUren } from "@/lib/offlineCache";
+
+// Haal een nette meldingstekst uit een 422-antwoord (bv. de akkoordpoort
+// die uren weigert met AKKOORD_ONTBREEKT). Retryen lost zo'n weigering niet
+// op, dus dit wordt een permanente fout met de uitleg van de server.
+async function lees422Melding(r: Response): Promise<string> {
+  try {
+    const body = (await r.json()) as { error?: string; code?: string };
+    if (body?.error) return body.error;
+  } catch {
+    // geen JSON-body — val terug op generieke tekst
+  }
+  return "De server heeft deze wijziging geweigerd (422).";
+}
 
 const INTERVAL_MS = 5 * 60 * 1000;
 
@@ -249,6 +263,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             headers,
             body: JSON.stringify(item.payload),
           });
+          if (r.status === 422) {
+            throw new PermanenteSyncFout(await lees422Melding(r));
+          }
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           // Verwijder de lokale kopie na succesvolle sync
           await verwijderOfflineUren(item.lokaalId);
@@ -262,6 +279,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             headers,
             body: JSON.stringify(item.velden),
           });
+          if (r.status === 422) {
+            throw new PermanenteSyncFout(await lees422Melding(r));
+          }
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           break;
         }

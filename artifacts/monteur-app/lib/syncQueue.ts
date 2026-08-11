@@ -145,6 +145,15 @@ export type WachtrijItem = SyncActie & {
   fout?: string;
 };
 
+// Fout die niet door opnieuw proberen wordt opgelost (bv. 422 akkoordpoort):
+// het item wordt direct als definitief mislukt gemarkeerd met de meldingstekst.
+export class PermanenteSyncFout extends Error {
+  constructor(melding: string) {
+    super(melding);
+    this.name = "PermanenteSyncFout";
+  }
+}
+
 // ─── Interne helpers ──────────────────────────────────────────────────────────
 function uuid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -187,6 +196,19 @@ export async function markeerFout(id: string, fout: string): Promise<void> {
   await slaWachtrijOp(
     items.map((i) =>
       i.id === id ? { ...i, pogingen: i.pogingen + 1, fout } : i,
+    ),
+  );
+}
+
+// Markeer een item direct als definitief mislukt (geen verdere retries).
+export async function markeerDefinitiefMislukt(
+  id: string,
+  fout: string,
+): Promise<void> {
+  const items = await laadWachtrij();
+  await slaWachtrijOp(
+    items.map((i) =>
+      i.id === id ? { ...i, pogingen: MAX_POGINGEN, fout } : i,
     ),
   );
 }
@@ -245,7 +267,12 @@ export async function verwerkWachtrij(
       verwerkt++;
     } catch (err) {
       const foutTekst = err instanceof Error ? err.message : String(err);
-      await markeerFout(item.id, foutTekst);
+      if (err instanceof PermanenteSyncFout) {
+        // Retryen lost dit niet op — direct definitief mislukt met nette melding.
+        await markeerDefinitiefMislukt(item.id, foutTekst);
+      } else {
+        await markeerFout(item.id, foutTekst);
+      }
       mislukt++;
     }
   }
