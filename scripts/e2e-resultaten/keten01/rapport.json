@@ -1,18 +1,18 @@
 {
-  "merk": "KETEN01 1786478143229",
+  "merk": "KETEN01 1786601378729",
   "keten": {
     "adminId": 59,
-    "voorstelId": 28,
-    "klantId": 47,
-    "gebouwId": 250,
-    "opnameId": 23,
-    "calculatieId": 235,
-    "offerteId": 78,
-    "portaalToken": "9961761d9111c919cb6615157cf3aaaaadf44dd838fb7b959794d2619d240d52",
-    "opdrachtId": 125,
-    "materiaalAanvraagId": 47,
-    "inkoopFactuurId": 73,
-    "medewerkerId": 482
+    "voorstelId": 26,
+    "klantId": 43,
+    "gebouwId": 244,
+    "opnameId": 21,
+    "calculatieId": 229,
+    "offerteId": 68,
+    "portaalToken": "7c2911efe1fbe99e740b161de3b761b3ca1db0cde27daea90f5bcd0ea7179a30",
+    "opdrachtId": 109,
+    "materiaalAanvraagId": 35,
+    "inkoopFactuurId": 71,
+    "medewerkerId": 464
   },
   "rapport": [
     {
@@ -23,42 +23,37 @@
     {
       "stap": "1b aanvraag accepteren → klant+gebouw",
       "uitkomst": "doorlopen",
-      "detail": "voorstel 28 geaccepteerd; klant 47, gebouw 250, projectkans 39"
+      "detail": "voorstel 26 geaccepteerd; klant 43, gebouw 244, projectkans 37"
     },
     {
       "stap": "2 opname definitief op gebouw",
       "uitkomst": "doorlopen",
-      "detail": "opname 23 (nummer 22) definitief op gebouw 250"
+      "detail": "opname 21 (nummer 20) definitief op gebouw 244"
     },
     {
       "stap": "3 calculatie aan opname + regels",
       "uitkomst": "doorlopen",
-      "detail": "calculatie 235 (C149) aan opname 23, 1 regel(s)"
+      "detail": "calculatie 229 (C143) aan opname 21, 1 regel(s)"
     },
     {
       "stap": "4a offerte uit calculatie + verzonden",
       "uitkomst": "doorlopen",
-      "detail": "offerte 78, portaal_status=verzonden, bezorgd-event vastgelegd, geldige portaallink"
-    },
-    {
-      "stap": "4b klant opent en tekent in portaal",
-      "uitkomst": "schijnbaar gelukt",
-      "detail": "portaal_status=bekeken"
+      "detail": "offerte 68, portaal_status=verzonden, bezorgd-event vastgelegd, geldige portaallink"
     },
     {
       "stap": "4b/5 portaal-tekenen → opdracht",
       "uitkomst": "vastgelopen",
-      "detail": "APP-BEVINDING: 'Definitief akkoord geven' doet niets — op stap 2 is het handtekening-canvas ontkoppeld (unmount → canvasRef null) waardoor bevestigHandtekening stil retourneert en er nooit een POST /portaal/:token/ondertekenen vertrekt. Testfout uitgesloten (geen serverhit in log). Oorspr. fout: locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Maak opdracht/i }).fi"
+      "detail": "APP-BEVINDING: 'Definitief akkoord geven' doet niets — op stap 2 is het handtekening-canvas ontkoppeld (unmount → canvasRef null) waardoor bevestigHandtekening stil retourneert en er nooit een POST /portaal/:token/ondertekenen vertrekt. Testfout uitgesloten (geen serverhit in log). Oorspr. fout: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Accepteren/ }).first"
     },
     {
       "stap": "5b vangnet-opdracht",
       "uitkomst": "gesimuleerd",
-      "detail": "opdracht 125 + concept-werkbegroting 36 DB-geseed omdat portaal-ondertekenen vastliep; proces 6-11 blijft zo meetbaar (afwijking, gemeld)"
+      "detail": "opdracht 109 + concept-werkbegroting 32 DB-geseed omdat portaal-ondertekenen vastliep; proces 6-11 blijft zo meetbaar (afwijking, gemeld)"
     },
     {
       "stap": "6 werkbegroting + planning",
       "uitkomst": "doorlopen",
-      "detail": "werkbegroting 36 vastgesteld; AI-uitvoeringsplanning met 3 taak/taken. NB: losse planning-items lopen via de aparte Planning-module (niet op de opdrachtpagina)."
+      "detail": "werkbegroting 32 vastgesteld; AI-uitvoeringsplanning met 3 taak/taken. NB: losse planning-items lopen via de aparte Planning-module (niet op de opdrachtpagina)."
     },
     {
       "stap": "7a monteur-aanvraag",
@@ -68,12 +63,12 @@
     {
       "stap": "7b goedkeuring → concept-inkoopbon",
       "uitkomst": "doorlopen",
-      "detail": "aanvraag goedgekeurd, inkoopbon 52 (status concept) gekoppeld via inkoopbon_id"
+      "detail": "aanvraag goedgekeurd, inkoopbon 42 (status concept) gekoppeld via inkoopbon_id"
     },
     {
       "stap": "8 uren op opdracht mét akkoord",
       "uitkomst": "doorlopen",
-      "detail": "1 uren-rij(en) op opdracht 125 (POST /uren → 201 {\"id\":141,\"datum\":\"2026-08-11\",\"medewerker_id\":482,\"medewerker_naam\":null,\"gebouw_id\":250,\"gebouw_naam\":null,\"project_id\":null,\"project_naam\":\"Opdracht KETEN01 1786478143229\",\"werkzaamheden\":null,\"werkzaamheid_categorie\":null,\"ruimte)"
+      "detail": "1 uren-rij(en) op opdracht 109 (POST /uren → 201 {\"id\":137,\"datum\":\"2026-08-13\",\"medewerker_id\":464,\"medewerker_naam\":null,\"gebouw_id\":244,\"gebouw_naam\":null,\"project_id\":null,\"project_naam\":\"Opdracht KETEN01 1786601378729\",\"werkzaamheden\":null,\"werkzaamheid_categorie\":null,\"ruimte)"
     },
     {
       "stap": "9a leveranciersfactuur binnen",
