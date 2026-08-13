@@ -92,6 +92,8 @@ export default function InfoPagina() {
   const [offerteReactieDagen, setOfferteReactieDagen] = useState<string>("");
   const [offerteBekekenDagen, setOfferteBekekenDagen] = useState<string>("");
   const [opnameCalculatieDagen, setOpnameCalculatieDagen] = useState<string>("");
+  const [prijsafspraakDagen, setPrijsafspraakDagen] = useState<string>("");
+  const [prijsafwijkingMarge, setPrijsafwijkingMarge] = useState<string>("");
   useEffect(() => {
     if (instellingen) {
       setReactieUren(String(instellingen.aanvraag_reactietermijn_uren ?? 24));
@@ -99,6 +101,8 @@ export default function InfoPagina() {
       setOfferteReactieDagen(String(instellingen.offerte_reactie_bewaking_dagen ?? 7));
       setOfferteBekekenDagen(String(instellingen.offerte_bekeken_bewaking_dagen ?? 5));
       setOpnameCalculatieDagen(String(instellingen.opname_calculatie_bewaking_dagen ?? 14));
+      setPrijsafspraakDagen(String(instellingen.prijsafspraak_bewaking_dagen ?? 60));
+      setPrijsafwijkingMarge(String(instellingen.prijsafwijking_marge_pct ?? 2));
     }
   }, [instellingen]);
 
@@ -116,6 +120,20 @@ export default function InfoPagina() {
         offerte_reactie_bewaking_dagen: Math.round(Number(offerteReactieDagen)),
         offerte_bekeken_bewaking_dagen: Math.round(Number(offerteBekekenDagen)),
         opname_calculatie_bewaking_dagen: Math.round(Number(opnameCalculatieDagen)),
+      },
+    });
+    queryClient.invalidateQueries();
+  }
+
+  async function prijsafspraakDrempelsOpslaan() {
+    const marge = Number(prijsafwijkingMarge);
+    if (!geldigDagen(prijsafspraakDagen) || !Number.isFinite(marge) || marge < 0 || marge > 100) {
+      return;
+    }
+    await updateInstellingen.mutateAsync({
+      data: {
+        prijsafspraak_bewaking_dagen: Math.round(Number(prijsafspraakDagen)),
+        prijsafwijking_marge_pct: marge,
       },
     });
     queryClient.invalidateQueries();
@@ -598,6 +616,53 @@ export default function InfoPagina() {
               </div>
             </div>
             <Button size="sm" onClick={bewakingsdrempelsOpslaan} disabled={updateInstellingen.isPending}>
+              <Save className="mr-1 h-4 w-4" /> Drempels opslaan
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Prijsafspraak-bewakingsdrempels (PRIJS_01 §5/§7) */}
+      {isHoofdBeheerder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              Prijsafspraak-bewaking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground max-w-md">
+              Drempels voor de bewaking van prijsafspraken en de prijscontrole van inkoopfacturen.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Aflopende afspraak (dagen)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="mt-1"
+                  value={prijsafspraakDagen}
+                  onChange={(e) => setPrijsafspraakDagen(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Zoveel dagen vóór het aflopen van een prijsafspraak verschijnt een signaal.</p>
+              </div>
+              <div>
+                <Label>Prijsafwijkingsmarge (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.1"
+                  className="mt-1"
+                  value={prijsafwijkingMarge}
+                  onChange={(e) => setPrijsafwijkingMarge(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Toegestane afwijking tussen factuurprijs en afgesproken prijs voordat een melding volgt.</p>
+              </div>
+            </div>
+            <Button size="sm" onClick={prijsafspraakDrempelsOpslaan} disabled={updateInstellingen.isPending}>
               <Save className="mr-1 h-4 w-4" /> Drempels opslaan
             </Button>
           </CardContent>
