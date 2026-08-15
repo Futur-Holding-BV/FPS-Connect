@@ -1,3 +1,9 @@
+## 2026-08-15 — Klantloos-controle: achtervoegselregel vangt camelCase-rolvariabelen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen controle-script; nul valse treffers)
+
+Het patroongat uit taak #935 gedicht: rolvergelijkingen met camelCase-variabelen (`testRol === "klant"`, `gebruikerRol !== "klant"`) glipten door de klantloos-controle omdat de patronen een woordgrens vóór "rol" eisten. Nieuwe achtervoegselregel: een regel faalt wanneer links een naam staat die eindigt op "rol"/"Rol" (ook `gebruiker.rol`) én rechts de string `"klant"` — vergelijking, toewijzing of veldwaarde, beide aanhalingstekens. Een eerder geprobeerd puur waarde-gebaseerd patroon leverde 13 valse treffers op legitieme CRM-/weergavesemantiek (`type: "klant"`, `weergave === "klant"`) en is verworpen; de achtervoegselregel geeft **0 valse treffers** op de huidige boom, zonder uitzonderingslijst of markers. Verboden-identifier-controles (isKlant e.d.) en de OpenAPI-rol-enum-check ongewijzigd. Bewijs: groen op alle 5 bronbomen → drie opzettelijke varianten in drie verschillende bronbomen (monteur-app, firevault, lib/permissies) alle gevangen mét bestandsnaam en regelnummer → na verwijdering weer groen.
+
 ## 2026-08-15 — MIGRATIE_DUBBEL: dubbele migratienummers vastgelegd en nieuwe geblokkeerd
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (read-only controle; bestaande bestanden onaangeraakt)

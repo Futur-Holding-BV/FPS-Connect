@@ -47,12 +47,15 @@ const VERBODEN_IDENTIFIERS = [
 ];
 
 // Rol-context: vergelijking of toewijzing van letterlijk "klant" aan iets dat
-// rol heet, of "klant" in een rollenlijst/rol-type.
+// Achtervoegselregel (taak #935): een regel faalt wanneer links een naam
+// staat die eindigt op "rol"/"Rol" (rol, testRol, gebruikerRol, gebruiker.rol)
+// én rechts de tekst "klant" (beide aanhalingstekens). CRM-/weergavevelden
+// zoals type: "klant", entityType: "klant" en weergave === "klant" vallen
+// hier bewust buiten — geen uitzonderingslijst of markers nodig.
 const VERBODEN_ROLPATRONEN = [
-  /\brol\w*\s*(?:===|!==|==|!=)\s*["'`]klant["'`]/i,
-  /["'`]klant["'`]\s*(?:===|!==|==|!=)\s*\w*rol/i,
-  /\brol\s*:\s*["'`]klant["'`]/,
-  /\brol\s*=\s*["'`]klant["'`]/,
+  /[\w.$]*[Rr]ol\b\s*(?:===|!==|==|!=)\s*["'`]klant["'`]/,
+  /["'`]klant["'`]\s*(?:===|!==|==|!=)\s*[\w.$]*[Rr]ol\b/,
+  /[\w.$]*[Rr]ol\b\s*[:=]\s*["'`]klant["'`]/,
   /requireRol\([^)]*["'`]klant["'`]/,
 ];
 
