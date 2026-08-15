@@ -1,3 +1,4 @@
+import { ProcesBalk } from "@/components/proces-balk";
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -872,9 +873,22 @@ export default function ProposalStudio() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
                 <div className="flex flex-wrap gap-2 items-center">
-                  <Badge variant="outline" className={STATUS_KLEUR[offerte.status] ?? ""}>
-                    {STATUS_LABEL[offerte.status] ?? offerte.status}
-                  </Badge>
+                  {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
+                  <ProcesBalk
+                    stappen={[
+                      { sleutel: "concept", label: "Concept" },
+                      { sleutel: "verzonden", label: "Verzonden" },
+                      { sleutel: "bekeken", label: "In behandeling" },
+                      { sleutel: "ondertekend", label: "Geaccepteerd" },
+                    ]}
+                    huidige={offerte.status === "geaccepteerd" ? "ondertekend" : offerte.status}
+                    eindtoestand={
+                      offerte.status === "afgewezen" ? "Afgewezen"
+                        : offerte.status === "vervallen" ? "Vervallen"
+                        : offerte.status === "ingetrokken" ? "Ingetrokken"
+                        : null
+                    }
+                  />
                   {offerte.calculatie_id && (
                     <Badge variant="outline" className="px-3 py-1 text-sm font-normal bg-blue-50 text-blue-700 border-blue-200">
                       <Hammer className="h-3 w-3 mr-1.5" />

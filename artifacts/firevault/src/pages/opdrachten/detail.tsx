@@ -1,4 +1,5 @@
 // Opdracht detail — werkbegroting, nacalculatie, planning-uren, inkoopplanning, uitvoeringsplanning
+import { ProcesBalk } from "@/components/proces-balk";
 import { useEffect, useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import {
@@ -786,7 +787,15 @@ export default function OpdrachtDetailPagina() {
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold tracking-tight">{opdracht.titel}</h1>
-            <Badge variant="outline" className={opStatus.kleur}>{opStatus.label}</Badge>
+            {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
+            <ProcesBalk
+              stappen={[{ sleutel: "actief", label: "Actief" }, { sleutel: "afgerond", label: "Afgerond" }]}
+              huidige={opdracht.status === "gepauzeerd" ? "actief" : opdracht.status}
+              eindtoestand={opdracht.status === "geannuleerd" ? "Geannuleerd" : null}
+            />
+            {opdracht.status === "gepauzeerd" && (
+              <Badge variant="outline" className={opStatus.kleur}>{opStatus.label}</Badge>
+            )}
             {wbStatus && (
               <Badge variant="outline" className={wbStatus.kleur}>Begroting: {wbStatus.label}</Badge>
             )}

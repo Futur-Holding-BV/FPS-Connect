@@ -1,3 +1,4 @@
+import { ProcesBalk } from "@/components/proces-balk";
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import {
@@ -141,10 +142,12 @@ export default function OpnameDetailPagina() {
             </div>
           </div>
         </div>
-        <Badge variant={st.variant} className="shrink-0 mt-1">
-          {isDefinitief ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
-          {st.label}
-        </Badge>
+        {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
+        <ProcesBalk
+          stappen={[{ sleutel: "concept", label: "Concept" }, { sleutel: "definitief", label: "Definitief" }]}
+          huidige={opname.status}
+          className="shrink-0 mt-1"
+        />
       </div>
 
       {opname.notities && (

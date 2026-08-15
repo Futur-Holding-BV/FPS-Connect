@@ -67,9 +67,15 @@ import {
   ChevronDown, ChevronUp, Building2, BookOpen, Search,
   TrendingUp, TrendingDown, Minus, AlertTriangle,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ProcesBalk } from "@/components/proces-balk";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 // ─── Constanten ─────────────────────────────────────────────────────────────
 
@@ -88,6 +94,14 @@ const STATUS_KLEUR: Record<string, string> = {
   gewonnen: "bg-green-100 text-green-800 border-green-200",
   verloren: "bg-red-100 text-red-800 border-red-200",
 };
+
+/** Procesbalk-stappen (herbruikbaar patroon Projectaanpak): commercieel traject van een calculatie. */
+const PROCES_STAPPEN = [
+  { sleutel: "concept", label: "Concept" },
+  { sleutel: "intern_akkoord", label: "Intern akkoord" },
+  { sleutel: "aangeboden", label: "Offerte" },
+  { sleutel: "gewonnen", label: "Opdracht" },
+];
 
 const STATUS_WORKFLOW: Record<string, string[]> = {
   concept: ["intern_akkoord", "verloren"],
@@ -2352,6 +2366,11 @@ export default function ModulesCalculatieDetail() {
 
   const aiChatMut = useAiChatCalculatie();
 
+  // Rechten-gating (conventie: 2=schrijven, 4=verwijderen); alleen-lezen krijgt geen mutatieknoppen.
+  const { heeftNiveau } = useBevoegdheid();
+  const kanSchrijven = heeftNiveau("calculaties", 2);
+  const kanVerwijderen = heeftNiveau("calculaties", 4);
+
   const [weergave, setWeergave] = useState<Weergave>("intern");
   const [teVerwijderen, setTeVerwijderen]       = useState(false);
   const [bewerkenDialoog, setBewerkenDialoog]   = useState(false);
@@ -2706,58 +2725,91 @@ export default function ModulesCalculatieDetail() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          {volgendStatussen.map((s) => (
-            <Button key={s} variant={s === "verloren" ? "outline" : "default"} size="sm" onClick={() => handleStatusWijzigen(s)}>
-              {STATUS_LABEL[s]}
-              {s !== "verloren" && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          {/* Procesbalk: proces in plaats van knoppen (herbruikbaar patroon) */}
+          <ProcesBalk
+            stappen={PROCES_STAPPEN}
+            huidige={data.status === "gewonnen" ? "gewonnen" : data.status}
+            eindtoestand={data.status === "verloren" ? "Verloren" : null}
+          />
+          {/* Eén knop voor de eerstvolgende stap (alleen met schrijfrecht) */}
+          {kanSchrijven && data.status === "concept" && (
+            <Button size="sm" onClick={() => handleStatusWijzigen("intern_akkoord")} data-testid="knop-volgende-stap">
+              Intern akkoord
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          )}
+          {kanSchrijven && data.status === "intern_akkoord" && (offertes.length === 0 ? (
+            <Button size="sm" onClick={() => maakOfferteMut.mutate({ id })} disabled={maakOfferteMut.isPending} data-testid="knop-volgende-stap">
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              {maakOfferteMut.isPending ? "Bezig..." : "Maak offerte"}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => handleStatusWijzigen("aangeboden")} data-testid="knop-volgende-stap">
+              Aangeboden
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           ))}
-          <Button size="sm" onClick={() => maakOfferteMut.mutate({ id })} disabled={maakOfferteMut.isPending}>
-            <FileText className="h-3.5 w-3.5 mr-1.5" />
-            {maakOfferteMut.isPending ? "Bezig..." : "Maak offerte"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={openBewerkenHeader}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" />
-            Bewerken
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => dupliceerMut.mutate({ id })}>
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Dupliceren
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setVersieOpslaanDialoog(true)}>
-            <Save className="h-3.5 w-3.5 mr-1.5" />
-            Versie opslaan
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setVersieDialoog(true)}>
-            <History className="h-3.5 w-3.5 mr-1.5" />
-            Versies
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" />
-            Afdrukken
-          </Button>
-          <Button
-            variant={seniorOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSeniorOpen(v => !v)}
-            title="AI Senior Calculator"
-          >
-            <BrainCircuit className="h-3.5 w-3.5 mr-1.5" />
-            Senior
-          </Button>
-          <Button
-            variant={chatOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setChatOpen(v => !v)}
-            title="AI-assistent"
-          >
-            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-            AI-chat
-          </Button>
-          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setTeVerwijderen(true)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {kanSchrijven && data.status === "aangeboden" && (
+            <Button size="sm" onClick={() => handleStatusWijzigen("gewonnen")} data-testid="knop-volgende-stap">
+              Gewonnen
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          )}
+          {kanSchrijven && data.status === "verloren" && (
+            <Button variant="outline" size="sm" onClick={() => handleStatusWijzigen("concept")} data-testid="knop-volgende-stap">
+              Heropenen als concept
+            </Button>
+          )}
+          {/* Alle documentacties achter drie puntjes */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label="Meer acties" data-testid="knop-meer-acties">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {kanSchrijven && (
+                <>
+                  <DropdownMenuItem onClick={openBewerkenHeader}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Bewerken
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => dupliceerMut.mutate({ id })}>
+                    <Copy className="h-3.5 w-3.5 mr-2" /> Dupliceren
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setVersieOpslaanDialoog(true)}>
+                    <Save className="h-3.5 w-3.5 mr-2" /> Versie opslaan
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuItem onClick={() => setVersieDialoog(true)}>
+                <History className="h-3.5 w-3.5 mr-2" /> Versies
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}>
+                <Printer className="h-3.5 w-3.5 mr-2" /> Afdrukken
+              </DropdownMenuItem>
+              {kanSchrijven && data.status !== "verloren" && data.status !== "gewonnen" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleStatusWijzigen("verloren")}>
+                    <X className="h-3.5 w-3.5 mr-2" /> Markeer als verloren
+                  </DropdownMenuItem>
+                </>
+              )}
+              {kanVerwijderen && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setTeVerwijderen(true)}
+                    data-testid="menu-verwijderen"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Verwijderen
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -2842,10 +2894,13 @@ export default function ModulesCalculatieDetail() {
       <div className="flex flex-1 min-h-0 gap-0">
 
         {/* === Spreadsheet === */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0 p-3">
+          {/* Rekenblad in eigen omkaderd vlak met lichte achtergrondtint;
+              alle handelingen op het blad horen binnen dit kader. */}
+          <div className="flex flex-col flex-1 min-h-0 rounded-lg border bg-muted/20 overflow-hidden" data-testid="rekenblad-kader">
 
           {/* Spreadsheet toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-background gap-3 shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-background/60 gap-3 shrink-0">
             {/* Weergave tabs */}
             <div className="flex rounded-md border overflow-hidden text-xs">
               {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
@@ -3217,17 +3272,140 @@ export default function ModulesCalculatieDetail() {
           ) : (
             <MonteurView regels={regels} />
           )}
+          </div>
         </div>
 
-        {/* === Zijpaneel === */}
-        <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col gap-0 overflow-y-auto pb-14">
+        {/* === Zijpaneel: twee kaarten (Financieel + AI-hulp) === */}
+        <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col gap-3 overflow-y-auto pb-14 p-3">
 
-          {/* AI-voorstel */}
-          <div className="p-4 border-b">
+          {/* Kaart Financieel — accent in de kleur van hoofdstuk Financieel (NAV_01) */}
+          <div
+            className="rounded-lg border bg-background shadow-sm overflow-hidden"
+            style={{ borderTop: "3px solid hsl(var(--hoofdstuk-financieel))" }}
+            data-testid="kaart-financieel"
+          >
+            <div className="px-4 pt-3 pb-2 flex items-center gap-1.5">
+              <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: "hsl(var(--hoofdstuk-financieel))" }} />
+              <h3 className="text-sm font-semibold">Financieel</h3>
+            </div>
+            {/* Totaal incl. btw = grootste element; marge = tweede signaal */}
+            <div className="px-4 pb-3">
+              <p className="text-xs text-muted-foreground">Totaal incl. BTW</p>
+              <p className="text-2xl font-bold tabular-nums" data-testid="totaal-incl-btw">{formatBedragKort(totaalBtw)}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Marge <span className="font-semibold text-foreground">{marge}%</span>
+              </p>
+            </div>
+
+            {/* Kostopbouw */}
+            <div className="px-4 py-3 border-t space-y-1.5 text-sm">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kostopbouw</h4>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Materiaal</span>
+              <span className="tabular-nums">{formatBedrag(matSubtotaal)}</span>
+            </div>
+            {opslagMateriaal > 0 && (
+              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                <span>+ Opslag ({opslagMateriaal}%)</span>
+                <span className="tabular-nums">{formatBedrag(matOpslagBedrag)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>Arbeid</span>
+              <span className="tabular-nums">{formatBedrag(arbSubtotaal)}</span>
+            </div>
+            {opslagArbeid > 0 && (
+              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                <span>+ Opslag ({opslagArbeid}%)</span>
+                <span className="tabular-nums">{formatBedrag(arbOpslagBedrag)}</span>
+              </div>
+            )}
+            {oaSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Onderaanneming</span>
+                <span className="tabular-nums">{formatBedrag(oaSubtotaal)}</span>
+              </div>
+            )}
+            {bouwplaatsSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Bouwplaatskosten</span>
+                <span className="tabular-nums">{formatBedrag(bouwplaatsSubtotaal)}</span>
+              </div>
+            )}
+            {staartSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Staartkosten</span>
+                <span className="tabular-nums">{formatBedrag(staartSubtotaal)}</span>
+              </div>
+            )}
+            <Separator />
+            <div className="flex justify-between font-medium">
+              <span>Subtotaal</span>
+              <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>AK ({opslagAk}%)</span>
+              <span className="tabular-nums">{formatBedrag(akBedrag)}</span>
+            </div>
+            {(opslagAbk > 0 || abkIsVast) && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>ABK ({opslagAbk}%)</span>
+                <span className="tabular-nums">{formatBedrag(abkBedrag)}</span>
+              </div>
+            )}
+            {opslagRisico > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Risico ({opslagRisico}%)</span>
+                <span className="tabular-nums">{formatBedrag(risicoBedrag)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs text-muted-foreground border-t pt-1">
+              <span>Basis voor winst</span>
+              <span className="tabular-nums">{formatBedrag(basisWinst)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Winst ({opslagWinst}%)</span>
+              <span className="tabular-nums">{formatBedrag(winstBedrag)}</span>
+            </div>
+            {data.korting > 0 && (
+              <div className="flex justify-between text-green-700 dark:text-green-400">
+                <span>Korting ({data.korting}%)</span>
+                <span className="tabular-nums">- {formatBedrag(kortingBedrag)}</span>
+              </div>
+            )}
+            <Separator />
+            <div className="flex justify-between font-medium">
+              <span>Totaal excl. BTW</span>
+              <span className="tabular-nums">{formatBedrag(totaal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>BTW (21%)</span>
+              <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
+            </div>
+            {optioneelSubtotaal > 0 && (
+              <div className="flex justify-between items-center text-xs pt-1 border-t">
+                <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400">
+                  <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700 dark:text-blue-400">optioneel</Badge>
+                  Niet in aanneemsom
+                </span>
+                <span className="tabular-nums font-medium text-blue-700 dark:text-blue-400">{formatBedrag(optioneelSubtotaal)}</span>
+              </div>
+            )}
+            </div>
+
+            {/* Bedrijfskompas hoort in de kaart Financieel */}
+            <div className="border-t">
+              <FieContextBlok calculatieId={id} />
+            </div>
+          </div>
+
+          {/* Kaart AI-hulp — één hoofdactie, inleesacties als kleinere regels */}
+          <div className="rounded-lg border bg-background shadow-sm" data-testid="kaart-ai-hulp">
+          <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-amber-500" />
-                AI-voorstel
+                AI-hulp
               </h3>
               {aiPaneel && (
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAiPaneel(false)}>
@@ -3297,6 +3475,7 @@ export default function ModulesCalculatieDetail() {
                 </Button>
               </div>
             )}
+            {/* Inleesacties als kleinere regels onder de hoofdactie */}
             {/* CALC_INVOER_01 — plakken van leverancier */}
             <PlakInvoer calculatieId={id} onOvergenomen={invalidate} />
             {/* ADVIES_01 — adviesrapport uitlezen en per punt inrichten */}
@@ -3306,121 +3485,36 @@ export default function ModulesCalculatieDetail() {
               onAfgehandeld={ruimAdviesParamOp}
               onOvergenomen={invalidate}
             />
-          </div>
-
-          {/* Kostopbouw */}
-          <div className="p-4 border-b space-y-1.5 text-sm">
-            <h3 className="text-sm font-semibold mb-3">Kostopbouw</h3>
-            <div className="flex justify-between text-muted-foreground">
-              <span>Materiaal</span>
-              <span className="tabular-nums">{formatBedrag(matSubtotaal)}</span>
-            </div>
-            {opslagMateriaal > 0 && (
-              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
-                <span>+ Opslag ({opslagMateriaal}%)</span>
-                <span className="tabular-nums">{formatBedrag(matOpslagBedrag)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-muted-foreground">
-              <span>Arbeid</span>
-              <span className="tabular-nums">{formatBedrag(arbSubtotaal)}</span>
-            </div>
-            {opslagArbeid > 0 && (
-              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
-                <span>+ Opslag ({opslagArbeid}%)</span>
-                <span className="tabular-nums">{formatBedrag(arbOpslagBedrag)}</span>
-              </div>
-            )}
-            {oaSubtotaal > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Onderaanneming</span>
-                <span className="tabular-nums">{formatBedrag(oaSubtotaal)}</span>
-              </div>
-            )}
-            {bouwplaatsSubtotaal > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Bouwplaatskosten</span>
-                <span className="tabular-nums">{formatBedrag(bouwplaatsSubtotaal)}</span>
-              </div>
-            )}
-            {staartSubtotaal > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Staartkosten</span>
-                <span className="tabular-nums">{formatBedrag(staartSubtotaal)}</span>
-              </div>
-            )}
-            <Separator />
-            <div className="flex justify-between font-medium">
-              <span>Subtotaal</span>
-              <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>AK ({opslagAk}%)</span>
-              <span className="tabular-nums">{formatBedrag(akBedrag)}</span>
-            </div>
-            {(opslagAbk > 0 || abkIsVast) && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>ABK ({opslagAbk}%)</span>
-                <span className="tabular-nums">{formatBedrag(abkBedrag)}</span>
-              </div>
-            )}
-            {opslagRisico > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Risico ({opslagRisico}%)</span>
-                <span className="tabular-nums">{formatBedrag(risicoBedrag)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-xs text-muted-foreground border-t pt-1">
-              <span>Basis voor winst</span>
-              <span className="tabular-nums">{formatBedrag(basisWinst)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>Winst ({opslagWinst}%)</span>
-              <span className="tabular-nums">{formatBedrag(winstBedrag)}</span>
-            </div>
-            {data.korting > 0 && (
-              <div className="flex justify-between text-green-700">
-                <span>Korting ({data.korting}%)</span>
-                <span className="tabular-nums">- {formatBedrag(kortingBedrag)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Totaalpaneel */}
-          <div className="p-4 space-y-1.5 text-sm">
-            <div className="flex justify-between font-semibold text-base">
-              <span>Totaal excl. BTW</span>
-              <span className="tabular-nums">{formatBedrag(totaal)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>BTW (21%)</span>
-              <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between font-semibold text-primary">
-              <span>Totaal incl. BTW</span>
-              <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
-            </div>
-            {optioneelSubtotaal > 0 && (
-              <div className="flex justify-between items-center text-xs pt-1 border-t">
-                <span className="flex items-center gap-1.5 text-blue-700">
-                  <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700">optioneel</Badge>
-                  Niet in aanneemsom
-                </span>
-                <span className="tabular-nums font-medium text-blue-700">{formatBedrag(optioneelSubtotaal)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
-              <span>Marge</span>
-              <span>{marge}%</span>
+            {/* Panelen: Senior-calculator en AI-chat als kleine regels */}
+            <div className="mt-3 pt-3 border-t space-y-1">
+              <button
+                type="button"
+                onClick={() => setSeniorOpen((v) => !v)}
+                className={cn(
+                  "w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors text-left",
+                  seniorOpen ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                <BrainCircuit className="h-3.5 w-3.5 shrink-0" />
+                Senior-calculator {seniorOpen ? "sluiten" : "openen"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatOpen((v) => !v)}
+                className={cn(
+                  "w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors text-left",
+                  chatOpen ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                AI-chat {chatOpen ? "sluiten" : "openen"}
+              </button>
             </div>
           </div>
-
-          {/* FIE Bedrijfskompas contextblok */}
-          <FieContextBlok calculatieId={id} />
+          </div>
 
           {data.opmerkingen && (
-            <div className="p-4 border-t">
+            <div className="rounded-lg border bg-background shadow-sm p-4">
               <p className="text-xs font-semibold text-muted-foreground mb-1">Opmerkingen</p>
               <p className="text-xs text-muted-foreground">{data.opmerkingen}</p>
             </div>
