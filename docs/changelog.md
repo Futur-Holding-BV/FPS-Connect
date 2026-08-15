@@ -1,3 +1,9 @@
+## 2026-08-15 — Pushwachtrij vlotgetrokken: workflow-commit vervallen, rest gepusht
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen git-historie; de vervallen wijziging was puur instructietekst)
+
+Het pushtoken krijgt bewust géén workflow-scope. De ene commit die `.github/workflows/token-health-check.yml` wijzigde (taak #941-nasleep: 3 instructieregels naar het nieuwe repo-adres/secret-naam) is met een rebase uit de wachtrij gehaald; de overige 16 commits zijn daarna succesvol naar `Futur-Holding-BV/FPS-Connect` gepusht. De handmatige aanpassing staat nu als actiepunt in de zijrandlijst mét de exacte oude en nieuwe regelteksten (migratie `0052_actiepunt-token-health-check.sql`), zodat René ze op GitHub kan doorvoeren.
+
 ## 2026-08-15 — Zes actiepunten van 15 augustus toegevoegd
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen data via idempotente migratie)
