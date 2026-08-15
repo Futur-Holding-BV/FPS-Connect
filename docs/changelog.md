@@ -3362,6 +3362,12 @@ De documentherkenner classificeerde een opdrachtbevestiging al, maar grond B was
 
 De drie bewakingsdrempels uit migratie `0048` (offerte-reactie 7 d, offerte-bekeken 5 d, opname→calculatie 14 d) zijn nu via het beheerscherm bij te stellen. `GET/PUT /info/instellingen` toont en bewaart ze (validatie 1–365 dagen, zelfde patroon als `prijsafspraak_bewaking_dagen`); OpenAPI + codegen bijgewerkt. Web: nieuwe kaart "Commerciële bewaking" op de App-informatiepagina (alleen hoofdbeheerder), naast de bestaande aanvraagstroom-termijnen. De bewakingsloop leest de waarden live uit `app_instellingen`, dus een wijziging werkt direct door in de eerstvolgende draai. Bewijs: `scripts/src/bewijs-taak909-drempels-instelbaar.ts` — 12/12 groen (GET/PUT/DB/400-validatie, met herstel van de oorspronkelijke waarden).
 
+
+## 2026-08-15 — Typecheck routebestanden direct na merge (stap 6b)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bewaking, geen runtimewijziging)
+
+Nieuwe stap 6b toegevoegd aan `scripts/post-merge.sh`: na seed-profielen (stap 6) draait nu `pnpm --filter @workspace/api-server run typecheck` vóórdat de ERR-trap wordt verwijderd en vóórdat de push naar GitHub plaatsvindt. Bij een TypeScript-fout faalt de stap hard via de bestaande ERR-trap (→ faalmelding naar René), met een gestructureerde foutuitvoer: unieke lijst van kapotte bestandsnamen + herstelprocedure (git checkout uit de laatste goede commit + bewust her-toepassen van de beoogde wijziging). Achtergrond: vier eerdere taak-agent-merges mangelden routebestanden (auth.ts, 2× opname.ts, rapporten.ts) die pas bij de deploy-gate werden gevangen. Bewijs geleverd: typecheck groen op de huidige boom → opzettelijke mangeling in `aanvragen.ts` (type-fout op regel 1) gevangen mét bestandsnaam en regelnummer → na herstel weer groen.
 ## 2026-08-15 — Taak #944: Documenten direct aan de opdracht koppelen vanuit het uitvoeringsscherm
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief: nieuw doeltype + upload-knop)
