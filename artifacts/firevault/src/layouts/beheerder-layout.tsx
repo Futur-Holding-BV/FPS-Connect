@@ -36,7 +36,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
-import { InklapbaarHoofdstuk } from "@/components/ui/herschikbaar-hoofdstuk";
+import { TweeTrapsHoofdstuk, TweeTrapsProvider } from "@/components/ui/twee-traps-hoofdstuk";
+import { hoofdstukVanRoute } from "@/lib/hoofdstuk-van-route";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
 import { useSidebarHoofdstukken } from "@/hooks/use-sidebar-hoofdstukken";
@@ -318,6 +319,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true} className="h-dvh">
+      <TweeTrapsProvider>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
@@ -397,7 +399,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Projectaanpak — workflow in volgorde */}
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="projectaanpak"
                 titel="Projectaanpak"
                 positie={hoofdstukPositie("projectaanpak")}
@@ -605,7 +607,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </>
                     )}
                   </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
 
               {/* Algemene inkoop (NP_INKOOP_01) — losse post, geen hoofdstuk.
                   Leveranciers & Artikelen staan onder Instellingen; het
@@ -628,7 +630,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
               {/* Magazijn */}
               {toonMagazijn && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="magazijn"
                 titel="Magazijn"
                 positie={hoofdstukPositie("magazijn")}
@@ -760,12 +762,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* CRM — één centraal menu-item; alle onderdelen bereikbaar via het CRM-dashboard */}
               {toonCrm && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="commercie"
                 titel="Commercie"
                 positie={hoofdstukPositie("commercie")}
@@ -786,11 +788,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Communicatie */}
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="communicatie"
                 titel="Communicatie"
                 positie={hoofdstukPositie("communicatie")}
@@ -849,11 +851,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuItem>
                         )}
                       </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
 
               {/* Veiligheid */}
               {toonToolboxen && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="veiligheid"
                 titel="Veiligheid"
                 positie={hoofdstukPositie("veiligheid")}
@@ -930,12 +932,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Financieel */}
               {toonFinancieel && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="financieel"
                 titel="Financieel"
                 positie={hoofdstukPositie("financieel")}
@@ -1195,12 +1197,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                     </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Goedkeuring */}
               {toonGoedkeuring && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="goedkeuring"
                 titel="Goedkeuring"
                 positie={hoofdstukPositie("goedkeuring")}
@@ -1237,12 +1239,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Declaraties */}
               {toonDeclaraties && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="declaraties"
                 titel="Declaraties"
                 positie={hoofdstukPositie("declaraties")}
@@ -1263,11 +1265,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Organisatie */}
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="organisatie"
                 titel="Organisatie"
                 positie={hoofdstukPositie("organisatie")}
@@ -1406,11 +1408,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
 
               {/* Personeel */}
               {(toonPersoneel || isHoofdbeheerder) && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="personeel"
                 titel="Personeel"
                 positie={hoofdstukPositie("personeel")}
@@ -1605,12 +1607,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                     </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
               {/* Loon — scheiding vóór salarismodules */}
               {(toonSalarisMutaties || toonScabMail || toonLoonOutput || toonBoekhouderPortaal || toonSalarisarchief) && (
-              <InklapbaarHoofdstuk
+              <TweeTrapsHoofdstuk
                 sleutel="loon"
                 titel="Loon"
                 positie={hoofdstukPositie("loon")}
@@ -1699,7 +1701,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuItem>
                         )}
                       </SidebarMenu>
-              </InklapbaarHoofdstuk>
+              </TweeTrapsHoofdstuk>
               )}
 
             </>
@@ -1816,6 +1818,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           ? "overflow-hidden flex flex-col"
           : "overflow-y-auto",
       )}>
+        {/* NAV_01: dunne accentlijn in de hoofdstukkleur boven de pagina */}
+        {hoofdstukVanRoute(location) && (
+          <div
+            aria-hidden
+            className="h-0.5 w-full flex-shrink-0"
+            style={{ backgroundColor: `hsl(var(--hoofdstuk-${hoofdstukVanRoute(location)}))` }}
+          />
+        )}
         {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
         <div className={cn(
           "z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border",
@@ -1868,6 +1878,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       <BerichtNotificatieToast />
       <SlimUploadBalk />
       <NieuwsTicker />
+      </TweeTrapsProvider>
     </SidebarProvider>
   );
 }

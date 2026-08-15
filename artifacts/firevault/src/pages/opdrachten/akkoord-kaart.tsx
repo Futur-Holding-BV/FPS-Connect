@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { ShieldCheck, ShieldAlert, Sparkles, Undo2 } from "lucide-react";
+import { GoedkeuringLabel } from "@/components/goedkeuring/goedkeuring-label";
 
 const GROND_LABELS: Record<string, string> = {
   ondertekening: "A — Digitale ondertekening offerte",
@@ -105,6 +106,8 @@ export function AkkoordKaart({ opdrachtId, kanSchrijven, isHoofdbeheerder }: {
           ) : (
             <Badge className="bg-amber-100 text-amber-800 border-amber-200">Nog niet werkbaar</Badge>
           )}
+          {/* NAV_01 §3 — gedeeld goedkeuringslabel: serverstatus van de goedkeuringsmotor */}
+          <GoedkeuringLabel objectType="opdracht_akkoord" objectId={opdrachtId} koppeling="/beheer/goedkeuringen-dashboard" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

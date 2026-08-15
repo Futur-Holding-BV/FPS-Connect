@@ -129,6 +129,33 @@ export const kleuren: { licht: Palet; donker: Palet } = {
   },
 };
 
+// ── Hoofdstukkleuren (NAV_01) ────────────────────────────────────────────────
+// Elf benoemde kleuren, één per sidebar-hoofdstuk. Merkteken, geen achtergrond:
+// gebruikt als gekleurde tekst/accentlijn. `opLicht` is de variant voor lichte
+// oppervlakken (kaart/wit), `opDonker` voor donkere (sidebar #212631-laag en
+// het donkere palet). Elke variant haalt WCAG AA (≥4,5:1) als tekstkleur op
+// zijn eigen ondergrond — programmatisch berekend en gemeten in
+// docs/metingen/NAV_01_contrast.md. Kleur is nooit het enige signaal: de
+// hoofdstuknaam staat er altijd bij.
+
+export type HoofdstukSleutel =
+  | "projectaanpak" | "magazijn" | "commercie" | "communicatie" | "veiligheid"
+  | "financieel" | "goedkeuring" | "declaraties" | "organisatie" | "personeel" | "loon";
+
+export const hoofdstukKleuren: Record<HoofdstukSleutel, { opLicht: string; opDonker: string }> = {
+  projectaanpak: { opLicht: "#BD380F", opDonker: "#F06B42" }, // 5,62:1 op wit · 4,97:1 op donker
+  magazijn: { opLicht: "#AE6109", opDonker: "#F59F3D" }, // 4,65:1 · 7,15:1
+  commercie: { opLicht: "#906D04", opDonker: "#FAC938" }, // 4,80:1 · 9,72:1
+  communicatie: { opLicht: "#137BAE", opDonker: "#47B4EB" }, // 4,70:1 · 6,49:1
+  veiligheid: { opLicht: "#B3191F", opDonker: "#E96367" }, // 6,83:1 · 4,65:1
+  financieel: { opLicht: "#18864F", opDonker: "#52E099" }, // 4,60:1 · 9,00:1
+  goedkeuring: { opLicht: "#6629A3", opDonker: "#AB78DD" }, // 8,71:1 · 4,66:1
+  declaraties: { opLicht: "#A8247C", opDonker: "#DE63B5" }, // 6,55:1 · 4,73:1
+  organisatie: { opLicht: "#2952A3", opDonker: "#688ED9" }, // 7,42:1 · 4,66:1
+  personeel: { opLicht: "#128178", opDonker: "#4CE6D9" }, // 4,73:1 · 9,83:1
+  loon: { opLicht: "#498321", opDonker: "#8FD65C" }, // 4,61:1 · 8,61:1
+};
+
 // ── Vorm ─────────────────────────────────────────────────────────────────────
 
 export const radius = 14;
@@ -243,6 +270,14 @@ export function cssVariabelen(schema: "licht" | "donker"): Record<string, string
     "--duur-normaal": `${beweging.normaal}ms`,
     "--duur-traag": `${beweging.traag}ms`,
     "--versnelling": beweging.versnellingCss,
+    // Hoofdstukkleuren (NAV_01): per schema de passende AA-variant. Op licht
+    // is de sidebar zelf donker, dus die leest --hoofdstuk-*-sidebar.
+    ...Object.fromEntries(
+      Object.entries(hoofdstukKleuren).flatMap(([naam, k]) => [
+        [`--hoofdstuk-${naam}`, hexNaarHslTriplet(schema === "donker" ? k.opDonker : k.opLicht)],
+        [`--hoofdstuk-${naam}-sidebar`, hexNaarHslTriplet(k.opDonker)],
+      ]),
+    ),
   };
 }
 

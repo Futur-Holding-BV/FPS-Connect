@@ -2,6 +2,7 @@
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
 - [ADVIES_01 regelsoorten](advies-regelsoorten.md) — somplekken filteren op soort+!optioneel (helpers teltMeeRegel/berekenOfferteTotalen); elk rapportpunt krijgt fail-closed een voorstel; koppel-whitelist synchroon met DB-CHECK.
 - [PRIJS_01 prijsafspraken](prijsafspraken.md) — EXCLUDE-overlap in DB; rollback=markeren; afspraak=ÍNKOOPprijs (nooit het verkooptarief vervangen); web_search+JSON-mode=400; marktspiegel fail-closed op vindplaats.
+- [Twee-traps sidebar & hoofdstukkleuren](nav-twee-traps.md) — TweeTrapsHoofdstuk = drop-in om InklapbaarHoofdstuk; kleuren via --hoofdstuk-*-tokens; GoedkeuringLabel: object_type=opdracht_akkoord + retry:false (403 zonder goedkeuring:1).
 - [PANEEL_01 banen & voorkeuren](paneel-banen.md) — gebruiker_voorkeuren = hét ene voorkeurenmechanisme (MENU_01 §4.3); banen-remount via generatie-key; routes in connect-routes.tsx (nooit terug naar App.tsx).
 - [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: élke pipe naar head/grep onder set -e/pipefail altijd || true (ook ls|head, exit 141/SIGPIPE).
 - [Playwright/e2e-valkuilen](e2e-playwright-valkuilen.md) — verzamelindex van 8 e2e-valkuil-topicfiles (selectors, routes, multipart, RNW-modal, Reanimated, onboarding).

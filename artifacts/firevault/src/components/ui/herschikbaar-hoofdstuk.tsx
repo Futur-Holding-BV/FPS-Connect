@@ -116,27 +116,45 @@ const SLEEP_DREMPEL = 4;
  * zichtbaar grip-icoon in de kop) én inklapbaar (klik op de kop of het
  * pijltje). Children vormen de hoofdstukinhoud, meestal een `<SidebarMenu>`.
  */
-export function InklapbaarHoofdstuk({
-  sleutel,
-  titel,
-  positie,
-  onVerplaats,
-  open,
-  onOpenChange,
-  metScheiding = false,
-  kopExtra,
-  children,
-}: PropsWithChildren<InklapbaarHoofdstukProps>) {
+/**
+ * Losse sleepgreep — dezelfde pointer-gebaseerde sleeplogica als in
+ * `InklapbaarHoofdstuk`, herbruikbaar voor andere hoofdstukweergaven
+ * (NAV_01: het twee-traps menu). Rendert het grip-icoon en regelt de
+ * volledige sleepafhandeling.
+ */
+export function SleepGreep({ sleutel, titel, onVerplaats }: { sleutel: string; titel: string; onVerplaats: (van: string, naar: string) => void }) {
   const [aanHetSlepen, setAanHetSlepen] = useState(false);
-  // Verwijst tijdens een actieve sleep naar de opruimfunctie, zodat een
-  // unmount midden in een sleep de window-listeners en body-stijlen niet lekt.
   const annuleerLopendeSleepRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => annuleerLopendeSleepRef.current?.(), []);
+  const startSleep = maakStartSleep({ sleutel, onVerplaats, setAanHetSlepen, annuleerLopendeSleepRef });
+  return (
+    <span
+      onMouseDown={startSleep}
+      title="Versleep om dit hoofdstuk te herschikken"
+      aria-label={`Hoofdstuk ${titel} verslepen`}
+      className={cn(
+        "-ml-1 flex h-5 w-4 shrink-0 cursor-grab items-center justify-center rounded text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-primary group-data-[collapsible=icon]:hidden",
+        aanHetSlepen && "cursor-grabbing text-primary",
+      )}
+    >
+      <GripVertical className="h-3.5 w-3.5" />
+    </span>
+  );
+}
 
-  useEffect(() => {
-    return () => annuleerLopendeSleepRef.current?.();
-  }, []);
-
-  const startSleep = (startEvent: ReactMouseEvent<HTMLSpanElement>) => {
+/** Gedeelde sleepafhandeling voor `InklapbaarHoofdstuk` en `SleepGreep`. */
+function maakStartSleep({
+  sleutel,
+  onVerplaats,
+  setAanHetSlepen,
+  annuleerLopendeSleepRef,
+}: {
+  sleutel: string;
+  onVerplaats: (van: string, naar: string) => void;
+  setAanHetSlepen: (b: boolean) => void;
+  annuleerLopendeSleepRef: { current: (() => void) | null };
+}) {
+  return (startEvent: ReactMouseEvent<HTMLSpanElement>) => {
     if (startEvent.button !== 0) return;
     startEvent.preventDefault();
     const startX = startEvent.clientX;
@@ -155,8 +173,6 @@ export function InklapbaarHoofdstuk({
         document.body.style.cursor = "grabbing";
         document.body.style.userSelect = "none";
       }
-      // Automatisch scrollen nabij de boven-/onderrand van de sidebar-inhoud,
-      // zodat ook hoofdstukken buiten beeld bereikbaar zijn tijdens het slepen.
       if (scrollContainer) {
         const rect = scrollContainer.getBoundingClientRect();
         if (e.clientY < rect.top + RANDSCROLL_MARGE) {
@@ -190,7 +206,6 @@ export function InklapbaarHoofdstuk({
     const bijToets = (e: KeyboardEvent) => {
       if (e.key === "Escape") beeindig(false);
     };
-    // Vensterwissel (alt-tab) kan de mouseup laten missen; annuleer dan netjes.
     const bijFocusverlies = () => beeindig(false);
 
     window.addEventListener("mousemove", bijBeweging);
@@ -199,6 +214,29 @@ export function InklapbaarHoofdstuk({
     window.addEventListener("blur", bijFocusverlies);
     annuleerLopendeSleepRef.current = () => beeindig(false);
   };
+}
+
+export function InklapbaarHoofdstuk({
+  sleutel,
+  titel,
+  positie,
+  onVerplaats,
+  open,
+  onOpenChange,
+  metScheiding = false,
+  kopExtra,
+  children,
+}: PropsWithChildren<InklapbaarHoofdstukProps>) {
+  const [aanHetSlepen, setAanHetSlepen] = useState(false);
+  // Verwijst tijdens een actieve sleep naar de opruimfunctie, zodat een
+  // unmount midden in een sleep de window-listeners en body-stijlen niet lekt.
+  const annuleerLopendeSleepRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => annuleerLopendeSleepRef.current?.();
+  }, []);
+
+  const startSleep = maakStartSleep({ sleutel, onVerplaats, setAanHetSlepen, annuleerLopendeSleepRef });
 
   return (
     <HerschikbaarHoofdstuk sleutel={sleutel} positie={positie} onVerplaats={onVerplaats}>
