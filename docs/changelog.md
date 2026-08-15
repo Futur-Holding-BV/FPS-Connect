@@ -1,3 +1,9 @@
+## 2026-08-15 — Taak #938: blokkerende pre-push poort tegen gemangelde bestanden
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen controles; geen runtimegedrag)
+
+Vier merge-mangelingsincidenten (auth.ts, 2× opname.ts, rapporten.ts) worden voortaan vóór de push gestopt. Nieuwe git pre-push hook (`.githooks/pre-push`, actief via core.hooksPath) die BLOKKEREND twee controles draait op de te pushen commits: (1) opmaakschade-controle `scripts/git/check-opmaakschade.mjs` — faalt als één commit een bestaand bestand meer dan 300 regels laat groeien of krimpen zonder aankondiging via de marker `[grote-wijziging]` in de commit-boodschap, met bestand en regelverschil in de melding; gegenereerde paden (pnpm-lock, .generated, attached_assets, changelog, api-client dist) uitgezonderd; (2) volledige workspace-typecheck. Zelfde twee controles ook als tweede vangnet in `scripts/post-merge.sh` (stap 6b/6c, vóór de GitHub-push), zodat taakagent-merges die buiten de hook om binnenkomen ook worden gevangen. Bewijs: normale push gaat door (alle controles groen); een opzettelijk gemangeld rapporten.ts (769→1725 regels) wordt tegengehouden mét vindplaats ("groeit met 954 regels (+1329/-375)"); een kleine opzettelijke typefout (<300 regels) wordt door de typecheck-poort tegengehouden (error TS1110 met bestand+regel); na opruimen weer groen.
+
 ## 2026-08-15 — Herstel opmaakschade rapporten.ts na merge taak #931
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (inhoud identiek aan bedoelde wijziging)
