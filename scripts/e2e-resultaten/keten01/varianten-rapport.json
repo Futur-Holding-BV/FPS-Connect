@@ -1,15 +1,15 @@
 {
-  "merk": "KETENVAR 1786770158330",
+  "merk": "KETENVAR 1786776255924",
   "rapport": [
     {
       "variant": "Offerte-afloop: afgewezen",
       "uitkomst": "doorlopen",
-      "detail": "portaal_status=afgewezen, afwijs-event vastgelegd (offerte 74)"
+      "detail": "portaal_status=afgewezen, afwijs-event vastgelegd (offerte 79)"
     },
     {
       "variant": "Offerte-afloop: ingetrokken",
       "uitkomst": "doorlopen",
-      "detail": "status=ingetrokken, portaal_status=verzonden (offerte 75)"
+      "detail": "status=ingetrokken, portaal_status=verzonden (offerte 80)"
     },
     {
       "variant": "Offerte-afloop: verlopen zonder reactie",
@@ -39,17 +39,17 @@
     {
       "variant": "Uren: opdracht zonder akkoord",
       "uitkomst": "doorlopen",
-      "detail": "weigering zoals bedoeld: 422 AKKOORD_ONTBREEKT, geen uren-rij (opdracht 120)"
+      "detail": "weigering zoals bedoeld: 422 AKKOORD_ONTBREEKT, geen uren-rij (opdracht 128)"
     },
     {
       "variant": "Uren: zonder opdracht",
       "uitkomst": "doorlopen",
-      "detail": "uren zonder opdracht worden geaccepteerd (201, rij 140) — conform beleid 'alleen meten'"
+      "detail": "uren zonder opdracht worden geaccepteerd (201, rij 142) — conform beleid 'alleen meten'"
     },
     {
       "variant": "Terugzetten: akkoord intrekken als hoofdbeheerder",
       "uitkomst": "doorlopen",
-      "detail": "akkoord verwijderd op opdracht 121"
+      "detail": "akkoord verwijderd op opdracht 129"
     },
     {
       "variant": "Terugzetten: als gewone gebruiker",
@@ -59,7 +59,7 @@
     {
       "variant": "Bedrag: boven tien mille langs de bedrijfsleider",
       "uitkomst": "doorlopen",
-      "detail": "weigering zoals bedoeld: offerte €12.000 gekoppeld → akkoord-vastleggen geeft 422 GOEDKEURING_VEREIST, geen akkoord ontstaan (opdracht 122). De volledige goedkeuringsronde (tweede beoordelaar) is niet doorlopen (vergt ingericht beleid + tweede account)"
+      "detail": "weigering zoals bedoeld: offerte €12.000 gekoppeld → akkoord-vastleggen geeft 422 GOEDKEURING_VEREIST, geen akkoord ontstaan (opdracht 130). De volledige goedkeuringsronde (tweede beoordelaar) is niet doorlopen (vergt ingericht beleid + tweede account)"
     },
     {
       "variant": "Akkoord zonder offerte (alleen calculatie)",
