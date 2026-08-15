@@ -1,3 +1,9 @@
+## 2026-08-15 — Merge-mangeling uitvoeringsscherm hersteld + workflow-wijziging opnieuw uit pushwachtrij
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De merge van taak #945 liet in `uitvoering/detail.tsx` het import-hunk vallen (regie-tab-componenten + Euro-icoon) terwijl de gebruikende JSX wel meekwam; post-merge stap 6c (workspace-typecheck, net toegevoegd door #938) ving dit direct. Ontbrekende imports teruggezet, typecheck groen. Daarnaast bracht de merge van #944 de eerder gedropte wijziging aan `.github/workflows/token-health-check.yml` opnieuw binnen; die is met een history-rewrite uit alle wachtende commits gehaald (PAT blijft bewust zonder workflow-scope) en alles is gepusht.
+
 ## 2026-08-15 — Pushwachtrij vlotgetrokken: workflow-commit vervallen, rest gepusht
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen git-historie; de vervallen wijziging was puur instructietekst)
