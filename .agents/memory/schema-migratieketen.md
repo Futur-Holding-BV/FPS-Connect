@@ -18,3 +18,6 @@ description: Hoe DB-schemawijzigingen sinds 7 aug 2026 moeten — migratierunner
 
 ## Verweesde prod-registraties (STOP "database loopt vóór op de code")
 Tijdelijk gedeployde en daarna hernoemde/verwijderde migratiebestanden laten rijen achter in prod-`schema_migraties` → migrate.mjs STOPt elke deploy. Herstel zonder SSH: gerichte reconciliatie-stap in migrate.mjs (expliciete namenlijst `VERWEESD`, DELETE vóór de pre-check) — alleen voor namen waarvan het netto schema-effect aantoonbaar nul is; al het overige onbekende blijft harde STOP. Les: nooit een al gedeployde migratie hernoemen; incident 15 aug 2026 (materiaal01-fase3 0043/0048).
+
+## CI-bewaker (check-hernoeming)
+`lib/db/scripts/check-migratie-hernoeming.mjs` detecteert hernoemde/verwijderde migraties t.o.v. origin/main via `git diff --diff-filter=DR`. Faalt met exit 1 + expliciete SCHEMA_01-foutmelding. Script ook bereikbaar als `pnpm --filter @workspace/db run check-hernoeming` en Replit-validatiestap `migratie-hernoeming`. Volledig herstelpad staat in `docs/schema-migratieketen.md`.

@@ -44,3 +44,12 @@ jobs:
         run: PORT=3000 BASE_PATH=/ pnpm --filter @workspace/firevault run build
         env:
           NODE_ENV: production
+
+      # SCHEMA_01 — blokkeer een merge als een migratiebestand is hernoemd of
+      # verwijderd t.o.v. main. Hernoemde bestanden laten verweesd registraties
+      # achter in prod-schema_migraties en blokkeren elke volgende deploy.
+      # Zie docs/schema-migratieketen.md §Bewaker.
+      - name: Migratie-hernoeming-controle
+        run: |
+          git fetch origin main --depth=1
+          pnpm --filter @workspace/db run check-hernoeming
