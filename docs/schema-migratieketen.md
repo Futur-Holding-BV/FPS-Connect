@@ -55,6 +55,29 @@ uit vóór de check.
 De check is ook geregistreerd als Replit-validatiestap (`migratie-hernoeming`)
 en als stap in `.github/workflows/ci.yml` (met expliciete fetch).
 
+## Pre-push hook
+
+Om de check ook *vóór* een push naar GitHub te laten draaien installeert
+`scripts/install.sh` automatisch een `.git/hooks/pre-push` hook (idempotent).
+De hook herkent zichzelf aan de markering `fps-migratie-hernoeming-hook-v1`.
+
+**Gedrag:**
+
+- Als `origin/main` lokaal bekend is (normale werksituatie), roept de hook
+  `pnpm --filter @workspace/db run check-hernoeming` aan. De push wordt
+  geblokkeerd bij een schending.
+- Als `origin/main` lokaal **niet** bekend is (verse checkout, volledig offline),
+  slaat de hook over met een mededeling en laat de push door. De CI-check en
+  Replit-validatiestap vangen het daarna alsnog op.
+
+**Handmatige installatie** (als `scripts/install.sh` nog niet is gedraaid):
+
+```bash
+bash scripts/install.sh   # installeert ook de hook
+```
+
+Of alleen de hook installeren door `stap 8b` te kopiëren uit `scripts/install.sh`.
+
 ## Uitzondering: VERWEESD-reconciliatie
 
 Gebruik dit pad **uitsluitend** als:

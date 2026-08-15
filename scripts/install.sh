@@ -264,6 +264,57 @@ ok "Dependencies geïnstalleerd"
 sudo -u ${APP_USER} pnpm --filter @workspace/api-spec run codegen 2>/dev/null || warn "Codegen mislukt — continue"
 ok "Codegeneratie klaar"
 
+# ── Stap 8b: Git pre-push hook installeren ────────────────────
+stap "8b" "Git pre-push hook installeren (migratie-hernoeming)"
+
+HOOK_PAD="${APP_DIR}/.git/hooks/pre-push"
+HOOK_MARKERING="# fps-migratie-hernoeming-hook-v1"
+
+if [[ ! -d "${APP_DIR}/.git" ]]; then
+  warn ".git-map niet gevonden in ${APP_DIR} — hook overgeslagen (niet-git-omgeving)"
+elif [[ -f "${HOOK_PAD}" ]] && grep -qF "${HOOK_MARKERING}" "${HOOK_PAD}" 2>/dev/null; then
+  ok "pre-push hook al geïnstalleerd — overgeslagen"
+else
+  # Schrijf de hook (of voeg toe aan een bestaande hook)
+  if [[ -f "${HOOK_PAD}" ]]; then
+    warn "Bestaande pre-push hook gevonden — FPS-blok wordt toegevoegd aan het einde"
+    cat >> "${HOOK_PAD}" << 'HOOKEOF'
+
+# ── FPS Connect: migratie-hernoemingscheck ──────────────────────
+# fps-migratie-hernoeming-hook-v1
+# Blokkeert push wanneer migratiebestanden zijn hernoemd of verwijderd
+# t.o.v. origin/main. Wordt overgeslagen als origin/main lokaal niet bekend is.
+# Zie docs/schema-migratieketen.md §Pre-push hook voor uitleg.
+if git rev-parse origin/main >/dev/null 2>&1; then
+  pnpm --filter @workspace/db run check-hernoeming
+else
+  echo "[pre-push] origin/main niet lokaal bekend — migratie-hernoemingscheck overgeslagen."
+fi
+HOOKEOF
+  else
+    cat > "${HOOK_PAD}" << 'HOOKEOF'
+#!/usr/bin/env bash
+# pre-push hook: blokkeer hernoemde/verwijderde migratiebestanden vóór push.
+# fps-migratie-hernoeming-hook-v1
+#
+# Installatie: scripts/install.sh (idempotent via de markering hierboven).
+# Zie docs/schema-migratieketen.md §Pre-push hook voor uitleg.
+
+set -euo pipefail
+
+# Sla over als origin/main nog niet lokaal bekend is (offline / verse checkout).
+if ! git rev-parse origin/main >/dev/null 2>&1; then
+  echo "[pre-push] origin/main niet lokaal bekend — migratie-hernoemingscheck overgeslagen."
+  exit 0
+fi
+
+exec pnpm --filter @workspace/db run check-hernoeming
+HOOKEOF
+  fi
+  chmod +x "${HOOK_PAD}"
+  ok "pre-push hook geïnstalleerd in ${HOOK_PAD}"
+fi
+
 # ── Stap 9: Database initialiseren ────────────────────────────
 stap 9 "Database schema initialiseren"
 
