@@ -30,6 +30,7 @@ import {
 import { useGetInfoInstellingen, useUpdateInfoInstellingen } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -41,6 +42,7 @@ function formatDatum(iso: string): string {
 
 export default function InfoPagina() {
   const { gebruiker } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const isHoofdBeheerder = gebruiker?.rol === "hoofdbeheerder";
 
@@ -112,43 +114,83 @@ export default function InfoPagina() {
   }
 
   async function bewakingsdrempelsOpslaan() {
-    if (!geldigDagen(offerteReactieDagen) || !geldigDagen(offerteBekekenDagen) || !geldigDagen(opnameCalculatieDagen)) {
+    const ongeldig: string[] = [];
+    if (!geldigDagen(offerteReactieDagen)) ongeldig.push("Offerte-reactie");
+    if (!geldigDagen(offerteBekekenDagen)) ongeldig.push("Offerte bekeken");
+    if (!geldigDagen(opnameCalculatieDagen)) ongeldig.push("Opname → calculatie");
+    if (ongeldig.length > 0) {
+      toast({
+        title: "Niet opgeslagen",
+        description: `Ongeldige invoer bij: ${ongeldig.join(", ")}. Vul een aantal dagen tussen 1 en 365 in.`,
+        variant: "destructive",
+      });
       return;
     }
-    await updateInstellingen.mutateAsync({
-      data: {
-        offerte_reactie_bewaking_dagen: Math.round(Number(offerteReactieDagen)),
-        offerte_bekeken_bewaking_dagen: Math.round(Number(offerteBekekenDagen)),
-        opname_calculatie_bewaking_dagen: Math.round(Number(opnameCalculatieDagen)),
-      },
-    });
-    queryClient.invalidateQueries();
+    try {
+      await updateInstellingen.mutateAsync({
+        data: {
+          offerte_reactie_bewaking_dagen: Math.round(Number(offerteReactieDagen)),
+          offerte_bekeken_bewaking_dagen: Math.round(Number(offerteBekekenDagen)),
+          opname_calculatie_bewaking_dagen: Math.round(Number(opnameCalculatieDagen)),
+        },
+      });
+      queryClient.invalidateQueries();
+      toast({ title: "Opgeslagen", description: "De bewakingsdrempels zijn bijgewerkt." });
+    } catch {
+      toast({ title: "Opslaan mislukt", description: "De bewakingsdrempels konden niet worden opgeslagen. Probeer het opnieuw.", variant: "destructive" });
+    }
   }
 
   async function prijsafspraakDrempelsOpslaan() {
     const marge = Number(prijsafwijkingMarge);
-    if (!geldigDagen(prijsafspraakDagen) || !Number.isFinite(marge) || marge < 0 || marge > 100) {
+    const ongeldig: string[] = [];
+    if (!geldigDagen(prijsafspraakDagen)) ongeldig.push("Aflopende afspraak: vul een aantal dagen tussen 1 en 365 in");
+    if (!Number.isFinite(marge) || marge < 0 || marge > 100) ongeldig.push("Prijsafwijkingsmarge: vul een percentage tussen 0 en 100 in");
+    if (ongeldig.length > 0) {
+      toast({
+        title: "Niet opgeslagen",
+        description: ongeldig.join(". ") + ".",
+        variant: "destructive",
+      });
       return;
     }
-    await updateInstellingen.mutateAsync({
-      data: {
-        prijsafspraak_bewaking_dagen: Math.round(Number(prijsafspraakDagen)),
-        prijsafwijking_marge_pct: marge,
-      },
-    });
-    queryClient.invalidateQueries();
+    try {
+      await updateInstellingen.mutateAsync({
+        data: {
+          prijsafspraak_bewaking_dagen: Math.round(Number(prijsafspraakDagen)),
+          prijsafwijking_marge_pct: marge,
+        },
+      });
+      queryClient.invalidateQueries();
+      toast({ title: "Opgeslagen", description: "De prijsafspraak-drempels zijn bijgewerkt." });
+    } catch {
+      toast({ title: "Opslaan mislukt", description: "De prijsafspraak-drempels konden niet worden opgeslagen. Probeer het opnieuw.", variant: "destructive" });
+    }
   }
 
   async function termijnenOpslaan() {
     const reactie = Number(reactieUren);
     const oppak = Number(oppakUren);
-    if (!Number.isFinite(reactie) || reactie < 1 || reactie > 720 || !Number.isFinite(oppak) || oppak < 1 || oppak > 720) {
+    const ongeldig: string[] = [];
+    if (!Number.isFinite(reactie) || reactie < 1 || reactie > 720) ongeldig.push("Reactietermijn");
+    if (!Number.isFinite(oppak) || oppak < 1 || oppak > 720) ongeldig.push("Oppaktermijn");
+    if (ongeldig.length > 0) {
+      toast({
+        title: "Niet opgeslagen",
+        description: `Ongeldige invoer bij: ${ongeldig.join(", ")}. Vul een aantal uren tussen 1 en 720 in.`,
+        variant: "destructive",
+      });
       return;
     }
-    await updateInstellingen.mutateAsync({
-      data: { aanvraag_reactietermijn_uren: Math.round(reactie), aanvraag_oppak_termijn_uren: Math.round(oppak) },
-    });
-    queryClient.invalidateQueries();
+    try {
+      await updateInstellingen.mutateAsync({
+        data: { aanvraag_reactietermijn_uren: Math.round(reactie), aanvraag_oppak_termijn_uren: Math.round(oppak) },
+      });
+      queryClient.invalidateQueries();
+      toast({ title: "Opgeslagen", description: "De aanvraag-termijnen zijn bijgewerkt." });
+    } catch {
+      toast({ title: "Opslaan mislukt", description: "De aanvraag-termijnen konden niet worden opgeslagen. Probeer het opnieuw.", variant: "destructive" });
+    }
   }
 
   async function toggleHeatmapTracking(checked: boolean) {
