@@ -1,3 +1,9 @@
+## 2026-08-15 — Zes actiepunten van 15 augustus toegevoegd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen data via idempotente migratie)
+
+Zes nieuwe actiepunten in de zijrandlijst van de hoofdbeheerder (Actiepunten naast Werkbak/Assistent), via genummerde migratie `lib/db/src/migrations/0051_actiepunten-15aug.sql` (zelfde idempotente vorm als 0050, dus loopt in prod automatisch mee met de eerstvolgende deploy): Ticket naar Denko (foutcode 90094, werk-inbox/beheerderstoestemming), Ticket naar TransIP (koersa.online, vastgelopen nameserverwijziging), Oud Azure-geheim verwijderen (pas na werkende mailkoppeling), VPS herstarten, Uitzoeken waarom Platform/Adviescentrum/Planner geen bouwcontrole draaien, en Beslissen waarvoor het kantoorscherm rood mag worden (voorstel: product plat, uitrol mislukt, back-up niet gemaakt — niet bij mislukte bouwcontrole). Migratie in dev uitgevoerd en met SQL gecontroleerd: alle zes staan open achteraan de lijst.
+
 ## 2026-08-15 — One volledig uit Connect verwijderd (Connect = binnenlaag zonder buitenlaag)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen verwijdering van ongebruikte buitenlaag-schermen; geen backend- of datawijziging)
