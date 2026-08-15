@@ -11,6 +11,9 @@ import {
   gebruikersTable,
   documentenTable,
   werkbonnenTable,
+  crmOpdrachtenTable,
+  crmKlantenTable,
+  crmContactpersonenTable,
 } from "@workspace/db";
 import { eq, desc, and, inArray, ne, isNotNull } from "drizzle-orm";
 import { stuurRapportBeschikbaarMelding } from "../services/email";
@@ -398,11 +401,45 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
               isNotNull(gebouwPartijenTable.email),
             ),
           );
-        for (const partij of partijen) {
-          if (!partij.email) continue;
+
+        // Primaire CRM-contactpersonen gekoppeld via crm_opdrachten aan dit gebouw
+        const crmContacten = await db
+          .select({
+            naam: crmContactpersonenTable.naam,
+            email: crmContactpersonenTable.email,
+          })
+          .from(crmContactpersonenTable)
+          .innerJoin(
+            crmKlantenTable,
+            eq(crmContactpersonenTable.klantId, crmKlantenTable.id),
+          )
+          .innerJoin(
+            crmOpdrachtenTable,
+            eq(crmOpdrachtenTable.klantId, crmKlantenTable.id),
+          )
+          .where(
+            and(
+              eq(crmOpdrachtenTable.gebouwId, gebouwId),
+              eq(crmContactpersonenTable.primair, true),
+              isNotNull(crmContactpersonenTable.email),
+            ),
+          );
+
+        // Dedupliceer op e-mailadres (partijen en CRM-contacten gecombineerd)
+        const gezieneEmails = new Set<string>();
+        const ontvangers: { naam: string | null; email: string }[] = [];
+        for (const r of [...partijen, ...crmContacten]) {
+          if (!r.email) continue;
+          const normalized = r.email.trim().toLowerCase();
+          if (gezieneEmails.has(normalized)) continue;
+          gezieneEmails.add(normalized);
+          ontvangers.push({ naam: r.naam, email: r.email });
+        }
+
+        for (const ontvanger of ontvangers) {
           await stuurRapportBeschikbaarMelding({
-            naarEmail: partij.email,
-            naarNaam: partij.naam,
+            naarEmail: ontvanger.email,
+            naarNaam: ontvanger.naam,
             rapportTitel: definitief.titel,
             gebouwNaam: gebouw?.naam ?? "",
             reactietermijnDatum: definitief.reactietermijnDatum!,
