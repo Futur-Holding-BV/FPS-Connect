@@ -159,7 +159,7 @@ jobs:
 
               Stappen:
               1. Ga naar https://github.com/settings/personal-access-tokens
-              2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de fps-one repo
+              2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de Futur-Holding-BV/FPS-Connect repo
               3. Update Replit Secrets: GITHUB_TOKEN_PUSH
               4. Update GitHub Actions Secrets: FPS_PUSH_TOKEN
 
