@@ -19,7 +19,7 @@
 
 ## Automatische deploy na Replit-merge (vastgesteld 15 juli 2026; bijgewerkt 16 juli 2026)
 
-Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7a+7) automatisch naar `github.com/vinkrene-jpg/fps-one` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
+Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7a+7) automatisch naar `github.com/Futur-Holding-BV/FPS-Connect` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
 
 ### Stap 7a: auto-sync vóór GitHub-push (structurele fix 16 juli 2026)
 
@@ -69,8 +69,8 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
 
 1. **Nieuw token aanmaken of bestaande verlengen**
    - Ga naar [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens) (ingelogd als `vinkrene-jpg`)
-   - Kies het bestaande `fps-one-deploy` token en verleng het, of maak een nieuw token aan
-   - Vereiste scope: **Contents: Write** op de `fps-one` repository (fine-grained PAT) of `repo` (classic PAT)
+   - Kies het bestaande deploy-token en verleng het, of maak een nieuw token aan
+   - Vereiste scope: **Contents: Write** op de `Futur-Holding-BV/FPS-Connect` repository (fine-grained PAT) of `repo` (classic PAT). Let op: sinds de verhuizing van de repo naar de organisatie moet het token (van account `vinkrene-jpg`) expliciet toegang hebben op de organisatie-repo.
    - Stel de vervaldatum in op maximaal 1 jaar; noteer de nieuwe vervaldatum
 
 2. **Replit Secret bijwerken**
@@ -79,8 +79,8 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
    - Zoek `GITHUB_TOKEN_PUSH` en vervang de waarde door het nieuwe token
 
 3. **GitHub Actions Secret bijwerken**
-   - Ga naar `github.com/vinkrene-jpg/fps-one` > Settings > Secrets and variables > Actions
-   - Zoek `GITHUB_TOKEN_PUSH` en vervang de waarde door het nieuwe token
+   - Ga naar `github.com/Futur-Holding-BV/FPS-Connect` > Settings > Secrets and variables > Actions
+   - Zoek `FPS_PUSH_TOKEN` en vervang de waarde door het nieuwe token (Actions-secretnamen mogen niet met `GITHUB_` beginnen; dit is hetzelfde PAT als het Replit-secret `GITHUB_TOKEN_PUSH`)
    - Dit secret is nodig voor de dagelijkse health-check workflow
 
 4. **Controleer de werking**
@@ -104,7 +104,7 @@ Als er een merge heeft plaatsgevonden met een verlopen token is de VPS niet bijg
 
 ```bash
 # In een Replit-shell, nadat het token vernieuwd is:
-git push https://github.com/vinkrene-jpg/fps-one.git main
+git push https://github.com/Futur-Holding-BV/FPS-Connect.git main
 # (het script gebruikt GIT_ASKPASS; handmatig: voeg token toe aan de URL of stel GIT_ASKPASS in)
 ```
 
@@ -413,7 +413,7 @@ Verwachte output `/api/versie/status`:
 
 ### Via GitHub Actions UI
 
-1. Ga naar `https://github.com/vinkrene-jpg/fps-one/actions/workflows/deploy.yml`
+1. Ga naar `https://github.com/Futur-Holding-BV/FPS-Connect/actions/workflows/deploy.yml`
 2. Klik op **"Run workflow"** → branch `main` → **"Run workflow"**
 3. De deploy-workflow start opnieuw inclusief de volledige smoketest (15 checks)
 

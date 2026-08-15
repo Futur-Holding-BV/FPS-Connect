@@ -1,3 +1,11 @@
+## 2026-08-15 — Taak #941+#942: nieuw repository-adres + typecheck in de productie-bouw
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (build/push-infrastructuur; geen runtimegedrag)
+
+**#941 — repository-adres.** GitHub-repo is verhuisd van `vinkrene-jpg/fps-one` naar `Futur-Holding-BV/FPS-Connect`; pushes liepen via een redirect. Alle verwijzingen bijgewerkt in `scripts/post-merge.sh` (fetch-actualiteitscheck, push-URL stap 7, hersteltips), `.github/workflows/token-health-check.yml` en `docs/PRODUCTION_RUNBOOK.md`. Historische changelog-vermeldingen bewust ongemoeid. Het PAT blijft van het account `vinkrene-jpg`; dat account moet toegang houden op de nieuwe organisatie-repo.
+
+**#942 — typecheck in de bouwstap.** `deploy/Dockerfile.api` (de Dockerfile die `deploy/docker-compose.production.yml` gebruikt; `docker/Dockerfile.api` staat buiten de deploy-keten) heeft nu stap 3b: `pnpm --filter @workspace/api-server run typecheck` (tsc --noEmit, incrementeel, lib-referenties al gebouwd in stap 3) tussen libs-compilatie en de esbuild-bundel. Hiermee faalt óók een NOODFIX-deploy (die de typecheck-gate in deploy.yml overslaat) op code met typefouten. Bewijs (exacte Dockerfile-stappen lokaal nagespeeld): opzettelijke typefout → esbuild-build slaagt gewoon (het oude gat), nieuwe typecheck-stap faalt met `src/routes/werk-inbox.ts(1282,7): error TS2322`; na herstel typecheck én build weer groen. Een volledige docker-build is in de dev-omgeving niet uitgevoerd (geen productie-buildomgeving); de stap draait exact dezelfde commando's.
+
 ## 2026-08-15 — Werk-inbox OAuth: volledige gedelegeerde rechten + vaste redirect-URI + herkoppel-signaal
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande koppelingen blijven werken; alleen bredere consent bij herkoppelen)

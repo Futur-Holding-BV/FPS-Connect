@@ -33,7 +33,7 @@ PRESYNC_ASKPASS_EOF
   trap 'rm -f "$_PRESYNC_ASKPASS"; unset GIT_ASKPASS' EXIT INT TERM
 
   set +e
-  git fetch "https://github.com/vinkrene-jpg/fps-one.git" \
+  git fetch "https://github.com/Futur-Holding-BV/FPS-Connect.git" \
     "main:refs/remotes/fps-presync/main" 2>/dev/null
   _PRESYNC_FETCH_EXIT=$?
   set -e
@@ -62,7 +62,7 @@ PRESYNC_ASKPASS_EOF
       | head -10 >&2 || true
     echo "" >&2
     echo "Herstel: haal eerst main binnen en verwerk de merge daarna opnieuw:" >&2
-    echo "  git pull https://github.com/vinkrene-jpg/fps-one.git main" >&2
+    echo "  git pull https://github.com/Futur-Holding-BV/FPS-Connect.git main" >&2
     echo "====================================================" >&2
     exit 1
   fi
@@ -362,7 +362,7 @@ if [ -z "${GITHUB_TOKEN_PUSH:-}" ]; then
   echo "Stel GITHUB_TOKEN_PUSH in als Replit-secret om automatische deploys te activeren." >&2
 else
   LOCAL_SHA=$(git rev-parse HEAD)
-  _GH_URL="https://x-access-token:${GITHUB_TOKEN_PUSH}@github.com/vinkrene-jpg/fps-one.git"
+  _GH_URL="https://x-access-token:${GITHUB_TOKEN_PUSH}@github.com/Futur-Holding-BV/FPS-Connect.git"
 
   # Valideer het token via de GitHub API vóór de push.
   set +e
@@ -386,9 +386,9 @@ else
     echo "" >&2
     echo "Token vernieuwen:" >&2
     echo "  1. Ga naar https://github.com/settings/personal-access-tokens" >&2
-    echo "  2. Maak een nieuw PAT aan met 'Contents: Write' scope op de fps-one repo" >&2
+    echo "  2. Maak een nieuw PAT aan met 'Contents: Write' scope op de Futur-Holding-BV/FPS-Connect repo" >&2
     echo "  3. Update Replit: Secrets > GITHUB_TOKEN_PUSH" >&2
-    echo "  4. Update GitHub: fps-one repo > Settings > Secrets > Actions > GITHUB_TOKEN_PUSH" >&2
+    echo "  4. Update GitHub: Futur-Holding-BV/FPS-Connect repo > Settings > Secrets > Actions > FPS_PUSH_TOKEN" >&2
     echo "  Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')" >&2
     echo "========================================================" >&2
     rm -f "$HEADERS_FILE" /tmp/fps-gh-user.json
@@ -444,7 +444,7 @@ else
             "Conflicterende bestanden:
 ${CONFLICTING:-onbekend}
 
-  1. Haal main binnen: git pull https://github.com/vinkrene-jpg/fps-one.git main
+  1. Haal main binnen: git pull https://github.com/Futur-Holding-BV/FPS-Connect.git main
   2. Los de conflicten handmatig en inhoudelijk op (geen --ours/--theirs).
   3. Draai pnpm run typecheck en check-dubbele-routes, push daarna naar main."
           exit 1
@@ -496,7 +496,7 @@ ${CONFLICTING:-onbekend}
         "Exit-code: ${PUSH_EXIT}
 
   1. Controleer of GITHUB_TOKEN_PUSH geldig is (niet verlopen).
-  2. Voer handmatig uit: git push https://github.com/vinkrene-jpg/fps-one.git main
+  2. Voer handmatig uit: git push https://github.com/Futur-Holding-BV/FPS-Connect.git main
   3. Controleer daarna of GitHub Actions (deploy.yml) is gestart en groen is.
   4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid."
     fi

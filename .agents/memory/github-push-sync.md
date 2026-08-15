@@ -25,7 +25,7 @@ Als GitHub-commits niet in de lokale history zitten (of andersom): check eerst m
 
 - `GITHUB_TOKEN_PUSH` heeft geen `actions`-recht: `/repos/.../actions/runs` geeft 403.
 - Commits-lijst (`/repos/.../commits`) en ref-info (`/repos/.../git/ref/heads/main`) werken wel met dezelfde token.
-- Repo heet `vinkrene-jpg/fps-one` (niet `fps-brandpreventie/fps-connect`).
+- Repo heet `Futur-Holding-BV/FPS-Connect` (verhuisd van `vinkrene-jpg/fps-one`, aug 2026); PAT blijft van account vinkrene-jpg en moet toegang op de org-repo hebben; Actions-secret heet FPS_PUSH_TOKEN.
 
 ## Productie-verificatie na deploy
 

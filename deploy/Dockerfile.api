@@ -36,6 +36,12 @@ COPY artifacts/api-server/ artifacts/api-server/
 # Stap 3: libs compileren (bouwt o.a. lib/api-client-react declaraties)
 RUN pnpm run typecheck:libs
 
+# Stap 3b: typecheck van de api-server zelf. esbuild (stap 4) stript types
+# zonder controle; zonder deze stap kan een NOODFIX-deploy (die de typecheck-
+# gate in deploy.yml overslaat) code met typefouten uitrollen. Incrementeel
+# en licht: de lib-referenties zijn in stap 3 al gebouwd.
+RUN pnpm --filter @workspace/api-server run typecheck
+
 # Stap 4: api-server bundelen via esbuild
 RUN pnpm --filter @workspace/api-server run build
 

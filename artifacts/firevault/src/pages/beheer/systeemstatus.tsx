@@ -10,7 +10,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const GITHUB_REPO = "https://github.com/vinkrene-jpg/fps-one";
+const GITHUB_REPO = "https://github.com/Futur-Holding-BV/FPS-Connect";
 
 type StatusWaarde = "ok" | "fout" | "niet_geconfigureerd" | undefined;
 
