@@ -15,3 +15,6 @@ description: Hoe DB-schemawijzigingen sinds 7 aug 2026 moeten — migratierunner
 5. Handmatig een migratie op prod toepassen kan veilig door het runner-patroon na te bootsen: SQL + INSERT in schema_migraties (naam + sha256-checksum van het repo-bestand) in één transactie; de deploy-runner slaat 'm daarna over.
 
 - Post-merge (2026-08-10): scripts/post-merge.sh draait nu migrate + drift-check i.p.v. apply-additive/reconcile/push-force; drizzle push in non-TTY liep vast op interactieve prompt (incident: opnames_nummer_unique ontbrak in DB terwijl schema .unique() had → migratie 0045). Drift na merge = taak-agent leverde schemawijziging zonder genummerde migratie; agent vult 'm aan.
+
+## Verweesde prod-registraties (STOP "database loopt vóór op de code")
+Tijdelijk gedeployde en daarna hernoemde/verwijderde migratiebestanden laten rijen achter in prod-`schema_migraties` → migrate.mjs STOPt elke deploy. Herstel zonder SSH: gerichte reconciliatie-stap in migrate.mjs (expliciete namenlijst `VERWEESD`, DELETE vóór de pre-check) — alleen voor namen waarvan het netto schema-effect aantoonbaar nul is; al het overige onbekende blijft harde STOP. Les: nooit een al gedeployde migratie hernoemen; incident 15 aug 2026 (materiaal01-fase3 0043/0048).
