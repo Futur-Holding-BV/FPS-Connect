@@ -3361,3 +3361,16 @@ De documentherkenner classificeerde een opdrachtbevestiging al, maar grond B was
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen instellingen-endpoint + beheerscherm-kaart)
 
 De drie bewakingsdrempels uit migratie `0048` (offerte-reactie 7 d, offerte-bekeken 5 d, opname→calculatie 14 d) zijn nu via het beheerscherm bij te stellen. `GET/PUT /info/instellingen` toont en bewaart ze (validatie 1–365 dagen, zelfde patroon als `prijsafspraak_bewaking_dagen`); OpenAPI + codegen bijgewerkt. Web: nieuwe kaart "Commerciële bewaking" op de App-informatiepagina (alleen hoofdbeheerder), naast de bestaande aanvraagstroom-termijnen. De bewakingsloop leest de waarden live uit `app_instellingen`, dus een wijziging werkt direct door in de eerstvolgende draai. Bewijs: `scripts/src/bewijs-taak909-drempels-instelbaar.ts` — 12/12 groen (GET/PUT/DB/400-validatie, met herstel van de oorspronkelijke waarden).
+
+## 2026-08-15 — Taak #944: Documenten direct aan de opdracht koppelen vanuit het uitvoeringsscherm
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief: nieuw doeltype + upload-knop)
+
+Het uitvoeringsscherm (`/uitvoering/:id`) heeft nu een werkende documenten-tab die documenten rechtstreeks aan de opdracht koppelt. Vóór deze taak stond de koppeltabel geen doeltype `opdracht` toe in de OpenAPI-spec, waardoor het scherm alleen gebouw- en offertedocumenten kon tonen en de upload-knop ontbrak.
+
+**Wijzigingen:**
+- `lib/api-spec/openapi.yaml`: `KoppelingDoelType` uitgebreid met `opdracht` (was al aanwezig in de backend-whitelist `KOPPELING_DOEL_TYPES`; alleen de OpenAPI-enum was achter).
+- Codegen opnieuw gedraaid: `KoppelingDoelType` in `lib/api-client-react` bevat nu `opdracht` als valide waarde.
+- `artifacts/firevault/src/pages/uitvoering/detail.tsx`: `OpdrachtDocumenten`-component volledig herschreven — haalt nu ook documenten op via `doel_type=opdracht` en toont ze boven de gebouw/offerte-documenten in een aparte sectie. Nieuwe `UploadOpdrachtDocumentDialog` biedt een bestandskiezer die via `POST /documenten/aanleveren` uploadt (ter goedkeuring in de bibliotheek) en vervolgens via `useAddDocumentKoppeling` direct aan de opdracht koppelt. De upload-knop is alleen zichtbaar bij `bibliotheek:2`; lezen werkt al op `bibliotheek:1`.
+
+Rechten: bestaande separatie gehandhaafd — bekijken vereist bibliotheek:1 (ongewijzigd), toevoegen/koppelen vereist bibliotheek:2 (via de bestaande `POST /documenten/:id/koppelingen`-route).

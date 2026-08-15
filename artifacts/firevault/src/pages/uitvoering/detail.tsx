@@ -4,7 +4,7 @@
 // werkbaksignalen, documenten en regie-verwijzing toe.
 // Bevoegdheden volgen het bestaande rechtenmodel: tabs verschijnen alleen
 // als het onderliggende recht er is (menu verbergt, nooit grijs).
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Link, useRoute } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,6 +16,7 @@ import {
   useListGekoppeldeDocumenten,
   getListGekoppeldeDocumentenQueryKey,
   getGetUitvoeringOverzichtQueryKey,
+  useAddDocumentKoppeling,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
@@ -25,9 +26,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft, HardHat, ShieldCheck, CalendarCheck, Clock, Package,
-  Inbox, FileText, ClipboardList, ExternalLink, AlertTriangle, Check,
+  Inbox, FileText, ClipboardList, ExternalLink, AlertTriangle, Check, Upload,
 } from "lucide-react";
 import PimUitvoeringTab from "@/pages/opdrachten/pim-uitvoering-tab";
 import PimOpleveringTab from "@/pages/opdrachten/pim-oplevering-tab";
@@ -137,46 +141,207 @@ function WerkbakSignalen({ opdrachtId }: { opdrachtId: number }) {
   );
 }
 
+// ── Upload-dialog: bestand uploaden en direct aan de opdracht koppelen ────────
+function UploadOpdrachtDocumentDialog({
+  opdrachtId,
+  open,
+  onClose,
+  onGekoppeld,
+}: {
+  opdrachtId: number;
+  open: boolean;
+  onClose: () => void;
+  onGekoppeld: () => void;
+}) {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [bezig, setBezig] = useState(false);
+  const koppelMut = useAddDocumentKoppeling({
+    mutation: {
+      onError: () => toast({ title: "Koppelen mislukt", variant: "destructive" }),
+    },
+  });
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const bestand = fileRef.current?.files?.[0];
+    if (!bestand) return;
+    setBezig(true);
+    try {
+      const form = new FormData();
+      form.append("bestand", bestand);
+      form.append("categorie", "bibliotheek");
+      const resp = await fetch("/api/documenten/aanleveren", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      if (!resp.ok) {
+        const fout = (await resp.json().catch(() => ({}) as { error?: string })) as { error?: string };
+        toast({ title: fout.error ?? "Upload mislukt", variant: "destructive" });
+        return;
+      }
+      const doc = (await resp.json()) as { id: number };
+      await koppelMut.mutateAsync({
+        id: doc.id,
+        data: { doel_type: "opdracht", doel_id: opdrachtId },
+      });
+      toast({ title: "Document gekoppeld aan de opdracht" });
+      onGekoppeld();
+      onClose();
+    } catch {
+      toast({ title: "Upload of koppelen mislukt", variant: "destructive" });
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !bezig) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Document toevoegen aan opdracht</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="upload-bestand">Bestand</Label>
+            <Input
+              id="upload-bestand"
+              type="file"
+              ref={fileRef}
+              accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
+              required
+              disabled={bezig}
+            />
+            <p className="text-xs text-muted-foreground">
+              Het document komt als "ter goedkeuring" in de bibliotheek en is direct aan deze opdracht gekoppeld.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={bezig} onClick={onClose}>
+              Annuleren
+            </Button>
+            <Button type="submit" disabled={bezig}>
+              {bezig ? "Uploaden…" : "Uploaden en koppelen"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Documenten bij deze opdracht ─────────────────────────────────────────────
-// De koppeltabel kent geen doeltype "opdracht"; documenten hangen aan het
-// gebouw en de offerte onder de opdracht. Beide bronnen worden hier getoond.
-function OpdrachtDocumenten({ gebouwId, offerteId }: { gebouwId: number | null; offerteId: number | null }) {
+// Toont documenten die direct aan de opdracht zijn gekoppeld (doel_type=opdracht),
+// aangevuld met documenten van het gebouw en de offerte. De upload-knop koppelt
+// een nieuw document meteen aan de opdracht — vereist bibliotheek:2.
+function OpdrachtDocumenten({
+  opdrachtId,
+  gebouwId,
+  offerteId,
+  magToevoegen,
+}: {
+  opdrachtId: number;
+  gebouwId: number | null;
+  offerteId: number | null;
+  magToevoegen: boolean;
+}) {
+  const qc = useQueryClient();
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const opdrachtParams = { doel_type: "opdracht" as const, doel_id: opdrachtId };
   const gebouwParams = { doel_type: "gebouw" as const, doel_id: gebouwId ?? 0 };
   const offerteParams = { doel_type: "offerte" as const, doel_id: offerteId ?? 0 };
+
+  const { data: opdrachtDocs = [], isLoading: l0 } = useListGekoppeldeDocumenten(opdrachtParams, {
+    query: { queryKey: getListGekoppeldeDocumentenQueryKey(opdrachtParams), enabled: opdrachtId > 0 },
+  });
   const { data: gebouwDocs = [], isLoading: l1 } = useListGekoppeldeDocumenten(gebouwParams, {
     query: { queryKey: getListGekoppeldeDocumentenQueryKey(gebouwParams), enabled: (gebouwId ?? 0) > 0 },
   });
   const { data: offerteDocs = [], isLoading: l2 } = useListGekoppeldeDocumenten(offerteParams, {
     query: { queryKey: getListGekoppeldeDocumentenQueryKey(offerteParams), enabled: (offerteId ?? 0) > 0 },
   });
-  const isLoading = l1 || l2;
-  const documenten = useMemo(() => {
+
+  const isLoading = l0 || l1 || l2;
+
+  const directDocs = useMemo(
+    () => opdrachtDocs as { id: number; titel?: string | null; naam?: string | null }[],
+    [opdrachtDocs],
+  );
+
+  const overigeDocs = useMemo(() => {
+    const directIds = new Set(opdrachtDocs.map((d) => d.id));
     const alles = [...offerteDocs, ...gebouwDocs] as { id: number; titel?: string | null; naam?: string | null }[];
-    return alles.filter((d, i) => alles.findIndex((x) => x.id === d.id) === i);
-  }, [gebouwDocs, offerteDocs]);
+    return alles.filter((d, i) => !directIds.has(d.id) && alles.findIndex((x) => x.id === d.id) === i);
+  }, [opdrachtDocs, gebouwDocs, offerteDocs]);
+
+  function DocRij({ d }: { d: { id: number; titel?: string | null; naam?: string | null } }) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+        <span className="text-sm font-medium truncate flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          {d.titel ?? d.naam ?? `Document ${d.id}`}
+        </span>
+        <Link href={`/documenten?document=${d.id}`}>
+          <Button size="sm" variant="ghost" aria-label="Bekijk document">
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
   if (isLoading) return <Skeleton className="h-16 w-full" />;
+
   return (
-    <div className="space-y-2">
-      {documenten.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Nog geen documenten gekoppeld aan het gebouw of de offerte van deze opdracht.
-        </p>
-      )}
-      {documenten.map((d) => (
-        <div key={d.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-          <span className="text-sm font-medium truncate flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-            {d.titel ?? d.naam ?? `Document ${d.id}`}
-          </span>
-          <Link href={`/documenten?document=${d.id}`}>
-            <Button size="sm" variant="ghost"><ExternalLink className="h-4 w-4" /></Button>
-          </Link>
+    <div className="space-y-4">
+      {/* Opdracht-specifieke documenten */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Direct gekoppeld aan deze opdracht
+          </p>
+          {magToevoegen && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setUploadOpen(true)}
+              data-testid="upload-opdracht-document"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1.5" /> Document toevoegen
+            </Button>
+          )}
         </div>
-      ))}
-      <p className="text-xs text-muted-foreground">
-        Documenten toevoegen of koppelen gaat via{" "}
-        <Link href="/documenten" className="underline">de documentenmodule</Link>; gekoppelde stukken verschijnen hier direct.
-      </p>
+        {directDocs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nog geen documenten direct aan deze opdracht gekoppeld.
+          </p>
+        ) : (
+          directDocs.map((d) => <DocRij key={d.id} d={d} />)
+        )}
+      </div>
+
+      {/* Documenten van gebouw en offerte */}
+      {overigeDocs.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Via gebouw en offerte
+          </p>
+          {overigeDocs.map((d) => <DocRij key={d.id} d={d} />)}
+        </div>
+      )}
+
+      {uploadOpen && (
+        <UploadOpdrachtDocumentDialog
+          opdrachtId={opdrachtId}
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onGekoppeld={() => {
+            void qc.invalidateQueries({ queryKey: getListGekoppeldeDocumentenQueryKey(opdrachtParams) });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -196,6 +361,7 @@ export default function UitvoeringDetailPagina() {
   const magProjecten = heeftNiveau("projecten", 1);
   const magMateriaal = heeftNiveau("projecten", 2);
   const magDocumenten = heeftNiveau("bibliotheek", 1);
+  const magDocumentenToevoegen = heeftNiveau("bibliotheek", 2);
   const isRegie = (opdracht as { type?: string } | undefined)?.type === "regie";
 
   // Eerste toegestane tab als startpunt — iemand met alleen projectenrecht
@@ -355,8 +521,10 @@ export default function UitvoeringDetailPagina() {
               </CardHeader>
               <CardContent>
                 <OpdrachtDocumenten
+                  opdrachtId={opdrachtId}
                   gebouwId={(opdracht as { gebouw_id?: number | null } | undefined)?.gebouw_id ?? null}
                   offerteId={(opdracht as { offerte_id?: number | null } | undefined)?.offerte_id ?? null}
+                  magToevoegen={magDocumentenToevoegen}
                 />
               </CardContent>
             </Card>

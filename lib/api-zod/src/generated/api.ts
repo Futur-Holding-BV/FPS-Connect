@@ -4374,7 +4374,7 @@ export const ListDocumentLogboekResponse = zod.array(ListDocumentLogboekResponse
  * @summary Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
  */
 export const ListGekoppeldeDocumentenQueryParams = zod.object({
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'opdracht', 'calculatie']),
   "doel_id": zod.coerce.number()
 })
 
@@ -4417,7 +4417,7 @@ export const ListDocumentKoppelingenParams = zod.object({
 export const ListDocumentKoppelingenResponseItem = zod.object({
   "id": zod.number(),
   "document_id": zod.number(),
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'opdracht', 'calculatie']),
   "doel_id": zod.number(),
   "doel_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string()
@@ -4433,7 +4433,7 @@ export const AddDocumentKoppelingParams = zod.object({
 })
 
 export const AddDocumentKoppelingBody = zod.object({
-  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'calculatie']),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening', 'opdracht', 'calculatie']),
   "doel_id": zod.number()
 })
 

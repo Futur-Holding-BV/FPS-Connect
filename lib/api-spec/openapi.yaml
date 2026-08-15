@@ -33437,7 +33437,7 @@ components:
 
     KoppelingDoelType:
       type: string
-      enum: [gebouw, klant, offerte, dossier, voorziening, calculatie]
+      enum: [gebouw, klant, offerte, dossier, voorziening, opdracht, calculatie]
 
     DocumentKoppeling:
       type: object
