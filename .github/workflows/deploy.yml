@@ -144,6 +144,23 @@ jobs:
             scripts/deploy-production.sh \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}:/tmp/deploy-production.sh"
 
+      - name: GitHub-token naar server doorgeven
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Schrijf het GitHub-token via stdin naar een tijdelijk bestand op de
+          # server. Het token staat nooit in de commandoregel (en dus niet in de
+          # processlijst). Het deployscript leest het bestand in stap 3 en
+          # verwijdert het daarna direct.
+          printf '%s' "${GH_TOKEN}" | \
+            ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
+              "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
+              'cat > /tmp/.deploy-gh-token && chmod 600 /tmp/.deploy-gh-token'
+
       - name: Deploy uitvoeren op de VPS
         id: deploy
         env:

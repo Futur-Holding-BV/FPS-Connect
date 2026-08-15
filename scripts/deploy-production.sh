@@ -123,7 +123,23 @@ echo "Back-up OK: ${NIEUWSTE_BACKUP} ($(du -h "${NIEUWSTE_BACKUP}" | cut -f1))"
 
 # ─── STAP 3: nieuwste code ophalen ───────────────────────────────────────────
 echo "=== STAP 3: git fetch origin ==="
-git fetch origin
+if [ -f /tmp/.deploy-gh-token ]; then
+  # GitHub-token is door de Actions-runner via een tijdelijk bestand
+  # aangeboden. Verwijder het bestand direct na het lezen, zodat het token
+  # niet langer op schijf staat dan nodig.
+  _GH_TOKEN="$(cat /tmp/.deploy-gh-token)"
+  rm -f /tmp/.deploy-gh-token
+  # Herschrijf git@github.com:-URLs naar HTTPS en authenticeer via het token.
+  # url.insteadOf werkt voor SCP-stijl SSH-remotes (git@github.com:org/repo);
+  # http.extraHeader voegt de Authorization-header toe aan elk HTTPS-verzoek.
+  git \
+    -c "url.https://github.com/.insteadOf=git@github.com:" \
+    -c "http.extraHeader=Authorization: Bearer ${_GH_TOKEN}" \
+    fetch origin
+  unset _GH_TOKEN
+else
+  git fetch origin
+fi
 
 # ─── STAP 4: werkmap exact gelijk zetten aan origin/main ────────────────────
 # reset --hard (geen pull): de server volgt main altijd exact, ook na een
