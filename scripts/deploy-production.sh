@@ -15,6 +15,10 @@
 
 set -euo pipefail
 
+# Ruim het tijdelijke GitHub-tokenbestand altijd op bij het verlaten van het
+# script — ook bij een vroegtijdige fout in STAP 1 of STAP 2.
+trap 'rm -f /tmp/.deploy-gh-token; [ -n "${_CRED_FILE:-}" ] && rm -f "${_CRED_FILE}"' EXIT
+
 # ─── STAP 1: naar de productiemap ────────────────────────────────────────────
 cd /opt/fps-one
 
@@ -129,14 +133,23 @@ if [ -f /tmp/.deploy-gh-token ]; then
   # niet langer op schijf staat dan nodig.
   _GH_TOKEN="$(cat /tmp/.deploy-gh-token)"
   rm -f /tmp/.deploy-gh-token
-  # Herschrijf git@github.com:-URLs naar HTTPS en authenticeer via het token.
-  # url.insteadOf werkt voor SCP-stijl SSH-remotes (git@github.com:org/repo);
-  # http.extraHeader voegt de Authorization-header toe aan elk HTTPS-verzoek.
+
+  # Schrijf de credentials naar een tijdelijk bestand zodat het token nooit
+  # als commandoregelargument zichtbaar is (ps aux / /proc/<pid>/cmdline).
+  _CRED_FILE="$(mktemp)"
+  chmod 600 "${_CRED_FILE}"
+  printf 'https://x-access-token:%s@github.com\n' "${_GH_TOKEN}" > "${_CRED_FILE}"
+  unset _GH_TOKEN
+
+  # url.insteadOf herschrijft de SCP-stijl SSH-remote (git@github.com:)
+  # naar HTTPS. credential.helper leest de token uit het tijdelijke bestand.
   git \
     -c "url.https://github.com/.insteadOf=git@github.com:" \
-    -c "http.extraHeader=Authorization: Bearer ${_GH_TOKEN}" \
+    -c "credential.helper=store --file ${_CRED_FILE}" \
     fetch origin
-  unset _GH_TOKEN
+
+  rm -f "${_CRED_FILE}"
+  unset _CRED_FILE
 else
   git fetch origin
 fi
