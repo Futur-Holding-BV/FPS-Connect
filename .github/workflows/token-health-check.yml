@@ -142,10 +142,10 @@ jobs:
 
               Stappen om te herstellen:
               1. Ga naar https://github.com/settings/personal-access-tokens
-              2. Maak een nieuw PAT aan (of verleng het bestaande) met 'Contents: Write' scope op de fps-one repo
+              2. Maak een nieuw PAT aan (of verleng het bestaande) met 'Contents: Write' scope op de Futur-Holding-BV/FPS-Connect repo
               3. Kopieer het nieuwe token
               4. Update Replit: open de Replit-editor > Secrets > GITHUB_TOKEN_PUSH (vervang de waarde)
-              5. Update GitHub: ga naar github.com/vinkrene-jpg/fps-one > Settings > Secrets and variables > Actions > GITHUB_TOKEN_PUSH (vervang de waarde)
+              5. Update GitHub: ga naar github.com/Futur-Holding-BV/FPS-Connect > Settings > Secrets and variables > Actions > FPS_PUSH_TOKEN (vervang de waarde)
               6. Verifieer: open een Replit-shell en voer uit: curl -sS -H \"Authorization: token JOUWTOKEN\" https://api.github.com/user
 
               Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
@@ -161,7 +161,7 @@ jobs:
               1. Ga naar https://github.com/settings/personal-access-tokens
               2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de fps-one repo
               3. Update Replit Secrets: GITHUB_TOKEN_PUSH
-              4. Update GitHub Actions Secrets: GITHUB_TOKEN_PUSH
+              4. Update GitHub Actions Secrets: FPS_PUSH_TOKEN
 
               Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
               ;;
