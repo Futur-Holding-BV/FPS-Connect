@@ -53,6 +53,10 @@ test-results/
 playwright-report/
 blob-report/
 
+# E2e-testresultaten — gegenereerd tijdens CI-runs; mogen NOOIT in Git terechtkomen
+# (rapporten kunnen live portaaltokens of andere gevoelige testdata bevatten)
+scripts/e2e-resultaten/
+
 # Secrets — mogen NOOIT in Git terechtkomen
 .env
 .env.local
