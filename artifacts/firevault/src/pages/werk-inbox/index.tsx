@@ -23,7 +23,7 @@ import { toast } from "@/hooks/use-toast";
 
 type OAuthStatus =
   | { gekoppeld: false }
-  | { gekoppeld: true; email: string; verlooptOp: string };
+  | { gekoppeld: true; email: string; verlooptOp: string; herkoppelenNodig?: boolean; ontbrekendeRechten?: string[] };
 
 type Mailbox = {
   id: number;
@@ -1069,8 +1069,32 @@ export default function WerkInboxPagina() {
     ));
   }
 
+  const herkoppelenNodig = oauthStatus?.gekoppeld === true && oauthStatus.herkoppelenNodig === true;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Koppeling met verouderde (smallere) rechten → opnieuw koppelen */}
+      {herkoppelenNodig && (
+        <div
+          className="px-6 py-3 bg-amber-100 border-b border-amber-300 text-amber-900 flex items-center justify-between gap-4 shrink-0"
+          data-testid="banner-herkoppelen"
+        >
+          <p className="text-sm">
+            Uw Microsoft-koppeling heeft niet alle rechten die de werkinbox nodig heeft
+            (o.a. versturen en verplaatsen van e-mail). Koppel uw account opnieuw om alle
+            functies te gebruiken.
+          </p>
+          <Button
+            size="sm"
+            className="gap-2 h-8 shrink-0"
+            onClick={() => { window.location.href = "/api/werk-inbox/oauth/start"; }}
+            data-testid="knop-herkoppelen"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Opnieuw koppelen
+          </Button>
+        </div>
+      )}
       {/* Paginaheader */}
       <div className="px-6 py-4 border-b flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">

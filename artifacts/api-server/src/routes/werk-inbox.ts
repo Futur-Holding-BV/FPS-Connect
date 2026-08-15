@@ -50,6 +50,7 @@ import {
   beantwoordMail,
   verstuurNieuwDelegatedMail,
   probeExchangeToegang,
+  ontbrekendeScopes,
   GeenToegang,
   type TokenResponse,
 } from "../services/werkInboxGraph";
@@ -68,12 +69,15 @@ import { verwerkAanvraagmails } from "../services/aanvraagstroomService";
 
 const router = Router();
 
-function redirectUri(req: { protocol: string; get: (h: string) => string | undefined }): string {
-  const env = process.env["AZURE_REDIRECT_URI"];
-  if (env) return env;
-  const host = req.get("x-forwarded-host") ?? req.get("host") ?? "localhost";
-  const proto = req.get("x-forwarded-proto") ?? req.protocol;
-  return `${proto}://${host}/api/werk-inbox/oauth/callback`;
+// Het exacte adres dat in de Azure app-registratie als redirect-URI is
+// geregistreerd. Nooit meer uit request-headers afleiden: de URI moet
+// byte-voor-byte overeenkomen met de registratie, anders weigert Microsoft
+// de code-uitwisseling. AZURE_REDIRECT_URI kan dit per omgeving overschrijven
+// (bv. voor een ontwikkelomgeving met een eigen geregistreerde URI).
+const GEREGISTREERDE_REDIRECT_URI = "https://connect.fps-one.nl/api/werk-inbox/oauth/callback";
+
+function redirectUri(): string {
+  return process.env["AZURE_REDIRECT_URI"] ?? GEREGISTREERDE_REDIRECT_URI;
 }
 
 function gebruikerId(req: import("express").Request): number {
@@ -126,8 +130,13 @@ router.get("/werk-inbox/oauth/start", requireAuth, (req, res) => {
     res.status(503).json({ error: "Microsoft 365 is niet geconfigureerd op deze omgeving." });
     return;
   }
-  const state = maakOAuthState(gebruikerId(req));
-  const url   = bouwAuthUrl(redirectUri(req), state);
+  // One-time nonce in de server-side sessie: de callback accepteert de state
+  // alleen vanuit dezelfde browser-sessie die de flow startte (anti account-
+  // linking-CSRF) en de nonce is na één gebruik verbruikt.
+  const nonce = crypto.randomUUID();
+  (req.session as unknown as Record<string, unknown>)["werkInboxOAuthNonce"] = nonce;
+  const state = maakOAuthState(gebruikerId(req), nonce);
+  const url   = bouwAuthUrl(redirectUri(), state);
   res.redirect(url);
 });
 
@@ -146,11 +155,25 @@ router.get("/werk-inbox/oauth/callback", async (req, res): Promise<void> => {
     return;
   }
 
-  const uid = verifyOAuthState(state);
-  if (!uid) {
+  const geverifieerd = verifyOAuthState(state);
+  if (!geverifieerd) {
     res.redirect("/werk-inbox?ms_error=ongeldige_state");
     return;
   }
+
+  // Sessie-binding: de callback moet uit dezelfde ingelogde browser-sessie
+  // komen als de start (zelfde gebruiker, zelfde one-time nonce). Zonder deze
+  // controle kan een aanvaller zijn eigen state aan een slachtoffer voeren en
+  // diens Microsoft-account aan het aanvallers-FPS-account laten koppelen.
+  const sessie = req.session as unknown as { userId?: number } & Record<string, unknown>;
+  const sessieNonce = sessie["werkInboxOAuthNonce"];
+  delete sessie["werkInboxOAuthNonce"]; // one-time: altijd verbruiken
+  if (!sessie.userId || sessie.userId !== geverifieerd.uid || sessieNonce !== geverifieerd.nonce) {
+    req.log.warn({ uidState: geverifieerd.uid, uidSessie: sessie.userId ?? null }, "werk-inbox: OAuth-callback zonder bijpassende sessie geweigerd");
+    res.redirect("/werk-inbox?ms_error=ongeldige_state");
+    return;
+  }
+  const uid = geverifieerd.uid;
 
   if (!isGeconfigureerd()) {
     res.redirect("/werk-inbox?ms_error=niet_geconfigureerd");
@@ -167,7 +190,7 @@ router.get("/werk-inbox/oauth/callback", async (req, res): Promise<void> => {
           client_id:     process.env["AZURE_CLIENT_ID_NEW"]!,
           client_secret: process.env["AZURE_CLIENT_SECRET"]!,
           code,
-          redirect_uri:  redirectUri(req),
+          redirect_uri:  redirectUri(),
           grant_type:    "authorization_code",
         }).toString(),
       },
@@ -198,6 +221,7 @@ router.get("/werk-inbox/oauth/status", requireAuth, async (req, res): Promise<vo
   const [token] = await db.select({
     microsoftEmail: werkInboxTokensTable.microsoftEmail,
     verlooptOp:     werkInboxTokensTable.verlooptOp,
+    scope:          werkInboxTokensTable.scope,
   })
     .from(werkInboxTokensTable)
     .where(eq(werkInboxTokensTable.gebruikerId, uid))
@@ -207,7 +231,15 @@ router.get("/werk-inbox/oauth/status", requireAuth, async (req, res): Promise<vo
     res.json({ gekoppeld: false });
     return;
   }
-  res.json({ gekoppeld: true, email: token.microsoftEmail, verlooptOp: token.verlooptOp });
+  // Koppeling met smallere rechten dan nu vereist → opnieuw koppelen nodig.
+  const ontbrekend = ontbrekendeScopes(token.scope);
+  res.json({
+    gekoppeld: true,
+    email: token.microsoftEmail,
+    verlooptOp: token.verlooptOp,
+    herkoppelenNodig: ontbrekend.length > 0,
+    ontbrekendeRechten: ontbrekend,
+  });
 });
 
 // ─── Ontkoppelen ──────────────────────────────────────────────────────────────

@@ -18,7 +18,27 @@ const TENANT_ID  = process.env["AZURE_TENANT_ID"];
 const CLIENT_ID  = process.env["AZURE_CLIENT_ID_NEW"];
 const CLIENT_SECRET = process.env["AZURE_CLIENT_SECRET"];
 
-export const DELEGATED_SCOPES = "Mail.Read offline_access User.Read";
+// Exact de rechten die de beheerder in Azure heeft goedgekeurd (aug 2026).
+export const DELEGATED_SCOPES = "User.Read Mail.ReadWrite Mail.ReadWrite.Shared Mail.Send Mail.Send.Shared offline_access";
+
+/**
+ * Vergelijkt de bij een koppeling opgeslagen scopes met de nu vereiste scopes.
+ * Geeft de ontbrekende scopes terug (leeg = koppeling is breed genoeg).
+ * `offline_access` wordt buiten beschouwing gelaten: Microsoft geeft die scope
+ * niet terug in de token-response, dus die is nooit betrouwbaar opgeslagen.
+ */
+export function ontbrekendeScopes(opgeslagenScope: string | null | undefined): string[] {
+  const aanwezig = new Set(
+    (opgeslagenScope ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      // Graph kan scopes met resource-prefix teruggeven (https://graph.microsoft.com/Mail.Read)
+      .map((s) => s.split("/").pop()!.toLowerCase()),
+  );
+  return DELEGATED_SCOPES.split(" ")
+    .filter((s) => s !== "offline_access")
+    .filter((s) => !aanwezig.has(s.toLowerCase()));
+}
 
 // Review MAIL_01: nooit een voorspelbare fallback — een bekende secret zou
 // iedereen in staat stellen OAuth-states namens willekeurige gebruikers te
@@ -33,23 +53,25 @@ const SESSION_SECRET = (() => {
 
 // ── State-parameter (stateless, HMAC-gesigned) ────────────────────────────────
 
-export function maakOAuthState(gebruikerId: number): string {
-  const payload = Buffer.from(JSON.stringify({ uid: gebruikerId, ts: Date.now() })).toString("base64url");
+export function maakOAuthState(gebruikerId: number, nonce: string): string {
+  const payload = Buffer.from(JSON.stringify({ uid: gebruikerId, n: nonce, ts: Date.now() })).toString("base64url");
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
 
-export function verifyOAuthState(state: string): number | null {
+export function verifyOAuthState(state: string): { uid: number; nonce: string } | null {
   const dot = state.lastIndexOf(".");
   if (dot < 0) return null;
   const payload = state.slice(0, dot);
   const sig     = state.slice(dot + 1);
   const verwacht = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  if (sig.length !== verwacht.length) return null;
   if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(verwacht))) return null;
   try {
-    const obj = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { uid: number; ts: number };
+    const obj = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { uid: number; n?: string; ts: number };
     if (Date.now() - obj.ts > 10 * 60 * 1000) return null; // 10 minuten
-    return obj.uid;
+    if (typeof obj.n !== "string" || obj.n.length < 16) return null;
+    return { uid: obj.uid, nonce: obj.n };
   } catch {
     return null;
   }
@@ -82,6 +104,8 @@ export interface TokenResponse {
   expires_in:    number;
   token_type?:   string;
   id_token?:     string;
+  /** Door Microsoft daadwerkelijk toegekende scopes (zonder offline_access). */
+  scope?:        string;
 }
 
 async function ruilCodeVoorToken(code: string, redirectUri: string): Promise<TokenResponse> {
@@ -122,7 +146,11 @@ async function verversToken(refreshToken: string): Promise<TokenResponse> {
       client_secret: CLIENT_SECRET!,
       refresh_token: refreshToken,
       grant_type:    "refresh_token",
-      scope:         DELEGATED_SCOPES,
+      // Bewust GEEN scope-parameter: bij refresh staat Microsoft alleen een
+      // subset van de oorspronkelijke grant toe. Een bredere scope meesturen
+      // laat refreshes van bestaande (smallere) koppelingen falen met 400,
+      // waarna een werkende koppeling onterecht als stuk wordt gemarkeerd.
+      // Bredere rechten komen uitsluitend via interactief herkoppelen.
     }).toString(),
   });
   if (!res.ok) {
@@ -150,9 +178,14 @@ export async function slaTokenOp(gebruikerId: number, tokenData: TokenResponse, 
     // Geslaagde refresh/herkoppeling = koppeling weer gezond.
     refreshMisluktOp: null,
     bijgewerktOp:    new Date(),
+    // De door Microsoft dáádwerkelijk toegekende scopes opslaan (niet wat wij
+    // vroegen), zodat "opnieuw koppelen nodig" betrouwbaar te bepalen is.
+    // Fail-closed: geen scope in de response = niet bewezen dat de brede
+    // grant bestaat → leeg opslaan, zodat de status "herkoppelen nodig" toont.
+    scope: tokenData.scope ?? "",
   };
   await db.insert(werkInboxTokensTable)
-    .values({ ...values, scope: DELEGATED_SCOPES })
+    .values(values)
     .onConflictDoUpdate({
       target: werkInboxTokensTable.gebruikerId,
       set: values,
