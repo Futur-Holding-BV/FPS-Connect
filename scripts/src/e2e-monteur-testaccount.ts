@@ -41,6 +41,17 @@ export const E2E_WEB_ADMIN_EMAIL = "e2e-web-admin@fps.local";
 export const E2E_WEB_ADMIN_WACHTWOORD = "E2eWebAdmin!2026";
 export const E2E_WEB_ADMIN_TOTP_SECRET = "GJ3XA2LDN5UW45DF";
 
+// Vaste accounts voor de uitvoering-rechten-e2e (web-uitvoering-rechten.spec.ts):
+// een hoofdbeheerder (alle rechten → eersteTab = stappen) en een gebruiker met
+// uitsluitend projecten:1 (geen offertes/bibliotheek → eersteTab = planning).
+export const E2E_UITV_ADMIN_EMAIL = "e2e-uitv-admin@fps.local";
+export const E2E_UITV_ADMIN_WACHTWOORD = "E2eUitvAdmin!2026";
+export const E2E_UITV_ADMIN_TOTP_SECRET = "ORSXG5BNON4XIZLT";
+
+export const E2E_UITV_PROJ_EMAIL = "e2e-uitv-proj@fps.local";
+export const E2E_UITV_PROJ_WACHTWOORD = "E2eUitvProj!2026";
+export const E2E_UITV_PROJ_TOTP_SECRET = "MVXGG33PEBQW4RTF";
+
 // Vaste accounts voor de bedragen-strip-e2e (web-bedragen-strip.spec.ts):
 // een monteur-achtig account met projecten:1 (lezen ZONDER bedragen) en een
 // kantooraccount met projecten:2 (lezen MET bedragen). Bewust aparte accounts
@@ -192,6 +203,35 @@ export async function setupE2eWebAdminAccount(): Promise<number> {
     totpSecret: E2E_WEB_ADMIN_TOTP_SECRET,
     rol: "hoofdbeheerder",
   });
+}
+
+// Vaste accounts voor de uitvoering-rechten-suite (web-uitvoering-rechten.spec.ts).
+// Admin heeft alle bevoegdheden (eersteTab = stappen); proj alleen projecten:1
+// (eersteTab = planning, tabs stappen/oplevering/documenten/materiaal verborgen).
+export async function setupE2eUitvoeringAccounts(): Promise<{
+  adminId: number;
+  projId: number;
+}> {
+  const adminId = await maakOfUpdateE2eAccount({
+    email: E2E_UITV_ADMIN_EMAIL,
+    naam: "E2E Uitvoering Beheerder",
+    wachtwoord: E2E_UITV_ADMIN_WACHTWOORD,
+    totpSecret: E2E_UITV_ADMIN_TOTP_SECRET,
+    // Geen bevoegdheden opgeven → alle modules op 4 (default in maakOfUpdateE2eAccount).
+  });
+  const projId = await maakOfUpdateE2eAccount({
+    email: E2E_UITV_PROJ_EMAIL,
+    naam: "E2E Uitvoering Projecten",
+    wachtwoord: E2E_UITV_PROJ_WACHTWOORD,
+    totpSecret: E2E_UITV_PROJ_TOTP_SECRET,
+    bevoegdheden: { projecten: 1 },
+  });
+  return { adminId, projId };
+}
+
+export async function archiveerE2eUitvoeringAccounts(): Promise<void> {
+  await archiveerAccount(E2E_UITV_ADMIN_EMAIL);
+  await archiveerAccount(E2E_UITV_PROJ_EMAIL);
 }
 
 // Vaste accounts voor de bedragen-strip-suite (web-bedragen-strip.spec.ts).
