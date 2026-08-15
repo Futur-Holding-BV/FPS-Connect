@@ -83,13 +83,19 @@ jobs:
       - name: Installeer dependencies (voor controles)
         run: pnpm install --frozen-lockfile
 
-      - name: Controle 1/2 — typecheck
+      - name: Controle 1/3 — typecheck
         if: github.event.inputs.noodfix != 'NOODFIX'
         run: pnpm run typecheck
 
-      - name: Controle 2/2 — dubbele-routes-controle
+      - name: Controle 2/3 — dubbele-routes-controle
         if: github.event.inputs.noodfix != 'NOODFIX'
         run: pnpm --filter @workspace/scripts run check-dubbele-routes
+
+      # KLANTLOOS_01 fase 3: faalt zodra de klantrol of een "of klant"-
+      # autorisatievariant terugkeert in Connect.
+      - name: Controle 3/3 — klantloos-controle
+        if: github.event.inputs.noodfix != 'NOODFIX'
+        run: pnpm --filter @workspace/scripts run klantloos-check
 
       - name: SSH-sleutel en hostkey instellen
         env:

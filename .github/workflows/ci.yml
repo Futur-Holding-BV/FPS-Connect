@@ -31,6 +31,11 @@ jobs:
       - name: Dubbele-routes-controle
         run: pnpm --filter @workspace/scripts run check-dubbele-routes
 
+      # KLANTLOOS_01 fase 3: faalt zodra de klantrol of een "of klant"-
+      # autorisatievariant terugkeert in Connect.
+      - name: Klantloos-controle
+        run: pnpm --filter @workspace/scripts run klantloos-check
+
       - name: Build api-server
         run: pnpm --filter @workspace/api-server run build
 

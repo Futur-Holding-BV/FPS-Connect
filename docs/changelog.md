@@ -1,3 +1,9 @@
+## 2026-08-15 — KLANTLOOS_01 fase 3: buildcontrole tegen herintroductie van de klantrol
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (read-only controle, geen runtimegedrag)
+
+Nieuwe controle `scripts/src/klantloos-check.ts` (`pnpm --filter @workspace/scripts run klantloos-check`) die de build laat FALEN zodra de klantrol terugkeert: verboden identifiers (isKlant, requireBevoegdheidOfKlant, klantPoort, KLANT_BEVOEGDHEDEN), rol-vergelijkingen/-toewijzingen met "klant", "klant" in een OpenAPI-rol-enum, en of-klant/requireRol("klant")-middleware op routes (1402 routes gescand). CRM-klanttermen blijven toegestaan; de heractiveringsblokkade in gebruikers.ts draagt de bewuste marker `klantloos-ok`. Routes zonder per-route middleware (gedekt door globale requireAuth) worden alleen informatief geteld. Aangesloten op CI (na dubbele-routes-controle) en deploy (Controle 3/3). Bewijs geleverd: check slaagt op de huidige boom, faalt met vindplaatsen op een opzettelijk teruggezette `requireBevoegdheidOfKlant` en `rol === "klant"`, en slaagt weer na verwijdering.
+
 ## 2026-08-15 — KLANTLOOS_01 fase 2: Connect volledig klantloos
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (rol-verwijdering raakt autorisatielaag; alle bestaande medewerker-paden aantoonbaar intact)

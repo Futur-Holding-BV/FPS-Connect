@@ -20,6 +20,7 @@
     "check-codegen-stale": "tsx ./src/check-codegen-stale.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
     "check-dubbele-routes": "tsx ./src/check-dubbele-routes.ts",
+    "klantloos-check": "tsx ./src/klantloos-check.ts",
     "broncode-export": "tsx ./src/broncode-export.ts",
     "valideer-installatie": "tsx ./src/valideer-installatie.ts",
     "pre-publish-validatie": "tsx ./src/pre-publish-validatie.ts",

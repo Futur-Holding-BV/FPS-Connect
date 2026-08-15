@@ -145,8 +145,8 @@ router.use(requireAuth);
 router.use(blokkeerBijWachtwoordWijzigenVereist);
 // Laad permissies één keer per request — req.permissies beschikbaar op alle routes
 router.use(laadPermissies);
-// KLANTLOOS_01: Connect is klantloos — de klantpoort is verwijderd; alle
-// autorisatie loopt via de module-rechtencontrole per route.
+// KLANTLOOS_01: Connect is klantloos — de vroegere klant-toegangspoort is
+// verwijderd; alle autorisatie loopt via de module-rechtencontrole per route.
 // Universele audit trail — onderschept alle muterende requests
 router.use(maakAuditMiddleware());
 // AI Governance & Risk Engine — beoordeelt iedere schrijfactie, blokkeert kritieke operaties

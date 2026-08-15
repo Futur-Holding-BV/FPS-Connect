@@ -495,7 +495,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
     if (rol !== undefined && rol !== "hoofdbeheerder" && rol !== "gebruiker") {
       return void res.status(400).json({ error: "Ongeldige rol: alleen 'hoofdbeheerder' of 'gebruiker' is toegestaan" });
     }
-    if (actief === true && bestaand.rol === "klant" && rol === undefined) {
+    if (actief === true && bestaand.rol === "klant" && rol === undefined) { // klantloos-ok: dit ís de blokkade
       return void res.status(409).json({ error: "Klantaccounts zijn vervallen (KLANTLOOS_01) en kunnen niet worden geheractiveerd; wijs eerst een interne rol toe" });
     }
     const effectieveRol: unknown = rol !== undefined ? rol : bestaand.rol;
