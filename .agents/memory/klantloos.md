@@ -14,4 +14,4 @@ description: De rol 'klant' is volledig uit Connect verwijderd (aug 2026); wat b
 - **Blijft bestaan:** publiek offerteportaal `/portaal/:token` (token-based, gemount vóór requireAuth) en alle CRM-klantterminologie (`crm_klanten`, `klant_id` = bedrijfsrelatie, geen inlogrol). Ook aiContext-knooptype "klant" = CRM-entiteit, correct.
 - De klant-notificatiemail bij rapport-definitief is vervallen (verwees naar het verwijderde /klant/rapportages); herbouwen op het Platform als dat er is.
 - Projecten-router draait bewust nog op gebouwen/crm-rechten (technische-schuld #34) — niet "even rechttrekken".
-- Fase 3 (gepland): buildcontrole die FAALT bij herintroductie van de klantrol; de oude klant-poort-check + CI/deploy-stap zijn verwijderd.
+- Fase 3 (gebouwd): `klantloos-check` (scripts) faalt op klantrol-identifiers/rol-vergelijkingen/OpenAPI-enum/of-klant-middleware; in CI + deploy (Controle 3/3). Bewuste uitzonderingen markeren met `// klantloos-ok`; requireAuth-only routes alleen informatief.
