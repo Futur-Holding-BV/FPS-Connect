@@ -31,8 +31,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   ArrowLeft, HardHat, ShieldCheck, CalendarCheck, Clock, Package,
-  Inbox, FileText, ClipboardList, ExternalLink, AlertTriangle, Check, Upload,
+  Inbox, FileText, ClipboardList, ExternalLink, AlertTriangle, Check, Upload, Euro,
 } from "lucide-react";
+import {
+  VoorwaardenTab,
+  BegrotingTab,
+  UrenTab,
+  MateriaalTab as RegieMateriaalTab,
+} from "@/pages/regie/detail";
 import PimUitvoeringTab from "@/pages/opdrachten/pim-uitvoering-tab";
 import PimOpleveringTab from "@/pages/opdrachten/pim-oplevering-tab";
 import UitvoeringsplanningTab from "@/pages/opdrachten/uitvoeringsplanning-tab";
