@@ -36,6 +36,10 @@ args = "bewijs-materiaal01-fase3"
 task = "workflow.run"
 args = "migratie-hernoeming"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "migratie-wijziging"
+
 [[workflows.workflow]]
 name = "e2e-menu"
 author = "agent"
@@ -87,6 +91,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/db run check-hernoeming"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "migratie-wijziging"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/db run check-wijziging"
 
 [workflows.workflow.metadata]
 isValidation = true

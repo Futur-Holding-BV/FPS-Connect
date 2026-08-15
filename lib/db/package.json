@@ -15,7 +15,8 @@
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "schema-healthcheck": "node ./scripts/schema-healthcheck.mjs",
-    "check-hernoeming": "node ./scripts/check-migratie-hernoeming.mjs"
+    "check-hernoeming": "node ./scripts/check-migratie-hernoeming.mjs",
+    "check-wijziging": "node ./scripts/check-migratie-wijziging.mjs"
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.1",
