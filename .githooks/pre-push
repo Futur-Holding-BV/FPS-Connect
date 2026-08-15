@@ -1,0 +1,49 @@
+#!/bin/sh
+# FPS Connect — git pre-push hook (taak #938)
+#
+# BLOKKEREND: een push gaat alleen door als
+#   1. de opmaakschade-controle slaagt op alle te pushen commits
+#      (scripts/git/check-opmaakschade.mjs — vangt merge-/formatterschade
+#       zoals rapporten.ts op 15 aug 2026: 769 → 2071 regels), en
+#   2. de volledige workspace-typecheck groen is (pnpm run typecheck).
+#
+# Activeren gebeurt automatisch via core.hooksPath .githooks (zie de
+# prepare-stap in package.json). Er is bewust GEEN overslaan-vlag:
+# een bewust grote wijziging kondig je aan met [grote-wijziging] in de
+# commit-boodschap; een rode typecheck hoort nooit op main te belanden.
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha> per te pushen ref.
+RANGES=""
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "$local_sha" ] && continue
+  # Verwijderde ref (local sha = nullen): niets te controleren.
+  case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac
+  case "$remote_sha" in
+    0000000000000000000000000000000000000000)
+      # Nieuwe remote-ref: controleer alleen commits die nergens anders al bestaan
+      # (losse SHA's, want de controle-script kent alleen ranges en enkele commits).
+      NIEUWE=$(git rev-list "$local_sha" --not --remotes 2>/dev/null || echo "")
+      RANGES="$RANGES $NIEUWE" ;;
+    *)
+      RANGES="$RANGES $remote_sha..$local_sha" ;;
+  esac
+done
+
+if [ -n "$RANGES" ]; then
+  echo "[pre-push] Opmaakschade-controle op te pushen commits..."
+  # shellcheck disable=SC2086
+  node scripts/git/check-opmaakschade.mjs $RANGES || {
+    echo "[pre-push] GEBLOKKEERD: opmaakschade gedetecteerd — push niet uitgevoerd." >&2
+    exit 1
+  }
+fi
+
+echo "[pre-push] Volledige workspace-typecheck..."
+pnpm run typecheck || {
+  echo "[pre-push] GEBLOKKEERD: typecheck faalt — push niet uitgevoerd." >&2
+  exit 1
+}
+echo "[pre-push] Alle controles groen — push gaat door."

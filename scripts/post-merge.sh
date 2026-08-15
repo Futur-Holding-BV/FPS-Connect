@@ -326,6 +326,17 @@ pnpm --filter @workspace/scripts run seed-studio-opleverrapport
 _HUIDIGE_STAP="Stap 6: seed-profielen"
 pnpm --filter @workspace/scripts run seed-profielen
 
+# Stap 6b (taak #938): tweede vangnet tegen gemangelde bestanden.
+# De primaire poort is de git pre-push hook (.githooks/pre-push); deze stap
+# vangt merges die buiten die hook om binnenkomen (taakagent-merges).
+# BLOKKEREND: bij een rode typecheck of opmaakschade stopt het script vóór
+# de GitHub-push, zodat een kapot bestand nooit richting productie gaat.
+_HUIDIGE_STAP="Stap 6b: opmaakschade-controle (merge-mangeling)"
+node scripts/git/check-opmaakschade.mjs HEAD
+
+_HUIDIGE_STAP="Stap 6c: volledige workspace-typecheck"
+pnpm run typecheck
+
 # Stappen 1-6 voltooid — verwijder de ERR-trap; stap 7 heeft eigen foutafhandeling.
 trap - ERR
 
