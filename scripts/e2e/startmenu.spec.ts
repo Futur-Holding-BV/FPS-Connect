@@ -118,8 +118,9 @@ async function logIn(page: Page): Promise<void> {
     await page.getByText("Inloggen", { exact: true }).click();
 
     try {
-      // 45s timeout: cold-start Expo kan lang laden na submit
-      await expect(fps).toBeVisible({ timeout: 45_000 });
+      // 90s timeout: cold-start Expo + menu-chunk compilatie kan lang duren;
+      // de menu-route heeft een eigen lazy bundle die pas na login wordt geladen.
+      await expect(fps).toBeVisible({ timeout: 90_000 });
       return;
     } catch {
       if (poging === 3) {

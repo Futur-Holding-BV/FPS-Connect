@@ -95,8 +95,13 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   // Afwijzen
   const [afwijsReden, setAfwijsReden] = useState("");
 
-  // Ondertekening foutmelding (bijv. al ondertekend — 409)
+  // Ondertekening: vastgelegde data-URL van het canvas (op het moment van "Volgende")
+  const [sigDataUrl, setSigDataUrl] = useState<string | null>(null);
+
+  // Ondertekening foutmelding — zichtbaar voor klant
   const [ondertekenfout, setOndertekenfout] = useState<string | null>(null);
+  // Blokkeert de knop permanent (uitsluitend bij 409: al ondertekend — opnieuw proberen heeft geen zin)
+  const [ondertekeningGeblokkeerd, setOndertekeningGeblokkeerd] = useState(false);
 
   // Optioneel werk
   const [optioneelSelectie, setOptioneelSelectie] = useState<Record<number, boolean>>({});
@@ -165,13 +170,15 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
     const ctx = canvas.getContext("2d");
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHeeftHandtekening(false);
+    setSigDataUrl(null);
+    setOndertekeningGeblokkeerd(false);
   }
 
   async function bevestigHandtekening() {
     if (!heeftHandtekening || !sigNaam.trim()) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/png");
+    // Gebruik de vastgelegde data-URL (canvas is op de naam-stap niet meer gemount)
+    const dataUrl = sigDataUrl;
+    if (!dataUrl) return;
     setBezig(true);
     setOndertekenfout(null);
     try {
@@ -189,9 +196,12 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 409) {
+        // Al ondertekend — opnieuw proberen heeft geen zin; blokkeer de knop permanent.
+        setOndertekeningGeblokkeerd(true);
         setOndertekenfout("Deze offerte is al ondertekend. Vernieuw de pagina om de actuele status te zien.");
       } else {
-        setActieFase("tekenen");
+        // Tijdelijke fout (netwerk, server) — klant kan het opnieuw proberen via dezelfde knop.
+        setOndertekenfout("Er is een fout opgetreden bij het versturen. Probeer het opnieuw of neem contact op met de afzender.");
       }
     } finally {
       setBezig(false);
@@ -884,7 +894,18 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                       <h2 className="font-bold text-lg">Offerte ondertekenen</h2>
                       <p className="text-sm text-muted-foreground mt-0.5">Stap 1 van 2 — Zet uw handtekening</p>
                     </div>
-                    <button onClick={() => setActieFase("keuze")} className="text-sm text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => {
+                        // Canvas ontkoppelt bij fase-wissel — reset teken-status zodat
+                        // Volgende bij heropenen pas actief is na een nieuwe echte handtekening.
+                        setHeeftHandtekening(false);
+                        setSigDataUrl(null);
+                        setOndertekenfout(null);
+                        setOndertekeningGeblokkeerd(false);
+                        setActieFase("keuze");
+                      }}
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                    >
                       Annuleren
                     </button>
                   </div>
@@ -914,7 +935,17 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                     <Button variant="outline" size="sm" onClick={wisHandtekening} disabled={!heeftHandtekening}>
                       Opnieuw
                     </Button>
-                    <Button size="sm" onClick={() => setActieFase("naam")} disabled={!heeftHandtekening}>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const canvas = canvasRef.current;
+                        if (!canvas) return;
+                        setSigDataUrl(canvas.toDataURL("image/png"));
+                        setOndertekenfout(null);
+                        setActieFase("naam");
+                      }}
+                      disabled={!heeftHandtekening}
+                    >
                       Volgende
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
@@ -932,7 +963,18 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                       <h2 className="font-bold text-lg">Akkoord bevestigen</h2>
                       <p className="text-sm text-muted-foreground mt-0.5">Stap 2 van 2 — Vul uw gegevens in</p>
                     </div>
-                    <button onClick={() => setActieFase("tekenen")} className="text-sm text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => {
+                        // Canvas remount is leeg → reset teken-status zodat "Volgende" pas
+                        // weer klikbaar is nadat de gebruiker opnieuw heeft getekend.
+                        setSigDataUrl(null);
+                        setHeeftHandtekening(false);
+                        setOndertekenfout(null);
+                        setOndertekeningGeblokkeerd(false);
+                        setActieFase("tekenen");
+                      }}
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                    >
                       Terug
                     </button>
                   </div>
@@ -989,7 +1031,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
 
                   <Button
                     onClick={bevestigHandtekening}
-                    disabled={!sigNaam.trim() || bezig || !!ondertekenfout}
+                    disabled={!sigNaam.trim() || bezig || ondertekeningGeblokkeerd}
                     className="w-full sm:w-auto"
                     style={{ backgroundColor: "#F23B0D" }}
                   >

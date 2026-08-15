@@ -133,6 +133,7 @@ test.afterAll(async () => {
     await ruim("tracking", () => db.execute(sql`DELETE FROM offerte_tracking WHERE offerte_id = ${id}`));
     await ruim("vragen", () => db.execute(sql`DELETE FROM offerte_vragen WHERE offerte_id = ${id}`));
     await ruim("tokens", () => db.execute(sql`DELETE FROM offerte_portaal_tokens WHERE offerte_id = ${id}`));
+    await ruim("handtekeningen", () => db.execute(sql`DELETE FROM offerte_handtekeningen WHERE offerte_id = ${id}`));
     await ruim("offerte", () => db.delete(offertesTable).where(eq(offertesTable.id, id)));
   }
   if (st.gebouwId) await ruim("gebouw", () => db.delete(gebouwenTable).where(eq(gebouwenTable.id, st.gebouwId)));
@@ -197,7 +198,111 @@ test("KETEN_01 fase 2 — varianten", async ({ page, browser }) => {
     else noteer("Offerte-afloop: verlopen zonder reactie", "schijnbaar gelukt", "verstreken token gaf géén verlopen-melding — portaal mogelijk nog toegankelijk");
   } catch (err) { noteer("Offerte-afloop: verlopen zonder reactie", "vastgelopen", (err as Error).message.slice(0, 200)); }
 
-  noteer("Offerte-afloop: getekend", "vastgelopen", "gemeten in fase 1: 'Definitief akkoord geven' doet niets (canvas op stap 2 ontkoppeld); ondertekenen kan in de web-UI niet voltooid worden");
+  // ── V1b Offerte-afloop: GETEKEND via het klantportaal ────────────────────
+  try {
+    const { id: tekId, token: tekToken } = await seedOfferte("Var getekend");
+    const klant2 = await browser.newPage();
+    klant2.setDefaultTimeout(15_000);
+    await klant2.goto(`/portaal/${tekToken}`);
+    // Stap keuze → tekenen
+    await klant2.getByRole("button", { name: /Digitaal ondertekenen/i }).click({ timeout: 15_000 });
+    await kiek(klant2, "tekenen-canvas");
+    // Teken een handtekening op het canvas via evaluate() — betrouwbaarder dan
+    // page.mouse.*: de canvas kan onder de viewport-rand liggen en mouse.move()
+    // bereikt hem dan niet. dispatchEvent met canvas-lokale clientX/Y garandeert
+    // dat React's onMouseDown + onMouseMove handlers worden aangeroepen.
+    const canvas = klant2.locator("canvas").first();
+    await canvas.waitFor({ state: "visible", timeout: 10_000 });
+    await canvas.scrollIntoViewIfNeeded();
+    await klant2.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      const ctx = (el as HTMLCanvasElement).getContext("2d");
+      if (ctx) {
+        // Teken een lijn zodat de canvas-data-URL ook echt inhoud heeft.
+        ctx.beginPath();
+        ctx.moveTo(60, 100);
+        ctx.lineTo(200, 80);
+        ctx.lineTo(340, 100);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#1a1a2e";
+        ctx.stroke();
+      }
+      // Stuur native mouse-events met correcte viewport-coördinaten zodat
+      // React's onMouseDown (tekenRef=true) en onMouseMove (heeftHandtekening=true)
+      // worden geactiveerd.
+      const fire = (type: string, dx: number, dy: number) =>
+        el.dispatchEvent(new MouseEvent(type, {
+          bubbles: true, cancelable: true,
+          clientX: rect.left + dx, clientY: rect.top + dy,
+        }));
+      fire("mousedown",  60, 100);
+      fire("mousemove", 200,  80);   // activeert tekenBeweeg → heeftHandtekening = true
+      fire("mousemove", 340, 100);
+      fire("mouseup",   340, 100);
+    }, await canvas.elementHandle());
+    // Wacht op React state-update (heeftHandtekening) zodat Volgende actief wordt.
+    await klant2.waitForTimeout(500);
+    // Volgende → naam-stap
+    await klant2.getByRole("button", { name: /Volgende/i }).click({ timeout: 10_000 });
+    await kiek(klant2, "tekenen-naam");
+    // Vul naam in
+    await klant2.getByLabel(/Volledige naam/i).fill("Test Ondertekenaar (e2e)");
+    // POST luisteren vóór bevestigingsklik
+    const postBelofte = klant2.waitForResponse(
+      (r) => r.url().includes("/ondertekenen") && r.request().method() === "POST",
+      { timeout: 15_000 },
+    ).catch(() => null);
+    await klant2.getByRole("button", { name: /Definitief akkoord geven/i }).click({ timeout: 10_000 });
+    const postResp = await postBelofte;
+    await klant2.waitForTimeout(2000);
+    await kiek(klant2, "tekenen-na");
+    // Verifieer DB
+    const [na] = await db.select({ ps: offertesTable.portaalStatus }).from(offertesTable).where(eq(offertesTable.id, tekId));
+    const postInfo = postResp
+      ? `POST → ${postResp.status()} (offerte ${tekId})`
+      : "GEEN POST /ondertekenen vertrokken";
+    if (na?.ps === "ondertekend") {
+      noteer("Offerte-afloop: getekend", "doorlopen", `portaal_status=ondertekend; ${postInfo}`);
+    } else {
+      noteer("Offerte-afloop: getekend", "schijnbaar gelukt", `portaal_status=${na?.ps}; ${postInfo}`);
+    }
+    await klant2.close();
+    // Handtekening-rij opruimen zodat afterAll de offerte kan verwijderen
+    await db.execute(sql`DELETE FROM offerte_handtekeningen WHERE offerte_id = ${tekId}`).catch(() => {});
+  } catch (err) {
+    noteer("Offerte-afloop: getekend", "vastgelopen", (err as Error).message.slice(0, 200));
+  }
+
+  // ── V1d Regressie: Annuleren en heropenen mag Volgende niet activeren ────────
+  // Bewijs dat de canvas-reset bij Annuleren werkt: "Volgende" mag op een leeg
+  // canvas (na Annuleren + heropenen) niet klikbaar zijn.
+  try {
+    const { token: regToken } = await seedOfferte("Var annuleren-regressie");
+    const klantReg = await browser.newPage();
+    klantReg.setDefaultTimeout(15_000);
+    await klantReg.goto(`/portaal/${regToken}`);
+    // Eerste keer: open tekenen-stap
+    await klantReg.getByRole("button", { name: /Digitaal ondertekenen/i }).click({ timeout: 15_000 });
+    await klantReg.locator("canvas").first().waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+    // Annuleren zonder te tekenen → terug naar keuze
+    await klantReg.getByRole("button", { name: /^Annuleren$/ }).click({ timeout: 10_000 });
+    // Tweede keer: open tekenen-stap opnieuw
+    await klantReg.getByRole("button", { name: /Digitaal ondertekenen/i }).click({ timeout: 15_000 });
+    await kiek(klantReg, "annuleren-heropend");
+    // Volgende-knop moet uitgeschakeld zijn (canvas is leeg, heeftHandtekening=false)
+    const volgendKnop = klantReg.getByRole("button", { name: /^Volgende$/ });
+    await volgendKnop.waitFor({ state: "attached", timeout: 5_000 });
+    const isUitgeschakeld = await volgendKnop.isDisabled();
+    if (isUitgeschakeld) {
+      noteer("Regressie: Annuleren + heropenen blokkeert lege handtekening", "doorlopen", "Volgende uitgeschakeld op leeg canvas na Annuleren — integriteitsregressie afgedicht");
+    } else {
+      noteer("Regressie: Annuleren + heropenen blokkeert lege handtekening", "schijnbaar gelukt", "LEK: Volgende actief op leeg canvas na Annuleren — handtekeningintegriteit in gevaar");
+    }
+    await klantReg.close();
+  } catch (err) {
+    noteer("Regressie: Annuleren + heropenen blokkeert lege handtekening", "vastgelopen", (err as Error).message.slice(0, 200));
+  }
 
   // ── V2a Akkoordgrond C: vrijgave door projectleider ───────────────────────
   try {
@@ -249,7 +354,16 @@ test("KETEN_01 fase 2 — varianten", async ({ page, browser }) => {
     await page.keyboard.press("Escape").catch(() => {});
   } catch (err) { await kiek(page, "akkoord-b-vast"); noteer("Akkoordgrond: opdrachtbevestiging zonder document", "vastgelopen", (err as Error).message.slice(0, 200)); }
 
-  noteer("Akkoordgrond: ondertekende offerte", "vastgelopen", "gemeten in fase 1: portaal-ondertekenen komt niet door de web-UI (canvas-ontkoppeling stap 2)");
+  // Akkoordgrond A wordt bewezen via de "Offerte-afloop: getekend"-variant hierboven (portaal_status=ondertekend).
+  // De rapportuitkomst weerspiegelt of de portaal-ondertekening is hersteld.
+  {
+    const getekendRegel = rapport.find((r) => r.variant === "Offerte-afloop: getekend");
+    if (getekendRegel?.uitkomst === "doorlopen") {
+      noteer("Akkoordgrond: ondertekende offerte", "doorlopen", `portaal-ondertekening hersteld (canvas-bug opgelost); zie "Offerte-afloop: getekend": ${getekendRegel.detail}`);
+    } else {
+      noteer("Akkoordgrond: ondertekende offerte", getekendRegel?.uitkomst ?? "vastgelopen", `zie "Offerte-afloop: getekend": ${getekendRegel?.detail ?? "geen regel gevonden"}`);
+    }
+  }
 
   // ── V4a Uren op opdracht ZONDER akkoord → einddoel is de weigering ────────
   try {
