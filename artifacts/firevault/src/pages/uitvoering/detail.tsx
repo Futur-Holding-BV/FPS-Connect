@@ -532,21 +532,57 @@ export default function UitvoeringDetailPagina() {
         )}
         {isRegie && magProjecten && (
           <TabsContent value="regie" className="mt-4">
-            <Card>
-              <CardContent className="py-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="text-sm">
-                  <p className="font-medium">Regiewerk</p>
-                  <p className="text-muted-foreground text-xs">
-                    Besteding, voorwaarden en regiebegroting staan in de regiemodule.
-                  </p>
-                </div>
+            <Tabs defaultValue="voorwaarden">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
+                <TabsList className="flex-wrap h-auto gap-1">
+                  <TabsTrigger value="voorwaarden">
+                    <FileText className="h-3.5 w-3.5 mr-1.5" /> Voorwaarden
+                  </TabsTrigger>
+                  <TabsTrigger value="begroting">
+                    <Euro className="h-3.5 w-3.5 mr-1.5" /> Begroting
+                  </TabsTrigger>
+                  <TabsTrigger value="uren">
+                    <Clock className="h-3.5 w-3.5 mr-1.5" /> Uren
+                  </TabsTrigger>
+                  <TabsTrigger value="materiaal">
+                    <Package className="h-3.5 w-3.5 mr-1.5" /> Materiaal
+                  </TabsTrigger>
+                </TabsList>
                 <Link href={`/regie/${opdrachtId}`}>
-                  <Button size="sm" variant="outline">
-                    Open regiedetail <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                  <Button size="sm" variant="ghost" className="text-xs text-muted-foreground">
+                    Volledige regiemodule <ExternalLink className="h-3 w-3 ml-1" />
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
+              </div>
+              <TabsContent value="voorwaarden" className="mt-0">
+                <Card>
+                  <CardContent className="pt-6">
+                    <VoorwaardenTab opdrachtId={opdrachtId} kanSchrijven={heeftNiveau("offertes", 2)} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="begroting" className="mt-0">
+                <Card>
+                  <CardContent className="pt-6">
+                    <BegrotingTab opdrachtId={opdrachtId} kanSchrijven={heeftNiveau("offertes", 2)} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="uren" className="mt-0">
+                <Card>
+                  <CardContent className="pt-6">
+                    <UrenTab opdrachtId={opdrachtId} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="materiaal" className="mt-0">
+                <Card>
+                  <CardContent className="pt-6">
+                    <RegieMateriaalTab opdrachtId={opdrachtId} kanSchrijven={heeftNiveau("offertes", 2)} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         )}
       </Tabs>

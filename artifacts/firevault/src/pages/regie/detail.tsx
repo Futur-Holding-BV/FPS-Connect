@@ -111,7 +111,7 @@ function urenFormat(n: number | null | undefined) {
 
 // ── Sub: Voorwaarden-tab ──────────────────────────────────────────────────────
 
-function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
+export function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [tarieven, setTarieven] = useState<{ functiegroep: string; tariefsoort: string; uurtarief: string }[]>([]);
@@ -350,7 +350,7 @@ function VoorwaardenTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanS
 
 // ── Sub: Begroting-tab ────────────────────────────────────────────────────────
 
-function BegrotingTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
+export function BegrotingTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState<Partial<Begroting>>({});
@@ -486,7 +486,7 @@ function BegrotingTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSch
 
 // ── Sub: Uren-tab ─────────────────────────────────────────────────────────────
 
-function UrenTab({ opdrachtId }: { opdrachtId: number }) {
+export function UrenTab({ opdrachtId }: { opdrachtId: number }) {
   const { data: uren = [], isLoading } = useQuery<UrenRegel[]>({
     queryKey: ["regie-uren", opdrachtId],
     queryFn: async () => {
@@ -573,7 +573,7 @@ function UrenTab({ opdrachtId }: { opdrachtId: number }) {
 
 // ── Sub: Materiaal-tab ────────────────────────────────────────────────────────
 
-function MateriaalTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
+export function MateriaalTab({ opdrachtId, kanSchrijven }: { opdrachtId: number; kanSchrijven: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [nieuwOpen, setNieuwOpen] = useState(false);
