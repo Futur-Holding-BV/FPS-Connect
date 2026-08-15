@@ -212,13 +212,6 @@ import ModulesCalculatiePrint from "@/pages/modules/calculatie/print";
 import ModulesPlanning from "@/pages/modules/planning/index";
 import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
 import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
-import OneDashboard from "@/pages/one/dashboard";
-import OneGebouwen from "@/pages/one/gebouwen";
-import OneGebouwDetail from "@/pages/one/gebouw-detail";
-import OneDocumenten from "@/pages/one/documenten";
-import OneRapporten from "@/pages/one/rapporten";
-import OneAbonnementen from "@/pages/one/abonnementen";
-import OneAdviescentrum from "@/pages/one/adviescentrum";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 import WervingPagina from "@/pages/personeel/werving";
 import WervingDetailPagina from "@/pages/personeel/werving-detail";
@@ -556,14 +549,6 @@ export function ConnectRoutes() {
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
         <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />
 
-        {/* ── FPS ONE (klantportaal, via omgevingsswitch) ── */}
-        <Route path="/one/dashboard" component={OneDashboard} />
-        <Route path="/one/gebouwen/:id" component={OneGebouwDetail} />
-        <Route path="/one/gebouwen" component={OneGebouwen} />
-        <Route path="/one/documenten" component={OneDocumenten} />
-        <Route path="/one/rapporten" component={OneRapporten} />
-        <Route path="/one/abonnementen" component={OneAbonnementen} />
-        <Route path="/one/adviescentrum" component={OneAdviescentrum} />
 
         {/* ── Overig ── */}
         <Route path="/info" component={InfoPagina} />

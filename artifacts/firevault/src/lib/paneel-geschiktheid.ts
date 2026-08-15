@@ -165,13 +165,6 @@ export const PANEEL_GESCHIKTE_PADEN: string[] = [
   "/beheer/gebouwen-archief",
   "/mijn/privacy",
   "/mijn/salarisdocumenten",
-  "/one/dashboard",
-  "/one/gebouwen/:id",
-  "/one/gebouwen",
-  "/one/documenten",
-  "/one/rapporten",
-  "/one/abonnementen",
-  "/one/adviescentrum",
   "/info",
 ];
 

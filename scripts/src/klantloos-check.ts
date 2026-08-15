@@ -21,6 +21,10 @@
 //      requireRol met "klant" als argument is verboden. Routes zonder
 //      per-route middleware vallen onder de globale requireAuth-mount in
 //      routes/index.ts en worden alleen informatief geteld.
+//   5. ONE-verwijdering (aug 2026): Connect is de binnenlaag en bevat geen
+//      One-buitenlaag meer. Faalt zodra er weer een One-scherm
+//      (pages/one/…), een /one/-route of een Connect/One-omgevingsschakelaar
+//      (fps.omgeving, kiesOmgeving, Omgeving-type) in de code verschijnt.
 //
 // Exit 0 = klantloos; exit 1 = klantverwijzing gevonden (met vindplaatsen).
 
@@ -57,6 +61,16 @@ const VERBODEN_ROLPATRONEN = [
   /["'`]klant["'`]\s*(?:===|!==|==|!=)\s*[\w.$]*[Rr]ol\b/,
   /[\w.$]*[Rr]ol\b\s*[:=]\s*["'`]klant["'`]/,
   /requireRol\([^)]*["'`]klant["'`]/,
+];
+
+// ONE-verwijdering: verboden patronen die wijzen op terugkeer van de
+// One-buitenlaag in Connect (schermen, routes of de omgevingsschakelaar).
+const VERBODEN_ONE_PATRONEN: [RegExp, string][] = [
+  [/["'`]\/one\//, "one-route (/one/…)"],
+  [/pages\/one\b/, "one-scherm (pages/one)"],
+  [/\bfps\.omgeving\b|["'`]fps\.omgeving["'`]/, "omgevingsschakelaar (fps.omgeving)"],
+  [/\bkiesOmgeving\b/, "omgevingsschakelaar (kiesOmgeving)"],
+  [/["'`]connect["'`]\s*\|\s*["'`]one["'`]|["'`]one["'`]\s*\|\s*["'`]connect["'`]/, "Omgeving-type connect|one"],
 ];
 
 // Zelf-test: verifieer dat alle verwachte varianten daadwerkelijk matchen
@@ -108,6 +122,36 @@ const VERBODEN_ROLPATRONEN = [
       process.exit(2);
     }
   }
+
+  // Zelf-test ONE-patronen.
+  const onePositief: [string, number][] = [
+    ['<Route path="/one/dashboard" component={OneDashboard} />', 0],
+    ['navigeer("/one/gebouwen")', 0],
+    ['import OneDashboard from "@/pages/one/dashboard";', 1],
+    ['const OMGEVING_SLEUTEL = "fps.omgeving";', 2],
+    ['onClick={() => kiesOmgeving("one")}', 3],
+    ['type Omgeving = "connect" | "one";', 4],
+  ];
+  const oneNegatief = [
+    'iedereen/oneindig',                    // "one" los in een woord
+    'const telefoon = "06-1";',
+    'if (a === 1) doe();',
+    '"/onertalig/pad"',                     // /one zonder afsluitende slash-groep? (bevat /oner…)
+    'omgevingsvariabele PROD',
+  ];
+  for (const [invoer, idx] of onePositief) {
+    if (!VERBODEN_ONE_PATRONEN[idx][0].test(invoer)) {
+      console.error(`[klantloos-check] ZELFTEST MISLUKT — one-patroon[${idx}] herkent niet: ${invoer}`);
+      process.exit(2);
+    }
+  }
+  for (const invoer of oneNegatief) {
+    const match = VERBODEN_ONE_PATRONEN.find(([p]) => p.test(invoer));
+    if (match) {
+      console.error(`[klantloos-check] ZELFTEST MISLUKT — vals positief (one) op: ${invoer}  [${match[0]}]`);
+      process.exit(2);
+    }
+  }
 }
 
 interface Vondst { file: string; regel: number; tekst: string; patroon: string }
@@ -143,8 +187,23 @@ for (const dir of SCAN_DIRS) {
           vondsten.push({ file: rel, regel: i + 1, tekst: regel.trim().slice(0, 140), patroon: String(p) });
         }
       }
+      for (const [p, label] of VERBODEN_ONE_PATRONEN) {
+        if (p.test(regel)) {
+          vondsten.push({ file: rel, regel: i + 1, tekst: regel.trim().slice(0, 140), patroon: `ONE: ${label}` });
+        }
+      }
     });
   }
+}
+
+// 2b. ONE-schermenmap mag niet meer bestaan.
+{
+  const oneDir = join(ROOT, "artifacts/firevault/src/pages/one");
+  try {
+    if (statSync(oneDir).isDirectory()) {
+      vondsten.push({ file: "artifacts/firevault/src/pages/one", regel: 0, tekst: "map met One-schermen bestaat weer", patroon: "ONE: pages/one-map" });
+    }
+  } catch { /* map bestaat niet — goed */ }
 }
 
 // 3. OpenAPI rol-enums.
@@ -197,7 +256,7 @@ console.log(`[klantloos-check] ${SCAN_DIRS.length} bronbomen gescand, ${routesTo
 console.log(`[klantloos-check] Informatief: ${routesZonderCheck.length} sessieroutes zonder per-route middleware (gedekt door globale requireAuth).`);
 const fouten = vondsten;
 if (fouten.length === 0) {
-  console.log("[klantloos-check] OK — geen klantrol-verwijzingen, geen of-klant-middleware, geen sessieroute zonder rechtencontrole.");
+  console.log("[klantloos-check] OK — geen klantrol-verwijzingen, geen of-klant-middleware, geen sessieroute zonder rechtencontrole, geen One-restanten.");
   process.exit(0);
 }
 console.error(`[klantloos-check] GEFAALD — ${fouten.length} bevinding(en):`);
@@ -208,6 +267,8 @@ console.error(
   "\nKLANTLOOS_01: Connect kent geen externe gebruikers. De rol 'klant' en elke" +
   " 'of klant'-autorisatievariant zijn definitief verwijderd; klanten wonen in" +
   " het Platform. Verwijder de gevonden verwijzing(en) of bouw de functie op" +
-  " gewone module-rechten (requireBevoegdheid).",
+  " gewone module-rechten (requireBevoegdheid). ONE: de One-buitenlaag is" +
+  " definitief uit Connect verwijderd — geen One-schermen, /one/-routes of" +
+  " Connect/One-schakelaar terugbouwen.",
 );
 process.exit(1);

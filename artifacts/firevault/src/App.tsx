@@ -228,12 +228,6 @@ import ModulesCalculatiePrint from "@/pages/modules/calculatie/print";
 import ModulesPlanning from "@/pages/modules/planning/index";
 import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
 import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
-import OneDashboard from "@/pages/one/dashboard";
-import OneGebouwen from "@/pages/one/gebouwen";
-import OneDocumenten from "@/pages/one/documenten";
-import OneRapporten from "@/pages/one/rapporten";
-import OneAbonnementen from "@/pages/one/abonnementen";
-import OneAdviescentrum from "@/pages/one/adviescentrum";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
 const queryClient = new QueryClient({

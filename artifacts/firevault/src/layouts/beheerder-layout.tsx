@@ -96,14 +96,6 @@ function TerugKnop() {
   );
 }
 
-type Omgeving = "connect" | "one";
-const OMGEVING_SLEUTEL = "fps.omgeving";
-
-function omgevingVanLocatie(loc: string): Omgeving | null {
-  if (loc.startsWith("/one/")) return "one";
-  return null;
-}
-
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   return (
     <NavigatieBewakingProvider>
@@ -139,7 +131,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   // Paneelmodus is alleen actief in het Connect-portaal, boven de
   // terugvalbreedte, en niet op de mail-/werkbak-volledigschermroutes.
   const paneelBeschikbaar =
-    !location.startsWith("/one/") &&
     !location.startsWith("/berichten") &&
     !location.startsWith("/werk-inbox");
   // Wanneer een baan naar een niet-geschikt pad navigeert, sturen we het
@@ -223,26 +214,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     },
   );
   const openGoedkeuringenAantal = openGoedkeuringen?.length ?? 0;
-
-  const heeftOne = isHoofdbeheerder;
-  const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
-
-  const [opgeslagenKeuze, setOpgeslagenKeuze] = useState<Omgeving>(() => {
-    if (typeof localStorage !== "undefined") {
-      const v = localStorage.getItem(OMGEVING_SLEUTEL);
-      if (v === "connect" || v === "one") return v as Omgeving;
-    }
-    return "connect";
-  });
-
-  const actieveOmgeving: Omgeving = omgevingVanLocatie(location) ?? opgeslagenKeuze;
-
-  function kiesOmgeving(o: Omgeving) {
-    setOpgeslagenKeuze(o);
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(OMGEVING_SLEUTEL, o);
-    }
-  }
 
   const gebouwenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
@@ -334,42 +305,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             />
           </div>
 
-
-          {aantalOmgevingen > 1 && (
-            <div className="mt-2 flex gap-1 px-1 group-data-[collapsible=icon]:hidden">
-              <button
-                onClick={() => kiesOmgeving("connect")}
-                className={cn(
-                  "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
-                  actieveOmgeving === "connect"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
-                )}
-              >
-                Connect
-              </button>
-              {heeftOne && (
-                <button
-                  onClick={() => kiesOmgeving("one")}
-                  className={cn(
-                    "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
-                    actieveOmgeving === "one"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  )}
-                >
-                  One
-                </button>
-              )}
-            </div>
-          )}
         </SidebarHeader>
 
         <SidebarContent>
 
           {/* ══════════ FPS CONNECT ══════════ */}
-          {actieveOmgeving === "connect" && (
-            <>
+          <>
               {/* Dashboard */}
               <SidebarGroup>
                 <SidebarGroupContent>
@@ -1711,77 +1652,13 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               )}
 
             </>
-          )}
-
-          {/* ══════════ FPS ONE ══════════ */}
-          {actieveOmgeving === "one" && heeftOne && (
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem className="pl-5">
-                    <SidebarMenuButton asChild isActive={location === "/one/dashboard"}>
-                      <Link href="/one/dashboard">
-                        <LayoutDashboard />
-                        <span>Dashboard</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem className="pl-5">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/one/gebouwen" || location.startsWith("/one/gebouwen/")}
-                    >
-                      <Link href="/one/gebouwen">
-                        <Building />
-                        <span>Gebouwen</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem className="pl-5">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/one/documenten" || location.startsWith("/one/documenten/")}
-                    >
-                      <Link href="/one/documenten">
-                        <Files />
-                        <span>Documenten</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem className="pl-5">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/one/rapporten" || location.startsWith("/one/rapporten/")}
-                    >
-                      <Link href="/one/rapporten">
-                        <BarChart3 />
-                        <span>Rapporten</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem className="pl-5">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/one/abonnementen" || location.startsWith("/one/abonnementen/")}
-                    >
-                      <Link href="/one/abonnementen">
-                        <CreditCard />
-                        <span>Abonnementen</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
 
         </SidebarContent>
 
         <SidebarFooter style={{ paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 0.25rem)' }}>
           <PwaInstalleerKnop />
           <SidebarMenu>
-            {actieveOmgeving === "connect" &&
-              (toonGebruikers || toonSysteem || toonBibliotheek || isHoofdbeheerder) && (
+            {(toonGebruikers || toonSysteem || toonBibliotheek || isHoofdbeheerder) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild

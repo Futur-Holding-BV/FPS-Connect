@@ -296,21 +296,18 @@ async function main() {
 
   sectie("9. Architectuurscheiding — modules");
   const connectPad = path.join(repoRoot, "artifacts/firevault/src/pages/connect");
-  const onePad = path.join(repoRoot, "artifacts/firevault/src/pages/one");
   const modulesPad = path.join(repoRoot, "artifacts/firevault/src/pages/modules");
 
   const connectBestanden = fs.existsSync(connectPad) ? fs.readdirSync(connectPad).length : 0;
-  const oneBestanden = fs.existsSync(onePad) ? fs.readdirSync(onePad).length : 0;
   const modulesBestanden = fs.existsSync(modulesPad)
     ? fs.readdirSync(modulesPad, { recursive: true }).length : 0;
 
   ok(`FPS Connect: ${connectBestanden} pagina-bestanden onder /pages/connect/`);
-  ok(`FPS One: ${oneBestanden} pagina-bestanden onder /pages/one/`);
   ok(`Modules: ${modulesBestanden} bestanden onder /pages/modules/`);
 
   const srcPad = path.join(repoRoot, "artifacts/firevault/src/pages");
   const allePages = fs.readdirSync(srcPad);
-  const verwachteModules = ["connect", "one", "modules", "dashboard", "gebouwen",
+  const verwachteModules = ["connect", "modules", "dashboard", "gebouwen",
     "voorzieningen", "inspecties", "onderhoud", "gebruikers", "crm", "abonnementen",
     "beheer", "personeel", "dossiers", "offertes", "documenten", "rapporten",
     "toolbox", "auth", "uitnodiging", "info", "klant",
