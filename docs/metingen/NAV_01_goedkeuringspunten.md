@@ -36,5 +36,5 @@ NB: de akkoord**gronden** (`ondertekening`/`opdrachtbevestiging`/`vrijgave_pl` u
 ## 4. Afwijkingen / besluiten voor René
 
 1. Alleen `opdracht_akkoord` heeft vandaag een geseede beleidsregel; de andere typen bestaan pas als er via Beheer → Goedkeuringsbeleid een regel wordt aangemaakt. Het label toont dus alleen iets waar écht een aanvraag bestaat of vereist is — de server bepaalt dat (`mag_goedkeuren`/aanvraagstatus), de frontend leidt niets af.
-2. `weekstaat` is frontend-only aanwezig; of daar een beleidsregel voor moet komen is een **besluit van René** — het label bouwen we generiek, dus het werkt dan vanzelf.
+2. **Besluit weekstaat (15 aug 2026):** `weekstaat` krijgt een generiek `GoedkeuringLabel` in de weekstatenlijst. Er wordt **geen** beleidsregel geseed — René richt die desgewenst zelf in via Beheer → Goedkeuringsbeleid. Het label toont dan vanzelf. Loon/salarisgoedkeuring (aparte weekstaat-goedkeuren-flow) loopt bewust buiten de generieke motor.
 3. Loon/salaris (SEPA e.d.) loopt **niet** via de generieke motor (audit-/documenttypen, geen governance) — geen label.

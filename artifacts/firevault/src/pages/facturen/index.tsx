@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { Factuur } from "@workspace/api-client-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { GoedkeuringLabel } from "@/components/goedkeuring/goedkeuring-label";
 
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
@@ -269,12 +270,27 @@ export default function FacturenPagina() {
                     {euro(f.bedrag_incl_btw)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      {f.geblokkeerd && <Ban className="h-3.5 w-3.5 text-slate-500" />}
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${STATUS_KLEUR[f.status] ?? "bg-slate-100 text-slate-600"}`}>
-                        {STATUS_ICOON[f.status]}
-                        {STATUS_LABEL[f.status] ?? f.status}
-                      </span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        {f.geblokkeerd && <Ban className="h-3.5 w-3.5 text-slate-500" />}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${STATUS_KLEUR[f.status] ?? "bg-slate-100 text-slate-600"}`}>
+                          {STATUS_ICOON[f.status]}
+                          {STATUS_LABEL[f.status] ?? f.status}
+                        </span>
+                      </div>
+                      {(() => {
+                        const fx = f as Factuur & { subtype?: string | null };
+                        const docType = fx.subtype === "creditnota" ? "creditnota"
+                          : fx.subtype === "prijsafwijking" ? "prijsafwijking"
+                          : f.type === "inkoop" ? "inkoop_factuur" : "verkoop_factuur";
+                        return (
+                          <GoedkeuringLabel
+                            objectType={docType}
+                            objectId={f.id}
+                            koppeling={`/facturen/${f.id}`}
+                          />
+                        );
+                      })()}
                     </div>
                   </td>
                   <td className="px-4 py-3">

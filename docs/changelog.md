@@ -1,3 +1,9 @@
+## 2026-08-15 — Taak 913: GoedkeuringLabel op weekstaten, facturen en algemene inkoop
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-wijzigingen)
+
+Het gedeelde `GoedkeuringLabel` (NAV_01 §3) staat nu op alle relevante lijstpagina's naast de statusbadge — het toont alleen iets als de server een actieve aanvraag retourneert (403 → afwezig, n.v.t. → afwezig). Toegevoegd op: **factuurlijst** (`pages/facturen/index.tsx`, `docType` afgeleid uit `type`+`subtype`, link naar detailpagina), **weekstatenlijst** (`pages/uren/weekstaten.tsx`, `object_type="weekstaat"`) en **algemene-inkoop-kaarten** (`pages/algemene-inkoop/index.tsx`, `object_type="algemene_inkoop"`). Besluit weekstaat vastgelegd in `docs/metingen/NAV_01_goedkeuringspunten.md` §4-2: label is generiek gebouwd; René richt een beleidsregel in via Beheer → Goedkeuringsbeleid als dat gewenst is — er wordt geen regel geseed. Inkoopplanning-tab (`pages/opdrachten/inkoopplanning-tab.tsx`) had al een volledige `GoedkeuringWidget` inline per bon — geen aanvullend label nodig.
+
 ## 2026-08-15 — NAV_01: twee-traps sidebar, hoofdstukkleuren en GoedkeuringLabel
 
 - **Uitvoering:** volledig (fase 0-inventarisatie + bouw) | **Kwaliteit:** hoog | **Risico:** laag (alleen navigatie-weergave; menu-ingangen, volgorde-mechanisme en rechten ongewijzigd)

@@ -27,6 +27,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { GoedkeuringLabel } from "@/components/goedkeuring/goedkeuring-label";
 import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import {
@@ -245,7 +246,13 @@ export default function AlgemeneInkoopPagina() {
                     {r.soort === "op_rekening" && r.verwacht_bedrag != null && `± € ${r.verwacht_bedrag.toFixed(2)}`}
                   </div>
                   {r.soort === "direct_betaald" && r.bon_pad && <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-label="Bon aanwezig" />}
-                  <Badge variant="outline" className={`${status.kleur} shrink-0`}>{status.label}</Badge>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Badge variant="outline" className={`${status.kleur}`}>{status.label}</Badge>
+                    <GoedkeuringLabel
+                      objectType="algemene_inkoop"
+                      objectId={r.id}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             );

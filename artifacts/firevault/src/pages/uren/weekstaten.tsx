@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays, Lock, Unlock, Clock } from "lucide-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { GoedkeuringLabel } from "@/components/goedkeuring/goedkeuring-label";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
@@ -521,9 +522,15 @@ export default function WeekstatenPagina({ inline = false }: { inline?: boolean 
                       {(w.adv_uren ?? 0) > 0 ? formatUren(w.adv_uren) : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_VARIANT[w.status] ?? "secondary"}>
-                        {STATUS_LABELS[w.status] ?? w.status}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={STATUS_VARIANT[w.status] ?? "secondary"}>
+                          {STATUS_LABELS[w.status] ?? w.status}
+                        </Badge>
+                        <GoedkeuringLabel
+                          objectType="weekstaat"
+                          objectId={w.id}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {w.ingediend_op
