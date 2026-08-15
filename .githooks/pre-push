@@ -30,10 +30,10 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
       # kent. Alleen als de doelremote geen trackingrefs heeft, val terug op
       # alle remote-trackingrefs; als ook die er niet zijn, wordt de hele
       # bereikbare historie gecontroleerd (rev-list zonder --not).
-      if [ -n "$REMOTE_NAAM" ] && git rev-parse --verify -q "refs/remotes/$REMOTE_NAAM" >/dev/null 2>&1 || \
-         git for-each-ref --count=1 "refs/remotes/$REMOTE_NAAM/*" 2>/dev/null | grep -q .; then
+      if [ -n "$REMOTE_NAAM" ] && \
+         git for-each-ref --count=1 "refs/remotes/$REMOTE_NAAM" 2>/dev/null | grep -q .; then
         NIEUWE=$(git rev-list "$local_sha" --not --remotes="$REMOTE_NAAM/*" 2>/dev/null || echo "")
-      elif git for-each-ref --count=1 "refs/remotes/*" 2>/dev/null | grep -q .; then
+      elif git for-each-ref --count=1 refs/remotes 2>/dev/null | grep -q .; then
         NIEUWE=$(git rev-list "$local_sha" --not --remotes 2>/dev/null || echo "")
       else
         NIEUWE=$(git rev-list "$local_sha" 2>/dev/null || echo "")
