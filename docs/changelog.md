@@ -1,3 +1,9 @@
+## 2026-08-15 — Herstel opmaakschade rapporten.ts na merge taak #931
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (inhoud identiek aan bedoelde wijziging)
+
+De merge van taak #931 zette in `rapporten.ts` elke accolade en puntkomma op een eigen regel (769 → 2071 regels), waardoor de automatische puntkomma-invoeging na `return` brak en typecheck/build faalden. Bestand hersteld naar de versie van de vorige commit en alléén de inhoudelijke #931-wijziging opnieuw aangebracht: `dedupeerPartijEmails()` om de partijen-query vóór de verzendlus in de definitief-route. `lib/rapport-helpers.ts` en de nieuwe testset waren onbeschadigd en zijn ongemoeid gelaten. Onderzoek naar de veroorzaker: er staat GEEN formatter-configuratie, format-script of hook in de repo die dit kan doen; prettier stond ongebruikt in devDependencies (en produceert deze stijl niet) en is defensief verwijderd — de schade komt uit het bewerkproces van de taakagent-omgeving zelf. Detector blijft de typecheck (draait al in de deploy-gate). Bewijs: volledige workspace-typecheck groen, dedupe-tests 11/11 groen, api-server draait (`/api/healthz` ok).
+
 ## 2026-08-15 — Klantloos-controle: achtervoegselregel vangt camelCase-rolvariabelen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen controle-script; nul valse treffers)
