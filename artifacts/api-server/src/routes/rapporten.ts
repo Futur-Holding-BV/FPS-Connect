@@ -7,11 +7,12 @@ import {
   db,
   opleverrapportenTable,
   gebouwenTable,
+  gebouwPartijenTable,
   gebruikersTable,
   documentenTable,
   werkbonnenTable,
 } from "@workspace/db";
-import { eq, desc, and, inArray, ne } from "drizzle-orm";
+import { eq, desc, and, inArray, ne, isNotNull } from "drizzle-orm";
 import { stuurRapportBeschikbaarMelding } from "../services/email";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
@@ -378,9 +379,41 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
         ),
       );
 
-    // KLANTLOOS_01: de klant-notificatiemail is vervallen — er is geen
-    // Connect-klantportaal meer om naartoe te verwijzen. Zodra het externe
-    // Platform een rapportenportaal heeft, hoort de melding dáár te landen.
+    // Stuur een e-mail naar alle gekoppelde contacten van dit gebouw (best-effort
+    // via het Platform). Falen blokkeert het definitief maken nooit.
+    void (async () => {
+      try {
+        const basis = publiekeAppUrl();
+        const portaalUrl = basis ?? "https://fps-brandpreventie.nl";
+        const [gebouw] = await db
+          .select({ naam: gebouwenTable.naam })
+          .from(gebouwenTable)
+          .where(eq(gebouwenTable.id, gebouwId));
+        const partijen = await db
+          .select({ naam: gebouwPartijenTable.naam, email: gebouwPartijenTable.email })
+          .from(gebouwPartijenTable)
+          .where(
+            and(
+              eq(gebouwPartijenTable.gebouwId, gebouwId),
+              isNotNull(gebouwPartijenTable.email),
+            ),
+          );
+        for (const partij of partijen) {
+          if (!partij.email) continue;
+          await stuurRapportBeschikbaarMelding({
+            naarEmail: partij.email,
+            naarNaam: partij.naam,
+            rapportTitel: definitief.titel,
+            gebouwNaam: gebouw?.naam ?? "",
+            reactietermijnDatum: definitief.reactietermijnDatum!,
+            portaalUrl,
+            rapportId: definitief.id,
+          });
+        }
+      } catch (err) {
+        req.log.warn({ err }, "Klant-notificaties rapport-beschikbaar gefaald (niet-kritiek)");
+      }
+    })();
 
     res.json(mapRapport(definitief));
   } catch (err) {
