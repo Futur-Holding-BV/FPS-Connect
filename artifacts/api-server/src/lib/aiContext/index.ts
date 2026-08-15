@@ -46,11 +46,9 @@ export function magKnoopZien(type: ContextEntiteitType, knoop: OpgehaaldeKnoop, 
 
   if (cfg.gebouwGescoped) {
     if (!scope.magBijGebouw(knoop.gebouwId)) return false;
-    if (scope.isKlant) return true;
     return scope.heeftModuleRecht(cfg.module, 1) || scope.heeftObjectRecht(type, knoop.id, 1);
   }
 
-  if (scope.isKlant) return false;
   return scope.heeftModuleRecht(cfg.module, 1);
 }
 

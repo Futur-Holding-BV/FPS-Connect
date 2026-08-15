@@ -118,7 +118,6 @@ import GebouwRapporten from "./gebouw-rapporten";
 import { GebouwDashboard } from "./gebouw-dashboard";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TEAM_UITGESLOTEN_ROLLEN = ["klant"];
 const PROJECT_ROLLEN = [
   "Projectleider",
   "Projectbegeleider",
@@ -133,7 +132,6 @@ const ROL_DISPLAY: Record<string, string> = {
   gebruiker: "Gebruiker",
   monteur: "Monteur",
   controleur: "Controleur",
-  klant: "Klant",
 };
 
 const CALC_STATUS_LABEL: Record<string, string> = {
@@ -578,9 +576,7 @@ export default function GebouwDetail() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
-  const beschikbareGebruikers = (gebruikers ?? []).filter(
-    (g) => !TEAM_UITGESLOTEN_ROLLEN.includes(g.rol ?? ""),
-  );
+  const beschikbareGebruikers = gebruikers ?? [];
 
   // Toewijzen vereist het wijzig-/aanmaakniveau op gebouwen (zelfde drempel als
   // de POST /gebouwen/:id/toewijzingen op de server). Zo verschijnt de

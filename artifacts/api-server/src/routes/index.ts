@@ -108,7 +108,6 @@ import { requireAuth, laadPermissies, blokkeerBijWachtwoordWijzigenVereist } fro
 import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
 import { governanceMiddleware } from "../middlewares/governance";
-import { klantPoort } from "../middlewares/klantPoort";
 import governanceRouter from "./governance";
 import securityQuarantaineRouter from "./security-quarantine";
 import auditRouter from "./audit";
@@ -146,8 +145,8 @@ router.use(requireAuth);
 router.use(blokkeerBijWachtwoordWijzigenVereist);
 // Laad permissies één keer per request — req.permissies beschikbaar op alle routes
 router.use(laadPermissies);
-// KLANT_01: centrale klant-begrenzing — dicht tenzij open (zie middlewares/klantPoort.ts)
-router.use(klantPoort);
+// KLANTLOOS_01: Connect is klantloos — de klantpoort is verwijderd; alle
+// autorisatie loopt via de module-rechtencontrole per route.
 // Universele audit trail — onderschept alle muterende requests
 router.use(maakAuditMiddleware());
 // AI Governance & Risk Engine — beoordeelt iedere schrijfactie, blokkeert kritieke operaties

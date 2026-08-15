@@ -7,8 +7,6 @@ import { useRol } from "@/context/rol-context";
 // ── Paginacomponenten (interne portaalroutes) ──
 import BeheerderDashboard from "@/pages/dashboard/beheerder";
 import MonteurDashboard from "@/pages/dashboard/monteur";
-import KlantDashboard from "@/pages/dashboard/klant";
-import KlantRapportages from "@/pages/klant/rapportages";
 
 import Gebouwen from "@/pages/gebouwen/index";
 import GebouwDetail from "@/pages/gebouwen/detail";

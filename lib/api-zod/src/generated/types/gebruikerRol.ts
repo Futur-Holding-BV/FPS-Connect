@@ -12,5 +12,4 @@ export type GebruikerRol = typeof GebruikerRol[keyof typeof GebruikerRol];
 export const GebruikerRol = {
   hoofdbeheerder: 'hoofdbeheerder',
   gebruiker: 'gebruiker',
-  klant: 'klant',
 } as const;

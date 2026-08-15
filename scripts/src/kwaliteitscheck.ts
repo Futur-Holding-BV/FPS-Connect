@@ -429,23 +429,8 @@ async function main() {
     }
   }
 
-  // ─── 8b. Klant-poort (KLANT_01) ───────────────────────────────────────────
-  // Statische buildcontrole: elke route die requireBevoegdheidOfKlant gebruikt
-  // moet bewust in KLANT_TOEGESTANE_ROUTES staan. Let op: dit bewaakt de
-  // afspraak; de runtime klant-poort-middleware blijft de echte garantie.
-
-  sectie("12. Klant-poort — allowlist-controle");
-  const klantPoort = run("pnpm --filter @workspace/scripts run klant-poort-check");
-  if (klantPoort.ok) {
-    const samenvatting = klantPoort.output.split("\n").find((l) => l.includes("Klant-poort-check OK"));
-    ok(samenvatting ?? "Klant-poort-check geslaagd");
-    info("Statische check bewaakt de afspraak; runtime klant-poort is de garantie");
-  } else {
-    const regels = klantPoort.output.split("\n").filter((l) => l.trim().startsWith("- ") || l.includes("GEFAALD"));
-    regels.slice(0, 10).forEach((l) => fout(l.trim()));
-    registreer("Security / Klant-poort", "kritiek",
-      "klant-poort-check gefaald — nieuwe klantroute zonder bewuste allowlist-opname (zie uitvoer hierboven)");
-  }
+  // (KLANTLOOS_01: de klant-poort-allowlist-controle is vervallen — Connect
+  // kent geen externe gebruikers meer; zie de klantloos-buildcontrole.)
 
   // ─── 9. Git changelog ─────────────────────────────────────────────────────
 

@@ -183,8 +183,7 @@ describe("regressie — geen rollen / legacy fallback", () => {
     expect(niveauVan(controleur, "inspecties")).toBe(3);
   });
 
-  it("legacy fallback blijft ongewijzigd: klant/onbekend -> geen toegang", () => {
-    expect(bevoegdhedenVoorLegacyRol("klant")).toEqual({});
+  it("legacy fallback blijft ongewijzigd: onbekend -> geen toegang", () => {
     expect(bevoegdhedenVoorLegacyRol(null)).toEqual({});
     expect(bevoegdhedenVoorLegacyRol(undefined)).toEqual({});
     expect(bevoegdhedenVoorLegacyRol("gebruiker")).toEqual({});

@@ -222,8 +222,9 @@ export function bevoegdhedenGelijk(
 // ── Basisrollen ──────────────────────────────────────────────────────────
 // hoofdbeheerder: omzeilt de matrix volledig.
 // gebruiker: toegang volledig bepaald door de matrix.
-// klant: vast eigen portaal, geen matrix-toegang tot de interne modules.
-export const BASISROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
+// KLANTLOOS_01: de inlogrol "klant" bestaat niet meer; klanten wonen in het
+// externe Platform en loggen nooit in op Connect.
+export const BASISROLLEN = ["hoofdbeheerder", "gebruiker"] as const;
 export type Basisrol = (typeof BASISROLLEN)[number];
 
 function matrix(waarden: Partial<Record<ModuleId, Niveau>>): Bevoegdheden {
@@ -238,9 +239,6 @@ export const VOLLEDIGE_BEVOEGDHEDEN: Bevoegdheden = matrix(
     return acc;
   }, {}),
 );
-
-// Klant heeft geen toegang tot de interne modules (eigen portaal).
-export const KLANT_BEVOEGDHEDEN: Bevoegdheden = matrix({});
 
 // ── Standaardprofielen (presets) ───────────────────────────────────────────
 // Een preset vult de matrix als startpunt; per gebruiker volledig overschrijfbaar.
@@ -496,7 +494,7 @@ export function bevoegdhedenVoorLegacyRol(
         rapportages: 1, bibliotheek: 1,
       });
     default:
-      // klant, onbekend -> geen toegang (rol "gebruiker" gebruikt DB-matrix, geen fallback)
+      // onbekend -> geen toegang (rol "gebruiker" gebruikt DB-matrix, geen fallback)
       return {};
   }
 }

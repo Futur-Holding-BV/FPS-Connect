@@ -43,7 +43,7 @@ export function GebouwPublicatieKaart({ gebouwId }: Props) {
   const publiceerMutatie = usePubliceerGebouw({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Gepubliceerd", description: "Het gebouw is zichtbaar in FPS One." });
+        toast({ title: "Gepubliceerd", description: "Het gebouw is klaargezet om naar buiten te gaan." });
         queryClient.invalidateQueries({ queryKey: getGetGebouwPublicatieStatusQueryKey(gebouwId) });
         setUitklapOpen(false);
         setNotitie("");
@@ -57,7 +57,7 @@ export function GebouwPublicatieKaart({ gebouwId }: Props) {
   const intrekkenMutatie = useIntrekkenGebouwPublicatie({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Ingetrokken", description: "Het gebouw is niet meer zichtbaar in FPS One." });
+        toast({ title: "Ingetrokken", description: "Het gebouw staat niet langer klaar om naar buiten te gaan." });
         queryClient.invalidateQueries({ queryKey: getGetGebouwPublicatieStatusQueryKey(gebouwId) });
         setUitklapOpen(false);
         setNotitie("");
@@ -84,7 +84,7 @@ export function GebouwPublicatieKaart({ gebouwId }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
           <Globe className="h-4 w-4 text-muted-foreground" />
-          FPS One publicatie
+          Externe publicatie
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -147,7 +147,7 @@ export function GebouwPublicatieKaart({ gebouwId }: Props) {
                     ) : (
                       <>
                         <Globe className="h-3.5 w-3.5" />
-                        Publiceren naar FPS One
+                        Klaarzetten voor extern
                       </>
                     )}
                   </Button>

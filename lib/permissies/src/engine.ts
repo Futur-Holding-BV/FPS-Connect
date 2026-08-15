@@ -34,10 +34,6 @@ export class PermissieEngine {
     return this.ctx.rol === "hoofdbeheerder";
   }
 
-  get isKlant(): boolean {
-    return this.ctx.rol === "klant";
-  }
-
   get userId(): number {
     return this.ctx.userId;
   }
@@ -46,7 +42,6 @@ export class PermissieEngine {
 
   heeftModuleRecht(module: string, minNiveau: number): boolean {
     if (this.isHoofdbeheerder) return true;
-    if (this.isKlant) return false;
     return heeftNiveauIntern(this.ctx.bevoegdheden, module, minNiveau);
   }
 
@@ -99,7 +94,6 @@ export class PermissieEngine {
   private isBeperkt(): boolean {
     const { rol, bevoegdheden } = this.ctx;
     if (rol === "hoofdbeheerder") return false;
-    if (rol === "klant") return true;
     const gebouwNiveau = bevoegdheden["gebouwen"] ?? 0;
     if (gebouwNiveau < 1) return true;
     if (gebouwNiveau >= 2) return false;

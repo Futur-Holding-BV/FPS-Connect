@@ -452,7 +452,7 @@ router.get("/kalender", requireAuth, laadPermissies, async (req, res): Promise<v
   // 5. Verjaardagen (§5.0) — opt-in onverkort; alleen dag en maand, nooit
   // jaar of leeftijd, en zonder opt-in ook geen naamloze markering.
   const [instelling] = await db.select({ aan: appInstellingenTable.momentsVerjaardagIngeschakeld }).from(appInstellingenTable).limit(1);
-  if ((instelling?.aan ?? true) && ctx.rol !== "klant") {
+  if (instelling?.aan ?? true) {
     const jarigen = await db
       .select({ naam: medewerkersTable.naam, geboortedatum: medewerkersTable.geboortedatum })
       .from(medewerkersTable)

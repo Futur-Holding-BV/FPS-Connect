@@ -46,7 +46,7 @@ export interface ObjectRecht {
  */
 export interface PermissieContext {
   userId: number;
-  rol: string;                             // hoofdbeheerder | gebruiker | klant
+  rol: string;                             // hoofdbeheerder | gebruiker
   bevoegdheden: Record<string, number>;    // module → niveau (0–4)
   objectRechten: ObjectRecht[];
   toegewezenGebouwIds: number[];           // uit gebouw_toewijzingen

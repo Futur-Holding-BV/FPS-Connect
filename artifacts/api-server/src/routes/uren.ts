@@ -1393,7 +1393,7 @@ router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
 // UREN_01 §6c: server-side PDF-mandagstaat voor één opdracht + ISO-week.
 //
 // Autorisatie via de centrale policy magMandagstaatGenereren (lib/mandagstaat):
-// opdracht.mandagstaat_vereist === true (anders 422 met uitleg), klant nooit,
+// opdracht.mandagstaat_vereist === true (anders 422 met uitleg),
 // personeel ≥ 2 ÉN opdracht/gebouwtoegang (magBijGebouw), hoofdbeheerder mag
 // altijd. Dezelfde policy wordt op de factuurweg gebruikt.
 router.get("/opdrachten/:id/mandagstaat", requireAuth, async (req, res): Promise<void> => {
@@ -1413,7 +1413,7 @@ router.get("/opdrachten/:id/mandagstaat", requireAuth, async (req, res): Promise
     .limit(1);
   if (!opdracht) return void res.status(404).json({ error: "Opdracht niet gevonden" });
 
-  // Centrale policy: vlag-vereist + klant/rechten/gebouwtoegang in één.
+  // Centrale policy: vlag-vereist + rechten/gebouwtoegang in één.
   const toegang = magMandagstaatGenereren(perm, { mandagstaatVereist: opdracht.mandagstaatVereist, gebouwId: opdracht.gebouwId });
   if (!toegang.toegestaan) {
     // Vlag uit → 422 (mandagstaat is niet van toepassing); anders 403 (geen recht).

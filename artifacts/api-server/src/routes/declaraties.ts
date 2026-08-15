@@ -26,10 +26,7 @@ const beheerder   = requireBevoegdheid("declaraties", 4);
 // aanmaken, wijzigen en indienen; de module `declaraties` gaat uitsluitend
 // over het zien (niveau 3) en beoordelen/verwerken van ANDERMANS declaraties.
 // Eigendom wordt in elke handler afgedwongen via de medewerker-koppeling.
-const eigenGegevens = [requireAuth, (req: Parameters<typeof requireAuth>[0], res: Parameters<typeof requireAuth>[1], next: Parameters<typeof requireAuth>[2]): void => {
-  if (req.permissies?.isKlant) { res.status(403).json({ bericht: "Geen toegang" }); return; }
-  next();
-}] as const;
+const eigenGegevens = [requireAuth] as const;
 
 // ── Helper: medewerker_id voor sessie-gebruiker ───────────────────────────────
 async function medewerkerId(gebruikerId: number): Promise<number | null> {

@@ -5,7 +5,6 @@ export function useBevoegdheid() {
 
   function heeftNiveau(module: string, minNiveau: number): boolean {
     if (rol === "hoofdbeheerder") return true;
-    if (rol === "klant") return false;
     return (bevoegdheden[module] ?? 0) >= minNiveau;
   }
 

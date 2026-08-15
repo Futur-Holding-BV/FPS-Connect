@@ -50,8 +50,9 @@
 | 29 | AI-endpoints hebben geen input-lengte-limiet — XL-prompts naar OpenAI mogelijk | 3 | 3 | 2 | P2 |
 | 30 | Bestandsuploads controleren MIME-type niet server-side — content-type spoof mogelijk | 4 | 3 | 4 | P2 |
 | 31 | `requireBevoegdheid` queries altijd naar DB — geen caching, extra latency + aanvalsoppervlak | 3 | 2 | 4 | P3 |
-| 32 | `klant`-rol heeft toegang tot alle GET-endpoints binnen zijn gebouw — geen expliciete whitelist | 3 | 3 | 8 | P2 |
+| 32 | `klant`-rol heeft toegang tot alle GET-endpoints binnen zijn gebouw — vervallen 15 aug 2026: KLANTLOOS_01 heeft de klant-rol volledig uit Connect verwijderd (klanten wonen in het Platform) | 3 | 3 | 0 | ✅ |
 | 33 | `backup_records.lokaal_pad` zichtbaar in API response — informatielekking | 2 | 2 | 1 | P3 |
+| 34 | Projecten-router draait op gebouwen/crm-rechten i.p.v. een eigen module `projecten` (idem opname op gebouwen/voorzieningen, workflow op organisatie 1–4). Bewust NIET rechtgetrokken tijdens KLANTLOOS_01 (15 aug 2026): rechttrekken zou medewerkers toegang ontnemen precies in de week van ingebruikname. Rechttrekken = nieuwe module-sleutels + presets bijwerken + migratie | 3 | 2 | 8 | P3 |
 
 ---
 
@@ -174,16 +175,16 @@
 
 ## Samenvatting
 
-_Herrekend op 10 augustus 2026 uit de werkelijke markeringen in de tabellen hierboven (per rij ✅/opgelost vs P1/P2/P3/P4; uren = som van de Uren-kolom per prioriteit)._
+_Herrekend op 15 augustus 2026 uit de werkelijke markeringen in de tabellen hierboven (per rij ✅/opgelost vs P1/P2/P3/P4; uren = som van de Uren-kolom per prioriteit). Wijziging t.o.v. 10 aug: #32 opgelost via KLANTLOOS_01 (−8 uur P2), nieuw item #34 (P3, ~8 uur)._
 
 | Prioriteit | Aantal items | Totaal uren |
 |-----------|-------------|------------|
 | **P1 — Nu** | 0 | — |
-| **P2 — Sprint** | 41 | ~213 |
-| **P3 — Kwartaal** | 35 | ~264 |
+| **P2 — Sprint** | 40 | ~205 |
+| **P3 — Kwartaal** | 36 | ~272 |
 | **P4 — Backlog** | 3 | ~8 |
-| **Opgelost** | 22 | — |
-| **Totaal** | **101** | **~485 uur** |
+| **Opgelost** | 23 | — |
+| **Totaal** | **102** | **~485 uur** |
 
 > De zwaarste schuld zit in de ontbrekende productie-migratiehistorie (#98), de N+1-queries op de kernlijsten (#45–48), ontbrekende transacties op juridisch relevante paden (#14–16), en de ontbrekende backup-alerting (#83).
 >

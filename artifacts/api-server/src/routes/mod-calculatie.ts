@@ -3026,10 +3026,10 @@ router.post("/modules/calculaties/:id/adviesrapport-analyse", schrijvenCalc, asy
     // (c) Documentleesautorisatie afdwingen vóór er ook maar iets van het document
     // wordt gelezen — zelfde eis als GET /documenten/:id/download
     // (requireBevoegdheid("bibliotheek", 1)). laadPermissies vult req.permissies
-    // globaal (routes/index.ts); hoofdbeheerder mag altijd, klant nooit.
+    // globaal (routes/index.ts); hoofdbeheerder mag altijd.
     const magBibliotheekLezen =
       req.permissies?.isHoofdbeheerder === true ||
-      (req.permissies?.isKlant !== true && req.permissies?.heeftModuleRecht("bibliotheek", 1) === true);
+      req.permissies?.heeftModuleRecht("bibliotheek", 1) === true;
     if (!magBibliotheekLezen) {
       return void res.status(403).json({ error: "Geen leestoegang tot de documentbibliotheek." });
     }

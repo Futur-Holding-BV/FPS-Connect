@@ -54,7 +54,6 @@ interface ToolScope {
   heeftModuleRecht(module: string, minNiveau: number): boolean;
   magBijGebouw(gebouwId: number | null): boolean;
   isHoofdbeheerder: boolean;
-  isKlant: boolean;
   userId: number;
 }
 
@@ -144,7 +143,6 @@ const DATA_TOOLS: Array<{
       parameters: { type: "object", properties: {} },
     } },
     uitvoer: async (scope) => {
-      if (scope.isKlant) return { geweigerd: true, reden: "Klanten hebben geen werkbak." };
       const rijen = await db.select().from(werkbakItemsTable).where(eq(werkbakItemsTable.status, "open"));
       const zichtbaar = rijen.filter((i) => {
         if (scope.isHoofdbeheerder) return true;
@@ -349,7 +347,6 @@ Onderstaande systeemgegevens over dit object zijn opgehaald binnen de rechten va
       heeftModuleRecht: (m: string, n: number) => (bevoegdheden[m] ?? 0) >= n,
       magBijGebouw: () => gebruiker.rol === "hoofdbeheerder",
       isHoofdbeheerder: gebruiker.rol === "hoofdbeheerder",
-      isKlant: gebruiker.rol === "klant",
       userId,
     };
     const gesprek: Parameters<typeof aiGateway.chat>[1]["messages"] = [...berichtenVoorAi];

@@ -47,7 +47,6 @@ export interface MandagstaatToegang {
 // Minimale vorm van de permissie-service die we nodig hebben (ontkoppelt de lib
 // van express/PermissieService-implementatie).
 export interface MandagstaatPermissies {
-  isKlant: boolean;
   isHoofdbeheerder: boolean;
   heeftModuleRecht(module: string, minNiveau: number): boolean;
   magBijGebouw(gebouwId: number | null): boolean;
@@ -59,9 +58,6 @@ export function magMandagstaatGenereren(
 ): MandagstaatToegang {
   if (!opdracht.mandagstaatVereist) {
     return { toegestaan: false, reden: "niet_vereist", boodschap: "mandagstaat niet vereist op deze opdracht" };
-  }
-  if (perm.isKlant) {
-    return { toegestaan: false, reden: "geen_recht", boodschap: "mandagstaat niet beschikbaar voor klanten" };
   }
   if (!perm.heeftModuleRecht("personeel", 2)) {
     return { toegestaan: false, reden: "geen_recht", boodschap: "mandagstaat vereist personeel-beheerrecht (niveau 2)" };

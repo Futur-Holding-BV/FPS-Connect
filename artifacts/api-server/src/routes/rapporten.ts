@@ -13,7 +13,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, inArray, ne } from "drizzle-orm";
 import { stuurRapportBeschikbaarMelding } from "../services/email";
-import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { RAPPORT_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
@@ -23,7 +23,6 @@ import { extraheerPdfTekst } from "../lib/pdfTekst";
 const router = Router();
 
 const lezenRapporten = requireBevoegdheid("rapportages", 1);
-const lezenRapportenOfKlant = requireBevoegdheidOfKlant("rapportages", 1);
 const schrijvenRapporten = requireBevoegdheid("rapportages", 2);
 const aanmakenRapporten = requireBevoegdheid("rapportages", 3);
 const verwijderenRapporten = requireBevoegdheid("rapportages", 4);
@@ -121,19 +120,10 @@ router.get("/rapporten", lezenRapporten, async (req, res): Promise<void> => {
 });
 
 // ── GET /gebouwen/:id/rapporten ───────────────────────────────────────────────
-router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res): Promise<void> => {
+router.get("/gebouwen/:id/rapporten", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
-    const isKlant = (req.session as { rol?: string }).rol === "klant";
-    // KLANT_01: klant alleen bij een toegewezen gebouw (404, geen bestaan verklappen)
-    if (isKlant && !req.permissies?.magBijGebouw(gebouwId)) {
-      res.status(404).json({ error: "Gebouw niet gevonden" });
-      return;
-    }
-    const basisFilter = eq(opleverrapportenTable.gebouwId, gebouwId);
-    const waarFilter = isKlant
-      ? and(basisFilter, inArray(opleverrapportenTable.status, ["definitief", "gearchiveerd"]))
-      : basisFilter;
+    const waarFilter = eq(opleverrapportenTable.gebouwId, gebouwId);
     const rijen = await db
       .select({ r: opleverrapportenTable, naam: gebruikersTable.naam })
       .from(opleverrapportenTable)
@@ -196,16 +186,10 @@ router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res): Prom
 });
 
 // ── GET /gebouwen/:id/rapporten/:rapportId ────────────────────────────────────
-router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (req, res): Promise<void> => {
+router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
-    const isKlant = (req.session as { rol?: string }).rol === "klant";
-    // KLANT_01: klant alleen bij een toegewezen gebouw
-    if (isKlant && !req.permissies?.magBijGebouw(gebouwId)) {
-      res.status(404).json({ error: "Rapport niet gevonden" });
-      return;
-    }
 
     const [rij] = await db
       .select({ r: opleverrapportenTable, naam: gebruikersTable.naam })
@@ -218,10 +202,6 @@ router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (r
         ),
       );
     if (!rij) { res.status(404).json({ error: "Rapport niet gevonden" }); return; }
-    if (isKlant && rij.r.status !== "definitief" && rij.r.status !== "gearchiveerd") {
-      res.status(404).json({ error: "Rapport niet gevonden" });
-      return;
-    }
     res.json(mapRapport(rij.r, { aangemaaktDoorNaam: rij.naam }));
   } catch (err) {
     req.log.error(err);
@@ -398,36 +378,9 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
         ),
       );
 
-    // Klant-notificatie: stuur een e-mail naar de gekoppelde klant (best-effort).
-    try {
-      const [gebouw] = await db
-        .select({ naam: gebouwenTable.naam, klantId: gebouwenTable.klantId })
-        .from(gebouwenTable)
-        .where(eq(gebouwenTable.id, gebouwId));
-
-      if (gebouw?.klantId) {
-        const [klant] = await db
-          .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, actief: gebruikersTable.actief, gearchiveerd: gebruikersTable.gearchiveerd })
-          .from(gebruikersTable)
-          .where(eq(gebruikersTable.id, gebouw.klantId));
-
-        if (klant && klant.actief && !klant.gearchiveerd) {
-          const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") || "localhost";
-          const portaalUrl = `https://${domein}/klant/rapportages`;
-          await stuurRapportBeschikbaarMelding({
-            naarEmail: klant.email,
-            naarNaam: klant.naam,
-            rapportTitel: definitief.titel,
-            gebouwNaam: gebouw.naam,
-            reactietermijnDatum: reactietermijnDatum,
-            portaalUrl,
-            rapportId: definitief.id,
-          });
-        }
-      }
-    } catch (notificatieFout) {
-      req.log.warn({ err: notificatieFout, rapportId: definitief.id }, "Klant-notificatie rapport definitief mislukt (niet-kritiek)");
-    }
+    // KLANTLOOS_01: de klant-notificatiemail is vervallen — er is geen
+    // Connect-klantportaal meer om naartoe te verwijzen. Zodra het externe
+    // Platform een rapportenportaal heeft, hoort de melding dáár te landen.
 
     res.json(mapRapport(definitief));
   } catch (err) {
@@ -529,17 +482,13 @@ router.post("/gebouwen/:id/rapporten/:rapportId/certificaat-akkoord", aanmakenRa
 });
 
 // ── POST /gebouwen/:id/rapporten/:rapportId/klant-reactie ─────────────────────
-// Klant bevestigt ontvangst van een definitief rapport.
-router.post("/gebouwen/:id/rapporten/:rapportId/klant-reactie", lezenRapportenOfKlant, async (req, res): Promise<void> => {
+// KLANTLOOS_01: de klant logt niet meer in op Connect; deze route registreert
+// een ontvangstbevestiging die voortaan alleen nog door medewerkers met
+// rapportagerecht kan worden vastgelegd (bv. na telefonische bevestiging).
+router.post("/gebouwen/:id/rapporten/:rapportId/klant-reactie", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
-    // KLANT_01: klant alleen bij een toegewezen gebouw
-    const reactieIsKlant = (req.session as { rol?: string }).rol === "klant";
-    if (reactieIsKlant && !req.permissies?.magBijGebouw(gebouwId)) {
-      res.status(404).json({ error: "Rapport niet gevonden" });
-      return;
-    }
 
     const [huidig] = await db
       .select()
@@ -609,27 +558,7 @@ function wrapTextPdf(
 
 // ── GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel ─────────────────────
 
-router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapportenOfKlant, async (req, res): Promise<void> => {
-  // KLANT_01: klant alleen bij een toegewezen gebouw én een definitief/gearchiveerd rapport
-  {
-    const isKlant = (req.session as { rol?: string }).rol === "klant";
-    if (isKlant) {
-      const gebouwIdKlant = parseId(req.params.id);
-      if (!req.permissies?.magBijGebouw(gebouwIdKlant)) {
-        res.status(404).json({ error: "Rapport niet gevonden" });
-        return;
-      }
-      const [rapportKlant] = await db
-        .select({ status: opleverrapportenTable.status, gebouwId: opleverrapportenTable.gebouwId })
-        .from(opleverrapportenTable)
-        .where(eq(opleverrapportenTable.id, parseId(req.params.rapportId)));
-      if (!rapportKlant || rapportKlant.gebouwId !== gebouwIdKlant ||
-          (rapportKlant.status !== "definitief" && rapportKlant.status !== "gearchiveerd")) {
-        res.status(404).json({ error: "Rapport niet gevonden" });
-        return;
-      }
-    }
-  }
+router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId  = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);

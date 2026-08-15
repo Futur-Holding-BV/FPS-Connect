@@ -3,7 +3,6 @@ import type { Rol } from "@/context/rol-context";
 export type PaginaSleutel =
   | "dashboard-beheerder"
   | "dashboard-monteur"
-  | "dashboard-klant"
   | "gebouwen"
   | "gebouw-detail"
   | "plattegrond"
@@ -100,18 +99,11 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
       "Uw werkdashboard. Hier ziet u de gebouwen en werkorders die voor u klaarstaan. Gebruik de navigatie onderaan voor spots, foto's en plattegronden.",
   },
 
-  "dashboard-klant": {
-    klant:
-      "Welkom in FPS One. Hier ziet u een samenvatting van uw gebouwen, actuele spots en rapportages. Klik op een gebouw of rapport voor meer details.",
-  },
-
   "gebouwen": {
     hoofdbeheerder:
       "Overzicht van uw volledige projectportefeuille. Gebruik 'Nieuw gebouw' om een project aan te maken. Zoek en filter op naam, status of projectfase. Klik op een kaart om het gebouw te openen.",
     gebruiker:
       "Hier ziet u de gebouwen waaraan u bent gekoppeld. Klik op een gebouw om de spots, plattegrond en documenten te bekijken.",
-    klant:
-      "Uw gebouwen staan hier overzichtelijk weergegeven. Klik op een gebouw voor de actuele spotstatus en uw rapportages.",
   },
 
   "gebouw-detail": {

@@ -114,7 +114,6 @@ function useProjectOpenenHref(gebouwId: number): string {
   const { heeftNiveau } = useBevoegdheid();
   const rol = gebruiker?.rol ?? "";
 
-  if (rol === "klant") return `/klant/rapportages?gebouw=${gebouwId}`;
   if (rol === "hoofdbeheerder") return `/gebouwen/${gebouwId}`;
   if (heeftNiveau("gebouwen", 2)) return `/gebouwen/${gebouwId}`;
   return `/gebouwen/${gebouwId}?tab=uitvoering`;

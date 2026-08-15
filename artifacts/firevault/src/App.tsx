@@ -24,13 +24,10 @@ import { useBootstrapBeschikbaar } from "@/hooks/use-bootstrap-status";
 
 import BeheerderLayout from "@/layouts/beheerder-layout";
 import MonteurLayout from "@/layouts/monteur-layout";
-import KlantLayout from "@/layouts/klant-layout";
 import { ConnectRoutes } from "@/routes/connect-routes";
 
 import BeheerderDashboard from "@/pages/dashboard/beheerder";
 import MonteurDashboard from "@/pages/dashboard/monteur";
-import KlantDashboard from "@/pages/dashboard/klant";
-import KlantRapportages from "@/pages/klant/rapportages";
 
 import Gebouwen from "@/pages/gebouwen/index";
 import GebouwDetail from "@/pages/gebouwen/detail";
@@ -233,7 +230,6 @@ import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
 import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
 import OneDashboard from "@/pages/one/dashboard";
 import OneGebouwen from "@/pages/one/gebouwen";
-import OneGebouwDetail from "@/pages/one/gebouw-detail";
 import OneDocumenten from "@/pages/one/documenten";
 import OneRapporten from "@/pages/one/rapporten";
 import OneAbonnementen from "@/pages/one/abonnementen";
@@ -315,22 +311,6 @@ function MonteurPortal() {
   );
 }
 
-function KlantPortal() {
-  return (
-    <KlantLayout>
-      <Switch>
-        <Route path="/" component={KlantDashboard} />
-        <Route path="/gebouwen" component={Gebouwen} />
-        <Route path="/gebouwen/:id" component={OneGebouwDetail} />
-        <Route path="/klant/rapportages" component={KlantRapportages} />
-        <Route path="/assistent" component={AssistentPagina} />
-        <Route path="/info" component={InfoPagina} />
-        <Route component={NotFound} />
-      </Switch>
-    </KlantLayout>
-  );
-}
-
 function GeenToegang() {
   const { uitloggen } = useAuth();
   return (
@@ -372,9 +352,6 @@ function Portalen() {
         <ConnectPortal />
       </>
     );
-
-  // Klant-portaal
-  if (rolStr === "klant") return <KlantPortal />;
 
   // Gebruiker met bevoegdhedenmatrix
   if (rolStr === "gebruiker") {

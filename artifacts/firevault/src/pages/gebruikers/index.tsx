@@ -61,7 +61,7 @@ import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { Link } from "wouter";
 
-const ROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
+const ROLLEN = ["hoofdbeheerder", "gebruiker"] as const;
 type Rol = typeof ROLLEN[number];
 
 const FUNCTIETITELS = [
@@ -95,7 +95,6 @@ const FUNCTIE_GROEPEN: FunctieGroep[] = [
   { naam: "Financieel",          beschrijving: "Financieel beheer",        rol: "gebruiker",      presetNaam: null,                   icon: TrendingUp,  kleur: "text-emerald-600" },
   { naam: "Externe boekhouder",  beschrijving: "Externe boekhouder",       rol: "gebruiker",      presetNaam: "Externe boekhouder",   icon: TrendingUp,  kleur: "text-emerald-700" },
   { naam: "HRM-adviseur",        beschrijving: "HRM en personeel",         rol: "gebruiker",      presetNaam: "HRM-adviseur",         icon: Briefcase,   kleur: "text-pink-600"    },
-  { naam: "Klant",          beschrijving: "Rapportages en meldingen", rol: "klant",          presetNaam: null,               icon: User,        kleur: "text-gray-600"    },
 ];
 
 const GROEP_NAMEN = new Set(FUNCTIE_GROEPEN.map((g) => g.naam));
@@ -124,13 +123,6 @@ const ROL_CONFIG: Record<Rol, {
     badge: "bg-primary/10 text-primary border-primary/20",
     beschrijving: "Toegang via bevoegdheden-matrix",
   },
-  klant: {
-    label: "Klant",
-    icon: User,
-    kleur: "text-gray-600",
-    badge: "bg-gray-100 text-gray-700 border-gray-200",
-    beschrijving: "Rapportages & meldingen",
-  },
 };
 
 const UITNODIGING_STATUS_CONFIG = {
@@ -156,7 +148,6 @@ const UITNODIGING_STATUS_CONFIG = {
 
 function groepVanGebruiker(g: Gebruiker): string {
   if (g.rol === "hoofdbeheerder") return "Hoofdbeheerder";
-  if (g.rol === "klant") return "Klant";
   const ft = g.functietitels ?? [];
   const bekend = ft.find((f) => GROEP_NAMEN.has(f));
   if (bekend) return bekend;
@@ -326,7 +317,7 @@ export default function Gebruikers() {
 
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
-  const [actieveTab, setActieveTab]   = useState<"gebruikers" | "klanten" | "profielen">("gebruikers");
+  const [actieveTab, setActieveTab]   = useState<"gebruikers" | "profielen">("gebruikers");
   const [alleenAuto, setAlleenAuto]         = useState<boolean>(false);
   const [toonGearchiveerd, setToonGearchiveerd] = useState<boolean>(false);
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
@@ -665,18 +656,10 @@ export default function Gebruikers() {
     }
   }
 
-  // Interne FPS-gebruikers (staf) vs. klantaccounts. Klanten horen bij de
-  // klantomgeving (FPS One) en worden bewust apart getoond, niet tussen het
-  // interne gebruikersoverzicht.
+  // Interne FPS-gebruikers (staf).
   const internBron = useMemo(
     () => ((gebruikers ?? []) as Gebruiker[]).filter(
-      (g) => g.rol !== "klant" && (toonGearchiveerd || !g.gearchiveerd),
-    ),
-    [gebruikers, toonGearchiveerd],
-  );
-  const klantBron = useMemo(
-    () => ((gebruikers ?? []) as Gebruiker[]).filter(
-      (g) => g.rol === "klant" && (toonGearchiveerd || !g.gearchiveerd),
+      (g) => (toonGearchiveerd || !g.gearchiveerd),
     ),
     [gebruikers, toonGearchiveerd],
   );
@@ -707,18 +690,6 @@ export default function Gebruikers() {
       );
     }) as Gebruiker[];
   }, [internBron, filterGroep, zoek, alleenAuto]);
-
-  const klantGefilterd = useMemo(() => {
-    const term = zoek.trim().toLowerCase();
-    return klantBron.filter((g) => {
-      if (!term) return true;
-      return (
-        (g.naam ?? "").toLowerCase().includes(term) ||
-        (g.email ?? "").toLowerCase().includes(term) ||
-        (g.bedrijf ?? "").toLowerCase().includes(term)
-      );
-    });
-  }, [klantBron, zoek]);
 
   const totaalGevonden = groepGefilterd.length;
 
@@ -761,8 +732,7 @@ export default function Gebruikers() {
     }
   }
 
-  // Gedeelde gebruikerskaart — gebruikt voor zowel interne gebruikers als
-  // klantaccounts, zodat beide overzichten identiek werken (bekijken,
+  // Gedeelde gebruikerskaart voor de interne gebruikers (bekijken,
   // bewerken, verwijderen, uitnodigen).
   function gebruikerKaart(g: Gebruiker) {
     const status = (g.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
@@ -1012,23 +982,12 @@ export default function Gebruikers() {
               <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
             </Button>
           )}
-          {actieveTab === "klanten" && (
-            <Button onClick={() => { setToevoegenForm({ ...leegForm, rol: "klant" }); setToevoegenStap(2); setToevoegenOpen(true); setToevoegenFout(null); }}>
-              <Plus className="h-4 w-4 mr-2" /> Klant toevoegen
-            </Button>
-          )}
         </div>
       </div>
 
       <Tabs value={actieveTab} onValueChange={(v) => setActieveTab(v as typeof actieveTab)}>
         <TabsList className="h-9">
           <TabsTrigger value="gebruikers" className="text-sm">Gebruikers</TabsTrigger>
-          <TabsTrigger value="klanten" className="text-sm gap-1.5">
-            Klanten
-            {klantBron.length > 0 && (
-              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{klantBron.length}</Badge>
-            )}
-          </TabsTrigger>
           <TabsTrigger value="profielen" className="text-sm">Profielen</TabsTrigger>
         </TabsList>
 
@@ -1177,63 +1136,6 @@ export default function Gebruikers() {
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {groepGefilterd.map((g) => gebruikerKaart(g))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Tab: Klanten */}
-        <TabsContent value="klanten" className="space-y-4 mt-4">
-          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            Klantaccounts horen bij de klantomgeving (FPS One) en staan los van de interne FPS-gebruikers. Hier beheer je hun toegang tot het klantportaal.
-          </div>
-
-          {/* Zoekbalk */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={zoek}
-                onChange={(e) => setZoek(e.target.value)}
-                placeholder="Naam, e-mail of bedrijf..."
-                className="h-9 pl-8"
-              />
-            </div>
-            {!!zoek.trim() && (
-              <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => setZoek("")}>
-                Wissen
-              </Button>
-            )}
-            <span className="text-xs text-muted-foreground ml-auto">
-              {klantGefilterd.length} {klantGefilterd.length === 1 ? "klant" : "klanten"}
-            </span>
-          </div>
-
-          {/* Klantkaarten */}
-          {isLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-28 bg-muted animate-pulse rounded-lg" />
-              ))}
-            </div>
-          ) : klantGefilterd.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-muted/30 py-12 text-center">
-              <p className="text-muted-foreground text-sm">
-                {zoek.trim() ? "Geen klanten gevonden" : "Nog geen klantaccounts"}
-              </p>
-              {!!zoek.trim() && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-muted-foreground"
-                  onClick={() => setZoek("")}
-                >
-                  Filters wissen
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {klantGefilterd.map((g) => gebruikerKaart(g))}
             </div>
           )}
         </TabsContent>
@@ -2203,7 +2105,6 @@ function GebruikerVelden({
             <SelectContent>
               {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
               <SelectItem value="gebruiker">Gebruiker (matrix)</SelectItem>
-              <SelectItem value="klant">Klant</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -2272,7 +2173,7 @@ function GebruikerVelden({
         </div>
       )}
 
-      {form.rol !== "klant" && form.rol !== "hoofdbeheerder" && (
+      {form.rol !== "hoofdbeheerder" && (
         <BevoegdhedenEditor
           bevoegdheden={form.bevoegdheden}
           profielIds={form.profiel_ids}

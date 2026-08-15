@@ -208,9 +208,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
   const magGoedkeurenActies = heeftNiveau("goedkeuring", 3);
   // WERKBAK_02: team & overleg = personeel≥2 of planning≥2 (of hoofdbeheerder).
-  // Workflow = elke kantoorgebruiker (niet klant).
+  // Workflow = elke kantoorgebruiker.
   const toonTeamOverleg = heeftNiveau("personeel", 2) || heeftNiveau("planning", 2);
-  const toonWorkflow = rol !== "klant";
+  const toonWorkflow = true;
 
   const { data: openGoedkeuringen } = useListGoedkeuringAanvragen(
     { alleen_mijn_acties: true, status: "ingediend" },

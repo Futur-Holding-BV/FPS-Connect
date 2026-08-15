@@ -15,7 +15,7 @@ import {
   gebouwPublicatiesTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
-import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { volgendeGWerknummer } from "../lib/kenmerk";
@@ -32,7 +32,6 @@ import {
 
 const router = Router();
 const lezenGebouwen = requireBevoegdheid("gebouwen", 1);
-const lezenGebouwenOfKlant = requireBevoegdheidOfKlant("gebouwen", 1);
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
@@ -126,7 +125,7 @@ function gebouwRij(
 }
 
 // GET /gebouwen
-router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
+router.get("/gebouwen", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const { userId, beperkt } = await effectieveContext(req);
     const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
@@ -145,16 +144,6 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res): Promise<void> =>
         return void res.json([]);
       }
       gebouwen = gebouwen.filter((g) => ids.includes(g.id));
-
-      // Klantgebruikers zien uitsluitend gepubliceerde gebouwen
-      if (req.session.rol === "klant") {
-        const gepubliceerd = await db
-          .select({ gebouwId: gebouwPublicatiesTable.gebouwId })
-          .from(gebouwPublicatiesTable)
-          .where(eq(gebouwPublicatiesTable.status, "gepubliceerd"));
-        const gepubliceerdeSet = new Set(gepubliceerd.map((r) => r.gebouwId));
-        gebouwen = gebouwen.filter((g) => gepubliceerdeSet.has(g.id));
-      }
     }
 
     if (zoek) {
@@ -561,7 +550,7 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res): Promise<
 });
 
 // GET /gebouwen/:id
-router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
+router.get("/gebouwen/:id", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, beperkt } = await effectieveContext(req);
@@ -578,16 +567,6 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res): Promise<void
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
-      }
-
-      // Klantgebruikers zien uitsluitend gepubliceerde gebouwen
-      if (req.session.rol === "klant") {
-        const [pub] = await db
-          .select({ id: gebouwPublicatiesTable.id })
-          .from(gebouwPublicatiesTable)
-          .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
-          .limit(1);
-        if (!pub) return void res.status(403).json({ error: "Dit gebouw is nog niet gepubliceerd" });
       }
     }
 
@@ -1571,7 +1550,7 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
 });
 
 // GET /gebouwen/:id/publicatiestatus
-router.get("/gebouwen/:id/publicatiestatus", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
+router.get("/gebouwen/:id/publicatiestatus", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [gebouw] = await db.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, id));

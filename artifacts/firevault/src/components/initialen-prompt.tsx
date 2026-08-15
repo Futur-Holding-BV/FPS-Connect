@@ -37,7 +37,6 @@ export default function InitialenPrompt() {
 
   const moetVragen =
     !!gebruiker &&
-    gebruiker.rol !== "klant" &&
     !(gebruiker.initialen ?? "").trim() &&
     localStorage.getItem(LS_SLEUTEL_PREFIX + gebruiker.id) !== "1";
 

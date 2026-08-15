@@ -34,8 +34,8 @@ on:
     inputs:
       noodfix:
         description: >-
-          Typ NOODFIX om de pre-deploy controles (typecheck, dubbele-routes,
-          klant-poort) bewust over te slaan. Alleen gebruiken als productie
+          Typ NOODFIX om de pre-deploy controles (typecheck, dubbele-routes)
+          bewust over te slaan. Alleen gebruiken als productie
           plat ligt en de controles zelf de blokkade zijn.
           Zie docs/PRODUCTION_RUNBOOK.md, sectie "Noodfix: gate bewust passeren".
         required: false
@@ -83,17 +83,13 @@ jobs:
       - name: Installeer dependencies (voor controles)
         run: pnpm install --frozen-lockfile
 
-      - name: Controle 1/3 — typecheck
+      - name: Controle 1/2 — typecheck
         if: github.event.inputs.noodfix != 'NOODFIX'
         run: pnpm run typecheck
 
-      - name: Controle 2/3 — dubbele-routes-controle
+      - name: Controle 2/2 — dubbele-routes-controle
         if: github.event.inputs.noodfix != 'NOODFIX'
         run: pnpm --filter @workspace/scripts run check-dubbele-routes
-
-      - name: Controle 3/3 — klant-poort allowlist
-        if: github.event.inputs.noodfix != 'NOODFIX'
-        run: pnpm --filter @workspace/scripts run klant-poort-check
 
       - name: SSH-sleutel en hostkey instellen
         env:

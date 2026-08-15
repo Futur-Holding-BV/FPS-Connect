@@ -300,7 +300,7 @@ router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res): Promis
       .orderBy(gebruikersTable.naam);
     res.json(
       rijen
-        .filter((g) => g.rol !== "klant" && g.actief)
+        .filter((g) => g.actief)
         .map((g) => ({
           id: g.id,
           naam: g.naam,
@@ -325,6 +325,11 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
     } = req.body;
     if (!naam || !email || !rol) {
       return void res.status(400).json({ error: "naam, email en rol zijn verplicht" });
+    }
+    // KLANTLOOS_01: Connect kent alleen interne rollen. De rol 'klant' (of
+    // enige andere onbekende rol) mag niet meer worden aangemaakt.
+    if (rol !== "hoofdbeheerder" && rol !== "gebruiker") {
+      return void res.status(400).json({ error: "Ongeldige rol: alleen 'hoofdbeheerder' of 'gebruiker' is toegestaan" });
     }
     const functies = isBeheerderRol(rol)
       ? schoonFunctietitels(functietitels)
@@ -484,6 +489,15 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
     if (!bestaand) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+    // KLANTLOOS_01: rolwissel naar een onbekende/klant-rol weigeren, en een
+    // gedeactiveerd legacy-klantaccount mag niet worden geheractiveerd —
+    // eerst omzetten naar een interne rol is de enige weg.
+    if (rol !== undefined && rol !== "hoofdbeheerder" && rol !== "gebruiker") {
+      return void res.status(400).json({ error: "Ongeldige rol: alleen 'hoofdbeheerder' of 'gebruiker' is toegestaan" });
+    }
+    if (actief === true && bestaand.rol === "klant" && rol === undefined) {
+      return void res.status(409).json({ error: "Klantaccounts zijn vervallen (KLANTLOOS_01) en kunnen niet worden geheractiveerd; wijs eerst een interne rol toe" });
+    }
     const effectieveRol: unknown = rol !== undefined ? rol : bestaand.rol;
     const rolGewijzigd = rol !== undefined && rol !== bestaand.rol;
     const bestaandeFuncties = bestaand.functietitels ?? [];
@@ -510,7 +524,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       }
       // undefined: geen veld in de update → bestaande waarde blijft staan
     } else {
-      // Klant: geen functietitel.
+      // Onbekende (legacy) rol zonder rolwissel: geen functietitel.
       functies = [];
     }
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {

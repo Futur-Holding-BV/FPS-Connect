@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useListOnlineGebruikers } from "@workspace/api-client-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useRol } from "@/context/rol-context";
 
 
 
@@ -30,7 +29,6 @@ function naamKleur(naam: string): string {
 const ROL_LABELS: Record<string, string> = {
   hoofdbeheerder: "Beheerder",
   gebruiker:       "Gebruiker",
-  klant:           "Klant",
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -108,10 +106,7 @@ function OnlineGebruikersInner() {
   );
 }
 
-// Publiek exported wrapper — gated op rol zodat klanten de hook nooit aanroepen
 export function OnlineGebruikers() {
-  const { rol } = useRol();
-  if (rol === "klant") return null;
   return <OnlineGebruikersInner />;
 }
 
@@ -166,7 +161,5 @@ function OnlineGebruikersTaakbalkInner() {
 }
 
 export function OnlineGebruikersTaakbalk() {
-  const { rol } = useRol();
-  if (rol === "klant") return null;
   return <OnlineGebruikersTaakbalkInner />;
 }

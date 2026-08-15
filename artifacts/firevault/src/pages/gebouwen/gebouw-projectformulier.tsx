@@ -112,7 +112,6 @@ const BASIS_ROL_LABELS: Record<string, string> = {
   hoofdbeheerder: "Hoofdbeheerder",
   monteur: "Monteur",
   controleur: "Controleur",
-  klant: "Klant",
 };
 
 function basisRolLabel(rol: string): string {

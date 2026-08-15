@@ -146,7 +146,6 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
     // Als laadPermissies al heeft gedraaid, gebruik de gecachte service — geen extra DB-ronde.
     if (req.permissies) {
       if (req.permissies.isHoofdbeheerder) { next(); return; }
-      if (req.permissies.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
       if (req.permissies.heeftModuleRecht(module, minNiveau)) { next(); return; }
       res.status(403).json({ error: "Geen toegang" });
       return;
@@ -162,68 +161,6 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
       }
       // Hoofdbeheerder bypasses de matrix volledig.
       if (g.rol === "hoofdbeheerder") {
-        next();
-        return;
-      }
-      // Klant heeft geen toegang tot interne modules.
-      if (g.rol === "klant") {
-        res.status(403).json({ error: "Geen toegang" });
-        return;
-      }
-      // Toegang komt puur uit de bevoegdheden-matrix.
-      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-      if (!heeftNiveau(bev, module, minNiveau)) {
-        res.status(403).json({ error: "Geen toegang" });
-        return;
-      }
-      next();
-    } catch (err) {
-      req.log.error(err);
-      res.status(500).json({ error: "Interne serverfout" });
-    }
-  };
-}
-
-/**
- * Variant van requireBevoegdheid die klanten doorlaat voor lees-endpoints.
- * Object-level scope (klant ziet alleen eigen gebouwen) wordt geregeld in de
- * handler via de toewijzingsbeperking (beperkt) + toegewezenGebouwIds.
- * Gebruik voor GET-routes die zowel interne gebruikers als klanten nodig hebben.
- */
-export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): RequestHandler {
-  return async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    const id = req.session.userId;
-    if (!id) {
-      res.status(401).json({ error: "Niet ingelogd" });
-      return;
-    }
-    // Als laadPermissies al heeft gedraaid, gebruik de gecachte service — geen extra DB-ronde.
-    if (req.permissies) {
-      if (req.permissies.isHoofdbeheerder || req.permissies.isKlant) { next(); return; }
-      if (req.permissies.heeftModuleRecht(module, minNiveau)) { next(); return; }
-      res.status(403).json({ error: "Geen toegang" });
-      return;
-    }
-    try {
-      const [g] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, id));
-      if (!g) {
-        res.status(403).json({ error: "Geen toegang" });
-        return;
-      }
-      if (g.rol === "hoofdbeheerder") {
-        next();
-        return;
-      }
-      // Klant heeft via het klantportaal leestoegang; scope-filtering vindt
-      // plaats in de handler (toewijzingsbeperking / toegewezenGebouwIds).
-      if (g.rol === "klant") {
         next();
         return;
       }
@@ -247,8 +184,7 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
  * worden gedeeld — bijvoorbeeld een minimale lijst met toewijsbare personen
  * die zowel bij gebouwteams, spot-uitvoering als onderhoud nodig is — zodat een
  * gebruiker met gebouw- of voorzieningenrechten kan toewijzen zonder de
- * volledige gebruikersbevoegdheid te hebben. Hoofdbeheerder mag altijd; klant
- * nooit.
+ * volledige gebruikersbevoegdheid te hebben. Hoofdbeheerder mag altijd.
  */
 /**
  * Laadt de PermissieService voor de effectieve gebruiker (incl. impersonatie)
@@ -326,7 +262,6 @@ export function requireEnigeBevoegdheid(
     // is impersonatie-bewust ("Bekijken als"): de effectieve gebruiker telt.
     if (req.permissies) {
       if (req.permissies.isHoofdbeheerder) { next(); return; }
-      if (req.permissies.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
       if (eisen.some(([module, minNiveau]) => req.permissies!.heeftModuleRecht(module, minNiveau))) {
         next();
         return;
@@ -345,10 +280,6 @@ export function requireEnigeBevoegdheid(
       }
       if (g.rol === "hoofdbeheerder") {
         next();
-        return;
-      }
-      if (g.rol === "klant") {
-        res.status(403).json({ error: "Geen toegang" });
         return;
       }
       const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};

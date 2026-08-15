@@ -24,9 +24,6 @@ async function isOrganisatiebreedIngeschakeld(): Promise<boolean> {
 export const verjaardagMomentType: MomentType = {
   key: "verjaardag",
   async vandaag(ctx: MomentContext): Promise<Moment[]> {
-    // Klant/FPS One-portaal krijgt nooit Moments te zien.
-    if (ctx.rol === "klant") return [];
-
     if (!(await isOrganisatiebreedIngeschakeld())) return [];
 
     const maandDag = maandDagVandaag(ctx.vandaag);

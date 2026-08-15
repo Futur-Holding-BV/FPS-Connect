@@ -15,7 +15,6 @@ import type { TrimbareBron } from "./tokenBudget";
 function scope(overrides: Partial<ContextScope>): ContextScope {
   return {
     isHoofdbeheerder: false,
-    isKlant: false,
     userId: 1,
     heeftModuleRecht: () => false,
     magBijGebouw: () => false,
@@ -89,14 +88,7 @@ describe("magKnoopZien (scoping via matrix + gebouwtoewijzing, nooit rolnaam)", 
     expect(magKnoopZien("dossier", g, s)).toBe(true);
   });
 
-  it("klant ziet eigen (toegewezen) gebouw-gescoped entiteit, geen interne modules", () => {
-    const s = scope({ isKlant: true, magBijGebouw: () => true });
-    expect(magKnoopZien("gebouw", knoop("gebouw", 1, 1), s)).toBe(true);
-    expect(magKnoopZien("klant", knoop("klant", 1, null), s)).toBe(false);
-    expect(magKnoopZien("medewerker", knoop("medewerker", 1, null), s)).toBe(false);
-  });
-
-  it("niet-gescoped vereist module-lees en geen klant", () => {
+  it("niet-gescoped vereist module-leesrecht", () => {
     expect(magKnoopZien("medewerker", knoop("medewerker", 1, null), scope({ heeftModuleRecht: () => true }))).toBe(true);
     expect(magKnoopZien("medewerker", knoop("medewerker", 1, null), scope({ heeftModuleRecht: () => false }))).toBe(false);
   });

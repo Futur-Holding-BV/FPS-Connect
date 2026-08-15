@@ -48,10 +48,8 @@ function isVeldUitvoerder(bevoegdheden: Bevoegdheden): boolean {
 }
 
 // Of een gebruiker met deze rol + matrix beperkt is tot toegewezen gebouwen.
-// hoofdbeheerder omzeilt de matrix volledig en is nooit beperkt. Een klant ziet
-// uitsluitend de aan zijn account toegewezen gebouwen (object-scope van het
-// klantportaal loopt volledig via deze beperking + toegewezenGebouwIds) en is
-// dus altijd beperkt. Zonder leesrecht op de gebouwen-module (niveau 0) blijft
+// hoofdbeheerder omzeilt de matrix volledig en is nooit beperkt.
+// Zonder leesrecht op de gebouwen-module (niveau 0) blijft
 // een gebruiker altijd beperkt tot toegewezen gebouwen, ook al heeft hij rechten
 // op gebouw-gescopete modules (voorzieningen/onderhoud/inspecties). Wie gebouwen
 // mag beheren (>= 2) is niet beperkt. Bij alleen-leesrecht op gebouwen (niveau 1)
@@ -60,7 +58,6 @@ function isVeldUitvoerder(bevoegdheden: Bevoegdheden): boolean {
 // leesrechten (bv. commercieel, calculatie) ziet de hele portefeuille.
 function isBeperkt(rol: string, bevoegdheden: Bevoegdheden): boolean {
   if (rol === "hoofdbeheerder") return false;
-  if (rol === "klant") return true;
   const gebouwNiveau = niveauVan(bevoegdheden, "gebouwen");
   if (gebouwNiveau < GEBOUW_LEZEN_NIVEAU) return true;
   if (gebouwNiveau >= GEBOUW_BEHEER_NIVEAU) return false;

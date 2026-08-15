@@ -9,14 +9,13 @@ import {
   onderhoudTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 const lezenInspecties = requireBevoegdheid("inspecties", 1);
-const lezenInspectiesOfKlant = requireBevoegdheidOfKlant("inspecties", 1);
 
 async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
   const gebouw = i.gebouwId
@@ -81,7 +80,7 @@ async function mapBevinding(b: typeof inspectieBevindingen.$inferSelect) {
 }
 
 // GET /inspecties
-router.get("/inspecties", lezenInspectiesOfKlant, async (req, res): Promise<void> => {
+router.get("/inspecties", lezenInspecties, async (req, res): Promise<void> => {
   try {
     const { userId, beperkt } = await effectieveContext(req);
     const { gebouw_id, voorziening_id, type, status } = req.query;
@@ -160,7 +159,7 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
 });
 
 // GET /inspecties/:id
-router.get("/inspecties/:id", lezenInspectiesOfKlant, async (req, res): Promise<void> => {
+router.get("/inspecties/:id", lezenInspecties, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
@@ -258,7 +257,7 @@ router.delete("/inspecties/:id", requireBevoegdheid("inspecties", 4), async (req
 // ── BEVINDINGEN ────────────────────────────────────────────────────────────────
 
 // GET /inspecties/:id/bevindingen
-router.get("/inspecties/:id/bevindingen", lezenInspectiesOfKlant, async (req, res): Promise<void> => {
+router.get("/inspecties/:id/bevindingen", lezenInspecties, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }

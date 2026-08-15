@@ -1025,7 +1025,7 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
       })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, gebruikerId));
-    if (!g || !g.actief || g.rol === "klant") {
+    if (!g || !g.actief) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
     }
     const [gekoppeld] = await db

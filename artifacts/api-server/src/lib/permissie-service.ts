@@ -81,9 +81,6 @@ export class PermissieService {
   get isHoofdbeheerder(): boolean {
     return this.e.isHoofdbeheerder;
   }
-  get isKlant(): boolean {
-    return this.e.isKlant;
-  }
   get userId(): number {
     return this.gebruikerId;
   }

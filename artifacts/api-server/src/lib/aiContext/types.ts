@@ -28,7 +28,6 @@ export type ContextEntiteitType =
 // Orchestrator hoeft de implementatie niet te kennen.
 export interface ContextScope {
   readonly isHoofdbeheerder: boolean;
-  readonly isKlant: boolean;
   readonly userId: number;
   heeftModuleRecht(module: string, minNiveau: number): boolean;
   magBijGebouw(gebouwId: number | null): boolean;

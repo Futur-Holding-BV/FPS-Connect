@@ -13,7 +13,7 @@ const router = Router();
 
 function zichtbaarVoor(req: Request, item: WerkbakItem): boolean {
   const p = req.permissies;
-  if (!p || p.isKlant) return false;
+  if (!p) return false;
   if (p.isHoofdbeheerder) return true;
   // WERKBAK_02: meewerkers van een eigen taak zien de taak ook.
   if (item.gebruikerId != null) return item.gebruikerId === req.session.userId || item.meewerkerIds.includes(req.session.userId!);

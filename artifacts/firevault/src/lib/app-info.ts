@@ -25,7 +25,7 @@ export const WIJZIGINGSLOGBOEK: Wijziging[] = [
     datum: "2026-05-20",
     punten: [
       "Verplichte tweestapsverificatie met authenticator-app",
-      "Rolgebaseerde portalen voor beheerder, monteur, controleur en klant",
+      "Rolgebaseerde portalen voor beheerder en monteur",
       "Mobiele monteur-app gekoppeld aan het platform",
     ],
   },

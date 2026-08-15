@@ -142,8 +142,7 @@ async function bepaalEigenOrganisatie(): Promise<EigenOrganisatie> {
   const [interneGebruikers, medewerkers, werkgevers] = await Promise.all([
     db
       .select({ email: gebruikersTable.email })
-      .from(gebruikersTable)
-      .where(ne(gebruikersTable.rol, "klant")),
+      .from(gebruikersTable),
     db.select({ email: medewerkersTable.email }).from(medewerkersTable),
     db.select({ naam: werkgeversTable.naam, email: werkgeversTable.email }).from(werkgeversTable),
   ]);

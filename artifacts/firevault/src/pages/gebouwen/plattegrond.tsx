@@ -576,7 +576,7 @@ export default function Plattegrond() {
   const isBeheerder = heeftNiveau("gebouwen", 2);
   // Spots plaatsen, scheidingen tekenen en clusters beheren komt uit de
   // bevoegdheden-matrix (Spots-module, "Aanmaken en wijzigen" = niveau 3), niet
-  // uit een rolnaam. De rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant,
+  // uit een rolnaam. De rol-enum kent alleen nog hoofdbeheerder/gebruiker,
   // dus rol-string-gating liet de bewerkbalk verdwijnen voor gewone gebruikers.
   const magBewerken = heeftNiveau("voorzieningen", 3);
   const magOpnameLaag = heeftNiveau("opname", 1);
@@ -618,9 +618,8 @@ export default function Plattegrond() {
   const [visueelClusterAan, setVisueelClusterAan] = useState(true);
 
   // "Monteur uitvoering" = wie de spot daadwerkelijk uitvoert. De oude rol
-  // "monteur" bestaat niet meer (rollen zijn hoofdbeheerder/gebruiker/klant);
+  // "monteur" bestaat niet meer (rollen zijn hoofdbeheerder/gebruiker);
   // toon daarom alle toewijsbare interne personen behalve de hoofdbeheerder.
-  // Klanten zijn al uitgesloten door het /toewijsbare-gebruikers-endpoint.
   const monteurs = (gebruikers ?? []).filter(
     (g: any) => g.rol !== "hoofdbeheerder",
   );

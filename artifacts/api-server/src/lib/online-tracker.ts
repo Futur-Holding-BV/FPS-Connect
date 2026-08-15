@@ -57,7 +57,7 @@ export async function meldActief(userId: number): Promise<void> {
 }
 
 /**
- * Geeft een lijst van actieve (niet-klant) gebruikers, exclusief de aanvrager zelf.
+ * Geeft een lijst van actieve gebruikers, exclusief de aanvrager zelf.
  * Ruimt tegelijk verlopen entries op.
  */
 export function haalOnlineGebruikersOp(uitsluitenId: number): Array<{
@@ -74,7 +74,6 @@ export function haalOnlineGebruikersOp(uitsluitenId: number): Array<{
       continue;
     }
     if (id === uitsluitenId) continue;
-    if (entry.rol === "klant") continue;
     resultaat.push({
       naam:      entry.naam,
       initialen: entry.initialen,

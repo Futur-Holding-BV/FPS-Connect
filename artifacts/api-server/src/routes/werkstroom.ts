@@ -80,7 +80,6 @@ async function naamMap(): Promise<Map<number, string>> {
 
 router.post("/werkbak/taken", requireAuth, async (req, res): Promise<void> => {
   try {
-    if (req.permissies?.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
     const b = req.body ?? {};
     const titel = typeof b.titel === "string" ? b.titel.trim() : "";
     if (!titel) { res.status(400).json({ error: "Titel is verplicht" }); return; }
@@ -351,7 +350,7 @@ router.get("/overleggen", requireAuth, teamGate, async (req, res): Promise<void>
 function zichtbaarVoorMij(req: Request, item: WerkbakItem): boolean {
   const p = req.permissies;
   const uid = req.session.userId;
-  if (!p || p.isKlant) return false;
+  if (!p) return false;
   if (item.gebruikerId != null) return item.gebruikerId === uid || item.meewerkerIds.includes(uid!);
   if (p.isHoofdbeheerder) return true;
   if (item.alleenHoofdbeheerder) return false;
@@ -372,7 +371,6 @@ function uitlegRegel(sterren: number, deadline: string | null, gewicht: number, 
 router.get("/workflow", requireAuth, async (req, res): Promise<void> => {
   try {
     const uid = req.session.userId!;
-    if (req.permissies?.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
     const [alleOpen, sterren, mailboxen] = await Promise.all([
       db.select().from(werkbakItemsTable).where(eq(werkbakItemsTable.status, "open")),
       db.select().from(workflowSterrenTable).where(eq(workflowSterrenTable.gebruikerId, uid)),
@@ -454,7 +452,6 @@ router.get("/workflow", requireAuth, async (req, res): Promise<void> => {
 router.post("/workflow/ster", requireAuth, async (req, res): Promise<void> => {
   try {
     const uid = req.session.userId!;
-    if (req.permissies?.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
     const b = req.body ?? {};
     const doelType = b.doel_type === "mail_conversatie" ? "mail_conversatie" : b.doel_type === "werkbak" ? "werkbak" : null;
     const doelSleutel = typeof b.doel_sleutel === "string" ? b.doel_sleutel.trim() : "";
@@ -494,7 +491,6 @@ router.post("/workflow/ster", requireAuth, async (req, res): Promise<void> => {
 router.post("/workflow/ai-advies", requireAuth, async (req, res): Promise<void> => {
   try {
     const uid = req.session.userId!;
-    if (req.permissies?.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
     const alleOpen = await db.select().from(werkbakItemsTable).where(eq(werkbakItemsTable.status, "open"));
     const items = alleOpen.filter((i) => zichtbaarVoorMij(req, i)).slice(0, 40);
     if (items.length === 0) { res.json({ groepen: [], ontbreekt: [], kan_wachten: [], voorstellen: [] }); return; }

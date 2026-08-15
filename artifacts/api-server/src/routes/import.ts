@@ -69,7 +69,6 @@ async function importRechtFout(req: Request, type: string): Promise<{ status: nu
   if (!id) return { status: 401, error: "Niet ingelogd" };
   if (req.permissies) {
     if (req.permissies.isHoofdbeheerder) return null;
-    if (req.permissies.isKlant) return { status: 403, error: "Geen toegang" };
     return req.permissies.heeftModuleRecht(module, HOOGSTE_NIVEAU)
       ? null
       : { status: 403, error: "Geen toegang" };
@@ -80,7 +79,6 @@ async function importRechtFout(req: Request, type: string): Promise<{ status: nu
     .where(eq(gebruikersTable.id, id));
   if (!g) return { status: 403, error: "Geen toegang" };
   if (g.rol === "hoofdbeheerder") return null;
-  if (g.rol === "klant") return { status: 403, error: "Geen toegang" };
   const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
   return heeftNiveau(bev, module, HOOGSTE_NIVEAU) ? null : { status: 403, error: "Geen toegang" };
 }

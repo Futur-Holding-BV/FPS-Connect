@@ -3610,7 +3610,6 @@ export type GebruikerRol = typeof GebruikerRol[keyof typeof GebruikerRol];
 export const GebruikerRol = {
   hoofdbeheerder: 'hoofdbeheerder',
   gebruiker: 'gebruiker',
-  klant: 'klant',
 } as const;
 
 export type GebruikerUitnodigingStatus = typeof GebruikerUitnodigingStatus[keyof typeof GebruikerUitnodigingStatus];
@@ -4309,7 +4308,6 @@ export type AuthGebruikerRol = typeof AuthGebruikerRol[keyof typeof AuthGebruike
 export const AuthGebruikerRol = {
   hoofdbeheerder: 'hoofdbeheerder',
   gebruiker: 'gebruiker',
-  klant: 'klant',
 } as const;
 
 export type AuthGebruikerTaal = typeof AuthGebruikerTaal[keyof typeof AuthGebruikerTaal];

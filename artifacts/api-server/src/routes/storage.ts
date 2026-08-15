@@ -109,13 +109,6 @@ async function magBestandInGebouw(
   const gebouwId = parseGebouwIdFromObjectPath(objectPath);
   if (gebouwId == null) {
     // Legacy uploads/ of algemeen/ — geen gebouw-id in het pad.
-    // KLANT_01: klanten uitsluitend bestanden met een gebouw-koppeling naar
-    // een toegewezen gebouw; ongescoopte paden zijn voor klanten dicht.
-    const [g] = await db
-      .select({ rol: gebruikersTable.rol })
-      .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, userId));
-    if (g?.rol === "klant") return false;
     // Leid de gebouw-koppeling af uit de registraties in de database.
     // Is het bestand aan één of meer gebouwen gekoppeld, dan gelden dezelfde
     // gebouw-ACL-regels als voor gestructureerde paden: beperkte gebruikers

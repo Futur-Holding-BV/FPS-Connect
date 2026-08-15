@@ -2,8 +2,8 @@
 // Regels worden nooit overschreven: corrigeren kan alleen door de schrijver
 // binnen 15 minuten; daarna is een nieuwe aantekening de weg. Verwijderen
 // (gebouwen niveau 4) haalt de regel door maar laat hem zichtbaar staan.
-// Bewust NIET via requireBevoegdheidOfKlant en NIET in de klant-allowlist:
-// aantekeningen zijn intern, altijd (KLANT_01: dicht tenzij open).
+// Aantekeningen zijn intern en vallen onder de reguliere module-rechten
+// (KLANTLOOS_01: Connect kent geen externe gebruikers meer).
 import { Router } from "express";
 import { db, gebouwNotitiesTable, gebouwenTable, gebruikersTable } from "@workspace/db";
 import { eq, desc, and, isNull, gt } from "drizzle-orm";

@@ -31827,7 +31827,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [hoofdbeheerder, gebruiker, klant]
+          enum: [hoofdbeheerder, gebruiker]
         functietitels:
           type: array
           items:
@@ -32733,7 +32733,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [hoofdbeheerder, gebruiker, klant]
+          enum: [hoofdbeheerder, gebruiker]
         avatar_url:
           type: ["string", "null"]
         bedrijfskleuren:
