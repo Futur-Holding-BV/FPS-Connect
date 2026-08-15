@@ -3,6 +3,26 @@
 import type { opleverrapportenTable } from "@workspace/db";
 
 /**
+ * Dedupliceert een lijst van partijen op e-mailadres (case-insensitief).
+ * Bij meerdere rijen met hetzelfde adres wordt alleen de eerste rij bewaard.
+ * Rijen zonder e-mailadres worden gefilterd.
+ */
+export function dedupeerPartijEmails<T extends { email: string | null }>(
+  partijen: T[],
+): T[] {
+  const gezien = new Set<string>();
+  const resultaat: T[] = [];
+  for (const partij of partijen) {
+    if (!partij.email) continue;
+    const genormaliseerd = partij.email.trim().toLowerCase();
+    if (gezien.has(genormaliseerd)) continue;
+    gezien.add(genormaliseerd);
+    resultaat.push(partij);
+  }
+  return resultaat;
+}
+
+/**
  * Bouwt de insert-waarden voor een nieuwe conceptversie van een bestaand rapport.
  *
  * Bewust GEEN kopie van reactietermijn_melding_verzond_op: de melding-markering
