@@ -19954,6 +19954,26 @@ export const GetUrenPerUurcodeResponse = zod.object({
 
 
 /**
+ * @summary Opdrachten in uitvoering met voortgang en aandachtspunten
+ */
+export const GetUitvoeringOverzichtResponse = zod.object({
+  "opdrachten": zod.array(zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullable(),
+  "opdrachtgever": zod.string().nullable(),
+  "fase": zod.string(),
+  "monteurs": zod.array(zod.string()),
+  "stappen_totaal": zod.number(),
+  "stappen_voltooid": zod.number(),
+  "onbesliste_afwijkingen": zod.number(),
+  "wachtende_materiaal_aanvragen": zod.number(),
+  "open_werkbak_items": zod.number()
+}))
+})
+
+
+/**
  * @summary Actiepuntenlijst van de hoofdbeheerder (zijrand)
  */
 export const ListActiepuntenResponseItem = zod.object({

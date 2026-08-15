@@ -148,6 +148,8 @@ import OffertePrintPagina from "@/pages/offertes/print";
 import FactuurPrintPagina from "@/pages/facturen/print";
 import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
 import WerkvoorbereidingOverzicht from "@/pages/werkvoorbereiding/index";
+import UitvoeringOverzichtPagina from "@/pages/uitvoering/index";
+import UitvoeringDetailPagina from "@/pages/uitvoering/detail";
 import RegiePagina from "@/pages/regie/index";
 import RegieDetailPagina from "@/pages/regie/detail";
 import DocumentenPagina from "@/pages/documenten/index";
@@ -355,6 +357,8 @@ export function ConnectRoutes() {
         <Route path="/offertes/:id" component={ProposalStudio} />
         <Route path="/opdrachten/:id" component={OpdrachtDetailPagina} />
         <Route path="/werkvoorbereiding" component={WerkvoorbereidingOverzicht} />
+        <Route path="/uitvoering" component={UitvoeringOverzichtPagina} />
+        <Route path="/uitvoering/:id" component={UitvoeringDetailPagina} />
         <Route path="/regie" component={RegiePagina} />
         <Route path="/regie/:id" component={RegieDetailPagina} />
 

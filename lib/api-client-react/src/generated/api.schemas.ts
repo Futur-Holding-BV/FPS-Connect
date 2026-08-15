@@ -17467,6 +17467,24 @@ export type GetUrenPerUurcode200 = {
   niet_in_begroting_uren: number;
 };
 
+export type GetUitvoeringOverzicht200OpdrachtenItem = {
+  id: number;
+  titel: string;
+  werknummer: string | null;
+  opdrachtgever: string | null;
+  fase: string;
+  monteurs: string[];
+  stappen_totaal: number;
+  stappen_voltooid: number;
+  onbesliste_afwijkingen: number;
+  wachtende_materiaal_aanvragen: number;
+  open_werkbak_items: number;
+};
+
+export type GetUitvoeringOverzicht200 = {
+  opdrachten: GetUitvoeringOverzicht200OpdrachtenItem[];
+};
+
 export type CreateActiepuntBody = {
   titel: string;
   omschrijving?: string | null;

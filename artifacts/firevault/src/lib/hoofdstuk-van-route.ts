@@ -13,6 +13,7 @@ const PREFIXEN: ReadonlyArray<[string, HoofdstukSleutel]> = [
   ["/werkvoorbereiding", "projectaanpak"],
   ["/opdrachten", "projectaanpak"],
   ["/inkoop", "projectaanpak"],
+  ["/uitvoering", "projectaanpak"],
   ["/regie", "projectaanpak"],
   ["/modules/planning", "projectaanpak"],
   ["/rapporten", "projectaanpak"],

@@ -609,6 +609,8 @@ export * from './getSalarisarchiefDocumentenParams';
 export * from './getSalarisMutatiesParams';
 export * from './getScabMailsParams';
 export * from './getToolboxComplianceParams';
+export * from './getUitvoeringOverzicht200';
+export * from './getUitvoeringOverzicht200OpdrachtenItem';
 export * from './getUrenPerUurcode200';
 export * from './getUrenPerUurcode200CodesItem';
 export * from './getUrenPerUurcode200IndirectItem';

@@ -16593,6 +16593,39 @@ paths:
                         naam: { type: string }
                         geschreven_uren: { type: number }
                   niet_in_begroting_uren: { type: number }
+  /uitvoering/overzicht:
+    get:
+      operationId: getUitvoeringOverzicht
+      summary: Opdrachten in uitvoering met voortgang en aandachtspunten
+      tags: [Uitvoering]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [opdrachten]
+                properties:
+                  opdrachten:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, titel, werknummer, opdrachtgever, fase, monteurs, stappen_totaal, stappen_voltooid, onbesliste_afwijkingen, wachtende_materiaal_aanvragen, open_werkbak_items]
+                      properties:
+                        id: { type: integer }
+                        titel: { type: string }
+                        werknummer: { type: string, nullable: true }
+                        opdrachtgever: { type: string, nullable: true }
+                        fase: { type: string }
+                        monteurs:
+                          type: array
+                          items: { type: string }
+                        stappen_totaal: { type: integer }
+                        stappen_voltooid: { type: integer }
+                        onbesliste_afwijkingen: { type: integer }
+                        wachtende_materiaal_aanvragen: { type: integer }
+                        open_werkbak_items: { type: integer }
   /actiepunten:
     get:
       operationId: listActiepunten

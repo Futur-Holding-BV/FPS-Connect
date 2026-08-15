@@ -426,6 +426,7 @@ import type {
   GetSalarisarchiefDocumentenParams,
   GetScabMailsParams,
   GetToolboxComplianceParams,
+  GetUitvoeringOverzicht200,
   GetUrenPerUurcode200,
   GetVeiligheidIncidentenUploadUrl200,
   GetVeiligheidLmrasUploadUrl200,
@@ -56585,6 +56586,83 @@ export function useGetUrenPerUurcode<TData = Awaited<ReturnType<typeof getUrenPe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetUrenPerUurcodeQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetUitvoeringOverzichtUrl = () => {
+
+
+
+
+  return `/api/uitvoering/overzicht`
+}
+
+/**
+ * @summary Opdrachten in uitvoering met voortgang en aandachtspunten
+ */
+export const getUitvoeringOverzicht = async ( options?: RequestInit): Promise<GetUitvoeringOverzicht200> => {
+
+  return customFetch<GetUitvoeringOverzicht200>(getGetUitvoeringOverzichtUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUitvoeringOverzichtQueryKey = () => {
+    return [
+    `/api/uitvoering/overzicht`
+    ] as const;
+    }
+
+
+export const getGetUitvoeringOverzichtQueryOptions = <TData = Awaited<ReturnType<typeof getUitvoeringOverzicht>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUitvoeringOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUitvoeringOverzichtQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUitvoeringOverzicht>>> = ({ signal }) => getUitvoeringOverzicht({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUitvoeringOverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUitvoeringOverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getUitvoeringOverzicht>>>
+export type GetUitvoeringOverzichtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Opdrachten in uitvoering met voortgang en aandachtspunten
+ */
+
+export function useGetUitvoeringOverzicht<TData = Awaited<ReturnType<typeof getUitvoeringOverzicht>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUitvoeringOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUitvoeringOverzichtQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

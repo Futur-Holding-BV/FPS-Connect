@@ -157,3 +157,4 @@
 - [KETEN_01 ketenmeting lessen](keten-meetlessen.md) — canvas-unmount fix: sigDataUrl vastleggen vóór fase-wissel; evaluate()+dispatchEvent voor canvas e2e (page.mouse.* faalt buiten viewport); ondertekeningGeblokkeerd alleen bij 409; e2e-resultaten in .gitignore (portaaltokens).
 - [E2e-suite mutex contention](e2e-suite-mutex.md) — e2e-monteur-ci houdt mutex >15 min (3 retries×90s+TOTP); e2e-web-ci time-out daardoor; eigen mutex-sleutel per suite of web-timeout→25 min lost dit op.
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.
+- [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.

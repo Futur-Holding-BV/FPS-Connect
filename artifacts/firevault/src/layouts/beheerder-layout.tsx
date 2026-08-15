@@ -527,13 +527,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    <SidebarMenuItem className="pl-5">
-                      <SidebarMenuButton disabled>
-                        <HardHat />
-                        <span>Uitvoering</span>
-                        <InUitvoering />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {heeftNiveau("projecten", 1) && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/uitvoering" || location.startsWith("/uitvoering/")}
+                        >
+                          <Link href="/uitvoering">
+                            <HardHat />
+                            <span>Uitvoering</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {/* ── scheiding: uitvoering ↑ / oplevering ↓ ── */}
                     <div className="mx-3 my-2 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                       <div className="flex-1 h-px bg-slate-200" />
