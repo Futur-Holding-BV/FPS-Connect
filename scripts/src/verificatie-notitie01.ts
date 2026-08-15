@@ -130,7 +130,7 @@ async function main() {
   const bestaandeKlant = await db.select().from(gebruikersTable).where(eq(gebruikersTable.email, KLANT_EMAIL));
   if (bestaandeKlant.length === 0) {
     await db.insert(gebruikersTable).values({
-      naam: "E2E Klant Notitie", email: KLANT_EMAIL, rol: "klant",
+      naam: "E2E Klant Notitie", email: KLANT_EMAIL, rol: "klant", // klantloos-ok: verificatiescript bewijst dat klant-notitieroute 403 geeft
       wachtwoord: wachtwoordHash, actief: true,
       tweeFactorIngeschakeld: true, totpSecret: KLANT_TOTP,
     });

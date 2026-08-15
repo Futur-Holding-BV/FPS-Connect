@@ -9,11 +9,13 @@
 //
 // Controles:
 //   1. Verboden identifiers in broncode (api-server, firevault, permissies,
-//      aiContext): isKlant, requireBevoegdheidOfKlant, klantPoort,
-//      KLANT_BEVOEGDHEDEN.
+//      aiContext, monteur-app, scripts): isKlant, requireBevoegdheidOfKlant,
+//      klantPoort, KLANT_BEVOEGDHEDEN.
 //   2. Rol-vergelijkingen/-toewijzingen met "klant" (rol === "klant",
 //      rol: "klant", enz.). CRM-terminologie (klant_id, crm_klanten,
 //      klant_naam, knooptype "klant" in aiContext) blijft toegestaan.
+//      Legacy verificatiescripts die de 403-blokkade testen dragen de
+//      marker "klantloos-ok" zodat ze niet falen.
 //   3. OpenAPI: geen "klant" in een rol-enum.
 //   4. Route-scan api-server: middleware met "OfKlant" in de naam of
 //      requireRol met "klant" als argument is verboden. Routes zonder
@@ -31,6 +33,8 @@ const SCAN_DIRS = [
   "artifacts/api-server/src",
   "artifacts/firevault/src",
   "lib/permissies/src",
+  "artifacts/monteur-app",
+  "scripts/src",
 ];
 
 // Bestanden die "klant" als CRM-/historieterm mogen bevatten worden niet

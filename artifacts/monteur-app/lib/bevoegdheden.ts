@@ -11,7 +11,6 @@ export function heeftBevoegdheid(
   vereiste: Vereiste,
 ): boolean {
   if (!gebruiker) return false;
-  if (gebruiker.rol === "klant") return false;
   if (vereiste === "basis") return true; // eigen gegevens = basisrecht (§4)
   if (gebruiker.rol === "hoofdbeheerder") return true;
   return (gebruiker.bevoegdheden?.[vereiste.module] ?? 0) >= vereiste.niveau;

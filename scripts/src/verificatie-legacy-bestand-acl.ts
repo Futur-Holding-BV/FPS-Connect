@@ -35,7 +35,7 @@ const WACHTWOORD = "LegacyAcl!2026";
 const ACCOUNTS = {
   veld: { email: "legacy-acl-veld@fps.local", totp: "LEGACYVELD234567", rol: "gebruiker" as const, bevoegdheden: { gebouwen: 1, voorzieningen: 2 } },
   admin: { email: "legacy-acl-admin@fps.local", totp: "LEGACYADMIN23456", rol: "hoofdbeheerder" as const, bevoegdheden: {} },
-  klant: { email: "legacy-acl-klant@fps.local", totp: "LEGACYKLANT23456", rol: "klant" as const, bevoegdheden: {} },
+  klant: { email: "legacy-acl-klant@fps.local", totp: "LEGACYKLANT23456", rol: "klant" as const, bevoegdheden: {} }, // klantloos-ok: verificatiescript bewijst dat klant-rol 403 geeft
 };
 
 function faal(msg: string): never { console.error(`❌ FAAL: ${msg}`); process.exit(1); }
