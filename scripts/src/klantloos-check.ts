@@ -47,17 +47,68 @@ const VERBODEN_IDENTIFIERS = [
 ];
 
 // Rol-context: vergelijking of toewijzing van letterlijk "klant" aan iets dat
-// Achtervoegselregel (taak #935): een regel faalt wanneer links een naam
-// staat die eindigt op "rol"/"Rol" (rol, testRol, gebruikerRol, gebruiker.rol)
-// én rechts de tekst "klant" (beide aanhalingstekens). CRM-/weergavevelden
-// zoals type: "klant", entityType: "klant" en weergave === "klant" vallen
-// hier bewust buiten — geen uitzonderingslijst of markers nodig.
+// Achtervoegselregel: een regel faalt wanneer links een naam staat die eindigt
+// op "rol"/"Rol" (rol, testRol, gebruikerRol, gebruiker.rol) én rechts de
+// tekst "klant" (beide aanhalingstekens). CRM-/weergavevelden zoals
+// type: "klant", entityType: "klant" en weergave === "klant" vallen hier
+// bewust buiten — geen uitzonderingslijst of markers nodig.
 const VERBODEN_ROLPATRONEN = [
   /[\w.$]*[Rr]ol\b\s*(?:===|!==|==|!=)\s*["'`]klant["'`]/,
   /["'`]klant["'`]\s*(?:===|!==|==|!=)\s*[\w.$]*[Rr]ol\b/,
   /[\w.$]*[Rr]ol\b\s*[:=]\s*["'`]klant["'`]/,
   /requireRol\([^)]*["'`]klant["'`]/,
 ];
+
+// Zelf-test: verifieer dat alle verwachte varianten daadwerkelijk matchen
+// vóór het broncode-scannen begint.
+{
+  const positieve: [string, number][] = [
+    // prefix-varianten (rol / Rol — [Rr]ol matcht lowercase 'ol' na R of r)
+    ['rol === "klant"',          0],
+    ['Rol === "klant"',          0],
+    ['"klant" === rol',          1],
+    ['"klant" !== Rol',          1],
+    // object-literal / toewijzing (patroon 2, [:=])
+    ['rol: "klant"',             2],
+    ['Rol: "klant"',             2],
+    ['rol = "klant"',            2],
+    // camelCase-suffix
+    ['gebruikerRol === "klant"', 0],
+    ['testRol !== "klant"',      0],
+    ['userRol === "klant"',      0],
+    ['"klant" === gebruikerRol', 1],
+    ['"klant" !== testRol',      1],
+    ['gebruikerRol: "klant"',    2],
+    ['testRol = "klant"',        2],
+    // dot-notatie
+    ['gebruiker.rol === "klant"',0],
+    ['"klant" === gebruiker.Rol',1],
+    ['gebruiker.rol: "klant"',   2],
+  ];
+
+  const negatieve = [
+    'klant_id === 3',
+    'crm_klanten.find()',
+    'klant_naam',
+    '"klant" in object',
+    'entityType === "klant"',
+    'weergave === "klant"',
+  ];
+
+  for (const [invoer, idx] of positieve) {
+    if (!VERBODEN_ROLPATRONEN[idx].test(invoer)) {
+      console.error(`[klantloos-check] ZELFTEST MISLUKT — patroon[${idx}] herkent niet: ${invoer}`);
+      process.exit(2);
+    }
+  }
+  for (const invoer of negatieve) {
+    const match = VERBODEN_ROLPATRONEN.find((p) => p.test(invoer));
+    if (match) {
+      console.error(`[klantloos-check] ZELFTEST MISLUKT — vals positief op: ${invoer}  [${match}]`);
+      process.exit(2);
+    }
+  }
+}
 
 interface Vondst { file: string; regel: number; tekst: string; patroon: string }
 const vondsten: Vondst[] = [];
