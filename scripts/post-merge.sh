@@ -331,8 +331,16 @@ pnpm --filter @workspace/scripts run seed-profielen
 # vangt merges die buiten die hook om binnenkomen (taakagent-merges).
 # BLOKKEREND: bij een rode typecheck of opmaakschade stopt het script vóór
 # de GitHub-push, zodat een kapot bestand nooit richting productie gaat.
+# Gecontroleerd wordt de VOLLEDIGE door de merge geïntroduceerde range:
+# alles wat GitHub main (presync-ref uit de sync-controle) nog niet heeft.
+# Zonder bruikbare basis (geen presync-ref) valt de controle terug op HEAD.
 _HUIDIGE_STAP="Stap 6b: opmaakschade-controle (merge-mangeling)"
-node scripts/git/check-opmaakschade.mjs HEAD
+_OPMAAK_BASIS=$(git rev-parse -q --verify refs/remotes/fps-presync/main 2>/dev/null || echo "")
+if [ -n "$_OPMAAK_BASIS" ] && git merge-base --is-ancestor "$_OPMAAK_BASIS" HEAD 2>/dev/null; then
+  node scripts/git/check-opmaakschade.mjs "${_OPMAAK_BASIS}..HEAD"
+else
+  node scripts/git/check-opmaakschade.mjs HEAD
+fi
 
 _HUIDIGE_STAP="Stap 6c: volledige workspace-typecheck"
 pnpm run typecheck
@@ -443,6 +451,27 @@ ${CONFLICTING:-onbekend}
         fi
         # LOCAL_SHA bijwerken na merge zodat de log het juiste commit-SHA toont
         LOCAL_SHA=$(git rev-parse HEAD)
+
+        # Taak #938: de zojuist binnengehaalde remote-commits zijn NIET door
+        # stap 6b/6c gegaan — herhaal beide controles vóór de push. Faalt er
+        # één, dan wordt de push geblokkeerd en gaat er een faalmelding uit.
+        set +e
+        node scripts/git/check-opmaakschade.mjs "refs/remotes/fps-postsync/main..HEAD" HEAD && \
+          pnpm run typecheck
+        _NA_MERGE_CHECK_EXIT=$?
+        set -e
+        if [ "$_NA_MERGE_CHECK_EXIT" -ne 0 ]; then
+          echo "====================================================" >&2
+          echo "FOUT: controle na 7a-merge faalt (opmaakschade of typecheck)." >&2
+          echo "De push is NIET uitgevoerd; onderzoek de zojuist gemergde" >&2
+          echo "remote-commits (refs/remotes/fps-postsync/main..HEAD)." >&2
+          echo "====================================================" >&2
+          _stuur_faalmelding \
+            "Stap 7a: controle na remote-merge faalt — push geblokkeerd" \
+            "${LOCAL_SHA}" \
+            "Opmaakschade-controle of typecheck faalde op de na stap 7a binnengehaalde remote-commits. Zie de logs hierboven."
+          exit 1
+        fi
       else
         echo "Lokale commits bevatten alle remote-commits; directe push."
       fi

@@ -10,11 +10,15 @@
 // op te nemen — dan is de groei bewust en wordt de commit doorgelaten.
 //
 // Gebruik:
-//   node scripts/git/check-opmaakschade.mjs <range>...
+//   node scripts/git/check-opmaakschade.mjs <range-of-commit>...
 //   bv. node scripts/git/check-opmaakschade.mjs origin/main..HEAD
 //   of  node scripts/git/check-opmaakschade.mjs HEAD   (alleen die commit)
 //
 // Exit 0 = geen schade gevonden; exit 1 = geblokkeerd (vindplaatsen op stderr).
+//
+// NB: dit is een heuristiek tegen het bekende mangelingspatroon, geen
+// volledige integriteitscontrole — de typecheck-poort ernaast blijft de
+// definitieve detector voor kapotte bestanden.
 
 import { execFileSync } from "node:child_process";
 
@@ -32,24 +36,48 @@ const UITGEZONDERD = [
 ];
 
 function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8" }).trimEnd();
+  return execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 }
 
-const ranges = process.argv.slice(2);
-if (ranges.length === 0) {
-  console.error("[opmaakschade] Gebruik: check-opmaakschade.mjs <range>...");
+const argumenten = process.argv.slice(2);
+if (argumenten.length === 0) {
+  console.error("[opmaakschade] Gebruik: check-opmaakschade.mjs <range-of-commit>...");
   process.exit(2);
 }
 
-// Verzamel de te controleren commits (nieuwste eerst is prima; volgorde boeit niet).
+// Verzamel de te controleren commits.
 const commits = [];
-for (const range of ranges) {
-  const lijst = range.includes("..")
-    ? git("rev-list", range)
-    : git("rev-list", "-n", "1", range);
+for (const arg of argumenten) {
+  const lijst = arg.includes("..")
+    ? git("rev-list", arg)
+    : git("rev-list", "-n", "1", arg);
   for (const sha of lijst.split("\n").filter(Boolean)) {
     if (!commits.includes(sha)) commits.push(sha);
   }
+}
+
+// NUL-veilige parser voor `git diff --numstat -z`.
+// Stream-indeling per entry:
+//   "added\tdeleted\tpad\0"                       (gewoon bestand)
+//   "added\tdeleted\t\0oudpad\0nieuwpad\0"        (rename/copy)
+// Levert { toegevoegd, verwijderd, pad } met het NIEUWE pad bij renames.
+function parseNumstatZ(buf) {
+  const delen = buf.split("\0");
+  const entries = [];
+  for (let i = 0; i < delen.length; i++) {
+    const kop = delen[i];
+    if (!kop) continue;
+    const m = kop.match(/^(-|\d+)\t(-|\d+)\t(.*)$/s);
+    if (!m) continue;
+    let pad = m[3];
+    if (pad === "") {
+      // Rename/copy: volgende twee NUL-velden zijn oud pad en nieuw pad.
+      i += 2;
+      pad = delen[i] ?? "";
+    }
+    entries.push({ toegevoegd: m[1], verwijderd: m[2], pad });
+  }
+  return entries;
 }
 
 let fouten = 0;
@@ -58,17 +86,17 @@ for (const sha of commits) {
   if (boodschap.includes(MARKER)) continue; // bewust aangekondigd
 
   // Per bestand: regels toegevoegd/verwijderd t.o.v. de eerste ouder.
-  // --diff-filter=M: alleen GEWIJZIGDE bestanden; nieuwe of verwijderde
-  // bestanden hebben vanzelfsprekend een groot regelverschil.
+  // --diff-filter=MR: gewijzigde én hernoemde bestanden (een mangeling kan
+  // achter een rename schuilgaan); -M detecteert de rename zodat het
+  // regelverschil over de bestandsinhoud gaat, niet over delete+add.
   // Root-commit (geen ouder) heeft per definitie alleen nieuwe bestanden.
   let numstat;
   try {
-    numstat = git("diff", "--numstat", "--diff-filter=M", `${sha}^`, sha);
+    numstat = git("diff", "--numstat", "-z", "-M", "--diff-filter=MR", `${sha}^`, sha);
   } catch {
     continue;
   }
-  for (const regel of numstat.split("\n").filter(Boolean)) {
-    const [toegevoegd, verwijderd, pad] = regel.split("\t");
+  for (const { toegevoegd, verwijderd, pad } of parseNumstatZ(numstat)) {
     if (toegevoegd === "-" || verwijderd === "-") continue; // binair
     if (UITGEZONDERD.some((re) => re.test(pad))) continue;
     const verschil = Number(toegevoegd) - Number(verwijderd);

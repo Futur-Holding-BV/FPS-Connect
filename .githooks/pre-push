@@ -15,6 +15,9 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
+# $1 = naam van de remote waarheen gepusht wordt (of de URL bij een anonieme push).
+REMOTE_NAAM="${1:-}"
+
 # stdin: <local ref> <local sha> <remote ref> <remote sha> per te pushen ref.
 RANGES=""
 while read -r _local_ref local_sha _remote_ref remote_sha; do
@@ -23,9 +26,18 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac
   case "$remote_sha" in
     0000000000000000000000000000000000000000)
-      # Nieuwe remote-ref: controleer alleen commits die nergens anders al bestaan
-      # (losse SHA's, want de controle-script kent alleen ranges en enkele commits).
-      NIEUWE=$(git rev-list "$local_sha" --not --remotes 2>/dev/null || echo "")
+      # Nieuwe remote-ref: controleer alle commits die deze remote nog niet
+      # kent. Alleen als de doelremote geen trackingrefs heeft, val terug op
+      # alle remote-trackingrefs; als ook die er niet zijn, wordt de hele
+      # bereikbare historie gecontroleerd (rev-list zonder --not).
+      if [ -n "$REMOTE_NAAM" ] && git rev-parse --verify -q "refs/remotes/$REMOTE_NAAM" >/dev/null 2>&1 || \
+         git for-each-ref --count=1 "refs/remotes/$REMOTE_NAAM/*" 2>/dev/null | grep -q .; then
+        NIEUWE=$(git rev-list "$local_sha" --not --remotes="$REMOTE_NAAM/*" 2>/dev/null || echo "")
+      elif git for-each-ref --count=1 "refs/remotes/*" 2>/dev/null | grep -q .; then
+        NIEUWE=$(git rev-list "$local_sha" --not --remotes 2>/dev/null || echo "")
+      else
+        NIEUWE=$(git rev-list "$local_sha" 2>/dev/null || echo "")
+      fi
       RANGES="$RANGES $NIEUWE" ;;
     *)
       RANGES="$RANGES $remote_sha..$local_sha" ;;
