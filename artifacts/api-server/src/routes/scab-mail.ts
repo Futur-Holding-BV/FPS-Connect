@@ -131,6 +131,18 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
   if (mutaties.length === 0) {
     inhoud += "Er zijn geen mutaties voor deze periode.\n";
     inhoud += ondertekening;
+  } else {
+    // Deterministische fallback-body altijd eerst opbouwen; een geslaagde
+    // AI-generatie vervangt hem, een mislukte laat hem intact (nooit een
+    // halve mail zonder mutaties/ondertekening).
+    mutaties.forEach((m) => {
+      const naam = m.medewerkerNaam ?? `medewerker ${m.medewerkerId}`;
+      inhoud += `- ${naam}: ${m.type}`;
+      if (m.omschrijving) inhoud += ` (${m.omschrijving})`;
+      if (m.ingangsdatum) inhoud += `, ingangsdatum ${m.ingangsdatum}`;
+      inhoud += "\n";
+    });
+    inhoud += ondertekening;
   }
 
   if (heeftGateway() && mutaties.length > 0) {
@@ -167,17 +179,8 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
       // werkgevergegevens wordt server-side toegevoegd (nooit aan AI overlaten).
       if (scabResultaat.ok) inhoud = `${scabResultaat.inhoud.replace(/\s+$/, "")}\n${ondertekening}`;
     } catch (err) {
-      req.log.error({ err }, "AI SCAB-mail generatie mislukt, gebruik fallback");
+      req.log.error({ err }, "AI SCAB-mail generatie mislukt, deterministische fallback-body blijft staan");
     }
-  } else if (mutaties.length > 0) {
-    mutaties.forEach((m) => {
-      const naam = m.medewerkerNaam ?? `medewerker ${m.medewerkerId}`;
-      inhoud += `- ${naam}: ${m.type}`;
-      if (m.omschrijving) inhoud += ` (${m.omschrijving})`;
-      if (m.ingangsdatum) inhoud += `, ingangsdatum ${m.ingangsdatum}`;
-      inhoud += "\n";
-    });
-    inhoud += ondertekening;
   }
 
   const [mail] = await db.insert(scabMailsTable).values({

@@ -415,8 +415,8 @@ export const SALARIS_MUTATIES_CONTROLE_PROMPT: AiPrompt = {
 
 export const SCAB_MAIL_GENERATIE_PROMPT: AiPrompt = {
   naam: "scab-mail-generatie",
-  versie: "1.0.0",
-  tekst: "Je bent een Nederlandse HRM-medewerker die professionele e-mails schrijft aan salarisverwerker SCAB over salarismutaties. Schrijf altijd formeel Nederlands. De e-mail bevat een duidelijke opsomming van de mutaties per medewerker. Sluit af met een gebruikelijke ondertekening.",
+  versie: "1.1.0",
+  tekst: "Je bent een Nederlandse HRM-medewerker die professionele e-mails schrijft aan salarisverwerker SCAB over salarismutaties. Schrijf altijd formeel Nederlands. De e-mail bevat een aanhef en een duidelijke opsomming van de mutaties per medewerker. Voeg GEEN afsluiting of ondertekening toe (geen 'Met vriendelijke groet' of naam): de ondertekening wordt door het systeem toegevoegd.",
 };
 
 // ── Veiligheid — toolbox analyse ──────────────────────────────────────────────

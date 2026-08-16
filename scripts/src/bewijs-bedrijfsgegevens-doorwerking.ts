@@ -4,7 +4,7 @@
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-bedrijfsgegevens-doorwerking.ts
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
-import { db, werkgeversTable } from "@workspace/db";
+import { db, werkgeversTable, salarisMutatiesTable, scabMailsTable } from "@workspace/db";
 import {
   setupE2eWachtwoordAccounts,
   E2E_WW_ADMIN_EMAIL,
@@ -65,10 +65,31 @@ async function main() {
     check("ondertekening bevat werkgevernaam", mail.inhoud.includes("Bewijs Doorwerking BV"), mail.inhoud.slice(-160));
     check("ondertekening bevat intern aanspreekpunt", mail.inhoud.includes("I. Intern") && mail.inhoud.includes("intern@fps.local"), mail.inhoud.slice(-160));
     check("geen hardcoded FPS Bouw en Renovatie-ondertekening", !mail.inhoud.includes("FPS Bouw en Renovatie"));
+
+    // Bewijs C: mét mutaties (AI-pad indien beschikbaar) — precies één ondertekening
+    console.log("\nBewijs C: mail mét mutaties heeft precies één ondertekening");
+    await db.insert(salarisMutatiesTable).values({
+      medewerkerNaam: "M. Medewerker",
+      werkmaatschappij: "Bewijs Doorwerking BV",
+      werkgeverId: wg.id,
+      periodeJaar: 2026,
+      periodeMaand: 8,
+      type: "loonsverhoging",
+      omschrijving: "bewijs-doorwerking",
+    });
+    const resp2 = await api("/scab-mails/genereer", {
+      method: "POST",
+      body: JSON.stringify({ werkmaatschappij: "Bewijs Doorwerking BV", werkgever_id: wg.id, periode_jaar: 2026, periode_maand: 8 }),
+    });
+    check("concept met mutaties aangemaakt", resp2.ok, String(resp2.status));
+    const mail2 = await resp2.json() as { inhoud: string };
+    const grootAantal = (mail2.inhoud.match(/[Mm]et vriendelijke groet/g) ?? []).length;
+    check("precies één 'Met vriendelijke groet'", grootAantal === 1, `aantal=${grootAantal}`);
+    check("ondertekening bevat werkgever + intern aanspreekpunt", mail2.inhoud.includes("Bewijs Doorwerking BV") && mail2.inhoud.includes("I. Intern"), mail2.inhoud.slice(-200));
   } finally {
     // Opruimen: concept-mails + testwerkgever
-    const { scabMailsTable } = await import("@workspace/db");
     await db.delete(scabMailsTable).where(eq(scabMailsTable.werkgeverId, wg.id));
+    await db.delete(salarisMutatiesTable).where(eq(salarisMutatiesTable.werkgeverId, wg.id));
     await db.delete(werkgeversTable).where(eq(werkgeversTable.id, wg.id));
   }
 
