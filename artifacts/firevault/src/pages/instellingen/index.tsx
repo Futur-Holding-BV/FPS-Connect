@@ -11,6 +11,15 @@ import { Input } from "@/components/ui/input";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { magIetsImporteren } from "@/lib/import-rechten";
 import { useRol } from "@/context/rol-context";
+import { useGetMijnVoorkeuren } from "@workspace/api-client-react";
+
+const MAIL_SLEUTELS = [
+  "email.planning_melding",
+  "email.reactietermijn_melding",
+  "email.portaal_klantvraag",
+  "email.portaal_ondertekening",
+  "email.portaal_afwijzing",
+] as const;
 
 type InstItem = {
   label: string;
@@ -18,6 +27,7 @@ type InstItem = {
   icoon: React.ComponentType<{ className?: string }>;
   beschrijving: string;
   zichtbaar: boolean;
+  badge?: React.ReactNode;
 };
 
 type Groep = {
@@ -35,6 +45,19 @@ export default function InstellingenPagina() {
   const toonGebruikers = heeftNiveau("gebruikers", 1);
   const toonBibliotheek = heeftNiveau("bibliotheek", 1);
   const toonInkoopStamgegevens = heeftNiveau("offertes", 1);
+
+  const { data: mailVoorkeuren } = useGetMijnVoorkeuren();
+  const aantalMailUitgeschakeld = mailVoorkeuren
+    ? MAIL_SLEUTELS.filter(
+        (s) => (mailVoorkeuren as Record<string, unknown>)[s] === false,
+      ).length
+    : 0;
+  const mailBadge =
+    aantalMailUitgeschakeld > 0 ? (
+      <span className="ml-auto inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300 shrink-0">
+        {aantalMailUitgeschakeld} uit
+      </span>
+    ) : undefined;
 
   const groepen: Groep[] = useMemo(() => [
     {
@@ -358,6 +381,7 @@ export default function InstellingenPagina() {
           icoon: Mail,
           beschrijving: "Kies welke e-mailmeldingen u van het platform wilt ontvangen",
           zichtbaar: true,
+          badge: mailBadge,
         },
         {
           label: "App-informatie",
@@ -368,7 +392,7 @@ export default function InstellingenPagina() {
         },
       ],
     },
-  ], [toonSysteem, toonGebruikers, toonBibliotheek, isHoofdbeheerder]);
+  ], [toonSysteem, toonGebruikers, toonBibliotheek, isHoofdbeheerder, mailBadge]);
 
   const zoekterm = zoek.toLowerCase().trim();
   const gefilterd = groepen
@@ -427,9 +451,12 @@ export default function InstellingenPagina() {
                     <div className="mt-0.5 flex-shrink-0 rounded-md bg-muted p-2 group-hover:bg-background transition-colors">
                       <Icoon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground leading-tight">
-                        {item.label}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground leading-tight">
+                          {item.label}
+                        </span>
+                        {item.badge}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 leading-snug">
                         {item.beschrijving}

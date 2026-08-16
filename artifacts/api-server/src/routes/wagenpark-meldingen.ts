@@ -684,6 +684,7 @@ router.post("/meldingen/:id/doorzetten-garage", requireBevoegdheid("wagenpark", 
         onderwerp: `Voertuigmelding ${typeLabel} — ${voertuigLabel}`,
         html,
         soort: "voertuig_melding_garage",
+        direct: true, // medewerker verstuurt deze mail zelf expliciet via "Doorzetten naar garage"
       });
     } catch (mailErr) {
       // Mail mislukt → status blijft zoals hij was (open), duidelijke fout + werkbak-signaal.

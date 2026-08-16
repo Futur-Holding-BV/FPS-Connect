@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetMijnVoorkeuren, useZetMijnVoorkeur, useVerwijderMijnVoorkeur } from "@workspace/api-client-react";
-import { Bell, BellOff, Mail } from "lucide-react";
+import { Bell, BellOff, Mail, Inbox } from "lucide-react";
 
 // ── Categoriedefinities (zelfde volgorde als MAIL_CATEGORIE_LABELS op de server) ──
 const CATEGORIEEN = [
@@ -134,6 +134,12 @@ export default function MailVoorkeurenPagina() {
                       <span className="text-sm font-medium">{c.titel}</span>
                     </div>
                     <p className="text-xs text-muted-foreground pl-5.5">{c.beschrijving}</p>
+                    {!aan && (
+                      <p className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1 mt-1.5 ml-5.5">
+                        <Inbox className="h-3.5 w-3.5 shrink-0" />
+                        In-app inbox-items voor dit type blijven ongewijzigd beschikbaar in de werkbak.
+                      </p>
+                    )}
                   </div>
                   <Switch
                     checked={aan}
