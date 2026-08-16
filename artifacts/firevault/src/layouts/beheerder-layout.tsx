@@ -195,6 +195,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonWagenpark    = heeftNiveau("wagenpark", 1);
   const toonDeclaraties  = heeftNiveau("declaraties", 1);
   const toonMagazijn  = heeftNiveau("magazijn", 1);
+  const toonOrganisatie = heeftNiveau("organisatie", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
   const magGoedkeurenActies = heeftNiveau("goedkeuring", 3);
@@ -1234,7 +1235,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </TweeTrapsHoofdstuk>
               )}
 
-              {/* Organisatie */}
+              {/* Organisatie — hoofdstuk alleen tonen bij minimaal één zichtbaar item */}
+              {(toonOrganisatie || toonGereedschappen || toonWagenpark) && (
               <TweeTrapsHoofdstuk
                 sleutel="organisatie"
                 titel="Organisatie"
@@ -1283,6 +1285,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
+                    {toonOrganisatie && (<>
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
@@ -1373,8 +1376,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    </>)}
                   </SidebarMenu>
               </TweeTrapsHoofdstuk>
+              )}
 
               {/* Personeel */}
               {(toonPersoneel || isHoofdbeheerder) && (

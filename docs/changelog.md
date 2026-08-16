@@ -1,3 +1,9 @@
+## 2026-08-16 — Sidebar: hoofdstuk Organisatie afgeschermd op rechten
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Naar aanleiding van René's melding dat Ruben (werkvoorbereider) hoofdstukken zag die niet voor hem bestemd zijn: het hoofdstuk Organisatie en de meeste items erin (Verzekeringen, Bedrijfsgegevens, Werkmaatschappijen, Jaarverslagen & Rekeningen, Bedrijfsdocumenten, Documentopmaak, Workflow-designer) werden aan iedereen getoond, zonder rechtencheck. Nu: items alleen bij organisatie-recht (niveau 1+), en het hele hoofdstuk verdwijnt als er geen enkel zichtbaar item is (organisatie, gereedschappen of wagenpark). Berichten/chat is gecontroleerd wél per gebruiker gescheiden (alleen eigen gesprekken). PWA-cache naar v12.
+
 ## 2026-08-16 — Collectieve vrije dagen: verlofsoort automatisch via werkmaatschappij
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
