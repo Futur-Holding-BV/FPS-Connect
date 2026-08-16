@@ -1,3 +1,9 @@
+## 2026-08-16 — Sidebar: Algemene inkoop verplaatst naar onder het laatste hoofdstuk
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Op verzoek van René staat "Algemene inkoop" niet langer als losse post tussen Projectaanpak en Magazijn, maar onder het laatste hoofdstuk (Loon), in dezelfde lettergrootte als de hoofdstukkoppen. PWA-cache opgehoogd naar v6 zodat de wijziging na deploy direct zichtbaar is.
+
 ## 2026-08-16 — PWA toonde oude schermen ondanks nieuwe release (cache v5)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

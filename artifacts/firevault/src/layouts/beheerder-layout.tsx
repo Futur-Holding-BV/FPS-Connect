@@ -556,25 +556,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
               </TweeTrapsHoofdstuk>
 
-              {/* Algemene inkoop (NP_INKOOP_01) — losse post, geen hoofdstuk.
-                  Leveranciers & Artikelen staan onder Instellingen; het
-                  Inkoopoverzicht staat bij Uitvoering (Werkvoorbereiding). */}
-              {toonAlgemeneInkoop && (
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/algemene-inkoop" || location.startsWith("/algemene-inkoop/")}
-                    >
-                      <Link href="/algemene-inkoop">
-                        <ShoppingCart />
-                        <span>Algemene inkoop</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              )}
-
               {/* Magazijn */}
               {toonMagazijn && (
               <TweeTrapsHoofdstuk
@@ -1659,6 +1640,27 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         )}
                       </SidebarMenu>
               </TweeTrapsHoofdstuk>
+              )}
+
+              {/* Algemene inkoop (NP_INKOOP_01) — losse post onder het laatste
+                  hoofdstuk, in dezelfde lettergrootte als de hoofdstukkoppen.
+                  Leveranciers & Artikelen staan onder Instellingen; het
+                  Inkoopoverzicht staat bij Uitvoering (Werkvoorbereiding). */}
+              {toonAlgemeneInkoop && (
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/algemene-inkoop" || location.startsWith("/algemene-inkoop/")}
+                      className="text-xs font-medium text-sidebar-foreground/70"
+                    >
+                      <Link href="/algemene-inkoop">
+                        <ShoppingCart />
+                        <span>Algemene inkoop</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
               )}
 
             </>
