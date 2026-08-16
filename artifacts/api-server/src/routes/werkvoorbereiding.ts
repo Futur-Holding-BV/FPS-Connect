@@ -1749,6 +1749,7 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden", schr
         onderwerp: `Inkoopbon${bon.bonNummer ? ` ${bon.bonNummer}` : ""} — ${opdracht?.titel ?? "FPS Connect"}`,
         html,
         soort: "inkoopbon",
+        direct: true, // medewerker verstuurt de inkoopbon zelf expliciet
         verstuurdDoorId: userId ?? null,
       });
     }

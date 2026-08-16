@@ -26,6 +26,7 @@ type WachtrijItem = {
 
 const STATUS_LABEL: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   wachtend: { label: "Wachtend", variant: "default" },
+  verzenden: { label: "Bezig met verzenden", variant: "secondary" },
   verzonden: { label: "Verzonden", variant: "secondary" },
   afgewezen: { label: "Afgewezen", variant: "outline" },
   mislukt: { label: "Mislukt", variant: "destructive" },

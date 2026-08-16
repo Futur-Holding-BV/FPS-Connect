@@ -1,6 +1,6 @@
 import { logger } from "../lib/logger";
 import { db, mailLogboekTable, mailWachtrijTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 // ── Configuratie ────────────────────────────────────────────────────────────
 // Microsoft 365 via Azure App Registration (OAuth2 client-credentials, Graph
@@ -410,14 +410,28 @@ export async function verstuurMailWachtrijItem(
   id: number,
   verwerktDoorId: number,
 ): Promise<void> {
-  const [item] = await db
-    .select()
-    .from(mailWachtrijTable)
-    .where(eq(mailWachtrijTable.id, id))
-    .limit(1);
-  if (!item) throw new Error("Wachtrij-item niet gevonden");
-  if (item.status !== "wachtend" && item.status !== "mislukt") {
-    throw new Error(`Wachtrij-item is al verwerkt (status: ${item.status})`);
+  // Atomaire claim: alleen wie de status daadwerkelijk omzet mag verzenden.
+  // Voorkomt dat twee beheerders (of een gelijktijdige afwijzing) dezelfde
+  // mail dubbel versturen — de UPDATE slaagt maar voor één van hen.
+  const geclaimd = await db
+    .update(mailWachtrijTable)
+    .set({ status: "verzenden", verwerktDoorId, verwerktOp: new Date() })
+    .where(
+      and(
+        eq(mailWachtrijTable.id, id),
+        inArray(mailWachtrijTable.status, ["wachtend", "mislukt"]),
+      ),
+    )
+    .returning();
+  const item = geclaimd[0];
+  if (!item) {
+    const [bestaand] = await db
+      .select({ status: mailWachtrijTable.status })
+      .from(mailWachtrijTable)
+      .where(eq(mailWachtrijTable.id, id))
+      .limit(1);
+    if (!bestaand) throw new Error("Wachtrij-item niet gevonden");
+    throw new Error(`Wachtrij-item is al verwerkt (status: ${bestaand.status})`);
   }
   const bijlagen = Array.isArray(item.bijlagen)
     ? (item.bijlagen as Array<{ naam: string; contentType: string; inhoudBase64: string }>).map(
@@ -457,17 +471,27 @@ export async function wijsMailWachtrijItemAf(
   id: number,
   verwerktDoorId: number,
 ): Promise<void> {
-  const [item] = await db
-    .select({ status: mailWachtrijTable.status })
-    .from(mailWachtrijTable)
-    .where(eq(mailWachtrijTable.id, id))
-    .limit(1);
-  if (!item) throw new Error("Wachtrij-item niet gevonden");
-  if (item.status === "verzonden") throw new Error("Item is al verzonden");
-  await db
+  // Conditionele afwijzing: alleen vanuit wachtend/mislukt — een item dat
+  // (net) geclaimd of verzonden is, kan niet meer worden afgewezen.
+  const afgewezen = await db
     .update(mailWachtrijTable)
     .set({ status: "afgewezen", verwerktDoorId, verwerktOp: new Date() })
-    .where(eq(mailWachtrijTable.id, id));
+    .where(
+      and(
+        eq(mailWachtrijTable.id, id),
+        inArray(mailWachtrijTable.status, ["wachtend", "mislukt"]),
+      ),
+    )
+    .returning({ id: mailWachtrijTable.id });
+  if (afgewezen.length === 0) {
+    const [bestaand] = await db
+      .select({ status: mailWachtrijTable.status })
+      .from(mailWachtrijTable)
+      .where(eq(mailWachtrijTable.id, id))
+      .limit(1);
+    if (!bestaand) throw new Error("Wachtrij-item niet gevonden");
+    throw new Error(`Item is al verwerkt (status: ${bestaand.status})`);
+  }
 }
 
 async function verstuurMailDirect(opties: {

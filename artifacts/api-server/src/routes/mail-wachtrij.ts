@@ -18,9 +18,27 @@ function sessieUserId(req: { session?: { userId?: number } }): number {
   return req.session?.userId ?? 0;
 }
 
+// CSRF-bescherming voor cookie-geauthenticeerde mutaties: browsers sturen bij
+// cross-site POSTs altijd een Origin-header mee; die moet overeenkomen met de
+// host van dit verzoek. Verzoeken zonder Origin én Referer (curl, scripts met
+// bearer) worden toegestaan — die dragen geen sessiecookie-CSRF-risico.
+import type { Request, Response, NextFunction } from "express";
+function eisSameOrigin(req: Request, res: Response, next: NextFunction): void {
+  const bron = req.get("origin") ?? req.get("referer");
+  if (!bron) return void next();
+  try {
+    const bronHost = new URL(bron).host;
+    const eigenHost = req.get("host") ?? "";
+    if (bronHost === eigenHost) return void next();
+  } catch {
+    // Ongeldige Origin/Referer → weigeren (fail-closed)
+  }
+  res.status(403).json({ error: "Verzoek geweigerd: ongeldige herkomst (CSRF)" });
+}
+
 router.get("/mail-wachtrij", alleenBeheerder, async (req, res) => {
   const status = typeof req.query.status === "string" ? req.query.status : undefined;
-  const geldig = ["wachtend", "verzonden", "afgewezen", "mislukt"];
+  const geldig = ["wachtend", "verzenden", "verzonden", "afgewezen", "mislukt"];
   const rijen = await db
     .select({
       id: mailWachtrijTable.id,
@@ -70,7 +88,7 @@ router.get("/mail-wachtrij", alleenBeheerder, async (req, res) => {
   );
 });
 
-router.post("/mail-wachtrij/:id/verstuur", alleenBeheerder, async (req, res) => {
+router.post("/mail-wachtrij/:id/verstuur", eisSameOrigin, alleenBeheerder, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return void res.status(400).json({ error: "Ongeldig id" });
   try {
@@ -87,7 +105,7 @@ router.post("/mail-wachtrij/:id/verstuur", alleenBeheerder, async (req, res) => 
   }
 });
 
-router.post("/mail-wachtrij/:id/afwijzen", alleenBeheerder, async (req, res) => {
+router.post("/mail-wachtrij/:id/afwijzen", eisSameOrigin, alleenBeheerder, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return void res.status(400).json({ error: "Ongeldig id" });
   try {

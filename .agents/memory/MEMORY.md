@@ -69,6 +69,7 @@
 - [Mobiele biometrische app-lock](mobiele-app-lock.md) — slot rond bearer-sessie; publieke token=null gate't fetch-laag ÉN SyncProvider; centrale gate in _layout (per-scherm redirects omzeilen slot); web vergrendelt nooit; v1 alleen bij opstart.
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [Werk-inbox OAuth scopes & state](werkinbox-oauth-scopes.md) — refresh nooit met scope-param; scope-opslag fail-closed uit token-response; callback sessie-gebonden one-time nonce; redirect-URI vast, nooit uit headers.
+- [Mail-wachtrij goedkeuring](mail-wachtrij.md) — verstuurMail() default naar wachtrij, mens keurt goed; direct:true alleen bij expliciete verstuur-handeling; atomaire claim + dedupe-index; CSRF-guard op POSTs.
 - [Mailguard testdomeinen](mail-testdomein-guard.md) — alle mail-paden onderdrukken test-/voorbeelddomeinen (isTestAdres); e2e-KETEN01 veroorzaakte anders elke run een bounce in de postbus; dev kán mailen.
 - [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
