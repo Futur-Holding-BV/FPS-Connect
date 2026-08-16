@@ -104,7 +104,10 @@ export default function BedrijfsgegevensPagina() {
           website: form.website || undefined,
           boekhouder_naam: form.boekhouder_naam || undefined,
           boekhouder_email: form.boekhouder_email || undefined,
-          scab_email_adres: form.scab_email_adres || undefined,
+          // Leegmaken moet expliciet null sturen: PATCH negeert undefined,
+          // waardoor een oud adres anders blijft staan en de boekhouder-terugval
+          // nooit meer bereikbaar is.
+          scab_email_adres: (form.scab_email_adres ?? "").trim() || null,
           intern_contact_naam: form.intern_contact_naam || undefined,
           intern_contact_email: form.intern_contact_email || undefined,
         } as Parameters<typeof updateWerkgever.mutateAsync>[0]["data"],
