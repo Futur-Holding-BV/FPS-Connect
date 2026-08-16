@@ -249,6 +249,32 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Rood bolletje met aantal voor op de hoofdstukknop (NAV_01).
+  function HoofdstukTelBadge({ aantal }: { aantal: number }) {
+    if (aantal === 0) return null;
+    return (
+      <span
+        className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground group-data-[collapsible=icon]:hidden"
+        aria-label={`${aantal} openstaand`}
+      >
+        {aantal > 99 ? "99+" : aantal}
+      </span>
+    );
+  }
+
+  function CommunicatieHoofdstukBadge() {
+    const { data: gesprekken, refetch } = useListChatGesprekken();
+    useEffect(() => {
+      const timer = setInterval(() => void refetch(), 30000);
+      return () => clearInterval(timer);
+    }, [refetch]);
+    const totaal = (gesprekken ?? []).reduce(
+      (som, g) => som + (g.ongelezen_aantal ?? 0),
+      0,
+    );
+    return <HoofdstukTelBadge aantal={totaal} />;
+  }
+
   function MagazijnKritiekBadge() {
     const { data, refetch } = useGetMagazijnSignalering();
     useEffect(() => {
@@ -722,6 +748,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               {/* Communicatie */}
               <TweeTrapsHoofdstuk
                 sleutel="communicatie"
+                kopExtra={<CommunicatieHoofdstukBadge />}
                 titel="Communicatie"
                 positie={hoofdstukPositie("communicatie")}
                 onVerplaats={verplaatsHoofdstuk}
@@ -1142,6 +1169,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               {toonGoedkeuring && (
               <TweeTrapsHoofdstuk
                 sleutel="goedkeuring"
+                kopExtra={<HoofdstukTelBadge aantal={openGoedkeuringenAantal} />}
                 titel="Goedkeuring"
                 positie={hoofdstukPositie("goedkeuring")}
                 onVerplaats={verplaatsHoofdstuk}

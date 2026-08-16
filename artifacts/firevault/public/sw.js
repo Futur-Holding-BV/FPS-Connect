@@ -5,7 +5,7 @@
 // - API: altijd netwerk, nooit cache
 // LET OP: verhoog het versienummer in CACHE bij elke release zodat oude
 // caches bij activatie worden opgeruimd en de nieuwe build wordt geserveerd.
-const CACHE = "fps-connect-v7";
+const CACHE = "fps-connect-v8";
 
 function isViteDevBestand(url) {
   return (

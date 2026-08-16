@@ -1,3 +1,9 @@
+## 2026-08-16 — Rood teller-bolletje op hoofdstukken Communicatie en Goedkeuring
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De sidebar-hoofdstukken tonen nu direct of er iets op je wacht: Communicatie krijgt een rood bolletje met het aantal ongelezen berichten (ververst elke 30 s), Goedkeuring een rood bolletje met het aantal goedkeuringsaanvragen dat op jouw akkoord wacht (alleen zichtbaar voor wie mag goedkeuren). Zelfde mechanisme als de bestaande magazijn-badge (kopExtra op de hoofdstukknop); werkt ook in de mobiele inklapweergave. PWA-cache naar v8.
+
 ## 2026-08-16 — Stappenplan per hoofdstuk in het sidebar-uitklapvenster
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
