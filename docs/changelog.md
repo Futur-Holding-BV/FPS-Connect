@@ -1,3 +1,9 @@
+## 2026-08-16 — Collectieve vrije dagen: verlofsoort automatisch via werkmaatschappij
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+In de dialog "Collectieve vrije dagen vastleggen" hoeft de verlofsoort niet meer handmatig gekozen te worden: hij wordt automatisch afgeleid uit de gekozen werkgever/werkmaatschappij (collectieve soort van die werkmaatschappij, anders de algemene collectieve soort). Bij precies één kandidaat toont de dialog de soort als tekst "(automatisch via werkmaatschappij)"; alleen bij meerdere kandidaten verschijnt nog een voorgeselecteerde keuzelijst, en bij nul een duidelijke melding. PWA-cache naar v11.
+
 ## 2026-08-16 — Jaarkalender: beheerkaarten naar boven
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

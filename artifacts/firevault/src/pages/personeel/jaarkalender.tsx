@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -399,6 +399,39 @@ function CollectieveVrijeDagenSectie({ jaar, qc }: { jaar: number; qc: ReturnTyp
     setResultaat(null);
   }
 
+  // Verlofsoort automatisch afleiden uit de gekozen werkgever (op verzoek van
+  // René: geen handmatige keuze zolang de werkmaatschappij dit al bepaalt).
+  // Kandidaten: collectieve soorten van de gekozen werkmaatschappij, plus
+  // algemene soorten (zonder werkmaatschappij). Bij "Alle werkgevers" tellen
+  // alle collectieve soorten mee, met voorkeur voor de algemene.
+  const gekozenWerkgeverNaam = useMemo(
+    () => werkgevers.find((w) => String(w.id) === werkgeverId)?.naam ?? null,
+    [werkgevers, werkgeverId],
+  );
+  const kandidaatSoorten = useMemo(() => {
+    if (!gekozenWerkgeverNaam) {
+      const algemeen = collectieveSoorten.filter((v) => !v.werkmaatschappij);
+      return algemeen.length > 0 ? algemeen : collectieveSoorten;
+    }
+    const specifiek = collectieveSoorten.filter(
+      (v) => v.werkmaatschappij && v.werkmaatschappij.toLowerCase() === gekozenWerkgeverNaam.toLowerCase(),
+    );
+    if (specifiek.length > 0) return specifiek;
+    const algemeen = collectieveSoorten.filter((v) => !v.werkmaatschappij);
+    return algemeen.length > 0 ? algemeen : collectieveSoorten;
+  }, [collectieveSoorten, gekozenWerkgeverNaam]);
+
+  useEffect(() => {
+    // Automatisch (her)kiezen zodra de werkgever wijzigt of de kandidaten laden.
+    if (kandidaatSoorten.length === 0) {
+      setVerlofsoortId("");
+      return;
+    }
+    if (!kandidaatSoorten.some((v) => String(v.id) === verlofsoortId)) {
+      setVerlofsoortId(String(kandidaatSoorten[0].id));
+    }
+  }, [kandidaatSoorten, verlofsoortId]);
+
   async function opslaan() {
     const geldig = rijen.filter((r) => r.datum && r.naam.trim());
     if (geldig.length === 0) {
@@ -515,22 +548,6 @@ function CollectieveVrijeDagenSectie({ jaar, qc }: { jaar: number; qc: ReturnTyp
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Verlofsoort (collectief)</Label>
-                <Select value={verlofsoortId} onValueChange={setVerlofsoortId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Kies verlofsoort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {collectieveSoorten.length === 0 ? (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Geen collectieve verlofsoorten gevonden</div>
-                    ) : collectieveSoorten.map((v) => (
-                      <SelectItem key={v.id} value={String(v.id)}>{v.naam}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {werkgevers.length > 0 && (
                 <div className="space-y-2">
                   <Label>Werkgever (optioneel)</Label>
@@ -547,6 +564,31 @@ function CollectieveVrijeDagenSectie({ jaar, qc }: { jaar: number; qc: ReturnTyp
                   </Select>
                 </div>
               )}
+
+              {/* Verlofsoort wordt automatisch bepaald door de werkmaatschappij. */}
+              <div className="space-y-1">
+                <Label>Verlofsoort (collectief)</Label>
+                {kandidaatSoorten.length === 0 ? (
+                  <p className="text-sm text-destructive">
+                    Geen collectieve verlofsoort gevonden. Leg er eerst één vast bij de verlofsoorten (HRM).
+                  </p>
+                ) : kandidaatSoorten.length === 1 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {kandidaatSoorten[0].naam} <span className="text-xs">(automatisch via werkmaatschappij)</span>
+                  </p>
+                ) : (
+                  <Select value={verlofsoortId} onValueChange={setVerlofsoortId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kies verlofsoort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kandidaatSoorten.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>{v.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label>Dagen</Label>
