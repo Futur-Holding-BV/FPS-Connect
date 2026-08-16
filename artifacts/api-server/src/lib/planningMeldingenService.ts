@@ -1,7 +1,7 @@
 // Dagelijkse planning-bewaking voor aanvraag-planningen
 // Stuurt een overzicht van aanstaande / verlopen deadlines naar PL-gebruikers.
 import { db, aanvraagPlanningenTable, gebruikersTable, inboxItemsTable } from "@workspace/db";
-import { eq, and, isNotNull, or, lte, isNull } from "drizzle-orm";
+import { eq, and, isNotNull, lte, isNull } from "drizzle-orm";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurPlanningMelding } from "../services/email";
@@ -30,11 +30,11 @@ async function haalVervallendePlanningen(): Promise<PlanningRegel[]> {
       and(
         isNotNull(aanvraagPlanningenTable.plPlanningDatum),
         lte(aanvraagPlanningenTable.plPlanningDatum, overVier),
-        or(
-          isNull(aanvraagPlanningenTable.meldingVerzondOp),
-          // Opnieuw melden als de vorige melding > 24u geleden is
-          lte(aanvraagPlanningenTable.meldingVerzondOp, new Date(Date.now() - 24 * 3_600_000)),
-        ),
+        // Eén melding per planning: nooit opnieuw mailen zodra er al een
+        // melding is verstuurd. De dagelijkse herhaal-mails (elke 24u opnieuw,
+        // eindeloos voor verlopen planningen) zijn op verzoek van René
+        // verwijderd (15 aug 2026).
+        isNull(aanvraagPlanningenTable.meldingVerzondOp),
       ),
     );
 

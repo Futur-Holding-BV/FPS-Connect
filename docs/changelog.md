@@ -1,3 +1,9 @@
+## 2026-08-15 — Planning-herinneringsmails niet langer dagelijks herhaald
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De dagelijkse "Plannings-herinnering aanvragen"-mail verstuurde élke 24 uur opnieuw een mail voor iedere aanvraag-planning binnen 4 dagen of verlopen — verlopen planningen bleven dus eindeloos dagelijks mailen naar alle gebruikers met offerte-schrijfrecht. Op verzoek van René teruggebracht naar één melding per planning (`meldingVerzondOp` is nu definitief; her-verzendclausule verwijderd in `planningMeldingenService.ts`). Werkt door in productie bij de eerstvolgende deploy.
+
 ## 2026-08-15 — Merge-mangeling uitvoeringsscherm hersteld + workflow-wijziging opnieuw uit pushwachtrij
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
