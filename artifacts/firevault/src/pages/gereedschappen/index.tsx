@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ListCard } from "@/components/ui/list-card";
-import { Plus, Wrench, Search, User, Camera, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
+import { Plus, Wrench, Search, User, Camera, Sparkles, AlertTriangle } from "lucide-react";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -154,6 +154,9 @@ export default function GereedschappenPagina() {
       setFotoUploaden(false);
       setAiLaden(true);
       const voorstel = await analyseAi.mutateAsync({ id: 0, data: { foto_url: object_path } });
+      // Direct invullen: de AI-herkenning gaat meteen het formulier in;
+      // de gebruiker controleert en past aan waar nodig (amber = AI-ingevuld).
+      pasVoorstelToe(voorstel as GereedschapAiVoorstel);
       setAiVoorstel(voorstel as GereedschapAiVoorstel);
     } catch (err) {
       setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
@@ -164,25 +167,26 @@ export default function GereedschappenPagina() {
     }
   }
 
-  function accepteerVoorstel() {
-    if (!aiVoorstel) return;
+  // Vult het formulier direct met de AI-herkenning van de foto. Alleen velden
+  // waar de AI iets over zegt worden gezet; handmatig al ingevulde tekst wordt
+  // niet overschreven door een lege AI-waarde.
+  function pasVoorstelToe(voorstel: GereedschapAiVoorstel) {
     setFormulier((f) => ({
       ...f,
-      omschrijving: aiVoorstel.omschrijving || f.omschrijving,
-      merk: aiVoorstel.merk ?? f.merk,
-      type: aiVoorstel.type ?? f.type,
-      categorie: aiVoorstel.categorie || f.categorie,
-      aandrijving: aiVoorstel.aandrijving || f.aandrijving,
-      met_snoer: aiVoorstel.met_snoer ?? f.met_snoer,
-      accu_inbegrepen: aiVoorstel.accu_inbegrepen ?? f.accu_inbegrepen,
-      lader_inbegrepen: aiVoorstel.lader_inbegrepen ?? f.lader_inbegrepen,
-      koffer_inbegrepen: aiVoorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
-      keuringsplichtig: aiVoorstel.keuringsplichtig ?? f.keuringsplichtig,
-      opmerkingen: aiVoorstel.staat_indicatie
-        ? `Staat bij registratie: ${aiVoorstel.staat_indicatie}`
+      omschrijving: voorstel.omschrijving || f.omschrijving,
+      merk: voorstel.merk ?? f.merk,
+      type: voorstel.type ?? f.type,
+      categorie: voorstel.categorie || f.categorie,
+      aandrijving: voorstel.aandrijving || f.aandrijving,
+      met_snoer: voorstel.met_snoer ?? f.met_snoer,
+      accu_inbegrepen: voorstel.accu_inbegrepen ?? f.accu_inbegrepen,
+      lader_inbegrepen: voorstel.lader_inbegrepen ?? f.lader_inbegrepen,
+      koffer_inbegrepen: voorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
+      keuringsplichtig: voorstel.keuringsplichtig ?? f.keuringsplichtig,
+      opmerkingen: voorstel.staat_indicatie
+        ? `Staat bij registratie: ${voorstel.staat_indicatie}`
         : f.opmerkingen,
     }));
-    setAiVoorstel(null);
   }
 
   function sluitNieuwDialog() {
@@ -361,24 +365,14 @@ export default function GereedschappenPagina() {
                 <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span className="text-xs font-semibold text-amber-800">AI-voorstel op basis van de foto</span>
+                    <span className="text-xs font-semibold text-amber-800">AI heeft het formulier ingevuld op basis van de foto</span>
                   </div>
-                  <div className="text-xs text-amber-900 space-y-0.5">
-                    <p><span className="font-medium">Omschrijving:</span> {aiVoorstel.omschrijving}</p>
-                    {aiVoorstel.merk && <p><span className="font-medium">Merk:</span> {aiVoorstel.merk}</p>}
-                    {aiVoorstel.type && <p><span className="font-medium">Type:</span> {aiVoorstel.type}</p>}
-                    <p><span className="font-medium">Categorie:</span> {aiVoorstel.categorie} &middot; {aiVoorstel.aandrijving}</p>
-                    {aiVoorstel.staat_indicatie && <p><span className="font-medium">Staat:</span> {aiVoorstel.staat_indicatie}</p>}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={accepteerVoorstel}
-                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white w-full"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Voorstel overnemen in formulier
-                  </Button>
+                  <p className="text-xs text-amber-900">
+                    Herkend: {aiVoorstel.omschrijving}
+                    {aiVoorstel.merk ? ` — ${aiVoorstel.merk}` : ""}
+                    {aiVoorstel.type ? ` ${aiVoorstel.type}` : ""}
+                    {" "}({aiVoorstel.categorie} · {aiVoorstel.aandrijving}). Controleer de velden en pas aan waar nodig.
+                  </p>
                 </div>
               )}
             </div>

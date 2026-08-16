@@ -1,3 +1,9 @@
+## 2026-08-16 — Gereedschap-foto vult formulier direct in
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Bij "Foto nemen" in Gereedschap registreren herkent de AI het gereedschap en vult het formulier nu direct in (omschrijving, merk, type, categorie, aandrijving, toebehoren-vinkjes, staat-indicatie in opmerkingen) — geen aparte "voorstel overnemen"-klik meer. Een amber melding toont wat herkend is; de gebruiker controleert en past aan. Handmatig al ingevulde tekst wordt niet overschreven door lege AI-waarden. PWA-cache naar v17.
+
 ## 2026-08-16 — Declaraties automatisch de loonverwerking in
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
