@@ -173,11 +173,11 @@ export default function GereedschappenPagina() {
   function pasVoorstelToe(voorstel: GereedschapAiVoorstel) {
     setFormulier((f) => ({
       ...f,
-      omschrijving: voorstel.omschrijving || f.omschrijving,
-      merk: voorstel.merk ?? f.merk,
-      type: voorstel.type ?? f.type,
-      categorie: voorstel.categorie || f.categorie,
-      aandrijving: voorstel.aandrijving || f.aandrijving,
+      omschrijving: voorstel.omschrijving?.trim() || f.omschrijving,
+      merk: voorstel.merk?.trim() || f.merk,
+      type: voorstel.type?.trim() || f.type,
+      categorie: voorstel.categorie?.trim() || f.categorie,
+      aandrijving: voorstel.aandrijving?.trim() || f.aandrijving,
       met_snoer: voorstel.met_snoer ?? f.met_snoer,
       accu_inbegrepen: voorstel.accu_inbegrepen ?? f.accu_inbegrepen,
       lader_inbegrepen: voorstel.lader_inbegrepen ?? f.lader_inbegrepen,

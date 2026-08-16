@@ -21301,13 +21301,13 @@ export const AnalyseGereedschapFotoResponse = zod.object({
   "omschrijving": zod.string(),
   "merk": zod.string().nullish(),
   "type": zod.string().nullish(),
-  "categorie": zod.string(),
-  "aandrijving": zod.string(),
-  "met_snoer": zod.boolean().optional(),
-  "accu_inbegrepen": zod.boolean().optional(),
-  "lader_inbegrepen": zod.boolean().optional(),
-  "koffer_inbegrepen": zod.boolean().optional(),
-  "keuringsplichtig": zod.boolean().optional(),
+  "categorie": zod.string().nullish(),
+  "aandrijving": zod.string().nullish(),
+  "met_snoer": zod.boolean().nullish(),
+  "accu_inbegrepen": zod.boolean().nullish(),
+  "lader_inbegrepen": zod.boolean().nullish(),
+  "koffer_inbegrepen": zod.boolean().nullish(),
+  "keuringsplichtig": zod.boolean().nullish(),
   "staat_indicatie": zod.string().nullish().describe('AI-beoordeling van de visuele staat van het gereedschap')
 })
 

@@ -10470,13 +10470,13 @@ export interface GereedschapAiVoorstel {
   omschrijving: string;
   merk?: string | null;
   type?: string | null;
-  categorie: string;
-  aandrijving: string;
-  met_snoer?: boolean;
-  accu_inbegrepen?: boolean;
-  lader_inbegrepen?: boolean;
-  koffer_inbegrepen?: boolean;
-  keuringsplichtig?: boolean;
+  categorie?: string | null;
+  aandrijving?: string | null;
+  met_snoer?: boolean | null;
+  accu_inbegrepen?: boolean | null;
+  lader_inbegrepen?: boolean | null;
+  koffer_inbegrepen?: boolean | null;
+  keuringsplichtig?: boolean | null;
   /** AI-beoordeling van de visuele staat van het gereedschap */
   staat_indicatie?: string | null;
 }

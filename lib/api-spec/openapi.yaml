@@ -41338,7 +41338,7 @@ components:
 
     GereedschapAiVoorstel:
       type: object
-      required: [omschrijving, categorie, aandrijving]
+      required: [omschrijving]
       properties:
         omschrijving:
           type: string
@@ -41350,18 +41350,25 @@ components:
           nullable: true
         categorie:
           type: string
+          nullable: true
         aandrijving:
           type: string
+          nullable: true
         met_snoer:
           type: boolean
+          nullable: true
         accu_inbegrepen:
           type: boolean
+          nullable: true
         lader_inbegrepen:
           type: boolean
+          nullable: true
         koffer_inbegrepen:
           type: boolean
+          nullable: true
         keuringsplichtig:
           type: boolean
+          nullable: true
         staat_indicatie:
           type: string
           nullable: true

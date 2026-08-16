@@ -578,13 +578,15 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promi
       omschrijving: typeof voorstel.omschrijving === "string" ? voorstel.omschrijving : "",
       merk: typeof voorstel.merk === "string" ? voorstel.merk : null,
       type: typeof voorstel.type === "string" ? voorstel.type : null,
-      categorie: typeof voorstel.categorie === "string" ? voorstel.categorie : "overig",
-      aandrijving: typeof voorstel.aandrijving === "string" ? voorstel.aandrijving : "handgereedschap",
-      met_snoer: voorstel.met_snoer === true,
-      accu_inbegrepen: voorstel.accu_inbegrepen === true,
-      lader_inbegrepen: voorstel.lader_inbegrepen === true,
-      koffer_inbegrepen: voorstel.koffer_inbegrepen === true,
-      keuringsplichtig: voorstel.keuringsplichtig === true,
+      // Onbekend = null (geen defaults): de client vult het formulier direct in
+      // en mag bestaande invoer alleen overschrijven met écht herkende waarden.
+      categorie: typeof voorstel.categorie === "string" && voorstel.categorie.trim() ? voorstel.categorie : null,
+      aandrijving: typeof voorstel.aandrijving === "string" && voorstel.aandrijving.trim() ? voorstel.aandrijving : null,
+      met_snoer: typeof voorstel.met_snoer === "boolean" ? voorstel.met_snoer : null,
+      accu_inbegrepen: typeof voorstel.accu_inbegrepen === "boolean" ? voorstel.accu_inbegrepen : null,
+      lader_inbegrepen: typeof voorstel.lader_inbegrepen === "boolean" ? voorstel.lader_inbegrepen : null,
+      koffer_inbegrepen: typeof voorstel.koffer_inbegrepen === "boolean" ? voorstel.koffer_inbegrepen : null,
+      keuringsplichtig: typeof voorstel.keuringsplichtig === "boolean" ? voorstel.keuringsplichtig : null,
       staat_indicatie: typeof voorstel.staat_indicatie === "string" ? voorstel.staat_indicatie : null,
     });
   } catch (err) {
