@@ -527,7 +527,7 @@ function SpreadsheetRegelRij({
       onBlur={handleRowBlur}
       className={cn(
         "border-b border-border/40 group transition-colors",
-        editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "hover:bg-muted/30",
+        editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "bg-muted/25 hover:bg-muted/40",
         bezig ? "opacity-50 pointer-events-none" : ""
       )}
     >

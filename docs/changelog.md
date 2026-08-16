@@ -1,3 +1,9 @@
+## 2026-08-16 — Calculatieregels krijgen een lichte achtergrondkleur
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Opgeslagen calculatieregels hebben nu een lichte achtergrondtint zodat ze direct als regel herkenbaar zijn (voorheen waren ze transparant tot je eroverheen bewoog). Bewerken (amber) en muis-over blijven zich onderscheiden. PWA-cache naar v21.
+
 ## 2026-08-16 — Declaraties bij twijfel doorzetten naar een collega-beoordelaar
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
