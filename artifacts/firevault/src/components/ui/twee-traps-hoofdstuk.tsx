@@ -20,8 +20,9 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HOOFDSTUK_STAPPENPLANNEN } from "@/lib/hoofdstuk-stappenplannen";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -67,6 +68,48 @@ function focusbareElementen(container: HTMLElement): HTMLElement[] {
   return Array.from(
     container.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
   ).filter((el) => el.offsetParent !== null);
+}
+
+// ── Stappenplan: uitklapbaar blok bovenin het paneel ────────────────────────
+
+function StappenplanBlok({ sleutel }: { sleutel: string }) {
+  const stappen = HOOFDSTUK_STAPPENPLANNEN[sleutel];
+  const [open, setOpen] = useState(false);
+  if (!stappen || stappen.length === 0) return null;
+  return (
+    <div className="border-b border-sidebar-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring motion-reduce:transition-none"
+      >
+        <ListOrdered className="h-3.5 w-3.5 shrink-0" />
+        <span>Stappenplan</span>
+        <ChevronRight
+          className={cn(
+            "ml-auto h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none",
+            open && "rotate-90",
+          )}
+        />
+      </button>
+      {open && (
+        <ol className="space-y-1.5 px-3 pb-3 pt-0.5">
+          {stappen.map((stap, i) => (
+            <li key={i} className="flex gap-2 text-xs leading-relaxed text-sidebar-foreground/85">
+              <span
+                className="shrink-0 font-semibold tabular-nums"
+                style={{ color: `hsl(var(--hoofdstuk-${sleutel}-sidebar))` }}
+              >
+                {i + 1}.
+              </span>
+              <span>{stap}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
 }
 
 // ── Paneel ──────────────────────────────────────────────────────────────────
@@ -306,6 +349,7 @@ export function TweeTrapsHoofdstuk({
                 {titel}
               </span>
             </div>
+            <StappenplanBlok sleutel={sleutel} />
             <div className="p-1.5">{children}</div>
           </nav>,
           document.body,

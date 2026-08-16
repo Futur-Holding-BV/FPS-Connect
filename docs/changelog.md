@@ -1,3 +1,9 @@
+## 2026-08-16 — Stappenplan per hoofdstuk in het sidebar-uitklapvenster
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Elk sidebar-hoofdstuk (Projectaanpak, Magazijn, Commercie, Communicatie, Veiligheid, Financieel, Goedkeuring, Declaraties, Organisatie, Personeel, Loon) heeft nu een uitklapbaar "Stappenplan"-blok bovenin het tweede uitklapvenster: een genummerde, leesbare volgorde waarin de onderdelen van dat hoofdstuk in de praktijk worden doorlopen. Teksten staan centraal in `lib/hoofdstuk-stappenplannen.ts`; nummering in de hoofdstukkleur. PWA-cache opgehoogd naar v7.
+
 ## 2026-08-16 — Sidebar: Algemene inkoop verplaatst naar onder het laatste hoofdstuk
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
