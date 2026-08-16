@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useListOrgVerzekeringen,
   useCreateOrgVerzekering,
@@ -7,6 +7,9 @@ import {
   useAiSuggestiesOrgVerzekeringen,
   useAiBedrijfsscanOrganisatie,
   useListWerkgevers,
+  useListOrgVerzekeringDocumenten,
+  useUpdateOrgVerzekeringDocument,
+  useDeleteOrgVerzekeringDocument,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,12 @@ import {
   TrendingDown,
   CheckCircle2,
   ChevronRight,
+  FolderOpen,
+  Upload,
+  Download,
+  Archive,
+  ArchiveRestore,
+  FileText,
 } from "lucide-react";
 
 type Verzekering = {
@@ -78,6 +87,202 @@ function PremieFrequentieBadge({ freq }: { freq: string | null | undefined }) {
   return <span className="text-xs text-muted-foreground">{labels[freq ?? ""] ?? "per jaar"}</span>;
 }
 
+const DOC_SOORTEN: Array<{ waarde: string; label: string }> = [
+  { waarde: "polis", label: "Polis" },
+  { waarde: "voorblad", label: "Voorblad" },
+  { waarde: "premie_opbouw", label: "Premie-opbouw" },
+  { waarde: "uitsluitingen", label: "Uitsluitingen" },
+  { waarde: "overig", label: "Overig" },
+];
+const DOC_SOORT_LABELS = Object.fromEntries(DOC_SOORTEN.map((s) => [s.waarde, s.label]));
+
+// Documentenbeheer per verzekering — eigen component zodat de documenten-query
+// alleen draait wanneer de dialoog voor deze polis geopend is.
+function VerzekeringDocumentenDialoog({ verzekering, onSluiten }: { verzekering: Verzekering; onSluiten: () => void }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: documenten = [], isLoading } = useListOrgVerzekeringDocumenten(verzekering.id);
+  const updateDoc = useUpdateOrgVerzekeringDocument();
+  const deleteDoc = useDeleteOrgVerzekeringDocument();
+  const bestandInputRef = useRef<HTMLInputElement>(null);
+  const uploadSoortRef = useRef<string>("overig");
+  const [uploadBezig, setUploadBezig] = useState(false);
+  const [verwijderDocId, setVerwijderDocId] = useState<number | null>(null);
+  const [toonArchief, setToonArchief] = useState(false);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: [`/api/organisatie/verzekeringen/${verzekering.id}/documenten`] });
+
+  const kiesBestand = (soort: string) => {
+    uploadSoortRef.current = soort;
+    bestandInputRef.current?.click();
+  };
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setUploadBezig(true);
+    try {
+      const formData = new FormData();
+      formData.append("bestand", bestand);
+      formData.append("soort", uploadSoortRef.current);
+      const resp = await fetch(`/api/organisatie/verzekeringen/${verzekering.id}/documenten`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!resp.ok) {
+        const fout = await resp.json().catch(() => ({}));
+        throw new Error((fout as { error?: string }).error ?? "Upload mislukt");
+      }
+      invalidate();
+      toast({ title: "Document toegevoegd" });
+    } catch (err) {
+      toast({ title: "Upload mislukt", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    } finally {
+      setUploadBezig(false);
+      if (bestandInputRef.current) bestandInputRef.current.value = "";
+    }
+  }
+
+  const zetArchief = async (docId: number, gearchiveerd: boolean) => {
+    try {
+      await updateDoc.mutateAsync({ id: verzekering.id, docId, data: { gearchiveerd } });
+      invalidate();
+      toast({ title: gearchiveerd ? "Naar archief verplaatst" : "Teruggezet uit archief" });
+    } catch {
+      toast({ title: "Bijwerken mislukt", variant: "destructive" });
+    }
+  };
+
+  const verwijderDoc = async (docId: number) => {
+    try {
+      await deleteDoc.mutateAsync({ id: verzekering.id, docId });
+      invalidate();
+      setVerwijderDocId(null);
+      toast({ title: "Document verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  };
+
+  const actieveDocs = documenten.filter((d) => !d.gearchiveerd);
+  const archiefDocs = documenten.filter((d) => d.gearchiveerd);
+
+  const DocRij = ({ d }: { d: (typeof documenten)[number] }) => (
+    <div className="flex items-center justify-between gap-2 py-1.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-sm truncate">{d.naam}</span>
+        <span className="text-xs text-muted-foreground shrink-0">
+          {new Date(d.aangemaakt_op).toLocaleDateString("nl-NL")}
+        </span>
+      </div>
+      <div className="flex gap-1 shrink-0">
+        <a
+          href={`/api/organisatie/verzekeringen/${verzekering.id}/documenten/${d.id}/download`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Downloaden"
+          className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </a>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          title={d.gearchiveerd ? "Terugzetten uit archief" : "Naar archief"}
+          onClick={() => zetArchief(d.id, !d.gearchiveerd)}
+        >
+          {d.gearchiveerd ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+        </Button>
+        {verwijderDocId === d.id ? (
+          <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={() => verwijderDoc(d.id)}>
+            Zeker?
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            title="Verwijderen"
+            onClick={() => setVerwijderDocId(d.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onSluiten(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Documenten — {TYPE_LABELS[verzekering.type] ?? verzekering.type}</DialogTitle>
+        </DialogHeader>
+        <input ref={bestandInputRef} type="file" className="hidden" onChange={handleUpload} />
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <div className="space-y-4">
+            {DOC_SOORTEN.map((soort) => {
+              const docs = actieveDocs.filter((d) => d.soort === soort.waarde);
+              return (
+                <div key={soort.waarde} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{soort.label}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1.5 text-xs"
+                      disabled={uploadBezig}
+                      onClick={() => kiesBestand(soort.waarde)}
+                    >
+                      {uploadBezig && uploadSoortRef.current === soort.waarde
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Upload className="h-3.5 w-3.5" />}
+                      Uploaden
+                    </Button>
+                  </div>
+                  {docs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground mt-1.5">Nog geen documenten.</p>
+                  ) : (
+                    <div className="divide-y mt-1">{docs.map((d) => <DocRij key={d.id} d={d} />)}</div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="rounded-lg border border-dashed p-3">
+              <button
+                type="button"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground w-full"
+                onClick={() => setToonArchief((v) => !v)}
+              >
+                <Archive className="h-4 w-4" />
+                Archief ({archiefDocs.length})
+                <ChevronRight className={`h-4 w-4 ml-auto transition-transform ${toonArchief ? "rotate-90" : ""}`} />
+              </button>
+              {toonArchief && (
+                archiefDocs.length === 0
+                  ? <p className="text-xs text-muted-foreground mt-1.5">Archief is leeg.</p>
+                  : <div className="divide-y mt-1">{archiefDocs.map((d) => (
+                      <div key={d.id}>
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1.5">{DOC_SOORT_LABELS[d.soort] ?? d.soort}</div>
+                        <DocRij d={d} />
+                      </div>
+                    ))}</div>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const leegForm = {
   type: "",
   omschrijving: "",
@@ -108,6 +313,7 @@ export default function VerzekeringenPagina() {
   const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [form, setForm] = useState({ ...leegForm });
   const [verwijderBevestiging, setVerwijderBevestiging] = useState<number | null>(null);
+  const [documentenPolisId, setDocumentenPolisId] = useState<number | null>(null);
   const [suggesties, setSuggesties] = useState<unknown[]>([]);
   const [suggestiesBezig, setSuggestiesBezig] = useState(false);
   const [scanResultaat, setScanResultaat] = useState<{
@@ -332,6 +538,15 @@ export default function VerzekeringenPagina() {
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Documenten (polis, voorblad, premie-opbouw, uitsluitingen)"
+                      onClick={() => setDocumentenPolisId(p.id)}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openBewerken(p)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
@@ -616,6 +831,13 @@ export default function VerzekeringenPagina() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {documentenPolisId !== null && (() => {
+        const polis = polissen.find((p) => p.id === documentenPolisId);
+        return polis ? (
+          <VerzekeringDocumentenDialoog verzekering={polis} onSluiten={() => setDocumentenPolisId(null)} />
+        ) : null;
+      })()}
     </div>
   );
 }

@@ -321,6 +321,8 @@ INDEX|opnames|opnames_nummer_unique
 INDEX|opnames|opnames_pkey
 INDEX|org_bedrijfsdocumenten|org_bedrijfsdocumenten_pkey
 INDEX|org_jaarverslagen|org_jaarverslagen_pkey
+INDEX|org_verzekering_documenten|org_verzekering_documenten_pkey
+INDEX|org_verzekering_documenten|org_verzekering_documenten_verzekering_idx
 INDEX|org_verzekeringen|org_verzekeringen_pkey
 INDEX|overleggen|overleggen_pkey
 INDEX|overwerk_sloten|overwerk_sloten_pkey
@@ -3436,6 +3438,13 @@ KOLOM|org_jaarverslagen|id|integer|NO|nextval('org_jaarverslagen_id_seq'::regcla
 KOLOM|org_jaarverslagen|omschrijving|text|YES|
 KOLOM|org_jaarverslagen|type|text|NO|
 KOLOM|org_jaarverslagen|vastgesteld_op|text|YES|
+KOLOM|org_verzekering_documenten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|org_verzekering_documenten|bestand_pad|text|NO|
+KOLOM|org_verzekering_documenten|gearchiveerd|boolean|NO|false
+KOLOM|org_verzekering_documenten|id|integer|NO|nextval('org_verzekering_documenten_id_seq'::regclass)
+KOLOM|org_verzekering_documenten|naam|text|NO|
+KOLOM|org_verzekering_documenten|soort|text|NO|'overig'::text
+KOLOM|org_verzekering_documenten|verzekering_id|integer|NO|
 KOLOM|org_verzekeringen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|org_verzekeringen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|org_verzekeringen|eigen_risico|numeric|YES|

@@ -22983,6 +22983,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrgVerzekering"
 
+  /organisatie/verzekeringen/{id}/documenten:
+    get:
+      operationId: listOrgVerzekeringDocumenten
+      tags: [organisatie]
+      summary: Documenten van een verzekering ophalen
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgVerzekeringDocument"
+  /organisatie/verzekeringen/{id}/documenten/{docId}:
+    patch:
+      operationId: updateOrgVerzekeringDocument
+      tags: [organisatie]
+      summary: Verzekeringsdocument bijwerken (soort/naam/archief)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: docId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgVerzekeringDocumentUpdateInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgVerzekeringDocument"
+    delete:
+      operationId: deleteOrgVerzekeringDocument
+      tags: [organisatie]
+      summary: Verzekeringsdocument verwijderen
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: docId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verwijderd]
+                properties:
+                  verwijderd: { type: boolean }
   /organisatie/verzekeringen/ai-suggesties:
     post:
       operationId: aiSuggestiesOrgVerzekeringen
@@ -41335,6 +41404,28 @@ components:
       properties:
         foto_url:
           type: string
+
+    OrgVerzekeringDocument:
+      type: object
+      required: [id, verzekering_id, soort, naam, gearchiveerd, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        verzekering_id: { type: integer }
+        soort:
+          type: string
+          enum: [polis, voorblad, premie_opbouw, uitsluitingen, overig]
+        naam: { type: string }
+        gearchiveerd: { type: boolean }
+        aangemaakt_op: { type: string }
+
+    OrgVerzekeringDocumentUpdateInput:
+      type: object
+      properties:
+        soort:
+          type: string
+          enum: [polis, voorblad, premie_opbouw, uitsluitingen, overig]
+        naam: { type: string }
+        gearchiveerd: { type: boolean }
 
     GereedschapAiVoorstel:
       type: object

@@ -10466,6 +10466,43 @@ export interface GereedschapAiAnalyseInput {
   foto_url: string;
 }
 
+export type OrgVerzekeringDocumentSoort = typeof OrgVerzekeringDocumentSoort[keyof typeof OrgVerzekeringDocumentSoort];
+
+
+export const OrgVerzekeringDocumentSoort = {
+  polis: 'polis',
+  voorblad: 'voorblad',
+  premie_opbouw: 'premie_opbouw',
+  uitsluitingen: 'uitsluitingen',
+  overig: 'overig',
+} as const;
+
+export interface OrgVerzekeringDocument {
+  id: number;
+  verzekering_id: number;
+  soort: OrgVerzekeringDocumentSoort;
+  naam: string;
+  gearchiveerd: boolean;
+  aangemaakt_op: string;
+}
+
+export type OrgVerzekeringDocumentUpdateInputSoort = typeof OrgVerzekeringDocumentUpdateInputSoort[keyof typeof OrgVerzekeringDocumentUpdateInputSoort];
+
+
+export const OrgVerzekeringDocumentUpdateInputSoort = {
+  polis: 'polis',
+  voorblad: 'voorblad',
+  premie_opbouw: 'premie_opbouw',
+  uitsluitingen: 'uitsluitingen',
+  overig: 'overig',
+} as const;
+
+export interface OrgVerzekeringDocumentUpdateInput {
+  soort?: OrgVerzekeringDocumentUpdateInputSoort;
+  naam?: string;
+  gearchiveerd?: boolean;
+}
+
 export interface GereedschapAiVoorstel {
   omschrijving: string;
   merk?: string | null;
@@ -17921,6 +17958,10 @@ status?: string;
 export type LaadBrandstofImport200 = {
   aantalGeladen: number;
   aantalOvergeslagen: number;
+};
+
+export type DeleteOrgVerzekeringDocument200 = {
+  verwijderd: boolean;
 };
 
 export type AiSuggestiesOrgVerzekeringen200 = {

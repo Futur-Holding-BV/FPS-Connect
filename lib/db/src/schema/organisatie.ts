@@ -23,6 +23,20 @@ export const orgVerzekeringenTable = pgTable("org_verzekeringen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Documenten per bedrijfsverzekering — polis, voorblad, premie-opbouw,
+// uitsluitingen of overig; gearchiveerd=true verplaatst naar het archief.
+export const orgVerzekeringDocumentenTable = pgTable("org_verzekering_documenten", {
+  id: serial("id").primaryKey(),
+  verzekeringId: integer("verzekering_id").notNull().references(() => orgVerzekeringenTable.id, { onDelete: "cascade" }),
+  soort: text("soort").notNull().default("overig"),
+  naam: text("naam").notNull(),
+  bestandPad: text("bestand_pad").notNull(),
+  gearchiveerd: boolean("gearchiveerd").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type OrgVerzekeringDocument = typeof orgVerzekeringDocumentenTable.$inferSelect;
+
 // Jaarverslagen & jaarrekeningen per boekjaar
 export const orgJaarverslagenTable = pgTable("org_jaarverslagen", {
   id: serial("id").primaryKey(),

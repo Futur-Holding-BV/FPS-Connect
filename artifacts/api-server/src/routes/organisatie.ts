@@ -6,7 +6,7 @@ import { createHash } from "crypto";
 import { randomUUID } from "crypto";
 import { Readable } from "stream";
 import multer from "multer";
-import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable, appInstellingenTable } from "@workspace/db";
+import { db, orgVerzekeringenTable, orgVerzekeringDocumentenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable, appInstellingenTable } from "@workspace/db";
 import { eq, ne, desc, sql, inArray, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -682,6 +682,160 @@ router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res)
     await db.delete(orgBedrijfsdocumentenTable).where(eq(orgBedrijfsdocumentenTable.id, id));
     res.status(204).end();
   } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verzekeringsdocumenten — per polis: polis/voorblad/premie-opbouw/uitsluitingen/overig ──
+
+const VERZEKERING_DOC_SOORTEN = ["polis", "voorblad", "premie_opbouw", "uitsluitingen", "overig"] as const;
+const VERZEKERING_DOC_PAD_PREFIX = "/objects/algemeen/verzekeringen/";
+
+function isGeldigVerzekeringDocPad(pad: unknown): pad is string {
+  return typeof pad === "string" && pad.startsWith(VERZEKERING_DOC_PAD_PREFIX) && !pad.includes("..");
+}
+
+const mapVerzekeringDocument = (r: typeof orgVerzekeringDocumentenTable.$inferSelect) => ({
+  id: r.id,
+  verzekering_id: r.verzekeringId,
+  soort: r.soort,
+  naam: r.naam,
+  gearchiveerd: r.gearchiveerd,
+  aangemaakt_op: iso(r.aangemaaktOp),
+});
+
+router.get("/organisatie/verzekeringen/:id/documenten", lezen, async (req, res): Promise<void> => {
+  try {
+    const verzekeringId = parseId(req.params.id);
+    const rows = await db
+      .select()
+      .from(orgVerzekeringDocumentenTable)
+      .where(eq(orgVerzekeringDocumentenTable.verzekeringId, verzekeringId))
+      .orderBy(desc(orgVerzekeringDocumentenTable.aangemaaktOp));
+    res.json(rows.map(mapVerzekeringDocument));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/organisatie/verzekeringen/:id/documenten", schrijven, upload.single("bestand"), async (req, res): Promise<void> => {
+  try {
+    const verzekeringId = parseId(req.params.id);
+    const [polis] = await db.select().from(orgVerzekeringenTable).where(eq(orgVerzekeringenTable.id, verzekeringId)).limit(1);
+    if (!polis) return void res.status(404).json({ error: "Verzekering niet gevonden" });
+    if (!req.file) return void res.status(400).json({ error: "bestand is verplicht" });
+
+    const soortRaw = typeof req.body?.soort === "string" ? req.body.soort : "overig";
+    if (!(VERZEKERING_DOC_SOORTEN as readonly string[]).includes(soortRaw)) {
+      return void res.status(400).json({ error: "Ongeldige documentsoort" });
+    }
+    const naam = (typeof req.body?.naam === "string" && req.body.naam.trim())
+      ? req.body.naam.trim()
+      : req.file.originalname;
+
+    const origineel = req.file.originalname ?? "";
+    const ext = origineel.includes(".") ? "." + origineel.split(".").pop()!.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+    const subPath = `algemeen/verzekeringen/${randomUUID()}${ext}`;
+    const bestandPad = await oss.uploadBestand(subPath, req.file.buffer, req.file.mimetype || "application/octet-stream");
+
+    const [rij] = await db
+      .insert(orgVerzekeringDocumentenTable)
+      .values({ verzekeringId, soort: soortRaw, naam, bestandPad })
+      .returning();
+    res.status(201).json(mapVerzekeringDocument(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/organisatie/verzekeringen/:id/documenten/:docId", schrijven, async (req, res): Promise<void> => {
+  try {
+    const verzekeringId = parseId(req.params.id);
+    const docId = parseId(req.params.docId);
+    const { soort, naam, gearchiveerd } = (req.body ?? {}) as { soort?: string; naam?: string; gearchiveerd?: boolean };
+    if (soort !== undefined && !(VERZEKERING_DOC_SOORTEN as readonly string[]).includes(soort)) {
+      return void res.status(400).json({ error: "Ongeldige documentsoort" });
+    }
+    const [rij] = await db
+      .update(orgVerzekeringDocumentenTable)
+      .set({
+        ...(soort !== undefined ? { soort } : {}),
+        ...(naam !== undefined && naam.trim() ? { naam: naam.trim() } : {}),
+        ...(typeof gearchiveerd === "boolean" ? { gearchiveerd } : {}),
+      })
+      .where(and(
+        eq(orgVerzekeringDocumentenTable.id, docId),
+        eq(orgVerzekeringDocumentenTable.verzekeringId, verzekeringId),
+      ))
+      .returning();
+    if (!rij) return void res.status(404).json({ error: "Document niet gevonden" });
+    res.json(mapVerzekeringDocument(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/organisatie/verzekeringen/:id/documenten/:docId", schrijven, async (req, res): Promise<void> => {
+  try {
+    const verzekeringId = parseId(req.params.id);
+    const docId = parseId(req.params.docId);
+    const [rij] = await db
+      .delete(orgVerzekeringDocumentenTable)
+      .where(and(
+        eq(orgVerzekeringDocumentenTable.id, docId),
+        eq(orgVerzekeringDocumentenTable.verzekeringId, verzekeringId),
+      ))
+      .returning();
+    if (!rij) return void res.status(404).json({ error: "Document niet gevonden" });
+    res.json({ verwijderd: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/organisatie/verzekeringen/:id/documenten/:docId/download", lezen, async (req, res): Promise<void> => {
+  try {
+    const verzekeringId = parseId(req.params.id);
+    const docId = parseId(req.params.docId);
+    const [doc] = await db
+      .select()
+      .from(orgVerzekeringDocumentenTable)
+      .where(and(
+        eq(orgVerzekeringDocumentenTable.id, docId),
+        eq(orgVerzekeringDocumentenTable.verzekeringId, verzekeringId),
+      ))
+      .limit(1);
+    if (!doc) return void res.status(404).json({ error: "Document niet gevonden" });
+    if (!isGeldigVerzekeringDocPad(doc.bestandPad)) {
+      req.log.error({ bestandPad: doc.bestandPad }, "Ongeldig bestand_pad in DB — download geweigerd");
+      return void res.status(403).json({ error: "Bestandstoegang geweigerd" });
+    }
+
+    const objectFile = await oss.getObjectEntityFile(doc.bestandPad);
+    const response = await oss.downloadObject(objectFile);
+
+    const veiligeNaam = doc.naam.replace(/[^a-zA-Z0-9\-_.]/g, "_");
+    const ext = doc.bestandPad.includes(".") ? "." + doc.bestandPad.split(".").pop() : "";
+    res.setHeader("Content-Disposition", `attachment; filename="${veiligeNaam}${ext}"`);
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "content-disposition") res.setHeader(key, value);
+    });
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) {
+      return void res.status(404).json({ error: "Bestand niet gevonden in opslag" });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

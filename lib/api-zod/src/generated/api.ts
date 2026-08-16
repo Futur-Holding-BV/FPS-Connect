@@ -28450,6 +28450,61 @@ export const CreateOrgVerzekeringResponse = zod.void()
 
 
 /**
+ * @summary Documenten van een verzekering ophalen
+ */
+export const ListOrgVerzekeringDocumentenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOrgVerzekeringDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "verzekering_id": zod.number(),
+  "soort": zod.enum(['polis', 'voorblad', 'premie_opbouw', 'uitsluitingen', 'overig']),
+  "naam": zod.string(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOrgVerzekeringDocumentenResponse = zod.array(ListOrgVerzekeringDocumentenResponseItem)
+
+
+/**
+ * @summary Verzekeringsdocument bijwerken (soort/naam/archief)
+ */
+export const UpdateOrgVerzekeringDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "docId": zod.coerce.number()
+})
+
+export const UpdateOrgVerzekeringDocumentBody = zod.object({
+  "soort": zod.enum(['polis', 'voorblad', 'premie_opbouw', 'uitsluitingen', 'overig']).optional(),
+  "naam": zod.string().optional(),
+  "gearchiveerd": zod.boolean().optional()
+})
+
+export const UpdateOrgVerzekeringDocumentResponse = zod.object({
+  "id": zod.number(),
+  "verzekering_id": zod.number(),
+  "soort": zod.enum(['polis', 'voorblad', 'premie_opbouw', 'uitsluitingen', 'overig']),
+  "naam": zod.string(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Verzekeringsdocument verwijderen
+ */
+export const DeleteOrgVerzekeringDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "docId": zod.coerce.number()
+})
+
+export const DeleteOrgVerzekeringDocumentResponse = zod.object({
+  "verwijderd": zod.boolean()
+})
+
+
+/**
  * @summary AI-suggesties voor standaard bedrijfsverzekeringen
  */
 export const AiSuggestiesOrgVerzekeringenBody = zod.object({
