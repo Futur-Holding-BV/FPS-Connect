@@ -575,9 +575,9 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promi
     }
 
     return void res.json({
-      omschrijving: typeof voorstel.omschrijving === "string" ? voorstel.omschrijving : "",
-      merk: typeof voorstel.merk === "string" ? voorstel.merk : null,
-      type: typeof voorstel.type === "string" ? voorstel.type : null,
+      omschrijving: typeof voorstel.omschrijving === "string" ? voorstel.omschrijving.trim() : "",
+      merk: typeof voorstel.merk === "string" && voorstel.merk.trim() ? voorstel.merk.trim() : null,
+      type: typeof voorstel.type === "string" && voorstel.type.trim() ? voorstel.type.trim() : null,
       // Onbekend = null (geen defaults): de client vult het formulier direct in
       // en mag bestaande invoer alleen overschrijven met écht herkende waarden.
       categorie: typeof voorstel.categorie === "string" && voorstel.categorie.trim() ? voorstel.categorie : null,
@@ -587,7 +587,7 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promi
       lader_inbegrepen: typeof voorstel.lader_inbegrepen === "boolean" ? voorstel.lader_inbegrepen : null,
       koffer_inbegrepen: typeof voorstel.koffer_inbegrepen === "boolean" ? voorstel.koffer_inbegrepen : null,
       keuringsplichtig: typeof voorstel.keuringsplichtig === "boolean" ? voorstel.keuringsplichtig : null,
-      staat_indicatie: typeof voorstel.staat_indicatie === "string" ? voorstel.staat_indicatie : null,
+      staat_indicatie: typeof voorstel.staat_indicatie === "string" && voorstel.staat_indicatie.trim() ? voorstel.staat_indicatie.trim() : null,
     });
   } catch (err) {
     logger.error({ err }, "gereedschap ai-analyse fout");

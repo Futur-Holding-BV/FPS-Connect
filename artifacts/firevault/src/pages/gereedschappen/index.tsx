@@ -183,8 +183,8 @@ export default function GereedschappenPagina() {
       lader_inbegrepen: voorstel.lader_inbegrepen ?? f.lader_inbegrepen,
       koffer_inbegrepen: voorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
       keuringsplichtig: voorstel.keuringsplichtig ?? f.keuringsplichtig,
-      opmerkingen: voorstel.staat_indicatie
-        ? `Staat bij registratie: ${voorstel.staat_indicatie}`
+      opmerkingen: voorstel.staat_indicatie?.trim()
+        ? `Staat bij registratie: ${voorstel.staat_indicatie.trim()}`
         : f.opmerkingen,
     }));
   }
