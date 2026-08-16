@@ -159,6 +159,9 @@ let _gepland = false;
  * Plant de dagelijkse planning-meldingencheck op 08:00.
  * Veilig om meerdere keren aan te roepen — plant slechts één timer.
  */
+/** @internal Alleen voor tests — niet aanroepen in applicatiecode. */
+export const _testVoerCheckUit = voerCheckUit;
+
 export function planDagelijksePlanningMeldingen(): void {
   if (_gepland) return;
   _gepland = true;
