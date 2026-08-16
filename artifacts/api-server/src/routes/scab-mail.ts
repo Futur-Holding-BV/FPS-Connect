@@ -163,7 +163,9 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
         promptVersie: SCAB_MAIL_GENERATIE_PROMPT.versie,
       });
 
-      if (scabResultaat.ok) inhoud = scabResultaat.inhoud;
+      // AI levert alleen de body; de deterministische ondertekening met de
+      // werkgevergegevens wordt server-side toegevoegd (nooit aan AI overlaten).
+      if (scabResultaat.ok) inhoud = `${scabResultaat.inhoud.replace(/\s+$/, "")}\n${ondertekening}`;
     } catch (err) {
       req.log.error({ err }, "AI SCAB-mail generatie mislukt, gebruik fallback");
     }
@@ -186,8 +188,9 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     onderwerp,
     inhoud,
     // Ontvanger: het SCAB-/aanleveradres van de werkgever; wanneer dat leeg is
-    // valt de mail terug op het e-mailadres van de boekhouder (Bedrijfsgegevens).
-    scabEmailAdres: werkgeverInfo?.scabEmailAdres ?? werkgeverInfo?.boekhouderEmail ?? null,
+    // (null of lege/whitespace-string) valt de mail terug op het e-mailadres
+    // van de boekhouder (Bedrijfsgegevens).
+    scabEmailAdres: werkgeverInfo?.scabEmailAdres?.trim() || werkgeverInfo?.boekhouderEmail?.trim() || null,
     contactpersoon: werkgeverInfo?.boekhouderNaam ?? null,
     status: "concept",
     aantalMutaties: mutaties.length,

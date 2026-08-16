@@ -44,6 +44,7 @@ async function main() {
   const [wg] = await db.insert(werkgeversTable).values({
     naam: "Bewijs Doorwerking BV",
     actief: false,
+    scabEmailAdres: "   ",
     boekhouderNaam: "T. Teller",
     boekhouderEmail: "boekhouder@fps.local",
     internContactNaam: "I. Intern",
@@ -59,7 +60,7 @@ async function main() {
     check("concept aangemaakt", resp.ok, String(resp.status));
     const mail = await resp.json() as { id: number; scab_email_adres?: string | null; scabEmailAdres?: string | null; inhoud: string; contactpersoon?: string | null };
     const ontvanger = mail.scab_email_adres ?? mail.scabEmailAdres ?? null;
-    check("ontvanger = boekhouder_email (fallback)", ontvanger === "boekhouder@fps.local", String(ontvanger));
+    check("ontvanger = boekhouder_email (fallback, ook bij whitespace-scab-adres)", ontvanger === "boekhouder@fps.local", String(ontvanger));
     check("contactpersoon = boekhouder_naam", (mail.contactpersoon ?? null) === "T. Teller", String(mail.contactpersoon));
     check("ondertekening bevat werkgevernaam", mail.inhoud.includes("Bewijs Doorwerking BV"), mail.inhoud.slice(-160));
     check("ondertekening bevat intern aanspreekpunt", mail.inhoud.includes("I. Intern") && mail.inhoud.includes("intern@fps.local"), mail.inhoud.slice(-160));
