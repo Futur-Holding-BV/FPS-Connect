@@ -250,12 +250,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   }
 
   // Rood bolletje met aantal voor op de hoofdstukknop (NAV_01).
-  function HoofdstukTelBadge({ aantal }: { aantal: number }) {
+  function HoofdstukTelBadge({ aantal, label }: { aantal: number; label: string }) {
     if (aantal === 0) return null;
     return (
       <span
-        className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground group-data-[collapsible=icon]:hidden"
-        aria-label={`${aantal} openstaand`}
+        className="ml-1 inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground group-data-[collapsible=icon]:hidden"
+        aria-label={`${aantal} ${label}`}
       >
         {aantal > 99 ? "99+" : aantal}
       </span>
@@ -272,7 +272,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       (som, g) => som + (g.ongelezen_aantal ?? 0),
       0,
     );
-    return <HoofdstukTelBadge aantal={totaal} />;
+    return <HoofdstukTelBadge aantal={totaal} label="ongelezen berichten" />;
   }
 
   function MagazijnKritiekBadge() {
@@ -1169,7 +1169,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               {toonGoedkeuring && (
               <TweeTrapsHoofdstuk
                 sleutel="goedkeuring"
-                kopExtra={<HoofdstukTelBadge aantal={openGoedkeuringenAantal} />}
+                kopExtra={<HoofdstukTelBadge aantal={openGoedkeuringenAantal} label="openstaande goedkeuringen" />}
                 titel="Goedkeuring"
                 positie={hoofdstukPositie("goedkeuring")}
                 onVerplaats={verplaatsHoofdstuk}
