@@ -154,4 +154,5 @@
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.
 - [Procesbalk-patroon Projectaanpak](procesbalk-patroon.md) — ProcesBalk-component + één vervolgknop + ⋯-menu + kaarten Financieel/AI-hulp; screenshot-bewijs eist colorScheme-forcering.
 - [Declaratie→loonketen](declaratie-loonketen.md) — goedkeuren=auto salaris_mutatie; SCAB-verzenden verwerkt alléén snapshot (mutatie_ids), nooit her-query op wm+periode; verzend-overgang atomair.
+- [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
