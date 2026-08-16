@@ -1,3 +1,9 @@
+## 2026-08-16 — Slanker portaal voor uitvoerende veldmedewerkers + rechtencontrole bij onboarding
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Puur uitvoerende veldmedewerkers (alleen functie Monteur, Timmerman, Uitvoerder en/of Onderhoudsmonteur, geen kantoorfunctie) zien in het webportaal de hoofdstukken Projectaanpak, Communicatie en Declaraties niet meer — zij werken vanaf de telefoon; hun modulerechten blijven ongewijzigd (declareren via de app blijft werken). De impersonatie ("Bekijken als persoon") spiegelt dit exact mee via functietitels in de rol-context. Daarnaast kijkt de onboarding-wizard nu actief mee bij de functiestap: wijkt het al gekozen rechtenprofiel van het account af van het standaardprofiel van de functie, dan verschijnt een duidelijke amber waarschuwing (rechten zijn additief — hoogste niveau geldt); komt het overeen, dan een neutrale bevestiging. PWA-cache naar v14.
+
 ## 2026-08-16 — Sidebar: Gereedschappen verplaatst van Organisatie naar Magazijn
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

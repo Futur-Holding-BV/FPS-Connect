@@ -18,6 +18,7 @@ const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";
 type RolContextType = {
   rol: Rol;
   echteRol: Rol;
+  functietitels: string[];
   bevoegdheden: Record<string, number>;
   kanWisselen: boolean;
   persoon: GeimiteerdePersoon | null;
@@ -27,6 +28,7 @@ type RolContextType = {
 const RolContext = createContext<RolContextType>({
   rol: "gebruiker",
   echteRol: "gebruiker",
+  functietitels: [],
   bevoegdheden: {},
   kanWisselen: false,
   persoon: null,
@@ -82,6 +84,13 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
       ? (actievePersoon.bevoegdheden ?? {})
       : echteBevoegdheden;
 
+  // Functietitels van de actieve persoon (bij impersonatie: het teamlid),
+  // zodat de nav ook functie-afhankelijke weergave exact kan spiegelen.
+  const functietitels: string[] =
+    kanWisselen && actievePersoon
+      ? (actievePersoon.functietitels ?? [])
+      : ((gebruiker?.functietitels as string[] | undefined) ?? []);
+
   // Synchroniseer de impersonatie naar de API-client zodat de backend exact
   // dezelfde data filtert als het portaal toont (op basis van het teamlid-id).
   useEffect(() => {
@@ -96,7 +105,7 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <RolContext.Provider
-      value={{ rol, echteRol, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon }}
+      value={{ rol, echteRol, functietitels, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon }}
     >
       {children}
     </RolContext.Provider>

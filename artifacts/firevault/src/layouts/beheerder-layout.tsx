@@ -169,8 +169,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     [navigeer, toast],
   );
   const { heeftNiveau } = useBevoegdheid();
-  const { rol } = useRol();
+  const { rol, functietitels } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
+
+  // Puur uitvoerende veldmedewerkers (monteurs/timmermannen) werken vanaf de
+  // telefoon; het beheerderportaal verbergt voor hen kantoorhoofdstukken die
+  // hun dagelijkse werk overstijgen (Projectaanpak, Communicatie, Declaraties).
+  const UITVOERENDE_FUNCTIES = ["Monteur", "Timmerman", "Uitvoerder", "Onderhoudsmonteur"];
+  const isUitvoerendVeld =
+    !isHoofdbeheerder &&
+    functietitels.length > 0 &&
+    functietitels.every((f) => UITVOERENDE_FUNCTIES.includes(f));
 
   const toonGebouwen      = heeftNiveau("gebouwen", 1);
   const toonCrm           = heeftNiveau("crm", 1);
@@ -367,6 +376,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Projectaanpak — workflow in volgorde */}
+              {!isUitvoerendVeld && (
               <TweeTrapsHoofdstuk
                 sleutel="projectaanpak"
                 titel="Projectaanpak"
@@ -582,6 +592,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     )}
                   </SidebarMenu>
               </TweeTrapsHoofdstuk>
+              )}
 
               {/* Magazijn */}
               {(toonMagazijn || toonGereedschappen) && (
@@ -759,7 +770,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </TweeTrapsHoofdstuk>
               )}
 
-              {/* Communicatie */}
+              {/* Communicatie — verborgen voor puur uitvoerende veldmedewerkers */}
+              {!isUitvoerendVeld && (
               <TweeTrapsHoofdstuk
                 sleutel="communicatie"
                 kopExtra={<CommunicatieHoofdstukBadge />}
@@ -821,6 +833,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         )}
                       </SidebarMenu>
               </TweeTrapsHoofdstuk>
+              )}
 
               {/* Veiligheid */}
               {toonToolboxen && (
@@ -1222,8 +1235,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </TweeTrapsHoofdstuk>
               )}
 
-              {/* Declaraties */}
-              {toonDeclaraties && (
+              {/* Declaraties — veldmedewerkers declareren via de telefoon */}
+              {toonDeclaraties && !isUitvoerendVeld && (
               <TweeTrapsHoofdstuk
                 sleutel="declaraties"
                 titel="Declaraties"

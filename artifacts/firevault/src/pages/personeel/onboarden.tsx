@@ -1681,12 +1681,32 @@ function VastFormulier({
                     <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
                   )}
                   {context.account_profiel_naam ? (
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      Let op: dit account heeft al het rechtenprofiel{" "}
-                      <span className="font-medium">{context.account_profiel_naam}</span>. De rechten
-                      van deze functie komen daar additief bovenop — per module geldt het hoogste
-                      niveau.
-                    </p>
+                    context.account_profiel_naam.trim().toLowerCase() !==
+                    functieProfiel.naam.trim().toLowerCase() ? (
+                      <div
+                        className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 space-y-1"
+                        data-testid="waarschuwing-profiel-afwijking"
+                      >
+                        <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                          Controle toegangsrechten: het gekozen rechtenprofiel{" "}
+                          <span className="font-semibold">{context.account_profiel_naam}</span> wijkt af
+                          van het standaardprofiel <span className="font-semibold">{functieProfiel.naam}</span>{" "}
+                          dat bij deze functie hoort.
+                        </p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          De rechten komen additief bovenop elkaar — per module geldt het hoogste niveau.
+                          Zo kan de medewerker méér zien dan bij de functie past. Kies alleen bewust een
+                          afwijkend profiel; anders laat u het rechtenprofiel bij het account leeg zodat de
+                          rechten uit de functie volgen.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Het rechtenprofiel van het account (
+                        <span className="font-medium">{context.account_profiel_naam}</span>) komt overeen
+                        met het standaardprofiel van deze functie.
+                      </p>
+                    )
                   ) : null}
                   <p className="text-xs text-muted-foreground">Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).</p>
                 </>
