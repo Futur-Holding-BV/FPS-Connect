@@ -23,6 +23,7 @@ import {
 import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
 import { stuurKlantvraagNotificatie, stuurKlantvraagBevestiging, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging, stuurAfwijzingNotificatie, stuurAfwijzingBevestiging } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
+import { magMailSturen } from "../lib/mailVoorkeuren";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
@@ -355,6 +356,7 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
         let naarEmail: string;
         let naarNaam: string | null = null;
 
+        let behandelaarId: number | null = null;
         if (offerte.behandeldDoorId) {
           const [beheerder] = await db
             .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
@@ -363,6 +365,7 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
           if (beheerder) {
             naarEmail = beheerder.email;
             naarNaam = beheerder.naam;
+            behandelaarId = offerte.behandeldDoorId;
           } else {
             naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
           }
@@ -388,7 +391,12 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
           req.log.warn(logErr, "Activiteit loggen mislukt (vraag, niet-kritiek)");
         });
 
-        // Notificatiemail naar behandelaar
+        // Notificatiemail naar behandelaar — respecteer e-mailvoorkeur (fail-open).
+        const magKlantvraagMail =
+          behandelaarId === null || (await magMailSturen(behandelaarId, "email.portaal_klantvraag"));
+        if (!magKlantvraagMail) {
+          req.log.info({ behandelaarId }, "Klantvraag-notificatie overgeslagen: gebruiker heeft e-mail uitgeschakeld");
+        } else
         await stuurKlantvraagNotificatie({
           naarEmail,
           naarNaam,
@@ -620,6 +628,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
         let naarNaam: string | null = null;
         let contactpersoonNaam: string | null = null;
 
+        let ondertekeningBehandelaarId: number | null = null;
         if (offerte.behandeldDoorId) {
           const [beheerder] = await db
             .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
@@ -629,6 +638,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
             naarEmail = beheerder.email;
             naarNaam = beheerder.naam;
             contactpersoonNaam = beheerder.naam;
+            ondertekeningBehandelaarId = offerte.behandeldDoorId;
           } else {
             naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
           }
@@ -641,6 +651,16 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
 
+        // Respecteer e-mailvoorkeur behandelaar (fail-open).
+        const magOndertekeningMail =
+          ondertekeningBehandelaarId === null ||
+          (await magMailSturen(ondertekeningBehandelaarId, "email.portaal_ondertekening"));
+        if (!magOndertekeningMail) {
+          req.log.info(
+            { behandelaarId: ondertekeningBehandelaarId },
+            "Ondertekening-notificatie overgeslagen: gebruiker heeft e-mail uitgeschakeld",
+          );
+        } else
         await stuurOndertekeningNotificatie({
           naarEmail,
           naarNaam,
@@ -784,6 +804,7 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
 
         let naarEmail: string;
         let naarNaam: string | null = null;
+        let afwijzingBehandelaarId: number | null = null;
 
         if (offerte.behandeldDoorId) {
           const [beheerder] = await db
@@ -793,6 +814,7 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
           if (beheerder) {
             naarEmail = beheerder.email;
             naarNaam = beheerder.naam;
+            afwijzingBehandelaarId = offerte.behandeldDoorId;
           } else {
             naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
           }
@@ -805,6 +827,16 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
 
+        // Respecteer e-mailvoorkeur behandelaar (fail-open).
+        const magAfwijzingMail =
+          afwijzingBehandelaarId === null ||
+          (await magMailSturen(afwijzingBehandelaarId, "email.portaal_afwijzing"));
+        if (!magAfwijzingMail) {
+          req.log.info(
+            { behandelaarId: afwijzingBehandelaarId },
+            "Afwijzing-notificatie overgeslagen: gebruiker heeft e-mail uitgeschakeld",
+          );
+        } else
         await stuurAfwijzingNotificatie({
           naarEmail,
           naarNaam,

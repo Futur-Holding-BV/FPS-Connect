@@ -7,6 +7,7 @@ import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurReactietermijnMelding } from "../services/email";
+import { filterMailOntvangers } from "./mailVoorkeuren";
 
 interface VerstrekenRapport {
   rapport_id: number;
@@ -52,7 +53,7 @@ async function haalVerstrekenRapporten(): Promise<VerstrekenRapport[]> {
     });
 }
 
-async function haalBeheerderOntvangers(): Promise<Array<{ naam: string; email: string }>> {
+async function haalBeheerderOntvangers(): Promise<Array<{ id: number; naam: string; email: string }>> {
   const gebruikers = await db
     .select({
       id: gebruikersTable.id,
@@ -71,7 +72,7 @@ async function haalBeheerderOntvangers(): Promise<Array<{ naam: string; email: s
   return gebruikers.filter((g) => {
     const bev = effectief.get(g.id) ?? {};
     return (bev["rapportages"] ?? 0) >= 2 && g.email;
-  }) as Array<{ naam: string; email: string }>;
+  }) as Array<{ id: number; naam: string; email: string }>;
 }
 
 async function voerCheckUit(): Promise<void> {
@@ -90,7 +91,7 @@ async function voerCheckUit(): Promise<void> {
     return;
   }
 
-  let ontvangers: Array<{ naam: string; email: string }>;
+  let ontvangers: Array<{ id: number; naam: string; email: string }>;
   try {
     ontvangers = await haalBeheerderOntvangers();
   } catch (err) {
@@ -103,7 +104,16 @@ async function voerCheckUit(): Promise<void> {
     return;
   }
 
-  for (const ontvanger of ontvangers) {
+  // Respecteer per-gebruiker e-mailvoorkeur (fail-open: geen voorkeur = versturen).
+  const gefilterd = await filterMailOntvangers(ontvangers, "email.reactietermijn_melding");
+  if (gefilterd.length < ontvangers.length) {
+    logger.info(
+      { totaal: ontvangers.length, verstuurd: gefilterd.length },
+      "Reactietermijn-signalering: deel ontvangers heeft e-mail uitgeschakeld",
+    );
+  }
+
+  for (const ontvanger of gefilterd) {
     try {
       await stuurReactietermijnMelding({
         naarEmail: ontvanger.email,

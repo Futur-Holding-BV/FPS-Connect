@@ -3405,3 +3405,13 @@ Rechten: bestaande separatie gehandhaafd — bekijken vereist bibliotheek:1 (ong
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-only, geen backend-wijzigingen)
 
 Offerte-studio (`offertes/studio.tsx`), opdracht-detail (`opdrachten/detail.tsx`) en opname-detail (`opname/detail.tsx`) volgen nu hetzelfde koppatroon als de calculatie-detailpagina. Verwijderd: de inline status-Select, de losse Intrekken-knop en de losse "Versie opslaan"/"PDF downloaden"-knoppen uit de studio-header; de losse "Nacalculatie PDF" en "AI-chat"-knoppen uit de opdrachtkop. Toegevoegd: één vervolgstap-knop (`data-testid="knop-volgende-stap"`) per pagina (studio: Verzenden/Bekeken/Accepteren/Heropenen op basis van status; opdracht: Afronden met AlertDialog-bevestiging), plus een ⋯-dropdown (`data-testid="knop-meer-acties"`) met alle overige acties en destructieve acties achter separator. Schrijfacties gegate op `heeftNiveau(module, 2)`, annuleren/verwijderen op niveau 4. Opname krijgt `useBevoegdheid` + `kanSchrijven`-gate op de spots-aanmaken-knop. Bewijsscript in `scripts/src/bewijs-fase2-procesbalk-screenshot.ts` (licht + donker, drie pagina's).
+
+## 2026-08-16 — Per-gebruiker instelbare e-mailmeldingen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Gebruikers kunnen nu per categorie kiezen welke e-mailmeldingen ze ontvangen. Nieuw mechanisme loopt via het bestaande `gebruiker_voorkeuren`-systeem (PANEEL_01 §4.4) — geen extra tabel. Fail-open: geen voorkeur opgeslagen = mails gaan door zoals voorheen. Alleen expliciet `false` = niet versturen. Kritieke berichten (uitnodiging, wachtwoord-reset) vallen bewust buiten dit mechanisme.
+
+**Backend:** nieuw `lib/mailVoorkeuren.ts` met `magMailSturen(userId, categorie)` en `filterMailOntvangers(gebruikers, categorie)`. Vijf categorieën: `email.planning_melding`, `email.reactietermijn_melding`, `email.portaal_klantvraag`, `email.portaal_ondertekening`, `email.portaal_afwijzing`. Geïntegreerd in `planningMeldingenService.ts` (bulk-filter voor ontvangers), `reactietermijnSignalering.ts` (bulk-filter), en `portaal.ts` (per-behandelaar check bij klantvraag/ondertekening/afwijzing). Wanneer geen bekende `behandeldDoorId`, valt portaal terug op de gedeelde postbus — fail-open, altijd versturen.
+
+**Frontend:** nieuwe pagina `/mijn/mail-voorkeuren` met schakelaar per categorie, zichtbaar via de instellingen-pagina onder "E-mailmeldingen". Route geregistreerd in `connect-routes.tsx`.

@@ -353,6 +353,13 @@ export default function InstellingenPagina() {
           zichtbaar: true,
         },
         {
+          label: "E-mailmeldingen",
+          pad: "/mijn/mail-voorkeuren",
+          icoon: Mail,
+          beschrijving: "Kies welke e-mailmeldingen u van het platform wilt ontvangen",
+          zichtbaar: true,
+        },
+        {
           label: "App-informatie",
           pad: "/info",
           icoon: Info,

@@ -5,6 +5,7 @@ import { eq, and, isNotNull, lte, isNull } from "drizzle-orm";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurPlanningMelding } from "../services/email";
+import { filterMailOntvangers } from "./mailVoorkeuren";
 
 interface PlanningRegel {
   planning_id: number;
@@ -68,7 +69,7 @@ async function haalVervallendePlanningen(): Promise<PlanningRegel[]> {
     });
 }
 
-async function haalPlOntvangers(): Promise<Array<{ naam: string; email: string }>> {
+async function haalPlOntvangers(): Promise<Array<{ id: number; naam: string; email: string }>> {
   const gebruikers = await db
     .select({
       id: gebruikersTable.id,
@@ -87,7 +88,7 @@ async function haalPlOntvangers(): Promise<Array<{ naam: string; email: string }
   return gebruikers.filter((g) => {
     const bev = effectief.get(g.id) ?? {};
     return (bev["offertes"] ?? 0) >= 2 && g.email;
-  }) as Array<{ naam: string; email: string }>;
+  }) as Array<{ id: number; naam: string; email: string }>;
 }
 
 async function voerCheckUit(): Promise<void> {
@@ -106,7 +107,7 @@ async function voerCheckUit(): Promise<void> {
     return;
   }
 
-  let ontvangers: Array<{ naam: string; email: string }>;
+  let ontvangers: Array<{ id: number; naam: string; email: string }>;
   try {
     ontvangers = await haalPlOntvangers();
   } catch (err) {
@@ -119,7 +120,16 @@ async function voerCheckUit(): Promise<void> {
     return;
   }
 
-  for (const ontvanger of ontvangers) {
+  // Respecteer per-gebruiker e-mailvoorkeur (fail-open: geen voorkeur = versturen).
+  const gefilterd = await filterMailOntvangers(ontvangers, "email.planning_melding");
+  if (gefilterd.length < ontvangers.length) {
+    logger.info(
+      { totaal: ontvangers.length, verstuurd: gefilterd.length },
+      "Planning-meldingen: deel ontvangers heeft e-mail uitgeschakeld",
+    );
+  }
+
+  for (const ontvanger of gefilterd) {
     try {
       await stuurPlanningMelding({ naarEmail: ontvanger.email, naarNaam: ontvanger.naam, planningen });
     } catch (err) {
