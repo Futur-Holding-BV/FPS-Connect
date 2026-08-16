@@ -33316,6 +33316,12 @@ export const ListDeclaratiesResponseItem = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33360,6 +33366,12 @@ export const GetDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33397,6 +33409,12 @@ export const UpdateDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33436,6 +33454,63 @@ export const IndieningDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Actieve beoordelaars voor de doorzet-keuzelijst (niveau 3+, exclusief uzelf)
+ */
+export const ListDeclaratieBeoordelaarsResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string()
+})
+export const ListDeclaratieBeoordelaarsResponse = zod.array(ListDeclaratieBeoordelaarsResponseItem)
+
+
+/**
+ * @summary Zet een ingediende declaratie door naar een andere beoordelaar
+ */
+export const DoorzettenDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DoorzettenDeclaratieBody = zod.object({
+  "gebruiker_id": zod.number(),
+  "toelichting": zod.string().optional(),
+  "verwacht_doorgezet_naar": zod.number().nullish().describe('Optimistische vergrendeling — huidige doorgezet_naar volgens de client (null = nog niet doorgezet); bij afwijking volgt 409.')
+})
+
+export const DoorzettenDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33465,6 +33540,12 @@ export const GoedkeurenDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33498,6 +33579,12 @@ export const AfwijzenDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33527,6 +33614,12 @@ export const VerwerkenDeclaratieResponse = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),
@@ -33578,6 +33671,12 @@ export const ListMijnDeclaratiesResponseItem = zod.object({
   "beoordeeld_door": zod.number().nullish(),
   "beoordeeld_door_naam": zod.string().nullish(),
   "afwijzingsreden": zod.string().nullish(),
+  "doorgezet_naar": zod.number().nullish(),
+  "doorgezet_naar_naam": zod.string().nullish(),
+  "doorgezet_door": zod.number().nullish(),
+  "doorgezet_door_naam": zod.string().nullish(),
+  "doorgezet_op": zod.string().nullish(),
+  "doorzet_toelichting": zod.string().nullish(),
   "verwerking_op": zod.string().nullish(),
   "verwerkt_door": zod.number().nullish(),
   "bijlage_pad": zod.string().nullish(),

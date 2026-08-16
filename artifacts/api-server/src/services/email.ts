@@ -54,7 +54,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1904,6 +1904,38 @@ export async function stuurDeclaratieIngediendMail(opties: {
     await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "declaratie_ingediend" });
   } catch {
     // Stille fout — declaratie is al opgeslagen
+  }
+}
+
+export async function stuurDeclaratieDoorgezetMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  declaratieId: number;
+  medewerkernaam: string;
+  doorgezetDoorNaam: string;
+  toelichting?: string | null;
+  categorie: string;
+  bedragCents: number;
+  dashboardUrl?: string | null;
+}): Promise<void> {
+  const bedragTekst = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedragCents / 100);
+  const onderwerp = `Declaratie #${opties.declaratieId} aan u doorgezet — ${bedragTekst}`;
+  const html = mailShell({
+    titel: "Declaratie aan u doorgezet",
+    kopje: `Declaratie #${opties.declaratieId} — ${escapeHtml(opties.categorie)} — ${bedragTekst}`,
+    paragrafen: [
+      `${escapeHtml(opties.doorgezetDoorNaam)} heeft de declaratie van ${escapeHtml(opties.medewerkernaam)} aan u doorgezet ter beoordeling.`,
+      ...(opties.toelichting ? [`Toelichting: ${escapeHtml(opties.toelichting)}`] : []),
+      opties.dashboardUrl
+        ? "Gebruik de knop hieronder om de declaratie te bekijken en goed te keuren of af te wijzen."
+        : "Log in op FPS Connect om de declaratie te beoordelen.",
+    ],
+    ...(opties.dashboardUrl ? { knop: { label: "Bekijk declaratie", link: opties.dashboardUrl } } : {}),
+  });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "declaratie_doorgezet" });
+  } catch {
+    // Stille fout — doorzetten is al opgeslagen
   }
 }
 

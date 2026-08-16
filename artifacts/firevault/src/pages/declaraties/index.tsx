@@ -59,6 +59,11 @@ function DeclaratieRij({ declaratie }: { declaratie: Declaratie }) {
             <span className="font-medium text-sm">{declaratie.medewerker_naam}</span>
             <Badge variant="secondary" className="text-xs">{categorieTekst(declaratie.categorie)}</Badge>
             {statusBadge(declaratie.status)}
+            {declaratie.status === "ingediend" && declaratie.doorgezet_naar_naam && (
+              <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-200">
+                Doorgezet naar {declaratie.doorgezet_naar_naam}
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground text-xs mt-0.5 truncate">{declaratie.omschrijving}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Datum: {declaratie.datum}</p>

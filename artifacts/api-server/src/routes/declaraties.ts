@@ -14,6 +14,7 @@ import { heeftNiveau } from "@workspace/permissies";
 import {
   stuurDeclaratieIngediendMail,
   stuurDeclaratieAfgewezenMail,
+  stuurDeclaratieDoorgezetMail,
 } from "../services/email";
 
 const router = Router();
@@ -75,6 +76,11 @@ async function enrichDeclaratie(rij: typeof declaratiesTable.$inferSelect) {
     beoordeeld_door_naam = await gebruikerNaam(rij.beoordeeldDoor);
   }
 
+  let doorgezet_naar_naam: string | null = null;
+  if (rij.doorgezetNaar) doorgezet_naar_naam = await gebruikerNaam(rij.doorgezetNaar);
+  let doorgezet_door_naam: string | null = null;
+  if (rij.doorgezetDoor) doorgezet_door_naam = await gebruikerNaam(rij.doorgezetDoor);
+
   return {
     id:                   rij.id,
     medewerker_id:        rij.medewerkerId,
@@ -89,6 +95,12 @@ async function enrichDeclaratie(rij: typeof declaratiesTable.$inferSelect) {
     beoordeeld_door:      rij.beoordeeldDoor,
     beoordeeld_door_naam,
     afwijzingsreden:      rij.afwijzingsreden,
+    doorgezet_naar:       rij.doorgezetNaar,
+    doorgezet_naar_naam,
+    doorgezet_door:       rij.doorgezetDoor,
+    doorgezet_door_naam,
+    doorgezet_op:         rij.doorgezetOp?.toISOString() ?? null,
+    doorzet_toelichting:  rij.doorzetToelichting,
     verwerking_op:        rij.verwerkingOp?.toISOString() ?? null,
     verwerkt_door:        rij.verwerktDoor,
     bijlage_pad:          rij.bijlagePad,
@@ -167,6 +179,98 @@ router.post("/declaraties", ...eigenGegevens, async (req, res) => {
     .returning();
 
   res.status(201).json(await enrichDeclaratie(rij));
+});
+
+// ── GET /declaraties/beoordelaars ─────────────────────────────────────────────
+// Actieve gebruikers die declaraties mogen beoordelen (niveau 3 of hoofd-
+// beheerder) — voor de doorzet-keuzelijst. Moet vóór /declaraties/:id staan.
+router.get("/declaraties/beoordelaars", beoordelen, async (req, res) => {
+  const userId = req.session.userId!;
+  const alleGebruikers = await db
+    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.actief, true));
+
+  const beoordelaars = alleGebruikers
+    .filter((g) => g.id !== userId)
+    .filter((g) => g.rol === "hoofdbeheerder" || heeftNiveau((g.bevoegdheden as Record<string, number> | null) ?? {}, "declaraties", 3))
+    .map((g) => ({ id: g.id, naam: g.naam }))
+    .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
+
+  res.json(beoordelaars);
+});
+
+// ── POST /declaraties/:id/doorzetten ─────────────────────────────────────────
+// Beoordelaar zet een ingediende declaratie bij twijfel door naar een andere
+// beoordelaar; die krijgt een mail en ziet de declaratie gemarkeerd staan.
+// De status blijft "ingediend" — goedkeuren/afwijzen verloopt via de normale
+// knoppen en blijft voor élke beoordelaar mogelijk (doorzetten is een signaal,
+// geen vergrendeling).
+router.post("/declaraties/:id/doorzetten", beoordelen, async (req, res) => {
+  const id     = Number(req.params["id"]);
+  const userId = req.session.userId!;
+  const naarId = Number(req.body?.gebruiker_id);
+  const toelichting = typeof req.body?.toelichting === "string" ? req.body.toelichting.trim() || null : null;
+  // Optimistische vergrendeling: de client stuurt mee naar wie de declaratie
+  // volgens zijn scherm nú is doorgezet (null = nog niet doorgezet). Wijkt de
+  // werkelijkheid af (collega was net eerder), dan 409 i.p.v. stil overschrijven.
+  const verwachtRaw = req.body?.verwacht_doorgezet_naar;
+  const verwacht: number | null = verwachtRaw === null || verwachtRaw === undefined ? null : Number(verwachtRaw);
+  if (verwacht !== null && (!Number.isInteger(verwacht) || verwacht <= 0)) { res.status(400).json({ bericht: "verwacht_doorgezet_naar is ongeldig" }); return; }
+
+  if (!Number.isInteger(naarId) || naarId <= 0) { res.status(400).json({ bericht: "gebruiker_id is verplicht" }); return; }
+  if (naarId === userId) { res.status(422).json({ bericht: "U kunt een declaratie niet aan uzelf doorzetten" }); return; }
+
+  const [huidig] = await db.select().from(declaratiesTable).where(eq(declaratiesTable.id, id)).limit(1);
+  if (!huidig) { res.status(404).json({ bericht: "Niet gevonden" }); return; }
+  if (huidig.status !== "ingediend") { res.status(422).json({ bericht: "Alleen ingediende declaraties kunnen worden doorgezet" }); return; }
+
+  // Doel moet een actieve beoordelaar zijn (fail-closed)
+  const [doel] = await db
+    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol, actief: gebruikersTable.actief })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, naarId))
+    .limit(1);
+  const doelMagBeoordelen = doel?.actief && (doel.rol === "hoofdbeheerder" || heeftNiveau((doel.bevoegdheden as Record<string, number> | null) ?? {}, "declaraties", 3));
+  if (!doel || !doelMagBeoordelen) { res.status(422).json({ bericht: "Gekozen gebruiker kan geen declaraties beoordelen" }); return; }
+
+  const [bijgewerkt] = await db
+    .update(declaratiesTable)
+    .set({
+      doorgezetNaar:      naarId,
+      doorgezetDoor:      userId,
+      doorgezetOp:        new Date(),
+      doorzetToelichting: toelichting,
+      bijgewerktOp:       new Date(),
+    })
+    .where(and(
+      eq(declaratiesTable.id, id),
+      eq(declaratiesTable.status, "ingediend"),
+      sql`${declaratiesTable.doorgezetNaar} IS NOT DISTINCT FROM ${verwacht}`,
+    ))
+    .returning();
+  if (!bijgewerkt) { res.status(409).json({ bericht: "Deze declaratie is intussen al door een collega doorgezet of gewijzigd. Ververs de pagina en probeer opnieuw." }); return; }
+
+  try {
+    const verrijkt = await enrichDeclaratie(bijgewerkt);
+    const basis = publiekeAppUrl();
+    await stuurDeclaratieDoorgezetMail({
+      naarEmail:         doel.email,
+      naarNaam:          doel.naam,
+      declaratieId:      id,
+      medewerkernaam:    verrijkt.medewerker_naam,
+      doorgezetDoorNaam: await gebruikerNaam(userId),
+      toelichting,
+      categorie:         huidig.categorie,
+      bedragCents:       huidig.bedragTotaalCents,
+      dashboardUrl:      basis ? `${basis}/declaraties/${id}` : null,
+    });
+    res.json(verrijkt);
+    return;
+  } catch {
+    // mail-fouten blokkeren de flow niet
+  }
+  res.json(await enrichDeclaratie(bijgewerkt));
 });
 
 // ── GET /declaraties/:id ──────────────────────────────────────────────────────

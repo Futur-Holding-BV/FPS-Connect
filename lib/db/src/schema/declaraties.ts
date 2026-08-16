@@ -12,6 +12,12 @@ export const declaratiesTable = pgTable("declaraties", {
   beoordeeldOp:      timestamp("beoordeeld_op"),
   beoordeeldDoor:    integer("beoordeeld_door"),
   afwijzingsreden:   text("afwijzingsreden"),
+  // Doorzetten: beoordelaar zet een ingediende declaratie bij twijfel door
+  // naar een andere beoordelaar (migratie 0057).
+  doorgezetNaar:     integer("doorgezet_naar"),
+  doorgezetDoor:     integer("doorgezet_door"),
+  doorgezetOp:       timestamp("doorgezet_op"),
+  doorzetToelichting: text("doorzet_toelichting"),
   verwerkingOp:      timestamp("verwerking_op"),
   verwerktDoor:      integer("verwerkt_door"),
   bijlagePad:        text("bijlage_pad"),

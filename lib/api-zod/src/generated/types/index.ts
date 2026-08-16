@@ -284,6 +284,8 @@ export * from './declaratie';
 export * from './declaratieAfwijzingInput';
 export * from './declaratiebeleid';
 export * from './declaratiebeleidInput';
+export * from './declaratieBeoordelaar';
+export * from './declaratieDoorzettenInput';
 export * from './declaratieInput';
 export * from './declaratieInputCategorie';
 export * from './declaratieStatus';

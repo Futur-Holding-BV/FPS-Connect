@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, Receipt, CheckCircle, XCircle, Banknote, Edit, Trash2, Send } from "lucide-react";
+import { ArrowLeft, Receipt, CheckCircle, XCircle, Banknote, Edit, Trash2, Send, Forward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,9 @@ import {
   useGoedkeurenDeclaratie,
   useAfwijzenDeclaratie,
   useVerwerkenDeclaratie,
+  useDoorzettenDeclaratie,
+  useListDeclaratieBeoordelaars,
+  getListDeclaratieBeoordelaarsQueryKey,
   type DeclaratieInputCategorie,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -74,9 +77,18 @@ export default function DeclaratieDetailPagina() {
   const { mutateAsync: keur_goed, isPending: keurGoedBezig } = useGoedkeurenDeclaratie();
   const { mutateAsync: wijs_af, isPending: wijstAf } = useAfwijzenDeclaratie();
   const { mutateAsync: verwerk, isPending: verwerktBezig } = useVerwerkenDeclaratie();
+  const { mutateAsync: zet_door, isPending: zetDoorBezig } = useDoorzettenDeclaratie();
 
   const [bewerkOpen, setBewerkOpen] = useState(false);
   const [afwijsOpen, setAfwijsOpen] = useState(false);
+  const [doorzetOpen, setDoorzetOpen] = useState(false);
+  const [doorzetNaar, setDoorzetNaar] = useState("");
+  const [doorzetToelichting, setDoorzetToelichting] = useState("");
+
+  // Beoordelaars alleen ophalen wanneer de doorzet-dialoog open is
+  const { data: beoordelaars } = useListDeclaratieBeoordelaars({
+    query: { queryKey: getListDeclaratieBeoordelaarsQueryKey(), enabled: doorzetOpen && magBeoordelen },
+  });
   const [verwijderOpen, setVerwijderOpen] = useState(false);
   const [afwijzingsreden, setAfwijzingsreden] = useState("");
 
@@ -126,6 +138,31 @@ export default function DeclaratieDetailPagina() {
     await verwerk({ id });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+  }
+
+  async function doorzetten() {
+    const naarId = Number(doorzetNaar);
+    if (!naarId) return;
+    try {
+      await zet_door({
+        id,
+        data: {
+          gebruiker_id: naarId,
+          verwacht_doorgezet_naar: declaratie?.doorgezet_naar ?? null,
+          ...(doorzetToelichting.trim() ? { toelichting: doorzetToelichting.trim() } : {}),
+        },
+      });
+    } catch {
+      // 409: collega was net eerder — verse gegevens tonen zodat de banner de actuele toewijzing laat zien
+      await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
+      setDoorzetOpen(false);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
+    await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    setDoorzetOpen(false);
+    setDoorzetNaar("");
+    setDoorzetToelichting("");
   }
 
   async function verwijderen() {
@@ -242,6 +279,19 @@ export default function DeclaratieDetailPagina() {
         </Card>
       )}
 
+      {declaratie.doorgezet_naar && declaratie.status === "ingediend" && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="py-3 text-sm text-amber-800">
+            <strong>{declaratie.doorgezet_door_naam ?? "Een beoordelaar"}</strong> heeft deze declaratie doorgezet naar{" "}
+            <strong>{declaratie.doorgezet_naar_naam ?? "een collega"}</strong>
+            {declaratie.doorgezet_op ? ` op ${new Date(declaratie.doorgezet_op).toLocaleDateString("nl-NL")}` : ""}.
+            {declaratie.doorzet_toelichting && (
+              <div className="mt-1">Toelichting: {declaratie.doorzet_toelichting}</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {declaratie.verwerking_op && (
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="py-3 text-sm text-blue-800">
@@ -278,6 +328,10 @@ export default function DeclaratieDetailPagina() {
             <Button variant="destructive" className="gap-2" onClick={() => setAfwijsOpen(true)}>
               <XCircle className="h-4 w-4" />
               Afwijzen
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => setDoorzetOpen(true)}>
+              <Forward className="h-4 w-4" />
+              Doorzetten naar collega
             </Button>
           </>
         )}
@@ -350,6 +404,53 @@ export default function DeclaratieDetailPagina() {
             <Button variant="outline" onClick={() => setBewerkOpen(false)} disabled={isBezig}>Annuleren</Button>
             <Button onClick={opslaanBewerking} disabled={isBezig}>
               {isBezig ? "Opslaan..." : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Doorzetdialoog */}
+      <Dialog open={doorzetOpen} onOpenChange={o => { if (!o) setDoorzetOpen(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Declaratie doorzetten naar collega</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Zet deze declaratie bij twijfel door naar een andere beoordelaar.
+              Die ontvangt een e-mail en ziet de declaratie gemarkeerd staan; goedkeuren of afwijzen blijft daarna gewoon mogelijk.
+            </p>
+            <div>
+              <Label>Doorzetten naar</Label>
+              <Select value={doorzetNaar} onValueChange={setDoorzetNaar}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Kies een beoordelaar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(beoordelaars ?? []).map(b => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {beoordelaars && beoordelaars.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Er zijn geen andere beoordelaars beschikbaar.</p>
+              )}
+            </div>
+            <div>
+              <Label>Toelichting (optioneel)</Label>
+              <Textarea
+                className="mt-1"
+                value={doorzetToelichting}
+                onChange={e => setDoorzetToelichting(e.target.value)}
+                rows={3}
+                placeholder="Bijv. graag jouw oordeel: bedrag valt buiten het beleid..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDoorzetOpen(false)} disabled={zetDoorBezig}>Annuleren</Button>
+            <Button onClick={doorzetten} disabled={zetDoorBezig || !doorzetNaar}>
+              {zetDoorBezig ? "Doorzetten..." : "Doorzetten"}
             </Button>
           </DialogFooter>
         </DialogContent>

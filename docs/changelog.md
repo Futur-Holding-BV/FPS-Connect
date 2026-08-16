@@ -1,3 +1,9 @@
+## 2026-08-16 — Declaraties bij twijfel doorzetten naar een collega-beoordelaar
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Beoordelaars (zoals de administratie) kunnen een ingediende declaratie nu bij twijfel doorzetten naar een andere beoordelaar, bijvoorbeeld de directie. Op de declaratiepagina staat daarvoor de knop "Doorzetten naar collega" met een keuzelijst van actieve beoordelaars (declaraties-niveau 3+ of hoofdbeheerder, uzelf uitgezonderd) en een optionele toelichting. De ontvanger krijgt een e-mail met een link naar de declaratie en ziet in het overzicht een amber label "Doorgezet naar …"; op de detailpagina staat wie de declaratie wanneer heeft doorgezet en waarom. Doorzetten is een signaal, geen vergrendeling: de status blijft "ingediend" en goedkeuren/afwijzen blijft voor elke beoordelaar mogelijk. Fail-closed randen: doorzetten aan uzelf, aan een niet-beoordelaar of van een niet-ingediende declaratie wordt geweigerd (422). Na review verder gehard tegen gelijktijdig doorzetten: de client stuurt de huidige toewijzing mee (optimistische vergrendeling); zetten twee collega's tegelijk door, dan wint er precies één en krijgt de ander een 409 met verzoek te verversen — geen stil overschrijven en geen dubbele, tegenstrijdige mails. Nieuwe kolommen op declaraties (migratie 0057). Bewijs: scripts/src/bewijs-declaratie-doorzetten.ts (17/17 groen, incl. parallelle race-test). PWA-cache naar v20.
+
 ## 2026-08-16 — Bedrijfsgegevens: compactere weergave + velden werken nu écht door
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

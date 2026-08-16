@@ -1281,6 +1281,10 @@ KOLOM|declaraties|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|declaraties|bijlage_pad|text|YES|
 KOLOM|declaraties|categorie|text|NO|
 KOLOM|declaraties|datum|text|NO|
+KOLOM|declaraties|doorgezet_door|integer|YES|
+KOLOM|declaraties|doorgezet_naar|integer|YES|
+KOLOM|declaraties|doorgezet_op|timestamp without time zone|YES|
+KOLOM|declaraties|doorzet_toelichting|text|YES|
 KOLOM|declaraties|id|integer|NO|nextval('declaraties_id_seq'::regclass)
 KOLOM|declaraties|ingediend_op|timestamp without time zone|YES|
 KOLOM|declaraties|medewerker_id|integer|NO|

@@ -16356,6 +16356,18 @@ export interface Declaratie {
   /** @nullable */
   afwijzingsreden?: string | null;
   /** @nullable */
+  doorgezet_naar?: number | null;
+  /** @nullable */
+  doorgezet_naar_naam?: string | null;
+  /** @nullable */
+  doorgezet_door?: number | null;
+  /** @nullable */
+  doorgezet_door_naam?: string | null;
+  /** @nullable */
+  doorgezet_op?: string | null;
+  /** @nullable */
+  doorzet_toelichting?: string | null;
+  /** @nullable */
   verwerking_op?: string | null;
   /** @nullable */
   verwerkt_door?: number | null;
@@ -16363,6 +16375,21 @@ export interface Declaratie {
   bijlage_pad?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+export interface DeclaratieDoorzettenInput {
+  gebruiker_id: number;
+  toelichting?: string;
+  /**
+     * Optimistische vergrendeling — huidige doorgezet_naar volgens de client (null = nog niet doorgezet); bij afwijking volgt 409.
+     * @nullable
+     */
+  verwacht_doorgezet_naar?: number | null;
+}
+
+export interface DeclaratieBeoordelaar {
+  id: number;
+  naam: string;
 }
 
 export type DeclaratieInputCategorie = typeof DeclaratieInputCategorie[keyof typeof DeclaratieInputCategorie];

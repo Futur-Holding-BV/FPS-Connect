@@ -203,6 +203,8 @@ import type {
   DashboardStats,
   Declaratie,
   DeclaratieAfwijzingInput,
+  DeclaratieBeoordelaar,
+  DeclaratieDoorzettenInput,
   DeclaratieInput,
   Declaratiebeleid,
   DeclaratiebeleidInput,
@@ -93405,6 +93407,154 @@ export const useIndieningDeclaratie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getIndieningDeclaratieMutationOptions(options));
+    }
+
+export const getListDeclaratieBeoordelaarsUrl = () => {
+
+
+
+
+  return `/api/declaraties/beoordelaars`
+}
+
+/**
+ * @summary Actieve beoordelaars voor de doorzet-keuzelijst (niveau 3+, exclusief uzelf)
+ */
+export const listDeclaratieBeoordelaars = async ( options?: RequestInit): Promise<DeclaratieBeoordelaar[]> => {
+
+  return customFetch<DeclaratieBeoordelaar[]>(getListDeclaratieBeoordelaarsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeclaratieBeoordelaarsQueryKey = () => {
+    return [
+    `/api/declaraties/beoordelaars`
+    ] as const;
+    }
+
+
+export const getListDeclaratieBeoordelaarsQueryOptions = <TData = Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeclaratieBeoordelaarsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>> = ({ signal }) => listDeclaratieBeoordelaars({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeclaratieBeoordelaarsQueryResult = NonNullable<Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>>
+export type ListDeclaratieBeoordelaarsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Actieve beoordelaars voor de doorzet-keuzelijst (niveau 3+, exclusief uzelf)
+ */
+
+export function useListDeclaratieBeoordelaars<TData = Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeclaratieBeoordelaars>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeclaratieBeoordelaarsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDoorzettenDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}/doorzetten`
+}
+
+/**
+ * @summary Zet een ingediende declaratie door naar een andere beoordelaar
+ */
+export const doorzettenDeclaratie = async (id: number,
+    declaratieDoorzettenInput: DeclaratieDoorzettenInput, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getDoorzettenDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(declaratieDoorzettenInput)
+  }
+);}
+
+
+
+
+export const getDoorzettenDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorzettenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieDoorzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof doorzettenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieDoorzettenInput>}, TContext> => {
+
+const mutationKey = ['doorzettenDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof doorzettenDeclaratie>>, {id: number;data: BodyType<DeclaratieDoorzettenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  doorzettenDeclaratie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DoorzettenDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof doorzettenDeclaratie>>>
+    export type DoorzettenDeclaratieMutationBody = BodyType<DeclaratieDoorzettenInput>
+    export type DoorzettenDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Zet een ingediende declaratie door naar een andere beoordelaar
+ */
+export const useDoorzettenDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorzettenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieDoorzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof doorzettenDeclaratie>>,
+        TError,
+        {id: number;data: BodyType<DeclaratieDoorzettenInput>},
+        TContext
+      > => {
+      return useMutation(getDoorzettenDeclaratieMutationOptions(options));
     }
 
 export const getGoedkeurenDeclaratieUrl = (id: number,) => {

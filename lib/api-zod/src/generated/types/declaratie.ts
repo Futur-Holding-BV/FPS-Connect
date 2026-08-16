@@ -27,6 +27,18 @@ export interface Declaratie {
   /** @nullable */
   afwijzingsreden?: string | null;
   /** @nullable */
+  doorgezet_naar?: number | null;
+  /** @nullable */
+  doorgezet_naar_naam?: string | null;
+  /** @nullable */
+  doorgezet_door?: number | null;
+  /** @nullable */
+  doorgezet_door_naam?: string | null;
+  /** @nullable */
+  doorgezet_op?: string | null;
+  /** @nullable */
+  doorzet_toelichting?: string | null;
+  /** @nullable */
   verwerking_op?: string | null;
   /** @nullable */
   verwerkt_door?: number | null;

@@ -26858,6 +26858,39 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Declaratie' }
 
+  /declaraties/beoordelaars:
+    get:
+      operationId: listDeclaratieBeoordelaars
+      tags: [declaraties]
+      summary: Actieve beoordelaars voor de doorzet-keuzelijst (niveau 3+, exclusief uzelf)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DeclaratieBeoordelaar' }
+
+  /declaraties/{id}/doorzetten:
+    post:
+      operationId: doorzettenDeclaratie
+      tags: [declaraties]
+      summary: Zet een ingediende declaratie door naar een andere beoordelaar
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclaratieDoorzettenInput' }
+      responses:
+        '200':
+          description: Doorgezet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
   /declaraties/{id}/goedkeuren:
     post:
       operationId: goedkeurenDeclaratie
@@ -49402,11 +49435,34 @@ components:
         beoordeeld_door:     { type: ["integer", "null"] }
         beoordeeld_door_naam: { type: ["string", "null"] }
         afwijzingsreden:     { type: ["string", "null"] }
+        doorgezet_naar:      { type: ["integer", "null"] }
+        doorgezet_naar_naam: { type: ["string", "null"] }
+        doorgezet_door:      { type: ["integer", "null"] }
+        doorgezet_door_naam: { type: ["string", "null"] }
+        doorgezet_op:        { type: ["string", "null"] }
+        doorzet_toelichting: { type: ["string", "null"] }
         verwerking_op:       { type: ["string", "null"] }
         verwerkt_door:       { type: ["integer", "null"] }
         bijlage_pad:         { type: ["string", "null"] }
         aangemaakt_op:       { type: string }
         bijgewerkt_op:       { type: string }
+
+    DeclaratieDoorzettenInput:
+      type: object
+      required: [gebruiker_id]
+      properties:
+        gebruiker_id: { type: integer }
+        toelichting:  { type: string }
+        verwacht_doorgezet_naar:
+          type: ["integer", "null"]
+          description: Optimistische vergrendeling — huidige doorgezet_naar volgens de client (null = nog niet doorgezet); bij afwijking volgt 409.
+
+    DeclaratieBeoordelaar:
+      type: object
+      required: [id, naam]
+      properties:
+        id:   { type: integer }
+        naam: { type: string }
 
     DeclaratieInput:
       type: object
