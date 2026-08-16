@@ -584,7 +584,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </TweeTrapsHoofdstuk>
 
               {/* Magazijn */}
-              {toonMagazijn && (
+              {(toonMagazijn || toonGereedschappen) && (
               <TweeTrapsHoofdstuk
                 sleutel="magazijn"
                 titel="Magazijn"
@@ -716,6 +716,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          {toonGereedschappen && (
+                            <SidebarMenuItem className="pl-5">
+                              <SidebarMenuButton
+                                asChild
+                                isActive={location === "/gereedschappen" || location.startsWith("/gereedschappen/")}
+                              >
+                                <Link href="/gereedschappen">
+                                  <Wrench />
+                                  <span>{t("nav.gereedschappen")}</span>
+                                </Link>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          )}
                         </SidebarMenu>
               </TweeTrapsHoofdstuk>
               )}
@@ -1236,7 +1249,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Organisatie — hoofdstuk alleen tonen bij minimaal één zichtbaar item */}
-              {(toonOrganisatie || toonGereedschappen || toonWagenpark) && (
+              {(toonOrganisatie || toonWagenpark) && (
               <TweeTrapsHoofdstuk
                 sleutel="organisatie"
                 titel="Organisatie"
@@ -1246,19 +1259,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 onOpenChange={(open) => setHoofdstukOpen("organisatie", open)}
               >
                   <SidebarMenu>
-                    {toonGereedschappen && (
-                      <SidebarMenuItem className="pl-5">
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/gereedschappen" || location.startsWith("/gereedschappen/")}
-                        >
-                          <Link href="/gereedschappen">
-                            <Wrench />
-                            <span>{t("nav.gereedschappen")}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
                     {toonWagenpark && (
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton

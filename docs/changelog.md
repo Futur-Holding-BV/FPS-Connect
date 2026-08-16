@@ -1,3 +1,9 @@
+## 2026-08-16 — Sidebar: Gereedschappen verplaatst van Organisatie naar Magazijn
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Op verzoek van René staat Gereedschappen nu als item onder het hoofdstuk Magazijn (onderaan, na Picklijsten) in plaats van onder Organisatie. Zichtbaarheid blijft op gereedschappen-recht; het Magazijn-hoofdstuk toont ook voor wie alleen gereedschappen-recht heeft, en Organisatie verschijnt nu alleen nog bij organisatie- of wagenpark-recht. PWA-cache naar v13.
+
 ## 2026-08-16 — Sidebar: hoofdstuk Organisatie afgeschermd op rechten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
