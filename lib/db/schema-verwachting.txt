@@ -3849,6 +3849,7 @@ KOLOM|scab_mails|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|scab_mails|contactpersoon|text|YES|
 KOLOM|scab_mails|id|integer|NO|nextval('scab_mails_id_seq'::regclass)
 KOLOM|scab_mails|inhoud|text|NO|
+KOLOM|scab_mails|mutatie_ids|jsonb|YES|
 KOLOM|scab_mails|onderwerp|text|NO|
 KOLOM|scab_mails|periode_jaar|integer|NO|
 KOLOM|scab_mails|periode_maand|integer|NO|

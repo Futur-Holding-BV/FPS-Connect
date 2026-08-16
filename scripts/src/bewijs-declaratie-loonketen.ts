@@ -136,6 +136,17 @@ async function main(): Promise<void> {
   const mail = (await res.json()) as { id: number };
   // E-mailadres verplicht voor verzenden; testdomein — mailguard onderdrukt echte verzending.
   await db.update(scabMailsTable).set({ scabEmailAdres: "bewijs@fps.local" }).where(eq(scabMailsTable.id, mail.id));
+
+  // BEWIJS C-voorbereiding: declaratie die pas NA het genereren wordt goedgekeurd
+  // (staat dus niet in de mail-snapshot en mag niet mee op "verwerkt").
+  res = await api("/declaraties", {
+    method: "POST",
+    body: JSON.stringify({ categorie: "Overig", omschrijving: "BEWIJS na-genereren", bedrag_totaal_cents: 750, datum: "2026-08-16" }),
+  });
+  const decl3 = (await res.json()) as { id: number };
+  await api(`/declaraties/${decl3.id}/indienen`, { method: "POST" });
+  await api(`/declaraties/${decl3.id}/goedkeuren`, { method: "POST" });
+
   res = await api(`/scab-mails/${mail.id}/verzend`, { method: "POST" });
   if (!res.ok) faal(`scab verzend: ${res.status} ${await res.text()}`);
   console.log(`4. SCAB-mail #${mail.id} verzonden.`);
@@ -145,6 +156,11 @@ async function main(): Promise<void> {
   if (na?.status !== "verwerkt") faal(`declaratie-status is ${na?.status}, verwacht "verwerkt"`);
   if (!na.verwerkingOp) faal("verwerking_op niet gevuld");
   console.log(`5. BEWIJS B: declaratie #${decl.id} staat automatisch op "verwerkt" (door gebruiker ${na.verwerktDoor}).`);
+
+  // BEWIJS C: na-genereren goedgekeurde declaratie blijft "goedgekeurd"
+  const [na3] = await db.select().from(declaratiesTable).where(eq(declaratiesTable.id, decl3.id)).limit(1);
+  if (na3?.status !== "goedgekeurd") faal(`BEWIJS C: declaratie #${decl3.id} heeft status ${na3?.status}, verwacht "goedgekeurd" (stond niet in mail-snapshot)`);
+  console.log(`5b. BEWIJS C: declaratie #${decl3.id} (goedgekeurd ná genereren) blijft "goedgekeurd" — snapshot beschermt tegen meeliften.`);
 
   // 6. Tegenproef: nieuwe declaratie, goedkeuren, alsnog afwijzen → mutatie weg
   res = await api("/declaraties", {
@@ -164,6 +180,8 @@ async function main(): Promise<void> {
 
   // 7. Opruimen
   await db.delete(salarisMutatiesTable).where(eq(salarisMutatiesTable.declaratieId, decl.id));
+  await db.delete(salarisMutatiesTable).where(eq(salarisMutatiesTable.declaratieId, decl3.id));
+  await db.delete(declaratiesTable).where(eq(declaratiesTable.id, decl3.id));
   await db.delete(scabMailsTable).where(eq(scabMailsTable.id, mail.id));
   await db.delete(declaratiesTable).where(eq(declaratiesTable.id, decl.id));
   await db.delete(declaratiesTable).where(eq(declaratiesTable.id, decl2.id));

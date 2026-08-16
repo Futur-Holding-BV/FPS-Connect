@@ -62,6 +62,9 @@ export const scabMailsTable = pgTable("scab_mails", {
   verzondDoorId: integer("verzond_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   verzondDoorNaam: text("verzond_door_naam"),
   aantalMutaties: integer("aantal_mutaties").notNull().default(0),
+  // Snapshot (migratie 0055): ids van de salaris_mutaties die bij het genereren
+  // in deze mail zijn opgenomen. Verzenden verwerkt alléén declaraties uit deze set.
+  mutatieIds: jsonb("mutatie_ids"),
   aiContextJson: jsonb("ai_context_json"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktDoorNaam: text("aangemaakt_door_naam"),

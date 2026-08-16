@@ -172,6 +172,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     contactpersoon: werkgeverInfo?.boekhouderNaam ?? null,
     status: "concept",
     aantalMutaties: mutaties.length,
+    mutatieIds: mutaties.map((m) => m.id),
     aiContextJson: { mutaties: mutaties.length, methode: heeftGateway() ? "gpt-4o" : "fallback" },
     aangemaaktDoorId: sess.userId ?? null,
     aangemaaktDoorNaam: sess.gebruikerNaam ?? null,
@@ -217,29 +218,37 @@ router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Resp
   if (mail.status === "verzonden") return void res.status(409).json({ message: "Al verzonden" });
   if (!mail.scabEmailAdres) return void res.status(422).json({ message: "Geen SCAB-e-mailadres geconfigureerd" });
 
+  // Atomaire statusovergang: alleen de request die de rij daadwerkelijk van
+  // niet-verzonden naar verzonden brengt, gaat door (parallelle klik → 409).
   const [updated] = await db.update(scabMailsTable).set({
     status: "verzonden",
     verzondOp: new Date(),
     verzondDoorId: sess.userId ?? null,
     verzondDoorNaam: sess.gebruikerNaam ?? null,
     bijgewerktOp: new Date(),
-  }).where(eq(scabMailsTable.id, id)).returning();
+  }).where(and(
+    eq(scabMailsTable.id, id),
+    ne(scabMailsTable.status, "verzonden"),
+  )).returning();
+  if (!updated) return void res.status(409).json({ message: "Al verzonden" });
 
   req.log.info({ scabMailId: id, naar: mail.scabEmailAdres }, "SCAB-mail als verzonden gemarkeerd");
 
   // Meegenomen met de loonaanlevering → declaraties automatisch op "verwerkt".
-  // Alle mutaties van deze werkmaatschappij/periode die uit een declaratie
-  // komen (en niet afgekeurd zijn) gelden nu als aangeleverd bij de
-  // loonverwerking; de gekoppelde declaraties hoeven niet meer handmatig
-  // gemarkeerd te worden. Fouten hier blokkeren de verzending niet.
+  // Uitsluitend de mutaties uit de snapshot van deze mail (mutatie_ids,
+  // vastgelegd bij het genereren) tellen mee: een declaratie die ná het
+  // genereren is goedgekeurd stond niet in de verzonden mail en blijft dus
+  // "goedgekeurd" tot een volgende aanlevering. Fouten hier blokkeren de
+  // verzending niet.
   try {
-    const gekoppeld = await db
+    const snapshot = Array.isArray(mail.mutatieIds)
+      ? (mail.mutatieIds as unknown[]).filter((v): v is number => typeof v === "number")
+      : [];
+    const gekoppeld = snapshot.length === 0 ? [] : await db
       .select({ declaratieId: salarisMutatiesTable.declaratieId })
       .from(salarisMutatiesTable)
       .where(and(
-        eq(salarisMutatiesTable.werkmaatschappij, mail.werkmaatschappij),
-        eq(salarisMutatiesTable.periodeJaar, mail.periodeJaar),
-        eq(salarisMutatiesTable.periodeMaand, mail.periodeMaand),
+        inArray(salarisMutatiesTable.id, snapshot),
         isNotNull(salarisMutatiesTable.declaratieId),
         ne(salarisMutatiesTable.status, "afgekeurd"),
       ));
