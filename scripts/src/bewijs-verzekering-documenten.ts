@@ -58,7 +58,7 @@ async function main() {
     fd.append("bestand", new Blob([`inhoud ${naam}`], { type: "application/pdf" }), `${naam}.pdf`);
     fd.append("soort", soort);
     const resp = await api(`/organisatie/verzekeringen/${polis.id}/documenten`, { method: "POST", body: fd });
-    return { status: resp.status, body: await resp.json() };
+    return { status: resp.status, body: (await resp.json()) as { id?: number; soort?: string; error?: string } };
   }
 
   const up1 = await uploadDoc("polis", "polisblad");
