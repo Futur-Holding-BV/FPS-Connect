@@ -10256,6 +10256,7 @@ export const ListWerkgeversResponseItem = zod.object({
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
+  "scab_email_adres": zod.string().nullish().describe('Aanleveradres loonverwerking (SCAB); leeg = terugval op boekhouder_email.'),
   "intern_contact_naam": zod.string().nullish(),
   "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -10295,6 +10296,7 @@ export const CreateWerkgeverBody = zod.object({
   "actief": zod.boolean().optional(),
   "boekhouder_naam": zod.string().optional(),
   "boekhouder_email": zod.string().optional(),
+  "scab_email_adres": zod.string().nullish(),
   "intern_contact_naam": zod.string().optional(),
   "intern_contact_email": zod.string().optional()
 })
@@ -10338,6 +10340,7 @@ export const GetWerkgeverResponse = zod.object({
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
+  "scab_email_adres": zod.string().nullish().describe('Aanleveradres loonverwerking (SCAB); leeg = terugval op boekhouder_email.'),
   "intern_contact_naam": zod.string().nullish(),
   "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -10380,6 +10383,7 @@ export const UpdateWerkgeverBody = zod.object({
   "actief": zod.boolean().optional(),
   "boekhouder_naam": zod.string().optional(),
   "boekhouder_email": zod.string().optional(),
+  "scab_email_adres": zod.string().nullish(),
   "intern_contact_naam": zod.string().optional(),
   "intern_contact_email": zod.string().optional()
 })
@@ -10413,6 +10417,7 @@ export const UpdateWerkgeverResponse = zod.object({
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
+  "scab_email_adres": zod.string().nullish().describe('Aanleveradres loonverwerking (SCAB); leeg = terugval op boekhouder_email.'),
   "intern_contact_naam": zod.string().nullish(),
   "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),

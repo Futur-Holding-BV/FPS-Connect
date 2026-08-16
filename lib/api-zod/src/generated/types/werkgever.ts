@@ -75,6 +75,11 @@ export interface Werkgever {
   boekhouder_naam?: string | null;
   /** @nullable */
   boekhouder_email?: string | null;
+  /**
+     * Aanleveradres loonverwerking (SCAB); leeg = terugval op boekhouder_email.
+     * @nullable
+     */
+  scab_email_adres?: string | null;
   /** @nullable */
   intern_contact_naam?: string | null;
   /** @nullable */

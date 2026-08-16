@@ -33985,6 +33985,9 @@ components:
           type: ["string", "null"]
         boekhouder_email:
           type: ["string", "null"]
+        scab_email_adres:
+          type: ["string", "null"]
+          description: Aanleveradres loonverwerking (SCAB); leeg = terugval op boekhouder_email.
         intern_contact_naam:
           type: ["string", "null"]
         intern_contact_email:
@@ -34054,6 +34057,8 @@ components:
           type: string
         boekhouder_email:
           type: string
+        scab_email_adres:
+          type: ["string", "null"]
         intern_contact_naam:
           type: string
         intern_contact_email:

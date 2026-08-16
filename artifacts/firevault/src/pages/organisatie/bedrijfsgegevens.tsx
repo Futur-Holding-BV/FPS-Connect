@@ -76,6 +76,7 @@ export default function BedrijfsgegevensPagina() {
       website: wg.website ?? "",
       boekhouder_naam: wg.boekhouder_naam ?? "",
       boekhouder_email: wg.boekhouder_email ?? "",
+      scab_email_adres: wg.scab_email_adres ?? "",
       intern_contact_naam: wg.intern_contact_naam ?? "",
       intern_contact_email: wg.intern_contact_email ?? "",
     });
@@ -103,6 +104,7 @@ export default function BedrijfsgegevensPagina() {
           website: form.website || undefined,
           boekhouder_naam: form.boekhouder_naam || undefined,
           boekhouder_email: form.boekhouder_email || undefined,
+          scab_email_adres: form.scab_email_adres || undefined,
           intern_contact_naam: form.intern_contact_naam || undefined,
           intern_contact_email: form.intern_contact_email || undefined,
         } as Parameters<typeof updateWerkgever.mutateAsync>[0]["data"],
@@ -274,6 +276,11 @@ export default function BedrijfsgegevensPagina() {
                   <Label>E-mail boekhouder</Label>
                   <Input value={form.boekhouder_email ?? ""} onChange={(e) => setForm((p) => ({ ...p, boekhouder_email: e.target.value }))} type="email" />
                 </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label>Aanleveradres loonverwerking (SCAB)</Label>
+                  <Input value={form.scab_email_adres ?? ""} onChange={(e) => setForm((p) => ({ ...p, scab_email_adres: e.target.value }))} type="email" placeholder="Leeg = loonaanlevering gaat naar de boekhouder" />
+                  <p className="text-xs text-muted-foreground">De maandelijkse loonaanlevering gaat naar dit adres; is het leeg, dan wordt het e-mailadres van de boekhouder gebruikt.</p>
+                </div>
               </div>
             </div>
             <Separator />
@@ -323,6 +330,7 @@ export default function BedrijfsgegevensPagina() {
               <div className="space-y-0">
                 <VeldRij label="Naam" waarde={wg.boekhouder_naam} />
                 <VeldRij label="E-mail" waarde={wg.boekhouder_email} />
+                <VeldRij label="SCAB-aanleveradres" waarde={wg.scab_email_adres} />
               </div>
             </div>
             <div>

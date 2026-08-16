@@ -62,6 +62,8 @@ export interface WerkgeverInput {
   actief?: boolean;
   boekhouder_naam?: string;
   boekhouder_email?: string;
+  /** @nullable */
+  scab_email_adres?: string | null;
   intern_contact_naam?: string;
   intern_contact_email?: string;
 }

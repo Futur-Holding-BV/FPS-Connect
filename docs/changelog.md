@@ -1,3 +1,9 @@
+## 2026-08-16 — SCAB-aanleveradres invulbaar op Bedrijfsgegevens
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Het aanleveradres voor de loonverwerking (SCAB) was nergens in de interface in te vullen, terwijl de loonaanlevering er wél op terugvalt. Op Organisatie → Bedrijfsgegevens staat nu per werkmaatschappij onder "Boekhouder" het veld "Aanleveradres loonverwerking (SCAB)", met uitleg dat een leeg veld terugvalt op het e-mailadres van de boekhouder. Het veld wordt ook getoond in de leesweergave. PWA-cache naar v22.
+
 ## 2026-08-16 — Calculatieregels krijgen een lichte achtergrondkleur
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -130,6 +130,7 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   actief: w.actief,
   boekhouder_naam: w.boekhouderNaam ?? null,
   boekhouder_email: w.boekhouderEmail ?? null,
+  scab_email_adres: w.scabEmailAdres ?? null,
   intern_contact_naam: w.internContactNaam ?? null,
   intern_contact_email: w.internContactEmail ?? null,
   aangemaakt_op: iso(w.aangemaaktOp),
