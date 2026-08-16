@@ -87,9 +87,11 @@ async function main() {
   const dlTekst = await dl.text();
   check("download 200 + inhoud klopt", dl.status === 200 && dlTekst === "inhoud polisblad", `${dl.status} ${dlTekst.slice(0, 40)}`);
 
-  for (const docId of [up1.body.id, up2.body.id]) {
-    await api(`/organisatie/verzekeringen/${polis.id}/documenten/${docId}`, { method: "DELETE" });
-  }
+  const delDoc = await api(`/organisatie/verzekeringen/${polis.id}/documenten/${up1.body.id}`, { method: "DELETE" });
+  check("document verwijderd (200)", delDoc.status === 200, String(delDoc.status));
+  const dlNaDelete = await api(`/organisatie/verzekeringen/${polis.id}/documenten/${up1.body.id}/download`);
+  check("download na verwijderen = 404 (opslag ook opgeruimd)", dlNaDelete.status === 404, String(dlNaDelete.status));
+  await api(`/organisatie/verzekeringen/${polis.id}/documenten/${up2.body.id}`, { method: "DELETE" });
   const lijst3 = await (await api(`/organisatie/verzekeringen/${polis.id}/documenten`)).json() as unknown[];
   check("documenten verwijderd", lijst3.length === 0, String(lijst3.length));
   const delPolis = await api(`/organisatie/verzekeringen/${polis.id}`, { method: "DELETE" });

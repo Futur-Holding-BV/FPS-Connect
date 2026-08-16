@@ -167,6 +167,21 @@ router.patch("/organisatie/verzekeringen/:id", schrijven, async (req, res): Prom
 router.delete("/organisatie/verzekeringen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
+    // Gekoppelde documentbestanden eerst uit de objectopslag verwijderen;
+    // de FK-cascade ruimt daarna alleen de DB-rijen op.
+    const docs = await db
+      .select({ bestandPad: orgVerzekeringDocumentenTable.bestandPad })
+      .from(orgVerzekeringDocumentenTable)
+      .where(eq(orgVerzekeringDocumentenTable.verzekeringId, id));
+    for (const d of docs) {
+      if (d.bestandPad && isGeldigVerzekeringDocPad(d.bestandPad)) {
+        try {
+          await oss.deleteBestand(d.bestandPad);
+        } catch (opslagFout) {
+          req.log.warn({ err: opslagFout }, "Verzekeringsdocument uit opslag verwijderen mislukt bij polisverwijdering");
+        }
+      }
+    }
     await db.delete(orgVerzekeringenTable).where(eq(orgVerzekeringenTable.id, id));
     res.status(204).end();
   } catch (err) {
@@ -783,6 +798,23 @@ router.delete("/organisatie/verzekeringen/:id/documenten/:docId", schrijven, asy
   try {
     const verzekeringId = parseId(req.params.id);
     const docId = parseId(req.params.docId);
+    // Eerst het bestand uit de objectopslag verwijderen (data-retentie);
+    // een opslagfout blokkeert de rijverwijdering niet maar wordt gelogd.
+    const [bestaand] = await db
+      .select({ bestandPad: orgVerzekeringDocumentenTable.bestandPad })
+      .from(orgVerzekeringDocumentenTable)
+      .where(and(
+        eq(orgVerzekeringDocumentenTable.id, docId),
+        eq(orgVerzekeringDocumentenTable.verzekeringId, verzekeringId),
+      ))
+      .limit(1);
+    if (bestaand?.bestandPad && isGeldigVerzekeringDocPad(bestaand.bestandPad)) {
+      try {
+        await oss.deleteBestand(bestaand.bestandPad);
+      } catch (opslagFout) {
+        req.log.warn({ err: opslagFout }, "Verzekeringsdocument uit opslag verwijderen mislukt; DB-rij wordt toch verwijderd");
+      }
+    }
     const [rij] = await db
       .delete(orgVerzekeringDocumentenTable)
       .where(and(

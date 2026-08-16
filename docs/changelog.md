@@ -2,7 +2,7 @@
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
-Op de Verzekeringen-pagina heeft elke polis nu een documentenmap (mapicoon in het polisoverzicht). Per verzekering upload je documenten in vaste soorten: Polis, Voorblad, Premie-opbouw, Uitsluitingen en Overig; elk document is te downloaden, te archiveren (en terug te zetten) of te verwijderen. Nieuwe tabel org_verzekering_documenten (migratie 0056), opslag in objectopslag onder verzekeringen/, downloads via een ACL-route. Bewijs: scripts/src/bewijs-verzekering-documenten.ts (11/11 groen: upload per soort, soortvalidatie 400, archiveren, download-inhoud, opruimen). PWA-cache naar v18.
+Op de Verzekeringen-pagina heeft elke polis nu een documentenmap (mapicoon in het polisoverzicht). Per verzekering upload je documenten in vaste soorten: Polis, Voorblad, Premie-opbouw, Uitsluitingen en Overig; elk document is te downloaden, te archiveren (en terug te zetten) of te verwijderen. Nieuwe tabel org_verzekering_documenten (migratie 0056), opslag in objectopslag onder verzekeringen/, downloads via een ACL-route. Verwijderen ruimt ook het bestand in de objectopslag op (zowel per document als bij het verwijderen van de hele polis). Bewijs: scripts/src/bewijs-verzekering-documenten.ts (13/13 groen: upload per soort, soortvalidatie 400, archiveren, download-inhoud, opruimen). PWA-cache naar v18.
 
 ## 2026-08-16 — Gereedschap-foto vult formulier direct in
 
