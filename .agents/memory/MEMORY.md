@@ -153,4 +153,5 @@
 - [KETEN_01 ketenmeting lessen](keten-meetlessen.md) — canvas-unmount fix: sigDataUrl vastleggen vóór fase-wissel; evaluate()+dispatchEvent voor canvas e2e (page.mouse.* faalt buiten viewport); ondertekeningGeblokkeerd alleen bij 409; e2e-resultaten in .gitignore (portaaltokens).
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.
 - [Procesbalk-patroon Projectaanpak](procesbalk-patroon.md) — ProcesBalk-component + één vervolgknop + ⋯-menu + kaarten Financieel/AI-hulp; screenshot-bewijs eist colorScheme-forcering.
+- [Declaratie→loonketen](declaratie-loonketen.md) — goedkeuren=auto salaris_mutatie; SCAB-verzenden verwerkt alléén snapshot (mutatie_ids), nooit her-query op wm+periode; verzend-overgang atomair.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
