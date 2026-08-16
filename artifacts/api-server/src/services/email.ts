@@ -219,6 +219,8 @@ export function isTestAdres(email: string): boolean {
   const domein = email.split("@")[1]?.toLowerCase().trim() ?? "";
   return (
     TESTDOMEINEN.includes(domein) ||
+    domein.startsWith("example.") ||
+    domein.startsWith("voorbeeld.") ||
     domein.endsWith(".invalid") ||
     domein.endsWith(".example") ||
     domein.endsWith(".test")

@@ -462,14 +462,34 @@ export async function beantwoordMail(
     const detail = await conceptRes.text().catch(() => "");
     return { ok: false, fout: `Concept aanmaken mislukt (${conceptRes.status}): ${detail.slice(0, 100)}` };
   }
-  const concept = (await conceptRes.json()) as { id: string };
+  const concept = (await conceptRes.json()) as {
+    id: string;
+    toRecipients?: Array<{ emailAddress?: { address?: string } }>;
+  };
+
+  // Antwoorden aan testdomein-adressen (bv. e2e-testmails) nooit echt
+  // versturen: concept opruimen en als geslaagd rapporteren.
+  const antwoordAdressen = (concept.toRecipients ?? [])
+    .map((r) => r.emailAddress?.address ?? "")
+    .filter((a) => a.length > 0);
+  if (antwoordAdressen.length > 0 && antwoordAdressen.every((a) => isTestAdres(a))) {
+    logger.info({ naar: antwoordAdressen }, "Werk-inbox antwoord onderdrukt: testdomein-adres");
+    await fetch(`${basis}/${encodeURIComponent(concept.id)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => undefined);
+    return { ok: true };
+  }
 
   // Stap 2: body patchen
   const patchPayload: Record<string, unknown> = {
     body: { contentType: "HTML", content: opties.htmlBody },
   };
   if (opties.extraOntvangers && opties.extraOntvangers.length > 0) {
-    patchPayload.ccRecipients = opties.extraOntvangers;
+    const echteExtra = opties.extraOntvangers.filter(
+      (r) => !isTestAdres((r as { emailAddress?: { address?: string } }).emailAddress?.address ?? ""),
+    );
+    if (echteExtra.length > 0) patchPayload.ccRecipients = echteExtra;
   }
 
   const conceptBasis = isPersonlijk
