@@ -484,6 +484,8 @@ export function ConnectRoutes() {
         <Route path="/workflow-designer" component={WorkflowDesignerPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
+        {/* Alias: werkbak-items verwezen historisch naar /uren/weekstaten */}
+        <Route path="/uren/weekstaten" component={WeekstatenPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />
         {/* Verouderd pad — redirect naar personeel */}
         <Route path="/connect/hrm">

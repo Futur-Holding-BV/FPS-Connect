@@ -263,7 +263,7 @@ export function bouwWeekControleItems(resultaten: WeekControleResultaat[]): Werk
           titel: `${r.medewerker_naam}: tweede onvolledige week op rij (${weekLabel})`,
           omschrijving: detail,
           vereisteModule: "personeel", vereistNiveau: 2, gewicht: 50,
-          actiePad: "/uren/weekstaten", herkomstType: "weekstaat_controle",
+          actiePad: "/weekstaten", herkomstType: "weekstaat_controle",
           herkomstId: r.medewerker_id,
           dedupSleutel: `weekstaat_onvolledig:${r.medewerker_id}:${r.jaar}-${r.week}:hrm`,
         });

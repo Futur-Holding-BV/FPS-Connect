@@ -1,3 +1,9 @@
+## 2026-08-16 — Werkbak "Openen" bij weekstaat-meldingen gaf 404
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De HRM-meldingen "tweede onvolledige week op rij" verwezen naar /uren/weekstaten, terwijl de weekstatenpagina op /weekstaten staat — de Openen-knop gaf daardoor een 404. Nieuwe werkbak-items verwijzen nu naar het juiste pad, en /uren/weekstaten is als alias toegevoegd zodat bestaande items in de werkbak ook direct weer werken. PWA-cache naar v15.
+
 ## 2026-08-16 — Slanker portaal voor uitvoerende veldmedewerkers + rechtencontrole bij onboarding
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
