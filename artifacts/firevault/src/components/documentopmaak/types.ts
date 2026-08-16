@@ -9,6 +9,7 @@ export interface WerkmaatschappijInfo {
   email: string;
   website: string;
   kvk: string;
+  btw?: string;
   briefpapierUrl?: string;
   // Onderstaande velden zijn optioneel en worden alleen door DocumentVoet
   // geconsumeerd (voettekst-regel + marge-onder/-links/-rechts). koptekst_positie

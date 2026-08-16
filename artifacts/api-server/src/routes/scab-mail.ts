@@ -96,12 +96,22 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
       eq(salarisMutatiesTable.periodeMaand, maand),
     ));
 
-  let werkgeverInfo: { naam: string; scabEmailAdres: string | null; boekhouderNaam: string | null } | null = null;
+  let werkgeverInfo: {
+    naam: string;
+    scabEmailAdres: string | null;
+    boekhouderNaam: string | null;
+    boekhouderEmail: string | null;
+    internContactNaam: string | null;
+    internContactEmail: string | null;
+  } | null = null;
   if (werkgever_id) {
     const [wg] = await db.select({
       naam: werkgeversTable.naam,
       scabEmailAdres: werkgeversTable.scabEmailAdres,
       boekhouderNaam: werkgeversTable.boekhouderNaam,
+      boekhouderEmail: werkgeversTable.boekhouderEmail,
+      internContactNaam: werkgeversTable.internContactNaam,
+      internContactEmail: werkgeversTable.internContactEmail,
     }).from(werkgeversTable).where(eq(werkgeversTable.id, Number(werkgever_id)));
     if (wg) werkgeverInfo = wg;
   }
@@ -112,8 +122,15 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
   let onderwerp = `Salarismutaties ${werkmaatschappij} – ${periodeLabel}`;
   let inhoud = `Geachte heer/mevrouw,\n\nHierbij de salarismutaties voor ${werkmaatschappij} over de loonperiode ${periodeLabel}.\n\n`;
 
+  // Ondertekening op basis van de werkgevergegevens (Bedrijfsgegevens-pagina);
+  // intern aanspreekpunt als afzendernaam wanneer ingevuld.
+  const afzenderBedrijf = werkgeverInfo?.naam ?? werkmaatschappij;
+  const afzenderPersoon = werkgeverInfo?.internContactNaam;
+  const ondertekening = `\nMet vriendelijke groet,\n${afzenderPersoon ? `${afzenderPersoon}\n` : ""}${afzenderBedrijf}\nPersoneelszaken${werkgeverInfo?.internContactEmail ? `\n${werkgeverInfo.internContactEmail}` : ""}\n`;
+
   if (mutaties.length === 0) {
     inhoud += "Er zijn geen mutaties voor deze periode.\n";
+    inhoud += ondertekening;
   }
 
   if (heeftGateway() && mutaties.length > 0) {
@@ -158,7 +175,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
       if (m.ingangsdatum) inhoud += `, ingangsdatum ${m.ingangsdatum}`;
       inhoud += "\n";
     });
-    inhoud += `\nMet vriendelijke groet,\nFPS Bouw en Renovatie\nPersoneelszaken\n`;
+    inhoud += ondertekening;
   }
 
   const [mail] = await db.insert(scabMailsTable).values({
@@ -168,7 +185,9 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     periodeMaand: maand,
     onderwerp,
     inhoud,
-    scabEmailAdres: werkgeverInfo?.scabEmailAdres ?? null,
+    // Ontvanger: het SCAB-/aanleveradres van de werkgever; wanneer dat leeg is
+    // valt de mail terug op het e-mailadres van de boekhouder (Bedrijfsgegevens).
+    scabEmailAdres: werkgeverInfo?.scabEmailAdres ?? werkgeverInfo?.boekhouderEmail ?? null,
     contactpersoon: werkgeverInfo?.boekhouderNaam ?? null,
     status: "concept",
     aantalMutaties: mutaties.length,

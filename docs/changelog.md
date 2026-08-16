@@ -1,3 +1,9 @@
+## 2026-08-16 — Bedrijfsgegevens: compactere weergave + velden werken nu écht door
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De Bedrijfsgegevens-pagina staat niet meer paginabreed: de kaart is begrensd en label + waarde staan nu links naast elkaar op één regel. Daarnaast nagelopen welke ingevulde velden elders daadwerkelijk gebruikt worden en de dode velden aangesloten: BTW-nummer staat nu in de documentopmaak (offerte- en factuurkop, beide documentfamilies en de opmaak-previews); het e-mailadres van de boekhouder is het terugvaladres voor de loonaanlevering (SCAB-mail) wanneer er geen apart aanleveradres is ingevuld; het interne aanspreekpunt (naam + e-mail) ondertekent voortaan de loonaanlever-mail samen met de werkgevernaam, in plaats van de hardcoded "FPS Bouw en Renovatie"-ondertekening (die nu ook verschijnt bij periodes zonder mutaties). Bewijs: scripts/src/bewijs-bedrijfsgegevens-doorwerking.ts (6/6 groen). PWA-cache naar v19.
+
 ## 2026-08-16 — Documenten per verzekering (polis, voorblad, premie-opbouw, uitsluitingen, archief)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -118,6 +118,7 @@ export function FactuurTemplateA({
             {mij.email && <p>{mij.email}</p>}
             {mij.website && <p>{mij.website}</p>}
             {mij.kvk && <p>KVK: {mij.kvk}</p>}
+            {mij.btw && <p>BTW: {mij.btw}</p>}
             {mij.iban && <p>IBAN: {mij.iban}</p>}
           </div>
 

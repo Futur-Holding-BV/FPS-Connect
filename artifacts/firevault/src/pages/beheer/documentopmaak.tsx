@@ -37,6 +37,7 @@ function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
     email: w.email ?? "",
     website: w.website ?? "",
     kvk: w.kvk ?? "",
+    btw: w.btw ?? "",
   };
 }
 

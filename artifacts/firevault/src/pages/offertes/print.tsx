@@ -199,6 +199,7 @@ export default function OffertePrintPagina() {
     email: werkgever?.email ?? "",
     telefoon: werkgever?.telefoon ?? "",
     kvk: werkgever?.kvk ?? "",
+    btw: werkgever?.btw ?? "",
   };
 
   const meta = {

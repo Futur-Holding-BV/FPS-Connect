@@ -12,6 +12,7 @@ export function VervolgpaginaB({ meta, mij }: BaseDocumentProps) {
           <div>{mij.adres}</div>
           <div>{mij.postcodeWoonplaats}</div>
           <div className="mt-2">KVK {mij.kvk}</div>
+          {mij.btw && <div>BTW {mij.btw}</div>}
         </div>
       </div>
 

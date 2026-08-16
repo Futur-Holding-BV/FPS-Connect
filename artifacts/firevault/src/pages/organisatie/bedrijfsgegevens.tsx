@@ -13,9 +13,9 @@ import { useQueryClient } from "@tanstack/react-query";
 
 function VeldRij({ label, waarde }: { label: string; waarde: string | null | undefined }) {
   return (
-    <div className="flex justify-between items-start py-2 border-b last:border-0">
+    <div className="flex items-start gap-4 py-2 border-b last:border-0">
       <span className="text-sm text-muted-foreground w-40 shrink-0">{label}</span>
-      <span className="text-sm font-medium text-right">{waarde || <span className="text-muted-foreground italic">Niet ingevuld</span>}</span>
+      <span className="text-sm font-medium">{waarde || <span className="text-muted-foreground italic">Niet ingevuld</span>}</span>
     </div>
   );
 }
@@ -339,7 +339,7 @@ export default function BedrijfsgegevensPagina() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Bedrijfsgegevens</h1>
         <p className="text-muted-foreground mt-1">

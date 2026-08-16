@@ -124,6 +124,7 @@ export default function FactuurPrintPagina() {
     email:              werkgever?.email ?? "",
     website:            werkgever?.website ?? "",
     kvk:                werkgever?.kvk ?? "",
+    btw:                werkgever?.btw ?? "",
     iban:               werkgeverIban ?? "",
     voettekst:          werkgeverVoettekst ?? templateJson?.voettekst ?? "",
     voettekstPositie:   werkgeverVoettekstPositie as "links" | "midden" | "rechts",
