@@ -242,6 +242,8 @@ INDEX|magazijn_snoozes|magazijn_snoozes_artikel_id_unique
 INDEX|magazijn_snoozes|magazijn_snoozes_pkey
 INDEX|magazijn_stellingscans|magazijn_stellingscans_pkey
 INDEX|mail_logboek|mail_logboek_pkey
+INDEX|mail_wachtrij|mail_wachtrij_dedupe_idx
+INDEX|mail_wachtrij|mail_wachtrij_pkey
 INDEX|mandagstaat_logs|mandagstaat_logs_opdracht_idx
 INDEX|mandagstaat_logs|mandagstaat_logs_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_onderwerp_idx
@@ -2704,6 +2706,19 @@ KOLOM|mail_logboek|onderwerp|text|NO|
 KOLOM|mail_logboek|soort|text|NO|
 KOLOM|mail_logboek|status|text|NO|
 KOLOM|mail_logboek|verstuurd_door_id|integer|YES|
+KOLOM|mail_wachtrij|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|mail_wachtrij|aangevraagd_door_id|integer|YES|
+KOLOM|mail_wachtrij|bijlagen|jsonb|YES|
+KOLOM|mail_wachtrij|foutdetail|text|YES|
+KOLOM|mail_wachtrij|html|text|NO|
+KOLOM|mail_wachtrij|id|integer|NO|nextval('mail_wachtrij_id_seq'::regclass)
+KOLOM|mail_wachtrij|naar_email|text|NO|
+KOLOM|mail_wachtrij|naar_naam|text|YES|
+KOLOM|mail_wachtrij|onderwerp|text|NO|
+KOLOM|mail_wachtrij|soort|text|NO|
+KOLOM|mail_wachtrij|status|text|NO|'wachtend'::text
+KOLOM|mail_wachtrij|verwerkt_door_id|integer|YES|
+KOLOM|mail_wachtrij|verwerkt_op|timestamp without time zone|YES|
 KOLOM|mandagstaat_logs|gegenereerd_door_id|integer|YES|
 KOLOM|mandagstaat_logs|gegenereerd_op|timestamp without time zone|NO|now()
 KOLOM|mandagstaat_logs|id|integer|NO|nextval('mandagstaat_logs_id_seq'::regclass)

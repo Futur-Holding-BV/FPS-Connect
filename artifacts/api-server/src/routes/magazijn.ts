@@ -1591,6 +1591,7 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
         html,
         soort: "magazijn_bestelbon",
         verstuurdDoorId: userId,
+        direct: true, // medewerker verstuurt de bestelbon zelf expliciet
       });
 
       return void res.json({ email_verstuurd: true, bericht: `Bestelbon verstuurd naar ${naarEmail}` });
@@ -2317,6 +2318,7 @@ router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) =
       naarNaam: order.leverancierNaam ?? undefined,
       onderwerp: `Inkooporder ${order.nummer} — FPS Brandpreventie`,
       soort: "magazijn_bestelbon",
+      direct: true, // medewerker verstuurt de inkooporder zelf expliciet
       html: `<h2>Inkooporder ${order.nummer}</h2>
 <p>Geachte ${order.leverancierNaam ? escapeHtml(order.leverancierNaam) : "leverancier"},</p>
 <p>Hierbij ontvangt u onze inkooporder. Wij verzoeken u vriendelijk de onderstaande materialen te leveren.</p>

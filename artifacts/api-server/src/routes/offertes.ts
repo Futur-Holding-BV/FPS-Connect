@@ -1989,6 +1989,7 @@ router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res): Promi
         html,
         soort: "offerte",
         verstuurdDoorId: req.session.userId ?? null,
+        direct: true, // medewerker verstuurt dit antwoord zelf expliciet
       });
     }
 
@@ -2271,6 +2272,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
       html,
       soort: "offerte",
       verstuurdDoorId: req.session.userId ?? null,
+      direct: true, // medewerker verstuurt de offerte zelf expliciet
       bijlagen: [
         {
           naam: `offerte-${offerte.offertenummer ?? offerteId}.pdf`,

@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger";
-import { db, mailLogboekTable } from "@workspace/db";
+import { db, mailLogboekTable, mailWachtrijTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 // ── Configuratie ────────────────────────────────────────────────────────────
 // Microsoft 365 via Azure App Registration (OAuth2 client-credentials, Graph
@@ -346,6 +347,137 @@ export async function verstuurMail(opties: {
   soort: MailSoort;
   verstuurdDoorId?: number | null;
   bijlagen?: MailBijlage[];
+  /**
+   * Alleen true voor mails waar de verzending zélf de expliciete menselijke
+   * handeling is: account-mails (uitnodiging, wachtwoord-reset, testmail) en
+   * mails die een medewerker met een verstuur-knop verstuurt (offerte,
+   * factuur, bestelbon). Al het overige gaat fail-closed de mail-wachtrij in
+   * en wordt pas verzonden na goedkeuring door een beheerder.
+   */
+  direct?: boolean;
+}): Promise<void> {
+  if (!opties.direct) {
+    await plaatsInMailWachtrij(opties);
+    return;
+  }
+  await verstuurMailDirect(opties);
+}
+
+// Plaatst een mail in de wachtrij. Dubbele wachtende mails (zelfde adres +
+// onderwerp) worden stilzwijgend samengevoegd via de partiële unieke index —
+// zo kan een periodieke job nooit dezelfde mail herhaald klaarzetten.
+async function plaatsInMailWachtrij(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  onderwerp: string;
+  html: string;
+  soort: MailSoort;
+  verstuurdDoorId?: number | null;
+  bijlagen?: MailBijlage[];
+}): Promise<void> {
+  await db
+    .insert(mailWachtrijTable)
+    .values({
+      naarEmail: opties.naarEmail,
+      naarNaam: opties.naarNaam ?? null,
+      onderwerp: opties.onderwerp,
+      html: opties.html,
+      soort: opties.soort,
+      bijlagen:
+        opties.bijlagen && opties.bijlagen.length > 0
+          ? opties.bijlagen.map((b) => ({
+              naam: b.naam,
+              contentType: b.contentType,
+              inhoudBase64: b.inhoud.toString("base64"),
+            }))
+          : null,
+      aangevraagdDoorId: opties.verstuurdDoorId ?? null,
+    })
+    .onConflictDoNothing();
+  logger.info(
+    { naar: opties.naarEmail, soort: opties.soort },
+    "Mail in wachtrij geplaatst — wacht op menselijke goedkeuring",
+  );
+}
+
+/**
+ * Verstuurt een wachtrij-item ná menselijke goedkeuring. Retourneert het
+ * bijgewerkte item; gooit MailFout bij verzendfouten (status wordt "mislukt",
+ * het item blijft zichtbaar en kan niet nogmaals per ongeluk verzonden worden
+ * zonder opnieuw expliciet te kiezen).
+ */
+export async function verstuurMailWachtrijItem(
+  id: number,
+  verwerktDoorId: number,
+): Promise<void> {
+  const [item] = await db
+    .select()
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.id, id))
+    .limit(1);
+  if (!item) throw new Error("Wachtrij-item niet gevonden");
+  if (item.status !== "wachtend" && item.status !== "mislukt") {
+    throw new Error(`Wachtrij-item is al verwerkt (status: ${item.status})`);
+  }
+  const bijlagen = Array.isArray(item.bijlagen)
+    ? (item.bijlagen as Array<{ naam: string; contentType: string; inhoudBase64: string }>).map(
+        (b) => ({ naam: b.naam, contentType: b.contentType, inhoud: Buffer.from(b.inhoudBase64, "base64") }),
+      )
+    : undefined;
+  try {
+    await verstuurMailDirect({
+      naarEmail: item.naarEmail,
+      naarNaam: item.naarNaam,
+      onderwerp: item.onderwerp,
+      html: item.html,
+      soort: item.soort as MailSoort,
+      verstuurdDoorId: verwerktDoorId,
+      bijlagen,
+    });
+  } catch (err) {
+    await db
+      .update(mailWachtrijTable)
+      .set({
+        status: "mislukt",
+        foutdetail: err instanceof MailFout ? err.categorie : "verzendfout",
+        verwerktDoorId,
+        verwerktOp: new Date(),
+      })
+      .where(eq(mailWachtrijTable.id, id));
+    throw err;
+  }
+  await db
+    .update(mailWachtrijTable)
+    .set({ status: "verzonden", foutdetail: null, verwerktDoorId, verwerktOp: new Date() })
+    .where(eq(mailWachtrijTable.id, id));
+}
+
+/** Wijst een wachtrij-item af: de mail wordt nooit verzonden. */
+export async function wijsMailWachtrijItemAf(
+  id: number,
+  verwerktDoorId: number,
+): Promise<void> {
+  const [item] = await db
+    .select({ status: mailWachtrijTable.status })
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.id, id))
+    .limit(1);
+  if (!item) throw new Error("Wachtrij-item niet gevonden");
+  if (item.status === "verzonden") throw new Error("Item is al verzonden");
+  await db
+    .update(mailWachtrijTable)
+    .set({ status: "afgewezen", verwerktDoorId, verwerktOp: new Date() })
+    .where(eq(mailWachtrijTable.id, id));
+}
+
+async function verstuurMailDirect(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  onderwerp: string;
+  html: string;
+  soort: MailSoort;
+  verstuurdDoorId?: number | null;
+  bijlagen?: MailBijlage[];
 }): Promise<void> {
   const basis = {
     naarEmail: opties.naarEmail,
@@ -498,6 +630,7 @@ export async function stuurUitnodigingsmail(opties: {
     html,
     soort: "uitnodiging",
     verstuurdDoorId,
+    direct: true, // account-mail: uitgezonderd van de wachtrij
   });
 }
 
@@ -527,6 +660,7 @@ export async function verstuurWachtwoordResetMail(opties: {
     onderwerp,
     html,
     soort: "wachtwoord_reset",
+    direct: true, // account-mail: uitgezonderd van de wachtrij
   });
 }
 
@@ -1529,6 +1663,7 @@ export async function stuurTestmail(opties: {
     html,
     soort: "test",
     verstuurdDoorId: opties.verstuurdDoorId,
+    direct: true, // testmail: de gebruiker verstuurt deze zelf expliciet
   });
 }
 

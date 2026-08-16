@@ -55,6 +55,7 @@ import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
 import MailBeheer from "@/pages/beheer/mail";
 import MailboxenBeheer from "@/pages/beheer/mailboxen";
 import BackupBeheer from "@/pages/beheer/backup";
+import MailWachtrijBeheer from "@/pages/beheer/mail-wachtrij";
 import HerstelDashboard from "@/pages/beheer/herstel";
 import ImportPagina from "@/pages/beheer/import";
 import PrijsafsprakenBeheerPagina from "@/pages/beheer/prijsafspraken";
@@ -522,6 +523,7 @@ export function ConnectRoutes() {
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/mailboxen" component={MailboxenBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
+        <Route path="/beheer/mail-wachtrij" component={MailWachtrijBeheer} />
         <Route path="/beheer/herstel" component={HerstelDashboard} />
         <Route path="/beheer/import" component={ImportPagina} />
         <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />

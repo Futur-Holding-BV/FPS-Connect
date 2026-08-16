@@ -1,3 +1,11 @@
+## 2026-08-16 — Mail-wachtrij: elke systeemmail vereist menselijke goedkeuring
+
+- Nieuwe centrale mail-wachtrij (`mail_wachtrij`, migratie 0053): alle systeem- en notificatiemails (planning, leverbewaking, magazijn-signalering, escalaties, portaal-notificaties, AVG, declaraties, goedkeuringen, AI-drempel, enz.) worden NIET meer automatisch verzonden, maar wachten op een expliciete menselijke handeling.
+- Beheerpagina `/beheer/mail-wachtrij` (systeembeheer): wachtende mails bekijken (veilige HTML-preview), per mail Versturen of Afwijzen; tabbladen voor verzonden/afgewezen/mislukt.
+- Nooit herhalende mails: een partiële unieke index dedupet identieke wachtende mails (zelfde adres + onderwerp) — een periodieke job kan dezelfde mail nooit dubbel klaarzetten.
+- Uitzonderingen (gaan direct, conform keuze René): account-mails (uitnodiging, wachtwoord-reset, testmail) en mails die een medewerker zelf expliciet met een verstuur-knop verstuurt (offerte, antwoord klantvraag, factuur-correspondentie, bestelbon, inkooporder).
+- Bewijs: scriptrun toont — systeemmail komt als 'wachtend' in de wachtrij (geen verzending), dubbele aanroep levert géén tweede rij, afwijzen zet status 'afgewezen' met verwerker.
+
 ## 2026-08-16 — Geen bounce-mails meer van e2e-testoffertes (KETEN01)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

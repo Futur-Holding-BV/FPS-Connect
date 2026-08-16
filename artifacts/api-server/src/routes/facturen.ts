@@ -1604,6 +1604,7 @@ router.post("/facturen/:id/correspondentie/:cid/verzenden", requireBevoegdheid("
       html,
       soort: "afwijzing",
       verstuurdDoorId: sessionUserId(req),
+      direct: true, // medewerker verstuurt deze mail zelf expliciet
     });
   } catch (err) {
     const melding = veiligeFoutmelding(err, "Onbekende fout");

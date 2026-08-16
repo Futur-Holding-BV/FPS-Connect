@@ -955,6 +955,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       )}
                       {toonSysteem && (
                         <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/beheer/mail-wachtrij"}>
+                            <Link href="/beheer/mail-wachtrij">
+                              <Mail />
+                              <span>Mail-wachtrij</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonSysteem && (
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>
                             <Link href="/beheer/boekhouding">
                               <Receipt />
