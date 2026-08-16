@@ -3573,6 +3573,11 @@ Gebruikers kunnen nu per categorie kiezen welke e-mailmeldingen ze ontvangen. Ni
 **Token-health bevestigd:** De `token-health-check`-workflow (`.github/workflows/token-health-check.yml`) handmatig getriggerd via `workflow_dispatch`. Uitkomst: `success`. Tevens de dagelijkse automatische run van 2026-08-16 08:15 UTC: `success`. Het Actions-secret `FPS_PUSH_TOKEN` is gevuld en het token is geldig. Actions-run: https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/31958091377
 
 
+## 2026-08-16 — PIM-analyse is nu normbewust: Knowledge Base gekoppeld als systeemcontext
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+`POST /opdrachten/:id/pim/analyseer` roept `kbService.assembleKbContext()` aan en geeft de KB-context (FPS-bedrijfsstandaarden, actieve leveranciers, artikelencatalogus) plus de KB-beslisstructuur nu mee als SYSTEEMcontext bij de AI-aanroep (voorheen aan het gebruikersbericht geplakt). Hierdoor weegt het AI-advies FPS-normen en beslisregels als instructiekader in plaats van als invoerdata. Geen gedragswijziging wanneer de KB leeg is (fail-safe: alleen de bestaande analyseprompt).
 ## 2026-08-16 — Klantvragen mét antwoorden zichtbaar in het klantportaal
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

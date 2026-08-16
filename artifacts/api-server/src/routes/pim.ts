@@ -502,24 +502,23 @@ router.post("/opdrachten/:id/pim/analyseer", schrijven, async (req, res): Promis
       };
     }
 
-    // 6. KB-context (Task #303 stub — retourneert null totdat KB-module beschikbaar is)
-    // contextTekst en userContent zijn al opgebouwd; kbContext wordt als extra tekststuk toegevoegd.
+    // 6. KB-context (Knowledge Base, Task #306): FPS-normen, competenties en
+    // beslisstructuren als SYSTEEMcontext meegeven zodat het advies normbewust is.
     const kbContext = await kbService.assembleKbContext();
     const kbExtras = [
       kbContext ? `=== KENNISBANK CONTEXT ===\n${kbContext}` : "",
       KB_BESLISSTRUCTUUR ? `=== BESLISSTRUCTUUR ===\n${KB_BESLISSTRUCTUUR}` : "",
     ].filter(Boolean).join("\n\n");
-    if (kbExtras) {
-      const eersteTextPart = userContent[0] as { type: "text"; text: string };
-      userContent[0] = { type: "text", text: `${eersteTextPart.text}\n\n${kbExtras}` };
-    }
+    const systemContent = kbExtras
+      ? `${PIM_AANVRAAG_ANALYSE_PROMPT.tekst}\n\n${kbExtras}`
+      : PIM_AANVRAAG_ANALYSE_PROMPT.tekst;
 
     // 7. AI-aanroep (vision-slot = gpt-5)
     const resultaat = await aiGateway.chat(
       "vision",
       {
         messages: [
-          { role: "system", content: PIM_AANVRAAG_ANALYSE_PROMPT.tekst },
+          { role: "system", content: systemContent },
           { role: "user", content: userContent as unknown as OpenAI.Chat.Completions.ChatCompletionContentPart[] },
         ],
         response_format: { type: "json_object" },

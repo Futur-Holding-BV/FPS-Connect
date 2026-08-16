@@ -1,3 +1,4 @@
+- [Expo stale .env dev-domein](expo-stale-env-domein.md) — monteur-app .env met hardcoded EXPO_PUBLIC_DOMAIN wint van shell-env na domeinrotatie → e2e-login "Failed to fetch"; .env weg + Metro-cache wissen.
 - [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
 - [ADVIES_01 regelsoorten](advies-regelsoorten.md) — somplekken filteren op soort+!optioneel (helpers teltMeeRegel/berekenOfferteTotalen); elk rapportpunt krijgt fail-closed een voorstel; koppel-whitelist synchroon met DB-CHECK.
