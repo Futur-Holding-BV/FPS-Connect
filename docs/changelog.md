@@ -3547,6 +3547,12 @@ Gebruikers kunnen nu per categorie kiezen welke e-mailmeldingen ze ontvangen. Ni
 
 **Token-health bevestigd:** De `token-health-check`-workflow (`.github/workflows/token-health-check.yml`) handmatig getriggerd via `workflow_dispatch`. Uitkomst: `success`. Tevens de dagelijkse automatische run van 2026-08-16 08:15 UTC: `success`. Het Actions-secret `FPS_PUSH_TOKEN` is gevuld en het token is geldig. Actions-run: https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/31958091377
 
+
+## 2026-08-16 — Klantvragen mét antwoorden zichtbaar in het klantportaal
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Beantwoorde klantvragen waren tot nu toe alleen zichtbaar voor de admin in FPS Connect; de klant zag zijn antwoord nooit in het portaal. `GET /portaal/:token` geeft nu ook de vragenlijst terug (`vragen`: vraag, antwoord, beantwoord-vlag, datums; afwijzingen uitgesloten). Het klantportaal toont deze als chat-thread (klantvraag rechts, FPS-antwoord links, "In behandeling" bij openstaande vragen) en de klant kan per beantwoorde vraag direct een vervolgvraag stellen via het bestaande vraag-endpoint. In de verzend-tab kreeg elke beantwoorde vraag de badge "Beantwoord — zichtbaar in portaal". Bewijs: publieke API-respons gecontroleerd via curl (beantwoord/onbeantwoord + vervolgvraag in thread) en screenshot van de portaal-thread.
 ## 2026-08-16 — Planningsmeldingen: alle titels correct bij meerdere items (Task 968)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

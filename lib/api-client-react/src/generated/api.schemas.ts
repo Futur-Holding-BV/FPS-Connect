@@ -8719,6 +8719,20 @@ export interface PortaalAiUitlegInput {
   regel_id: number;
 }
 
+export interface PortaalVraagItem {
+  id: number;
+  vraag: string;
+  /** @nullable */
+  antwoord?: string | null;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  bezoeker_naam?: string | null;
+  beantwoord: boolean;
+  aangemaakt_op: string;
+  /** @nullable */
+  beantwoord_op?: string | null;
+}
 export interface PortaalOfferte {
   id: number;
   /** @nullable */
@@ -8741,6 +8755,7 @@ export interface PortaalOfferte {
   bijlagen: PortaalOfferteBijlagenItem[];
   optionele_regels: PortaalOptioneleRegelItem[];
   regels: PortaalRegelItem[];
+  vragen: PortaalVraagItem[];
 }
 
 export interface PortaalHandtekeningInput {
@@ -18269,4 +18284,3 @@ hoeveelheid?: number;
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
 };
-

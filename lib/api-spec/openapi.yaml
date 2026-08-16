@@ -38650,9 +38650,30 @@ components:
         regel_id:
           type: integer
 
+    PortaalVraagItem:
+      type: object
+      required: [id, vraag, beantwoord, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        vraag:
+          type: string
+        antwoord:
+          type: ["string", "null"]
+        type:
+          type: ["string", "null"]
+        bezoeker_naam:
+          type: ["string", "null"]
+        beantwoord:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        beantwoord_op:
+          type: ["string", "null"]
+
     PortaalOfferte:
       type: object
-      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen, optionele_regels, regels]
+      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen, optionele_regels, regels, vragen]
       properties:
         id:
           type: integer
@@ -38698,6 +38719,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PortaalRegelItem"
+        vragen:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortaalVraagItem"
 
     PortaalHandtekeningInput:
       type: object

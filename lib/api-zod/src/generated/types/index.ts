@@ -1238,6 +1238,7 @@ export * from './portaalOptioneleRegelItem';
 export * from './portaalRegelItem';
 export * from './portaalTrackingInput';
 export * from './portaalVraagInput';
+export * from './portaalVraagItem';
 export * from './prijsafspraak';
 export * from './prijsafspraakConflict';
 export * from './prijsafspraakInput';

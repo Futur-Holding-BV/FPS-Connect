@@ -10,6 +10,7 @@ import type { PortaalOfferteBijlagenItem } from './portaalOfferteBijlagenItem';
 import type { PortaalOfferteSectiesItem } from './portaalOfferteSectiesItem';
 import type { PortaalOptioneleRegelItem } from './portaalOptioneleRegelItem';
 import type { PortaalRegelItem } from './portaalRegelItem';
+import type { PortaalVraagItem } from './portaalVraagItem';
 
 export interface PortaalOfferte {
   id: number;
@@ -33,4 +34,5 @@ export interface PortaalOfferte {
   bijlagen: PortaalOfferteBijlagenItem[];
   optionele_regels: PortaalOptioneleRegelItem[];
   regels: PortaalRegelItem[];
+  vragen: PortaalVraagItem[];
 }

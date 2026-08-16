@@ -1008,9 +1008,13 @@ export function VerzendTab({
                         <span className="text-xs text-muted-foreground truncate">
                           <span className="font-semibold text-foreground">{v.bezoeker_naam ?? "Klant"}</span>
                           {v.bezoeker_email ? ` (${v.bezoeker_email})` : ""} — {datumLabel(v.aangemaakt_op)}
-                          {!v.antwoord && (
+                          {!v.antwoord ? (
                             <Badge className="ml-2 h-4 px-1.5 text-[10px] bg-rose-600 hover:bg-rose-600 text-white border-none">
                               Onbeantwoord
+                            </Badge>
+                          ) : (
+                            <Badge className="ml-2 h-4 px-1.5 text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200">
+                              Beantwoord — zichtbaar in portaal
                             </Badge>
                           )}
                         </span>

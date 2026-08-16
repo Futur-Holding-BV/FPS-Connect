@@ -63,12 +63,21 @@ router.get("/portaal/:token", async (req, res): Promise<void> => {
       .where(eq(offertesTable.id, tokenRecord.offerteId));
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden." });
 
-    const [secties, bijlagen, optioneleRegels, verplichtRegels, handtekeningRows] = await Promise.all([
+    const [secties, bijlagen, optioneleRegels, verplichtRegels, handtekeningRows, vragen] = await Promise.all([
       db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerte.id)).orderBy(offerteSectiesTable.volgorde),
       db.select().from(offerteBijlagenTable).where(eq(offerteBijlagenTable.offerteId, offerte.id)).orderBy(offerteBijlagenTable.volgorde),
       db.select().from(offerteRegelsTable).where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, true))).orderBy(offerteRegelsTable.volgorde),
       db.select().from(offerteRegelsTable).where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, false))).orderBy(offerteRegelsTable.volgorde),
       db.select().from(offerteHandtekeningenTable).where(eq(offerteHandtekeningenTable.offerteId, offerte.id)).limit(1),
+      // Vragen & antwoorden voor de chat-thread in het portaal (afwijzingen niet).
+      db
+        .select()
+        .from(offerteVragenTable)
+        .where(and(
+          eq(offerteVragenTable.offerteId, offerte.id),
+          or(isNull(offerteVragenTable.type), ne(offerteVragenTable.type, "afwijzing")),
+        ))
+        .orderBy(offerteVragenTable.aangemaaktOp),
     ]);
 
     const handtekening = handtekeningRows[0];
@@ -153,6 +162,16 @@ router.get("/portaal/:token", async (req, res): Promise<void> => {
         prijs_per_eenheid: r.prijsPerEenheid,
         kosten: r.kosten,
         volgorde: r.volgorde,
+      })),
+      vragen: vragen.map((v) => ({
+        id: v.id,
+        vraag: v.vraag,
+        antwoord: v.antwoord ?? null,
+        type: v.type ?? null,
+        bezoeker_naam: v.bezoekerNaam ?? null,
+        beantwoord: v.antwoord != null && v.antwoord.trim() !== "",
+        aangemaakt_op: v.aangemaaktOp.toISOString(),
+        beantwoord_op: v.antwoord != null && v.antwoord.trim() !== "" ? v.bijgewerktOp.toISOString() : null,
       })),
     });
   } catch (err) {

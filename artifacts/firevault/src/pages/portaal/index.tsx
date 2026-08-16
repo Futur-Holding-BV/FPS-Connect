@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Loader2, CheckCircle, XCircle, MessageSquare, PenLine, AlertTriangle,
   Printer, Paperclip, ChevronDown, ChevronUp, Sparkles, Phone, Mail,
-  ArrowRight, ClipboardList, Wrench, FileCheck, User, Edit3,
+  ArrowRight, ClipboardList, Wrench, FileCheck, User, Edit3, Reply,
 } from "lucide-react";
 
 function euro(n: number) {
@@ -114,6 +114,10 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
 
   // Ingeklapte regelgroepen (categorie-naam → boolean)
   const [ingeklapt, setIngeklapt] = useState<Record<string, boolean>>({});
+
+  // Follow-up op een beantwoorde vraag
+  const [followUpVoor, setFollowUpVoor] = useState<number | null>(null);
+  const [followUpTekst, setFollowUpTekst] = useState("");
 
   const gespoord = useRef(false);
 
@@ -229,6 +233,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
       setVraagVerstuurd(true);
       setActieFase("keuze");
       setVraagTekst("");
+      await qc.invalidateQueries({ queryKey: getGetPortaalQueryKey(token) });
     } catch {
       // noop
     } finally {
@@ -244,6 +249,30 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
       setWijzigingVerstuurd(true);
       setActieFase("keuze");
       setWijzigingTekst("");
+      await qc.invalidateQueries({ queryKey: getGetPortaalQueryKey(token) });
+    } catch {
+      // noop
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  async function verstuurFollowUp(vraagId: number, origineleVraag: string) {
+    if (!followUpTekst.trim()) return;
+    setBezig(true);
+    try {
+      await stelVraag.mutateAsync({
+        token,
+        data: {
+          naam: vraagNaam.trim() || undefined,
+          email: vraagEmail.trim() || undefined,
+          vraag: `Vervolgvraag op "${origineleVraag.slice(0, 80)}${origineleVraag.length > 80 ? "…" : ""}": ${followUpTekst.trim()}`,
+          type: "vraag",
+        },
+      });
+      setFollowUpTekst("");
+      setFollowUpVoor(null);
+      await qc.invalidateQueries({ queryKey: getGetPortaalQueryKey(token) });
     } catch {
       // noop
     } finally {
@@ -1155,6 +1184,87 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                 </CardContent>
               </Card>
             )}
+          </div>
+        )}
+
+        {/* ── Vragen & antwoorden (chat-thread) ──────────────────────────────── */}
+        {(o.vragen ?? []).length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-semibold text-sm text-foreground uppercase tracking-wider">Vragen & antwoorden</h2>
+            </div>
+            <Card>
+              <CardContent className="p-5 space-y-5">
+                {(o.vragen ?? []).map((v) => (
+                  <div key={v.id} className="space-y-2">
+                    {/* Klantvraag — rechts uitgelijnd */}
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-blue-50 border border-blue-100 px-4 py-2.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-blue-800">{v.bezoeker_naam ?? "U"}</span>
+                          {v.type === "wijziging" && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-50 text-amber-700 border-amber-200">Wijzigingsverzoek</Badge>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">{datumNL(v.aangemaakt_op)}</span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{v.vraag}</p>
+                      </div>
+                    </div>
+                    {/* Antwoord — links uitgelijnd */}
+                    {v.beantwoord && v.antwoord ? (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-gray-50 border px-4 py-2.5">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold" style={{ color: "#F23B0D" }}>FPS Brandpreventie</span>
+                            {v.beantwoord_op && (
+                              <span className="text-[10px] text-muted-foreground">{datumNL(v.beantwoord_op)}</span>
+                            )}
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{v.antwoord}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-start">
+                        <p className="text-xs text-muted-foreground italic pl-1">In behandeling — wij reageren zo snel mogelijk.</p>
+                      </div>
+                    )}
+                    {/* Follow-up op een beantwoorde vraag */}
+                    {v.beantwoord && !isGesloten && (
+                      followUpVoor === v.id ? (
+                        <div className="pl-1 space-y-2">
+                          <Textarea
+                            value={followUpTekst}
+                            onChange={(e) => setFollowUpTekst(e.target.value)}
+                            rows={2}
+                            placeholder="Uw vervolgvraag…"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => { setFollowUpVoor(null); setFollowUpTekst(""); }}>
+                              Annuleren
+                            </Button>
+                            <Button size="sm" onClick={() => verstuurFollowUp(v.id, v.vraag)} disabled={!followUpTekst.trim() || bezig}>
+                              {bezig ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+                              {bezig ? "Bezig…" : "Versturen"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors pl-1 inline-flex items-center gap-1"
+                          onClick={() => { setFollowUpVoor(v.id); setFollowUpTekst(""); }}
+                        >
+                          <Reply className="h-3 w-3" />
+                          Vervolgvraag stellen
+                        </button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
         )}
 
