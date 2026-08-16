@@ -50,8 +50,12 @@ import {
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
-  ChevronDown, ChevronUp, CalendarDays, FileDown,
+  ChevronDown, ChevronUp, CalendarDays, FileDown, MoreHorizontal, ChevronRight, X,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import {
   Tooltip,
@@ -569,12 +573,17 @@ function MandagstaatKaart({
 // ── Hoofdpagina ────────────────────────────────────────────────────────────────
 export default function OpdrachtDetailPagina() {
   const { heeftNiveau } = useBevoegdheid();
+  // PATCH /opdrachten/:id eist projecten:3; workflow-transitie eist offertes:2
+  // (Pauzeren/Hervatten/Afronden) resp. offertes:3 (Annuleren).
+  const kanSchrijven   = heeftNiveau("projecten", 3) && heeftNiveau("offertes", 2);
+  const kanVerwijderen = heeftNiveau("projecten", 3) && heeftNiveau("offertes", 3);
   const { rol } = useRol();
   const { id } = useParams<{ id: string }>();
   const opdrachtId = parseInt(id ?? "0", 10);
   const qc = useQueryClient();
   const { toast } = useToast();
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
+  const [afrondenDialoog, setAfrondenDialoog] = useState(false);
   const zoekParams = useSearch();
   const [activeTab, setActiveTabState] = useState(() => {
     const gevraagd = new URLSearchParams(zoekParams).get("tab") ?? "";
@@ -729,6 +738,20 @@ export default function OpdrachtDetailPagina() {
 
   const aiChatMut = useAiChatWerkbegroting();
 
+  const updateOpdrachtMut = useUpdateOpdracht({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Opdracht bijgewerkt" });
+      },
+      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
+    },
+  });
+
+  function wijzigOpdrachtStatus(nieuweStatus: string) {
+    updateOpdrachtMut.mutate({ id: opdrachtId, data: { status: nieuweStatus } as any });
+  }
+
   const isGereed = opdracht?.status === "afgerond";
 
   function downloadNacalculatiePdf() {
@@ -800,22 +823,81 @@ export default function OpdrachtDetailPagina() {
               <Badge variant="outline" className={wbStatus.kleur}>Begroting: {wbStatus.label}</Badge>
             )}
             <div className="flex-1" />
-            <div className="flex gap-2 print:hidden">
-              {isGereed && (
-                <Button variant="outline" size="sm" onClick={downloadNacalculatiePdf}>
-                  <Printer className="h-4 w-4 mr-1.5" />
-                  Nacalculatie PDF
+            <div className="flex items-center gap-2 print:hidden">
+              {/* Eén knop voor de eerstvolgende stap (alleen met schrijfrecht) */}
+              {kanSchrijven && (opdracht.status === "actief" || opdracht.status === "gepauzeerd") && (
+                <Button size="sm" onClick={() => setAfrondenDialoog(true)} data-testid="knop-volgende-stap">
+                  Afronden <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
-                <MessageSquare className="h-4 w-4 mr-1.5" />
-                AI-chat
-              </Button>
+              {/* Alle overige acties achter drie puntjes */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" aria-label="Meer acties" data-testid="knop-meer-acties">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => setChatOpen(true)}>
+                    <MessageSquare className="h-3.5 w-3.5 mr-2" /> AI-chat
+                  </DropdownMenuItem>
+                  {isGereed && (
+                    <DropdownMenuItem onClick={downloadNacalculatiePdf}>
+                      <Printer className="h-3.5 w-3.5 mr-2" /> Nacalculatie PDF
+                    </DropdownMenuItem>
+                  )}
+                  {kanSchrijven && opdracht.status === "actief" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => wijzigOpdrachtStatus("gepauzeerd")}>
+                        Pauzeren
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {kanSchrijven && opdracht.status === "gepauzeerd" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => wijzigOpdrachtStatus("actief")}>
+                        Hervatten
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {kanVerwijderen && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => wijzigOpdrachtStatus("geannuleerd")}
+                      >
+                        <X className="h-3.5 w-3.5 mr-2" /> Annuleren
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           {opdracht.werknummer && <p className="text-xs text-muted-foreground mt-0.5">{opdracht.werknummer}</p>}
         </div>
       </div>
+
+      {/* Bevestiging: opdracht afronden */}
+      <AlertDialog open={afrondenDialoog} onOpenChange={setAfrondenDialoog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Opdracht afronden?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hiermee wordt de opdracht als afgerond gemarkeerd. Controleer of alle uren en inkopen zijn verwerkt voordat je doorgaat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setAfrondenDialoog(false); wijzigOpdrachtStatus("afgerond"); }}>
+              Afronden bevestigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Goedkeuring projectafsluiting */}
       {isGereed && (

@@ -60,7 +60,12 @@ import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus, AlertTriangle,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
   FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown, History, ArrowRight, User,
+  MoreHorizontal, ChevronRight,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { VerzendTab } from "./verzend-tab";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { useToast } from "@/hooks/use-toast";
@@ -872,120 +877,34 @@ export default function ProposalStudio() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
-                <div className="flex flex-wrap gap-2 items-center">
-                  {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
-                  <ProcesBalk
-                    stappen={[
-                      { sleutel: "concept", label: "Concept" },
-                      { sleutel: "verzonden", label: "Verzonden" },
-                      { sleutel: "bekeken", label: "In behandeling" },
-                      { sleutel: "ondertekend", label: "Geaccepteerd" },
-                    ]}
-                    huidige={offerte.status === "geaccepteerd" ? "ondertekend" : offerte.status}
-                    eindtoestand={
-                      offerte.status === "afgewezen" ? "Afgewezen"
-                        : offerte.status === "vervallen" ? "Vervallen"
-                        : offerte.status === "ingetrokken" ? "Ingetrokken"
-                        : null
-                    }
-                  />
-                  {offerte.calculatie_id && (
-                    <Badge variant="outline" className="px-3 py-1 text-sm font-normal bg-blue-50 text-blue-700 border-blue-200">
-                      <Hammer className="h-3 w-3 mr-1.5" />
-                      Op basis van calculatie:{" "}
-                      <Link href={`/modules/calculaties/${offerte.calculatie_id}`} className="ml-1 font-semibold hover:underline text-blue-700">
-                        {offerte.calculatie_naam || `#${offerte.calculatie_id}`}
-                      </Link>
-                    </Badge>
-                  )}
-                </div>
-                {kanSchrijven && (VOLGENDE_STATUSSEN[offerte.status] ?? []).length > 0 && (
-                  <Select
-                    value=""
-                    onValueChange={(v) => {
-                      if (!v) return;
-                      if (IRREVERSIBELE_STATUSSEN.has(v)) { setBevestigStatus(v); return; }
-                      void wijzigStatus(v);
-                    }}
-                    disabled={statusWijzigenBusy}
-                  >
-                    <SelectTrigger className="h-7 text-xs px-2.5 w-auto gap-1">
-                      <SelectValue placeholder={statusWijzigenBusy ? "Bezig…" : "Status wijzigen"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(VOLGENDE_STATUSSEN[offerte.status] ?? []).map((s) => (
-                        <SelectItem key={s} value={s}>{STATUS_LABEL[s] ?? s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
+                <ProcesBalk
+                  stappen={[
+                    { sleutel: "concept", label: "Concept" },
+                    { sleutel: "verzonden", label: "Verzonden" },
+                    { sleutel: "bekeken", label: "In behandeling" },
+                    { sleutel: "ondertekend", label: "Geaccepteerd" },
+                  ]}
+                  huidige={offerte.status === "geaccepteerd" ? "ondertekend" : offerte.status}
+                  eindtoestand={
+                    offerte.status === "afgewezen" ? "Afgewezen"
+                      : offerte.status === "vervallen" ? "Vervallen"
+                      : offerte.status === "ingetrokken" ? "Ingetrokken"
+                      : null
+                  }
+                />
+                {offerte.calculatie_id && (
+                  <Badge variant="outline" className="px-3 py-1 text-sm font-normal bg-blue-50 text-blue-700 border-blue-200">
+                    <Hammer className="h-3 w-3 mr-1.5" />
+                    Op basis van calculatie:{" "}
+                    <Link href={`/modules/calculaties/${offerte.calculatie_id}`} className="ml-1 font-semibold hover:underline text-blue-700">
+                      {offerte.calculatie_naam || `#${offerte.calculatie_id}`}
+                    </Link>
+                  </Badge>
                 )}
-                <AlertDialog open={bevestigStatus !== null} onOpenChange={(open) => { if (!open) setBevestigStatus(null); }}>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Status wijzigen naar &quot;{bevestigStatus ? (STATUS_LABEL[bevestigStatus] ?? bevestigStatus) : ""}&quot;?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Deze statuswijziging is niet terug te draaien. Weet je zeker dat je wilt doorgaan?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setBevestigStatus(null)}>Annuleren</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          const doel = bevestigStatus;
-                          setBevestigStatus(null);
-                          if (doel) void wijzigStatus(doel);
-                        }}
-                      >
-                        Bevestigen
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                {kanIntrekken && (offerte.status === "verzonden" || offerte.status === "bekeken") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5"
-                    onClick={() => { setIntrekkenReden(""); setIntrekkenDialoogOpen(true); }}
-                  >
-                    Intrekken
-                  </Button>
-                )}
-                <Dialog open={intrekkenDialoogOpen} onOpenChange={(open) => { if (!open) setIntrekkenDialoogOpen(false); }}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Offerte intrekken</DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground">
-                      De offerte wordt formeel ingetrokken. De klant kan daarna niet meer ondertekenen. Geef een reden op voor de audittrail.
-                    </p>
-                    <div className="space-y-2">
-                      <Label htmlFor="intrekken-reden">Reden (verplicht)</Label>
-                      <Textarea
-                        id="intrekken-reden"
-                        value={intrekkenReden}
-                        onChange={(e) => setIntrekkenReden(e.target.value)}
-                        placeholder="Geef een reden op voor het intrekken van deze offerte…"
-                        rows={3}
-                      />
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIntrekkenDialoogOpen(false)} disabled={intrekkenBusy}>Annuleren</Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => void voerIntrekkenUit()}
-                        disabled={intrekkenBusy || !intrekkenReden.trim()}
-                      >
-                        {intrekkenBusy ? "Bezig…" : "Offerte intrekken"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
               </div>
               {((offerte as any).kenmerk || offerte.offertenummer) && (
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                   {(offerte as any).kenmerk && (
                     <span
                       className="font-mono font-semibold tracking-wide bg-muted border border-border rounded px-1.5 py-0.5 select-all"
@@ -999,17 +918,142 @@ export default function ProposalStudio() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setVersieDialoogOpen(true)}>
-              <Clock className="h-3.5 w-3.5" /> Versie opslaan
-            </Button>
-            <a
-              href={`/api/offertes/${offerteId}/pdf`}
-              download
-              className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              <FileDown className="h-3.5 w-3.5" /> PDF downloaden
-            </a>
+          <div className="flex items-center gap-2">
+            {/* Eén knop voor de eerstvolgende stap (alleen met schrijfrecht) */}
+            {kanSchrijven && offerte.status === "concept" && (
+              <Button size="sm" onClick={() => void wijzigStatus("verzonden")} disabled={statusWijzigenBusy} data-testid="knop-volgende-stap">
+                Verzenden <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            )}
+            {kanSchrijven && offerte.status === "verzonden" && (
+              <Button size="sm" onClick={() => void wijzigStatus("bekeken")} disabled={statusWijzigenBusy} data-testid="knop-volgende-stap">
+                Bekeken <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            )}
+            {kanSchrijven && offerte.status === "bekeken" && (
+              <Button size="sm" onClick={() => setBevestigStatus("ondertekend")} disabled={statusWijzigenBusy} data-testid="knop-volgende-stap">
+                Accepteren <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            )}
+            {kanSchrijven && (offerte.status === "afgewezen" || offerte.status === "ingetrokken") && (
+              <Button variant="outline" size="sm" onClick={() => void wijzigStatus("concept")} disabled={statusWijzigenBusy} data-testid="knop-volgende-stap">
+                Heropenen als concept
+              </Button>
+            )}
+            {/* Alle documentacties achter drie puntjes */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" aria-label="Meer acties" data-testid="knop-meer-acties">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem asChild>
+                  <a href={`/api/offertes/${offerteId}/pdf`} download className="flex items-center">
+                    <FileDown className="h-3.5 w-3.5 mr-2" /> PDF downloaden
+                  </a>
+                </DropdownMenuItem>
+                {kanSchrijven && (
+                  <DropdownMenuItem onClick={() => setVersieDialoogOpen(true)}>
+                    <Clock className="h-3.5 w-3.5 mr-2" /> Versie opslaan
+                  </DropdownMenuItem>
+                )}
+                {/* Overige statusopties die niet de primaire vervolgstap zijn */}
+                {kanSchrijven && offerte.status === "concept" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => void wijzigStatus("afgewezen")} disabled={statusWijzigenBusy}>
+                      <X className="h-3.5 w-3.5 mr-2" /> Markeer afgewezen
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {kanSchrijven && offerte.status === "verzonden" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setBevestigStatus("ondertekend")} disabled={statusWijzigenBusy}>
+                      <ChevronRight className="h-3.5 w-3.5 mr-2" /> Accepteren
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void wijzigStatus("afgewezen")} disabled={statusWijzigenBusy}>
+                      <X className="h-3.5 w-3.5 mr-2" /> Afwijzen
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {kanSchrijven && offerte.status === "bekeken" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => void wijzigStatus("afgewezen")} disabled={statusWijzigenBusy}>
+                      <X className="h-3.5 w-3.5 mr-2" /> Afwijzen
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {kanIntrekken && (offerte.status === "verzonden" || offerte.status === "bekeken") && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => { setIntrekkenReden(""); setIntrekkenDialoogOpen(true); }}
+                    >
+                      <X className="h-3.5 w-3.5 mr-2" /> Intrekken
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {/* Dialogen worden getriggerd vanuit het ⋯-menu of de vervolgstap-knop */}
+            <AlertDialog open={bevestigStatus !== null} onOpenChange={(open) => { if (!open) setBevestigStatus(null); }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Status wijzigen naar &quot;{bevestigStatus ? (STATUS_LABEL[bevestigStatus] ?? bevestigStatus) : ""}&quot;?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Deze statuswijziging is niet terug te draaien. Weet je zeker dat je wilt doorgaan?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setBevestigStatus(null)}>Annuleren</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      const doel = bevestigStatus;
+                      setBevestigStatus(null);
+                      if (doel) void wijzigStatus(doel);
+                    }}
+                  >
+                    Bevestigen
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Dialog open={intrekkenDialoogOpen} onOpenChange={(open) => { if (!open) setIntrekkenDialoogOpen(false); }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Offerte intrekken</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  De offerte wordt formeel ingetrokken. De klant kan daarna niet meer ondertekenen. Geef een reden op voor de audittrail.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="intrekken-reden">Reden (verplicht)</Label>
+                  <Textarea
+                    id="intrekken-reden"
+                    value={intrekkenReden}
+                    onChange={(e) => setIntrekkenReden(e.target.value)}
+                    placeholder="Geef een reden op voor het intrekken van deze offerte…"
+                    rows={3}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIntrekkenDialoogOpen(false)} disabled={intrekkenBusy}>Annuleren</Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => void voerIntrekkenUit()}
+                    disabled={intrekkenBusy || !intrekkenReden.trim()}
+                  >
+                    {intrekkenBusy ? "Bezig…" : "Offerte intrekken"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

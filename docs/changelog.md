@@ -3392,3 +3392,10 @@ Het uitvoeringsscherm (`/uitvoering/:id`) heeft nu een werkende documenten-tab d
 - `artifacts/firevault/src/pages/uitvoering/detail.tsx`: `OpdrachtDocumenten`-component volledig herschreven — haalt nu ook documenten op via `doel_type=opdracht` en toont ze boven de gebouw/offerte-documenten in een aparte sectie. Nieuwe `UploadOpdrachtDocumentDialog` biedt een bestandskiezer die via `POST /documenten/aanleveren` uploadt (ter goedkeuring in de bibliotheek) en vervolgens via `useAddDocumentKoppeling` direct aan de opdracht koppelt. De upload-knop is alleen zichtbaar bij `bibliotheek:2`; lezen werkt al op `bibliotheek:1`.
 
 Rechten: bestaande separatie gehandhaafd — bekijken vereist bibliotheek:1 (ongewijzigd), toevoegen/koppelen vereist bibliotheek:2 (via de bestaande `POST /documenten/:id/koppelingen`-route).
+
+
+## 2026-08-15 — Fase 2 procesbalk: knoppenrijen offerte-studio, opdracht en opname opgeruimd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-only, geen backend-wijzigingen)
+
+Offerte-studio (`offertes/studio.tsx`), opdracht-detail (`opdrachten/detail.tsx`) en opname-detail (`opname/detail.tsx`) volgen nu hetzelfde koppatroon als de calculatie-detailpagina. Verwijderd: de inline status-Select, de losse Intrekken-knop en de losse "Versie opslaan"/"PDF downloaden"-knoppen uit de studio-header; de losse "Nacalculatie PDF" en "AI-chat"-knoppen uit de opdrachtkop. Toegevoegd: één vervolgstap-knop (`data-testid="knop-volgende-stap"`) per pagina (studio: Verzenden/Bekeken/Accepteren/Heropenen op basis van status; opdracht: Afronden met AlertDialog-bevestiging), plus een ⋯-dropdown (`data-testid="knop-meer-acties"`) met alle overige acties en destructieve acties achter separator. Schrijfacties gegate op `heeftNiveau(module, 2)`, annuleren/verwijderen op niveau 4. Opname krijgt `useBevoegdheid` + `kanSchrijven`-gate op de spots-aanmaken-knop. Bewijsscript in `scripts/src/bewijs-fase2-procesbalk-screenshot.ts` (licht + donker, drie pagina's).

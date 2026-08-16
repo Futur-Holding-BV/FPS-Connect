@@ -1,5 +1,6 @@
 import { ProcesBalk } from "@/components/proces-balk";
 import { useState } from "react";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useParams, Link } from "wouter";
 import {
   useGetOpname,
@@ -58,13 +59,16 @@ export default function OpnameDetailPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [resultaat, setResultaat] = useState<OpnameSpotsAanmakenResultaat | null>(null);
+  const { heeftNiveau } = useBevoegdheid();
+  // POST /opname/:id/spots-aanmaken eist voorzieningen:3.
+  const kanSchrijven = heeftNiveau("voorzieningen", 3);
 
   const { data: opname, isLoading } = useGetOpname(Number(id));
   const spotsAanmaken = useOpnameSpotsAanmaken();
 
   const isDefinitief = opname?.status === "definitief";
   const heeftGebouw = Boolean(opname?.gebouw_id);
-  const kanSpotsAanmaken = isDefinitief && heeftGebouw && resultaat === null;
+  const kanSpotsAanmaken = kanSchrijven && isDefinitief && heeftGebouw && resultaat === null;
 
   async function maakSpotsAan() {
     if (!opname) return;
