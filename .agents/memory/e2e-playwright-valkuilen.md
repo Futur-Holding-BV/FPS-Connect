@@ -18,5 +18,6 @@ description: Wegwijzer naar alle Playwright/e2e-valkuil-topicfiles; lees het bet
 - [E2E menu-test validatiestap](e2e-validatie-runner.md) — runner boot api-server+expo zelf; CI heeft geen restart_workflow.
 - [Playwright op NixOS](playwright-nixos.md) — Nix-chromium via executablePath.
 - [e2e-menu "Failed to fetch" login](e2e-monteur-login-failed-to-fetch.md) — tunnelflakiness of stale .env-domein.
+- [Stale EXPO_PUBLIC_DOMAIN monteur-app](monteur-env-stale-domein.md) — fix .env op $REPLIT_DEV_DOMAIN, Metro-cache wissen, expo herstarten.
 - [runTest infra-failure diagnosis](runtest-infra-failure-diagnosis.md) — bij "Maximum iterations" eerst Playwright zelf checken, anders curl-bewijs.
 - [E2e-suite mutex contention](e2e-suite-mutex.md) — eigen mutex-sleutel per suite of ruimere web-timeout.

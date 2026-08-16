@@ -1,11 +1,53 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { createHash } from "crypto";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { createRequire } from "module";
 const _require = createRequire(import.meta.url);
 const pkg = _require("./package.json") as { version: string };
+
+// Vervangt de __SW_VERSIE__-placeholder in de serviceworker automatisch door
+// een hash van de gebouwde bundel. Zo krijgt elke release vanzelf een nieuwe
+// cachenaam (en ruimt de serviceworker oude caches op) zonder dat iemand het
+// versienummer met de hand hoeft op te hogen.
+function swVersiePlugin(): Plugin {
+  let bundelHash = "";
+  return {
+    name: "sw-versie",
+    apply: "build",
+    generateBundle(_opts, bundle) {
+      // De bestandsnamen van de chunks bevatten al content-hashes van Vite;
+      // een hash over de gesorteerde namen verandert dus bij elke wijziging
+      // in de gebouwde code en blijft gelijk bij een identieke build.
+      bundelHash = createHash("sha256")
+        .update(Object.keys(bundle).sort().join("|"))
+        .digest("hex")
+        .slice(0, 12);
+    },
+    closeBundle() {
+      const swPad = path.resolve(
+        import.meta.dirname,
+        "dist/public/sw.js",
+      );
+      if (!existsSync(swPad)) {
+        throw new Error(
+          "sw-versie plugin: dist/public/sw.js niet gevonden na build.",
+        );
+      }
+      const inhoud = readFileSync(swPad, "utf8");
+      if (!inhoud.includes("__SW_VERSIE__")) {
+        throw new Error(
+          "sw-versie plugin: placeholder __SW_VERSIE__ ontbreekt in sw.js.",
+        );
+      }
+      const versie = bundelHash || Date.now().toString(36);
+      writeFileSync(swPad, inhoud.replaceAll("__SW_VERSIE__", versie));
+    },
+  };
+}
 
 export default defineConfig(async ({ command }) => {
   const isBuild = command === "build";
@@ -35,6 +77,7 @@ export default defineConfig(async ({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
+      swVersiePlugin(),
       runtimeErrorOverlay(),
       ...(process.env.NODE_ENV !== "production" &&
       process.env.REPL_ID !== undefined

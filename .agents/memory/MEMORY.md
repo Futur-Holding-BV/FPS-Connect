@@ -156,5 +156,4 @@
 - [Declaratie→loonketen](declaratie-loonketen.md) — plus doorzetten: signaal geen lock, optimistische vergrendeling via verwacht_doorgezet_naar (IS NOT DISTINCT FROM), anders 409; — goedkeuren=auto salaris_mutatie; SCAB-verzenden verwerkt alléén snapshot (mutatie_ids), nooit her-query op wm+periode; verzend-overgang atomair.
 - [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.
 - [Document Studio bulk-generatie](studio-bulk-generatie.md) — claim via advisory lock + tussenstatus 'genererend' vóór AI-aanroep; referentie optioneel; single-routes moeten 'genererend' kennen.
-- [Stale EXPO_PUBLIC_DOMAIN monteur-app](monteur-env-stale-domein.md) — e2e-monteur "Failed to fetch" bij login = stale .env-domein + Metro-cache; fix .env op $REPLIT_DEV_DOMAIN, cache wissen, expo herstarten.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.

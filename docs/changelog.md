@@ -3560,3 +3560,10 @@ Beantwoorde klantvragen waren tot nu toe alleen zichtbaar voor de admin in FPS C
 De inbox-items query in `planningMeldingenService.ts` gebruikte `eq(id, itemIds[0])`, waardoor alleen de titel van het eerste item werd opgehaald. Bij bulk-planningswaarschuwingen (meerdere aanvragen) kregen alle overige regels `offerte_titel: null`. Opgelost door over te stappen op `inArray(id, itemIds)` zodat alle betrokken items in één query worden opgehaald en de titelMap volledig wordt gevuld.
 
 Bewijs: nieuwe test "bulk: alle titels correct meegestuurd bij meerdere planningsitems" in `planningMeldingenService.test.ts` toont dat bij twee planningsregels met verschillende inbox-item-ids beide titels ("Offerte A" en "Offerte B") aanwezig zijn en geen enkele null is. Alle 333 bestaande tests blijven groen.
+
+
+## 2026-08-16 — Serviceworker-cacheversie nu automatisch per release (taak #489)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Het handmatig ophogen van `fps-connect-vN` in `artifacts/firevault/public/sw.js` is niet meer nodig. Een nieuwe `sw-versie` Vite-plugin (in `vite.config.ts`) vervangt tijdens elke build de placeholder `__SW_VERSIE__` in de serviceworker door een hash (12 tekens) van de gebouwde bundel-bestandsnamen (die zelf al content-hashes bevatten). Elke release krijgt dus automatisch een nieuwe cachenaam; identieke builds houden dezelfde naam (geen onnodige cache-churn). Bij activatie ruimt de serviceworker alle oude caches op, en dankzij `skipWaiting`/`clients.claim` neemt de nieuwe worker direct over. In dev (waar de placeholder blijft staan) valt de cachenaam terug op `fps-connect-dev`. De plugin faalt de build hard als `dist/public/sw.js` ontbreekt of de placeholder niet gevonden wordt, zodat dit mechanisme nooit stil kan wegvallen.
