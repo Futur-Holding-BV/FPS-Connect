@@ -3423,3 +3423,12 @@ Gebruikers kunnen nu per categorie kiezen welke e-mailmeldingen ze ontvangen. Ni
 **Backend:** nieuw `lib/mailVoorkeuren.ts` met `magMailSturen(userId, categorie)` en `filterMailOntvangers(gebruikers, categorie)`. Vijf categorieën: `email.planning_melding`, `email.reactietermijn_melding`, `email.portaal_klantvraag`, `email.portaal_ondertekening`, `email.portaal_afwijzing`. Geïntegreerd in `planningMeldingenService.ts` (bulk-filter voor ontvangers), `reactietermijnSignalering.ts` (bulk-filter), en `portaal.ts` (per-behandelaar check bij klantvraag/ondertekening/afwijzing). Wanneer geen bekende `behandeldDoorId`, valt portaal terug op de gedeelde postbus — fail-open, altijd versturen.
 
 **Frontend:** nieuwe pagina `/mijn/mail-voorkeuren` met schakelaar per categorie, zichtbaar via de instellingen-pagina onder "E-mailmeldingen". Route geregistreerd in `connect-routes.tsx`.
+
+
+## 2026-08-16 — GitHub klein onderhoud: copilot-tak verwijderd, token-health bevestigd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Tak opgeruimd:** `copilot/fix-github-actions-check` verwijderd uit Futur-Holding-BV/FPS-Connect. De tak bevatte een Copilot-bot-poging van 2026-08-08 om de route-mangeling in `auth.ts`/`opname.ts` te repareren; het probleem is sindsdien correct opgelost via de gecontroleerde merge-aanpak (zie auth-ts-mangling.md). De tak liep 200+ commits achter op `main` en bevatte niets unieks.
+
+**Token-health bevestigd:** De `token-health-check`-workflow (`.github/workflows/token-health-check.yml`) handmatig getriggerd via `workflow_dispatch`. Uitkomst: `success`. Tevens de dagelijkse automatische run van 2026-08-16 08:15 UTC: `success`. Het Actions-secret `FPS_PUSH_TOKEN` is gevuld en het token is geldig. Actions-run: https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/31958091377
