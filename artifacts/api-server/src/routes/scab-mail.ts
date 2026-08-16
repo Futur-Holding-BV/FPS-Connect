@@ -5,10 +5,11 @@ import {
   scabMailsTable,
   scabMailBijlagenTable,
   salarisMutatiesTable,
+  declaratiesTable,
   werkgeversTable,
   medewerkersTable,
 } from "@workspace/db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, isNotNull, ne } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -225,6 +226,46 @@ router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Resp
   }).where(eq(scabMailsTable.id, id)).returning();
 
   req.log.info({ scabMailId: id, naar: mail.scabEmailAdres }, "SCAB-mail als verzonden gemarkeerd");
+
+  // Meegenomen met de loonaanlevering → declaraties automatisch op "verwerkt".
+  // Alle mutaties van deze werkmaatschappij/periode die uit een declaratie
+  // komen (en niet afgekeurd zijn) gelden nu als aangeleverd bij de
+  // loonverwerking; de gekoppelde declaraties hoeven niet meer handmatig
+  // gemarkeerd te worden. Fouten hier blokkeren de verzending niet.
+  try {
+    const gekoppeld = await db
+      .select({ declaratieId: salarisMutatiesTable.declaratieId })
+      .from(salarisMutatiesTable)
+      .where(and(
+        eq(salarisMutatiesTable.werkmaatschappij, mail.werkmaatschappij),
+        eq(salarisMutatiesTable.periodeJaar, mail.periodeJaar),
+        eq(salarisMutatiesTable.periodeMaand, mail.periodeMaand),
+        isNotNull(salarisMutatiesTable.declaratieId),
+        ne(salarisMutatiesTable.status, "afgekeurd"),
+      ));
+    const ids = gekoppeld.map((r) => r.declaratieId).filter((v): v is number => v != null);
+    if (ids.length > 0) {
+      const verwerkt = await db
+        .update(declaratiesTable)
+        .set({
+          status:       "verwerkt",
+          verwerkingOp: new Date(),
+          verwerktDoor: sess.userId ?? null,
+          bijgewerktOp: new Date(),
+        })
+        .where(and(
+          inArray(declaratiesTable.id, ids),
+          eq(declaratiesTable.status, "goedgekeurd"),
+        ))
+        .returning({ id: declaratiesTable.id });
+      if (verwerkt.length > 0) {
+        req.log.info({ scabMailId: id, declaratieIds: verwerkt.map((v) => v.id) }, "Declaraties automatisch op verwerkt gezet na SCAB-verzending");
+      }
+    }
+  } catch (err) {
+    req.log.error({ err, scabMailId: id }, "Automatisch verwerken van declaraties na SCAB-verzending mislukt");
+  }
+
   return void res.json(mapMail(updated));
 });
 

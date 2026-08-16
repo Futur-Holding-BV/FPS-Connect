@@ -3,6 +3,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { medewerkersTable, werkgeversTable } from "./hrm";
+import { declaratiesTable } from "./declaraties";
 
 // ── Salarismutaties ──────────────────────────────────────────────────────────
 // Eén rij per mutatie per medewerker per loonperiode. HRM, handmatig of import
@@ -21,6 +22,9 @@ export const salarisMutatiesTable = pgTable("salaris_mutaties", {
   omschrijving: text("omschrijving"),
   ingangsdatum: text("ingangsdatum"),
   bron: text("bron").notNull().default("handmatig"),
+  // Gevuld wanneer de mutatie automatisch uit een goedgekeurde declaratie komt
+  // (bron "declaratie"); uniek per declaratie via partiële index (migratie 0054).
+  declaratieId: integer("declaratie_id").references(() => declaratiesTable.id, { onDelete: "set null" }),
   bijlageObjectPath: text("bijlage_object_path"),
   bijlageNaam: text("bijlage_naam"),
   bijlageGrootte: integer("bijlage_grootte"),

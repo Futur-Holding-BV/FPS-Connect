@@ -1,3 +1,9 @@
+## 2026-08-16 — Declaraties automatisch de loonverwerking in
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Goedgekeurde declaraties stromen nu automatisch door richting de loonverwerking: bij goedkeuring wordt direct een salarismutatie (bron "declaratie") aangemaakt voor de lopende loonperiode, gekoppeld aan de declaratie (migratie 0054, uniek per declaratie dus race-veilig). Zodra de SCAB-mail van die werkmaatschappij/periode wordt verzonden, springen de meegenomen declaraties vanzelf op "verwerkt" — handmatig markeren blijft alleen nodig bij uitbetaling buiten de loonrun om (de knop blijft bestaan, met uitleg erbij). Alsnog afwijzen ná goedkeuring ruimt de nog niet geaccordeerde concept-mutatie automatisch op. Bewezen met een end-to-end script (scripts/src/bewijs-declaratie-loonketen.ts): goedkeuren → mutatie, SCAB-verzending → verwerkt, afwijzen → mutatie weg. PWA-cache naar v16.
+
 ## 2026-08-16 — Werkbak "Openen" bij weekstaat-meldingen gaf 404
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -5,8 +5,9 @@ import {
   declaratieBeleidTable,
   gebruikersTable,
   medewerkersTable,
+  salarisMutatiesTable,
 } from "@workspace/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { heeftNiveau } from "@workspace/permissies";
@@ -332,6 +333,52 @@ router.post("/declaraties/:id/goedkeuren", beoordelen, async (req, res) => {
     .where(eq(declaratiesTable.id, id))
     .returning();
 
+  // Automatische stap richting loonverwerking: goedgekeurde declaratie wordt
+  // een salarismutatie (bron "declaratie") voor de lopende loonperiode. De
+  // partiële unieke index op declaratie_id maakt dit race-veilig; een fout
+  // hier blokkeert de goedkeuring niet (mutatie kan handmatig alsnog).
+  try {
+    const [mw] = await db
+      .select({
+        naam:             medewerkersTable.naam,
+        werkmaatschappij: medewerkersTable.werkmaatschappij,
+        werkgeverId:      medewerkersTable.werkgeverId,
+      })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, huidig.medewerkerId))
+      .limit(1);
+    if (mw) {
+      const nu = new Date();
+      const bedrag = (huidig.bedragTotaalCents / 100).toFixed(2).replace(".", ",");
+      const beoordelaar = await gebruikerNaam(userId);
+      await db
+        .insert(salarisMutatiesTable)
+        .values({
+          medewerkerId:      huidig.medewerkerId,
+          medewerkerNaam:    mw.naam,
+          werkmaatschappij:  mw.werkmaatschappij,
+          werkgeverId:       mw.werkgeverId,
+          periodeJaar:       nu.getFullYear(),
+          periodeMaand:      nu.getMonth() + 1,
+          type:              "declaratie",
+          omschrijving:      `Declaratie #${id} — ${huidig.categorie} — € ${bedrag} (${huidig.omschrijving})`,
+          ingangsdatum:      huidig.datum,
+          bron:              "declaratie",
+          declaratieId:      id,
+          aangemaaktDoorId:  userId,
+          aangemaaktDoorNaam: beoordelaar,
+        })
+        .onConflictDoNothing({
+          target: [salarisMutatiesTable.declaratieId],
+          where: sql`declaratie_id IS NOT NULL`,
+        });
+    } else {
+      req.log.warn({ declaratieId: id }, "Geen medewerker gevonden; salarismutatie niet automatisch aangemaakt");
+    }
+  } catch (err) {
+    req.log.error({ err, declaratieId: id }, "Automatische salarismutatie uit declaratie mislukt");
+  }
+
   res.json(await enrichDeclaratie(bijgewerkt));
 });
 
@@ -369,6 +416,26 @@ router.post("/declaraties/:id/afwijzen", beoordelen, async (req, res) => {
     })
     .where(eq(declaratiesTable.id, id))
     .returning();
+
+  // Alsnog afwijzen ná goedkeuring: de automatisch aangemaakte salarismutatie
+  // mag niet blijven staan zolang die nog concept is (geaccordeerde mutaties
+  // laten we bewust staan — die zijn al onderdeel van de loonaanlevering).
+  if (huidig.status === "goedgekeurd") {
+    try {
+      const verwijderd = await db
+        .delete(salarisMutatiesTable)
+        .where(and(
+          eq(salarisMutatiesTable.declaratieId, id),
+          eq(salarisMutatiesTable.status, "concept"),
+        ))
+        .returning({ id: salarisMutatiesTable.id });
+      if (verwijderd.length > 0) {
+        req.log.info({ declaratieId: id, mutatieId: verwijderd[0]!.id }, "Concept-salarismutatie verwijderd na alsnog afwijzen declaratie");
+      }
+    } catch (err) {
+      req.log.error({ err, declaratieId: id }, "Opruimen salarismutatie na afwijzen mislukt");
+    }
+  }
 
   // Mail naar medewerker
   try {

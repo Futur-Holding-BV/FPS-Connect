@@ -303,6 +303,14 @@ export default function DeclaratieDetailPagina() {
         )}
       </div>
 
+      {isGoedgekeurd && magVerwerken && (
+        <p className="text-xs text-muted-foreground">
+          Deze declaratie staat al automatisch klaar als salarismutatie voor de loonverwerking.
+          Zodra de loonaanlevering (SCAB-mail) van deze periode wordt verzonden, springt de status
+          vanzelf op verwerkt. Handmatig markeren is alleen nodig als u buiten de loonrun om uitbetaalt.
+        </p>
+      )}
+
       {/* Bewerkdialoog */}
       <Dialog open={bewerkOpen} onOpenChange={o => { if (!o) setBewerkOpen(false); }}>
         <DialogContent className="max-w-md">

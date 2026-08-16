@@ -354,6 +354,7 @@ INDEX|regie_voorwaarden|regie_voorwaarden_pkey
 INDEX|release_update_notes|release_update_notes_pkey
 INDEX|reserveringen|reserveringen_pkey
 INDEX|salaris_audit_ext|salaris_audit_ext_pkey
+INDEX|salaris_mutaties|salaris_mutaties_declaratie_id_uniek
 INDEX|salaris_mutaties|salaris_mutaties_pkey
 INDEX|salarisbatches|salarisbatches_pkey
 INDEX|salarisbestanden|salarisbestanden_pkey
@@ -3764,6 +3765,7 @@ KOLOM|salaris_mutaties|bijlage_grootte|integer|YES|
 KOLOM|salaris_mutaties|bijlage_naam|text|YES|
 KOLOM|salaris_mutaties|bijlage_object_path|text|YES|
 KOLOM|salaris_mutaties|bron|text|NO|'handmatig'::text
+KOLOM|salaris_mutaties|declaratie_id|integer|YES|
 KOLOM|salaris_mutaties|gecontroleerd_door_id|integer|YES|
 KOLOM|salaris_mutaties|gecontroleerd_door_naam|text|YES|
 KOLOM|salaris_mutaties|gecontroleerd_op|timestamp without time zone|YES|
