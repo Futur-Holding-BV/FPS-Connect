@@ -46,3 +46,5 @@ Verwacht: `{"versie":"2026.07.14-<sha8>","commit":"<sha8>","gebouwd_op":"..."}`.
 ## Deploy-workflow op GitHub vereist repo-secrets
 
 Een push naar main triggert `.github/workflows/deploy.yml` (Docker-images bouwen → SSH-deploy naar VPS). De SSH-stap leest `secrets.PROD_SSH_HOST/USER/KEY/PORT` uit de GitHub-repo-secrets. Bij ontbrekende secrets faalt de job.
+
+**Org-verhuizing & token-scope (aug 2026):** repo verhuisd naar Futur-Holding-BV/FPS-Connect. Fine-grained PATs gelden per resource-owner: een token aangemaakt onder het persoonlijke account dekt de organisatie NIET — Actions/secrets-API geeft dan 403 ondanks admin-rechten. Nieuw token moet resource owner = Futur-Holding-BV hebben. Gewenste rechten: Contents R/W (push), Actions R/W (runs lezen + workflow_dispatch), evt. Secrets Read. Vervangen in Replit-secret GITHUB_TOKEN_PUSH én GitHub Actions-secret FPS_PUSH_TOKEN.
