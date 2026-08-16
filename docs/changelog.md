@@ -3508,6 +3508,31 @@ De drie bewakingsdrempels uit migratie `0048` (offerte-reactie 7 d, offerte-beke
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bewaking, geen runtimewijziging)
 
 Nieuwe stap 6b toegevoegd aan `scripts/post-merge.sh`: na seed-profielen (stap 6) draait nu `pnpm --filter @workspace/api-server run typecheck` vóórdat de ERR-trap wordt verwijderd en vóórdat de push naar GitHub plaatsvindt. Bij een TypeScript-fout faalt de stap hard via de bestaande ERR-trap (→ faalmelding naar René), met een gestructureerde foutuitvoer: unieke lijst van kapotte bestandsnamen + herstelprocedure (git checkout uit de laatste goede commit + bewust her-toepassen van de beoogde wijziging). Achtergrond: vier eerdere taak-agent-merges mangelden routebestanden (auth.ts, 2× opname.ts, rapporten.ts) die pas bij de deploy-gate werden gevangen. Bewijs geleverd: typecheck groen op de huidige boom → opzettelijke mangeling in `aanvragen.ts` (type-fout op regel 1) gevangen mét bestandsnaam en regelnummer → na herstel weer groen.
+
+
+## 2026-08-16 — Taak #967: Mail-wachtrij hardening: vastgelopen items herstellen + badge
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief)
+
+Twee zwakke plekken in de mail-wachtrij gate (actief sinds 16 aug) zijn gedicht:
+
+**1. Herstelroutine vastgelopen items**
+Items die tijdens het verzenden crashten (status `"verzenden"`) bleven eeuwig hangen en waren onbereikbaar voor een beheerder. De nieuwe functie `herstelVastgelopenMailWachtrijItems()` in `email.ts` zet dergelijke items — ouder dan 10 minuten — terug naar `"mislukt"` met foutdetail `"verzendpoging afgebroken (serverherstart)"`. De routine wordt bij serverstart én daarna elke 5 minuten automatisch gedraaid via een `setInterval` in `index.ts`.
+
+**2. Telling-endpoint**
+Nieuw `GET /api/mail-wachtrij/telling` endpoint retourneert `{ aantal: number }` voor items met status `"wachtend"`. Staat vóór de `/:id`-routes zodat `"telling"` niet als id wordt geparsed. Zelfde `alleenBeheerder`-bewaking als de bestaande lijst.
+
+**3. Sidebar-badge**
+Nieuw `MailWachtrijBadge`-component in `beheerder-layout.tsx` haalt de telling op en toont een badge naast het "Mail-wachtrij" menu-item, alleen zichtbaar bij aantal > 0. Ververset elke 60 seconden via `setInterval`.
+
+**4. Dubbele-verzending-beveiliging**
+Twee extra lagen voorkomen dat een trage Graph-aanvraag na herstel + herstart een mail alsnog dubbel verstuurt: (a) `AbortSignal.timeout` op alle Graph-fetches (token: 30 s, sendMail: 8 min — ruim onder de herstel-drempel van 10 min); (b) claim-token: de terminal-updates (verzonden/mislukt) bevatten `verwerktOp = claimedAt` in de WHERE — een vertraagde sender wiens item al is teruggezet én opnieuw geclaimd past nooit meer op het gewijzigde `verwerktOp`.
+
+**5. Herstel-endpoint**
+`POST /api/mail-wachtrij/herstel-vastgelopen` (beheerder-only) triggert de herstelroutine on-demand en retourneert `{ aantalHersteld }`. Staat vóór `:id`-routes.
+
+**Bewijs:** `scripts/src/bewijs-mail-wachtrij-herstel.ts` plaatst een vastgelopen item (verwerktOp 11 min oud), roept het echte herstel-endpoint aan (geen SQL-duplicaat), en controleert status → `"mislukt"` + telling ongewijzigd.
+
 ## 2026-08-15 — Taak #944: Documenten direct aan de opdracht koppelen vanuit het uitvoeringsscherm
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief: nieuw doeltype + upload-knop)

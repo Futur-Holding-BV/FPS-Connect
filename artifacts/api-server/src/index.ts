@@ -22,6 +22,7 @@ import { initBiae } from "./services/biae/init";
 import { planCentraleDeadlineBewaking } from "./services/biae/jobs/deadline-bewaking";
 import { planDagelijkseComplianceControle } from "./services/biae/jobs/compliance-monitoring";
 import { planDagelijkseBewakingsloop } from "./lib/bewakingsloop";
+import { herstelVastgelopenMailWachtrijItems } from "./services/email";
 
 const rawPort = process.env["PORT"];
 
@@ -81,6 +82,19 @@ ensureSessionTable()
       planDagelijkseComplianceControle();
       // WERKBAK_01 — dagelijkse bewakingsloop die de werkbak voedt (06:30).
       planDagelijkseBewakingsloop();
+      // Mail-wachtrij hardening: herstel items die tijdens verzenden zijn
+      // gecrasht (status "verzenden" > 10 min) → terugzetten naar "mislukt".
+      // Meteen bij start uitvoeren, daarna elke 5 minuten herhalen.
+      void herstelVastgelopenMailWachtrijItems().catch((err) =>
+        logger.error({ err }, "Herstel vastgelopen mail-wachtrij items mislukt"),
+      );
+      const _mailHerstelTimer = setInterval(
+        () =>
+          void herstelVastgelopenMailWachtrijItems().catch((err) =>
+            logger.error({ err }, "Periodiek herstel mail-wachtrij items mislukt"),
+          ),
+        5 * 60 * 1000,
+      );
     });
   })
   .catch((err) => {

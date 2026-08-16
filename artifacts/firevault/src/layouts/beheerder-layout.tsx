@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { ZijrandKnoppen } from "@/components/zijrand-paneel";
@@ -283,6 +284,29 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       0,
     );
     return <HoofdstukTelBadge aantal={totaal} label="ongelezen berichten" />;
+  }
+
+  function MailWachtrijBadge() {
+    const { data, refetch } = useQuery<{ aantal: number }>({
+      queryKey: ["/api/mail-wachtrij/telling"],
+      queryFn: async () => {
+        const res = await fetch("/api/mail-wachtrij/telling", { credentials: "include" });
+        if (!res.ok) return { aantal: 0 };
+        return res.json() as Promise<{ aantal: number }>;
+      },
+      staleTime: 60000,
+    });
+    useEffect(() => {
+      const timer = setInterval(() => void refetch(), 60000);
+      return () => clearInterval(timer);
+    }, [refetch]);
+    const aantal = data?.aantal ?? 0;
+    if (aantal === 0) return null;
+    return (
+      <Badge className="ml-auto text-[10px] px-1.5 py-0 min-w-5 h-4 bg-primary group-data-[collapsible=icon]:hidden">
+        {aantal > 99 ? "99+" : aantal}
+      </Badge>
+    );
   }
 
   function MagazijnKritiekBadge() {
@@ -994,6 +1018,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/beheer/mail-wachtrij">
                               <Mail />
                               <span>Mail-wachtrij</span>
+                              <MailWachtrijBadge />
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

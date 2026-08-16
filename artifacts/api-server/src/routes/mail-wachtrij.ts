@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db, mailWachtrijTable, gebruikersTable } from "@workspace/db";
-import { desc, eq, inArray } from "drizzle-orm";
+import { count, desc, eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   verstuurMailWachtrijItem,
   wijsMailWachtrijItemAf,
+  herstelVastgelopenMailWachtrijItems,
   MailFout,
 } from "../services/email";
 import { logger } from "../lib/logger";
@@ -86,6 +87,24 @@ router.get("/mail-wachtrij", alleenBeheerder, async (req, res) => {
       verwerkt_door_naam: r.verwerktDoorId != null ? (naamVan.get(r.verwerktDoorId) ?? null) : null,
     })),
   );
+});
+
+// Herstel-endpoint: triggert de herstelroutine voor vastgelopen items.
+// Staat vóór de /:id-routes zodat "herstel-vastgelopen" niet als id geparsed wordt.
+// Bruikbaar als handmatige trigger (beheerder) én in bewijsscripts.
+router.post("/mail-wachtrij/herstel-vastgelopen", eisSameOrigin, alleenBeheerder, async (_req, res) => {
+  const aantalHersteld = await herstelVastgelopenMailWachtrijItems();
+  res.json({ aantalHersteld });
+});
+
+// Telling-endpoint: aantal wachtende mails — voor de sidebar-badge.
+// Staat vóór de /:id-routes zodat "telling" niet als id wordt geparsed.
+router.get("/mail-wachtrij/telling", alleenBeheerder, async (_req, res) => {
+  const [rij] = await db
+    .select({ aantal: count() })
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.status, "wachtend"));
+  res.json({ aantal: rij?.aantal ?? 0 });
 });
 
 router.post("/mail-wachtrij/:id/verstuur", eisSameOrigin, alleenBeheerder, async (req, res) => {

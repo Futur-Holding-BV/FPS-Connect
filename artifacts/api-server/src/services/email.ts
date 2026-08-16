@@ -1,6 +1,6 @@
 import { logger } from "../lib/logger";
 import { db, mailLogboekTable, mailWachtrijTable } from "@workspace/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, lt, isNull, or } from "drizzle-orm";
 
 // ── Configuratie ────────────────────────────────────────────────────────────
 // Microsoft 365 via Azure App Registration (OAuth2 client-credentials, Graph
@@ -139,6 +139,7 @@ async function haalAccessToken(): Promise<string> {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
+      signal: AbortSignal.timeout(30_000), // 30 sec: token-aanvraag moet snel klaar zijn
     });
   } catch {
     throw new MailFout("token_verlopen", "Microsoft 365 niet bereikbaar voor aanmelden");
@@ -275,6 +276,10 @@ async function verstuurViaGraph(opties: {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(bericht),
+      // Harde grens ruim onder de herstel-drempel van 10 minuten. Zo kan een
+      // trage Graph-aanvraag nooit nog actief zijn op het moment dat de
+      // herstelroutine het item als vastgelopen aanmerkt.
+      signal: AbortSignal.timeout(8 * 60 * 1000),
     });
   } catch {
     throw new MailFout("verzendfout", "Microsoft Graph niet bereikbaar");
@@ -433,6 +438,11 @@ export async function verstuurMailWachtrijItem(
     if (!bestaand) throw new Error("Wachtrij-item niet gevonden");
     throw new Error(`Wachtrij-item is al verwerkt (status: ${bestaand.status})`);
   }
+  // Claim-token: vastgelegde verwerktOp op het moment van claimen. Alle
+  // terminal updates (verzonden / mislukt) gebruiken dit in de WHERE-conditie
+  // zodat een vertraagde sender wiens item door de herstelroutine is
+  // teruggezet (en daarna opnieuw geclaimd) geen dubbele mail kan veroorzaken.
+  const claimedAt = item.verwerktOp!;
   const bijlagen = Array.isArray(item.bijlagen)
     ? (item.bijlagen as Array<{ naam: string; contentType: string; inhoudBase64: string }>).map(
         (b) => ({ naam: b.naam, contentType: b.contentType, inhoud: Buffer.from(b.inhoudBase64, "base64") }),
@@ -457,15 +467,54 @@ export async function verstuurMailWachtrijItem(
         verwerktDoorId,
         verwerktOp: new Date(),
       })
-      .where(eq(mailWachtrijTable.id, id));
+      .where(and(eq(mailWachtrijTable.id, id), eq(mailWachtrijTable.verwerktOp, claimedAt)));
     throw err;
   }
   await db
     .update(mailWachtrijTable)
     .set({ status: "verzonden", foutdetail: null, verwerktDoorId, verwerktOp: new Date() })
-    .where(eq(mailWachtrijTable.id, id));
+    .where(and(eq(mailWachtrijTable.id, id), eq(mailWachtrijTable.verwerktOp, claimedAt)));
 }
 
+/**
+ * Herstelt vastgelopen items: items die langer dan de drempel (standaard 10
+ * minuten) in status "verzenden" staan worden teruggeplaatst naar "mislukt"
+ * met een duidelijke foutdetail. Bedoeld om aan te roepen bij serverstart en
+ * periodiek (bijv. elke 5 minuten), zodat een beheerder het item opnieuw kan
+ * versturen of afwijzen zonder handmatig in de database te hoeven ingrijpen.
+ */
+export async function herstelVastgelopenMailWachtrijItems(
+  drempelMinuten = 10,
+): Promise<number> {
+  const grens = new Date(Date.now() - drempelMinuten * 60 * 1000);
+  const hersteld = await db
+    .update(mailWachtrijTable)
+    .set({
+      status: "mislukt",
+      foutdetail: "verzendpoging afgebroken (serverherstart)",
+      verwerktOp: new Date(),
+    })
+    .where(
+      and(
+        eq(mailWachtrijTable.status, "verzenden"),
+        or(
+          lt(mailWachtrijTable.verwerktOp, grens),
+          and(
+            isNull(mailWachtrijTable.verwerktOp),
+            lt(mailWachtrijTable.aangemaaktOp, grens),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: mailWachtrijTable.id });
+  if (hersteld.length > 0) {
+    logger.warn(
+      { aantalHersteld: hersteld.length, drempelMinuten },
+      "Vastgelopen mail-wachtrij items hersteld naar 'mislukt'",
+    );
+  }
+  return hersteld.length;
+}
 /** Wijst een wachtrij-item af: de mail wordt nooit verzonden. */
 export async function wijsMailWachtrijItemAf(
   id: number,
