@@ -263,6 +263,14 @@ export default function JaarkalenderPagina() {
         </div>
       </div>
 
+      {/* Beheersecties — bovenaan op verzoek van René */}
+      {magBeheren && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CollectieveVrijeDagenSectie jaar={jaar} qc={qc} />
+          <TerugkerendeAfsprakenSectie qc={qc} />
+        </div>
+      )}
+
       {/* Filters */}
       <Card>
         <CardContent className="py-4 space-y-3">
@@ -356,13 +364,6 @@ export default function JaarkalenderPagina() {
         </DialogContent>
       </Dialog>
 
-      {/* Beheersecties */}
-      {magBeheren && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CollectieveVrijeDagenSectie jaar={jaar} qc={qc} />
-          <TerugkerendeAfsprakenSectie qc={qc} />
-        </div>
-      )}
     </div>
   );
 }

@@ -1,3 +1,9 @@
+## 2026-08-16 — Jaarkalender: beheerkaarten naar boven
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De kaarten "Collectieve vrije dagen" en "Terugkerende afspraken" stonden onderaan de jaarkalender; op verzoek van René staan ze nu bovenaan de pagina (direct onder de kop, boven de filters en maandrasters). Alleen zichtbaar voor wie mag beheren, ongewijzigd. PWA-cache naar v10.
+
 ## 2026-08-16 — Tabbladen lopen nooit meer buiten de paginabreedte
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
