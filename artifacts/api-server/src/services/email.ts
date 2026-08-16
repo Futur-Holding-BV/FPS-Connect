@@ -204,6 +204,27 @@ async function leesGraphFout(res: Response): Promise<MailFout> {
 
 export type MailBijlage = { naam: string; contentType: string; inhoud: Buffer };
 
+// Test-/voorbeelddomeinen waar nooit echt naartoe gemaild mag worden. Mails
+// aan deze adressen (o.a. uit e2e-tests zoals KETEN01) leverden Microsoft-
+// bounces ("Onbestelbaar") op in de gedeelde postbus, elke testrun opnieuw.
+const TESTDOMEINEN = [
+  "voorbeeld.nl",
+  "example.com",
+  "example.org",
+  "example.net",
+  "test.local",
+];
+
+export function isTestAdres(email: string): boolean {
+  const domein = email.split("@")[1]?.toLowerCase().trim() ?? "";
+  return (
+    TESTDOMEINEN.includes(domein) ||
+    domein.endsWith(".invalid") ||
+    domein.endsWith(".example") ||
+    domein.endsWith(".test")
+  );
+}
+
 async function verstuurViaGraph(opties: {
   naarEmail: string;
   naarNaam?: string | null;
@@ -211,6 +232,13 @@ async function verstuurViaGraph(opties: {
   html: string;
   bijlagen?: MailBijlage[];
 }): Promise<void> {
+  if (isTestAdres(opties.naarEmail)) {
+    logger.info(
+      { naar: opties.naarEmail, onderwerp: knip(opties.onderwerp, 120) },
+      "Mail onderdrukt: testdomein-adres, niet verzonden",
+    );
+    return;
+  }
   const token = await haalAccessToken();
   const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
     MAIL_MAILBOX,

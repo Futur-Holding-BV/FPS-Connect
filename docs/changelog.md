@@ -1,3 +1,9 @@
+## 2026-08-16 — Geen bounce-mails meer van e2e-testoffertes (KETEN01)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De KETEN01-e2e-test verstuurde bij elke run een echte offerte-mail naar het niet-bestaande adres keten01-klant@voorbeeld.nl; Microsoft leverde daarop telkens een bounce ("Onbestelbaar") af in de gedeelde postbus. Omdat de e2e-workflow na elke taakmerge opnieuw draait, kwamen die bounces elke 20–30 minuten binnen. Opgelost met een centrale guard: `isTestAdres()` in `services/email.ts` onderdrukt verzending naar test-/voorbeelddomeinen (voorbeeld.nl, example.*, test.local, *.invalid/*.example/*.test) in beide verzendpaden (`verstuurViaGraph` en `verstuurNieuwDelegatedMail`), met logregel in plaats van echte mail.
+
 ## 2026-08-15 — Planning-herinneringsmails niet langer dagelijks herhaald
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

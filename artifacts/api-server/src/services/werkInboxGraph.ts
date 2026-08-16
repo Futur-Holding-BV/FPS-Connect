@@ -12,6 +12,7 @@ import {
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { isTestAdres } from "./email";
 import { encrypteer, decrypteer } from "../lib/werkInboxCrypto";
 
 const TENANT_ID  = process.env["AZURE_TENANT_ID"];
@@ -514,6 +515,10 @@ export async function verstuurNieuwDelegatedMail(
   gebruikerId: number,
   opties: NieuwBerichtOpties,
 ): Promise<{ ok: boolean; fout?: string }> {
+  if (isTestAdres(opties.naarEmail)) {
+    logger.info({ naar: opties.naarEmail }, "Werk-inbox mail onderdrukt: testdomein-adres");
+    return { ok: true };
+  }
   const token = await haalGeldigToken(gebruikerId);
   if (!token) return { ok: false, fout: "Geen geldig Microsoft-token. Koppel uw account opnieuw." };
 
