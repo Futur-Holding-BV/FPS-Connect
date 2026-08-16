@@ -1,3 +1,9 @@
+## 2026-08-16 — PWA toonde oude schermen ondanks nieuwe release (cache v5)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+René zag na de deploy de opgeschoonde schermen (procesbalk op calculatie/opname/offerte/opdracht) niet in de geïnstalleerde bureaublad-app, terwijl de versiebalk wél het nieuwste versienummer toonde. Oorzaak: het cacheversienummer van de service worker (`fps-connect-v4`) was sinds die schermwijzigingen niet opgehoogd, waardoor de PWA de oude frontend-bestanden uit zijn cache bleef serveren. Opgehoogd naar `fps-connect-v5`; na de deploy haalt de app bij het eerstvolgende openen de nieuwe build op en ruimt de oude cache op. Structurele oplossing (automatisch bijwerken zonder handmatig versienummer) is taak #489.
+
 ## 2026-08-16 — Mail-wachtrij: elke systeemmail vereist menselijke goedkeuring
 
 - Nieuwe centrale mail-wachtrij (`mail_wachtrij`, migratie 0053): alle systeem- en notificatiemails (planning, leverbewaking, magazijn-signalering, escalaties, portaal-notificaties, AVG, declaraties, goedkeuringen, AI-drempel, enz.) worden NIET meer automatisch verzonden, maar wachten op een expliciete menselijke handeling.
