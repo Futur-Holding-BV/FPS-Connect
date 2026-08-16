@@ -986,7 +986,7 @@ export default function Gebruikers() {
       </div>
 
       <Tabs value={actieveTab} onValueChange={(v) => setActieveTab(v as typeof actieveTab)}>
-        <TabsList className="h-9">
+        <TabsList className="min-h-9">
           <TabsTrigger value="gebruikers" className="text-sm">Gebruikers</TabsTrigger>
           <TabsTrigger value="profielen" className="text-sm">Profielen</TabsTrigger>
         </TabsList>

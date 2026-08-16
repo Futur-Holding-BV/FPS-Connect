@@ -960,7 +960,7 @@ function KompasInhoud() {
       )}
 
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
-        <TabsList className="h-8">
+        <TabsList className="min-h-8">
           <TabsTrigger value="prognose" className="text-xs">Prognose</TabsTrigger>
           <TabsTrigger value="leereffecten" className="text-xs gap-1.5">
             Leereffecten

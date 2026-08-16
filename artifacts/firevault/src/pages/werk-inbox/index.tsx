@@ -1160,7 +1160,7 @@ export default function WerkInboxPagina() {
       <Tabs defaultValue="alle" className="flex-1 flex flex-col overflow-hidden">
         {/* Tabs + filters */}
         <div className="border-b px-4 pt-2 shrink-0">
-          <TabsList className="h-8 bg-transparent p-0 gap-0">
+          <TabsList className="min-h-8 bg-transparent p-0 gap-0">
             {[
               { value: "alle", label: "Alle berichten", count: alleNietAfgehandeld.filter(m => !m.isGelezenMs).length },
               { value: "voorstellen", label: "AI Voorstellen", count: aiVoorstellen.length },
