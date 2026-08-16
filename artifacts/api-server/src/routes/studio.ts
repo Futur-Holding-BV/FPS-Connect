@@ -16,6 +16,8 @@ const DocumentStudioModelInputDocumentType = {
   inkoopbon: "inkoopbon",
   factuur: "factuur",
   calculatie: "calculatie",
+  bestelbon: "bestelbon",
+  mandagstaat: "mandagstaat",
 } as const;
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
@@ -362,7 +364,7 @@ router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
         and(
           eq(documentStudioModellenTable.werkgeverId, werkgever_id),
           eq(documentStudioModellenTable.documentType, document_type),
-          inArray(documentStudioModellenTable.status, ["geen", "referentie", "concept"]),
+          inArray(documentStudioModellenTable.status, ["geen", "referentie", "concept", "genererend"]),
         ),
       )
       .orderBy(desc(documentStudioModellenTable.id))
@@ -650,6 +652,8 @@ function bouwPrompt(params: {
     inkoopbon: "Inkoopbon",
     factuur: "Factuur",
     calculatie: "Calculatie-werkblad",
+    bestelbon: "Bestelbon",
+    mandagstaat: "Mandagstaat / werkbon",
   };
   const familieAdvies: Record<string, string> = {
     offerte: "A",
@@ -661,6 +665,8 @@ function bouwPrompt(params: {
     inkoopbon: "C",
     factuur: "B",
     calculatie: "C",
+    bestelbon: "C",
+    mandagstaat: "C",
   };
   const naam = typeNaam[params.documentType] ?? params.documentType;
   const familie = familieAdvies[params.documentType] ?? "A";
@@ -707,6 +713,77 @@ Retourneer UITSLUITEND de volgende JSON zonder extra tekst of markdown-omhulsel:
 Gebruik maximaal 6 secties. Sectie-inhoud is placeholder-tekst (gebruiker vult later echt content in).`;
 }
 
+/**
+ * Kern van de AI-generatie: bouwt de prompt (referentie optioneel), roept de
+ * gateway aan, valideert de JSON strikt en slaat het concept op. Gooit bij
+ * ongeldige AI-uitvoer (SyntaxError/ZodError) — afhandeling bij de aanroeper.
+ */
+async function genereerConceptVoorModel(
+  model: typeof documentStudioModellenTable.$inferSelect,
+  wg: typeof werkgeversTable.$inferSelect | null,
+  instructie: string | null,
+  userId: number | null,
+  warn: (o: object) => void,
+): Promise<typeof documentStudioModellenTable.$inferSelect> {
+  // Referentie ophalen en tekst extraheren — optioneel: zonder referentie
+  // genereren we puur op huisstijl (naam, merkkleur, voettekst).
+  let documentTekst = "";
+  let heeftAfbeelding = false;
+  if (model.referentieBestandPad) {
+    try {
+      const buffer = await downloadAlsBuffer(model.referentieBestandPad);
+      documentTekst = await extraheerTekst(buffer, model.referentieBestandPad);
+      heeftAfbeelding = !model.referentieBestandPad.endsWith(".pdf");
+    } catch (err) {
+      warn({ err, melding: "Referentiebestand kon niet worden gelezen — genereer zonder tekst" });
+    }
+  }
+
+  const prompt = bouwPrompt({
+    documentType:   model.documentType,
+    documentTekst,
+    heeftAfbeelding,
+    werkgeverNaam:  wg?.naam ?? "Werkmaatschappij",
+    primaireKleur:  wg?.primaireKleur ?? null,
+    voettekst:      wg?.voettekst ?? null,
+    instructie,
+  });
+
+  const genereerResultaat = await aiGateway.chat("default", {
+    max_tokens: 1200,
+    messages: [
+      { role: "system", content: STUDIO_GENEREER_JSON_PROMPT.tekst },
+      { role: "user",   content: prompt },
+    ],
+  }, undefined, {
+    module: "studio",
+    functie: "genereerTemplate",
+    gebruikerId: userId,
+    entiteitstype: "documentStudioModel",
+    entiteitId: model.id,
+    promptNaam: STUDIO_GENEREER_JSON_PROMPT.naam,
+    promptVersie: STUDIO_GENEREER_JSON_PROMPT.versie,
+  });
+
+  const tekst = genereerResultaat.ok ? genereerResultaat.inhoud.trim() : "";
+  // JSON extraheren uit mogelijke markdown-blokken
+  const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
+
+  // Strikte schema-validatie: gooit bij ongeldige JSON én bij ontbrekende/verkeerde velden
+  valideerTemplateJson(json);
+
+  const [bijgewerkt] = await db
+    .update(documentStudioModellenTable)
+    .set({
+      connectTemplateJson: json,
+      status:              "concept",
+      bijgewerktOp:        new Date(),
+    })
+    .where(eq(documentStudioModellenTable.id, model.id))
+    .returning();
+  return bijgewerkt;
+}
+
 // ── AI genereer — genereert concept-template via GPT-4o ───────────────────────
 
 router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promise<void> => {
@@ -728,63 +805,18 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promis
     if (rij.model.status === "goedgekeurd" || rij.model.status === "gearchiveerd") {
       return void res.status(409).json({ error: "Dit model is actief of gearchiveerd en kan niet meer worden gegenereerd — upload een nieuwe referentie voor een nieuw concept" });
     }
-    if (!rij.model.referentieBestandPad) {
-      return void res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
+    if (rij.model.status === "genererend") {
+      return void res.status(409).json({ error: "Er loopt al een generatie voor dit model — even geduld" });
     }
-
-    // Referentie ophalen en tekst extraheren
-    let documentTekst = "";
-    let heeftAfbeelding = false;
-    try {
-      const buffer = await downloadAlsBuffer(rij.model.referentieBestandPad);
-      documentTekst = await extraheerTekst(buffer, rij.model.referentieBestandPad);
-      heeftAfbeelding = !rij.model.referentieBestandPad.endsWith(".pdf");
-    } catch (err) {
-      req.log.warn({ err }, "Referentiebestand kon niet worden gelezen — genereer zonder tekst");
-    }
-
-    const prompt = bouwPrompt({
-      documentType:   rij.model.documentType,
-      documentTekst,
-      heeftAfbeelding,
-      werkgeverNaam:  rij.wg?.naam ?? "Werkmaatschappij",
-      primaireKleur:  rij.wg?.primaireKleur ?? null,
-      voettekst:      rij.wg?.voettekst ?? null,
+    // Zonder referentiebestand genereren we op basis van de huisstijl van de
+    // werkgever (merkkleur, voettekst, naam) — een referentie is optioneel.
+    const bijgewerkt = await genereerConceptVoorModel(
+      rij.model,
+      rij.wg,
       instructie,
-    });
-
-    const genereerResultaat = await aiGateway.chat("default", {
-      max_tokens: 1200,
-      messages: [
-        { role: "system", content: STUDIO_GENEREER_JSON_PROMPT.tekst },
-        { role: "user",   content: prompt },
-      ],
-    }, undefined, {
-      module: "studio",
-      functie: "genereerTemplate",
-      gebruikerId: (req.session.userId as number | undefined) ?? null,
-      entiteitstype: "documentStudioModel",
-      entiteitId: id,
-      promptNaam: STUDIO_GENEREER_JSON_PROMPT.naam,
-      promptVersie: STUDIO_GENEREER_JSON_PROMPT.versie,
-    });
-
-    const tekst = genereerResultaat.ok ? genereerResultaat.inhoud.trim() : "";
-    // JSON extraheren uit mogelijke markdown-blokken
-    const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
-
-    // Strikte schema-validatie: gooit bij ongeldige JSON én bij ontbrekende/verkeerde velden
-    valideerTemplateJson(json);
-
-    const [bijgewerkt] = await db
-      .update(documentStudioModellenTable)
-      .set({
-        connectTemplateJson: json,
-        status:              "concept",
-        bijgewerktOp:        new Date(),
-      })
-      .where(eq(documentStudioModellenTable.id, id))
-      .returning();
+      (req.session.userId as number | undefined) ?? null,
+      (o) => req.log.warn(o),
+    );
 
     res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
   } catch (err) {
@@ -792,6 +824,109 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promis
     if (err instanceof SyntaxError || (err instanceof z.ZodError)) {
       return void res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
     }
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bulk genereer — maak in één keer concepten voor alle ontbrekende types ───
+// "Ontbrekend" = documenttype zonder concept- of goedgekeurd model voor deze
+// werkgever. Bestaande concepten en actieve modellen blijven onaangeroerd.
+
+router.post("/studio/werkgevers/:werkgever_id/genereer-ontbrekend", schrijven, async (req, res): Promise<void> => {
+  try {
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+    }
+
+    const werkgeverId = parseId(req.params.werkgever_id);
+    if (!werkgeverId) return void res.status(400).json({ error: "werkgever_id ongeldig" });
+
+    const [wg] = await db.select().from(werkgeversTable).where(eq(werkgeversTable.id, werkgeverId));
+    if (!wg) return void res.status(404).json({ error: "Werkgever niet gevonden" });
+
+    const userId = (req.session.userId as number | undefined) ?? null;
+    const warn = (o: object) => req.log.warn(o);
+
+    // Claimfase — atomair onder een advisory lock per werkgever, zodat twee
+    // gelijktijdige bulk-verzoeken nooit dezelfde types dubbel genereren. De
+    // winnaar zet geclaimde rijen op tussenstatus 'genererend'; de verliezer
+    // ziet die status en beschouwt het type als niet-ontbrekend. De AI-aanroep
+    // gebeurt buiten de transactie (lock kort houden).
+    const claims = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(874201, ${werkgeverId})`);
+
+      const bestaande = await tx
+        .select()
+        .from(documentStudioModellenTable)
+        .where(eq(documentStudioModellenTable.werkgeverId, werkgeverId));
+
+      const heeftModel = new Set(
+        bestaande
+          .filter((m) => m.status === "concept" || m.status === "goedgekeurd" || m.status === "genererend")
+          .map((m) => m.documentType),
+      );
+      const ontbrekend = GELDIGE_TYPES.filter((t) => !heeftModel.has(t));
+
+      const geclaimd: { model: typeof documentStudioModellenTable.$inferSelect; vorigeStatus: string }[] = [];
+      for (const type of ontbrekend) {
+        // Hergebruik een bestaande geen/referentie-rij, anders nieuwe rij.
+        let model = bestaande
+          .filter((m) => m.documentType === type && (m.status === "geen" || m.status === "referentie"))
+          .sort((a, b) => b.id - a.id)[0];
+        if (!model) {
+          const [nieuw] = await tx
+            .insert(documentStudioModellenTable)
+            .values({ werkgeverId, documentType: type, status: "geen", aangemaaktDoor: userId })
+            .returning();
+          model = nieuw;
+        }
+        const vorigeStatus = model.status;
+        const [geclaimdModel] = await tx
+          .update(documentStudioModellenTable)
+          .set({ status: "genererend", bijgewerktOp: new Date() })
+          .where(eq(documentStudioModellenTable.id, model.id))
+          .returning();
+        geclaimd.push({ model: geclaimdModel, vorigeStatus });
+      }
+      return geclaimd;
+    });
+
+    // Generatiefase — begrensde parallelliteit (max 4 tegelijk).
+    const resultaten: { document_type: string; ok: boolean; fout?: string; model?: ReturnType<typeof mapModel> }[] = [];
+    const wachtrij = [...claims];
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (;;) {
+        const claim = wachtrij.shift();
+        if (!claim) return;
+        const type = claim.model.documentType;
+        try {
+          const bijgewerkt = await genereerConceptVoorModel(claim.model, wg, null, userId, warn);
+          resultaten.push({ document_type: type, ok: true, model: mapModel(bijgewerkt, wg.naam) });
+        } catch (err) {
+          req.log.warn({ err, type }, "Bulk-generatie mislukt voor documenttype");
+          // Claim vrijgeven: status terug naar de vorige, zodat een volgende
+          // run dit type opnieuw kan oppakken.
+          await db
+            .update(documentStudioModellenTable)
+            .set({ status: claim.vorigeStatus, bijgewerktOp: new Date() })
+            .where(and(
+              eq(documentStudioModellenTable.id, claim.model.id),
+              eq(documentStudioModellenTable.status, "genererend"),
+            ))
+            .catch(() => undefined);
+          resultaten.push({ document_type: type, ok: false, fout: "AI retourneerde geen geldig template" });
+        }
+      }
+    }));
+
+    res.json({
+      totaal_ontbrekend: claims.length,
+      geslaagd: resultaten.filter((r) => r.ok).length,
+      mislukt: resultaten.filter((r) => !r.ok).length,
+      resultaten,
+    });
+  } catch (err) {
+    req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
 });

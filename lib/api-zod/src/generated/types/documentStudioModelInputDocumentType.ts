@@ -19,4 +19,6 @@ export const DocumentStudioModelInputDocumentType = {
   inkoopbon: 'inkoopbon',
   factuur: 'factuur',
   calculatie: 'calculatie',
+  bestelbon: 'bestelbon',
+  mandagstaat: 'mandagstaat',
 } as const;

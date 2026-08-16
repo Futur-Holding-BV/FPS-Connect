@@ -1349,6 +1349,8 @@ export * from './statusUpdate';
 export * from './statusVerdeling';
 export * from './stelFunctieKernvragenVoor200';
 export * from './studioBijstuurInput';
+export * from './studioBulkGenereerResultaat';
+export * from './studioBulkGenereerResultaatResultatenItem';
 export * from './studioGenereerInput';
 export * from './studioHuisstijlAnalyseResponse';
 export * from './studioHuisstijlHuidig';

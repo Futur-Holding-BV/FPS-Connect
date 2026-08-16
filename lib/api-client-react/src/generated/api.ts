@@ -952,6 +952,7 @@ import type {
   StatusVerdeling,
   StelFunctieKernvragenVoor200,
   StudioBijstuurInput,
+  StudioBulkGenereerResultaat,
   StudioGenereerInput,
   StudioHuisstijlAnalyseResponse,
   SynchroniseerStandaardCalculatieData200,
@@ -86812,6 +86813,76 @@ export const useGenereerStudioTemplate = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getGenereerStudioTemplateMutationOptions(options));
+    }
+
+export const getGenereerOntbrekendeStudioModellenUrl = (werkgeverId: number,) => {
+
+
+
+
+  return `/api/studio/werkgevers/${werkgeverId}/genereer-ontbrekend`
+}
+
+/**
+ * @summary Genereer in één keer concept-templates voor alle documenttypes zonder concept of actief model
+ */
+export const genereerOntbrekendeStudioModellen = async (werkgeverId: number, options?: RequestInit): Promise<StudioBulkGenereerResultaat> => {
+
+  return customFetch<StudioBulkGenereerResultaat>(getGenereerOntbrekendeStudioModellenUrl(werkgeverId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerOntbrekendeStudioModellenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>, TError,{werkgeverId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>, TError,{werkgeverId: number}, TContext> => {
+
+const mutationKey = ['genereerOntbrekendeStudioModellen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>, {werkgeverId: number}> = (props) => {
+          const {werkgeverId} = props ?? {};
+
+          return  genereerOntbrekendeStudioModellen(werkgeverId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerOntbrekendeStudioModellenMutationResult = NonNullable<Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>>
+
+    export type GenereerOntbrekendeStudioModellenMutationError = ErrorType<void>
+
+    /**
+ * @summary Genereer in één keer concept-templates voor alle documenttypes zonder concept of actief model
+ */
+export const useGenereerOntbrekendeStudioModellen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>, TError,{werkgeverId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerOntbrekendeStudioModellen>>,
+        TError,
+        {werkgeverId: number},
+        TContext
+      > => {
+      return useMutation(getGenereerOntbrekendeStudioModellenMutationOptions(options));
     }
 
 export const getBijstuurStudioTemplateUrl = (id: number,) => {

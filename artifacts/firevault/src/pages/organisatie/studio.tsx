@@ -8,6 +8,7 @@ import {
   useBijstuurStudioTemplate,
   useGoedkeurenStudioTemplate,
   useAnalyseerStudioHuisstijl,
+  useGenereerOntbrekendeStudioModellen,
   useUpdateWerkgever,
   getListDocumentStudioModellenQueryKey,
   getListStudioWerkgeversQueryKey,
@@ -53,6 +54,8 @@ import {
   Wand2,
   Check,
   X,
+  ShoppingCart,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StudioTemplatePreview from "@/components/documentopmaak/StudioTemplatePreview";
@@ -72,12 +75,15 @@ const DOCUMENT_TYPEN: {
   { type: "inkoopbon",      label: "Inkoopbon",       icoon: Package,        omschrijving: "Interne inkoopbon" },
   { type: "factuur",        label: "Factuur",         icoon: Receipt,        omschrijving: "Factuursjabloon" },
   { type: "calculatie",     label: "Calculatie",      icoon: Calculator,     omschrijving: "Calculatie-werkblad" },
+  { type: "bestelbon",      label: "Bestelbon",       icoon: ShoppingCart,   omschrijving: "Bestelbon richting leverancier" },
+  { type: "mandagstaat",    label: "Mandagstaat",     icoon: ClipboardList,  omschrijving: "Mandagstaat / werkbon uitgevoerde uren" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijving: string }> = {
   geen:         { label: "Geen model",          klasse: "bg-gray-100 text-gray-600",    beschrijving: "Er is nog geen referentie of model voor dit documenttype." },
   referentie:   { label: "Referentie ge-upload",klasse: "bg-amber-100 text-amber-700", beschrijving: "Referentiedocument aanwezig. Klaar voor AI-generatie." },
   concept:      { label: "Concept",             klasse: "bg-blue-100 text-blue-700",   beschrijving: "AI heeft een concept gegenereerd. Beoordeling vereist." },
+  genererend:   { label: "AI genereert...",     klasse: "bg-amber-100 text-amber-700", beschrijving: "De AI is bezig met het genereren van een concept voor dit documenttype." },
   goedgekeurd:  { label: "Model 0 goedgekeurd", klasse: "bg-green-100 text-green-700", beschrijving: "Dit model is goedgekeurd als officieel Connect-template." },
   gearchiveerd: { label: "Gearchiveerd",        klasse: "bg-gray-100 text-gray-500",   beschrijving: "Deze versie is niet meer actief, maar blijft bewaard in de geschiedenis." },
 };
@@ -163,6 +169,7 @@ export default function DocumentStudioPagina() {
   const bijstuur         = useBijstuurStudioTemplate();
   const goedkeur         = useGoedkeurenStudioTemplate();
   const analyseerHuisstijl = useAnalyseerStudioHuisstijl();
+  const bulkGenereer       = useGenereerOntbrekendeStudioModellen();
   const updateWerkgever    = useUpdateWerkgever();
 
   const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId);
@@ -274,9 +281,35 @@ export default function DocumentStudioPagina() {
     setAiIteraties([]);
     setAiDialoogOpen(true);
 
-    // Als er nog geen concept is maar wel een referentie, direct genereren
-    if (!model.connect_template_json && model.referentie_bestand_pad) {
+    // Als er nog geen concept is, direct genereren — een referentie is
+    // optioneel: zonder referentie genereert de AI op basis van de huisstijl.
+    if (!model.connect_template_json) {
       void triggerGenereer(model.id, null);
+    }
+  };
+
+  // ── Bulk genereer — alle ontbrekende documenttypes in één keer ─────────────
+
+  const ontbrekendeTypes = DOCUMENT_TYPEN.filter(({ type }) =>
+    !versiesVoorType(type).some((m) => m.status === "concept" || m.status === "goedgekeurd"),
+  );
+
+  const triggerBulkGenereer = async () => {
+    if (!werkgeverId) return;
+    try {
+      const resultaat = await bulkGenereer.mutateAsync({ werkgeverId });
+      invalideer();
+      const mislukt = resultaat.resultaten.filter((r) => !r.ok).map((r) => r.document_type);
+      toast({
+        title: `${resultaat.geslaagd} van ${resultaat.totaal_ontbrekend} concepten gegenereerd`,
+        description: mislukt.length
+          ? `Mislukt: ${mislukt.join(", ")} — probeer deze los opnieuw.`
+          : "Beoordeel de concepten per kaart en keur ze goed als Model 0.",
+        variant: mislukt.length ? "destructive" : undefined,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Onbekende fout";
+      toast({ title: "Bulk-generatie mislukt", description: msg, variant: "destructive" });
     }
   };
 
@@ -467,6 +500,21 @@ export default function DocumentStudioPagina() {
             Beheer referentiemodellen en Connect-templates per documenttype, per werkmaatschappij.
           </p>
         </div>
+        {magSchrijven && werkgeverId != null && !laadtModellen && ontbrekendeTypes.length > 0 && (
+          <Button
+            onClick={() => void triggerBulkGenereer()}
+            disabled={bulkGenereer.isPending || aiBezig}
+          >
+            {bulkGenereer.isPending ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-1.5" />
+            )}
+            {bulkGenereer.isPending
+              ? "Bezig met genereren..."
+              : `Genereer ${ontbrekendeTypes.length} ontbrekende ${ontbrekendeTypes.length === 1 ? "model" : "modellen"}`}
+          </Button>
+        )}
       </div>
 
       {werkgevers.length === 0 ? (
@@ -537,7 +585,7 @@ export default function DocumentStudioPagina() {
           {/* Status-samenvatting */}
           {!laadtModellen && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {Object.entries(STATUS_CONFIG).filter(([sleutel]) => sleutel !== "gearchiveerd").map(([sleutel, cfg]) => {
+              {Object.entries(STATUS_CONFIG).filter(([sleutel]) => sleutel !== "gearchiveerd" && sleutel !== "genererend").map(([sleutel, cfg]) => {
                 const aantal = sleutel === "geen"
                   ? DOCUMENT_TYPEN.length - modellen.filter((m) => m.status !== "geen").length
                   : modellen.filter((m) => m.status === sleutel).length;
@@ -657,19 +705,17 @@ export default function DocumentStudioPagina() {
                       )}
                       {magSchrijven && (
                         <div className="flex flex-col gap-2 mt-auto">
-                          {/* Genereer/bekijk knop — beschikbaar als referentie aanwezig is */}
-                          {heeftReferentie && (
-                            <Button
-                              size="sm"
-                              variant={heeftConcept || status === "goedgekeurd" ? "outline" : "default"}
-                              className="w-full"
-                              onClick={() => void openAiDialoog(type)}
-                              disabled={aiBezig}
-                            >
-                              <Sparkles className="h-3.5 w-3.5 mr-1" />
-                              {status === "goedgekeurd" ? "Template bekijken" : heeftConcept ? "Template verfijnen" : "Genereer met AI"}
-                            </Button>
-                          )}
+                          {/* Genereer/bekijk knop — referentie is optioneel (AI valt terug op huisstijl) */}
+                          <Button
+                            size="sm"
+                            variant={heeftConcept || status === "goedgekeurd" ? "outline" : "default"}
+                            className="w-full"
+                            onClick={() => void openAiDialoog(type)}
+                            disabled={aiBezig}
+                          >
+                            <Sparkles className="h-3.5 w-3.5 mr-1" />
+                            {status === "goedgekeurd" ? "Template bekijken" : heeftConcept ? "Template verfijnen" : "Genereer met AI"}
+                          </Button>
                           {/* Goedkeuren knop voor concepten */}
                           {status === "concept" && heeftConcept && (
                             <Button

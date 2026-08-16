@@ -1,3 +1,9 @@
+## 2026-08-16 — Document Studio: genereren zonder referentie, bulk-knop en twee nieuwe documenttypes
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Drie uitbreidingen op de Document Studio (Organisatie → Document Studio): (1) AI genereert nu ook een concept-template zónder referentie-upload, puur op basis van de huisstijl van de werkmaatschappij (merkkleur, voettekst, naam); (2) een knop "Genereer X ontbrekende modellen" maakt in één keer concepten voor alle documenttypes die nog geen concept of goedgekeurd model hebben (bestaande concepten en actieve modellen blijven onaangeroerd, tweede run is een no-op); (3) twee nieuwe documenttypes: Bestelbon en Mandagstaat/werkbon. Bewijs: scripts/src/bewijs-studio-bulk.ts — 11/11 groen. PWA-cache naar v23.
+
 ## 2026-08-16 — SCAB-aanleveradres invulbaar op Bedrijfsgegevens
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

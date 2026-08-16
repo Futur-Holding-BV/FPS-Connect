@@ -14968,6 +14968,8 @@ export const DocumentStudioModelInputDocumentType = {
   inkoopbon: 'inkoopbon',
   factuur: 'factuur',
   calculatie: 'calculatie',
+  bestelbon: 'bestelbon',
+  mandagstaat: 'mandagstaat',
 } as const;
 
 export interface DocumentStudioModelInput {
@@ -15006,6 +15008,21 @@ export interface DocumentStudioWerkgever {
 export interface StudioGenereerInput {
   /** @nullable */
   instructie?: string | null;
+}
+
+export type StudioBulkGenereerResultaatResultatenItem = {
+  document_type: string;
+  ok: boolean;
+  /** @nullable */
+  fout?: string | null;
+  model?: DocumentStudioModel | null;
+};
+
+export interface StudioBulkGenereerResultaat {
+  totaal_ontbrekend: number;
+  geslaagd: number;
+  mislukt: number;
+  resultaten: StudioBulkGenereerResultaatResultatenItem[];
 }
 
 export interface StudioBijstuurInput {

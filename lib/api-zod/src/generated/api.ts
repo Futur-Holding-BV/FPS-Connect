@@ -30777,7 +30777,7 @@ export const ListDocumentStudioModellenResponse = zod.array(ListDocumentStudioMo
  */
 export const UpsertDocumentStudioModelBody = zod.object({
   "werkgever_id": zod.number(),
-  "document_type": zod.enum(['offerte', 'opleverrapport', 'brief', 'email', 'lmra', 'toolbox', 'inkoopbon', 'factuur', 'calculatie']),
+  "document_type": zod.enum(['offerte', 'opleverrapport', 'brief', 'email', 'lmra', 'toolbox', 'inkoopbon', 'factuur', 'calculatie', 'bestelbon', 'mandagstaat']),
   "naam": zod.string().nullish(),
   "status": zod.string().optional()
 })
@@ -30927,6 +30927,42 @@ export const GenereerStudioTemplateResponse = zod.object({
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Genereer in één keer concept-templates voor alle documenttypes zonder concept of actief model
+ */
+export const GenereerOntbrekendeStudioModellenParams = zod.object({
+  "werkgever_id": zod.coerce.number()
+})
+
+export const GenereerOntbrekendeStudioModellenResponse = zod.object({
+  "totaal_ontbrekend": zod.number(),
+  "geslaagd": zod.number(),
+  "mislukt": zod.number(),
+  "resultaten": zod.array(zod.object({
+  "document_type": zod.string(),
+  "ok": zod.boolean(),
+  "fout": zod.string().nullish(),
+  "model": zod.union([zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+}),zod.null()]).optional()
+}))
 })
 
 

@@ -25009,9 +25009,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/DocumentStudioModel"
         "400":
-          description: Geen referentiebestand of ongeldige invoer
+          description: Ongeldige invoer
         "404":
           description: Niet gevonden
+        "503":
+          description: AI niet beschikbaar
+
+  /studio/werkgevers/{werkgever_id}/genereer-ontbrekend:
+    post:
+      operationId: genereerOntbrekendeStudioModellen
+      tags: [studio]
+      summary: Genereer in één keer concept-templates voor alle documenttypes zonder concept of actief model
+      parameters:
+        - in: path
+          name: werkgever_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resultaat per ontbrekend documenttype
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioBulkGenereerResultaat"
+        "404":
+          description: Werkgever niet gevonden
         "503":
           description: AI niet beschikbaar
 
@@ -48103,7 +48126,7 @@ components:
         werkgever_id:             { type: integer }
         document_type:
           type: string
-          enum: [offerte, opleverrapport, brief, email, lmra, toolbox, inkoopbon, factuur, calculatie]
+          enum: [offerte, opleverrapport, brief, email, lmra, toolbox, inkoopbon, factuur, calculatie, bestelbon, mandagstaat]
         naam:                     { type: ["string", "null"] }
         status:                   { type: string }
 
@@ -48137,6 +48160,27 @@ components:
       type: object
       properties:
         instructie: { type: ["string", "null"] }
+
+    StudioBulkGenereerResultaat:
+      type: object
+      required: [totaal_ontbrekend, geslaagd, mislukt, resultaten]
+      properties:
+        totaal_ontbrekend: { type: integer }
+        geslaagd:          { type: integer }
+        mislukt:           { type: integer }
+        resultaten:
+          type: array
+          items:
+            type: object
+            required: [document_type, ok]
+            properties:
+              document_type: { type: string }
+              ok:            { type: boolean }
+              fout:          { type: ["string", "null"] }
+              model:
+                oneOf:
+                  - $ref: "#/components/schemas/DocumentStudioModel"
+                  - type: "null"
 
     StudioBijstuurInput:
       type: object
