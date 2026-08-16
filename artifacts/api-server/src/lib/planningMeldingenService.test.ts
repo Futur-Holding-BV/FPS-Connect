@@ -17,6 +17,7 @@ vi.mock("drizzle-orm", () => ({
   isNotNull: () => ({}),
   isNull: () => ({}),
   lte: () => ({}),
+  inArray: () => ({}),
 }));
 
 // DB — alle queries sturen een instelbare array terug
@@ -245,5 +246,42 @@ describe("planningMeldingenService.voerCheckUit", () => {
     expect(stuurPlanningMeldingMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ naarEmail: "bob@fps.nl" }),
     );
+  });
+
+  it("bulk: alle titels correct meegestuurd bij meerdere planningsitems (bewijs Task 968)", async () => {
+    // Twee planningsregels met twee *verschillende* inbox-item-ids
+    const planningRij2 = {
+      id: 2,
+      plPlanningDatum: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
+      meldingVerzondOp: null,
+      inboxItemId: 20,
+      offerteId: 6,
+    };
+
+    setupSelectSequence(
+      [planningRij, planningRij2],
+      // Inbox-items voor BEIDE ids — de buggy implementatie (eq op [0]) zou
+      // alleen item 10 ophalen en item 20 missen, zodat planningRij2.offerte_titel
+      // null zou zijn in plaats van "Offerte B".
+      [{ id: 10, naam: "Offerte A" }, { id: 20, naam: "Offerte B" }],
+      [gebruikerAlice],
+    );
+    filterMailOntvangersMock.mockResolvedValue([
+      { id: 1, naam: "Alice", email: "alice@fps.nl" },
+    ]);
+
+    await _testVoerCheckUit();
+
+    expect(stuurPlanningMeldingMock).toHaveBeenCalledTimes(1);
+    const aangeroepen = stuurPlanningMeldingMock.mock.calls[0]![0] as {
+      planningen: Array<{ planning_id: number; offerte_titel: string | null }>;
+    };
+    const titels = aangeroepen.planningen.map((p) => p.offerte_titel);
+
+    // Beide titels moeten aanwezig zijn — niet alleen de eerste
+    expect(titels).toContain("Offerte A");
+    expect(titels).toContain("Offerte B");
+    // Geen enkel item mag een null-titel hebben door een gemiste lookup
+    expect(titels.every((t) => t !== null)).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 // Dagelijkse planning-bewaking voor aanvraag-planningen
 // Stuurt een overzicht van aanstaande / verlopen deadlines naar PL-gebruikers.
 import { db, aanvraagPlanningenTable, gebruikersTable, inboxItemsTable } from "@workspace/db";
-import { eq, and, isNotNull, lte, isNull } from "drizzle-orm";
+import { eq, and, isNotNull, lte, isNull, inArray } from "drizzle-orm";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurPlanningMelding } from "../services/email";
@@ -48,7 +48,7 @@ async function haalVervallendePlanningen(): Promise<PlanningRegel[]> {
       ? await db
           .select({ id: inboxItemsTable.id, naam: inboxItemsTable.gekoppeldeEntiteitNaam })
           .from(inboxItemsTable)
-          .where(eq(inboxItemsTable.id, itemIds[0]!)) // drizzle inArray-vrij pad
+          .where(inArray(inboxItemsTable.id, itemIds))
       : [];
 
   const titelMap = new Map(items.map((i) => [i.id, i.naam]));

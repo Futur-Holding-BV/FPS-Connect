@@ -3438,3 +3438,11 @@ Gebruikers kunnen nu per categorie kiezen welke e-mailmeldingen ze ontvangen. Ni
 **Tak opgeruimd:** `copilot/fix-github-actions-check` verwijderd uit Futur-Holding-BV/FPS-Connect. De tak bevatte een Copilot-bot-poging van 2026-08-08 om de route-mangeling in `auth.ts`/`opname.ts` te repareren; het probleem is sindsdien correct opgelost via de gecontroleerde merge-aanpak (zie auth-ts-mangling.md). De tak liep 200+ commits achter op `main` en bevatte niets unieks.
 
 **Token-health bevestigd:** De `token-health-check`-workflow (`.github/workflows/token-health-check.yml`) handmatig getriggerd via `workflow_dispatch`. Uitkomst: `success`. Tevens de dagelijkse automatische run van 2026-08-16 08:15 UTC: `success`. Het Actions-secret `FPS_PUSH_TOKEN` is gevuld en het token is geldig. Actions-run: https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/31958091377
+
+## 2026-08-16 — Planningsmeldingen: alle titels correct bij meerdere items (Task 968)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De inbox-items query in `planningMeldingenService.ts` gebruikte `eq(id, itemIds[0])`, waardoor alleen de titel van het eerste item werd opgehaald. Bij bulk-planningswaarschuwingen (meerdere aanvragen) kregen alle overige regels `offerte_titel: null`. Opgelost door over te stappen op `inArray(id, itemIds)` zodat alle betrokken items in één query worden opgehaald en de titelMap volledig wordt gevuld.
+
+Bewijs: nieuwe test "bulk: alle titels correct meegestuurd bij meerdere planningsitems" in `planningMeldingenService.test.ts` toont dat bij twee planningsregels met verschillende inbox-item-ids beide titels ("Offerte A" en "Offerte B") aanwezig zijn en geen enkele null is. Alle 333 bestaande tests blijven groen.
