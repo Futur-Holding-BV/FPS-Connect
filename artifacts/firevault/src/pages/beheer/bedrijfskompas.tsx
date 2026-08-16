@@ -920,7 +920,7 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
 
       {/* Tabs: Overzicht / AK-posten / Capaciteit / Doelmarge / Prognose / Leereffecten */}
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
-        <TabsList className="grid w-full grid-cols-6 max-w-2xl">
+        <TabsList className="w-full max-w-2xl justify-start">
           <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
           <TabsTrigger value="ak-posten">AK-posten</TabsTrigger>
           <TabsTrigger value="capaciteit">Capaciteit</TabsTrigger>

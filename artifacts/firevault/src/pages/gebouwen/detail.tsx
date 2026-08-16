@@ -878,7 +878,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="sticky top-9 z-10 bg-background border-b -mx-3 px-3 md:-mx-4 md:px-4 xl:-mx-6 xl:px-6 py-2 flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-11">
+          <TabsList className="w-full max-w-5xl justify-start">
             <TabsTrigger value="dashboard" className="gap-1.5">
               <LayoutDashboard className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Dashboard</span>

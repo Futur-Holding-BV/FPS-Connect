@@ -735,7 +735,7 @@ function CardEditSheet({
 
         <div className="flex-1 overflow-y-auto mt-4">
           <Tabs defaultValue="basis">
-            <TabsList className="w-full grid grid-cols-6 h-auto">
+            <TabsList className="w-full justify-start">
               <TabsTrigger value="basis" className="text-xs py-1.5 gap-1">
                 <BookOpen className="h-3 w-3" />
                 Basis

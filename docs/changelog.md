@@ -1,3 +1,9 @@
+## 2026-08-16 — Tabbladen lopen nooit meer buiten de paginabreedte
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Op verzoek van René: tabbladenrijen (zoals Onboarding / Middelen / AI-voorstellen op het medewerkerdossier) vouwen bij te weinig ruimte door naar een tweede rij in plaats van buiten beeld te lopen. App-breed opgelost in de basiscomponent (`components/ui/tabs.tsx`: flex-wrap); vier pagina's met afwijkende eigen instellingen (gebouwdetail grid-cols-11, bedrijfskompas, workflow, declaraties overflow-x) gelijkgetrokken. PWA-cache naar v9.
+
 ## 2026-08-16 — Rood teller-bolletje op hoofdstukken Communicatie en Goedkeuring
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -243,7 +243,7 @@ export default function DeclaratiesPagina() {
       </div>
 
       <Tabs value={tabblad} onValueChange={setTabblad}>
-        <TabsList className="w-full justify-start overflow-x-auto">
+        <TabsList className="w-full justify-start">
           <TabsTrigger value="alles">Alles ({declaraties.length})</TabsTrigger>
           {magBeoordelen && (
             <TabsTrigger value="te_beoordelen" className="gap-1.5">

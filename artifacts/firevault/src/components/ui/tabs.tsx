@@ -12,7 +12,9 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "flex items-stretch border-b border-border bg-transparent p-0 h-auto gap-0",
+      // flex-wrap: tabbladen mogen nooit buiten de paginabreedte lopen; te veel
+      // tabbladen vouwen door naar een tweede rij (geldt app-breed).
+      "flex flex-wrap items-stretch border-b border-border bg-transparent p-0 h-auto gap-0",
       className
     )}
     {...props}
