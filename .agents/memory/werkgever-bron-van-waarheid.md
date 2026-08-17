@@ -32,3 +32,5 @@ koppeling te fragiel om op naam-matching te leunen.
   name-matching vervallen.
 - Out of scope (geparkeerd V3.0): salarisadmin, payroll, e-signature, werving, planning,
   beoordeling, AI-personeelsadvies.
+
+- **Besluit René (17 aug 2026):** "FPS Bouw" en "FPS Bouw en Renovatie" zijn écht twee aparte werkmaatschappijen — nooit samenvoegen of als duplicaat behandelen. Let op naam-matching: exacte DB-naam is "FPS Bouw en Renovatie" (met "en", niet "&"); includes-matching kan "FPS Bouw" onterecht laten matchen op de langere naam.
