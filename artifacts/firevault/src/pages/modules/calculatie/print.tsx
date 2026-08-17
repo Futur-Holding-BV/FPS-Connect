@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useListStudioWerkgevers, useListWerkgevers } from "@workspace/api-client-react";
-import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +9,7 @@ type PrintData = {
     id: number; naam: string; referentie: string | null; klant_naam: string | null;
     project_naam: string | null; status: string; omschrijving: string | null;
     opslag_ak: number; opslag_abk: number; opslag_risico: number; opslag_winst: number;
-    korting: number; gebouw_naam: string | null; werkgever_id: number | null; aangemaakt_op: string;
+    korting: number; gebouw_naam: string | null; aangemaakt_op: string;
   };
   regels: {
     id: number; categorie: string; omschrijving: string; eenheid: string;
@@ -34,6 +32,12 @@ type PrintData = {
     totaal_materiaal: number | null;
     advies_status: string | null;
     advies_tekst: string | null;
+  } | null;
+  branding: {
+    werkgever_naam: string | null; primaire_kleur: string;
+    logo_url: string | null; adres: string | null; postcode: string | null;
+    plaats: string | null; telefoon: string | null; email: string | null;
+    studio_model_naam: string | null; studio_primaire_kleur: string | null;
   } | null;
 };
 
@@ -68,52 +72,26 @@ export default function ModulesCalculatiePrint() {
     enabled: id !== null,
   });
 
-  // ── Document Studio — actief template + werkgever-branding ──────────────
-  const { data: werkgevers }      = useListWerkgevers();
-  const { data: studioWerkgevers } = useListStudioWerkgevers();
-
-  // Werkgever afgeleid van de calculatie (via gebouw.werkgever_id), NOOIT van localStorage.
-  // Dit garandeert dat de koptekst, kleur en het logo altijd overeenkomen met de
-  // werkmaatschappij die eigenaar is van het gekoppelde gebouw.
-  const werkgeverId = data?.header.werkgever_id ?? null;
-  const werkgever = werkgeverId
-    ? ((werkgevers ?? []).find(w => w.id === werkgeverId) ?? (werkgevers ?? [])[0] ?? null)
-    : ((werkgevers ?? [])[0] ?? null);
-
-  const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find(w => werkgever && w.naam === werkgever.naam)?.id
-    ?? (studioWerkgevers ?? [])[0]?.id
-    ?? null
-  );
-  const { model: actiefStudioModel, isLoading: modelLaden } = useActiefStudioModel(studioWerkgeverId, "calculatie");
-
-  const accentKleur = (() => {
-    if (!actiefStudioModel?.connect_template_json) return null;
-    try {
-      const tmpl = JSON.parse(actiefStudioModel.connect_template_json) as { kleurschema?: { primair?: string } };
-      return tmpl.kleurschema?.primair ?? null;
-    } catch { return null; }
-  })();
+  // ── Branding — volledig server-side opgelost in print-data ─────────────
+  // Geen aparte werkgever/Studio-queries nodig: calculaties:1 is voldoende.
+  const branding = data?.branding ?? null;
   // Kleur-fallback-keten: studio-model → werkgever.primaire_kleur → FPS-merk
-  const kleur = accentKleur ?? werkgever?.primaire_kleur ?? "#F23B0D";
-  const _rawLogoUrl = (studioWerkgevers ?? []).find(w => w.id === studioWerkgeverId)?.logo_url ?? null;
+  const kleur = branding?.studio_primaire_kleur ?? branding?.primaire_kleur ?? "#F23B0D";
+  const _rawLogoUrl = branding?.logo_url ?? null;
   // Normaliseer: /objects/... → /api/storage/objects/..., bare key → /api/storage/objects/<key>
   const studioLogoUrl = _rawLogoUrl
     ? (_rawLogoUrl.startsWith("/") ? `/api/storage${_rawLogoUrl}` : `/api/storage/objects/${_rawLogoUrl}`)
     : null;
-
-  // Branding-queries moeten ook klaar zijn voordat we printen (inclusief studio-model).
-  const brandingLoaded = werkgevers !== undefined && studioWerkgevers !== undefined && !modelLaden;
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (data && brandingLoaded) {
-      // Wacht iets langer zodat logo-afbeelding kan decoderen na het laden van branding-queries.
+    if (data) {
+      // Wacht iets langer zodat logo-afbeelding kan decoderen.
       const timer = setTimeout(() => window.print(), 800);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [data, brandingLoaded]);
+  }, [data]);
 
   if (isLoading) {
     return (
@@ -182,26 +160,26 @@ export default function ModulesCalculatiePrint() {
           <div className="flex-1 min-w-0 pr-4">
             <div className="text-lg font-bold text-slate-900">Calculatie intern — {header.naam}</div>
             {header.referentie && <div className="text-muted-foreground mt-0.5">Referentie: {header.referentie}</div>}
-            {actiefStudioModel && (
+            {branding?.studio_model_naam && (
               <div
                 className="inline-flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded mt-1"
                 style={{ backgroundColor: kleur + "18", color: kleur }}
               >
-                Opmaak: {actiefStudioModel.werkgever_naam ?? werkgever?.naam ?? "FPS"}
+                Opmaak: {branding.werkgever_naam ?? "FPS"}
               </div>
             )}
           </div>
 
           {/* Midden: bedrijfsgegevensblok */}
-          {werkgever && (
+          {branding && (
             <div className="text-right text-[10px] text-slate-600 leading-snug mr-4 shrink-0">
-              <div className="font-semibold text-slate-800">{werkgever.naam}</div>
-              {werkgever.adres && <div>{werkgever.adres}</div>}
-              {(werkgever.postcode || werkgever.plaats) && (
-                <div>{[werkgever.postcode, werkgever.plaats].filter(Boolean).join("  ")}</div>
+              <div className="font-semibold text-slate-800">{branding.werkgever_naam}</div>
+              {branding.adres && <div>{branding.adres}</div>}
+              {(branding.postcode || branding.plaats) && (
+                <div>{[branding.postcode, branding.plaats].filter(Boolean).join("  ")}</div>
               )}
-              {werkgever.telefoon && <div>{werkgever.telefoon}</div>}
-              {werkgever.email && <div>{werkgever.email}</div>}
+              {branding.telefoon && <div>{branding.telefoon}</div>}
+              {branding.email && <div>{branding.email}</div>}
             </div>
           )}
 
@@ -210,7 +188,7 @@ export default function ModulesCalculatiePrint() {
             {studioLogoUrl && (
               <img
                 src={studioLogoUrl}
-                alt={werkgever?.naam ?? "Logo"}
+                alt={branding?.werkgever_naam ?? "Logo"}
                 className="h-10 w-auto object-contain"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
@@ -462,7 +440,7 @@ export default function ModulesCalculatiePrint() {
 
         {/* Footer */}
         <div className="mt-8 pt-4 border-t text-xs text-muted-foreground flex justify-between" style={{ borderColor: kleur + "30" }}>
-          <span>{werkgever?.naam ?? "FPS Brandpreventie"} — Intern calculatieoverzicht</span>
+          <span>{branding?.werkgever_naam ?? "FPS Brandpreventie"} — Intern calculatieoverzicht</span>
           <span className="no-print">
             <button
               onClick={() => window.print()}
