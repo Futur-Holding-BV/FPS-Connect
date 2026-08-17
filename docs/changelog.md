@@ -1,3 +1,10 @@
+## 2026-08-17 — Personeelsdossier: AI benoemt documenttype i.p.v. 'Overig'
+
+- De documentclassificatie kent nu binnen personeelsdocumenten alle dossiertypen: functiebeschrijving, identiteitsbewijs/paspoort/verblijfsvergunning/rijbewijs, VCA/BHV/EHBO-certificaat, diploma, loonstrook, NAW-formulier, geheimhoudingsverklaring en AOW-verklaring (naast CV en arbeidscontract). Deterministisch vangnet voor functiebeschrijvingen toegevoegd.
+- Bij upload in het personeelsdossier zet de achtergrondanalyse het documenttype automatisch wanneer het nog 'overig' is en de AI een bekend type herkent (whitelist, fail-closed; 'arbeidscontract' genormaliseerd naar het canonieke 'contract'). Een handmatig gekozen specifiek type wordt nooit overschreven.
+- Nieuw endpoint POST /medewerkers/:id/documenten/heranalyse + knop "Automatisch benoemen" op de Documenten-tab (zichtbaar zodra er 'overig'-documenten staan) om bestaande documenten alsnog te benoemen.
+- Frontend: nieuwe kopjes/labels Functiebeschrijving en AOW-verklaring; legacy-typen (arbeidscontract, id_bewijs, rijbewijs_scan) vallen nu onder het juiste kopje en tellen mee in de dossiervolledigheid.
+
 ## 2026-08-17 — Deploybewaking adaptief + dubbele typecheck uit het api-image
 
 - Tijdbewaking in deploy.yml meldt niet langer op een vaste grens van 8 minuten (die bij vrijwel elke uitrol werd overschreden — 16 identieke mails op één dag), maar alleen bij een verslechtering: wanneer de uitrol meer dan de helft langer duurt dan de mediaan van de laatste tien geslaagde uitrollen (via de GitHub API), en hoogstens één tijdmelding per dag (datummarker `/opt/fps-one/.deploy-tijdmelding-datum` op de VPS). De schijfbewaking is ongewijzigd.

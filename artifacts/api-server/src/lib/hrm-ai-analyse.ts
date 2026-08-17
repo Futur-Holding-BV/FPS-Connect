@@ -69,6 +69,29 @@ function normaliseerVelden(gevonden: Record<string, string>): HrmVeldenExtractie
   };
 }
 
+// Whitelist van dossier-documenttypen die de AI-classificatie mag toekennen
+// wanneer het document nu als "overig" staat. Fail-closed: onbekende subtypes
+// laten het type ongemoeid. "arbeidscontract" is bewust genormaliseerd naar
+// "contract" (het canonieke dossiertype in de volledigheidscheck).
+const SUBTYPE_NAAR_DOSSIERTYPE: Record<string, string> = {
+  cv: "cv",
+  arbeidscontract: "contract",
+  contract: "contract",
+  functiebeschrijving: "functiebeschrijving",
+  identiteitsbewijs: "identiteitsbewijs",
+  paspoort: "paspoort",
+  verblijfsvergunning: "verblijfsvergunning",
+  rijbewijs: "rijbewijs",
+  vca_certificaat: "vca_certificaat",
+  bhv_certificaat: "bhv_certificaat",
+  ehbo_certificaat: "ehbo_certificaat",
+  diploma: "diploma",
+  loonstrook: "loonstrook",
+  naw_formulier: "naw_formulier",
+  geheimhoudingsverklaring: "geheimhoudingsverklaring",
+  aow_verklaring: "aow_verklaring",
+};
+
 function heeftBruikbareVelden(v: HrmVeldenExtractie): boolean {
   return !!(v.naam || v.email || v.telefoon || v.mobiel || v.adres || v.geboortedatum || v.rijbewijs);
 }
@@ -109,9 +132,11 @@ export async function analyseerEnSlaVoorstellenOp(
   medewerker: Medewerker,
   doc: Doc,
   fileBuffer: Buffer,
-): Promise<{ aangemaakt: number; overgeslagen: number }> {
+): Promise<{ aangemaakt: number; overgeslagen: number; hernoemd: boolean; analyseFout: boolean }> {
   let aangemaakt = 0;
   let overgeslagen = 0;
+  let hernoemd = false;
+  let analyseFout = false;
 
   try {
     const resultaat = await classificeerDocument({
@@ -119,6 +144,37 @@ export async function analyseerEnSlaVoorstellenOp(
       bestandsnaam: doc.bestandsnaam ?? "document",
       mime: doc.contentType ?? "application/octet-stream",
     });
+
+    // Documenttype automatisch benoemen: staat het document nog als "overig"
+    // (of zonder type) en herkent de classificatie een bekend dossiertype,
+    // dan zetten we dat type direct — zodat het dossier niet vol "Overig"
+    // staat. Een door een mens gekozen specifiek type wordt NOOIT overschreven.
+    const huidigType = (doc.type ?? "").trim().toLowerCase();
+    const herkendSubtype = (resultaat.subtype ?? resultaat.gevonden_gegevens.document_subtype ?? "")
+      .trim()
+      .toLowerCase();
+    const nieuwType = SUBTYPE_NAAR_DOSSIERTYPE[herkendSubtype];
+    if ((huidigType === "" || huidigType === "overig") && nieuwType && !resultaat.lees_probleem) {
+      const bijgewerkt = await db
+        .update(medewerkerDocumentenTable)
+        .set({ type: nieuwType })
+        .where(
+          and(
+            eq(medewerkerDocumentenTable.id, doc.id),
+            eq(medewerkerDocumentenTable.type, doc.type ?? "overig"),
+          ),
+        )
+        .returning({ id: medewerkerDocumentenTable.id });
+      // Alleen tellen wanneer onze eigen conditionele update daadwerkelijk een
+      // rij wijzigde — een tussentijdse handmatige typekeuze wint (guard in WHERE).
+      hernoemd = bijgewerkt.length > 0;
+      if (hernoemd) {
+        logger.info(
+          { docId: doc.id, medewerkerId: medewerker.id, van: huidigType || "(leeg)", naar: nieuwType },
+          "hrm-ai-analyse: documenttype automatisch benoemd",
+        );
+      }
+    }
 
     const extractie = normaliseerVelden(resultaat.gevonden_gegevens);
     const baseConf =
@@ -210,11 +266,12 @@ export async function analyseerEnSlaVoorstellenOp(
 
     if (voorstellen.length === 0) overgeslagen++;
   } catch (err) {
+    analyseFout = true;
     logger.warn(
       { err, docId: doc.id, medewerkerId: medewerker.id },
       "hrm-ai-analyse: document-analyse mislukt",
     );
   }
 
-  return { aangemaakt, overgeslagen };
+  return { aangemaakt, overgeslagen, hernoemd, analyseFout };
 }

@@ -380,6 +380,11 @@ REGELS:
    - testrapport/eta/dop/certificaat: organisatie (fabrikant), productnaam, normen, jaar
    - personeelsdocument (CV): document_subtype="cv", naam_medewerker, gewenste_functie (GEEN BSN/salaris)
    - personeelsdocument (arbeidsovereenkomst/arbeidscontract): document_subtype="arbeidscontract", naam_medewerker (de werknemer), organisatie (de werkgever) (GEEN BSN/salaris)
+   - personeelsdocument (overige): geef ALTIJD een document_subtype uit precies deze lijst wanneer het document
+     erbij past: "functiebeschrijving" (functieomschrijving/functieprofiel), "identiteitsbewijs", "paspoort",
+     "verblijfsvergunning", "rijbewijs", "vca_certificaat", "bhv_certificaat", "ehbo_certificaat", "diploma",
+     "loonstrook", "naw_formulier", "geheimhoudingsverklaring", "aow_verklaring". Past het nergens bij, laat
+     document_subtype dan leeg. Altijd naam_medewerker meegeven indien vindbaar (GEEN BSN/salaris).
    - verzekering: organisatie (verzekeraar), polisnummer, jaar
    - snagstream: organisatie (opdrachtgever), locatie, jaar
 5. Bij "onbekend": geef 3 zinvolle alternatieven.
@@ -954,6 +959,24 @@ export async function classificeerDocument(input: {
           resultaat: "arbeidscontract",
           detail: "Arbeidscontract-kenmerken in tekst/bestandsnaam (vangnet: AI gaf geen subtype)",
         });
+      } else {
+        // Vangnet voor functiebeschrijvingen: het dossiertype in het
+        // personeelsdossier hangt op dit subtype.
+        const isFunctiebeschrijving =
+          tekstLower.includes("functiebeschrijving") ||
+          tekstLower.includes("functieomschrijving") ||
+          tekstLower.includes("functieprofiel") ||
+          naamLower.includes("functiebeschrijving") ||
+          naamLower.includes("functieomschrijving") ||
+          /functie[ _-]?beschrijving/.test(naamLower);
+        if (isFunctiebeschrijving) {
+          subtype = "functiebeschrijving";
+          bewijs.push({
+            stap: "subtype_afgeleid",
+            resultaat: "functiebeschrijving",
+            detail: "Functiebeschrijving-kenmerken in tekst/bestandsnaam (vangnet: AI gaf geen subtype)",
+          });
+        }
       }
     }
   }

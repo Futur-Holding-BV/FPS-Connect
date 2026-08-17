@@ -5097,6 +5097,66 @@ router.post(
   },
 );
 
+// ─── Heranalyse van 'overig'-documenten (AI benoemt het documenttype) ────────
+// Voor bestaande dossierdocumenten die als "overig" staan: haal het bestand op,
+// laat de classificatie het type benoemen (zelfde pad als bij upload) en maak
+// eventuele AI-voorstellen aan. Een handmatig gekozen specifiek type wordt
+// nooit aangeraakt (de update in analyseerEnSlaVoorstellenOp is overig-only).
+router.post(
+  "/medewerkers/:id/documenten/heranalyse",
+  schrijven,
+  async (req, res): Promise<void> => {
+    try {
+      const medewerkerId = parseId(req.params.id);
+      const [mw] = await db
+        .select()
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.id, medewerkerId));
+      if (!mw) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+
+      const docs = await db
+        .select()
+        .from(medewerkerDocumentenTable)
+        .where(
+          and(
+            eq(medewerkerDocumentenTable.medewerkerId, medewerkerId),
+            eq(medewerkerDocumentenTable.type, "overig"),
+          ),
+        );
+      if (!docs.length) return void res.json({ geanalyseerd: 0, hernoemd: 0, mislukt: 0 });
+
+      let geanalyseerd = 0;
+      let hernoemd = 0;
+      let mislukt = 0;
+      for (const doc of docs) {
+        try {
+          const storageFile = await hrmStorage.getObjectEntityFile(doc.objectPath);
+          const stream = storageFile.createReadStream();
+          const chunks: Buffer[] = [];
+          for await (const chunk of stream) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+          }
+          const uitkomst = await analyseerEnSlaVoorstellenOp(mw, doc, Buffer.concat(chunks));
+          if (uitkomst.analyseFout) {
+            mislukt++;
+          } else {
+            geanalyseerd++;
+            if (uitkomst.hernoemd) hernoemd++;
+          }
+        } catch (docErr) {
+          mislukt++;
+          req.log.warn({ err: docErr, doc_id: doc.id }, "Heranalyse document mislukt");
+        }
+      }
+
+      res.json({ geanalyseerd, hernoemd, mislukt });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
 // ─── Tijdelijk analyseren zonder opslag (wizard stap 1) ─────────────────────
 
 router.post(

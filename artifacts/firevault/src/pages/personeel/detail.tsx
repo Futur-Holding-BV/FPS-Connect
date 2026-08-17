@@ -347,6 +347,8 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   verblijfsvergunning: "Verblijfsvergunning",
   rijbewijs: "Rijbewijs",
   contract: "Arbeidscontract",
+  functiebeschrijving: "Functiebeschrijving",
+  aow_verklaring: "AOW-verklaring",
   vca_certificaat: "VCA-certificaat",
   bhv_certificaat: "BHV-certificaat",
   ehbo_certificaat: "EHBO-certificaat",
@@ -359,6 +361,15 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const DOCUMENT_TYPES = Object.keys(DOCUMENT_TYPE_LABELS);
+
+// Legacy/alias-typen uit de backend mappen op het canonieke dossiertype,
+// zodat ze onder het juiste kopje vallen i.p.v. onder "Overig".
+const DOCUMENT_TYPE_ALIASSEN: Record<string, string> = {
+  arbeidscontract: "contract",
+  id_bewijs: "identiteitsbewijs",
+  rijbewijs_scan: "rijbewijs",
+};
+const normaliseerDocType = (t: string) => DOCUMENT_TYPE_ALIASSEN[t] ?? t;
 
 // Types waarvoor een verloopdatum relevant is
 const TYPES_MET_VERLOOPDATUM = new Set([
@@ -399,6 +410,7 @@ function DocumentenTab({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadBezig, setUploadBezig] = useState(false);
+  const [heranalyseBezig, setHeranalyseBezig] = useState(false);
   const [uploadType, setUploadType] = useState("overig");
   const [uploadLabel, setUploadLabel] = useState("");
   const [uploadVerloopdatum, setUploadVerloopdatum] = useState("");
@@ -408,6 +420,28 @@ function DocumentenTab({
   const { data: docs = [], isLoading } = useListMedewerkerDocumenten(medewerkerId, {
     query: { queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) },
   });
+
+  async function heranalyseren() {
+    setHeranalyseBezig(true);
+    try {
+      const resp = await fetch(`/api/medewerkers/${medewerkerId}/documenten/heranalyse`, { method: "POST" });
+      if (!resp.ok) throw new Error(await resp.text());
+      const r = (await resp.json()) as { geanalyseerd: number; hernoemd: number; mislukt: number };
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) });
+      toast({
+        title: r.hernoemd > 0 ? `${r.hernoemd} document${r.hernoemd === 1 ? "" : "en"} benoemd` : "Geen documenten hernoemd",
+        description: r.mislukt > 0
+          ? `${r.mislukt} document${r.mislukt === 1 ? "" : "en"} kon${r.mislukt === 1 ? "" : "den"} niet geanalyseerd worden.`
+          : r.hernoemd === 0
+            ? "De AI herkende geen bekend documenttype; kies het type handmatig."
+            : undefined,
+      });
+    } catch {
+      toast({ title: "Automatisch benoemen mislukt", variant: "destructive" });
+    } finally {
+      setHeranalyseBezig(false);
+    }
+  }
 
   function bestandGekozen(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -454,13 +488,13 @@ function DocumentenTab({
     }
   }
 
-  const aanwezigTypes = new Set(docs.map((d) => d.type));
+  const aanwezigTypes = new Set(docs.map((d) => normaliseerDocType(d.type)));
 
   const groepenPerType = DOCUMENT_TYPES
-    .map((t) => ({ type: t, label: DOCUMENT_TYPE_LABELS[t], docs: docs.filter((d) => d.type === t) }))
+    .map((t) => ({ type: t, label: DOCUMENT_TYPE_LABELS[t], docs: docs.filter((d) => normaliseerDocType(d.type) === t) }))
     .filter((g) => g.docs.length > 0);
 
-  const overige = docs.filter((d) => !DOCUMENT_TYPES.includes(d.type));
+  const overige = docs.filter((d) => !DOCUMENT_TYPES.includes(normaliseerDocType(d.type)));
 
   return (
     <div className="space-y-4">
@@ -520,7 +554,13 @@ function DocumentenTab({
 
       {/* Upload knop */}
       {magBewerken && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {docs.some((d) => normaliseerDocType(d.type) === "overig") && (
+            <Button variant="outline" disabled={heranalyseBezig} onClick={heranalyseren}>
+              <Sparkles className="h-4 w-4" />
+              {heranalyseBezig ? "Bezig met benoemen…" : "Automatisch benoemen"}
+            </Button>
+          )}
           <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={bestandGekozen} />
           <Button onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4" />
