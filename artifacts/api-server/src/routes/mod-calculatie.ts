@@ -30,6 +30,7 @@ import {
   documentKoppelingenTable,
   werkgeversTable,
   documentStudioModellenTable,
+  medewerkersTable,
 } from "@workspace/db";
 import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
@@ -42,6 +43,7 @@ import { haalPlakInvoerBeeld } from "../lib/documentIntelligence";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
 import { renderPdfPaginas, resizeAfbeelding } from "../lib/pdfVisie";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { resolveWerkgeverLogoSubPath } from "../lib/werkgever-logo-pad";
 import { bouwInkoopEigenCijfersContext, haalInkoopHistorie } from "../lib/inkoopEigenCijfers";
 import { kenmerkVoorModCalc } from "../lib/kenmerk";
 import { vindGeldigeAfspraak } from "../services/prijsAfspraken";
@@ -1827,14 +1829,29 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       .orderBy(asc(modCalcRegelsTable.volgorde));
 
     let gebouwNaam: string | null = null;
-    let gebouwWerkgeverId: number | null = null;
+    let werkgeverId: number | null = null;
+
+    // Stabiele werkgever-bron 1: gebouw.werkgever_id (meest betrouwbaar).
     if (header.gebouwId) {
       const [g] = await db
         .select({ naam: gebouwenTable.naam, werkgeverId: gebouwenTable.werkgeverId })
         .from(gebouwenTable)
         .where(eq(gebouwenTable.id, header.gebouwId));
       gebouwNaam = g?.naam ?? null;
-      gebouwWerkgeverId = g?.werkgeverId ?? null;
+      werkgeverId = g?.werkgeverId ?? null;
+    }
+
+    // Stabiele werkgever-bron 2 (fallback als er geen gebouw of het gebouw geen
+    // werkgever heeft): de werkgever van de medewerker die de calculatie aanmaakte.
+    // Calculaties zijn interne documenten; de aanmaker is altijd een medewerker
+    // van één werkmaatschappij. Dit is stabieler dan een globale app-instelling.
+    if (werkgeverId == null && header.aangemaaktDoorId) {
+      const [m] = await db
+        .select({ werkgeverId: medewerkersTable.werkgeverId })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, header.aangemaaktDoorId))
+        .limit(1);
+      werkgeverId = m?.werkgeverId ?? null;
     }
 
     // Branding server-side oplossen zodat calculaties:1 voldoende is (geen personeel:1 nodig).
@@ -1845,7 +1862,7 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       studio_model_naam: string | null; studio_primaire_kleur: string | null;
     };
     let branding: BrandingData | null = null;
-    if (gebouwWerkgeverId) {
+    if (werkgeverId) {
       const [wg] = await db
         .select({
           naam: werkgeversTable.naam, primaireKleur: werkgeversTable.primaireKleur,
@@ -1854,12 +1871,12 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
           telefoon: werkgeversTable.telefoon, email: werkgeversTable.email,
         })
         .from(werkgeversTable)
-        .where(eq(werkgeversTable.id, gebouwWerkgeverId));
+        .where(eq(werkgeversTable.id, werkgeverId));
       const [model] = await db
         .select({ naam: documentStudioModellenTable.naam, connectTemplateJson: documentStudioModellenTable.connectTemplateJson })
         .from(documentStudioModellenTable)
         .where(and(
-          eq(documentStudioModellenTable.werkgeverId, gebouwWerkgeverId),
+          eq(documentStudioModellenTable.werkgeverId, werkgeverId),
           eq(documentStudioModellenTable.documentType, "calculatie"),
           eq(documentStudioModellenTable.status, "goedgekeurd"),
         ))
@@ -1872,10 +1889,22 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
           studioPrimaireKleur = t.kleurschema?.primair ?? null;
         } catch { /* ignore */ }
       }
+      // Canonicaliseer logo_url naar /api/storage/objects/<subPath> zodat de
+      // browser de afbeelding via de geauthenticeerde objects-route kan laden.
+      // Legacy /api/storage/files?path=... en /objects/... worden genormaliseerd;
+      // externe http(s)-URLs en paden buiten de werkgever/algemeen-prefix worden
+      // verwijderd (null). Zie lib/werkgever-logo-pad.ts voor de ACL-logica.
+      const rawLogoUrl = wg?.logoUrl ?? null;
+      const canoniekLogoUrl = (() => {
+        if (!rawLogoUrl) return null;
+        const subPath = resolveWerkgeverLogoSubPath(rawLogoUrl);
+        if (subPath === null) return null;
+        return `/api/storage/objects/${encodeURIComponent(subPath)}`;
+      })();
       branding = {
         werkgever_naam: wg?.naam ?? null,
         primaire_kleur: wg?.primaireKleur ?? "#F23B0D",
-        logo_url: wg?.logoUrl ?? null,
+        logo_url: canoniekLogoUrl,
         adres: wg?.adres ?? null,
         postcode: wg?.postcode ?? null,
         plaats: wg?.plaats ?? null,

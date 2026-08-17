@@ -1,3 +1,6 @@
+// hint: Structural and logic conflict. Both design and behavior differ.
+// hint: Structural and logic conflict. Both design and behavior differ.
+// hint: Structural and logic conflict. Both design and behavior differ.
 - [Expo stale .env dev-domein](expo-stale-env-domein.md) — monteur-app .env met hardcoded EXPO_PUBLIC_DOMAIN wint van shell-env na domeinrotatie → e2e-login "Failed to fetch"; .env weg + Metro-cache wissen.
 - [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
@@ -155,3 +158,17 @@
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [MOBIEL_01 responsief patroon](mobiel01-responsief-patroon.md) — onderbalk via --bottom-bar-hoogte (safe-area zit al in de var!), FAB wegschuiven+rusttuck, tabel met stapel-per-breakpoint; dev-banner vertekent metingen.
 - [Deploybewaking adaptief](deploy-bewaking-adaptief.md) — tijdmelding alleen >1,5× mediaan laatste 10 runs + dagcap (marker op VPS, actions:read vereist); typecheck in api-image alleen bij NOODFIX (TYPECHECK_IN_IMAGE).
+// hint: Structural and logic conflict. Both design and behavior differ.
+- [Governance blokkeert kritieke acties: sessie mist rol](governance-sessie-rol.md) — req.session.rol wordt nooit gezet bij login; governance-middleware ziet rol=null en blokkeert "kritiek" (o.a. DELETE /gebouwen/:id) met 403, ook voor hoofdbeheerder; e2e-cleanup dus via DB.
+
+// hint: Structural and logic conflict. Both design and behavior differ.
+
+// hint: Logic changed on both sides. Requires understanding intent of each change.
+- [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/objects/<subPath> (NIET rauw objectPath; /files-formaat was dood, defect gefixt aug 2026); AI stelt voor, mens accepteert, tonen alleen bij toon_fotos.
+- [Marketingmodule (MARKETING_01)](marketing-module.md) — crm 3=beheren/4=verzenden; consent-poort in élke query, leden live; proef verplicht+vers; wachtrij fail-closed; afmelden ruimt wachtrij op.
+- [Social-mediamodule (SOCIAL_01)](social-module.md) — kanaaleisen server-side fail-closed (plannen=422+redenen); publicatiemotor nooit stil (mislukt/concept ⇒ werkbak-taak); adapters=stubs tot fase 3-OAuth; koppelingen-API token-vrij.
+- [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/); archiver v8=named ZipArchive.
+- [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
+
+- [Clean PR bij gebundelde commit-history](clean-pr-bundled-commits.md) — code-reviewer vergelijkt HEAD vs github/main; andere taken bundelen mee → altijd schone branch via `git checkout -b <branch> github/main` + `git checkout main -- <files>`; push via `git push github <branch>`; github remote toevoegen met GITHUB_TOKEN_PUSH.
+

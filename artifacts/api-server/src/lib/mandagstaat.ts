@@ -1,3 +1,4 @@
+// hint: Logic changed on both sides. Requires understanding intent of each change.
 // UREN_01 §6c — de mandagstaat (mandagenregister).
 //
 // Genereert server-side een PDF met per medewerker per dag (ma-zo) de uren, met
@@ -23,8 +24,11 @@ import {
 } from "@workspace/db/schema";
 import { and, eq, gte, lte, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
+import sharp from "sharp";
 import {
   resolveWerkgeverLogoSubPath,
+  isSvgSubPath,
+  berekenWerkgeverLogoPad,
 } from "./werkgever-logo-pad";
 
 // Fallback-kleur wanneer geen werkgever-branding beschikbaar is.
@@ -201,31 +205,41 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
 }
 
 
-
 interface WerkgeverBranding {
   naam: string;
   primaireKleur: string;
   logoUrl: string | null;
 }
 
-// Werkgever-branding: naam, huisstijlkleur en logo van de dominante werkgever
-// op de mandagstaat. "Dominant" = werkgever met de meeste medewerkers in de
-// lijst; bij gelijke telling wint de laagste werkgever-ID (deterministisch).
-// Zoekt uitsluitend op werkgever-ID's uit de rijen — nooit op naam.
-async function bepaalWerkgeverBranding(rijen: MedewerkerRij[]): Promise<WerkgeverBranding> {
+// Werkgever-branding: naam, huisstijlkleur en logo voor de mandagstaat.
+//
+// Bronprioriteit (stabiel → minder stabiel):
+//   1. explicieteWerkgeverId — rechtstreeks van opdracht.gebouw.werkgever_id;
+//      dit is de primaire, stabiele bron en verandert niet bij urenverschuivingen.
+//   2. Dominant op basis van medewerkers-aantallen (bestaand gedrag) — alleen
+//      als fallback wanneer het gebouw geen werkgever heeft of niet bestaat.
+//
+// Zoekt uitsluitend op werkgever-ID's — nooit op naam.
+async function bepaalWerkgeverBranding(
+  rijen: MedewerkerRij[],
+  explicieteWerkgeverId: number | null = null,
+): Promise<WerkgeverBranding> {
   const fallback: WerkgeverBranding = { naam: "FPS", primaireKleur: FALLBACK_KLEUR, logoUrl: null };
 
-  // Tel per werkgever-ID hoeveel medewerkers op de mandagstaat staan.
-  const telPerWerkgever = new Map<number, number>();
-  for (const r of rijen) {
-    if (r.werkgeverId == null) continue;
-    telPerWerkgever.set(r.werkgeverId, (telPerWerkgever.get(r.werkgeverId) ?? 0) + 1);
-  }
-  if (telPerWerkgever.size === 0) return fallback;
+  // Bepaal welk werkgever-ID gebruikt wordt voor de PDF-opmaak.
+  let werkgeverId: number | null = explicieteWerkgeverId;
 
-  // Kies de werkgever met de meeste medewerkers; bij gelijke telling: laagste ID.
-  const dominantId = [...telPerWerkgever.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+  if (werkgeverId == null) {
+    // Fallback: werkgever met de meeste medewerkers op de mandagstaat.
+    const telPerWerkgever = new Map<number, number>();
+    for (const r of rijen) {
+      if (r.werkgeverId == null) continue;
+      telPerWerkgever.set(r.werkgeverId, (telPerWerkgever.get(r.werkgeverId) ?? 0) + 1);
+    }
+    if (telPerWerkgever.size === 0) return fallback;
+    werkgeverId = [...telPerWerkgever.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+  }
 
   const [werkgever] = await db
     .select({
@@ -234,7 +248,7 @@ async function bepaalWerkgeverBranding(rijen: MedewerkerRij[]): Promise<Werkgeve
       logoUrl: werkgeversTable.logoUrl,
     })
     .from(werkgeversTable)
-    .where(eq(werkgeversTable.id, dominantId))
+    .where(eq(werkgeversTable.id, werkgeverId))
     .limit(1);
 
   if (!werkgever) return fallback;
@@ -256,7 +270,16 @@ async function haalLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   try {
     const subPath = resolveWerkgeverLogoSubPath(logoUrl);
     if (subPath === null) return null;
-    return await objectStorage.downloadBestandBuffer(subPath);
+    const buf = await objectStorage.downloadBestandBuffer(subPath);
+    // PDFKit 0.19 ondersteunt alleen JPEG en PNG. SVG, WebP en GIF worden
+    // via sharp naar PNG omgezet zodat ze correct in de PDF worden ingebed.
+    // Bestaande SVG-logo's in de DB worden zo altijd weergegeven; nieuwe
+    // SVG-uploads worden al geblokkeerd door POST/PATCH /werkgevers.
+    const ext = subPath.toLowerCase().slice(subPath.lastIndexOf("."));
+    if (ext === ".svg" || ext === ".webp" || ext === ".gif") {
+      return await sharp(buf).png().toBuffer();
+    }
+    return buf;
   } catch {
     return null;
   }
@@ -401,12 +424,19 @@ export async function genereerMandagstaat(opdrachtId: number, jaar: number, week
   }
 
   let gebouwNaam: string | null = null;
+  let gebouwWerkgeverId: number | null = null;
   if (opdracht.gebouwId) {
-    const [g] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, opdracht.gebouwId)).limit(1);
+    const [g] = await db
+      .select({ naam: gebouwenTable.naam, werkgeverId: gebouwenTable.werkgeverId })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, opdracht.gebouwId))
+      .limit(1);
     gebouwNaam = g?.naam ?? null;
+    // Stabiele bron: werkgever via het gekoppelde gebouw, ongeacht urenverdeling.
+    gebouwWerkgeverId = g?.werkgeverId ?? null;
   }
 
-  const branding = await bepaalWerkgeverBranding(rijen);
+  const branding = await bepaalWerkgeverBranding(rijen, gebouwWerkgeverId);
   const logoBuffer = branding.logoUrl ? await haalLogoBuffer(branding.logoUrl) : null;
 
   const pdf = await tekenPdf({

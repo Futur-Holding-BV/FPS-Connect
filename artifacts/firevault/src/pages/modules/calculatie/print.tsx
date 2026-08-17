@@ -78,10 +78,18 @@ export default function ModulesCalculatiePrint() {
   // Kleur-fallback-keten: studio-model → werkgever.primaire_kleur → FPS-merk
   const kleur = branding?.studio_primaire_kleur ?? branding?.primaire_kleur ?? "#F23B0D";
   const _rawLogoUrl = branding?.logo_url ?? null;
-  // Normaliseer: /objects/... → /api/storage/objects/..., bare key → /api/storage/objects/<key>
-  const studioLogoUrl = _rawLogoUrl
-    ? (_rawLogoUrl.startsWith("/") ? `/api/storage${_rawLogoUrl}` : `/api/storage/objects/${_rawLogoUrl}`)
-    : null;
+  // Normaliseer naar een browser-toegankelijke URL:
+  //   /api/storage/objects/... → ongewijzigd (canoniek formaat)
+  //   /api/storage/files?...  → ongewijzigd (historisch formaat)
+  //   /objects/<subPath>      → /api/storage/objects/<subPath>
+  //   kale subPath            → /api/storage/objects/<subPath>
+  const studioLogoUrl = (() => {
+    if (!_rawLogoUrl) return null;
+    if (_rawLogoUrl.startsWith("/api/storage/")) return _rawLogoUrl;
+    if (_rawLogoUrl.startsWith("/objects/")) return `/api/storage/objects/${_rawLogoUrl.slice("/objects/".length)}`;
+    if (_rawLogoUrl.startsWith("/")) return null; // onbekend root-pad — niet tonen
+    return `/api/storage/objects/${_rawLogoUrl}`;
+  })();
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {

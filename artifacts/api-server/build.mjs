@@ -60,6 +60,7 @@ async function buildAll() {
       "@sentry/node",
       "pdf-parse",
       "pdf-parse/*",
+      "archiver",
       "handlebars",
       "knex",
       "typeorm",
