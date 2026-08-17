@@ -386,6 +386,14 @@ INDEX|session|session_pkey
 INDEX|slim_upload_log|slim_upload_log_pkey
 INDEX|snagstream_rapporten|snagstream_rapporten_pkey
 INDEX|snagstream_snags|snagstream_snags_pkey
+INDEX|social_bericht_kanalen|social_bericht_kanalen_pkey
+INDEX|social_bericht_kanalen|social_bericht_kanalen_status_idx
+INDEX|social_bericht_kanalen|social_bericht_kanalen_uq
+INDEX|social_berichten|social_berichten_pkey
+INDEX|social_berichten|social_berichten_status_gepland_idx
+INDEX|social_berichten|social_berichten_wg_gepland_idx
+INDEX|social_koppelingen|social_koppelingen_pkey
+INDEX|social_koppelingen|social_koppelingen_wg_kanaal_uq
 INDEX|spot_ai_voorstellen|spot_ai_voorstellen_pkey
 INDEX|spot_dossiers|spot_dossiers_pkey
 INDEX|spot_dossiers|spot_dossiers_voorziening_id_type_unique
@@ -4126,6 +4134,54 @@ KOLOM|snagstream_snags|status_origineel|text|YES|
 KOLOM|snagstream_snags|toepassing_naam|text|YES|
 KOLOM|snagstream_snags|type_naam|text|YES|
 KOLOM|snagstream_snags|verdieping|text|YES|
+KOLOM|social_bericht_kanalen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|social_bericht_kanalen|bericht_id|integer|NO|
+KOLOM|social_bericht_kanalen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|social_bericht_kanalen|cijfers_opgehaald_op|timestamp without time zone|YES|
+KOLOM|social_bericht_kanalen|cijfers|jsonb|YES|
+KOLOM|social_bericht_kanalen|concept_klaargezet_op|timestamp without time zone|YES|
+KOLOM|social_bericht_kanalen|extern_id|text|YES|
+KOLOM|social_bericht_kanalen|geplaatst_op|timestamp without time zone|YES|
+KOLOM|social_bericht_kanalen|id|integer|NO|nextval('social_bericht_kanalen_id_seq'::regclass)
+KOLOM|social_bericht_kanalen|kanaal|text|NO|
+KOLOM|social_bericht_kanalen|laatste_fout|text|YES|
+KOLOM|social_bericht_kanalen|laatste_poging_op|timestamp without time zone|YES|
+KOLOM|social_bericht_kanalen|plaatsing_status|text|NO|'wachtend'::text
+KOLOM|social_bericht_kanalen|pogingen|integer|NO|0
+KOLOM|social_bericht_kanalen|taak_gemaakt|boolean|NO|false
+KOLOM|social_bericht_kanalen|tekst_override|text|YES|
+KOLOM|social_berichten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|social_berichten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|social_berichten|campagne_id|integer|YES|
+KOLOM|social_berichten|crm_klant_id|integer|YES|
+KOLOM|social_berichten|gebouw_id|integer|YES|
+KOLOM|social_berichten|geplaatst_op|timestamp without time zone|YES|
+KOLOM|social_berichten|gepland_op|timestamp without time zone|YES|
+KOLOM|social_berichten|id|integer|NO|nextval('social_berichten_id_seq'::regclass)
+KOLOM|social_berichten|klaar_op|timestamp without time zone|YES|
+KOLOM|social_berichten|maker_id|integer|YES|
+KOLOM|social_berichten|media_pad|text|YES|
+KOLOM|social_berichten|media_type|text|YES|
+KOLOM|social_berichten|planner_id|integer|YES|
+KOLOM|social_berichten|status|text|NO|'concept'::text
+KOLOM|social_berichten|tekst|text|NO|''::text
+KOLOM|social_berichten|visual_id|integer|YES|
+KOLOM|social_berichten|werkgever_id|integer|NO|
+KOLOM|social_koppelingen|aangemaakt_door_id|integer|YES|
+KOLOM|social_koppelingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|social_koppelingen|access_token|text|YES|
+KOLOM|social_koppelingen|account_naam|text|NO|
+KOLOM|social_koppelingen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|social_koppelingen|id|integer|NO|nextval('social_koppelingen_id_seq'::regclass)
+KOLOM|social_koppelingen|kanaal|text|NO|
+KOLOM|social_koppelingen|laatst_vernieuwd_op|timestamp without time zone|YES|
+KOLOM|social_koppelingen|laatste_fout|text|YES|
+KOLOM|social_koppelingen|modus|text|NO|'klaarzetten'::text
+KOLOM|social_koppelingen|refresh_token|text|YES|
+KOLOM|social_koppelingen|status|text|NO|'actief'::text
+KOLOM|social_koppelingen|verloop_taak_op|timestamp without time zone|YES|
+KOLOM|social_koppelingen|verloopt_op|timestamp without time zone|YES|
+KOLOM|social_koppelingen|werkgever_id|integer|NO|
 KOLOM|spot_ai_voorstellen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|spot_ai_voorstellen|afwijking_toepassing|boolean|NO|false
 KOLOM|spot_ai_voorstellen|beheerder_bevestigd_door_id|integer|YES|

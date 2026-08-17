@@ -33,6 +33,7 @@ import CrmKennisbibliotheek from "@/pages/crm/kennisbibliotheek";
 import CrmTaken from "@/pages/crm/taken";
 import CrmRelatievoorstellen from "@/pages/crm/relatievoorstellen";
 import CrmMarketing from "@/pages/crm/marketing";
+import CrmSocial from "@/pages/crm/social";
 import CrmAanvragen from "@/pages/crm/aanvragen";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
@@ -464,6 +465,7 @@ export function ConnectRoutes() {
         <Route path="/crm/taken" component={CrmTaken} />
         <Route path="/crm/relatievoorstellen" component={CrmRelatievoorstellen} />
         <Route path="/crm/marketing" component={CrmMarketing} />
+        <Route path="/crm/social" component={CrmSocial} />
         <Route path="/crm/kennisbibliotheek" component={CrmKennisbibliotheek} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/crm" component={CrmKlanten} />

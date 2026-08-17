@@ -153,4 +153,5 @@
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
 - [HRM AI-voorstellen zonder waarde](hrm-ai-voorstellen-leeg.md) — lege voorstelwaarde = signalering: geen zekerheidsscore, geen Overnemen-knop, goedkeuren zonder waarde → 422; heranalyse heelt oude 100%-rijen.
 - [Marketingmodule (MARKETING_01)](marketing-module.md) — crm 3=beheren/4=verzenden; consent-poort in élke query, leden live; proef verplicht+vers; wachtrij fail-closed; afmelden ruimt wachtrij op.
+- [Social-mediamodule (SOCIAL_01)](social-module.md) — kanaaleisen server-side fail-closed (plannen=422+redenen); publicatiemotor nooit stil (mislukt/concept ⇒ werkbak-taak); adapters=stubs tot fase 3-OAuth; koppelingen-API token-vrij.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.

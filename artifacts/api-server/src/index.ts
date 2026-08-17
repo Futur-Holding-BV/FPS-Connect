@@ -22,6 +22,7 @@ import { initBiae } from "./services/biae/init";
 import { planCentraleDeadlineBewaking } from "./services/biae/jobs/deadline-bewaking";
 import { planDagelijkseComplianceControle } from "./services/biae/jobs/compliance-monitoring";
 import { planDagelijkseBewakingsloop } from "./lib/bewakingsloop";
+import { planSocialPublicaties } from "./services/socialService";
 import { herstelVastgelopenMailWachtrijItems } from "./services/email";
 
 const rawPort = process.env["PORT"];
@@ -82,6 +83,8 @@ ensureSessionTable()
       planDagelijkseComplianceControle();
       // WERKBAK_01 — dagelijkse bewakingsloop die de werkbak voedt (06:30).
       planDagelijkseBewakingsloop();
+      // SOCIAL_01 — publicatieplanner (elke minuut) + verloopbewaking koppelingen.
+      planSocialPublicaties();
       // Mail-wachtrij hardening: herstel items die tijdens verzenden zijn
       // gecrasht (status "verzenden" > 10 min) → terugzetten naar "mislukt".
       // Meteen bij start uitvoeren, daarna elke 5 minuten herhalen.

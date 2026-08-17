@@ -34,7 +34,7 @@ import {
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
   Users2, Star,
-  Megaphone,
+  Megaphone, Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -832,7 +832,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={(location === "/crm" || location.startsWith("/crm/")) && !location.startsWith("/crm/marketing")}
+                          isActive={(location === "/crm" || location.startsWith("/crm/")) && !location.startsWith("/crm/marketing") && !location.startsWith("/crm/social")}
                         >
                           <Link href="/crm">
                             <Contact />
@@ -852,6 +852,22 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <Link href="/crm/marketing">
                             <Megaphone />
                             <span>Marketing</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      )}
+                      {/* Social media (SOCIAL_01) — zelfde grens als Marketing: de
+                          Social-API vereist crm 3 voor bekijken/opstellen; plannen en
+                          koppelingen gate't de pagina intern op crm 4. */}
+                      {heeftNiveau("crm", 3) && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.startsWith("/crm/social")}
+                        >
+                          <Link href="/crm/social">
+                            <Share2 />
+                            <span>Social media</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

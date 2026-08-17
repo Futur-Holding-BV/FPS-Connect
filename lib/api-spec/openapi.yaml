@@ -28035,8 +28035,404 @@ paths:
         "404":
           description: Niet gevonden
 
+  /social/kanaaleisen:
+    get:
+      operationId: listSocialKanaaleisen
+      tags: [social]
+      summary: Kanaaleisen per social kanaal (tekst, media, limieten)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialKanaalEisen"
+
+  /social/berichten:
+    get:
+      operationId: listSocialBerichten
+      tags: [social]
+      summary: Social berichten (kalender/lijst), optioneel per periode en werkmaatschappij
+      parameters:
+        - in: query
+          name: van
+          schema: { type: string }
+        - in: query
+          name: tot
+          schema: { type: string }
+        - in: query
+          name: werkgever_id
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialBericht"
+    post:
+      operationId: createSocialBericht
+      tags: [social]
+      summary: Social bericht aanmaken (concept)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialBerichtInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialBericht"
+        "400":
+          description: Ongeldige invoer
+
+  /social/berichten/{id}:
+    get:
+      operationId: getSocialBericht
+      tags: [social]
+      summary: Eén social bericht met kanaalvarianten
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialBericht"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateSocialBericht
+      tags: [social]
+      summary: Social bericht bewerken (alleen concept/klaar)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialBerichtInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialBericht"
+        "409":
+          description: Niet bewerkbaar in deze status
+    delete:
+      operationId: deleteSocialBericht
+      tags: [social]
+      summary: Social bericht verwijderen (alleen concept/klaar)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "409":
+          description: Niet verwijderbaar in deze status
+
+  /social/berichten/{id}/klaar:
+    post:
+      operationId: zetSocialBerichtKlaar
+      tags: [social]
+      summary: Concept op 'klaar' zetten
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "409":
+          description: Verkeerde status
+
+  /social/berichten/{id}/terug-naar-concept:
+    post:
+      operationId: zetSocialBerichtTerugNaarConcept
+      tags: [social]
+      summary: Klaar-bericht terug naar concept
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "409":
+          description: Verkeerde status
+
+  /social/berichten/{id}/plannen:
+    post:
+      operationId: planSocialBericht
+      tags: [social]
+      summary: Bericht plannen (valideert kanaaleisen fail-closed)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gepland_op]
+              properties:
+                gepland_op:
+                  type: string
+      responses:
+        "200":
+          description: Gepland
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "409":
+          description: Verkeerde status
+        "422":
+          description: Voldoet niet aan de kanaaleisen (redenen in antwoord)
+
+  /social/berichten/{id}/terug-naar-klaar:
+    post:
+      operationId: zetSocialBerichtTerugNaarKlaar
+      tags: [social]
+      summary: Gepland bericht terughalen (zolang niets geplaatst is)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "409":
+          description: Al (deels) geplaatst
+
+  /social/koppelingen:
+    get:
+      operationId: listSocialKoppelingen
+      tags: [social]
+      summary: Kanaal-koppelingen per werkmaatschappij (zonder tokens)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialKoppeling"
+    post:
+      operationId: createSocialKoppeling
+      tags: [social]
+      summary: Kanaal-koppeling aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialKoppelingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialKoppeling"
+        "409":
+          description: Bestaat al voor deze werkmaatschappij+kanaal
+
+  /social/koppelingen/{id}:
+    patch:
+      operationId: updateSocialKoppeling
+      tags: [social]
+      summary: Kanaal-koppeling bijwerken (naam, modus, status, verloopdatum)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialKoppelingInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialKoppeling"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteSocialKoppeling
+      tags: [social]
+      summary: Kanaal-koppeling verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+
+
 components:
   schemas:
+
+    SocialKanaalEisen:
+      type: object
+      required: [kanaal, naam, tekst_max, beeld, video, media_verplicht, beeld_bestandstypen, video_bestandstypen]
+      properties:
+        kanaal: { type: string, enum: [linkedin, facebook, instagram, tiktok] }
+        naam: { type: string }
+        tekst_max: { type: integer }
+        beeld: { type: string, enum: [verplicht, optioneel, verboden] }
+        video: { type: string, enum: [verplicht, optioneel, verboden] }
+        media_verplicht: { type: boolean }
+        video_max_seconden: { type: integer, nullable: true }
+        beeld_bestandstypen:
+          type: array
+          items: { type: string }
+        video_bestandstypen:
+          type: array
+          items: { type: string }
+        beeld_verhouding: { type: string, nullable: true }
+        max_per_dag: { type: integer, nullable: true }
+
+    SocialBerichtKanaal:
+      type: object
+      required: [id, kanaal, plaatsing_status, pogingen]
+      properties:
+        id: { type: integer }
+        kanaal: { type: string, enum: [linkedin, facebook, instagram, tiktok] }
+        tekst_override: { type: string, nullable: true }
+        plaatsing_status: { type: string, enum: [wachtend, bezig, geplaatst, concept_klaargezet, mislukt] }
+        extern_id: { type: string, nullable: true }
+        geplaatst_op: { type: string, nullable: true }
+        concept_klaargezet_op: { type: string, nullable: true }
+        pogingen: { type: integer }
+        laatste_fout: { type: string, nullable: true }
+        cijfers:
+          type: object
+          nullable: true
+          additionalProperties: { type: number }
+        cijfers_opgehaald_op: { type: string, nullable: true }
+
+    SocialBericht:
+      type: object
+      required: [id, werkgever_id, status, tekst, kanalen]
+      properties:
+        id: { type: integer }
+        werkgever_id: { type: integer }
+        werkgever_naam: { type: string, nullable: true }
+        status: { type: string, enum: [concept, klaar, gepland, geplaatst, deels_geplaatst, mislukt] }
+        tekst: { type: string }
+        media_pad: { type: string, nullable: true }
+        media_type: { type: string, nullable: true, enum: [beeld, video, null] }
+        gepland_op: { type: string, nullable: true }
+        campagne_id: { type: integer, nullable: true }
+        crm_klant_id: { type: integer, nullable: true }
+        gebouw_id: { type: integer, nullable: true }
+        geplaatst_op: { type: string, nullable: true }
+        kanalen:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialBerichtKanaal"
+
+    SocialBerichtInput:
+      type: object
+      properties:
+        werkgever_id: { type: integer }
+        tekst: { type: string }
+        kanalen:
+          type: array
+          items: { type: string, enum: [linkedin, facebook, instagram, tiktok] }
+        kanaal_teksten:
+          type: object
+          additionalProperties: { type: string }
+        media_pad: { type: string, nullable: true }
+        media_type: { type: string, nullable: true, enum: [beeld, video, null] }
+        gepland_op: { type: string, nullable: true }
+        campagne_id: { type: integer, nullable: true }
+        crm_klant_id: { type: integer, nullable: true }
+        gebouw_id: { type: integer, nullable: true }
+
+    SocialKoppeling:
+      type: object
+      required: [id, werkgever_id, kanaal, account_naam, modus, status, heeft_toegang]
+      properties:
+        id: { type: integer }
+        werkgever_id: { type: integer }
+        werkgever_naam: { type: string, nullable: true }
+        kanaal: { type: string, enum: [linkedin, facebook, instagram, tiktok] }
+        account_naam: { type: string }
+        modus: { type: string, enum: [publiceren, klaarzetten] }
+        status: { type: string, enum: [actief, verlopen, ingetrokken] }
+        heeft_toegang: { type: boolean }
+        verloopt_op: { type: string, nullable: true }
+        laatst_vernieuwd_op: { type: string, nullable: true }
+        laatste_fout: { type: string, nullable: true }
+
+    SocialKoppelingInput:
+      type: object
+      properties:
+        werkgever_id: { type: integer }
+        kanaal: { type: string, enum: [linkedin, facebook, instagram, tiktok] }
+        account_naam: { type: string }
+        modus: { type: string, enum: [publiceren, klaarzetten] }
+        status: { type: string, enum: [actief, ingetrokken] }
+        verloopt_op: { type: string, nullable: true }
     WerkbakTaakInput:
       type: object
       required: [titel, eigenaar_id]

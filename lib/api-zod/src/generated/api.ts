@@ -34923,3 +34923,306 @@ export const GetMarktspiegelOnderzoekResponse = zod.object({
 })
 
 
+/**
+ * @summary Kanaaleisen per social kanaal (tekst, media, limieten)
+ */
+export const ListSocialKanaaleisenResponseItem = zod.object({
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "naam": zod.string(),
+  "tekst_max": zod.number(),
+  "beeld": zod.enum(['verplicht', 'optioneel', 'verboden']),
+  "video": zod.enum(['verplicht', 'optioneel', 'verboden']),
+  "media_verplicht": zod.boolean(),
+  "video_max_seconden": zod.number().nullish(),
+  "beeld_bestandstypen": zod.array(zod.string()),
+  "video_bestandstypen": zod.array(zod.string()),
+  "beeld_verhouding": zod.string().nullish(),
+  "max_per_dag": zod.number().nullish()
+})
+export const ListSocialKanaaleisenResponse = zod.array(ListSocialKanaaleisenResponseItem)
+
+
+/**
+ * @summary Social berichten (kalender/lijst), optioneel per periode en werkmaatschappij
+ */
+export const ListSocialBerichtenQueryParams = zod.object({
+  "van": zod.coerce.string().optional(),
+  "tot": zod.coerce.string().optional(),
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const ListSocialBerichtenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
+  "tekst": zod.string(),
+  "media_pad": zod.string().nullish(),
+  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
+  "gepland_op": zod.string().nullish(),
+  "campagne_id": zod.number().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "kanalen": zod.array(zod.object({
+  "id": zod.number(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "tekst_override": zod.string().nullish(),
+  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
+  "extern_id": zod.string().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "concept_klaargezet_op": zod.string().nullish(),
+  "pogingen": zod.number(),
+  "laatste_fout": zod.string().nullish(),
+  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
+  "cijfers_opgehaald_op": zod.string().nullish()
+}))
+})
+export const ListSocialBerichtenResponse = zod.array(ListSocialBerichtenResponseItem)
+
+
+/**
+ * @summary Social bericht aanmaken (concept)
+ */
+export const CreateSocialBerichtBody = zod.object({
+  "werkgever_id": zod.number().optional(),
+  "tekst": zod.string().optional(),
+  "kanalen": zod.array(zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok'])).optional(),
+  "kanaal_teksten": zod.record(zod.string(), zod.string()).optional(),
+  "media_pad": zod.string().nullish(),
+  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
+  "gepland_op": zod.string().nullish(),
+  "campagne_id": zod.number().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish()
+})
+
+export const CreateSocialBerichtResponse = zod.void()
+
+
+/**
+ * @summary Eén social bericht met kanaalvarianten
+ */
+export const GetSocialBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSocialBerichtResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
+  "tekst": zod.string(),
+  "media_pad": zod.string().nullish(),
+  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
+  "gepland_op": zod.string().nullish(),
+  "campagne_id": zod.number().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "kanalen": zod.array(zod.object({
+  "id": zod.number(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "tekst_override": zod.string().nullish(),
+  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
+  "extern_id": zod.string().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "concept_klaargezet_op": zod.string().nullish(),
+  "pogingen": zod.number(),
+  "laatste_fout": zod.string().nullish(),
+  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
+  "cijfers_opgehaald_op": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Social bericht bewerken (alleen concept/klaar)
+ */
+export const UpdateSocialBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSocialBerichtBody = zod.object({
+  "werkgever_id": zod.number().optional(),
+  "tekst": zod.string().optional(),
+  "kanalen": zod.array(zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok'])).optional(),
+  "kanaal_teksten": zod.record(zod.string(), zod.string()).optional(),
+  "media_pad": zod.string().nullish(),
+  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
+  "gepland_op": zod.string().nullish(),
+  "campagne_id": zod.number().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish()
+})
+
+export const UpdateSocialBerichtResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
+  "tekst": zod.string(),
+  "media_pad": zod.string().nullish(),
+  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
+  "gepland_op": zod.string().nullish(),
+  "campagne_id": zod.number().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "kanalen": zod.array(zod.object({
+  "id": zod.number(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "tekst_override": zod.string().nullish(),
+  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
+  "extern_id": zod.string().nullish(),
+  "geplaatst_op": zod.string().nullish(),
+  "concept_klaargezet_op": zod.string().nullish(),
+  "pogingen": zod.number(),
+  "laatste_fout": zod.string().nullish(),
+  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
+  "cijfers_opgehaald_op": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Social bericht verwijderen (alleen concept/klaar)
+ */
+export const DeleteSocialBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSocialBerichtResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Concept op 'klaar' zetten
+ */
+export const ZetSocialBerichtKlaarParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ZetSocialBerichtKlaarResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Klaar-bericht terug naar concept
+ */
+export const ZetSocialBerichtTerugNaarConceptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ZetSocialBerichtTerugNaarConceptResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Bericht plannen (valideert kanaaleisen fail-closed)
+ */
+export const PlanSocialBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PlanSocialBerichtBody = zod.object({
+  "gepland_op": zod.string()
+})
+
+export const PlanSocialBerichtResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Gepland bericht terughalen (zolang niets geplaatst is)
+ */
+export const ZetSocialBerichtTerugNaarKlaarParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ZetSocialBerichtTerugNaarKlaarResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Kanaal-koppelingen per werkmaatschappij (zonder tokens)
+ */
+export const ListSocialKoppelingenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "account_naam": zod.string(),
+  "modus": zod.enum(['publiceren', 'klaarzetten']),
+  "status": zod.enum(['actief', 'verlopen', 'ingetrokken']),
+  "heeft_toegang": zod.boolean(),
+  "verloopt_op": zod.string().nullish(),
+  "laatst_vernieuwd_op": zod.string().nullish(),
+  "laatste_fout": zod.string().nullish()
+})
+export const ListSocialKoppelingenResponse = zod.array(ListSocialKoppelingenResponseItem)
+
+
+/**
+ * @summary Kanaal-koppeling aanmaken
+ */
+export const CreateSocialKoppelingBody = zod.object({
+  "werkgever_id": zod.number().optional(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']).optional(),
+  "account_naam": zod.string().optional(),
+  "modus": zod.enum(['publiceren', 'klaarzetten']).optional(),
+  "status": zod.enum(['actief', 'ingetrokken']).optional(),
+  "verloopt_op": zod.string().nullish()
+})
+
+export const CreateSocialKoppelingResponse = zod.void()
+
+
+/**
+ * @summary Kanaal-koppeling bijwerken (naam, modus, status, verloopdatum)
+ */
+export const UpdateSocialKoppelingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSocialKoppelingBody = zod.object({
+  "werkgever_id": zod.number().optional(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']).optional(),
+  "account_naam": zod.string().optional(),
+  "modus": zod.enum(['publiceren', 'klaarzetten']).optional(),
+  "status": zod.enum(['actief', 'ingetrokken']).optional(),
+  "verloopt_op": zod.string().nullish()
+})
+
+export const UpdateSocialKoppelingResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
+  "account_naam": zod.string(),
+  "modus": zod.enum(['publiceren', 'klaarzetten']),
+  "status": zod.enum(['actief', 'verlopen', 'ingetrokken']),
+  "heeft_toegang": zod.boolean(),
+  "verloopt_op": zod.string().nullish(),
+  "laatst_vernieuwd_op": zod.string().nullish(),
+  "laatste_fout": zod.string().nullish()
+})
+
+
+/**
+ * @summary Kanaal-koppeling verwijderen
+ */
+export const DeleteSocialKoppelingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSocialKoppelingResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+

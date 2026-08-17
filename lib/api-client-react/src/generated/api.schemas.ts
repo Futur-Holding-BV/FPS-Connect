@@ -5,6 +5,230 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type SocialKanaalEisenKanaal = typeof SocialKanaalEisenKanaal[keyof typeof SocialKanaalEisenKanaal];
+
+
+export const SocialKanaalEisenKanaal = {
+  linkedin: 'linkedin',
+  facebook: 'facebook',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+} as const;
+
+export type SocialKanaalEisenBeeld = typeof SocialKanaalEisenBeeld[keyof typeof SocialKanaalEisenBeeld];
+
+
+export const SocialKanaalEisenBeeld = {
+  verplicht: 'verplicht',
+  optioneel: 'optioneel',
+  verboden: 'verboden',
+} as const;
+
+export type SocialKanaalEisenVideo = typeof SocialKanaalEisenVideo[keyof typeof SocialKanaalEisenVideo];
+
+
+export const SocialKanaalEisenVideo = {
+  verplicht: 'verplicht',
+  optioneel: 'optioneel',
+  verboden: 'verboden',
+} as const;
+
+export interface SocialKanaalEisen {
+  kanaal: SocialKanaalEisenKanaal;
+  naam: string;
+  tekst_max: number;
+  beeld: SocialKanaalEisenBeeld;
+  video: SocialKanaalEisenVideo;
+  media_verplicht: boolean;
+  video_max_seconden?: number | null;
+  beeld_bestandstypen: string[];
+  video_bestandstypen: string[];
+  beeld_verhouding?: string | null;
+  max_per_dag?: number | null;
+}
+
+export type SocialBerichtKanaalKanaal = typeof SocialBerichtKanaalKanaal[keyof typeof SocialBerichtKanaalKanaal];
+
+
+export const SocialBerichtKanaalKanaal = {
+  linkedin: 'linkedin',
+  facebook: 'facebook',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+} as const;
+
+export type SocialBerichtKanaalPlaatsingStatus = typeof SocialBerichtKanaalPlaatsingStatus[keyof typeof SocialBerichtKanaalPlaatsingStatus];
+
+
+export const SocialBerichtKanaalPlaatsingStatus = {
+  wachtend: 'wachtend',
+  bezig: 'bezig',
+  geplaatst: 'geplaatst',
+  concept_klaargezet: 'concept_klaargezet',
+  mislukt: 'mislukt',
+} as const;
+
+export type SocialBerichtKanaalCijfers = {[key: string]: number} | null;
+
+export interface SocialBerichtKanaal {
+  id: number;
+  kanaal: SocialBerichtKanaalKanaal;
+  tekst_override?: string | null;
+  plaatsing_status: SocialBerichtKanaalPlaatsingStatus;
+  extern_id?: string | null;
+  geplaatst_op?: string | null;
+  concept_klaargezet_op?: string | null;
+  pogingen: number;
+  laatste_fout?: string | null;
+  cijfers?: SocialBerichtKanaalCijfers;
+  cijfers_opgehaald_op?: string | null;
+}
+
+export type SocialBerichtStatus = typeof SocialBerichtStatus[keyof typeof SocialBerichtStatus];
+
+
+export const SocialBerichtStatus = {
+  concept: 'concept',
+  klaar: 'klaar',
+  gepland: 'gepland',
+  geplaatst: 'geplaatst',
+  deels_geplaatst: 'deels_geplaatst',
+  mislukt: 'mislukt',
+} as const;
+
+export type SocialBerichtMediaType = typeof SocialBerichtMediaType[keyof typeof SocialBerichtMediaType] | null;
+
+
+export const SocialBerichtMediaType = {
+  beeld: 'beeld',
+  video: 'video',
+} as const;
+
+export interface SocialBericht {
+  id: number;
+  werkgever_id: number;
+  werkgever_naam?: string | null;
+  status: SocialBerichtStatus;
+  tekst: string;
+  media_pad?: string | null;
+  media_type?: SocialBerichtMediaType;
+  gepland_op?: string | null;
+  campagne_id?: number | null;
+  crm_klant_id?: number | null;
+  gebouw_id?: number | null;
+  geplaatst_op?: string | null;
+  kanalen: SocialBerichtKanaal[];
+}
+
+export type SocialBerichtInputKanalenItem = typeof SocialBerichtInputKanalenItem[keyof typeof SocialBerichtInputKanalenItem];
+
+
+export const SocialBerichtInputKanalenItem = {
+  linkedin: 'linkedin',
+  facebook: 'facebook',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+} as const;
+
+export type SocialBerichtInputKanaalTeksten = {[key: string]: string};
+
+export type SocialBerichtInputMediaType = typeof SocialBerichtInputMediaType[keyof typeof SocialBerichtInputMediaType] | null;
+
+
+export const SocialBerichtInputMediaType = {
+  beeld: 'beeld',
+  video: 'video',
+} as const;
+
+export interface SocialBerichtInput {
+  werkgever_id?: number;
+  tekst?: string;
+  kanalen?: SocialBerichtInputKanalenItem[];
+  kanaal_teksten?: SocialBerichtInputKanaalTeksten;
+  media_pad?: string | null;
+  media_type?: SocialBerichtInputMediaType;
+  gepland_op?: string | null;
+  campagne_id?: number | null;
+  crm_klant_id?: number | null;
+  gebouw_id?: number | null;
+}
+
+export type SocialKoppelingKanaal = typeof SocialKoppelingKanaal[keyof typeof SocialKoppelingKanaal];
+
+
+export const SocialKoppelingKanaal = {
+  linkedin: 'linkedin',
+  facebook: 'facebook',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+} as const;
+
+export type SocialKoppelingModus = typeof SocialKoppelingModus[keyof typeof SocialKoppelingModus];
+
+
+export const SocialKoppelingModus = {
+  publiceren: 'publiceren',
+  klaarzetten: 'klaarzetten',
+} as const;
+
+export type SocialKoppelingStatus = typeof SocialKoppelingStatus[keyof typeof SocialKoppelingStatus];
+
+
+export const SocialKoppelingStatus = {
+  actief: 'actief',
+  verlopen: 'verlopen',
+  ingetrokken: 'ingetrokken',
+} as const;
+
+export interface SocialKoppeling {
+  id: number;
+  werkgever_id: number;
+  werkgever_naam?: string | null;
+  kanaal: SocialKoppelingKanaal;
+  account_naam: string;
+  modus: SocialKoppelingModus;
+  status: SocialKoppelingStatus;
+  heeft_toegang: boolean;
+  verloopt_op?: string | null;
+  laatst_vernieuwd_op?: string | null;
+  laatste_fout?: string | null;
+}
+
+export type SocialKoppelingInputKanaal = typeof SocialKoppelingInputKanaal[keyof typeof SocialKoppelingInputKanaal];
+
+
+export const SocialKoppelingInputKanaal = {
+  linkedin: 'linkedin',
+  facebook: 'facebook',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+} as const;
+
+export type SocialKoppelingInputModus = typeof SocialKoppelingInputModus[keyof typeof SocialKoppelingInputModus];
+
+
+export const SocialKoppelingInputModus = {
+  publiceren: 'publiceren',
+  klaarzetten: 'klaarzetten',
+} as const;
+
+export type SocialKoppelingInputStatus = typeof SocialKoppelingInputStatus[keyof typeof SocialKoppelingInputStatus];
+
+
+export const SocialKoppelingInputStatus = {
+  actief: 'actief',
+  ingetrokken: 'ingetrokken',
+} as const;
+
+export interface SocialKoppelingInput {
+  werkgever_id?: number;
+  kanaal?: SocialKoppelingInputKanaal;
+  account_naam?: string;
+  modus?: SocialKoppelingInputModus;
+  status?: SocialKoppelingInputStatus;
+  verloopt_op?: string | null;
+}
+
 export type WerkbakTaakInputSoort = typeof WerkbakTaakInputSoort[keyof typeof WerkbakTaakInputSoort];
 
 
@@ -18454,5 +18678,15 @@ hoeveelheid?: number;
 
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
+};
+
+export type ListSocialBerichtenParams = {
+van?: string;
+tot?: string;
+werkgever_id?: number;
+};
+
+export type PlanSocialBerichtBody = {
+  gepland_op: string;
 };
 

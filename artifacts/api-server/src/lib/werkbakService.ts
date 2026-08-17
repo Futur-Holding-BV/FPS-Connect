@@ -97,6 +97,12 @@ export const WERKBAK_BRONNEN = [
   "opname_zonder_calculatie",       // V4 — opname zonder gekoppelde calculatie (doen)
   "calculatie_zonder_offerte",      // V5 — definitieve calculatie zonder offerte (weten)
   "opdracht_zonder_akkoord",        // V6 — actieve opdracht zonder akkoordgrond (weten)
+  // SOCIAL_01 deel C: bericht kon niet (volledig) automatisch geplaatst worden —
+  // concept klaargezet of mislukt → taak voor de planner, nooit stilzwijgend.
+  "social_publicatie",
+  // SOCIAL_01 deel E: kanaal-toegang verloopt binnenkort en kan niet automatisch
+  // vernieuwd worden → taak ruim vóór het verlopen, geen storing achteraf.
+  "social_koppeling_verloopt",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

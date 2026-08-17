@@ -131,6 +131,7 @@ import werkstroomRouter from "./werkstroom";
 import "../services/workflow-configs";
 import wervingRouter from "./werving";
 import marketingRouter, { marketingPubliekRouter } from "./marketing";
+import socialRouter from "./social";
 
 const router: IRouter = Router();
 
@@ -179,6 +180,7 @@ router.use(systeemRouter);
 router.use(infoRouter);
 router.use(crmRouter);
 router.use(marketingRouter);
+router.use(socialRouter);
 router.use(aanvragenRouter);
 router.use(inboxRouter);
 router.use(emailsRouter);
