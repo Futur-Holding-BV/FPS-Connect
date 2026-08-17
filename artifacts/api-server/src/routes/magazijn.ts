@@ -25,6 +25,7 @@ import {
   planningItemsTable,
   werkgeversTable,
   gebouwenTable,
+  documentStudioModellenTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, ilike, lt, lte, gte, sql, gt, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";

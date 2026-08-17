@@ -11,6 +11,7 @@
 // daardoor niets, dan is er geen genereerbare mandagstaat.
 import PDFDocument from "pdfkit";
 import { db } from "@workspace/db";
+import { storageObjectsUrl } from "./storageObjectsUrl";
 import {
   urenRegistratiesTable,
   weekStatenTable,
