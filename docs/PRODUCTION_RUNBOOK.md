@@ -45,7 +45,7 @@ GitHub Actions (`deploy.yml`) SSHt naar de VPS om `deploy-production.sh` te draa
 | `SMOKETEST_PASSWORD` | Wachtwoord smoketest-account | Nee |
 | `EXPO_TOKEN` | Expo access token (account `futur-holding`) voor de automatische OTA-update van de monteur-app na elke deploy | Nee* |
 
-\* Zonder `EXPO_TOKEN` slaagt de deploy gewoon, maar wordt de OTA-update-stap met een waarschuwing overgeslagen — monteurs krijgen dan geen automatische app-update en er moet handmatig `npx eas-cli update --channel production` gedraaid worden (zie `docs/monteur-app-apk.md`).
+\* `EXPO_TOKEN` staat sinds 16 augustus 2026 ingesteld als GitHub Actions secret; de eerste automatische OTA-update is diezelfde dag aantoonbaar geland op het `production`-kanaal (update-groep `9732cfb2`, deploy `afbc2b5`). Zonder `EXPO_TOKEN` slaagt de deploy gewoon, maar wordt de OTA-update-stap met een waarschuwing overgeslagen — monteurs krijgen dan geen automatische app-update en er moet handmatig `npx eas-cli update --channel production` gedraaid worden (zie `docs/monteur-app-apk.md`).
 
 Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflow onmiddellijk met een foutmelding maar mislukt de _merge_ er niet door.
 

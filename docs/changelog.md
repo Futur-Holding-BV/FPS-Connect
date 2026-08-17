@@ -1,3 +1,9 @@
+## 2026-08-16 — Automatische OTA-update monteur-app bewezen werkend
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De laatste bewijsstap van de automatische EAS-Update-keten is afgerond: `EXPO_TOKEN` is (via de GitHub-API, versleuteld met de repo-public-key) als GitHub Actions secret ingesteld, waarna een deploy-run de stap "OTA-update monteur-app" zonder skip-waarschuwing doorliep. Bewijs: `eas-cli channel:list` toont nu een echte update-groep op het `production`-kanaal (groep `9732cfb2`, runtime 1.0.0, android+ios, message "deploy afbc2b5: …") in plaats van N/A. Monteurs halen de update volgens het standaard EAS-mechanisme op bij de eerstvolgende (tweede) app-start; de runtime-versie komt overeen met de uitgeleverde productie-APK. Runbook bijgewerkt.
+
 ## 2026-08-16 — Document Studio: genereren zonder referentie, bulk-knop en twee nieuwe documenttypes
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
