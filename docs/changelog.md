@@ -4,6 +4,12 @@
 
 De laatste bewijsstap van de automatische EAS-Update-keten is afgerond: `EXPO_TOKEN` is (via de GitHub-API, versleuteld met de repo-public-key) als GitHub Actions secret ingesteld, waarna een deploy-run de stap "OTA-update monteur-app" zonder skip-waarschuwing doorliep. Bewijs: `eas-cli channel:list` toont nu een echte update-groep op het `production`-kanaal (groep `9732cfb2`, runtime 1.0.0, android+ios, message "deploy afbc2b5: …") in plaats van N/A. Monteurs halen de update volgens het standaard EAS-mechanisme op bij de eerstvolgende (tweede) app-start; de runtime-versie komt overeen met de uitgeleverde productie-APK. Runbook bijgewerkt.
 
+## 2026-08-17 — Standalone productie-meetscript AI-gebruik (taak #870, AI_01 fase 0)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen-lezen)
+
+Nieuw scripts/src/meting-ai01-prod.ts: draait tegen de database die via DATABASE_URL wordt meegegeven (verplicht, geen dev-defaults), zonder dat de app hoeft te draaien. Sessie wordt hard op read-only gezet; uitsluitend SELECT-query's, geen bestanden — alle uitvoer als platte tekst naar stdout met meetdatum, databasenaam en dezelfde vier tabellen als de ontwikkelmeting (meting-ai01.ts blijft ongewijzigd voor dev). pg toegevoegd aan scripts-dependencies. Verder niets aan de app veranderd.
+
 ## 2026-08-17 — Offboarde medewerkers verdwijnen uit de medewerkerslijst
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
