@@ -1,3 +1,10 @@
+## 2026-08-17 — Personeel: zoekfilter, eigen/inleen-scheiding, cruciale datums + sidebar-signalen
+
+- Personeelsoverzicht: zoekveld (naam/functie/werkmaatschappij/e-mail); eigen medewerkers alfabetisch, inleners (dienstverband uitzend/inhuur) alfabetisch onder een scheidingslijn "Inleen".
+- Nieuw endpoint GET /contract-bewaking/cruciale-datums (personeel:1, afgeleide view): per actieve medewerker de meest urgente deadline — uiterste aanzegdatum (einddatum − 1 maand bij contractduur ≥ 6 mnd, Wet Aanzegging) of einddatum bij tijdelijke contracten, en ZZP-einddatums incl. DBA-duurwaarschuwing (verband ≥ 9 maanden → risico schijnzelfstandigheid).
+- Medewerkerkaarten (eigen én inleen) tonen deze cruciale datum: rood met waarschuwingsicoon bij urgentie (≤ 30 dagen of DBA-risico), anders amber; tooltip met volledige reden.
+- Sidebar (Personeel-hoofdstuk, personeel:2/hoofdbeheerder — o.a. Jacqueline en René): rood telbadge op het hoofdstuk + directe meldingsregels per dreigende overschrijding; klik navigeert naar de betreffende medewerkerkaart. Verversing elke 5 minuten.
+
 ## 2026-08-17 — Personeelsdossier: AI benoemt documenttype i.p.v. 'Overig'
 
 - De documentclassificatie kent nu binnen personeelsdocumenten alle dossiertypen: functiebeschrijving, identiteitsbewijs/paspoort/verblijfsvergunning/rijbewijs, VCA/BHV/EHBO-certificaat, diploma, loonstrook, NAW-formulier, geheimhoudingsverklaring en AOW-verklaring (naast CV en arbeidscontract). Deterministisch vangnet voor functiebeschrijvingen toegevoegd.

@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from "react";
 import { featureFlags } from "@/lib/feature-flags";
 import { Link } from "wouter";
 const HrmWidgets = lazy(() => import("./hrm-widgets"));
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   useGetHrmStats,
   useListMedewerkers,
@@ -70,7 +70,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import {
-  Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
+  Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle, Search,
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
   LogOut, Shield, Sparkles, Loader2, CheckCircle2,
 } from "lucide-react";
@@ -163,6 +163,105 @@ export default function PersoneelPagina() {
     !m.actief || (m.uit_dienst_per != null && new Date(m.uit_dienst_per) <= new Date());
   const actieveMedewerkers = (medewerkers ?? []).filter((m) => !isOudMedewerker(m));
   const aantalOud = (medewerkers ?? []).length - actieveMedewerkers.length;
+
+  // Cruciale datums (aanzegtermijn tijdelijke contracten, ZZP/Wet DBA) per medewerker
+  type CrucialeDatumItem = {
+    medewerker_id: number;
+    naam: string;
+    datum: string;
+    dagen_tot: number;
+    urgent: boolean;
+    bron: "contract" | "zzp";
+    label: string;
+    reden: string;
+  };
+  type CrucialeDatums = { items: CrucialeDatumItem[]; urgent_aantal: number };
+  const { data: crucialeDatums } = useQuery({
+    queryKey: ["contract-bewaking", "cruciale-datums"],
+    queryFn: async (): Promise<CrucialeDatums> => {
+      const resp = await fetch("/api/contract-bewaking/cruciale-datums");
+      if (!resp.ok) throw new Error(await resp.text());
+      return resp.json();
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+  const crucialePerMedewerker = new Map((crucialeDatums?.items ?? []).map((i) => [i.medewerker_id, i]));
+
+  // Zoeken + eigen medewerkers (alfabetisch) gescheiden van inleners (uitzend/inhuur)
+  const [zoekterm, setZoekterm] = useState("");
+  const zoek = zoekterm.trim().toLowerCase();
+  const matchtZoek = (m: (typeof actieveMedewerkers)[number]) =>
+    !zoek ||
+    [m.naam, m.functie_naam, m.werkmaatschappij, m.email]
+      .some((v) => (v ?? "").toLowerCase().includes(zoek));
+  const isInlener = (m: { dienstverband?: string | null }) =>
+    m.dienstverband === "uitzend" || m.dienstverband === "inhuur";
+  const opNaam = (a: { naam: string }, b: { naam: string }) =>
+    a.naam.localeCompare(b.naam, "nl", { sensitivity: "base" });
+  const eigenMedewerkers = actieveMedewerkers.filter((m) => !isInlener(m) && matchtZoek(m)).sort(opNaam);
+  const inleners = actieveMedewerkers.filter((m) => isInlener(m) && matchtZoek(m)).sort(opNaam);
+
+  function renderMedewerkerKaart(m: (typeof actieveMedewerkers)[number]) {
+    const cruciaal = crucialePerMedewerker.get(m.id);
+    return (
+      <Link key={m.id} href={`/personeel/${m.id}`}>
+        <Card className="cursor-pointer transition-colors hover:border-primary/40 hover:bg-accent/40">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="font-semibold truncate">{m.naam}</div>
+              <Badge variant={m.actief ? "outline" : "secondary"} className={m.actief ? "border-emerald-200 text-emerald-700" : ""}>
+                {m.actief ? "actief" : "inactief"}
+              </Badge>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              {m.functie_naam && <div>{m.functie_naam}</div>}
+              <div>{m.werkmaatschappij}</div>
+              {m.cao && <div>CAO: {m.cao}</div>}
+              {m.contracturen_per_week != null && <div>{m.contracturen_per_week} uur/week</div>}
+            </div>
+            {cruciaal && (
+              <div
+                className={`flex items-center gap-1.5 text-xs font-medium ${cruciaal.urgent ? "text-red-600" : "text-amber-700"}`}
+                title={cruciaal.reden}
+              >
+                {cruciaal.urgent ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> : <CalendarClock className="h-3.5 w-3.5 shrink-0" />}
+                <span className="truncate">
+                  {cruciaal.label}: {new Date(cruciaal.datum).toLocaleDateString("nl-NL")}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 pt-1">
+              {m.gebruiker_id ? (
+                <Badge variant="secondary" className="text-[11px]">
+                  Account{m.gebruiker_rol ? `: ${m.gebruiker_rol}` : ""}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[11px] border-amber-200 text-amber-700">Geen account</Badge>
+              )}
+              {m.actief && magSchrijven ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/10 px-2 ml-auto"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOffboardMedId(m.id);
+                    setOffboardOpen(true);
+                  }}
+                >
+                  <LogOut className="h-3 w-3 mr-1" />
+                  Offboarden
+                </Button>
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  }
 
   const bekwaamhedenPerCategorie = (alleBekwaamheden ?? []).reduce<Record<string, typeof alleBekwaamheden>>(
     (acc, b) => {
@@ -671,55 +770,44 @@ export default function PersoneelPagina() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {actieveMedewerkers.map((m) => (
-                <Link key={m.id} href={`/personeel/${m.id}`}>
-                  <Card className="cursor-pointer transition-colors hover:border-primary/40 hover:bg-accent/40">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="font-semibold truncate">{m.naam}</div>
-                        <Badge variant={m.actief ? "outline" : "secondary"} className={m.actief ? "border-emerald-200 text-emerald-700" : ""}>
-                          {m.actief ? "actief" : "inactief"}
-                        </Badge>
+            <>
+              <div className="relative max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={zoekterm}
+                  onChange={(e) => setZoekterm(e.target.value)}
+                  placeholder="Zoek op naam, functie of werkmaatschappij…"
+                  className="pl-8"
+                />
+              </div>
+              {eigenMedewerkers.length === 0 && inleners.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                    Geen medewerkers gevonden voor "{zoekterm}".
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {eigenMedewerkers.map((m) => renderMedewerkerKaart(m))}
+                  </div>
+                  {inleners.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-3 pt-2">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Inleen (uitzend / inhuur)
+                        </span>
+                        <div className="h-px flex-1 bg-border" />
                       </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        {m.functie_naam && <div>{m.functie_naam}</div>}
-                        <div>{m.werkmaatschappij}</div>
-                        {m.cao && <div>CAO: {m.cao}</div>}
-                        {m.contracturen_per_week != null && <div>{m.contracturen_per_week} uur/week</div>}
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {inleners.map((m) => renderMedewerkerKaart(m))}
                       </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        {m.gebruiker_id ? (
-                          <Badge variant="secondary" className="text-[11px]">
-                            Account{m.gebruiker_rol ? `: ${m.gebruiker_rol}` : ""}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[11px] border-amber-200 text-amber-700">Geen account</Badge>
-                        )}
-                        {m.actief && magSchrijven ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/10 px-2 ml-auto"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setOffboardMedId(m.id);
-                              setOffboardOpen(true);
-                            }}
-                          >
-                            <LogOut className="h-3 w-3 mr-1" />
-                            Offboarden
-                          </Button>
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
           )}
         </TabsContent>
 

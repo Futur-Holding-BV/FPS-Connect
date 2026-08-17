@@ -336,6 +336,62 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Dreigende contract-/ZZP-overschrijdingen (aanzegtermijn, Wet DBA) voor HRM.
+  type CruciaalItem = {
+    medewerker_id: number;
+    naam: string;
+    datum: string;
+    dagen_tot: number;
+    urgent: boolean;
+    bron: "contract" | "zzp";
+    label: string;
+    reden: string;
+  };
+  function useCrucialeDatums(actief: boolean): CruciaalItem[] {
+    const { data, refetch } = useQuery<{ items: CruciaalItem[]; urgent_aantal: number }>({
+      queryKey: ["contract-bewaking", "cruciale-datums"],
+      queryFn: async () => {
+        const res = await fetch("/api/contract-bewaking/cruciale-datums", { credentials: "include" });
+        if (!res.ok) return { items: [], urgent_aantal: 0 };
+        return res.json() as Promise<{ items: CruciaalItem[]; urgent_aantal: number }>;
+      },
+      staleTime: 5 * 60 * 1000,
+      enabled: actief,
+    });
+    useEffect(() => {
+      if (!actief) return;
+      const timer = setInterval(() => void refetch(), 5 * 60 * 1000);
+      return () => clearInterval(timer);
+    }, [refetch, actief]);
+    return actief ? (data?.items ?? []).filter((i) => i.urgent) : [];
+  }
+
+  function ContractSignaalItems({ actief }: { actief: boolean }) {
+    const urgente = useCrucialeDatums(actief);
+    if (urgente.length === 0) return null;
+    return (
+      <>
+        {urgente.slice(0, 6).map((i) => (
+          <SidebarMenuItem key={`cruciaal-${i.medewerker_id}`} className="pl-5">
+            <SidebarMenuButton asChild isActive={location === `/personeel/${i.medewerker_id}`}>
+              <Link href={`/personeel/${i.medewerker_id}`} title={i.reden}>
+                <AlertTriangle className="text-destructive" />
+                <span className="truncate text-destructive">
+                  {i.naam} · {new Date(i.datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </>
+    );
+  }
+
+  function ContractSignaalBadge({ actief }: { actief: boolean }) {
+    const urgente = useCrucialeDatums(actief);
+    return <HoofdstukTelBadge aantal={urgente.length} label="dreigende contract-deadlines" />;
+  }
+
   function MagazijnKritiekBadge() {
     const { data, refetch } = useGetMagazijnSignalering();
     useEffect(() => {
@@ -1573,6 +1629,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 onVerplaats={verplaatsHoofdstuk}
                 open={hoofdstukOpen("personeel")}
                 onOpenChange={(open) => setHoofdstukOpen("personeel", open)}
+                kopExtra={<ContractSignaalBadge actief={isHoofdbeheerder || heeftNiveau("personeel", 2)} />}
               >
                     <SidebarMenu>
                       {toonPersoneel && (
@@ -1591,6 +1648,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {/* Dreigende contract-/ZZP-deadlines: klik = direct naar de kaart */}
+                      <ContractSignaalItems actief={isHoofdbeheerder || heeftNiveau("personeel", 2)} />
                       {toonPersoneel && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
