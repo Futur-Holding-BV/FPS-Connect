@@ -1,3 +1,9 @@
+## 2026-08-17 — Factuurafdruk: ketenkenmerk erop, betalingskenmerk herleidbaar, geen afdruk zonder fiscaal nummer
+
+- Het ketenkenmerk (bv. O405/F002) staat nu als "Ons kenmerk" op de factuurafdruk naast het fiscale factuurnummer. Het fiscale nummer alleen is niet herleidbaar: de drie BV's hebben elk een eigen reeks die bij hetzelfde getal begint; het ketenkenmerk hangt via de offerte aan gebouw en BV.
+- De betalingsinstructie vraagt nu om vermelding van "factuurnummer / ketenkenmerk" zodat het bankafschrift eenduidig naar één administratie wijst.
+- Een factuur zonder fiscaal factuurnummer is niet meer afdrukbaar: in plaats van de eerdere terugval op FACT-<intern id> toont de printpagina een duidelijke blokkade ("eerst definitief maken") en start het afdrukken niet.
+
 ## 2026-08-17 — Geüploade offerte-aanvraag e-mails (.eml) worden weer als aanvraag herkend
 
 - Probleem: een geüploade offerte-aanvraag (bv. "De Aak 71 — plafonds brandwerend maken") belandde bij documenten in plaats van het aanvraagproces te starten. Oorzaak: bij .eml/.msg-bestanden las de documentclassificatie de rauwe bytes — de eerste duizenden tekens zijn mailheaders/DKIM-handtekeningen, waardoor de AI alleen ruis zag en het bestand als algemeen document indeelde.

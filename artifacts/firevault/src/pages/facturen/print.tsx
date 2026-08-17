@@ -59,15 +59,39 @@ export default function FactuurPrintPagina() {
   const gebruiktModelLaden = pinnedModelId ? pinnedModelLaden : modelLaden;
 
   const klaar = !factuurLaden && !regelsLaden && !!factuur;
+  // Zonder fiscaal factuurnummer is de factuur niet afdrukbaar: een terugval
+  // op het interne id zet een betekenisloos nummer op een uitgaand document.
+  const heeftFactuurnummer = !!factuur?.factuurnummer;
 
   useEffect(() => {
-    if (klaar) {
+    if (klaar && heeftFactuurnummer) {
       document.documentElement.setAttribute("data-fps-print-ready", "1");
       const t = setTimeout(() => window.print(), 800);
-      return () => clearTimeout(t);
+      return () => {
+        clearTimeout(t);
+        document.documentElement.removeAttribute("data-fps-print-ready");
+      };
     }
+    // Laden of geblokkeerd (geen fiscaal nummer): ready-marker mag nooit blijven
+    // hangen van een eerder bezochte, wél afdrukbare factuur in dezelfde SPA-sessie.
+    document.documentElement.removeAttribute("data-fps-print-ready");
     return undefined;
-  }, [klaar, factuur?.id]);
+  }, [klaar, heeftFactuurnummer, factuur?.id]);
+
+  if (klaar && !heeftFactuurnummer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-geen-factuurnummer">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Deze factuur is nog niet afdrukbaar</p>
+          <p className="text-sm">
+            Er is nog geen fiscaal factuurnummer toegekend. Maak de factuur eerst definitief;
+            afdrukken zonder nummer zou een betekenisloos nummer op een uitgaand document zetten.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!klaar) {
     return (
@@ -135,7 +159,12 @@ export default function FactuurPrintPagina() {
 
   // Factuurgegevens — directe velden uit het schema
   const factuurX      = factuur as unknown as Record<string, unknown>;
-  const factuurNummer = factuur.factuurnummer ?? `FACT-${factuur.id}`;
+  // Boven al afgedwongen: zonder factuurnummer komt de render hier niet.
+  const factuurNummer = factuur.factuurnummer as string;
+  // Ketenkenmerk (bv. O405/F002): hangt via de offerte aan gebouw en BV en is
+  // daarmee — anders dan het fiscale nummer — uniek over de drie administraties.
+  const ketenKenmerk = (factuurX["kenmerk"] as string | null | undefined) ?? null;
+  const betalingskenmerk = ketenKenmerk ? `${factuurNummer} / ${ketenKenmerk}` : factuurNummer;
   const factuurDatum  = datumNl(factuur.factuurdatum) || datumNl(factuurX["aangemaakt_op"] as string);
   const vervaldatum   = factuur.vervaldatum ? datumNl(factuur.vervaldatum) : null;
   const referentie    = (factuurX["relatie_referentie"] as string | null | undefined) ?? null;
@@ -199,7 +228,8 @@ export default function FactuurPrintPagina() {
           datum:       factuurDatum,
           vervaldatum: vervaldatum,
           referentie:  referentie ?? null,
-          kenmerk:     factuurNummer,
+          kenmerk:     ketenKenmerk,
+          betalingskenmerk,
           type:        factuur.type,
         }}
         debiteur={debiteur}

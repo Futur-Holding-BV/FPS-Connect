@@ -30,6 +30,8 @@ export interface FactuurData {
   vervaldatum?: string | null;
   referentie?: string | null;
   kenmerk?: string | null;
+  /** Wat de debiteur bij de betaling moet vermelden; valt terug op het factuurnummer. */
+  betalingskenmerk?: string | null;
   type?: "inkoop" | "verkoop" | string | null;
 }
 
@@ -262,7 +264,8 @@ export function FactuurTemplateA({
               over te maken op{" "}
               <strong>{mij.iban}</strong>{" "}
               ten name van <strong>{mij.naam}</strong>
-              {factuur.nummer && `, onder vermelding van factuurnummer ${factuur.nummer}`}.
+              {(factuur.betalingskenmerk || factuur.nummer) &&
+                `, onder vermelding van ${factuur.betalingskenmerk ?? `factuurnummer ${factuur.nummer}`}`}.
             </p>
           </div>
         )}
