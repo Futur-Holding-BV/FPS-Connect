@@ -74,8 +74,9 @@ async function uploadProbe(subPath: string, data: Buffer, contentType: string): 
   const fullPath = `${dir}/${subPath}`.replace(/^\/+/, "");
   const [bucketName, ...rest] = fullPath.split("/");
   const objectName = rest.join("/");
-  // GCS-client uit de api-server node_modules (zelfde patroon als pdfkit-import).
-  const mod: any = await import("/home/runner/workspace/artifacts/api-server/node_modules/@google-cloud/storage/build/esm/src/index.js");
+  // GCS-client als gewone afhankelijkheid van het scripts-pakket (nooit via een
+  // absoluut werkruimte-pad importeren: dat bestaat niet op de GitHub-runner).
+  const mod: any = await import("@google-cloud/storage");
   const storage = new mod.Storage({
     credentials: { audience: "replit", subject_token_type: "access_token", token_url: "http://127.0.0.1:1106/token", type: "external_account", credential_source: { url: "http://127.0.0.1:1106/credential", format: { type: "json", subject_token_field_name: "access_token" } }, universe_domain: "googleapis.com" },
     projectId: "",
