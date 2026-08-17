@@ -13245,6 +13245,7 @@ export interface ScabMailMutatieKeuze {
   status: string;
   in_snapshot: boolean;
 }
+
 export interface ScabMailBijlage {
   id: number;
   scab_mail_id: number;
@@ -18893,3 +18894,4 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+
