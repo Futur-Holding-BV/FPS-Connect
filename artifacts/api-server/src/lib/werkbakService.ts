@@ -103,6 +103,9 @@ export const WERKBAK_BRONNEN = [
   // SOCIAL_01 deel E: kanaal-toegang verloopt binnenkort en kan niet automatisch
   // vernieuwd worden → taak ruim vóór het verlopen, geen storing achteraf.
   "social_koppeling_verloopt",
+  // HRM_01 §2.3: uiterste aanzegdatum (Wet Aanzegging) of ZZP/Wet DBA-deadline
+  // nadert binnen 30 dagen (of DBA-duurgrens bereikt) → HRM-beheerder (doen).
+  "cruciale_deadlines_hrm",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

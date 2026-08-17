@@ -66,7 +66,7 @@ import { beoordeelVorigeWeek, bouwWeekControleItems, bouwTvtOpnameItems } from "
 import { vindGebruikersMetFunctietitel } from "./bouwMeldingen";
 import { haalInkoopHistorie, artikelSleutel, MIN_WAARNEMINGEN_INKOOP } from "./inkoopEigenCijfers";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
-import { voerContractBewakingUit } from "../routes/contract-bewaking";
+import { voerContractBewakingUit, haalCrucialeDatumItems } from "../routes/contract-bewaking";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
 
@@ -1442,6 +1442,34 @@ async function voedAiHrmCapaciteit(): Promise<{ nieuw: number; afgehandeld: numb
 
 // ── AI_01 §3.5 — werkvoorbereidingssignaal ────────────────────────────────────
 // Actieve opdrachten met een werkbegroting waarvan materiaalregels GEEN
+// HRM_01 §2.3: uiterste aanzegdatum (Wet Aanzegging) of ZZP/Wet DBA-deadline
+// nadert binnen 30 dagen (of DBA-duurgrens bereikt) → HRM-beheerder (doen).
+// Dedup per medewerker + brontype zodat een contract- en ZZP-deadline onafhankelijk
+// kunnen worden aangemaakt en afgehandeld. syncBron lost items automatisch op
+// zodra de deadline niet meer urgent is (nieuw contract, einde vastgelegd).
+async function voedCrucialeDeadlinesHrm(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const items: WerkbakInvoer[] = [];
+  const deadlines = await haalCrucialeDatumItems();
+  for (const d of deadlines) {
+    const bronLabel = d.bron === "zzp" ? "ZZP/DBA" : "contract";
+    items.push({
+      soort: "doen",
+      bron: "cruciale_deadlines_hrm",
+      titel: `${d.label}: ${d.naam}`,
+      omschrijving: d.reden,
+      vereisteModule: "personeel",
+      vereistNiveau: 2,
+      alleenHoofdbeheerder: false,
+      gewicht: d.dagen_tot < 0 ? 95 : d.dagen_tot <= 7 ? 85 : 70,
+      actiePad: "/personeel/contracten",
+      herkomstType: `cruciale_deadline_${d.bron}`,
+      herkomstId: d.medewerker_id,
+      dedupSleutel: `cruciale-deadline:${bronLabel}:${d.medewerker_id}`,
+    });
+  }
+  return syncBron("cruciale_deadlines_hrm", items);
+}
+
 // leverancier én geen inkoopplan-koppeling hebben. Zelfde tabellen als de
 // AI-kandidaten in routes/opdrachten.ts: werkbegroting_regels (categorie
 // materiaal) tegenover inkoopplan_regels (via werkbegrotingRegelId, met gevulde
@@ -1862,6 +1890,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["ai_magazijn_bestelsuggestie", voedAiMagazijnBestelsuggestie],
     ["ai_hrm_capaciteit", voedAiHrmCapaciteit],
     ["ai_werkvoorbereiding_signaal", voedAiWerkvoorbereidingSignaal],
+    // HRM_01 §2.3: uiterste aanzegdatum + ZZP/DBA-deadline → HRM-beheerder.
+    ["cruciale_deadlines_hrm", voedCrucialeDeadlinesHrm],
     // BEWAKING_02 §6 — de commerciële keten.
     ["offerte_geen_reactie", voedOfferteGeenReactie],
     ["offerte_bekeken_niet_getekend", voedOfferteBekekenNietGetekend],
