@@ -10,3 +10,5 @@ description: Handgeschreven (niet-OpenAPI) Express-routes die zelf "/api/..." in
 **Why:** dit werd pas zichtbaar tijdens een echte end-to-end curl-test (login → call), niet bij typecheck/build. Een diagnostisch endpoint kan zo maandenlang "gebouwd maar onbereikbaar" blijven zonder dat iemand het merkt, omdat er geen frontend-hook op zit die zou falen.
 
 **How to apply:** bij het toevoegen van een handgeschreven (niet-Orval-gegenereerde) route: pad NOOIT met `/api/` beginnen — schrijf het relatief (`/beheer/...`, `/backups`, etc.), precies zoals de OpenAPI-routes al doen. Fix al toegepast op `ai-context.ts` (10 juli 2026); `backups.ts` heeft dezelfde bug nog en is nog niet gefixt (buiten scope van die taak).
+
+**Aanvulling (aug 2026, poortwachter):** het omgekeerde gat bestaat ook — handgeschreven routes die het sub-prefix uit de OpenAPI-spec (bv. `/hrm/...`) weglaten compileren en werken via curl op het "kale" pad, maar de gegenereerde webclient krijgt 404 (SPA-HTML). Bij nieuwe handgeschreven routes altijd het pad letterlijk uit openapi.yaml overnemen (zonder `/api`), en bewijsscripts via de spec-paden laten lopen zodat zo'n mismatch direct opvalt.

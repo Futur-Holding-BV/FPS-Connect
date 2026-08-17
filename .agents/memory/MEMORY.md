@@ -78,7 +78,7 @@
 - [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.
 - [Productie-VPS toegang](prod-vps-toegang.md) — sinds 8 aug 2026 GEEN SSH voor de agent; deploy alleen via GitHub Actions, VPS-config zet René zelf; prod-bewijs via publieke API + Actions-logs.
 - [AI Context Service](ai-context-service.md) + [AI Decision Engine](ai-decision-engine.md) — centrale contextbundel in lib/aiContext; scoping via PermissieService; passthrough-laag boven aiGateway.
-- [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel.
+- [Handgeschreven route pad-mismatches](handgeschreven-route-dubbel-prefix.md) — nooit "/api/"-prefix (dubbel), maar ook spec-subprefix (bv. /hrm) niet weglaten; pad letterlijk uit openapi.yaml minus /api.
 - [EAS Update OTA valkuilen](eas-update-ota.md) — eas update bakt EXPO_PUBLIC_* zelf in (build.env geldt niet!); babel-preset SDK-matched als directe dep.
 - [Deploy-failure alerting](deploy-failure-alerting.md) — deploy.yml faalmelding via Graph client-credentials direct vanuit Actions runner (geen app-server nodig); GitHub secrets nodig, apart van Replit env.
 - [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext(type,id) wired into 8 core entities' primary mutation routes.
