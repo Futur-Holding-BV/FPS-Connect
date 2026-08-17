@@ -109,12 +109,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
-             [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
-            echo "Mailconfiguratie ontbreekt als GitHub Actions secrets; waarschuwing alleen in logs." >&2
+          ONTBREKENDE_SECRETS=""
+          [ -z "${AZURE_TENANT_ID:-}" ]   && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_TENANT_ID"
+          [ -z "${AZURE_CLIENT_ID:-}" ]   && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_CLIENT_ID"
+          [ -z "${AZURE_CLIENT_SECRET:-}" ] && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_CLIENT_SECRET"
+          [ -z "${RENE_EMAIL:-}" ]         && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} RENE_ALERT_EMAIL"
+
+          if [ -n "$ONTBREKENDE_SECRETS" ]; then
+            echo "FOUT: De volgende GitHub Actions secrets ontbreken waardoor de waarschuwingsmail niet verstuurd kan worden:" >&2
+            for S in $ONTBREKENDE_SECRETS; do echo "  - $S" >&2; done
+            echo "" >&2
             echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
-            echo "Actie: vernieuw GITHUB_TOKEN_PUSH in Replit Secrets EN GitHub Actions Secrets." >&2
-            exit 0
+            echo "" >&2
+            echo "Configureer de ontbrekende secrets via:" >&2
+            echo "  github.com/Futur-Holding-BV/FPS-Connect > Settings > Secrets and variables > Actions" >&2
+            echo "" >&2
+            echo "Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'Benodigde GitHub Actions secrets token-health-check')" >&2
+            exit 1
           fi
 
           ACCESS_TOKEN=$(curl -fsS -X POST \
@@ -126,8 +137,10 @@ jobs:
             | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
 
           if [ -z "$ACCESS_TOKEN" ]; then
-            echo "Kon geen Graph-token ophalen; waarschuwing alleen in logs." >&2
-            exit 0
+            echo "FOUT: Kon geen Graph-accesstoken ophalen. Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET (client-credentials stroom)." >&2
+            echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
+            echo "Waarschuwingsmail kon niet verstuurd worden — token-probleem onzichtbaar voor René." >&2
+            exit 1
           fi
 
           case "${TOKEN_STATUS}" in
@@ -203,7 +216,11 @@ jobs:
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "Waarschuwingsmail verzonden naar René."
           else
-            echo "Verzenden van waarschuwingsmail gaf HTTP ${HTTP_CODE}." >&2
+            echo "FOUT: Verzenden van waarschuwingsmail gaf HTTP ${HTTP_CODE} — René heeft de melding niet ontvangen." >&2
+            # Foutdetails zonder credential-waarden (graph-response bevat geen secrets)
             cat /tmp/graph-response.json >&2 || true
-            exit 0
+            echo "" >&2
+            echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
+            echo "Controleer: MAIL_MAILBOX (${MAIL_MAILBOX}) moet send-as rechten hebben via de Azure-app." >&2
+            exit 1
           fi

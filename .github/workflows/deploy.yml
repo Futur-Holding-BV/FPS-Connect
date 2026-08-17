@@ -57,6 +57,14 @@ jobs:
       # omschrijving voor de faalmelding) beschikbaar te hebben.
       - uses: actions/checkout@v4
 
+      # ─── Tijdbewaking (DEPLOY_SNELHEID_01 punt 4) ────────────────────────────
+      # Starttijd en mijlpalen vastleggen; de bewakingsstap onderaan rekent er
+      # de duur per fase mee uit en mailt René als de uitrol > 8 minuten duurt.
+      - name: Starttijd vastleggen
+        run: |
+          echo "DEPLOY_START=$(date +%s)" >> "$GITHUB_ENV"
+          echo "start|$(date +%s)" > /tmp/mijlpalen.txt
+
       # ─── Controles vóór de VPS wordt aangeraakt (MERGE_01 §3.2) ─────────────
       # De Docker-build bundelt met esbuild en controleert geen types; op
       # 8 aug 2026 belandde daardoor code met ongedefinieerde variabelen op
@@ -104,6 +112,7 @@ jobs:
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
+          echo "controles-en-install|$(date +%s)" >> /tmp/mijlpalen.txt
 
           if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_SSH_HOST:-}" ]; then
             echo "FOUT: GitHub Secrets PROD_SSH_KEY en/of PROD_SSH_HOST ontbreken." >&2
@@ -153,10 +162,14 @@ jobs:
         run: |
           set -euo pipefail
           # De exitcode van het script op de server bepaalt direct het
-          # resultaat van deze stap: iedere fout stopt de workflow.
+          # resultaat van deze stap: iedere fout stopt de workflow (pipefail
+          # laat de ssh-exitcode door de tee heen). De uitvoer gaat óók naar
+          # /tmp/deploy-output.log, zodat de tijd- en schijfbewaking onderaan
+          # de TIJD|- en SCHIJF_ALARM|-regels van het script kan lezen.
           ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
-            'bash /tmp/deploy-production.sh'
+            'bash /tmp/deploy-production.sh' 2>&1 | tee /tmp/deploy-output.log
+          echo "vps-deploy|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── Smoketest na deploy ─────────────────────────────────────────────────
       # Drie kritieke API-controles uitgevoerd vanaf de Actions runner (extern,
@@ -173,6 +186,7 @@ jobs:
 
           if [ -z "${SMOKETEST_EMAIL:-}" ] || [ -z "${SMOKETEST_PASSWORD:-}" ]; then
             echo "WAARSCHUWING: SMOKETEST_EMAIL en/of SMOKETEST_PASSWORD ontbreekt als GitHub Actions secret; smoketest wordt overgeslagen." >&2
+            echo "smoketest|$(date +%s)" >> /tmp/mijlpalen.txt
             exit 0
           fi
 
@@ -378,6 +392,7 @@ jobs:
             exit 1
           fi
           echo "Smoketest geslaagd (${GESLAAGD}/${TOTAAL} checks)."
+          echo "smoketest|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── OTA-update monteur-app (EAS Update) ───────────────────────────────
       # Na een geslaagde deploy + smoketest wordt de monteur-app automatisch
@@ -390,6 +405,15 @@ jobs:
       # futur-holding). Ontbreekt het token, dan wordt deze stap met een
       # duidelijke waarschuwing overgeslagen; de deploy zelf faalt daar
       # bewust niet op (web/API staan dan al correct live).
+      #
+      # DEPLOY_SNELHEID_01: de update wordt (1) beperkt tot Android — FPS
+      # levert uitsluitend een Android-APK, de iOS-bundel was pure bouwtijd —
+      # en (2) alleen gepubliceerd wanneer deze push werkelijk iets aan de
+      # telefoon-app wijzigt (artifacts/monteur-app, of de gedeelde pakketten
+      # die in de app-bundel belanden: lib/api-client-react en lib/ontwerp).
+      # Bij twijfel (handmatige dispatch, force-push, before-commit niet
+      # ophaalbaar) draait de update gewoon — overslaan is een optimalisatie,
+      # nooit een risico.
       - name: OTA-update monteur-app (EAS Update, kanaal production)
         id: eas_update
         env:
@@ -400,11 +424,35 @@ jobs:
           # EAS Build, niet voor eas update). Zelfde waarde als het
           # production-buildprofiel.
           EXPO_PUBLIC_DOMAIN: connect.fps-one.nl
+          VORIGE_COMMIT: ${{ github.event.before }}
         run: |
           set -euo pipefail
 
+          # ── Alleen draaien als er iets aan de telefoon-app is gewijzigd ──
+          APP_PADEN=(artifacts/monteur-app lib/api-client-react lib/ontwerp)
+          OTA_NODIG=1
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] \
+             && [ -n "${VORIGE_COMMIT:-}" ] \
+             && [ "${VORIGE_COMMIT}" != "0000000000000000000000000000000000000000" ]; then
+            if git fetch --no-tags --depth=1 origin "${VORIGE_COMMIT}" 2>/dev/null; then
+              GEWIJZIGD="$(git diff --name-only "${VORIGE_COMMIT}" "${GITHUB_SHA}" -- "${APP_PADEN[@]}" || echo "diff-mislukt")"
+              if [ -z "${GEWIJZIGD}" ]; then
+                OTA_NODIG=0
+              fi
+            else
+              echo "Vorige commit niet ophaalbaar (force-push?) — OTA-update draait voor de zekerheid gewoon."
+            fi
+          fi
+
+          if [ "${OTA_NODIG}" -eq 0 ]; then
+            echo "Geen wijzigingen aan de telefoon-app in deze uitrol (${APP_PADEN[*]}) — OTA-update overgeslagen."
+            echo "ota|$(date +%s)" >> /tmp/mijlpalen.txt
+            exit 0
+          fi
+
           if [ -z "${EXPO_TOKEN:-}" ]; then
-            echo "::warning::EXPO_TOKEN ontbreekt als GitHub Actions secret — OTA-update naar monteurs wordt OVERGESLAGEN. Voeg het token toe (Settings -> Secrets -> Actions) of draai handmatig: cd artifacts/monteur-app && npx eas-cli update --channel production."
+            echo "::warning::EXPO_TOKEN ontbreekt als GitHub Actions secret — OTA-update naar monteurs wordt OVERGESLAGEN. Voeg het token toe (Settings -> Secrets -> Actions) of draai handmatig: cd artifacts/monteur-app && npx eas-cli update --channel production --platform android."
+            echo "ota|$(date +%s)" >> /tmp/mijlpalen.txt
             exit 0
           fi
 
@@ -414,10 +462,121 @@ jobs:
           cd artifacts/monteur-app
           npx eas-cli update \
             --channel production \
+            --platform android \
             --non-interactive \
             --message "deploy ${COMMIT_KORT}: ${COMMIT_MSG}"
 
-          echo "OTA-update gepubliceerd op kanaal production (commit ${COMMIT_KORT})."
+          echo "OTA-update gepubliceerd op kanaal production (alleen Android, commit ${COMMIT_KORT})."
+          echo "ota|$(date +%s)" >> /tmp/mijlpalen.txt
+
+      # ─── Tijd- en schijfbewaking (DEPLOY_SNELHEID_01 punt 4 + 5) ────────────
+      # Draait alleen bij een verder geslaagde uitrol (bij falen mailt de
+      # faalmelding-stap hieronder al). Twee bewakingen, één mail via exact
+      # dezelfde Microsoft 365/Graph-koppeling:
+      #  - duurde de uitrol langer dan 8 minuten → mail met de duur per stap;
+      #  - meldde het deployscript SCHIJF_ALARM (schijf na opruimen nog boven
+      #    85%) → dezelfde mail. Onder de grenzen: géén mail (geen mailmoeheid).
+      - name: Tijd- en schijfbewaking (mail bij trage uitrol of volle schijf)
+        if: success()
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@fpsbrandpreventie.nl' }}
+          MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
+          RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MAX_DUUR_SEC: "480"
+        run: |
+          set -euo pipefail
+
+          NU=$(date +%s)
+          DUUR=$((NU - DEPLOY_START))
+          echo "Totale uitrolduur: ${DUUR}s (grens: ${MAX_DUUR_SEC}s)."
+
+          # Schijfalarm uit de deploy-uitvoer (marker gezet door het script
+          # op de VPS wanneer de schijf ook ná opruimen boven de 85% staat).
+          SCHIJF_ALARM="$( (grep -E '^SCHIJF_ALARM\|' /tmp/deploy-output.log 2>/dev/null || true) | head -1 | cut -d'|' -f2)"
+
+          TE_TRAAG=0
+          [ "${DUUR}" -gt "${MAX_DUUR_SEC}" ] && TE_TRAAG=1
+
+          if [ "${TE_TRAAG}" -eq 0 ] && [ -z "${SCHIJF_ALARM}" ]; then
+            echo "Uitrol binnen de tijdgrens en schijf onder de grens — geen mail."
+            exit 0
+          fi
+
+          # Duur per workflow-fase uit de mijlpalen (opeenvolgende verschillen).
+          FASE_TIJDEN="$(awk -F'|' 'NR>1 {printf "  %s: %ds\n", $1, $2 - vorig} {vorig=$2}' /tmp/mijlpalen.txt 2>/dev/null || echo "  (geen mijlpalen beschikbaar)")"
+          # Duur per serverstap uit de deploy-uitvoer (TIJD|stap|Ns).
+          SERVER_TIJDEN="$( (grep -E '^TIJD\|' /tmp/deploy-output.log 2>/dev/null || true) | awk -F'|' '{printf "  %s: %s\n", $2, $3}')"
+          [ -n "${SERVER_TIJDEN}" ] || SERVER_TIJDEN="  (geen serverstap-tijden gevonden in de deploy-uitvoer)"
+
+          REDENEN=""
+          [ "${TE_TRAAG}" -eq 1 ] && REDENEN="- Uitrol duurde ${DUUR}s, langer dan de grens van ${MAX_DUUR_SEC}s (8 minuten)."$'\n'
+          [ -n "${SCHIJF_ALARM}" ] && REDENEN="${REDENEN}- Schijf op de server staat ook na het opruimen van oude Docker-images op ${SCHIJF_ALARM}% (grens: 85%)."$'\n'
+
+          if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
+            echo "Mailconfig ontbreekt als GitHub Actions secret; bewakingsmelding kan niet verzonden worden. Redenen die gemeld zouden zijn:" >&2
+            printf '%s' "${REDENEN}" >&2
+            exit 0
+          fi
+
+          TOKEN=$(curl -fsS -X POST \
+            "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+            -d "client_id=${AZURE_CLIENT_ID}" \
+            -d "client_secret=${AZURE_CLIENT_SECRET}" \
+            -d "scope=https://graph.microsoft.com/.default" \
+            -d "grant_type=client_credentials" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+
+          if [ -z "$TOKEN" ]; then
+            echo "Kon geen Graph-token ophalen; bewakingsmelding kan niet verzonden worden." >&2
+            exit 0
+          fi
+
+          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+          BODY="Productie-release GESLAAGD, maar de deploybewaking sloeg aan.
+
+          Commit: ${GITHUB_SHA}
+          Omschrijving: ${COMMIT_MSG}
+          Totale uitrolduur: ${DUUR}s
+
+          Redenen:
+          ${REDENEN}
+          Duur per workflow-fase:
+          ${FASE_TIJDEN}
+
+          Duur per serverstap (deployscript op de VPS):
+          ${SERVER_TIJDEN}
+
+          Actions-run: ${RUN_URL}"
+
+          PAYLOAD=$(MAIL_BODY="$BODY" node -e "
+            const body = {
+              message: {
+                subject: 'FPS Connect: deploybewaking — uitrol traag of schijf vol',
+                body: { contentType: 'Text', content: process.env.MAIL_BODY.replace(/^ {10}/gm, '') },
+                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
+                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
+              },
+              saveToSentItems: false,
+            };
+            console.log(JSON.stringify(body));
+          ")
+
+          HTTP_CODE=$(curl -sS -o /tmp/graph-response.json -w "%{http_code}" \
+            -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Bewakingsmelding verzonden naar René."
+          else
+            echo "Verzenden van bewakingsmelding gaf HTTP $HTTP_CODE." >&2
+            cat /tmp/graph-response.json >&2 || true
+            exit 0
+          fi
 
       # ─── Meldingen bij falen ────────────────────────────────────────────────
       # René moet een kapotte release direct horen, niet later ontdekken via de
