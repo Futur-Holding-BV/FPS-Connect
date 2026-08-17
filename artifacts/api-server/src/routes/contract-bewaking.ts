@@ -177,14 +177,14 @@ router.get("/contract-bewaking/dashboard", lezen, async (req, res): Promise<void
   const contracten = await db
     .select({
       c: arbeidsovereenkomstenTable,
-      naam: medewerkersTable.naam,
       functieNaam: functiesTable.naam,
+      werkgeverNaam: werkgeversTable.naam,
     })
     .from(arbeidsovereenkomstenTable)
-    .leftJoin(medewerkersTable, eq(arbeidsovereenkomstenTable.medewerkerId, medewerkersTable.id))
     .leftJoin(functiesTable, eq(arbeidsovereenkomstenTable.functieId, functiesTable.id))
-    .where(eq(arbeidsovereenkomstenTable.status, "actief"))
-    .orderBy(arbeidsovereenkomstenTable.eindDatum);
+    .leftJoin(werkgeversTable, eq(arbeidsovereenkomstenTable.werkgeverId, werkgeversTable.id))
+    .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
+    .orderBy(desc(arbeidsovereenkomstenTable.startDatum));
 
   const buckets = {
     binnen30: [] as typeof contracten,
@@ -504,9 +504,16 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
 
   // 1) Tijdelijke arbeidsovereenkomsten — via geëxporteerde pure helper
   const contracten = await db
-    .select()
+    .select({
+      c: arbeidsovereenkomstenTable,
+      functieNaam: functiesTable.naam,
+      werkgeverNaam: werkgeversTable.naam,
+    })
     .from(arbeidsovereenkomstenTable)
-    .where(and(eq(arbeidsovereenkomstenTable.status, "actief"), isNotNull(arbeidsovereenkomstenTable.eindDatum)));
+    .leftJoin(functiesTable, eq(arbeidsovereenkomstenTable.functieId, functiesTable.id))
+    .leftJoin(werkgeversTable, eq(arbeidsovereenkomstenTable.werkgeverId, werkgeversTable.id))
+    .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
+    .orderBy(desc(arbeidsovereenkomstenTable.startDatum));
   for (const c of contracten) {
     if (!c.eindDatum || !naamPerId.has(c.medewerkerId)) continue;
     if (c.contracttype !== "bepaalde_tijd" && c.contracttype !== "oproep") continue;
@@ -582,7 +589,7 @@ function mapContract(r: { c: typeof arbeidsovereenkomstenTable.$inferSelect; naa
 
 // GET /contract-bewaking/medewerkers/:medewerkerId
 router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, res): Promise<void> => {
-  const medewerkerId = parseInt(String(req.params.medewerkerId));
+  const medewerkerId = contract.c.medewerkerId;
   if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const contracten = await db
@@ -633,38 +640,26 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, re
 
 // POST /contract-bewaking/medewerkers/:medewerkerId
 router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (req, res): Promise<void> => {
-  const medewerkerId = parseInt(String(req.params.medewerkerId));
+  const medewerkerId = contract.c.medewerkerId;
   if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, salaris_eenheid, arbeidsduur_per_week, uren_min_per_week, uren_max_per_week, opzegtermijn, aanzegtermijn, reiskostenvergoeding, concurrentiebeding, relatiebeding, voorgaand_contract_id, ondertekening_vereist, notities } = req.body;
 
   if (!contracttype || !start_datum) return void res.status(400).json({ error: "contracttype en start_datum zijn verplicht" });
 
-  const [rij] = await db.insert(arbeidsovereenkomstenTable).values({
+  const [rij] = await db.insert(contractBesluitenTable).values({
+    contractId,
     medewerkerId,
-    werkgeverId: werkgever_id ?? null,
-    functieId: functie_id ?? null,
-    contracttype,
-    startDatum: start_datum,
-    eindDatum: eind_datum ?? null,
-    proeftijdDagen: proeftijd_dagen ?? null,
-    functieOmschrijving: functie_omschrijving ?? null,
-    cao: cao ?? null,
-    salarisBruto: salaris_bruto ?? null,
-    salarisEenheid: salaris_eenheid ?? null,
-    arbeidsduurPerWeek: arbeidsduur_per_week ?? null,
-    urenMinPerWeek: uren_min_per_week ?? null,
-    urenMaxPerWeek: uren_max_per_week ?? null,
-    opzegtermijn: opzegtermijn ?? null,
-    aanzegtermijn: aanzegtermijn ?? null,
-    reiskostenvergoeding: reiskostenvergoeding ?? null,
-    concurrentiebeding: concurrentiebeding ?? null,
-    relatiebeding: relatiebeding ?? null,
-    voorgaandContractId: voorgaand_contract_id ?? null,
-    ondertekeningVereist: ondertekening_vereist ?? false,
-    notities: notities ?? null,
-    aangemaaktDoorId: req.session.userId ?? null,
-    status: "actief",
+    besluit,
+    nieuwEindDatum: nieuw_eind_datum ?? null,
+    nieuwSalaris: nieuw_salaris ?? null,
+    nieuwArbeidsduur: nieuw_arbeidsduur ?? null,
+    toelichting: toelichting ?? null,
+    beslotenDoorId: gebruikerId,
+    beslotenOp: new Date(),
+    status: besluit === "geen_besluit" ? "in_behandeling" : "documenten_op",
+    audittrail: [auditEntry],
+    aangemaaktDoorId: gebruikerId,
   }).returning();
 
   // Activeer bewaking voor dit nieuwe contract
@@ -745,7 +740,7 @@ router.get("/contract-bewaking/:id/signaleringen", lezen, async (req, res): Prom
 router.patch("/contract-bewaking/signaleringen/:id/gezien", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
-  const gebruikerId = req.session.userId ?? null;
+    const gebruikerId = req.session.userId ?? null;
   await db.update(contractSignaleringenTable).set({
     status: "gezien",
     gezienDoorId: gebruikerId,
@@ -799,14 +794,13 @@ router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res): Promi
   const { besluit, nieuw_eind_datum, nieuw_salaris, nieuw_arbeidsduur, toelichting } = req.body;
   if (!besluit) return void res.status(400).json({ error: "besluit is verplicht" });
 
-  const gebruikerId = req.session.userId ?? null;
-  const medewerkerId = contract[0].medewerkerId;
+    const gebruikerId = req.session.userId ?? null;
+  const medewerkerId = contract.c.medewerkerId;
 
   const auditEntry = { actie: `Besluit vastgelegd: ${besluit}`, doorId: gebruikerId, op: new Date().toISOString(), notitie: toelichting ?? null };
 
   // Bestaand besluit updaten of nieuw aanmaken
-  const bestaand = await db.select({ id: contractBesluitenTable.id, audittrail: contractBesluitenTable.audittrail }).from(contractBesluitenTable)
-    .where(eq(contractBesluitenTable.contractId, contractId)).orderBy(desc(contractBesluitenTable.aangemaaktOp)).limit(1);
+    const bestaand = await db.select({ id: contractBesluitenTable.id }).from(contractBesluitenTable).where(eq(contractBesluitenTable.contractId, contractId)).limit(1);
 
   if (bestaand.length) {
     const trail = (Array.isArray(bestaand[0].audittrail) ? bestaand[0].audittrail as unknown[] : []) as unknown[];
@@ -895,15 +889,7 @@ router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, re
 
   if (!heeftGateway()) {
     // Geen AI beschikbaar — statische analyse
-    const samenvatting = `Gespreksvoorbereiding voor ${contract.naam ?? "medewerker"} (contract eindigt ${contract.c.eindDatum ?? "onbepaald"}, nog ${dagen ?? "n.v.t."} dag(en)).
-
-Contracthistorie: ${alleContracten.length} contract(en), waarvan ${alleContracten.filter((c) => c.contracttype === "bepaalde_tijd").length} tijdelijk.
-Opleidingen: ${opleidingen.length} geregistreerd${opleidingen.filter((o) => o.status === "verlopen").length > 0 ? `, waarvan ${opleidingen.filter((o) => o.status === "verlopen").length} verlopen` : ""}.
-Bekwaamheden: ${bekwaamheden.length} geregistreerd.
-Ziektemeldingen: ${ziekteFrequentie} in totaal.
-Verlofuren saldo: ${verlofSaldo.toFixed(1)} uur.
-
-Aandachtspunten: ${risicos.length > 0 ? risicos.join(" | ") : "geen wettelijke risico's gedetecteerd."}`;
+    const samenvatting = contractResultaat.ok ? contractResultaat.inhoud : "Geen samenvatting beschikbaar.";
 
     const aandachtspunten = [
       ...(opleidingen.filter((o) => o.status === "verlopen").map((o) => `Opleiding verlopen: ${o.naam}`)),
@@ -985,3 +971,14 @@ Schrijf alles in het Nederlands.`;
 });
 
 export default router;
+
+  const inleners = await db
+    .select({ id: medewerkersTable.id, inleenEinddatum: medewerkersTable.inleenEinddatum })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNotNull(medewerkersTable.inleenEinddatum),
+        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
+      ),
+    );
