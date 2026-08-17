@@ -177,14 +177,14 @@ router.get("/contract-bewaking/dashboard", lezen, async (req, res): Promise<void
   const contracten = await db
     .select({
       c: arbeidsovereenkomstenTable,
+      naam: medewerkersTable.naam,
       functieNaam: functiesTable.naam,
-      werkgeverNaam: werkgeversTable.naam,
     })
     .from(arbeidsovereenkomstenTable)
+    .leftJoin(medewerkersTable, eq(arbeidsovereenkomstenTable.medewerkerId, medewerkersTable.id))
     .leftJoin(functiesTable, eq(arbeidsovereenkomstenTable.functieId, functiesTable.id))
-    .leftJoin(werkgeversTable, eq(arbeidsovereenkomstenTable.werkgeverId, werkgeversTable.id))
-    .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
-    .orderBy(desc(arbeidsovereenkomstenTable.startDatum));
+    .where(eq(arbeidsovereenkomstenTable.status, "actief"))
+    .orderBy(arbeidsovereenkomstenTable.eindDatum);
 
   const buckets = {
     binnen30: [] as typeof contracten,
@@ -386,8 +386,11 @@ export type CrucialeDatumItem = {
 };
 
 /**
- * Haal alle urgente cruciale deadlines op (aanzegdatums, ZZP/DBA, inleentermijnen),
- * gegroepeerd per medewerker + bron. Gebruikt door de bewakingsloop voor werkbak-items.
+ * Haal alle urgente cruciale deadlines op (aanzegdatums + ZZP/DBA), gegroepeerd
+ * per medewerker + bron. Gebruikt door de bewakingsloop voor werkbak-items.
+ * Definitie "urgent": dagen_tot <= CRUCIALE_URGENT_DAGEN OF DBA-risico bereikt.
+ * Eén item per medewerker per bron-type zodat contract- en ZZP-deadline
+ * onafhankelijk kunnen worden afgehandeld.
  */
 export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
   const medewerkers = await db
@@ -396,6 +399,7 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
     .where(eq(medewerkersTable.actief, true));
   const naamPerId = new Map(medewerkers.map((m) => [m.id, m.naam]));
 
+  // Per (medewerker_id, bron): bewaar het meest urgente item.
   const perMedewerkerBron = new Map<string, CrucialeDatumItem>();
   const zetAlsUrgenter = (item: CrucialeDatumItem) => {
     const sleutel = `${item.bron}:${item.medewerker_id}`;
@@ -424,7 +428,15 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
     }
     const dagen = dagenTot(datum);
     if (dagen > CRUCIALE_URGENT_DAGEN) continue;
-    zetAlsUrgenter({ medewerker_id: c.medewerkerId, naam: naamPerId.get(c.medewerkerId)!, datum, dagen_tot: dagen, bron: "contract", label, reden });
+    zetAlsUrgenter({
+      medewerker_id: c.medewerkerId,
+      naam: naamPerId.get(c.medewerkerId)!,
+      datum,
+      dagen_tot: dagen,
+      bron: "contract",
+      label,
+      reden,
+    });
   }
 
   // 2) ZZP-overeenkomsten (Wet DBA)
@@ -443,11 +455,13 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
       .sort((a, b) => a.eindDatum.localeCompare(b.eindDatum))[0];
     if (!lopend) continue;
     const dagen = dagenTot(lopend.eindDatum);
+
     const eersteStart = overeenkomsten.map((o) => o.startDatum).sort()[0];
     const laatsteEind = overeenkomsten.map((o) => o.eindDatum).sort().slice(-1)[0];
     const verbandMaanden =
       (new Date(laatsteEind).getTime() - new Date(eersteStart).getTime()) / (1000 * 60 * 60 * 24 * 30);
     const dbaRisico = verbandMaanden >= CRUCIALE_DBA_MAANDEN_GRENS;
+
     if (dagen > CRUCIALE_URGENT_DAGEN && !dbaRisico) continue;
     zetAlsUrgenter({
       medewerker_id: medewerkerId,
@@ -516,16 +530,9 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
 
   // 1) Tijdelijke arbeidsovereenkomsten — via geëxporteerde pure helper
   const contracten = await db
-    .select({
-      c: arbeidsovereenkomstenTable,
-      functieNaam: functiesTable.naam,
-      werkgeverNaam: werkgeversTable.naam,
-    })
+    .select()
     .from(arbeidsovereenkomstenTable)
-    .leftJoin(functiesTable, eq(arbeidsovereenkomstenTable.functieId, functiesTable.id))
-    .leftJoin(werkgeversTable, eq(arbeidsovereenkomstenTable.werkgeverId, werkgeversTable.id))
-    .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
-    .orderBy(desc(arbeidsovereenkomstenTable.startDatum));
+    .where(and(eq(arbeidsovereenkomstenTable.status, "actief"), isNotNull(arbeidsovereenkomstenTable.eindDatum)));
   for (const c of contracten) {
     if (!c.eindDatum || !naamPerId.has(c.medewerkerId)) continue;
     if (c.contracttype !== "bepaalde_tijd" && c.contracttype !== "oproep") continue;
@@ -567,6 +574,32 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
     });
   }
 
+  // 3) Inleen-einddatum: eigen veld op de medewerker (dienstverband uitzend/inhuur)
+  const inleners = await db
+    .select({ id: medewerkersTable.id, inleenEinddatum: medewerkersTable.inleenEinddatum })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNotNull(medewerkersTable.inleenEinddatum),
+        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
+      ),
+    );
+  for (const inlener of inleners) {
+    if (!inlener.inleenEinddatum || !naamPerId.has(inlener.id)) continue;
+    const dagen = dagenTot(inlener.inleenEinddatum);
+    zetAlsUrgenter({
+      medewerker_id: inlener.id,
+      naam: naamPerId.get(inlener.id)!,
+      datum: inlener.inleenEinddatum,
+      dagen_tot: dagen,
+      urgent: dagen <= URGENT_DAGEN,
+      bron: "contract",
+      label: "Inleentermijn afloop",
+      reden: `Inleen-/inhuurperiode eindigt op ${inlener.inleenEinddatum}.`,
+    });
+  }
+
   const items = [...perMedewerker.values()].sort((a, b) => a.dagen_tot - b.dagen_tot);
   res.json({ items, urgent_aantal: items.filter((i) => i.urgent).length });
 });
@@ -601,7 +634,7 @@ function mapContract(r: { c: typeof arbeidsovereenkomstenTable.$inferSelect; naa
 
 // GET /contract-bewaking/medewerkers/:medewerkerId
 router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, res): Promise<void> => {
-  const medewerkerId = contract.c.medewerkerId;
+  const medewerkerId = parseInt(String(req.params.medewerkerId));
   if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const contracten = await db
@@ -652,26 +685,38 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, re
 
 // POST /contract-bewaking/medewerkers/:medewerkerId
 router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (req, res): Promise<void> => {
-  const medewerkerId = contract.c.medewerkerId;
+  const medewerkerId = parseInt(String(req.params.medewerkerId));
   if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, salaris_eenheid, arbeidsduur_per_week, uren_min_per_week, uren_max_per_week, opzegtermijn, aanzegtermijn, reiskostenvergoeding, concurrentiebeding, relatiebeding, voorgaand_contract_id, ondertekening_vereist, notities } = req.body;
 
   if (!contracttype || !start_datum) return void res.status(400).json({ error: "contracttype en start_datum zijn verplicht" });
 
-  const [rij] = await db.insert(contractBesluitenTable).values({
-    contractId,
+  const [rij] = await db.insert(arbeidsovereenkomstenTable).values({
     medewerkerId,
-    besluit,
-    nieuwEindDatum: nieuw_eind_datum ?? null,
-    nieuwSalaris: nieuw_salaris ?? null,
-    nieuwArbeidsduur: nieuw_arbeidsduur ?? null,
-    toelichting: toelichting ?? null,
-    beslotenDoorId: gebruikerId,
-    beslotenOp: new Date(),
-    status: besluit === "geen_besluit" ? "in_behandeling" : "documenten_op",
-    audittrail: [auditEntry],
-    aangemaaktDoorId: gebruikerId,
+    werkgeverId: werkgever_id ?? null,
+    functieId: functie_id ?? null,
+    contracttype,
+    startDatum: start_datum,
+    eindDatum: eind_datum ?? null,
+    proeftijdDagen: proeftijd_dagen ?? null,
+    functieOmschrijving: functie_omschrijving ?? null,
+    cao: cao ?? null,
+    salarisBruto: salaris_bruto ?? null,
+    salarisEenheid: salaris_eenheid ?? null,
+    arbeidsduurPerWeek: arbeidsduur_per_week ?? null,
+    urenMinPerWeek: uren_min_per_week ?? null,
+    urenMaxPerWeek: uren_max_per_week ?? null,
+    opzegtermijn: opzegtermijn ?? null,
+    aanzegtermijn: aanzegtermijn ?? null,
+    reiskostenvergoeding: reiskostenvergoeding ?? null,
+    concurrentiebeding: concurrentiebeding ?? null,
+    relatiebeding: relatiebeding ?? null,
+    voorgaandContractId: voorgaand_contract_id ?? null,
+    ondertekeningVereist: ondertekening_vereist ?? false,
+    notities: notities ?? null,
+    aangemaaktDoorId: req.session.userId ?? null,
+    status: "actief",
   }).returning();
 
   // Activeer bewaking voor dit nieuwe contract
@@ -752,7 +797,7 @@ router.get("/contract-bewaking/:id/signaleringen", lezen, async (req, res): Prom
 router.patch("/contract-bewaking/signaleringen/:id/gezien", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
-    const gebruikerId = req.session.userId ?? null;
+  const gebruikerId = req.session.userId ?? null;
   await db.update(contractSignaleringenTable).set({
     status: "gezien",
     gezienDoorId: gebruikerId,
@@ -806,13 +851,14 @@ router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res): Promi
   const { besluit, nieuw_eind_datum, nieuw_salaris, nieuw_arbeidsduur, toelichting } = req.body;
   if (!besluit) return void res.status(400).json({ error: "besluit is verplicht" });
 
-    const gebruikerId = req.session.userId ?? null;
-  const medewerkerId = contract.c.medewerkerId;
+  const gebruikerId = req.session.userId ?? null;
+  const medewerkerId = contract[0].medewerkerId;
 
   const auditEntry = { actie: `Besluit vastgelegd: ${besluit}`, doorId: gebruikerId, op: new Date().toISOString(), notitie: toelichting ?? null };
 
   // Bestaand besluit updaten of nieuw aanmaken
-    const bestaand = await db.select({ id: contractBesluitenTable.id }).from(contractBesluitenTable).where(eq(contractBesluitenTable.contractId, contractId)).limit(1);
+  const bestaand = await db.select({ id: contractBesluitenTable.id, audittrail: contractBesluitenTable.audittrail }).from(contractBesluitenTable)
+    .where(eq(contractBesluitenTable.contractId, contractId)).orderBy(desc(contractBesluitenTable.aangemaaktOp)).limit(1);
 
   if (bestaand.length) {
     const trail = (Array.isArray(bestaand[0].audittrail) ? bestaand[0].audittrail as unknown[] : []) as unknown[];
@@ -901,7 +947,15 @@ router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, re
 
   if (!heeftGateway()) {
     // Geen AI beschikbaar — statische analyse
-    const samenvatting = contractResultaat.ok ? contractResultaat.inhoud : "Geen samenvatting beschikbaar.";
+    const samenvatting = `Gespreksvoorbereiding voor ${contract.naam ?? "medewerker"} (contract eindigt ${contract.c.eindDatum ?? "onbepaald"}, nog ${dagen ?? "n.v.t."} dag(en)).
+
+Contracthistorie: ${alleContracten.length} contract(en), waarvan ${alleContracten.filter((c) => c.contracttype === "bepaalde_tijd").length} tijdelijk.
+Opleidingen: ${opleidingen.length} geregistreerd${opleidingen.filter((o) => o.status === "verlopen").length > 0 ? `, waarvan ${opleidingen.filter((o) => o.status === "verlopen").length} verlopen` : ""}.
+Bekwaamheden: ${bekwaamheden.length} geregistreerd.
+Ziektemeldingen: ${ziekteFrequentie} in totaal.
+Verlofuren saldo: ${verlofSaldo.toFixed(1)} uur.
+
+Aandachtspunten: ${risicos.length > 0 ? risicos.join(" | ") : "geen wettelijke risico's gedetecteerd."}`;
 
     const aandachtspunten = [
       ...(opleidingen.filter((o) => o.status === "verlopen").map((o) => `Opleiding verlopen: ${o.naam}`)),
@@ -983,14 +1037,3 @@ Schrijf alles in het Nederlands.`;
 });
 
 export default router;
-
-  const inleners = await db
-    .select({ id: medewerkersTable.id, inleenEinddatum: medewerkersTable.inleenEinddatum })
-    .from(medewerkersTable)
-    .where(
-      and(
-        eq(medewerkersTable.actief, true),
-        isNotNull(medewerkersTable.inleenEinddatum),
-        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
-      ),
-    );
