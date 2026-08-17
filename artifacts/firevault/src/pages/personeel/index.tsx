@@ -154,6 +154,14 @@ export default function PersoneelPagina() {
   );
   const ongekoppeld = (gebruikers ?? []).filter((g) => !gekoppeldeIds.has(g.id));
 
+  // Zelfde regel als de Oud-medewerkers-pagina: na offboarden (inactief of
+  // uitdienstdatum verstreken) verdwijnt de kaart uit deze lijst en staat de
+  // medewerker alleen nog onder Oud medewerkers.
+  const isOudMedewerker = (m: { actief?: boolean | null; uit_dienst_per?: string | null }) =>
+    !m.actief || (m.uit_dienst_per != null && new Date(m.uit_dienst_per) <= new Date());
+  const actieveMedewerkers = (medewerkers ?? []).filter((m) => !isOudMedewerker(m));
+  const aantalOud = (medewerkers ?? []).length - actieveMedewerkers.length;
+
   const bekwaamhedenPerCategorie = (alleBekwaamheden ?? []).reduce<Record<string, typeof alleBekwaamheden>>(
     (acc, b) => {
       const cat = b.categorie?.trim() || "Overig";
@@ -597,17 +605,26 @@ export default function PersoneelPagina() {
         </TabsContent>
 
         <TabsContent value="medewerkers" className="space-y-4">
-          {magSchrijven && featureFlags.wizardOnboarding && (
-            <div className="flex justify-end">
-              {/* Altijd zichtbaar (ook bij 0 wachtende accounts): onboarding start
-                  in één flow en maakt zelf het gebruikersaccount aan. */}
+          <div className="flex justify-end gap-2">
+            {/* Vindbaarheid: oud-medewerkers staan niet meer tussen de kaarten,
+                dus altijd een ingang tonen zodra er ex-medewerkers zijn. */}
+            {aantalOud > 0 && (
+              <Button variant="outline" asChild>
+                <Link href="/personeel/oud-medewerkers">
+                  <LogOut className="h-4 w-4" /> Oud medewerkers ({aantalOud})
+                </Link>
+              </Button>
+            )}
+            {magSchrijven && featureFlags.wizardOnboarding && (
+              /* Altijd zichtbaar (ook bij 0 wachtende accounts): onboarding start
+                 in één flow en maakt zelf het gebruikersaccount aan. */
               <Button asChild>
                 <Link href="/personeel/onboarden">
                   <UserPlus className="h-4 w-4" /> Nieuwe medewerker onboarden
                 </Link>
               </Button>
-            </div>
-          )}
+            )}
+          </div>
           {magSchrijven && ongekoppeld.length > 0 && (
             <Card>
               <CardContent className="p-4 space-y-3">
@@ -644,16 +661,16 @@ export default function PersoneelPagina() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
             </div>
-          ) : (medewerkers ?? []).length === 0 ? (
+          ) : actieveMedewerkers.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p>Nog geen medewerkers gevonden.</p>
+                <p>Nog geen actieve medewerkers gevonden.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(medewerkers ?? []).map((m) => (
+              {actieveMedewerkers.map((m) => (
                 <Link key={m.id} href={`/personeel/${m.id}`}>
                   <Card className="cursor-pointer transition-colors hover:border-primary/40 hover:bg-accent/40">
                     <CardContent className="p-4 space-y-2">
