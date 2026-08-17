@@ -8,10 +8,10 @@ const onlineGebruikersRouter = Router();
  * GET /mijn/online-gebruikers
  * Geeft actieve collega's (laatste 5 min) terug, exclusief jezelf.
  */
-onlineGebruikersRouter.get("/mijn/online-gebruikers", requireAuth, (req, res) => {
+onlineGebruikersRouter.get("/mijn/online-gebruikers", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
 
-  const online = haalOnlineGebruikersOp(userId);
+  const online = await haalOnlineGebruikersOp(userId);
   res.json(online);
 });
 
