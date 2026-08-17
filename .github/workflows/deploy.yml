@@ -47,6 +47,14 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+# Expliciete token-scopes: contents-read voor de checkout, actions-read voor
+# de adaptieve tijdbewaking (mediaan van eerdere workflow-runs via de API).
+# Zonder expliciete declaratie hangt dit van repository-defaults af en zou
+# de mediaanopvraag stil kunnen falen (= nooit een tijdmelding).
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   deploy:
     name: Deploy naar productie
@@ -59,7 +67,8 @@ jobs:
 
       # ─── Tijdbewaking (DEPLOY_SNELHEID_01 punt 4) ────────────────────────────
       # Starttijd en mijlpalen vastleggen; de bewakingsstap onderaan rekent er
-      # de duur per fase mee uit en mailt René als de uitrol > 8 minuten duurt.
+      # de duur per fase mee uit en mailt René alleen bij een verslechtering
+      # (>1,5× de mediaan van de laatste tien uitrollen, max. één mail per dag).
       - name: Starttijd vastleggen
         run: |
           echo "DEPLOY_START=$(date +%s)" >> "$GITHUB_ENV"
@@ -166,9 +175,17 @@ jobs:
           # laat de ssh-exitcode door de tee heen). De uitvoer gaat óók naar
           # /tmp/deploy-output.log, zodat de tijd- en schijfbewaking onderaan
           # de TIJD|- en SCHIJF_ALARM|-regels van het script kan lezen.
+          # Typecheck in het api-image alleen bij NOODFIX (controles vooraf
+          # overgeslagen); bij een normale deploy is de volledige workspace-
+          # typecheck al op deze runner gedraaid en is herhalen pure dubbeling.
+          if [ "${{ github.event.inputs.noodfix }}" = "NOODFIX" ]; then
+            TYPECHECK_IN_IMAGE=1
+          else
+            TYPECHECK_IN_IMAGE=0
+          fi
           ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
-            'bash /tmp/deploy-production.sh' 2>&1 | tee /tmp/deploy-output.log
+            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log
           echo "vps-deploy|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── Smoketest na deploy ─────────────────────────────────────────────────
@@ -473,9 +490,14 @@ jobs:
       # Draait alleen bij een verder geslaagde uitrol (bij falen mailt de
       # faalmelding-stap hieronder al). Twee bewakingen, één mail via exact
       # dezelfde Microsoft 365/Graph-koppeling:
-      #  - duurde de uitrol langer dan 8 minuten → mail met de duur per stap;
+      #  - tijdbewaking is ADAPTIEF (geen vaste grens meer — die van 8 minuten
+      #    werd bij vrijwel elke uitrol overschreden en produceerde identieke
+      #    mails): melden alleen bij een VERSLECHTERING, d.w.z. wanneer deze
+      #    uitrol meer dan de helft langer duurt dan de mediaan van de laatste
+      #    tien geslaagde uitrollen (via de GitHub API), en hoogstens één
+      #    tijdmelding per dag (datummarker op de VPS);
       #  - meldde het deployscript SCHIJF_ALARM (schijf na opruimen nog boven
-      #    85%) → dezelfde mail. Onder de grenzen: géén mail (geen mailmoeheid).
+      #    85%) → dezelfde mail, ongewijzigd en zonder dagelijkse beperking.
       - name: Tijd- en schijfbewaking (mail bij trage uitrol of volle schijf)
         if: success()
         env:
@@ -486,23 +508,69 @@ jobs:
           MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
           RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MAX_DUUR_SEC: "480"
+          GH_TOKEN: ${{ github.token }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
 
           NU=$(date +%s)
           DUUR=$((NU - DEPLOY_START))
-          echo "Totale uitrolduur: ${DUUR}s (grens: ${MAX_DUUR_SEC}s)."
+
+          # Mediaan van de laatste tien geslaagde uitrollen (deze run niet
+          # meegeteld) uit de GitHub API. Bij minder dan drie historische
+          # runs is er geen zinvolle basislijn — dan geen tijdmelding.
+          MEDIAAN="$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?status=success&per_page=15" \
+            | node -e '
+              let d = "";
+              process.stdin.on("data", (c) => (d += c));
+              process.stdin.on("end", () => {
+                try {
+                  const runs = (JSON.parse(d).workflow_runs || [])
+                    .filter((r) => String(r.id) !== process.env.GITHUB_RUN_ID)
+                    .slice(0, 10);
+                  const duren = runs
+                    .map((r) => (new Date(r.updated_at) - new Date(r.run_started_at)) / 1000)
+                    .filter((s) => Number.isFinite(s) && s > 0)
+                    .sort((a, b) => a - b);
+                  if (duren.length < 3) return console.log("");
+                  const m = duren.length % 2
+                    ? duren[(duren.length - 1) / 2]
+                    : (duren[duren.length / 2 - 1] + duren[duren.length / 2]) / 2;
+                  console.log(Math.round(m));
+                } catch { console.log(""); }
+              });' || echo "")"
+
+          TE_TRAAG=0
+          if [ -n "${MEDIAAN}" ]; then
+            GRENS=$((MEDIAAN * 3 / 2))
+            echo "Totale uitrolduur: ${DUUR}s (mediaan laatste 10: ${MEDIAAN}s, meldgrens: >${GRENS}s)."
+            [ "${DUUR}" -gt "${GRENS}" ] && TE_TRAAG=1
+          else
+            echo "Totale uitrolduur: ${DUUR}s (geen basislijn van eerdere uitrollen beschikbaar — geen tijdmelding)."
+          fi
 
           # Schijfalarm uit de deploy-uitvoer (marker gezet door het script
           # op de VPS wanneer de schijf ook ná opruimen boven de 85% staat).
           SCHIJF_ALARM="$( (grep -E '^SCHIJF_ALARM\|' /tmp/deploy-output.log 2>/dev/null || true) | head -1 | cut -d'|' -f2)"
 
-          TE_TRAAG=0
-          [ "${DUUR}" -gt "${MAX_DUUR_SEC}" ] && TE_TRAAG=1
+          # Hoogstens één tijdmelding per dag: datummarker op de VPS (de
+          # runner zelf is wegwerp). Het schijfalarm valt hier bewust buiten.
+          if [ "${TE_TRAAG}" -eq 1 ]; then
+            VANDAAG="$(date -u +%F)"
+            LAATSTE_MAIL_DATUM="$(ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
+              "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
+              'cat /opt/fps-one/.deploy-tijdmelding-datum 2>/dev/null' || true)"
+            if [ "${LAATSTE_MAIL_DATUM}" = "${VANDAAG}" ]; then
+              echo "Uitrol trager dan de meldgrens (${DUUR}s), maar vandaag is al een tijdmelding verstuurd — geen tweede mail."
+              TE_TRAAG=0
+            fi
+          fi
 
           if [ "${TE_TRAAG}" -eq 0 ] && [ -z "${SCHIJF_ALARM}" ]; then
-            echo "Uitrol binnen de tijdgrens en schijf onder de grens — geen mail."
+            echo "Geen verslechtering en schijf onder de grens — geen mail."
             exit 0
           fi
 
@@ -513,7 +581,7 @@ jobs:
           [ -n "${SERVER_TIJDEN}" ] || SERVER_TIJDEN="  (geen serverstap-tijden gevonden in de deploy-uitvoer)"
 
           REDENEN=""
-          [ "${TE_TRAAG}" -eq 1 ] && REDENEN="- Uitrol duurde ${DUUR}s, langer dan de grens van ${MAX_DUUR_SEC}s (8 minuten)."$'\n'
+          [ "${TE_TRAAG}" -eq 1 ] && REDENEN="- Uitrol duurde ${DUUR}s — meer dan de helft langer dan de mediaan van de laatste tien uitrollen (${MEDIAAN}s, meldgrens >${GRENS}s)."$'\n'
           [ -n "${SCHIJF_ALARM}" ] && REDENEN="${REDENEN}- Schijf op de server staat ook na het opruimen van oude Docker-images op ${SCHIJF_ALARM}% (grens: 85%)."$'\n'
 
           if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
@@ -572,6 +640,14 @@ jobs:
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "Bewakingsmelding verzonden naar René."
+            # Datummarker bijwerken zodat een volgende trage uitrol vandaag
+            # geen tweede tijdmelding meer oplevert.
+            if [ "${TE_TRAAG}" -eq 1 ]; then
+              ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
+                "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
+                "printf '%s' '$(date -u +%F)' > /opt/fps-one/.deploy-tijdmelding-datum" \
+                || echo "WAARSCHUWING: datummarker op de VPS kon niet worden bijgewerkt." >&2
+            fi
           else
             echo "Verzenden van bewakingsmelding gaf HTTP $HTTP_CODE." >&2
             cat /tmp/graph-response.json >&2 || true

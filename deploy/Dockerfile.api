@@ -33,14 +33,21 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY lib/ lib/
 COPY artifacts/api-server/ artifacts/api-server/
 
-# Stap 3: libs compileren (bouwt o.a. lib/api-client-react declaraties)
-RUN pnpm run typecheck:libs
-
-# Stap 3b: typecheck van de api-server zelf. esbuild (stap 4) stript types
-# zonder controle; zonder deze stap kan een NOODFIX-deploy (die de typecheck-
-# gate in deploy.yml overslaat) code met typefouten uitrollen. Incrementeel
-# en licht: de lib-referenties zijn in stap 3 al gebouwd.
-RUN pnpm --filter @workspace/api-server run typecheck
+# Stap 3: typecheck ín het image — alleen wanneer de controle vooraf is
+# overgeslagen (NOODFIX-uitrol). Bij een normale deploy heeft de workflow de
+# volledige workspace-typecheck al op de runner gedraaid; hem hier herhalen
+# was pure dubbeling en maakte elke bouwstap minuten langer. esbuild (stap 4)
+# stript types zonder controle en heeft de lib-declaraties niet nodig (alle
+# @workspace-packages exporteren ./src/*.ts), dus overslaan is veilig.
+# Default "1" (wél checken): iedereen die dit image buiten de pipeline bouwt,
+# krijgt de veilige variant; alleen deploy-production.sh zet hem uit.
+ARG TYPECHECK_IN_IMAGE=1
+RUN if [ "${TYPECHECK_IN_IMAGE}" = "1" ]; then \
+      pnpm run typecheck:libs && \
+      pnpm --filter @workspace/api-server run typecheck; \
+    else \
+      echo "Typecheck in image overgeslagen: al op de Actions-runner gedraaid."; \
+    fi
 
 # Stap 4: api-server bundelen via esbuild
 RUN pnpm --filter @workspace/api-server run build

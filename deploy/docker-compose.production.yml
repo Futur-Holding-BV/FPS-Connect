@@ -104,6 +104,9 @@ services:
         GIT_COMMIT: ${GIT_COMMIT:-onbekend}
         BUILD_TIJD: ${BUILD_TIJD:-}
         DEPLOY_NUMMER: ${DEPLOY_NUMMER:-}
+        # "1" = typecheck ín het image (NOODFIX: controles vooraf overgeslagen);
+        # "0" = overslaan (normale deploy, al gecontroleerd op de runner).
+        TYPECHECK_IN_IMAGE: ${TYPECHECK_IN_IMAGE:-1}
     restart: always
     env_file: .env.production
     environment:

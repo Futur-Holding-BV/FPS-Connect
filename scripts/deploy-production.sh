@@ -149,6 +149,11 @@ echo "Server staat nu op commit: $(git rev-parse HEAD)"
 # gebakken (zie docker-compose.production.yml) en is daarna zichtbaar in de
 # taakbalk van de app en via GET /api/versie en GET /api/status — zo is
 # controleerbaar dat deze release ook echt draait.
+# Typecheck ín het api-image: alleen bij een NOODFIX-uitrol (de workflow geeft
+# TYPECHECK_IN_IMAGE=1 mee wanneer de controles vooraf zijn overgeslagen).
+# Default veilig "1" voor wie dit script handmatig draait.
+export TYPECHECK_IN_IMAGE="${TYPECHECK_IN_IMAGE:-1}"
+echo "Typecheck in api-image: ${TYPECHECK_IN_IMAGE} (1=ja/NOODFIX of handmatig, 0=al op de runner gedaan)"
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
 export GIT_COMMIT_LANG="$(git rev-parse HEAD)"
 export BUILD_TIJD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

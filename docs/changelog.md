@@ -1,3 +1,8 @@
+## 2026-08-17 — Deploybewaking adaptief + dubbele typecheck uit het api-image
+
+- Tijdbewaking in deploy.yml meldt niet langer op een vaste grens van 8 minuten (die bij vrijwel elke uitrol werd overschreden — 16 identieke mails op één dag), maar alleen bij een verslechtering: wanneer de uitrol meer dan de helft langer duurt dan de mediaan van de laatste tien geslaagde uitrollen (via de GitHub API), en hoogstens één tijdmelding per dag (datummarker `/opt/fps-one/.deploy-tijdmelding-datum` op de VPS). De schijfbewaking is ongewijzigd.
+- Oorzaak van de trage uitrol weggenomen: deploy/Dockerfile.api draaide `typecheck:libs` en de api-server-typecheck opnieuw ín het image, terwijl de workflow die vooraf al volledig op de runner draait. Via build-arg `TYPECHECK_IN_IMAGE` (doorgegeven vanuit deploy.yml → deploy-production.sh → compose) draait de typecheck in het image alleen nog bij een NOODFIX-uitrol, waar de controle vooraf bewust wordt overgeslagen. Buiten de pipeline blijft de default veilig aan. Overslaan is bewezen veilig: esbuild bundelt rechtstreeks vanuit `src/` (alle @workspace-packages exporteren TypeScript-bron).
+
 ## 2026-08-17 — Smoketest-serviceaccount voor de post-deploy controle
 
 - Nieuw beheerscript `pnpm --filter @workspace/db run smoketest-account` (lib/db/scripts/smoketest-account.mjs): maakt idempotent het vaste smoketest-account `smoketest@fps-brandpreventie.nl` aan (wachtwoord uit omgevingsvariabele `SMOKETEST_PASSWORD`, minimaal 16 tekens — staat nooit in de repo). Draaibaar op de productieserver via de bestaande migrate-container.
