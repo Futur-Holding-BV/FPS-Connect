@@ -82,9 +82,8 @@ const EIND_DATUM = (() => {
 })();
 
 async function bouwContractPdf(): Promise<Buffer> {
-  const mod: any = await import(
-    "/home/runner/workspace/artifacts/api-server/node_modules/pdfkit/js/pdfkit.es.js"
-  );
+  // @ts-expect-error — absoluut pad naar de ESM-build (geen types nodig).
+  const mod: any = await import("/home/runner/workspace/artifacts/api-server/node_modules/pdfkit/js/pdfkit.es.js");
   const PDFDocument: any = mod.default ?? mod;
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks: Buffer[] = [];
