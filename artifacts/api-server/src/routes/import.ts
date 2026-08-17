@@ -1,4 +1,5 @@
 import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
+import { isRedelijkeDatum } from "../lib/datumSaniteit";
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
@@ -1024,8 +1025,9 @@ function koppelMedewerker(rij: Record<string, string>, kop: Record<string, strin
     mobiel: haal(rij, kop, "mobiel") || null,
     werkmaatschappij: haal(rij, kop, "werkmaatschappij") || "FPS Brandpreventie",
     dienstverband: (geldigDienstverband.includes(dienstverband as Dienstverband) ? dienstverband : "vast") as Dienstverband,
-    inDienstSinds: haal(rij, kop, "in_dienst_sinds") || null,
-    geboortedatum: haal(rij, kop, "geboortedatum") || null,
+    // Datum-saniteit: onzinjaartallen uit importbestanden nooit overnemen (fail-closed null).
+    inDienstSinds: (() => { const w = haal(rij, kop, "in_dienst_sinds"); return w && isRedelijkeDatum(w) ? w : null; })(),
+    geboortedatum: (() => { const w = haal(rij, kop, "geboortedatum"); return w && isRedelijkeDatum(w) ? w : null; })(),
     adres: haal(rij, kop, "adres") || null,
     postcode: haal(rij, kop, "postcode") || null,
     woonplaats: haal(rij, kop, "woonplaats") || haal(rij, kop, "stad") || null,

@@ -47,6 +47,7 @@ import {
   arbeidsovereenkomstenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { isRedelijkeDatum, ongeldigeDatumvelden } from "../lib/datumSaniteit";
 import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -939,6 +940,7 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
   }
 });
 
+
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
     const {
@@ -950,6 +952,13 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       verlofsoort_ids, jaar,
     } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
+    const fouteDatums = ongeldigeDatumvelden(req.body as Record<string, unknown>);
+    if (fouteDatums.length > 0) {
+      return void res.status(422).json({
+        error: "Ongeldige datum (verwacht JJJJ-MM-DD met jaartal 1900\u20132100).",
+        velden: fouteDatums,
+      });
+    }
 
     // Geconsolideerde onboarding: een medewerkerprofiel bestaat alleen als
     // koppeling aan een bestaand gebruikersaccount. Zonder gebruiker_id faalt
@@ -1354,10 +1363,10 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
     if (!in_dienst_sinds) {
       velden.push("in_dienst_sinds");
     } else {
-      const d = new Date(in_dienst_sinds);
-      if (Number.isNaN(d.getTime())) {
+      if (!isRedelijkeDatum(in_dienst_sinds)) {
         velden.push("in_dienst_sinds");
       } else {
+        const d = new Date(`${in_dienst_sinds}T00:00:00`);
         const vandaag = new Date();
         vandaag.setHours(23, 59, 59, 999);
         if (d.getTime() > vandaag.getTime()) velden.push("in_dienst_sinds");
@@ -1461,6 +1470,13 @@ router.get("/medewerkers/:id", lezen, async (req, res): Promise<void> => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
+    const fouteDatumsPatch = ongeldigeDatumvelden(req.body as Record<string, unknown>);
+    if (fouteDatumsPatch.length > 0) {
+      return void res.status(422).json({
+        error: "Ongeldige datum (verwacht JJJJ-MM-DD met jaartal 1900\u20132100).",
+        velden: fouteDatumsPatch,
+      });
+    }
     const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, met de unieke index als laatste wacht).
@@ -4423,6 +4439,9 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res): Promise<vo
 
     if (!uit_dienst_per) {
       return void res.status(422).json({ error: "Veld 'uit_dienst_per' is verplicht." });
+    }
+    if (!isRedelijkeDatum(uit_dienst_per)) {
+      return void res.status(422).json({ error: "Ongeldige datum voor 'uit_dienst_per' (verwacht JJJJ-MM-DD met jaartal 1900\u20132100).", velden: ["uit_dienst_per"] });
     }
 
     const [m] = await db

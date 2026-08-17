@@ -9,3 +9,9 @@ Regel: een AI-"voorstel" zonder voorstelwaarde is een **signalering** (modelGebr
 
 **Why:** kaarten met "Voorstel: —" + Overnemen + "100% zekerheid" (terwijl impact laag/gemiddeld zei) waren misleidend en goedkeuren deed stil niets.
 **How to apply:** bij nieuwe voorstel-bronnen in hrm_ai_voorstellen: lege waarde ⇒ score null en frontend-kaart behandelt het als signalering. Bewijs: scripts/src/verificatie-hrm-voorstel-leeg.ts.
+
+## Datum-saniteit medewerkerprofiel (aug 2026)
+Regel: alle datumvelden op het medewerkerprofiel gaan uitsluitend via lib/datumSaniteit (echte kalenderdatum, jaartal 1900–2100); geldt voor routes, AI-voorstel-doorvoer, onboarding én import.
+**Why:** text-kolommen + dossier-AI lieten "82026-07-14" in het dossier landen; losse per-route checks misten paden.
+**How to apply:** nieuw schrijfpad voor deze velden → ongeldigeDatumvelden/isRedelijkeDatum hergebruiken, nooit een eigen new Date()-check.
+

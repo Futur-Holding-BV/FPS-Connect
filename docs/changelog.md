@@ -1,3 +1,11 @@
+## 2026-08-17 — Onzinjaartallen in personeelsdatums geweigerd én geheeld
+
+- Gemeld defect: personeelsdossier toonde "Uit dienst per 14 jul 82026" — een onzinjaartal dat via dossier-analyse/invoer ongehinderd in de tekstkolom belandde.
+- API valideert nu alle datumvelden van het medewerkerprofiel (in/uit dienst, geboortedatum, rijbewijs/VCA/EHBO/BHV-verval) op echte kalenderdatum JJJJ-MM-DD met jaartal 1900–2100; anders 422 met veldnamen (aanmaken, wijzigen én offboarden).
+- Validator is gedeeld (lib/datumSaniteit) en dekt álle schrijfpaden: HRM-routes, onboarding, doorvoer van goedgekeurde AI-voorstellen én de medewerker-import (fail-closed).
+- Migraties 0071 + 0072 wissen bestaande onzinwaarden en kalenderongeldige datums (NULL = onbekend); draaien via de deploy ook op productie.
+- Bewijs: API-run — onzinjaar op POST en PATCH → 422, geldige datum → 201.
+
 ## 2026-08-17 — Eigen modules "Social media" en "Merk" in de bevoegdheden-matrix (#1037/#1038)
 
 - Social en Merk (merkenkast + beeldbank) zijn losgekoppeld van het CRM-recht, zelfde aanpak als Marketing.

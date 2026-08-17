@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { DATUMVELDEN_MEDEWERKER, isRedelijkeDatum } from "../lib/datumSaniteit";
 import {
   db,
   medewerkersTable,
@@ -372,6 +373,12 @@ async function voerVoorstelDoor(medewerkerId: number, veld: string, waarde: stri
 
   const kolom = kolomMap[veld];
   if (!kolom) return;
+
+  // Datumvelden fail-closed: een AI-voorstel met onzinjaartal (bv. 82026)
+  // mag nooit in het profiel landen — zelfde regel als de HRM-routes.
+  if ((DATUMVELDEN_MEDEWERKER as readonly string[]).includes(veld) && !isRedelijkeDatum(werkelijkeWaarde)) {
+    throw new Error(`Voorstel voor '${veld}' is geen geldige datum (JJJJ-MM-DD, jaartal 1900\u20132100): ${werkelijkeWaarde}`);
+  }
 
   await db
     .update(medewerkersTable)
