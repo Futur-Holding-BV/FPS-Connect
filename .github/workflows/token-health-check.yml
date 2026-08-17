@@ -76,28 +76,37 @@ jobs:
             echo "laatste_deploy=${LAATSTE_DEPLOY}"
           } >> "$GITHUB_OUTPUT"
 
-          # ── 3. Secret-toets: alleen geldig als hij het échte token is ──────
+          # ── 3. Secret-toets: alleen geldig als hij aantoonbaar het échte token is ──
+          # Fail-closed: zonder syntactisch geldige vingerafdruk (64 hex-tekens)
+          # wordt NOOIT een live-tokenconclusie getrokken.
           STATUS="onbepaald"; EXPIRY="${FP_VERLOOPT}"; SECRET_ZEGT_IETS="nee"
-          if [ -z "${FPS_PUSH_TOKEN:-}" ]; then
+          if ! printf %s "$FP_SHA" | grep -qE '^[0-9a-f]{64}$'; then
+            STATUS="vingerafdruk_ontbreekt"
+            echo "Geen geldige sha256-vingerafdruk in ${VINGERAFDRUK_BESTAND}; live toetsing uitgesloten (fail-closed)." >&2
+          elif [ -z "${FPS_PUSH_TOKEN:-}" ]; then
             STATUS="secret_ontbreekt"
             echo "Actions-secret FPS_PUSH_TOKEN is niet gezet; live API-toets van het pushtoken is hier niet mogelijk." >&2
           else
             SECRET_SHA=$(printf %s "$FPS_PUSH_TOKEN" | sha256sum | cut -d' ' -f1)
-            if [ -n "$FP_SHA" ] && [ "$SECRET_SHA" != "$FP_SHA" ]; then
+            if [ "$SECRET_SHA" != "$FP_SHA" ]; then
               STATUS="ander_token"
               echo "FPS_PUSH_TOKEN is een ÁNDER token dan Replit gebruikt om te pushen (sha256 wijkt af van docs/push-token-vingerafdruk.json)." >&2
             else
               SECRET_ZEGT_IETS="ja"
               HEADERS_FILE=$(mktemp)
+              # curl-fout (DNS/TLS/netwerk) mag de stap niet doden: altijd een code.
               HTTP_CODE=$(curl -sS -o /tmp/gh-user.json -D "$HEADERS_FILE" -w "%{http_code}" \
-                -H "Authorization: token ${FPS_PUSH_TOKEN}" https://api.github.com/user)
+                -H "Authorization: token ${FPS_PUSH_TOKEN}" https://api.github.com/user || echo "000")
               LIVE_EXPIRY=$(grep -i "github-authentication-token-expiration:" "$HEADERS_FILE" \
                 | tr -d '\r' | cut -d' ' -f2- | xargs || echo "")
               rm -f "$HEADERS_FILE"
               [ -n "$LIVE_EXPIRY" ] && EXPIRY="$LIVE_EXPIRY"
-              if [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
+              if [ "$HTTP_CODE" = "401" ]; then
                 STATUS="verlopen"
-              elif [ "$HTTP_CODE" -ne 200 ]; then
+              elif [ "$HTTP_CODE" = "403" ]; then
+                # 403 is niet per se verlopen: kan rate limiting of policy zijn.
+                STATUS="api_geweigerd"
+              elif [ "$HTTP_CODE" != "200" ]; then
                 STATUS="api_onbereikbaar"
               else
                 STATUS="geldig"
@@ -106,7 +115,8 @@ jobs:
           fi
 
           # ── 4. Vervaldatum bewaken (uit live check of vingerafdruk) ────────
-          if [ "$STATUS" = "geldig" ] || [ "$STATUS" = "secret_ontbreekt" ] || [ "$STATUS" = "ander_token" ]; then
+          case "$STATUS" in geldig|secret_ontbreekt|ander_token|vingerafdruk_ontbreekt) BEWAAK_VERVAL=1;; *) BEWAAK_VERVAL=0;; esac
+          if [ "$BEWAAK_VERVAL" -eq 1 ]; then
             if [ -n "$EXPIRY" ]; then
               EXPIRY_TS=$(date -d "$EXPIRY" +%s 2>/dev/null || echo 0)
               DAYS_LEFT=$(( (EXPIRY_TS - $(date +%s)) / 86400 ))
@@ -128,8 +138,28 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Eindstatus: ${STATUS}"
 
+      # Anti-mailmoeheid: urgente statussen (verlopen, laatste 3 dagen voor verval)
+      # mailen dagelijks; alle andere afwijkingen alleen op maandag als weekherinnering.
+      - name: Mailmoment bepalen (dagelijks bij urgent, anders wekelijks)
+        id: cadans
+        env:
+          TOKEN_STATUS: ${{ steps.toets.outputs.status }}
+          DAYS_LEFT: ${{ steps.toets.outputs.days_left }}
+        run: |
+          set -euo pipefail
+          MAIL="nee"
+          if [ "$TOKEN_STATUS" != "geldig" ]; then
+            URGENT=0
+            case "$TOKEN_STATUS" in verlopen|verlopen_volgens_vingerafdruk) URGENT=1;; esac
+            if [ "$TOKEN_STATUS" = "verloopt_binnenkort" ] && [ "${DAYS_LEFT:-99}" -le 3 ]; then URGENT=1; fi
+            if [ "$URGENT" -eq 1 ] || [ "$(date -u +%u)" = "1" ]; then MAIL="ja"; else
+              echo "Status ${TOKEN_STATUS} is niet urgent; weekherinnering volgt op maandag (geen dagelijkse mail)."
+            fi
+          fi
+          echo "mail=${MAIL}" >> "$GITHUB_OUTPUT"
+
       - name: Melding mailen (alleen bij een vastgesteld probleem)
-        if: ${{ !contains(fromJSON('["geldig"]'), steps.toets.outputs.status) }}
+        if: steps.cadans.outputs.mail == 'ja' 
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -202,6 +232,18 @@ jobs:
               geldigheid ervan wordt hier dus níéts beweerd. Vervaldatum volgens
               vingerafdruk: ${TOKEN_EXPIRY:-onbekend}. Zet FPS_PUSH_TOKEN op dezelfde waarde
               als de Replit-secret GITHUB_TOKEN_PUSH (herstelstap 4) om dit op te lossen." ;;
+            vingerafdruk_ontbreekt)
+              ONDERWERP="FPS Connect: tokenbewaking mist een geldige vingerafdruk"
+              KERN="docs/push-token-vingerafdruk.json ontbreekt of bevat geen geldige sha256.
+              Zonder vingerafdruk toetst deze bewaking bewust niets aan een token (fail-closed)
+              en wordt hier dus niets over het pushtoken beweerd. Herstel: draai in de
+              Replit-shell scripts/git/update-token-vingerafdruk.sh en push het resultaat." ;;
+            api_geweigerd)
+              ONDERWERP="FPS Connect: GitHub API weigerde de token-toets (HTTP 403)"
+              KERN="De live toets van het pushtoken kreeg HTTP 403. Dat betekent niet per se
+              dat het token verlopen is: het kan ook rate limiting of een policy-weigering
+              zijn. Er wordt hier dus geen conclusie over de geldigheid getrokken; zie de
+              gemeten feiten hieronder en de Actions-run voor het API-antwoord." ;;
             secret_ontbreekt)
               ONDERWERP="FPS Connect: tokenbewaking kan pushtoken niet live toetsen (FPS_PUSH_TOKEN ontbreekt)"
               KERN="De Actions-secret FPS_PUSH_TOKEN is niet gezet. Dat zegt niets over het
