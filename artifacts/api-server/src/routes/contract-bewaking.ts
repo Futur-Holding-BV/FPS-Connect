@@ -386,11 +386,8 @@ export type CrucialeDatumItem = {
 };
 
 /**
- * Haal alle urgente cruciale deadlines op (aanzegdatums + ZZP/DBA), gegroepeerd
- * per medewerker + bron. Gebruikt door de bewakingsloop voor werkbak-items.
- * Definitie "urgent": dagen_tot <= CRUCIALE_URGENT_DAGEN OF DBA-risico bereikt.
- * Eén item per medewerker per bron-type zodat contract- en ZZP-deadline
- * onafhankelijk kunnen worden afgehandeld.
+ * Haal alle urgente cruciale deadlines op (aanzegdatums, ZZP/DBA, inleentermijnen),
+ * gegroepeerd per medewerker + bron. Gebruikt door de bewakingsloop voor werkbak-items.
  */
 export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
   const medewerkers = await db
@@ -399,7 +396,6 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
     .where(eq(medewerkersTable.actief, true));
   const naamPerId = new Map(medewerkers.map((m) => [m.id, m.naam]));
 
-  // Per (medewerker_id, bron): bewaar het meest urgente item.
   const perMedewerkerBron = new Map<string, CrucialeDatumItem>();
   const zetAlsUrgenter = (item: CrucialeDatumItem) => {
     const sleutel = `${item.bron}:${item.medewerker_id}`;
@@ -428,15 +424,7 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
     }
     const dagen = dagenTot(datum);
     if (dagen > CRUCIALE_URGENT_DAGEN) continue;
-    zetAlsUrgenter({
-      medewerker_id: c.medewerkerId,
-      naam: naamPerId.get(c.medewerkerId)!,
-      datum,
-      dagen_tot: dagen,
-      bron: "contract",
-      label,
-      reden,
-    });
+    zetAlsUrgenter({ medewerker_id: c.medewerkerId, naam: naamPerId.get(c.medewerkerId)!, datum, dagen_tot: dagen, bron: "contract", label, reden });
   }
 
   // 2) ZZP-overeenkomsten (Wet DBA)
@@ -455,13 +443,11 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
       .sort((a, b) => a.eindDatum.localeCompare(b.eindDatum))[0];
     if (!lopend) continue;
     const dagen = dagenTot(lopend.eindDatum);
-
     const eersteStart = overeenkomsten.map((o) => o.startDatum).sort()[0];
     const laatsteEind = overeenkomsten.map((o) => o.eindDatum).sort().slice(-1)[0];
     const verbandMaanden =
       (new Date(laatsteEind).getTime() - new Date(eersteStart).getTime()) / (1000 * 60 * 60 * 24 * 30);
     const dbaRisico = verbandMaanden >= CRUCIALE_DBA_MAANDEN_GRENS;
-
     if (dagen > CRUCIALE_URGENT_DAGEN && !dbaRisico) continue;
     zetAlsUrgenter({
       medewerker_id: medewerkerId,
@@ -473,6 +459,32 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
       reden: dbaRisico
         ? `ZZP-verband loopt al ${Math.round(verbandMaanden)} maanden (grens ${CRUCIALE_DBA_MAANDEN_GRENS}); risico op schijnzelfstandigheid (Wet DBA). Overeenkomst eindigt ${lopend.eindDatum}.`
         : `ZZP-overeenkomst eindigt op ${lopend.eindDatum} (Wet DBA: einddatum verplicht).`,
+    });
+  }
+
+  // 3) Inleen-einddatum: eigen veld op de medewerker (dienstverband uitzend/inhuur)
+  const inleners = await db
+    .select({ id: medewerkersTable.id, naam: medewerkersTable.naam, inleenEinddatum: medewerkersTable.inleenEinddatum })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNotNull(medewerkersTable.inleenEinddatum),
+        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
+      ),
+    );
+  for (const inlener of inleners) {
+    if (!inlener.inleenEinddatum) continue;
+    const dagen = dagenTot(inlener.inleenEinddatum);
+    if (dagen > CRUCIALE_URGENT_DAGEN) continue;
+    zetAlsUrgenter({
+      medewerker_id: inlener.id,
+      naam: inlener.naam,
+      datum: inlener.inleenEinddatum,
+      dagen_tot: dagen,
+      bron: "contract",
+      label: "Inleentermijn afloop",
+      reden: `Inleen-/inhuurperiode eindigt op ${inlener.inleenEinddatum}.`,
     });
   }
 
