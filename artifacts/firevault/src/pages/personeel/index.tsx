@@ -74,7 +74,7 @@ import {
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
   LogOut, Shield, Sparkles, Loader2, CheckCircle2,
 } from "lucide-react";
-import { WERKMAATSCHAPPIJEN } from "@/lib/werkmaatschappijen";
+import { WERKMAATSCHAPPIJEN, useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { OffboardDialog } from "./offboard-dialog";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
@@ -117,6 +117,8 @@ function fmtDatum(datum?: string | null) {
 }
 
 export default function PersoneelPagina() {
+  // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
+  const { namen: WERKMAATSCHAPPIJEN } = useWerkmaatschappijen();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

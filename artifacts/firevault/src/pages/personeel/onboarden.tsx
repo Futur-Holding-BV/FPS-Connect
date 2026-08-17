@@ -44,7 +44,7 @@ import {
   CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck, Loader2,
   GraduationCap, Clock3, CreditCard, ArrowLeftRight, Crown, Upload, Check,
 } from "lucide-react";
-import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
+import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij, useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
@@ -638,6 +638,8 @@ function GeneriekeWizard({
   const [huidigStap, setHuidigStap] = useState(1);
   const TOTAAL = GENERIEKE_STAPPEN.length;
   const { data: functies } = useListFuncties();
+  // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
+  const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
   const slaVoortgangOp = usePatchWizardVoortgang();
   const bijwerk = useUpdateMedewerker();
@@ -951,6 +953,8 @@ function VastFormulier({
     return extra;
   });
   const { data: functies } = useListFuncties();
+  // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
+  const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
   const { data: profielen } = useListProfielen();
@@ -2190,6 +2194,8 @@ function ZzpFormulier({
 }) {
   const [form, setForm] = useState<ZzpForm>(() => ({ ...LEEG_ZZP, naam: context.naam }));
   const { data: functies } = useListFuncties();
+  // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
+  const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
 
@@ -2327,6 +2333,8 @@ function UitzendFormulier({
   const [soort, setSoort] = useState<"uitzend" | "inhuur">("uitzend");
   const [uitzendbureauId, setUitzendbureauId] = useState<number | null>(null);
   const { data: functies } = useListFuncties();
+  // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
+  const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
 

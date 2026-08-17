@@ -95,7 +95,7 @@ import {
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaatschappijen";
+import { useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -709,6 +709,8 @@ function SalarisdocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: num
 }
 
 export default function MedewerkerDetailPagina() {
+  // Werkmaatschappijen + CAO-voorselectie live uit de werkgevers-API.
+  const { caoVoor: caoVoorWerkmaatschappij, opties: werkmaatschappijOpties } = useWerkmaatschappijen();
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
   const { toast } = useToast();

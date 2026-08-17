@@ -1,9 +1,13 @@
-// Werkmaatschappijen binnen de FPS Groep en hun standaard-CAO. De CAO-naam komt
-// exact overeen met CAO_OPTIES.naam in de api-server (artifacts/api-server/src/routes/hrm.ts),
-// zodat een voorgeselecteerde CAO altijd een geldige optie is.
+// Werkmaatschappijen binnen de FPS Groep en hun standaard-CAO.
 //
-// Wanneer een medewerker aan een werkmaatschappij wordt gekoppeld, wordt de
-// bijbehorende CAO automatisch voorgeselecteerd (de gebruiker kan dit overschrijven).
+// BRON VAN WAARHEID: de werkgevers-tabel via GET /werkgevers (naam + cao per
+// rij; cao komt exact overeen met CAO_OPTIES in de api-server). Componenten
+// gebruiken de hook useWerkmaatschappijen() zodat een nieuw aangemaakte
+// werkmaatschappij overal direct in de keuzelijsten verschijnt.
+//
+// De statische lijst hieronder is uitsluitend een fallback voor de eerste
+// render (voordat de API-respons binnen is) en voor module-level defaults.
+import { useListWerkgevers } from "@workspace/api-client-react";
 
 export const WERKMAATSCHAPPIJEN = [
   "FPS Brandpreventie",
@@ -35,4 +39,28 @@ export function werkmaatschappijOpties(huidige?: string | null): string[] {
   const opties: string[] = [...WERKMAATSCHAPPIJEN];
   if (huidige && !opties.includes(huidige)) return [huidige, ...opties];
   return opties;
+}
+
+// Hook-variant: werkmaatschappijen én CAO-voorselectie live uit de
+// werkgevers-API (alleen actieve). Valt terug op de statische lijst zolang
+// de API-respons nog niet binnen is. Retourneert dezelfde vormen als de
+// statische helpers, zodat call-sites ze 1-op-1 kunnen vervangen (of via
+// shadowing binnen een component).
+export function useWerkmaatschappijen() {
+  const { data: werkgevers } = useListWerkgevers();
+  // Fallback alleen zolang de query nog geen data heeft; een geslaagde maar
+  // lege respons (geen actieve werkgevers) levert bewust een lege lijst.
+  const namen: string[] =
+    werkgevers === undefined
+      ? [...WERKMAATSCHAPPIJEN]
+      : werkgevers.filter((w) => w.actief).map((w) => w.naam);
+  const actieve = (werkgevers ?? []).filter((w) => w.actief);
+  const caoVoor = (werkmaatschappij: string | null | undefined): string | undefined => {
+    if (!werkmaatschappij) return undefined;
+    const rij = actieve.find((w) => w.naam === werkmaatschappij);
+    return rij?.cao ?? CAO_PER_WERKMAATSCHAPPIJ[werkmaatschappij];
+  };
+  const opties = (huidige?: string | null): string[] =>
+    huidige && !namen.includes(huidige) ? [huidige, ...namen] : namen;
+  return { namen, caoVoor, opties };
 }

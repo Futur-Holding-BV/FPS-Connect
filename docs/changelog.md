@@ -1,3 +1,10 @@
+## 2026-08-17 — Werkmaatschappij-keuzelijsten live uit de werkgevers-API
+
+- Het planning-filter en alle HRM-dropdowns (onboarding, medewerkerdetail, functiebeheer) tonen nu álle actieve werkmaatschappijen uit de database — de vanmorgen aangemaakte FPS Bouw en Renovatie verschijnt direct, zonder codewijziging bij een volgende nieuwe BV.
+- Nieuwe hook `useWerkmaatschappijen()` in `lib/werkmaatschappijen.ts`: namen én CAO-voorselectie komen uit GET /werkgevers (werkgevers.cao is bron van waarheid); de statische lijst is alleen nog fallback tijdens het laden. Gedragscorrectie: FPS Bouw selecteert nu Bouw & Infra voor (stond hardcoded op Metaal & Techniek, DB zei Bouw & Infra).
+- Bewijs: `scripts/src/bewijs-planning-wm-filter.ts` (Playwright) — dropdown toont alle 4 werkmaatschappijen incl. FPS Bouw en Renovatie.
+- Controle overige acties na aanmaken werkmaatschappij: rij + CAO + actief staan goed in DB; gesignaleerde gaten (hardcoded FPS-branding in offerte-/mailroutes, leeg kenmerk_prefix, geen automatische mailafzender/social-provisioning) apart gerapporteerd.
+
 ## 2026-08-17 — Deploy-blokkade opgelost: absoluut Replit-pad in verificatiescript
 
 - Acht mislukte uitrollen op rij (sinds #346) kwamen door één regel: `scripts/src/verificatie-storage-links.ts` importeerde `@google-cloud/storage` via het absolute pad `/home/runner/workspace/artifacts/api-server/node_modules/...`, dat op de GitHub-runner niet bestaat.

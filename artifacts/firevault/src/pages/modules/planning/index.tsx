@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { Link } from "wouter";
 import {
   useListPlanningItems,
@@ -676,6 +677,8 @@ export default function ModulesPlanning() {
   const [opslaan, setOpslaan] = useState(false);
   const [reistijdSchatting, setReistijdSchatting] = useState<{ minuten: number; beschrijving: string; onzeker?: boolean | null } | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
+  // Werkmaatschappij-filter live uit de werkgevers-API (nieuwe BV's direct zichtbaar).
+  const { namen: wmNamen } = useWerkmaatschappijen();
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(true);
   const [reistijden, setReistijden] = useState<Map<string, ReistijdResult>>(new Map());
   const reistijdFetched = useRef(new Set<string>());
@@ -1367,8 +1370,7 @@ export default function ModulesPlanning() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="alle">Alle werkmaatschappijen</SelectItem>
-                  <SelectItem value="FPS Brandpreventie">FPS Brandpreventie</SelectItem>
-                  <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
+                  {wmNamen.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                 </SelectContent>
               </Select>
               <button
