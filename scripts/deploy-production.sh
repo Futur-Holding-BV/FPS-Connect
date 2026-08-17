@@ -15,6 +15,17 @@
 
 set -euo pipefail
 
+# ─── Tijdmeting per stap (DEPLOY_SNELHEID_01) ────────────────────────────────
+# Elke hoofdstap meldt zijn duur als machine-leesbare regel "TIJD|<stap>|<n>s".
+# De GitHub Actions-workflow leest die regels uit de deploy-uitvoer en zet ze
+# in de waarschuwingsmail wanneer de totale uitrol de tijdgrens overschrijdt.
+STAP_START=$(date +%s)
+stap_tijd() {
+  local nu; nu=$(date +%s)
+  echo "TIJD|$1|$((nu - STAP_START))s"
+  STAP_START=$nu
+}
+
 # ─── STAP 1: naar de productiemap ────────────────────────────────────────────
 cd /opt/fps-one
 
@@ -120,6 +131,7 @@ if command -v gzip >/dev/null 2>&1; then
   gzip -t "${NIEUWSTE_BACKUP}"
 fi
 echo "Back-up OK: ${NIEUWSTE_BACKUP} ($(du -h "${NIEUWSTE_BACKUP}" | cut -f1))"
+stap_tijd "databaseback-up"
 
 # ─── STAP 3: nieuwste code ophalen ───────────────────────────────────────────
 echo "=== STAP 3: git fetch origin ==="
@@ -142,10 +154,45 @@ export GIT_COMMIT_LANG="$(git rev-parse HEAD)"
 export BUILD_TIJD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 export DEPLOY_NUMMER="$(date -u +%Y%m%d%H%M%S)"
 echo "Release-versie: ${BUILD_TIJD%%T*} — commit ${GIT_COMMIT} (deploy #${DEPLOY_NUMMER})"
+stap_tijd "code-ophalen"
 
-# ─── STAP 5: API bouwen zonder cache ─────────────────────────────────────────
-echo "=== STAP 5: API-image bouwen (--no-cache) ==="
-${COMPOSE} build --no-cache api
+# ─── SCHIJFBEWAKING (DEPLOY_SNELHEID_01 punt 5) ──────────────────────────────
+# Vóór het bouwen: staat de schijf boven de 85%, dan eerst zelf oude Docker-
+# images opruimen. Blijft hij daarna boven de 85%, dan meldt het script dat
+# met een machine-leesbare SCHIJF_ALARM-regel; de Actions-workflow verstuurt
+# daarop dezelfde faalmail naar René (mail gaat altijd vanaf de runner, de
+# server zelf mailt nooit). De uitrol gaat gewoon door — een volle schijf is
+# een waarschuwing, het bouwen zelf faalt vanzelf hard als het echt niet past.
+SCHIJF_GRENS=85
+schijf_pct() {
+  local pad="/var/lib/docker"
+  [ -d "${pad}" ] || pad="/"
+  df -P "${pad}" | awk 'NR==2 {gsub("%","",$5); print $5}'
+}
+SCHIJF_PCT="$(schijf_pct)"
+echo "Schijfgebruik vóór het bouwen: ${SCHIJF_PCT}%"
+if [ "${SCHIJF_PCT}" -gt "${SCHIJF_GRENS}" ]; then
+  echo "Schijf boven ${SCHIJF_GRENS}% — oude Docker-images opruimen..."
+  docker image prune -af || true
+  docker builder prune -af || true
+  SCHIJF_PCT="$(schijf_pct)"
+  echo "Schijfgebruik na opruimen: ${SCHIJF_PCT}%"
+  if [ "${SCHIJF_PCT}" -gt "${SCHIJF_GRENS}" ]; then
+    echo "SCHIJF_ALARM|${SCHIJF_PCT}"
+    echo "WAARSCHUWING: schijf staat ook na opruimen boven ${SCHIJF_GRENS}% (${SCHIJF_PCT}%)." >&2
+  fi
+fi
+stap_tijd "schijfbewaking"
+
+# ─── STAP 5: API bouwen (mét Docker-cache) ───────────────────────────────────
+# DEPLOY_SNELHEID_01: --no-cache is hier bewust weggehaald — Docker hergebruikt
+# onveranderde lagen (dependencies e.d.), de gewijzigde bronlagen worden altijd
+# opnieuw gebouwd omdat de git-checkout net is ververst. De reden waarom
+# migrate WEL --no-cache houdt (schema in het image gebakken, incident
+# 13 juli 2026) geldt niet voor api en caddy.
+echo "=== STAP 5: API-image bouwen ==="
+${COMPOSE} build api
+stap_tijd "api-image-bouwen"
 
 # ─── STAP 6: database-migraties uitvoeren ────────────────────────────────────
 # Het migrate-image MOET zelf ook zonder cache herbouwd worden: het schema zit
@@ -194,6 +241,7 @@ else
   rm -rf "${SENTRY_TMP}"
   set -e
 fi
+stap_tijd "sentry-sourcemaps"
 
 echo "=== STAP 6: migraties (migrate-image vers bouwen + migratierunner + verificatie) ==="
 ${COMPOSE} build --no-cache migrate
@@ -201,18 +249,23 @@ ${COMPOSE} run --rm -T migrate
 ${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run schema-healthcheck
 echo "=== STAP 6b: schema-drift-check (database vs. vastgelegde verwachting) ==="
 ${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run drift-check
+stap_tijd "migraties"
 
-# ─── STAP 7: Caddy/frontend bouwen zonder cache ──────────────────────────────
-echo "=== STAP 7: Caddy/frontend-image bouwen (--no-cache) ==="
-${COMPOSE} build --no-cache caddy
+# ─── STAP 7: Caddy/frontend bouwen (mét Docker-cache) ────────────────────────
+# Zie stap 5: --no-cache bewust weggehaald (DEPLOY_SNELHEID_01).
+echo "=== STAP 7: Caddy/frontend-image bouwen ==="
+${COMPOSE} build caddy
+stap_tijd "caddy-image-bouwen"
 
 # ─── STAP 8: containers starten ──────────────────────────────────────────────
 echo "=== STAP 8: docker compose up -d ==="
 ${COMPOSE} up -d --remove-orphans db api caddy
+stap_tijd "containers-starten"
 
 # ─── STAP 9 + 10: healthcheck; alleen slagen bij status ok ───────────────────
 echo "=== STAP 9/10: healthcheck ==="
 if healthcheck; then
+  stap_tijd "healthcheck"
   # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
   docker image prune -f --filter "until=72h" || true
   echo "Deploy voltooid: release is gezond."

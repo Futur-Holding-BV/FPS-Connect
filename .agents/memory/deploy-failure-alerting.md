@@ -24,3 +24,5 @@ no-ops (exits 0 with a warning) rather than failing the run.
 The step intentionally never notifies on a successful deploy (avoid mail
 fatigue) and always exits 0 on its own errors so a broken notification path
 never masks the real deploy failure in the Actions UI.
+
+**DEPLOY_SNELHEID_01 (aug 2026):** OTA-stap alleen bij wijzigingen in artifacts/monteur-app, lib/api-client-react of lib/ontwerp én alleen --platform android; api/caddy-builds mét cache (migrate blijft --no-cache, schema-in-image). Tijdbewaking: serverscript print TIJD|stap|Ns, workflow tee't ssh-uitvoer en mailt via dezelfde Graph-flow bij >480s of SCHIJF_ALARM (schijf na prune nog >85%); uitrol wordt daarop niet afgebroken, mail komt altijd van de Actions-runner.

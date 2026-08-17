@@ -1,3 +1,11 @@
+## 2026-08-17 — DEPLOY_SNELHEID_01: snellere uitrol + tijd- en schijfbewaking
+
+- **OTA-stap (deploy.yml):** `eas-cli update` bouwt nu alleen de Android-bundel (`--platform android`; FPS levert uitsluitend een Android-APK) en draait alleen nog wanneer de push werkelijk iets aan de telefoon-app wijzigt (artifacts/monteur-app, lib/api-client-react of lib/ontwerp). Bij twijfel (dispatch, force-push, before-commit niet ophaalbaar) draait de update voor de zekerheid gewoon.
+- **deploy-production.sh:** `--no-cache` weggehaald bij de api- en caddy-builds zodat Docker onveranderde lagen hergebruikt; bij migrate blijft `--no-cache` bewust staan (schema in het image gebakken; incident 13 juli 2026).
+- **Tijdbewaking:** elke serverstap meldt zijn duur (`TIJD|stap|Ns`); de workflow meet de totale uitrolduur en mailt René via de bestaande Microsoft 365/Graph-koppeling wanneer de uitrol langer dan 8 minuten duurt, met de duur per workflow-fase én per serverstap. Onder de grens: geen mail.
+- **Schijfbewaking:** vóór het bouwen controleert het deployscript het schijfgebruik; boven 85% ruimt het zelf oude Docker-images op (`docker image prune -af` + builder-cache); staat de schijf daarna nog boven 85%, dan meldt het `SCHIJF_ALARM` en verstuurt de workflow dezelfde bewakingsmail. Mail gaat altijd vanaf de Actions-runner (server mailt nooit); de uitrol wordt er niet op afgebroken.
+- Ongewijzigd, conform opdracht: de drie pre-deploy controles, de databaseback-up + verificatie, de healthcheck en de automatische rollback.
+
 ## 2026-08-17 — Basislaag eigen gegevens in de webapp + besluit geen iOS-build
 
 - **Besluit vastgelegd (taak #886):** geen iOS-build en geen Apple Developer-account; iPhone-gebruikers werken in de webapp. Zie docs/besluit-geen-ios-build.md; docs/monteur-app-apk.md bijgewerkt (iOS-actiepunt vervallen).
