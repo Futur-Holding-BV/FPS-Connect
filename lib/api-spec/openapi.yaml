@@ -8196,7 +8196,7 @@ paths:
     post:
       operationId: verstuurMarketingCampagne
       tags: [marketing]
-      summary: Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+      summary: Campagne verzenden naar de doelgroep (via de mailwachtrij, marketing niveau 4)
       parameters:
         - in: path
           name: id

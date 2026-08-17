@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   useGetCrmDashboard,
 } from "@workspace/api-client-react";
@@ -35,6 +36,7 @@ function euro(v: number) {
 
 export default function CrmDashboardPagina() {
   const { data: dash, isLoading } = useGetCrmDashboard();
+  const { heeftNiveau } = useBevoegdheid();
 
   const nav = [
     { href: "/crm/organisaties", label: "Organisaties", icon: Building2, beschrijving: "Klanten, prospects en partners" },
@@ -45,7 +47,10 @@ export default function CrmDashboardPagina() {
     { href: "/crm/marktintelligentie", label: "Marktinzicht", icon: Newspaper, beschrijving: "Nieuws, aanbestedingen en signalen" },
     { href: "/crm/taken", label: "Taken", icon: ClipboardList, beschrijving: "Acties en opvolging" },
     { href: "/crm/relatievoorstellen", label: "AI-relatievoorstellen", icon: Sparkles, beschrijving: "Voorgestelde contacten ter beoordeling" },
-    { href: "/crm/marketing", label: "Marketing", icon: Megaphone, beschrijving: "Doelgroepen, sjablonen en campagnes" },
+    // Marketing is een eigen module (niveau 3 = beheren); zonder recht geen kaart.
+    ...(heeftNiveau("marketing", 3)
+      ? [{ href: "/crm/marketing", label: "Marketing", icon: Megaphone, beschrijving: "Doelgroepen, sjablonen en campagnes" }]
+      : []),
     { href: "/crm/kennisbibliotheek", label: "Kennisbibliotheek", icon: BookOpen, beschrijving: "Documenten en naslag" },
   ];
 

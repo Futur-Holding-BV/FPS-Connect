@@ -22,3 +22,7 @@ description: Consent-poort, campagneflow via mailwachtrij, rechtenmodel en afges
 **Vervolg (akkoord, nog te bouwen):** open/klik-tracking (alleen geaggregeerd bij campagne; klik op aanbod mag als opvolgsignaal bij relatie; meting noemen in privacyverklaring én mail), bounce-verwerking via bestaande werk-inbox Graph-uitlezing (hard bounce → mail_onbestelbaar; >5% harde bounces → autostop + mail René), gedoseerde verzender op de wachtrij, Document Studio-renderlaag met werkmaatschappij-branding (huidige campagneMailHtml-wrapper met #F23B0D is bewust tijdelijk), verkoopkans↔offerte via offertes.projectkans_id, opvolgreeksen, webformulier, overzicht, Deel B coaching.
 
 **Bewijs:** scripts/src/verificatie-marketing-fase1.ts (24 checks).
+
+
+## MARKETING_02 (17-08-2026, akkoord René)
+Eigen module `marketing` in de matrix (los van crm): niveau 3 = beheren + proefverzenden, 4 = écht verzenden/stoppen. Presets: Commercieel 3, Directie 4 (migratie 0069, alleen-verhogend). Toestemming-PATCH blijft crm 2; social/merkenkast/beeldbank blijven bewust op crm 3/4. Frontend: sidebar-hoofdstuk Commercie toont ook bij marketing-only; CRM-kaart Marketing en social-campagnekoppeling gegate op marketing 3 (query enabled + queryKey verplicht).

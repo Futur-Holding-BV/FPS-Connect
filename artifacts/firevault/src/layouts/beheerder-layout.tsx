@@ -818,8 +818,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </TweeTrapsHoofdstuk>
               )}
 
-              {/* CRM — één centraal menu-item; alle onderdelen bereikbaar via het CRM-dashboard */}
-              {toonCrm && (
+              {/* CRM — één centraal menu-item; alle onderdelen bereikbaar via het CRM-dashboard.
+                  Het hoofdstuk toont ook voor marketing-only gebruikers (eigen module). */}
+              {(toonCrm || heeftNiveau("marketing", 3)) && (
               <TweeTrapsHoofdstuk
                 sleutel="commercie"
                 titel="Commercie"
@@ -829,6 +830,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 onOpenChange={(open) => setHoofdstukOpen("commercie", open)}
               >
                     <SidebarMenu>
+                      {toonCrm && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
@@ -840,6 +842,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      )}
                       {/* Marketing — eigen module in de rechtenmatrix: de Marketing-API
                           vereist marketing 3 (beheren) voor alle lees/beheer-endpoints;
                           verzenden gate't de pagina intern op marketing 4. */}

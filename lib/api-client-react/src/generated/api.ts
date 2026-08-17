@@ -28493,7 +28493,7 @@ export const getVerstuurMarketingCampagneUrl = (id: number,) => {
 }
 
 /**
- * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, marketing niveau 4)
  */
 export const verstuurMarketingCampagne = async (id: number, options?: RequestInit): Promise<VerstuurMarketingCampagne200> => {
 
@@ -28541,7 +28541,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type VerstuurMarketingCampagneMutationError = ErrorType<void>
 
     /**
- * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, marketing niveau 4)
  */
 export const useVerstuurMarketingCampagne = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}

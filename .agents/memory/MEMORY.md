@@ -150,5 +150,5 @@
 - [Document Studio bulk-generatie](studio-bulk-generatie.md) — claim via advisory lock + tussenstatus 'genererend' vóór AI-aanroep; referentie optioneel; single-routes moeten 'genererend' kennen.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
 - [HRM AI-voorstellen zonder waarde](hrm-ai-voorstellen-leeg.md) — lege voorstelwaarde = signalering: geen zekerheidsscore, geen Overnemen-knop, goedkeuren zonder waarde → 422; heranalyse heelt oude 100%-rijen.
-- [Marketingmodule (MARKETING_01)](marketing-module.md) — crm 3=beheren/4=verzenden; consent-poort in élke query, leden live; proef verplicht+vers; wachtrij fail-closed; afmelden ruimt wachtrij op.
+- [Marketingmodule (MARKETING_01/02)](marketing-module.md) — eigen module 'marketing' (3=beheren/4=verzenden; Commercieel 3, Directie 4); consent-poort in élke query, leden live; proef verplicht+vers; wachtrij fail-closed; afmelden ruimt wachtrij op.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.

@@ -9712,7 +9712,7 @@ export const VerstuurMarketingCampagneProefResponse = zod.object({
 
 
 /**
- * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, marketing niveau 4)
  */
 export const VerstuurMarketingCampagneParams = zod.object({
   "id": zod.coerce.number()

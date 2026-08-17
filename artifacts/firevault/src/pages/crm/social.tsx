@@ -19,6 +19,7 @@ import {
   useDeleteSocialKoppeling,
   useListWerkgevers,
   useListMarketingCampagnes,
+  getListMarketingCampagnesQueryKey,
   getListSocialBerichtenQueryKey,
   getListSocialKoppelingenQueryKey,
   type SocialBericht,
@@ -391,7 +392,11 @@ function OpstellerDialog({ open, onClose, bestaand, eisen, werkgevers, onKlaar }
   const [mediaPad, setMediaPad] = useState<string | null>(bestaand?.media_pad ?? null);
   const [mediaType, setMediaType] = useState<"beeld" | "video" | null>((bestaand?.media_type as "beeld" | "video" | null) ?? null);
   const [campagneId, setCampagneId] = useState<string>(bestaand?.campagne_id ? String(bestaand.campagne_id) : "geen");
-  const { data: campagnes } = useListMarketingCampagnes();
+  // Campagne-koppeling vereist de marketingmodule (lijst-endpoint = marketing 3);
+  // zonder recht geen aanroep (403) en geen selector.
+  const { heeftNiveau: heeftNiveauDialog } = useBevoegdheid();
+  const magCampagneKoppelen = heeftNiveauDialog("marketing", 3);
+  const { data: campagnes } = useListMarketingCampagnes({ query: { enabled: magCampagneKoppelen, queryKey: getListMarketingCampagnesQueryKey() } });
   const { uploadFile, isUploading } = useUpload({ bestand_type: "algemeen" });
 
   const create = useCreateSocialBericht({ mutation: { onSuccess: () => { onKlaar(); onClose(); }, onError: (e: unknown) => foutToast(toast, e) } });
@@ -439,6 +444,7 @@ function OpstellerDialog({ open, onClose, bestaand, eisen, werkgevers, onKlaar }
                 <SelectContent>{werkgevers.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.naam}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {magCampagneKoppelen && (
             <div className="space-y-1.5">
               <Label>Campagne (optioneel)</Label>
               <Select value={campagneId} onValueChange={setCampagneId}>
@@ -449,6 +455,7 @@ function OpstellerDialog({ open, onClose, bestaand, eisen, werkgevers, onKlaar }
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
