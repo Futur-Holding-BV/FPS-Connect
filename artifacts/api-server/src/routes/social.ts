@@ -37,7 +37,7 @@ const plannen = requireBevoegdheid("social", 4);
 /**
  * Campagne-koppelingen zijn Marketing-terrein: het meesturen of wijzigen van
  * een niet-lege campagne_id vereist marketing niveau 3, ook al is de route
- * zelf crm-gegate. Server-side afgedwongen — de UI-gate alleen is geen
+ * zelf social-gegate. Server-side afgedwongen — de UI-gate alleen is geen
  * autorisatie. Retourneert null bij toegang, anders een foutmelding.
  */
 async function controleerCampagneKoppeling(
@@ -373,7 +373,7 @@ router.post("/social/berichten/:id/terug-naar-klaar", plannen, async (req, res) 
   res.json({ ok: true, status: "klaar" });
 });
 
-// ── Koppelingen (deel E) — crm 4 ─────────────────────────────────────────────
+// ── Koppelingen (deel E) — social 4 ──────────────────────────────────────────
 router.get("/social/koppelingen", plannen, async (_req, res) => {
   const rijen = await db
     .select({ k: socialKoppelingenTable, werkgeverNaam: werkgeversTable.naam })

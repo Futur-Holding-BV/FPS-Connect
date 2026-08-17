@@ -11,8 +11,8 @@
 // opdracht-koppeling; alleen handmatige uploads kunnen er een dragen. Dit is
 // bewust — we tonen geen gegokte koppeling (gemeld bij scoping MERK_01).
 //
-// Rechten (getoetst tegen marketing.ts/social.ts): crm niveau 3 = bekijken,
-// zoeken, uploaden en downloaden. Gebouw-ACL: beperkte gebruikers (via
+// Rechten (merk module, eigen module #1037): merk niveau 1 = bekijken, zoeken
+// en downloaden; merk niveau 3 = uploaden. Gebouw-ACL: beperkte gebruikers (via
 // effectieveContext) zien alleen foto's van hun toegewezen gebouwen; de
 // storage-route dwingt dit per bestand nogmaals af.
 import { Router } from "express";

@@ -129,7 +129,7 @@
 - [Generieke AI-leerlus](ai-leerlus-generiek.md) — /ai/veld-correctie = meetdata, géén leersignaal; consumptiefilter-invariant in organisatie.ts; loggen alleen ná geslaagde mutatie, fire-and-forget.
 - [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie.
 - [Procesbalk-patroon Projectaanpak](procesbalk-patroon.md) — ProcesBalk-component + één vervolgknop + ⋯-menu + kaarten Financieel/AI-hulp; screenshot-bewijs eist colorScheme-forcering.
-- [Declaratie→loonketen](declaratie-loonketen.md) — plus doorzetten: signaal geen lock, optimistische vergrendeling via verwacht_doorgezet_naar (IS NOT DISTINCT FROM), anders 409; — goedkeuren=auto salaris_mutatie.
+- [Declaratie→loonketen](declaratie-loonketen.md) — plus doorzetten: signaal geen lock, optimistische vergrendeling via verwacht_doorgezet_naar (IS NOT DISTINCT FROM), anders 409; goedkeuren=auto salaris_mutatie.
 - [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.
 - [Document Studio bulk-generatie](studio-bulk-generatie.md) — claim via advisory lock + tussenstatus 'genererend' vóór AI-aanroep; referentie optioneel; single-routes moeten 'genererend' kennen.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
@@ -138,10 +138,11 @@
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [MOBIEL_01 responsief patroon](mobiel01-responsief-patroon.md) — onderbalk via --bottom-bar-hoogte (safe-area zit al in de var!), FAB wegschuiven+rusttuck, tabel met stapel-per-breakpoint.
 - [Deploybewaking adaptief](deploy-bewaking-adaptief.md) — tijdmelding alleen >1,5× mediaan laatste 10 runs + dagcap (marker op VPS, actions:read vereist); typecheck in api-image alleen bij NOODFIX (TYPECHECK_IN_IMAGE).
-- [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/objects/<subPath> (NIET rauw objectPath.
-- [Social-mediamodule (SOCIAL_01)](social-module.md) — kanaaleisen server-side fail-closed (plannen=422+redenen); publicatiemotor nooit stil (mislukt/concept ⇒ werkbak-taak); adapters=stubs tot fase 3-OAuth.
-- [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/).
+- [Governance blokkeert kritieke acties: sessie mist rol](governance-sessie-rol.md) — req.session.rol wordt nooit gezet bij login; governance-middleware ziet rol=null en blokkeert "kritiek" (o.a. DELETE /gebouwen/:id) met 403, ook voor hoofdbeheerder; e2e-cleanup dus via DB.
+- [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/objects/<subPath> (NIET rauw objectPath; /files-formaat was dood, defect gefixt aug 2026).
+- [Social-mediamodule (SOCIAL_01)](social-module.md) — kanaaleisen server-side fail-closed (plannen=422+redenen); publicatiemotor nooit stil (mislukt/concept ⇒ werkbak-taak); adapters=stubs tot fase 3-OAuth; rechten: social 3/4 (eigen module, los van crm, aug 2026).
+- [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/); archiver v8=named ZipArchive.
 - [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
-- [Clean PR bij gebundelde commit-history](clean-pr-bundled-commits.md) — code-reviewer vergelijkt HEAD vs github/main.
+- [Clean PR bij gebundelde commit-history](clean-pr-bundled-commits.md) — code-reviewer vergelijkt HEAD vs github/main; altijd schone branch via `git checkout -b <branch> github/main`; push via `git push github <branch>`; GITHUB_TOKEN_PUSH.
 - [Actions diagnose zonder logs](actions-diagnose.md) — job-logs=403 via connector; gebruik jobs-steps + check-run-annotations; SMOKETEST-secrets ontbreken in GitHub (smoketest skipt stil).
 - [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).

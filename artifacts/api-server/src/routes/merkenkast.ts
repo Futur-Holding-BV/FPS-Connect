@@ -5,7 +5,7 @@
 // (logo-varianten, merkkleuren, lettertype, bedrijfsomschrijvingen). Er wordt
 // niets gekopieerd naar een tweede plek.
 //
-// Rechten (getoetst tegen bestaande crm-routes: marketing.ts/social.ts):
+// Rechten (merk module, eigen module #1037):
 //   merk niveau 1 = merkenkast bekijken en downloaden (per stuk en als pakket).
 // Beheren gaat via de bestaande werkgever-routes (PATCH /werkgevers, HRM).
 import { Router } from "express";
