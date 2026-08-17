@@ -295,6 +295,20 @@ router.patch("/medewerkers/ai-voorstellen/:voorstelId", schrijven, async (req, r
 
   const gebruikerId: number | null = (req.session as { userId?: number }).userId ?? null;
 
+  // Fail-closed: goedkeuren zonder over te nemen waarde is betekenisloos.
+  if (status === "goedgekeurd") {
+    const [huidig] = await db
+      .select({ voorgesteldeWaarde: hrmAiVoorstellenTable.voorgesteldeWaarde })
+      .from(hrmAiVoorstellenTable)
+      .where(eq(hrmAiVoorstellenTable.id, voorstelId));
+    if (!huidig) return void res.status(404).json({ error: "Voorstel niet gevonden" });
+    if (!huidig.voorgesteldeWaarde?.trim() && !correctie_tekst?.trim()) {
+      return void res.status(422).json({
+        error: "Dit voorstel heeft geen waarde om over te nemen. Vul een waarde in via 'Waarde invullen en overnemen', of wijs het af.",
+      });
+    }
+  }
+
   const [bijgewerkt] = await db
     .update(hrmAiVoorstellenTable)
     .set({
@@ -310,9 +324,9 @@ router.patch("/medewerkers/ai-voorstellen/:voorstelId", schrijven, async (req, r
   if (!bijgewerkt) return void res.status(404).json({ error: "Voorstel niet gevonden" });
 
   // Bij goedkeuren: voorstel doorvoeren naar medewerker-veld
-  if (status === "goedgekeurd" && bijgewerkt.voorgesteldeWaarde) {
+  if (status === "goedgekeurd" && (bijgewerkt.voorgesteldeWaarde?.trim() || bijgewerkt.correctieTekst?.trim())) {
     try {
-      await voerVoorstelDoor(bijgewerkt.medewerkerId, bijgewerkt.veld, bijgewerkt.voorgesteldeWaarde, bijgewerkt.correctieTekst);
+      await voerVoorstelDoor(bijgewerkt.medewerkerId, bijgewerkt.veld, bijgewerkt.voorgesteldeWaarde ?? "", bijgewerkt.correctieTekst);
     } catch (err) {
       logger.warn({ err, voorstelId }, "Voorstel goedgekeurd maar doorvoer mislukt");
     }
@@ -421,6 +435,23 @@ router.post("/medewerkers/:id/heranalyseer-dossier", schrijven, async (req, res)
     { veld: "woonplaats", label: "Woonplaats", impact: "laag" },
   ];
 
+  // Zelfheling: oudere ontbrekend-veld-signaleringen kregen ten onrechte 100%
+  // zekerheid mee. Heel álle open scan-rijen van deze medewerker in één keer.
+  await db
+    .update(hrmAiVoorstellenTable)
+    .set({ confidence: null, vertrouwenScore: null, bijgewerktOp: new Date() })
+    .where(
+      and(
+        eq(hrmAiVoorstellenTable.medewerkerId, id),
+        eq(hrmAiVoorstellenTable.modelGebruikt, "missingFieldScan"),
+        eq(hrmAiVoorstellenTable.status, "open"),
+        or(
+          sql`${hrmAiVoorstellenTable.confidence} IS NOT NULL`,
+          sql`${hrmAiVoorstellenTable.vertrouwenScore} IS NOT NULL`,
+        ),
+      ),
+    );
+
   for (const { veld, label, impact } of ONTBREKENDE_VELDEN) {
     const waarde = (medewerker as Record<string, unknown>)[veld];
     if (!waarde) {
@@ -440,10 +471,12 @@ router.post("/medewerkers/:id/heranalyseer-dossier", schrijven, async (req, res)
           veld,
           huidigeWaarde: null,
           voorgesteldeWaarde: null,
-          reden: `Ontbrekend veld: ${label} is nog niet ingevuld in het profiel`,
+          reden: `Ontbrekend veld: ${label} is nog niet ingevuld in het profiel — geen waarde in de documenten gevonden`,
           brondocument: null,
-          confidence: 1.0,
-          vertrouwenScore: 1.0,
+          // Signalering zonder voorstelwaarde: een zekerheidspercentage is hier
+          // betekenisloos (er is niets om zeker over te zijn) — dus geen score.
+          confidence: null,
+          vertrouwenScore: null,
           status: "open",
           impact,
           modelGebruikt: "missingFieldScan",

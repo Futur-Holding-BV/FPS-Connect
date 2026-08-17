@@ -70,6 +70,7 @@ function VoorstelRegel({
 
   const bezig = item.status !== "open";
   const label = VELD_LABELS[item.veld] ?? item.veld;
+  const leegVoorstel = !item.voorgestelde_waarde?.trim();
   const isAfwijking = item.reden?.startsWith("Afwijking") ?? false;
   const zekerheid = item.vertrouwen_score ?? item.confidence;
   const zekerheidPct = zekerheid != null ? Math.round(zekerheid * 100) : null;
@@ -109,6 +110,10 @@ function VoorstelRegel({
           {isAfwijking ? (
             <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-200">
               Afwijking
+            </Badge>
+          ) : leegVoorstel ? (
+            <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+              Ontbreekt
             </Badge>
           ) : (
             <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200">
@@ -151,9 +156,15 @@ function VoorstelRegel({
             Huidig: <span className="line-through">{item.huidige_waarde}</span>
           </p>
         )}
-        <p className={cn("font-medium", isAfwijking ? "text-orange-900" : "text-amber-900")}>
-          Voorstel: {item.voorgestelde_waarde ?? "—"}
-        </p>
+        {leegVoorstel ? (
+          <p className="text-xs text-muted-foreground">
+            Geen waarde in de documenten gevonden — vul zelf een waarde in of wijs af.
+          </p>
+        ) : (
+          <p className={cn("font-medium", isAfwijking ? "text-orange-900" : "text-amber-900")}>
+            Voorstel: {item.voorgestelde_waarde}
+          </p>
+        )}
       </div>
 
       {open && (
@@ -189,16 +200,23 @@ function VoorstelRegel({
             />
           )}
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              size="sm"
-              className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
-              onClick={() =>
-                onBeoordeel(item.id, "goedgekeurd", metCorrectie ? correctie : undefined)
-              }
-            >
-              <Check className="h-3.5 w-3.5 mr-1" />
-              {metCorrectie ? "Bevestig gecorrigeerde waarde" : "Overnemen"}
-            </Button>
+            {(!leegVoorstel || metCorrectie) && (
+              <Button
+                size="sm"
+                className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                disabled={metCorrectie && leegVoorstel && !correctie.trim()}
+                onClick={() =>
+                  onBeoordeel(item.id, "goedgekeurd", metCorrectie ? correctie : undefined)
+                }
+              >
+                <Check className="h-3.5 w-3.5 mr-1" />
+                {metCorrectie
+                  ? leegVoorstel
+                    ? "Waarde overnemen"
+                    : "Bevestig gecorrigeerde waarde"
+                  : "Overnemen"}
+              </Button>
+            )}
             {!metCorrectie && (
               <Button
                 size="sm"
@@ -206,7 +224,7 @@ function VoorstelRegel({
                 className="h-7 text-xs"
                 onClick={() => setMetCorrectie(true)}
               >
-                Aanpassen en overnemen
+                {leegVoorstel ? "Waarde invullen en overnemen" : "Aanpassen en overnemen"}
               </Button>
             )}
             <Button
@@ -244,7 +262,7 @@ export function AiVoorstelKaart({
   const openVoorstellen = voorstellen.filter((v) => v.status === "open");
   const behandeld = voorstellen.filter((v) => v.status !== "open");
   const heeftOpenAanvullingen = openVoorstellen.some(
-    (v) => !(v.reden?.startsWith("Afwijking") ?? false),
+    (v) => !(v.reden?.startsWith("Afwijking") ?? false) && !!v.voorgestelde_waarde?.trim(),
   );
 
   if (isLoading) {

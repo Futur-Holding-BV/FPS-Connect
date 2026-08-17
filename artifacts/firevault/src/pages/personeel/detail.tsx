@@ -2292,7 +2292,10 @@ export default function MedewerkerDetailPagina() {
                 magSchrijven
                   ? async () => {
                       const aanvullingen = aiVoorstellen.filter(
-                        (v) => v.status === "open" && !(v.reden?.startsWith("Afwijking") ?? false),
+                        (v) =>
+                          v.status === "open" &&
+                          !(v.reden?.startsWith("Afwijking") ?? false) &&
+                          !!v.voorgestelde_waarde?.trim(),
                       );
                       for (const v of aanvullingen) {
                         await voorstelBeoordelen(v.id, "goedgekeurd");
