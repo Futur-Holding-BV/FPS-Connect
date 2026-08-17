@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { medewerkersTable, werkgeversTable, functiesTable } from "./hrm";
 import { gebruikersTable } from "./gebruikers";
 
@@ -21,8 +21,16 @@ export const arbeidsovereenkomstenTable = pgTable("arbeidsovereenkomsten", {
   // Arbeidsvoorwaarden
   functieOmschrijving: text("functie_omschrijving"),                             // eventueel afwijkend van functieId.naam
   cao: text("cao"),
-  salarisBruto: real("salaris_bruto"),                                           // euro per maand
+  salarisBruto: real("salaris_bruto"),                                           // euro (eenheid in salarisEenheid; historisch: per maand)
+  salarisEenheid: text("salaris_eenheid"),                                       // maand | 4-weken | week | uur | jaar (null = onbekend/maand)
   arbeidsduurPerWeek: real("arbeidsduur_per_week"),                              // uren
+  urenMinPerWeek: real("uren_min_per_week"),                                     // min-max bandbreedte (nul-uren/oproep)
+  urenMaxPerWeek: real("uren_max_per_week"),
+  opzegtermijn: text("opzegtermijn"),                                            // zoals in het contract vermeld
+  aanzegtermijn: text("aanzegtermijn"),                                          // zoals in het contract vermeld
+  reiskostenvergoeding: text("reiskostenvergoeding"),                            // zoals in het contract vermeld
+  concurrentiebeding: boolean("concurrentiebeding"),                             // null = niet vastgelegd
+  relatiebeding: boolean("relatiebeding"),                                       // null = niet vastgelegd
   // Status
   status: text("status").notNull().default("actief"),
   // concept | actief | verlopen | opgezegd | omgezet | beëindigd
@@ -59,7 +67,10 @@ export const contractSignaleringenTable = pgTable("contract_signaleringen", {
   gezienDoorId: integer("gezien_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   gezienOp: timestamp("gezien_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // Dedupe DB-geborgd: één signalering per contract per type (race-vrij).
+  uniqueIndex("contract_signaleringen_contract_type_uniek").on(t.contractId, t.type),
+]);
 
 // ── Contract-besluiten — besluitvorming per contract ─────────────────────────
 // Vastgelegd na gespreksvoorbereiding. Geeft de workflow-status van het besluit.

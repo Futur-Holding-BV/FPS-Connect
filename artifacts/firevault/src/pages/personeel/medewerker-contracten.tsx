@@ -27,7 +27,15 @@ type Contract = {
   proeftijd_dagen: number | null;
   cao: string | null;
   salaris_bruto: number | null;
+  salaris_eenheid: string | null;
   arbeidsduur_per_week: number | null;
+  uren_min_per_week: number | null;
+  uren_max_per_week: number | null;
+  opzegtermijn: string | null;
+  aanzegtermijn: string | null;
+  reiskostenvergoeding: string | null;
+  concurrentiebeding: boolean | null;
+  relatiebeding: boolean | null;
   status: string;
   voorgaand_contract_id: number | null;
   ondertekening_vereist: boolean;
@@ -597,9 +605,18 @@ function ContractKaart({
           {tab === "info" && (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               {[
-                ["Salaris", contract.salaris_bruto ? `€ ${contract.salaris_bruto.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} bruto/mnd` : "—"],
-                ["Arbeidsduur", contract.arbeidsduur_per_week ? `${contract.arbeidsduur_per_week} uur/week` : "—"],
+                ["Salaris", contract.salaris_bruto ? `€ ${contract.salaris_bruto.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} bruto/${contract.salaris_eenheid ?? "mnd"}` : "—"],
+                ["Arbeidsduur", contract.arbeidsduur_per_week
+                  ? `${contract.arbeidsduur_per_week} uur/week`
+                  : contract.uren_min_per_week != null || contract.uren_max_per_week != null
+                    ? `${contract.uren_min_per_week ?? 0}–${contract.uren_max_per_week ?? "?"} uur/week`
+                    : "—"],
                 ["CAO", contract.cao ?? "—"],
+                ["Opzegtermijn", contract.opzegtermijn ?? "—"],
+                ["Aanzegtermijn", contract.aanzegtermijn ?? "—"],
+                ["Reiskosten", contract.reiskostenvergoeding ?? "—"],
+                ["Concurrentiebeding", contract.concurrentiebeding == null ? "—" : contract.concurrentiebeding ? "Ja" : "Nee"],
+                ["Relatiebeding", contract.relatiebeding == null ? "—" : contract.relatiebeding ? "Ja" : "Nee"],
                 ["Proeftijd", contract.proeftijd_dagen ? `${contract.proeftijd_dagen} dagen` : "Geen"],
                 ["Ondertekening", contract.ondertekening_vereist
                   ? (contract.ondertekend_door_medewerker_op ? `Ondertekend op ${formatDatum(contract.ondertekend_door_medewerker_op)}` : "Nog te ondertekenen")
@@ -655,6 +672,187 @@ function ContractKaart({
   );
 }
 
+// ── Contract uitlezen (AI) ───────────────────────────────────────────────────
+// Leest het nieuwste arbeidscontract-document van de medewerker gericht uit
+// (elk veld met vindplaats-citaat; zonder vindplaats blijft het veld leeg).
+// De gebruiker controleert/corrigeert en neemt het met één handeling over in
+// het dossier — nooit stil opslaan.
+
+interface AiVeld {
+  waarde: string | number | null;
+  vindplaats: { pagina: number | null; citaat: string } | null;
+}
+
+const AI_VELD_LABELS: Array<[string, string]> = [
+  ["werkmaatschappij", "Werkmaatschappij"],
+  ["werknemer_naam", "Naam werknemer"],
+  ["functie", "Functie"],
+  ["datum_in_dienst", "Datum in dienst"],
+  ["contract_type", "Contracttype"],
+  ["einddatum", "Einddatum"],
+  ["proeftijd", "Proeftijd"],
+  ["uren_per_week", "Uren per week"],
+  ["uren_min_per_week", "Uren per week (min)"],
+  ["uren_max_per_week", "Uren per week (max)"],
+  ["salaris", "Salaris"],
+  ["salaris_eenheid", "Salariseenheid"],
+  ["cao", "CAO"],
+  ["opzegtermijn", "Opzegtermijn"],
+  ["aanzegtermijn", "Aanzegtermijn"],
+  ["reiskostenvergoeding", "Reiskostenvergoeding"],
+  ["concurrentiebeding", "Concurrentiebeding"],
+  ["relatiebeding", "Relatiebeding"],
+];
+
+function ContractUitlezenDialog({
+  open,
+  onSluiten,
+  onOvergenomen,
+  medewerkerId,
+}: {
+  open: boolean;
+  onSluiten: () => void;
+  onOvergenomen: () => void;
+  medewerkerId: number;
+}) {
+  const [bezig, setBezig] = useState(false);
+  const [overnemenBezig, setOvernemenBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [velden, setVelden] = useState<Record<string, AiVeld> | null>(null);
+  const [waarden, setWaarden] = useState<Record<string, string>>({});
+  const [brondocument, setBrondocument] = useState<string | null>(null);
+  const [brondocumentId, setBrondocumentId] = useState<number | null>(null);
+  const [toelichting, setToelichting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setBezig(true);
+    setFout(null);
+    setVelden(null);
+    (async () => {
+      try {
+        const resp = await fetch(`/api/medewerkers/${medewerkerId}/ai-contract-analyse`, { method: "POST" });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error((data as { error?: string }).error ?? "Uitlezen mislukt");
+        const v = (data.velden ?? {}) as Record<string, AiVeld>;
+        setVelden(v);
+        setBrondocument((data.brondocument as string) ?? null);
+        setBrondocumentId(typeof data.brondocument_id === "number" ? data.brondocument_id : null);
+        setToelichting((data.ai_toelichting as string) ?? null);
+        const w: Record<string, string> = {};
+        for (const [sleutel] of AI_VELD_LABELS) {
+          const veld = v[sleutel];
+          w[sleutel] = veld?.waarde != null ? String(veld.waarde) : "";
+        }
+        setWaarden(w);
+      } catch (e) {
+        setFout(e instanceof Error ? e.message : "Uitlezen mislukt");
+      } finally {
+        setBezig(false);
+      }
+    })();
+  }, [open, medewerkerId]);
+
+  async function overnemen() {
+    if (!waarden.contract_type || !waarden.datum_in_dienst) {
+      setFout("Contracttype en datum in dienst zijn verplicht om over te nemen.");
+      return;
+    }
+    setOvernemenBezig(true);
+    setFout(null);
+    try {
+      const payloadVelden: Record<string, string | null> = {};
+      for (const [sleutel] of AI_VELD_LABELS) {
+        payloadVelden[sleutel] = waarden[sleutel]?.trim() || null;
+      }
+      const resp = await fetch(`/api/medewerkers/${medewerkerId}/contract-overnemen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ velden: payloadVelden, document_id: brondocumentId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error((data as { error?: string }).error ?? "Overnemen mislukt");
+      onOvergenomen();
+    } catch (e) {
+      setFout(e instanceof Error ? e.message : "Overnemen mislukt");
+    } finally {
+      setOvernemenBezig(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onSluiten(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            Contract uitlezen (AI)
+          </DialogTitle>
+        </DialogHeader>
+        {fout && <Alert variant="destructive"><AlertDescription>{fout}</AlertDescription></Alert>}
+        {bezig && (
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-slate-500">Contract wordt uitgelezen…</p>
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        )}
+        {!bezig && velden && (
+          <div className="space-y-3 py-1">
+            <div className="rounded-md border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs text-amber-700">
+              AI-voorstel uit {brondocument ?? "het contractdocument"}. Elk ingevuld veld heeft een
+              vindplaats in het document; velden zonder vindplaats zijn bewust leeg gelaten.
+              Controleer, corrigeer waar nodig en neem daarna over.
+              {toelichting ? <span className="block mt-1 italic">{toelichting}</span> : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {AI_VELD_LABELS.map(([sleutel, label]) => {
+                const veld = velden[sleutel];
+                const verplicht = sleutel === "contract_type" || sleutel === "datum_in_dienst";
+                return (
+                  <div key={sleutel} className={sleutel === "opzegtermijn" || sleutel === "reiskostenvergoeding" ? "col-span-2" : ""}>
+                    <Label className="text-xs">{label}{verplicht && " *"}</Label>
+                    {sleutel === "contract_type" ? (
+                      <Select value={waarden[sleutel] ?? ""} onValueChange={(v) => setWaarden((w) => ({ ...w, [sleutel]: v }))}>
+                        <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bepaalde_tijd">Bepaalde tijd</SelectItem>
+                          <SelectItem value="onbepaalde_tijd">Onbepaalde tijd</SelectItem>
+                          <SelectItem value="oproep">Oproep / nul-uren</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        className="mt-1 h-8 text-sm"
+                        type={sleutel === "datum_in_dienst" || sleutel === "einddatum" ? "date" : "text"}
+                        value={waarden[sleutel] ?? ""}
+                        placeholder="niet aangetroffen"
+                        onChange={(e) => setWaarden((w) => ({ ...w, [sleutel]: e.target.value }))}
+                      />
+                    )}
+                    {veld?.vindplaats ? (
+                      <p className="mt-0.5 text-[11px] text-amber-700 line-clamp-2">
+                        {veld.vindplaats.pagina ? `p.${veld.vindplaats.pagina}: ` : ""}“{veld.vindplaats.citaat}”
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-[11px] text-slate-400">niet aangetroffen in het contract</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onSluiten} disabled={overnemenBezig}>Annuleren</Button>
+          <Button onClick={overnemen} disabled={bezig || overnemenBezig || !velden}>
+            {overnemenBezig ? "Overnemen…" : "Overnemen in dossier"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Hoofd-export ─────────────────────────────────────────────────────────────
 
 export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number }) {
@@ -665,6 +863,7 @@ export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number
   const [laden, setLaden] = useState(true);
   const [fout, setFout] = useState<string | null>(null);
   const [nieuwOpen, setNieuwOpen] = useState(false);
+  const [uitlezenOpen, setUitlezenOpen] = useState(false);
 
   async function laadContracten() {
     setLaden(true);
@@ -687,10 +886,16 @@ export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-700">Contracthistorie</h2>
         {magSchrijven && (
-          <Button size="sm" variant="outline" onClick={() => setNieuwOpen(true)} className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            Nieuw contract
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setUitlezenOpen(true)} className="gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+              Contract uitlezen (AI)
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setNieuwOpen(true)} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Nieuw contract
+            </Button>
+          </div>
         )}
       </div>
 
@@ -709,6 +914,13 @@ export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number
       {!laden && contracten.map((c) => (
         <ContractKaart key={c.id} contract={c} onBijgewerkt={laadContracten} />
       ))}
+
+      <ContractUitlezenDialog
+        open={uitlezenOpen}
+        onSluiten={() => setUitlezenOpen(false)}
+        onOvergenomen={() => { setUitlezenOpen(false); laadContracten(); }}
+        medewerkerId={medewerkerId}
+      />
 
       <ContractFormulier
         open={nieuwOpen}

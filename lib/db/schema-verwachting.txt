@@ -66,6 +66,7 @@ INDEX|compliance_signalen|compliance_signalen_regel_idx
 INDEX|compliance_signalen|compliance_signalen_status_idx
 INDEX|constructie_templates|constructie_templates_pkey
 INDEX|contract_besluiten|contract_besluiten_pkey
+INDEX|contract_signaleringen|contract_signaleringen_contract_type_uniek
 INDEX|contract_signaleringen|contract_signaleringen_pkey
 INDEX|cqo_bevindingen|cqo_bevindingen_pkey
 INDEX|cqo_runs|cqo_runs_pkey
@@ -754,9 +755,11 @@ KOLOM|app_instellingen|support_telefoon|text|YES|
 KOLOM|app_instellingen|support_website|text|YES|
 KOLOM|arbeidsovereenkomsten|aangemaakt_door_id|integer|YES|
 KOLOM|arbeidsovereenkomsten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|arbeidsovereenkomsten|aanzegtermijn|text|YES|
 KOLOM|arbeidsovereenkomsten|arbeidsduur_per_week|real|YES|
 KOLOM|arbeidsovereenkomsten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|arbeidsovereenkomsten|cao|text|YES|
+KOLOM|arbeidsovereenkomsten|concurrentiebeding|boolean|YES|
 KOLOM|arbeidsovereenkomsten|contracttype|text|NO|'bepaalde_tijd'::text
 KOLOM|arbeidsovereenkomsten|eind_datum|text|YES|
 KOLOM|arbeidsovereenkomsten|functie_id|integer|YES|
@@ -769,10 +772,16 @@ KOLOM|arbeidsovereenkomsten|ondertekend_door_hr_id|integer|YES|
 KOLOM|arbeidsovereenkomsten|ondertekend_door_hr_op|text|YES|
 KOLOM|arbeidsovereenkomsten|ondertekend_door_medewerker_op|text|YES|
 KOLOM|arbeidsovereenkomsten|ondertekening_vereist|boolean|NO|false
+KOLOM|arbeidsovereenkomsten|opzegtermijn|text|YES|
 KOLOM|arbeidsovereenkomsten|proeftijd_dagen|integer|YES|
+KOLOM|arbeidsovereenkomsten|reiskostenvergoeding|text|YES|
+KOLOM|arbeidsovereenkomsten|relatiebeding|boolean|YES|
 KOLOM|arbeidsovereenkomsten|salaris_bruto|real|YES|
+KOLOM|arbeidsovereenkomsten|salaris_eenheid|text|YES|
 KOLOM|arbeidsovereenkomsten|start_datum|text|NO|
 KOLOM|arbeidsovereenkomsten|status|text|NO|'actief'::text
+KOLOM|arbeidsovereenkomsten|uren_max_per_week|real|YES|
+KOLOM|arbeidsovereenkomsten|uren_min_per_week|real|YES|
 KOLOM|arbeidsovereenkomsten|voorgaand_contract_id|integer|YES|
 KOLOM|arbeidsovereenkomsten|werkgever_id|integer|YES|
 KOLOM|artikelen|aangemaakt_op|timestamp without time zone|NO|now()

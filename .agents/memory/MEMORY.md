@@ -156,3 +156,4 @@
 - [Social-mediamodule (SOCIAL_01)](social-module.md) — kanaaleisen server-side fail-closed (plannen=422+redenen); publicatiemotor nooit stil (mislukt/concept ⇒ werkbak-taak); adapters=stubs tot fase 3-OAuth; koppelingen-API token-vrij.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/); archiver v8=named ZipArchive.
+- [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.

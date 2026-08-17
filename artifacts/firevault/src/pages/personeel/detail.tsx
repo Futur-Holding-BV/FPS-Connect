@@ -126,19 +126,24 @@ interface ContractAiVeld {
   vindplaats: { pagina: number | null; citaat: string } | null;
 }
 const CONTRACT_AI_VELD_LABELS: Array<[string, string]> = [
+  ["werkmaatschappij", "Werkmaatschappij"],
+  ["werknemer_naam", "Naam werknemer"],
   ["functie", "Functie"],
   ["datum_in_dienst", "Datum in dienst"],
   ["contract_type", "Contracttype"],
   ["einddatum", "Einddatum"],
   ["proeftijd", "Proeftijd"],
   ["uren_per_week", "Uren per week"],
+  ["uren_min_per_week", "Uren per week (min)"],
+  ["uren_max_per_week", "Uren per week (max)"],
   ["salaris", "Salaris"],
-  ["salaris_periodiciteit", "Salarisperiodiciteit"],
+  ["salaris_eenheid", "Salariseenheid"],
   ["cao", "CAO"],
   ["opzegtermijn", "Opzegtermijn"],
+  ["aanzegtermijn", "Aanzegtermijn"],
+  ["reiskostenvergoeding", "Reiskostenvergoeding"],
   ["concurrentiebeding", "Concurrentiebeding"],
   ["relatiebeding", "Relatiebeding"],
-  ["werkmaatschappij", "Werkmaatschappij"],
 ];
 const DIENSTVERBAND_LABELS: Record<string, string> = {
   vast: "Vaste medewerker",

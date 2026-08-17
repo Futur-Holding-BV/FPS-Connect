@@ -9,10 +9,9 @@
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
 import { Router } from "express";
 import multer from "multer";
-import { extraheerPdfTekst } from "../lib/pdfTekst";
-import { renderPdfPaginasMetStatus } from "../lib/pdfVisie";
-import { kortTekstInKopStaart, MAX_VISION_PAGINAS } from "../lib/documentIntelligence";
 import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../lib/hrm-ai-analyse";
+import { extraheerArbeidsovereenkomst, proeftijdNaarDagen } from "../services/contractExtractie";
+import { voerContractBewakingUit } from "./contract-bewaking";
 import { invalideerContext } from "../lib/aiContext/cache";
 import { haalVervalsignalen } from "../lib/verlofVervalService";
 import { zaaiVerlofPresets } from "../lib/verlofPresets";
@@ -45,6 +44,7 @@ import {
   salarisMutatiesTable,
   profielenTable,
   gebruikerProfielenTable,
+  arbeidsovereenkomstenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
@@ -4764,181 +4764,205 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res):
         .json({ error: "Contractbestand kon niet worden opgehaald uit de opslag. Controleer het document." });
     }
 
-    const isPdf =
-      (doc.contentType ?? "").includes("pdf") ||
-      doc.bestandsnaam.toLowerCase().endsWith(".pdf");
-
-    // Tekstlaag ophalen (per pagina waar mogelijk, voor vindplaats-verwijzingen).
-    let tekst = "";
-    let paginaTeksten: string[] = [];
-    let paginaAantal: number | null = null;
-    if (isPdf) {
-      try {
-        const parsed = await extraheerPdfTekst(buf);
-        tekst = parsed.tekst ?? "";
-        paginaTeksten = parsed.paginaTeksten ?? [];
-        paginaAantal = parsed.paginaAantal ?? null;
-      } catch { /* geen tekstlaag — vision hieronder */ }
-    } else {
-      tekst = buf.toString("utf-8");
-    }
-
-    // Gescand contract zonder tekstlaag: pagina's als afbeelding aanbieden
-    // (vision), inclusief de laatste pagina — daar staan de slotbepalingen
-    // en de ondertekening.
-    let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
-    if (isPdf && tekst.trim().length < 200) {
-      const nummers = Array.from(
-        { length: Math.min(paginaAantal ?? MAX_VISION_PAGINAS, MAX_VISION_PAGINAS) },
-        (_, i) => i + 1,
-      );
-      if (paginaAantal && paginaAantal > MAX_VISION_PAGINAS) nummers[nummers.length - 1] = paginaAantal;
-      const render = await renderPdfPaginasMetStatus(buf, nummers);
-      afbeeldingen = render.paginas;
-      if (afbeeldingen.length === 0 && !tekst.trim()) {
-        return void res.status(422).json({
-          error: `Contract kon niet gelezen worden: ${render.fout ?? "geen tekstlaag en paginaweergave mislukt"}. Vul de gegevens handmatig in.`,
-        });
-      }
-    }
-
-    // Bruikbaarheidsdrempel: een paar losse tekens uit een scan is geen
-    // contracttekst. Zonder bruikbare tekst én zonder paginascans → 422.
-    if (afbeeldingen.length === 0 && tekst.trim().length < 200) {
-      return void res
-        .status(422)
-        .json({ error: "Contract bevat geen (voldoende) leesbare inhoud. Controleer het bestand of vul de gegevens handmatig in." });
-    }
-
-    // Tekst met paginamarkeringen zodat de AI een vindplaats (pagina + citaat)
-    // per veld kan teruggeven; kop+staart-inkorting behoudt de bepalingen achterin.
-    const contractTekst = paginaTeksten.length > 0
-      ? paginaTeksten.map((t, i) => `--- Pagina ${i + 1} ---\n${(t ?? "").trim()}`).join("\n\n")
-      : tekst;
-
-    const VELD_SPEC = `{
-  "waarde": <de gevonden waarde, of null als het contract dit niet vermeldt>,
-  "vindplaats": { "pagina": <paginanummer of null>, "citaat": "<letterlijk kort citaat uit het contract, max 200 tekens>" } of null
-}`;
-    const prompt = `Je analyseert een Nederlands arbeidscontract. Extraheer UITSLUITEND wat er letterlijk in het contract staat — verzin niets, en gebruik null wanneer iets ontbreekt of onduidelijk is. Antwoord UITSLUITEND met een geldig JSON-object.
-
-Elk veld heeft deze vorm:
-${VELD_SPEC}
-
-Extraheer exact deze velden:
-{
-  "functie": <veld: functietitel (string)>,
-  "datum_in_dienst": <veld: datum indiensttreding als YYYY-MM-DD (string)>,
-  "contract_type": <veld: "bepaalde_tijd" of "onbepaalde_tijd" (string)>,
-  "einddatum": <veld: einddatum bij bepaalde tijd als YYYY-MM-DD (string)>,
-  "proeftijd": <veld: proeftijd zoals vermeld, bv. "1 maand" (string)>,
-  "uren_per_week": <veld: aantal uur per week (getal)>,
-  "salaris": <veld: brutosalaris als getal, zonder valutateken>,
-  "salaris_periodiciteit": <veld: "maand" | "4-weken" | "week" | "uur" | "jaar" (string)>,
-  "cao": <veld: naam van de van toepassing zijnde CAO (string)>,
-  "opzegtermijn": <veld: opzegtermijn zoals vermeld, bv. "1 maand voor werknemer, 2 maanden voor werkgever" (string)>,
-  "concurrentiebeding": <veld: "ja" of "nee" met als citaat de kernbepaling>,
-  "relatiebeding": <veld: "ja" of "nee" met als citaat de kernbepaling>,
-  "werkmaatschappij": <veld: naam van de werkgever (string)>,
-  "ai_toelichting": "korte opmerking over betrouwbaarheid/leesbaarheid of null (max 1 zin)"
-}
-
-CONTRACTTEKST${afbeeldingen.length > 0 ? " (aangevuld met paginascans hieronder — gebruik het paginanummer van de scan als vindplaats)" : ""}:
-${kortTekstInKopStaart(contractTekst, 20000, 10000) || "GEEN tekstlaag — lees de bijgevoegde paginascans."}`;
-
-    type ContentBlock =
-      | { type: "text"; text: string }
-      | { type: "image_url"; image_url: { url: string; detail: "high" } };
-    const content: ContentBlock[] = [{ type: "text", text: prompt }];
-    for (const afb of afbeeldingen) {
-      content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "high" } });
-    }
-
-    const contractResultaat = await aiGateway.chat("default", {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: [{ role: "user", content: content as any }],
-      max_tokens: 1600,
-      response_format: { type: "json_object" },
-    }, undefined, {
-      module: "personeel",
-      functie: "contractAnalyse",
+    // Gerichte extractie (wervingVoorbereiding-patroon) in de gedeelde service:
+    // elk veld met vindplaats, fail-closed — zonder vindplaats blijft het leeg.
+    const extractie = await extraheerArbeidsovereenkomst({
+      buffer: buf,
+      bestandsnaam: doc.bestandsnaam,
+      contentType: doc.contentType,
       gebruikerId: req.session.userId ?? null,
-      promptNaam: "hrm-contract-analyse",
-      promptVersie: "2.0.0",
     });
-    if (!contractResultaat.ok) {
-      return void res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
+    if (!extractie.ok) {
+      return void res.status(extractie.status).json({ error: extractie.fout });
     }
 
-    let resultaat: Record<string, unknown> = {};
-    try {
-      resultaat = JSON.parse(contractResultaat.inhoud);
-    } catch {
-      return void res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
-    }
-
-    // Harden: alleen goedgevormde velden doorlaten; lege waarde = signalering
-    // zonder waarde (HRM-conventie: geen waarde → niets om over te nemen).
-    type Vindplaats = { pagina: number | null; citaat: string } | null;
-    type ContractVeld = { waarde: string | number | null; vindplaats: Vindplaats };
-    const leesVeld = (naam: string): ContractVeld => {
-      const raw = resultaat[naam];
-      if (typeof raw !== "object" || raw === null) return { waarde: null, vindplaats: null };
-      const r = raw as Record<string, unknown>;
-      const waarde =
-        typeof r.waarde === "string" ? (r.waarde.trim() || null) :
-        typeof r.waarde === "number" && Number.isFinite(r.waarde) ? r.waarde : null;
-      let vindplaats: Vindplaats = null;
-      if (typeof r.vindplaats === "object" && r.vindplaats !== null) {
-        const v = r.vindplaats as Record<string, unknown>;
-        const citaat = typeof v.citaat === "string" ? v.citaat.trim().slice(0, 300) : "";
-        if (citaat) {
-          vindplaats = {
-            pagina: typeof v.pagina === "number" && Number.isInteger(v.pagina) && v.pagina > 0 ? v.pagina : null,
-            citaat,
-          };
-        }
-      }
-      // Fail-closed: een waarde zonder vindplaats blijft staan maar is als
-      // "zonder bewijs" herkenbaar doordat vindplaats null is.
-      return { waarde, vindplaats };
-    };
-
-    const velden = {
-      functie: leesVeld("functie"),
-      datum_in_dienst: leesVeld("datum_in_dienst"),
-      contract_type: leesVeld("contract_type"),
-      einddatum: leesVeld("einddatum"),
-      proeftijd: leesVeld("proeftijd"),
-      uren_per_week: leesVeld("uren_per_week"),
-      salaris: leesVeld("salaris"),
-      salaris_periodiciteit: leesVeld("salaris_periodiciteit"),
-      cao: leesVeld("cao"),
-      opzegtermijn: leesVeld("opzegtermijn"),
-      concurrentiebeding: leesVeld("concurrentiebeding"),
-      relatiebeding: leesVeld("relatiebeding"),
-      werkmaatschappij: leesVeld("werkmaatschappij"),
-    };
-
-    // Backward-compat topvelden vullen alléén vanuit velden mét vindplaats:
-    // een AI-waarde zonder citaat mag nooit stilzwijgend het formulier invullen.
-    const metBewijs = (veld: ContractVeld) => (veld.vindplaats ? veld.waarde : null);
-    const urenWaarde = metBewijs(velden.uren_per_week);
-    const contractType = metBewijs(velden.contract_type);
+    const { velden } = extractie;
+    const urenWaarde = velden.uren_per_week.waarde;
+    const contractType = velden.contract_type.waarde;
     return void res.json({
       // Backward-compatibel voor het aanstellingsformulier:
-      functie_naam: metBewijs(velden.functie) ?? null,
-      werkmaatschappij: metBewijs(velden.werkmaatschappij) ?? null,
-      cao: metBewijs(velden.cao) ?? null,
-      contracturen_per_week:
-        typeof urenWaarde === "number" ? urenWaarde : urenWaarde != null ? Number(urenWaarde) || null : null,
+      functie_naam: velden.functie.waarde ?? null,
+      werkmaatschappij: velden.werkmaatschappij.waarde ?? null,
+      cao: velden.cao.waarde ?? null,
+      contracturen_per_week: typeof urenWaarde === "number" ? urenWaarde : null,
       dienstverband: contractType === "onbepaalde_tijd" ? "vast" : contractType === "bepaalde_tijd" ? "tijdelijk" : null,
-      ai_toelichting: typeof resultaat.ai_toelichting === "string" ? resultaat.ai_toelichting : null,
+      ai_toelichting: extractie.ai_toelichting,
       // Gerichte contractextractie met vindplaats per veld:
       velden,
-      vision_gebruikt: afbeeldingen.length > 0,
-      paginas_geanalyseerd: afbeeldingen.length > 0 ? afbeeldingen.map((a) => a.paginaNummer) : null,
+      vision_gebruikt: extractie.vision_gebruikt,
+      paginas_geanalyseerd: extractie.paginas_geanalyseerd,
       brondocument: doc.bestandsnaam,
+      brondocument_id: doc.id,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ─── Contractvoorstel overnemen in het dienstverband ─────────────────────────
+// De gebruiker neemt het extractievoorstel met één handeling over: er wordt een
+// arbeidsovereenkomst-rij aangemaakt (nooit stil — alleen op expliciete actie).
+// Einddatum + contracttype landen daarmee in de bestaande contractbewaking.
+router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): Promise<void> => {
+  try {
+    const medId = parseId(req.params.id);
+    const [medewerker] = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, medId));
+    if (!medewerker) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const v = (typeof body.velden === "object" && body.velden !== null ? body.velden : {}) as Record<string, unknown>;
+    const str = (naam: string): string | null => {
+      const w = v[naam];
+      return typeof w === "string" && w.trim() ? w.trim() : null;
+    };
+    const num = (naam: string): number | null => {
+      const w = v[naam];
+      if (typeof w === "number" && Number.isFinite(w)) return w;
+      if (typeof w === "string" && w.trim()) {
+        const n = Number(w.replace(",", "."));
+        return Number.isFinite(n) ? n : null;
+      }
+      return null;
+    };
+    const datum = (naam: string): string | null => {
+      const w = str(naam);
+      if (!w || !/^\d{4}-\d{2}-\d{2}$/.test(w)) return null;
+      // Kalendervalidatie: 2026-02-31 is regex-geldig maar geen echte datum.
+      const d = new Date(`${w}T00:00:00Z`);
+      return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === w ? w : null;
+    };
+    const jaNee = (naam: string): boolean | null => {
+      const w = str(naam);
+      return w === "ja" ? true : w === "nee" ? false : null;
+    };
+
+    const contracttype = str("contract_type");
+    const startDatum = datum("datum_in_dienst");
+    if (!contracttype || !["bepaalde_tijd", "onbepaalde_tijd", "oproep"].includes(contracttype)) {
+      return void res.status(400).json({ error: "contract_type is verplicht (bepaalde_tijd, onbepaalde_tijd of oproep)" });
+    }
+    if (!startDatum) {
+      return void res.status(400).json({ error: "datum_in_dienst (YYYY-MM-DD) is verplicht" });
+    }
+    const eindDatum = datum("einddatum");
+    if (contracttype === "bepaalde_tijd" && !eindDatum) {
+      return void res.status(400).json({ error: "Bij bepaalde tijd is een einddatum verplicht — anders kan de contractbewaking niet bewaken" });
+    }
+    if (eindDatum && eindDatum <= startDatum) {
+      return void res.status(400).json({ error: "einddatum moet ná datum_in_dienst liggen" });
+    }
+    if (str("einddatum") && !eindDatum) {
+      return void res.status(400).json({ error: "einddatum is geen geldige datum (YYYY-MM-DD)" });
+    }
+    if (str("datum_in_dienst") && !startDatum) {
+      return void res.status(400).json({ error: "datum_in_dienst is geen geldige datum (YYYY-MM-DD)" });
+    }
+
+    // Numerieke domeingrenzen: negatief salaris of >80 uur/week is nooit geldig.
+    const salaris = num("salaris");
+    if (salaris != null && (salaris < 0 || salaris > 1_000_000)) {
+      return void res.status(400).json({ error: "salaris valt buiten het geldige bereik" });
+    }
+    const urenGeldig = (n: number | null): boolean => n == null || (n >= 0 && n <= 80);
+    const urenPerWeek = num("uren_per_week");
+    const urenMin = num("uren_min_per_week");
+    const urenMax = num("uren_max_per_week");
+    if (!urenGeldig(urenPerWeek) || !urenGeldig(urenMin) || !urenGeldig(urenMax)) {
+      return void res.status(400).json({ error: "uren per week moeten tussen 0 en 80 liggen" });
+    }
+    if (urenMin != null && urenMax != null && urenMin > urenMax) {
+      return void res.status(400).json({ error: "uren_min_per_week mag niet groter zijn dan uren_max_per_week" });
+    }
+
+    const salarisEenheid = str("salaris_eenheid");
+    const geldigeEenheden = ["maand", "4-weken", "week", "uur", "jaar"];
+
+    // Herkomst-borging: document_id moet een contractdocument van déze medewerker zijn.
+    let documentId: number | null = null;
+    if (body.document_id != null) {
+      const docId = typeof body.document_id === "number" && Number.isInteger(body.document_id) ? body.document_id : NaN;
+      if (!Number.isFinite(docId)) {
+        return void res.status(400).json({ error: "document_id is ongeldig" });
+      }
+      const [bronDoc] = await db
+        .select({ id: medewerkerDocumentenTable.id, type: medewerkerDocumentenTable.type })
+        .from(medewerkerDocumentenTable)
+        .where(and(eq(medewerkerDocumentenTable.id, docId), eq(medewerkerDocumentenTable.medewerkerId, medId)));
+      if (!bronDoc || !["contract", "arbeidscontract"].includes(bronDoc.type)) {
+        return void res.status(400).json({ error: "document_id hoort niet bij deze medewerker of is geen contractdocument" });
+      }
+      documentId = bronDoc.id;
+    }
+
+    // Werkgever-koppeling: uitgelezen werkmaatschappij herleiden naar één
+    // geregistreerde werkgever (exacte, hoofdletterongevoelige naam-match).
+    // Geen of ambigue match → geen stille gok: werkgever blijft leeg en de
+    // response meldt dit expliciet als waarschuwing.
+    const waarschuwingen: string[] = [];
+    let werkgeverId: number | null = null;
+    const wmNaam = str("werkmaatschappij");
+    if (wmNaam) {
+      const werkgevers = await db
+        .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+        .from(werkgeversTable);
+      const matches = werkgevers.filter((w) => w.naam.trim().toLowerCase() === wmNaam.toLowerCase());
+      if (matches.length === 1) werkgeverId = matches[0].id;
+      else waarschuwingen.push(`Werkmaatschappij "${wmNaam}" kon niet eenduidig aan een geregistreerde werkgever worden gekoppeld; koppel de werkgever handmatig.`);
+    }
+
+    const [rij] = await db.insert(arbeidsovereenkomstenTable).values({
+      medewerkerId: medId,
+      werkgeverId,
+      contracttype,
+      startDatum,
+      eindDatum,
+      proeftijdDagen: proeftijdNaarDagen(str("proeftijd")),
+      functieOmschrijving: str("functie"),
+      cao: str("cao"),
+      salarisBruto: salaris,
+      salarisEenheid: salarisEenheid && geldigeEenheden.includes(salarisEenheid) ? salarisEenheid : null,
+      arbeidsduurPerWeek: urenPerWeek,
+      urenMinPerWeek: urenMin,
+      urenMaxPerWeek: urenMax,
+      opzegtermijn: str("opzegtermijn"),
+      aanzegtermijn: str("aanzegtermijn"),
+      reiskostenvergoeding: str("reiskostenvergoeding"),
+      concurrentiebeding: jaNee("concurrentiebeding"),
+      relatiebeding: jaNee("relatiebeding"),
+      ingebrachtDocumentId: documentId,
+      notities: str("notities"),
+      status: "actief",
+      aangemaaktDoorId: req.session.userId ?? null,
+    }).returning();
+
+    // Activeer de bewaking direct zodat een aflopend contract meteen zichtbaar is.
+    if (eindDatum) await voerContractBewakingUit();
+    invalideerContext("medewerker", medId);
+    logAudit({
+      gebruikerId: req.session.userId ?? null,
+      gebruikerNaam: (req.session as unknown as Record<string, unknown>).gebruikerNaam as string | null ?? null,
+      ipAdres: req.ip ?? null,
+      sessieId: null,
+      module: "personeel",
+      actie: "contract-overgenomen",
+      entiteit: "arbeidsovereenkomsten",
+      entiteitId: rij.id,
+      nieuweWaarde: { medewerker_id: medId, contracttype, start_datum: startDatum, eind_datum: eindDatum },
+    });
+
+    res.status(201).json({
+      id: rij.id,
+      medewerker_id: medId,
+      contracttype: rij.contracttype,
+      start_datum: rij.startDatum,
+      eind_datum: rij.eindDatum,
+      werkgever_id: rij.werkgeverId,
+      bewaking_actief: Boolean(eindDatum),
+      waarschuwingen,
     });
   } catch (err) {
     req.log.error(err);

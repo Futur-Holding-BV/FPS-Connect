@@ -63,6 +63,9 @@ interface SlimUploadSuggestie {
   lees_probleem?: string | null;
   mag_uploaden: boolean;
   beperkingen: string[];
+  // AI-voorstellen voor personeelsdocumenten (mens bevestigt altijd zelf)
+  medewerker_voorstel?: { id: number; naam: string } | null;
+  document_type_voorstel?: string | null;
 }
 
 interface LogActieData {
@@ -413,6 +416,17 @@ function BeslisScherm({
   const [bevestigdAkkoord, setBevestigdAkkoord] = useState(false);
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
+  // AI-voorstellen (medewerker/documenttype) voorselecteren — de gebruiker
+  // ziet dit als geel AI-voorstel en kan het altijd wijzigen (nooit stil).
+  const medewerkerVoorstel = item.suggestie?.medewerker_voorstel ?? null;
+  const docTypeVoorstel = item.suggestie?.document_type_voorstel ?? null;
+  useEffect(() => {
+    if (medewerkerVoorstel) setGekozenMedewerker((v) => v || String(medewerkerVoorstel.id));
+    if (docTypeVoorstel && PERSONEEL_DOC_TYPEN.some((t) => t.value === docTypeVoorstel)) {
+      setGekozenDocType((v) => v || docTypeVoorstel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medewerkerVoorstel?.id, docTypeVoorstel]);
   const [cvBezig, setCvBezig] = useState(false);
   const [aanvraagWerkmaatschappijId, setAanvraagWerkmaatschappijId] = useState("");
   const [aanvraagGebouwId, setAanvraagGebouwId] = useState("");
@@ -774,6 +788,17 @@ function BeslisScherm({
       {effectiefeCat === "personeelsdocument" && !isCV && (
         <div className="space-y-2 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
           <p className="text-xs font-semibold text-purple-700">Opslaan in personeelsdossier</p>
+          {(medewerkerVoorstel || docTypeVoorstel) && (
+            <div className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-100/60 px-2 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">
+                AI-voorstel: {[
+                  medewerkerVoorstel ? `medewerker ${medewerkerVoorstel.naam}` : null,
+                  docTypeVoorstel ? `type ${PERSONEEL_DOC_TYPEN.find((t) => t.value === docTypeVoorstel)?.label ?? docTypeVoorstel}` : null,
+                ].filter(Boolean).join(" · ")} — controleer en pas aan waar nodig.
+              </p>
+            </div>
+          )}
           <div>
             <Label className="text-xs">Medewerker <span className="text-destructive">*</span></Label>
             <Select value={gekozenMedewerker} onValueChange={setGekozenMedewerker}>

@@ -5,6 +5,7 @@ import { logger } from "../lib/logger";
 import { db, gebruikersTable, slimUploadLogTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { classificeerDocument, DOC_CATEGORIEEN, type DocCategorie, type BewijsStap } from "../lib/documentIntelligence";
+import { zoekMedewerkerOpNaam } from "../services/contractExtractie";
 
 const router = Router();
 const upload = multer({
@@ -46,6 +47,10 @@ export interface SlimUploadSuggestie {
   // Toegangscontrole (toegevoegd door route handler op basis van sessie)
   mag_uploaden: boolean;
   beperkingen: string[];
+  // Voorstellen voor personeelsdocumenten (AI stelt voor, mens bevestigt):
+  // deterministische naam-match op de gelezen werknemersnaam; bij twijfel null.
+  medewerker_voorstel: { id: number; naam: string } | null;
+  document_type_voorstel: string | null;
 }
 
 // ── Bestand classificeren (gedeelde Document Intelligence-engine) ────────────
@@ -90,7 +95,42 @@ async function classificeerBestand(
     lees_probleem: analyse.lees_probleem,
     mag_uploaden: true,
     beperkingen: [],
+    medewerker_voorstel: null,
+    document_type_voorstel: null,
   };
+}
+
+// ── Personeelsvoorstellen (medewerker + documenttype) ────────────────────────
+// Op basis van de gelezen werknemersnaam wordt deterministisch één medewerker
+// voorgesteld (bij 0 of >1 kandidaten: geen voorstel). Het documenttype volgt
+// uit het herkende subtype. De gebruiker bevestigt altijd zelf.
+
+const SUBTYPE_NAAR_DOC_TYPE: Record<string, string> = {
+  cv: "cv",
+  arbeidscontract: "arbeidscontract",
+  arbeidsovereenkomst: "arbeidscontract",
+};
+
+async function verrijkMetPersoneelVoorstellen(
+  s: SlimUploadSuggestie,
+  magPersoneelLezen: boolean,
+): Promise<SlimUploadSuggestie> {
+  if (s.categorie !== "personeelsdocument") return s;
+  // Autorisatie: medewerker-identiteit (id+naam) alleen teruggeven aan gebruikers
+  // met leesrecht op Personeel — anders lekt een upload de personeelslijst.
+  if (!magPersoneelLezen) return s;
+  const documentTypeVoorstel = s.subtype ? (SUBTYPE_NAAR_DOC_TYPE[s.subtype] ?? null) : null;
+  const gevondenNaam =
+    s.gevonden_gegevens?.naam_medewerker ??
+    s.gevonden_gegevens?.naam ??
+    null;
+  let medewerkerVoorstel: { id: number; naam: string } | null = null;
+  try {
+    medewerkerVoorstel = await zoekMedewerkerOpNaam(gevondenNaam);
+  } catch (err) {
+    logger.warn(err, "slim-upload: medewerker-match mislukt (voorstel overgeslagen)");
+  }
+  return { ...s, medewerker_voorstel: medewerkerVoorstel, document_type_voorstel: documentTypeVoorstel };
 }
 
 // ── Permissiecheck helper ─────────────────────────────────────────────────────
@@ -204,8 +244,10 @@ router.post(
         isHoofdBeheerder = info.rol === "hoofdbeheerder";
       }
 
-      const verrijkteResultaten = resultaten.map((s) =>
-        verrijkMetBevoegdheden(s, bevoegdheden, isHoofdBeheerder),
+      const verrijkteResultaten = await Promise.all(
+        resultaten
+          .map((s) => verrijkMetBevoegdheden(s, bevoegdheden, isHoofdBeheerder))
+          .map((s) => verrijkMetPersoneelVoorstellen(s, isHoofdBeheerder || (bevoegdheden.personeel ?? 0) >= 1)),
       );
 
       for (const [i, s] of verrijkteResultaten.entries()) {

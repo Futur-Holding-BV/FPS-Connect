@@ -353,6 +353,7 @@ REGELS:
    - aanvraag: organisatie (klant), locatie, projectnaam
    - testrapport/eta/dop/certificaat: organisatie (fabrikant), productnaam, normen, jaar
    - personeelsdocument (CV): document_subtype="cv", naam_medewerker, gewenste_functie (GEEN BSN/salaris)
+   - personeelsdocument (arbeidsovereenkomst/arbeidscontract): document_subtype="arbeidscontract", naam_medewerker (de werknemer), organisatie (de werkgever) (GEEN BSN/salaris)
    - verzekering: organisatie (verzekeraar), polisnummer, jaar
    - snagstream: organisatie (opdrachtgever), locatie, jaar
 5. Bij "onbekend": geef 3 zinvolle alternatieven.
@@ -911,6 +912,23 @@ export async function classificeerDocument(input: {
         resultaat: "cv",
         detail: "CV-kenmerken in tekst/bestandsnaam (vangnet: AI gaf geen subtype)",
       });
+    } else {
+      // Zelfde vangnet voor arbeidscontracten: de gerichte contract-flow
+      // (medewerker- en documenttype-voorstel) hangt op dit subtype.
+      const isContract =
+        tekstLower.includes("arbeidsovereenkomst") ||
+        tekstLower.includes("arbeidscontract") ||
+        naamLower.includes("arbeidsovereenkomst") ||
+        naamLower.includes("arbeidscontract") ||
+        (tekstLower.includes("werkgever") && tekstLower.includes("werknemer") && tekstLower.includes("in dienst"));
+      if (isContract) {
+        subtype = "arbeidscontract";
+        bewijs.push({
+          stap: "subtype_afgeleid",
+          resultaat: "arbeidscontract",
+          detail: "Arbeidscontract-kenmerken in tekst/bestandsnaam (vangnet: AI gaf geen subtype)",
+        });
+      }
     }
   }
   // Deterministisch vangnet voor geconsolideerde jaarrekeningen: typo-tolerante

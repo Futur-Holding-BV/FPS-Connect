@@ -119,15 +119,17 @@ export async function voerContractBewakingUit(): Promise<number> {
             ? `Contract van ${row.medewerkerNaam} is verlopen (einddatum ${contract.eindDatum}).`
             : `Contract van ${row.medewerkerNaam} verloopt over ${dagen} dag(en) (${contract.eindDatum}).`;
 
-        await db.insert(contractSignaleringenTable).values({
+        // onConflictDoNothing + unieke index (contract_id, type): race-vrij bij
+        // gelijktijdige bewakingsruns (bv. twee contract-overnames tegelijk).
+        const ingevoegd = await db.insert(contractSignaleringenTable).values({
           contractId: contract.id,
           medewerkerId: contract.medewerkerId,
           type: d.type,
           ernst: d.ernst,
           boodschap,
           status: "nieuw",
-        });
-        aangemaakt++;
+        }).onConflictDoNothing().returning({ id: contractSignaleringenTable.id });
+        if (ingevoegd.length > 0) aangemaakt++;
       }
     }
 
@@ -273,7 +275,15 @@ function mapContract(r: { c: typeof arbeidsovereenkomstenTable.$inferSelect; naa
     dagen_tot_einde: r.c.eindDatum ? dagenTot(r.c.eindDatum) : null,
     cao: r.c.cao,
     salaris_bruto: r.c.salarisBruto,
+    salaris_eenheid: r.c.salarisEenheid,
     arbeidsduur_per_week: r.c.arbeidsduurPerWeek,
+    uren_min_per_week: r.c.urenMinPerWeek,
+    uren_max_per_week: r.c.urenMaxPerWeek,
+    opzegtermijn: r.c.opzegtermijn,
+    aanzegtermijn: r.c.aanzegtermijn,
+    reiskostenvergoeding: r.c.reiskostenvergoeding,
+    concurrentiebeding: r.c.concurrentiebeding,
+    relatiebeding: r.c.relatiebeding,
     status: r.c.status,
     ondertekening_vereist: r.c.ondertekeningVereist,
     ondertekend_door_medewerker_op: r.c.ondertekendDoorMedewerkerOp,
@@ -311,7 +321,15 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, re
     proeftijd_dagen: r.c.proeftijdDagen,
     cao: r.c.cao,
     salaris_bruto: r.c.salarisBruto,
+    salaris_eenheid: r.c.salarisEenheid,
     arbeidsduur_per_week: r.c.arbeidsduurPerWeek,
+    uren_min_per_week: r.c.urenMinPerWeek,
+    uren_max_per_week: r.c.urenMaxPerWeek,
+    opzegtermijn: r.c.opzegtermijn,
+    aanzegtermijn: r.c.aanzegtermijn,
+    reiskostenvergoeding: r.c.reiskostenvergoeding,
+    concurrentiebeding: r.c.concurrentiebeding,
+    relatiebeding: r.c.relatiebeding,
     status: r.c.status,
     voorgaand_contract_id: r.c.voorgaandContractId,
     ondertekening_vereist: r.c.ondertekeningVereist,
@@ -329,7 +347,7 @@ router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (re
   const medewerkerId = parseInt(String(req.params.medewerkerId));
   if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
-  const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, arbeidsduur_per_week, voorgaand_contract_id, ondertekening_vereist, notities } = req.body;
+  const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, salaris_eenheid, arbeidsduur_per_week, uren_min_per_week, uren_max_per_week, opzegtermijn, aanzegtermijn, reiskostenvergoeding, concurrentiebeding, relatiebeding, voorgaand_contract_id, ondertekening_vereist, notities } = req.body;
 
   if (!contracttype || !start_datum) return void res.status(400).json({ error: "contracttype en start_datum zijn verplicht" });
 
@@ -344,7 +362,15 @@ router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (re
     functieOmschrijving: functie_omschrijving ?? null,
     cao: cao ?? null,
     salarisBruto: salaris_bruto ?? null,
+    salarisEenheid: salaris_eenheid ?? null,
     arbeidsduurPerWeek: arbeidsduur_per_week ?? null,
+    urenMinPerWeek: uren_min_per_week ?? null,
+    urenMaxPerWeek: uren_max_per_week ?? null,
+    opzegtermijn: opzegtermijn ?? null,
+    aanzegtermijn: aanzegtermijn ?? null,
+    reiskostenvergoeding: reiskostenvergoeding ?? null,
+    concurrentiebeding: concurrentiebeding ?? null,
+    relatiebeding: relatiebeding ?? null,
     voorgaandContractId: voorgaand_contract_id ?? null,
     ondertekeningVereist: ondertekening_vereist ?? false,
     notities: notities ?? null,
@@ -363,7 +389,7 @@ router.patch("/contract-bewaking/:id", schrijven, async (req, res): Promise<void
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
-  const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, arbeidsduur_per_week, status, ondertekening_vereist, ondertekend_door_medewerker_op, ondertekend_door_hr_op, notities } = req.body;
+  const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, salaris_eenheid, arbeidsduur_per_week, uren_min_per_week, uren_max_per_week, opzegtermijn, aanzegtermijn, reiskostenvergoeding, concurrentiebeding, relatiebeding, status, ondertekening_vereist, ondertekend_door_medewerker_op, ondertekend_door_hr_op, notities } = req.body;
 
   await db.update(arbeidsovereenkomstenTable).set({
     ...(contracttype !== undefined && { contracttype }),
@@ -375,7 +401,15 @@ router.patch("/contract-bewaking/:id", schrijven, async (req, res): Promise<void
     ...(functie_omschrijving !== undefined && { functieOmschrijving: functie_omschrijving }),
     ...(cao !== undefined && { cao }),
     ...(salaris_bruto !== undefined && { salarisBruto: salaris_bruto }),
+    ...(salaris_eenheid !== undefined && { salarisEenheid: salaris_eenheid }),
     ...(arbeidsduur_per_week !== undefined && { arbeidsduurPerWeek: arbeidsduur_per_week }),
+    ...(uren_min_per_week !== undefined && { urenMinPerWeek: uren_min_per_week }),
+    ...(uren_max_per_week !== undefined && { urenMaxPerWeek: uren_max_per_week }),
+    ...(opzegtermijn !== undefined && { opzegtermijn }),
+    ...(aanzegtermijn !== undefined && { aanzegtermijn }),
+    ...(reiskostenvergoeding !== undefined && { reiskostenvergoeding }),
+    ...(concurrentiebeding !== undefined && { concurrentiebeding }),
+    ...(relatiebeding !== undefined && { relatiebeding }),
     ...(status !== undefined && { status }),
     ...(ondertekening_vereist !== undefined && { ondertekeningVereist: ondertekening_vereist }),
     ...(ondertekend_door_medewerker_op !== undefined && { ondertekendDoorMedewerkerOp: ondertekend_door_medewerker_op }),
