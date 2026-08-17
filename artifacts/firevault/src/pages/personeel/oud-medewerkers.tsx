@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useRol } from "@/hooks/use-rol";
+import { useRol } from "@/context/rol-context";
 import { UserX, Search, Lock } from "lucide-react";
 import { Link } from "wouter";
 
