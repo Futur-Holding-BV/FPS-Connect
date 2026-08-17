@@ -215,17 +215,27 @@ const TESTDOMEINEN = [
   "example.org",
   "example.net",
   "test.local",
+  "fps.local", // e2e-accounts (e2e-web@fps.local e.d.) — onbestelbaar
+  // Fixture-domeinen uit e2e-/bewijsscripts — bestaan niet, leveren bounces op.
+  "fps-test.nl",
+  "e2e-aanvraag-test.nl",
+  "voorbeeld-test.nl",
+  "garage-jansen-e2e-onbestaand.nl",
+  "test.fpsbrandpreventie.nl",
 ];
 
 export function isTestAdres(email: string): boolean {
   const domein = email.split("@")[1]?.toLowerCase().trim() ?? "";
   return (
-    TESTDOMEINEN.includes(domein) ||
+    // Exacte match óf elk subdomein van een testdomein (bv. mail.fps.local).
+    TESTDOMEINEN.some((d) => domein === d || domein.endsWith(`.${d}`)) ||
     domein.startsWith("example.") ||
     domein.startsWith("voorbeeld.") ||
     domein.endsWith(".invalid") ||
     domein.endsWith(".example") ||
-    domein.endsWith(".test")
+    domein.endsWith(".test") ||
+    // .local is nooit een echt bezorgbaar internetdomein (mDNS/RFC 6762).
+    domein.endsWith(".local") || domein === "local"
   );
 }
 

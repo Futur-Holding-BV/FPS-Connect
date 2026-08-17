@@ -1,3 +1,7 @@
+## 2026-08-17 — Onbestelbaar-mails naar testadressen gestopt (fps.local e.a.)
+
+De app mailde naar e2e-/bewijsaccounts op fps.local; dat domein ontbrak in de TESTDOMEINEN-lijst (services/email.ts). Toegevoegd: fps.local plus de fixture-domeinen uit de bewijsscripts (fps-test.nl, e2e-aanvraag-test.nl, voorbeeld-test.nl, garage-jansen-e2e-onbestaand.nl, test.fpsbrandpreventie.nl). isTestAdres dekt nu ook élk subdomein van een testdomein én alle .local-adressen af (mDNS, nooit bezorgbaar). Vastzittende wachtrij-items naar fps.local (7 wachtend/mislukt, dev) verwijderd zodat de herhalingen stoppen. Niet geblokkeerd (bewust): krudersweda.nl uit een bewijsscript — mogelijk het echte domein van de accountant; graag bevestigen.
+
 ## 2026-08-17 — Bedrijfsgegevens: scherm ververst nu wél na opslaan (boekhouder-gegevens)
 
 Opslaan van de boekhouder-/bedrijfsgegevens werkte in de database al (bewezen via PATCH-test), maar het scherm ververste met een verkeerde cache-sleutel (`["listWerkgevers"]` i.p.v. de gegenereerde `getListWerkgeversQueryKey()`), waardoor de oude waarden bleven staan en het leek alsof opslaan mislukte. Sleutel gecorrigeerd in organisatie/bedrijfsgegevens.tsx; dit was de enige plek met deze verkeerde sleutel.
