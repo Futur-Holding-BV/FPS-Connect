@@ -26,12 +26,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
-import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer, Archive } from "lucide-react";
+import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer, Archive, Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
+import { OfferteAanvraagWizard } from "@/components/offerte-aanvraag-wizard";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
@@ -344,6 +346,10 @@ export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
   const [search, setSearch] = useVoorkeur<string>("gebouwen_zoek", "");
+  const [aanvraagOpen, setAanvraagOpen] = useState(false);
+  // Zelfde beleidsbron als POST /inbox/offerte-aanvraag: crm-schrijfrecht (niveau 2).
+  const { heeftNiveau } = useBevoegdheid();
+  const magAanvraagVerwerken = heeftNiveau("crm", 2);
   const [partijType, setPartijType] = useVoorkeur<string>("gebouwen_partij_type", ALLE);
   const [partijNaam, setPartijNaam] = useVoorkeur<string>("gebouwen_partij_naam", ALLE);
   const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");
@@ -425,9 +431,16 @@ export default function Gebouwen() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {magAanvraagVerwerken && (
+            <Button variant="outline" onClick={() => setAanvraagOpen(true)} data-testid="knop-nieuwe-aanvraag">
+              <Mail className="h-4 w-4" /> Nieuwe aanvraag (e-mail)
+            </Button>
+          )}
           {isBeheerder && <GebouwAanmakenDialog />}
         </div>
       </div>
+
+      <OfferteAanvraagWizard open={aanvraagOpen} onOpenChange={setAanvraagOpen} />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <Select

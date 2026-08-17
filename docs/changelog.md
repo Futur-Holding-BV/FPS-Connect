@@ -1,3 +1,8 @@
+## 2026-08-17 — Offerte-aanvraag (e-mail) verplaatst van Offertes naar Projecten
+
+- De knop "Offerte-aanvraag (e-mail)" stond op de Offertes-pagina; een aanvraag maakt echter een nieuw project (gebouw + offerte + opname) aan en hoort dus bij Projecten. De knop heet nu "Nieuwe aanvraag (e-mail)" en staat op het projectenoverzicht naast "Nieuw gebouw" (alleen beheerders); de wizard zelf is ongewijzigd.
+- De knop op de Offertes-pagina is verwijderd.
+
 ## 2026-08-17 — Factuurafdruk: ketenkenmerk erop, betalingskenmerk herleidbaar, geen afdruk zonder fiscaal nummer
 
 - Het ketenkenmerk (bv. O405/F002) staat nu als "Ons kenmerk" op de factuurafdruk naast het fiscale factuurnummer. Het fiscale nummer alleen is niet herleidbaar: de drie BV's hebben elk een eigen reeks die bij hetzelfde getal begint; het ketenkenmerk hangt via de offerte aan gebouw en BV.
