@@ -3605,6 +3605,11 @@ Bewijs: nieuwe test "bulk: alle titels correct meegestuurd bij meerdere planning
 Het handmatig ophogen van `fps-connect-vN` in `artifacts/firevault/public/sw.js` is niet meer nodig. Een nieuwe `sw-versie` Vite-plugin (in `vite.config.ts`) vervangt tijdens elke build de placeholder `__SW_VERSIE__` in de serviceworker door een hash (12 tekens) van de gebouwde bundel-bestandsnamen (die zelf al content-hashes bevatten). Elke release krijgt dus automatisch een nieuwe cachenaam; identieke builds houden dezelfde naam (geen onnodige cache-churn). Bij activatie ruimt de serviceworker alle oude caches op, en dankzij `skipWaiting`/`clients.claim` neemt de nieuwe worker direct over. In dev (waar de placeholder blijft staan) valt de cachenaam terug op `fps-connect-dev`. De plugin faalt de build hard als `dist/public/sw.js` ontbreekt of de placeholder niet gevonden wordt, zodat dit mechanisme nooit stil kan wegvallen.
 
 
+## 2026-08-16 — Bewijs: escalaties aantoonbaar verstuurd bij verlopen goedkeuringsaanvraag
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Nieuw geautomatiseerd bewijsscript voor de goedkeuringsbewaking: het dient een aanvraag in onder een beleidsregel met volledige escalatieconfiguratie, zet de indieningstijd kunstmatig 10 uur terug, triggert de bewaking via POST /goedkeuring/bewaking/uitvoeren en bewijst einde-tot-einde dat: alle vier escalatie-rijen (herinnering, escalatie_1, escalatie_2, max_doorlooptijd) in goedkeuring_escalaties ontstaan; de bijbehorende e-mails aantoonbaar klaarstaan in de mail-wachtrij (3 aan de aangewezen goedkeurder, de max-doorlooptijd-mail aan de hoofdbeheerder); de tijdlijn (workflow_transitie_log) de stappen logt; het dashboard de escalaties teruggeeft en de "Kritiek"-badge verschijnt na escalatie_2; en een tweede bewakingsrun géén dubbele escalaties aanmaakt (dedupe). Testdata wordt volledig opgeruimd. Bewijs: scripts/src/bewijs-task676-goedkeuring-escalaties.ts (19/19 groen), ook draaibaar via pnpm --filter @workspace/scripts run bewijs-task676-escalaties.
 ## 2026-08-16 — Automatische bewaking: nette uitleg bij uren schrijven zonder projectenrecht
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
