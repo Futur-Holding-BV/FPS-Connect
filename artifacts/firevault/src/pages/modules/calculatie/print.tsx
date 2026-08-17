@@ -3,6 +3,7 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { somRegelBedragen, teltMeeRegel } from "@workspace/calculatie";
 
 type PrintData = {
   header: {
@@ -118,8 +119,8 @@ export default function ModulesCalculatiePrint() {
   }
 
   const { header, regels, totalen, fie } = data;
-  // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart.
-  const teltMee = (r: { soort?: string }) => (r.soort ?? "regel") === "regel" || (r.soort ?? "regel") === "materiaal";
+  // CALC_KERN_01: regelsoort-semantiek en sommen uit de gedeelde rekenkern.
+  const teltMee = (r: { soort?: string }) => teltMeeRegel(r);
   const directeRegels = regels.filter((r) => !r.is_staartkosten && !r.optioneel);
   const staartRegels = regels.filter((r) => r.is_staartkosten && !r.optioneel);
   const optioneleRegels = regels.filter((r) => r.optioneel);
@@ -330,7 +331,7 @@ export default function ModulesCalculatiePrint() {
                 <tr className="border-t-2 bg-slate-50">
                   <td colSpan={8} className="px-2 py-1 text-right font-medium text-muted-foreground">Subtotaal {hoofdstuk}</td>
                   <td className="px-2 py-1 text-right font-bold tabular-nums">
-                    {formatBedrag(hRegels.filter(teltMee).reduce((s, r) => s + r.totaal, 0))}
+                    {formatBedrag(somRegelBedragen(hRegels).totaal)}
                   </td>
                 </tr>
               </tbody>
@@ -380,7 +381,7 @@ export default function ModulesCalculatiePrint() {
                 <tr className="border-t-2 bg-slate-50">
                   <td className="px-2 py-1 text-right font-medium text-muted-foreground">Optioneel subtotaal</td>
                   <td className="px-2 py-1 text-right font-bold tabular-nums">
-                    {formatBedrag(totalen.optioneel_totaal ?? optioneleRegels.filter(teltMee).reduce((s, r) => s + r.totaal, 0))}
+                    {formatBedrag(totalen.optioneel_totaal ?? somRegelBedragen(optioneleRegels, { alles: true }).totaal)}
                   </td>
                 </tr>
               </tbody>

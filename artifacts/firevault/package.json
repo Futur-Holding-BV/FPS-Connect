@@ -93,6 +93,7 @@
     "pdfjs-dist": "^6.0.227",
     "qrcode.react": "^4.2.0",
     "react-i18next": "^17.0.8",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@workspace/calculatie": "workspace:*"
   }
 }

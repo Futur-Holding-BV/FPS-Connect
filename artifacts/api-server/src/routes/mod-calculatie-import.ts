@@ -587,10 +587,12 @@ router.post("/modules/calculaties/import/:id/bevestig", aanmakenCalc, async (req
         };
         let correctieCenten = verschilCenten;
         for (let i = 0; i < 8; i++) {
+          // CALC_KERN_01: de kern rekent uit hoeveelheid×tarief (negeert een los
+          // 'totaal'-veld) — de correctie moet dus als tarief worden aangeleverd.
           const proef = berekenTotalen([
             ...basisRegels,
             {
-              hoeveelheid: 1, tarief: 0, muPerEenheid: 0, arbeidsTarief: 0,
+              hoeveelheid: 1, tarief: centenNaarEuroGetal(correctieCenten), muPerEenheid: 0, arbeidsTarief: 0,
               onderaannemingBedrag: 0, isStaartkosten: true, isBouwplaatskosten: false,
               totaal: centenNaarEuroGetal(correctieCenten),
             },
@@ -605,7 +607,9 @@ router.post("/modules/calculaties/import/:id/bevestig", aanmakenCalc, async (req
           omschrijving: `Correctie ENK-import: ENK-totaal aangehouden (€ ${centenNaarEuroTekst(enkCenten)})`,
           eenheid: "post",
           hoeveelheid: 1,
-          tarief: 0,
+          // CALC_KERN_01: tarief draagt het correctiebedrag zodat de rekenkern
+          // (die uit hoeveelheid×tarief rekent) de regel meetelt.
+          tarief: centenNaarEuroGetal(correctieCenten),
           totaal: centenNaarEuroGetal(correctieCenten),
           volgorde: volgorde++,
           isStaartkosten: true,

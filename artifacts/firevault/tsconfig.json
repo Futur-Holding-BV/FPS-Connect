@@ -22,6 +22,9 @@
     },
     {
       "path": "../../lib/ontwerp"
+    },
+    {
+      "path": "../../lib/calculatie"
     }
   ]
 }

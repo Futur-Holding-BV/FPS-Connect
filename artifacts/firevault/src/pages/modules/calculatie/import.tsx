@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { berekenTotalen as kernBerekenTotalen } from "@workspace/calculatie";
 import { useLocation } from "wouter";
 import {
   useAnalyseEnkImport,
@@ -54,8 +55,9 @@ function formatGrootte(bytes: number): string {
 }
 
 /**
- * Client-side spiegel van berekenTotalen (api-server/routes/mod-calculatie.ts)
- * + berekenConnectCenten (mod-calculatie-import.ts), zodat de totaalvergelijking
+ * CALC_KERN_01: de Connect-vergelijking rekent via de gedeelde rekenkern —
+ * exact dezelfde code als de server (mod-calculatie-import.ts), met dezelfde
+ * regelmapping (tarief = totaal/hv ongerond), zodat de totaalvergelijking
  * live meebeweegt met de gekozen verwerking en opslagen.
  */
 function berekenConnectCenten(
@@ -63,39 +65,33 @@ function berekenConnectCenten(
   verwerking: "inclusief" | "bovenop",
   opslagen: EnkImportOpslagen,
 ): number {
-  const rnd = (n: number) => Math.round(n * 100) / 100;
   const regels = analyse.hoofdstukken
     .flatMap((h) => h.regels)
-    .filter((r) => r.totaal_centen !== 0);
-
-  const directe = regels.filter((r) => !r.is_bouwplaatskosten);
-  const bouwplaats = regels.filter((r) => r.is_bouwplaatskosten);
-
-  const regelTotaal = (r: { totaal_centen: number; hoeveelheid: number }) => {
-    const totaalEuro = r.totaal_centen / 100;
-    const effHv = r.hoeveelheid > 0 ? r.hoeveelheid : 1;
-    // hv * (totaal/hv) — identiek aan de servermapping (tarief = totaal/hv ongerond)
-    return effHv * (totaalEuro / effHv);
-  };
-
-  const matSubtotaal = rnd(directe.reduce((s, r) => s + regelTotaal(r), 0));
-  const bouwplaatsSubtotaal = rnd(bouwplaats.reduce((s, r) => s + r.totaal_centen / 100, 0));
+    .filter((r) => r.totaal_centen !== 0)
+    .map((r) => {
+      const totaalEuro = r.totaal_centen / 100;
+      const effHv = r.hoeveelheid > 0 ? r.hoeveelheid : 1;
+      return {
+        hoeveelheid: effHv,
+        tarief: totaalEuro / effHv,
+        is_bouwplaatskosten: r.is_bouwplaatskosten,
+      };
+    });
 
   const ops = verwerking === "inclusief"
     ? { materiaal: 0, arbeid: 0, ak: 0, abk: 0, risico: 0, winst: 0, korting: 0 }
     : opslagen;
 
-  const matOpslagBedrag = rnd(matSubtotaal * ops.materiaal / 100);
-  const subtotaal = rnd(matSubtotaal + matOpslagBedrag + bouwplaatsSubtotaal);
-
-  const akBedrag = rnd(subtotaal * ops.ak / 100);
-  const abkBedrag = rnd(subtotaal * ops.abk / 100);
-  const risicoBedrag = rnd(subtotaal * ops.risico / 100);
-  const basisWinst = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
-  const winstBedrag = rnd(basisWinst * ops.winst / 100);
-  const aanneemsom = rnd(basisWinst + winstBedrag);
-  const kortingBedrag = rnd(aanneemsom * ops.korting / 100);
-  return Math.round(rnd(aanneemsom - kortingBedrag) * 100);
+  const t = kernBerekenTotalen(regels, {
+    opslag_materiaal: ops.materiaal,
+    opslag_arbeid: ops.arbeid,
+    opslag_ak: ops.ak,
+    opslag_abk: ops.abk,
+    opslag_risico: ops.risico,
+    opslag_winst: ops.winst,
+    korting: ops.korting,
+  });
+  return Math.round(t.totaal_na_opslagen * 100);
 }
 
 const OPSLAG_VELDEN: Array<{ sleutel: keyof EnkImportOpslagen; label: string }> = [

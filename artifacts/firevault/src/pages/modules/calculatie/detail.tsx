@@ -1,4 +1,12 @@
 import { KenmerkKop } from "@/components/kenmerk-kop";
+// CALC_KERN_01: het scherm rekent niets meer zelf — alle bedragen komen uit
+// dezelfde gedeelde rekenkern als de server.
+import {
+  berekenTotalen as kernBerekenTotalen,
+  somRegelBedragen,
+  teltMeeRegel,
+  rond2 as rnd,
+} from "@workspace/calculatie";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import {
@@ -351,13 +359,7 @@ function fmt2(n: number) {
   }).format(n);
 }
 
-function rnd(n: number) { return Math.round(n * 100) / 100; }
-
-// ADVIES_01 §6: alleen 'regel' en 'materiaal' tellen mee in het totaal.
-const MEETELLENDE_SOORTEN = new Set(["regel", "materiaal"]);
-function teltMeeRegel(r: { soort?: string | null }): boolean {
-  return MEETELLENDE_SOORTEN.has(r.soort ?? "regel");
-}
+// CALC_KERN_01: rnd en teltMeeRegel komen uit @workspace/calculatie (zie imports).
 
 // Ouderkeuze voor een materiaalregel: de gewone werkregels binnen dezelfde groep.
 function ouderOptiesVoor(siblings: RegelRow[], eigenId: number): Array<{ id: number; omschrijving: string }> {
@@ -1369,11 +1371,13 @@ function DirectieView({
       <table className="w-full text-sm">
         <tbody className="divide-y">
           {groepenPerCat.map(({ cat, label, regels }) => {
-            const mu  = regels.reduce((s, r) => s + (r.mu_totaal ?? 0), 0);
-            const mat = regels.reduce((s, r) => s + (r.materiaal_totaal ?? 0), 0);
-            const arb = regels.reduce((s, r) => s + (r.arbeidsloon ?? 0), 0);
-            const ond = regels.reduce((s, r) => s + (r.onderaanneming_bedrag ?? 0), 0);
-            const tot = regels.reduce((s, r) => s + r.totaal, 0);
+            // CALC_KERN_01: sommen via de gedeelde rekenkern, niet zelf optellen.
+            const som = somRegelBedragen(regels);
+            const mu  = som.mu_totaal;
+            const mat = som.materiaal_totaal;
+            const arb = som.arbeidsloon;
+            const ond = som.onderaanneming_bedrag;
+            const tot = som.totaal;
             return (
               <tr key={cat} className="hover:bg-muted/40">
                 <td className="py-2 font-medium text-foreground w-1/3">{label}</td>
@@ -1492,7 +1496,8 @@ function KlantView({ regels, totaal, totaalBtw, optioneelTotaal = 0 }: { regels:
   // optioneel telt niet mee maar wordt apart getoond.
   const zichtbaar = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten && !r.optioneel);
   const optioneleRegels = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten && r.optioneel);
-  const aangeboden = zichtbaar.filter((r) => teltMeeRegel(r)).reduce((s, r) => s + r.totaal, 0);
+  // CALC_KERN_01: aangeboden totaal via de gedeelde rekenkern.
+  const aangeboden = somRegelBedragen(zichtbaar).totaal;
   const bedragCel = (r: RegelRow) => {
     if (r.soort === "tekst" || r.soort === "kop") return <span className="text-muted-foreground/40">—</span>;
     if (r.soort === "stelpost") return <span className="tabular-nums">{formatBedrag(r.totaal)} <span className="text-[10px] text-amber-700">stelpost</span></span>;
@@ -1572,7 +1577,7 @@ function KlantView({ regels, totaal, totaalBtw, optioneelTotaal = 0 }: { regels:
               ))}
               <tr className="border-t font-semibold">
                 <td className="py-2">Optioneel subtotaal</td>
-                <td className="py-2 text-right tabular-nums">{formatBedrag(optioneelTotaal || optioneleRegels.filter(teltMeeRegel).reduce((s, r) => s + r.totaal, 0))}</td>
+                <td className="py-2 text-right tabular-nums">{formatBedrag(optioneelTotaal || somRegelBedragen(optioneleRegels.filter(teltMeeRegel), { alles: true }).totaal)}</td>
               </tr>
             </tbody>
           </table>
@@ -2601,16 +2606,6 @@ export default function ModulesCalculatieDetail() {
   const bouwplaatsRegels = regels.filter((r) => r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
   const staartRegels     = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
 
-  const directeMeetellend    = directeRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
-  const bouwplaatsMeetellend = bouwplaatsRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
-  const staartMeetellend     = staartRegels.filter(teltMeeRegel).filter((r) => !r.optioneel);
-  const optioneelSubtotaal   = rnd(regels.filter((r) => teltMeeRegel(r) && r.optioneel).reduce((s, r) => s + r.totaal, 0));
-
-  const matSubtotaal        = rnd(directeMeetellend.reduce((s, r) => s + r.materiaal_totaal, 0));
-  const arbSubtotaal        = rnd(directeMeetellend.reduce((s, r) => s + r.arbeidsloon, 0));
-  const oaSubtotaal         = rnd(directeMeetellend.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
-  const bouwplaatsSubtotaal = rnd(bouwplaatsMeetellend.reduce((s, r) => s + r.totaal, 0));
-  const staartSubtotaal     = rnd(staartMeetellend.reduce((s, r) => s + r.totaal, 0));
   const opslagMateriaal     = data.opslag_materiaal ?? 0;
   const opslagArbeid        = data.opslag_arbeid ?? 0;
   const opslagAk            = data.opslag_ak;
@@ -2621,20 +2616,40 @@ export default function ModulesCalculatieDetail() {
   const abkIsVast           = (data as any).abk_is_vast ?? false;
   const risicoIsVast        = (data as any).risico_is_vast ?? false;
   const winstIsVast         = (data as any).winst_is_vast ?? false;
-  const matOpslagBedrag     = rnd(matSubtotaal * opslagMateriaal / 100);
-  const arbOpslagBedrag     = rnd(arbSubtotaal * opslagArbeid / 100);
-  const subtotaal           = rnd(matSubtotaal + matOpslagBedrag + arbSubtotaal + arbOpslagBedrag + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal);
-  const akBedrag            = akIsVast     ? rnd(opslagAk)    : rnd(subtotaal * opslagAk / 100);
-  const abkBedrag           = abkIsVast    ? rnd(opslagAbk)   : rnd(subtotaal * opslagAbk / 100);
-  const risicoBedrag        = risicoIsVast ? rnd(opslagRisico): rnd(subtotaal * opslagRisico / 100);
-  const basisWinst          = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
-  const winstBedrag         = winstIsVast  ? rnd(opslagWinst) : rnd(basisWinst * opslagWinst / 100);
-  const aanneemsom          = rnd(basisWinst + winstBedrag);
-  const kortingBedrag       = rnd(aanneemsom * data.korting / 100);
-  const totaal              = rnd(aanneemsom - kortingBedrag);
-  const totaalBtw           = rnd(totaal * 1.21);
-  const rawKosten           = matSubtotaal + arbSubtotaal + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal;
-  const marge               = totaal > 0 ? Math.round(((totaal - rawKosten) / totaal) * 100 * 10) / 10 : 0;
+  // CALC_KERN_01: de volledige kostenopbouw komt uit de gedeelde rekenkern —
+  // exact dezelfde berekening als op de server (lijst, detail én print).
+  const kernTotalen = kernBerekenTotalen(regels, {
+    opslag_materiaal: opslagMateriaal,
+    opslag_arbeid: opslagArbeid,
+    opslag_ak: opslagAk,
+    opslag_abk: opslagAbk,
+    opslag_risico: opslagRisico,
+    opslag_winst: opslagWinst,
+    korting: data.korting,
+    ak_is_vast: akIsVast,
+    abk_is_vast: abkIsVast,
+    risico_is_vast: risicoIsVast,
+    winst_is_vast: winstIsVast,
+  });
+  const optioneelSubtotaal  = kernTotalen.optioneel_totaal;
+  const matSubtotaal        = kernTotalen.materiaal_subtotaal;
+  const arbSubtotaal        = kernTotalen.arbeid_subtotaal;
+  const oaSubtotaal         = kernTotalen.onderaanneming_subtotaal;
+  const bouwplaatsSubtotaal = kernTotalen.bouwplaats_subtotaal;
+  const staartSubtotaal     = kernTotalen.staart_subtotaal;
+  const matOpslagBedrag     = kernTotalen.materiaal_opslag_bedrag;
+  const arbOpslagBedrag     = kernTotalen.arbeid_opslag_bedrag;
+  const subtotaal           = kernTotalen.subtotaal;
+  const akBedrag            = kernTotalen.ak_bedrag;
+  const abkBedrag           = kernTotalen.abk_bedrag;
+  const risicoBedrag        = kernTotalen.risico_bedrag;
+  const basisWinst          = kernTotalen.basis_winst;
+  const winstBedrag         = kernTotalen.winst_bedrag;
+  const aanneemsom          = kernTotalen.aanneemsom;
+  const kortingBedrag       = kernTotalen.korting_bedrag;
+  const totaal              = kernTotalen.totaal_na_opslagen;
+  const totaalBtw           = kernTotalen.incl_btw;
+  const marge               = kernTotalen.marge_pct;
 
   const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
 
@@ -2667,9 +2682,11 @@ export default function ModulesCalculatieDetail() {
       .map((h) => ({ hoofdstuk: h, regels: ordenKinderenOnderOuder(eRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h)) }))
       .filter((g) => g.regels.length > 0);
     const overigeRegels = ordenKinderenOnderOuder(eRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")));
-    const totaalMat  = rnd(eRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
-    const totaalArb  = rnd(eRegels.reduce((s, r) => s + r.arbeidsloon, 0));
-    const totaalOa   = rnd(eRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
+    // CALC_KERN_01: eenheidskosten via de gedeelde rekenkern.
+    const eSom = somRegelBedragen(eRegels, { alles: true });
+    const totaalMat  = eSom.materiaal_totaal;
+    const totaalArb  = eSom.arbeidsloon;
+    const totaalOa   = eSom.onderaanneming_bedrag;
     const totaalKosten = rnd(totaalMat + totaalArb + totaalOa);
     return { eenheid: e, regels: eRegels, regelsPerHoofdstuk, overigeRegels, totaalMat, totaalArb, totaalOa, totaalKosten };
   });

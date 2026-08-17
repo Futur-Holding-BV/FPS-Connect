@@ -2961,10 +2961,10 @@ KOLOM|mod_calc_artikelen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_artikelen|categorie|text|NO|'materiaal'::text
 KOLOM|mod_calc_artikelen|eenheid|text|NO|'st'::text
 KOLOM|mod_calc_artikelen|id|integer|NO|nextval('mod_calc_artikelen_id_seq'::regclass)
-KOLOM|mod_calc_artikelen|inkoopprijs|real|NO|0
+KOLOM|mod_calc_artikelen|inkoopprijs|numeric|NO|0
 KOLOM|mod_calc_artikelen|leverancier_id|integer|YES|
 KOLOM|mod_calc_artikelen|omschrijving|text|NO|
-KOLOM|mod_calc_artikelen|verkoopprijs|real|NO|0
+KOLOM|mod_calc_artikelen|verkoopprijs|numeric|NO|0
 KOLOM|mod_calc_bronbestanden|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_bronbestanden|bestandsgrootte|integer|NO|0
 KOLOM|mod_calc_bronbestanden|bestandsnaam|text|NO|
@@ -2999,18 +2999,18 @@ KOLOM|mod_calc_headers|gebouw_id|integer|YES|
 KOLOM|mod_calc_headers|gekopieerd_van_id|integer|YES|
 KOLOM|mod_calc_headers|id|integer|NO|nextval('mod_calc_headers_id_seq'::regclass)
 KOLOM|mod_calc_headers|klant_naam|text|YES|
-KOLOM|mod_calc_headers|korting|real|NO|0
+KOLOM|mod_calc_headers|korting|numeric|NO|0
 KOLOM|mod_calc_headers|naam|text|NO|
 KOLOM|mod_calc_headers|nummer|integer|NO|nextval('seq_nummer_c'::regclass)
 KOLOM|mod_calc_headers|omschrijving|text|YES|
 KOLOM|mod_calc_headers|opmerkingen|text|YES|
 KOLOM|mod_calc_headers|opname_id|integer|YES|
-KOLOM|mod_calc_headers|opslag_abk|real|NO|10
-KOLOM|mod_calc_headers|opslag_ak|real|NO|15
-KOLOM|mod_calc_headers|opslag_arbeid|real|NO|0
-KOLOM|mod_calc_headers|opslag_materiaal|real|NO|0
-KOLOM|mod_calc_headers|opslag_risico|real|NO|5
-KOLOM|mod_calc_headers|opslag_winst|real|NO|10
+KOLOM|mod_calc_headers|opslag_abk|numeric|NO|10
+KOLOM|mod_calc_headers|opslag_ak|numeric|NO|15
+KOLOM|mod_calc_headers|opslag_arbeid|numeric|NO|0
+KOLOM|mod_calc_headers|opslag_materiaal|numeric|NO|0
+KOLOM|mod_calc_headers|opslag_risico|numeric|NO|5
+KOLOM|mod_calc_headers|opslag_winst|numeric|NO|10
 KOLOM|mod_calc_headers|project_naam|text|YES|
 KOLOM|mod_calc_headers|referentie|text|YES|
 KOLOM|mod_calc_headers|risico_is_vast|boolean|NO|false
@@ -3021,7 +3021,7 @@ KOLOM|mod_calc_headers|winst_is_vast|boolean|NO|false
 KOLOM|mod_calc_inkoop_items|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_inkoop_items|aantal|real|YES|1
 KOLOM|mod_calc_inkoop_items|artikel|text|YES|
-KOLOM|mod_calc_inkoop_items|bedrag|real|YES|
+KOLOM|mod_calc_inkoop_items|bedrag|numeric|YES|
 KOLOM|mod_calc_inkoop_items|beslisdatum|text|YES|
 KOLOM|mod_calc_inkoop_items|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_inkoop_items|calculatie_id|integer|NO|
@@ -3040,7 +3040,7 @@ KOLOM|mod_calc_inkoop_items|levertijd|text|YES|
 KOLOM|mod_calc_inkoop_items|notities|text|YES|
 KOLOM|mod_calc_inkoop_items|offerte_ontvangen|boolean|NO|false
 KOLOM|mod_calc_inkoop_items|omschrijving|text|NO|
-KOLOM|mod_calc_inkoop_items|prijs|real|YES|
+KOLOM|mod_calc_inkoop_items|prijs|numeric|YES|
 KOLOM|mod_calc_inkoop_items|reactiedatum|text|YES|
 KOLOM|mod_calc_inkoop_items|regel_id|integer|YES|
 KOLOM|mod_calc_inkoop_items|status|text|NO|'concept'::text
@@ -3064,7 +3064,7 @@ KOLOM|mod_calc_normtijden|id|integer|NO|nextval('mod_calc_normtijden_id_seq'::re
 KOLOM|mod_calc_normtijden|omschrijving|text|NO|
 KOLOM|mod_calc_normtijden|uren_per_eenheid|real|NO|0
 KOLOM|mod_calc_regels|aangemaakt_op|timestamp without time zone|NO|now()
-KOLOM|mod_calc_regels|arbeids_tarief|real|NO|0
+KOLOM|mod_calc_regels|arbeids_tarief|numeric|NO|0
 KOLOM|mod_calc_regels|artikel_id|integer|YES|
 KOLOM|mod_calc_regels|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_regels|btw_tarief|text|NO|'21'::text
@@ -3081,15 +3081,15 @@ KOLOM|mod_calc_regels|klanttekst|text|YES|
 KOLOM|mod_calc_regels|mu_per_eenheid|real|NO|0
 KOLOM|mod_calc_regels|normtijd_id|integer|YES|
 KOLOM|mod_calc_regels|omschrijving|text|NO|
-KOLOM|mod_calc_regels|onderaanneming_bedrag|real|NO|0
+KOLOM|mod_calc_regels|onderaanneming_bedrag|numeric|NO|0
 KOLOM|mod_calc_regels|opmerkingen|text|YES|
 KOLOM|mod_calc_regels|optioneel|boolean|NO|false
 KOLOM|mod_calc_regels|ouder_regel_id|integer|YES|
 KOLOM|mod_calc_regels|regelnummer|text|YES|
 KOLOM|mod_calc_regels|soort|text|NO|'regel'::text
-KOLOM|mod_calc_regels|tarief|real|NO|0
+KOLOM|mod_calc_regels|tarief|numeric|NO|0
 KOLOM|mod_calc_regels|toepassing_tekst|text|YES|
-KOLOM|mod_calc_regels|totaal|real|NO|0
+KOLOM|mod_calc_regels|totaal|numeric|NO|0
 KOLOM|mod_calc_regels|volgorde|integer|NO|0
 KOLOM|mod_calc_regels|wand_plafond|text|YES|
 KOLOM|mod_calc_tarieven|aangemaakt_op|timestamp without time zone|NO|now()
@@ -3099,7 +3099,7 @@ KOLOM|mod_calc_tarieven|categorie|text|NO|'arbeid'::text
 KOLOM|mod_calc_tarieven|eenheid|text|NO|'uur'::text
 KOLOM|mod_calc_tarieven|id|integer|NO|nextval('mod_calc_tarieven_id_seq'::regclass)
 KOLOM|mod_calc_tarieven|naam|text|NO|
-KOLOM|mod_calc_tarieven|tarief|real|NO|0
+KOLOM|mod_calc_tarieven|tarief|numeric|NO|0
 KOLOM|mod_calc_versies|aangemaakt_door_id|integer|YES|
 KOLOM|mod_calc_versies|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mod_calc_versies|calculatie_id|integer|NO|

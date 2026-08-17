@@ -36,6 +36,14 @@ import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import multer from "multer";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
+// CALC_KERN_01: dé ene rekenkern — server en scherm rekenen allebei via @workspace/calculatie.
+import {
+  berekenTotalen as kernBerekenTotalen,
+  berekenRegelBedragen,
+  teltMeeRegel,
+  rond2,
+  type KernRegel,
+} from "@workspace/calculatie";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
 import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT, CALCULATIE_PLAK_HERKEN_PROMPT, CALCULATIE_PLAK_KOPPEL_PROMPT, CALCULATIE_ADVIES_PUNTEN_PROMPT, CALCULATIE_ADVIES_KOPPEL_PROMPT } from "../lib/aiPrompts";
@@ -120,11 +128,32 @@ type RegelCalcInput = {
 
 // ADVIES_01 §3/§6: alleen 'regel' en 'materiaal' tellen mee in het totaal.
 // tekst/kop tellen nooit mee; stelpost is zichtbaar met bedrag maar telt niet mee.
-const MEETELLENDE_SOORTEN = new Set(["regel", "materiaal"]);
+// CALC_KERN_01: de regelsoort-semantiek leeft in @workspace/calculatie.
 function teltMee(r: { soort?: string | null }): boolean {
-  return MEETELLENDE_SOORTEN.has(r.soort ?? "regel");
+  return teltMeeRegel(r);
 }
 
+/** CALC_KERN_01: camelCase DB-regel → kern-invoer (snake_case). */
+function naarKernRegel(r: RegelCalcInput): KernRegel {
+  return {
+    soort: r.soort ?? "regel",
+    optioneel: r.optioneel ?? false,
+    is_staartkosten: r.isStaartkosten,
+    is_bouwplaatskosten: r.isBouwplaatskosten,
+    hoeveelheid: r.hoeveelheid,
+    tarief: r.tarief,
+    mu_per_eenheid: r.muPerEenheid,
+    arbeids_tarief: r.arbeidsTarief,
+    onderaanneming_bedrag: r.onderaannemingBedrag,
+  };
+}
+
+/**
+ * CALC_KERN_01: dunne wrapper om de gedeelde rekenkern, met de camelCase
+ * headervelden zoals de routes die aanleveren. Alle rekenwerk (regelsoorten,
+ * optioneel, opslagen incl. vaste-bedragvariant, korting, afronding) zit in
+ * @workspace/calculatie — hier wordt niets meer zelf gerekend.
+ */
 export function berekenTotalen(
   regels: RegelCalcInput[],
   header: {
@@ -141,46 +170,25 @@ export function berekenTotalen(
     winstIsVast?: boolean;
   },
 ) {
-  const rnd = (n: number) => Math.round(n * 100) / 100;
-
-  // ADVIES_01 §6: tekst/stelpost/kop tellen NOOIT mee. Alleen regel/materiaal.
-  // optioneel=true telt niet mee in het aangeboden totaal, maar wordt apart gesommeerd.
-  const meetellend = regels.filter(r => teltMee(r) && !r.optioneel);
-  const optioneleRegels = regels.filter(r => teltMee(r) && r.optioneel);
-  const optioneelTotaal = rnd(optioneleRegels.reduce((s, r) => s + (r.totaal ?? 0), 0));
-
-  const directe    = meetellend.filter(r => !r.isStaartkosten && !r.isBouwplaatskosten);
-  const bouwplaats = meetellend.filter(r => r.isBouwplaatskosten);
-  const staart     = meetellend.filter(r => r.isStaartkosten);
-
-  const matSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.tarief, 0));
-  const arbSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.muPerEenheid * r.arbeidsTarief, 0));
-  const oaSubtotaal         = rnd(directe.reduce((s, r) => s + r.onderaannemingBedrag, 0));
-  const bouwplaatsSubtotaal = rnd(bouwplaats.reduce((s, r) => s + r.totaal, 0));
-  const staartSubtotaal     = rnd(staart.reduce((s, r) => s + r.totaal, 0));
-
-  const matOpslagBedrag = rnd(matSubtotaal * header.opslagMateriaal / 100);
-  const arbOpslagBedrag = rnd(arbSubtotaal * header.opslagArbeid / 100);
-
-  const subtotaal = rnd(
-    matSubtotaal + matOpslagBedrag +
-    arbSubtotaal + arbOpslagBedrag +
-    oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
-  );
-
-  const akBedrag     = header.akIsVast     ? rnd(header.opslagAk)      : rnd(subtotaal * header.opslagAk / 100);
-  const abkBedrag    = header.abkIsVast    ? rnd(header.opslagAbk)     : rnd(subtotaal * header.opslagAbk / 100);
-  const risicoBedrag = header.risicoIsVast ? rnd(header.opslagRisico)  : rnd(subtotaal * header.opslagRisico / 100);
-  const basisWinst   = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
-  const winstBedrag  = header.winstIsVast  ? rnd(header.opslagWinst)   : rnd(basisWinst * header.opslagWinst / 100);
-
-  const aanneemsom    = rnd(basisWinst + winstBedrag);
-  const kortingBedrag = rnd(aanneemsom * header.korting / 100);
-
+  const t = kernBerekenTotalen(regels.map(naarKernRegel), {
+    opslag_materiaal: header.opslagMateriaal,
+    opslag_arbeid: header.opslagArbeid,
+    opslag_ak: header.opslagAk,
+    opslag_abk: header.opslagAbk,
+    opslag_risico: header.opslagRisico,
+    opslag_winst: header.opslagWinst,
+    korting: header.korting,
+    ak_is_vast: header.akIsVast ?? false,
+    abk_is_vast: header.abkIsVast ?? false,
+    risico_is_vast: header.risicoIsVast ?? false,
+    winst_is_vast: header.winstIsVast ?? false,
+  });
   return {
-    subtotaal,
-    totaal_na_opslagen: rnd(aanneemsom - kortingBedrag),
-    optioneel_totaal: optioneelTotaal,
+    subtotaal: t.subtotaal,
+    totaal_na_opslagen: t.totaal_na_opslagen,
+    optioneel_totaal: t.optioneel_totaal,
+    // Volledige uitsplitsing voor routes die meer nodig hebben (print-data).
+    kern: t,
   };
 }
 
@@ -248,9 +256,15 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
   const mu = (r as any).muPerEenheid ?? 0;
   const at = (r as any).arbeidsTarief ?? 0;
   const ob = (r as any).onderaannemingBedrag ?? 0;
-  const materiaalTotaal = Math.round(hv * t * 100) / 100;
-  const muTotaal        = Math.round(hv * mu * 100) / 100;
-  const arbeidsloon     = Math.round(muTotaal * at * 100) / 100;
+  // CALC_KERN_01: per-regel bedragen via de gedeelde rekenkern.
+  const bedragen = berekenRegelBedragen({
+    soort: (r as any).soort ?? "regel",
+    hoeveelheid: hv, tarief: t, mu_per_eenheid: mu, arbeids_tarief: at,
+    onderaanneming_bedrag: ob,
+  });
+  const materiaalTotaal = bedragen.materiaal_totaal;
+  const muTotaal        = bedragen.mu_totaal;
+  const arbeidsloon     = bedragen.arbeidsloon;
   return {
     id: r.id,
     calculatie_id: r.calculatieId,
@@ -262,7 +276,9 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     eenheid: r.eenheid,
     hoeveelheid: hv,
     tarief: t,
-    totaal: r.totaal,
+    // CALC_KERN_01: het getoonde regeltotaal komt uit de kern (natelbaar),
+    // niet uit de opgeslagen kolom — die kan door oude schrijfpaden afwijken.
+    totaal: bedragen.totaal,
     volgorde: r.volgorde,
     opmerkingen: r.opmerkingen,
     regelnummer: (r as any).regelnummer ?? null,
@@ -300,8 +316,7 @@ function berekenRegelTotaal(body: Record<string, unknown>, existing?: {
   // maar telt niet mee in het calculatietotaal (gefilterd in berekenTotalen).
   if (soort === "stelpost") {
     const t = body.tarief !== undefined ? Number(body.tarief) : (existing?.tarief ?? 0);
-    const totaal = Math.round(t * 100) / 100;
-    return { hv: 1, t, mu: 0, at: 0, ob: 0, totaal };
+    return { hv: 1, t, mu: 0, at: 0, ob: 0, totaal: rond2(t) };
   }
 
   const hv = body.hoeveelheid !== undefined ? Number(body.hoeveelheid) : (existing?.hoeveelheid ?? 0);
@@ -309,10 +324,11 @@ function berekenRegelTotaal(body: Record<string, unknown>, existing?: {
   const mu = body.mu_per_eenheid !== undefined ? Number(body.mu_per_eenheid) : ((existing as any)?.muPerEenheid ?? 0);
   const at = body.arbeids_tarief !== undefined ? Number(body.arbeids_tarief) : ((existing as any)?.arbeidsTarief ?? 0);
   const ob = body.onderaanneming_bedrag !== undefined ? Number(body.onderaanneming_bedrag) : ((existing as any)?.onderaannemingBedrag ?? 0);
-  const materiaalDeel = Math.round(hv * t * 100) / 100;
-  const muTotaal      = Math.round(hv * mu * 100) / 100;
-  const arbeidsloon   = Math.round(muTotaal * at * 100) / 100;
-  const totaal = Math.round((materiaalDeel + arbeidsloon + ob) * 100) / 100;
+  // CALC_KERN_01: het regeltotaal komt uit de gedeelde rekenkern.
+  const { totaal } = berekenRegelBedragen({
+    soort, hoeveelheid: hv, tarief: t, mu_per_eenheid: mu,
+    arbeids_tarief: at, onderaanneming_bedrag: ob,
+  });
   return { hv, t, mu, at, ob, totaal };
 }
 
@@ -1623,17 +1639,34 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
     const regels = meetellendeRegels.filter((r) => !r.optioneel);
     const optioneleRegels = meetellendeRegels.filter((r) => r.optioneel);
 
-    // Alleen de aangeboden (niet-optionele) regels bepalen het offertetotaal en de opslagen.
-    const subtotaal = regels.reduce((s, r) => s + (r.totaal ?? 0), 0);
-    const opslagAbk = (header as any).opslagAbk ?? 10;
-    const akBedrag     = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
-    const abkBedrag    = Math.round(subtotaal * (opslagAbk / 100) * 100) / 100;
-    const risicoBedrag = Math.round(subtotaal * (header.opslagRisico / 100) * 100) / 100;
-    const winstBedrag  = Math.round(subtotaal * (header.opslagWinst / 100) * 100) / 100;
-    const totaalVoorKorting = subtotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
-    const kortingBedrag = Math.round(totaalVoorKorting * (header.korting / 100) * 100) / 100;
-    const bedragExcl = Math.round((totaalVoorKorting - kortingBedrag) * 100) / 100;
-    const bedragIncl = Math.round(bedragExcl * 1.21 * 100) / 100;
+    // CALC_KERN_01: het offertetotaal komt uit dezelfde rekenkern als lijst,
+    // detail en print — incl. materiaal-/arbeidsopslag en de vaste-bedrag-
+    // varianten van AK/ABK/risico/winst (de oude keten negeerde die).
+    const offerteKern = berekenTotalen(
+      alleRegels.map((r) => ({
+        hoeveelheid: r.hoeveelheid, tarief: r.tarief,
+        muPerEenheid: (r as any).muPerEenheid ?? 0,
+        arbeidsTarief: (r as any).arbeidsTarief ?? 0,
+        onderaannemingBedrag: (r as any).onderaannemingBedrag ?? 0,
+        isStaartkosten: r.isStaartkosten, isBouwplaatskosten: (r as any).isBouwplaatskosten,
+        totaal: r.totaal, soort: (r as any).soort, optioneel: (r as any).optioneel,
+      })),
+      {
+        opslagMateriaal: (header as any).opslagMateriaal ?? 0,
+        opslagArbeid: (header as any).opslagArbeid ?? 0,
+        opslagAk: header.opslagAk,
+        opslagAbk: (header as any).opslagAbk ?? 10,
+        opslagRisico: header.opslagRisico,
+        opslagWinst: header.opslagWinst,
+        korting: header.korting,
+        akIsVast: (header as any).akIsVast ?? false,
+        abkIsVast: (header as any).abkIsVast ?? false,
+        risicoIsVast: (header as any).risicoIsVast ?? false,
+        winstIsVast: (header as any).winstIsVast ?? false,
+      },
+    ).kern;
+    const bedragExcl = offerteKern.totaal_na_opslagen;
+    const bedragIncl = offerteKern.incl_btw;
 
     let gebouwNaam: string | null = null;
     if (header.gebouwId) {
@@ -1692,14 +1725,15 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
       );
     }
 
+    // CALC_KERN_01: opslagbedragen uit dezelfde kern-uitkomst als het totaal.
     const opslagen = [
-      { label: `Algemene kosten (${header.opslagAk}%)`, bedrag: akBedrag },
-      { label: `Algemene bedrijfskosten (${opslagAbk}%)`, bedrag: abkBedrag },
-      { label: `Risico (${header.opslagRisico}%)`, bedrag: risicoBedrag },
-      { label: `Winst (${header.opslagWinst}%)`, bedrag: winstBedrag },
+      { label: (header as any).akIsVast ? "Algemene kosten (vast)" : `Algemene kosten (${header.opslagAk}%)`, bedrag: offerteKern.ak_bedrag },
+      { label: (header as any).abkIsVast ? "Algemene bedrijfskosten (vast)" : `Algemene bedrijfskosten (${(header as any).opslagAbk ?? 10}%)`, bedrag: offerteKern.abk_bedrag },
+      { label: (header as any).risicoIsVast ? "Risico (vast)" : `Risico (${header.opslagRisico}%)`, bedrag: offerteKern.risico_bedrag },
+      { label: (header as any).winstIsVast ? "Winst (vast)" : `Winst (${header.opslagWinst}%)`, bedrag: offerteKern.winst_bedrag },
     ];
     if (header.korting > 0) {
-      opslagen.push({ label: `Korting (${header.korting}%)`, bedrag: -kortingBedrag });
+      opslagen.push({ label: `Korting (${header.korting}%)`, bedrag: -offerteKern.korting_bedrag });
     }
     await db.insert(offerteRegelsTable).values(
       opslagen.map((o, i) => ({
@@ -1915,21 +1949,42 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       };
     }
 
-    // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart gesommeerd.
-    const meetellend = regels.filter((r) => teltMee(r) && !r.optioneel);
-    const optioneelTotaal = Math.round(
-      regels.filter((r) => teltMee(r) && r.optioneel).reduce((s, r) => s + (r.totaal ?? 0), 0) * 100
-    ) / 100;
-    const subtotaal = meetellend.filter((r) => !r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
-    const staarttotaal = meetellend.filter((r) => r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
+    // CALC_KERN_01: print rekent via exact dezelfde kern als het scherm en de
+    // lijst/detail-routes — geen eigen (legacy) formuleketen meer. Daarmee
+    // respecteert de print nu ook de vaste-bedragvarianten van AK/ABK/risico/
+    // winst en de juiste winstbasis (subtotaal + AK + ABK + risico).
     const opslagAbk = header.opslagAbk ?? 10;
-    const akBedrag = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
-    const abkBedrag = Math.round(subtotaal * (opslagAbk / 100) * 100) / 100;
-    const risicoBedrag = Math.round(subtotaal * (header.opslagRisico / 100) * 100) / 100;
-    const winstBedrag = Math.round(subtotaal * (header.opslagWinst / 100) * 100) / 100;
-    const voorKorting = subtotaal + staarttotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
-    const kortingBedrag = Math.round(voorKorting * (header.korting / 100) * 100) / 100;
-    const eindtotaal = voorKorting - kortingBedrag;
+    const kern = berekenTotalen(
+      regels.map((r) => ({
+        hoeveelheid: r.hoeveelheid, tarief: r.tarief,
+        muPerEenheid: r.muPerEenheid, arbeidsTarief: r.arbeidsTarief,
+        onderaannemingBedrag: r.onderaannemingBedrag,
+        isStaartkosten: r.isStaartkosten, isBouwplaatskosten: r.isBouwplaatskosten,
+        totaal: r.totaal, soort: r.soort, optioneel: r.optioneel,
+      })),
+      {
+        opslagMateriaal: header.opslagMateriaal ?? 0,
+        opslagArbeid: header.opslagArbeid ?? 0,
+        opslagAk: header.opslagAk,
+        opslagAbk,
+        opslagRisico: header.opslagRisico,
+        opslagWinst: header.opslagWinst,
+        korting: header.korting,
+        akIsVast: header.akIsVast ?? false,
+        abkIsVast: header.abkIsVast ?? false,
+        risicoIsVast: header.risicoIsVast ?? false,
+        winstIsVast: header.winstIsVast ?? false,
+      },
+    ).kern;
+    const optioneelTotaal = kern.optioneel_totaal;
+    const subtotaal = rond2(kern.subtotaal - kern.staart_subtotaal);
+    const staarttotaal = kern.staart_subtotaal;
+    const akBedrag = kern.ak_bedrag;
+    const abkBedrag = kern.abk_bedrag;
+    const risicoBedrag = kern.risico_bedrag;
+    const winstBedrag = kern.winst_bedrag;
+    const kortingBedrag = kern.korting_bedrag;
+    const eindtotaal = kern.totaal_na_opslagen;
 
     res.json({
       header: {
