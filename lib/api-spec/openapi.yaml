@@ -34,6 +34,7 @@ tags:
   - name: AccountView
     description: AccountView relatie- en projectmapping
   - name: crm
+  - name: marketing
     description: CRM - klanten, contactpersonen, opdrachten en commercieel
   - name: emails
     description: E-mailarchief per gebouw
@@ -7821,6 +7822,480 @@ paths:
       responses:
         "204":
           description: Verwijderd
+
+  /marketing/contactpersonen/{id}/toestemming:
+    patch:
+      operationId: zetMarketingToestemming
+      tags: [marketing]
+      summary: Mail-toestemming van een contactpersoon vastleggen of intrekken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toestemming]
+              properties:
+                toestemming:
+                  type: boolean
+                bron:
+                  type: string
+      responses:
+        "200":
+          description: Vastgelegd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Ongeldige invoer
+
+  /marketing/doelgroepen:
+    get:
+      operationId: listMarketingDoelgroepen
+      tags: [marketing]
+      summary: Doelgroepen met live ledenaantal (toestemmingspoort)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketingDoelgroep"
+    post:
+      operationId: createMarketingDoelgroep
+      tags: [marketing]
+      summary: Doelgroep aanmaken (criteria, leden altijd live berekend)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingDoelgroepInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResultaat"
+
+  /marketing/doelgroepen/voorbeeld:
+    post:
+      operationId: telMarketingDoelgroepVoorbeeld
+      tags: [marketing]
+      summary: Live telling van leden voor (concept)criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                criteria:
+                  $ref: "#/components/schemas/MarketingDoelgroepCriteria"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aantal_leden]
+                properties:
+                  aantal_leden:
+                    type: integer
+
+  /marketing/doelgroepen/{id}:
+    patch:
+      operationId: updateMarketingDoelgroep
+      tags: [marketing]
+      summary: Doelgroep wijzigen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingDoelgroepInput"
+      responses:
+        "200":
+          description: Gewijzigd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteMarketingDoelgroep
+      tags: [marketing]
+      summary: Doelgroep verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+
+  /marketing/doelgroepen/{id}/leden:
+    get:
+      operationId: listMarketingDoelgroepLeden
+      tags: [marketing]
+      summary: Live berekende leden van een doelgroep
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketingDoelgroepLid"
+        "404":
+          description: Niet gevonden
+
+  /marketing/sjablonen:
+    get:
+      operationId: listMarketingSjablonen
+      tags: [marketing]
+      summary: Mailsjablonen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketingSjabloon"
+    post:
+      operationId: createMarketingSjabloon
+      tags: [marketing]
+      summary: Mailsjabloon aanmaken ({{naam}} en {{organisatie}} als velden)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingSjabloonInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResultaat"
+
+  /marketing/sjablonen/{id}:
+    patch:
+      operationId: updateMarketingSjabloon
+      tags: [marketing]
+      summary: Mailsjabloon wijzigen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingSjabloonInput"
+      responses:
+        "200":
+          description: Gewijzigd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteMarketingSjabloon
+      tags: [marketing]
+      summary: Mailsjabloon verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+
+  /marketing/campagnes:
+    get:
+      operationId: listMarketingCampagnes
+      tags: [marketing]
+      summary: Campagnes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketingCampagne"
+    post:
+      operationId: createMarketingCampagne
+      tags: [marketing]
+      summary: Campagne aanmaken (concept)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingCampagneInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResultaat"
+
+  /marketing/campagnes/{id}:
+    get:
+      operationId: getMarketingCampagne
+      tags: [marketing]
+      summary: Campagne met ontvanger-tellingen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingCampagneDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateMarketingCampagne
+      tags: [marketing]
+      summary: Campagne wijzigen (alleen concept/gepland)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingCampagneInput"
+      responses:
+        "200":
+          description: Gewijzigd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Status laat wijzigen niet toe
+    delete:
+      operationId: deleteMarketingCampagne
+      tags: [marketing]
+      summary: Concept-campagne verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResultaat"
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Alleen concept kan worden verwijderd
+
+  /marketing/campagnes/{id}/proef:
+    post:
+      operationId: verstuurMarketingCampagneProef
+      tags: [marketing]
+      summary: Proefverzending naar jezelf (verplicht vóór echte verzending)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proef verzonden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  verzonden_naar:
+                    type: string
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Onvolledig (sjabloon/e-mail ontbreekt)
+
+  /marketing/campagnes/{id}/verzenden:
+    post:
+      operationId: verstuurMarketingCampagne
+      tags: [marketing]
+      summary: Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: In de mailwachtrij geplaatst
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  ingepland:
+                    type: integer
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Al verzonden/verzendend
+        "422":
+          description: Voorwaarden niet vervuld (proef, doelgroep, sjabloon)
+
+  /marketing/campagnes/{id}/stoppen:
+    post:
+      operationId: stopMarketingCampagne
+      tags: [marketing]
+      summary: Verzending stoppen — resterende berichten vervallen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reden:
+                  type: string
+      responses:
+        "200":
+          description: Gestopt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  vervallen:
+                    type: integer
+        "409":
+          description: Alleen gepland/verzendend kan worden gestopt
+
+  /marketing/afmelden/{token}:
+    get:
+      operationId: getMarketingAfmeldPagina
+      tags: [marketing]
+      summary: Publieke afmeldpagina (zonder inloggen, zonder bijwerking — toont bevestigingsknop)
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML-bevestigingspagina
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      operationId: bevestigMarketingAfmelding
+      tags: [marketing]
+      summary: Afmelding uitvoeren (idempotent; trekt toestemming in en annuleert wachtende campagnemail)
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Afgemeld (HTML-bevestiging)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Onbekende of vervallen afmeldlink
 
   /inbox/stats:
     get:
@@ -29612,6 +30087,176 @@ components:
           type: ["string", "null"]
         koppeling_id:
           type: ["integer", "null"]
+
+    OkResultaat:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+
+    IdResultaat:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+
+    MarketingDoelgroepCriteria:
+      type: object
+      properties:
+        branche:
+          type: array
+          items:
+            type: string
+        stad:
+          type: array
+          items:
+            type: string
+        relatie_status:
+          type: array
+          items:
+            type: string
+        klant_status:
+          type: array
+          items:
+            type: string
+        org_type:
+          type: array
+          items:
+            type: string
+        laatste_contact_voor:
+          type: ["string", "null"]
+
+    MarketingDoelgroep:
+      type: object
+      required: [id, naam, criteria, aantal_leden]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        criteria:
+          $ref: "#/components/schemas/MarketingDoelgroepCriteria"
+        aantal_leden:
+          type: integer
+        aangemaakt_op:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: ["string", "null"]
+
+    MarketingDoelgroepInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        criteria:
+          $ref: "#/components/schemas/MarketingDoelgroepCriteria"
+
+    MarketingDoelgroepLid:
+      type: object
+      required: [contactpersoon_id, naam, email]
+      properties:
+        contactpersoon_id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        klant_id:
+          type: ["integer", "null"]
+        organisatie:
+          type: ["string", "null"]
+
+    MarketingSjabloon:
+      type: object
+      required: [id, naam, onderwerp, inhoud]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        onderwerp:
+          type: string
+        inhoud:
+          type: string
+        aangemaakt_op:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: ["string", "null"]
+
+    MarketingSjabloonInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        onderwerp:
+          type: string
+        inhoud:
+          type: string
+
+    MarketingCampagne:
+      type: object
+      required: [id, naam, status]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        doel:
+          type: ["string", "null"]
+        doelgroep_id:
+          type: ["integer", "null"]
+        sjabloon_id:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [concept, gepland, verzendend, verzonden, gestopt]
+        gepland_op:
+          type: ["string", "null"]
+        proef_verzonden_op:
+          type: ["string", "null"]
+        gestart_op:
+          type: ["string", "null"]
+        afgerond_op:
+          type: ["string", "null"]
+        gestopt_op:
+          type: ["string", "null"]
+        gestopt_reden:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: ["string", "null"]
+
+    MarketingCampagneDetail:
+      allOf:
+        - $ref: "#/components/schemas/MarketingCampagne"
+        - type: object
+          required: [ontvangers]
+          properties:
+            ontvangers:
+              type: object
+              additionalProperties:
+                type: integer
+
+    MarketingCampagneInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        doel:
+          type: ["string", "null"]
+        doelgroep_id:
+          type: ["integer", "null"]
+        sjabloon_id:
+          type: ["integer", "null"]
+        gepland_op:
+          type: ["string", "null"]
 
     CrmRelatievoorstel:
       type: object

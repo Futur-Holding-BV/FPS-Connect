@@ -22,6 +22,11 @@ const CLIENT_SECRET = process.env["AZURE_CLIENT_SECRET"];
 // Exact de rechten die de beheerder in Azure heeft goedgekeurd (aug 2026).
 export const DELEGATED_SCOPES = "User.Read Mail.ReadWrite Mail.ReadWrite.Shared Mail.Send Mail.Send.Shared offline_access";
 
+/** Duidelijke gebruikersfout wanneer de koppeling geen verzend-toestemming heeft. */
+const FOUT_GEEN_MAIL_SEND =
+  "Uw Microsoft-koppeling heeft geen toestemming om mail te versturen (Mail.Send). " +
+  "Ontkoppel uw Microsoft-account en koppel het opnieuw om verzenden toe te staan.";
+
 /**
  * Vergelijkt de bij een koppeling opgeslagen scopes met de nu vereiste scopes.
  * Geeft de ontbrekende scopes terug (leeg = koppeling is breed genoeg).
@@ -445,6 +450,9 @@ export async function beantwoordMail(
   isPersonlijk: boolean,
   opties: BeantwoordOpties,
 ): Promise<{ ok: boolean; fout?: string }> {
+  if (!(await heeftMailSendScope(gebruikerId))) {
+    return { ok: false, fout: FOUT_GEEN_MAIL_SEND };
+  }
   const token = await haalGeldigToken(gebruikerId);
   if (!token) return { ok: false, fout: "Geen geldig Microsoft-token. Koppel uw account opnieuw." };
 
@@ -511,6 +519,9 @@ export async function beantwoordMail(
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!sendRes.ok) {
+    if (sendRes.status === 403) {
+      return { ok: false, fout: FOUT_GEEN_MAIL_SEND };
+    }
     return { ok: false, fout: `Versturen mislukt (${sendRes.status})` };
   }
   return { ok: true };
@@ -539,6 +550,9 @@ export async function verstuurNieuwDelegatedMail(
     logger.info({ naar: opties.naarEmail }, "Werk-inbox mail onderdrukt: testdomein-adres");
     return { ok: true };
   }
+  if (!(await heeftMailSendScope(gebruikerId))) {
+    return { ok: false, fout: FOUT_GEEN_MAIL_SEND };
+  }
   const token = await haalGeldigToken(gebruikerId);
   if (!token) return { ok: false, fout: "Geen geldig Microsoft-token. Koppel uw account opnieuw." };
 
@@ -564,6 +578,9 @@ export async function verstuurNieuwDelegatedMail(
   });
 
   if (!res.ok) {
+    if (res.status === 403) {
+      return { ok: false, fout: FOUT_GEEN_MAIL_SEND };
+    }
     const detail = await res.text().catch(() => "");
     return { ok: false, fout: `Versturen mislukt (${res.status}): ${detail.slice(0, 100)}` };
   }
@@ -677,4 +694,19 @@ export async function syncMailboxen(gebruikerId: number): Promise<SyncResultaat>
   }
 
   return { mailboxen: resultaten, totaal };
+}
+
+/**
+ * Controleert of de opgeslagen koppeling Mail.Send-scope heeft.
+ * Tokens van vóór de scope-uitbreiding ontbreken Mail.Send en kunnen
+ * niet versturen totdat de gebruiker opnieuw koppelt.
+ * Geen token-rij → geeft true (laat haalGeldigToken de token-fout afhandelen).
+ */
+async function heeftMailSendScope(gebruikerId: number): Promise<boolean> {
+  const [token] = await db.select({ scope: werkInboxTokensTable.scope })
+    .from(werkInboxTokensTable)
+    .where(eq(werkInboxTokensTable.gebruikerId, gebruikerId))
+    .limit(1);
+  if (!token) return true;
+  return !ontbrekendeScopes(token.scope).includes("Mail.Send");
 }

@@ -72,6 +72,15 @@ export const crmContactpersonenTable = pgTable("crm_contactpersonen", {
   volgende_actie: text("volgende_actie"),
   bron: text("bron").notNull().default("handmatig"),  // "handmatig" | "import"
   importId: integer("import_id"),                     // IMPORT_01: verwijzing naar import_logs.id
+  // MARKETING_01 — toestemming voor commerciële mail (AVG): vastgelegd wanneer
+  // en waarop de toestemming berust. Afmelding en onbestelbaar (harde bounce)
+  // sluiten iemand blijvend uit van elke doelgroep — server-side afgedwongen.
+  mailToestemming: boolean("mail_toestemming").notNull().default(false),
+  mailToestemmingOp: timestamp("mail_toestemming_op"),
+  mailToestemmingBron: text("mail_toestemming_bron"),
+  mailAfgemeldOp: timestamp("mail_afgemeld_op"),
+  mailOnbestelbaarOp: timestamp("mail_onbestelbaar_op"),
+  mailOnbestelbaarReden: text("mail_onbestelbaar_reden"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

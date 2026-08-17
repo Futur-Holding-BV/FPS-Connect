@@ -246,6 +246,13 @@ INDEX|mail_wachtrij|mail_wachtrij_dedupe_idx
 INDEX|mail_wachtrij|mail_wachtrij_pkey
 INDEX|mandagstaat_logs|mandagstaat_logs_opdracht_idx
 INDEX|mandagstaat_logs|mandagstaat_logs_pkey
+INDEX|marketing_campagne_ontvangers|marketing_campagne_ontvangers_campagne_idx
+INDEX|marketing_campagne_ontvangers|marketing_campagne_ontvangers_pkey
+INDEX|marketing_campagne_ontvangers|marketing_campagne_ontvangers_token_uq
+INDEX|marketing_campagne_ontvangers|marketing_campagne_ontvangers_uq
+INDEX|marketing_campagnes|marketing_campagnes_pkey
+INDEX|marketing_doelgroepen|marketing_doelgroepen_pkey
+INDEX|marketing_sjablonen|marketing_sjablonen_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_onderwerp_idx
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_pkey
 INDEX|marktspiegel_onderzoeken|marktspiegel_onderzoeken_status_idx
@@ -1168,6 +1175,12 @@ KOLOM|crm_contactpersonen|import_id|integer|YES|
 KOLOM|crm_contactpersonen|klant_id|integer|YES|
 KOLOM|crm_contactpersonen|laatste_contact_datum|text|YES|
 KOLOM|crm_contactpersonen|linkedin_url|text|YES|
+KOLOM|crm_contactpersonen|mail_afgemeld_op|timestamp without time zone|YES|
+KOLOM|crm_contactpersonen|mail_onbestelbaar_op|timestamp without time zone|YES|
+KOLOM|crm_contactpersonen|mail_onbestelbaar_reden|text|YES|
+KOLOM|crm_contactpersonen|mail_toestemming_bron|text|YES|
+KOLOM|crm_contactpersonen|mail_toestemming_op|timestamp without time zone|YES|
+KOLOM|crm_contactpersonen|mail_toestemming|boolean|NO|false
 KOLOM|crm_contactpersonen|mobiel|text|YES|
 KOLOM|crm_contactpersonen|naam|text|NO|
 KOLOM|crm_contactpersonen|opmerkingen|text|YES|
@@ -2717,6 +2730,7 @@ KOLOM|mail_logboek|verstuurd_door_id|integer|YES|
 KOLOM|mail_wachtrij|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mail_wachtrij|aangevraagd_door_id|integer|YES|
 KOLOM|mail_wachtrij|bijlagen|jsonb|YES|
+KOLOM|mail_wachtrij|campagne_ontvanger_id|integer|YES|
 KOLOM|mail_wachtrij|foutdetail|text|YES|
 KOLOM|mail_wachtrij|html|text|NO|
 KOLOM|mail_wachtrij|id|integer|NO|nextval('mail_wachtrij_id_seq'::regclass)
@@ -2735,6 +2749,49 @@ KOLOM|mandagstaat_logs|medewerker_aantal|integer|NO|0
 KOLOM|mandagstaat_logs|opdracht_id|integer|NO|
 KOLOM|mandagstaat_logs|uren_totaal|numeric|NO|0
 KOLOM|mandagstaat_logs|week_nummer|integer|NO|
+KOLOM|marketing_campagne_ontvangers|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_campagne_ontvangers|afgemeld_op|timestamp without time zone|YES|
+KOLOM|marketing_campagne_ontvangers|afmeld_token|text|NO|
+KOLOM|marketing_campagne_ontvangers|campagne_id|integer|NO|
+KOLOM|marketing_campagne_ontvangers|contactpersoon_id|integer|NO|
+KOLOM|marketing_campagne_ontvangers|email|text|NO|
+KOLOM|marketing_campagne_ontvangers|gebounced_op|timestamp without time zone|YES|
+KOLOM|marketing_campagne_ontvangers|geklikt_op|timestamp without time zone|YES|
+KOLOM|marketing_campagne_ontvangers|geopend_op|timestamp without time zone|YES|
+KOLOM|marketing_campagne_ontvangers|id|integer|NO|nextval('marketing_campagne_ontvangers_id_seq'::regclass)
+KOLOM|marketing_campagne_ontvangers|klant_id|integer|YES|
+KOLOM|marketing_campagne_ontvangers|status|text|NO|'gepland'::text
+KOLOM|marketing_campagne_ontvangers|verzonden_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|aangemaakt_door_id|integer|YES|
+KOLOM|marketing_campagnes|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_campagnes|afgerond_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_campagnes|doelgroep_id|integer|YES|
+KOLOM|marketing_campagnes|doel|text|YES|
+KOLOM|marketing_campagnes|gepland_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|gestart_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|gestopt_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|gestopt_reden|text|YES|
+KOLOM|marketing_campagnes|id|integer|NO|nextval('marketing_campagnes_id_seq'::regclass)
+KOLOM|marketing_campagnes|naam|text|NO|
+KOLOM|marketing_campagnes|proef_verzonden_door_id|integer|YES|
+KOLOM|marketing_campagnes|proef_verzonden_op|timestamp without time zone|YES|
+KOLOM|marketing_campagnes|sjabloon_id|integer|YES|
+KOLOM|marketing_campagnes|status|text|NO|'concept'::text
+KOLOM|marketing_doelgroepen|aangemaakt_door_id|integer|YES|
+KOLOM|marketing_doelgroepen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_doelgroepen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_doelgroepen|criteria|jsonb|NO|'{}'::jsonb
+KOLOM|marketing_doelgroepen|id|integer|NO|nextval('marketing_doelgroepen_id_seq'::regclass)
+KOLOM|marketing_doelgroepen|naam|text|NO|
+KOLOM|marketing_doelgroepen|omschrijving|text|YES|
+KOLOM|marketing_sjablonen|aangemaakt_door_id|integer|YES|
+KOLOM|marketing_sjablonen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_sjablonen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|marketing_sjablonen|id|integer|NO|nextval('marketing_sjablonen_id_seq'::regclass)
+KOLOM|marketing_sjablonen|inhoud|text|NO|
+KOLOM|marketing_sjablonen|naam|text|NO|
+KOLOM|marketing_sjablonen|onderwerp|text|NO|
 KOLOM|marktspiegel_onderzoeken|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|marktspiegel_onderzoeken|aangevraagd_door|integer|YES|
 KOLOM|marktspiegel_onderzoeken|aanleiding|text|NO|'handmatig'::text

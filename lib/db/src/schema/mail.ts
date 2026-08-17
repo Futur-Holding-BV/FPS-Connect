@@ -52,6 +52,9 @@ export const mailWachtrijTable = pgTable(
     verwerktDoorId: integer("verwerkt_door_id"),
     aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
     verwerktOp: timestamp("verwerkt_op"),
+    // MARKETING_01: koppeling naar marketing_campagne_ontvangers zodat de
+    // daadwerkelijke verzending terugschrijft naar de campagne (FK in SQL).
+    campagneOntvangerId: integer("campagne_ontvanger_id"),
   },
   (t) => [
     uniqueIndex("mail_wachtrij_dedupe_idx")

@@ -130,6 +130,7 @@ import werkbakRouter from "./werkbak";
 import werkstroomRouter from "./werkstroom";
 import "../services/workflow-configs";
 import wervingRouter from "./werving";
+import marketingRouter, { marketingPubliekRouter } from "./marketing";
 
 const router: IRouter = Router();
 
@@ -139,6 +140,8 @@ router.use(authRouter);
 router.use(uitnodigingRouter);
 router.use(installatieRouter);
 router.use(portaalRouter);
+// MARKETING_01: afmelden zonder inloggen (publieke token)
+router.use(marketingPubliekRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
 // Fail-closed: een verplichte wachtwoordwijziging (na admin-reset) blokkeert
@@ -175,6 +178,7 @@ router.use(storageRouter);
 router.use(systeemRouter);
 router.use(infoRouter);
 router.use(crmRouter);
+router.use(marketingRouter);
 router.use(aanvragenRouter);
 router.use(inboxRouter);
 router.use(emailsRouter);

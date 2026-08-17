@@ -61,6 +61,25 @@ const VERBODEN_ROLPATRONEN = [
   /["'`]klant["'`]\s*(?:===|!==|==|!=)\s*[\w.$]*[Rr]ol\b/,
   /[\w.$]*[Rr]ol\b\s*[:=]\s*["'`]klant["'`]/,
   /requireRol\([^)]*["'`]klant["'`]/,
+  // TypeScript-type-annotaties: de TYPE is Rol (of een Rol-variant) en de
+  // waarde is literal "klant", bijv. `const x: Rol = "klant"` of
+  // `function f(r: Rol = "klant")`. Vangt ook union-type annotaties waarbij
+  // "klant" als literal type verschijnt: `r: "klant" | "beheerder"`.
+  /:\s*[\w.]*[Rr]ol\b[^=\n]*=\s*["'`]klant["'`]/,
+  // Union-type literal "klant" (patroon 5): "klant" als literal-type in een
+  // TypeScript-union, op dezelfde regel als het woord Rol/rol. Vangt zowel de
+  // vorm `type Rol = "klant" | "beheerder"` (klant eerst) als
+  // `type Rol = "beheerder" | "klant"` (klant laatste) en
+  // `function f(rol: "beheerder" | "klant")`. Door [Rr]ol te eisen op dezelfde
+  // regel worden weergave-unions zoals
+  // `type Weergave = "intern" | "klant" | "monteur"` bewust uitgesloten.
+  // Vier alternatieven: Rol vóór/na; | vóór/na "klant".
+  /\b[Rr]ol\b[^\n]*(?:["'`]klant["'`]\s*\|(?!\|)|\|(?!\|)\s*["'`]klant["'`])|(?:["'`]klant["'`]\s*\|(?!\|)|\|(?!\|)\s*["'`]klant["'`])[^\n]*\b[Rr]ol\b/,
+  // Multiline union (patroon 6): een regel die uitsluitend een union-pipe
+  // gevolgd door "klant" bevat, bijv. `  | "klant"`. In een TypeScript-union
+  // over meerdere regels staat elke lidwaarde op zijn eigen regel met `|`-prefix.
+  // Logische OR (||) wordt door de negatief-lookahead uitgesloten.
+  /^\s*\|(?!\|)\s*["'`]klant["'`]/,
 ];
 
 // ONE-verwijdering: verboden patronen die wijzen op terugkeer van de
@@ -98,6 +117,23 @@ const VERBODEN_ONE_PATRONEN: [RegExp, string][] = [
     ['gebruiker.rol === "klant"',0],
     ['"klant" === gebruiker.Rol',1],
     ['gebruiker.rol: "klant"',   2],
+    // TypeScript-type-annotaties (patroon 4): TYPE is Rol, waarde is "klant"
+    ['const x: Rol = "klant"',  4],
+    ['const x: Rol = \'klant\'',4],
+    ['function f(r: Rol = "klant")', 4],
+    ['const status: gebruikerRol = "klant"', 4],
+    // Union-type literal "klant" in Rol-context (patroon 5) — klant eerst
+    ['type Rol = "klant" | "beheerder"', 5],
+    ['function f(rol: "klant" | "admin")', 5],
+    ['"klant" | "beheerder" — type Rol', 5],
+    // Patroon 5 — klant laatste (volgorde-onafhankelijk)
+    ['type Rol = "beheerder" | "klant"', 5],
+    ['function f(rol: "beheerder" | "klant")', 5],
+    ['type Rol = "beheerder" | "hoofdbeheerder" | "klant"', 5],
+    // Multiline union-lid (patroon 6)
+    ['  | "klant"', 6],
+    ["  | 'klant'", 6],
+    ['| "klant"', 6],
   ];
 
   const negatieve = [
@@ -107,6 +143,16 @@ const VERBODEN_ONE_PATRONEN: [RegExp, string][] = [
     '"klant" in object',
     'entityType === "klant"',
     'weergave === "klant"',
+    // type-annotatie zonder Rol en geen union — mag niet matchen
+    'const naam: string = "klant_naam"',
+    '"klant" in rechtenObject',
+    // weergave-union op één regel: geen Rol → patroon 5 vuurt niet; geen
+    // ^\s*| prefix → patroon 6 vuurt niet
+    'type Weergave = "intern" | "directie" | "klant" | "monteur"',
+    // logische OR (||) mag niet matchen via patroon 5 of 6
+    'if (entityType === "klant" || iets) {}',
+    // "klant" als union-lid zonder leidende | — geen patroon 6
+    '"klant" | "beheerder"',
   ];
 
   for (const [invoer, idx] of positieve) {

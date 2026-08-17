@@ -93,10 +93,30 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
 
 ### Welke twee plekken moeten gesynchroniseerd blijven
 
-| Locatie | Waarde | Gebruikt door |
+| Locatie | Secretnaam | Gebruikt door |
 |---|---|---|
-| Replit Secrets > `GITHUB_TOKEN_PUSH` | Actueel token | `scripts/post-merge.sh` (Stap 7) |
-| GitHub repo Secrets > `GITHUB_TOKEN_PUSH` | Actueel token | `.github/workflows/token-health-check.yml` |
+| Replit Secrets | `GITHUB_TOKEN_PUSH` | `scripts/post-merge.sh` (Stap 7) |
+| GitHub repo Secrets | `FPS_PUSH_TOKEN` | `.github/workflows/token-health-check.yml` |
+
+> **Let op:** de Actions-secretnaam is `FPS_PUSH_TOKEN` (niet `GITHUB_TOKEN_PUSH`), omdat GitHub Actions-secretnamen niet met `GITHUB_` mogen beginnen. Beide bevatten dezelfde PAT-waarde.
+
+### Benodigde GitHub Actions secrets token-health-check
+
+De workflow `.github/workflows/token-health-check.yml` vereist vijf verplichte GitHub Actions secrets. De workflow valideert actief of de vier Azure/mail-secrets aanwezig zijn; ontbreekt er één, dan faalt de workflow direct met een expliciete foutmelding en een lijst van de ontbrekende secrets. Daarnaast is `FPS_PUSH_TOKEN` nodig zodat de workflow het token zelf kan controleren — ontbreekt dit secret, dan rapporteert de workflow `status=ontbreekt` (token onbekend) en probeert vervolgens alsnog de mail te sturen.
+
+| Secret | Doel | Gevalideerd door workflow |
+|---|---|---|
+| `FPS_PUSH_TOKEN` | PAT waarvan de geldigheid wordt gecontroleerd (zelfde waarde als Replit-secret `GITHUB_TOKEN_PUSH`) | Nee — token wordt als `ontbreekt` gerapporteerd |
+| `AZURE_TENANT_ID` | Microsoft Graph OAuth — tenant voor Graph-mailkoppeling | **Ja — ontbreken → `exit 1`** |
+| `AZURE_CLIENT_ID` | Microsoft Graph OAuth — client-id van de Azure-app | **Ja — ontbreken → `exit 1`** |
+| `AZURE_CLIENT_SECRET` | Microsoft Graph OAuth — client-secret van de Azure-app | **Ja — ontbreken → `exit 1`** |
+| `RENE_ALERT_EMAIL` | E-mailadres van de ontvanger van token-waarschuwingen | **Ja — ontbreken → `exit 1`** |
+| `MAIL_FROM` | Zichtbaar afzenderadres (fallback: `noreply@fpsbrandpreventie.nl`) | Nee |
+| `MAIL_MAILBOX` | Gedeelde postbus die via Graph verzendt (fallback: `app@fpsbrandpreventie.nl`) | Nee |
+
+Ook na geslaagde validatie faalt de workflow (zichtbaar als rode run) als de Azure-token-aanvraag of het Graph-sendMail-verzoek mislukt, zodat elke alert-leveringsfout zichtbaar is.
+
+Configureer de ontbrekende secrets via: **github.com/Futur-Holding-BV/FPS-Connect → Settings → Secrets and variables → Actions**.
 
 ### Wat te doen als de push al mislukt is
 

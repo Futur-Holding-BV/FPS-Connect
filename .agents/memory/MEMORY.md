@@ -1,4 +1,3 @@
-// hint: Logic changed on both sides. Requires understanding intent of each change.
 - [Expo stale .env dev-domein](expo-stale-env-domein.md) — monteur-app .env met hardcoded EXPO_PUBLIC_DOMAIN wint van shell-env na domeinrotatie → e2e-login "Failed to fetch"; .env weg + Metro-cache wissen.
 - [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
@@ -151,4 +150,6 @@
 - [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.
 - [Document Studio bulk-generatie](studio-bulk-generatie.md) — claim via advisory lock + tussenstatus 'genererend' vóór AI-aanroep; referentie optioneel; single-routes moeten 'genererend' kennen.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
+- [HRM AI-voorstellen zonder waarde](hrm-ai-voorstellen-leeg.md) — lege voorstelwaarde = signalering: geen zekerheidsscore, geen Overnemen-knop, goedkeuren zonder waarde → 422; heranalyse heelt oude 100%-rijen.
+- [Marketingmodule (MARKETING_01)](marketing-module.md) — crm 3=beheren/4=verzenden; consent-poort in élke query, leden live; proef verplicht+vers; wachtrij fail-closed; afmelden ruimt wachtrij op.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.

@@ -54,7 +54,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -362,6 +362,8 @@ export async function verstuurMail(opties: {
   soort: MailSoort;
   verstuurdDoorId?: number | null;
   bijlagen?: MailBijlage[];
+  /** MARKETING_01: koppelt het wachtrij-item aan een campagne-ontvanger. */
+  campagneOntvangerId?: number | null;
   /**
    * Alleen true voor mails waar de verzending zélf de expliciete menselijke
    * handeling is: account-mails (uitnodiging, wachtwoord-reset, testmail) en
@@ -389,6 +391,7 @@ async function plaatsInMailWachtrij(opties: {
   soort: MailSoort;
   verstuurdDoorId?: number | null;
   bijlagen?: MailBijlage[];
+  campagneOntvangerId?: number | null;
 }): Promise<void> {
   await db
     .insert(mailWachtrijTable)
@@ -407,6 +410,7 @@ async function plaatsInMailWachtrij(opties: {
             }))
           : null,
       aangevraagdDoorId: opties.verstuurdDoorId ?? null,
+      campagneOntvangerId: opties.campagneOntvangerId ?? null,
     })
     .onConflictDoNothing();
   logger.info(
@@ -453,6 +457,23 @@ export async function verstuurMailWachtrijItem(
   // zodat een vertraagde sender wiens item door de herstelroutine is
   // teruggezet (en daarna opnieuw geclaimd) geen dubbele mail kan veroorzaken.
   const claimedAt = item.verwerktOp!;
+  // MARKETING_01: laatste consent-/statuspoort vlak vóór verzending. Tussen
+  // klaarzetten en goedkeuren kan de ontvanger zich hebben afgemeld, de
+  // toestemming zijn ingetrokken of de campagne zijn gestopt — dan wijzen we
+  // het item af in plaats van te verzenden.
+  if (item.campagneOntvangerId) {
+    const { controleerCampagneItemVerzendbaar, markeerOntvangerOvergeslagen } =
+      await import("./marketingService");
+    const blokkade = await controleerCampagneItemVerzendbaar(item.campagneOntvangerId);
+    if (blokkade) {
+      await db
+        .update(mailWachtrijTable)
+        .set({ status: "afgewezen", foutdetail: `campagnemail geblokkeerd: ${blokkade}`, verwerktDoorId, verwerktOp: new Date() })
+        .where(and(eq(mailWachtrijTable.id, id), eq(mailWachtrijTable.verwerktOp, claimedAt)));
+      await markeerOntvangerOvergeslagen(item.campagneOntvangerId);
+      throw new Error(`Campagnemail niet verzonden: ${blokkade}`);
+    }
+  }
   const bijlagen = Array.isArray(item.bijlagen)
     ? (item.bijlagen as Array<{ naam: string; contentType: string; inhoudBase64: string }>).map(
         (b) => ({ naam: b.naam, contentType: b.contentType, inhoud: Buffer.from(b.inhoudBase64, "base64") }),
@@ -484,6 +505,12 @@ export async function verstuurMailWachtrijItem(
     .update(mailWachtrijTable)
     .set({ status: "verzonden", foutdetail: null, verwerktDoorId, verwerktOp: new Date() })
     .where(and(eq(mailWachtrijTable.id, id), eq(mailWachtrijTable.verwerktOp, claimedAt)));
+  // MARKETING_01: verzending terugkoppelen naar de campagne (fout hier mag
+  // de wachtrijverwerking nooit breken — helper vangt zelf af).
+  if (item.campagneOntvangerId) {
+    const { handelCampagneVerzendingAf } = await import("./marketingService");
+    await handelCampagneVerzendingAf(item.campagneOntvangerId, item.onderwerp);
+  }
 }
 
 /**

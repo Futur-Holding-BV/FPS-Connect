@@ -478,6 +478,7 @@ import type {
   HrmOnboardingTaak,
   HrmOnboardingTaakInput,
   HrmStats,
+  IdResultaat,
   ImportControleResultaat,
   ImportControlerenInput,
   ImportLog,
@@ -679,6 +680,14 @@ import type {
   MailOpdrachtbevestigingDemoInput,
   MailStatus,
   MailTestmailInput,
+  MarketingCampagne,
+  MarketingCampagneDetail,
+  MarketingCampagneInput,
+  MarketingDoelgroep,
+  MarketingDoelgroepInput,
+  MarketingDoelgroepLid,
+  MarketingSjabloon,
+  MarketingSjabloonInput,
   MarktspiegelOnderzoek,
   MarktspiegelOnderzoekInput,
   Medewerker,
@@ -762,6 +771,7 @@ import type {
   OfferteVerzendenInput,
   OfferteVraag,
   OfferteVraagAntwoordInput,
+  OkResultaat,
   OnboardingAccountConflict,
   OnboardingAccountInput,
   OnboardingAccountResultaat,
@@ -952,6 +962,8 @@ import type {
   StatusUpdate,
   StatusVerdeling,
   StelFunctieKernvragenVoor200,
+  StopMarketingCampagne200,
+  StopMarketingCampagneBody,
   StudioBijstuurInput,
   StudioBulkGenereerResultaat,
   StudioGenereerInput,
@@ -964,6 +976,8 @@ import type {
   TekeningAiAnalyseResultaat,
   TekeningInput,
   TekeningUpdate,
+  TelMarketingDoelgroepVoorbeeld200,
+  TelMarketingDoelgroepVoorbeeldBody,
   Testrapport,
   TestrapportInput,
   TestrapportUpdate,
@@ -1044,6 +1058,8 @@ import type {
   VersieInfo,
   VersieStatus,
   VerstuurFactuurCorrespondentie200,
+  VerstuurMarketingCampagne200,
+  VerstuurMarketingCampagneProef200,
   Vervaldag,
   Vervalsignaal,
   VerzendOfferte200,
@@ -1139,6 +1155,7 @@ import type {
   WorkflowLijst,
   WorkflowSterInput,
   WorkflowTransitieLog,
+  ZetMarketingToestemmingBody,
   ZetMijnVoorkeur200,
   ZetMijnVoorkeurBody,
   Ziekmelding,
@@ -27222,6 +27239,1523 @@ export const useDeleteCrmRelatievoorstel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCrmRelatievoorstelMutationOptions(options));
+    }
+
+export const getZetMarketingToestemmingUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/contactpersonen/${id}/toestemming`
+}
+
+/**
+ * @summary Mail-toestemming van een contactpersoon vastleggen of intrekken
+ */
+export const zetMarketingToestemming = async (id: number,
+    zetMarketingToestemmingBody: ZetMarketingToestemmingBody, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getZetMarketingToestemmingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(zetMarketingToestemmingBody)
+  }
+);}
+
+
+
+
+export const getZetMarketingToestemmingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetMarketingToestemming>>, TError,{id: number;data: BodyType<ZetMarketingToestemmingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof zetMarketingToestemming>>, TError,{id: number;data: BodyType<ZetMarketingToestemmingBody>}, TContext> => {
+
+const mutationKey = ['zetMarketingToestemming'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof zetMarketingToestemming>>, {id: number;data: BodyType<ZetMarketingToestemmingBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  zetMarketingToestemming(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ZetMarketingToestemmingMutationResult = NonNullable<Awaited<ReturnType<typeof zetMarketingToestemming>>>
+    export type ZetMarketingToestemmingMutationBody = BodyType<ZetMarketingToestemmingBody>
+    export type ZetMarketingToestemmingMutationError = ErrorType<void>
+
+    /**
+ * @summary Mail-toestemming van een contactpersoon vastleggen of intrekken
+ */
+export const useZetMarketingToestemming = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof zetMarketingToestemming>>, TError,{id: number;data: BodyType<ZetMarketingToestemmingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof zetMarketingToestemming>>,
+        TError,
+        {id: number;data: BodyType<ZetMarketingToestemmingBody>},
+        TContext
+      > => {
+      return useMutation(getZetMarketingToestemmingMutationOptions(options));
+    }
+
+export const getListMarketingDoelgroepenUrl = () => {
+
+
+
+
+  return `/api/marketing/doelgroepen`
+}
+
+/**
+ * @summary Doelgroepen met live ledenaantal (toestemmingspoort)
+ */
+export const listMarketingDoelgroepen = async ( options?: RequestInit): Promise<MarketingDoelgroep[]> => {
+
+  return customFetch<MarketingDoelgroep[]>(getListMarketingDoelgroepenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarketingDoelgroepenQueryKey = () => {
+    return [
+    `/api/marketing/doelgroepen`
+    ] as const;
+    }
+
+
+export const getListMarketingDoelgroepenQueryOptions = <TData = Awaited<ReturnType<typeof listMarketingDoelgroepen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarketingDoelgroepenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarketingDoelgroepen>>> = ({ signal }) => listMarketingDoelgroepen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarketingDoelgroepenQueryResult = NonNullable<Awaited<ReturnType<typeof listMarketingDoelgroepen>>>
+export type ListMarketingDoelgroepenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Doelgroepen met live ledenaantal (toestemmingspoort)
+ */
+
+export function useListMarketingDoelgroepen<TData = Awaited<ReturnType<typeof listMarketingDoelgroepen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarketingDoelgroepenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMarketingDoelgroepUrl = () => {
+
+
+
+
+  return `/api/marketing/doelgroepen`
+}
+
+/**
+ * @summary Doelgroep aanmaken (criteria, leden altijd live berekend)
+ */
+export const createMarketingDoelgroep = async (marketingDoelgroepInput: MarketingDoelgroepInput, options?: RequestInit): Promise<IdResultaat> => {
+
+  return customFetch<IdResultaat>(getCreateMarketingDoelgroepUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingDoelgroepInput)
+  }
+);}
+
+
+
+
+export const getCreateMarketingDoelgroepMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingDoelgroep>>, TError,{data: BodyType<MarketingDoelgroepInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMarketingDoelgroep>>, TError,{data: BodyType<MarketingDoelgroepInput>}, TContext> => {
+
+const mutationKey = ['createMarketingDoelgroep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMarketingDoelgroep>>, {data: BodyType<MarketingDoelgroepInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMarketingDoelgroep(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMarketingDoelgroepMutationResult = NonNullable<Awaited<ReturnType<typeof createMarketingDoelgroep>>>
+    export type CreateMarketingDoelgroepMutationBody = BodyType<MarketingDoelgroepInput>
+    export type CreateMarketingDoelgroepMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Doelgroep aanmaken (criteria, leden altijd live berekend)
+ */
+export const useCreateMarketingDoelgroep = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingDoelgroep>>, TError,{data: BodyType<MarketingDoelgroepInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMarketingDoelgroep>>,
+        TError,
+        {data: BodyType<MarketingDoelgroepInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMarketingDoelgroepMutationOptions(options));
+    }
+
+export const getTelMarketingDoelgroepVoorbeeldUrl = () => {
+
+
+
+
+  return `/api/marketing/doelgroepen/voorbeeld`
+}
+
+/**
+ * @summary Live telling van leden voor (concept)criteria
+ */
+export const telMarketingDoelgroepVoorbeeld = async (telMarketingDoelgroepVoorbeeldBody: TelMarketingDoelgroepVoorbeeldBody, options?: RequestInit): Promise<TelMarketingDoelgroepVoorbeeld200> => {
+
+  return customFetch<TelMarketingDoelgroepVoorbeeld200>(getTelMarketingDoelgroepVoorbeeldUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(telMarketingDoelgroepVoorbeeldBody)
+  }
+);}
+
+
+
+
+export const getTelMarketingDoelgroepVoorbeeldMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>, TError,{data: BodyType<TelMarketingDoelgroepVoorbeeldBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>, TError,{data: BodyType<TelMarketingDoelgroepVoorbeeldBody>}, TContext> => {
+
+const mutationKey = ['telMarketingDoelgroepVoorbeeld'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>, {data: BodyType<TelMarketingDoelgroepVoorbeeldBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  telMarketingDoelgroepVoorbeeld(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TelMarketingDoelgroepVoorbeeldMutationResult = NonNullable<Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>>
+    export type TelMarketingDoelgroepVoorbeeldMutationBody = BodyType<TelMarketingDoelgroepVoorbeeldBody>
+    export type TelMarketingDoelgroepVoorbeeldMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Live telling van leden voor (concept)criteria
+ */
+export const useTelMarketingDoelgroepVoorbeeld = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>, TError,{data: BodyType<TelMarketingDoelgroepVoorbeeldBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof telMarketingDoelgroepVoorbeeld>>,
+        TError,
+        {data: BodyType<TelMarketingDoelgroepVoorbeeldBody>},
+        TContext
+      > => {
+      return useMutation(getTelMarketingDoelgroepVoorbeeldMutationOptions(options));
+    }
+
+export const getUpdateMarketingDoelgroepUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/doelgroepen/${id}`
+}
+
+/**
+ * @summary Doelgroep wijzigen
+ */
+export const updateMarketingDoelgroep = async (id: number,
+    marketingDoelgroepInput: MarketingDoelgroepInput, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getUpdateMarketingDoelgroepUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingDoelgroepInput)
+  }
+);}
+
+
+
+
+export const getUpdateMarketingDoelgroepMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingDoelgroep>>, TError,{id: number;data: BodyType<MarketingDoelgroepInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMarketingDoelgroep>>, TError,{id: number;data: BodyType<MarketingDoelgroepInput>}, TContext> => {
+
+const mutationKey = ['updateMarketingDoelgroep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMarketingDoelgroep>>, {id: number;data: BodyType<MarketingDoelgroepInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMarketingDoelgroep(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMarketingDoelgroepMutationResult = NonNullable<Awaited<ReturnType<typeof updateMarketingDoelgroep>>>
+    export type UpdateMarketingDoelgroepMutationBody = BodyType<MarketingDoelgroepInput>
+    export type UpdateMarketingDoelgroepMutationError = ErrorType<void>
+
+    /**
+ * @summary Doelgroep wijzigen
+ */
+export const useUpdateMarketingDoelgroep = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingDoelgroep>>, TError,{id: number;data: BodyType<MarketingDoelgroepInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMarketingDoelgroep>>,
+        TError,
+        {id: number;data: BodyType<MarketingDoelgroepInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMarketingDoelgroepMutationOptions(options));
+    }
+
+export const getDeleteMarketingDoelgroepUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/doelgroepen/${id}`
+}
+
+/**
+ * @summary Doelgroep verwijderen
+ */
+export const deleteMarketingDoelgroep = async (id: number, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getDeleteMarketingDoelgroepUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMarketingDoelgroepMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingDoelgroep>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingDoelgroep>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMarketingDoelgroep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMarketingDoelgroep>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMarketingDoelgroep(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMarketingDoelgroepMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMarketingDoelgroep>>>
+
+    export type DeleteMarketingDoelgroepMutationError = ErrorType<void>
+
+    /**
+ * @summary Doelgroep verwijderen
+ */
+export const useDeleteMarketingDoelgroep = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingDoelgroep>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMarketingDoelgroep>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMarketingDoelgroepMutationOptions(options));
+    }
+
+export const getListMarketingDoelgroepLedenUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/doelgroepen/${id}/leden`
+}
+
+/**
+ * @summary Live berekende leden van een doelgroep
+ */
+export const listMarketingDoelgroepLeden = async (id: number, options?: RequestInit): Promise<MarketingDoelgroepLid[]> => {
+
+  return customFetch<MarketingDoelgroepLid[]>(getListMarketingDoelgroepLedenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarketingDoelgroepLedenQueryKey = (id: number,) => {
+    return [
+    `/api/marketing/doelgroepen/${id}/leden`
+    ] as const;
+    }
+
+
+export const getListMarketingDoelgroepLedenQueryOptions = <TData = Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarketingDoelgroepLedenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>> = ({ signal }) => listMarketingDoelgroepLeden(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarketingDoelgroepLedenQueryResult = NonNullable<Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>>
+export type ListMarketingDoelgroepLedenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Live berekende leden van een doelgroep
+ */
+
+export function useListMarketingDoelgroepLeden<TData = Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingDoelgroepLeden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarketingDoelgroepLedenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListMarketingSjablonenUrl = () => {
+
+
+
+
+  return `/api/marketing/sjablonen`
+}
+
+/**
+ * @summary Mailsjablonen
+ */
+export const listMarketingSjablonen = async ( options?: RequestInit): Promise<MarketingSjabloon[]> => {
+
+  return customFetch<MarketingSjabloon[]>(getListMarketingSjablonenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarketingSjablonenQueryKey = () => {
+    return [
+    `/api/marketing/sjablonen`
+    ] as const;
+    }
+
+
+export const getListMarketingSjablonenQueryOptions = <TData = Awaited<ReturnType<typeof listMarketingSjablonen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingSjablonen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarketingSjablonenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarketingSjablonen>>> = ({ signal }) => listMarketingSjablonen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarketingSjablonen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarketingSjablonenQueryResult = NonNullable<Awaited<ReturnType<typeof listMarketingSjablonen>>>
+export type ListMarketingSjablonenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Mailsjablonen
+ */
+
+export function useListMarketingSjablonen<TData = Awaited<ReturnType<typeof listMarketingSjablonen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingSjablonen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarketingSjablonenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMarketingSjabloonUrl = () => {
+
+
+
+
+  return `/api/marketing/sjablonen`
+}
+
+/**
+ * @summary Mailsjabloon aanmaken ({{naam}} en {{organisatie}} als velden)
+ */
+export const createMarketingSjabloon = async (marketingSjabloonInput: MarketingSjabloonInput, options?: RequestInit): Promise<IdResultaat> => {
+
+  return customFetch<IdResultaat>(getCreateMarketingSjabloonUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingSjabloonInput)
+  }
+);}
+
+
+
+
+export const getCreateMarketingSjabloonMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingSjabloon>>, TError,{data: BodyType<MarketingSjabloonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMarketingSjabloon>>, TError,{data: BodyType<MarketingSjabloonInput>}, TContext> => {
+
+const mutationKey = ['createMarketingSjabloon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMarketingSjabloon>>, {data: BodyType<MarketingSjabloonInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMarketingSjabloon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMarketingSjabloonMutationResult = NonNullable<Awaited<ReturnType<typeof createMarketingSjabloon>>>
+    export type CreateMarketingSjabloonMutationBody = BodyType<MarketingSjabloonInput>
+    export type CreateMarketingSjabloonMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mailsjabloon aanmaken ({{naam}} en {{organisatie}} als velden)
+ */
+export const useCreateMarketingSjabloon = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingSjabloon>>, TError,{data: BodyType<MarketingSjabloonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMarketingSjabloon>>,
+        TError,
+        {data: BodyType<MarketingSjabloonInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMarketingSjabloonMutationOptions(options));
+    }
+
+export const getUpdateMarketingSjabloonUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/sjablonen/${id}`
+}
+
+/**
+ * @summary Mailsjabloon wijzigen
+ */
+export const updateMarketingSjabloon = async (id: number,
+    marketingSjabloonInput: MarketingSjabloonInput, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getUpdateMarketingSjabloonUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingSjabloonInput)
+  }
+);}
+
+
+
+
+export const getUpdateMarketingSjabloonMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingSjabloon>>, TError,{id: number;data: BodyType<MarketingSjabloonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMarketingSjabloon>>, TError,{id: number;data: BodyType<MarketingSjabloonInput>}, TContext> => {
+
+const mutationKey = ['updateMarketingSjabloon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMarketingSjabloon>>, {id: number;data: BodyType<MarketingSjabloonInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMarketingSjabloon(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMarketingSjabloonMutationResult = NonNullable<Awaited<ReturnType<typeof updateMarketingSjabloon>>>
+    export type UpdateMarketingSjabloonMutationBody = BodyType<MarketingSjabloonInput>
+    export type UpdateMarketingSjabloonMutationError = ErrorType<void>
+
+    /**
+ * @summary Mailsjabloon wijzigen
+ */
+export const useUpdateMarketingSjabloon = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingSjabloon>>, TError,{id: number;data: BodyType<MarketingSjabloonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMarketingSjabloon>>,
+        TError,
+        {id: number;data: BodyType<MarketingSjabloonInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMarketingSjabloonMutationOptions(options));
+    }
+
+export const getDeleteMarketingSjabloonUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/sjablonen/${id}`
+}
+
+/**
+ * @summary Mailsjabloon verwijderen
+ */
+export const deleteMarketingSjabloon = async (id: number, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getDeleteMarketingSjabloonUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMarketingSjabloonMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingSjabloon>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingSjabloon>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMarketingSjabloon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMarketingSjabloon>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMarketingSjabloon(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMarketingSjabloonMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMarketingSjabloon>>>
+
+    export type DeleteMarketingSjabloonMutationError = ErrorType<void>
+
+    /**
+ * @summary Mailsjabloon verwijderen
+ */
+export const useDeleteMarketingSjabloon = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingSjabloon>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMarketingSjabloon>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMarketingSjabloonMutationOptions(options));
+    }
+
+export const getListMarketingCampagnesUrl = () => {
+
+
+
+
+  return `/api/marketing/campagnes`
+}
+
+/**
+ * @summary Campagnes
+ */
+export const listMarketingCampagnes = async ( options?: RequestInit): Promise<MarketingCampagne[]> => {
+
+  return customFetch<MarketingCampagne[]>(getListMarketingCampagnesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarketingCampagnesQueryKey = () => {
+    return [
+    `/api/marketing/campagnes`
+    ] as const;
+    }
+
+
+export const getListMarketingCampagnesQueryOptions = <TData = Awaited<ReturnType<typeof listMarketingCampagnes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingCampagnes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarketingCampagnesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarketingCampagnes>>> = ({ signal }) => listMarketingCampagnes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarketingCampagnes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarketingCampagnesQueryResult = NonNullable<Awaited<ReturnType<typeof listMarketingCampagnes>>>
+export type ListMarketingCampagnesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Campagnes
+ */
+
+export function useListMarketingCampagnes<TData = Awaited<ReturnType<typeof listMarketingCampagnes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingCampagnes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarketingCampagnesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMarketingCampagneUrl = () => {
+
+
+
+
+  return `/api/marketing/campagnes`
+}
+
+/**
+ * @summary Campagne aanmaken (concept)
+ */
+export const createMarketingCampagne = async (marketingCampagneInput: MarketingCampagneInput, options?: RequestInit): Promise<IdResultaat> => {
+
+  return customFetch<IdResultaat>(getCreateMarketingCampagneUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingCampagneInput)
+  }
+);}
+
+
+
+
+export const getCreateMarketingCampagneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingCampagne>>, TError,{data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMarketingCampagne>>, TError,{data: BodyType<MarketingCampagneInput>}, TContext> => {
+
+const mutationKey = ['createMarketingCampagne'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMarketingCampagne>>, {data: BodyType<MarketingCampagneInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMarketingCampagne(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof createMarketingCampagne>>>
+    export type CreateMarketingCampagneMutationBody = BodyType<MarketingCampagneInput>
+    export type CreateMarketingCampagneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Campagne aanmaken (concept)
+ */
+export const useCreateMarketingCampagne = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMarketingCampagne>>, TError,{data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMarketingCampagne>>,
+        TError,
+        {data: BodyType<MarketingCampagneInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMarketingCampagneMutationOptions(options));
+    }
+
+export const getGetMarketingCampagneUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}`
+}
+
+/**
+ * @summary Campagne met ontvanger-tellingen
+ */
+export const getMarketingCampagne = async (id: number, options?: RequestInit): Promise<MarketingCampagneDetail> => {
+
+  return customFetch<MarketingCampagneDetail>(getGetMarketingCampagneUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMarketingCampagneQueryKey = (id: number,) => {
+    return [
+    `/api/marketing/campagnes/${id}`
+    ] as const;
+    }
+
+
+export const getGetMarketingCampagneQueryOptions = <TData = Awaited<ReturnType<typeof getMarketingCampagne>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingCampagne>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMarketingCampagneQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketingCampagne>>> = ({ signal }) => getMarketingCampagne(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMarketingCampagne>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMarketingCampagneQueryResult = NonNullable<Awaited<ReturnType<typeof getMarketingCampagne>>>
+export type GetMarketingCampagneQueryError = ErrorType<void>
+
+
+/**
+ * @summary Campagne met ontvanger-tellingen
+ */
+
+export function useGetMarketingCampagne<TData = Awaited<ReturnType<typeof getMarketingCampagne>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingCampagne>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMarketingCampagneQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMarketingCampagneUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}`
+}
+
+/**
+ * @summary Campagne wijzigen (alleen concept/gepland)
+ */
+export const updateMarketingCampagne = async (id: number,
+    marketingCampagneInput: MarketingCampagneInput, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getUpdateMarketingCampagneUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(marketingCampagneInput)
+  }
+);}
+
+
+
+
+export const getUpdateMarketingCampagneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext> => {
+
+const mutationKey = ['updateMarketingCampagne'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMarketingCampagne>>, {id: number;data: BodyType<MarketingCampagneInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMarketingCampagne(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof updateMarketingCampagne>>>
+    export type UpdateMarketingCampagneMutationBody = BodyType<MarketingCampagneInput>
+    export type UpdateMarketingCampagneMutationError = ErrorType<void>
+
+    /**
+ * @summary Campagne wijzigen (alleen concept/gepland)
+ */
+export const useUpdateMarketingCampagne = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMarketingCampagne>>,
+        TError,
+        {id: number;data: BodyType<MarketingCampagneInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMarketingCampagneMutationOptions(options));
+    }
+
+export const getDeleteMarketingCampagneUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}`
+}
+
+/**
+ * @summary Concept-campagne verwijderen
+ */
+export const deleteMarketingCampagne = async (id: number, options?: RequestInit): Promise<OkResultaat> => {
+
+  return customFetch<OkResultaat>(getDeleteMarketingCampagneUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMarketingCampagneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingCampagne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingCampagne>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMarketingCampagne'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMarketingCampagne>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMarketingCampagne(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMarketingCampagne>>>
+
+    export type DeleteMarketingCampagneMutationError = ErrorType<void>
+
+    /**
+ * @summary Concept-campagne verwijderen
+ */
+export const useDeleteMarketingCampagne = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMarketingCampagne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMarketingCampagne>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMarketingCampagneMutationOptions(options));
+    }
+
+export const getVerstuurMarketingCampagneProefUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}/proef`
+}
+
+/**
+ * @summary Proefverzending naar jezelf (verplicht vóór echte verzending)
+ */
+export const verstuurMarketingCampagneProef = async (id: number, options?: RequestInit): Promise<VerstuurMarketingCampagneProef200> => {
+
+  return customFetch<VerstuurMarketingCampagneProef200>(getVerstuurMarketingCampagneProefUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerstuurMarketingCampagneProefMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['verstuurMarketingCampagneProef'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  verstuurMarketingCampagneProef(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerstuurMarketingCampagneProefMutationResult = NonNullable<Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>>
+
+    export type VerstuurMarketingCampagneProefMutationError = ErrorType<void>
+
+    /**
+ * @summary Proefverzending naar jezelf (verplicht vóór echte verzending)
+ */
+export const useVerstuurMarketingCampagneProef = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verstuurMarketingCampagneProef>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVerstuurMarketingCampagneProefMutationOptions(options));
+    }
+
+export const getVerstuurMarketingCampagneUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}/verzenden`
+}
+
+/**
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ */
+export const verstuurMarketingCampagne = async (id: number, options?: RequestInit): Promise<VerstuurMarketingCampagne200> => {
+
+  return customFetch<VerstuurMarketingCampagne200>(getVerstuurMarketingCampagneUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerstuurMarketingCampagneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagne>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['verstuurMarketingCampagne'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verstuurMarketingCampagne>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  verstuurMarketingCampagne(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerstuurMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof verstuurMarketingCampagne>>>
+
+    export type VerstuurMarketingCampagneMutationError = ErrorType<void>
+
+    /**
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ */
+export const useVerstuurMarketingCampagne = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMarketingCampagne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verstuurMarketingCampagne>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVerstuurMarketingCampagneMutationOptions(options));
+    }
+
+export const getStopMarketingCampagneUrl = (id: number,) => {
+
+
+
+
+  return `/api/marketing/campagnes/${id}/stoppen`
+}
+
+/**
+ * @summary Verzending stoppen — resterende berichten vervallen
+ */
+export const stopMarketingCampagne = async (id: number,
+    stopMarketingCampagneBody?: StopMarketingCampagneBody, options?: RequestInit): Promise<StopMarketingCampagne200> => {
+
+  return customFetch<StopMarketingCampagne200>(getStopMarketingCampagneUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(stopMarketingCampagneBody)
+  }
+);}
+
+
+
+
+export const getStopMarketingCampagneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopMarketingCampagne>>, TError,{id: number;data?: BodyType<StopMarketingCampagneBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopMarketingCampagne>>, TError,{id: number;data?: BodyType<StopMarketingCampagneBody>}, TContext> => {
+
+const mutationKey = ['stopMarketingCampagne'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopMarketingCampagne>>, {id: number;data?: BodyType<StopMarketingCampagneBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  stopMarketingCampagne(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof stopMarketingCampagne>>>
+    export type StopMarketingCampagneMutationBody = BodyType<StopMarketingCampagneBody> | undefined
+    export type StopMarketingCampagneMutationError = ErrorType<void>
+
+    /**
+ * @summary Verzending stoppen — resterende berichten vervallen
+ */
+export const useStopMarketingCampagne = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopMarketingCampagne>>, TError,{id: number;data?: BodyType<StopMarketingCampagneBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stopMarketingCampagne>>,
+        TError,
+        {id: number;data?: BodyType<StopMarketingCampagneBody>},
+        TContext
+      > => {
+      return useMutation(getStopMarketingCampagneMutationOptions(options));
+    }
+
+export const getGetMarketingAfmeldPaginaUrl = (token: string,) => {
+
+
+
+
+  return `/api/marketing/afmelden/${token}`
+}
+
+/**
+ * @summary Publieke afmeldpagina (zonder inloggen, zonder bijwerking — toont bevestigingsknop)
+ */
+export const getMarketingAfmeldPagina = async (token: string, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getGetMarketingAfmeldPaginaUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMarketingAfmeldPaginaQueryKey = (token: string,) => {
+    return [
+    `/api/marketing/afmelden/${token}`
+    ] as const;
+    }
+
+
+export const getGetMarketingAfmeldPaginaQueryOptions = <TData = Awaited<ReturnType<typeof getMarketingAfmeldPagina>>, TError = ErrorType<unknown>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingAfmeldPagina>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMarketingAfmeldPaginaQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketingAfmeldPagina>>> = ({ signal }) => getMarketingAfmeldPagina(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMarketingAfmeldPagina>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMarketingAfmeldPaginaQueryResult = NonNullable<Awaited<ReturnType<typeof getMarketingAfmeldPagina>>>
+export type GetMarketingAfmeldPaginaQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Publieke afmeldpagina (zonder inloggen, zonder bijwerking — toont bevestigingsknop)
+ */
+
+export function useGetMarketingAfmeldPagina<TData = Awaited<ReturnType<typeof getMarketingAfmeldPagina>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingAfmeldPagina>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMarketingAfmeldPaginaQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBevestigMarketingAfmeldingUrl = (token: string,) => {
+
+
+
+
+  return `/api/marketing/afmelden/${token}`
+}
+
+/**
+ * @summary Afmelding uitvoeren (idempotent; trekt toestemming in en annuleert wachtende campagnemail)
+ */
+export const bevestigMarketingAfmelding = async (token: string, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getBevestigMarketingAfmeldingUrl(token),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBevestigMarketingAfmeldingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigMarketingAfmelding>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigMarketingAfmelding>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['bevestigMarketingAfmelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigMarketingAfmelding>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  bevestigMarketingAfmelding(token,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigMarketingAfmeldingMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigMarketingAfmelding>>>
+
+    export type BevestigMarketingAfmeldingMutationError = ErrorType<void>
+
+    /**
+ * @summary Afmelding uitvoeren (idempotent; trekt toestemming in en annuleert wachtende campagnemail)
+ */
+export const useBevestigMarketingAfmelding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigMarketingAfmelding>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigMarketingAfmelding>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+      return useMutation(getBevestigMarketingAfmeldingMutationOptions(options));
     }
 
 export const getGetInboxStatsUrl = () => {

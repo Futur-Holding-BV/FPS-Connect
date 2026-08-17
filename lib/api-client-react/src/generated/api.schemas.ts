@@ -1818,6 +1818,128 @@ export interface CrmTaakInput {
   koppeling_id?: number | null;
 }
 
+export interface OkResultaat {
+  ok: boolean;
+}
+
+export interface IdResultaat {
+  id: number;
+}
+
+export interface MarketingDoelgroepCriteria {
+  branche?: string[];
+  stad?: string[];
+  relatie_status?: string[];
+  klant_status?: string[];
+  org_type?: string[];
+  /** @nullable */
+  laatste_contact_voor?: string | null;
+}
+
+export interface MarketingDoelgroep {
+  id: number;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  criteria: MarketingDoelgroepCriteria;
+  aantal_leden: number;
+  /** @nullable */
+  aangemaakt_op?: string | null;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface MarketingDoelgroepInput {
+  naam?: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  criteria?: MarketingDoelgroepCriteria;
+}
+
+export interface MarketingDoelgroepLid {
+  contactpersoon_id: number;
+  naam: string;
+  email: string;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  organisatie?: string | null;
+}
+
+export interface MarketingSjabloon {
+  id: number;
+  naam: string;
+  onderwerp: string;
+  inhoud: string;
+  /** @nullable */
+  aangemaakt_op?: string | null;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface MarketingSjabloonInput {
+  naam?: string;
+  onderwerp?: string;
+  inhoud?: string;
+}
+
+export type MarketingCampagneStatus = typeof MarketingCampagneStatus[keyof typeof MarketingCampagneStatus];
+
+
+export const MarketingCampagneStatus = {
+  concept: 'concept',
+  gepland: 'gepland',
+  verzendend: 'verzendend',
+  verzonden: 'verzonden',
+  gestopt: 'gestopt',
+} as const;
+
+export interface MarketingCampagne {
+  id: number;
+  naam: string;
+  /** @nullable */
+  doel?: string | null;
+  /** @nullable */
+  doelgroep_id?: number | null;
+  /** @nullable */
+  sjabloon_id?: number | null;
+  status: MarketingCampagneStatus;
+  /** @nullable */
+  gepland_op?: string | null;
+  /** @nullable */
+  proef_verzonden_op?: string | null;
+  /** @nullable */
+  gestart_op?: string | null;
+  /** @nullable */
+  afgerond_op?: string | null;
+  /** @nullable */
+  gestopt_op?: string | null;
+  /** @nullable */
+  gestopt_reden?: string | null;
+  /** @nullable */
+  aangemaakt_op?: string | null;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export type MarketingCampagneDetailOntvangers = {[key: string]: number};
+
+export type MarketingCampagneDetail = MarketingCampagne & {
+  ontvangers: MarketingCampagneDetailOntvangers;
+};
+
+export interface MarketingCampagneInput {
+  naam?: string;
+  /** @nullable */
+  doel?: string | null;
+  /** @nullable */
+  doelgroep_id?: number | null;
+  /** @nullable */
+  sjabloon_id?: number | null;
+  /** @nullable */
+  gepland_op?: string | null;
+}
+
 export interface CrmRelatievoorstel {
   id: number;
   /** @nullable */
@@ -17306,6 +17428,38 @@ organisatie_id?: number;
 
 export type GenereerCrmRelatievoorstellen503 = {
   error?: string;
+};
+
+export type ZetMarketingToestemmingBody = {
+  toestemming: boolean;
+  bron?: string;
+};
+
+export type TelMarketingDoelgroepVoorbeeldBody = {
+  criteria?: MarketingDoelgroepCriteria;
+};
+
+export type TelMarketingDoelgroepVoorbeeld200 = {
+  aantal_leden: number;
+};
+
+export type VerstuurMarketingCampagneProef200 = {
+  ok?: boolean;
+  verzonden_naar?: string;
+};
+
+export type VerstuurMarketingCampagne200 = {
+  ok?: boolean;
+  ingepland?: number;
+};
+
+export type StopMarketingCampagneBody = {
+  reden?: string;
+};
+
+export type StopMarketingCampagne200 = {
+  ok?: boolean;
+  vervallen?: number;
 };
 
 export type ListInboxItemsParams = {

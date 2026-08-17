@@ -17,7 +17,7 @@ export type ContextEntiteitType =
   | "document"
   | "dossier"
   | "onderhoud"
-  | "klant";
+  | "klant"; // klantloos-ok: CRM-entiteitstype (graafknooptype), geen rol
 
 // ── Scoping-contract ─────────────────────────────────────────────────────────
 //

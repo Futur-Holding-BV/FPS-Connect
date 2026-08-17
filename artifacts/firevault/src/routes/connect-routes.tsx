@@ -1,5 +1,3 @@
-import { Switch, Route, Redirect } from "wouter";
-import { Lock } from "lucide-react";
 import { featureFlags } from "@/lib/feature-flags";
 import NotFound from "@/pages/not-found";
 import { useRol } from "@/context/rol-context";
@@ -34,6 +32,7 @@ import CrmContactpersonen from "@/pages/crm/contactpersonen";
 import CrmKennisbibliotheek from "@/pages/crm/kennisbibliotheek";
 import CrmTaken from "@/pages/crm/taken";
 import CrmRelatievoorstellen from "@/pages/crm/relatievoorstellen";
+import CrmMarketing from "@/pages/crm/marketing";
 import CrmAanvragen from "@/pages/crm/aanvragen";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
@@ -219,6 +218,9 @@ import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 import WervingPagina from "@/pages/personeel/werving";
 import WervingDetailPagina from "@/pages/personeel/werving-detail";
+import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Lock, ShieldOff } from "lucide-react";
+import { useEffect } from "react";
 
 const WeekstatenPagina = () => <WeekstatenPaginaComponent />;
 
@@ -243,6 +245,46 @@ const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie"
 const WizardNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Wizard onboarding" />;
 
 /**
+ * Puur uitvoerende veldmedewerkers (monteurs/timmermannen) mogen kantoor-
+ * gerichte pagina's niet benaderen — ook niet via een directe URL.
+ * Dezelfde criteria als in beheerder-layout.tsx (isUitvoerendVeld).
+ */
+const UITVOERENDE_FUNCTIES = ["Monteur", "Timmerman", "Uitvoerder", "Onderhoudsmonteur"];
+
+/**
+ * Pad-prefixen die voor veldmedewerkers zijn geblokkeerd. Elke prefix dekt
+ * zowel het exacte pad als alle sub-paden (bijv. /offertes/123).
+ * Synchroon houden met de !isUitvoerendVeld-blokken in beheerder-layout.tsx.
+ */
+const VELD_GEBLOKKEERDE_PREFIXEN = [
+  // Projectaanpak
+  "/gebouwen",
+  "/voorzieningen",
+  "/opname",
+  "/modules/calculatie",
+  "/modules/planning",
+  "/offertes",
+  "/opdrachten",
+  "/werkvoorbereiding",
+  "/inkoop",
+  "/regie",
+  "/uitvoering",
+  "/rapporten",
+  "/onderhoud",
+  "/dossiers",
+  "/documenten",
+  "/snagstream",
+  "/magazijn",
+  "/gereedschappen",
+  // Communicatie
+  "/berichten",
+  "/werk-inbox",
+  "/workflow",
+  "/team-overleg",
+  // Declaraties
+  "/declaraties",
+] as const;
+/**
  * Dashboard adapteert op basis van rol en bevoegdheden.
  * Beheerder-gericht profiel → BeheerderDashboard; anders → MonteurDashboard.
  */
@@ -265,6 +307,25 @@ function AdaptieveDashboard() {
  * memoryLocation, zodat navigatie binnen een baan blijft.
  */
 export function ConnectRoutes() {
+  const { rol, functietitels } = useRol();
+  const [location] = useLocation();
+
+  const isHoofdbeheerder = rol === "hoofdbeheerder";
+  const isUitvoerendVeld =
+    !isHoofdbeheerder &&
+    functietitels.length > 0 &&
+    functietitels.every((f) => UITVOERENDE_FUNCTIES.includes(f));
+
+  // Veldmedewerker op een geblokkeerd pad → toon omleidingspagina.
+  if (
+    isUitvoerendVeld &&
+    VELD_GEBLOKKEERDE_PREFIXEN.some(
+      (pad) => location === pad || location.startsWith(pad + "/"),
+    )
+  ) {
+    return <VeldwerkOmleiding />;
+  }
+
   return (
       <Switch>
         {/* ── Hoofdpagina ── */}
@@ -402,6 +463,7 @@ export function ConnectRoutes() {
         <Route path="/crm/contactpersonen" component={CrmContactpersonen} />
         <Route path="/crm/taken" component={CrmTaken} />
         <Route path="/crm/relatievoorstellen" component={CrmRelatievoorstellen} />
+        <Route path="/crm/marketing" component={CrmMarketing} />
         <Route path="/crm/kennisbibliotheek" component={CrmKennisbibliotheek} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/crm" component={CrmKlanten} />
@@ -564,5 +626,27 @@ export function ConnectRoutes() {
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
+  );
+}
+
+
+/** Tijdelijke omleidingspagina terwijl de navigatie naar / afhandelt. */
+function VeldwerkOmleiding() {
+  const [, navigeer] = useLocation();
+  useEffect(() => {
+    navigeer("/");
+  }, [navigeer]);
+  return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-4">
+      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+        <ShieldOff className="w-5 h-5 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="font-semibold text-foreground">Pagina niet beschikbaar</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Deze pagina is bedoeld voor kantoormedewerkers. Je wordt teruggestuurd naar je startpagina.
+        </p>
+      </div>
+    </div>
   );
 }

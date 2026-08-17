@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2, Users, Target, AlertCircle, Clock,
-  ChevronRight, ArrowRight, Handshake, Newspaper, TrendingUp,
+  ChevronRight, ArrowRight, Handshake, Newspaper, TrendingUp, Megaphone,
   ClipboardList, Sparkles, BookOpen, Inbox,
 } from "lucide-react";
 
@@ -45,6 +45,7 @@ export default function CrmDashboardPagina() {
     { href: "/crm/marktintelligentie", label: "Marktinzicht", icon: Newspaper, beschrijving: "Nieuws, aanbestedingen en signalen" },
     { href: "/crm/taken", label: "Taken", icon: ClipboardList, beschrijving: "Acties en opvolging" },
     { href: "/crm/relatievoorstellen", label: "AI-relatievoorstellen", icon: Sparkles, beschrijving: "Voorgestelde contacten ter beoordeling" },
+    { href: "/crm/marketing", label: "Marketing", icon: Megaphone, beschrijving: "Doelgroepen, sjablonen en campagnes" },
     { href: "/crm/kennisbibliotheek", label: "Kennisbibliotheek", icon: BookOpen, beschrijving: "Documenten en naslag" },
   ];
 

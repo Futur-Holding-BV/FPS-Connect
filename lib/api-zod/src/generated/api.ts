@@ -9417,6 +9417,351 @@ export const DeleteCrmRelatievoorstelResponse = zod.void()
 
 
 /**
+ * @summary Mail-toestemming van een contactpersoon vastleggen of intrekken
+ */
+export const ZetMarketingToestemmingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ZetMarketingToestemmingBody = zod.object({
+  "toestemming": zod.boolean(),
+  "bron": zod.string().optional()
+})
+
+export const ZetMarketingToestemmingResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Doelgroepen met live ledenaantal (toestemmingspoort)
+ */
+export const ListMarketingDoelgroepenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "criteria": zod.object({
+  "branche": zod.array(zod.string()).optional(),
+  "stad": zod.array(zod.string()).optional(),
+  "relatie_status": zod.array(zod.string()).optional(),
+  "klant_status": zod.array(zod.string()).optional(),
+  "org_type": zod.array(zod.string()).optional(),
+  "laatste_contact_voor": zod.string().nullish()
+}),
+  "aantal_leden": zod.number(),
+  "aangemaakt_op": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListMarketingDoelgroepenResponse = zod.array(ListMarketingDoelgroepenResponseItem)
+
+
+/**
+ * @summary Doelgroep aanmaken (criteria, leden altijd live berekend)
+ */
+export const CreateMarketingDoelgroepBody = zod.object({
+  "naam": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "criteria": zod.object({
+  "branche": zod.array(zod.string()).optional(),
+  "stad": zod.array(zod.string()).optional(),
+  "relatie_status": zod.array(zod.string()).optional(),
+  "klant_status": zod.array(zod.string()).optional(),
+  "org_type": zod.array(zod.string()).optional(),
+  "laatste_contact_voor": zod.string().nullish()
+}).optional()
+})
+
+export const CreateMarketingDoelgroepResponse = zod.void()
+
+
+/**
+ * @summary Live telling van leden voor (concept)criteria
+ */
+export const TelMarketingDoelgroepVoorbeeldBody = zod.object({
+  "criteria": zod.object({
+  "branche": zod.array(zod.string()).optional(),
+  "stad": zod.array(zod.string()).optional(),
+  "relatie_status": zod.array(zod.string()).optional(),
+  "klant_status": zod.array(zod.string()).optional(),
+  "org_type": zod.array(zod.string()).optional(),
+  "laatste_contact_voor": zod.string().nullish()
+}).optional()
+})
+
+export const TelMarketingDoelgroepVoorbeeldResponse = zod.object({
+  "aantal_leden": zod.number()
+})
+
+
+/**
+ * @summary Doelgroep wijzigen
+ */
+export const UpdateMarketingDoelgroepParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMarketingDoelgroepBody = zod.object({
+  "naam": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "criteria": zod.object({
+  "branche": zod.array(zod.string()).optional(),
+  "stad": zod.array(zod.string()).optional(),
+  "relatie_status": zod.array(zod.string()).optional(),
+  "klant_status": zod.array(zod.string()).optional(),
+  "org_type": zod.array(zod.string()).optional(),
+  "laatste_contact_voor": zod.string().nullish()
+}).optional()
+})
+
+export const UpdateMarketingDoelgroepResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Doelgroep verwijderen
+ */
+export const DeleteMarketingDoelgroepParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMarketingDoelgroepResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Live berekende leden van een doelgroep
+ */
+export const ListMarketingDoelgroepLedenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListMarketingDoelgroepLedenResponseItem = zod.object({
+  "contactpersoon_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "klant_id": zod.number().nullish(),
+  "organisatie": zod.string().nullish()
+})
+export const ListMarketingDoelgroepLedenResponse = zod.array(ListMarketingDoelgroepLedenResponseItem)
+
+
+/**
+ * @summary Mailsjablonen
+ */
+export const ListMarketingSjablonenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string(),
+  "aangemaakt_op": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListMarketingSjablonenResponse = zod.array(ListMarketingSjablonenResponseItem)
+
+
+/**
+ * @summary Mailsjabloon aanmaken ({{naam}} en {{organisatie}} als velden)
+ */
+export const CreateMarketingSjabloonBody = zod.object({
+  "naam": zod.string().optional(),
+  "onderwerp": zod.string().optional(),
+  "inhoud": zod.string().optional()
+})
+
+export const CreateMarketingSjabloonResponse = zod.void()
+
+
+/**
+ * @summary Mailsjabloon wijzigen
+ */
+export const UpdateMarketingSjabloonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMarketingSjabloonBody = zod.object({
+  "naam": zod.string().optional(),
+  "onderwerp": zod.string().optional(),
+  "inhoud": zod.string().optional()
+})
+
+export const UpdateMarketingSjabloonResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Mailsjabloon verwijderen
+ */
+export const DeleteMarketingSjabloonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMarketingSjabloonResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Campagnes
+ */
+export const ListMarketingCampagnesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "doel": zod.string().nullish(),
+  "doelgroep_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'gepland', 'verzendend', 'verzonden', 'gestopt']),
+  "gepland_op": zod.string().nullish(),
+  "proef_verzonden_op": zod.string().nullish(),
+  "gestart_op": zod.string().nullish(),
+  "afgerond_op": zod.string().nullish(),
+  "gestopt_op": zod.string().nullish(),
+  "gestopt_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListMarketingCampagnesResponse = zod.array(ListMarketingCampagnesResponseItem)
+
+
+/**
+ * @summary Campagne aanmaken (concept)
+ */
+export const CreateMarketingCampagneBody = zod.object({
+  "naam": zod.string().optional(),
+  "doel": zod.string().nullish(),
+  "doelgroep_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "gepland_op": zod.string().nullish()
+})
+
+export const CreateMarketingCampagneResponse = zod.void()
+
+
+/**
+ * @summary Campagne met ontvanger-tellingen
+ */
+export const GetMarketingCampagneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMarketingCampagneResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "doel": zod.string().nullish(),
+  "doelgroep_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'gepland', 'verzendend', 'verzonden', 'gestopt']),
+  "gepland_op": zod.string().nullish(),
+  "proef_verzonden_op": zod.string().nullish(),
+  "gestart_op": zod.string().nullish(),
+  "afgerond_op": zod.string().nullish(),
+  "gestopt_op": zod.string().nullish(),
+  "gestopt_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+}).and(zod.object({
+  "ontvangers": zod.record(zod.string(), zod.number())
+}))
+
+
+/**
+ * @summary Campagne wijzigen (alleen concept/gepland)
+ */
+export const UpdateMarketingCampagneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMarketingCampagneBody = zod.object({
+  "naam": zod.string().optional(),
+  "doel": zod.string().nullish(),
+  "doelgroep_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "gepland_op": zod.string().nullish()
+})
+
+export const UpdateMarketingCampagneResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Concept-campagne verwijderen
+ */
+export const DeleteMarketingCampagneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMarketingCampagneResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Proefverzending naar jezelf (verplicht vóór echte verzending)
+ */
+export const VerstuurMarketingCampagneProefParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerstuurMarketingCampagneProefResponse = zod.object({
+  "ok": zod.boolean().optional(),
+  "verzonden_naar": zod.string().optional()
+})
+
+
+/**
+ * @summary Campagne verzenden naar de doelgroep (via de mailwachtrij, crm niveau 4)
+ */
+export const VerstuurMarketingCampagneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerstuurMarketingCampagneResponse = zod.object({
+  "ok": zod.boolean().optional(),
+  "ingepland": zod.number().optional()
+})
+
+
+/**
+ * @summary Verzending stoppen — resterende berichten vervallen
+ */
+export const StopMarketingCampagneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const StopMarketingCampagneBody = zod.object({
+  "reden": zod.string().optional()
+})
+
+export const StopMarketingCampagneResponse = zod.object({
+  "ok": zod.boolean().optional(),
+  "vervallen": zod.number().optional()
+})
+
+
+/**
+ * @summary Publieke afmeldpagina (zonder inloggen, zonder bijwerking — toont bevestigingsknop)
+ */
+export const GetMarketingAfmeldPaginaParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetMarketingAfmeldPaginaResponse = zod.unknown()
+
+
+/**
+ * @summary Afmelding uitvoeren (idempotent; trekt toestemming in en annuleert wachtende campagnemail)
+ */
+export const BevestigMarketingAfmeldingParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const BevestigMarketingAfmeldingResponse = zod.unknown()
+
+
+/**
  * @summary Inbox statistieken
  */
 export const GetInboxStatsResponse = zod.object({

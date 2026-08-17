@@ -1,3 +1,16 @@
+## 2026-08-17 — MARKETING_01 Fase 1: marketingfundament (doelgroepen, sjablonen, campagnes, toestemming)
+
+- **Uitvoering:** Fase 1 van Deel A | **Kwaliteit:** hoog | **Risico:** laag (nieuwe module, bestaand gedrag ongewijzigd)
+
+Eerste bouwsteen van de marketingmodule, binnen module crm (niveau 3 = beheren + proef, niveau 4 = echt verzenden/stoppen, conform akkoord). Migraties 0060/0061: mail-toestemmingsvelden op contactpersonen (toestemming+bron, afgemeld, onbestelbaar) en tabellen voor doelgroepen, sjablonen, campagnes en campagne-ontvangers; mailwachtrij gekoppeld aan campagne-ontvangers. Kernprincipes afgedwongen in de code, niet alleen in de UI:
+
+- **Harde toestemmingspoort:** élke doelgroep-query filtert server-side op e-mail aanwezig + toestemming + niet afgemeld + niet onbestelbaar; leden worden altijd live berekend (nooit opgeslagen lijsten). Toestemming vastleggen vereist een bron; een afmelding is niet stilletjes terug te draaien.
+- **Proef verplicht:** verzenden kan pas na een proefmail naar jezelf, en de proef moet nieuwer zijn dan de laatste wijziging aan campagne én sjabloon (anders 422 met uitleg).
+- **Fail-closed verzenden:** campagnemails gaan altijd via de bestaande mailwachtrij (nooit direct), met atomaire statusclaim tegen dubbel verzenden (409). Elke mail draagt een persoonlijke afmeldlink (publiek token); afmelden werkt zonder inloggen, is idempotent, trekt toestemming in, annuleert nog wachtende campagnemails van die persoon en logt een gebeurtenis bij de relatie. Stoppen wijst alle nog wachtende wachtrij-items van de campagne af.
+- **Frontend:** nieuwe pagina /crm/marketing (tabs Campagnes/Doelgroepen/Sjablonen) + nav-kaart op het CRM-dashboard; verzend-/stopknoppen alleen zichtbaar bij crm 4.
+
+Na architect-review vier gaten dichtgezet: (a) laatste consent-/statuspoort vlak vóór daadwerkelijke verzending vanuit de wachtrij (afmelding/intrekking/bounce/gestopte campagne ná klaarzetten → item afgewezen i.p.v. verzonden), (b) toestemming intrekken annuleert per direct nog wachtende campagnemails, (c) wachtrij-samenvoeging (zelfde adres+onderwerp) kan geen ontvanger meer stilzwijgend verliezen (ontvanger wordt zichtbaar overgeslagen + logregel), (d) afmelden is scanner-veilig: GET toont alleen een bevestigingsknop, de afmelding zelf loopt via POST. Bewijs: scripts/src/verificatie-marketing-fase1.ts — 27/27 groen (422 zonder bron, toestemmingspoort in telling én ledenlijst, proefverplichting, wachtrij-koppeling+afmeldlink, dubbelverzending 409, publiek afmelden incl. uit-doelgroep-vallen, onbestelbaar-poort, stoppen ruimt wachtrij op). Vervolg (afgesproken, nog te bouwen): open/klik-tracking, bounce-verwerking via werk-inbox met 5%-autostop, gedoseerde verzender, Document Studio-renderlaag met werkmaatschappij-branding, verkoopkanskoppeling, opvolgreeksen, webformulier, overzicht en Deel B coaching.
+
 ## 2026-08-17 — HRM AI-voorstellen: geen lege "Overnemen"-voorstellen en geen valse 100% zekerheid meer
 
 De ontbrekende-velden-scan bij dossierheranalyse maakte voorstellen aan zónder voorstelwaarde maar mét 100% zekerheid, waardoor kaarten met "Voorstel: —" en een Overnemen-knop verschenen (er viel niets over te nemen) en het percentage het impact-label tegensprak. Gerepareerd op beide vlakken: signaleringen van ontbrekende velden krijgen geen zekerheidsscore meer (die is betekenisloos zonder waarde) en de heranalyse heelt bestaande foute signaleringen zelf; de kaart toont zulke items nu als "Ontbreekt" met alleen "Waarde invullen en overnemen" (pas actief bij ingevulde waarde), Later en Afwijzen. Server-side fail-closed: goedkeuren zonder waarde én zonder correctietekst geeft 422; bulk "Alle aanvullingen accepteren" slaat lege signaleringen over. Bewijs: scripts/src/verificatie-hrm-voorstel-leeg.ts (9/9 groen: 422-poort, zelfheling, doorvoer met ingevulde waarde, afwijzen).
@@ -3334,6 +3347,29 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - `artifacts/api-server/src/verificatie-mail-naar-factuur.ts` — bewijst nu de inkoperroute end-to-end (was bewust directieroute): seedt een leveranciers-rij + opdracht + goedgekeurde inkoopbon, borgt dat crm_klanten-id en leveranciers-id verschillen (anders zou het bewijs op id-toeval kunnen leunen) en eist `wacht_op_inkoper` met de juiste inkoper-id. Cleanup ruimt alle nieuwe seeds op in `finally`.
 
 **Bewijs:** verificatiescript gedraaid — ALLE STAPPEN GESLAAGD; factuur kwam via de naam-brug op `wacht_op_inkoper` met de goedkeurder van de inkoopbon als inkoper; dedupe en §8-heropening blijven werken.
+
+
+## 2026-08-17 — Mail.Send scope: antwoorden veilig geblokkeerd zonder toestemming (taak 808)
+
+- **Uitvoering:** volledig gebouwd en lokaal bewezen | **Kwaliteit:** hoog | **Risico:** laag (alleen uitbreidend — leesfunctionaliteit ongewijzigd)
+
+**Aanleiding:** de antwoord-composer in de werk-inbox (`POST /werk-inbox/mails/:messageId/beantwoord`) verstuurt via Microsoft 365 Graph. Op dev had het token alleen `Mail.Read`-scopes, waardoor het versturen nooit end-to-end kon worden bewezen. Bovendien zouden bestaande koppelingen bij een stil falen (403 van Graph) een cryptische foutmelding geven.
+
+**Wijzigingen (`artifacts/api-server/src/services/werkInboxGraph.ts`):**
+- `DELEGATED_SCOPES` uitgebreid met `Mail.Send` — nieuwe OAuth-koppelingen vragen voortaan ook verzend-toestemming.
+- `heeftMailSendScope(gebruikerId)` toegevoegd — leest de opgeslagen `scope`-kolom in `werk_inbox_tokens` en geeft `false` terug als `Mail.Send` ontbreekt.
+- `beantwoordMail()` en `verstuurNieuwDelegatedMail()` blokkeren vroeg met een duidelijke Nederlandse foutmelding ("Uw Microsoft-koppeling heeft geen toestemming om mail te versturen (Mail.Send). Ontkoppel uw Microsoft-account en koppel het opnieuw…") als de scope ontbreekt, zodat de gebruiker weet wat te doen.
+- 403 van Graph zelf (bv. bij een token dat ondanks scope-claim geen consent heeft) wordt ook op dezelfde duidelijke melding gemapped in plaats van "Versturen mislukt (403)".
+- Token-refresh behoudt bewust de **opgeslagen** scope: een bestaand `Mail.Read`-token wordt bij verversing niet stiekem upgraded naar `Mail.Send` (dat zou de refresh laten mislukken en leesfunctionaliteit breken). Refresh en opslaan accepteren nu een expliciete scope-parameter.
+
+**Bewijs (lokaal via bearer-token curl):**
+- Seed: token met scope `Mail.Read offline_access User.Read` (zonder `Mail.Send`), mailbox + mail aangemaakt.
+- `POST /api/werk-inbox/mails/e2e-scope-test-808/beantwoord` → HTTP 502 + correcte foutmelding ontvangen.
+- `samenwerk_status` en `beantwoord_op` ongewijzigd (mail niet als "beantwoord" gemarkeerd bij geblokkeerd verzoek) ✓
+- Typecheck slaagt; leesfunctionaliteit (sync, inbox, detail) ongewijzigd.
+
+**Restpunt (bewust gedefereerd):** live end-to-end bewijs (echt antwoord zichtbaar in verzonden items) vereist een Microsoft-account met `Mail.Send`-consent dat op dit moment niet beschikbaar is. Code is klaar; zodra een beheerder zijn account ontkoppelt en opnieuw koppelt, wordt `Mail.Send` gevraagd en werkt het volledige pad.
+
 ## 2026-08-07 — Indirecte loonkosten: dekking per boekjaar afgedwongen (taak 803)
 
 - **Uitvoering:** gebouwd en bewezen (24/24 checks) | **Kwaliteit:** hoog | **Risico:** laag (alleen strengere bevinding, geen berekening gewijzigd)
