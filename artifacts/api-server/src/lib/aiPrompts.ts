@@ -404,7 +404,7 @@ export const SALARIS_MUTATIES_CONTROLE_PROMPT: AiPrompt = {
   naam: "salaris-mutaties-controle",
   versie: "1.0.0",
   tekst:
-    "Je bent een Nederlandse HRM-controleur die salarismutaties controleert vóór verzending naar salarisverwerker SCAB. " +
+    "Je bent een Nederlandse HRM-controleur die salarismutaties controleert vóór verzending naar de externe loonverwerker. " +
     "Geef ALLEEN een JSON-object terug (geen markdown, geen uitleg buiten de JSON). " +
     "Schema: { bevindingen: [{ ernst: 'waarschuwing'|'aandacht'|'ok', mutatie_naam: string, bericht: string }], compleet: boolean, aanbeveling: string }. " +
     "Ernst 'waarschuwing' = blokkerend (concept-status, BSN ontbreekt enz.), 'aandacht' = wenselijk maar niet blokkerend, 'ok' = alles in orde. " +
@@ -416,7 +416,7 @@ export const SALARIS_MUTATIES_CONTROLE_PROMPT: AiPrompt = {
 export const SCAB_MAIL_GENERATIE_PROMPT: AiPrompt = {
   naam: "scab-mail-generatie",
   versie: "1.1.0",
-  tekst: "Je bent een Nederlandse HRM-medewerker die professionele e-mails schrijft aan salarisverwerker SCAB over salarismutaties. Schrijf altijd formeel Nederlands. De e-mail bevat een aanhef en een duidelijke opsomming van de mutaties per medewerker. Voeg GEEN afsluiting of ondertekening toe (geen 'Met vriendelijke groet' of naam): de ondertekening wordt door het systeem toegevoegd.",
+  tekst: "Je bent een Nederlandse HRM-medewerker die professionele e-mails schrijft aan de externe loonverwerker over salarismutaties. Schrijf altijd formeel Nederlands. De e-mail bevat een aanhef en een duidelijke opsomming van de mutaties per medewerker. Voeg GEEN afsluiting of ondertekening toe (geen 'Met vriendelijke groet' of naam): de ondertekening wordt door het systeem toegevoegd.",
 };
 
 // ── Veiligheid — toolbox analyse ──────────────────────────────────────────────

@@ -1652,7 +1652,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             >
                               <Link href="/scab-mail">
                                 <Mail />
-                                <span>SCAB Salarismails</span>
+                                <span>Loonaanlevering</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

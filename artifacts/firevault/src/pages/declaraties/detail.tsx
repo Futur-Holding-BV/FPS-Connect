@@ -360,7 +360,7 @@ export default function DeclaratieDetailPagina() {
       {isGoedgekeurd && magVerwerken && (
         <p className="text-xs text-muted-foreground">
           Deze declaratie staat al automatisch klaar als salarismutatie voor de loonverwerking.
-          Zodra de loonaanlevering (SCAB-mail) van deze periode wordt verzonden, springt de status
+          Zodra de loonaanlevering van deze periode wordt verzonden, springt de status
           vanzelf op verwerkt. Handmatig markeren is alleen nodig als u buiten de loonrun om uitbetaalt.
         </p>
       )}

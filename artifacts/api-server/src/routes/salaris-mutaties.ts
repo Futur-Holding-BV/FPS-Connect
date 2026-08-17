@@ -150,8 +150,8 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
       bevindingen,
       compleet,
       aanbeveling: compleet
-        ? `Alle ${geaccordeerd} geaccordeerde mutaties voor ${periodeLabel} zien er volledig uit. U kunt de SCAB-conceptmail genereren.`
-        : `Er zijn ${bevindingen.length} aandachtspunten. Los de waarschuwingen op voor verzending naar SCAB.`,
+        ? `Alle ${geaccordeerd} geaccordeerde mutaties voor ${periodeLabel} zien er volledig uit. U kunt de loonaanlever-conceptmail genereren.`
+        : `Er zijn ${bevindingen.length} aandachtspunten. Los de waarschuwingen op voor verzending naar de loonverwerker.`,
     };
   }
 

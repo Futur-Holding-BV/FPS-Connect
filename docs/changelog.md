@@ -4,6 +4,12 @@
 
 De laatste bewijsstap van de automatische EAS-Update-keten is afgerond: `EXPO_TOKEN` is (via de GitHub-API, versleuteld met de repo-public-key) als GitHub Actions secret ingesteld, waarna een deploy-run de stap "OTA-update monteur-app" zonder skip-waarschuwing doorliep. Bewijs: `eas-cli channel:list` toont nu een echte update-groep op het `production`-kanaal (groep `9732cfb2`, runtime 1.0.0, android+ios, message "deploy afbc2b5: …") in plaats van N/A. Monteurs halen de update volgens het standaard EAS-mechanisme op bij de eerstvolgende (tweede) app-start; de runtime-versie komt overeen met de uitgeleverde productie-APK. Runbook bijgewerkt.
 
+## 2026-08-17 — Bedrijfsgegevens opslaan gerepareerd + SCAB-naam geneutraliseerd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Opslaan van boekhouder-naam/-e-mail (en aanleveradres/intern contact) op Organisatie → Bedrijfsgegevens werkte niet: de algemene PATCH /werkgevers/:id negeerde deze velden stilzwijgend (ze zaten alleen in de aparte salaris-config-route). Velden toegevoegd aan de hoofdroute; bewezen via dev-API (PATCH → velden komen gevuld terug). Daarnaast alle gebruikersgerichte "SCAB"-teksten geneutraliseerd naar "loonverwerker/loonaanlevering" (bedrijfsgegevens, sidebar, loonaanleverpagina, salarismutaties, boekhouderdashboard, declaratie-uitleg, AI-prompts): SCAB is alleen de loonverwerker van FPS Bouw en Renovatie; de huidige maatschappijen gebruiken Kruders & Weda. Interne techniek (routes/hooks/moduleniveau scab_mail) is bewust ongewijzigd. PWA-cacheversie gaat sinds vandaag automatisch mee met de release (geen handmatige bump meer).
+
 ## 2026-08-16 — Document Studio: genereren zonder referentie, bulk-knop en twee nieuwe documenttypes
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -127,7 +127,7 @@ export default function BoekhouderPage() {
             { label: "Wachtend loon-output", waarde: dashboard.wachtend_loon_output, icoon: FileText, kleur: "text-blue-600" },
             { label: "Eigen uploads", waarde: dashboard.eigen_uploads, icoon: Upload, kleur: "text-green-600" },
             { label: "SEPA-bestanden", waarde: dashboard.sepa_bestanden, icoon: Banknote, kleur: "text-purple-600" },
-            { label: "SCAB-conceptmails", waarde: dashboard.scab_mails_concept ?? 0, icoon: FileText, kleur: "text-orange-600" },
+            { label: "Loonaanlever-conceptmails", waarde: dashboard.scab_mails_concept ?? 0, icoon: FileText, kleur: "text-orange-600" },
           ].map(({ label, waarde, icoon: Icoon, kleur }) => (
             <Card key={label}>
               <CardContent className="pt-4 pb-4">

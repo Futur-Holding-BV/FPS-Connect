@@ -39,7 +39,7 @@ const STAPPEN = [
   { nr: 1, label: "Mutaties accorderen", href: "/salaris-mutaties" },
   { nr: 2, label: "AI-conceptmail genereren" },
   { nr: 3, label: "Controleren & aanpassen" },
-  { nr: 4, label: "Verzenden naar SCAB" },
+  { nr: 4, label: "Verzenden naar loonverwerker" },
 ];
 
 function WorkflowIndicator({ actief }: { actief: number }) {
@@ -161,7 +161,7 @@ export default function ScabMailPage() {
         <div className="flex items-center gap-3">
           <Mail className="text-primary" size={24} />
           <div>
-            <h1 className="text-2xl font-semibold">SCAB Salarismails</h1>
+            <h1 className="text-2xl font-semibold">Loonaanlevering salarismails</h1>
             <p className="text-sm text-muted-foreground">
               AI genereert een conceptmail op basis van geaccordeerde mutaties — altijd eerst controleren vóór verzending
             </p>
@@ -196,7 +196,7 @@ export default function ScabMailPage() {
           <p className="font-medium text-amber-900">Hoe werkt de AI-conceptmail?</p>
           <p className="text-amber-800 mt-1">
             De AI leest alle geaccordeerde salarismutaties voor de geselecteerde periode en stelt
-            een complete, formele e-mail op gericht aan de contactpersoon bij SCAB. Per mutatie worden
+            een complete, formele e-mail op gericht aan de loonverwerker van de werkmaatschappij. Per mutatie worden
             de medewerker, het type wijziging, de toelichting en de ingangsdatum verwerkt.
             U controleert de inhoud, past aan waar nodig, en verstuurt definitief.
           </p>
@@ -288,7 +288,7 @@ export default function ScabMailPage() {
                         <div className="flex items-center gap-1.5 mt-1">
                           <AlertTriangle size={13} className="text-amber-500" />
                           <p className="text-xs text-amber-700">
-                            Geen SCAB-e-mailadres ingesteld — stel in via Beheer &rsaquo; Werkgevers.
+                            Geen aanleveradres loonverwerking ingesteld — stel in via Beheer &rsaquo; Werkgevers.
                           </p>
                         </div>
                       )}
@@ -415,7 +415,7 @@ export default function ScabMailPage() {
                 Pas de inhoud aan zodat alle informatie correct en volledig is vóór verzending.
               </div>
               <div className="space-y-1.5">
-                <Label>SCAB e-mailadres</Label>
+                <Label>Aanleveradres loonverwerking</Label>
                 <Input value={bewerkForm.scab_email_adres}
                   onChange={(e) => setBewerkForm((f) => ({ ...f, scab_email_adres: e.target.value }))}
                   placeholder="naam@scab.nl" />
@@ -465,7 +465,7 @@ export default function ScabMailPage() {
               {!verzendDialogOpen.scab_email_adres && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
                   <AlertTriangle size={16} className="shrink-0" />
-                  Stel eerst een SCAB-e-mailadres in via Beheer &rsaquo; Werkgevers.
+                  Stel eerst een aanleveradres loonverwerking in via Beheer &rsaquo; Werkgevers.
                 </div>
               )}
               <Separator />

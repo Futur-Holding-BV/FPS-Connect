@@ -215,7 +215,7 @@ router.get("/werkgevers/:id", lezen, async (req, res): Promise<void> => {
 router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -250,6 +250,11 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           margeLinks: marge_links !== undefined ? (marge_links != null ? String(marge_links) : null) : undefined,
           margeRechts: marge_rechts !== undefined ? (marge_rechts != null ? String(marge_rechts) : null) : undefined,
           actief,
+          boekhouderNaam: boekhouder_naam !== undefined ? boekhouder_naam : undefined,
+          boekhouderEmail: boekhouder_email !== undefined ? boekhouder_email : undefined,
+          scabEmailAdres: scab_email_adres !== undefined ? scab_email_adres : undefined,
+          internContactNaam: intern_contact_naam !== undefined ? intern_contact_naam : undefined,
+          internContactEmail: intern_contact_email !== undefined ? intern_contact_email : undefined,
           bijgewerktOp: new Date(),
         })
         .where(eq(werkgeversTable.id, id))

@@ -55,7 +55,7 @@ const STAPPEN = [
   { nr: 1, label: "Mutaties verzamelen" },
   { nr: 2, label: "Accorderen" },
   { nr: 3, label: "AI-controle" },
-  { nr: 4, label: "SCAB-mail" },
+  { nr: 4, label: "Loonaanlevering" },
 ];
 
 function WorkflowIndicator({ actief }: { actief: number }) {
@@ -150,7 +150,7 @@ function AiControleSectie({
         </div>
         {!resultaat && !laden && (
           <p className="text-xs text-muted-foreground mt-1">
-            Laat AI controleren of alle mutaties volledig en consistent zijn voor verzending naar SCAB.
+            Laat AI controleren of alle mutaties volledig en consistent zijn voor verzending naar de loonverwerker.
             {aantalGeaccordeerd === 0 && " Accordeer eerst minimaal één mutatie."}
           </p>
         )}
@@ -292,7 +292,7 @@ export default function SalarisMutatiesPage() {
           <ClipboardList className="text-primary" size={24} />
           <div>
             <h1 className="text-2xl font-semibold">Salarismutaties</h1>
-            <p className="text-sm text-muted-foreground">Mutaties per loonperiode verzamelen, accorderen en doorsturen naar SCAB</p>
+            <p className="text-sm text-muted-foreground">Mutaties per loonperiode verzamelen, accorderen en doorsturen naar de loonverwerker</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -300,7 +300,7 @@ export default function SalarisMutatiesPage() {
             <Button variant="outline" asChild className="text-xs h-9">
               <Link href="/scab-mail">
                 <Mail size={14} className="mr-1.5" />
-                Naar SCAB-mail
+                Naar loonaanlevering
               </Link>
             </Button>
           )}
@@ -373,7 +373,7 @@ export default function SalarisMutatiesPage() {
         />
       )}
 
-      {/* CTA naar SCAB-mail als alles geaccordeerd */}
+      {/* CTA naar loonaanlevering als alles geaccordeerd */}
       {allesBehandeld && aantalGeaccordeerd > 0 && werkmaatschappijFilter !== "alle" && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
           <CheckCircle2 size={20} className="text-green-600 shrink-0" />
@@ -381,12 +381,12 @@ export default function SalarisMutatiesPage() {
             <p className="text-sm font-medium text-green-800">
               Alle {aantalGeaccordeerd} mutaties geaccordeerd voor {MAAND_NAMEN[maand - 1]} {jaar}
             </p>
-            <p className="text-xs text-green-700">U kunt nu een SCAB-conceptmail laten genereren door de AI.</p>
+            <p className="text-xs text-green-700">U kunt nu een loonaanlever-conceptmail laten genereren door de AI.</p>
           </div>
           <Button size="sm" className="shrink-0 bg-green-700 hover:bg-green-800" asChild>
             <Link href="/scab-mail">
               <Mail size={14} className="mr-1.5" />
-              Genereer SCAB-mail
+              Genereer loonaanlever-mail
             </Link>
           </Button>
         </div>
