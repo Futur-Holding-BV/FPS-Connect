@@ -144,3 +144,4 @@
 - [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
 - [Clean PR bij gebundelde commit-history](clean-pr-bundled-commits.md) — code-reviewer vergelijkt HEAD vs github/main.
 - [Actions diagnose zonder logs](actions-diagnose.md) — job-logs=403 via connector; gebruik jobs-steps + check-run-annotations; SMOKETEST-secrets ontbreken in GitHub (smoketest skipt stil).
+- [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).

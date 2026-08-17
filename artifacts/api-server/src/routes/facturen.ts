@@ -318,6 +318,89 @@ router.post("/facturen", requireBevoegdheid("financieel", 2), async (req: Reques
   res.status(201).json(await mapFactuur(rij));
 });
 
+// ── GET /facturen/factuurnummer-tellers ───────────────────────────────────────
+// NUMMER_01 actiepunt: geeft per BV de huidige tellerstatus zodat de accountant
+// kan controleren of de startteller correct is gezet vóór de eerste definitieve
+// factuur in Connect.
+router.get("/facturen/factuurnummer-tellers", requireBevoegdheid("financieel", 4), async (_req: Request, res: Response): Promise<void> => {
+  const werkgevers = await db
+    .select({ id: werkgeversTable.id, naam: werkgeversTable.naam, kenmerkPrefix: werkgeversTable.kenmerkPrefix })
+    .from(werkgeversTable)
+    .orderBy(werkgeversTable.naam);
+  const tellers = await db.select().from(factuurnummerTellersTable);
+  const tellerMap = new Map(tellers.map((t) => [t.werkgeverId, t]));
+  res.json(werkgevers.map((w) => {
+    const t = tellerMap.get(w.id);
+    return {
+      werkgever_id: w.id,
+      naam: w.naam,
+      kenmerk_prefix: w.kenmerkPrefix ?? null,
+      laatste_nummer: t?.laatsteNummer ?? 0,
+      volgend_nummer: String((t?.laatsteNummer ?? 0) + 1).padStart(5, "0"),
+      bijgewerkt_op: t?.bijgewerktOp?.toISOString() ?? null,
+      heeft_definitieve_facturen: (t?.laatsteNummer ?? 0) > 0,
+    };
+  }));
+});
+
+// ── PUT /facturen/factuurnummer-tellers/:werkgeverId ───────────────────────────
+// NUMMER_01 actiepunt: eenmalig de teller per BV instellen op het laatste nummer
+// uit het oude pakket, vóór de eerste definitieve factuur in Connect. Zo worden
+// dubbele fiscale nummers richting de belastingdienst voorkomen.
+// Vereist: financieel niveau 4 (alleen beheerders) + een verplichte reden.
+router.put("/facturen/factuurnummer-tellers/:werkgeverId", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const werkgeverId = parseInt(String(req.params.werkgeverId), 10);
+  const { nieuwe_waarde, reden } = req.body as { nieuwe_waarde?: unknown; reden?: unknown };
+  if (typeof nieuwe_waarde !== "number" || !Number.isInteger(nieuwe_waarde) || nieuwe_waarde < 0) {
+    res.status(400).json({ error: "nieuwe_waarde is verplicht en moet een niet-negatief geheel getal zijn" });
+    return;
+  }
+  if (!reden || typeof reden !== "string" || !reden.trim()) {
+    res.status(400).json({ error: "reden is verplicht (bijv. 'Laatste nummer uit oud pakket vóór overstap: 142')" });
+    return;
+  }
+
+  const [werkgever] = await db
+    .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.id, werkgeverId));
+  if (!werkgever) { res.status(404).json({ error: "Werkgever niet gevonden" }); return; }
+
+  // Blokkeer verlagen als er al definitieve facturen zijn (laatste_nummer > 0):
+  // dat zou fiscale gaten opleveren in de reeks.
+  const [huidig] = await db
+    .select()
+    .from(factuurnummerTellersTable)
+    .where(eq(factuurnummerTellersTable.werkgeverId, werkgeverId));
+  if (huidig && huidig.laatsteNummer > 0 && nieuwe_waarde < huidig.laatsteNummer) {
+    res.status(409).json({
+      error: "De teller kan niet worden verlaagd: er zijn al definitieve facturen uitgegeven voor deze BV.",
+      laatste_nummer: huidig.laatsteNummer,
+      detail: "Verlagen zou fiscale gaten (ontbrekende nummers) opleveren. Neem contact op met de systeembeheerder als dit een noodcorrectie vereist.",
+    });
+    return;
+  }
+
+  const [bijgewerkt] = await db
+    .insert(factuurnummerTellersTable)
+    .values({ werkgeverId, laatsteNummer: nieuwe_waarde, bijgewerktOp: new Date() })
+    .onConflictDoUpdate({
+      target: factuurnummerTellersTable.werkgeverId,
+      set: { laatsteNummer: nieuwe_waarde, bijgewerktOp: new Date() },
+    })
+    .returning();
+
+  res.json({
+    werkgever_id: werkgeverId,
+    naam: werkgever.naam,
+    laatste_nummer: bijgewerkt.laatsteNummer,
+    volgend_nummer: String(bijgewerkt.laatsteNummer + 1).padStart(5, "0"),
+    bijgewerkt_op: bijgewerkt.bijgewerktOp.toISOString(),
+    heeft_definitieve_facturen: bijgewerkt.laatsteNummer > 0,
+    reden_opgeslagen: reden.trim(),
+  });
+});
+
 // ── POST /facturen/:id/definitief ─────────────────────────────────────────────
 // NUMMER_01 §4.6: pas bij het definitief maken van een verkoopfactuur wordt het
 // fiscale factuurnummer uitgegeven — per BV, doorlopend, teller onder slot in

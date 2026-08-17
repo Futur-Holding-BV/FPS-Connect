@@ -22,8 +22,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2, Settings, Wifi, WifiOff, CheckCircle2, AlertTriangle,
-  Loader2, Eye, EyeOff, Info, Plus, Pencil, Trash2, Users, FolderOpen,
+  Loader2, Eye, EyeOff, Info, Plus, Pencil, Trash2, Users, FolderOpen, Hash,
 } from "lucide-react";
+import { useEffect } from "react";
 import type {
   AccountviewInstellingen,
   AccountviewRelatieMapping,
@@ -116,6 +117,9 @@ export default function BoekhoudingBeheer() {
           </TabsTrigger>
           <TabsTrigger value="projecten" className="flex items-center gap-1.5">
             <FolderOpen className="h-3.5 w-3.5" />Project-mapping
+          </TabsTrigger>
+          <TabsTrigger value="factuurnummers" className="flex items-center gap-1.5">
+            <Hash className="h-3.5 w-3.5" />Factuurnummers
           </TabsTrigger>
         </TabsList>
 
@@ -374,6 +378,11 @@ export default function BoekhoudingBeheer() {
         {/* Tab: Project-mapping */}
         <TabsContent value="projecten" className="mt-4">
           <ProjectMappingTab />
+        </TabsContent>
+
+        {/* Tab: Factuurnummer-tellers */}
+        <TabsContent value="factuurnummers" className="mt-4">
+          <FactuurnummerTellersTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -678,6 +687,236 @@ function ProjectMappingTab() {
               onClick={opslaan}
             >
               {createMut.isPending || updateMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+type TellerRij = {
+  werkgever_id: number;
+  naam: string;
+  kenmerk_prefix: string | null;
+  laatste_nummer: number;
+  volgend_nummer: string;
+  bijgewerkt_op: string | null;
+  heeft_definitieve_facturen: boolean;
+};
+
+function FactuurnummerTellersTab() {
+  const [tellers, setTellers] = useState<TellerRij[]>([]);
+  const [laden, setLaden] = useState(true);
+  const [fout, setFout] = useState<string | null>(null);
+  const [dialoogOpen, setDialoogOpen] = useState(false);
+  const [gekozenRij, setGekozenRij] = useState<TellerRij | null>(null);
+  const [nieuweWaarde, setNieuweWaarde] = useState("");
+  const [reden, setReden] = useState("");
+  const [opslaan, setOpslaan] = useState(false);
+  const [opslaanFout, setOpslaanFout] = useState<string | null>(null);
+
+  async function laadTellers() {
+    setLaden(true);
+    setFout(null);
+    try {
+      const resp = await fetch("/api/facturen/factuurnummer-tellers");
+      if (!resp.ok) { setFout("Ophalen mislukt"); return; }
+      setTellers(await resp.json() as TellerRij[]);
+    } catch {
+      setFout("Netwerk- of serverfout");
+    } finally {
+      setLaden(false);
+    }
+  }
+
+  useEffect(() => { void laadTellers(); }, []);
+
+  function openDialoog(rij: TellerRij) {
+    setGekozenRij(rij);
+    setNieuweWaarde(String(rij.laatste_nummer));
+    setReden("");
+    setOpslaanFout(null);
+    setDialoogOpen(true);
+  }
+
+  async function slaOp() {
+    if (!gekozenRij) return;
+    const val = parseInt(nieuweWaarde, 10);
+    if (isNaN(val) || val < 0) { setOpslaanFout("Voer een geldig niet-negatief getal in"); return; }
+    if (!reden.trim()) { setOpslaanFout("Een reden is verplicht"); return; }
+    setOpslaan(true);
+    setOpslaanFout(null);
+    try {
+      const resp = await fetch(`/api/facturen/factuurnummer-tellers/${gekozenRij.werkgever_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nieuwe_waarde: val, reden: reden.trim() }),
+      });
+      const data = await resp.json() as { error?: string; detail?: string };
+      if (!resp.ok) {
+        setOpslaanFout(data.error ?? "Opslaan mislukt");
+        return;
+      }
+      setDialoogOpen(false);
+      await laadTellers();
+    } catch {
+      setOpslaanFout("Netwerk- of serverfout");
+    } finally {
+      setOpslaan(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Hash className="h-4 w-4 text-primary" />
+            Fiscale factuurnummer-tellers per BV
+          </CardTitle>
+          <CardDescription>
+            Stel hier per werkmaatschappij het startpunt van de fiscale nummerreeks in <strong>vóór</strong> de
+            eerste definitieve factuur in Connect. Het volgende definitieve nummer is de waarde hieronder&nbsp;+&nbsp;1.
+            Zodra er definitieve facturen zijn, kan de teller niet meer worden verlaagd.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {laden && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />Ophalen…
+            </div>
+          )}
+          {!laden && fout && (
+            <div className="text-sm text-destructive flex items-center gap-2 py-4">
+              <AlertTriangle className="h-4 w-4" />{fout}
+            </div>
+          )}
+          {!laden && !fout && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="px-4 py-2 text-left font-medium">Werkmaatschappij</th>
+                    <th className="px-4 py-2 text-left font-medium">Prefix</th>
+                    <th className="px-4 py-2 text-right font-medium">Huidig (laatste)</th>
+                    <th className="px-4 py-2 text-right font-medium">Volgend nummer</th>
+                    <th className="px-4 py-2 text-left font-medium">Bijgewerkt</th>
+                    <th className="px-4 py-2 text-right font-medium" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {tellers.map((rij) => (
+                    <tr key={rij.werkgever_id} className="border-b last:border-0">
+                      <td className="px-4 py-3 font-medium">{rij.naam}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{rij.kenmerk_prefix ?? "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        {rij.laatste_nummer === 0 ? (
+                          <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 text-xs">
+                            <AlertTriangle className="h-3 w-3" />Nog niet ingesteld
+                          </span>
+                        ) : (
+                          <span className="font-mono">{String(rij.laatste_nummer).padStart(5, "0")}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold">{rij.volgend_nummer}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {rij.bijgewerkt_op ? new Date(rij.bijgewerkt_op).toLocaleString("nl-NL") : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          size="sm"
+                          variant={rij.heeft_definitieve_facturen ? "outline" : "default"}
+                          className="h-7 text-xs"
+                          onClick={() => openDialoog(rij)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          {rij.heeft_definitieve_facturen ? "Aanpassen" : "Instellen"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-blue-200 bg-blue-50/50">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-start gap-2 text-sm text-blue-800">
+            <Info className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
+            <div className="space-y-1">
+              <p className="font-medium">Wanneer moet ik dit instellen?</p>
+              <p>
+                Vóór de eerste definitieve factuur vanuit Connect. Als de BV in het oude pakket bijvoorbeeld
+                al 142 facturen heeft verstuurd, stel je de teller in op&nbsp;<code className="font-mono bg-blue-100 px-1 rounded">142</code>.
+                De eerstvolgende definitieve factuur in Connect krijgt dan nummer&nbsp;<code className="font-mono bg-blue-100 px-1 rounded">00143</code>.
+              </p>
+              <p className="text-blue-700">
+                Als de teller al op 0 staat en er nog geen definitieve facturen zijn, start Connect automatisch bij 00001.
+                Instellen is dan alleen nodig als de BV een bestaande reeks heeft.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialoogOpen} onOpenChange={setDialoogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {gekozenRij?.heeft_definitieve_facturen ? "Teller aanpassen" : "Startteller instellen"} — {gekozenRij?.naam}
+            </DialogTitle>
+          </DialogHeader>
+          {gekozenRij?.heeft_definitieve_facturen && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              Er zijn al definitieve facturen voor deze BV. De teller kan alleen worden verhoogd.
+            </div>
+          )}
+          <div className="space-y-3">
+            <div>
+              <Label>Laatste gebruikte nummer (uit oud pakket)</Label>
+              <Input
+                className="mt-1 font-mono"
+                type="number"
+                min={0}
+                placeholder="bijv. 142"
+                value={nieuweWaarde}
+                onChange={(e) => setNieuweWaarde(e.target.value)}
+              />
+              {nieuweWaarde && !isNaN(parseInt(nieuweWaarde, 10)) && parseInt(nieuweWaarde, 10) >= 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Eerstvolgende Connect-factuur krijgt nummer&nbsp;
+                  <strong className="font-mono">{String(parseInt(nieuweWaarde, 10) + 1).padStart(5, "0")}</strong>
+                </p>
+              )}
+            </div>
+            <div>
+              <Label>Reden / toelichting <span className="text-destructive">*</span></Label>
+              <Input
+                className="mt-1"
+                placeholder="bijv. Laatste nummer uit oud pakket vóór overstap op Connect"
+                value={reden}
+                onChange={(e) => setReden(e.target.value)}
+              />
+            </div>
+            {opslaanFout && (
+              <div className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" />{opslaanFout}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialoogOpen(false)}>Annuleren</Button>
+            <Button
+              disabled={!nieuweWaarde.trim() || !reden.trim() || opslaan}
+              onClick={slaOp}
+            >
+              {opslaan ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Opslaan
             </Button>
           </DialogFooter>
