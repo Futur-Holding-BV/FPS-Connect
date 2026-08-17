@@ -1,4 +1,5 @@
 // Opdracht detail — werkbegroting, nacalculatie, planning-uren, inkoopplanning, uitvoeringsplanning
+import { KenmerkKop } from "@/components/kenmerk-kop";
 import { ProcesBalk } from "@/components/proces-balk";
 import { useEffect, useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
@@ -868,6 +869,7 @@ export default function OpdrachtDetailPagina() {
         )}
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
+            <KenmerkKop kenmerk={(opdracht as any).kenmerk} />
             <h1 data-paginatitel className="text-xl font-bold tracking-tight">{opdracht.titel}</h1>
             {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
             <ProcesBalk

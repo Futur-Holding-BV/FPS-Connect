@@ -1,3 +1,4 @@
+import { KenmerkKop } from "@/components/kenmerk-kop";
 import { ProcesBalk } from "@/components/proces-balk";
 import { useState } from "react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -127,7 +128,10 @@ export default function OpnameDetailPagina() {
             <ClipboardList className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 data-paginatitel className="text-xl font-bold">{opname.naam}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <KenmerkKop kenmerk={(opname as any).kenmerk} />
+              <h1 data-paginatitel className="text-xl font-bold">{opname.naam}</h1>
+            </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
               {opname.gebouw_naam && (
                 <span className="flex items-center gap-1">

@@ -35,7 +35,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT, MAGAZIJN_BESTELSUGGESTIE_PROMPT } from "../lib/aiPrompts";
 import { herplanMagazijnSignalering } from "../lib/magazijnSignalering";
-import { kenmerkVoorVoorraadinkoop } from "../lib/kenmerk";
+import { formatNummer, herzieningsLetter, kenmerkVoorVoorraadinkoop } from "../lib/kenmerk";
 
 const router = Router();
 
@@ -2153,12 +2153,26 @@ router.get("/magazijn/inkooporders", inkooporderLezen, async (req, res) => {
       .groupBy(magazijnInkoopordersTable.id, gebruikersTable.naam)
       .orderBy(desc(magazijnInkoopordersTable.aangemaaktOp));
 
-    return void res.json(await Promise.all(rows.map(async (r) => mapInkooporder({
-      ...r.order,
-      aangemaakt_door_naam: r.aangemaakt_door_naam,
-      totaal_regels: Number(r.totaal_regels),
-      kenmerk_berekend: await kenmerkVoorVoorraadinkoop(r.order.gebouwId, r.order.inkoopnummer, r.order.herziening),
-    }))));
+    // Geen N+1: alle voorraadorders delen het magazijn-gebouw; kenmerk per uniek
+    // gebouw één keer opvragen en daarna in geheugen samenstellen.
+    const gebouwIds = [...new Set(rows.map((r) => r.order.gebouwId).filter((g): g is number => g != null))];
+    const gDelen = new Map<number, string>();
+    for (const gid of gebouwIds) {
+      // kenmerkVoorVoorraadinkoop = "<Gdeel>/<Ideel>"; haal het G-deel via een dummy-I op
+      const basis = await kenmerkVoorVoorraadinkoop(gid, 0, 0);
+      const gdeel = basis.includes("/") ? basis.split("/")[0] : "";
+      if (gdeel) gDelen.set(gid, gdeel);
+    }
+    return void res.json(rows.map((r) => {
+      const ideel = formatNummer("I", r.order.inkoopnummer) + herzieningsLetter(r.order.herziening);
+      const gdeel = r.order.gebouwId != null ? gDelen.get(r.order.gebouwId) : undefined;
+      return mapInkooporder({
+        ...r.order,
+        aangemaakt_door_naam: r.aangemaakt_door_naam,
+        totaal_regels: Number(r.totaal_regels),
+        kenmerk_berekend: gdeel ? `${gdeel}/${ideel}` : ideel,
+      });
+    }));
   } catch (err) {
     logger.error({ err }, "lijst inkooporders ophalen fout");
     return void res.status(500).json({ error: "Interne serverfout" });

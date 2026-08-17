@@ -1,3 +1,4 @@
+import { KenmerkKop } from "@/components/kenmerk-kop";
 import { useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import {
@@ -771,6 +772,7 @@ export default function GebouwDetail() {
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
+            <KenmerkKop kenmerk={(gebouw as any).kenmerk ?? gebouw.werknummer} />
             <h1 data-paginatitel className="text-2xl font-bold tracking-tight leading-tight">
               {gebouw.projectnummer
                 ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`

@@ -1,3 +1,4 @@
+import { KenmerkKop } from "@/components/kenmerk-kop";
 import { ProcesBalk } from "@/components/proces-balk";
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
@@ -876,6 +877,7 @@ export default function ProposalStudio() {
             </Link>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
+                <KenmerkKop kenmerk={(offerte as any).kenmerk} toelichting="Dit kenmerk staat op de offerte-PDF. Automatisch berekend, niet bewerkbaar." />
                 <h1 data-paginatitel className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
                 {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
                 <ProcesBalk
@@ -903,18 +905,8 @@ export default function ProposalStudio() {
                   </Badge>
                 )}
               </div>
-              {((offerte as any).kenmerk || offerte.offertenummer) && (
-                <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                  {(offerte as any).kenmerk && (
-                    <span
-                      className="font-mono font-semibold tracking-wide bg-muted border border-border rounded px-1.5 py-0.5 select-all"
-                      title="Kenmerk (automatisch berekend, niet bewerkbaar)"
-                    >
-                      {(offerte as any).kenmerk}
-                    </span>
-                  )}
-                  {offerte.offertenummer && <span>{offerte.offertenummer}</span>}
-                </p>
+              {offerte.offertenummer && (
+                <p className="text-xs text-muted-foreground mt-0.5">{offerte.offertenummer}</p>
               )}
             </div>
           </div>

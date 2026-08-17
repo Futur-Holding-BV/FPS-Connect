@@ -1,3 +1,4 @@
+import { KenmerkKop } from "@/components/kenmerk-kop";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import {
@@ -2705,20 +2706,8 @@ export default function ModulesCalculatieDetail() {
           )}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              {data.referentie && (
-                <span className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 select-all">
-                  {data.referentie}
-                </span>
-              )}
+              <KenmerkKop kenmerk={(data as any).kenmerk} toelichting="Dit kenmerk loopt door op de offerte (…/O…) en staat op de uitgaande documenten." />
               <h1 data-paginatitel className="text-xl font-semibold text-foreground">{data.naam}</h1>
-              {(data as any).kenmerk && (
-                <span
-                  className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 select-all"
-                  title="Kenmerk (automatisch berekend, niet bewerkbaar)"
-                >
-                  {(data as any).kenmerk}
-                </span>
-              )}
               <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
                 {STATUS_LABEL[data.status] ?? data.status}
               </Badge>

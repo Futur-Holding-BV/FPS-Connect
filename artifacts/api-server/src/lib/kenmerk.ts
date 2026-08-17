@@ -81,6 +81,18 @@ export async function kenmerkVoorModCalc(
   return g ? `${prefix}${g}/${cdeel}` : cdeel;
 }
 
+/** Kenmerk van een opname: [PFX-]G156/M012. Zonder gebouw: M012. */
+export async function kenmerkVoorOpname(
+  gebouwId: number | null | undefined,
+  nummer: number | null | undefined,
+): Promise<string | null> {
+  if (nummer == null) return null;
+  const g = await gDeel(gebouwId);
+  const prefix = await prefixVoorGebouw(gebouwId);
+  const mdeel = formatNummer("M", nummer);
+  return g ? `${prefix}${g}/${mdeel}` : mdeel;
+}
+
 /** Kenmerk van een offerte: [PFX-]G156/C590/O405. Zonder calculatie: G156/O405. */
 export async function kenmerkVoorOfferte(offerteId: number): Promise<string | null> {
   const [o] = await db

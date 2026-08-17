@@ -1,3 +1,10 @@
+## 2026-08-17 — Uniek volgkenmerk prominent bovenaan alle Projectaanpak-detailpagina's
+
+- Nieuw gedeeld kop-element (KenmerkKop) dat het automatisch berekende ketenkenmerk (bv. BP-G156/C590/O405) duidelijk bovenaan toont — hetzelfde kenmerk dat op de uitgaande documenten (offerte, factuur) staat.
+- Toegevoegd op: gebouw-detail ([PFX-]G…), calculatie-detail ([PFX-]G…/C…), offerte-studio (…/O…), opdracht-detail (keten via de offerte), opname-detail ([PFX-]G…/M…), magazijn-inkooporder (G…/I…) en factuur-detail (O…/F…).
+- Calculatie: de interne CALC-referentie (CALC-2026-…) staat niet langer prominent in de paginakop — die is een intern registratienummer en niet het nummer dat op de offerte komt; hij blijft zichtbaar als "Ref:" in de gegevensstrip. Het ketenkenmerk (…/C…) dat doorloopt in het offertekenmerk staat nu vooraan.
+- API: gebouw-, opdracht- en opname-detailresponses geven nu ook het berekende kenmerk terug (nieuwe helper voor de M-reeks).
+
 ## 2026-08-17 — Paginabreedte begrensd op brede schermen (Externen + 7 andere pagina's)
 
 - Externen werd paginabreed getrokken waardoor tekst en knoppen tegen de rechterrand stonden; de pagina is nu begrensd op dezelfde maximale breedte als de rest (max-w-6xl, gecentreerd).

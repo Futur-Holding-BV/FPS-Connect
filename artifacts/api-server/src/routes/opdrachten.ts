@@ -31,6 +31,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTING_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
 import { bouwWerkbegrotingEigenCijfersContext } from "../lib/inkoopEigenCijfers";
+import { kenmerkVoorOfferte } from "../lib/kenmerk";
 import { logger } from "../lib/logger";
 import { berekenEnSlaOpNacalculatie } from "../services/fie-service";
 import { meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
@@ -709,7 +710,9 @@ router.get("/opdrachten/:id", lezen, async (req, res): Promise<void> => {
       .where(eq(opdrachtenTable.id, id));
 
     if (!row) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
-    res.json(mapOpdracht(row.o, row.b?.id ?? null, row.b?.status ?? null, row.b?.totaalArbeidUren ?? null, row.g));
+    // NUMMER_01: kenmerk van de keten ([PFX-]G/C/O) via de onderliggende offerte
+    const kenmerk = row.o.offerteId ? await kenmerkVoorOfferte(row.o.offerteId) : null;
+    res.json({ ...mapOpdracht(row.o, row.b?.id ?? null, row.b?.status ?? null, row.b?.totaalArbeidUren ?? null, row.g), kenmerk });
   } catch (err) {
     logger.error({ err }, "getOpdracht fout");
     res.status(500).json({ error: "Serverfout" });

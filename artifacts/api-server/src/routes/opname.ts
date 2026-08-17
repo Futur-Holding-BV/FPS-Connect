@@ -57,6 +57,8 @@ async function volgendSpotnummer(gebouwId: number): Promise<string> {
 }
 
 const router = Router();
+import { kenmerkVoorOpname } from "../lib/kenmerk";
+
 const objectStorage = new ObjectStorageService();
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -137,7 +139,10 @@ async function opnameMetItems(id: number) {
     }),
   );
 
-  return { ...opname, items: itemsMetFotos };
+  // NUMMER_01: kenmerk [PFX-]G156/M012, zoals in de ketenweergave
+  const kenmerk = await kenmerkVoorOpname(opname.gebouw_id, opname.nummer);
+
+  return { ...opname, kenmerk, items: itemsMetFotos };
 }
 
 // ─── GET /opname ──────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
-import { volgendeGWerknummer } from "../lib/kenmerk";
+import { prefixVoorGebouw, volgendeGWerknummer } from "../lib/kenmerk";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -605,8 +605,14 @@ router.get("/gebouwen/:id", lezenGebouwen, async (req, res): Promise<void> => {
       in_onderhoud: alleVoorzieningen.filter((v) => v.status === "in_onderhoud").length,
     };
 
+    // NUMMER_01: kenmerk = [PFX-]G156, zoals op uitgaande documenten
+    const gebouwKenmerk = gebouw.werknummer
+      ? `${await prefixVoorGebouw(gebouw.id)}${gebouw.werknummer}`
+      : null;
+
     res.json({
       id: gebouw.id,
+      kenmerk: gebouwKenmerk,
       werknummer: gebouw.werknummer,
       projectnummer: gebouw.projectnummer,
       naam: gebouw.naam,
