@@ -1,3 +1,9 @@
+## 2026-08-17 — Geüploade offerte-aanvraag e-mails (.eml) worden weer als aanvraag herkend
+
+- Probleem: een geüploade offerte-aanvraag (bv. "De Aak 71 — plafonds brandwerend maken") belandde bij documenten in plaats van het aanvraagproces te starten. Oorzaak: bij .eml/.msg-bestanden las de documentclassificatie de rauwe bytes — de eerste duizenden tekens zijn mailheaders/DKIM-handtekeningen, waardoor de AI alleen ruis zag en het bestand als algemeen document indeelde.
+- Fix: e-mailbestanden worden nu écht geparsed (onderwerp, afzender, inhoud, bijlagenamen) vóór classificatie, ook als de browser een generiek MIME-type meestuurt. De De Aak-mail classificeert nu als "aanvraag" (vertrouwen: hoog), waardoor de slimme upload direct de stap "Offerte-aanvraag verwerken" toont die het aanvraagproces start.
+- Regressietests toegevoegd voor .eml-extractie (herkenning op extensie én MIME-type).
+
 ## 2026-08-17 — Uniek volgkenmerk prominent bovenaan alle Projectaanpak-detailpagina's
 
 - Nieuw gedeeld kop-element (KenmerkKop) dat het automatisch berekende ketenkenmerk (bv. BP-G156/C590/O405) duidelijk bovenaan toont — hetzelfde kenmerk dat op de uitgaande documenten (offerte, factuur) staat.

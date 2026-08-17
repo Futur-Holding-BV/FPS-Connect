@@ -280,3 +280,31 @@ describe("bevatGeconsolideerd — typo-tolerante detectie", () => {
     expect(bevatGeconsolideerd("")).toBe(false);
   });
 });
+
+describe("extraheerTekst — e-mailbestanden (.eml) écht parsen", () => {
+  const eml = Buffer.from([
+    "From: \"Arjen Gort\" <a.gort@voorbeeld.nl>",
+    "To: rene@fpsbouw.nl",
+    "Subject: De Aak 71 : plafonds brandwerend maken",
+    "Date: Wed, 12 Aug 2026 13:09:23 +0200",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Kun jij mij een kostenopgave doen voor De Aak 71 in Borne?",
+    "",
+  ].join("\r\n"));
+
+  it("haalt onderwerp en inhoud uit een .eml (ook bij generiek MIME-type)", async () => {
+    const { extraheerTekst } = await import("./documentIntelligence");
+    const r = await extraheerTekst(eml, "application/octet-stream", "aanvraag.eml");
+    expect(r.bron).toBe("email");
+    expect(r.tekst).toContain("Onderwerp: De Aak 71 : plafonds brandwerend maken");
+    expect(r.tekst).toContain("kostenopgave");
+  });
+
+  it("herkent message/rfc822 als e-mail en geeft geen rauwe headers terug", async () => {
+    const { extraheerTekst } = await import("./documentIntelligence");
+    const r = await extraheerTekst(eml, "message/rfc822", "bericht");
+    expect(r.bron).toBe("email");
+    expect(r.tekst?.startsWith("Onderwerp:")).toBe(true);
+  });
+});

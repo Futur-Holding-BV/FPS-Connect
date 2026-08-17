@@ -118,7 +118,7 @@ export function kortTekstInKopStaart(tekst: string, maxKop = 12000, maxStaart = 
 
 export interface ExtractieResultaat {
   tekst: string | null;
-  bron: "tekstlaag" | "docx" | "platte_tekst" | "geen";
+  bron: "tekstlaag" | "docx" | "platte_tekst" | "email" | "geen";
   paginaAantal: number | null;
   paginaTeksten: string[];
 }
@@ -153,7 +153,33 @@ export async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam:
       return { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };
     }
   }
-  if (mime.startsWith("text/") || mime === "message/rfc822") {
+  // E-mailbestanden (.eml/.msg) écht parsen: de rauwe bytes beginnen met honderden
+  // regels headers/DKIM-handtekeningen, waardoor de eerste 8000 tekens géén
+  // onderwerp of inhoud bevatten en de classificatie op ruis draait.
+  const isEmailBestand =
+    mime === "message/rfc822" ||
+    mime === "application/vnd.ms-outlook" ||
+    naam.endsWith(".eml") ||
+    naam.endsWith(".msg");
+  if (isEmailBestand) {
+    try {
+      const { parseEmailBestand } = await import("../services/email-ai");
+      const mail = await parseEmailBestand(bestandsnaam, buffer, mime);
+      const delen: string[] = [];
+      if (mail.onderwerp) delen.push(`Onderwerp: ${mail.onderwerp}`);
+      if (mail.afzender) delen.push(`Van: ${mail.afzender}`);
+      if (mail.ontvanger) delen.push(`Aan: ${mail.ontvanger}`);
+      if (mail.datum) delen.push(`Datum: ${mail.datum}`);
+      if (mail.bijlagen.length > 0) delen.push(`Bijlagen: ${mail.bijlagen.map((b) => b.bestandsnaam).join(", ")}`);
+      if (mail.inhoudTekst) delen.push("", mail.inhoudTekst);
+      const tekst = delen.join("\n").trim().slice(0, 8000) || null;
+      return { tekst, bron: tekst ? "email" : "geen", paginaAantal: null, paginaTeksten: [] };
+    } catch (err) {
+      logger.warn({ err, bestandsnaam }, "documentIntelligence: e-mail parsen mislukt — val terug op platte tekst");
+      return { tekst: buffer.toString("utf8").slice(0, 8000), bron: "platte_tekst", paginaAantal: null, paginaTeksten: [] };
+    }
+  }
+  if (mime.startsWith("text/")) {
     return { tekst: buffer.toString("utf8").slice(0, 8000), bron: "platte_tekst", paginaAantal: null, paginaTeksten: [] };
   }
   return { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };

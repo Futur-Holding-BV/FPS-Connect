@@ -227,8 +227,12 @@ function isLegeEmail(e: GeparseerdeEmail): boolean {
 export async function parseEmailBestand(
   bestandsnaam: string,
   buffer: Buffer,
+  mime?: string | null,
 ): Promise<GeparseerdeEmail> {
-  const geparseerd = isMsg(bestandsnaam) ? parseMsg(buffer) : await parseEml(buffer);
+  // .msg-keuze op extensie óf Outlook-MIME: een extensieloze upload met
+  // application/vnd.ms-outlook is een binair .msg-bestand, geen EML.
+  const alsMsg = isMsg(bestandsnaam) || mime === "application/vnd.ms-outlook";
+  const geparseerd = alsMsg ? parseMsg(buffer) : await parseEml(buffer);
   if (isLegeEmail(geparseerd)) {
     throw new Error(
       "Het bestand bevat geen leesbare e-mailgegevens (geen afzender, onderwerp, inhoud of bijlagen).",

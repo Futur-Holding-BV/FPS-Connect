@@ -14,3 +14,4 @@ Bindende regels (opdracht NUMMER_01, gebouwd + bewezen 8 aug 2026):
 - A-reeks (algemene inkoop, NP_INKOOP_01): `seq_nummer_a` op eigen tabel `algemene_inkopen`, weergave `A%03d`; géén kenmerkketen (niet projectgebonden). Factuurstroom matcht op A-nummers: >1 nummer = nooit koppelen (tijdlijnmelding), koppelen zelf = atomaire conditionele update (status besteld + factuur_id IS NULL). Vrijgeven na goedkeuring uitsluitend via de motor — hoofdbeheerder kan de gate niet overslaan.
 Bewijs: `scripts/src/bewijs-nummer01-kenmerkketen.ts` (punten A–I); algemene inkoop: `scripts/src/verificatie-np-inkoop01.ts`.
 Valkuil: magazijn-inkooporderroutes moeten op `/magazijn/...`-prefix staan (spec/frontend); stonden fout.
+Weergave-regel (aug 2026): het ketenkenmerk hoort prominent bovenaan elke Projectaanpak-detailpagina via het gedeelde KenmerkKop-component; interne registratienummers (zoals CALC-jjjj-nnnn) nooit prominent tonen als "het" nummer.
