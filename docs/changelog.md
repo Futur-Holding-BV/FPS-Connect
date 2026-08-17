@@ -1,3 +1,10 @@
+## 2026-08-17 — MOBIEL_01: onderbalk-ruimte, wijkende zwevende knop en tabelpatroon Organisaties
+
+- Onderbalk (Uitloggen/NIEUWS) dekt de laatste kaart niet meer af: pagina-onderruimte rekent nu balkhoogte + veilig gebied van de telefoon mee (viewport-fit=cover, env(safe-area-inset-bottom)); gemeten 31px vrije ruimte op 402px.
+- Zwevende ondersteuningsknop schuift tijdens scrollen rechts uit beeld (doorklikbaar uit) en keert kort na het stoppen terug; hij staat ook boven het veilige gebied.
+- Overzicht Organisaties is nu één echte tabel voor alle breedtes (MOBIEL_01-tabelpatroon): zes kolommen op desktop; op telefoon blijven Organisatie en Relatie staan en stapelen type/locatie/contact ónder de naam in de eerste cel. Rij-klik opent het dossier.
+- Bewijs: Playwright-metingen + screenshots op 402×874 en 1280×900 met gevulde demo-organisaties (na afloop opgeruimd).
+
 ## 2026-08-17 — Onzinjaartallen in personeelsdatums geweigerd én geheeld
 
 - Gemeld defect: personeelsdossier toonde "Uit dienst per 14 jul 82026" — een onzinjaartal dat via dossier-analyse/invoer ongehinderd in de tekstkolom belandde.

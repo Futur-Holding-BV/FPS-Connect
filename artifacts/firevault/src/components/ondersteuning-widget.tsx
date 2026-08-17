@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LifeBuoy, MessageSquarePlus, Send, Star, X } from "lucide-react";
 import {
   useCreateHelpdeskTicket,
@@ -22,6 +22,25 @@ type Modus = null | "menu" | "helpdesk" | "feedback";
 export function OndersteuningWidget() {
   const { toast } = useToast();
   const [modus, setModus] = useState<Modus>(null);
+
+  // MOBIEL_01: de zwevende knop mag nooit tekst afdekken — tijdens scrollen
+  // schuift hij opzij (rechts uit beeld) en komt hij kort na het stoppen terug.
+  const [aanHetScrollen, setAanHetScrollen] = useState(false);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    function bijScroll() {
+      setAanHetScrollen(true);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+      scrollTimer.current = setTimeout(() => setAanHetScrollen(false), 650);
+    }
+    // capture: het scrollen gebeurt in de <main>-container, niet op window
+    window.addEventListener("scroll", bijScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("scroll", bijScroll, { capture: true });
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    };
+  }, []);
+  const weggeschoven = aanHetScrollen && modus === null;
 
   const [onderwerp, setOnderwerp] = useState("");
   const [helpdeskBericht, setHelpdeskBericht] = useState("");
@@ -81,7 +100,20 @@ export function OndersteuningWidget() {
 
   return (
     <>
-      <div className="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-2">
+      <div
+        // MOBIEL_01: nooit tekst afdekken. Tijdens scrollen schuift de knop uit
+        // beeld; in rust staat hij op telefoon half tegen de rand getukt (tik
+        // haalt hem tevoorschijn doordat het menu opent). Vanaf md volledig
+        // zichtbaar. Bottom volgt de live gemeten onderbalk-hoogte.
+        className={`fixed right-5 z-50 flex flex-col items-end gap-2 transition-all duration-300 ${
+          weggeschoven
+            ? "translate-x-[4.5rem] opacity-40 pointer-events-none"
+            : modus === null
+              ? "max-md:translate-x-9 max-md:opacity-60"
+              : ""
+        }`}
+        style={{ bottom: "calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)" }}
+      >
         {modus === "menu" && (
           <div className="flex flex-col gap-2 rounded-lg border bg-card p-2 shadow-lg">
             <Button

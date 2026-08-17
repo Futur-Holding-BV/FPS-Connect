@@ -46,7 +46,13 @@ export function NieuwsTicker() {
         }
       `}</style>
 
-      <div data-bottom-bar="nieuws-ticker" className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
+      <div
+        data-bottom-bar="nieuws-ticker"
+        className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full"
+        // MOBIEL_01: het veilige gebied van de telefoon (home-indicator) hoort bij
+        // de balk, niet bij de pagina; box-content laat de inhoud op h-14 staan.
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", boxSizing: "content-box" }}
+      >
 
         {/* Uitloggen — altijd helemaal links */}
         <button

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListCrmKlanten,
   useCreateCrmKlant,
@@ -8,6 +8,7 @@ import {
 import type { CrmOrganisatie } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ const RELATIE_KLEUR: Record<string, string> = {
 export default function OrganisatiesPagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [, navigeer] = useLocation();
   const [zoek, setZoek] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("alle");
   const [relatieFilter, setRelatieFilter] = useState<string>("alle");
@@ -94,7 +96,7 @@ export default function OrganisatiesPagina() {
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-6xl mx-auto">
+    <div className="p-0 md:p-2 space-y-4 max-w-6xl mx-auto">
       <div className="flex items-center gap-3">
         <Link href="/crm">
           <Button variant="ghost" size="sm" className="gap-1 pl-1">
@@ -154,43 +156,82 @@ export default function OrganisatiesPagina() {
           </div>
         )
       ) : (
-        <div className="space-y-2">
-          {gefilterd.map((org) => (
-            <Link key={org.id} href={`/crm/${org.id}`}>
-              <Card className="cursor-pointer hover:shadow-sm hover:border-primary/30 transition-all">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Building2 className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm">{org.naam}</span>
-                      {org.relatie_status && org.relatie_status !== "onbekend" && (
-                        <Badge variant="outline" className={`text-xs border ${RELATIE_KLEUR[org.relatie_status] ?? ""}`}>
-                          {RELATIE_STATUSSEN.find((s) => s.value === org.relatie_status)?.label ?? org.relatie_status}
-                        </Badge>
-                      )}
+        // MOBIEL_01-tabelpatroon: één echte tabel voor alle breedtes.
+        // Zes kolommen passen niet op 402px; op telefoon blijven de twee
+        // beslissende kolommen (Organisatie, Relatie) staan en stapelen de
+        // overige gegevens ónder de naam in de eerste cel. Vanaf sm/md/lg
+        // schuiven ze terug naar hun eigen kolom (dan verdwijnt de stapel).
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Organisatie</TableHead>
+                <TableHead className="hidden md:table-cell">Type</TableHead>
+                <TableHead>Relatie</TableHead>
+                <TableHead className="hidden sm:table-cell">Locatie</TableHead>
+                <TableHead className="hidden lg:table-cell">Contact</TableHead>
+                <TableHead className="hidden md:table-cell">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {gefilterd.map((org) => (
+                <TableRow
+                  key={org.id}
+                  className="cursor-pointer"
+                  onClick={() => navigeer(`/crm/${org.id}`)}
+                >
+                  <TableCell className="max-w-0 w-full sm:w-auto sm:max-w-56">
+                    {/* Echte link: focusbaar en met toetsenbord te openen; de
+                        rij-onClick blijft als groot tikdoel eromheen bestaan */}
+                    <Link
+                      href={`/crm/${org.id}`}
+                      className="flex items-center gap-2 min-w-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Building2 className="w-4 h-4 text-primary shrink-0" />
+                      <span className="font-semibold text-sm truncate">{org.naam}</span>
+                    </Link>
+                    {/* Gestapelde secundaire gegevens: elke regel verdwijnt exact
+                        wanneer zijn eigen kolom verschijnt (type=md, locatie=sm, contact=lg) */}
+                    <div className="mt-0.5 space-y-0.5 pl-6 lg:hidden">
                       {org.type && org.type !== "overig" && (
-                        <span className="text-xs text-muted-foreground">{ORG_TYPES.find((t) => t.value === org.type)?.label ?? org.type}</span>
+                        <div className="text-xs text-muted-foreground truncate md:hidden">{ORG_TYPES.find((t) => t.value === org.type)?.label ?? org.type}</div>
+                      )}
+                      {(org.stad || org.regio) && (
+                        <div className="text-xs text-muted-foreground truncate sm:hidden flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{[org.stad, org.regio].filter(Boolean).join(", ")}</div>
+                      )}
+                      {(org.telefoon || org.email) && (
+                        <div className="text-xs text-muted-foreground truncate lg:hidden flex items-center gap-1">
+                          {org.telefoon ? <><Phone className="w-3 h-3 shrink-0" />{org.telefoon}</> : <><Mail className="w-3 h-3 shrink-0" />{org.email}</>}
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      {(org.stad || org.regio) && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{[org.stad, org.regio].filter(Boolean).join(", ")}</span>}
-                      {org.telefoon && <span className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{org.telefoon}</span>}
-                      {org.email && <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{org.email}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="outline" className={`text-xs border ${STATUS_KLEUR[org.status] ?? ""}`}>
-                      {org.status}
-                    </Badge>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground whitespace-nowrap">
+                    {org.type && org.type !== "overig" ? (ORG_TYPES.find((t) => t.value === org.type)?.label ?? org.type) : "—"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {org.relatie_status && org.relatie_status !== "onbekend" ? (
+                      <Badge variant="outline" className={`text-xs border ${RELATIE_KLEUR[org.relatie_status] ?? ""}`}>
+                        {RELATIE_STATUSSEN.find((r) => r.value === org.relatie_status)?.label ?? org.relatie_status}
+                      </Badge>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground whitespace-nowrap max-w-36 truncate">
+                    {[org.stad, org.regio].filter(Boolean).join(", ") || "—"}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground max-w-48">
+                    <div className="truncate">{org.telefoon || "—"}</div>
+                    {org.email && <div className="truncate">{org.email}</div>}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-nowrap">
+                    <Badge variant="outline" className={`text-xs border ${STATUS_KLEUR[org.status] ?? ""}`}>{org.status}</Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {/* Nieuw dialog */}

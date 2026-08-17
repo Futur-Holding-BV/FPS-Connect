@@ -1967,7 +1967,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             // [data-hoofdstuk]); alleen actief wanneer de route een hoofdstuk heeft.
             {...(hoofdstukVanRoute(location) ? { "data-hoofdstuk": "" } : {})}
             style={{
-              paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)',
+              // MOBIEL_01: onderbalk + veilig gebied mogen de laatste kaart nooit afdekken
+            paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)',
               ...(hoofdstukVanRoute(location)
                 ? ({ "--hoofdstuk-actief": `var(--hoofdstuk-${hoofdstukVanRoute(location)})` } as React.CSSProperties)
                 : {}),
