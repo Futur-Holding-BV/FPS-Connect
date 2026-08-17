@@ -74,6 +74,7 @@ async function main(): Promise<void> {
     { naam: "uren", pad: "/uren" },
     ...(gebouw ? [{ naam: "gebouw-id", pad: `/gebouw/${gebouw.id}` }] : []),
     { naam: "hrm-index", pad: "/hrm" },
+    { naam: "mijn-auto", pad: "/mijn-auto" },
   ];
   const SCHERMEN = filter.length ? ALLE_SCHERMEN.filter((s) => filter.includes(s.naam)) : ALLE_SCHERMEN;
 

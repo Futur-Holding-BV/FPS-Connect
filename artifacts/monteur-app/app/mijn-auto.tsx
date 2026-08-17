@@ -12,7 +12,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -20,11 +19,11 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
 import { LegeStatus } from "@/components/LegeStatus";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { Knop, LijstFout, Statusmerk, tekstStijl, bovenInset, onderInset } from "@/components/ui";
-import { ruimte } from "@workspace/ontwerp";
+import { Knop, Ladenstaat, LijstFout, Statusmerk, tekstStijl, bovenInset, onderInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useColors } from "@/hooks/useColors";
@@ -105,7 +104,7 @@ export default function MijnAutoScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, bezigLaden } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
   const { isOnline } = useOffline();
 
@@ -133,6 +132,9 @@ export default function MijnAutoScherm() {
     }, [refetch]),
   );
 
+  // Deep-link-race: wacht tot het token-herstel klaar is voordat we
+  // doorsturen, anders verliest een koude deep-link de race (→ /login → /menu).
+  if (bezigLaden) return null;
   if (!token) return <Redirect href="/login" />;
 
   // Toon serverdata indien beschikbaar, val anders terug op de cache.
@@ -149,29 +151,29 @@ export default function MijnAutoScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Mijn auto
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
             Overzicht van jouw voertuig en meldingen
           </Text>
         </View>
       </View>
 
       {toonLaden ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : toonFout ? (
         <LijstFout
@@ -181,9 +183,9 @@ export default function MijnAutoScherm() {
       ) : (
         <ScrollView
           contentContainerStyle={{
-            padding: 16,
-            gap: 14,
-            paddingBottom: onderInset(insets) + 24,
+            padding: ruimte.l,
+            gap: ruimte.m + 2,
+            paddingBottom: onderInset(insets) + ruimte.xl,
             width: "100%",
             maxWidth: inhoudMaxBreedte,
             alignSelf: "center",
@@ -195,7 +197,7 @@ export default function MijnAutoScherm() {
           <OfflineBanner stijl="compact" />
 
           {voertuig === null ? (
-            <View style={{ marginTop: 32 }}>
+            <View style={{ marginTop: ruimte.xxl }}>
               <LegeStatus
                 icoon="car-outline"
                 titel="Nog geen auto gekoppeld"
@@ -211,22 +213,22 @@ export default function MijnAutoScherm() {
                   borderRadius: c.radius,
                   borderWidth: 1,
                   borderColor: c.border,
-                  padding: 18,
-                  gap: 14,
+                  padding: ruimte.l,
+                  gap: ruimte.m + 2,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: ruimte.m }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 20, color: c.foreground, fontFamily: "Inter_700Bold" }}>
+                    <Text style={tekstStijl("sectiekop", c.foreground)}>
                       {voertuig.merk} {voertuig.type}
                     </Text>
                     {voertuig.bouwjaar ? (
-                      <Text style={{ fontSize: 14, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                      <Text style={[tekstStijl("standaard", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                         Bouwjaar {voertuig.bouwjaar}
                         {voertuig.kleur ? ` · ${voertuig.kleur}` : ""}
                       </Text>
                     ) : voertuig.kleur ? (
-                      <Text style={{ fontSize: 14, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                      <Text style={[tekstStijl("standaard", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                         {voertuig.kleur}
                       </Text>
                     ) : null}
@@ -236,13 +238,13 @@ export default function MijnAutoScherm() {
 
                 {/* Aandrijving */}
                 {voertuig.aandrijving ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s }}>
                     <Ionicons
                       name={AANDRIJVING_ICOON[voertuig.aandrijving] ?? "car-outline"}
                       size={18}
                       color={c.mutedForeground}
                     />
-                    <Text style={{ fontSize: 15, color: c.foreground, fontFamily: "Inter_500Medium" }}>
+                    <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_500Medium" }]}>
                       {AANDRIJVING_LABELS[voertuig.aandrijving] ?? voertuig.aandrijving}
                     </Text>
                   </View>

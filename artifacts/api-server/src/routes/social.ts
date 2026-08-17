@@ -8,13 +8,15 @@
 // Fail-closed (deel A): een bericht dat niet aan de kanaaleisen voldoet is
 // niet te plannen — het plannen-endpoint valideert álle kanalen en weigert
 // met 422 en de redenen; geen mislukte poging achteraf.
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { db } from "@workspace/db";
 import {
   socialBerichtenTable,
   socialBerichtKanalenTable,
   socialKoppelingenTable,
   werkgeversTable,
+  gebruikersTable,
+  marketingCampagnesTable,
   SOCIAL_KANALEN,
   KOPPELING_MODI,
   type SocialKanaal,
@@ -24,12 +26,62 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, gte, lte, isNotNull, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { heeftNiveau } from "@workspace/permissies";
 import { KANAAL_EISEN, valideerTegenKanaal } from "../lib/socialKanalen";
 import { telBerichtenOpDag } from "../services/socialService";
 
 const router = Router();
 const opstellen = requireBevoegdheid("social", 3);
 const plannen = requireBevoegdheid("social", 4);
+
+/**
+ * Campagne-koppelingen zijn Marketing-terrein: het meesturen of wijzigen van
+ * een niet-lege campagne_id vereist marketing niveau 3, ook al is de route
+ * zelf crm-gegate. Server-side afgedwongen — de UI-gate alleen is geen
+ * autorisatie. Retourneert null bij toegang, anders een foutmelding.
+ */
+async function controleerCampagneKoppeling(
+  req: Request,
+  campagneIdRuw: unknown,
+): Promise<{ status: number; error: string } | null> {
+  if (campagneIdRuw === undefined || campagneIdRuw === null || campagneIdRuw === "") return null;
+  const campagneId = Number(campagneIdRuw);
+  if (!Number.isInteger(campagneId) || campagneId <= 0) {
+    return { status: 400, error: "campagne_id is ongeldig" };
+  }
+  const bevoegdheidFout = await controleerMarketingBevoegdheid(req);
+  if (bevoegdheidFout) return bevoegdheidFout;
+  const [campagne] = await db
+    .select({ id: marketingCampagnesTable.id })
+    .from(marketingCampagnesTable)
+    .where(eq(marketingCampagnesTable.id, campagneId));
+  if (!campagne) return { status: 404, error: "Campagne niet gevonden" };
+  return null;
+}
+
+/** Marketing niveau 3 vereist (hoofdbeheerder mag altijd). */
+async function controleerMarketingBevoegdheid(
+  req: Request,
+): Promise<{ status: number; error: string } | null> {
+  const userId = req.session.userId;
+  if (!userId) return { status: 401, error: "Niet ingelogd" };
+  let mag = false;
+  if (req.permissies) {
+    mag = req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("marketing", 3);
+  } else {
+    const [g] = await db
+      .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, userId));
+    if (!g) return { status: 403, error: "Geen toegang" };
+    mag = g.rol === "hoofdbeheerder"
+      || heeftNiveau((g.bevoegdheden as Record<string, number> | null) ?? {}, "marketing", 3);
+  }
+  if (!mag) {
+    return { status: 403, error: "Campagne koppelen vereist marketing-bevoegdheid (niveau 3)" };
+  }
+  return null;
+}
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -144,6 +196,8 @@ router.post("/social/berichten", opstellen, async (req, res) => {
   if (!werkgeverId) return void res.status(400).json({ error: "werkgever_id is verplicht" });
   const gekozen = parseKanalen(kanalen);
   if (!gekozen) return void res.status(400).json({ error: "Kies minstens één geldig kanaal" });
+  const campagneFout = await controleerCampagneKoppeling(req, campagne_id);
+  if (campagneFout) return void res.status(campagneFout.status).json({ error: campagneFout.error });
   if (media_type != null && !["beeld", "video"].includes(String(media_type))) {
     return void res.status(400).json({ error: "media_type moet 'beeld' of 'video' zijn" });
   }
@@ -182,6 +236,21 @@ router.patch("/social/berichten/:id", opstellen, async (req, res) => {
     return void res.status(409).json({ error: `Bericht met status '${bestaand.status}' is niet te bewerken — haal het eerst terug` });
   }
   const { tekst, kanalen, media_pad, media_type, gepland_op, campagne_id, crm_klant_id, gebouw_id, kanaal_teksten } = req.body ?? {};
+  // Ook het wijzigen/ontkoppelen van de campagne-koppeling is Marketing-terrein.
+  if (campagne_id !== undefined) {
+    const isOntkoppelen = campagne_id === null || campagne_id === "";
+    if (isOntkoppelen) {
+      // Ontkoppelen van een bestaande koppeling vereist dezelfde bevoegdheid;
+      // was er niets gekoppeld, dan is het een no-op.
+      if (bestaand.campagneId != null) {
+        const fout = await controleerMarketingBevoegdheid(req);
+        if (fout) return void res.status(fout.status).json({ error: fout.error });
+      }
+    } else {
+      const campagneFout = await controleerCampagneKoppeling(req, campagne_id);
+      if (campagneFout) return void res.status(campagneFout.status).json({ error: campagneFout.error });
+    }
+  }
   if (media_type !== undefined && media_type !== null && !["beeld", "video"].includes(String(media_type))) {
     return void res.status(400).json({ error: "media_type moet 'beeld' of 'video' zijn" });
   }

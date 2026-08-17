@@ -26,6 +26,7 @@ async function zorgVoorVerdieping(gebouwId: number, naam: string): Promise<numbe
 
 async function main(): Promise<void> {
   await db.execute(sql`DELETE FROM voorzieningen WHERE objectnummer LIKE 'VORM01-%'`);
+  await db.execute(sql`DELETE FROM voertuigen WHERE kenteken = 'VORM-01-B'`);
   if (ALLEEN_OPRUIMEN) {
     console.log("VORM01-testspots opgeruimd.");
     return;
@@ -64,6 +65,14 @@ async function main(): Promise<void> {
     `);
   }
   console.log(`Klaar: ${spots.length} VORM01-testspots toegewezen aan e2e-account ${monteurId}.`);
+
+  // Voertuig voor het mijn-auto-bewijsscherm: koppel een herkenbare testauto
+  // (kenteken VORM-01-B) als chauffeur aan het e2e-account.
+  await db.execute(sql`
+    INSERT INTO voertuigen (kenteken, merk, type, bouwjaar, kleur, aandrijving, km_stand, chauffeur_id)
+    VALUES ('VORM-01-B', 'Volkswagen', 'Transporter', 2023, 'Wit', 'diesel', 48250, ${monteurId})
+  `);
+  console.log("VORM01-testvoertuig gekoppeld aan e2e-account.");
 }
 
 main()
