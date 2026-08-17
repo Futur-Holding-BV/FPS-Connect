@@ -23,6 +23,8 @@ import {
   magazijnPicklijstRegelsTable,
   medewerkersTable,
   planningItemsTable,
+  werkgeversTable,
+  gebouwenTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, ilike, lt, lte, gte, sql, gt, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -1545,6 +1547,39 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
 
     const datumStr = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
 
+    // Werkgever bepalen voor huisstijl: via sessiegebruiker → medewerker → werkgever; fallback = eerste actieve werkgever
+    const werkgeverVelden = {
+      naam: werkgeversTable.naam,
+      logoUrl: werkgeversTable.logoUrl,
+      primaireKleur: werkgeversTable.primaireKleur,
+      kvk: werkgeversTable.kvk,
+      btw: werkgeversTable.btw,
+      iban: werkgeversTable.iban,
+      adres: werkgeversTable.adres,
+      postcode: werkgeversTable.postcode,
+      plaats: werkgeversTable.plaats,
+      telefoon: werkgeversTable.telefoon,
+      email: werkgeversTable.email,
+    } as const;
+    type WerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; iban: string | null; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
+    let werkgever: WerkgeverBranding | null = null;
+    if (userId) {
+      const [med] = await db.select({ werkgeverId: medewerkersTable.werkgeverId })
+        .from(medewerkersTable).where(eq(medewerkersTable.gebruikerId, userId)).limit(1);
+      if (med?.werkgeverId) {
+        const [wg] = await db.select(werkgeverVelden).from(werkgeversTable)
+          .where(eq(werkgeversTable.id, med.werkgeverId)).limit(1);
+        werkgever = wg ?? null;
+      }
+    }
+    if (!werkgever) {
+      const [wg] = await db.select(werkgeverVelden).from(werkgeversTable)
+        .where(eq(werkgeversTable.actief, true)).orderBy(asc(werkgeversTable.id)).limit(1);
+      werkgever = wg ?? null;
+    }
+    const wgNaam = werkgever?.naam ?? "FPS Brandpreventie";
+    const wgKleur = werkgever?.primaireKleur ?? "#F23B0D";
+
     if (body.verstuur_email) {
       const naarEmail = leverancier?.email ?? process.env.MAIL_FROM ?? null;
       if (!naarEmail) {
@@ -1554,21 +1589,30 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
       const regelsHtml = regels.map(r => {
         const art = artikelen.find(a => a.id === Number(r.artikel_id));
         return `<tr>
-          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${art?.naam ?? `Artikel ${r.artikel_id}`}</td>
-          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280">${art?.code ?? "—"}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${escapeHtml(art?.naam ?? `Artikel ${r.artikel_id}`)}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280">${escapeHtml(art?.code ?? "—")}</td>
           <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${r.hoeveelheid}</td>
-          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${art?.eenheid ?? ""}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${escapeHtml(art?.eenheid ?? "")}</td>
         </tr>`;
       }).join("");
 
+      // Voettekst met bedrijfsgegevens uit werkgever
+      const voettekstDelen: string[] = [];
+      if (werkgever?.kvk) voettekstDelen.push(`KVK: ${escapeHtml(werkgever.kvk)}`);
+      if (werkgever?.btw) voettekstDelen.push(`BTW: ${escapeHtml(werkgever.btw)}`);
+      if (werkgever?.iban) voettekstDelen.push(`IBAN: ${escapeHtml(werkgever.iban)}`);
+      const adresRegel = [werkgever?.adres, werkgever?.postcode, werkgever?.plaats].filter(Boolean).map(s => escapeHtml(s!)).join(", ");
+      const contactRegel = [werkgever?.telefoon, werkgever?.email].filter(Boolean).map(s => escapeHtml(s!)).join(" · ");
+
       const html = `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:#F23B0D;padding:20px 24px;border-radius:8px 8px 0 0">
-            <h1 style="color:#fff;margin:0;font-size:20px">Bestelbon FPS Brandpreventie</h1>
+          <div style="background:${escapeHtml(wgKleur)};padding:20px 24px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:16px">
+            ${werkgever?.logoUrl ? `<img src="${escapeHtml(werkgever.logoUrl)}" alt="${escapeHtml(wgNaam)}" style="height:36px;width:auto;object-fit:contain;vertical-align:middle" />` : ""}
+            <h1 style="color:#fff;margin:0;font-size:20px">Bestelbon ${escapeHtml(wgNaam)}</h1>
           </div>
           <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
             <p style="color:#374151;margin:0 0 16px"><strong>Datum:</strong> ${datumStr}</p>
-            ${leverancier ? `<p style="color:#374151;margin:0 0 16px"><strong>Leverancier:</strong> ${leverancier.naam}</p>` : ""}
+            ${leverancier ? `<p style="color:#374151;margin:0 0 16px"><strong>Leverancier:</strong> ${escapeHtml(leverancier.naam)}</p>` : ""}
             <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
               <thead>
                 <tr style="background:#f9fafb">
@@ -1580,14 +1624,21 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
               </thead>
               <tbody>${regelsHtml}</tbody>
             </table>
-            ${body.notities ? `<p style="color:#374151;background:#f9fafb;padding:12px;border-radius:6px"><strong>Opmerkingen:</strong> ${body.notities}</p>` : ""}
+            ${body.notities ? `<p style="color:#374151;background:#f9fafb;padding:12px;border-radius:6px"><strong>Opmerkingen:</strong> ${escapeHtml(body.notities)}</p>` : ""}
           </div>
+          ${(voettekstDelen.length > 0 || adresRegel || contactRegel) ? `
+          <div style="padding:16px 24px;border-top:1px solid #e5e7eb;margin-top:0;font-size:11px;color:#9ca3af;text-align:center">
+            <strong>${escapeHtml(wgNaam)}</strong>
+            ${adresRegel ? `<br/>${adresRegel}` : ""}
+            ${contactRegel ? `<br/>${contactRegel}` : ""}
+            ${voettekstDelen.length > 0 ? `<br/>${voettekstDelen.join(" · ")}` : ""}
+          </div>` : ""}
         </div>`;
 
       await verstuurMail({
         naarEmail,
         naarNaam: leverancier?.naam ?? undefined,
-        onderwerp: `Bestelbon FPS Brandpreventie — ${datumStr}`,
+        onderwerp: `Bestelbon ${wgNaam} — ${datumStr}`,
         html,
         soort: "magazijn_bestelbon",
         verstuurdDoorId: userId,
@@ -2309,26 +2360,100 @@ router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) =
 
     if (regels.length === 0) return void res.status(422).json({ error: "Inkooporder bevat geen regels" });
 
+    // Werkgever bepalen voor huisstijl: gebouw → werkgever; fallback = sessiegebruiker → medewerker → werkgever; fallback = eerste actieve werkgever
+    const io_werkgeverVelden = {
+      naam: werkgeversTable.naam,
+      logoUrl: werkgeversTable.logoUrl,
+      primaireKleur: werkgeversTable.primaireKleur,
+      kvk: werkgeversTable.kvk,
+      btw: werkgeversTable.btw,
+      iban: werkgeversTable.iban,
+      adres: werkgeversTable.adres,
+      postcode: werkgeversTable.postcode,
+      plaats: werkgeversTable.plaats,
+      telefoon: werkgeversTable.telefoon,
+      email: werkgeversTable.email,
+    } as const;
+    type IoWerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; iban: string | null; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
+    let ioWerkgever: IoWerkgeverBranding | null = null;
+    if (order.gebouwId) {
+      const [wg] = await db.select(io_werkgeverVelden).from(werkgeversTable)
+        .innerJoin(gebouwenTable, eq(gebouwenTable.werkgeverId, werkgeversTable.id))
+        .where(eq(gebouwenTable.id, order.gebouwId)).limit(1);
+      ioWerkgever = wg ?? null;
+    }
+    if (!ioWerkgever) {
+      const verstuurdDoor = req.session.userId ?? null;
+      if (verstuurdDoor) {
+        const [med] = await db.select({ werkgeverId: medewerkersTable.werkgeverId })
+          .from(medewerkersTable).where(eq(medewerkersTable.gebruikerId, verstuurdDoor)).limit(1);
+        if (med?.werkgeverId) {
+          const [wg] = await db.select(io_werkgeverVelden).from(werkgeversTable)
+            .where(eq(werkgeversTable.id, med.werkgeverId)).limit(1);
+          ioWerkgever = wg ?? null;
+        }
+      }
+    }
+    if (!ioWerkgever) {
+      const [wg] = await db.select(io_werkgeverVelden).from(werkgeversTable)
+        .where(eq(werkgeversTable.actief, true)).orderBy(asc(werkgeversTable.id)).limit(1);
+      ioWerkgever = wg ?? null;
+    }
+    const ioWgNaam = ioWerkgever?.naam ?? "FPS Brandpreventie";
+    const ioWgKleur = ioWerkgever?.primaireKleur ?? "#F23B0D";
+
     const regelsHtml = regels.map((r) =>
-      `<tr><td>${r.artikel_naam ?? `Artikel #${r.regel.artikelId}`}</td><td>${r.regel.gevraagdHoeveelheid} ${r.artikel_eenheid ?? ""}</td><td>${r.regel.eenheidsprijs != null ? `€ ${r.regel.eenheidsprijs.toFixed(2)}` : "—"}</td></tr>`
+      `<tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${escapeHtml(r.artikel_naam ?? `Artikel #${r.regel.artikelId}`)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${r.regel.gevraagdHoeveelheid} ${escapeHtml(r.artikel_eenheid ?? "")}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${r.regel.eenheidsprijs != null ? `€ ${Number(r.regel.eenheidsprijs).toFixed(2)}` : "—"}</td>
+      </tr>`
     ).join("");
+
+    // Voettekst met bedrijfsgegevens
+    const ioVoettekstDelen: string[] = [];
+    if (ioWerkgever?.kvk) ioVoettekstDelen.push(`KVK: ${escapeHtml(ioWerkgever.kvk)}`);
+    if (ioWerkgever?.btw) ioVoettekstDelen.push(`BTW: ${escapeHtml(ioWerkgever.btw)}`);
+    if (ioWerkgever?.iban) ioVoettekstDelen.push(`IBAN: ${escapeHtml(ioWerkgever.iban)}`);
+    const ioAdresRegel = [ioWerkgever?.adres, ioWerkgever?.postcode, ioWerkgever?.plaats].filter(Boolean).map(s => escapeHtml(s!)).join(", ");
+    const ioContactRegel = [ioWerkgever?.telefoon, ioWerkgever?.email].filter(Boolean).map(s => escapeHtml(s!)).join(" · ");
 
     await verstuurMail({
       naarEmail: order.leverancierEmail!,
       naarNaam: order.leverancierNaam ?? undefined,
-      onderwerp: `Inkooporder ${order.nummer} — FPS Brandpreventie`,
+      onderwerp: `Inkooporder ${order.nummer} — ${ioWgNaam}`,
       soort: "magazijn_bestelbon",
       direct: true, // medewerker verstuurt de inkooporder zelf expliciet
-      html: `<h2>Inkooporder ${order.nummer}</h2>
-<p>Geachte ${order.leverancierNaam ? escapeHtml(order.leverancierNaam) : "leverancier"},</p>
-<p>Hierbij ontvangt u onze inkooporder. Wij verzoeken u vriendelijk de onderstaande materialen te leveren.</p>
-${order.verwachteLeverdatum ? `<p><strong>Gewenste leverdatum:</strong> ${new Date(order.verwachteLeverdatum).toLocaleDateString("nl-NL")}</p>` : ""}
-${order.notities ? `<p><strong>Notities:</strong> ${order.notities}</p>` : ""}
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;">
-  <thead><tr><th>Artikel</th><th>Hoeveelheid</th><th>Prijs/eenheid</th></tr></thead>
-  <tbody>${regelsHtml}</tbody>
-</table>
-<p>Met vriendelijke groet,<br/>FPS Brandpreventie</p>`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">
+  <div style="background:${escapeHtml(ioWgKleur)};padding:20px 24px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:16px">
+    ${ioWerkgever?.logoUrl ? `<img src="${escapeHtml(ioWerkgever.logoUrl)}" alt="${escapeHtml(ioWgNaam)}" style="height:36px;width:auto;object-fit:contain;vertical-align:middle" />` : ""}
+    <h1 style="color:#fff;margin:0;font-size:20px">Inkooporder ${escapeHtml(order.nummer ?? "")}</h1>
+  </div>
+  <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+    <p style="color:#374151;margin:0 0 12px">Geachte ${order.leverancierNaam ? escapeHtml(order.leverancierNaam) : "leverancier"},</p>
+    <p style="color:#374151;margin:0 0 16px">Hierbij ontvangt u onze inkooporder. Wij verzoeken u vriendelijk de onderstaande materialen te leveren.</p>
+    ${order.verwachteLeverdatum ? `<p style="color:#374151;margin:0 0 12px"><strong>Gewenste leverdatum:</strong> ${new Date(order.verwachteLeverdatum).toLocaleDateString("nl-NL")}</p>` : ""}
+    ${order.notities ? `<p style="color:#374151;background:#f9fafb;padding:12px;border-radius:6px;margin:0 0 16px"><strong>Notities:</strong> ${escapeHtml(order.notities)}</p>` : ""}
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <thead>
+        <tr style="background:#f9fafb">
+          <th style="padding:8px 10px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase">Artikel</th>
+          <th style="padding:8px 10px;text-align:right;font-size:12px;color:#6b7280;text-transform:uppercase">Hoeveelheid</th>
+          <th style="padding:8px 10px;text-align:right;font-size:12px;color:#6b7280;text-transform:uppercase">Prijs/eenheid</th>
+        </tr>
+      </thead>
+      <tbody>${regelsHtml}</tbody>
+    </table>
+    <p style="color:#374151;margin:0">Met vriendelijke groet,<br/><strong>${escapeHtml(ioWgNaam)}</strong></p>
+  </div>
+  ${(ioVoettekstDelen.length > 0 || ioAdresRegel || ioContactRegel) ? `
+  <div style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center">
+    <strong>${escapeHtml(ioWgNaam)}</strong>
+    ${ioAdresRegel ? `<br/>${ioAdresRegel}` : ""}
+    ${ioContactRegel ? `<br/>${ioContactRegel}` : ""}
+    ${ioVoettekstDelen.length > 0 ? `<br/>${ioVoettekstDelen.join(" · ")}` : ""}
+  </div>` : ""}
+</div>`,
     });
 
     const [updated] = await db

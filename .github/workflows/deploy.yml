@@ -416,7 +416,6 @@ jobs:
       # nooit een risico.
       - name: OTA-update monteur-app (EAS Update, kanaal production)
         id: eas_update
-        continue-on-error: true
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           # EXPO_PUBLIC_* wordt bij het exporteren van de update-bundle
@@ -453,7 +452,6 @@ jobs:
 
           if [ -z "${EXPO_TOKEN:-}" ]; then
             echo "::warning::EXPO_TOKEN ontbreekt als GitHub Actions secret — OTA-update naar monteurs wordt OVERGESLAGEN. Voeg het token toe (Settings -> Secrets -> Actions) of draai handmatig: cd artifacts/monteur-app && npx eas-cli update --channel production --platform android."
-            echo "reden=token_ontbreekt" >> "$GITHUB_OUTPUT"
             echo "ota|$(date +%s)" >> /tmp/mijlpalen.txt
             exit 0
           fi
@@ -470,103 +468,6 @@ jobs:
 
           echo "OTA-update gepubliceerd op kanaal production (alleen Android, commit ${COMMIT_KORT})."
           echo "ota|$(date +%s)" >> /tmp/mijlpalen.txt
-
-      # ─── OTA-skip of -faalmelding (token ontbreekt of eas-cli mislukt) ────────
-      # Wanneer de OTA-stap overgeslagen wordt omdat EXPO_TOKEN ontbreekt, of
-      # wanneer eas-cli zelf faalt (continue-on-error houdt de deploy dan levend),
-      # stuurt deze stap een expliciete mail naar René via hetzelfde Graph-pad
-      # als de algemene faalmelding. Zo krijgt hij het altijd mee, ook als de
-      # deploy-job zelf groen eindigt.
-      - name: OTA-skip of -faalmelding e-mailen naar René
-        if: steps.eas_update.outputs.reden == 'token_ontbreekt' || steps.eas_update.outcome == 'failure'
-        continue-on-error: true
-        env:
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@fpsbrandpreventie.nl' }}
-          MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
-          RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          OTA_REDEN: ${{ steps.eas_update.outputs.reden }}
-          OTA_OUTCOME: ${{ steps.eas_update.outcome }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
-            echo "Mailconfig (AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL) ontbreekt als GitHub Actions secret; OTA-melding kan niet verzonden worden." >&2
-            exit 0
-          fi
-
-          TOKEN=$(curl -fsS -X POST \
-            "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
-            -d "client_id=${AZURE_CLIENT_ID}" \
-            -d "client_secret=${AZURE_CLIENT_SECRET}" \
-            -d "scope=https://graph.microsoft.com/.default" \
-            -d "grant_type=client_credentials" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
-
-          if [ -z "$TOKEN" ]; then
-            echo "Kon geen Graph-token ophalen; OTA-melding kan niet verzonden worden." >&2
-            exit 0
-          fi
-
-          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
-
-          if [ "${OTA_REDEN:-}" = "token_ontbreekt" ]; then
-            ONDERWERP="FPS Connect: OTA-update monteur-app OVERGESLAGEN — EXPO_TOKEN ontbreekt"
-            DETAIL="De OTA-updatestap is overgeslagen omdat het GitHub Actions secret EXPO_TOKEN ontbreekt of leeg is.
-          Monteurs ontvangen hierdoor GEEN app-update voor deze release.
-
-          Actie vereist: voeg EXPO_TOKEN toe via GitHub Settings → Secrets → Actions,
-          of draai de update handmatig:
-            cd artifacts/monteur-app
-            npx eas-cli update --channel production --platform android"
-          else
-            ONDERWERP="FPS Connect: OTA-update monteur-app GEFAALD — eas-cli fout"
-            DETAIL="De OTA-updatestap is mislukt (eas-cli gaf een foutcode terug).
-          Monteurs ontvangen hierdoor GEEN app-update voor deze release.
-
-          Controleer de Actions-run voor de volledige foutuitvoer en draai
-          de update handmatig als eas-cli het probleem is opgelost:
-            cd artifacts/monteur-app
-            npx eas-cli update --channel production --platform android"
-          fi
-
-          BODY="OTA-update monteur-app niet uitgevoerd.
-
-          Commit: ${GITHUB_SHA}
-          Omschrijving: ${COMMIT_MSG}
-
-          ${DETAIL}
-
-          Actions-run: ${RUN_URL}"
-
-          PAYLOAD=$(MAIL_BODY="$BODY" MAIL_SUBJECT="$ONDERWERP" node -e "
-            const body = {
-              message: {
-                subject: process.env.MAIL_SUBJECT,
-                body: { contentType: 'Text', content: process.env.MAIL_BODY },
-                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
-                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
-              },
-              saveToSentItems: false,
-            };
-            console.log(JSON.stringify(body));
-          ")
-
-          HTTP_CODE=$(curl -sS -o /tmp/graph-ota-response.json -w "%{http_code}" \
-            -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "OTA-melding verzonden naar René (reden: ${OTA_REDEN:-eas-cli fout})."
-          else
-            echo "Verzenden van OTA-melding gaf HTTP $HTTP_CODE." >&2
-            cat /tmp/graph-ota-response.json >&2 || true
-            exit 0
-          fi
 
       # ─── Tijd- en schijfbewaking (DEPLOY_SNELHEID_01 punt 4 + 5) ────────────
       # Draait alleen bij een verder geslaagde uitrol (bij falen mailt de
