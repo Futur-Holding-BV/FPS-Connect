@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListWerkgevers, useUpdateWerkgever, useAiInvullenOrganisatie } from "@workspace/api-client-react";
+import { useListWerkgevers, useUpdateWerkgever, useAiInvullenOrganisatie, getListWerkgeversQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +112,9 @@ export default function BedrijfsgegevensPagina() {
           intern_contact_email: form.intern_contact_email || undefined,
         } as Parameters<typeof updateWerkgever.mutateAsync>[0]["data"],
       });
-      queryClient.invalidateQueries({ queryKey: ["listWerkgevers"] });
+      // De gegenereerde hook gebruikt het API-pad als queryKey; ["listWerkgevers"]
+      // matchte niets, waardoor het scherm oude waarden bleef tonen na opslaan.
+      queryClient.invalidateQueries({ queryKey: getListWerkgeversQueryKey() });
       setBewerken(null);
       setForm({});
       toast({ title: "Bedrijfsgegevens opgeslagen" });

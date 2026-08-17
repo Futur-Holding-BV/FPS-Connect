@@ -1,3 +1,7 @@
+## 2026-08-17 — Bedrijfsgegevens: scherm ververst nu wél na opslaan (boekhouder-gegevens)
+
+Opslaan van de boekhouder-/bedrijfsgegevens werkte in de database al (bewezen via PATCH-test), maar het scherm ververste met een verkeerde cache-sleutel (`["listWerkgevers"]` i.p.v. de gegenereerde `getListWerkgeversQueryKey()`), waardoor de oude waarden bleven staan en het leek alsof opslaan mislukte. Sleutel gecorrigeerd in organisatie/bedrijfsgegevens.tsx; dit was de enige plek met deze verkeerde sleutel.
+
 ## 2026-08-17 — AI_01 vervolg: harde logcontext-poort, tokenraadsel opgelost, generieke leerlus
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
