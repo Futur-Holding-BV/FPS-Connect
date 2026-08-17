@@ -237,32 +237,36 @@ async function bepaalWerkgeverBranding(rijen: MedewerkerRij[]): Promise<Werkgeve
   };
 }
 
-// Haal het logo als buffer op vanuit object storage. Alleen interne
-// storage-paden worden geaccepteerd — externe URL's worden geweigerd om
-// SSRF te voorkomen. De logo_url kan zijn:
-//   - "/api/storage/files?path=<subPath>" → extract subPath en download
-//   - "/objects/<subPath>"               → canonical werkgever-pad, strip leading "/" en download
-//   - kale storage-subpath (geen "/" prefix, geen "http") → direct downloaden
-// Externe http(s)-URL's en onbekende root-paden worden geweigerd.
-// Bij elke fout: null retourneren (logo is optioneel).
+// Haal het logo als buffer op vanuit object storage. Alleen werkgever-logo-paden
+// worden geaccepteerd (prefix "werkgevers/") — zo kunnen geen andere objecten
+// met eigen document-ACL via de mandagstaat worden uitgelezen.
+// De logo_url kan zijn:
+//   - "/api/storage/files?path=<subPath>" → extract subPath, valideer prefix, download
+//   - "/objects/<subPath>"               → canonical werkgever-pad, strip, valideer prefix, download
+//   - kale storage-subpath (geen "/" prefix, geen "http") → valideer prefix, direct downloaden
+// Externe http(s)-URL's, onbekende root-paden en paden buiten "werkgevers/" worden geweigerd.
+// Bij elke fout of afwijzing: null retourneren (logo is optioneel).
+const LOGO_STORAGE_PREFIX = "werkgevers/";
+
 async function haalLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   try {
+    let subPath: string;
     if (logoUrl.startsWith("/api/storage/files?path=")) {
-      const subPath = decodeURIComponent(logoUrl.replace("/api/storage/files?path=", ""));
-      return await objectStorage.downloadBestandBuffer(subPath);
-    }
-    // Canonical objectpad zoals opgeslagen door uploadBestand (/objects/<subPath>).
-    // downloadBestandBuffer verwacht alleen <subPath> — strip het volledige "/objects/" prefix.
-    if (logoUrl.startsWith("/objects/")) {
-      const subPath = logoUrl.slice("/objects/".length); // geeft bijv. "werkgevers/1/logo.png"
-      return await objectStorage.downloadBestandBuffer(subPath);
-    }
-    // Externe URLs worden expliciet geweigerd (SSRF-preventie).
-    if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://") || logoUrl.startsWith("/")) {
+      subPath = decodeURIComponent(logoUrl.replace("/api/storage/files?path=", ""));
+    } else if (logoUrl.startsWith("/objects/")) {
+      // Canonical objectpad zoals opgeslagen door uploadBestand (/objects/<subPath>).
+      subPath = logoUrl.slice("/objects/".length); // geeft bijv. "werkgevers/1/logo.png"
+    } else if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://") || logoUrl.startsWith("/")) {
+      // Externe URLs en onbekende root-paden worden geweigerd.
       return null;
+    } else {
+      // Kale storage-subpath (bijv. "werkgevers/1/logo.png")
+      subPath = logoUrl;
     }
-    // Kale storage-subpath (bijv. "objects/werkgevers/1/logo.png")
-    return await objectStorage.downloadBestandBuffer(logoUrl);
+    // ACL-bewaking: alleen werkgever-logo-paden zijn toegestaan.
+    // Andere objectpaden kunnen documenten met eigen gebouw/document-ACL bevatten.
+    if (!subPath.startsWith(LOGO_STORAGE_PREFIX)) return null;
+    return await objectStorage.downloadBestandBuffer(subPath);
   } catch {
     return null;
   }
