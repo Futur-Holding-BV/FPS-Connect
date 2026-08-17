@@ -1825,9 +1825,14 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       .orderBy(asc(modCalcRegelsTable.volgorde));
 
     let gebouwNaam: string | null = null;
+    let gebouwWerkgeverId: number | null = null;
     if (header.gebouwId) {
-      const [g] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
+      const [g] = await db
+        .select({ naam: gebouwenTable.naam, werkgeverId: gebouwenTable.werkgeverId })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, header.gebouwId));
       gebouwNaam = g?.naam ?? null;
+      gebouwWerkgeverId = g?.werkgeverId ?? null;
     }
 
     // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart gesommeerd.
@@ -1854,6 +1859,7 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
         opslag_ak: header.opslagAk, opslag_abk: opslagAbk,
         opslag_risico: header.opslagRisico, opslag_winst: header.opslagWinst,
         korting: header.korting, gebouw_naam: gebouwNaam,
+        werkgever_id: gebouwWerkgeverId,
         aangemaakt_op: iso(header.aangemaaktOp),
       },
       regels: regels.map((r) => ({

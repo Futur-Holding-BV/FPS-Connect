@@ -11,7 +11,7 @@ type PrintData = {
     id: number; naam: string; referentie: string | null; klant_naam: string | null;
     project_naam: string | null; status: string; omschrijving: string | null;
     opslag_ak: number; opslag_abk: number; opslag_risico: number; opslag_winst: number;
-    korting: number; gebouw_naam: string | null; aangemaakt_op: string;
+    korting: number; gebouw_naam: string | null; werkgever_id: number | null; aangemaakt_op: string;
   };
   regels: {
     id: number; categorie: string; omschrijving: string; eenheid: string;
@@ -72,23 +72,20 @@ export default function ModulesCalculatiePrint() {
   const { data: werkgevers }      = useListWerkgevers();
   const { data: studioWerkgevers } = useListStudioWerkgevers();
 
-  const _actieveWerkgeverId = (() => {
-    try { const v = localStorage.getItem("fps.actieve_werkgever"); return v ? Number(v) : null; } catch { return null; }
-  })();
-  const _actieveWerkgeverNaam = _actieveWerkgeverId
-    ? ((werkgevers ?? []).find(w => w.id === _actieveWerkgeverId)?.naam ?? null)
-    : null;
+  // Werkgever afgeleid van de calculatie (via gebouw.werkgever_id), NOOIT van localStorage.
+  // Dit garandeert dat de koptekst, kleur en het logo altijd overeenkomen met de
+  // werkmaatschappij die eigenaar is van het gekoppelde gebouw.
+  const werkgeverId = data?.header.werkgever_id ?? null;
+  const werkgever = werkgeverId
+    ? ((werkgevers ?? []).find(w => w.id === werkgeverId) ?? (werkgevers ?? [])[0] ?? null)
+    : ((werkgevers ?? [])[0] ?? null);
+
   const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find(w => _actieveWerkgeverNaam && w.naam === _actieveWerkgeverNaam)?.id
+    (studioWerkgevers ?? []).find(w => werkgever && w.naam === werkgever.naam)?.id
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
   const { model: actiefStudioModel, isLoading: modelLaden } = useActiefStudioModel(studioWerkgeverId, "calculatie");
-
-  // Werkgever-branding: logo + bedrijfsgegevens (zelfde patroon als offerte/factuur print)
-  const werkgever = _actieveWerkgeverNaam
-    ? ((werkgevers ?? []).find(w => w.naam === _actieveWerkgeverNaam) ?? (werkgevers ?? [])[0] ?? null)
-    : ((werkgevers ?? [])[0] ?? null);
 
   const accentKleur = (() => {
     if (!actiefStudioModel?.connect_template_json) return null;
