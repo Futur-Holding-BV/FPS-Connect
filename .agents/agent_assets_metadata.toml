@@ -95,3 +95,17 @@ id = "cNEo_h09QtH8k7Ma55_2R"
 uri = "file://scripts/test-results/dossier-keuze-stap3.png"
 type = "image"
 title = "Drieledige keuze bij gebruikersaanmaak (stap 3)"
+
+[[outputs]]
+id = "q5Vi-DTxX2hI1l4aMmx8Y"
+uri = "file://attached_assets/bewijs/crm-mobiel-boven.png"
+type = "image"
+title = "CRM-overzicht op telefoonbreedte (bovenkant)"
+description = "Gevulde KPI's: 5 organisaties, 4 open kansen, € 200.650 gewogen pijplijn, 2 aandacht nodig."
+
+[[outputs]]
+id = "sHywvKdlSeOxe2QVf9ME-"
+uri = "file://attached_assets/bewijs/crm-mobiel-onder.png"
+type = "image"
+title = "CRM-overzicht op telefoonbreedte (doorgescrold)"
+description = "Navigatiekaarten: Organisaties, Contactpersonen, Aanvragen, Projectkansen, Concurrenten."

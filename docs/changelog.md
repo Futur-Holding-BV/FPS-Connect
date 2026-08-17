@@ -1,3 +1,13 @@
+## 2026-08-17 — Eigen modules "Social media" en "Merk" in de bevoegdheden-matrix (#1037/#1038)
+
+- Social en Merk (merkenkast + beeldbank) zijn losgekoppeld van het CRM-recht, zelfde aanpak als Marketing.
+- Module **social**: niveau 3 = opstellen/klaarzetten (preset Commercieel), niveau 4 = plaatsen en koppelingen beheren (preset Directie). Verder niemand.
+- Module **merk**: niveau 1 = zoeken/downloaden (presets Calculatie, Administratie, Projectleider — voor logo's en projectfoto's in offertes, brieven en rapportages), niveau 3 = ook uploaden (presets Commercieel en Directie). Veldprofielen krijgen niets.
+- Huisstijl beheren blijft onder organisatiebeheer; de merkenkast toont die gegevens alleen.
+- Migratie 0070 is alleen-verhogend en idempotent; handmatige profielen blijven op 0 (fail-closed).
+- API-routes en sidebar/paginagating omgezet naar de nieuwe modules.
+- Bewijs (#1038): `scripts/src/bewijs-module-rechten-1038.ts` — 21 checks tegen de echte API met wegwerpgebruikers per preset (marketing/social/merk, incl. weigeringen), alle geslaagd.
+
 ## 2026-08-17 — Naam "FPS Connect" beter zichtbaar in navigatie en welkomstpagina
 
 - Het volledige logo-plaatje (met kleine, onleesbare "FPS Connect"-tekst en wit blok) is vervangen door een vrijstaand schild-icoon (transparante achtergrond, `assets/logo-fps-schild.png`) met daarnaast de naam "FPS Connect" als echte tekst — scherp op elk formaat en leesbaar in licht én donker schema.

@@ -1,5 +1,5 @@
 // MERK_01 deel B — Beeldbank: één zoekingang over spotfoto's (per fase),
-// opnamefoto's, inspectiefoto's en handmatige uploads. crm niveau 3.
+// opnamefoto's, inspectiefoto's en handmatige uploads. Module merk: 1=lezen, 3=uploaden.
 // Gebouw-ACL wordt server-side afgedwongen (lijst én per bestand).
 // Opdracht is alleen gevuld waar hij echt vastligt (handmatige uploads).
 import { useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpload } from "@workspace/object-storage-web";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,10 @@ export default function CrmBeeldbank() {
   const [limit, setLimit] = useState(60);
   const [selectie, setSelectie] = useState<Set<string>>(new Set());
   const [uploadOpen, setUploadOpen] = useState(false);
+  // Server eist merk:3 voor uploaden; zonder dat recht ook geen upload-UI
+  // (anders gaat het bestand al naar object storage vóór de 403 op metadata).
+  const { heeftNiveau } = useBevoegdheid();
+  const magUploaden = heeftNiveau("merk", 3);
   const [zipBezig, setZipBezig] = useState(false);
 
   const params = useMemo(() => ({
@@ -200,9 +205,11 @@ export default function CrmBeeldbank() {
           </p>
         </div>
         <div className="flex gap-2">
+          {magUploaden && (
           <Button variant="outline" onClick={() => setUploadOpen(true)} data-testid="beeldbank-upload-knop">
             <Upload className="mr-1 h-4 w-4" />Uploaden
           </Button>
+          )}
           <Button onClick={downloadZip} disabled={selectie.size === 0 || zipBezig} data-testid="beeldbank-download-knop">
             {zipBezig ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
             Download ({selectie.size})

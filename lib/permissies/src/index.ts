@@ -54,6 +54,18 @@ export const MODULES = [
       "Marketingcampagnes: doelgroepen, sjablonen en campagnes. Niveau 3 = beheren en proefverzenden, niveau 4 = campagnes écht verzenden en stoppen",
   },
   {
+    id: "social",
+    label: "Social media",
+    omschrijving:
+      "Social-mediaberichten: kalender, opstellen en cijfers. Niveau 3 = opstellen en klaarzetten, niveau 4 = plannen/plaatsen en koppelingen beheren",
+  },
+  {
+    id: "merk",
+    label: "Merk (merkenkast & beeldbank)",
+    omschrijving:
+      "Merkenkast en beeldbank: logo's, huisstijlgegevens en projectfoto's. Niveau 1 = zoeken en downloaden, niveau 3 = ook uploaden. Huisstijl beheren blijft onder organisatiebeheer",
+  },
+  {
     id: "abonnementen",
     label: "Abonnementen",
     omschrijving: "Abonnementen en pakketten",
@@ -329,7 +341,7 @@ export const PRESETS: Preset[] = [
       rapportages: 4, bibliotheek: 3, crm: 3,
       planning: 3, toolbox: 3, calculaties: 1,
       financieel: 2, goedkeuring: 3, declaraties: 3,
-      projecten: 3, magazijn: 2, gereedschappen: 2,
+      projecten: 3, magazijn: 2, gereedschappen: 2, merk: 1,
     }),
   },
   {
@@ -368,7 +380,7 @@ export const PRESETS: Preset[] = [
     groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 1,
-      crm: 4, marketing: 3, abonnementen: 4, offertes: 3, projecten: 3,
+      crm: 4, marketing: 3, social: 3, merk: 3, abonnementen: 4, offertes: 3, projecten: 3,
     }),
   },
   {
@@ -376,7 +388,7 @@ export const PRESETS: Preset[] = [
     groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 2,
-      offertes: 4, projecten: 3, dossiers: 2, crm: 1, calculaties: 4,
+      offertes: 4, projecten: 3, dossiers: 2, crm: 1, calculaties: 4, merk: 1,
     }),
   },
   {
@@ -391,7 +403,7 @@ export const PRESETS: Preset[] = [
     groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
-      rapportages: 4, bibliotheek: 2, crm: 4, marketing: 4, abonnementen: 4,
+      rapportages: 4, bibliotheek: 2, crm: 4, marketing: 4, social: 4, merk: 3, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, projecten: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
       goedkeuring: 4, declaraties: 4,
@@ -402,7 +414,7 @@ export const PRESETS: Preset[] = [
     groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
-      crm: 2, personeel: 2, dossiers: 3, offertes: 1, projecten: 2, planning: 1,
+      crm: 2, personeel: 2, dossiers: 3, offertes: 1, projecten: 2, planning: 1, merk: 1,
       financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
       goedkeuring: 3, declaraties: 4,
     }),

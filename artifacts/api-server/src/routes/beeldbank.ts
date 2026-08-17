@@ -41,7 +41,8 @@ import { ObjectNotFoundError } from "../lib/objectStorageTypes";
 import { naarObjectPad } from "./merkenkast";
 
 const router = Router();
-const lezen = requireBevoegdheid("crm", 3);
+const lezen = requireBevoegdheid("merk", 1);
+const uploaden = requireBevoegdheid("merk", 3);
 
 export type BeeldbankBron = "spot" | "opname" | "inspectie" | "upload";
 
@@ -255,7 +256,7 @@ router.get("/beeldbank/fotos", lezen, async (req, res): Promise<void> => {
 
 // POST /beeldbank/fotos — handmatige upload registreren (bestand is al via de
 // storage-upload geplaatst; hier leggen we de metadata vast).
-router.post("/beeldbank/fotos", lezen, async (req, res): Promise<void> => {
+router.post("/beeldbank/fotos", uploaden, async (req, res): Promise<void> => {
   try {
     const { object_path, bijschrift, gebouw_id, opdracht_id, werksoort } = req.body ?? {};
     const pad = naarObjectPad(typeof object_path === "string" ? object_path : null);

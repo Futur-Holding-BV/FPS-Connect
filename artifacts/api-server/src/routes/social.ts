@@ -2,8 +2,8 @@
 //
 // Rechten (zelfde grens als MARKETING_01, getoetst tegen de bestaande
 // backendroutes in marketing.ts):
-//   - crm niveau 3 = kalender en berichten bekijken, opstellen en klaarzetten
-//   - crm niveau 4 = plannen, plaatsen en koppelingen beheren
+//   - social niveau 3 = kalender en berichten bekijken, opstellen en klaarzetten
+//   - social niveau 4 = plannen, plaatsen en koppelingen beheren
 //
 // Fail-closed (deel A): een bericht dat niet aan de kanaaleisen voldoet is
 // niet te plannen — het plannen-endpoint valideert álle kanalen en weigert
@@ -28,8 +28,8 @@ import { KANAAL_EISEN, valideerTegenKanaal } from "../lib/socialKanalen";
 import { telBerichtenOpDag } from "../services/socialService";
 
 const router = Router();
-const opstellen = requireBevoegdheid("crm", 3);
-const plannen = requireBevoegdheid("crm", 4);
+const opstellen = requireBevoegdheid("social", 3);
+const plannen = requireBevoegdheid("social", 4);
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 

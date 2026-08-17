@@ -6,7 +6,7 @@
 // niets gekopieerd naar een tweede plek.
 //
 // Rechten (getoetst tegen bestaande crm-routes: marketing.ts/social.ts):
-//   crm niveau 3 = merkenkast bekijken en downloaden (per stuk en als pakket).
+//   merk niveau 1 = merkenkast bekijken en downloaden (per stuk en als pakket).
 // Beheren gaat via de bestaande werkgever-routes (PATCH /werkgevers, HRM).
 import { Router } from "express";
 import { ZipArchive } from "archiver";
@@ -19,7 +19,7 @@ const objectStorageService = new ObjectStorageService();
 import { ObjectNotFoundError } from "../lib/objectStorageTypes";
 
 const router = Router();
-const lezen = requireBevoegdheid("crm", 3);
+const lezen = requireBevoegdheid("merk", 1);
 
 // Vaste, eindige set logo-variantsleutels (zelfde sleutels als de frontend).
 export const LOGO_VARIANTEN = ["kleur", "wit", "zwart", "liggend", "vierkant", "transparant"] as const;

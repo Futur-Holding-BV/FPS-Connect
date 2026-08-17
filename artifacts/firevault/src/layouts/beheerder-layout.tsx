@@ -185,6 +185,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
   const toonGebouwen      = heeftNiveau("gebouwen", 1);
   const toonCrm           = heeftNiveau("crm", 1);
+  const toonSocial        = heeftNiveau("social", 3);
+  const toonMerk          = heeftNiveau("merk", 1);
   const toonBibliotheek   = heeftNiveau("bibliotheek", 1);
   const toonGebruikers    = heeftNiveau("gebruikers", 1);
   const toonSysteem       = heeftNiveau("systeem", 1);
@@ -825,7 +827,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
               {/* CRM — één centraal menu-item; alle onderdelen bereikbaar via het CRM-dashboard.
                   Het hoofdstuk toont ook voor marketing-only gebruikers (eigen module). */}
-              {(toonCrm || heeftNiveau("marketing", 3)) && (
+              {(toonCrm || heeftNiveau("marketing", 3) || toonSocial || toonMerk) && (
               <TweeTrapsHoofdstuk
                 sleutel="commercie"
                 titel="Commercie"
@@ -864,10 +866,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       )}
-                      {/* Social media (SOCIAL_01) — zelfde grens als Marketing: de
-                          Social-API vereist crm 3 voor bekijken/opstellen; plannen en
-                          koppelingen gate't de pagina intern op crm 4. */}
-                      {heeftNiveau("crm", 3) && (
+                      {/* Social media (#1037) — eigen module: social 3 =
+                          bekijken/opstellen; plannen en koppelingen gate't de
+                          pagina intern op social 4. */}
+                      {heeftNiveau("social", 3) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
@@ -880,9 +882,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       )}
-                      {/* Merkenkast + Beeldbank (MERK_01) — crm 3 = bekijken,
+                      {/* Merkenkast + Beeldbank (#1037) — module merk: 1 =
                           zoeken en downloaden (zelfde grens als de API-routes). */}
-                      {heeftNiveau("crm", 3) && (
+                      {heeftNiveau("merk", 1) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
@@ -895,7 +897,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       )}
-                      {heeftNiveau("crm", 3) && (
+                      {heeftNiveau("merk", 1) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild

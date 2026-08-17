@@ -26,3 +26,11 @@ description: Consent-poort, campagneflow via mailwachtrij, rechtenmodel en afges
 
 ## MARKETING_02 (17-08-2026, akkoord René)
 Eigen module `marketing` in de matrix (los van crm): niveau 3 = beheren + proefverzenden, 4 = écht verzenden/stoppen. Presets: Commercieel 3, Directie 4 (migratie 0069, alleen-verhogend). Toestemming-PATCH blijft crm 2; social/merkenkast/beeldbank blijven bewust op crm 3/4. Frontend: sidebar-hoofdstuk Commercie toont ook bij marketing-only; CRM-kaart Marketing en social-campagnekoppeling gegate op marketing 3 (query enabled + queryKey verplicht).
+
+## Social & Merk afgesplitst (#1037, 17-08-2026)
+Regel: social en merk zijn eigen modules, niet langer crm-recht.
+- social: 3=opstellen/klaarzetten (Commercieel), 4=plaatsen+koppelingen (Directie). Verder niemand.
+- merk (merkenkast+beeldbank samen): 1=zoeken/downloaden (Calculatie/Administratie/Projectleider), 3=ook uploaden (Commercieel/Directie). Veldprofielen niets.
+**Why:** merk-assets nodig voor offertes/brieven/rapportages zonder social-rechten; huisstijl beheren blijft organisatiebeheer (merkenkast toont alleen).
+**How to apply:** migratie 0070 (alleen-verhogend, handmatige profielen 0); bewijs: scripts/src/bewijs-module-rechten-1038.ts (wegwerpgebruikers per preset via mobile-login bearer — herbruikbaar patroon voor modulerechten-tests).
+

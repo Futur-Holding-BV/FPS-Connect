@@ -84,7 +84,7 @@ function fmtDatumTijd(iso: string | null | undefined): string {
 
 export default function CrmSocialPagina() {
   const { heeftNiveau } = useBevoegdheid();
-  const magPlannen = heeftNiveau("crm", 4);
+  const magPlannen = heeftNiveau("social", 4);
   const params = new URLSearchParams(window.location.search);
   const startTab = params.get("tab") === "koppelingen" && magPlannen ? "koppelingen" : "kalender";
 
