@@ -45,7 +45,17 @@ GitHub Actions (`deploy.yml`) SSHt naar de VPS om `deploy-production.sh` te draa
 | `SMOKETEST_PASSWORD` | Wachtwoord smoketest-account | Nee |
 | `EXPO_TOKEN` | Expo access token (account `futur-holding`) voor de automatische OTA-update van de monteur-app na elke deploy | Nee* |
 
-\* `EXPO_TOKEN` staat sinds 16 augustus 2026 ingesteld als GitHub Actions secret; de eerste automatische OTA-update is diezelfde dag aantoonbaar geland op het `production`-kanaal (update-groep `9732cfb2`, deploy `afbc2b5`). Zonder `EXPO_TOKEN` slaagt de deploy gewoon, maar wordt de OTA-update-stap met een waarschuwing overgeslagen — monteurs krijgen dan geen automatische app-update en er moet handmatig `npx eas-cli update --channel production` gedraaid worden (zie `docs/monteur-app-apk.md`).
+\* `EXPO_TOKEN` staat sinds 16 augustus 2026 ingesteld als GitHub Actions secret; de eerste automatische OTA-update is diezelfde dag aantoonbaar geland op het `production`-kanaal (update-groep `9732cfb2`, deploy `afbc2b5`). Zonder `EXPO_TOKEN` slaagt de deploy gewoon, maar wordt de OTA-update-stap met een waarschuwing overgeslagen en stuurt de workflow een e-mail naar René (zie "OTA-update bewaking" hieronder) — monteurs krijgen dan geen automatische app-update en er moet handmatig `npx eas-cli update --channel production` gedraaid worden (zie `docs/monteur-app-apk.md`).
+
+### OTA-update bewaking (EXPO_TOKEN verloop of eas-cli fout)
+
+Wanneer de OTA-updatestap wordt overgeslagen omdat `EXPO_TOKEN` ontbreekt, of wanneer `eas-cli` een foutcode teruggeeft, stuurt de workflow automatisch een e-mail naar René via dezelfde Microsoft 365/Graph-koppeling als de overige deploy-meldingen. De deploy zelf slaagt (de web- en API-containers zijn op dat moment al live); alleen de app-update is niet uitgerold.
+
+- **Token ontbreekt:** het e-mailonderwerp is "FPS Connect: OTA-update monteur-app OVERGESLAGEN — EXPO_TOKEN ontbreekt". Voeg het token toe via GitHub → Settings → Secrets and variables → Actions (secret naam: `EXPO_TOKEN`).
+- **eas-cli fout:** het onderwerp is "FPS Connect: OTA-update monteur-app GEFAALD — eas-cli fout". Raadpleeg de Actions-run voor de foutuitvoer.
+- **Handmatige herstelstap:** draai in beide gevallen handmatig `cd artifacts/monteur-app && npx eas-cli update --channel production --platform android`.
+
+De meldingstap loopt alleen als de mailconfig (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`) aanwezig is; ontbreekt die, dan verschijnt alleen een waarschuwing in de run-logs.
 
 Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflow onmiddellijk met een foutmelding maar mislukt de _merge_ er niet door.
 
