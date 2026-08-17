@@ -1,3 +1,11 @@
+## 2026-08-17 — RECHTEN_HRM_02 §1 afgerond: laatste vier muterende factuur-routes van niveau 1 naar 2
+
+- Het herstelpunt uit RECHTEN_HRM_02 (negen muterende routes achter financieel:1) was bij RECHTEN_BOEKHOUDER_01 al voor vijf routes doorgevoerd; de laatste vier zijn nu ook opgetild naar financieel:2: POST /facturen/:id/bevestig-inkoop, POST /facturen/:id/beoordelen-medewerker, POST /facturen/:id/opmerkingen en PATCH /facturen/:id/opmerkingen/:oid. De persoonsgebonden poorten (alleen de toegewezen inkoper/beoordelaar) blijven daarbovenop staan.
+- Niveau 1 is daarmee puur leesrecht: geen enkele POST/PATCH/PUT/DELETE-route in de api-server staat nog op financieel:1 (grep-gecontroleerd).
+- Vastlopers gezocht conform de opdracht: in de ontwikkeldatabase staat geen enkele gebruiker met financieel:1, en dus ook niemand met alleen leesrecht die als inkoper of beoordelaar aan een factuur hangt — er loopt niemand vast. Productie kan pas gecontroleerd worden zodra de SMOKETEST-secrets er zijn.
+- Doorsturen ter beoordeling is fail-closed gemaakt: POST /facturen/:id/doorsturen-medewerker weigert nu (422, met naam) een beoordelaar die geen financieel:2 heeft — anders zou die na het optillen onvermijdelijk vastlopen op de beoordelen-route.
+- Gedragsbewijs: nieuw script `bewijs-facturen-leesrecht` (12/12 groen) — wegwerpaccount met preset Externe boekhouder leest facturen/analyse/opmerkingen (200) en krijgt op alle negen muterende routes 403.
+
 ## 2026-08-17 — RECHTEN_HRM_02: HRM-adviseur ingeperkt + Poortwachter twee-stapsvrijgave (vier-ogen)
 
 - **Punt 2 — profiel HRM-adviseur**: gebruikers 4 → 1 (alleen inzien; alle muterende gebruikersroutes zaten al op niveau 4, dus niveau 1 dekt uitsluitend GET /gebruikers). Nieuw: hrm_vrijgave 3. Profiel Directie krijgt óók hrm_vrijgave 3.

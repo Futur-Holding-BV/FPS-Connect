@@ -54,6 +54,7 @@ import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../servi
 import { schrijfTijdlijn, maakAfwijsMailTekst } from "../services/factuurstroomService";
 import { verwerkMandagstaatVoorFactuur } from "../lib/mandagstaat";
 import { PermissieService } from "../lib/permissie-service";
+import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -884,7 +885,7 @@ router.post("/facturen/:id/leverancier-koppelen", requireBevoegdheid("financieel
 });
 
 // ── POST /facturen/:id/bevestig-inkoop — stap van de inkoper (§5) ──────────────
-router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -1902,6 +1903,14 @@ router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financiee
     .from(gebruikersTable).where(eq(gebruikersTable.id, gebruiker_id)).limit(1);
   if (!medewerker) { res.status(404).json({ error: "Medewerker niet gevonden" }); return; }
 
+  // RECHTEN_HRM_02 §1 — beoordelen-medewerker vereist financieel:2; stuur nooit
+  // door naar iemand die daar vervolgens niet bij kan (fail-closed, 422).
+  const rechten = await berekenEffectieveBevoegdheden(gebruiker_id);
+  if ((rechten["financieel"] ?? 0) < 2) {
+    res.status(422).json({ error: `${medewerker.naam} heeft geen schrijfrecht op Financieel (niveau 2) en kan deze factuur niet beoordelen. Verhoog eerst diens recht of kies iemand anders.` });
+    return;
+  }
+
   const userId = sessionUserId(req);
   const [updated] = await db.update(facturenTable).set({
     beoordelaarId: gebruiker_id,
@@ -1930,7 +1939,7 @@ router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financiee
 });
 
 // ── POST /facturen/:id/beoordelen-medewerker ──────────────────────────────────
-router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { actie, reden } = req.body as { actie?: string; reden?: string };
 
@@ -1945,9 +1954,9 @@ router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financiee
   }
 
   const userId = sessionUserId(req);
-  // RECHTEN_BOEKHOUDER_01 — deze stap staat bewust op niveau 1 (doorgestuurde
-  // medewerkers hebben vaak niet meer), maar is persoonsgebonden en fail-closed:
-  // alleen de toegewezen beoordelaar mag hier iets wijzigen; zonder toegewezen
+  // RECHTEN_HRM_02 §1 — niveau 1 is puur leesrecht; deze muterende stap staat
+  // daarom op niveau 2. Daarbovenop persoonsgebonden en fail-closed: alleen de
+  // toegewezen beoordelaar mag hier iets wijzigen; zonder toegewezen
   // beoordelaar of zonder ingelogde gebruiker wordt geweigerd.
   if (!factuur.beoordelaarId || !userId || userId !== factuur.beoordelaarId) {
     res.status(403).json({ error: "Alleen de toegewezen medewerker kan deze factuur beoordelen." });
@@ -2019,7 +2028,7 @@ router.get("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), asy
 });
 
 // ── POST /facturen/:id/opmerkingen ────────────────────────────────────────────
-router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { tekst, reply_op_id } = req.body as { tekst?: string; reply_op_id?: number };
 
@@ -2052,7 +2061,7 @@ router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), as
 });
 
 // ── PATCH /facturen/:id/opmerkingen/:oid ──────────────────────────────────────
-router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const oid = paramInt(req.params["oid"]);
   const { afgehandeld } = req.body as { afgehandeld?: boolean };
