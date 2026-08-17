@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
@@ -117,22 +118,22 @@ export default function DocumentViewer() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 8,
-          paddingHorizontal: 16,
-          paddingBottom: 14,
+          paddingTop: bovenInset(insets) + ruimte.s,
+          paddingHorizontal: ruimte.l,
+          paddingBottom: ruimte.m + 2,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Text style={{ color: c.primary, fontSize: 26, fontFamily: "Inter_700Bold" }}>
+          <Text style={[tekstStijl("schermtitel", c.primary), { fontSize: 26 }]}>
             ‹
           </Text>
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text
-            style={{ color: c.darkForeground, fontSize: 17, fontFamily: "Inter_700Bold" }}
+            style={tekstStijl("sectiekop", c.darkForeground)}
             numberOfLines={1}
           >
             {naam || "Document"}
@@ -140,29 +141,24 @@ export default function DocumentViewer() {
         </View>
       </View>
 
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xl }}>
         {status === "laden" ? (
           <>
             <ActivityIndicator size="large" color={c.primary} />
-            <Text style={{ color: c.mutedForeground, marginTop: 16, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { marginTop: ruimte.l }]}>
               Document laden…
             </Text>
           </>
         ) : status === "fout" ? (
           <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 15,
-              textAlign: "center",
-              fontFamily: "Inter_400Regular",
-            }}
+            style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}
           >
             Document kon niet geladen worden.
           </Text>
         ) : isBeeld && dataUri ? (
           <ScrollView
             style={{ width: "100%" }}
-            contentContainerStyle={{ alignItems: "center", paddingVertical: 16 }}
+            contentContainerStyle={{ alignItems: "center", paddingVertical: ruimte.l }}
             maximumZoomScale={4}
             minimumZoomScale={1}
           >
@@ -173,14 +169,9 @@ export default function DocumentViewer() {
             />
           </ScrollView>
         ) : (
-          <View style={{ alignItems: "center", gap: 16 }}>
+          <View style={{ alignItems: "center", gap: ruimte.l }}>
             <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 15,
-                textAlign: "center",
-                fontFamily: "Inter_400Regular",
-              }}
+              style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}
             >
               Het PDF is geopend in de PDF-viewer van uw toestel.
             </Text>
@@ -189,12 +180,12 @@ export default function DocumentViewer() {
               style={({ pressed }) => ({
                 backgroundColor: c.primary,
                 borderRadius: c.radius,
-                paddingHorizontal: 20,
-                paddingVertical: 10,
+                paddingHorizontal: ruimte.xl,
+                paddingVertical: ruimte.s + 2,
                 opacity: pressed || status === "openen" ? 0.75 : 1,
               })}
             >
-              <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+              <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                 {status === "openen" ? "Openen…" : "Opnieuw openen"}
               </Text>
             </Pressable>

@@ -5,6 +5,7 @@ import {
   useListLabels,
 } from "@workspace/api-client-react";
 import type { Label } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
@@ -57,7 +58,7 @@ export function ToepassingKiezer({
       style={{ maxHeight: 200 }}
       nestedScrollEnabled
     >
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: ruimte.s }}>
         {actief.map((l: Label) => {
           const geselecteerd = geselecteerdeIds.includes(l.id);
           return (
@@ -67,9 +68,9 @@ export function ToepassingKiezer({
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 12,
-                paddingVertical: 11,
-                paddingHorizontal: 14,
+                gap: ruimte.m,
+                paddingVertical: ruimte.m - 1,
+                paddingHorizontal: ruimte.m + 2,
                 backgroundColor: geselecteerd ? c.secondary : "transparent",
                 borderRadius: c.radius,
                 borderWidth: geselecteerd ? 1.5 : 1,
@@ -80,7 +81,7 @@ export function ToepassingKiezer({
                 style={{
                   width: 20,
                   height: 20,
-                  borderRadius: 4,
+                  borderRadius: c.radius / 2,
                   borderWidth: 2,
                   borderColor: geselecteerd ? c.primary : c.border,
                   backgroundColor: geselecteerd ? c.primary : "transparent",
@@ -91,7 +92,7 @@ export function ToepassingKiezer({
                 {geselecteerd && (
                   <Text
                     style={{
-                      color: "#fff",
+                      color: c.primaryForeground,
                       fontSize: 13,
                       fontFamily: "Inter_700Bold",
                       lineHeight: 16,
@@ -110,7 +111,7 @@ export function ToepassingKiezer({
                   style={{
                     width: 40,
                     height: 40,
-                    borderRadius: 6,
+                    borderRadius: c.radius / 2,
                     backgroundColor: c.secondary,
                   }}
                   resizeMode="cover"

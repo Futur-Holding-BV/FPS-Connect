@@ -1,0 +1,94 @@
+{
+  "merk": "KETEN01 1786942551607",
+  "keten": {
+    "adminId": 59,
+    "voorstelId": 37,
+    "klantId": 65,
+    "gebouwId": 277,
+    "opnameId": 32,
+    "calculatieId": 262,
+    "offerteId": 0,
+    "portaalToken": "",
+    "opdrachtId": 209,
+    "materiaalAanvraagId": 107,
+    "inkoopFactuurId": 82,
+    "medewerkerId": 566
+  },
+  "rapport": [
+    {
+      "stap": "1a mail-binnenkomst",
+      "uitkomst": "gesimuleerd",
+      "detail": "aanvraag_voorstellen geseed (geen mailbox in testomgeving; vooraf gemeld)"
+    },
+    {
+      "stap": "1b aanvraag accepteren → klant+gebouw",
+      "uitkomst": "doorlopen",
+      "detail": "voorstel 37 geaccepteerd; klant 65, gebouw 277, projectkans 48"
+    },
+    {
+      "stap": "2 opname definitief op gebouw",
+      "uitkomst": "doorlopen",
+      "detail": "opname 32 (nummer 31) definitief op gebouw 277"
+    },
+    {
+      "stap": "3 calculatie aan opname + regels",
+      "uitkomst": "doorlopen",
+      "detail": "calculatie 262 (C176) aan opname 32, 1 regel(s)"
+    },
+    {
+      "stap": "4a offerte uit calculatie + verzonden",
+      "uitkomst": "vastgelopen",
+      "detail": "locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Maak offerte/i }).first()\u001b[22m\n"
+    },
+    {
+      "stap": "4b/5 portaal-tekenen → opdracht",
+      "uitkomst": "vastgelopen",
+      "detail": "APP-BEVINDING: 'Definitief akkoord geven' doet niets — op stap 2 is het handtekening-canvas ontkoppeld (unmount → canvasRef null) waardoor bevestigHandtekening stil retourneert en er nooit een POST /portaal/:token/ondertekenen vertrekt. Testfout uitgesloten (geen serverhit in log). Oorspr. fout: portaallink nodig\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31m\"\"\u001b[39m"
+    },
+    {
+      "stap": "5b vangnet-opdracht",
+      "uitkomst": "gesimuleerd",
+      "detail": "opdracht 209 + concept-werkbegroting 54 DB-geseed omdat portaal-ondertekenen vastliep; proces 6-11 blijft zo meetbaar (afwijking, gemeld)"
+    },
+    {
+      "stap": "6 werkbegroting + planning",
+      "uitkomst": "vastgelopen",
+      "detail": "werkbegroting=54 (vastgesteld), uitvoeringsplan-taken=0"
+    },
+    {
+      "stap": "7a monteur-aanvraag",
+      "uitkomst": "gesimuleerd",
+      "detail": "materiaal_aanvragen geseed (mobiele-app-handeling; vooraf gemeld)"
+    },
+    {
+      "stap": "7b goedkeuring → concept-inkoopbon",
+      "uitkomst": "doorlopen",
+      "detail": "aanvraag goedgekeurd, inkoopbon 97 (status concept) gekoppeld via inkoopbon_id"
+    },
+    {
+      "stap": "8 uren op opdracht mét akkoord",
+      "uitkomst": "doorlopen",
+      "detail": "1 uren-rij(en) op opdracht 209 (POST /uren → 201 {\"id\":159,\"datum\":\"2026-08-17\",\"medewerker_id\":566,\"medewerker_naam\":null,\"gebouw_id\":277,\"gebouw_naam\":null,\"project_id\":null,\"project_naam\":\"Opdracht KETEN01 1786942551607\",\"werkzaamheden\":null,\"werkzaamheid_categorie\":null,\"ruimte)"
+    },
+    {
+      "stap": "9a leveranciersfactuur binnen",
+      "uitkomst": "gesimuleerd",
+      "detail": "facturen-rij geseed (binnenkomst is mailbox-only; vooraf gemeld)"
+    },
+    {
+      "stap": "9b beoordeling + prijscontrole",
+      "uitkomst": "doorlopen",
+      "detail": "factuurstatus na beoordeling = te_beoordelen_wvb; koppeling aan bestelling/prijscontrole vergt factuurregels — gemeten op /facturen/:id (zie schermafdruk)"
+    },
+    {
+      "stap": "10 verkoopfactuur naar klant",
+      "uitkomst": "vastgelopen",
+      "detail": "de web-UI kent alleen 'Verkoopfactuur uploaden' (bestaand PDF); een verkoopfactuur SAMENSTELLEN vanuit de opdracht/offerte en definitief maken (fiscaal nummer) is niet klikbaar aanwezig — einddoel niet haalbaar via de UI"
+    },
+    {
+      "stap": "11 opdracht afsluiten",
+      "uitkomst": "doorlopen",
+      "detail": "status na klik = afgerond"
+    }
+  ]
+}

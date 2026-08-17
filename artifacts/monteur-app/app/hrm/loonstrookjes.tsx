@@ -3,6 +3,7 @@ import { API_DOMEIN } from "@/lib/apiDomein";
 // Toont eigen gepubliceerde salarisdocumenten en maakt downloaden/openen mogelijk.
 
 import { useGetMijnSalarisdocumenten } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 import * as FileSystem from "expo-file-system/legacy";
 import { Redirect } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -18,7 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { Kaart, bovenInset, netteWaarde, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -103,26 +104,22 @@ export default function LoonstrookjesScherm() {
   function renderDoc(item: NonNullable<typeof data>[number]) {
     const isLaaden = laadenId === item.id;
     return (
-      <View
-        style={{
-          backgroundColor: c.card,
-          borderRadius: c.radius,
-          borderWidth: 1,
-          borderColor: c.border,
-          padding: 16,
-          marginBottom: 10,
+      <Kaart
+        stijl={{
+          padding: ruimte.l,
+          marginBottom: ruimte.m - 2,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={tekstStijl("nadruk", c.foreground)}>
             {periodeLabel(item.periode_jaar ?? null, item.periode_maand ?? null)}
           </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 3, fontFamily: "Inter_400Regular" }}>
-            {TYPE_LABELS[item.type ?? ""] ?? item.type}
+          <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 3 }]}>
+            {TYPE_LABELS[item.type ?? ""] ?? netteWaarde(item.type ?? "")}
             {item.bestandsgrootte ? `  ·  ${bestandsGrootteLabel(item.bestandsgrootte)}` : ""}
           </Text>
         </View>
@@ -131,44 +128,44 @@ export default function LoonstrookjesScherm() {
           disabled={isLaaden}
           style={({ pressed }) => ({
             backgroundColor: isLaaden ? c.muted : c.primary,
-            borderRadius: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
+            borderRadius: c.radius / 2,
+            paddingHorizontal: ruimte.m + 2,
+            paddingVertical: ruimte.s,
             opacity: pressed ? 0.8 : 1,
           })}
         >
           {isLaaden ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={c.primaryForeground} />
           ) : (
-            <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={tekstStijl("klein", c.primaryForeground)}>
               Openen
             </Text>
           )}
         </Pressable>
-      </View>
+      </Kaart>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + 12, paddingHorizontal: 20, paddingBottom: 18 }}>
+      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + ruimte.m, paddingHorizontal: ruimte.xl, paddingBottom: ruimte.l + 2 }}>
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Mijn loonstrookjes
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 2 }]}>
             Gepubliceerde salarisdocumenten
           </Text>
         </View>
       </View>
 
       {isLoading && (
-        <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 48 }} />
+        <ActivityIndicator size="large" color={c.primary} style={{ marginTop: ruimte.xxl + ruimte.l }} />
       )}
 
       {isError && (
-        <View style={{ padding: 24, alignItems: "center" }}>
-          <Text style={{ color: c.destructive, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+        <View style={{ padding: ruimte.xl, alignItems: "center" }}>
+          <Text style={tekstStijl("standaard", c.destructive)}>
             Documenten konden niet worden geladen.
           </Text>
         </View>
@@ -179,18 +176,18 @@ export default function LoonstrookjesScherm() {
           data={[]}
           renderItem={() => null}
           contentContainerStyle={{
-            padding: 16,
-            paddingBottom: insets.bottom + 32,
+            padding: ruimte.l,
+            paddingBottom: insets.bottom + ruimte.xxl,
             width: "100%",
             maxWidth: inhoudMaxBreedte,
             alignSelf: "center",
           }}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => void refetch()} tintColor={c.primary} />}
           ListHeaderComponent={
-            <View style={{ gap: 4 }}>
+            <View style={{ gap: ruimte.xs }}>
               {loonstroken.length === 0 && jaaropgaven.length === 0 && (
-                <View style={{ alignItems: "center", paddingTop: 40 }}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+                <View style={{ alignItems: "center", paddingTop: ruimte.xl + ruimte.l }}>
+                  <Text style={tekstStijl("standaard", c.mutedForeground)}>
                     Er zijn nog geen salarisdocumenten beschikbaar.
                   </Text>
                 </View>
@@ -198,7 +195,7 @@ export default function LoonstrookjesScherm() {
 
               {loonstroken.length > 0 && (
                 <>
-                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", marginBottom: 10, marginTop: 4 }}>
+                  <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: ruimte.m - 2, marginTop: ruimte.xs }]}>
                     Loonstroken
                   </Text>
                   {loonstroken.map((d) => (
@@ -209,7 +206,7 @@ export default function LoonstrookjesScherm() {
 
               {jaaropgaven.length > 0 && (
                 <>
-                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", marginBottom: 10, marginTop: loonstroken.length > 0 ? 16 : 4 }}>
+                  <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: ruimte.m - 2, marginTop: loonstroken.length > 0 ? ruimte.l : ruimte.xs }]}>
                     Jaaropgaven
                   </Text>
                   {jaaropgaven.map((d) => (

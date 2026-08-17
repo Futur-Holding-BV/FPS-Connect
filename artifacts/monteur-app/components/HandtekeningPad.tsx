@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { ruimte } from "@workspace/ontwerp";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -112,10 +113,10 @@ export function HandtekeningPad({
         style={{
           width: breedte,
           height: hoogte,
-          backgroundColor: opgeslagen ? "rgba(34,197,94,0.05)" : "#ffffff",
-          borderRadius: 10,
+          backgroundColor: opgeslagen ? c.success + "0D" : c.card,
+          borderRadius: c.radius,
           borderWidth: 1.5,
-          borderColor: opgeslagen ? "#16a34a" : c.border,
+          borderColor: opgeslagen ? c.success : c.border,
           borderStyle: heeftHandtekening ? "solid" : "dashed",
           overflow: "hidden",
         }}
@@ -126,7 +127,7 @@ export function HandtekeningPad({
             <Path
               key={i}
               d={lijnNaarPad(lijn)}
-              stroke={opgeslagen ? "#16a34a" : "#1a1a1a"}
+              stroke={opgeslagen ? c.success : c.foreground}
               strokeWidth={2.5}
               fill="none"
               strokeLinecap="round"
@@ -159,22 +160,22 @@ export function HandtekeningPad({
           <View
             style={{
               position: "absolute",
-              top: 8,
-              right: 8,
+              top: ruimte.s,
+              right: ruimte.s,
             }}
             pointerEvents="none"
           >
             <View
               style={{
-                backgroundColor: "rgba(34,197,94,0.15)",
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 6,
+                backgroundColor: c.success + "26",
+                paddingHorizontal: ruimte.s,
+                paddingVertical: ruimte.xs - 1,
+                borderRadius: c.radius / 2,
               }}
             >
               <Text
                 style={{
-                  color: "#16a34a",
+                  color: c.success,
                   fontSize: 10,
                   fontFamily: "Inter_600SemiBold",
                 }}
@@ -187,14 +188,14 @@ export function HandtekeningPad({
       </View>
 
       {!opgeslagen && (
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+        <View style={{ flexDirection: "row", gap: ruimte.s + 2, marginTop: ruimte.s + 2 }}>
           <Pressable
             onPress={wis}
             disabled={!heeftHandtekening || bezig}
             style={({ pressed }) => ({
               flex: 1,
-              paddingVertical: 10,
-              borderRadius: 8,
+              paddingVertical: ruimte.s + 2,
+              borderRadius: c.radius / 2,
               borderWidth: 1,
               borderColor: heeftHandtekening ? c.border : c.muted,
               alignItems: "center",
@@ -217,27 +218,24 @@ export function HandtekeningPad({
             disabled={!heeftHandtekening || bezig}
             style={({ pressed }) => ({
               flex: 2,
-              paddingVertical: 10,
-              borderRadius: 8,
+              paddingVertical: ruimte.s + 2,
+              borderRadius: c.radius / 2,
               backgroundColor:
-                heeftHandtekening && !bezig
-                  ? pressed
-                    ? "#15803d"
-                    : "#16a34a"
-                  : c.muted,
+                heeftHandtekening && !bezig ? c.success : c.muted,
+              opacity: heeftHandtekening && !bezig && pressed ? 0.85 : 1,
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "row",
-              gap: 6,
+              gap: ruimte.xs + 2,
             })}
           >
             {bezig ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={c.primaryForeground} />
             ) : null}
             <Text
               style={{
                 color:
-                  heeftHandtekening && !bezig ? "#fff" : c.mutedForeground,
+                  heeftHandtekening && !bezig ? c.primaryForeground : c.mutedForeground,
                 fontFamily: "Inter_600SemiBold",
                 fontSize: 13,
               }}

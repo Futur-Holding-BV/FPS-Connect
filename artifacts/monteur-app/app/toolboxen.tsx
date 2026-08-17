@@ -31,9 +31,11 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ruimte } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
+import { Kaart, Ladenstaat, Statusmerk, tekstStijl } from "@/components/ui";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -100,26 +102,26 @@ function QuizScherm({
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+    <View style={{ flex: 1, padding: ruimte.l + ruimte.xs }}>
+      <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginBottom: ruimte.s }]}>
         Vraag {huidig + 1} van {vragen.length}
       </Text>
 
-      <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", marginBottom: 20, lineHeight: 24 }}>
+      <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: ruimte.l + ruimte.xs, lineHeight: 24 }]}>
         {vraag?.vraag}
       </Text>
 
-      <View style={{ gap: 10 }}>
+      <View style={{ gap: ruimte.s + 2 }}>
         {opties.map((o: any, i: number) => {
           let bg = c.card;
           let border = c.border;
           let tekstKleur = c.foreground;
 
           if (gecontroleerd) {
-            if (i === juistIndex) { bg = "#dcfce7"; border = "#16a34a"; tekstKleur = "#166534"; }
-            else if (i === gekozen && i !== juistIndex) { bg = "#fee2e2"; border = "#dc2626"; tekstKleur = "#991b1b"; }
+            if (i === juistIndex) { bg = c.secondary; border = c.success; tekstKleur = c.success; }
+            else if (i === gekozen && i !== juistIndex) { bg = c.accent; border = c.destructive; tekstKleur = c.destructive; }
           } else if (i === gekozen) {
-            bg = c.primary + "20"; border = c.primary;
+            bg = c.accent; border = c.primary;
           }
 
           return (
@@ -127,14 +129,14 @@ function QuizScherm({
               key={i}
               onPress={() => kiesOptie(i)}
               style={{
-                padding: 14,
-                borderRadius: 10,
+                padding: ruimte.m + 2,
+                borderRadius: c.radius,
                 borderWidth: 1.5,
                 backgroundColor: bg,
                 borderColor: border,
               }}
             >
-              <Text style={{ color: tekstKleur, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+              <Text style={tekstStijl("standaard", tekstKleur)}>
                 {o.tekst}
               </Text>
             </Pressable>
@@ -143,31 +145,31 @@ function QuizScherm({
       </View>
 
       {gecontroleerd && vraag?.uitleg && (
-        <View style={{ marginTop: 12, padding: 12, backgroundColor: "#f0fdf4", borderRadius: 8, borderWidth: 1, borderColor: "#bbf7d0" }}>
-          <Text style={{ color: "#166534", fontSize: 13, fontFamily: "Inter_400Regular" }}>{vraag.uitleg}</Text>
+        <View style={{ marginTop: ruimte.m, padding: ruimte.m, backgroundColor: c.secondary, borderRadius: c.radius, borderWidth: 1, borderColor: c.success }}>
+          <Text style={tekstStijl("klein", c.success)}>{vraag.uitleg}</Text>
         </View>
       )}
 
-      <View style={{ marginTop: 20 }}>
+      <View style={{ marginTop: ruimte.l + ruimte.xs }}>
         {!gecontroleerd ? (
           <Pressable
             onPress={controleer}
             disabled={gekozen === null}
             style={{
               backgroundColor: gekozen !== null ? c.primary : c.muted,
-              paddingVertical: 14,
-              borderRadius: 10,
+              paddingVertical: ruimte.m + 2,
+              borderRadius: c.radius,
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Controleer</Text>
+            <Text style={tekstStijl("nadruk", c.primaryForeground)}>Controleer</Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={volgende}
-            style={{ backgroundColor: c.primary, paddingVertical: 14, borderRadius: 10, alignItems: "center" }}
+            style={{ backgroundColor: c.primary, paddingVertical: ruimte.m + 2, borderRadius: c.radius, alignItems: "center" }}
           >
-            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            <Text style={tekstStijl("nadruk", c.primaryForeground)}>
               {huidig + 1 < vragen.length ? "Volgende vraag" : "Afronden"}
             </Text>
           </Pressable>
@@ -256,7 +258,7 @@ function DetailModal({
           <Pressable onPress={sluit} style={{ padding: 4 }}>
             <Ionicons name="close" size={24} color={c.foreground} />
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 17, fontFamily: "Inter_700Bold", color: c.foreground }} numberOfLines={1}>
+          <Text style={[tekstStijl("sectiekop", c.foreground), { flex: 1 }]} numberOfLines={1}>
             {detail?.titel ?? "Toolbox"}
           </Text>
         </View>
@@ -314,17 +316,15 @@ function DetailModal({
                     </View>
                   )}
                   {detail.verplicht && (
-                    <View style={{ backgroundColor: "#fef2f2", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "#fecaca" }}>
-                      <Text style={{ fontSize: 12, color: "#dc2626", fontFamily: "Inter_600SemiBold" }}>Verplicht</Text>
-                    </View>
+                    <Statusmerk label="Verplicht" soort="fout" />
                   )}
                 </View>
 
                 {/* Intro tekst */}
                 {(detail as any).intro && (
                   <View>
-                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground, marginBottom: 6 }}>Introductie</Text>
-                    <Text style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_400Regular", lineHeight: 22 }}>
+                    <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.xs + 2 }]}>Introductie</Text>
+                    <Text style={[tekstStijl("standaard", c.foreground), { lineHeight: 22 }]}>
                       {(detail as any).intro}
                     </Text>
                   </View>
@@ -332,49 +332,49 @@ function DetailModal({
 
                 {/* AI Samenvatting */}
                 {(detail as any).ai_samenvatting && (
-                  <View style={{ backgroundColor: "#fffbeb", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "#fde68a" }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                      <Ionicons name="sparkles" size={15} color="#d97706" />
-                      <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: "#92400e" }}>AI Samenvatting</Text>
+                  <View style={{ backgroundColor: c.accent, borderRadius: c.radius, padding: ruimte.m + 2, borderWidth: 1, borderColor: c.warning }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2, marginBottom: ruimte.s }}>
+                      <Ionicons name="sparkles" size={ruimte.m + 3} color={c.warning} />
+                      <Text style={tekstStijl("klein", c.warning)}>AI Samenvatting</Text>
                     </View>
-                    <Text style={{ fontSize: 13, color: "#78350f", fontFamily: "Inter_400Regular", lineHeight: 20 }}>
+                    <Text style={[tekstStijl("klein", c.foreground), { lineHeight: 20 }]}>
                       {(detail as any).ai_samenvatting}
                     </Text>
 
                     {((detail as any).ai_risicos ?? []).length > 0 && (
-                      <View style={{ marginTop: 10 }}>
-                        <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: "#dc2626", marginBottom: 4 }}>
+                      <View style={{ marginTop: ruimte.s + 2 }}>
+                        <Text style={[tekstStijl("bijschrift", c.destructive), { marginBottom: ruimte.xs }]}>
                           Belangrijkste risico's
                         </Text>
                         {((detail as any).ai_risicos as string[]).map((r, i) => (
-                          <View key={i} style={{ flexDirection: "row", gap: 6, marginBottom: 3 }}>
-                            <Ionicons name="warning" size={13} color="#dc2626" style={{ marginTop: 2 }} />
-                            <Text style={{ fontSize: 13, color: "#991b1b", fontFamily: "Inter_400Regular", flex: 1 }}>{r}</Text>
+                          <View key={i} style={{ flexDirection: "row", gap: ruimte.xs + 2, marginBottom: 3 }}>
+                            <Ionicons name="warning" size={ruimte.m + 1} color={c.destructive} style={{ marginTop: 2 }} />
+                            <Text style={[tekstStijl("klein", c.destructive), { flex: 1 }]}>{r}</Text>
                           </View>
                         ))}
                       </View>
                     )}
 
                     {((detail as any).ai_maatregelen ?? []).length > 0 && (
-                      <View style={{ marginTop: 10 }}>
-                        <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: "#16a34a", marginBottom: 4 }}>
+                      <View style={{ marginTop: ruimte.s + 2 }}>
+                        <Text style={[tekstStijl("bijschrift", c.success), { marginBottom: ruimte.xs }]}>
                           Maatregelen
                         </Text>
                         {((detail as any).ai_maatregelen as string[]).map((m, i) => (
-                          <View key={i} style={{ flexDirection: "row", gap: 6, marginBottom: 3 }}>
-                            <Ionicons name="checkmark-circle" size={13} color="#16a34a" style={{ marginTop: 2 }} />
-                            <Text style={{ fontSize: 13, color: "#166534", fontFamily: "Inter_400Regular", flex: 1 }}>{m}</Text>
+                          <View key={i} style={{ flexDirection: "row", gap: ruimte.xs + 2, marginBottom: 3 }}>
+                            <Ionicons name="checkmark-circle" size={ruimte.m + 1} color={c.success} style={{ marginTop: 2 }} />
+                            <Text style={[tekstStijl("klein", c.success), { flex: 1 }]}>{m}</Text>
                           </View>
                         ))}
                       </View>
                     )}
 
                     {(detail as any).ai_stoppen && (
-                      <View style={{ marginTop: 10, backgroundColor: "#fef2f2", padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#fecaca" }}>
-                        <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: "#dc2626", marginBottom: 3 }}>
+                      <View style={{ marginTop: ruimte.s + 2, backgroundColor: c.card, padding: ruimte.s + 2, borderRadius: c.radius, borderWidth: 1, borderColor: c.destructive }}>
+                        <Text style={[tekstStijl("bijschrift", c.destructive), { marginBottom: 3 }]}>
                           Wanneer direct stoppen
                         </Text>
-                        <Text style={{ fontSize: 13, color: "#991b1b", fontFamily: "Inter_400Regular" }}>
+                        <Text style={tekstStijl("klein", c.destructive)}>
                           {(detail as any).ai_stoppen}
                         </Text>
                       </View>
@@ -437,11 +437,11 @@ function DetailModal({
 
                 {/* Mijn afronding */}
                 {mijnAfronding && (
-                  <View style={{ backgroundColor: mijnAfronding.geslaagd ? "#f0fdf4" : "#fff7ed", padding: 12, borderRadius: 10, borderWidth: 1, borderColor: mijnAfronding.geslaagd ? "#bbf7d0" : "#fed7aa" }}>
-                    <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: mijnAfronding.geslaagd ? "#166534" : "#9a3412", marginBottom: 3 }}>
+                  <View style={{ backgroundColor: mijnAfronding.geslaagd ? c.secondary : c.accent, padding: ruimte.m, borderRadius: c.radius, borderWidth: 1, borderColor: mijnAfronding.geslaagd ? c.success : c.warning }}>
+                    <Text style={[tekstStijl("klein", mijnAfronding.geslaagd ? c.success : c.warning), { marginBottom: 3 }]}>
                       {mijnAfronding.geslaagd ? "Afgerond en geslaagd" : "Niet geslaagd — probeer opnieuw"}
                     </Text>
-                    <Text style={{ fontSize: 12, color: mijnAfronding.geslaagd ? "#166534" : "#9a3412", fontFamily: "Inter_400Regular" }}>
+                    <Text style={tekstStijl("bijschrift", mijnAfronding.geslaagd ? c.success : c.warning)}>
                       Score: {mijnAfronding.score}/{mijnAfronding.max_score}
                       {mijnAfronding.geldig_tot && ` · Geldig t/m ${new Date(mijnAfronding.geldig_tot).toLocaleDateString("nl-NL")}`}
                     </Text>
@@ -452,13 +452,13 @@ function DetailModal({
                   onPress={() => setSectie(heeftQuiz ? "quiz" : "bevestiging")}
                   style={{
                     backgroundColor: c.primary,
-                    paddingVertical: 14,
-                    borderRadius: 10,
+                    paddingVertical: ruimte.m + 2,
+                    borderRadius: c.radius,
                     alignItems: "center",
-                    marginTop: 8,
+                    marginTop: ruimte.s,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                     {heeftQuiz ? "Naar controlevragen" : "Bevestigen"}
                   </Text>
                 </Pressable>
@@ -484,53 +484,53 @@ function DetailModal({
               <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
                 {heeftQuiz && (
                   <View style={{
-                    padding: 14,
-                    borderRadius: 10,
-                    backgroundColor: quizGeslaagd ? "#f0fdf4" : "#fff7ed",
+                    padding: ruimte.m + 2,
+                    borderRadius: c.radius,
+                    backgroundColor: quizGeslaagd ? c.secondary : c.accent,
                     borderWidth: 1,
-                    borderColor: quizGeslaagd ? "#bbf7d0" : "#fed7aa",
+                    borderColor: quizGeslaagd ? c.success : c.warning,
                   }}>
-                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: quizGeslaagd ? "#166534" : "#9a3412" }}>
+                    <Text style={tekstStijl("nadruk", quizGeslaagd ? c.success : c.warning)}>
                       {quizGeslaagd ? "Quiz geslaagd" : "Quiz niet geslaagd"}
                     </Text>
-                    <Text style={{ fontSize: 13, color: quizGeslaagd ? "#166534" : "#9a3412", fontFamily: "Inter_400Regular", marginTop: 3 }}>
+                    <Text style={[tekstStijl("klein", quizGeslaagd ? c.success : c.warning), { marginTop: 3 }]}>
                       {quizAntwoorden.filter((a, i) => (detail as any).vragen?.[i]?.opties?.[a]?.correct).length} van {(detail as any).vragen?.length} vragen goed
                     </Text>
                   </View>
                 )}
 
                 {afgerond ? (
-                  <View style={{ alignItems: "center", paddingVertical: 30, gap: 12 }}>
-                    <Ionicons name="checkmark-circle" size={56} color="#16a34a" />
-                    <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: "#166534" }}>
+                  <View style={{ alignItems: "center", paddingVertical: ruimte.xxl, gap: ruimte.m }}>
+                    <Ionicons name="checkmark-circle" size={56} color={c.success} />
+                    <Text style={tekstStijl("schermtitel", c.success)}>
                       Toolbox afgerond
                     </Text>
-                    <Text style={{ fontSize: 14, color: c.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                    <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}>
                       Uw bevestiging is geregistreerd. Geldig voor {detail.geldigheid_maanden} maanden.
                     </Text>
                     <Pressable
                       onPress={sluit}
-                      style={{ backgroundColor: c.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, marginTop: 8 }}
+                      style={{ backgroundColor: c.primary, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.m, borderRadius: c.radius, marginTop: ruimte.s }}
                     >
-                      <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>Sluiten</Text>
+                      <Text style={tekstStijl("nadruk", c.primaryForeground)}>Sluiten</Text>
                     </Pressable>
                   </View>
                 ) : (
                   <>
                     <View style={{
-                      backgroundColor: "#f8fafc",
-                      padding: 16,
-                      borderRadius: 10,
+                      backgroundColor: c.muted,
+                      padding: ruimte.l,
+                      borderRadius: c.radius,
                       borderWidth: 1,
                       borderColor: c.border,
                     }}>
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, lineHeight: 22, textAlign: "center" }}>
+                      <Text style={[tekstStijl("standaard", c.foreground), { lineHeight: 22, textAlign: "center" }]}>
                         "Ik, {/* naam placeholder */}heb deze toolbox gelezen en begrepen, en verklaar de veiligheidsregels toe te passen in de praktijk."
                       </Text>
                     </View>
 
                     <View>
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+                      <Text style={[tekstStijl("standaard", c.foreground), { marginBottom: ruimte.xs + 2 }]}>
                         Handtekening (volledige naam)
                       </Text>
                       <TextInput
@@ -540,8 +540,8 @@ function DetailModal({
                         style={{
                           borderWidth: 1,
                           borderColor: c.border,
-                          borderRadius: 10,
-                          padding: 14,
+                          borderRadius: c.radius,
+                          padding: ruimte.m + 2,
                           fontSize: 14,
                           fontFamily: "Inter_400Regular",
                           color: c.foreground,
@@ -556,15 +556,15 @@ function DetailModal({
                       disabled={bezig || !handtekening.trim() || (heeftQuiz && !quizGeslaagd && (detail.min_score ?? 0) > 0)}
                       style={{
                         backgroundColor: (bezig || !handtekening.trim() || (heeftQuiz && !quizGeslaagd && (detail.min_score ?? 0) > 0)) ? c.muted : c.primary,
-                        paddingVertical: 14,
-                        borderRadius: 10,
+                        paddingVertical: ruimte.m + 2,
+                        borderRadius: c.radius,
                         alignItems: "center",
                       }}
                     >
                       {bezig ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={c.primaryForeground} />
                       ) : (
-                        <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                        <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                           Bevestigen en afronden
                         </Text>
                       )}
@@ -572,7 +572,7 @@ function DetailModal({
 
                     {heeftQuiz && !quizGeslaagd && (detail.min_score ?? 0) > 0 && (
                       <Pressable onPress={() => setSectie("quiz")} style={{ alignItems: "center" }}>
-                        <Text style={{ color: c.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                        <Text style={tekstStijl("nadruk", c.primary)}>
                           Quiz opnieuw proberen
                         </Text>
                       </Pressable>
@@ -627,51 +627,51 @@ function ToolboxenScherm() {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       {/* Header */}
       <View style={{
-        paddingTop: insets.top + 8,
-        paddingBottom: 12,
-        paddingHorizontal: 16,
+        paddingTop: insets.top + ruimte.s,
+        paddingBottom: ruimte.m,
+        paddingHorizontal: ruimte.l,
         backgroundColor: c.dark,
-        gap: 10,
+        gap: ruimte.s + 2,
       }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Ionicons name="shield-checkmark" size={22} color={c.primary} />
-          <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: c.darkForeground, flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s + 2 }}>
+          <Ionicons name="shield-checkmark" size={ruimte.l + 2} color={c.primary} />
+          <Text style={[tekstStijl("schermtitel", c.darkForeground), { flex: 1 }]}>
             Veiligheidstoolboxen
           </Text>
         </View>
         <View style={{
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: "#2d3444",
-          borderRadius: 10,
-          paddingHorizontal: 12,
+          backgroundColor: c.darkMuted + "33",
+          borderRadius: c.radius,
+          paddingHorizontal: ruimte.m,
           borderWidth: 1,
-          borderColor: "#3a4255",
-          gap: 8,
+          borderColor: c.darkMuted + "55",
+          gap: ruimte.s,
         }}>
-          <Ionicons name="search" size={16} color={c.darkMuted} />
+          <Ionicons name="search" size={ruimte.l} color={c.darkMuted} />
           <TextInput
             value={zoek}
             onChangeText={setZoek}
             placeholder="Zoek toolbox..."
             placeholderTextColor={c.darkMuted}
-            style={{ flex: 1, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular", color: c.darkForeground }}
+            style={{ flex: 1, paddingVertical: ruimte.s + 2, fontSize: 14, fontFamily: "Inter_400Regular", color: c.darkForeground }}
           />
         </View>
       </View>
 
       {/* Lijst */}
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={c.primary} size="large" />
+        <View style={{ flex: 1, padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : gefilterd.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
-          <Ionicons name="shield-checkmark-outline" size={48} color={c.mutedForeground} style={{ marginBottom: 12 }} />
-          <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xxl + ruimte.s }}>
+          <Ionicons name="shield-checkmark-outline" size={ruimte.xxl + ruimte.l} color={c.mutedForeground} style={{ marginBottom: ruimte.m }} />
+          <Text style={[tekstStijl("sectiekop", c.foreground), { marginBottom: ruimte.xs + 2 }]}>
             Geen toolboxen
           </Text>
-          <Text style={{ fontSize: 14, color: c.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+          <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}>
             {zoek ? "Geen resultaten voor uw zoekopdracht." : "Er zijn nog geen gepubliceerde toolboxen."}
           </Text>
         </View>
@@ -679,7 +679,7 @@ function ToolboxenScherm() {
         <FlatList
           data={gefilterd}
           keyExtractor={(t) => String(t.id)}
-          contentContainerStyle={{ padding: 14, gap: 10, paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ padding: ruimte.m + 2, gap: ruimte.s + 2, paddingBottom: insets.bottom + ruimte.l + ruimte.xs }}
           refreshControl={<RefreshControl refreshing={vernieuwen} onRefresh={handleRefresh} tintColor={c.primary} />}
           renderItem={({ item: t }) => {
             const mijnAfronding = (t as any).mijn_afronding;
@@ -687,69 +687,59 @@ function ToolboxenScherm() {
             const afgerond = mijnAfronding != null;
 
             return (
-              <Pressable
-                onPress={() => setGeselecteerdeId(t.id)}
-                style={{
-                  backgroundColor: c.card,
-                  borderRadius: 12,
-                  padding: 14,
-                  borderWidth: 1,
-                  borderColor: c.border,
-                  gap: 8,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+              <Pressable onPress={() => setGeselecteerdeId(t.id)}>
+                <Kaart stijl={{ padding: ruimte.m + 2, gap: ruimte.s }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2 }}>
                   <View style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 10,
-                    backgroundColor: c.primary + "20",
+                    width: ruimte.xxl + ruimte.xs,
+                    height: ruimte.xxl + ruimte.xs,
+                    borderRadius: c.radius,
+                    backgroundColor: c.accent,
                     alignItems: "center",
                     justifyContent: "center",
-                    shrink: 0,
-                  } as any}>
-                    <Ionicons name="shield-checkmark" size={20} color={c.primary} />
+                    flexShrink: 0,
+                  }}>
+                    <Ionicons name="shield-checkmark" size={ruimte.l + 2} color={c.primary} />
                   </View>
                   <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground }} numberOfLines={2}>
+                    <Text style={tekstStijl("nadruk", c.foreground)} numberOfLines={2}>
                       {t.titel}
                     </Text>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                    <View style={{ flexDirection: "row", gap: ruimte.s }}>
+                      <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                         {catLabel(t.categorie)}
                       </Text>
                       {t.geschatte_leestijd && (
-                        <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                        <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                           {t.geschatte_leestijd} min
                         </Text>
                       )}
                     </View>
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                  <View style={{ alignItems: "flex-end", gap: ruimte.xs }}>
                     {afgerond ? (
                       <Ionicons
                         name={geslaagd ? "checkmark-circle" : "close-circle"}
-                        size={22}
-                        color={geslaagd ? "#16a34a" : "#ea580c"}
+                        size={ruimte.l + 2}
+                        color={geslaagd ? c.success : c.warning}
                       />
                     ) : t.verplicht ? (
-                      <View style={{ backgroundColor: "#fef2f2", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                        <Text style={{ fontSize: 10, color: "#dc2626", fontFamily: "Inter_600SemiBold" }}>Verplicht</Text>
-                      </View>
+                      <Statusmerk label="Verplicht" soort="fout" />
                     ) : null}
-                    <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+                    <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
                   </View>
                 </View>
 
                 {(t.tags ?? []).length > 0 && (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.xs + 1 }}>
                     {(t.tags as string[]).slice(0, 3).map((tag) => (
-                      <View key={tag} style={{ backgroundColor: c.muted, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                        <Text style={{ fontSize: 11, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>{tag}</Text>
+                      <View key={tag} style={{ backgroundColor: c.muted, paddingHorizontal: ruimte.s, paddingVertical: 2, borderRadius: c.radius / 2 }}>
+                        <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{tag}</Text>
                       </View>
                     ))}
                   </View>
                 )}
+                </Kaart>
               </Pressable>
             );
           }}

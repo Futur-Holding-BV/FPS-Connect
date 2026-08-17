@@ -4,7 +4,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Knop, bovenInset } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
+
+import { Knop, bovenInset, tekstStijl } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
@@ -68,21 +70,21 @@ export default function Vergrendeld() {
       style={{
         flex: 1,
         backgroundColor: c.dark,
-        paddingTop: bovenInset(insets) + 40,
-        paddingHorizontal: 24,
-        paddingBottom: insets.bottom + 32,
+        paddingTop: bovenInset(insets) + ruimte.xxl + ruimte.s,
+        paddingHorizontal: ruimte.xl,
+        paddingBottom: insets.bottom + ruimte.xxl,
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <View style={{ alignItems: "center", marginBottom: 36 }}>
+      <View style={{ alignItems: "center", marginBottom: ruimte.xxl + ruimte.xs }}>
         <View
           style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            paddingHorizontal: 24,
-            paddingVertical: 12,
-            marginBottom: 20,
+            backgroundColor: c.card,
+            borderRadius: c.radius,
+            paddingHorizontal: ruimte.xl,
+            paddingVertical: ruimte.m,
+            marginBottom: ruimte.l + ruimte.xs,
           }}
         >
           <Image
@@ -99,37 +101,34 @@ export default function Vergrendeld() {
             height: 72,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 16,
+            marginBottom: ruimte.l,
           }}
         >
-          <Ionicons name={biometrieIconNaam} size={34} color="#fff" />
+          <Ionicons name={biometrieIconNaam} size={34} color={c.primaryForeground} />
         </View>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("schermtitel", c.darkForeground)}>
           App vergrendeld
         </Text>
         <Text
-          style={{
-            color: c.darkMuted,
-            fontSize: 15,
-            marginTop: 6,
-            textAlign: "center",
-            fontFamily: "Inter_400Regular",
-          }}
+          style={[
+            tekstStijl("standaard", c.darkMuted),
+            { marginTop: ruimte.xs + 2, textAlign: "center" },
+          ]}
         >
           {gebruiker?.naam ? `Welkom terug, ${gebruiker.naam}.` : "Welkom terug."}
         </Text>
       </View>
 
-      <View style={{ width: "100%", maxWidth: 420, gap: 14 }}>
+      <View style={{ width: "100%", maxWidth: 420, gap: ruimte.m + 2 }}>
         {mislukt && (
           <View
             style={{
-              backgroundColor: "rgba(229,72,77,0.15)",
+              backgroundColor: c.destructive + "26",
               borderRadius: c.radius,
-              padding: 14,
+              padding: ruimte.m + 2,
             }}
           >
-            <Text style={{ color: "#FCA5A5", fontSize: 15, fontFamily: "Inter_500Medium", textAlign: "center" }}>
+            <Text style={[tekstStijl("nadruk", c.destructive), { fontFamily: "Inter_500Medium", textAlign: "center" }]}>
               Ontgrendelen is niet gelukt. Probeer het opnieuw of log in met je
               wachtwoord.
             </Text>
@@ -143,15 +142,8 @@ export default function Vergrendeld() {
           groot
         />
 
-        <Pressable onPress={naarWachtwoord} style={{ paddingVertical: 12 }}>
-          <Text
-            style={{
-              color: c.darkMuted,
-              fontSize: 15,
-              textAlign: "center",
-              fontFamily: "Inter_600SemiBold",
-            }}
-          >
+        <Pressable onPress={naarWachtwoord} style={{ paddingVertical: ruimte.m }}>
+          <Text style={[tekstStijl("nadruk", c.darkMuted), { textAlign: "center" }]}>
             Met wachtwoord inloggen
           </Text>
         </Pressable>

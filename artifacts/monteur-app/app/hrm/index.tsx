@@ -1,10 +1,11 @@
 import { useGetHrmStats, useGetMijnCertificaten } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { Kaart, Statusmerk, bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { heeftBevoegdheid } from "@/lib/bevoegdheden";
 import { useColors } from "@/hooks/useColors";
@@ -57,11 +58,11 @@ export default function HrmDashboard() {
     { label: "BHV", datum: certificaten?.bhv_vervaldatum ?? null },
   ];
 
-  const statusKleur: Record<CertStatus, string> = {
-    verlopen: "#dc2626",
-    binnenkort: "#d97706",
-    geldig: "#16a34a",
-    onbekend: c.mutedForeground,
+  const statusSoort: Record<CertStatus, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+    verlopen: "fout",
+    binnenkort: "waarschuwing",
+    geldig: "succes",
+    onbekend: "neutraal",
   };
 
   const statusLabel: Record<CertStatus, string> = {
@@ -82,13 +83,13 @@ export default function HrmDashboard() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + 12, paddingHorizontal: 20, paddingBottom: 18 }}>
+      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + ruimte.m, paddingHorizontal: ruimte.xl, paddingBottom: ruimte.l + 2 }}>
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>‹ Terug</Text>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>‹ Terug</Text>
           </Pressable>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <View style={{ backgroundColor: "#fff", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m + 2 }}>
+            <View style={{ backgroundColor: c.card, borderRadius: c.radius / 2, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs + 2 }}>
               <Image
                 source={require("../../assets/images/logo-fps.png")}
                 style={{ width: 90, height: 35, resizeMode: "contain" }}
@@ -96,8 +97,8 @@ export default function HrmDashboard() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>{magPersoneel ? "Personeel" : "Mijn gegevens"}</Text>
-              <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+              <Text style={tekstStijl("schermtitel", c.darkForeground)}>{magPersoneel ? "Personeel" : "Mijn gegevens"}</Text>
+              <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 2 }]}>
                 {gebruiker?.naam ?? "Medewerker"}
               </Text>
             </View>
@@ -106,35 +107,27 @@ export default function HrmDashboard() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+        contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m + 2, paddingBottom: insets.bottom + ruimte.xxl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
       >
         {!magPersoneel ? null : isLoading ? (
-          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 32 }} />
+          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: ruimte.xxl }} />
         ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.m }}>
             {statItems.map((s) => (
-              <View
+              <Kaart
                 key={s.label}
-                style={{
-                  flexGrow: 1,
-                  flexBasis: "45%",
-                  backgroundColor: c.card,
-                  borderRadius: c.radius,
-                  borderWidth: 1,
-                  borderColor: c.border,
-                  padding: 16,
-                }}
+                stijl={{ flexGrow: 1, flexBasis: "45%", padding: ruimte.l }}
               >
-                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>{s.label}</Text>
-                <Text style={{ color: c.foreground, fontSize: 26, fontFamily: "Inter_700Bold", marginTop: 4 }}>{s.waarde}</Text>
-              </View>
+                <Text style={tekstStijl("klein", c.mutedForeground)}>{s.label}</Text>
+                <Text style={[tekstStijl("schermtitel", c.foreground), { fontSize: 26, lineHeight: 32, marginTop: ruimte.xs }]}>{s.waarde}</Text>
+              </Kaart>
             ))}
           </View>
         )}
 
         {/* Mijn veiligheidscertificaten */}
-        <View style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 16 }}>
-          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 12 }}>
+        <Kaart stijl={{ padding: ruimte.l }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.m }]}>
             Mijn veiligheidscertificaten
           </Text>
           {certs.map((cert) => {
@@ -142,49 +135,37 @@ export default function HrmDashboard() {
             return (
               <View
                 key={cert.label}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border }}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: ruimte.s, borderBottomWidth: 1, borderBottomColor: c.border }}
               >
-                <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold", width: 52 }}>
+                <Text style={[tekstStijl("standaard", c.foreground), { fontFamily: "Inter_600SemiBold", width: 52 }]}>
                   {cert.label}
                 </Text>
-                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, paddingHorizontal: 8 }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { flex: 1, paddingHorizontal: ruimte.s }]}>
                   {fmtDatum(cert.datum)}
                 </Text>
-                <View style={{ backgroundColor: statusKleur[status] + "1a", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                  <Text style={{ color: statusKleur[status], fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
-                    {statusLabel[status]}
-                  </Text>
-                </View>
+                <Statusmerk label={statusLabel[status]} soort={statusSoort[status]} />
               </View>
             );
           })}
-        </View>
+        </Kaart>
 
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: ruimte.m }}>
           {navKaarten.map((k) => (
             <Pressable
               key={k.route}
               testID={k.testID}
               onPress={() => router.push(k.route)}
-              style={({ pressed }) => ({
-                backgroundColor: c.card,
-                borderRadius: c.radius,
-                borderWidth: 1,
-                borderColor: c.border,
-                padding: 18,
-                opacity: pressed ? 0.85 : 1,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }}>{k.titel}</Text>
-                <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
-                  {k.omschrijving}
-                </Text>
-              </View>
-              <Text style={{ color: c.primary, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>›</Text>
+              <Kaart stijl={{ padding: ruimte.l + 2, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={tekstStijl("sectiekop", c.foreground)}>{k.titel}</Text>
+                  <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
+                    {k.omschrijving}
+                  </Text>
+                </View>
+                <Text style={[tekstStijl("sectiekop", c.primary), { fontSize: 22 }]}>›</Text>
+              </Kaart>
             </Pressable>
           ))}
         </View>

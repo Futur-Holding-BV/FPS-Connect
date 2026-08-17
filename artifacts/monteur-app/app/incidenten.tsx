@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
+import { Kaart, Ladenstaat, Statusmerk, Waarschuwvlak, tekstStijl } from "@/components/ui";
 import { useFocusEffect } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -90,11 +92,11 @@ function typeLabel(type: string) {
   return type === "bijna_ongeval" ? "Bijna-Ongeval" : "Ongeval";
 }
 
-function statusKleur(status: string, c: ReturnType<typeof useColors>) {
-  if (status === "gesloten") return c.success;
-  if (status === "in_behandeling") return c.warning;
-  return c.primary;
-}
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  gesloten: "succes",
+  in_behandeling: "waarschuwing",
+  open: "primair",
+};
 
 function statusLabel(status: string) {
   if (status === "gesloten") return "Gesloten";
@@ -225,45 +227,37 @@ function IncidentenScherm() {
   const volgendeStap = () => setStap(stappen[stapIndex + 1] ?? "bevestigen");
 
   const renderItem = ({ item }: { item: VeiligheidIncident }) => (
-    <View style={{
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 10,
-      borderLeftWidth: 4,
+    <Kaart stijl={{
+      padding: ruimte.m + 2,
+      marginBottom: ruimte.s + 2,
+      borderLeftWidth: ruimte.xs,
       borderLeftColor: item.type === "ongeval" ? c.primary : c.warning,
     }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: ruimte.xs, gap: ruimte.s }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2, flexShrink: 1, flexWrap: "wrap" }}>
           <Ionicons
             name={item.type === "ongeval" ? "warning" : "alert-circle-outline"}
-            size={16}
+            size={ruimte.l}
             color={item.type === "ongeval" ? c.primary : c.warning}
           />
-          <Text style={{ fontWeight: "700", fontSize: 13, color: c.text }}>
+          <Text style={tekstStijl("nadruk", c.foreground)}>
             {typeLabel(item.type)}
           </Text>
           {item.meldplichtig && (
-            <View style={{ backgroundColor: c.primary + "20", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-              <Text style={{ fontSize: 10, color: c.primary, fontWeight: "600" }}>NLA-meldplichtig</Text>
-            </View>
+            <Statusmerk label="NLA-meldplichtig" soort="primair" />
           )}
         </View>
-        <View style={{ backgroundColor: statusKleur(item.status, c) + "20", borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-          <Text style={{ fontSize: 10, color: statusKleur(item.status, c), fontWeight: "600" }}>
-            {statusLabel(item.status)}
-          </Text>
-        </View>
+        <Statusmerk label={statusLabel(item.status)} soort={STATUS_SOORT[item.status] ?? "primair"} />
       </View>
-      <Text style={{ fontSize: 13, color: c.text, marginBottom: 4 }} numberOfLines={2}>
+      <Text style={[tekstStijl("klein", c.foreground), { marginBottom: ruimte.xs }]} numberOfLines={2}>
         {item.omschrijving}
       </Text>
-      <Text style={{ fontSize: 12, color: c.mutedForeground }}>
+      <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
         {item.locatie_omschrijving}
         {item.datum ? ` — ${datumLabel(item.datum)}` : ""}
         {item.opdracht_naam ? ` | ${item.opdracht_naam}` : ""}
       </Text>
-    </View>
+    </Kaart>
   );
 
   const STAP_TITELS: Record<StapId, string> = {
@@ -277,19 +271,21 @@ function IncidentenScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background, paddingTop: insets.top }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: c.text }}>Incidenten</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: ruimte.l, paddingVertical: ruimte.m + 2 }}>
+        <Text style={tekstStijl("schermtitel", c.foreground)}>Incidenten</Text>
         <Pressable
           onPress={openFormulier}
-          style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6 }}
+          style={{ backgroundColor: c.primary, borderRadius: c.radius, paddingHorizontal: ruimte.m + 2, paddingVertical: ruimte.s, flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2 }}
         >
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Registreren</Text>
+          <Ionicons name="add" size={ruimte.l + 2} color={c.primaryForeground} />
+          <Text style={tekstStijl("klein", c.primaryForeground)}>Registreren</Text>
         </Pressable>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator color={c.primary} style={{ marginTop: 32 }} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
+        </View>
       ) : incidenten.length === 0 ? (
         <LegeStatus
           icoon="shield-checkmark-outline"
@@ -301,7 +297,7 @@ function IncidentenScherm() {
           data={incidenten}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
+          contentContainerStyle={{ padding: ruimte.l, paddingBottom: insets.bottom + ruimte.l }}
         />
       )}
 
@@ -312,8 +308,8 @@ function IncidentenScherm() {
               {stapIndex > 0 && <Ionicons name="chevron-back" size={22} color={c.primary} />}
             </Pressable>
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontWeight: "700", fontSize: 16, color: c.text }}>{STAP_TITELS[stap]}</Text>
-              <Text style={{ fontSize: 11, color: c.mutedForeground, marginTop: 2 }}>{stapIndex + 1} / {stappen.length}</Text>
+              <Text style={tekstStijl("sectiekop", c.foreground)}>{STAP_TITELS[stap]}</Text>
+              <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: 2 }]}>{stapIndex + 1} / {stappen.length}</Text>
             </View>
             <Pressable onPress={() => setFormulierOpen(false)} style={{ width: 40, alignItems: "flex-end" }}>
               <Ionicons name="close" size={22} color={c.mutedForeground} />
@@ -381,7 +377,7 @@ function IncidentenScherm() {
                   onPress={volgendeStap}
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 8 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Volgende</Text>
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 15 }}>Volgende</Text>
                 </Pressable>
               </View>
             )}
@@ -466,7 +462,7 @@ function IncidentenScherm() {
                   disabled={!form.locatieOmschrijving.trim()}
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 4, opacity: form.locatieOmschrijving.trim() ? 1 : 0.5 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Volgende</Text>
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 15 }}>Volgende</Text>
                 </Pressable>
               </View>
             )}
@@ -474,10 +470,7 @@ function IncidentenScherm() {
             {stap === "omschrijving" && (
               <View style={{ gap: 14 }}>
                 {form.aiVoorstel && (
-                  <View style={{ flexDirection: "row", gap: 6, alignItems: "center", padding: 8, backgroundColor: "#fef9c3", borderRadius: 8 }}>
-                    <Ionicons name="sparkles" size={14} color="#ca8a04" />
-                    <Text style={{ fontSize: 12, color: "#92400e", flex: 1 }}>AI-voorstel geladen. Controleer en pas aan waar nodig.</Text>
-                  </View>
+                  <Waarschuwvlak soort="waarschuwing" tekst="AI-voorstel geladen. Controleer en pas aan waar nodig." />
                 )}
                 <View style={{ gap: 6 }}>
                   <Text style={{ fontWeight: "600", color: c.text, fontSize: 13 }}>Wat is er gebeurd? *</Text>
@@ -520,7 +513,7 @@ function IncidentenScherm() {
                       }}
                       style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" }}
                     >
-                      <Ionicons name="add" size={20} color="#fff" />
+                      <Ionicons name="add" size={20} color={c.primaryForeground} />
                     </Pressable>
                   </View>
                   {form.getuigen.map((g, i) => (
@@ -539,7 +532,7 @@ function IncidentenScherm() {
                   disabled={!form.omschrijving.trim()}
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 4, opacity: form.omschrijving.trim() ? 1 : 0.5 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Volgende</Text>
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 15 }}>Volgende</Text>
                 </Pressable>
               </View>
             )}
@@ -555,7 +548,7 @@ function IncidentenScherm() {
                     value={form.letselBeschrijving.length > 0 || form.type === "ongeval"}
                     onValueChange={v => setForm(f => ({ ...f, letselBeschrijving: v ? f.letselBeschrijving || " " : "" }))}
                     trackColor={{ false: c.border, true: c.primary }}
-                    thumbColor="#fff"
+                    thumbColor={c.primaryForeground}
                   />
                 </View>
 
@@ -581,7 +574,7 @@ function IncidentenScherm() {
                     value={form.eersteHulpVerleend}
                     onValueChange={v => setForm(f => ({ ...f, eersteHulpVerleend: v }))}
                     trackColor={{ false: c.border, true: c.primary }}
-                    thumbColor="#fff"
+                    thumbColor={c.primaryForeground}
                   />
                 </View>
 
@@ -603,7 +596,7 @@ function IncidentenScherm() {
                   onPress={volgendeStap}
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 4 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Volgende</Text>
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 15 }}>Volgende</Text>
                 </Pressable>
               </View>
             )}
@@ -636,7 +629,7 @@ function IncidentenScherm() {
                       value={form.meldplichtig}
                       onValueChange={v => setForm(f => ({ ...f, meldplichtig: v }))}
                       trackColor={{ false: c.border, true: c.primary }}
-                      thumbColor="#fff"
+                      thumbColor={c.primaryForeground}
                     />
                   </View>
                   {form.meldplichtig && (
@@ -653,7 +646,7 @@ function IncidentenScherm() {
                   onPress={volgendeStap}
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 4 }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Volgende</Text>
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 15 }}>Volgende</Text>
                 </Pressable>
               </View>
             )}
@@ -691,9 +684,9 @@ function IncidentenScherm() {
                   style={{ backgroundColor: c.primary, borderRadius: 10, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
                 >
                   {aanmaken.isPending
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Ionicons name="checkmark-circle" size={20} color="#fff" />}
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Incident registreren</Text>
+                    ? <ActivityIndicator color={c.primaryForeground} size="small" />
+                    : <Ionicons name="checkmark-circle" size={20} color={c.primaryForeground} />}
+                  <Text style={{ color: c.primaryForeground, fontWeight: "700", fontSize: 16 }}>Incident registreren</Text>
                 </Pressable>
               </View>
             )}

@@ -1,8 +1,11 @@
 import { API_DOMEIN } from "@/lib/apiDomein";
+import { ruimte } from "@workspace/ontwerp";
 import { useState, useCallback } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Modal, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/auth";
+import { useColors } from "@/hooks/useColors";
+import { Bedragregel, Kaart, Statusmerk, Waarschuwvlak, netteWaarde, tekstStijl } from "@/components/ui";
 
 const DOMEIN = API_DOMEIN;
 
@@ -34,16 +37,13 @@ const CATEGORIEEN = [
   { value: "overig",       label: "Overig" },
 ];
 
-function statusKleur(status: DeclaratieStatus): string {
-  switch (status) {
-    case "concept":     return "#6B7280";
-    case "ingediend":   return "#D97706";
-    case "goedgekeurd": return "#16A34A";
-    case "afgekeurd":   return "#DC2626";
-    case "verwerkt":    return "#2563EB";
-    default:            return "#6B7280";
-  }
-}
+const STATUS_SOORT: Record<DeclaratieStatus, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  concept: "neutraal",
+  ingediend: "waarschuwing",
+  goedgekeurd: "succes",
+  afgekeurd: "fout",
+  verwerkt: "primair",
+};
 
 function statusLabel(status: DeclaratieStatus): string {
   switch (status) {
@@ -65,6 +65,8 @@ function categorieTekst(cat: string): string {
 }
 
 export default function DeclaratiesScherm() {
+  const c = useColors();
+  const styles = maakStyles(c);
   const { token } = useAuth();
   const [declaraties, setDeclaraties] = useState<Declaratie[]>([]);
   const [laden, setLaden] = useState(true);
@@ -143,20 +145,18 @@ export default function DeclaratiesScherm() {
 
   function renderItem({ item }: { item: Declaratie }) {
     return (
-      <TouchableOpacity style={styles.kaart} onPress={() => setGeselecteerd(item)}>
-        <View style={styles.kaartTop}>
-          <Text style={styles.kaartNaam}>{categorieTekst(item.categorie)}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusKleur(item.status) + "20" }]}>
-            <Text style={[styles.statusTekst, { color: statusKleur(item.status) }]}>
-              {statusLabel(item.status)}
-            </Text>
+      <TouchableOpacity onPress={() => setGeselecteerd(item)}>
+        <Kaart stijl={styles.kaart}>
+          <View style={styles.kaartTop}>
+            <Text style={styles.kaartNaam}>{categorieTekst(item.categorie)}</Text>
+            <Statusmerk label={statusLabel(item.status)} soort={STATUS_SOORT[item.status]} />
           </View>
-        </View>
-        <Text style={styles.kaartOmschrijving} numberOfLines={2}>{item.omschrijving}</Text>
-        <View style={styles.kaartOnder}>
-          <Text style={styles.kaartDatum}>{item.datum}</Text>
-          <Text style={styles.kaartBedrag}>{bedragTekst(item.bedrag_totaal_cents)}</Text>
-        </View>
+          <Text style={styles.kaartOmschrijving} numberOfLines={2}>{item.omschrijving}</Text>
+          <View style={styles.kaartOnder}>
+            <Text style={styles.kaartDatum}>{item.datum}</Text>
+            <Text style={styles.kaartBedrag}>{bedragTekst(item.bedrag_totaal_cents)}</Text>
+          </View>
+        </Kaart>
       </TouchableOpacity>
     );
   }
@@ -164,7 +164,7 @@ export default function DeclaratiesScherm() {
   if (laden && declaraties.length === 0) {
     return (
       <View style={styles.midden}>
-        <ActivityIndicator size="large" color="#F23B0D" />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
@@ -207,21 +207,16 @@ export default function DeclaratiesScherm() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.statusBadge, { backgroundColor: statusKleur(geselecteerd.status) + "20", alignSelf: "flex-start", marginBottom: 16 }]}>
-              <Text style={[styles.statusTekst, { color: statusKleur(geselecteerd.status) }]}>
-                {statusLabel(geselecteerd.status)}
-              </Text>
+            <View style={{ alignSelf: "flex-start", marginBottom: ruimte.l }}>
+              <Statusmerk label={statusLabel(geselecteerd.status)} soort={STATUS_SOORT[geselecteerd.status]} />
             </View>
 
             <View style={styles.detailRij}>
               <Text style={styles.detailLabel}>Categorie</Text>
               <Text style={styles.detailWaarde}>{categorieTekst(geselecteerd.categorie)}</Text>
             </View>
-            <View style={styles.detailRij}>
-              <Text style={styles.detailLabel}>Bedrag</Text>
-              <Text style={[styles.detailWaarde, { fontWeight: "700", fontSize: 18 }]}>
-                {bedragTekst(geselecteerd.bedrag_totaal_cents)}
-              </Text>
+            <View style={{ paddingVertical: ruimte.s, borderBottomWidth: 1, borderBottomColor: c.border }}>
+              <Bedragregel label="Bedrag" bedrag={geselecteerd.bedrag_totaal_cents / 100} nadruk />
             </View>
             <View style={styles.detailRij}>
               <Text style={styles.detailLabel}>Datum kosten</Text>
@@ -233,12 +228,16 @@ export default function DeclaratiesScherm() {
             </View>
 
             {geselecteerd.afwijzingsreden && (
-              <View style={styles.afwijsBlok}>
+              <View style={{ marginVertical: ruimte.l }}>
                 <Text style={styles.afwijsTitel}>Reden afwijzing</Text>
-                <Text style={styles.afwijsTekst}>{geselecteerd.afwijzingsreden}</Text>
-                {geselecteerd.beoordeeld_door_naam && (
-                  <Text style={styles.afwijsDoor}>Door: {geselecteerd.beoordeeld_door_naam}</Text>
-                )}
+                <Waarschuwvlak
+                  soort="fout"
+                  tekst={
+                    geselecteerd.beoordeeld_door_naam
+                      ? `${geselecteerd.afwijzingsreden}\nDoor: ${geselecteerd.beoordeeld_door_naam}`
+                      : geselecteerd.afwijzingsreden
+                  }
+                />
               </View>
             )}
 
@@ -249,8 +248,8 @@ export default function DeclaratiesScherm() {
             )}
 
             {geselecteerd.status === "ingediend" && (
-              <View style={styles.wachten}>
-                <Text style={styles.wachtenTekst}>In behandeling bij uw leidinggevende</Text>
+              <View style={{ marginTop: ruimte.l }}>
+                <Waarschuwvlak soort="waarschuwing" tekst="In behandeling bij uw leidinggevende" />
               </View>
             )}
           </ScrollView>
@@ -327,50 +326,50 @@ export default function DeclaratiesScherm() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: "#F9FAFB" },
-  midden:           { flex: 1, justifyContent: "center", alignItems: "center" },
-  header:           { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#E5E7EB" },
-  titel:            { fontSize: 20, fontWeight: "700", color: "#111827" },
-  nieuwKnop:        { backgroundColor: "#F23B0D", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 },
-  nieuwKnopTekst:   { color: "#fff", fontWeight: "600", fontSize: 14 },
-  kaart:            { backgroundColor: "#fff", borderRadius: 10, padding: 14, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-  kaartTop:         { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  kaartNaam:        { fontSize: 15, fontWeight: "600", color: "#111827" },
-  kaartOmschrijving:{ fontSize: 13, color: "#6B7280", marginBottom: 8 },
-  kaartOnder:       { flexDirection: "row", justifyContent: "space-between" },
-  kaartDatum:       { fontSize: 12, color: "#9CA3AF" },
-  kaartBedrag:      { fontSize: 15, fontWeight: "700", color: "#111827" },
-  statusBadge:      { borderRadius: 99, paddingVertical: 3, paddingHorizontal: 8 },
-  statusTekst:      { fontSize: 12, fontWeight: "600" },
-  leeg:             { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
-  leegTekst:        { fontSize: 16, color: "#9CA3AF", marginBottom: 16 },
-  leegKnop:         { backgroundColor: "#F23B0D", borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 },
-  leegKnopTekst:    { color: "#fff", fontWeight: "600" },
-  modal:            { flex: 1, backgroundColor: "#F9FAFB" },
-  modalHeader:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  modalTitel:       { fontSize: 20, fontWeight: "700", color: "#111827" },
-  sluitTekst:       { fontSize: 15, color: "#F23B0D", fontWeight: "600" },
-  detailRij:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  detailBlok:       { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  detailLabel:      { fontSize: 13, color: "#6B7280" },
-  detailWaarde:     { fontSize: 15, color: "#111827", fontWeight: "500" },
-  detailWaardeLang: { fontSize: 14, color: "#111827", marginTop: 4, lineHeight: 20 },
-  afwijsBlok:       { backgroundColor: "#FEF2F2", borderRadius: 8, padding: 14, marginVertical: 16 },
-  afwijsTitel:      { fontSize: 13, fontWeight: "700", color: "#DC2626", marginBottom: 4 },
-  afwijsTekst:      { fontSize: 14, color: "#7F1D1D", lineHeight: 20 },
-  afwijsDoor:       { fontSize: 12, color: "#9CA3AF", marginTop: 6 },
-  actieKnop:        { backgroundColor: "#F23B0D", borderRadius: 10, paddingVertical: 14, alignItems: "center", marginTop: 24 },
-  actieKnopUit:     { opacity: 0.5 },
-  actieKnopTekst:   { color: "#fff", fontWeight: "700", fontSize: 16 },
-  wachten:          { backgroundColor: "#FEF3C7", borderRadius: 8, padding: 14, marginTop: 16, alignItems: "center" },
-  wachtenTekst:     { fontSize: 14, color: "#92400E" },
-  label:            { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 6, marginTop: 14 },
-  input:            { backgroundColor: "#fff", borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#111827" },
-  inputMulti:       { height: 80, paddingTop: 10 },
-  categorieScroll:  { marginBottom: 4 },
-  categoriePil:     { borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 99, paddingVertical: 6, paddingHorizontal: 14, marginRight: 8, backgroundColor: "#fff" },
-  categoriePilActief:{ backgroundColor: "#F23B0D", borderColor: "#F23B0D" },
-  categoriePilTekst:{ fontSize: 13, color: "#6B7280", fontWeight: "500" },
-  categoriePilTekstActief: { color: "#fff" },
-});
+type Kleuren = ReturnType<typeof useColors>;
+
+function maakStyles(c: Kleuren) {
+  return StyleSheet.create({
+    container:        { flex: 1, backgroundColor: c.background },
+    midden:           { flex: 1, justifyContent: "center", alignItems: "center" },
+    header:           { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: ruimte.l, backgroundColor: c.card, borderBottomWidth: 1, borderBottomColor: c.border },
+    titel:            { ...tekstStijl("schermtitel", c.foreground) },
+    nieuwKnop:        { backgroundColor: c.primary, borderRadius: c.radius / 2, paddingVertical: ruimte.s, paddingHorizontal: ruimte.m + 2 },
+    nieuwKnopTekst:   { ...tekstStijl("nadruk", c.primaryForeground) },
+    kaart:            { padding: ruimte.m + 2 },
+    kaartTop:         { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: ruimte.xs + 2 },
+    kaartNaam:        { ...tekstStijl("nadruk", c.foreground) },
+    kaartOmschrijving:{ ...tekstStijl("klein", c.mutedForeground), marginBottom: ruimte.s },
+    kaartOnder:       { flexDirection: "row", justifyContent: "space-between" },
+    kaartDatum:       { ...tekstStijl("bijschrift", c.mutedForeground) },
+    kaartBedrag:      { ...tekstStijl("nadruk", c.foreground) },
+    leeg:             { flex: 1, justifyContent: "center", alignItems: "center", padding: ruimte.xxl + ruimte.s },
+    leegTekst:        { ...tekstStijl("sectiekop", c.mutedForeground), marginBottom: ruimte.l },
+    leegKnop:         { backgroundColor: c.primary, borderRadius: c.radius / 2, paddingVertical: ruimte.s + 2, paddingHorizontal: ruimte.xl },
+    leegKnopTekst:    { ...tekstStijl("nadruk", c.primaryForeground) },
+    modal:            { flex: 1, backgroundColor: c.background },
+    modalHeader:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: ruimte.xl },
+    modalTitel:       { ...tekstStijl("schermtitel", c.foreground) },
+    sluitTekst:       { ...tekstStijl("nadruk", c.primary) },
+    detailRij:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: ruimte.s, borderBottomWidth: 1, borderBottomColor: c.border },
+    detailBlok:       { paddingVertical: ruimte.s, borderBottomWidth: 1, borderBottomColor: c.border },
+    detailLabel:      { ...tekstStijl("klein", c.mutedForeground) },
+    detailWaarde:     { ...tekstStijl("nadruk", c.foreground) },
+    detailWaardeLang: { ...tekstStijl("standaard", c.foreground), marginTop: ruimte.xs, lineHeight: 20 },
+    afwijsTitel:      { ...tekstStijl("klein", c.destructive), fontFamily: "Inter_700Bold", marginBottom: ruimte.xs },
+    afwijsTekst:      { ...tekstStijl("standaard", c.foreground), lineHeight: 20 },
+    afwijsDoor:       { ...tekstStijl("bijschrift", c.mutedForeground), marginTop: ruimte.xs + 2 },
+    actieKnop:        { backgroundColor: c.primary, borderRadius: c.radius, paddingVertical: ruimte.m + 2, alignItems: "center", marginTop: ruimte.xl },
+    actieKnopUit:     { opacity: 0.5 },
+    actieKnopTekst:   { ...tekstStijl("sectiekop", c.primaryForeground) },
+    wachtenTekst:     { ...tekstStijl("standaard", c.foreground) },
+    label:            { ...tekstStijl("nadruk", c.foreground), marginBottom: ruimte.xs + 2, marginTop: ruimte.m + 2 },
+    input:            { backgroundColor: c.card, borderWidth: 1, borderColor: c.border, borderRadius: c.radius / 2, paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2, ...tekstStijl("standaard", c.foreground) },
+    inputMulti:       { height: 80, paddingTop: ruimte.s + 2 },
+    categorieScroll:  { marginBottom: ruimte.xs },
+    categoriePil:     { borderWidth: 1, borderColor: c.border, borderRadius: c.radius, paddingVertical: ruimte.xs + 2, paddingHorizontal: ruimte.m + 2, marginRight: ruimte.s, backgroundColor: c.card },
+    categoriePilActief:{ backgroundColor: c.primary, borderColor: c.primary },
+    categoriePilTekst:{ ...tekstStijl("klein", c.mutedForeground) },
+    categoriePilTekstActief: { color: c.primaryForeground },
+  });
+}

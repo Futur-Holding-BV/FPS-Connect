@@ -13,7 +13,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Redirect, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -25,8 +24,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { bovenInset } from "@/components/ui";
+import { Ladenstaat, tekstStijl, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
@@ -84,16 +84,18 @@ export default function WerkbakScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background, paddingTop: bovenInset(insets) }}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: ruimte.l, paddingBottom: ruimte.s + 2, gap: ruimte.s + 2 }}>
         <Pressable onPress={() => router.back()} hitSlop={10} testID="knop-terug">
-          <Ionicons name="chevron-back" size={24} color={c.foreground} />
+          <Ionicons name="chevron-back" size={ruimte.xl} color={c.foreground} />
         </Pressable>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: c.foreground }}>Werkbak</Text>
+        <Text style={tekstStijl("sectiekop", c.foreground)}>Werkbak</Text>
       </View>
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
+        </View>
       ) : isError ? (
-        <Text style={{ color: c.mutedForeground, textAlign: "center", marginTop: 40 }}>
+        <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.s }]}>
           Werkbak kon niet worden geladen.
         </Text>
       ) : (
@@ -101,9 +103,9 @@ export default function WerkbakScherm() {
           data={gesorteerd}
           keyExtractor={(i) => String(i.id)}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: ruimte.l, paddingBottom: ruimte.xxl, gap: ruimte.s }}
           ListEmptyComponent={
-            <Text style={{ color: c.mutedForeground, textAlign: "center", marginTop: 40 }} testID="tekst-werkbak-leeg">
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.s }]} testID="tekst-werkbak-leeg">
               Niets te doen — de werkbak is leeg.
             </Text>
           }
@@ -113,43 +115,43 @@ export default function WerkbakScherm() {
             return (
               <View>
                 {eersteVanSoort && (
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", marginBottom: 6, marginTop: index === 0 ? 0 : 12 }}>
+                  <Text style={[tekstStijl("bijschrift", c.mutedForeground), { fontFamily: "Inter_700Bold", textTransform: "uppercase", marginBottom: ruimte.s - 2, marginTop: index === 0 ? 0 : ruimte.m }]}>
                     {item.soort === "doen" ? "Doen" : "Weten"}
                   </Text>
                 )}
                 <View
                   style={{
                     backgroundColor: c.card,
-                    borderRadius: 10,
+                    borderRadius: c.radius,
                     borderWidth: 1,
-                    borderColor: urgent ? "#fca5a5" : c.border,
-                    padding: 12,
-                    gap: 6,
+                    borderColor: urgent ? c.destructive : c.border,
+                    padding: ruimte.m,
+                    gap: ruimte.s - 2,
                   }}
                   testID={`kaart-werkbak-item-${item.id}`}
                 >
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    <Text style={{ flex: 1, fontWeight: "600", color: c.foreground }}>{item.titel}</Text>
-                    <Text style={{ fontSize: 11, color: c.mutedForeground }}>{BRON_LABELS[item.bron] ?? item.bron}</Text>
+                  <View style={{ flexDirection: "row", gap: ruimte.s }}>
+                    <Text style={[tekstStijl("nadruk", c.foreground), { flex: 1 }]}>{item.titel}</Text>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{BRON_LABELS[item.bron] ?? item.bron}</Text>
                   </View>
                   {!!item.omschrijving && (
-                    <Text style={{ fontSize: 13, color: c.mutedForeground }}>{item.omschrijving}</Text>
+                    <Text style={tekstStijl("klein", c.mutedForeground)}>{item.omschrijving}</Text>
                   )}
-                  <View style={{ flexDirection: "row", gap: 14, marginTop: 2 }}>
+                  <View style={{ flexDirection: "row", gap: ruimte.m + 2, marginTop: ruimte.xs / 2 }}>
                     <Pressable
                       onPress={() => afhandelen.mutate({ id: item.id })}
                       disabled={afhandelen.isPending}
                       hitSlop={8}
                       testID={`knop-afhandelen-${item.id}`}
                     >
-                      <Text style={{ color: c.primary, fontWeight: "600", fontSize: 13 }}>Afgehandeld</Text>
+                      <Text style={[tekstStijl("klein", c.primary), { fontFamily: "Inter_600SemiBold" }]}>Afgehandeld</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => { setWegzetItem(item); setReden(""); }}
                       hitSlop={8}
                       testID={`knop-wegzetten-${item.id}`}
                     >
-                      <Text style={{ color: c.mutedForeground, fontWeight: "600", fontSize: 13 }}>Wegzetten</Text>
+                      <Text style={[tekstStijl("klein", c.mutedForeground), { fontFamily: "Inter_600SemiBold" }]}>Wegzetten</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -160,22 +162,22 @@ export default function WerkbakScherm() {
       )}
       {wegzetItem != null && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setWegzetItem(null)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 24 }}>
-            <View style={{ backgroundColor: c.card, borderRadius: 12, padding: 16, gap: 10 }}>
-              <Text style={{ fontWeight: "700", color: c.foreground }}>Wegzetten</Text>
-              <Text style={{ fontSize: 13, color: c.mutedForeground }}>{wegzetItem.titel}</Text>
+          <View style={{ flex: 1, backgroundColor: c.dark + "80", justifyContent: "center", padding: ruimte.xl }}>
+            <View style={{ backgroundColor: c.card, borderRadius: c.radius, padding: ruimte.l, gap: ruimte.s + 2 }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>Wegzetten</Text>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>{wegzetItem.titel}</Text>
               <TextInput
                 value={reden}
                 onChangeText={setReden}
                 placeholder="Waarom zet je dit weg? (verplicht)"
                 placeholderTextColor={c.mutedForeground}
                 multiline
-                style={{ borderWidth: 1, borderColor: c.border, borderRadius: 8, padding: 10, minHeight: 60, color: c.foreground }}
+                style={[tekstStijl("standaard", c.foreground), { borderWidth: 1, borderColor: c.border, borderRadius: c.radius / 2, padding: ruimte.s + 2, minHeight: ruimte.xxl + ruimte.xl }]}
                 testID="invoer-wegzet-reden"
               />
-              <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: ruimte.l }}>
                 <Pressable onPress={() => setWegzetItem(null)} hitSlop={8}>
-                  <Text style={{ color: c.mutedForeground, fontWeight: "600" }}>Annuleren</Text>
+                  <Text style={tekstStijl("nadruk", c.mutedForeground)}>Annuleren</Text>
                 </Pressable>
                 <Pressable
                   disabled={!reden.trim() || wegzetten.isPending}
@@ -183,7 +185,7 @@ export default function WerkbakScherm() {
                   hitSlop={8}
                   testID="knop-wegzet-bevestig"
                 >
-                  <Text style={{ color: reden.trim() ? c.primary : c.mutedForeground, fontWeight: "700" }}>Wegzetten</Text>
+                  <Text style={tekstStijl("nadruk", reden.trim() ? c.primary : c.mutedForeground)}>Wegzetten</Text>
                 </Pressable>
               </View>
             </View>

@@ -1,11 +1,12 @@
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 import { useRouter } from "expo-router";
 import { Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
 
 const SECTIES = [
   {
@@ -50,12 +51,12 @@ export default function PrivacyScherm() {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <View
         style={{
-          paddingTop: bovenInset(insets) + 8,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
+          paddingTop: bovenInset(insets) + ruimte.s,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingBottom: ruimte.m,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
           backgroundColor: c.card,
@@ -65,10 +66,10 @@ export default function PrivacyScherm() {
           <Ionicons name="arrow-back" size={22} color={c.foreground} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("sectiekop", c.foreground)}>
             Privacy &amp; transparantie
           </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
             Hoe FPS Monteur uw gegevens gebruikt
           </Text>
         </View>
@@ -87,53 +88,49 @@ export default function PrivacyScherm() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ padding: ruimte.l + ruimte.xs, paddingBottom: insets.bottom + ruimte.xl }}
         showsVerticalScrollIndicator={false}
       >
         {gebruiker && (
           <View
             style={{
               backgroundColor: c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.l,
               borderWidth: 1,
               borderColor: c.border,
             }}
           >
             <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 11,
-                fontFamily: "Inter_500Medium",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                marginBottom: 8,
-              }}
+              style={[
+                tekstStijl("bijschrift", c.mutedForeground),
+                { textTransform: "uppercase", letterSpacing: 0.5, marginBottom: ruimte.s },
+              ]}
             >
               Ingelogd als
             </Text>
-            <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={tekstStijl("nadruk", c.foreground)}>
               {gebruiker.naam}
             </Text>
             <Text
-              style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}
+              style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}
             >
               {gebruiker.email}
             </Text>
             {gebruiker.rol && (
               <View
                 style={{
-                  marginTop: 8,
+                  marginTop: ruimte.s,
                   alignSelf: "flex-start",
-                  paddingHorizontal: 8,
+                  paddingHorizontal: ruimte.s,
                   paddingVertical: 3,
-                  borderRadius: 6,
+                  borderRadius: c.radius / 2,
                   backgroundColor: c.primary + "18",
                 }}
               >
                 <Text
-                  style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}
+                  style={[tekstStijl("bijschrift", c.primary), { textTransform: "capitalize" }]}
                 >
                   {gebruiker.rol === "hoofdbeheerder"
                     ? "Hoofdbeheerder"
@@ -151,14 +148,14 @@ export default function PrivacyScherm() {
             key={i}
             style={{
               backgroundColor: s.accent ? c.primary + "0D" : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
               borderWidth: 1,
               borderColor: s.accent ? c.primary + "33" : c.border,
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: ruimte.s, marginBottom: ruimte.xs + 2 }}>
               <Ionicons
                 name={s.accent ? "shield-checkmark" : i === 1 ? "sparkles" : "information-circle"}
                 size={16}
@@ -166,37 +163,22 @@ export default function PrivacyScherm() {
                 style={{ marginTop: 1 }}
               />
               <Text
-                style={{
-                  color: s.accent ? c.primary : c.foreground,
-                  fontSize: 14,
-                  fontFamily: "Inter_600SemiBold",
-                  flex: 1,
-                }}
+                style={[
+                  tekstStijl("standaard", s.accent ? c.primary : c.foreground),
+                  { fontFamily: "Inter_600SemiBold", flex: 1 },
+                ]}
               >
                 {s.titel}
               </Text>
             </View>
-            <Text
-              style={{
-                color: c.mutedForeground,
-                fontSize: 13,
-                fontFamily: "Inter_400Regular",
-                lineHeight: 20,
-              }}
-            >
+            <Text style={tekstStijl("klein", c.mutedForeground)}>
               {s.tekst}
             </Text>
           </View>
         ))}
 
         <Text
-          style={{
-            color: c.mutedForeground,
-            fontSize: 11,
-            fontFamily: "Inter_400Regular",
-            textAlign: "center",
-            marginTop: 8,
-          }}
+          style={[tekstStijl("bijschrift", c.mutedForeground), { textAlign: "center", marginTop: ruimte.s }]}
         >
           FPS Brandpreventie — FPS Connect privacybeleid
         </Text>

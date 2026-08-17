@@ -8,7 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ruimte } from "@workspace/ontwerp";
 
+import { useColors } from "@/hooks/useColors";
+
+// Bewuste feestkleuren: de confetti-kleuren zijn beeldbepalend voor de viering
+// (VORM_01) en blijven bewust letterlijk; gewone UI-kleuren (overlay, tekst)
+// lopen via het palet.
 const CONFETTI_CONFIG = [
   { x: -110, startY: -80, kleur: "#F23B0D" },
   { x: -70, startY: -60, kleur: "#FFD700" },
@@ -66,6 +72,7 @@ export function BirthdayCelebration({
   naam: string;
   onDismiss: () => void;
 }) {
+  const c = useColors();
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textY = useRef(new Animated.Value(20)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -89,7 +96,7 @@ export function BirthdayCelebration({
 
   return (
     <Modal transparent animationType="none" onRequestClose={onDismiss}>
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+      <Animated.View style={[styles.overlay, { backgroundColor: c.dark + "EB", opacity: overlayOpacity }]}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onDismiss} />
 
         {CONFETTI_CONFIG.map((cfg, idx) => (

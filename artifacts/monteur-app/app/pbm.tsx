@@ -2,13 +2,26 @@ import { API_DOMEIN } from "@/lib/apiDomein";
 import { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, Image, FlatList,
+  ActivityIndicator, Alert, Image, FlatList,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { ruimte } from "@workspace/ontwerp";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/context/auth";
 import { useFotoUpload } from "@/hooks/useFotoUpload";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
+import { useColors } from "@/hooks/useColors";
+import {
+  Kaart,
+  Knop,
+  Ladenstaat,
+  LegeStaat,
+  SchermKop,
+  Statusmerk,
+  Waarschuwvlak,
+  netteWaarde,
+  tekstStijl,
+} from "@/components/ui";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,18 +51,20 @@ interface AiResultaat {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_KLEUR: Record<string, string> = {
-  actief: "#16a34a",
-  afgekeurd: "#dc2626",
-  ingenomen: "#6b7280",
-  verloren: "#ea580c",
+// Status → soort Statusmerk (kleur komt uit het palet, niet uit dit bestand).
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  actief: "succes",
+  afgekeurd: "fout",
+  ingenomen: "neutraal",
+  verloren: "waarschuwing",
 };
 
-const SLIJTAGE_KLEUR: Record<string, string> = {
-  geen: "#16a34a",
-  licht: "#ca8a04",
-  matig: "#ea580c",
-  ernstig: "#dc2626",
+// Slijtage → soort Statusmerk.
+const SLIJTAGE_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  geen: "succes",
+  licht: "waarschuwing",
+  matig: "waarschuwing",
+  ernstig: "fout",
 };
 
 const DOMEIN = API_DOMEIN;
@@ -67,6 +82,8 @@ function isVervangingBinnenkort(d: string | null | undefined) {
 // ── Hoofd-scherm ─────────────────────────────────────────────────────────────
 
 function PbmScherm() {
+  const c = useColors();
+  const s = useStyles();
   const { token } = useAuth();
   const { uploadFoto } = useFotoUpload();
 
@@ -105,43 +122,58 @@ function PbmScherm() {
   return (
     <View style={s.container}>
       <View style={s.kop}>
-        <Text style={s.kopTitel}>Mijn PBM</Text>
-        <Text style={s.kopSub}>Persoonlijke beschermingsmiddelen</Text>
+        <Text style={tekstStijl("schermtitel", c.foreground)}>Mijn PBM</Text>
+        <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
+          Persoonlijke beschermingsmiddelen
+        </Text>
       </View>
 
       {laden ? (
-        <ActivityIndicator style={{ margin: 32 }} color="#F23B0D" />
-      ) : items.length === 0 ? (
-        <View style={s.leeg}>
-          <Text style={s.leegTekst}>Nog geen PBM-items toegewezen.</Text>
-          <Text style={s.leegSub}>Neem contact op met de PBM-beheerder.</Text>
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
+      ) : items.length === 0 ? (
+        <LegeStaat
+          icoon="shield-outline"
+          titel="Nog geen PBM-items toegewezen"
+          beschrijving="Neem contact op met de PBM-beheerder."
+        />
       ) : (
         <FlatList
           data={items}
           keyExtractor={i => String(i.id)}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.s + 2 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={s.kaart} onPress={() => setGeselecteerd(item)} activeOpacity={0.7}>
-              <View style={s.kaartKop}>
-                <Text style={s.kaartType}>{item.type}</Text>
-                <View style={[s.statusBadge, { backgroundColor: (STATUS_KLEUR[item.status] ?? "#6b7280") + "20" }]}>
-                  <Text style={[s.statusText, { color: STATUS_KLEUR[item.status] ?? "#6b7280" }]}>
-                    {item.status}
+            <TouchableOpacity onPress={() => setGeselecteerd(item)} activeOpacity={0.7}>
+              <Kaart stijl={{ padding: ruimte.m + 2 }}>
+                <View style={s.kaartKop}>
+                  <Text style={[tekstStijl("nadruk", c.foreground), { textTransform: "capitalize", flexShrink: 1 }]} numberOfLines={1}>
+                    {item.type}
                   </Text>
+                  <Statusmerk
+                    label={netteWaarde(item.status)}
+                    soort={STATUS_SOORT[item.status] ?? "neutraal"}
+                  />
                 </View>
-              </View>
-              {(item.merk || item.model) && (
-                <Text style={s.kaartSub}>{[item.merk, item.model].filter(Boolean).join(" ")}</Text>
-              )}
-              <View style={s.kaartMeta}>
-                <Text style={s.kaartMetaTekst}>Uitgifte: {datumLabel(item.uitgifteDatum)}</Text>
-                {item.vervangingsDatum && (
-                  <Text style={[s.kaartMetaTekst, isVervangingBinnenkort(item.vervangingsDatum) && s.waarschuwing]}>
-                    Vervanging: {datumLabel(item.vervangingsDatum)}
+                {(item.merk || item.model) && (
+                  <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
+                    {[item.merk, item.model].filter(Boolean).join(" ")}
                   </Text>
                 )}
-              </View>
+                <View style={s.kaartMeta}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>Uitgifte: {datumLabel(item.uitgifteDatum)}</Text>
+                  {item.vervangingsDatum && (
+                    <Text
+                      style={tekstStijl(
+                        "bijschrift",
+                        isVervangingBinnenkort(item.vervangingsDatum) ? c.warning : c.mutedForeground,
+                      )}
+                    >
+                      Vervanging: {datumLabel(item.vervangingsDatum)}
+                    </Text>
+                  )}
+                </View>
+              </Kaart>
             </TouchableOpacity>
           )}
         />
@@ -160,6 +192,8 @@ interface DetailProps {
 }
 
 function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
+  const c = useColors();
+  const s = useStyles();
   const [fotoUris, setFotoUris] = useState<string[]>([]);
   const [ai, setAi] = useState<AiResultaat | null>(null);
   const [bezig, setBezig] = useState(false);
@@ -225,34 +259,36 @@ function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
   ];
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: ruimte.xxl + ruimte.s }}>
       {/* Terug */}
       <TouchableOpacity style={s.terug} onPress={onTerug}>
-        <Text style={s.terugTekst}>Terug</Text>
+        <Text style={tekstStijl("nadruk", c.tint)}>Terug</Text>
       </TouchableOpacity>
 
       <View style={s.kop}>
-        <Text style={s.kopTitel}>{item.type}</Text>
-        <View style={[s.statusBadge, { backgroundColor: (STATUS_KLEUR[item.status] ?? "#6b7280") + "20" }]}>
-          <Text style={[s.statusText, { color: STATUS_KLEUR[item.status] ?? "#6b7280" }]}>{item.status}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ruimte.s }}>
+          <Text style={[tekstStijl("schermtitel", c.foreground), { textTransform: "capitalize", flexShrink: 1 }]} numberOfLines={1}>
+            {item.type}
+          </Text>
+          <Statusmerk label={netteWaarde(item.status)} soort={STATUS_SOORT[item.status] ?? "neutraal"} />
         </View>
       </View>
 
       {/* Kenmerken */}
-      <View style={s.sectie}>
+      <Kaart stijl={s.sectie}>
         <Text style={s.sectieKop}>Kenmerken</Text>
         {ri.filter(([, v]) => v && v !== "—").map(([k, v]) => (
           <View key={k} style={s.rij}>
-            <Text style={s.rijLabel}>{k}</Text>
-            <Text style={s.rijWaarde}>{v}</Text>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>{k}</Text>
+            <Text style={tekstStijl("klein", c.foreground)}>{v}</Text>
           </View>
         ))}
-      </View>
+      </Kaart>
 
       {/* Foto-inspectie */}
-      <View style={s.sectie}>
+      <Kaart stijl={s.sectie}>
         <Text style={s.sectieKop}>AI Foto-inspectie</Text>
-        <Text style={s.toelichting}>
+        <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.m }]}>
           Maak foto's van je PBM. AI controleert op mogelijke slijtage of beschadigingen
           en geeft een advies. De formele beoordeling blijft altijd bij de PBM-beheerder.
         </Text>
@@ -267,7 +303,7 @@ function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
                   style={s.verwijderFoto}
                   onPress={() => setFotoUris(prev => prev.filter((_, j) => j !== i))}
                 >
-                  <Text style={s.verwijderFotoText}>X</Text>
+                  <Text style={tekstStijl("bijschrift", c.primaryForeground)}>X</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -275,64 +311,55 @@ function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
         )}
 
         <View style={s.fotoknoppen}>
-          <TouchableOpacity style={[s.knop, s.knopSecundair, { flex: 1 }]} onPress={maakFoto}>
-            <Text style={s.knopSecundairTekst}>Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.knop, s.knopSecundair, { flex: 1 }]} onPress={kiesFoto}>
-            <Text style={s.knopSecundairTekst}>Album</Text>
-          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Knop titel="Camera" onPress={maakFoto} variant="secundair" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Knop titel="Album" onPress={kiesFoto} variant="secundair" />
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[s.knop, s.knopPrimair, (!fotoUris.length || bezig) && s.knopDisabled]}
+        <Knop
+          titel="AI-inspectie starten"
           onPress={() => void startInspectie()}
+          bezig={bezig}
           disabled={!fotoUris.length || bezig}
-        >
-          {bezig ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={s.knopPrimairTekst}>AI-inspectie starten</Text>
-          )}
-        </TouchableOpacity>
+        />
 
         {/* AI-resultaat */}
         {ai && (
           <View style={s.aiResultaat}>
-            <Text style={s.aiTitel}>AI advies</Text>
-            <Text style={s.aiDisclaimer}>
+            <Text style={s.sectieKop}>AI advies</Text>
+            <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginBottom: ruimte.s + 2, fontStyle: "italic" }]}>
               Dit is uitsluitend een advies. AI keurt nooit formeel goed of af.
             </Text>
 
             <View style={s.aiRij}>
-              <Text style={s.aiLabel}>Beoordeling</Text>
-              <Text style={s.aiTekst}>{ai.beoordeling}</Text>
+              <Text style={tekstStijl("bijschrift", c.mutedForeground)}>Beoordeling</Text>
+              <Text style={[tekstStijl("klein", c.foreground), { marginTop: 2 }]}>{ai.beoordeling}</Text>
             </View>
             <View style={s.aiRij}>
-              <Text style={s.aiLabel}>Aanbeveling</Text>
-              <Text style={s.aiTekst}>{ai.aanbeveling}</Text>
+              <Text style={tekstStijl("bijschrift", c.mutedForeground)}>Aanbeveling</Text>
+              <Text style={[tekstStijl("klein", c.foreground), { marginTop: 2 }]}>{ai.aanbeveling}</Text>
             </View>
             <View style={s.aiRij}>
-              <Text style={s.aiLabel}>Slijtage</Text>
-              <Text style={[s.aiTekst, { color: SLIJTAGE_KLEUR[ai.slijtage] ?? "#374151", fontWeight: "600" }]}>
-                {ai.slijtage.charAt(0).toUpperCase() + ai.slijtage.slice(1)}
-              </Text>
+              <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginBottom: ruimte.xs }]}>Slijtage</Text>
+              <Statusmerk label={netteWaarde(ai.slijtage)} soort={SLIJTAGE_SOORT[ai.slijtage] ?? "neutraal"} />
             </View>
             {ai.keurNodig && (
-              <View style={s.keurWaarschuwing}>
-                <Text style={s.keurWaarschuwingTekst}>
-                  Keuring door PBM-beheerder aanbevolen
-                </Text>
+              <View style={{ marginTop: ruimte.s }}>
+                <Waarschuwvlak tekst="Keuring door PBM-beheerder aanbevolen" soort="waarschuwing" />
               </View>
             )}
           </View>
         )}
-      </View>
+      </Kaart>
 
       {item.opmerkingen && (
-        <View style={s.sectie}>
+        <Kaart stijl={s.sectie}>
           <Text style={s.sectieKop}>Opmerkingen</Text>
-          <Text style={s.rijWaarde}>{item.opmerkingen}</Text>
-        </View>
+          <Text style={tekstStijl("klein", c.foreground)}>{item.opmerkingen}</Text>
+        </Kaart>
       )}
     </ScrollView>
   );
@@ -340,68 +367,50 @@ function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
 
 // ── Stijlen ──────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
-  kop: { padding: 20, paddingTop: 48, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  kopTitel: { fontSize: 22, fontWeight: "700", color: "#111827", textTransform: "capitalize" },
-  kopSub: { fontSize: 14, color: "#6b7280", marginTop: 2 },
-  leeg: { padding: 40, alignItems: "center" },
-  leegTekst: { fontSize: 15, color: "#374151", fontWeight: "600" },
-  leegSub: { fontSize: 13, color: "#9ca3af", marginTop: 4, textAlign: "center" },
-  kaart: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  kaartKop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  kaartType: { fontSize: 15, fontWeight: "600", color: "#111827", textTransform: "capitalize" },
-  kaartSub: { fontSize: 13, color: "#6b7280", marginTop: 2 },
-  kaartMeta: { flexDirection: "row", gap: 12, marginTop: 6 },
-  kaartMetaTekst: { fontSize: 12, color: "#9ca3af" },
-  statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { fontSize: 11, fontWeight: "600" },
-  waarschuwing: { color: "#ea580c", fontWeight: "600" },
-  terug: { padding: 16, paddingTop: 48 },
-  terugTekst: { color: "#F23B0D", fontSize: 15, fontWeight: "600" },
-  sectie: { margin: 16, backgroundColor: "#fff", borderRadius: 10, padding: 16, borderWidth: 1, borderColor: "#e5e7eb" },
-  sectieKop: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 },
-  rij: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
-  rijLabel: { fontSize: 13, color: "#6b7280" },
-  rijWaarde: { fontSize: 13, color: "#111827", fontWeight: "500" },
-  toelichting: { fontSize: 12, color: "#6b7280", marginBottom: 12, lineHeight: 18 },
-  fotoRij: { marginBottom: 10 },
-  fotoWrap: { marginRight: 8, position: "relative" },
-  foto: { width: 80, height: 80, borderRadius: 6 },
-  verwijderFoto: {
-    position: "absolute", top: -6, right: -6,
-    backgroundColor: "#dc2626", borderRadius: 999, width: 18, height: 18,
-    alignItems: "center", justifyContent: "center",
-  },
-  verwijderFotoText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-  fotoknoppen: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  knop: { borderRadius: 8, paddingVertical: 11, paddingHorizontal: 16, alignItems: "center" },
-  knopPrimair: { backgroundColor: "#F23B0D" },
-  knopPrimairTekst: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  knopSecundair: { backgroundColor: "#f3f4f6", borderWidth: 1, borderColor: "#e5e7eb" },
-  knopSecundairTekst: { color: "#374151", fontWeight: "600", fontSize: 14 },
-  knopDisabled: { opacity: 0.4 },
-  aiResultaat: {
-    marginTop: 14, backgroundColor: "#fafafa", borderRadius: 8,
-    borderWidth: 1, borderColor: "#e5e7eb", padding: 14,
-  },
-  aiTitel: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 4 },
-  aiDisclaimer: { fontSize: 11, color: "#9ca3af", marginBottom: 10, fontStyle: "italic" },
-  aiRij: { marginBottom: 8 },
-  aiLabel: { fontSize: 11, color: "#6b7280", textTransform: "uppercase", fontWeight: "600", letterSpacing: 0.4 },
-  aiTekst: { fontSize: 13, color: "#111827", marginTop: 2 },
-  keurWaarschuwing: {
-    marginTop: 8, backgroundColor: "#fef3c7", borderRadius: 6,
-    padding: 10, borderWidth: 1, borderColor: "#f59e0b",
-  },
-  keurWaarschuwingTekst: { fontSize: 13, color: "#92400e", fontWeight: "600" },
-});
+function useStyles() {
+  const c = useColors();
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    kop: {
+      padding: ruimte.l + ruimte.xs,
+      paddingTop: ruimte.xxl + ruimte.l,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    kaartKop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: ruimte.s },
+    kaartMeta: { flexDirection: "row", gap: ruimte.m, marginTop: ruimte.s - 2 },
+    terug: { padding: ruimte.l, paddingTop: ruimte.xxl + ruimte.l },
+    sectie: { margin: ruimte.l },
+    sectieKop: {
+      ...tekstStijl("bijschrift", c.mutedForeground),
+      marginBottom: ruimte.s + 2,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    rij: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: ruimte.xs + 1,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    fotoRij: { marginBottom: ruimte.s + 2 },
+    fotoWrap: { marginRight: ruimte.s, position: "relative" },
+    foto: { width: ruimte.xxl * 2 + ruimte.l, height: ruimte.xxl * 2 + ruimte.l, borderRadius: c.radius / 2 },
+    verwijderFoto: {
+      position: "absolute", top: -6, right: -6,
+      backgroundColor: c.destructive, borderRadius: c.radius, width: ruimte.l + 2, height: ruimte.l + 2,
+      alignItems: "center", justifyContent: "center",
+    },
+    fotoknoppen: { flexDirection: "row", gap: ruimte.s, marginBottom: ruimte.s + 2 },
+    aiResultaat: {
+      marginTop: ruimte.m + 2, backgroundColor: c.secondary, borderRadius: c.radius,
+      borderWidth: 1, borderColor: c.border, padding: ruimte.m + 2,
+    },
+    aiRij: { marginBottom: ruimte.s },
+  });
+}
 
 // APP_01 §3.3 — schermbescherming: nette weigering zonder bevoegdheid
 // (backendroute eist toolbox niveau 1; gemeten, zie docs/metingen).

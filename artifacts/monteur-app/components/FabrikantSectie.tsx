@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Alert, Linking, Pressable, Text, View } from "react-native";
+import { ruimte } from "@workspace/ontwerp";
 import { useColors } from "@/hooks/useColors";
 
 const FABRIKANTEN: { naam: string; url: string | null }[] = [
@@ -32,9 +33,9 @@ export function FabrikantSectie() {
   const fabrikant = FABRIKANTEN.find((f) => f.naam === gekozen) ?? null;
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: ruimte.m }}>
       {/* Fabrikant chips */}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s }}>
         {FABRIKANTEN.map((f) => {
           const actief = gekozen === f.naam;
           return (
@@ -42,8 +43,8 @@ export function FabrikantSectie() {
               key={f.naam}
               onPress={() => setGekozen(actief ? null : f.naam)}
               style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
+                paddingHorizontal: ruimte.m + 2,
+                paddingVertical: ruimte.s,
                 borderRadius: 20,
                 borderWidth: 1.5,
                 borderColor: actief ? c.primary : c.border,
@@ -71,13 +72,13 @@ export function FabrikantSectie() {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            gap: 10,
+            gap: ruimte.s + 2,
             backgroundColor: c.secondary,
             borderRadius: c.radius,
             borderWidth: 1.5,
             borderColor: c.primary,
-            paddingHorizontal: 16,
-            paddingVertical: 13,
+            paddingHorizontal: ruimte.l,
+            paddingVertical: ruimte.m + 1,
           }}
         >
           <Text
@@ -110,18 +111,18 @@ export function FabrikantSectie() {
       {/* Disclaimer */}
       <View
         style={{
-          backgroundColor: "#fef9c3",
+          backgroundColor: c.warning + "1A",
           borderRadius: c.radius,
           borderWidth: 1,
-          borderColor: "#fde047",
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          gap: 4,
+          borderColor: c.warning + "66",
+          paddingHorizontal: ruimte.m + 2,
+          paddingVertical: ruimte.m,
+          gap: ruimte.xs,
         }}
       >
         <Text
           style={{
-            color: "#854d0e",
+            color: c.warning,
             fontSize: 13,
             fontFamily: "Inter_600SemiBold",
           }}
@@ -130,7 +131,7 @@ export function FabrikantSectie() {
         </Text>
         <Text
           style={{
-            color: "#92400e",
+            color: c.warning,
             fontSize: 13,
             fontFamily: "Inter_400Regular",
             lineHeight: 19,

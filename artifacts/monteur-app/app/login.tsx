@@ -12,7 +12,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Knop, TekstVeld, bovenInset } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
+
+import { Knop, TekstVeld, bovenInset, tekstStijl } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
@@ -83,15 +85,15 @@ export default function Login() {
         style={{
           flex: 1,
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 40,
-          paddingHorizontal: 24,
-          paddingBottom: insets.bottom + 32,
+          paddingTop: bovenInset(insets) + ruimte.xxl + ruimte.s,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: insets.bottom + ruimte.xxl,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <View style={{ width: "100%", maxWidth: maxBreedte, alignItems: "center", gap: 28 }}>
-          <View style={{ alignItems: "center", gap: 16 }}>
+        <View style={{ width: "100%", maxWidth: maxBreedte, alignItems: "center", gap: ruimte.xl + ruimte.xs }}>
+          <View style={{ alignItems: "center", gap: ruimte.l }}>
             <View
               style={{
                 backgroundColor: c.primary,
@@ -102,26 +104,18 @@ export default function Login() {
                 justifyContent: "center",
               }}
             >
-              <Ionicons name={biometrieIconNaam} size={40} color="#fff" />
+              <Ionicons name={biometrieIconNaam} size={40} color={c.primaryForeground} />
             </View>
             <Text
-              style={{
-                color: c.darkForeground,
-                fontSize: 22,
-                fontFamily: "Inter_700Bold",
-                textAlign: "center",
-              }}
+              style={[tekstStijl("schermtitel", c.darkForeground), { textAlign: "center" }]}
             >
               Snel ontgrendelen inschakelen?
             </Text>
             <Text
-              style={{
-                color: c.darkMuted,
-                fontSize: 15,
-                fontFamily: "Inter_400Regular",
-                textAlign: "center",
-                lineHeight: 22,
-              }}
+              style={[
+                tekstStijl("standaard", c.darkMuted),
+                { textAlign: "center", lineHeight: 22 },
+              ]}
             >
               Gebruik{" "}
               <Text style={{ fontFamily: "Inter_600SemiBold", color: c.darkForeground }}>
@@ -132,22 +126,15 @@ export default function Login() {
             </Text>
           </View>
 
-          <View style={{ width: "100%", gap: 14 }}>
+          <View style={{ width: "100%", gap: ruimte.m + 2 }}>
             <Knop
               titel={`Inschakelen met ${biometrieType}`}
               onPress={schakelBiometriIn}
               bezig={bezigBio}
               groot
             />
-            <Pressable onPress={slaOver} style={{ paddingVertical: 12 }}>
-              <Text
-                style={{
-                  color: c.darkMuted,
-                  fontSize: 15,
-                  textAlign: "center",
-                  fontFamily: "Inter_600SemiBold",
-                }}
-              >
+            <Pressable onPress={slaOver} style={{ paddingVertical: ruimte.m }}>
+              <Text style={[tekstStijl("nadruk", c.darkMuted), { textAlign: "center" }]}>
                 Niet nu
               </Text>
             </Pressable>
@@ -168,15 +155,15 @@ export default function Login() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ paddingTop: bovenInset(insets) + 32, paddingHorizontal: 24, paddingBottom: 48, width: "100%", maxWidth: maxBreedte, alignSelf: "center" }}>
-          <View style={{ alignItems: "center", marginBottom: 36 }}>
+        <View style={{ paddingTop: bovenInset(insets) + ruimte.xxl, paddingHorizontal: ruimte.xl, paddingBottom: ruimte.xxl + ruimte.l, width: "100%", maxWidth: maxBreedte, alignSelf: "center" }}>
+          <View style={{ alignItems: "center", marginBottom: ruimte.xxl + ruimte.xs }}>
             <View
               style={{
-                backgroundColor: "#fff",
-                borderRadius: 16,
-                paddingHorizontal: 24,
-                paddingVertical: 12,
-                marginBottom: 20,
+                backgroundColor: c.card,
+                borderRadius: c.radius,
+                paddingHorizontal: ruimte.xl,
+                paddingVertical: ruimte.m,
+                marginBottom: ruimte.l + ruimte.xs,
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.18,
@@ -190,12 +177,12 @@ export default function Login() {
                 accessibilityLabel="FPS Brandpreventie"
               />
             </View>
-            <Text style={{ color: c.darkMuted, fontSize: 15, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("standaard", c.darkMuted)}>
               Brandpreventie op de bouwplaats
             </Text>
           </View>
 
-          <View style={{ gap: 16 }}>
+          <View style={{ gap: ruimte.l }}>
             <TekstVeld
               label="E-mailadres"
               value={email}
@@ -224,30 +211,26 @@ export default function Login() {
             {fout && (
               <View
                 style={{
-                  backgroundColor: "rgba(229,72,77,0.15)",
+                  backgroundColor: c.destructive + "26",
                   borderRadius: c.radius,
-                  padding: 14,
+                  padding: ruimte.m + 2,
                 }}
               >
-                <Text style={{ color: "#FCA5A5", fontSize: 15, fontFamily: "Inter_500Medium" }}>
+                <Text style={[tekstStijl("nadruk", c.destructive), { fontFamily: "Inter_500Medium" }]}>
                   {fout}
                 </Text>
               </View>
             )}
 
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: ruimte.s }}>
               <Knop titel="Inloggen" onPress={verstuur} bezig={bezig} groot />
             </View>
 
             <Text
-              style={{
-                color: c.darkMuted,
-                fontSize: 13,
-                textAlign: "center",
-                marginTop: 8,
-                lineHeight: 19,
-                fontFamily: "Inter_400Regular",
-              }}
+              style={[
+                tekstStijl("klein", c.darkMuted),
+                { textAlign: "center", marginTop: ruimte.s, lineHeight: 19 },
+              ]}
             >
               Nog geen 2FA ingericht? Log eerst eenmalig in via de webportal om je
               authenticator-app te koppelen.

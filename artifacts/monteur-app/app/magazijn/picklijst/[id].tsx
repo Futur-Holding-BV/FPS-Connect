@@ -6,6 +6,7 @@ import {
   type MagazijnPicklijstRegel,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -21,7 +22,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { bovenInset } from "@/components/ui";
+import {
+  Ladenstaat,
+  Statusmerk,
+  Waarschuwvlak,
+  bovenInset,
+  netteWaarde,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
@@ -43,11 +51,12 @@ const STATUS_LABELS: Record<string, string> = {
   geannuleerd: "Geannuleerd",
 };
 
-const STATUS_KLEUREN: Record<string, string> = {
-  concept: "#3b82f6",
-  deels_voltooid: "#f59e0b",
-  voltooid: "#22c55e",
-  geannuleerd: "#6b7280",
+// Statussen → soort Statusmerk (kleur komt uit het palet, niet uit dit bestand).
+const STATUS_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  concept: "primair",
+  deels_voltooid: "waarschuwing",
+  voltooid: "succes",
+  geannuleerd: "neutraal",
 };
 
 interface RegelState {
@@ -70,6 +79,9 @@ function RegelRij({
   const c = useColors();
   const isGepickt = regel.status === "gepickt";
   const toonInvoer = state.gepickt && !isGepickt && !gesloten;
+  const aangevinkt = state.gepickt || isGepickt;
+  const voldoendeVoorraad =
+    regel.vrije_voorraad != null && regel.vrije_voorraad >= regel.gevraagd_hoeveelheid;
 
   function toggle() {
     if (gesloten) return;
@@ -99,58 +111,56 @@ function RegelRij({
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        backgroundColor: pressed && !gesloten ? c.card + "aa" : c.card,
-        borderRadius: 10,
-        padding: 14,
-        marginBottom: 8,
+        gap: ruimte.m,
+        backgroundColor: c.card,
+        borderRadius: c.radius,
+        padding: ruimte.m + 2,
+        marginBottom: ruimte.s,
         borderWidth: 1,
-        borderColor: state.gepickt || isGepickt ? "#22c55e44" : c.border,
-        opacity: gesloten ? 0.7 : 1,
+        borderColor: aangevinkt ? c.success : c.border,
+        opacity: gesloten ? 0.7 : pressed ? 0.85 : 1,
       })}
     >
       <View
         style={{
-          width: 24,
-          height: 24,
-          borderRadius: 6,
+          width: ruimte.xl,
+          height: ruimte.xl,
+          borderRadius: c.radius / 2,
           borderWidth: 2,
-          borderColor: state.gepickt || isGepickt ? "#22c55e" : c.border,
-          backgroundColor: state.gepickt || isGepickt ? "#22c55e" : "transparent",
+          borderColor: aangevinkt ? c.success : c.border,
+          backgroundColor: aangevinkt ? c.success : "transparent",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
         }}
       >
-        {(state.gepickt || isGepickt) && (
-          <Ionicons name="checkmark" size={15} color="#fff" />
+        {aangevinkt && (
+          <Ionicons name="checkmark" size={ruimte.l - 1} color={c.primaryForeground} />
         )}
       </View>
 
       <View style={{ flex: 1 }}>
         <Text
-          style={{
-            color: c.text,
-            fontSize: 14,
-            fontWeight: "600",
-            textDecorationLine: isGepickt ? "line-through" : "none",
-          }}
+          style={[
+            tekstStijl("nadruk", c.foreground),
+            { textDecorationLine: isGepickt ? "line-through" : "none" },
+          ]}
           numberOfLines={2}
         >
           {regel.artikel_naam ?? `Artikel #${regel.artikel_id}`}
         </Text>
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 3, flexWrap: "wrap" }}>
+        <View style={{ flexDirection: "row", gap: ruimte.s + 2, marginTop: 3, flexWrap: "wrap" }}>
           {regel.artikel_code ? (
-            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{regel.artikel_code}</Text>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>{regel.artikel_code}</Text>
           ) : null}
           {regel.locatie_naam ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
               <Ionicons name="location-outline" size={11} color={c.mutedForeground} />
-              <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{regel.locatie_naam}</Text>
+              <Text style={tekstStijl("klein", c.mutedForeground)}>{regel.locatie_naam}</Text>
             </View>
           ) : null}
           {regel.vrije_voorraad != null ? (
-            <Text style={{ color: regel.vrije_voorraad >= regel.gevraagd_hoeveelheid ? "#22c55e" : "#f59e0b", fontSize: 12 }}>
+            <Text style={tekstStijl("klein", voldoendeVoorraad ? c.success : c.warning)}>
               voorraad: {regel.vrije_voorraad} {eenheidLabel(regel.artikel_eenheid)}
             </Text>
           ) : null}
@@ -158,33 +168,33 @@ function RegelRij({
       </View>
 
       <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
-        <Text style={{ color: c.text, fontSize: 14, fontWeight: "700" }}>
+        <Text style={tekstStijl("nadruk", c.foreground)}>
           {regel.gevraagd_hoeveelheid} {eenheidLabel(regel.artikel_eenheid)}
         </Text>
         {isGepickt ? (
-          <Text style={{ color: "#22c55e", fontSize: 11, marginTop: 2 }}>gepickt</Text>
+          <Text style={[tekstStijl("bijschrift", c.success), { marginTop: 2 }]}>gepickt</Text>
         ) : null}
         {toonInvoer ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-            <Text style={{ color: c.mutedForeground, fontSize: 11 }}>gepickt:</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs, marginTop: ruimte.xs + 2 }}>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>gepickt:</Text>
             <TextInput
               value={String(state.gepicktHoeveelheid)}
               onChangeText={wijzigHoeveelheid}
               keyboardType="number-pad"
               selectTextOnFocus
-              style={{
-                minWidth: 44,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderWidth: 1,
-                borderColor: state.gepicktHoeveelheid === 0 ? "#f59e0b" : c.border,
-                borderRadius: 8,
-                color: c.text,
-                fontSize: 14,
-                fontWeight: "700",
-                textAlign: "center",
-                backgroundColor: c.background,
-              }}
+              style={[
+                tekstStijl("nadruk", c.foreground),
+                {
+                  minWidth: ruimte.xl + ruimte.l,
+                  paddingHorizontal: ruimte.s,
+                  paddingVertical: ruimte.xs,
+                  borderWidth: 1,
+                  borderColor: state.gepicktHoeveelheid === 0 ? c.warning : c.border,
+                  borderRadius: c.radius / 2,
+                  textAlign: "center",
+                  backgroundColor: c.background,
+                },
+              ]}
             />
           </View>
         ) : null}
@@ -239,8 +249,8 @@ export default function PicklijstDetailScherm() {
     picklijst?.status === "voltooid" ||
     picklijst?.status === "deels_voltooid" ||
     picklijst?.status === "geannuleerd";
-  const statusLabel = picklijst ? (STATUS_LABELS[picklijst.status] ?? picklijst.status) : "";
-  const statusKleur = picklijst ? (STATUS_KLEUREN[picklijst.status] ?? "#6b7280") : "#6b7280";
+  const statusLabel = picklijst ? (STATUS_LABELS[picklijst.status] ?? netteWaarde(picklijst.status)) : "";
+  const statusSoort = picklijst ? (STATUS_SOORT[picklijst.status] ?? "neutraal") : "neutraal";
 
   const alleAangevinkt = picklijst?.regels?.every((r) => {
     const s = regelStaten.get(r.id);
@@ -321,25 +331,16 @@ export default function PicklijstDetailScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ paddingTop: bovenInset(insets), paddingHorizontal: 16, paddingBottom: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 4 }}>
+      <View style={{ paddingTop: bovenInset(insets), paddingHorizontal: ruimte.l, paddingBottom: ruimte.m }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s + 2, paddingTop: ruimte.xs }}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color={c.text} />
+            <Ionicons name="arrow-back" size={ruimte.xl} color={c.foreground} />
           </Pressable>
-          <Text style={{ color: c.text, fontSize: 18, fontWeight: "700", flex: 1 }} numberOfLines={1}>
+          <Text style={[tekstStijl("sectiekop", c.foreground), { flex: 1 }]} numberOfLines={1}>
             {picklijst?.opdracht_titel ?? (isLoading ? "Laden..." : `Picklijst #${picklijstId}`)}
           </Text>
           {picklijst ? (
-            <View style={{
-              backgroundColor: statusKleur + "22",
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-            }}>
-              <Text style={{ color: statusKleur, fontSize: 12, fontWeight: "600" }}>
-                {statusLabel}
-              </Text>
-            </View>
+            <Statusmerk label={statusLabel} soort={statusSoort} />
           ) : null}
         </View>
       </View>
@@ -347,30 +348,21 @@ export default function PicklijstDetailScherm() {
       <OfflineBanner stijl="compact" />
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#f97316" />
+        <View style={{ flex: 1, padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : !picklijst ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 15 }}>Picklijst niet gevonden</Text>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xxl }}>
+          <Text style={tekstStijl("standaard", c.mutedForeground)}>Picklijst niet gevonden</Text>
         </View>
       ) : (
         <>
           <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 120 + insets.bottom }}
+            contentContainerStyle={{ padding: ruimte.l, paddingBottom: ruimte.xxl * 3 + insets.bottom }}
           >
             {picklijst.notities ? (
-              <View style={{
-                backgroundColor: "#f59e0b22",
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 14,
-                flexDirection: "row",
-                gap: 8,
-                alignItems: "flex-start",
-              }}>
-                <Ionicons name="information-circle-outline" size={16} color="#f59e0b" style={{ marginTop: 1 }} />
-                <Text style={{ color: c.text, fontSize: 13, flex: 1 }}>{picklijst.notities}</Text>
+              <View style={{ marginBottom: ruimte.m + 2 }}>
+                <Waarschuwvlak tekst={picklijst.notities} soort="info" />
               </View>
             ) : null}
 
@@ -378,14 +370,14 @@ export default function PicklijstDetailScherm() {
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 12,
+              marginBottom: ruimte.m,
             }}>
-              <Text style={{ color: c.text, fontWeight: "700", fontSize: 15 }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Artikelen ({aantalGepickt}/{totaalRegels} gepickt)
               </Text>
               {!gesloten && totaalRegels > 0 && (
                 <Pressable onPress={allesAanvinken} hitSlop={8}>
-                  <Text style={{ color: "#f97316", fontSize: 13, fontWeight: "600" }}>
+                  <Text style={tekstStijl("nadruk", c.primary)}>
                     Alles aanvinken
                   </Text>
                 </Pressable>
@@ -407,8 +399,8 @@ export default function PicklijstDetailScherm() {
                 />
               ))
             ) : (
-              <View style={{ alignItems: "center", padding: 24 }}>
-                <Text style={{ color: c.mutedForeground, fontSize: 14 }}>Geen artikelen op deze picklijst</Text>
+              <View style={{ alignItems: "center", padding: ruimte.xl }}>
+                <Text style={tekstStijl("standaard", c.mutedForeground)}>Geen artikelen op deze picklijst</Text>
               </View>
             )}
           </ScrollView>
@@ -422,23 +414,12 @@ export default function PicklijstDetailScherm() {
               backgroundColor: c.background,
               borderTopWidth: 1,
               borderTopColor: c.border,
-              padding: 16,
-              paddingBottom: insets.bottom + 16,
+              padding: ruimte.l,
+              paddingBottom: insets.bottom + ruimte.l,
             }}>
               {!isOnline && (
-                <View style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  backgroundColor: "#f59e0b22",
-                  borderRadius: 8,
-                  padding: 10,
-                  marginBottom: 12,
-                }}>
-                  <Ionicons name="cloud-offline-outline" size={15} color="#f59e0b" />
-                  <Text style={{ color: "#f59e0b", fontSize: 13, flex: 1 }}>
-                    Offline — wijzigingen worden later verstuurd
-                  </Text>
+                <View style={{ marginBottom: ruimte.m }}>
+                  <Waarschuwvlak tekst="Offline — wijzigingen worden later verstuurd" />
                 </View>
               )}
               <Pressable
@@ -447,24 +428,23 @@ export default function PicklijstDetailScherm() {
                 style={({ pressed }) => ({
                   backgroundColor:
                     bezigVerwerken || aantalTeVerwerken === 0
-                      ? "#6b7280"
-                      : pressed
-                        ? "#ea580c"
-                        : "#f97316",
-                  borderRadius: 12,
-                  padding: 16,
+                      ? c.muted
+                      : c.primary,
+                  opacity: pressed && !(bezigVerwerken || aantalTeVerwerken === 0) ? 0.85 : 1,
+                  borderRadius: c.radius,
+                  padding: ruimte.l,
                   alignItems: "center",
                   flexDirection: "row",
                   justifyContent: "center",
-                  gap: 8,
+                  gap: ruimte.s,
                 })}
               >
                 {bezigVerwerken ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={c.primaryForeground} size="small" />
                 ) : (
-                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Ionicons name="checkmark-circle" size={ruimte.xl} color={c.primaryForeground} />
                 )}
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+                <Text style={tekstStijl("sectiekop", c.primaryForeground)}>
                   {bezigVerwerken
                     ? "Bezig..."
                     : `Verwerk ${aantalTeVerwerken} artikel${aantalTeVerwerken !== 1 ? "en" : ""}`}

@@ -27,6 +27,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { onderInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 
+// Bewuste, beeldbepalende merkkleuren van de radiaalknop: het oranje verloop en
+// de glasachtige wit/zwart-transparanties zijn de visuele identiteit van dit
+// menu (VORM_01). Deze blijven bewust letterlijk; gewone UI-kleuren (tekst,
+// backdrop, badge) lopen wel via het palet.
+const RADIAAL_VERLOOP = ["#FF6530", "#E02800"] as const;
+
 export type RadiaalActie = {
   sleutel: string;
   label: string;
@@ -177,7 +183,7 @@ function RadiaalItem({
                     borderColor: c.card,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                  <Text style={{ color: c.primaryForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
                     {(actie.badge ?? 0) > 9 ? "9+" : actie.badge}
                   </Text>
                 </View>
@@ -307,7 +313,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
     >
       <Animated.View
         pointerEvents={open ? "auto" : "none"}
-        style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }, backdropStijl]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: c.dark }, backdropStijl]}
       >
         <Pressable style={{ flex: 1 }} onPress={sluiten} accessibilityLabel="Menu sluiten" />
       </Animated.View>
@@ -374,7 +380,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                 })}
               >
                 <LinearGradient
-                  colors={["#FF6530", "#E02800"]}
+                  colors={RADIAAL_VERLOOP}
                   start={{ x: 0.25, y: 0 }}
                   end={{ x: 0.75, y: 1 }}
                   style={{
@@ -429,7 +435,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                   />
                   <Text
                     style={{
-                      color: "#FFFFFF",
+                      color: c.primaryForeground,
                       fontFamily: "Inter_700Bold",
                       fontSize: 30,
                       letterSpacing: 1,
@@ -445,7 +451,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                       <Ionicons name="chevron-up" size={18} color="rgba(255,255,255,0.92)" />
                     </Animated.View>
                     <Animated.View style={[{ position: "absolute", alignSelf: "center" }, vinkStijl]}>
-                      <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                      <Ionicons name="checkmark" size={20} color={c.primaryForeground} />
                     </Animated.View>
                   </View>
                 </LinearGradient>
@@ -575,7 +581,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                                 borderColor: c.dark,
                               }}
                             >
-                              <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>
+                              <Text style={{ color: c.primaryForeground, fontSize: 10, fontFamily: "Inter_700Bold" }}>
                                 {(actie.badge ?? 0) > 9 ? "9+" : actie.badge}
                               </Text>
                             </View>

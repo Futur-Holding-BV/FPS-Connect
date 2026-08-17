@@ -2,26 +2,28 @@ import { API_DOMEIN } from "@/lib/apiDomein";
 import { useListLabels } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
+import { FlatList, Image, Linking, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { ChipRij, TekstVeld, bovenInset, onderInset } from "@/components/ui";
+import { ChipRij, Ladenstaat, LegeStaat, TekstVeld, tekstStijl, bovenInset, onderInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
 const DOMEIN = API_DOMEIN;
 
 function Badge({ tekst, kleur, achtergrond }: { tekst: string; kleur: string; achtergrond: string }) {
+  const c = useColors();
   return (
     <View
       style={{
         backgroundColor: achtergrond,
-        borderRadius: 7,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
+        borderRadius: c.radius / 2,
+        paddingHorizontal: ruimte.s,
+        paddingVertical: ruimte.xs - 1,
       }}
     >
-      <Text style={{ color: kleur, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{tekst}</Text>
+      <Text style={tekstStijl("bijschrift", kleur)}>{tekst}</Text>
     </View>
   );
 }
@@ -72,32 +74,27 @@ export default function FabrikantenScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+          <Text style={tekstStijl("nadruk", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("schermtitel", c.darkForeground)}>
           Fabrikanten
         </Text>
         <Text
-          style={{
-            color: c.darkMuted,
-            fontSize: 14,
-            marginTop: 4,
-            fontFamily: "Inter_400Regular",
-          }}
+          style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}
         >
           Productselectie en testnormen
         </Text>
       </View>
 
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 12 }}>
+      <View style={{ paddingHorizontal: ruimte.l, paddingTop: ruimte.m + 2, gap: ruimte.m }}>
         <TekstVeld
           label="Zoeken"
           value={zoek}
@@ -113,35 +110,25 @@ export default function FabrikantenScherm() {
       </View>
 
       {bezig ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : (
         <FlatList
           data={producten}
           keyExtractor={(l) => String(l.id)}
           contentContainerStyle={{
-            padding: 16,
-            paddingBottom: onderInset(insets) + 24,
-            gap: 10,
+            padding: ruimte.l,
+            paddingBottom: onderInset(insets) + ruimte.xl,
+            gap: ruimte.s + 2,
           }}
           scrollEnabled={producten.length > 0}
           ListEmptyComponent={
-            <View style={{ alignItems: "center", paddingVertical: 48, gap: 8 }}>
-              <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
-                Geen producten gevonden
-              </Text>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontSize: 14,
-                  fontFamily: "Inter_400Regular",
-                  textAlign: "center",
-                }}
-              >
-                Pas de zoekopdracht of het fabrikantenfilter aan.
-              </Text>
-            </View>
+            <LegeStaat
+              icoon="cube-outline"
+              titel="Geen producten gevonden"
+              beschrijving="Pas de zoekopdracht of het fabrikantenfilter aan."
+            />
           }
           renderItem={({ item }) => (
             <View
@@ -150,11 +137,11 @@ export default function FabrikantenScherm() {
                 borderRadius: c.radius,
                 borderWidth: 1,
                 borderColor: c.border,
-                padding: 16,
-                gap: 10,
+                padding: ruimte.l,
+                gap: ruimte.s + 2,
               }}
             >
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flexDirection: "row", gap: ruimte.m }}>
                 {item.product_foto_url && item.product_foto_geverifieerd ? (
                   <Image
                     source={{
@@ -162,34 +149,30 @@ export default function FabrikantenScherm() {
                       headers: { Authorization: `Bearer ${token}` },
                     }}
                     style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 8,
+                      width: ruimte.xxl + ruimte.xl,
+                      height: ruimte.xxl + ruimte.xl,
+                      borderRadius: c.radius / 2,
                       backgroundColor: c.secondary,
                     }}
                     resizeMode="cover"
                   />
                 ) : null}
-                <View style={{ flex: 1, gap: 4 }}>
+                <View style={{ flex: 1, gap: ruimte.xs }}>
                   <Text
-                    style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}
+                    style={tekstStijl("nadruk", c.foreground)}
                   >
                     {item.naam}
                   </Text>
                   {item.fabrikant ? (
                     <Text
-                      style={{
-                        color: c.mutedForeground,
-                        fontSize: 14,
-                        fontFamily: "Inter_400Regular",
-                      }}
+                      style={tekstStijl("standaard", c.mutedForeground)}
                     >
                       {item.fabrikant}
                     </Text>
                   ) : null}
                 </View>
               </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s }}>
                 {item.type_code ? (
                   <Badge tekst={item.type_code} kleur={c.accentForeground} achtergrond={c.accent} />
                 ) : null}
@@ -210,14 +193,10 @@ export default function FabrikantenScherm() {
                     Linking.openURL(adres).catch(() => {});
                   }}
                   hitSlop={8}
-                  style={{ flexDirection: "row", alignItems: "center", paddingTop: 2 }}
+                  style={{ flexDirection: "row", alignItems: "center", paddingTop: ruimte.xs / 2 }}
                 >
                   <Text
-                    style={{
-                      color: c.primary,
-                      fontSize: 14,
-                      fontFamily: "Inter_600SemiBold",
-                    }}
+                    style={tekstStijl("standaard", c.primary)}
                   >
                     Website leverancier ›
                   </Text>

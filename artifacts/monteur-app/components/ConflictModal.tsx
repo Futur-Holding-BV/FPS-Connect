@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import React from "react";
 import {
   Modal,
@@ -79,15 +80,15 @@ export function ConflictModal({
       <View
         style={{
           flex: 1,
-          backgroundColor: "rgba(0,0,0,0.6)",
+          backgroundColor: c.dark + "99",
           justifyContent: "flex-end",
         }}
       >
         <View
           style={{
             backgroundColor: c.card,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            borderTopLeftRadius: c.radius + ruimte.xs,
+            borderTopRightRadius: c.radius + ruimte.xs,
             maxHeight: "80%",
           }}
         >
@@ -97,25 +98,25 @@ export function ConflictModal({
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              paddingHorizontal: 20,
-              paddingTop: 20,
-              paddingBottom: 12,
+              paddingHorizontal: ruimte.l + ruimte.xs,
+              paddingTop: ruimte.l + ruimte.xs,
+              paddingBottom: ruimte.m,
               borderBottomWidth: 1,
               borderBottomColor: c.border,
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s + 2 }}>
               <View
                 style={{
                   width: 32,
                   height: 32,
-                  borderRadius: 8,
-                  backgroundColor: "rgba(239,68,68,0.12)",
+                  borderRadius: c.radius / 2,
+                  backgroundColor: c.destructive + "1F",
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
-                <Ionicons name="warning-outline" size={16} color="#f87171" />
+                <Ionicons name="warning-outline" size={16} color={c.destructive} />
               </View>
               <View>
                 <Text
@@ -147,7 +148,7 @@ export function ConflictModal({
 
           {/* Lijst mislukte items */}
           <ScrollView
-            contentContainerStyle={{ padding: 16, gap: 10 }}
+            contentContainerStyle={{ padding: ruimte.l, gap: ruimte.s + 2 }}
             showsVerticalScrollIndicator={false}
           >
             {mislukteItems.map((item) => (
@@ -155,31 +156,31 @@ export function ConflictModal({
                 key={item.id}
                 style={{
                   backgroundColor: c.background,
-                  borderRadius: 10,
+                  borderRadius: c.radius,
                   borderWidth: 1,
-                  borderColor: "rgba(239,68,68,0.2)",
-                  padding: 14,
+                  borderColor: c.destructive + "33",
+                  padding: ruimte.m + 2,
                 }}
               >
                 <View
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 8,
-                    marginBottom: 6,
+                    gap: ruimte.s,
+                    marginBottom: ruimte.xs + 2,
                   }}
                 >
                   <View
                     style={{
-                      backgroundColor: "rgba(239,68,68,0.1)",
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 6,
+                      backgroundColor: c.destructive + "1A",
+                      paddingHorizontal: ruimte.s,
+                      paddingVertical: ruimte.xs - 1,
+                      borderRadius: c.radius / 2,
                     }}
                   >
                     <Text
                       style={{
-                        color: "#f87171",
+                        color: c.destructive,
                         fontSize: 11,
                         fontFamily: "Inter_600SemiBold",
                       }}
@@ -203,7 +204,7 @@ export function ConflictModal({
                     color: c.foreground,
                     fontSize: 13,
                     fontFamily: "Inter_500Medium",
-                    marginBottom: 4,
+                    marginBottom: ruimte.xs,
                   }}
                 >
                   {actieOmschrijving(item)}
@@ -212,7 +213,7 @@ export function ConflictModal({
                 {item.fout ? (
                   <Text
                     style={{
-                      color: "#f87171",
+                      color: c.destructive,
                       fontSize: 11,
                       fontFamily: "Inter_400Regular",
                     }}
@@ -227,7 +228,7 @@ export function ConflictModal({
                     color: c.mutedForeground,
                     fontSize: 10,
                     fontFamily: "Inter_400Regular",
-                    marginTop: 4,
+                    marginTop: ruimte.xs,
                   }}
                 >
                   Aangemaakt:{" "}
@@ -235,25 +236,25 @@ export function ConflictModal({
                 </Text>
 
                 {(onHerprobeeerItem || onVerwijderItem) ? (
-                  <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                  <View style={{ flexDirection: "row", gap: ruimte.s, marginTop: 10 }}>
                     {onHerprobeeerItem ? (
                       <Pressable
                         onPress={() => onHerprobeeerItem(item.id)}
                         style={({ pressed }) => ({
                           flex: 1,
                           backgroundColor: pressed
-                            ? "rgba(242,59,13,0.2)"
-                            : "rgba(242,59,13,0.1)",
-                          borderRadius: 7,
-                          paddingVertical: 7,
+                            ? c.primary + "33"
+                            : c.primary + "1A",
+                          borderRadius: c.radius / 2,
+                          paddingVertical: ruimte.xs + 3,
                           alignItems: "center",
                           borderWidth: 1,
-                          borderColor: "rgba(242,59,13,0.3)",
+                          borderColor: c.primary + "4D",
                         })}
                       >
                         <Text
                           style={{
-                            color: "#F23B0D",
+                            color: c.primary,
                             fontSize: 12,
                             fontFamily: "Inter_600SemiBold",
                           }}
@@ -268,18 +269,18 @@ export function ConflictModal({
                         style={({ pressed }) => ({
                           flex: 1,
                           backgroundColor: pressed
-                            ? "rgba(239,68,68,0.15)"
+                            ? c.destructive + "26"
                             : "transparent",
-                          borderRadius: 7,
-                          paddingVertical: 7,
+                          borderRadius: c.radius / 2,
+                          paddingVertical: ruimte.xs + 3,
                           alignItems: "center",
                           borderWidth: 1,
-                          borderColor: "rgba(239,68,68,0.3)",
+                          borderColor: c.destructive + "4D",
                         })}
                       >
                         <Text
                           style={{
-                            color: "#f87171",
+                            color: c.destructive,
                             fontSize: 12,
                             fontFamily: "Inter_600SemiBold",
                           }}
@@ -297,8 +298,8 @@ export function ConflictModal({
           {/* Acties */}
           <View
             style={{
-              padding: 16,
-              gap: 10,
+              padding: ruimte.l,
+              gap: ruimte.s + 2,
               borderTopWidth: 1,
               borderTopColor: c.border,
             }}
@@ -306,14 +307,14 @@ export function ConflictModal({
             <Pressable
               onPress={onHerprobeer}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? "#d63510" : c.primary,
-                borderRadius: 10,
-                paddingVertical: 13,
+                backgroundColor: c.primary, opacity: pressed ? 0.85 : 1,
+                borderRadius: c.radius,
+                paddingVertical: ruimte.m + 1,
                 alignItems: "center",
               })}
             >
               <Text
-                style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}
+                style={{ color: c.primaryForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}
               >
                 Alles opnieuw proberen
               </Text>
@@ -322,16 +323,16 @@ export function ConflictModal({
               onPress={onWisMislukte}
               style={({ pressed }) => ({
                 backgroundColor: pressed ? c.muted : "transparent",
-                borderRadius: 10,
-                paddingVertical: 12,
+                borderRadius: c.radius,
+                paddingVertical: ruimte.m,
                 alignItems: "center",
                 borderWidth: 1,
-                borderColor: "#f87171",
+                borderColor: c.destructive,
               })}
             >
               <Text
                 style={{
-                  color: "#f87171",
+                  color: c.destructive,
                   fontFamily: "Inter_600SemiBold",
                   fontSize: 14,
                 }}
@@ -339,7 +340,7 @@ export function ConflictModal({
                 Alle mislukte items verwijderen
               </Text>
             </Pressable>
-            <Pressable onPress={onSluit} style={{ alignItems: "center", paddingVertical: 8 }}>
+            <Pressable onPress={onSluit} style={{ alignItems: "center", paddingVertical: ruimte.s }}>
               <Text
                 style={{
                   color: c.mutedForeground,

@@ -9,7 +9,13 @@ import {
   View,
 } from "react-native";
 import type { Achievement } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 
+import { useColors } from "@/hooks/useColors";
+
+// Bewuste feestkleuren: rang-/medaillekleuren en de confetti-sterren zijn
+// beeldbepalend voor de viering (VORM_01). Deze blijven bewust letterlijk;
+// gewone UI-kleuren (overlay, tekst) lopen via het palet.
 function achievementKleur(beloning: string): string {
   if (beloning.includes("Legende")) return "#F23B0D";
   if (beloning.includes("Diamanten")) return "#4FC3F7";
@@ -147,6 +153,7 @@ export function AchievementCelebration({
   naam: string;
   onDismiss: () => void;
 }) {
+  const c = useColors();
   const kleur = achievementKleur(achievement.beloning);
 
   const textOpacity = useRef(new Animated.Value(0)).current;
@@ -188,7 +195,7 @@ export function AchievementCelebration({
 
   return (
     <Modal transparent animationType="none" onRequestClose={onDismiss}>
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+      <Animated.View style={[styles.overlay, { backgroundColor: c.dark + "EB", opacity: overlayOpacity }]}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -203,8 +210,8 @@ export function AchievementCelebration({
           <Animated.View
             style={{ opacity: textOpacity, transform: [{ translateY: textY }] }}
           >
-            <Text style={styles.felicitatie}>Gefeliciteerd {naam}!</Text>
-            <Text style={styles.subTekst}>Je hebt zojuist je</Text>
+            <Text style={[styles.felicitatie, { color: c.darkForeground }]}>Gefeliciteerd {naam}!</Text>
+            <Text style={[styles.subTekst, { color: c.darkMuted }]}>Je hebt zojuist je</Text>
           </Animated.View>
 
           <MedailleIcoon beloning={achievement.beloning} kleur={kleur} />
@@ -219,8 +226,8 @@ export function AchievementCelebration({
               {mijlpaalTekst} Spot geplaatst
             </Text>
 
-            <View style={[styles.rangBadge, { borderColor: kleur }]}>
-              <Text style={styles.rangLabel}>Nieuwe rang</Text>
+            <View style={[styles.rangBadge, { borderColor: kleur, backgroundColor: c.darkForeground + "0A" }]}>
+              <Text style={[styles.rangLabel, { color: c.darkMuted }]}>Nieuwe rang</Text>
               <Text style={[styles.rangNaam, { color: kleur }]}>
                 {achievement.rang}
               </Text>
@@ -229,7 +236,7 @@ export function AchievementCelebration({
               </Text>
             </View>
 
-            <Text style={styles.volgende}>Op naar de volgende mijlpaal!</Text>
+            <Text style={[styles.volgende, { color: c.darkMuted }]}>Op naar de volgende mijlpaal!</Text>
           </Animated.View>
         </View>
       </Animated.View>
@@ -240,7 +247,6 @@ export function AchievementCelebration({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 18, 26, 0.92)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -254,46 +260,42 @@ const styles = StyleSheet.create({
   },
   inhoud: {
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: ruimte.xxl,
   },
   felicitatie: {
-    color: "#ffffff",
     fontSize: 22,
     fontFamily: "Inter_700Bold",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: ruimte.xs + 2,
   },
   subTekst: {
-    color: "#9ca3af",
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: ruimte.xl,
   },
   tekstBlok: {
     alignItems: "center",
-    marginTop: 20,
+    marginTop: ruimte.l + ruimte.xs,
   },
   mijlpaal: {
     fontSize: 26,
     fontFamily: "Inter_700Bold",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: ruimte.l + ruimte.xs,
   },
   rangBadge: {
     borderWidth: 1.5,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    borderRadius: ruimte.l,
+    paddingVertical: ruimte.l,
+    paddingHorizontal: ruimte.xxl,
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    marginBottom: 20,
+    marginBottom: ruimte.l + ruimte.xs,
   },
   rangLabel: {
-    color: "#9ca3af",
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    marginBottom: 4,
+    marginBottom: ruimte.xs,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
@@ -305,10 +307,9 @@ const styles = StyleSheet.create({
   beloningTekst: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    marginTop: 4,
+    marginTop: ruimte.xs,
   },
   volgende: {
-    color: "#6b7280",
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: ruimte.s,
   },
   medailleTekst: {
     fontSize: 32,

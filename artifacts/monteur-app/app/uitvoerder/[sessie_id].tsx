@@ -20,6 +20,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ruimte } from "@workspace/ontwerp";
+
+import { Kaart, Ladenstaat, Statusmerk, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { uploadFoto } from "@/lib/upload";
@@ -233,26 +236,26 @@ export default function UitvoerderScherm() {
     return (
       <View
         style={{
-          marginHorizontal: 16,
-          marginBottom: 12,
+          marginHorizontal: ruimte.l,
+          marginBottom: ruimte.m,
           alignItems: isMonteur ? "flex-end" : "flex-start",
         }}
       >
         {!isMonteur && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs, marginBottom: ruimte.xs }}>
             <View
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
+                width: ruimte.l + ruimte.xs,
+                height: ruimte.l + ruimte.xs,
+                borderRadius: (ruimte.l + ruimte.xs) / 2,
                 backgroundColor: c.primary,
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Ionicons name="sparkles" size={11} color="#fff" />
+              <Ionicons name="sparkles" size={11} color={c.primaryForeground} />
             </View>
-            <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: c.mutedForeground }}>
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
               Digitale Uitvoerder
             </Text>
           </View>
@@ -261,10 +264,10 @@ export default function UitvoerderScherm() {
           style={{
             maxWidth: "82%",
             backgroundColor: isMonteur ? c.primary : c.card,
-            borderRadius: 14,
-            borderBottomRightRadius: isMonteur ? 4 : 14,
-            borderBottomLeftRadius: isMonteur ? 14 : 4,
-            padding: 12,
+            borderRadius: c.radius,
+            borderBottomRightRadius: isMonteur ? ruimte.xs : c.radius,
+            borderBottomLeftRadius: isMonteur ? c.radius : ruimte.xs,
+            padding: ruimte.m,
             borderWidth: isMonteur ? 0 : 1,
             borderColor: c.border,
           }}
@@ -272,22 +275,20 @@ export default function UitvoerderScherm() {
           {item.foto_pad && (
             <Image
               source={{ uri: `https://${DOMEIN}/api/storage/object?path=${encodeURIComponent(item.foto_pad)}` }}
-              style={{ width: 200, height: 150, borderRadius: 8, marginBottom: 8 }}
+              style={{ width: 200, height: 150, borderRadius: c.radius / 2, marginBottom: ruimte.s, backgroundColor: c.muted }}
               resizeMode="cover"
             />
           )}
           <Text
-            style={{
-              color: isMonteur ? "#fff" : c.foreground,
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              lineHeight: 20,
-            }}
+            style={[
+              tekstStijl("standaard", isMonteur ? c.primaryForeground : c.foreground),
+              { lineHeight: 20 },
+            ]}
           >
             {item.inhoud}
           </Text>
         </View>
-        <Text style={{ fontSize: 10, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+        <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: 2 }]}>
           {new Date(item.aangemaakt_op).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
         </Text>
       </View>
@@ -296,8 +297,8 @@ export default function UitvoerderScherm() {
 
   if (laden) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color={c.primary} />
+      <View style={{ flex: 1, backgroundColor: c.background, padding: ruimte.l }}>
+        <Ladenstaat regels={4} />
       </View>
     );
   }
@@ -311,15 +312,15 @@ export default function UitvoerderScherm() {
       {/* Header */}
       <View
         style={{
-          paddingTop: insets.top + 12,
-          paddingBottom: 12,
-          paddingHorizontal: 16,
+          paddingTop: insets.top + ruimte.m,
+          paddingBottom: ruimte.m,
+          paddingHorizontal: ruimte.l,
           backgroundColor: c.card,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
         <Pressable onPress={() => router.back()}>
@@ -327,37 +328,28 @@ export default function UitvoerderScherm() {
         </Pressable>
         <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            width: ruimte.xxl + ruimte.xs,
+            height: ruimte.xxl + ruimte.xs,
+            borderRadius: (ruimte.xxl + ruimte.xs) / 2,
             backgroundColor: c.primary,
             justifyContent: "center",
             alignItems: "center",
           }}
         >
-          <Ionicons name="sparkles" size={18} color="#fff" />
+          <Ionicons name="sparkles" size={18} color={c.primaryForeground} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>
+          <Text style={tekstStijl("nadruk", c.foreground)}>
             Digitale Uitvoerder
           </Text>
           {(titel || werknummer) && (
-            <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("klein", c.mutedForeground)}>
               {[werknummer, titel].filter(Boolean).join(" — ")}
             </Text>
           )}
         </View>
         {isBevestigd && (
-          <View
-            style={{
-              backgroundColor: "#16a34a22",
-              borderRadius: 8,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-            }}
-          >
-            <Text style={{ fontSize: 11, color: "#16a34a", fontFamily: "Inter_600SemiBold" }}>Vastgelegd</Text>
-          </View>
+          <Statusmerk label="Vastgelegd" soort="succes" />
         )}
       </View>
 
@@ -365,21 +357,21 @@ export default function UitvoerderScherm() {
       {isBevestigd && sessie?.gekozen_aanpak && (
         <View
           style={{
-            margin: 12,
-            padding: 12,
-            backgroundColor: "#16a34a11",
-            borderRadius: 10,
+            margin: ruimte.m,
+            padding: ruimte.m,
+            backgroundColor: c.secondary,
+            borderRadius: c.radius,
             borderWidth: 1,
-            borderColor: "#16a34a44",
+            borderColor: c.success,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#16a34a" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2, marginBottom: ruimte.xs }}>
+            <Ionicons name="checkmark-circle" size={ruimte.l} color={c.success} />
+            <Text style={tekstStijl("klein", c.success)}>
               Vastgelegde aanpak
             </Text>
           </View>
-          <Text style={{ fontSize: 13, color: c.foreground, fontFamily: "Inter_400Regular", lineHeight: 18 }}>
+          <Text style={tekstStijl("klein", c.foreground)}>
             {sessie.gekozen_aanpak}
           </Text>
         </View>
@@ -387,39 +379,28 @@ export default function UitvoerderScherm() {
 
       {/* Welkomstbericht als nog geen berichten */}
       {berichten.length === 0 && (
-        <View
-          style={{
-            margin: 16,
-            padding: 16,
-            backgroundColor: c.card,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: c.border,
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <Kaart stijl={{ margin: ruimte.l, alignItems: "center", gap: ruimte.s }}>
           <View
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: `${c.primary}22`,
+              width: ruimte.xxl + ruimte.l,
+              height: ruimte.xxl + ruimte.l,
+              borderRadius: (ruimte.xxl + ruimte.l) / 2,
+              backgroundColor: c.accent,
               justifyContent: "center",
               alignItems: "center",
             }}
           >
-            <Ionicons name="sparkles" size={24} color={c.primary} />
+            <Ionicons name="sparkles" size={ruimte.xl} color={c.primary} />
           </View>
-          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground, textAlign: "center" }}>
+          <Text style={[tekstStijl("nadruk", c.foreground), { textAlign: "center" }]}>
             Digitale Uitvoerder
           </Text>
           <Text
-            style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 }}
+            style={[tekstStijl("klein", c.mutedForeground), { textAlign: "center" }]}
           >
             Stel een vraag of maak een foto. De uitvoerder denkt mee over de aanpak, controleert de norm en geeft praktisch advies.
           </Text>
-        </View>
+        </Kaart>
       )}
 
       {/* Berichtenlijst */}
@@ -434,20 +415,11 @@ export default function UitvoerderScherm() {
 
       {/* Bevestig-aanpak panel */}
       {toonBevestig && (
-        <View
-          style={{
-            margin: 12,
-            padding: 14,
-            backgroundColor: c.card,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: c.border,
-          }}
-        >
-          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 6 }}>
+        <Kaart stijl={{ margin: ruimte.m, padding: ruimte.m + 2 }}>
+          <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold", marginBottom: ruimte.xs + 2 }]}>
             Aanpak vastleggen
           </Text>
-          <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+          <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.s }]}>
             Beschrijf de gekozen aanpak. Dit wordt vastgelegd in het logboek en gedeeld met de projectleider.
           </Text>
           <TextInput
@@ -461,79 +433,79 @@ export default function UitvoerderScherm() {
               backgroundColor: c.background,
               borderWidth: 1,
               borderColor: c.border,
-              borderRadius: 8,
-              padding: 10,
+              borderRadius: c.radius / 2,
+              padding: ruimte.s + 2,
               color: c.foreground,
               fontFamily: "Inter_400Regular",
               fontSize: 13,
               minHeight: 80,
               textAlignVertical: "top",
-              marginBottom: 10,
+              marginBottom: ruimte.s + 2,
             }}
           />
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", gap: ruimte.s }}>
             <Pressable
               onPress={() => setToonBevestig(false)}
               style={{
                 flex: 1,
-                padding: 10,
-                borderRadius: 8,
+                padding: ruimte.s + 2,
+                borderRadius: c.radius / 2,
                 backgroundColor: c.muted,
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_500Medium" }}>Annuleer</Text>
+              <Text style={tekstStijl("klein", c.foreground)}>Annuleer</Text>
             </Pressable>
             <Pressable
               onPress={bevestigAanpak}
               disabled={bevestigen}
               style={{
                 flex: 2,
-                padding: 10,
-                borderRadius: 8,
-                backgroundColor: "#16a34a",
+                padding: ruimte.s + 2,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.success,
                 alignItems: "center",
                 flexDirection: "row",
                 justifyContent: "center",
-                gap: 6,
+                gap: ruimte.xs + 2,
                 opacity: bevestigen ? 0.6 : 1,
               }}
             >
               {bevestigen ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={c.primaryForeground} />
               ) : (
-                <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                <Ionicons name="checkmark-circle" size={ruimte.l} color={c.primaryForeground} />
               )}
-              <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("klein", c.primaryForeground)}>
                 {bevestigen ? "Vastleggen..." : "Vastleggen"}
               </Text>
             </Pressable>
           </View>
-        </View>
+        </Kaart>
       )}
 
       {/* Foto preview */}
       {foto && (
         <View
           style={{
-            marginHorizontal: 16,
-            marginBottom: 8,
+            marginHorizontal: ruimte.l,
+            marginBottom: ruimte.s,
             flexDirection: "row",
             alignItems: "center",
-            gap: 8,
+            gap: ruimte.s,
           }}
         >
           <Image
             source={{ uri: foto.uri }}
-            style={{ width: 56, height: 56, borderRadius: 8 }}
+            style={{ width: ruimte.xxl + ruimte.xl, height: ruimte.xxl + ruimte.xl, borderRadius: c.radius / 2, backgroundColor: c.muted }}
             resizeMode="cover"
           />
           {fotoUploaden && <ActivityIndicator size="small" color={c.primary} />}
           {!fotoUploaden && foto.pad && (
-            <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+            <Ionicons name="checkmark-circle" size={18} color={c.success} />
           )}
           <Pressable onPress={() => setFoto(null)} style={{ marginLeft: "auto" }}>
-            <Ionicons name="close-circle" size={20} color={c.mutedForeground} />
+            <Ionicons name="close-circle" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
         </View>
       )}
@@ -542,9 +514,9 @@ export default function UitvoerderScherm() {
       {!isBevestigd && (
         <View
           style={{
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            paddingBottom: insets.bottom + 10,
+            paddingHorizontal: ruimte.m,
+            paddingVertical: ruimte.s + 2,
+            paddingBottom: insets.bottom + ruimte.s + 2,
             backgroundColor: c.card,
             borderTopWidth: 1,
             borderTopColor: c.border,
@@ -558,31 +530,31 @@ export default function UitvoerderScherm() {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 6,
-                backgroundColor: "#16a34a11",
+                gap: ruimte.xs + 2,
+                backgroundColor: c.secondary,
                 borderWidth: 1,
-                borderColor: "#16a34a44",
-                borderRadius: 8,
-                paddingVertical: 8,
-                marginBottom: 8,
+                borderColor: c.success,
+                borderRadius: c.radius / 2,
+                paddingVertical: ruimte.s,
+                marginBottom: ruimte.s,
               }}
             >
-              <Ionicons name="checkmark-circle-outline" size={16} color="#16a34a" />
-              <Text style={{ fontSize: 13, color: "#16a34a", fontFamily: "Inter_600SemiBold" }}>
+              <Ionicons name="checkmark-circle-outline" size={ruimte.l} color={c.success} />
+              <Text style={tekstStijl("klein", c.success)}>
                 Aanpak vastleggen
               </Text>
             </Pressable>
           )}
 
-          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: ruimte.s }}>
             {/* Foto-knoppen */}
-            <View style={{ flexDirection: "column", gap: 4 }}>
+            <View style={{ flexDirection: "column", gap: ruimte.xs }}>
               <Pressable
                 onPress={maakFoto}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
+                  width: ruimte.xxl + ruimte.xs,
+                  height: ruimte.xxl + ruimte.xs,
+                  borderRadius: c.radius / 2,
                   backgroundColor: c.muted,
                   justifyContent: "center",
                   alignItems: "center",
@@ -593,9 +565,9 @@ export default function UitvoerderScherm() {
               <Pressable
                 onPress={kiesFoto}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
+                  width: ruimte.xxl + ruimte.xs,
+                  height: ruimte.xxl + ruimte.xs,
+                  borderRadius: c.radius / 2,
                   backgroundColor: c.muted,
                   justifyContent: "center",
                   alignItems: "center",
@@ -617,9 +589,9 @@ export default function UitvoerderScherm() {
                 backgroundColor: c.background,
                 borderWidth: 1,
                 borderColor: c.border,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
+                borderRadius: c.radius / 2,
+                paddingHorizontal: ruimte.m,
+                paddingVertical: ruimte.s,
                 color: c.foreground,
                 fontFamily: "Inter_400Regular",
                 fontSize: 14,
@@ -633,9 +605,9 @@ export default function UitvoerderScherm() {
               onPress={verstuur}
               disabled={verzenden || fotoUploaden || (!tekst.trim() && !foto?.pad)}
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: ruimte.xl + ruimte.l + ruimte.xs,
+                height: ruimte.xl + ruimte.l + ruimte.xs,
+                borderRadius: (ruimte.xl + ruimte.l + ruimte.xs) / 2,
                 backgroundColor: c.primary,
                 justifyContent: "center",
                 alignItems: "center",
@@ -643,9 +615,9 @@ export default function UitvoerderScherm() {
               }}
             >
               {verzenden ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={c.primaryForeground} />
               ) : (
-                <Ionicons name="send" size={18} color="#fff" />
+                <Ionicons name="send" size={18} color={c.primaryForeground} />
               )}
             </Pressable>
           </View>

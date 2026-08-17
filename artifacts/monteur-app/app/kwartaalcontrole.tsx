@@ -17,12 +17,14 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/context/auth";
 import { uploadFoto } from "@/lib/upload";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { useColors } from "@/hooks/useColors";
+import { Waarschuwvlak, tekstStijl } from "@/components/ui";
 
 const DOMEIN = API_DOMEIN;
 
@@ -177,48 +179,46 @@ export default function KwartaalcontroleScherm() {
     header: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 12,
-      gap: 12,
+      paddingHorizontal: ruimte.l,
+      paddingTop: ruimte.l,
+      paddingBottom: ruimte.m,
+      gap: ruimte.m,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
       backgroundColor: c.card,
     },
-    titel: { fontSize: 17, fontFamily: "Inter_700Bold", color: c.foreground, flex: 1 },
-    kaart: { margin: 16, backgroundColor: c.card, borderRadius: 12, borderWidth: 1, borderColor: c.border, overflow: "hidden" as const },
-    kaartRij: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
-    rijLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: c.mutedForeground, textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: 4 },
-    rijTekst: { fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, lineHeight: 20 },
+    titel: { ...tekstStijl("sectiekop", c.foreground), flex: 1 },
+    kaart: { margin: ruimte.l, backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, overflow: "hidden" as const },
+    kaartRij: { paddingHorizontal: ruimte.l, paddingVertical: ruimte.m, borderBottomWidth: 1, borderBottomColor: c.border },
+    rijLabel: { ...tekstStijl("bijschrift", c.mutedForeground), textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: ruimte.xs },
+    rijTekst: { ...tekstStijl("klein", c.foreground), lineHeight: 20 },
     primairKnop: {
-      marginHorizontal: 16,
-      marginTop: 24,
-      marginBottom: 12,
+      marginHorizontal: ruimte.l,
+      marginTop: ruimte.xl,
+      marginBottom: ruimte.m,
       backgroundColor: c.primary,
-      borderRadius: 12,
-      paddingVertical: 14,
+      borderRadius: c.radius,
+      paddingVertical: ruimte.m + 2,
       alignItems: "center" as const,
     },
-    primairKnopTekst: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
+    primairKnopTekst: { ...tekstStijl("nadruk", c.primaryForeground) },
     secundairKnop: {
-      marginHorizontal: 16,
-      marginBottom: 24,
-      borderRadius: 12,
-      paddingVertical: 14,
+      marginHorizontal: ruimte.l,
+      marginBottom: ruimte.xl,
+      borderRadius: c.radius,
+      paddingVertical: ruimte.m + 2,
       alignItems: "center" as const,
       borderWidth: 1,
       borderColor: c.border,
     },
-    fout: { marginHorizontal: 16, marginTop: 12, backgroundColor: "#fee2e2", borderRadius: 8, padding: 12 },
-    foutTekst: { color: "#dc2626", fontSize: 13, fontFamily: "Inter_400Regular" },
-    centraal: { flex: 1, justifyContent: "center", alignItems: "center", gap: 16, padding: 32 },
+    centraal: { flex: 1, justifyContent: "center", alignItems: "center", gap: ruimte.l, padding: ruimte.xxl },
     invoer: {
       backgroundColor: c.background,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      borderRadius: c.radius,
+      paddingHorizontal: ruimte.m + 2,
+      paddingVertical: ruimte.s + 2,
       fontSize: 16,
       fontFamily: "Inter_600SemiBold",
       color: c.foreground,
@@ -245,7 +245,7 @@ export default function KwartaalcontroleScherm() {
         <Header terug={false} />
         <View style={s.centraal}>
           <ActivityIndicator size="large" color={c.primary} />
-          <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: c.mutedForeground, textAlign: "center" }}>
+          <Text style={[tekstStijl("klein", c.mutedForeground), { textAlign: "center" }]}>
             {stap === "ai_bezig" ? "AI analyseert dashboardfoto..." : "Controle wordt vastgelegd..."}
           </Text>
         </View>
@@ -259,17 +259,14 @@ export default function KwartaalcontroleScherm() {
       <View style={s.container}>
         <Header />
         <ScrollView>
-          <View style={{ marginHorizontal: 16, marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#fef3c7", borderRadius: 10, padding: 14 }}>
-            <Ionicons name="cloud-offline-outline" size={20} color="#d97706" style={{ marginTop: 1 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#92400e" }}>Opgeslagen (offline)</Text>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#a16207", marginTop: 4, lineHeight: 18 }}>
-                De kwartaalcontrole is lokaal opgeslagen en wordt automatisch verzonden zodra de verbinding hersteld is.
-              </Text>
-            </View>
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.l + ruimte.xs }}>
+            <Waarschuwvlak
+              soort="waarschuwing"
+              tekst="Opgeslagen (offline). De kwartaalcontrole is lokaal opgeslagen en wordt automatisch verzonden zodra de verbinding hersteld is."
+            />
           </View>
           <Pressable style={s.secundairKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Sluiten</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>Sluiten</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -283,19 +280,19 @@ export default function KwartaalcontroleScherm() {
         <Header />
         <ScrollView>
           {fotoUri && (
-            <Image source={{ uri: fotoUri }} style={{ margin: 16, height: 200, borderRadius: 12 }} resizeMode="cover" />
+            <Image source={{ uri: fotoUri }} style={{ margin: ruimte.l, height: 200, borderRadius: c.radius }} resizeMode="cover" />
           )}
-          <View style={{ marginHorizontal: 16, marginTop: 8, backgroundColor: "#fee2e2", borderRadius: 10, padding: 14 }}>
-            <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#dc2626", marginBottom: 6 }}>Foto voldoet niet</Text>
-            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#7f1d1d", lineHeight: 18 }}>
-              {aiResultaat.reden ?? "De foto is niet scherp genoeg of toont niet het dashboard. Probeer opnieuw."}
-            </Text>
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.s }}>
+            <Waarschuwvlak
+              soort="fout"
+              tekst={`Foto voldoet niet. ${aiResultaat.reden ?? "De foto is niet scherp genoeg of toont niet het dashboard. Probeer opnieuw."}`}
+            />
           </View>
           <Pressable style={s.primairKnop} onPress={() => { setFotoUri(null); setFotoPad(null); setAiResultaat(null); setStap("foto_nemen"); }}>
             <Text style={s.primairKnopTekst}>Opnieuw fotograferen</Text>
           </Pressable>
           <Pressable style={s.secundairKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Annuleren</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>Annuleren</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -312,11 +309,11 @@ export default function KwartaalcontroleScherm() {
       <View style={s.container}>
         <Header />
         <ScrollView>
-          <View style={{ marginHorizontal: 16, marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#dcfce7", borderRadius: 10, padding: 14 }}>
-            <Ionicons name="checkmark-circle" size={20} color="#16a34a" style={{ marginTop: 1 }} />
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.l + ruimte.xs, flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2, backgroundColor: c.secondary, borderRadius: c.radius, padding: ruimte.m + 2 }}>
+            <Ionicons name="checkmark-circle" size={ruimte.l + 2} color={c.success} style={{ marginTop: 1 }} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#14532d" }}>Kwartaalcontrole vastgelegd</Text>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#166534", marginTop: 2 }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>Kwartaalcontrole vastgelegd</Text>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                 {voertuigLabel || "Uw voertuig"}
               </Text>
             </View>
@@ -331,28 +328,29 @@ export default function KwartaalcontroleScherm() {
                   : "Niet afleesbaar"}
               </Text>
             </View>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.m }}>
               <Text style={s.rijLabel}>Waarschuwingen</Text>
               {heeftWaarschuwingen ? (
                 (eindResultaat.ai_gelezen_waarschuwingen ?? []).map((w, i) => (
-                  <Text key={i} style={[s.rijTekst, { marginTop: i > 0 ? 4 : 0 }]}>{"\u2022"} {w}</Text>
+                  <Text key={i} style={[s.rijTekst, { marginTop: i > 0 ? ruimte.xs : 0 }]}>{"\u2022"} {w}</Text>
                 ))
               ) : (
-                <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: "#16a34a" }}>Geen waarschuwingen zichtbaar</Text>
+                <Text style={tekstStijl("klein", c.success)}>Geen waarschuwingen zichtbaar</Text>
               )}
             </View>
           </View>
 
           {heeftWaarschuwingen && (
-            <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: "#fff7ed", borderRadius: 10, padding: 14, borderWidth: 1, borderColor: "#fed7aa" }}>
-              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#9a3412", lineHeight: 18 }}>
-                Er zijn waarschuwingen geconstateerd. De administratie ontvangt een melding voor verdere afhandeling.
-              </Text>
+            <View style={{ marginHorizontal: ruimte.l, marginBottom: ruimte.s }}>
+              <Waarschuwvlak
+                soort="waarschuwing"
+                tekst="Er zijn waarschuwingen geconstateerd. De administratie ontvangt een melding voor verdere afhandeling."
+              />
             </View>
           )}
 
           <Pressable style={s.secundairKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Sluiten</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>Sluiten</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -366,7 +364,7 @@ export default function KwartaalcontroleScherm() {
         <Header />
         <ScrollView keyboardShouldPersistTaps="handled">
           {fotoUri && (
-            <Image source={{ uri: fotoUri }} style={{ margin: 16, height: 180, borderRadius: 12 }} resizeMode="cover" />
+            <Image source={{ uri: fotoUri }} style={{ margin: ruimte.l, height: 180, borderRadius: c.radius }} resizeMode="cover" />
           )}
 
           <View style={s.kaart}>
@@ -381,32 +379,32 @@ export default function KwartaalcontroleScherm() {
                 placeholderTextColor={c.mutedForeground}
               />
               {aiResultaat.km_stand != null && (
-                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: c.mutedForeground, marginTop: 4 }}>
+                <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs }]}>
                   Automatisch afgelezen: {aiResultaat.km_stand.toLocaleString("nl-NL")} km
                 </Text>
               )}
             </View>
 
             {aiResultaat.waarschuwingen.length > 0 && (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.m }}>
                 <Text style={s.rijLabel}>Gedetecteerde waarschuwingen</Text>
                 {aiResultaat.waarschuwingen.map((w, i) => (
-                  <Text key={i} style={[s.rijTekst, { marginTop: i > 0 ? 4 : 0, color: "#c2410c" }]}>{"\u2022"} {w}</Text>
+                  <Text key={i} style={[tekstStijl("klein", c.warning), { marginTop: i > 0 ? ruimte.xs : 0, lineHeight: 20 }]}>{"\u2022"} {w}</Text>
                 ))}
               </View>
             )}
 
             {aiResultaat.waarschuwingen.length === 0 && (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", gap: 8, alignItems: "center" }}>
-                <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-                <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: "#16a34a" }}>Geen waarschuwingslampjes zichtbaar</Text>
+              <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.m, flexDirection: "row", gap: ruimte.s, alignItems: "center" }}>
+                <Ionicons name="checkmark-circle" size={ruimte.l} color={c.success} />
+                <Text style={tekstStijl("klein", c.success)}>Geen waarschuwingslampjes zichtbaar</Text>
               </View>
             )}
           </View>
 
           {foutMelding && (
-            <View style={s.fout}>
-              <Text style={s.foutTekst}>{foutMelding}</Text>
+            <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.m }}>
+              <Waarschuwvlak soort="fout" tekst={foutMelding} />
             </View>
           )}
 
@@ -414,7 +412,7 @@ export default function KwartaalcontroleScherm() {
             <Text style={s.primairKnopTekst}>Bevestigen en vastleggen</Text>
           </Pressable>
           <Pressable style={s.secundairKnop} onPress={() => { setFotoUri(null); setFotoPad(null); setAiResultaat(null); setKmStandTekst(""); setStap("foto_nemen"); }}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Opnieuw fotograferen</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>Opnieuw fotograferen</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -427,20 +425,20 @@ export default function KwartaalcontroleScherm() {
       <View style={s.container}>
         <Header />
         <ScrollView>
-          <View style={{ marginHorizontal: 16, marginTop: 20, backgroundColor: c.card, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: c.border }}>
-            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>Dashboardfoto maken</Text>
-            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: c.mutedForeground, lineHeight: 20 }}>
+          <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.l + ruimte.xs, backgroundColor: c.card, borderRadius: c.radius, padding: ruimte.l, borderWidth: 1, borderColor: c.border }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>Dashboardfoto maken</Text>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { lineHeight: 20 }]}>
               Fotografeer het volledige dashboard inclusief de kilometerteller. Zorg dat de foto scherp is en het scherm goed leesbaar.
             </Text>
           </View>
 
           {fotoUri && (
-            <Image source={{ uri: fotoUri }} style={{ margin: 16, height: 180, borderRadius: 12 }} resizeMode="cover" />
+            <Image source={{ uri: fotoUri }} style={{ margin: ruimte.l, height: 180, borderRadius: c.radius }} resizeMode="cover" />
           )}
 
           {foutMelding && (
-            <View style={s.fout}>
-              <Text style={s.foutTekst}>{foutMelding}</Text>
+            <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.m }}>
+              <Waarschuwvlak soort="fout" tekst={foutMelding} />
             </View>
           )}
 
@@ -450,7 +448,7 @@ export default function KwartaalcontroleScherm() {
             </Text>
           </Pressable>
           <Pressable style={s.secundairKnop} onPress={() => router.back()}>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Annuleren</Text>
+            <Text style={tekstStijl("nadruk", c.foreground)}>Annuleren</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -462,28 +460,28 @@ export default function KwartaalcontroleScherm() {
     <View style={s.container}>
       <Header />
       <ScrollView>
-        <View style={{ marginHorizontal: 16, marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: `${c.primary}15`, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: `${c.primary}40` }}>
-          <Ionicons name="information-circle-outline" size={20} color={c.primary} style={{ marginTop: 1 }} />
+        <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.l + ruimte.xs, flexDirection: "row", alignItems: "flex-start", gap: ruimte.s + 2, backgroundColor: c.accent, borderRadius: c.radius, padding: ruimte.m + 2, borderWidth: 1, borderColor: c.border }}>
+          <Ionicons name="information-circle-outline" size={ruimte.l + 2} color={c.primary} style={{ marginTop: 1 }} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: c.foreground, marginBottom: 6 }}>Wat is de kwartaalcontrole?</Text>
-            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: c.mutedForeground, lineHeight: 20 }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.xs + 2 }]}>Wat is de kwartaalcontrole?</Text>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { lineHeight: 20 }]}>
               Elke drie maanden controleert u kort de staat van uw voertuig. Maak een foto van het dashboard — de AI leest automatisch de kilometerstand en eventuele waarschuwingen af.
             </Text>
           </View>
         </View>
 
-        <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+        <View style={{ marginHorizontal: ruimte.l, marginTop: ruimte.l }}>
           {[
             "Start de motor zodat het dashboard volledig actief is",
             "Fotografeer het volledige instrumentenpaneel",
             "Zorg voor voldoende licht en een scherpe, rechte foto",
             "Controleer de afgelezen gegevens en bevestig",
           ].map((stap, i) => (
-            <View key={i} style={{ flexDirection: "row", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: c.primary, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" }}>{i + 1}</Text>
+            <View key={i} style={{ flexDirection: "row", gap: ruimte.m, marginBottom: ruimte.m + 2, alignItems: "flex-start" }}>
+              <View style={{ width: ruimte.l + ruimte.s, height: ruimte.l + ruimte.s, borderRadius: c.radius, backgroundColor: c.primary, justifyContent: "center", alignItems: "center" }}>
+                <Text style={tekstStijl("bijschrift", c.primaryForeground)}>{i + 1}</Text>
               </View>
-              <Text style={{ flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: c.foreground, lineHeight: 20 }}>{stap}</Text>
+              <Text style={[tekstStijl("klein", c.foreground), { flex: 1, lineHeight: 20 }]}>{stap}</Text>
             </View>
           ))}
         </View>
@@ -492,7 +490,7 @@ export default function KwartaalcontroleScherm() {
           <Text style={s.primairKnopTekst}>Start kwartaalcontrole</Text>
         </Pressable>
         <Pressable style={s.secundairKnop} onPress={() => router.back()}>
-          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.foreground }}>Annuleren</Text>
+          <Text style={tekstStijl("nadruk", c.foreground)}>Annuleren</Text>
         </Pressable>
       </ScrollView>
     </View>

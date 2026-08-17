@@ -1,10 +1,11 @@
 import { useGetMijnOpleidingen, useListOpleidingen } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LijstFout, bovenInset } from "@/components/ui";
+import { Kaart, Ladenstaat, LijstFout, Statusmerk, bovenInset, netteWaarde, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -37,21 +38,21 @@ export default function OpleidingenScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + 12, paddingHorizontal: 20, paddingBottom: 18 }}>
+      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + ruimte.m, paddingHorizontal: ruimte.xl, paddingBottom: ruimte.l + 2 }}>
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>‹ Terug</Text>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>‹ Terug</Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>Opleidingen</Text>
-          <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>Opleidingen</Text>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 2 }]}>
             Trainingen en certificaten
           </Text>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ flex: 1, padding: ruimte.l, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -62,124 +63,96 @@ export default function OpleidingenScherm() {
         <FlatList
           data={opleidingen}
           keyExtractor={(o) => String(o.id)}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m, paddingBottom: insets.bottom + ruimte.xl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.l }]}>
               Geen opleidingen gevonden.
             </Text>
           }
           ListHeaderComponent={
             mijnOpleidingen.length > 0 ? (
-              <View style={{ marginBottom: 4 }}>
-                <Text style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold", marginBottom: 8 }}>
+              <View style={{ marginBottom: ruimte.xs }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
                   Mijn opleidingen
                 </Text>
-                <View style={{ gap: 10, marginBottom: 16 }}>
+                <View style={{ gap: ruimte.m - 2, marginBottom: ruimte.l }}>
                   {mijnOpleidingen.map((m) => {
                     const verlopen = isVerlopen(m.verloopt_op);
                     const bijnaVerlopen = !verlopen && isBinnenkortVerlopen(m.verloopt_op);
                     return (
-                      <View
+                      <Kaart
                         key={m.id}
-                        style={{
-                          backgroundColor: c.card,
-                          borderRadius: c.radius,
-                          borderWidth: 1,
-                          borderColor: verlopen ? c.destructive : c.border,
-                          padding: 14,
-                        }}
+                        stijl={{ borderColor: verlopen ? c.destructive : c.border, padding: ruimte.m + 2 }}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                          <Text style={{ flex: 1, fontSize: 15, color: c.foreground, fontFamily: "Inter_600SemiBold" }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ruimte.s }}>
+                          <Text style={[tekstStijl("nadruk", c.foreground), { flex: 1 }]}>
                             {m.opleiding_naam}
                           </Text>
-                          <View
-                            style={{
-                              backgroundColor: verlopen ? c.destructive : bijnaVerlopen ? c.accent : c.muted,
-                              paddingHorizontal: 10,
-                              paddingVertical: 4,
-                              borderRadius: 8,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: verlopen ? c.destructiveForeground : bijnaVerlopen ? c.accentForeground : c.mutedForeground,
-                                fontSize: 12,
-                                fontFamily: "Inter_600SemiBold",
-                              }}
-                            >
-                              {verlopen ? "Verlopen" : m.status}
-                            </Text>
-                          </View>
+                          <Statusmerk
+                            label={verlopen ? "Verlopen" : netteWaarde(m.status)}
+                            soort={verlopen ? "fout" : bijnaVerlopen ? "waarschuwing" : "neutraal"}
+                          />
                         </View>
                         {m.behaald_op ? (
-                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 6, fontFamily: "Inter_400Regular" }}>
+                          <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs + 2 }]}>
                             Behaald op {new Date(m.behaald_op).toLocaleDateString("nl-NL")}
                           </Text>
                         ) : null}
                         {m.verloopt_op ? (
-                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                          <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                             {verlopen ? "Verlopen op" : "Geldig tot"} {new Date(m.verloopt_op).toLocaleDateString("nl-NL")}
                           </Text>
                         ) : null}
                         {m.opleider ? (
-                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                          <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                             Opleider: {m.opleider}
                           </Text>
                         ) : null}
-                      </View>
+                      </Kaart>
                     );
                   })}
                 </View>
-                <Text style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold", marginBottom: 8 }}>
+                <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
                   Catalogus
                 </Text>
               </View>
             ) : null
           }
           renderItem={({ item }) => (
-            <View
-              style={{
-                backgroundColor: c.card,
-                borderRadius: c.radius,
-                borderWidth: 1,
-                borderColor: c.border,
-                padding: 18,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <Text style={{ flex: 1, fontSize: 16, color: c.foreground, fontFamily: "Inter_700Bold" }}>{item.naam}</Text>
+            <Kaart stijl={{ padding: ruimte.l + 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: ruimte.s }}>
+                <Text style={[tekstStijl("sectiekop", c.foreground), { flex: 1, fontFamily: "Inter_700Bold" }]}>{item.naam}</Text>
                 {item.verplicht ? (
-                  <View style={{ backgroundColor: c.accent, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ color: c.accentForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>verplicht</Text>
+                  <View style={{ backgroundColor: c.accent, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs, borderRadius: c.radius / 2 }}>
+                    <Text style={tekstStijl("bijschrift", c.accentForeground)}>verplicht</Text>
                   </View>
                 ) : null}
               </View>
 
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.xs + 2, marginTop: ruimte.s }}>
+                <View style={{ backgroundColor: c.muted, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs, borderRadius: c.radius / 2 }}>
+                  <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                     {item.soort === "opleiding" ? "Opleiding" : "Cursus"}
                   </Text>
                 </View>
                 {item.categorie ? (
-                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs, borderRadius: c.radius / 2 }}>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                       {item.categorie}
                     </Text>
                   </View>
                 ) : null}
                 {item.niveau ? (
-                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs, borderRadius: c.radius / 2 }}>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                       {item.niveau}
                     </Text>
                   </View>
                 ) : null}
                 {item.lesvorm ? (
-                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: ruimte.s + 2, paddingVertical: ruimte.xs, borderRadius: c.radius / 2 }}>
+                    <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                       {item.lesvorm}
                     </Text>
                   </View>
@@ -187,26 +160,26 @@ export default function OpleidingenScherm() {
               </View>
 
               {item.opleider ? (
-                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 8, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.s }]}>
                   Opleider: {item.opleider}
                 </Text>
               ) : null}
               {item.studieduur || item.studiebelasting ? (
-                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                   {[item.studieduur, item.studiebelasting].filter(Boolean).join(" · ")}
                 </Text>
               ) : null}
               {item.kosten_werkgever_pct != null || item.kosten_werknemer_pct != null ? (
-                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                   Kostenverdeling: werkgever {item.kosten_werkgever_pct ?? 0}% · werknemer {item.kosten_werknemer_pct ?? 0}%
                 </Text>
               ) : null}
               {item.geldigheid_maanden != null ? (
-                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 2 }]}>
                   Geldig {item.geldigheid_maanden} maanden
                 </Text>
               ) : null}
-            </View>
+            </Kaart>
           )}
         />
       )}

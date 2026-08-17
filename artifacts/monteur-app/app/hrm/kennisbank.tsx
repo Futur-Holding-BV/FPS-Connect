@@ -1,11 +1,12 @@
 import { useListToolboxBerichten } from "@workspace/api-client-react";
 import type { ToolboxBericht } from "@workspace/api-client-react";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { Kaart, bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -20,47 +21,42 @@ function BerichtKaart({ bericht, c }: { bericht: ToolboxBericht; c: ReturnType<t
   return (
     <Pressable
       onPress={() => setUitgevouwen((v) => !v)}
-      style={({ pressed }) => ({
-        backgroundColor: c.card,
-        borderRadius: c.radius,
-        borderWidth: 1,
-        borderColor: uitgevouwen ? c.primary : c.border,
-        padding: 18,
-        opacity: pressed ? 0.88 : 1,
-      })}
+      style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
     >
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", lineHeight: 21 }}>
-            {bericht.titel}
-          </Text>
-          {bericht.gepubliceerd_op && (
-            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 }}>
-              {datumLabel(bericht.gepubliceerd_op)}
+      <Kaart stijl={{ borderColor: uitgevouwen ? c.primary : c.border, padding: ruimte.l + 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: ruimte.m }}>
+          <View style={{ flex: 1 }}>
+            <Text style={tekstStijl("nadruk", c.foreground)}>
+              {bericht.titel}
             </Text>
-          )}
+            {bericht.gepubliceerd_op && (
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 3 }]}>
+                {datumLabel(bericht.gepubliceerd_op)}
+              </Text>
+            )}
+          </View>
+          <Text style={[tekstStijl("sectiekop", c.primary), { fontSize: 18, lineHeight: 24 }]}>
+            {uitgevouwen ? "−" : "+"}
+          </Text>
         </View>
-        <Text style={{ color: c.primary, fontSize: 18, fontFamily: "Inter_600SemiBold", lineHeight: 24 }}>
-          {uitgevouwen ? "−" : "+"}
-        </Text>
-      </View>
 
-      {!uitgevouwen && bericht.inhoud ? (
-        <Text
-          style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 8, lineHeight: 19 }}
-          numberOfLines={2}
-        >
-          {bericht.inhoud}
-        </Text>
-      ) : null}
+        {!uitgevouwen && bericht.inhoud ? (
+          <Text
+            style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.s }]}
+            numberOfLines={2}
+          >
+            {bericht.inhoud}
+          </Text>
+        ) : null}
 
-      {uitgevouwen && bericht.inhoud ? (
-        <Text
-          style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 10, lineHeight: 22 }}
-        >
-          {bericht.inhoud}
-        </Text>
-      ) : null}
+        {uitgevouwen && bericht.inhoud ? (
+          <Text
+            style={[tekstStijl("standaard", c.foreground), { marginTop: ruimte.s + 2, lineHeight: 22 }]}
+          >
+            {bericht.inhoud}
+          </Text>
+        ) : null}
+      </Kaart>
     </Pressable>
   );
 }
@@ -98,13 +94,13 @@ export default function KennisbankScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + 12, paddingHorizontal: 20, paddingBottom: 18 }}>
+      <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + ruimte.m, paddingHorizontal: ruimte.xl, paddingBottom: ruimte.l + 2 }}>
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>‹ Terug</Text>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>‹ Terug</Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>Kennisbank</Text>
-          <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>Kennisbank</Text>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 2 }]}>
             Werkafspraken, handboeken en toolboxen
           </Text>
         </View>
@@ -112,36 +108,33 @@ export default function KennisbankScherm() {
 
       <ScrollView
         contentContainerStyle={{
-          padding: 16,
-          gap: 12,
-          paddingBottom: insets.bottom + 32,
+          padding: ruimte.l,
+          gap: ruimte.m,
+          paddingBottom: insets.bottom + ruimte.xxl,
           width: "100%",
           maxWidth: leesMaxBreedte,
           alignSelf: "center",
         }}
       >
         {/* Vaste kennisartikelen — altijd aanwezig, geen API-afhankelijkheid */}
-        <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+        <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textTransform: "uppercase", letterSpacing: 0.8, marginBottom: ruimte.xs }]}>
           Vaste artikelen
         </Text>
         {vasteArtikelen.map((a) => (
-          <View
-            key={a.titel}
-            style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 16 }}
-          >
-            <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 6 }}>{a.titel}</Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>{a.inhoud}</Text>
-          </View>
+          <Kaart key={a.titel} stijl={{ padding: ruimte.l }}>
+            <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.xs + 2 }]}>{a.titel}</Text>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { lineHeight: 19 }]}>{a.inhoud}</Text>
+          </Kaart>
         ))}
 
         {/* Toolbox berichten vanuit de beheeromgeving */}
         {zichtbaar.length > 0 && (
-          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, marginTop: 8, marginBottom: 4 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textTransform: "uppercase", letterSpacing: 0.8, marginTop: ruimte.s, marginBottom: ruimte.xs }]}>
             Toolbox
           </Text>
         )}
         {isLoading ? (
-          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 16 }} />
+          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: ruimte.l }} />
         ) : (
           zichtbaar.map((b) => <BerichtKaart key={b.id} bericht={b} c={c} />)
         )}

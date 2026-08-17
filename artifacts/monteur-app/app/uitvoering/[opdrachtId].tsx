@@ -32,8 +32,16 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ruimte } from "@workspace/ontwerp";
+
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { bovenInset } from "@/components/ui";
+import {
+  bovenInset,
+  Ladenstaat,
+  netteWaarde,
+  Statusmerk,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
@@ -133,34 +141,34 @@ function VergrootModal({
       onRequestClose={onSluiten}
       statusBarTranslucent
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.92)" barStyle="light-content" />
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}>
+      <StatusBar backgroundColor={c.dark} barStyle="light-content" />
+      <View style={{ flex: 1, backgroundColor: c.dark, alignItems: "center", justifyContent: "center" }}>
         <Pressable
           onPress={onSluiten}
-          style={{ position: "absolute", top: 44, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 8 }}
+          style={{ position: "absolute", top: 44, right: ruimte.l + ruimte.xs, zIndex: 10, backgroundColor: c.darkMuted, borderRadius: ruimte.l + ruimte.xs, padding: ruimte.s }}
         >
-          <Ionicons name="close" size={22} color="#fff" />
+          <Ionicons name="close" size={22} color={c.darkForeground} />
         </Pressable>
-        <View style={{ paddingHorizontal: 20, width: "100%", gap: 8 }}>
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
+        <View style={{ paddingHorizontal: ruimte.l + ruimte.xs, width: "100%", gap: ruimte.s }}>
+          <Text style={[tekstStijl("bijschrift", c.darkMuted), { textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }]}>
             {VISUAL_LABELS[visual.type] ?? visual.type}
           </Text>
           {laadFout ? (
-            <View style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Ionicons name="image-outline" size={40} color="rgba(255,255,255,0.35)" />
-              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+            <View style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: c.radius, backgroundColor: c.darkMuted, alignItems: "center", justifyContent: "center", gap: ruimte.s }}>
+              <Ionicons name="image-outline" size={40} color={c.darkMuted} />
+              <Text style={[tekstStijl("klein", c.darkMuted), { textAlign: "center" }]}>
                 Visual niet beschikbaar
               </Text>
             </View>
           ) : (
             <Image
               source={{ uri: imageUri, headers: authHeaders }}
-              style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: c.accent }}
+              style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: c.radius, backgroundColor: c.accent }}
               resizeMode="contain"
               onError={() => setLaadFout(true)}
             />
           )}
-          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" }} numberOfLines={2}>
+          <Text style={[tekstStijl("standaard", c.darkForeground), { textAlign: "center", fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
             {visual.naam}
           </Text>
         </View>
@@ -185,8 +193,8 @@ function GuidanceThumbnail({
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
   return (
-    <View style={{ flex: 1, gap: 4 }}>
-      <Text style={{ color: c.mutedForeground, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
+    <View style={{ flex: 1, gap: ruimte.xs }}>
+      <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }]}>
         {label}
       </Text>
       <Pressable
@@ -194,7 +202,7 @@ function GuidanceThumbnail({
         style={{
           aspectRatio: 4 / 3,
           backgroundColor: c.accent,
-          borderRadius: 8,
+          borderRadius: c.radius / 2,
           borderWidth: 1,
           borderColor: c.border,
           overflow: "hidden",
@@ -203,9 +211,9 @@ function GuidanceThumbnail({
         }}
       >
         {laadFout ? (
-          <View style={{ flex: 1, width: "100%", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <Ionicons name="image-outline" size={28} color={c.mutedForeground} />
-            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 8 }}>
+          <View style={{ flex: 1, width: "100%", alignItems: "center", justifyContent: "center", gap: ruimte.xs + 2 }}>
+            <Ionicons name="image-outline" size={ruimte.xl} color={c.mutedForeground} />
+            <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textAlign: "center", paddingHorizontal: ruimte.s }]}>
               Visual niet beschikbaar
             </Text>
           </View>
@@ -223,23 +231,23 @@ function GuidanceThumbnail({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                backgroundColor: "rgba(0,0,0,0.45)",
-                paddingHorizontal: 4,
+                backgroundColor: c.dark,
+                paddingHorizontal: ruimte.xs,
                 paddingVertical: 2,
                 flexDirection: "row",
                 justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular", flex: 1 }} numberOfLines={1}>
+              <Text style={[tekstStijl("bijschrift", c.darkForeground), { flex: 1 }]} numberOfLines={1}>
                 {VISUAL_LABELS[visual.type] ?? visual.type}
               </Text>
-              <Ionicons name="expand-outline" size={11} color="rgba(255,255,255,0.8)" />
+              <Ionicons name="expand-outline" size={11} color={c.darkForeground} />
             </View>
           </>
         )}
       </Pressable>
-      <Text style={{ color: c.foreground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 15 }} numberOfLines={2}>
+      <Text style={[tekstStijl("bijschrift", c.foreground), { textAlign: "center", lineHeight: 15 }]} numberOfLines={2}>
         {visual.naam}
       </Text>
       {vergroot && (
@@ -270,21 +278,21 @@ function GuidanceSectie({
   return (
     <Sectie titel="Visuele begeleiding">
       {visuals.length > 0 && (
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: heeftTekst ? 12 : 0 }}>
+        <View style={{ flexDirection: "row", gap: ruimte.s, marginBottom: heeftTekst ? ruimte.m : 0 }}>
           {visuals.map(({ slot, label }) => (
             <GuidanceThumbnail key={slot.visual_id} visual={slot} label={label} c={c} />
           ))}
         </View>
       )}
       {aandachtspunten.length > 0 && (
-        <View style={{ gap: 4, marginBottom: veiligheidsrisicos.length > 0 ? 8 : 0 }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+        <View style={{ gap: ruimte.xs, marginBottom: veiligheidsrisicos.length > 0 ? ruimte.s : 0 }}>
+          <Text style={[tekstStijl("bijschrift", c.mutedForeground), { textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }]}>
             Aandachtspunten
           </Text>
           {aandachtspunten.map((punt, i) => (
-            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
-              <Ionicons name="information-circle-outline" size={14} color="#d97706" style={{ marginTop: 2 }} />
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>
+            <View key={i} style={{ flexDirection: "row", gap: ruimte.xs + 2, alignItems: "flex-start" }}>
+              <Ionicons name="information-circle-outline" size={ruimte.m + 2} color={c.warning} style={{ marginTop: 2 }} />
+              <Text style={[tekstStijl("klein", c.foreground), { lineHeight: 18, flex: 1 }]}>
                 {punt}
               </Text>
             </View>
@@ -292,14 +300,14 @@ function GuidanceSectie({
         </View>
       )}
       {veiligheidsrisicos.length > 0 && (
-        <View style={{ gap: 4 }}>
-          <Text style={{ color: "#92400e", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+        <View style={{ gap: ruimte.xs }}>
+          <Text style={[tekstStijl("bijschrift", c.warning), { textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }]}>
             Veiligheidsrisicos
           </Text>
           {veiligheidsrisicos.map((risico, i) => (
-            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
-              <Ionicons name="warning-outline" size={14} color="#dc2626" style={{ marginTop: 2 }} />
-              <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>
+            <View key={i} style={{ flexDirection: "row", gap: ruimte.xs + 2, alignItems: "flex-start" }}>
+              <Ionicons name="warning-outline" size={ruimte.m + 2} color={c.destructive} style={{ marginTop: 2 }} />
+              <Text style={[tekstStijl("klein", c.warning), { lineHeight: 18, flex: 1 }]}>
                 {risico}
               </Text>
             </View>
@@ -363,19 +371,19 @@ function VoortgangsBalk({ volgorde }: { volgorde: number }) {
   const c = useColors();
   const breedte = Math.min(100, (volgorde / 10) * 100);
   return (
-    <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-        <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+    <View style={{ paddingHorizontal: ruimte.l + ruimte.xs, paddingBottom: ruimte.m }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: ruimte.xs }}>
+        <Text style={tekstStijl("bijschrift", c.darkMuted)}>
           Stap {volgorde}
         </Text>
-        <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+        <Text style={tekstStijl("bijschrift", c.darkMuted)}>
           Voortgang
         </Text>
       </View>
-      <View style={{ height: 4, backgroundColor: c.darkMuted + "44", borderRadius: 2 }}>
+      <View style={{ height: ruimte.xs, backgroundColor: c.darkMuted, borderRadius: 2 }}>
         <View
           style={{
-            height: 4,
+            height: ruimte.xs,
             width: `${breedte}%`,
             backgroundColor: c.primary,
             borderRadius: 2,
@@ -392,21 +400,16 @@ function Sectie({ titel, children }: { titel: string; children: React.ReactNode 
     <View
       style={{
         backgroundColor: c.card,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+        borderRadius: c.radius,
+        padding: ruimte.l,
+        marginBottom: ruimte.m,
       }}
     >
       <Text
-        style={{
-          color: c.foreground,
-          fontSize: 12,
-          fontFamily: "Inter_700Bold",
-          letterSpacing: 0.5,
-          textTransform: "uppercase",
-          marginBottom: 10,
-          opacity: 0.6,
-        }}
+        style={[
+          tekstStijl("bijschrift", c.foreground),
+          { letterSpacing: 0.5, textTransform: "uppercase", marginBottom: ruimte.s + 2, opacity: 0.6 },
+        ]}
       >
         {titel}
       </Text>
@@ -418,11 +421,11 @@ function Sectie({ titel, children }: { titel: string; children: React.ReactNode 
 function BulletLijst({ items }: { items: string[] }) {
   const c = useColors();
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: ruimte.xs + 2 }}>
       {items.map((item, i) => (
-        <View key={i} style={{ flexDirection: "row", gap: 8 }}>
-          <Text style={{ color: c.primary, fontSize: 14, marginTop: 1 }}>•</Text>
-          <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 }}>
+        <View key={i} style={{ flexDirection: "row", gap: ruimte.s }}>
+          <Text style={[tekstStijl("standaard", c.primary), { marginTop: 1 }]}>•</Text>
+          <Text style={[tekstStijl("standaard", c.foreground), { flex: 1, lineHeight: 20 }]}>
             {item}
           </Text>
         </View>
@@ -443,7 +446,7 @@ function FotoRij({
   const c = useColors();
   if (uris.length === 0) return null;
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s, marginTop: ruimte.s }}>
       {uris.map((f, i) => (
         <View key={i} style={{ position: "relative" }}>
           <Image
@@ -451,24 +454,24 @@ function FotoRij({
             style={{
               width: 80,
               height: 80,
-              borderRadius: 8,
+              borderRadius: c.radius / 2,
               backgroundColor: c.accent,
               borderWidth: f.fout ? 2 : 0,
-              borderColor: f.fout ? "#dc2626" : "transparent",
+              borderColor: f.fout ? c.destructive : "transparent",
             }}
           />
           {f.objectPath && !f.fout && (
             <View
               style={{
                 position: "absolute",
-                bottom: 4,
-                right: 4,
-                backgroundColor: "#16a34a",
-                borderRadius: 8,
+                bottom: ruimte.xs,
+                right: ruimte.xs,
+                backgroundColor: c.success,
+                borderRadius: c.radius / 2,
                 padding: 2,
               }}
             >
-              <Ionicons name="checkmark" size={10} color="#fff" />
+              <Ionicons name="checkmark" size={10} color={c.primaryForeground} />
             </View>
           )}
           {f.fout && onHerprobeer && (
@@ -476,16 +479,16 @@ function FotoRij({
               onPress={() => onHerprobeer(i)}
               style={{
                 position: "absolute",
-                bottom: 4,
-                left: 4,
-                right: 4,
-                backgroundColor: "rgba(220,38,38,0.88)",
-                borderRadius: 5,
+                bottom: ruimte.xs,
+                left: ruimte.xs,
+                right: ruimte.xs,
+                backgroundColor: c.destructive,
+                borderRadius: ruimte.xs + 1,
                 paddingVertical: 3,
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("bijschrift", c.destructiveForeground)}>
                 Opnieuw
               </Text>
             </Pressable>
@@ -494,17 +497,17 @@ function FotoRij({
             onPress={() => onVerwijder(i)}
             style={{
               position: "absolute",
-              top: -6,
-              right: -6,
-              backgroundColor: "#dc2626",
-              borderRadius: 10,
-              width: 20,
-              height: 20,
+              top: -ruimte.xs - 2,
+              right: -ruimte.xs - 2,
+              backgroundColor: c.destructive,
+              borderRadius: ruimte.s + 2,
+              width: ruimte.l + ruimte.xs,
+              height: ruimte.l + ruimte.xs,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Ionicons name="close" size={12} color="#fff" />
+            <Ionicons name="close" size={12} color={c.destructiveForeground} />
           </Pressable>
         </View>
       ))}
@@ -901,37 +904,37 @@ export default function UitvoeringScherm() {
           <View
             style={{
               backgroundColor: c.dark,
-              paddingTop: bovenInset(insets) + 12,
-              paddingHorizontal: 20,
-              paddingBottom: 18,
+              paddingTop: bovenInset(insets) + ruimte.m,
+              paddingHorizontal: ruimte.l + ruimte.xs,
+              paddingBottom: ruimte.l + 2,
             }}
           >
-            <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-              <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+            <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+              <Text style={tekstStijl("nadruk", c.primary)}>
                 ‹ Terug
               </Text>
             </Pressable>
-            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+            <Text style={tekstStijl("schermtitel", c.darkForeground)}>
               Adaptieve gids
             </Text>
           </View>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xxl, gap: ruimte.l }}>
             <View
               style={{
                 width: 80,
                 height: 80,
                 borderRadius: 40,
-                backgroundColor: "#dcfce7",
+                backgroundColor: c.secondary,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="checkmark-circle" size={44} color="#16a34a" />
+              <Ionicons name="checkmark-circle" size={44} color={c.success} />
             </View>
-            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+            <Text style={[tekstStijl("schermtitel", c.foreground), { textAlign: "center" }]}>
               Uitvoering gereed
             </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 22 }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", lineHeight: 22 }]}>
               Alle stappen zijn doorlopen. De uitvoering is voltooid.
             </Text>
             <Pressable
@@ -941,13 +944,13 @@ export default function UitvoeringScherm() {
               }}
               style={{
                 backgroundColor: c.primary,
-                borderRadius: 10,
-                paddingHorizontal: 24,
-                paddingVertical: 14,
-                marginTop: 8,
+                borderRadius: c.radius,
+                paddingHorizontal: ruimte.xl,
+                paddingVertical: ruimte.m + 2,
+                marginTop: ruimte.s,
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+              <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                 Terug naar werk
               </Text>
             </Pressable>
@@ -963,21 +966,21 @@ export default function UitvoeringScherm() {
         <View
           style={{
             backgroundColor: c.dark,
-            paddingTop: bovenInset(insets) + 12,
-            paddingHorizontal: 20,
-            paddingBottom: 12,
+            paddingTop: bovenInset(insets) + ruimte.m,
+            paddingHorizontal: ruimte.l + ruimte.xs,
+            paddingBottom: ruimte.m,
           }}
         >
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Adaptieve gids
           </Text>
           {actieveStap && (
-            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+            <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: 2 }]}>
               Stap {actieveStap.volgorde}
               {actieveStap.werkpakket_sleutel ? ` · ${actieveStap.werkpakket_sleutel}` : ""}
             </Text>
@@ -988,19 +991,16 @@ export default function UitvoeringScherm() {
         <OfflineBanner />
 
         {isLoading && !gecachteStap ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <ActivityIndicator size="large" color={c.primary} />
-            <Text style={{ color: c.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
-              Stap laden...
-            </Text>
+          <View style={{ flex: 1, padding: ruimte.l }}>
+            <Ladenstaat regels={5} />
           </View>
         ) : isError && !gecachteStap ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xxl, gap: ruimte.l }}>
             <Ionicons name="cloud-offline-outline" size={48} color={c.mutedForeground} />
-            <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+            <Text style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center" }]}>
               Geen actieve stap gevonden
             </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 }}>
+            <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", lineHeight: 20 }]}>
               Start de adaptieve gids om de eerste AI-stap te genereren. Hiervoor is een internetverbinding vereist.
             </Text>
             <Pressable
@@ -1008,16 +1008,16 @@ export default function UitvoeringScherm() {
               disabled={!isOnline || startMutatie.isPending}
               style={{
                 backgroundColor: !isOnline ? c.accent : c.primary,
-                borderRadius: 10,
-                paddingHorizontal: 24,
-                paddingVertical: 14,
+                borderRadius: c.radius,
+                paddingHorizontal: ruimte.xl,
+                paddingVertical: ruimte.m + 2,
                 opacity: startMutatie.isPending ? 0.7 : 1,
               }}
             >
               {startMutatie.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: !isOnline ? c.mutedForeground : "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+                <Text style={tekstStijl("nadruk", !isOnline ? c.mutedForeground : c.primaryForeground)}>
                   {isOnline ? "Start adaptieve gids" : "Geen verbinding"}
                 </Text>
               )}
@@ -1026,7 +1026,7 @@ export default function UitvoeringScherm() {
         ) : actieveStap ? (
           actieveStap.status === "afgeweken" ? (
             <ScrollView
-              contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
+              contentContainerStyle={{ padding: ruimte.l, paddingBottom: insets.bottom + ruimte.xxl }}
               keyboardShouldPersistTaps="handled"
             >
               <AfwijkingWachtScherm
@@ -1038,7 +1038,7 @@ export default function UitvoeringScherm() {
             </ScrollView>
           ) : afwijkingModus ? (
             <ScrollView
-              contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
+              contentContainerStyle={{ padding: ruimte.l, paddingBottom: insets.bottom + ruimte.xxl }}
               keyboardShouldPersistTaps="handled"
             >
               <AfwijkingFormulier
@@ -1056,18 +1056,18 @@ export default function UitvoeringScherm() {
               {offlineOpgeslagen && (
                 <View
                   style={{
-                    backgroundColor: "#fef3c7",
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
+                    backgroundColor: c.secondary,
+                    paddingHorizontal: ruimte.l,
+                    paddingVertical: ruimte.s + 2,
                     flexDirection: "row",
-                    gap: 8,
+                    gap: ruimte.s,
                     alignItems: "center",
                     borderBottomWidth: 1,
-                    borderBottomColor: "#fcd34d",
+                    borderBottomColor: c.warning,
                   }}
                 >
-                  <Ionicons name="save-outline" size={14} color="#92400e" />
-                  <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
+                  <Ionicons name="save-outline" size={ruimte.m + 2} color={c.warning} />
+                  <Text style={[tekstStijl("klein", c.warning), { flex: 1 }]}>
                     Opgeslagen voor later — wordt gesynchroniseerd zodra verbinding is hersteld.
                   </Text>
                 </View>

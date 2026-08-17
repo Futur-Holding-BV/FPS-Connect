@@ -7,7 +7,6 @@ import { LegeStatus } from "@/components/LegeStatus";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -15,8 +14,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { LijstFout, TekstVeld, bovenInset } from "@/components/ui";
+import { LijstFout, Ladenstaat, TekstVeld, tekstStijl, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
@@ -82,40 +82,40 @@ function Documenten() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Documenten
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+          <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
             Bibliotheek met certificaten en rapporten
           </Text>
 
-          <View style={{ marginTop: 14 }}>
+          <View style={{ marginTop: ruimte.m + 2 }}>
             <TekstVeld
               label=""
               value={zoek}
               onChangeText={setZoek}
               placeholder="Zoek op naam, fabrikant of rapportnummer…"
               autoCapitalize="none"
-              style={{ backgroundColor: "rgba(255,255,255,0.10)", borderColor: "rgba(255,255,255,0.18)", color: "#fff" }}
+              style={{ backgroundColor: c.darkForeground + "1A", borderColor: c.darkForeground + "2E", color: c.darkForeground }}
             />
           </View>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -129,7 +129,7 @@ function Documenten() {
           keyExtractor={(d) => String(d.id)}
           numColumns={kolommen}
           columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m, paddingBottom: insets.bottom + ruimte.xl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />
           }
@@ -148,36 +148,36 @@ function Documenten() {
                 borderRadius: c.radius,
                 borderWidth: 1,
                 borderColor: c.border,
-                padding: 18,
+                padding: ruimte.l,
                 width: itemBreedte,
                 opacity: pressed ? 0.85 : 1,
               })}
             >
               <Text
-                style={{ fontSize: 17, color: c.foreground, fontFamily: "Inter_700Bold" }}
+                style={tekstStijl("sectiekop", c.foreground)}
                 numberOfLines={2}
               >
                 {item.naam}
               </Text>
               {item.fabrikant ? (
-                <Text style={{ fontSize: 14, color: c.mutedForeground, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+                <Text style={[tekstStijl("standaard", c.mutedForeground), { marginTop: ruimte.xs }]}>
                   {item.fabrikant}
                 </Text>
               ) : null}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12, alignItems: "center" }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s, marginTop: ruimte.m, alignItems: "center" }}>
                 <View
                   style={{
                     backgroundColor: c.accent,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 8,
+                    paddingHorizontal: ruimte.m,
+                    paddingVertical: ruimte.s - 2,
+                    borderRadius: c.radius / 2,
                   }}
                 >
-                  <Text style={{ color: c.accentForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={tekstStijl("bijschrift", c.accentForeground)}>
                     {TYPE_LABELS[item.documenttype] ?? item.documenttype}
                   </Text>
                 </View>
-                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                   {STATUS_LABELS[item.status] ?? item.status}
                 </Text>
               </View>

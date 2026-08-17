@@ -22,7 +22,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LijstFout, bovenInset, onderInset } from "@/components/ui";
+import { ruimte } from "@workspace/ontwerp";
+
+import { Kaart, Ladenstaat, LijstFout, bovenInset, onderInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -37,14 +39,19 @@ const SOORT_LABELS: Record<KalenderItemSoort, string> = {
   afspraak: "Afspraak",
 };
 
-const SOORT_KLEUREN: Record<KalenderItemSoort, string> = {
-  feestdag: "#7c3aed",
-  collectief: "#F23B0D",
-  vakantie: "#2563eb",
-  keuring: "#E8870E",
-  verjaardag: "#db2777",
-  afspraak: "#0891b2",
-};
+// De zes soorten hadden elk een eigen kleur. Het palet (@workspace/ontwerp)
+// kent geen paars/blauw/roze/cyaan; de soorten worden daarom afgebeeld op de
+// dichtstbijzijnde tokens. Zie eindrapport voor deze afweging.
+function soortKleuren(c: ReturnType<typeof useColors>): Record<KalenderItemSoort, string> {
+  return {
+    feestdag: c.accentForeground,
+    collectief: c.primary,
+    vakantie: c.success,
+    keuring: c.warning,
+    verjaardag: c.destructive,
+    afspraak: c.mutedForeground,
+  };
+}
 
 // Vaste volgorde voor legenda en stippen.
 const SOORT_VOLGORDE: KalenderItemSoort[] = [
@@ -79,6 +86,7 @@ function eersteWeekdagIndex(jaar: number, maand: number): number {
 
 export default function KalenderScherm() {
   const c = useColors();
+  const SOORT_KLEUREN = soortKleuren(c);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
@@ -159,29 +167,29 @@ export default function KalenderScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l + 2,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             Kalender
           </Text>
-          <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+          <Text style={[tekstStijl("standaard", c.darkMuted), { marginTop: ruimte.xs }]}>
             Feestdagen, verlof, keuringen en afspraken
           </Text>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ flex: 1, padding: ruimte.l, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : isError ? (
         <LijstFout
@@ -328,7 +336,7 @@ export default function KalenderScherm() {
                       <Text
                         style={{
                           fontSize: 15,
-                          color: isGekozen ? "#FFFFFF" : c.foreground,
+                          color: isGekozen ? c.primaryForeground : c.foreground,
                           fontFamily: isVandaag ? "Inter_700Bold" : "Inter_400Regular",
                         }}
                       >
@@ -351,7 +359,7 @@ export default function KalenderScherm() {
                               width: 5,
                               height: 5,
                               borderRadius: 3,
-                              backgroundColor: isGekozen ? "#FFFFFF" : SOORT_KLEUREN[s],
+                              backgroundColor: isGekozen ? c.primaryForeground : SOORT_KLEUREN[s],
                             }}
                           />
                         ))}
@@ -412,32 +420,16 @@ export default function KalenderScherm() {
               </Text>
 
               {gekozenItems.length === 0 ? (
-                <View
-                  style={{
-                    backgroundColor: c.card,
-                    borderRadius: c.radius,
-                    borderWidth: 1,
-                    borderColor: c.border,
-                    padding: 18,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 14, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                <Kaart stijl={{ padding: ruimte.l + 2, alignItems: "center" }}>
+                  <Text style={tekstStijl("standaard", c.mutedForeground)}>
                     Geen items op deze dag.
                   </Text>
-                </View>
+                </Kaart>
               ) : (
                 gekozenItems.map((item, i) => (
-                  <View
+                  <Kaart
                     key={`${item.bron}-${i}`}
-                    style={{
-                      backgroundColor: c.card,
-                      borderRadius: c.radius,
-                      borderWidth: 1,
-                      borderColor: c.border,
-                      padding: 14,
-                      gap: 8,
-                    }}
+                    stijl={{ padding: ruimte.m + 2, gap: ruimte.s }}
                   >
                     <View
                       style={{
@@ -459,16 +451,21 @@ export default function KalenderScherm() {
                       </Text>
                       <View
                         style={{
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 999,
-                          backgroundColor: SOORT_KLEUREN[item.soort] + "22",
+                          flexShrink: 0,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: ruimte.xs + 2,
+                          paddingHorizontal: ruimte.s + 2,
+                          paddingVertical: ruimte.xs,
+                          borderRadius: c.radius,
+                          backgroundColor: c.secondary,
                         }}
                       >
+                        <View style={{ width: ruimte.s, height: ruimte.s, borderRadius: ruimte.xs, backgroundColor: SOORT_KLEUREN[item.soort] }} />
                         <Text
                           style={{
                             fontSize: 11,
-                            color: SOORT_KLEUREN[item.soort],
+                            color: c.foreground,
                             fontFamily: "Inter_600SemiBold",
                           }}
                         >

@@ -22,10 +22,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ruimte } from "@workspace/ontwerp";
+
 import { HandtekeningPad } from "@/components/HandtekeningPad";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
-import { bovenInset } from "@/components/ui";
+import {
+  bovenInset,
+  Kaart as UiKaart,
+  Ladenstaat,
+  netteWaarde,
+  Statusmerk,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
@@ -43,11 +52,24 @@ const UITVOERING_LABEL: Record<string, string> = {
   gereed: "Gereed",
 };
 
-const UITVOERING_KLEUR: Record<string, string> = {
-  gepland: "#6b7280",
-  bezig: "#F23B0D",
-  pauze: "#d97706",
-  gereed: "#16a34a",
+// Statussen → soort Statusmerk (kleur komt uit het palet, niet uit dit bestand).
+const UITVOERING_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  gepland: "neutraal",
+  bezig: "primair",
+  pauze: "waarschuwing",
+  gereed: "succes",
+};
+
+// Meerwerk-status → soort Statusmerk.
+const MEERWERK_SOORT: Record<string, "neutraal" | "succes" | "waarschuwing" | "fout" | "primair"> = {
+  goedgekeurd: "succes",
+  afgewezen: "fout",
+};
+
+const MEERWERK_LABEL: Record<string, string> = {
+  goedgekeurd: "Goedgekeurd",
+  afgewezen: "Afgewezen",
+  ingediend: "In behandeling",
 };
 
 function InfoRegel({
@@ -64,22 +86,18 @@ function InfoRegel({
   const c = useColors();
   if (!waarde) return null;
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", paddingVertical: 8, gap: 12 }}>
-      <Ionicons name={icoon} size={16} color={c.mutedForeground} style={{ marginTop: 2 }} />
+    <View style={{ flexDirection: "row", alignItems: "flex-start", paddingVertical: ruimte.s, gap: ruimte.m }}>
+      <Ionicons name={icoon} size={ruimte.l} color={c.mutedForeground} style={{ marginTop: 2 }} />
       <View style={{ flex: 1 }}>
         <Text
-          style={{
-            color: c.mutedForeground,
-            fontSize: 11,
-            fontFamily: "Inter_600SemiBold",
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
-            marginBottom: 2,
-          }}
+          style={[
+            tekstStijl("bijschrift", c.mutedForeground),
+            { letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 2 },
+          ]}
         >
           {label}
         </Text>
-        <Text style={{ color: kleur ?? c.text, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+        <Text style={tekstStijl("standaard", kleur ?? c.foreground)}>
           {waarde}
         </Text>
       </View>
@@ -90,28 +108,14 @@ function InfoRegel({
 function Kaart({ titel, children }: { titel: string; children: React.ReactNode }) {
   const c = useColors();
   return (
-    <View
-      style={{
-        backgroundColor: c.card,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        marginHorizontal: 16,
-      }}
-    >
+    <UiKaart stijl={{ marginBottom: ruimte.m, marginHorizontal: ruimte.l }}>
       <Text
-        style={{
-          color: c.text,
-          fontSize: 13,
-          fontFamily: "Inter_700Bold",
-          letterSpacing: 0.3,
-          marginBottom: 8,
-        }}
+        style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}
       >
         {titel}
       </Text>
       {children}
-    </View>
+    </UiKaart>
   );
 }
 
@@ -333,21 +337,21 @@ export default function WerkdagDetailScherm() {
       {/* Header */}
       <View
         style={{
-          paddingTop: bovenInset(insets) + 8,
-          paddingHorizontal: 16,
-          paddingBottom: 14,
+          paddingTop: bovenInset(insets) + ruimte.s,
+          paddingHorizontal: ruimte.l,
+          paddingBottom: ruimte.m + 2,
           backgroundColor: c.dark,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: ruimte.m,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: ruimte.xs }}>
+          <Ionicons name="arrow-back" size={22} color={c.darkForeground} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text
-            style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_700Bold" }}
+            style={tekstStijl("sectiekop", c.darkForeground)}
             numberOfLines={1}
           >
             {isLoading && !huidigWerkorder
@@ -355,35 +359,21 @@ export default function WerkdagDetailScherm() {
               : (huidigWerkorder?.project_naam ?? huidigWerkorder?.titel ?? "Werkorder")}
           </Text>
           {huidigWerkorder?.werknummer ? (
-            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+            <Text style={tekstStijl("klein", c.darkMuted)}>
               #{huidigWerkorder.werknummer}
             </Text>
           ) : null}
         </View>
         {huidigWerkorder ? (
-          <View
-            style={{
-              backgroundColor: (UITVOERING_KLEUR[uitvoeringStatus] ?? "#6b7280") + "33",
-              borderRadius: 8,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-            }}
-          >
-            <Text
-              style={{
-                color: UITVOERING_KLEUR[uitvoeringStatus] ?? "#6b7280",
-                fontSize: 12,
-                fontFamily: "Inter_600SemiBold",
-              }}
-            >
-              {UITVOERING_LABEL[uitvoeringStatus] ?? uitvoeringStatus}
-            </Text>
-          </View>
+          <Statusmerk
+            label={UITVOERING_LABEL[uitvoeringStatus] ?? netteWaarde(uitvoeringStatus)}
+            soort={UITVOERING_SOORT[uitvoeringStatus] ?? "neutraal"}
+          />
         ) : null}
       </View>
 
       <OfflineBanner stijl="compact" />
-      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+      <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.s }}>
         <SyncStatusBadge
           status={syncStatus}
           aantalWachtend={aantalWachtend}
@@ -399,16 +389,16 @@ export default function WerkdagDetailScherm() {
       {isOfflineCache ? (
         <View
           style={{
-            backgroundColor: "rgba(234,179,8,0.1)",
-            paddingHorizontal: 16,
-            paddingVertical: 6,
+            backgroundColor: c.secondary,
+            paddingHorizontal: ruimte.l,
+            paddingVertical: ruimte.xs + 2,
             flexDirection: "row",
             alignItems: "center",
-            gap: 6,
+            gap: ruimte.xs + 2,
           }}
         >
-          <Ionicons name="time-outline" size={13} color="#facc15" />
-          <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
+          <Ionicons name="time-outline" size={ruimte.m + 1} color={c.warning} />
+          <Text style={tekstStijl("bijschrift", c.warning)}>
             Gegevens uit lokale cache
           </Text>
         </View>
@@ -416,80 +406,74 @@ export default function WerkdagDetailScherm() {
 
       {/* Inhoud */}
       {isLoading && !huidigWerkorder ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator color={c.tint} size="large" />
+        <View style={{ flex: 1, padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : (isError && !huidigWerkorder) ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: ruimte.xxl }}>
           <Ionicons name="alert-circle-outline" size={40} color={c.mutedForeground} />
           <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 15,
-              textAlign: "center",
-              marginTop: 12,
-              fontFamily: "Inter_400Regular",
-            }}
+            style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.m }]}
           >
             {isOnline
               ? "Werkorder niet gevonden of geen toegang."
               : "Geen verbinding en geen lokale cache beschikbaar."}
           </Text>
-          <Pressable onPress={() => router.back()} style={{ marginTop: 16 }}>
-            <Text style={{ color: c.tint, fontFamily: "Inter_600SemiBold" }}>Terug</Text>
+          <Pressable onPress={() => router.back()} style={{ marginTop: ruimte.l }}>
+            <Text style={tekstStijl("nadruk", c.tint)}>Terug</Text>
           </Pressable>
         </View>
       ) : huidigWerkorder ? (
-        <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}>
+        <ScrollView contentContainerStyle={{ paddingTop: ruimte.l, paddingBottom: ruimte.xxl + ruimte.l }}>
 
           {/* ── Statusknopen ─────────────────────────────────────────────── */}
           {uitvoeringStatus !== "gereed" ? (
-            <View style={{ marginHorizontal: 16, marginBottom: 16, gap: 10 }}>
+            <View style={{ marginHorizontal: ruimte.l, marginBottom: ruimte.l, gap: ruimte.s + 2 }}>
               {uitvoeringStatus === "gepland" ? (
                 <Pressable
                   onPress={() => void zetStatus("bezig")}
                   disabled={statusBezig}
                   style={({ pressed }) => ({
-                    backgroundColor: pressed || statusBezig ? "#d63510" : c.tint,
-                    borderRadius: 12,
-                    paddingVertical: 16,
+                    backgroundColor: c.tint,
+                    borderRadius: c.radius,
+                    paddingVertical: ruimte.l,
                     flexDirection: "row",
                     justifyContent: "center",
                     alignItems: "center",
-                    gap: 8,
-                    opacity: statusBezig ? 0.7 : 1,
+                    gap: ruimte.s,
+                    opacity: statusBezig ? 0.7 : pressed ? 0.85 : 1,
                   })}
                 >
                   {statusBezig ? (
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={c.primaryForeground} size="small" />
                   ) : (
-                    <Ionicons name="play-circle" size={20} color="#fff" />
+                    <Ionicons name="play-circle" size={20} color={c.primaryForeground} />
                   )}
-                  <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>
+                  <Text style={tekstStijl("sectiekop", c.primaryForeground)}>
                     Start werk{!isOnline ? " (offline)" : ""}
                   </Text>
                 </Pressable>
               ) : null}
 
               {uitvoeringStatus === "bezig" ? (
-                <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flexDirection: "row", gap: ruimte.s + 2 }}>
                   <Pressable
                     onPress={() => void zetStatus("pauze")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
-                      backgroundColor: pressed ? "#b45309" : "#d97706",
-                      borderRadius: 12,
-                      paddingVertical: 14,
+                      backgroundColor: c.warning,
+                      borderRadius: c.radius,
+                      paddingVertical: ruimte.m + 2,
                       flexDirection: "row",
                       justifyContent: "center",
                       alignItems: "center",
-                      gap: 6,
-                      opacity: statusBezig ? 0.7 : 1,
+                      gap: ruimte.xs + 2,
+                      opacity: statusBezig ? 0.7 : pressed ? 0.85 : 1,
                     })}
                   >
-                    <Ionicons name="pause-circle" size={18} color="#fff" />
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Ionicons name="pause-circle" size={18} color={c.primaryForeground} />
+                    <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                       Pauze
                     </Text>
                   </Pressable>
@@ -498,18 +482,18 @@ export default function WerkdagDetailScherm() {
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
-                      backgroundColor: pressed ? "#15803d" : "#16a34a",
-                      borderRadius: 12,
-                      paddingVertical: 14,
+                      backgroundColor: c.success,
+                      borderRadius: c.radius,
+                      paddingVertical: ruimte.m + 2,
                       flexDirection: "row",
                       justifyContent: "center",
                       alignItems: "center",
-                      gap: 6,
-                      opacity: statusBezig ? 0.7 : 1,
+                      gap: ruimte.xs + 2,
+                      opacity: statusBezig ? 0.7 : pressed ? 0.85 : 1,
                     })}
                   >
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Ionicons name="checkmark-circle" size={18} color={c.primaryForeground} />
+                    <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                       Gereed melden
                     </Text>
                   </Pressable>
@@ -517,28 +501,28 @@ export default function WerkdagDetailScherm() {
               ) : null}
 
               {uitvoeringStatus === "pauze" ? (
-                <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flexDirection: "row", gap: ruimte.s + 2 }}>
                   <Pressable
                     onPress={() => void zetStatus("bezig")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
-                      backgroundColor: pressed || statusBezig ? "#d63510" : c.tint,
-                      borderRadius: 12,
-                      paddingVertical: 14,
+                      backgroundColor: c.tint,
+                      borderRadius: c.radius,
+                      paddingVertical: ruimte.m + 2,
                       flexDirection: "row",
                       justifyContent: "center",
                       alignItems: "center",
-                      gap: 6,
-                      opacity: statusBezig ? 0.7 : 1,
+                      gap: ruimte.xs + 2,
+                      opacity: statusBezig ? 0.7 : pressed ? 0.85 : 1,
                     })}
                   >
                     {statusBezig ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ActivityIndicator color={c.primaryForeground} size="small" />
                     ) : (
-                      <Ionicons name="play-circle" size={18} color="#fff" />
+                      <Ionicons name="play-circle" size={18} color={c.primaryForeground} />
                     )}
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                       Hervat werk
                     </Text>
                   </Pressable>
@@ -547,18 +531,18 @@ export default function WerkdagDetailScherm() {
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
-                      backgroundColor: pressed ? "#15803d" : "#16a34a",
-                      borderRadius: 12,
-                      paddingVertical: 14,
+                      backgroundColor: c.success,
+                      borderRadius: c.radius,
+                      paddingVertical: ruimte.m + 2,
                       flexDirection: "row",
                       justifyContent: "center",
                       alignItems: "center",
-                      gap: 6,
-                      opacity: statusBezig ? 0.7 : 1,
+                      gap: ruimte.xs + 2,
+                      opacity: statusBezig ? 0.7 : pressed ? 0.85 : 1,
                     })}
                   >
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    <Ionicons name="checkmark-circle" size={18} color={c.primaryForeground} />
+                    <Text style={tekstStijl("nadruk", c.primaryForeground)}>
                       Gereed melden
                     </Text>
                   </Pressable>
@@ -568,21 +552,21 @@ export default function WerkdagDetailScherm() {
           ) : (
             <View
               style={{
-                marginHorizontal: 16,
-                marginBottom: 16,
-                backgroundColor: "#16a34a22",
-                borderRadius: 12,
+                marginHorizontal: ruimte.l,
+                marginBottom: ruimte.l,
+                backgroundColor: c.secondary,
+                borderRadius: c.radius,
                 borderWidth: 1,
-                borderColor: "#16a34a",
-                paddingVertical: 14,
+                borderColor: c.success,
+                paddingVertical: ruimte.m + 2,
                 flexDirection: "row",
                 justifyContent: "center",
                 alignItems: "center",
-                gap: 8,
+                gap: ruimte.s,
               }}
             >
-              <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
-              <Text style={{ color: "#16a34a", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+              <Ionicons name="checkmark-circle" size={20} color={c.success} />
+              <Text style={tekstStijl("nadruk", c.success)}>
                 Werk voltooid
               </Text>
             </View>
@@ -636,44 +620,34 @@ export default function WerkdagDetailScherm() {
           {/* ── Meerwerk melden ──────────────────────────────────────────────── */}
           <Kaart titel={meerwerkItems.length > 0 ? `Meerwerk (${meerwerkItems.length})` : "Meerwerk melden"}>
             {meerwerkItems.length > 0 && (
-              <View style={{ marginBottom: 12, gap: 8 }}>
-                {meerwerkItems.map((item) => {
-                  const kleur = item.status === "goedgekeurd" ? "#16a34a"
-                    : item.status === "afgewezen" ? "#dc2626"
-                    : "#d97706";
-                  const label = item.status === "goedgekeurd" ? "Goedgekeurd"
-                    : item.status === "afgewezen" ? "Afgewezen"
-                    : "In behandeling";
-                  return (
-                    <View
-                      key={item.id}
-                      style={{
-                        backgroundColor: kleur + "18",
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: kleur + "44",
-                        padding: 10,
-                        gap: 4,
-                      }}
-                    >
-                      {item.omschrijving ? (
-                        <Text style={{ color: c.text, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-                          {item.omschrijving}
-                        </Text>
-                      ) : null}
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: kleur }} />
-                        <Text style={{ color: kleur, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
-                          {label}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
+              <View style={{ marginBottom: ruimte.m, gap: ruimte.s }}>
+                {meerwerkItems.map((item) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      backgroundColor: c.secondary,
+                      borderRadius: c.radius / 2,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      padding: ruimte.s + 2,
+                      gap: ruimte.xs,
+                    }}
+                  >
+                    {item.omschrijving ? (
+                      <Text style={tekstStijl("klein", c.foreground)}>
+                        {item.omschrijving}
+                      </Text>
+                    ) : null}
+                    <Statusmerk
+                      label={MEERWERK_LABEL[item.status] ?? netteWaarde(item.status)}
+                      soort={MEERWERK_SOORT[item.status] ?? "waarschuwing"}
+                    />
+                  </View>
+                ))}
               </View>
             )}
             {toonMeerwerkFormulier ? (
-              <View style={{ gap: 10 }}>
+              <View style={{ gap: ruimte.s + 2 }}>
                 <TextInput
                   value={meerwerkTekst}
                   onChangeText={setMeerwerkTekst}
@@ -685,21 +659,21 @@ export default function WerkdagDetailScherm() {
                     backgroundColor: c.background,
                     borderWidth: 1,
                     borderColor: c.border,
-                    borderRadius: 8,
-                    padding: 10,
-                    color: c.text,
+                    borderRadius: c.radius / 2,
+                    padding: ruimte.s + 2,
+                    color: c.foreground,
                     fontSize: 14,
                     fontFamily: "Inter_400Regular",
                     minHeight: 72,
                     textAlignVertical: "top",
                   }}
                 />
-                <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: ruimte.s }}>
                   <Pressable
                     onPress={() => { setToonMeerwerkFormulier(false); setMeerwerkTekst(""); }}
-                    style={{ flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
+                    style={{ flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: c.radius / 2, paddingVertical: ruimte.s + 2, alignItems: "center" }}
                   >
-                    <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_500Medium" }}>Annuleren</Text>
+                    <Text style={tekstStijl("standaard", c.mutedForeground)}>Annuleren</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => void indienMeerwerk()}
@@ -707,16 +681,16 @@ export default function WerkdagDetailScherm() {
                     style={{
                       flex: 2,
                       backgroundColor: meerwerkBezig || !meerwerkTekst.trim() ? c.muted : c.tint,
-                      borderRadius: 8,
-                      paddingVertical: 10,
+                      borderRadius: c.radius / 2,
+                      paddingVertical: ruimte.s + 2,
                       alignItems: "center",
                       flexDirection: "row",
                       justifyContent: "center",
-                      gap: 6,
+                      gap: ruimte.xs + 2,
                     }}
                   >
-                    {meerwerkBezig && <ActivityIndicator size="small" color="#fff" />}
-                    <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Indienen</Text>
+                    {meerwerkBezig && <ActivityIndicator size="small" color={c.primaryForeground} />}
+                    <Text style={tekstStijl("standaard", c.primaryForeground)}>Indienen</Text>
                   </Pressable>
                 </View>
               </View>
@@ -726,16 +700,16 @@ export default function WerkdagDetailScherm() {
                 style={({ pressed }) => ({
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 10,
+                  gap: ruimte.s + 2,
                   borderWidth: 1,
                   borderStyle: "dashed",
                   borderColor: pressed ? c.tint : c.border,
-                  borderRadius: 8,
-                  padding: 12,
+                  borderRadius: c.radius / 2,
+                  padding: ruimte.m,
                 })}
               >
                 <Ionicons name="add-circle-outline" size={18} color={c.tint} />
-                <Text style={{ color: c.tint, fontSize: 14, fontFamily: "Inter_500Medium" }}>
+                <Text style={tekstStijl("standaard", c.tint)}>
                   Meerwerk melden
                 </Text>
               </Pressable>
@@ -745,20 +719,20 @@ export default function WerkdagDetailScherm() {
           {/* ── Uitvoerend personeel ───────────────────────────────────────── */}
           {(huidigWerkorder.medewerker_naam as string | null) ? (
             <Kaart titel="Uitvoerend personeel">
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.s + 2 }}>
                 <View
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: c.accent + "33",
+                    width: ruimte.xxl,
+                    height: ruimte.xxl,
+                    borderRadius: ruimte.l,
+                    backgroundColor: c.accent,
                     justifyContent: "center",
                     alignItems: "center",
                   }}
                 >
-                  <Ionicons name="person" size={16} color={c.tint} />
+                  <Ionicons name="person" size={ruimte.l} color={c.tint} />
                 </View>
-                <Text style={{ color: c.text, fontSize: 14, fontFamily: "Inter_500Medium" }}>
+                <Text style={tekstStijl("standaard", c.foreground)}>
                   {huidigWerkorder.medewerker_naam as string}
                 </Text>
               </View>
@@ -768,26 +742,26 @@ export default function WerkdagDetailScherm() {
           {/* ── Foto's (offline-first) ─────────────────────────────────────── */}
           <Kaart titel={`Foto's${lokaleFotos.length > 0 ? ` (${lokaleFotos.length})` : ""}`}>
             {lokaleFotos.length > 0 ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s, marginBottom: ruimte.s + 2 }}>
                 {lokaleFotos.map((pad) => (
                   <View key={pad} style={{ position: "relative" }}>
                     <Image
                       source={{ uri: pad }}
-                      style={{ width: 90, height: 90, borderRadius: 8, backgroundColor: c.muted }}
+                      style={{ width: 90, height: 90, borderRadius: c.radius / 2, backgroundColor: c.muted }}
                       resizeMode="cover"
                     />
                     <View
                       style={{
                         position: "absolute",
-                        bottom: 4,
-                        right: 4,
-                        backgroundColor: "rgba(0,0,0,0.55)",
-                        borderRadius: 6,
-                        paddingHorizontal: 5,
+                        bottom: ruimte.xs,
+                        right: ruimte.xs,
+                        backgroundColor: c.dark,
+                        borderRadius: c.radius / 2,
+                        paddingHorizontal: ruimte.xs + 1,
                         paddingVertical: 2,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_500Medium" }}>Lokaal</Text>
+                      <Text style={tekstStijl("bijschrift", c.darkForeground)}>Lokaal</Text>
                     </View>
                   </View>
                 ))}
@@ -798,14 +772,14 @@ export default function WerkdagDetailScherm() {
                   borderWidth: 1,
                   borderColor: c.border,
                   borderStyle: "dashed",
-                  borderRadius: 8,
-                  padding: 20,
+                  borderRadius: c.radius / 2,
+                  padding: ruimte.l + ruimte.xs,
                   alignItems: "center",
-                  marginBottom: 10,
+                  marginBottom: ruimte.s + 2,
                 }}
               >
-                <Ionicons name="camera-outline" size={26} color={c.mutedForeground} />
-                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 6 }}>
+                <Ionicons name="camera-outline" size={ruimte.xl} color={c.mutedForeground} />
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs + 2 }]}>
                   Nog geen foto's toegevoegd
                 </Text>
               </View>
@@ -816,19 +790,19 @@ export default function WerkdagDetailScherm() {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 6,
+                gap: ruimte.xs + 2,
                 backgroundColor: pressed ? c.muted : c.accent,
-                borderRadius: 10,
-                paddingVertical: 10,
+                borderRadius: c.radius / 2,
+                paddingVertical: ruimte.s + 2,
               })}
             >
-              <Ionicons name="camera-outline" size={16} color={c.primary} />
-              <Text style={{ color: c.primary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Ionicons name="camera-outline" size={ruimte.l} color={c.primary} />
+              <Text style={tekstStijl("nadruk", c.primary)}>
                 Foto toevoegen
               </Text>
             </Pressable>
             {!isOnline && (
-              <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 6, textAlign: "center" }}>
+              <Text style={[tekstStijl("bijschrift", c.mutedForeground), { marginTop: ruimte.xs + 2, textAlign: "center" }]}>
                 Foto's worden lokaal opgeslagen en gesynchroniseerd bij verbinding
               </Text>
             )}
@@ -848,36 +822,36 @@ export default function WerkdagDetailScherm() {
             }
             style={({ pressed }) => ({
               backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
-              marginHorizontal: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
+              marginHorizontal: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: ruimte.m,
             })}
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: "#d9770622",
+                width: ruimte.xxl + ruimte.xs,
+                height: ruimte.xxl + ruimte.xs,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.secondary,
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Ionicons name="bag-add-outline" size={18} color="#d97706" />
+              <Ionicons name="bag-add-outline" size={18} color={c.warning} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Materiaal melden
               </Text>
-              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                 Voor de opdracht — op, beschadigd of nodig
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
 
           {/* ── Toebehoren gereedschap ────────────────────────────────────── */}
@@ -885,36 +859,36 @@ export default function WerkdagDetailScherm() {
             onPress={() => router.push("/materiaal-aanvraag/toebehoren")}
             style={({ pressed }) => ({
               backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
-              marginHorizontal: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
+              marginHorizontal: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: ruimte.m,
             })}
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: "#2563eb22",
+                width: ruimte.xxl + ruimte.xs,
+                height: ruimte.xxl + ruimte.xs,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.accent,
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Ionicons name="build-outline" size={18} color="#2563eb" />
+              <Ionicons name="build-outline" size={18} color={c.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Toebehoren gereedschap
               </Text>
-              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                 Verbruik — zaagjes, boortjes, schijven
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
 
           {/* ── Digitale Uitvoerder ───────────────────────────────────────── */}
@@ -932,21 +906,21 @@ export default function WerkdagDetailScherm() {
             }
             style={({ pressed }) => ({
               backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
-              marginHorizontal: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
+              marginHorizontal: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: ruimte.m,
             })}
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${c.primary}22`,
+                width: ruimte.xxl + ruimte.xs,
+                height: ruimte.xxl + ruimte.xs,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.accent,
                 justifyContent: "center",
                 alignItems: "center",
               }}
@@ -954,14 +928,14 @@ export default function WerkdagDetailScherm() {
               <Ionicons name="sparkles" size={18} color={c.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Digitale Uitvoerder
               </Text>
-              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                 AI meedenken over aanpak en uitvoering
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
 
           {/* ── Adaptieve gids ─────────────────────────────────────────────── */}
@@ -972,21 +946,21 @@ export default function WerkdagDetailScherm() {
               }
               style={({ pressed }) => ({
                 backgroundColor: pressed ? c.muted : c.card,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 12,
-                marginHorizontal: 16,
+                borderRadius: c.radius,
+                padding: ruimte.l,
+                marginBottom: ruimte.m,
+                marginHorizontal: ruimte.l,
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 12,
+                gap: ruimte.m,
               })}
             >
               <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  backgroundColor: `${c.primary}22`,
+                  width: ruimte.xxl + ruimte.xs,
+                  height: ruimte.xxl + ruimte.xs,
+                  borderRadius: c.radius / 2,
+                  backgroundColor: c.accent,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -994,14 +968,14 @@ export default function WerkdagDetailScherm() {
                 <Ionicons name="map-outline" size={18} color={c.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={tekstStijl("nadruk", c.foreground)}>
                   Start adaptieve gids
                 </Text>
-                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                   AI-gestuurde stap-voor-stap uitvoering
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+              <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
             </Pressable>
           )}
 
@@ -1010,41 +984,41 @@ export default function WerkdagDetailScherm() {
             <Pressable
               onPress={() => router.push("/kwartaalcontrole" as Parameters<typeof router.push>[0])}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? "#fef3c7" : "#fffbeb",
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 12,
-                marginHorizontal: 16,
+                backgroundColor: pressed ? c.muted : c.secondary,
+                borderRadius: c.radius,
+                padding: ruimte.l,
+                marginBottom: ruimte.m,
+                marginHorizontal: ruimte.l,
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 12,
+                gap: ruimte.m,
                 borderWidth: 1.5,
-                borderColor: "#fbbf24",
+                borderColor: c.warning,
               })}
             >
               <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  backgroundColor: "#fef3c7",
+                  width: ruimte.xxl + ruimte.xs,
+                  height: ruimte.xxl + ruimte.xs,
+                  borderRadius: c.radius / 2,
+                  backgroundColor: c.card,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
-                <Ionicons name="clipboard-outline" size={18} color="#d97706" />
+                <Ionicons name="clipboard-outline" size={18} color={c.warning} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_700Bold" }}>
+                <Text style={tekstStijl("nadruk", c.warning)}>
                   Kwartaalcontrole uitvoeren
                 </Text>
-                <Text style={{ color: "#a16207", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                   {openKwartaalCyclus.voertuig_kenteken
                     ? `Verplicht voor ${openKwartaalCyclus.voertuig_kenteken}`
                     : "Verplichte dashboardfoto en kilometerstand"}
                 </Text>
               </View>
-              <Ionicons name="alert-circle" size={18} color="#d97706" />
+              <Ionicons name="alert-circle" size={18} color={c.warning} />
             </Pressable>
           )}
 
@@ -1053,36 +1027,36 @@ export default function WerkdagDetailScherm() {
             onPress={() => router.push("/voertuig-melding")}
             style={({ pressed }) => ({
               backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
-              marginHorizontal: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
+              marginHorizontal: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: ruimte.m,
             })}
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: "#fef3c722",
+                width: ruimte.xxl + ruimte.xs,
+                height: ruimte.xxl + ruimte.xs,
+                borderRadius: c.radius / 2,
+                backgroundColor: c.secondary,
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Ionicons name="car-outline" size={18} color="#d97706" />
+              <Ionicons name="car-outline" size={18} color={c.warning} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Voertuig melden
               </Text>
-              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                 Storing of schade doorgeven
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
 
           {/* ── Tijdregistratie ────────────────────────────────────────────── */}
@@ -1090,20 +1064,20 @@ export default function WerkdagDetailScherm() {
             onPress={() => router.push("/uren")}
             style={({ pressed }) => ({
               backgroundColor: pressed ? c.muted : c.card,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 12,
-              marginHorizontal: 16,
+              borderRadius: c.radius,
+              padding: ruimte.l,
+              marginBottom: ruimte.m,
+              marginHorizontal: ruimte.l,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: ruimte.m,
             })}
           >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
+                width: ruimte.xxl + ruimte.xs,
+                height: ruimte.xxl + ruimte.xs,
+                borderRadius: c.radius / 2,
                 backgroundColor: c.accent,
                 justifyContent: "center",
                 alignItems: "center",
@@ -1112,19 +1086,19 @@ export default function WerkdagDetailScherm() {
               <Ionicons name="stopwatch-outline" size={18} color={c.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={tekstStijl("nadruk", c.foreground)}>
                 Tijdregistratie
               </Text>
-              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
                 Uren bijhouden voor vandaag
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
           </Pressable>
 
           {/* ── Oplevering / handtekening ──────────────────────────────────── */}
           <Kaart titel="Oplevering">
-            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 14 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.m + 2 }]}>
               Laat de opdrachtgever of contactpersoon hieronder tekenen ter bevestiging van de uitgevoerde werkzaamheden.
             </Text>
             <HandtekeningPad
@@ -1140,15 +1114,15 @@ export default function WerkdagDetailScherm() {
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 6,
-                  marginTop: 8,
-                  backgroundColor: "rgba(234,179,8,0.1)",
-                  borderRadius: 8,
-                  padding: 10,
+                  gap: ruimte.xs + 2,
+                  marginTop: ruimte.s,
+                  backgroundColor: c.secondary,
+                  borderRadius: c.radius / 2,
+                  padding: ruimte.s + 2,
                 }}
               >
-                <Ionicons name="time-outline" size={14} color="#facc15" />
-                <Text style={{ color: "#facc15", fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 }}>
+                <Ionicons name="time-outline" size={ruimte.m + 2} color={c.warning} />
+                <Text style={[tekstStijl("klein", c.warning), { flex: 1 }]}>
                   Handtekening lokaal opgeslagen — wordt gesynchroniseerd bij verbinding
                 </Text>
               </View>

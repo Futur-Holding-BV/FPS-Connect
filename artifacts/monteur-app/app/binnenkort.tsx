@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { bovenInset, tekstStijl } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
@@ -22,17 +23,17 @@ export default function Binnenkort() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingBottom: ruimte.l + 2,
         }}
       >
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s + 2 }}>
+          <Text style={tekstStijl("sectiekop", c.primary)}>
             ‹ Terug
           </Text>
         </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+        <Text style={tekstStijl("schermtitel", c.darkForeground)}>
           {titel ?? "Binnenkort"}
         </Text>
       </View>
@@ -42,8 +43,8 @@ export default function Binnenkort() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          padding: 32,
-          gap: 16,
+          padding: ruimte.xxl,
+          gap: ruimte.l,
         }}
       >
         <View
@@ -59,24 +60,15 @@ export default function Binnenkort() {
           <Ionicons name="construct-outline" size={40} color={c.primary} />
         </View>
         <Text
-          style={{
-            color: c.foreground,
-            fontSize: 19,
-            fontFamily: "Inter_700Bold",
-            textAlign: "center",
-          }}
+          style={[tekstStijl("sectiekop", c.foreground), { textAlign: "center" }]}
         >
           Nog in ontwikkeling
         </Text>
         <Text
-          style={{
-            color: c.mutedForeground,
-            fontSize: 15,
-            fontFamily: "Inter_400Regular",
-            textAlign: "center",
-            lineHeight: 22,
-            maxWidth: 320,
-          }}
+          style={[
+            tekstStijl("standaard", c.mutedForeground),
+            { textAlign: "center", maxWidth: 320 },
+          ]}
         >
           {titel ? `"${titel}" is ` : "Deze module is "}
           nog niet beschikbaar. We werken eraan en voegen het binnenkort toe aan de app.

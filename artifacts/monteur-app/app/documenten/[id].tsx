@@ -6,10 +6,11 @@ import {
 } from "@workspace/api-client-react";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ruimte } from "@workspace/ontwerp";
 
-import { Knop, bovenInset } from "@/components/ui";
+import { Knop, Ladenstaat, tekstStijl, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
@@ -49,17 +50,17 @@ function MetaRij({ label, waarde }: { label: string; waarde: string }) {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
-        gap: 16,
-        paddingVertical: 12,
+        gap: ruimte.l,
+        paddingVertical: ruimte.m,
         borderBottomWidth: 1,
         borderBottomColor: c.border,
       }}
     >
-      <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+      <Text style={tekstStijl("standaard", c.mutedForeground)}>
         {label}
       </Text>
       <Text
-        style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold", flex: 1, textAlign: "right" }}
+        style={[tekstStijl("nadruk", c.foreground), { flex: 1, textAlign: "right" }]}
       >
         {waarde}
       </Text>
@@ -89,22 +90,22 @@ export default function DocumentDetail() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.xl,
+          paddingBottom: ruimte.l,
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-          <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-            <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+          <Pressable onPress={() => router.back()} style={{ marginBottom: ruimte.s }}>
+            <Text style={tekstStijl("nadruk", c.primary)}>
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>
             {document?.naam ?? "Document"}
           </Text>
           {document ? (
-            <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+            <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
               {TYPE_LABELS[document.documenttype] ?? document.documenttype}
             </Text>
           ) : null}
@@ -112,12 +113,12 @@ export default function DocumentDetail() {
       </View>
 
       {isLoading || !document ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l, paddingBottom: insets.bottom + ruimte.xxl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
         >
           {heeftPdf ? (
             <Knop
@@ -136,8 +137,8 @@ export default function DocumentDetail() {
               borderRadius: c.radius,
               borderWidth: 1,
               borderColor: c.border,
-              paddingHorizontal: 18,
-              paddingVertical: 6,
+              paddingHorizontal: ruimte.l,
+              paddingVertical: ruimte.s - 2,
             }}
           >
             <MetaRij label="Type" waarde={TYPE_LABELS[document.documenttype] ?? document.documenttype} />
@@ -151,15 +152,12 @@ export default function DocumentDetail() {
           </View>
 
           {gesorteerd.length > 0 ? (
-            <View style={{ gap: 10 }}>
+            <View style={{ gap: ruimte.s }}>
               <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontSize: 13,
-                  fontFamily: "Inter_600SemiBold",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
+                style={[
+                  tekstStijl("bijschrift", c.mutedForeground),
+                  { textTransform: "uppercase", letterSpacing: 0.5 },
+                ]}
               >
                 Revisiehistorie
               </Text>
@@ -171,34 +169,34 @@ export default function DocumentDetail() {
                     borderRadius: c.radius,
                     borderWidth: 1,
                     borderColor: c.border,
-                    padding: 16,
+                    padding: ruimte.l,
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 14,
+                    gap: ruimte.m + 2,
                   }}
                 >
                   <View
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 10,
+                      width: ruimte.xl + ruimte.xl,
+                      height: ruimte.xl + ruimte.xl,
+                      borderRadius: c.radius,
                       backgroundColor: c.accent,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: c.accentForeground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+                    <Text style={tekstStijl("nadruk", c.accentForeground)}>
                       {r.revisie_nummer}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text
-                      style={{ fontSize: 15, color: c.foreground, fontFamily: "Inter_600SemiBold" }}
+                      style={tekstStijl("nadruk", c.foreground)}
                       numberOfLines={2}
                     >
                       {r.naam}
                     </Text>
-                    <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                    <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: ruimte.xs / 2 }]}>
                       {STATUS_LABELS[r.status] ?? r.status}
                     </Text>
                   </View>

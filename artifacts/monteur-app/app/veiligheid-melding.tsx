@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { useFocusEffect } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,25 +22,34 @@ import {
   type VeiligheidMelding,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import {
+  Kaart,
+  Ladenstaat,
+  Statusmerk,
+  netteWaarde,
+  tekstStijl,
+} from "@/components/ui";
 
-const MELDING_TYPEN = [
-  { waarde: "onveilige_situatie", label: "Onveilige situatie", icoon: "warning" as const, kleur: "#f97316" },
-  { waarde: "bijna_ongeval", label: "Bijna-ongeval", icoon: "alert-circle" as const, kleur: "#ef4444" },
-  { waarde: "incident", label: "Incident", icoon: "medical" as const, kleur: "#dc2626" },
-  { waarde: "idee", label: "Verbeteringsidee", icoon: "bulb" as const, kleur: "#3b82f6" },
+type Soort = "neutraal" | "succes" | "waarschuwing" | "fout" | "primair";
+
+const MELDING_TYPEN: { waarde: string; label: string; icoon: keyof typeof Ionicons.glyphMap; soort: Soort }[] = [
+  { waarde: "onveilige_situatie", label: "Onveilige situatie", icoon: "warning", soort: "waarschuwing" },
+  { waarde: "bijna_ongeval", label: "Bijna-ongeval", icoon: "alert-circle", soort: "fout" },
+  { waarde: "incident", label: "Incident", icoon: "medical", soort: "fout" },
+  { waarde: "idee", label: "Verbeteringsidee", icoon: "bulb", soort: "primair" },
 ];
 
-const PRIORITEITEN = [
-  { waarde: "laag", label: "Laag", kleur: "#6b7280" },
-  { waarde: "middel", label: "Middel", kleur: "#f59e0b" },
-  { waarde: "hoog", label: "Hoog", kleur: "#f97316" },
-  { waarde: "kritiek", label: "Kritiek", kleur: "#dc2626" },
+const PRIORITEITEN: { waarde: string; label: string; soort: Soort }[] = [
+  { waarde: "laag", label: "Laag", soort: "neutraal" },
+  { waarde: "middel", label: "Middel", soort: "waarschuwing" },
+  { waarde: "hoog", label: "Hoog", soort: "waarschuwing" },
+  { waarde: "kritiek", label: "Kritiek", soort: "fout" },
 ];
 
-const STATUS_KLEUREN: Record<string, string> = {
-  open: "#f59e0b",
-  in_behandeling: "#3b82f6",
-  afgehandeld: "#10b981",
+const STATUS_SOORT: Record<string, Soort> = {
+  open: "waarschuwing",
+  in_behandeling: "primair",
+  afgehandeld: "succes",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -74,6 +84,18 @@ export default function VeiligheidMeldingPagina() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+
+  // Soort → kleur uit het palet (voor iconen en selectie-accenten).
+  const soortKleur = (soort: Soort) =>
+    soort === "succes"
+      ? c.success
+      : soort === "waarschuwing"
+        ? c.warning
+        : soort === "fout"
+          ? c.destructive
+          : soort === "primair"
+            ? c.tint
+            : c.mutedForeground;
 
   const [dialoogOpen, setDialoogOpen] = useState(false);
   const [formulier, setFormulier] = useState<FormState>(leegForm());
@@ -124,38 +146,27 @@ export default function VeiligheidMeldingPagina() {
     const tp = typeInfo(item.type);
     const pr = prioriteitInfo(item.prioriteit);
     return (
-      <View style={{
-        backgroundColor: c.card, borderRadius: 12, padding: 14, marginBottom: 10,
-        borderWidth: 1, borderColor: c.border, flexDirection: "row", gap: 10,
-      }}>
+      <Kaart stijl={{ padding: ruimte.m + 2, marginBottom: ruimte.s + 2, flexDirection: "row", gap: ruimte.m }}>
         <View style={{
-          width: 36, height: 36, borderRadius: 18,
-          backgroundColor: tp.kleur + "20",
+          width: ruimte.xxl + ruimte.xs, height: ruimte.xxl + ruimte.xs, borderRadius: c.radius,
+          backgroundColor: c.secondary,
           alignItems: "center", justifyContent: "center",
         }}>
-          <Ionicons name={tp.icoon} size={18} color={tp.kleur} />
+          <Ionicons name={tp.icoon} size={ruimte.l + 2} color={soortKleur(tp.soort)} />
         </View>
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", gap: 6, alignItems: "center", marginBottom: 4 }}>
-            <View style={{ backgroundColor: tp.kleur + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: tp.kleur, fontSize: 11, fontWeight: "600" }}>{tp.label}</Text>
-            </View>
-            <View style={{ backgroundColor: pr.kleur + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: pr.kleur, fontSize: 11 }}>{pr.label}</Text>
-            </View>
-            <View style={{ backgroundColor: (STATUS_KLEUREN[item.status] ?? "#6b7280") + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: STATUS_KLEUREN[item.status] ?? "#6b7280", fontSize: 11 }}>
-                {STATUS_LABELS[item.status] ?? item.status}
-              </Text>
-            </View>
+          <View style={{ flexDirection: "row", gap: ruimte.xs + 2, alignItems: "center", marginBottom: ruimte.xs, flexWrap: "wrap" }}>
+            <Statusmerk label={tp.label} soort={tp.soort} />
+            <Statusmerk label={pr.label} soort={pr.soort} />
+            <Statusmerk label={STATUS_LABELS[item.status] ?? netteWaarde(item.status)} soort={STATUS_SOORT[item.status] ?? "neutraal"} />
           </View>
-          <Text style={{ color: c.foreground, fontSize: 14 }} numberOfLines={3}>{item.omschrijving}</Text>
-          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-            {item.locatie && <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{item.locatie}</Text>}
-            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{datumLabel(item.aangemaakt_op)}</Text>
+          <Text style={tekstStijl("klein", c.foreground)} numberOfLines={3}>{item.omschrijving}</Text>
+          <View style={{ flexDirection: "row", gap: ruimte.s, marginTop: ruimte.xs }}>
+            {item.locatie && <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{item.locatie}</Text>}
+            <Text style={tekstStijl("bijschrift", c.mutedForeground)}>{datumLabel(item.aangemaakt_op)}</Text>
           </View>
         </View>
-      </View>
+      </Kaart>
     );
   };
 
@@ -164,43 +175,43 @@ export default function VeiligheidMeldingPagina() {
       {/* Header */}
       <View style={{
         backgroundColor: c.dark,
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingTop: insets.top + ruimte.m,
+        paddingHorizontal: ruimte.l,
+        paddingBottom: ruimte.m,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
       }}>
         <View>
-          <Text style={{ color: c.foreground, fontSize: 20, fontWeight: "700" }}>Veiligheidsmeldingen</Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Meld onveilige situaties en incidenten</Text>
+          <Text style={tekstStijl("schermtitel", c.darkForeground)}>Veiligheidsmeldingen</Text>
+          <Text style={tekstStijl("klein", c.darkMuted)}>Meld onveilige situaties en incidenten</Text>
         </View>
         <Pressable
           onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
           style={{
-            backgroundColor: c.primary, borderRadius: 22, width: 44, height: 44,
+            backgroundColor: c.primary, borderRadius: c.radius + ruimte.s, width: ruimte.xxl + ruimte.m, height: ruimte.xxl + ruimte.m,
             alignItems: "center", justifyContent: "center",
           }}
         >
-          <Ionicons name="add" size={24} color="white" />
+          <Ionicons name="add" size={ruimte.l + ruimte.s} color={c.primaryForeground} />
         </Pressable>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={c.primary} size="large" />
+        <View style={{ flex: 1, backgroundColor: c.background, padding: ruimte.l }}>
+          <Ladenstaat regels={5} />
         </View>
       ) : (meldingen?.length ?? 0) === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Ionicons name="warning-outline" size={48} color={c.mutedForeground} style={{ marginBottom: 12, opacity: 0.5 }} />
-          <Text style={{ color: c.mutedForeground, textAlign: "center" }}>
+        <View style={{ flex: 1, backgroundColor: c.background, alignItems: "center", justifyContent: "center", paddingHorizontal: ruimte.xxl }}>
+          <Ionicons name="warning-outline" size={ruimte.xxl + ruimte.l} color={c.mutedForeground} style={{ marginBottom: ruimte.m, opacity: 0.5 }} />
+          <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center" }]}>
             Nog geen meldingen. Meld onveilige situaties, bijna-ongevallen en incidenten.
           </Text>
           <Pressable
             onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
-            style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16 }}
+            style={{ backgroundColor: c.primary, borderRadius: c.radius, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.m - 2, marginTop: ruimte.l }}
           >
-            <Text style={{ color: "white", fontWeight: "600" }}>Eerste melding doen</Text>
+            <Text style={tekstStijl("nadruk", c.primaryForeground)}>Eerste melding doen</Text>
           </Pressable>
         </View>
       ) : (
@@ -208,7 +219,8 @@ export default function VeiligheidMeldingPagina() {
           data={meldingen ?? []}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 16 }}
+          style={{ backgroundColor: c.background }}
+          contentContainerStyle={{ padding: ruimte.l }}
           refreshing={isLoading}
           onRefresh={refetch}
         />
@@ -218,49 +230,49 @@ export default function VeiligheidMeldingPagina() {
       <Modal visible={dialoogOpen} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: c.dark }}>
           <View style={{
-            paddingTop: insets.top + 12,
-            paddingHorizontal: 16,
-            paddingBottom: 12,
+            paddingTop: insets.top + ruimte.m,
+            paddingHorizontal: ruimte.l,
+            paddingBottom: ruimte.m,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
             borderBottomWidth: 1,
             borderBottomColor: c.border,
           }}>
-            <Text style={{ color: c.foreground, fontSize: 18, fontWeight: "700" }}>Nieuwe melding</Text>
+            <Text style={tekstStijl("sectiekop", c.darkForeground)}>Nieuwe melding</Text>
             <Pressable onPress={() => setDialoogOpen(false)}>
-              <Ionicons name="close" size={24} color={c.foreground} />
+              <Ionicons name="close" size={ruimte.l + ruimte.s} color={c.darkForeground} />
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+          <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={{ padding: ruimte.l, gap: ruimte.l }}>
             {/* Type */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Type melding</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {MELDING_TYPEN.map((t) => (
-                  <Pressable
-                    key={t.waarde}
-                    onPress={() => setFormulier((f) => ({ ...f, type: t.waarde }))}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 6,
-                      backgroundColor: formulier.type === t.waarde ? t.kleur + "20" : c.card,
-                      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-                      borderWidth: 1, borderColor: formulier.type === t.waarde ? t.kleur : c.border,
-                    }}
-                  >
-                    <Ionicons name={t.icoon} size={16} color={formulier.type === t.waarde ? t.kleur : c.mutedForeground} />
-                    <Text style={{
-                      color: formulier.type === t.waarde ? t.kleur : c.foreground,
-                      fontSize: 13, fontWeight: formulier.type === t.waarde ? "600" : "400",
-                    }}>{t.label}</Text>
-                  </Pressable>
-                ))}
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.s }]}>Type melding</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ruimte.s }}>
+                {MELDING_TYPEN.map((t) => {
+                  const actief = formulier.type === t.waarde;
+                  return (
+                    <Pressable
+                      key={t.waarde}
+                      onPress={() => setFormulier((f) => ({ ...f, type: t.waarde }))}
+                      style={{
+                        flexDirection: "row", alignItems: "center", gap: ruimte.xs + 2,
+                        backgroundColor: actief ? c.accent : c.card,
+                        borderRadius: c.radius, paddingHorizontal: ruimte.m, paddingVertical: ruimte.s,
+                        borderWidth: 1, borderColor: actief ? soortKleur(t.soort) : c.border,
+                      }}
+                    >
+                      <Ionicons name={t.icoon} size={ruimte.l} color={actief ? soortKleur(t.soort) : c.mutedForeground} />
+                      <Text style={tekstStijl(actief ? "nadruk" : "standaard", actief ? c.foreground : c.foreground)}>{t.label}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
 
             {/* Omschrijving */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>Omschrijving *</Text>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs }]}>Omschrijving *</Text>
               <TextInput
                 value={formulier.omschrijving}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, omschrijving: v }))}
@@ -269,66 +281,69 @@ export default function VeiligheidMeldingPagina() {
                 multiline
                 numberOfLines={4}
                 style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: c.radius,
                   borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
-                  minHeight: 100, textAlignVertical: "top",
+                  paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2, fontSize: 15,
+                  fontFamily: "Inter_400Regular",
+                  minHeight: ruimte.xxl * 3 + ruimte.xs, textAlignVertical: "top",
                 }}
               />
             </View>
 
             {/* Locatie */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>Locatie</Text>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs }]}>Locatie</Text>
               <TextInput
                 value={formulier.locatie}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, locatie: v }))}
                 placeholder="Waar was dit?"
                 placeholderTextColor={c.mutedForeground}
                 style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: c.radius,
                   borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+                  paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2, fontSize: 15,
+                  fontFamily: "Inter_400Regular",
                 }}
               />
             </View>
 
             {/* Project */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>Project</Text>
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.xs }]}>Project</Text>
               <TextInput
                 value={formulier.projectNaam}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, projectNaam: v }))}
                 placeholder="Optioneel"
                 placeholderTextColor={c.mutedForeground}
                 style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: c.radius,
                   borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+                  paddingHorizontal: ruimte.m, paddingVertical: ruimte.s + 2, fontSize: 15,
+                  fontFamily: "Inter_400Regular",
                 }}
               />
             </View>
 
             {/* Prioriteit */}
             <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Prioriteit</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {PRIORITEITEN.map((p) => (
-                  <Pressable
-                    key={p.waarde}
-                    onPress={() => setFormulier((f) => ({ ...f, prioriteit: p.waarde }))}
-                    style={{
-                      flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 8,
-                      backgroundColor: formulier.prioriteit === p.waarde ? p.kleur + "20" : c.card,
-                      borderWidth: 1, borderColor: formulier.prioriteit === p.waarde ? p.kleur : c.border,
-                    }}
-                  >
-                    <Text style={{
-                      color: formulier.prioriteit === p.waarde ? p.kleur : c.mutedForeground,
-                      fontSize: 12, fontWeight: formulier.prioriteit === p.waarde ? "700" : "400",
-                    }}>{p.label}</Text>
-                  </Pressable>
-                ))}
+              <Text style={[tekstStijl("klein", c.mutedForeground), { marginBottom: ruimte.s }]}>Prioriteit</Text>
+              <View style={{ flexDirection: "row", gap: ruimte.s }}>
+                {PRIORITEITEN.map((p) => {
+                  const actief = formulier.prioriteit === p.waarde;
+                  return (
+                    <Pressable
+                      key={p.waarde}
+                      onPress={() => setFormulier((f) => ({ ...f, prioriteit: p.waarde }))}
+                      style={{
+                        flex: 1, alignItems: "center", paddingVertical: ruimte.s, borderRadius: c.radius,
+                        backgroundColor: actief ? c.accent : c.card,
+                        borderWidth: 1, borderColor: actief ? soortKleur(p.soort) : c.border,
+                      }}
+                    >
+                      <Text style={tekstStijl(actief ? "nadruk" : "standaard", actief ? c.foreground : c.mutedForeground)}>{p.label}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
 
@@ -336,14 +351,14 @@ export default function VeiligheidMeldingPagina() {
               onPress={opslaan}
               disabled={isBezigOpslaan}
               style={{
-                backgroundColor: isBezigOpslaan ? c.mutedForeground : c.primary,
-                borderRadius: 10, padding: 14, alignItems: "center", marginBottom: 16,
+                backgroundColor: isBezigOpslaan ? c.muted : c.primary,
+                borderRadius: c.radius, padding: ruimte.m + 2, alignItems: "center", marginBottom: ruimte.l,
               }}
             >
               {isBezigOpslaan ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color={c.primaryForeground} />
               ) : (
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>Melding indienen</Text>
+                <Text style={tekstStijl("sectiekop", c.primaryForeground)}>Melding indienen</Text>
               )}
             </Pressable>
           </ScrollView>

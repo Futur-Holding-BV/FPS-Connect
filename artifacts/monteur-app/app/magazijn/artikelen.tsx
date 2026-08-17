@@ -3,10 +3,10 @@ import {
   useListVoorraadTotaal,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import { ruimte } from "@workspace/ontwerp";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   Text,
@@ -15,7 +15,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import {
+  Ladenstaat,
+  LegeStaat,
+  bovenInset,
+  tekstStijl,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
@@ -71,20 +76,20 @@ function MagazijnArtikelenScherm() {
         style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
-          paddingHorizontal: 16,
-          paddingVertical: 14,
+          paddingHorizontal: ruimte.l,
+          paddingVertical: ruimte.m + 2,
           backgroundColor: pressed ? c.muted : c.card,
           borderBottomWidth: 1,
           borderBottomColor: c.border,
-          gap: 12,
+          gap: ruimte.m,
         })}
       >
         <View
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            backgroundColor: onderMin ? "#fef2f2" : "#fff3ef",
+            width: ruimte.xxl + ruimte.s,
+            height: ruimte.xxl + ruimte.s,
+            borderRadius: c.radius / 2,
+            backgroundColor: c.accent,
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
@@ -92,45 +97,39 @@ function MagazijnArtikelenScherm() {
         >
           <Ionicons
             name={onderMin ? "warning-outline" : "cube-outline"}
-            size={20}
-            color={onderMin ? "#dc2626" : c.primary}
+            size={ruimte.l + ruimte.xs}
+            color={onderMin ? c.destructive : c.primary}
           />
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
-            style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: c.text }}
+            style={tekstStijl("nadruk", c.foreground)}
             numberOfLines={1}
           >
             {item.naam}
           </Text>
           {item.code ? (
-            <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
               {item.code}{item.categorie ? ` · ${item.categorie}` : ""}
             </Text>
           ) : item.categorie ? (
-            <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { marginTop: 1 }]}>
               {item.categorie}
             </Text>
           ) : null}
         </View>
 
         <View style={{ alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontFamily: "Inter_700Bold",
-              color: onderMin ? "#dc2626" : "#16a34a",
-            }}
-          >
+          <Text style={tekstStijl("sectiekop", onderMin ? c.destructive : c.success)}>
             {vrij !== null ? vrij : "—"}
           </Text>
-          <Text style={{ fontSize: 10, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+          <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
             {eenheidLabel(item.eenheid)}
           </Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+        <Ionicons name="chevron-forward" size={ruimte.l} color={c.mutedForeground} />
       </Pressable>
     );
   }
@@ -140,16 +139,16 @@ function MagazijnArtikelenScherm() {
       <View
         style={{
           backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingTop: bovenInset(insets) + ruimte.m,
+          paddingHorizontal: ruimte.l + ruimte.xs,
+          paddingBottom: ruimte.l,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ruimte.m, marginBottom: ruimte.m + 2 }}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={22} color={c.darkForeground} />
+            <Ionicons name="arrow-back" size={ruimte.xl} color={c.darkForeground} />
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 18, fontFamily: "Inter_700Bold", flex: 1 }}>
+          <Text style={[tekstStijl("sectiekop", c.darkForeground), { flex: 1 }]}>
             Artikelen &amp; voorraad
           </Text>
         </View>
@@ -158,57 +157,54 @@ function MagazijnArtikelenScherm() {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "rgba(255,255,255,0.12)",
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            gap: 8,
+            backgroundColor: c.secondary,
+            borderRadius: c.radius / 2,
+            paddingHorizontal: ruimte.m,
+            gap: ruimte.s,
           }}
         >
-          <Ionicons name="search" size={18} color={c.darkMuted} />
+          <Ionicons name="search" size={ruimte.l + 2} color={c.darkMuted} />
           <TextInput
             value={zoek}
             onChangeText={setZoek}
             placeholder="Artikel zoeken..."
             placeholderTextColor={c.darkMuted}
-            style={{
-              flex: 1,
-              height: 40,
-              color: c.darkForeground,
-              fontFamily: "Inter_400Regular",
-              fontSize: 14,
-            }}
+            style={[
+              tekstStijl("klein", c.darkForeground),
+              { flex: 1, height: ruimte.xxl + ruimte.s },
+            ]}
           />
           {zoek.length > 0 && (
             <Pressable onPress={() => setZoek("")} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={c.darkMuted} />
+              <Ionicons name="close-circle" size={ruimte.l + 2} color={c.darkMuted} />
             </Pressable>
           )}
         </View>
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
-          <Text style={{ marginTop: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
-            Artikelen laden...
-          </Text>
+        <View style={{ flex: 1, padding: ruimte.l }}>
+          <Ladenstaat regels={6} />
         </View>
       ) : artikelen.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Ionicons name="cube-outline" size={48} color={c.mutedForeground} />
-          <Text style={{ marginTop: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
-            {zoek ? `Geen artikelen gevonden voor "${zoek}"` : "Geen artikelen beschikbaar"}
-          </Text>
-        </View>
+        <LegeStaat
+          icoon="cube-outline"
+          titel={zoek ? "Geen resultaten" : "Geen artikelen"}
+          beschrijving={
+            zoek
+              ? `Geen artikelen gevonden voor "${zoek}"`
+              : "Geen artikelen beschikbaar."
+          }
+        />
       ) : (
         <FlatList
           data={artikelen}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderArtikel}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + ruimte.l }}
           ListHeaderComponent={
-            <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: c.muted }}>
-              <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <View style={{ paddingHorizontal: ruimte.l, paddingVertical: ruimte.s + 2, backgroundColor: c.muted }}>
+              <Text style={tekstStijl("bijschrift", c.mutedForeground)}>
                 {artikelen.length} artikel{artikelen.length !== 1 ? "en" : ""} — tik om uit te geven / te retourneren
               </Text>
             </View>
