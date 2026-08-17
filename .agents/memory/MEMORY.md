@@ -1,3 +1,4 @@
+// hint: Logic changed on both sides. Requires understanding intent of each change.
 - [Expo stale .env dev-domein](expo-stale-env-domein.md) — monteur-app .env met hardcoded EXPO_PUBLIC_DOMAIN wint van shell-env na domeinrotatie → e2e-login "Failed to fetch"; .env weg + Metro-cache wissen.
 - [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
@@ -19,7 +20,7 @@
 - [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
-- [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
+- [Toewijzingen & picker-endpoint](toewijzingen-velden.md) — Toewijzing heeft naam/rol (niet gebruiker_naam); keuzelijsten via GET /toewijsbare-gebruikers (zie toewijsbare-gebruikers.md), NIET /gebruikers.
 - [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
 - [Rol-filter backend](rol-filter.md) — gebouw-scoping matrix-driven (effectieveContext.beperkt), NIET rolnaam; beperkt≠gebouwen<2: klant+gebouwen<1 altijd beperkt, gebouwen>=2 nooit, gebouwen==1 alleen veldgebruiker; kantoor-leesrol ziet hele portefeuille.
 - [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.
@@ -53,7 +54,6 @@
 - [Activiteit-logging (Live meekijken)](activiteit-logging.md) — nooit rauw db.insert(activiteitenTable); altijd logActiviteit() zodat gedenormaliseerde gebouw_naam/gebruiker_naam gevuld zijn (anders feed leeg + NULL lekt naar alle users).
 - [Voorziening status toevoegen](voorziening-status-toevoegen.md) — nieuwe spot-status = additief: OpenAPI enum + codegen + ~9 label/kleur/optie-maps (web+mobiel); GEEN DB-migratie (text-kolom) en GEEN backend wijziging (geen validatie/parse); dashboard-buckets tellen 'm niet.
 - [Dossier-bevriezing server-side](dossier-bevriezing.md) — definitief/gearchiveerd dossier moet op ALLE dossier-documenten mutaties (POST/PATCH/DELETE) 409 geven, niet alleen create; UI-gating ≠ access control; download via /api/storage; goedkeuring=statusmachine.
-- [Toewijsbare-gebruikers picker-endpoint](toewijsbare-gebruikers.md) — toewijs-keuzelijsten (team/monteur/onderhoud) gebruiken GET /toewijsbare-gebruikers (requireEnigeBevoegdheid), NIET /gebruikers (403 bij gebruikers:0).
 - [Cluster-monteur & serie plaatsen](cluster-monteur-serie.md) — cluster→monteur = bulk-update voorzieningen.monteurId (geen cluster-kolom), client-side afgeleid; serie plaatst per klik POST /voorzieningen met leeg objectnummer; sjabloon in refs.
 - [GPT-5 model params](gpt5-model-params.md) — gpt-5* chat-completions need max_completion_tokens (not max_tokens) + bigger budget (reasoning tokens share it); no custom temperature; gpt-4o vision calls keep max_tokens.
 - [Bearer = stateless, geen session-store](bearer-stateless-session.md) — mobiel bearer-pad mag NOOIT door sessionMiddleware (connect-pg-simple schrijft dan per request een sessie-rij, onbeperkte groei); gebruik niet-persisterende stub-sessie.
@@ -146,7 +146,7 @@
 - [Materiaal-aanvraagketen](materiaal-aanvraag-keten.md) — werkbaksluiting via handelHerkomstAf in de PATCH-transactie; fase 3=keuze A gebouwd (goedkeuring→concept-inkoopbon, gedeeld pad, claim+unieke index); prod-meting via hoofdbeheerder-beheerpagina.
 - [BEWAKING_02 commerciële voeders](bewaking02-commerciele-voeders.md) — offerte-momenten uit offerte_tracking (bezorgd=max, bekeken=min), keyen op portaal_status niet status; drempels in app_instellingen.
 - [KETEN_01 ketenmeting lessen](keten-meetlessen.md) — canvas-unmount fix: sigDataUrl vastleggen vóór fase-wissel; evaluate()+dispatchEvent voor canvas e2e (page.mouse.* faalt buiten viewport); ondertekeningGeblokkeerd alleen bij 409; e2e-resultaten in .gitignore (portaaltokens).
-- [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — aiGateway.chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie, inline → stabiele kebab-case naam.
+- [AI-gateway verplicht logcontext](ai-gateway-logcontext.md) — chat/responses eisen LogContext met module/functie/promptNaam (compile-afgedwongen); prompt uit aiPrompts.ts → PROMPT.naam/.versie; rawClient() verwijderd aug 2026 — nooit terugbouwen, kale client alleen in lib/openai.ts.
 - [Procesbalk-patroon Projectaanpak](procesbalk-patroon.md) — ProcesBalk-component + één vervolgknop + ⋯-menu + kaarten Financieel/AI-hulp; screenshot-bewijs eist colorScheme-forcering.
 - [Declaratie→loonketen](declaratie-loonketen.md) — plus doorzetten: signaal geen lock, optimistische vergrendeling via verwacht_doorgezet_naar (IS NOT DISTINCT FROM), anders 409; — goedkeuren=auto salaris_mutatie; SCAB-verzenden verwerkt alléén snapshot (mutatie_ids), nooit her-query op wm+periode; verzend-overgang atomair.
 - [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.

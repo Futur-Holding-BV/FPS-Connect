@@ -607,14 +607,6 @@ class AiGatewayService {
     return { ok: false, fout: "AI responses-aanroep mislukt na maximaal aantal pogingen." };
   }
 
-  /**
-   * Geeft de onderliggende OpenAI-client terug voor gevallen die buiten de
-   * standaard chat/responses-flow vallen.
-   * @deprecated Gebruik aiGateway.chat() of aiGateway.responses() waar mogelijk.
-   */
-  rawClient(): OpenAI {
-    return this.getClient();
-  }
 }
 
 export const aiGateway = new AiGatewayService();

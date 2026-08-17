@@ -3605,6 +3605,11 @@ Bewijs: nieuwe test "bulk: alle titels correct meegestuurd bij meerdere planning
 Het handmatig ophogen van `fps-connect-vN` in `artifacts/firevault/public/sw.js` is niet meer nodig. Een nieuwe `sw-versie` Vite-plugin (in `vite.config.ts`) vervangt tijdens elke build de placeholder `__SW_VERSIE__` in de serviceworker door een hash (12 tekens) van de gebouwde bundel-bestandsnamen (die zelf al content-hashes bevatten). Elke release krijgt dus automatisch een nieuwe cachenaam; identieke builds houden dezelfde naam (geen onnodige cache-churn). Bij activatie ruimt de serviceworker alle oude caches op, en dankzij `skipWaiting`/`clients.claim` neemt de nieuwe worker direct over. In dev (waar de placeholder blijft staan) valt de cachenaam terug op `fps-connect-dev`. De plugin faalt de build hard als `dist/public/sw.js` ontbreekt of de placeholder niet gevonden wordt, zodat dit mechanisme nooit stil kan wegvallen.
 
 
+## 2026-08-16 — AI-gateway: laatste sluiproute om logging heen dichtgezet
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De verouderde `rawClient()`-uitgang op de AI-gateway (die de kale OpenAI-client teruggaf en daarmee logging in ai_aanroepen, limieten en governance kon omzeilen) is verwijderd. Er waren geen productie-aanroepers meer; alle AI-aanroepen lopen nu gegarandeerd via chat()/responses() met verplichte logcontext. Kale-client-constructie bestaat alleen nog intern in lib/openai.ts, uitsluitend gebruikt door de gateway zelf.
 ## 2026-08-16 — Bewijs: escalaties aantoonbaar verstuurd bij verlopen goedkeuringsaanvraag
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
