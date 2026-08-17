@@ -1,6 +1,8 @@
 import { logger } from "../lib/logger";
 import { db, mailLogboekTable, mailWachtrijTable } from "@workspace/db";
 import { and, eq, inArray, lt, isNull, or } from "drizzle-orm";
+import { publiekeAppUrl } from "../lib/publiekeUrl";
+import QRCode from "qrcode";
 
 // ── Configuratie ────────────────────────────────────────────────────────────
 // Microsoft 365 via Azure App Registration (OAuth2 client-credentials, Graph
@@ -625,6 +627,7 @@ function mailShell(opties: {
   kopje: string;
   paragrafen: string[];
   knop?: { label: string; link: string };
+  extraHtml?: string;
   voettekst?: string;
 }): string {
   const knopHtml = opties.knop
@@ -685,6 +688,7 @@ function mailShell(opties: {
               </h1>
               ${paras}
               ${knopHtml}
+              ${opties.extraHtml ?? ""}
             </td>
           </tr>
           <tr>
@@ -715,6 +719,52 @@ export async function stuurUitnodigingsmail(opties: {
     ? "Uw uitnodiging voor FPS Connect (herinnering)"
     : "U bent uitgenodigd voor FPS Connect";
 
+  // Bouw de PWA-installatielink op, zodat de ontvanger FPS Connect direct
+  // als app op de telefoon kan zetten na het activeren van het account.
+  const basisUrl = publiekeAppUrl();
+  const pwaUrl = basisUrl ? `${basisUrl}/connect/planning` : null;
+
+  // Genereer een inline QR-code als base64 PNG zodat de mail zelfvoorzienend
+  // is — de ontvanger hoeft niet ingelogd te zijn om de afbeelding te laden.
+  let pwaQrDataUrl: string | null = null;
+  if (pwaUrl) {
+    try {
+      pwaQrDataUrl = await QRCode.toDataURL(pwaUrl, {
+        type: "image/png",
+        width: 200,
+        margin: 2,
+        color: { dark: "#212631", light: "#FFFFFF" },
+      });
+    } catch {
+      // Niet-kritiek: mail wordt zonder QR verstuurd.
+    }
+  }
+
+  const pwaBlok = pwaUrl
+    ? `
+      <hr style="border:none;border-top:1px solid #e4e4e7;margin:28px 0 20px;" />
+      <h2 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#18181b;">&#128241; FPS Connect ook op uw telefoon</h2>
+      <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#3f3f46;">
+        Na het activeren kunt u FPS Connect ook als app installeren op uw smartphone.
+        Scan de QR-code hieronder of open de link op uw telefoon en volg de stappen voor uw apparaat.
+      </p>
+      ${pwaQrDataUrl ? `<div style="text-align:center;margin:0 0 16px;"><img src="${pwaQrDataUrl}" alt="QR-code FPS Connect" width="160" height="160" style="border:1px solid #e4e4e7;border-radius:6px;" /></div>` : ""}
+      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#18181b;">iPhone / iPad (Safari)</p>
+      <ol style="margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.8;color:#3f3f46;">
+        <li>Scan de QR-code of open de link hieronder in <strong>Safari</strong></li>
+        <li>Tik op het deelicoon onderaan het scherm</li>
+        <li>Kies <strong>&ldquo;Zet op beginscherm&rdquo;</strong> en bevestig</li>
+      </ol>
+      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#18181b;">Android (Chrome)</p>
+      <ol style="margin:0 0 16px;padding-left:18px;font-size:13px;line-height:1.8;color:#3f3f46;">
+        <li>Scan de QR-code of open de link hieronder in <strong>Chrome</strong></li>
+        <li>Tik op het menu (&#8942;) rechtsboven</li>
+        <li>Kies <strong>&ldquo;App installeren&rdquo;</strong> of &ldquo;Toevoegen aan beginscherm&rdquo;</li>
+      </ol>
+      <p style="margin:0 0 4px;font-size:12px;color:#71717a;">App-link:</p>
+      <a href="${pwaUrl}" style="display:block;font-size:12px;color:#F23B0D;word-break:break-all;text-decoration:none;">${pwaUrl}</a>`
+    : "";
+
   // Geen speciale "stil doorgaan zonder mail"-uitzondering meer: als de
   // mailkoppeling niet geconfigureerd is, moet dit als een echte verzendfout
   // gelden (via verstuurMail hieronder), zodat de aanroeper de uitnodiging
@@ -731,6 +781,7 @@ export async function stuurUitnodigingsmail(opties: {
       "De activatielink is <strong>7 dagen geldig</strong>.",
     ],
     knop: { label: "Account activeren", link: activatieLink },
+    extraHtml: pwaBlok,
   });
 
   await verstuurMail({

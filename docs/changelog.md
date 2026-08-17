@@ -242,6 +242,12 @@ Bij het genereren of bewerken van een concept-SCAB-mail (loonperiodebrief aan de
 - Bewijs: scripts/src/bewijs-mijn-gegevens-basislaag.ts — 16/16 groen. Lib-fixes: lib/db en lib/api-client-react dist herbouwd na merge-drift (stale compiled declarations). Firevault-imports scab-mail/index.tsx: dubbele useState, ontbrekende ListChecks en useGetScabMailsIdMutaties toegevoegd. — 16/16 groen (rechtenloos account bereikt alle eigen-gegevens-routes incl. volledige concept-levenscyclus declaratie: aanmaken, detail, bewerken, indienen, verwijderen; module-lijsten blijven 403). Declaratie-detail: concept-acties nu eigenaarschap-gebaseerd (conform backend) i.p.v. declaraties:2; terugknop context-bewust. Architect-review: PASS.
 
 
+## 2026-08-17 — App-installatielink (PWA) meegestuurd bij nieuwe medewerker-uitnodiging (#1027)
+
+- De uitnodigingsmail bevat nu een sectie **"FPS Connect ook op uw telefoon"** met iPhone (Safari → "Zet op beginscherm") en Android (Chrome → "App installeren") instructies, plus de directe PWA-link (`/connect/planning`). Sectie verschijnt alleen als `PUBLIEKE_APP_URL` of een Replit-domein beschikbaar is (fail-closed).
+- De **activatiepagina** (`/uitnodiging/:token`) toont na het afronden van 2FA een installatie-kaart met QR-code, stap-voor-stap instructies voor iPhone en Android, en een "Doorgaan naar FPS Connect"-knop. Geen automatische redirect meer: de medewerker kan de QR eerst scannen.
+- Bestaande beheer-testpagina (`/beheer/pwa-test`) is ongewijzigd.
+- Gewijzigde bestanden: `artifacts/api-server/src/services/email.ts`, `artifacts/firevault/src/pages/uitnodiging/index.tsx`.
 ## 2026-08-17 — VORM_01 fase 6 afgerond met bewijsschermen mét gevulde gegevens (#1025)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

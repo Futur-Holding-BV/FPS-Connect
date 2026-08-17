@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle, Copy, Smartphone } from "lucide-react";
+import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle, Copy, Smartphone, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,9 @@ export default function ActivatiePagina({ token }: Props) {
   const [secretGekopieerd, setSecretGekopieerd] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpFout, setOtpFout] = useState("");
+
+  const [pwaUrl, setPwaUrl] = useState<string | null>(null);
+  const [pwaQrFout, setPwaQrFout] = useState(false);
 
   useEffect(() => {
     api(`/uitnodiging/${token}`)
@@ -124,10 +127,13 @@ export default function ActivatiePagina({ token }: Props) {
       });
       const data = await r.json();
       if (!r.ok) { setOtpFout(data.error ?? "Onjuiste code."); return; }
+      // Haal de PWA-installatielink op zodat we hem op de afrondpagina kunnen tonen.
+      // De gebruiker is nu ingelogd, dus de sessie is beschikbaar.
+      api("/auth/pwa-url")
+        .then((res) => res.json())
+        .then((d) => { if (d.url) setPwaUrl(d.url); })
+        .catch(() => {});
       setStap("klaar");
-      setTimeout(() => {
-        window.location.href = BASE + "/";
-      }, 2500);
     } catch {
       setOtpFout("Er is een netwerkfout opgetreden.");
     } finally {
@@ -368,12 +374,70 @@ export default function ActivatiePagina({ token }: Props) {
           )}
 
           {stap === "klaar" && (
-            <div className="p-8 text-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-              <h2 className="font-semibold text-zinc-900 text-xl mb-2">Account geactiveerd</h2>
-              <p className="text-zinc-500 text-sm">
-                Uw account is actief. U wordt automatisch doorgestuurd...
-              </p>
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <h2 className="font-semibold text-zinc-900 text-xl mb-2">Account geactiveerd</h2>
+                <p className="text-zinc-500 text-sm">
+                  Uw account is actief. U kunt nu inloggen op FPS Connect.
+                </p>
+              </div>
+
+              {/* App-installatie sectie */}
+              <div className="border border-zinc-100 rounded-lg bg-zinc-50 p-4 mb-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="h-4 w-4 text-zinc-600 shrink-0" />
+                  <p className="font-semibold text-sm text-zinc-800">FPS Connect ook op uw telefoon</p>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3">
+                  Installeer FPS Connect als app op uw smartphone voor snelle toegang, ook onderweg.
+                </p>
+
+                {/* QR-code (indien beschikbaar) */}
+                {pwaUrl && !pwaQrFout && (
+                  <div className="flex justify-center mb-3">
+                    <img
+                      src={`${BASE}/api/auth/pwa-qr`}
+                      alt="QR-code om FPS Connect te openen"
+                      className="w-32 h-32 border border-zinc-200 rounded-lg bg-white"
+                      onError={() => setPwaQrFout(true)}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-3 text-xs text-zinc-600">
+                  <div>
+                    <p className="font-semibold text-zinc-700 mb-1">iPhone / iPad (Safari)</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Open de link hieronder in <strong>Safari</strong></li>
+                      <li>Tik op het deelicoon onderaan het scherm</li>
+                      <li>Kies <strong>&ldquo;Zet op beginscherm&rdquo;</strong> en bevestig</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-zinc-700 mb-1">Android (Chrome)</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Open de link hieronder in <strong>Chrome</strong></li>
+                      <li>Tik op het menu (⋮) rechtsboven</li>
+                      <li>Kies <strong>&ldquo;App installeren&rdquo;</strong> of &ldquo;Toevoegen aan beginscherm&rdquo;</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {pwaUrl && (
+                  <div className="mt-3 flex items-center gap-2 bg-white rounded border border-zinc-200 px-2.5 py-2">
+                    <QrCode className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                    <span className="text-xs font-mono text-zinc-500 flex-1 truncate">{pwaUrl}</span>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 text-white"
+                onClick={() => { window.location.href = BASE + "/"; }}
+              >
+                Doorgaan naar FPS Connect
+              </Button>
             </div>
           )}
         </div>
