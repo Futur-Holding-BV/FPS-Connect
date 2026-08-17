@@ -47,6 +47,7 @@ import {
   gebruikerProfielenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -221,6 +222,21 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
     const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
+    // Migreer logo-URL van /objects/algemeen/<uuid> naar werkgevers/<id>/logo.<ext>
+    // zodat haalLogoBuffer in de mandagstaat nooit paden buiten het werkgever-prefix
+    // hoeft te accepteren. Mislukte migratie laat het pad ongewijzigd.
+    let effectiefLogoUrl: string | null | undefined = logo_url !== undefined ? (logo_url ?? null) : undefined;
+    if (logo_url && typeof logo_url === "string" && logo_url.startsWith("/objects/algemeen/")) {
+      try {
+        const origSubPath = logo_url.slice("/objects/".length);
+        const targetSubPath = berekenWerkgeverLogoPad(id, origSubPath);
+        const buf = await hrmStorage.downloadBestandBuffer(origSubPath);
+        effectiefLogoUrl = await hrmStorage.uploadBestand(targetSubPath, buf);
+      } catch {
+        // Migratie mislukt: behoud het originele pad.
+      }
+    }
+
     const w = await db.transaction(async (tx) => {
       const [huidig] = await tx.select().from(werkgeversTable).where(eq(werkgeversTable.id, id));
       if (!huidig) return null;
@@ -243,7 +259,7 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           website: website !== undefined ? website : undefined,
           voettekst: voettekst !== undefined ? voettekst : undefined,
           handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
-          logoUrl: logo_url !== undefined ? logo_url : undefined,
+          logoUrl: effectiefLogoUrl,
           primaireKleur: primaire_kleur !== undefined ? primaire_kleur : undefined,
           iban: iban !== undefined ? iban : undefined,
           koptekstPositie: koptekst_positie !== undefined ? koptekst_positie : undefined,

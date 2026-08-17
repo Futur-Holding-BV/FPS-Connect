@@ -28,6 +28,8 @@ import {
   leveranciersTable,
   documentenTable,
   documentKoppelingenTable,
+  werkgeversTable,
+  documentStudioModellenTable,
 } from "@workspace/db";
 import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
@@ -1825,9 +1827,63 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
       .orderBy(asc(modCalcRegelsTable.volgorde));
 
     let gebouwNaam: string | null = null;
+    let gebouwWerkgeverId: number | null = null;
     if (header.gebouwId) {
-      const [g] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
+      const [g] = await db
+        .select({ naam: gebouwenTable.naam, werkgeverId: gebouwenTable.werkgeverId })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, header.gebouwId));
       gebouwNaam = g?.naam ?? null;
+      gebouwWerkgeverId = g?.werkgeverId ?? null;
+    }
+
+    // Branding server-side oplossen zodat calculaties:1 voldoende is (geen personeel:1 nodig).
+    type BrandingData = {
+      werkgever_naam: string | null; primaire_kleur: string;
+      logo_url: string | null; adres: string | null; postcode: string | null;
+      plaats: string | null; telefoon: string | null; email: string | null;
+      studio_model_naam: string | null; studio_primaire_kleur: string | null;
+    };
+    let branding: BrandingData | null = null;
+    if (gebouwWerkgeverId) {
+      const [wg] = await db
+        .select({
+          naam: werkgeversTable.naam, primaireKleur: werkgeversTable.primaireKleur,
+          logoUrl: werkgeversTable.logoUrl, adres: werkgeversTable.adres,
+          postcode: werkgeversTable.postcode, plaats: werkgeversTable.plaats,
+          telefoon: werkgeversTable.telefoon, email: werkgeversTable.email,
+        })
+        .from(werkgeversTable)
+        .where(eq(werkgeversTable.id, gebouwWerkgeverId));
+      const [model] = await db
+        .select({ naam: documentStudioModellenTable.naam, connectTemplateJson: documentStudioModellenTable.connectTemplateJson })
+        .from(documentStudioModellenTable)
+        .where(and(
+          eq(documentStudioModellenTable.werkgeverId, gebouwWerkgeverId),
+          eq(documentStudioModellenTable.documentType, "calculatie"),
+          eq(documentStudioModellenTable.status, "goedgekeurd"),
+        ))
+        .orderBy(desc(documentStudioModellenTable.goedgekeurdOp))
+        .limit(1);
+      let studioPrimaireKleur: string | null = null;
+      if (model?.connectTemplateJson) {
+        try {
+          const t = JSON.parse(model.connectTemplateJson) as { kleurschema?: { primair?: string } };
+          studioPrimaireKleur = t.kleurschema?.primair ?? null;
+        } catch { /* ignore */ }
+      }
+      branding = {
+        werkgever_naam: wg?.naam ?? null,
+        primaire_kleur: wg?.primaireKleur ?? "#F23B0D",
+        logo_url: wg?.logoUrl ?? null,
+        adres: wg?.adres ?? null,
+        postcode: wg?.postcode ?? null,
+        plaats: wg?.plaats ?? null,
+        telefoon: wg?.telefoon ?? null,
+        email: wg?.email ?? null,
+        studio_model_naam: model?.naam ?? null,
+        studio_primaire_kleur: studioPrimaireKleur,
+      };
     }
 
     // ADVIES_01 §6: alleen regel/materiaal tellen mee; optioneel apart gesommeerd.
@@ -1856,6 +1912,7 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): P
         korting: header.korting, gebouw_naam: gebouwNaam,
         aangemaakt_op: iso(header.aangemaaktOp),
       },
+      branding,
       regels: regels.map((r) => ({
         id: r.id, categorie: r.categorie, omschrijving: r.omschrijving,
         eenheid: r.eenheid, hoeveelheid: r.hoeveelheid, tarief: r.tarief,
