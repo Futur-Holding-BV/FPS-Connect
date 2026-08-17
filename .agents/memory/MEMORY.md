@@ -121,7 +121,7 @@
 - [Schema-migratieketen (SCHEMA_01)](schema-migratieketen.md) — schemawijziging = genummerde migratie + drift-check --update; apply-additive/drizzle-push bevroren; migratierunner draait in deploy.
 - [Calculatie-AI eigen cijfers](calculatie-eigen-cijfers.md) + [AK-dashboard](ak-eigen-cijfers.md) + [Inkoop-AI](inkoop-eigen-cijfers.md) — AI toetst alleen aan eigen data (mediaan/drempels, fail-closed bronnen); vaste %-normen en AI-prijzen verboden; AK% over productie.
 - [AI-adviesbeleid server-side](afstoot-advies-beleid.md) — reviewer keurt prompt-only bewijsregels af: beleid als pure geteste functie, álle kostenbronnen aggregeren, AI-arrays hardenen.
-- [Scripts-typecheck bewijsscripts](scripts-typecheck-bewijs.md) — bewijsscripts nooit api-server-source importeren (TS6059); test via HTTP + @workspace/db; offenders staan in tsconfig-exclude.
+- [Scripts-typecheck bewijsscripts](scripts-typecheck-bewijs.md) — bewijsscripts nooit api-server-source importeren (TS6059) én nooit absolute werkruimte-paden (/home/runner/workspace/...) — bestaat niet op de GitHub-runner, brak 8 deploys; pakket als scripts-dep.
 - [Mailbox-syncbewaking & token-gezondheid](mailbox-syncbewaking.md) — "werkende koppeling" = token-rij mét refresh_mislukt_op IS NULL; invalid_grant markeert direct; alarm-dedupe via sync_alarm_op.
 - [Mail-samenwerkomgeving](mail-samenwerkomgeving.md) — mailboxen=organisatiebezit via toegang-tabel (lezen<behandelen<beheren); mails uniek per mailbox+message; modus verwerken/ondersteunen/registreren; detail Graph-tolerant.
 - [Loonstroom SEPA-mailintake](loonstroom-sepa-intake.md) — pain.001 uit mail altijd status ontvangen (nooit auto verder); onvolledig=afgeleid, 422 richting bank; preset-wijziging vergt migratie, niet alleen PRESETS-code.

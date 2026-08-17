@@ -1,3 +1,10 @@
+## 2026-08-17 — Deploy-blokkade opgelost: absoluut Replit-pad in verificatiescript
+
+- Acht mislukte uitrollen op rij (sinds #346) kwamen door één regel: `scripts/src/verificatie-storage-links.ts` importeerde `@google-cloud/storage` via het absolute pad `/home/runner/workspace/artifacts/api-server/node_modules/...`, dat op de GitHub-runner niet bestaat.
+- Fix: normale import van `@google-cloud/storage`, toegevoegd als afhankelijkheid van het scripts-pakket. Regel voortaan: nooit werkruimte-absolute paden in code die op main komt.
+- Gecontroleerd op meer voorkomens: broncode van scripts/lib is schoon; `/home/runner/workspace`-paden bestaan verder alleen in Replit-only shellscripts (freshclam) en in api-server-services met env-override (ClamAV/YARA/quarantaine) — bestaand gedrag, buiten deze fix gelaten.
+- CI + "Deploy naar productie" op commit 8ec7917 zijn weer groen.
+
 ## 2026-08-17 — Eigen module "Marketing" in de rechtenmatrix (MARKETING_02)
 
 - Marketing (doelgroepen, sjablonen, campagnes) is losgekoppeld van de CRM-module en heeft nu een eigen module `marketing` in de bevoegdheden-matrix (akkoord René): niveau 3 = beheren + proefverzenden, niveau 4 = campagnes écht verzenden en stoppen.
