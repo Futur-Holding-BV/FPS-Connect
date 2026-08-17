@@ -10,6 +10,8 @@
 import { Router } from "express";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { renderPdfPaginasMetStatus } from "../lib/pdfVisie";
+import { kortTekstInKopStaart, MAX_VISION_PAGINAS } from "../lib/documentIntelligence";
 import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../lib/hrm-ai-analyse";
 import { invalideerContext } from "../lib/aiContext/cache";
 import { haalVervalsignalen } from "../lib/verlofVervalService";
@@ -45,6 +47,7 @@ import {
   gebruikerProfielenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -219,6 +222,21 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
     const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
+    // Migreer logo-URL van /objects/algemeen/<uuid> naar werkgevers/<id>/logo.<ext>
+    // zodat haalLogoBuffer in de mandagstaat nooit paden buiten het werkgever-prefix
+    // hoeft te accepteren. Mislukte migratie laat het pad ongewijzigd.
+    let effectiefLogoUrl: string | null | undefined = logo_url !== undefined ? (logo_url ?? null) : undefined;
+    if (logo_url && typeof logo_url === "string" && logo_url.startsWith("/objects/algemeen/")) {
+      try {
+        const origSubPath = logo_url.slice("/objects/".length);
+        const targetSubPath = berekenWerkgeverLogoPad(id, origSubPath);
+        const buf = await hrmStorage.downloadBestandBuffer(origSubPath);
+        effectiefLogoUrl = await hrmStorage.uploadBestand(targetSubPath, buf);
+      } catch {
+        // Migratie mislukt: behoud het originele pad.
+      }
+    }
+
     const w = await db.transaction(async (tx) => {
       const [huidig] = await tx.select().from(werkgeversTable).where(eq(werkgeversTable.id, id));
       if (!huidig) return null;
@@ -241,7 +259,7 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           website: website !== undefined ? website : undefined,
           voettekst: voettekst !== undefined ? voettekst : undefined,
           handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
-          logoUrl: logo_url !== undefined ? logo_url : undefined,
+          logoUrl: effectiefLogoUrl,
           primaireKleur: primaire_kleur !== undefined ? primaire_kleur : undefined,
           iban: iban !== undefined ? iban : undefined,
           koptekstPositie: koptekst_positie !== undefined ? koptekst_positie : undefined,
@@ -4719,7 +4737,7 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res):
     }
 
     const doc = docs[0];
-    let tekst = "";
+    let buf: Buffer;
     try {
       const storageFile = await hrmStorage.getObjectEntityFile(doc.objectPath);
       const stream = storageFile.createReadStream();
@@ -4727,53 +4745,114 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res):
       for await (const chunk of stream) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
       }
-      const buf = Buffer.concat(chunks);
-      const isPdf =
-        (doc.contentType ?? "").includes("pdf") ||
-        doc.bestandsnaam.toLowerCase().endsWith(".pdf");
-      if (isPdf) {
-        const parsed = await extraheerPdfTekst(buf);
-        tekst = parsed.tekst ?? "";
-      } else {
-        tekst = buf.toString("utf-8");
-      }
+      buf = Buffer.concat(chunks);
     } catch {
       return void res
         .status(422)
-        .json({ error: "Contract kon niet worden gelezen. Gebruik een niet-gescand PDF-bestand." });
+        .json({ error: "Contractbestand kon niet worden opgehaald uit de opslag. Controleer het document." });
     }
 
-    if (!tekst.trim() || tekst.trim().length < 30) {
+    const isPdf =
+      (doc.contentType ?? "").includes("pdf") ||
+      doc.bestandsnaam.toLowerCase().endsWith(".pdf");
+
+    // Tekstlaag ophalen (per pagina waar mogelijk, voor vindplaats-verwijzingen).
+    let tekst = "";
+    let paginaTeksten: string[] = [];
+    let paginaAantal: number | null = null;
+    if (isPdf) {
+      try {
+        const parsed = await extraheerPdfTekst(buf);
+        tekst = parsed.tekst ?? "";
+        paginaTeksten = parsed.paginaTeksten ?? [];
+        paginaAantal = parsed.paginaAantal ?? null;
+      } catch { /* geen tekstlaag — vision hieronder */ }
+    } else {
+      tekst = buf.toString("utf-8");
+    }
+
+    // Gescand contract zonder tekstlaag: pagina's als afbeelding aanbieden
+    // (vision), inclusief de laatste pagina — daar staan de slotbepalingen
+    // en de ondertekening.
+    let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+    if (isPdf && tekst.trim().length < 200) {
+      const nummers = Array.from(
+        { length: Math.min(paginaAantal ?? MAX_VISION_PAGINAS, MAX_VISION_PAGINAS) },
+        (_, i) => i + 1,
+      );
+      if (paginaAantal && paginaAantal > MAX_VISION_PAGINAS) nummers[nummers.length - 1] = paginaAantal;
+      const render = await renderPdfPaginasMetStatus(buf, nummers);
+      afbeeldingen = render.paginas;
+      if (afbeeldingen.length === 0 && !tekst.trim()) {
+        return void res.status(422).json({
+          error: `Contract kon niet gelezen worden: ${render.fout ?? "geen tekstlaag en paginaweergave mislukt"}. Vul de gegevens handmatig in.`,
+        });
+      }
+    }
+
+    // Bruikbaarheidsdrempel: een paar losse tekens uit een scan is geen
+    // contracttekst. Zonder bruikbare tekst én zonder paginascans → 422.
+    if (afbeeldingen.length === 0 && tekst.trim().length < 200) {
       return void res
         .status(422)
-        .json({ error: "Te weinig tekst gevonden. Gebruik een niet-gescand PDF-bestand." });
+        .json({ error: "Contract bevat geen (voldoende) leesbare inhoud. Controleer het bestand of vul de gegevens handmatig in." });
     }
 
-    const prompt = `Analyseer het volgende arbeidscontract en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
+    // Tekst met paginamarkeringen zodat de AI een vindplaats (pagina + citaat)
+    // per veld kan teruggeven; kop+staart-inkorting behoudt de bepalingen achterin.
+    const contractTekst = paginaTeksten.length > 0
+      ? paginaTeksten.map((t, i) => `--- Pagina ${i + 1} ---\n${(t ?? "").trim()}`).join("\n\n")
+      : tekst;
 
-CONTRACTTEKST:
-${tekst.slice(0, 6000)}
-
-Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
-{
-  "functie_naam": "functietitel zoals vermeld in het contract of null",
-  "werkmaatschappij": "naam van de werkgever/werkmaatschappij of null",
-  "cao": "naam van de van toepassing zijnde CAO of null",
-  "contracturen_per_week": "aantal uur per week als getal (bijv. 40) of null",
-  "dienstverband": "vast | tijdelijk | oproep | stage | inhuur | zzp | uitzend of null",
-  "ai_toelichting": "korte opmerking over de betrouwbaarheid of null (max 1 zin)"
+    const VELD_SPEC = `{
+  "waarde": <de gevonden waarde, of null als het contract dit niet vermeldt>,
+  "vindplaats": { "pagina": <paginanummer of null>, "citaat": "<letterlijk kort citaat uit het contract, max 200 tekens>" } of null
 }`;
+    const prompt = `Je analyseert een Nederlands arbeidscontract. Extraheer UITSLUITEND wat er letterlijk in het contract staat — verzin niets, en gebruik null wanneer iets ontbreekt of onduidelijk is. Antwoord UITSLUITEND met een geldig JSON-object.
+
+Elk veld heeft deze vorm:
+${VELD_SPEC}
+
+Extraheer exact deze velden:
+{
+  "functie": <veld: functietitel (string)>,
+  "datum_in_dienst": <veld: datum indiensttreding als YYYY-MM-DD (string)>,
+  "contract_type": <veld: "bepaalde_tijd" of "onbepaalde_tijd" (string)>,
+  "einddatum": <veld: einddatum bij bepaalde tijd als YYYY-MM-DD (string)>,
+  "proeftijd": <veld: proeftijd zoals vermeld, bv. "1 maand" (string)>,
+  "uren_per_week": <veld: aantal uur per week (getal)>,
+  "salaris": <veld: brutosalaris als getal, zonder valutateken>,
+  "salaris_periodiciteit": <veld: "maand" | "4-weken" | "week" | "uur" | "jaar" (string)>,
+  "cao": <veld: naam van de van toepassing zijnde CAO (string)>,
+  "opzegtermijn": <veld: opzegtermijn zoals vermeld, bv. "1 maand voor werknemer, 2 maanden voor werkgever" (string)>,
+  "concurrentiebeding": <veld: "ja" of "nee" met als citaat de kernbepaling>,
+  "relatiebeding": <veld: "ja" of "nee" met als citaat de kernbepaling>,
+  "werkmaatschappij": <veld: naam van de werkgever (string)>,
+  "ai_toelichting": "korte opmerking over betrouwbaarheid/leesbaarheid of null (max 1 zin)"
+}
+
+CONTRACTTEKST${afbeeldingen.length > 0 ? " (aangevuld met paginascans hieronder — gebruik het paginanummer van de scan als vindplaats)" : ""}:
+${kortTekstInKopStaart(contractTekst, 20000, 10000) || "GEEN tekstlaag — lees de bijgevoegde paginascans."}`;
+
+    type ContentBlock =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string; detail: "high" } };
+    const content: ContentBlock[] = [{ type: "text", text: prompt }];
+    for (const afb of afbeeldingen) {
+      content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "high" } });
+    }
 
     const contractResultaat = await aiGateway.chat("default", {
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 400,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: "user", content: content as any }],
+      max_tokens: 1600,
       response_format: { type: "json_object" },
     }, undefined, {
       module: "personeel",
       functie: "contractAnalyse",
       gebruikerId: req.session.userId ?? null,
       promptNaam: "hrm-contract-analyse",
-      promptVersie: "1.0.0",
+      promptVersie: "2.0.0",
     });
     if (!contractResultaat.ok) {
       return void res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
@@ -4786,15 +4865,68 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
       return void res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
     }
 
-    const uren = resultaat.contracturen_per_week;
+    // Harden: alleen goedgevormde velden doorlaten; lege waarde = signalering
+    // zonder waarde (HRM-conventie: geen waarde → niets om over te nemen).
+    type Vindplaats = { pagina: number | null; citaat: string } | null;
+    type ContractVeld = { waarde: string | number | null; vindplaats: Vindplaats };
+    const leesVeld = (naam: string): ContractVeld => {
+      const raw = resultaat[naam];
+      if (typeof raw !== "object" || raw === null) return { waarde: null, vindplaats: null };
+      const r = raw as Record<string, unknown>;
+      const waarde =
+        typeof r.waarde === "string" ? (r.waarde.trim() || null) :
+        typeof r.waarde === "number" && Number.isFinite(r.waarde) ? r.waarde : null;
+      let vindplaats: Vindplaats = null;
+      if (typeof r.vindplaats === "object" && r.vindplaats !== null) {
+        const v = r.vindplaats as Record<string, unknown>;
+        const citaat = typeof v.citaat === "string" ? v.citaat.trim().slice(0, 300) : "";
+        if (citaat) {
+          vindplaats = {
+            pagina: typeof v.pagina === "number" && Number.isInteger(v.pagina) && v.pagina > 0 ? v.pagina : null,
+            citaat,
+          };
+        }
+      }
+      // Fail-closed: een waarde zonder vindplaats blijft staan maar is als
+      // "zonder bewijs" herkenbaar doordat vindplaats null is.
+      return { waarde, vindplaats };
+    };
+
+    const velden = {
+      functie: leesVeld("functie"),
+      datum_in_dienst: leesVeld("datum_in_dienst"),
+      contract_type: leesVeld("contract_type"),
+      einddatum: leesVeld("einddatum"),
+      proeftijd: leesVeld("proeftijd"),
+      uren_per_week: leesVeld("uren_per_week"),
+      salaris: leesVeld("salaris"),
+      salaris_periodiciteit: leesVeld("salaris_periodiciteit"),
+      cao: leesVeld("cao"),
+      opzegtermijn: leesVeld("opzegtermijn"),
+      concurrentiebeding: leesVeld("concurrentiebeding"),
+      relatiebeding: leesVeld("relatiebeding"),
+      werkmaatschappij: leesVeld("werkmaatschappij"),
+    };
+
+    // Backward-compat topvelden vullen alléén vanuit velden mét vindplaats:
+    // een AI-waarde zonder citaat mag nooit stilzwijgend het formulier invullen.
+    const metBewijs = (veld: ContractVeld) => (veld.vindplaats ? veld.waarde : null);
+    const urenWaarde = metBewijs(velden.uren_per_week);
+    const contractType = metBewijs(velden.contract_type);
     return void res.json({
-      functie_naam: resultaat.functie_naam ?? null,
-      werkmaatschappij: resultaat.werkmaatschappij ?? null,
-      cao: resultaat.cao ?? null,
+      // Backward-compatibel voor het aanstellingsformulier:
+      functie_naam: metBewijs(velden.functie) ?? null,
+      werkmaatschappij: metBewijs(velden.werkmaatschappij) ?? null,
+      cao: metBewijs(velden.cao) ?? null,
       contracturen_per_week:
-        typeof uren === "number" ? uren : uren != null ? Number(uren) || null : null,
-      dienstverband: resultaat.dienstverband ?? null,
-      ai_toelichting: resultaat.ai_toelichting ?? null,
+        typeof urenWaarde === "number" ? urenWaarde : urenWaarde != null ? Number(urenWaarde) || null : null,
+      dienstverband: contractType === "onbepaalde_tijd" ? "vast" : contractType === "bepaalde_tijd" ? "tijdelijk" : null,
+      ai_toelichting: typeof resultaat.ai_toelichting === "string" ? resultaat.ai_toelichting : null,
+      // Gerichte contractextractie met vindplaats per veld:
+      velden,
+      vision_gebruikt: afbeeldingen.length > 0,
+      paginas_geanalyseerd: afbeeldingen.length > 0 ? afbeeldingen.map((a) => a.paginaNummer) : null,
+      brondocument: doc.bestandsnaam,
     });
   } catch (err) {
     req.log.error(err);
