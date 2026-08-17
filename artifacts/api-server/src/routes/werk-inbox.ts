@@ -519,6 +519,23 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => 
   }
 });
 
+// ─── Telling voor sidebar-badge ───────────────────────────────────────────────
+// Aantal ongelezen, niet-afgehandelde mails in de mailboxen waar deze gebruiker
+// toegang toe heeft. Lichtgewicht (alleen DB), voor het rode rondje in de nav.
+router.get("/werk-inbox/telling", requireAuth, async (req, res): Promise<void> => {
+  const toegankelijk = await toegankelijkeMailboxen(gebruikerId(req));
+  const adressen = toegankelijk.map((m) => m.emailAdres);
+  if (adressen.length === 0) { res.json({ aantal: 0 }); return; }
+  const [rij] = await db.select({ aantal: sql<number>`count(*)::int` })
+    .from(werkInboxMailsTable)
+    .where(and(
+      inArray(werkInboxMailsTable.mailboxAdres, adressen),
+      eq(werkInboxMailsTable.isGelezenMs, false),
+      isNull(werkInboxMailsTable.afgehandeldOp),
+    ));
+  res.json({ aantal: rij?.aantal ?? 0 });
+});
+
 // ─── Mails ophalen ────────────────────────────────────────────────────────────
 router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);

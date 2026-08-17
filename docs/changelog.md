@@ -1,3 +1,8 @@
+## 2026-08-17 — Werk-inbox-teller ook op hoofdstuknaam Communicatie
+
+- Het rode rondje met het aantal ongelezen werk-inbox-mails is nu ook zichtbaar op de hoofdstuknaam "Communicatie" in de sidebar (net als bij Goedkeuring en Declaraties), zodat je het aantal ziet zonder het hoofdstuk te openen. Het hoofdstukrondje telt ongelezen chatberichten en ongelezen, niet-afgehandelde werk-inbox-mails samen.
+- Nieuw lichtgewicht endpoint `GET /api/werk-inbox/telling` (alleen database, gescoped op de mailboxen waar de gebruiker toegang toe heeft) voedt de teller; het Werk-inbox-item in het uitklapmenu toont hetzelfde rondje.
+
 ## 2026-08-17 — Offerte-aanvraag (e-mail) verplaatst van Offertes naar Projecten
 
 - De knop "Offerte-aanvraag (e-mail)" stond op de Offertes-pagina; een aanvraag maakt echter een nieuw project (gebouw + offerte + opname) aan en hoort dus bij Projecten. De knop heet nu "Nieuwe aanvraag (e-mail)" en staat op het projectenoverzicht naast "Nieuw gebouw" (alleen beheerders); de wizard zelf is ongewijzigd.

@@ -276,17 +276,41 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Ongelezen, niet-afgehandelde werk-inbox-mails (60s-refresh).
+  function useWerkInboxTelling(): number {
+    const { data, refetch } = useQuery<{ aantal: number }>({
+      queryKey: ["/api/werk-inbox/telling"],
+      queryFn: async () => {
+        const res = await fetch("/api/werk-inbox/telling", { credentials: "include" });
+        if (!res.ok) return { aantal: 0 };
+        return res.json() as Promise<{ aantal: number }>;
+      },
+      staleTime: 60000,
+    });
+    useEffect(() => {
+      const timer = setInterval(() => void refetch(), 60000);
+      return () => clearInterval(timer);
+    }, [refetch]);
+    return data?.aantal ?? 0;
+  }
+
+  function WerkInboxItemBadge() {
+    const aantal = useWerkInboxTelling();
+    return <HoofdstukTelBadge aantal={aantal} label="ongelezen werk-inbox-mails" />;
+  }
+
   function CommunicatieHoofdstukBadge() {
     const { data: gesprekken, refetch } = useListChatGesprekken();
     useEffect(() => {
       const timer = setInterval(() => void refetch(), 30000);
       return () => clearInterval(timer);
     }, [refetch]);
+    const werkInboxAantal = useWerkInboxTelling();
     const totaal = (gesprekken ?? []).reduce(
       (som, g) => som + (g.ongelezen_aantal ?? 0),
       0,
-    );
-    return <HoofdstukTelBadge aantal={totaal} label="ongelezen berichten" />;
+    ) + werkInboxAantal;
+    return <HoofdstukTelBadge aantal={totaal} label="ongelezen berichten en werk-inbox-mails" />;
   }
 
   function MailWachtrijBadge() {
@@ -946,6 +970,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/werk-inbox">
                               <PackageCheck />
                               <span>Werk-inbox</span>
+                              <WerkInboxItemBadge />
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
