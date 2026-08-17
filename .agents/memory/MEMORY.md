@@ -1,4 +1,3 @@
-- [Expo stale .env dev-domein](expo-stale-env-domein.md) — monteur-app .env met hardcoded EXPO_PUBLIC_DOMAIN wint van shell-env na domeinrotatie → e2e-login "Failed to fetch"; .env weg + Metro-cache wissen.
 - [Ontwerpsysteem tokens (VORM_01)](ontwerp-tokens.md) — @workspace/ontwerp = enige tokenbron; donker AAN sinds F6 (succes/warning-vlakken eisen eigen *Foreground); web erft alleen merk/beweging; token-guard in wrapper vóór hooks.
 - [CALC_INVOER_01 plak-analyse](calc-plak-invoer.md) — twee-traps AI kiest alleen kandidaat-id's (fail-closed); prijzen/uren alleen uit eigen tabellen; ontbrekend=null nooit 0; artikel aanleggen via calc-catalogus-route.
 - [ADVIES_01 regelsoorten](advies-regelsoorten.md) — somplekken filteren op soort+!optioneel (helpers teltMeeRegel/berekenOfferteTotalen); elk rapportpunt krijgt fail-closed een voorstel; koppel-whitelist synchroon met DB-CHECK.
@@ -15,11 +14,10 @@
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static: `mjs` verplicht in regexp; path+path_regexp in één matcher = AND (serveerde /logo-*.png als text/html) → alleen extensie-regexp gebruiken.
 - [KADER FPS Connect](kader-fps-connect.md) — attached_assets/KADER-FPS-Connect_*.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) + [Ontwikkelfilosofie](ontwikkelfilosofie.md) + [Changelog](changelog-verplichting.md) — taak pas gereed bij bewezen businessscenario; stabiliteit > functionaliteit; docs/changelog.md altijd bijwerken.
-- [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
+- [Offline-first monteur app](offline-first-monteur.md) + [Sync context](sync-context.md) — AsyncStorage cache + SyncQueue; WachtrijItem nooit id:number; SyncProvider + AbortSignal.timeout; forceerSync direct na bewaar().
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
-- [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen & picker-endpoint](toewijzingen-velden.md) — Toewijzing heeft naam/rol (niet gebruiker_naam); keuzelijsten via GET /toewijsbare-gebruikers (zie toewijsbare-gebruikers.md), NIET /gebruikers.
 - [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
 - [Rol-filter backend](rol-filter.md) — gebouw-scoping matrix-driven (effectieveContext.beperkt), NIET rolnaam; randgevallen in topicfile; kantoor-leesrol ziet hele portefeuille.
@@ -33,15 +31,12 @@
 - [Gebouw PDF/print-export](print-export.md) — standalone /gebouwen/:id/print buiten portal-layout; plattegrond-render scale:2 gelijk aan hero; auto-print readiness moet alle sectie-queries + beeld-fail meenemen anders incomplete/deadlock.
 - [Projectfuncties / functietitels](projectfuncties.md) — functietitels=text[] gesplitst office (beheerder) vs veld (monteur, max1 Timmerman/Uitvoerder); rol bepaalt toegang, niet de functie; server-side afdwingen.
 - [Spot maker vs uitvoering](spot-maker-uitvoering.md) — monteur_id="Monteur uitvoering"(selecteerbaar), maker_monteur_id="Geplaatst door"; maker ALTIJD server-derived uit sessie (POST /voorzieningen), niet uit body.
-- [Gebouwkaart segmenten & projectformulier](gebouwkaart-segmenten.md) — detail.tsx 3 segmenten als Tabs; AI-samenvatting bevestigbaar met atomaire setWhere-guard; DB push op TTY faalt → directe ALTER SQL.
 - [Plattegrond preview patroon](plattegrond-preview.md) — hero met eigen constanten (geen import uit plattegrond.tsx); pdfjs destroy in cleanup; polling via setInterval+refetch; activiteit client-side filteren.
-- [Gebouw AI-invullen flow](gebouw-ai-invullen.md) + [blokkades](gebouw-ai-blokkades.md) — eigendom via aiVeldenRef (geen state-race); ambigue geocode → suggesties; quota via Replit OpenAI-integratie.
 - [AI-state kleurconventie](ai-state-kleuren.md) — AI-voorstel = GEEL (amber+Sparkles); geaccepteerd/bevestigd = NEUTRAAL (secondary), NIET groen; actieknoppen/lifecycle vallen erbuiten.
 - [Spot-intake volgorde](spot-intake-volgorde.md) — spot aanmaken = foto vóór → foto ná → AI-voorstel overige velden → mens bevestigt (web+mobiel, s.g. uitgezonderd); AI-fill heeft sessie-token + foto-invalidatie nodig tegen stale cross-spot lek.
 - [Expo Go native modules](expo-go-native-modules.md) — monteur-app draait in Expo Go; keyboard-controller zit er niet in → crasht via KeyboardProvider; gebruik RN built-in KeyboardAvoidingView (expo-skill-advies geldt niet voor Expo Go).
 - [SnagStream classificatie](snagstream-classificatie.md) — Applicatie=typecatalogus (code "N.MM"); toepassing draagt fabrikant+testnorm zelf; FabrikantSectie is UI-only.
 - [Terminologie Gebouw/Spot](terminologie-gebouw-spot.md) — entiteit="Gebouwen", objecten="Spots", "Afgekeurde inspecties"; "Project" bewust behouden voor dossier/lifecycle/opleverrapport/projectnummer/projectfunctie — geen blanket rename.
-- [Expo typed routes regeneratie](expo-typed-routes.md) — nieuw app/-routebestand → typecheck faalt TS2345 op router.push tot .expo/types/router.d.ts regenereert; herstart expo-workflow, niet handmatig editen.
 - [Tekening-type document + zichtbaar_monteur](tekening-documenten.md) — documenten nooit in opleverrapport (print.tsx filter) en alleen zichtbaar voor niet-beheerders bij vlag; 3 plekken synchroon; zichtbaarheid ≠ access control (geen storage ACL).
 - [Drizzle push & post-merge drift](drizzle-push-postmerge.md) — push faalt op additieve UNIQUE + session (fix via ALTER); ontbrekende kolom uit drift → select-all 500 op álle lijst-queries (lijkt frontend-bug).
 - [Bevoegdheden-matrix architectuur](bevoegdheden-matrix.md) — jsonb+profielen-tabel; requireBevoegdheid; PRESETS=14; synchroniseer-standaard zaait ontbrekende presets; viewer=uitgebannen.
@@ -70,8 +65,7 @@
 - [Mail: wachtrij/testdomein/M365](mail-wachtrij.md) — zie ook mail-testdomein-guard.md en mail-microsoft365.md: wachtrij-default+goedkeuring; testdomeinen onderdrukken; MAIL_FROM vs MAIL_MAILBOX.
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.
-- [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile-interface + factory (S3_BUCKET→S3, anders GCS); upload-URL geeft {uploadURL,objectPath}; geen normalizeObjectEntityPath in routes.
-- [Back-up & Herstel systeem](backup-systeem.md) — backup_records + backupService (pg_dump+gzip+sha256), dagelijks 03:00; restore vereist "HERSTEL BEVESTIGEN" + hoofdbeheerder.
+- [S3-opslagabstractie](s3-storage-abstractie.md) + [Back-up & Herstel](backup-systeem.md) — StorageFile-factory (S3_BUCKET→S3, anders GCS); backupService pg_dump+gzip+sha256, dagelijks 03:00, restore vereist "HERSTEL BEVESTIGEN".
 - [FPS Connect PWA](fps-pwa.md) — manifest+SW in firevault/public; icons PNG via ImageMagick; QR via /api/auth/pwa-qr (qrcode pkg); René id=11 is_hoofdtester=true.
 - [Wagenpark-module patronen](wagenpark-module.md) — voertuigdoc-download alleen via eigen ACL-route; delete=unlink; scan-first bij server-uploads; effectieveContext is async; rit-dedupe via unieke index.
 - [Werkdag-module patroon](werkdag-module.md) — planning_items=work orders; uitvoering_status via SQL ALTER (geen drizzle push); medewerker opzoeken via gebruiker_id in sessie; useFocusEffect voor refresh bij terugkeer.
@@ -92,7 +86,6 @@
 - [AI Context Service](ai-context-service.md) — centrale contextbundel-motor in lib/aiContext; scoping via PermissieService nooit rolnaam; autorisatiegrens stopt graaf-expansie.
 - [AI Decision Engine (Fase 0)](ai-decision-engine.md) — passthrough-laag boven aiGateway; passthrough==directe gateway, human-in-the-loop via token; token-endpoints fail-closed op module-matrix.
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
-- [EAS Update OTA valkuilen](eas-update-ota.md) — eas update bakt EXPO_PUBLIC_* zelf in (build.env geldt niet!); babel-preset SDK-matched als directe dep; hermesc private-properties-fout = stale Metro-cache → --clear-cache.
 - [Deploy-failure alerting](deploy-failure-alerting.md) — deploy.yml faalmelding via Graph client-credentials direct vanuit Actions runner (geen app-server nodig); GitHub secrets nodig, apart van Replit env.
 - [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext gekoppeld aan 8 kernentiteiten; sub-resources bewust overgeslagen, hercheck vóór aannames.
 - [KLANTLOOS_01](klantloos.md) — rol klant volledig uit Connect verwijderd (aug 2026); alleen module-matrix-rechten; /portaal/:token en CRM-klanttermen blijven; nooit "of klant"-middleware terugbouwen.
@@ -116,8 +109,7 @@
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
 - [Sessie-bewijs dev & prod via https](dev-api-sessie-bewijs.md) — Secure-cookies eisen https (nooit http://localhost); prod-details in prod-curl-sessie-bewijs.md (#HttpOnly_ jar, SQL via stdin).
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; schemawijziging sinds SCHEMA_01 via genummerde migratie (zie schema-migratieketen).
-- [Factuurstroom pijplijn-verificatie](factuurstroom-verificatie.md) — Graph-randje injecteerbaar; inkoperroute matcht nooit (leveranciers- vs crm_klanten-id's), verwacht directieroute.
-- [Factuurstroom FACTUUR_02](factuurstroom.md) — één mail-ingang, gesloten afwijsredenen, inkoperstap nooit te omzeilen, claim teruggeven bij fout, rekeningwissel nooit stil; restpunten legacy-intake/idempotentie.
+- [Factuurstroom FACTUUR_02](factuurstroom.md) + [pijplijn-verificatie](factuurstroom-verificatie.md) — één mail-ingang, inkoperstap nooit omzeilbaar, rekeningwissel nooit stil; Graph-randje injecteerbaar, verwacht directieroute.
 - [Documentherkenning vision](document-vision.md) — 220 DPI/2000px/JPEG85/detail=high/pagina 1-5 heilig; vision-slot=gpt-4o; gateway vertaalt gpt-5 params; metadata nooit gegevensbron.
 - [Aanvraagstroom AANVRAAG_01](aanvraagstroom.md) — nooit project in dit proces; accepteren claimt voorstel als 1e tx-stap (race); signalen-dedupe via partiële unieke indexes; CRM-ingang voor aanvraag-signalen.
 - [Functie→preset naam-matching](functie-preset-matching.md) — koppel-heuristiek moet exacte match eerst rangschikken; bidirectionele includes laat langere preset ("Onderhoudsmonteur") exacte "Monteur" verslaan.
