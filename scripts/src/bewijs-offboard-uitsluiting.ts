@@ -69,6 +69,17 @@ async function main() {
 
   console.log("0. Uitgangssituatie (vóór offboard)");
   check("doel heeft werkende websessie", (await doel("/auth/me")).status === 200);
+  // IDOR-check: een niet-beheerder kan een gebruikers-ID (zoals de
+  // duplicate-check die geredigeerd teruggeeft) niet omzetten naar e-mail.
+  const adminMe = (await (await admin("/auth/me")).json()) as any;
+  const adminId = Number(adminMe?.id ?? adminMe?.gebruiker?.id ?? 0);
+  if (adminId) {
+    const rIdor = await doel(`/gebruikers/${adminId}`);
+    const idor = rIdor.status === 200 ? ((await rIdor.json()) as any) : null;
+    check("IDOR: niet-beheerder ziet geen e-mail/telefoon via /gebruikers/:id", idor != null && (idor.email ?? "") === "" && (idor.telefoon ?? null) === null, `status ${rIdor.status}`);
+  } else {
+    check("IDOR: admin-id bepaald voor IDOR-check", false, "geen id in /auth/me");
+  }
   if (bearer) {
     const rB = await fetch(`${BASE}/auth/me`, { headers: { Authorization: `Bearer ${bearer}` } });
     check("doel heeft werkend mobiel bearer-token", rB.status === 200, String(rB.status));
@@ -141,6 +152,58 @@ async function main() {
     const rDup3 = await admin("/medewerkers/duplicate-check", { method: "POST", body: JSON.stringify({ email: "e2e-ww-target" }) });
     const dup3 = (await rDup3.json()) as { mogelijke_duplicaten: Array<{ id: number; type: string }> };
     check("deelstring-e-mail levert afgeschermd account niet op", rDup3.status === 200 && !dup3.mogelijke_duplicaten.some((d) => d.id === targetId && d.type === "gebruiker_account"));
+
+    console.log("\n3. Bredere lek-audit: selectors/kalender lekken afgeschermde gegevens niet");
+    // Randgeval: afschermen kan ook bij actief=true zolang uit_dienst_per is
+    // verstreken — juist dan mochten planning-selector (e-mail/telefoon) en
+    // kalender-verjaardag (geboortedatum) vroeger nog lekken.
+    const nu = new Date();
+    const mmdd = `${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    // Gekoppeld aan het (nog actieve, ingelogde) admin-account: bewijst dat ook
+    // self-scoped routes (/mijn/privacy-gegevens) afgeschermde velden niet
+    // teruggeven — afschermen kan immers zonder account-deactivering.
+    // Bestaand medewerkerprofiel van de admin tijdelijk ontkoppelen zodat de
+    // self-scoped route deterministisch het testprofiel teruggeeft (herstel in finally).
+    let herstelAdminMedId: number | null = null;
+    const [bestaandeAdminMed] = await db.select({ id: medewerkersTable.id }).from(medewerkersTable).where(eq(medewerkersTable.gebruikerId, adminId));
+    if (bestaandeAdminMed) {
+      await db.update(medewerkersTable).set({ gebruikerId: null }).where(eq(medewerkersTable.id, bestaandeAdminMed.id));
+      herstelAdminMedId = bestaandeAdminMed.id;
+    }
+    const [af2] = await db.insert(medewerkersTable).values({
+      naam: "E2E Afgeschermd Selector",
+      werkmaatschappij: "FPS Brandpreventie",
+      actief: true,
+      uitDienstPer: "2026-01-01",
+      email: "e2e-afgeschermd-selector@example.com",
+      telefoon: "0687654321",
+      geboortedatum: `1990-${mmdd}`,
+      verjaardagZichtbaar: true,
+      gebruikerId: adminId,
+    }).returning({ id: medewerkersTable.id });
+    try {
+      check("afschermen (actief=true, uit dienst) = 200", (await admin(`/medewerkers/${af2.id}/afschermen`, { method: "POST" })).status === 200);
+      const rSel = await admin("/modules/planning/medewerkers");
+      const sel = rSel.status === 200 ? ((await rSel.json()) as any[]) : [];
+      check("planning-selector bevat afgeschermde medewerker niet", rSel.status === 200 && !sel.some((m) => m.id === af2.id), `status ${rSel.status}`);
+      const rKal = await admin(`/kalender?jaar=${nu.getFullYear()}`);
+      const kal = rKal.status === 200 ? ((await rKal.json()) as any) : null;
+      const kalItems: any[] = Array.isArray(kal) ? kal : (kal?.items ?? []);
+      check("kalender toont geen verjaardag van afgeschermde medewerker", rKal.status === 200 && !kalItems.some((i) => i.soort === "verjaardag" && String(i.titel ?? "").includes("E2E Afgeschermd Selector")), `status ${rKal.status}`);
+      const rPriv = await admin("/mijn/privacy-gegevens");
+      const priv = rPriv.status === 200 ? ((await rPriv.json()) as any) : null;
+      const eigen = priv?.medewerker;
+      check(
+        "self-scoped /mijn/privacy-gegevens geeft afgeschermde velden niet terug (actief account)",
+        rPriv.status === 200 && eigen?.id === af2.id && eigen.email === null && eigen.telefoon === null && eigen.mobiel === null && priv?.email == null,
+        `status ${rPriv.status}, med=${eigen?.id}, email=${eigen?.email}, accountEmail=${priv?.email}`,
+      );
+    } finally {
+      await db.delete(medewerkersTable).where(eq(medewerkersTable.id, af2.id));
+      if (herstelAdminMedId !== null) {
+        await db.update(medewerkersTable).set({ gebruikerId: adminId }).where(eq(medewerkersTable.id, herstelAdminMedId));
+      }
+    }
   } finally {
     await db.delete(medewerkersTable).where(eq(medewerkersTable.id, med.id));
     await db.update(gebruikersTable).set({ actief: true }).where(eq(gebruikersTable.id, targetId));

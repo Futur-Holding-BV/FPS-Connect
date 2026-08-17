@@ -456,7 +456,7 @@ router.get("/kalender", requireAuth, laadPermissies, async (req, res): Promise<v
     const jarigen = await db
       .select({ naam: medewerkersTable.naam, geboortedatum: medewerkersTable.geboortedatum })
       .from(medewerkersTable)
-      .where(and(eq(medewerkersTable.actief, true), eq(medewerkersTable.verjaardagZichtbaar, true), sql`${medewerkersTable.geboortedatum} IS NOT NULL`));
+      .where(and(eq(medewerkersTable.actief, true), eq(medewerkersTable.verjaardagZichtbaar, true), isNull(medewerkersTable.afgeschermdOp), sql`${medewerkersTable.geboortedatum} IS NOT NULL`));
     for (const j of jarigen) {
       const maandDag = j.geboortedatum!.slice(5, 10); // alleen mm-dd; het jaar komt de response nooit in
       if (!/^\d{2}-\d{2}$/.test(maandDag)) continue;

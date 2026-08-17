@@ -206,7 +206,7 @@ function GegevensTab() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">E-mailadres</p>
-              <p className="font-medium">{data.email}</p>
+              <p className="font-medium">{data.email ?? "Afgeschermd"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Rol</p>

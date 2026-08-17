@@ -10,7 +10,7 @@ import type { MijnMedewerkerProfiel } from './mijnMedewerkerProfiel';
 export interface MijnPrivacyGegevens {
   id: number;
   naam: string;
-  email: string;
+  email: string | null;
   rol: string;
   aangemaaktOp: string;
   medewerker?: MijnMedewerkerProfiel | null;

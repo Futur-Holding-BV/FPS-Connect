@@ -63,6 +63,7 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): P
       email: medewerkersTable.email,
       telefoon: medewerkersTable.telefoon,
       mobiel: medewerkersTable.mobiel,
+      afgeschermd_op: medewerkersTable.afgeschermdOp,
       functie_naam: functiesTable.naam,
       verjaardag_zichtbaar: medewerkersTable.verjaardagZichtbaar,
     })
@@ -112,7 +113,9 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): P
   return void res.json({
     id: gebruiker.id,
     naam: gebruiker.naam,
-    email: gebruiker.email,
+    // AVG-afscherming: het account-e-mailadres is doorgaans hetzelfde adres als
+    // het afgeschermde medewerker-e-mailadres; bij afscherming ook hier niet tonen.
+    email: medewerkerRij?.afgeschermd_op ? null : gebruiker.email,
     rol: gebruiker.rol,
     aangemaaktOp: gebruiker.aangemaaktOp,
     medewerker: medewerkerRij
@@ -122,9 +125,12 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): P
           werkmaatschappij: medewerkerRij.werkmaatschappij,
           dienstverband: medewerkerRij.dienstverband,
           in_dienst_sinds: medewerkerRij.in_dienst_sinds ?? null,
-          email: medewerkerRij.email ?? null,
-          telefoon: medewerkerRij.telefoon ?? null,
-          mobiel: medewerkerRij.mobiel ?? null,
+          // AVG-afscherming: ook self-scoped geen afgeschermde velden teruggeven —
+          // een afgeschermde oud-medewerker kan (actief=true, uit_dienst_per
+          // verstreken) nog een werkend account hebben.
+          email: medewerkerRij.afgeschermd_op ? null : (medewerkerRij.email ?? null),
+          telefoon: medewerkerRij.afgeschermd_op ? null : (medewerkerRij.telefoon ?? null),
+          mobiel: medewerkerRij.afgeschermd_op ? null : (medewerkerRij.mobiel ?? null),
           functie_naam: medewerkerRij.functie_naam ?? null,
           verlofsaldi,
           opleidingen,

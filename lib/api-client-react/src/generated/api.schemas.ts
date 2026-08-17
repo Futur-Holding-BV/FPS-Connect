@@ -11490,7 +11490,7 @@ export interface MijnMedewerkerProfiel {
 export interface MijnPrivacyGegevens {
   id: number;
   naam: string;
-  email: string;
+  email: string | null;
   rol: string;
   aangemaaktOp: string;
   medewerker?: MijnMedewerkerProfiel | null;
@@ -18894,4 +18894,3 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
-

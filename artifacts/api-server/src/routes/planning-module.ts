@@ -92,7 +92,9 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res): Pro
     const dvFilter = typeof req.query.dienstverband    === "string" ? req.query.dienstverband    : undefined;
     const alleenUitvoerend = req.query.alleen_uitvoerend === "true";
 
-    const conditions: SQL[] = [eq(medewerkersTable.actief, true)];
+    // AVG-afscherming: afgeschermde oud-medewerkers horen niet in de
+    // planning-selector (deze respons bevat e-mail/telefoon).
+    const conditions: SQL[] = [eq(medewerkersTable.actief, true), isNull(medewerkersTable.afgeschermdOp)];
     if (alleenUitvoerend) {
       // Uitvoerende medewerkers = functie.uitvoerend = true,
       // PLUS altijd: zzp / uitzend / inhuur / onderaannemer (zijn in deze branche veldwerkers)

@@ -39,7 +39,8 @@ export const verjaardagMomentType: MomentType = {
       .from(medewerkersTable)
       .leftJoin(gebruikersTable, eq(medewerkersTable.gebruikerId, gebruikersTable.id))
       .where(
-        sql`${medewerkersTable.geboortedatum} is not null and substring(${medewerkersTable.geboortedatum}, 6, 5) = ${maandDag} and ${medewerkersTable.actief} = true`,
+        // AVG-afscherming: geboortedatum van afgeschermde oud-medewerkers nooit gebruiken.
+        sql`${medewerkersTable.geboortedatum} is not null and substring(${medewerkersTable.geboortedatum}, 6, 5) = ${maandDag} and ${medewerkersTable.actief} = true and ${medewerkersTable.afgeschermdOp} is null`,
       );
 
     return rijen

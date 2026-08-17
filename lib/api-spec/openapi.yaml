@@ -43827,7 +43827,9 @@ components:
         naam:
           type: string
         email:
+          # AVG-afscherming: null bij een afgeschermd gekoppeld medewerkerprofiel
           type: string
+          nullable: true
         rol:
           type: string
         aangemaaktOp:
