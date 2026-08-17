@@ -13214,6 +13214,7 @@ export interface ScabMail {
   verzond_op?: string | null;
   verzond_door_naam?: string | null;
   aantal_mutaties: number;
+  mutatie_ids?: number[] | null;
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
@@ -13231,8 +13232,19 @@ export interface ScabMailPatch {
   inhoud?: string;
   scab_email_adres?: string | null;
   contactpersoon?: string | null;
+  /** Bijwerken van de snapshot en het mutatieaantal. Wanneer aanwezig, valideert de server elk ID tegen de werkmaatschappij+periode van deze mail, deduplicoert de lijst, en regenereert de volledige mailtekst inclusief ondertekening. Ontbreekt het veld, dan blijft de snapshot ongewijzigd. Een lege array [] leegt de snapshot (geen mutaties meegenomen). */
+  mutatie_ids?: number[];
 }
 
+export interface ScabMailMutatieKeuze {
+  id: number;
+  medewerker_naam?: string | null;
+  type: string;
+  omschrijving?: string | null;
+  ingangsdatum?: string | null;
+  status: string;
+  in_snapshot: boolean;
+}
 export interface ScabMailBijlage {
   id: number;
   scab_mail_id: number;
@@ -18881,4 +18893,3 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
-

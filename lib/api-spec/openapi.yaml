@@ -22142,6 +22142,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScabMail'
 
+  /scab-mails/{id}/mutaties:
+    get:
+      summary: Beschikbare mutaties voor een SCAB-mail (snapshot + overige voor de periode)
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScabMailMutatieKeuze'
+
   /scab-mails/{id}/bijlagen:
     get:
       summary: Bijlagen van SCAB-mail
@@ -47230,6 +47250,11 @@ components:
           nullable: true
         aantal_mutaties:
           type: integer
+        mutatie_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
         aangemaakt_door_naam:
           type: string
           nullable: true
@@ -47265,6 +47290,39 @@ components:
         contactpersoon:
           type: string
           nullable: true
+        mutatie_ids:
+          type: array
+          items:
+            type: integer
+          description: >
+            Bijwerken van de snapshot en het mutatieaantal. Wanneer aanwezig,
+            valideert de server elk ID tegen de werkmaatschappij+periode van
+            deze mail, deduplicoert de lijst, en regenereert de volledige
+            mailtekst inclusief ondertekening. Ontbreekt het veld, dan blijft
+            de snapshot ongewijzigd. Een lege array [] leegt de snapshot
+            (geen mutaties meegenomen).
+
+    ScabMailMutatieKeuze:
+      type: object
+      required: [id, type, status, in_snapshot]
+      properties:
+        id:
+          type: integer
+        medewerker_naam:
+          type: string
+          nullable: true
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        ingangsdatum:
+          type: string
+          nullable: true
+        status:
+          type: string
+        in_snapshot:
+          type: boolean
 
     ScabMailBijlage:
       type: object

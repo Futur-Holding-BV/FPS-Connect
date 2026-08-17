@@ -9,11 +9,19 @@ import {
   werkgeversTable,
   medewerkersTable,
 } from "@workspace/db";
-import { eq, and, desc, inArray, isNotNull, ne } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, isNotNull, ne } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { SCAB_MAIL_GENERATIE_PROMPT } from "../lib/aiPrompts";
+import {
+  genereerDeterministischeBody,
+  eersteOngeldigeElement,
+  dedupliceerId,
+  MAAND_NAMEN_NL,
+  type WerkgeverBodyInfo,
+  type MutatieBodyItem,
+} from "../lib/scabMailHelpers";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -24,6 +32,9 @@ const schrijven = requireBevoegdheid("scab_mail", 2);
 const verzenden = requireBevoegdheid("scab_mail", 3);
 
 function mapMail(m: typeof scabMailsTable.$inferSelect) {
+  const snapshotIds = Array.isArray(m.mutatieIds)
+    ? (m.mutatieIds as unknown[]).filter((v): v is number => typeof v === "number")
+    : null;
   return {
     id: m.id,
     werkmaatschappij: m.werkmaatschappij,
@@ -38,6 +49,7 @@ function mapMail(m: typeof scabMailsTable.$inferSelect) {
     verzond_op: m.verzondOp?.toISOString() ?? null,
     verzond_door_naam: m.verzondDoorNaam,
     aantal_mutaties: m.aantalMutaties,
+    mutatie_ids: snapshotIds,
     aangemaakt_door_naam: m.aangemaaktDoorNaam,
     aangemaakt_op: m.aangemaaktOp.toISOString(),
     bijgewerkt_op: m.bijgewerktOp.toISOString(),
@@ -116,34 +128,12 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     if (wg) werkgeverInfo = wg;
   }
 
-  const maandNamen = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-  const periodeLabel = `${maandNamen[maand - 1]} ${jaar}`;
+  const periodeLabel = `${MAAND_NAMEN_NL[maand - 1]} ${jaar}`;
+  const onderwerp = `Salarismutaties ${werkmaatschappij} – ${periodeLabel}`;
 
-  let onderwerp = `Salarismutaties ${werkmaatschappij} – ${periodeLabel}`;
-  let inhoud = `Geachte heer/mevrouw,\n\nHierbij de salarismutaties voor ${werkmaatschappij} over de loonperiode ${periodeLabel}.\n\n`;
-
-  // Ondertekening op basis van de werkgevergegevens (Bedrijfsgegevens-pagina);
-  // intern aanspreekpunt als afzendernaam wanneer ingevuld.
-  const afzenderBedrijf = werkgeverInfo?.naam ?? werkmaatschappij;
-  const afzenderPersoon = werkgeverInfo?.internContactNaam;
-  const ondertekening = `\nMet vriendelijke groet,\n${afzenderPersoon ? `${afzenderPersoon}\n` : ""}${afzenderBedrijf}\nPersoneelszaken${werkgeverInfo?.internContactEmail ? `\n${werkgeverInfo.internContactEmail}` : ""}\n`;
-
-  if (mutaties.length === 0) {
-    inhoud += "Er zijn geen mutaties voor deze periode.\n";
-    inhoud += ondertekening;
-  } else {
-    // Deterministische fallback-body altijd eerst opbouwen; een geslaagde
-    // AI-generatie vervangt hem, een mislukte laat hem intact (nooit een
-    // halve mail zonder mutaties/ondertekening).
-    mutaties.forEach((m) => {
-      const naam = m.medewerkerNaam ?? `medewerker ${m.medewerkerId}`;
-      inhoud += `- ${naam}: ${m.type}`;
-      if (m.omschrijving) inhoud += ` (${m.omschrijving})`;
-      if (m.ingangsdatum) inhoud += `, ingangsdatum ${m.ingangsdatum}`;
-      inhoud += "\n";
-    });
-    inhoud += ondertekening;
-  }
+  // Deterministische fallback-body altijd eerst opbouwen; een geslaagde
+  // AI-generatie vervangt hem, een mislukte laat hem intact.
+  let inhoud = genereerDeterministischeBody(werkmaatschappij, jaar, maand, mutaties, werkgeverInfo);
 
   if (heeftGateway() && mutaties.length > 0) {
     try {
@@ -177,7 +167,12 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
 
       // AI levert alleen de body; de deterministische ondertekening met de
       // werkgevergegevens wordt server-side toegevoegd (nooit aan AI overlaten).
-      if (scabResultaat.ok) inhoud = `${scabResultaat.inhoud.replace(/\s+$/, "")}\n${ondertekening}`;
+      if (scabResultaat.ok) {
+        const afzenderBedrijf = werkgeverInfo?.naam ?? werkmaatschappij;
+        const afzenderPersoon = werkgeverInfo?.internContactNaam ?? null;
+        const ondertekening = `\nMet vriendelijke groet,\n${afzenderPersoon ? `${afzenderPersoon}\n` : ""}${afzenderBedrijf}\nPersoneelszaken${werkgeverInfo?.internContactEmail ? `\n${werkgeverInfo.internContactEmail}` : ""}\n`;
+        inhoud = `${scabResultaat.inhoud.replace(/\s+$/, "")}\n${ondertekening}`;
+      }
     } catch (err) {
       req.log.error({ err }, "AI SCAB-mail generatie mislukt, deterministische fallback-body blijft staan");
     }
@@ -213,20 +208,162 @@ router.get("/scab-mails/:id", lezen, async (req: Request, res: Response): Promis
   return void res.json(mapMail(mail));
 });
 
+router.get("/scab-mails/:id/mutaties", lezen, async (req: Request, res: Response): Promise<void> => {
+  const id = Number(req.params.id);
+  const [mail] = await db.select({
+    werkmaatschappij: scabMailsTable.werkmaatschappij,
+    periodeJaar: scabMailsTable.periodeJaar,
+    periodeMaand: scabMailsTable.periodeMaand,
+    mutatieIds: scabMailsTable.mutatieIds,
+  }).from(scabMailsTable).where(eq(scabMailsTable.id, id));
+  if (!mail) return void res.status(404).json({ message: "Niet gevonden" });
+
+  const snapshot = Array.isArray(mail.mutatieIds)
+    ? new Set((mail.mutatieIds as unknown[]).filter((v): v is number => typeof v === "number"))
+    : new Set<number>();
+
+  // Alle mutaties voor deze werkmaatschappij+periode; snapshot-mutaties die
+  // inmiddels zijn verwijderd vallen weg (id's zijn integer, geen string-matching).
+  const mutaties = await db
+    .select({
+      id: salarisMutatiesTable.id,
+      medewerkerNaam: salarisMutatiesTable.medewerkerNaam,
+      type: salarisMutatiesTable.type,
+      omschrijving: salarisMutatiesTable.omschrijving,
+      ingangsdatum: salarisMutatiesTable.ingangsdatum,
+      status: salarisMutatiesTable.status,
+    })
+    .from(salarisMutatiesTable)
+    .where(and(
+      eq(salarisMutatiesTable.werkmaatschappij, mail.werkmaatschappij),
+      eq(salarisMutatiesTable.periodeJaar, mail.periodeJaar),
+      eq(salarisMutatiesTable.periodeMaand, mail.periodeMaand),
+    ))
+    .orderBy(asc(salarisMutatiesTable.id));
+
+  return void res.json(mutaties.map((m) => ({
+    id: m.id,
+    medewerker_naam: m.medewerkerNaam,
+    type: m.type,
+    omschrijving: m.omschrijving,
+    ingangsdatum: m.ingangsdatum,
+    status: m.status,
+    in_snapshot: snapshot.has(m.id),
+  })));
+});
+
 router.patch("/scab-mails/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
-  const { onderwerp, inhoud, scab_email_adres, contactpersoon } = req.body;
+  const { onderwerp, inhoud, scab_email_adres, contactpersoon, mutatie_ids } = req.body;
 
-  const [bestaand] = await db.select({ status: scabMailsTable.status })
-    .from(scabMailsTable).where(eq(scabMailsTable.id, id));
+  const [bestaand] = await db.select({
+    status: scabMailsTable.status,
+    werkmaatschappij: scabMailsTable.werkmaatschappij,
+    periodeJaar: scabMailsTable.periodeJaar,
+    periodeMaand: scabMailsTable.periodeMaand,
+    werkgeverId: scabMailsTable.werkgeverId,
+  }).from(scabMailsTable).where(eq(scabMailsTable.id, id));
   if (!bestaand) return void res.status(404).json({ message: "Niet gevonden" });
   if (bestaand.status === "verzonden") return void res.status(409).json({ message: "Verzonden mails kunnen niet meer worden bewerkt" });
 
   const update: Partial<typeof scabMailsTable.$inferInsert> = { bijgewerktOp: new Date() };
   if (onderwerp !== undefined) update.onderwerp = onderwerp;
-  if (inhoud !== undefined) update.inhoud = inhoud;
   if (scab_email_adres !== undefined) update.scabEmailAdres = scab_email_adres;
   if (contactpersoon !== undefined) update.contactpersoon = contactpersoon;
+
+  // Mutatieselectie bijwerken: server valideert alle opgegeven IDs tegen de
+  // werkmaatschappij+periode van déze mail, dedupliceert ze, en regenereert
+  // de volledige mailtekst inclusief aanhef en ondertekening. De client-body
+  // wordt genegeerd bij selectiewijzigingen om te voorkomen dat een incomplete
+  // preview (zonder ondertekening) of buitenscope IDs worden opgeslagen.
+  // Fail-closed: aanwezige maar niet-array mutatie_ids (bijv. string of getal)
+  // worden geweigerd zodat een typfout in de client nooit stilzwijgend wordt
+  // genegeerd en de selectie ongewijzigd laat.
+  if (mutatie_ids !== undefined && !Array.isArray(mutatie_ids)) {
+    return void res.status(400).json({ message: "mutatie_ids moet een array van gehele getallen zijn" });
+  }
+
+  if (Array.isArray(mutatie_ids)) {
+    // Fail-closed: als één element geen geheel getal is weigeren we het hele
+    // verzoek. Stil filteren zou onbedoeld mutaties uit de snapshot verwijderen
+    // en de boekhoudkundige scope stiekem verkleinen.
+    const ongeldig = eersteOngeldigeElement(mutatie_ids as unknown[]);
+    if (ongeldig !== undefined) {
+      return void res.status(400).json({ message: "Elk element van mutatie_ids moet een geheel getal zijn" });
+    }
+
+    const rawIds = mutatie_ids as number[];
+    const uniekIds = dedupliceerId(rawIds);
+
+    if (uniekIds.length > 0) {
+      // Controleer of alle opgegeven IDs daadwerkelijk bij de periode+werkmaatschappij
+      // van déze mail horen. IDs die niet bestaan of bij een ander scope horen
+      // worden geweigerd (fail-closed) — ze sturen anders de verwerkt-overgang.
+      const geldige = await db
+        .select({ id: salarisMutatiesTable.id })
+        .from(salarisMutatiesTable)
+        .where(and(
+          inArray(salarisMutatiesTable.id, uniekIds),
+          eq(salarisMutatiesTable.werkmaatschappij, bestaand.werkmaatschappij),
+          eq(salarisMutatiesTable.periodeJaar, bestaand.periodeJaar),
+          eq(salarisMutatiesTable.periodeMaand, bestaand.periodeMaand),
+        ));
+      const geldigeSet = new Set(geldige.map((r) => r.id));
+      const ongeldig = uniekIds.filter((i) => !geldigeSet.has(i));
+      if (ongeldig.length > 0) {
+        return void res.status(400).json({
+          message: `Onbekende of verkeerd-scope mutatie-id's: ${ongeldig.join(", ")}`,
+        });
+      }
+    }
+
+    // Werkgeverinfo ophalen voor de ondertekening in de geregende body.
+    let wgInfo: WerkgeverBodyInfo = null;
+    if (bestaand.werkgeverId) {
+      const [wg] = await db.select({
+        naam: werkgeversTable.naam,
+        internContactNaam: werkgeversTable.internContactNaam,
+        internContactEmail: werkgeversTable.internContactEmail,
+      }).from(werkgeversTable).where(eq(werkgeversTable.id, bestaand.werkgeverId));
+      if (wg) wgInfo = wg;
+    }
+
+    // Mutaties ophalen en vervolgens hersorteren naar de volgorde van uniekIds.
+    // SQL garandeert geen rijvolgorde bij WHERE id IN (...), dus we bouwen een
+    // Map en construeren de lijst in de opgeslagen/gevraagde ID-volgorde zodat
+    // de gegenereerde mailtekst deterministisch identiek is bij gelijke selectie.
+    const dbMutaties = uniekIds.length === 0 ? [] : await db
+      .select({
+        id: salarisMutatiesTable.id,
+        medewerkerNaam: salarisMutatiesTable.medewerkerNaam,
+        medewerkerId: salarisMutatiesTable.medewerkerId,
+        type: salarisMutatiesTable.type,
+        omschrijving: salarisMutatiesTable.omschrijving,
+        ingangsdatum: salarisMutatiesTable.ingangsdatum,
+      })
+      .from(salarisMutatiesTable)
+      .where(inArray(salarisMutatiesTable.id, uniekIds));
+    const mutatieMap = new Map(dbMutaties.map((m) => [m.id, m]));
+    const geselecteerdeMutaties = uniekIds
+      .map((mid) => mutatieMap.get(mid))
+      .filter((m): m is NonNullable<typeof m> => m !== undefined);
+
+    update.mutatieIds = uniekIds;
+    update.aantalMutaties = uniekIds.length;
+    // Server genereert de volledige deterministische body (aanhef + lijstregels
+    // + ondertekening). Een client-provided inhoud wordt bij een selectiewijziging
+    // genegeerd zodat de ondertekening altijd de echte werkgeverdata bevat.
+    update.inhoud = genereerDeterministischeBody(
+      bestaand.werkmaatschappij,
+      bestaand.periodeJaar,
+      bestaand.periodeMaand,
+      geselecteerdeMutaties,
+      wgInfo,
+    );
+  } else if (inhoud !== undefined) {
+    // Geen selectiewijziging: sla de handmatig bewerkte tekst op.
+    update.inhoud = inhoud;
+  }
 
   const [updated] = await db.update(scabMailsTable).set(update)
     .where(eq(scabMailsTable.id, id)).returning();

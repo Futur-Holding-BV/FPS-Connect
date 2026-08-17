@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import {
   useGetScabMails, usePostScabMailsGenereer,
   usePatchScabMailsId, usePostScabMailsIdVerzend,
-  useAiVeldCorrectie,
+  useAiVeldCorrectie, useGetScabMailsIdMutaties,
+  useListWerkgevers,
 } from "@workspace/api-client-react";
-import { useListWerkgevers } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import {
   Sparkles, Send, Mail, Pencil, Check, ArrowRight,
-  ClipboardList, AlertTriangle, Info,
+  ClipboardList, AlertTriangle, Info, ListChecks,
 } from "lucide-react";
 import { Link } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { ScabMail } from "@workspace/api-client-react";
 
 const HUIDIG_JAAR = new Date().getFullYear();
@@ -79,9 +80,6 @@ function WorkflowIndicator({ actief }: { actief: number }) {
     </div>
   );
 }
-
-// ── Hoofdpagina ────────────────────────────────────────────────────────────────
-
 export default function ScabMailPage() {
   const [jaar, setJaar] = useState(HUIDIG_JAAR);
   const [maand, setMaand] = useState(HUIDIG_MAAND);
@@ -108,7 +106,12 @@ export default function ScabMailPage() {
   // vastgelegd bij generatie zodat we bij verzenden kunnen vergelijken.
   const aiOorspronkelijkRef = useRef<Record<number, { onderwerp: string; inhoud: string }>>({});
 
+  // ── Bewerken-state ─────────────────────────────────────────────────────────
   const [bewerkForm, setBewerkForm] = useState({ onderwerp: "", inhoud: "", scab_email_adres: "" });
+  // Geselecteerde mutatie-ids (beheert de snapshot)
+  const [geselecteerdeMutatieIds, setGeselecteerdeMutatieIds] = useState<Set<number>>(new Set());
+  // Bijhouden of de selectie handmatig is gewijzigd (bepaalt welk pad opslaan neemt)
+  const [selectieGewijzigd, setSelectieGewijzigd] = useState(false);
 
   function openBewerken(mail: ScabMail) {
     setBewerkForm({
@@ -116,19 +119,50 @@ export default function ScabMailPage() {
       inhoud: mail.inhoud,
       scab_email_adres: mail.scab_email_adres ?? "",
     });
+    // Initialiseer geselecteerde ids vanuit de snapshot van de mail
+    const initIds = Array.isArray(mail.mutatie_ids)
+      ? new Set<number>(mail.mutatie_ids.filter((v): v is number => typeof v === "number"))
+      : new Set<number>();
+    setGeselecteerdeMutatieIds(initIds);
+    setSelectieGewijzigd(false);
     setBewerkenMail(mail);
+  }
+
+  // Wanneer de selectie verandert: bijhouden dat er iets gewijzigd is.
+  // De body-tekst wordt NIET client-side overschreven — de server regenereert
+  // bij opslaan de volledige inhoud (inclusief aanhef en ondertekening met
+  // echte werkgeverdata). Zo blijft de opgeslagen tekst altijd volledig.
+  function handleSelectieWijziging(nieuweIds: Set<number>) {
+    setGeselecteerdeMutatieIds(nieuweIds);
+    setSelectieGewijzigd(true);
   }
 
   async function opslaan() {
     if (!bewerkenMail) return;
-    await patchMail.mutateAsync({
-      id: bewerkenMail.id,
-      data: {
-        onderwerp: bewerkForm.onderwerp,
-        inhoud: bewerkForm.inhoud,
-        scab_email_adres: bewerkForm.scab_email_adres || undefined,
-      },
-    });
+
+    if (selectieGewijzigd) {
+      // Mutatieselectie is gewijzigd: stuur alleen mutatie_ids mee.
+      // De server valideert de IDs, deduplicoert ze, en regenereert de
+      // volledige mailtekst inclusief ondertekening op basis van werkgeverdata.
+      await patchMail.mutateAsync({
+        id: bewerkenMail.id,
+        data: {
+          onderwerp: bewerkForm.onderwerp,
+          scab_email_adres: bewerkForm.scab_email_adres || undefined,
+          mutatie_ids: Array.from(geselecteerdeMutatieIds),
+        },
+      });
+    } else {
+      // Alleen tekst of metagegevens bewerkt: stuur de aangepaste body mee.
+      await patchMail.mutateAsync({
+        id: bewerkenMail.id,
+        data: {
+          onderwerp: bewerkForm.onderwerp,
+          inhoud: bewerkForm.inhoud,
+          scab_email_adres: bewerkForm.scab_email_adres || undefined,
+        },
+      });
+    }
     setBewerkenMail(null);
     refetch();
   }
@@ -447,15 +481,39 @@ export default function ScabMailPage() {
       {/* Bewerken dialog */}
       {bewerkenMail && (
         <Dialog open={!!bewerkenMail} onOpenChange={() => setBewerkenMail(null)}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Conceptmail bewerken</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-2">
+            <div className="space-y-5 py-2">
+
+              {/* Info */}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground p-2 bg-muted/50 rounded">
                 <Info size={12} className="shrink-0" />
                 Pas de inhoud aan zodat alle informatie correct en volledig is vóór verzending.
               </div>
+
+              {/* Mutatieselectie */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <ListChecks size={14} className="text-muted-foreground" />
+                  Meegenomen mutaties
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Vink aan welke mutaties in deze mail en de boekhoudkundige snapshot worden opgenomen.
+                  Bij een gewijzigde selectie wordt de mailtekst inclusief ondertekening opnieuw
+                  samengesteld door de server.
+                </p>
+                <MutatieKeuzePanel
+                  mailId={bewerkenMail.id}
+                  geselecteerd={geselecteerdeMutatieIds}
+                  onChange={handleSelectieWijziging}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Velden */}
               <div className="space-y-1.5">
                 <Label>Aanleveradres loonverwerking</Label>
                 <Input value={bewerkForm.scab_email_adres}
@@ -469,9 +527,32 @@ export default function ScabMailPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Inhoud</Label>
-                <Textarea rows={14} value={bewerkForm.inhoud}
-                  onChange={(e) => setBewerkForm((f) => ({ ...f, inhoud: e.target.value }))}
-                  className="font-mono text-sm" />
+                {selectieGewijzigd ? (
+                  <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                    <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2.5">
+                      <Sparkles size={13} className="shrink-0 mt-0.5 text-amber-500" />
+                      <span>
+                        De mutatieselectie is gewijzigd. Bij het opslaan genereert de server de volledige
+                        mailtekst opnieuw — inclusief aanhef en ondertekening met werkgevergegevens.
+                        Wilt u de tekst zelf aanpassen, sla dan eerst de selectie op en open daarna
+                        opnieuw het bewerkscherm.
+                      </span>
+                    </div>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans max-h-32 overflow-y-auto opacity-60">
+                      {bewerkForm.inhoud}
+                    </pre>
+                  </div>
+                ) : (
+                  <>
+                    <Textarea rows={12} value={bewerkForm.inhoud}
+                      onChange={(e) => setBewerkForm((f) => ({ ...f, inhoud: e.target.value }))}
+                      className="font-mono text-sm" />
+                    <p className="text-xs text-muted-foreground">
+                      U kunt de tekst vrij aanpassen. Wijzig de mutatieselectie hierboven om de volledige
+                      inhoud opnieuw te laten genereren.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -503,6 +584,13 @@ export default function ScabMailPage() {
                 {verzendDialogOpen.contactpersoon && (
                   <p className="text-muted-foreground">Contactpersoon: {verzendDialogOpen.contactpersoon}</p>
                 )}
+                {(verzendDialogOpen.mutatie_ids?.length ?? verzendDialogOpen.aantal_mutaties) > 0 && (
+                  <p className="text-muted-foreground">
+                    Snapshot: <span className="font-medium text-foreground">
+                      {verzendDialogOpen.mutatie_ids?.length ?? verzendDialogOpen.aantal_mutaties} mutaties
+                    </span> worden na verzending op "verwerkt" gezet.
+                  </p>
+                )}
               </div>
               {!verzendDialogOpen.scab_email_adres && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
@@ -527,6 +615,105 @@ export default function ScabMailPage() {
           </DialogContent>
         </Dialog>
       )}
+    </div>
+  );
+}
+
+function MutatieKeuzePanel({
+  mailId,
+  geselecteerd,
+  onChange,
+}: {
+  mailId: number;
+  geselecteerd: Set<number>;
+  onChange: (nieuw: Set<number>) => void;
+}) {
+  const { data: mutaties = [], isLoading } = useGetScabMailsIdMutaties(mailId, {
+    query: { queryKey: ["scab-mail-mutaties", mailId] },
+  });
+
+  function toggleMutatie(id: number) {
+    const nieuw = new Set(geselecteerd);
+    if (nieuw.has(id)) {
+      nieuw.delete(id);
+    } else {
+      nieuw.add(id);
+    }
+    onChange(nieuw);
+  }
+
+  function allesAan() {
+    onChange(new Set(mutaties.map((m) => m.id)));
+  }
+
+  function allesUit() {
+    onChange(new Set());
+  }
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground py-2">Mutaties laden…</p>;
+  }
+
+  if (mutaties.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-2">
+        Geen salarismutaties gevonden voor deze periode.
+      </p>
+    );
+  }
+
+  const aantalGeselecteerd = mutaties.filter((m) => geselecteerd.has(m.id)).length;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {aantalGeselecteerd} van {mutaties.length} mutaties meegenomen
+        </span>
+        <div className="flex gap-2">
+          <button type="button" onClick={allesAan}
+            className="text-xs text-primary underline-offset-2 hover:underline">
+            Alle aan
+          </button>
+          <span className="text-muted-foreground text-xs">·</span>
+          <button type="button" onClick={allesUit}
+            className="text-xs text-primary underline-offset-2 hover:underline">
+            Alle uit
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-md border divide-y max-h-52 overflow-y-auto">
+        {mutaties.map((m) => {
+          const isAan = geselecteerd.has(m.id);
+          return (
+            <label key={m.id}
+              className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/40 transition-colors
+                ${isAan ? "" : "opacity-60"}`}>
+              <Checkbox
+                checked={isAan}
+                onCheckedChange={() => toggleMutatie(m.id)}
+                className="mt-0.5 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium leading-tight">
+                  {m.medewerker_naam ?? `Medewerker ${m.id}`}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {m.type}
+                  {m.omschrijving ? ` — ${m.omschrijving}` : ""}
+                  {m.ingangsdatum ? ` · per ${m.ingangsdatum}` : ""}
+                </p>
+              </div>
+              {!m.in_snapshot && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                  nieuw
+                </span>
+              )}
+            </label>
+          );
+        })}
+      </div>
     </div>
   );
 }

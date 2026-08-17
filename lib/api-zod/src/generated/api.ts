@@ -1104,8 +1104,6 @@ export const UpdateGebouwNotitieParams = zod.object({
 })
 
 
-
-
 export const UpdateGebouwNotitieBody = zod.object({
   "tekst": zod.string().min(1),
   "beller_naam": zod.string().nullish()
@@ -1486,7 +1484,6 @@ export const MaakRapportDefinitiefParams = zod.object({
 export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
 
 
-
 export const MaakRapportDefinitiefBody = zod.object({
   "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
 })
@@ -1736,7 +1733,6 @@ export const ListVoorzieningenResponse = zod.object({
 export const createVoorzieningBodyApplicatiesMax = 5;
 
 
-
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1898,7 +1894,6 @@ export const UpdateVoorzieningParams = zod.object({
 })
 
 export const updateVoorzieningBodyApplicatiesMax = 5;
-
 
 
 export const UpdateVoorzieningBody = zod.object({
@@ -2955,7 +2950,6 @@ export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrecti
  * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
  */
 export const listOnlineGebruikersResponseInitialenMax = 3;
-
 
 
 export const ListOnlineGebruikersResponseItem = zod.object({
@@ -5026,9 +5020,6 @@ export const DeleteModuleBeoordelingResponse = zod.void()
  */
 
 
-
-
-
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
@@ -5036,10 +5027,6 @@ export const RequestUploadUrlBody = zod.object({
   "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
   "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
-
-
-
-
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -6781,7 +6768,6 @@ export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
  */
 
 
-
 export const CreateProfielBody = zod.object({
   "naam": zod.string().min(1),
   "groep": zod.string().nullish(),
@@ -6842,8 +6828,6 @@ export const AiRollenVoorstelResponse = zod.object({
 export const UpdateProfielParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const UpdateProfielBody = zod.object({
@@ -6931,9 +6915,6 @@ export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBel
  */
 
 
-
-
-
 export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "naam": zod.string().min(1),
   "document_type": zod.string().min(1),
@@ -6965,10 +6946,6 @@ export const CreateGoedkeuringBeleidsregelResponse = zod.void()
 export const UpdateGoedkeuringBeleidsregelParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const UpdateGoedkeuringBeleidsregelBody = zod.object({
@@ -7184,8 +7161,6 @@ export const GoedkeuringAanvraagAfwijzenParams = zod.object({
 })
 
 
-
-
 export const GoedkeuringAanvraagAfwijzenBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -7271,7 +7246,6 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 export const listGoedkeuringDashboardQueryVensterMin = 0;
 
 
-
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
@@ -7318,7 +7292,6 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
  * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
  */
 export const exportGoedkeuringDashboardQueryVensterMin = 0;
-
 
 
 export const ExportGoedkeuringDashboardQueryParams = zod.object({
@@ -7689,7 +7662,6 @@ export const GetHuidigeGebruikerResponse = zod.object({
  * @summary Eigen initialen instellen (getoond bij aantekeningen)
  */
 export const updateMijnInitialenBodyInitialenMax = 6;
-
 
 
 export const UpdateMijnInitialenBody = zod.object({
@@ -10592,14 +10564,6 @@ export const ListWerkgeversResponseItem = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
-  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
-  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
-  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
-  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -10625,14 +10589,6 @@ export const ListWerkgeversResponse = zod.array(ListWerkgeversResponseItem)
 export const CreateWerkgeverBody = zod.object({
   "naam": zod.string(),
   "cao": zod.string().optional(),
-  "logo_varianten": zod.record(zod.string(), zod.string()).optional(),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})).optional(),
-  "lettertype": zod.string().nullish(),
-  "omschrijving_kort": zod.string().nullish(),
-  "omschrijving_lang": zod.string().nullish(),
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
@@ -10692,14 +10648,6 @@ export const GetWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
-  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
-  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
-  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
-  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -10728,14 +10676,6 @@ export const UpdateWerkgeverParams = zod.object({
 export const UpdateWerkgeverBody = zod.object({
   "naam": zod.string(),
   "cao": zod.string().optional(),
-  "logo_varianten": zod.record(zod.string(), zod.string()).optional(),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})).optional(),
-  "lettertype": zod.string().nullish(),
-  "omschrijving_kort": zod.string().nullish(),
-  "omschrijving_lang": zod.string().nullish(),
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
@@ -10785,14 +10725,6 @@ export const UpdateWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
-  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
-  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
-  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
-  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -12224,7 +12156,6 @@ export const CreateSaldoCorrectieParams = zod.object({
 export const createSaldoCorrectieBodyRedenMin = 3;
 
 
-
 export const CreateSaldoCorrectieBody = zod.object({
   "verlofsoort_id": zod.number(),
   "jaar": zod.number(),
@@ -13644,7 +13575,6 @@ export const DoorzettenNaarGarageResponse = zod.object({
 export const vraagAdviseurBodyVraagMax = 2000;
 
 export const vraagAdviseurBodyContextSchermMax = 300;
-
 
 
 export const VraagAdviseurBody = zod.object({
@@ -15806,8 +15736,6 @@ export const MeldMeerwerkParams = zod.object({
 })
 
 
-
-
 export const MeldMeerwerkBody = zod.object({
   "type": zod.enum(['meerwerk', 'minderwerk']),
   "fotos": zod.array(zod.string()).min(1),
@@ -16846,7 +16774,6 @@ export const AfwijzenPimAdviesParams = zod.object({
 })
 
 export const afwijzenPimAdviesBodyRedenMax = 1000;
-
 
 
 export const AfwijzenPimAdviesBody = zod.object({
@@ -27253,6 +27180,7 @@ export const GetScabMailsResponseItem = zod.object({
   "verzond_op": zod.string().nullish(),
   "verzond_door_naam": zod.string().nullish(),
   "aantal_mutaties": zod.number(),
+  "mutatie_ids": zod.array(zod.number()).nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -27294,6 +27222,7 @@ export const GetScabMailsIdResponse = zod.object({
   "verzond_op": zod.string().nullish(),
   "verzond_door_naam": zod.string().nullish(),
   "aantal_mutaties": zod.number(),
+  "mutatie_ids": zod.array(zod.number()).nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -27311,7 +27240,8 @@ export const PatchScabMailsIdBody = zod.object({
   "onderwerp": zod.string().optional(),
   "inhoud": zod.string().optional(),
   "scab_email_adres": zod.string().nullish(),
-  "contactpersoon": zod.string().nullish()
+  "contactpersoon": zod.string().nullish(),
+  "mutatie_ids": zod.array(zod.number()).optional().describe('Bijwerken van de snapshot en het mutatieaantal. Wanneer aanwezig, valideert de server elk ID tegen de werkmaatschappij+periode van deze mail, deduplicoert de lijst, en regenereert de volledige mailtekst inclusief ondertekening. Ontbreekt het veld, dan blijft de snapshot ongewijzigd. Een lege array [] leegt de snapshot (geen mutaties meegenomen).\n')
 })
 
 export const PatchScabMailsIdResponse = zod.object({
@@ -27328,6 +27258,7 @@ export const PatchScabMailsIdResponse = zod.object({
   "verzond_op": zod.string().nullish(),
   "verzond_door_naam": zod.string().nullish(),
   "aantal_mutaties": zod.number(),
+  "mutatie_ids": zod.array(zod.number()).nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -27355,10 +27286,30 @@ export const PostScabMailsIdVerzendResponse = zod.object({
   "verzond_op": zod.string().nullish(),
   "verzond_door_naam": zod.string().nullish(),
   "aantal_mutaties": zod.number(),
+  "mutatie_ids": zod.array(zod.number()).nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
+
+
+/**
+ * @summary Beschikbare mutaties voor een SCAB-mail (snapshot + overige voor de periode)
+ */
+export const GetScabMailsIdMutatiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScabMailsIdMutatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "status": zod.string(),
+  "in_snapshot": zod.boolean()
+})
+export const GetScabMailsIdMutatiesResponse = zod.array(GetScabMailsIdMutatiesResponseItem)
 
 
 /**
@@ -29919,7 +29870,6 @@ export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
 
 
-
 export const GetMagazijnInstellingenResponse = zod.object({
   "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
   "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
@@ -29940,7 +29890,6 @@ export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
 export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
 
 
-
 export const UpdateMagazijnInstellingenBody = zod.object({
   "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
   "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
@@ -29954,7 +29903,6 @@ export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
 export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 
 export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
-
 
 
 export const UpdateMagazijnInstellingenResponse = zod.object({
@@ -30235,7 +30183,6 @@ export const SnoozeMagazijnArtikelParams = zod.object({
 })
 
 export const snoozeMagazijnArtikelBodyDagenMax = 90;
-
 
 
 export const SnoozeMagazijnArtikelBody = zod.object({
@@ -32372,7 +32319,6 @@ export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
 export const updateFieLeermomentBodyCorrectieFactorMax = 3;
 
 
-
 export const UpdateFieLeermomentBody = zod.object({
   "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
@@ -32502,7 +32448,6 @@ export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
 export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
 
 export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
-
 
 
 export const CreateLeverancierPrestatieBody = zod.object({
@@ -34199,7 +34144,6 @@ export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponse
 export const listBiaeEventsQueryLimietMax = 500;
 
 
-
 export const ListBiaeEventsQueryParams = zod.object({
   "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
 })
@@ -34339,8 +34283,6 @@ export const HandelWerkbakItemAfResponse = zod.object({
 export const ZetWerkbakItemWegParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const ZetWerkbakItemWegBody = zod.object({
@@ -34626,7 +34568,6 @@ export const zetWorkflowSterBodySterrenMin = 0;
 export const zetWorkflowSterBodySterrenMax = 3;
 
 
-
 export const ZetWorkflowSterBody = zod.object({
   "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
   "doel_sleutel": zod.string(),
@@ -34635,7 +34576,6 @@ export const ZetWorkflowSterBody = zod.object({
 
 export const zetWorkflowSterResponseSterrenMin = 0;
 export const zetWorkflowSterResponseSterrenMax = 3;
-
 
 
 export const ZetWorkflowSterResponse = zod.object({
@@ -34961,411 +34901,3 @@ export const GetMarktspiegelOnderzoekResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "klaar_op": zod.string().nullish()
 })
-
-
-/**
- * @summary Merkenkast — merkgegevens per actieve werkmaatschappij (crm 3)
- */
-export const ListMerkenkastResponseItem = zod.object({
-  "werkgever_id": zod.number(),
-  "naam": zod.string(),
-  "logo_url": zod.string().nullish().describe('Downloadbare URL van het hoofdlogo.'),
-  "logo_varianten": zod.record(zod.string(), zod.string()).describe('Map variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar downloadbare URL.'),
-  "primaire_kleur": zod.string(),
-  "merk_kleuren": zod.array(zod.object({
-  "naam": zod.string(),
-  "hex": zod.string()
-})),
-  "lettertype": zod.string().nullish(),
-  "omschrijving_kort": zod.string().nullish(),
-  "omschrijving_lang": zod.string().nullish(),
-  "adres": zod.string().nullish(),
-  "postcode": zod.string().nullish(),
-  "plaats": zod.string().nullish(),
-  "telefoon": zod.string().nullish(),
-  "email": zod.string().nullish(),
-  "website": zod.string().nullish(),
-  "kvk": zod.string().nullish(),
-  "btw": zod.string().nullish(),
-  "iban": zod.string().nullish()
-})
-export const ListMerkenkastResponse = zod.array(ListMerkenkastResponseItem)
-
-
-/**
- * @summary Volledig merkpakket (logo's + merkgegevens) als zip (crm 3)
- */
-export const DownloadMerkenkastPakketParams = zod.object({
-  "werkgeverId": zod.coerce.number()
-})
-
-export const DownloadMerkenkastPakketResponse = zod.unknown()
-
-
-/**
- * @summary Beeldbank — zoeken/filteren over spot-, opname-, inspectiefoto's en uploads (crm 3, gebouw-ACL)
- */
-export const ListBeeldbankFotosQueryParams = zod.object({
-  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']).optional(),
-  "fase": zod.coerce.string().optional(),
-  "gebouw_id": zod.coerce.number().optional(),
-  "werksoort": zod.coerce.string().optional(),
-  "zoek": zod.coerce.string().optional(),
-  "van": zod.coerce.string().optional(),
-  "tot": zod.coerce.string().optional(),
-  "limit": zod.coerce.number().optional(),
-  "offset": zod.coerce.number().optional()
-})
-
-export const ListBeeldbankFotosResponse = zod.object({
-  "totaal": zod.number(),
-  "fotos": zod.array(zod.object({
-  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']),
-  "bron_id": zod.number(),
-  "volgnummer": zod.number(),
-  "url": zod.string(),
-  "object_path": zod.string().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "gebouw_naam": zod.string().nullish(),
-  "opdracht_id": zod.number().nullish(),
-  "opdracht_titel": zod.string().nullish(),
-  "werksoort": zod.string().nullish(),
-  "fase": zod.string().nullish(),
-  "gemaakt_op": zod.string().nullish(),
-  "gemaakt_door": zod.string().nullish(),
-  "bijschrift": zod.string().nullish()
-}))
-})
-
-
-/**
- * @summary Handmatige upload registreren in de beeldbank (crm 3)
- */
-export const CreateBeeldbankUploadBody = zod.object({
-  "object_path": zod.string(),
-  "bijschrift": zod.string().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "opdracht_id": zod.number().nullish(),
-  "werksoort": zod.string().nullish()
-})
-
-export const CreateBeeldbankUploadResponse = zod.void()
-
-
-/**
- * @summary Bulk-download van beeldbankfoto's als zip (crm 3, ACL per foto opnieuw afgedwongen)
- */
-export const DownloadBeeldbankZipBody = zod.object({
-  "items": zod.array(zod.object({
-  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']),
-  "bron_id": zod.number(),
-  "volgnummer": zod.number().optional()
-}))
-})
-
-export const DownloadBeeldbankZipResponse = zod.unknown()
-
-
-/**
- * @summary Kanaaleisen per social kanaal (tekst, media, limieten)
- */
-export const ListSocialKanaaleisenResponseItem = zod.object({
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "naam": zod.string(),
-  "tekst_max": zod.number(),
-  "beeld": zod.enum(['verplicht', 'optioneel', 'verboden']),
-  "video": zod.enum(['verplicht', 'optioneel', 'verboden']),
-  "media_verplicht": zod.boolean(),
-  "video_max_seconden": zod.number().nullish(),
-  "beeld_bestandstypen": zod.array(zod.string()),
-  "video_bestandstypen": zod.array(zod.string()),
-  "beeld_verhouding": zod.string().nullish(),
-  "max_per_dag": zod.number().nullish()
-})
-export const ListSocialKanaaleisenResponse = zod.array(ListSocialKanaaleisenResponseItem)
-
-
-/**
- * @summary Social berichten (kalender/lijst), optioneel per periode en werkmaatschappij
- */
-export const ListSocialBerichtenQueryParams = zod.object({
-  "van": zod.coerce.string().optional(),
-  "tot": zod.coerce.string().optional(),
-  "werkgever_id": zod.coerce.number().optional()
-})
-
-export const ListSocialBerichtenResponseItem = zod.object({
-  "id": zod.number(),
-  "werkgever_id": zod.number(),
-  "werkgever_naam": zod.string().nullish(),
-  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
-  "tekst": zod.string(),
-  "media_pad": zod.string().nullish(),
-  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
-  "gepland_op": zod.string().nullish(),
-  "campagne_id": zod.number().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "kanalen": zod.array(zod.object({
-  "id": zod.number(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "tekst_override": zod.string().nullish(),
-  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
-  "extern_id": zod.string().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "concept_klaargezet_op": zod.string().nullish(),
-  "pogingen": zod.number(),
-  "laatste_fout": zod.string().nullish(),
-  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
-  "cijfers_opgehaald_op": zod.string().nullish()
-}))
-})
-export const ListSocialBerichtenResponse = zod.array(ListSocialBerichtenResponseItem)
-
-
-/**
- * @summary Social bericht aanmaken (concept)
- */
-export const CreateSocialBerichtBody = zod.object({
-  "werkgever_id": zod.number().optional(),
-  "tekst": zod.string().optional(),
-  "kanalen": zod.array(zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok'])).optional(),
-  "kanaal_teksten": zod.record(zod.string(), zod.string()).optional(),
-  "media_pad": zod.string().nullish(),
-  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
-  "gepland_op": zod.string().nullish(),
-  "campagne_id": zod.number().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish()
-})
-
-export const CreateSocialBerichtResponse = zod.void()
-
-
-/**
- * @summary Eén social bericht met kanaalvarianten
- */
-export const GetSocialBerichtParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetSocialBerichtResponse = zod.object({
-  "id": zod.number(),
-  "werkgever_id": zod.number(),
-  "werkgever_naam": zod.string().nullish(),
-  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
-  "tekst": zod.string(),
-  "media_pad": zod.string().nullish(),
-  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
-  "gepland_op": zod.string().nullish(),
-  "campagne_id": zod.number().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "kanalen": zod.array(zod.object({
-  "id": zod.number(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "tekst_override": zod.string().nullish(),
-  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
-  "extern_id": zod.string().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "concept_klaargezet_op": zod.string().nullish(),
-  "pogingen": zod.number(),
-  "laatste_fout": zod.string().nullish(),
-  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
-  "cijfers_opgehaald_op": zod.string().nullish()
-}))
-})
-
-
-/**
- * @summary Social bericht bewerken (alleen concept/klaar)
- */
-export const UpdateSocialBerichtParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateSocialBerichtBody = zod.object({
-  "werkgever_id": zod.number().optional(),
-  "tekst": zod.string().optional(),
-  "kanalen": zod.array(zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok'])).optional(),
-  "kanaal_teksten": zod.record(zod.string(), zod.string()).optional(),
-  "media_pad": zod.string().nullish(),
-  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
-  "gepland_op": zod.string().nullish(),
-  "campagne_id": zod.number().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish()
-})
-
-export const UpdateSocialBerichtResponse = zod.object({
-  "id": zod.number(),
-  "werkgever_id": zod.number(),
-  "werkgever_naam": zod.string().nullish(),
-  "status": zod.enum(['concept', 'klaar', 'gepland', 'geplaatst', 'deels_geplaatst', 'mislukt']),
-  "tekst": zod.string(),
-  "media_pad": zod.string().nullish(),
-  "media_type": zod.union([zod.literal('beeld'),zod.literal('video'),zod.literal(null)]).nullish(),
-  "gepland_op": zod.string().nullish(),
-  "campagne_id": zod.number().nullish(),
-  "crm_klant_id": zod.number().nullish(),
-  "gebouw_id": zod.number().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "kanalen": zod.array(zod.object({
-  "id": zod.number(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "tekst_override": zod.string().nullish(),
-  "plaatsing_status": zod.enum(['wachtend', 'bezig', 'geplaatst', 'concept_klaargezet', 'mislukt']),
-  "extern_id": zod.string().nullish(),
-  "geplaatst_op": zod.string().nullish(),
-  "concept_klaargezet_op": zod.string().nullish(),
-  "pogingen": zod.number(),
-  "laatste_fout": zod.string().nullish(),
-  "cijfers": zod.record(zod.string(), zod.number()).nullish(),
-  "cijfers_opgehaald_op": zod.string().nullish()
-}))
-})
-
-
-/**
- * @summary Social bericht verwijderen (alleen concept/klaar)
- */
-export const DeleteSocialBerichtParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteSocialBerichtResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-
-/**
- * @summary Concept op 'klaar' zetten
- */
-export const ZetSocialBerichtKlaarParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ZetSocialBerichtKlaarResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-
-/**
- * @summary Klaar-bericht terug naar concept
- */
-export const ZetSocialBerichtTerugNaarConceptParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ZetSocialBerichtTerugNaarConceptResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-
-/**
- * @summary Bericht plannen (valideert kanaaleisen fail-closed)
- */
-export const PlanSocialBerichtParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const PlanSocialBerichtBody = zod.object({
-  "gepland_op": zod.string()
-})
-
-export const PlanSocialBerichtResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-
-/**
- * @summary Gepland bericht terughalen (zolang niets geplaatst is)
- */
-export const ZetSocialBerichtTerugNaarKlaarParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ZetSocialBerichtTerugNaarKlaarResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-
-/**
- * @summary Kanaal-koppelingen per werkmaatschappij (zonder tokens)
- */
-export const ListSocialKoppelingenResponseItem = zod.object({
-  "id": zod.number(),
-  "werkgever_id": zod.number(),
-  "werkgever_naam": zod.string().nullish(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "account_naam": zod.string(),
-  "modus": zod.enum(['publiceren', 'klaarzetten']),
-  "status": zod.enum(['actief', 'verlopen', 'ingetrokken']),
-  "heeft_toegang": zod.boolean(),
-  "verloopt_op": zod.string().nullish(),
-  "laatst_vernieuwd_op": zod.string().nullish(),
-  "laatste_fout": zod.string().nullish()
-})
-export const ListSocialKoppelingenResponse = zod.array(ListSocialKoppelingenResponseItem)
-
-
-/**
- * @summary Kanaal-koppeling aanmaken
- */
-export const CreateSocialKoppelingBody = zod.object({
-  "werkgever_id": zod.number().optional(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']).optional(),
-  "account_naam": zod.string().optional(),
-  "modus": zod.enum(['publiceren', 'klaarzetten']).optional(),
-  "status": zod.enum(['actief', 'ingetrokken']).optional(),
-  "verloopt_op": zod.string().nullish()
-})
-
-export const CreateSocialKoppelingResponse = zod.void()
-
-
-/**
- * @summary Kanaal-koppeling bijwerken (naam, modus, status, verloopdatum)
- */
-export const UpdateSocialKoppelingParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateSocialKoppelingBody = zod.object({
-  "werkgever_id": zod.number().optional(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']).optional(),
-  "account_naam": zod.string().optional(),
-  "modus": zod.enum(['publiceren', 'klaarzetten']).optional(),
-  "status": zod.enum(['actief', 'ingetrokken']).optional(),
-  "verloopt_op": zod.string().nullish()
-})
-
-export const UpdateSocialKoppelingResponse = zod.object({
-  "id": zod.number(),
-  "werkgever_id": zod.number(),
-  "werkgever_naam": zod.string().nullish(),
-  "kanaal": zod.enum(['linkedin', 'facebook', 'instagram', 'tiktok']),
-  "account_naam": zod.string(),
-  "modus": zod.enum(['publiceren', 'klaarzetten']),
-  "status": zod.enum(['actief', 'verlopen', 'ingetrokken']),
-  "heeft_toegang": zod.boolean(),
-  "verloopt_op": zod.string().nullish(),
-  "laatst_vernieuwd_op": zod.string().nullish(),
-  "laatste_fout": zod.string().nullish()
-})
-
-
-/**
- * @summary Kanaal-koppeling verwijderen
- */
-export const DeleteSocialKoppelingParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteSocialKoppelingResponse = zod.object({
-  "ok": zod.boolean()
-})
-
-

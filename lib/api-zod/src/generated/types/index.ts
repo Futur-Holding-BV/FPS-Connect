@@ -1337,6 +1337,7 @@ export * from './scabMail';
 export * from './scabMailBijlage';
 export * from './scabMailBijlageInput';
 export * from './scabMailGenereerInput';
+export * from './scabMailMutatieKeuze';
 export * from './scabMailPatch';
 export * from './scanCrmMarktintelligentieAi503';
 export * from './scheiding';

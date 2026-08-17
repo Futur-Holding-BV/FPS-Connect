@@ -20,6 +20,7 @@ export interface ScabMail {
   verzond_op?: string | null;
   verzond_door_naam?: string | null;
   aantal_mutaties: number;
+  mutatie_ids?: number[] | null;
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;

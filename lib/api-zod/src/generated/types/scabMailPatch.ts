@@ -11,4 +11,6 @@ export interface ScabMailPatch {
   inhoud?: string;
   scab_email_adres?: string | null;
   contactpersoon?: string | null;
+  /** Bijwerken van de snapshot en het mutatieaantal. Wanneer aanwezig, valideert de server elk ID tegen de werkmaatschappij+periode van deze mail, deduplicoert de lijst, en regenereert de volledige mailtekst inclusief ondertekening. Ontbreekt het veld, dan blijft de snapshot ongewijzigd. Een lege array [] leegt de snapshot (geen mutaties meegenomen). */
+  mutatie_ids?: number[];
 }
