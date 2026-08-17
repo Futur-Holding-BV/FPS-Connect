@@ -9,6 +9,7 @@
 //   14. "Staat niet in de begroting" wordt geaccepteerd én levert een signaal
 //       bij de werkvoorbereider op.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-uren01b.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

@@ -4,6 +4,7 @@
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-cv-onboarding.ts [--behoud]
 // Met --behoud blijven het inbox-item én het e2e-account actief (voor een
 // aansluitende browser-e2e); zonder vlag wordt alles opgeruimd.
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

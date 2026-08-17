@@ -11,6 +11,7 @@
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-materiaal01-fase3.ts
 
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { eq, and, isNull } from "drizzle-orm";

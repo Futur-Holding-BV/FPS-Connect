@@ -8,6 +8,7 @@
  * Draaien: S3_BUCKET=dummy AI_MAX_PER_GEBRUIKER_PER_MIN=2 AI_DAGPLAFOND_EUR=1000 \
  *   pnpm --filter @workspace/scripts exec tsx src/verificatie-ai-limieten.ts
  */
+import "./lib/prodGuard";
 import path from "path";
 import { fileURLToPath } from "url";
 

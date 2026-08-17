@@ -3,6 +3,7 @@
 // B: lijst per verzekering toont soorten; archiveren verplaatst naar archief
 // C: download levert het bestand; verwijderen ruimt op; ongeldige soort = 400
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-verzekering-documenten.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import {
   setupE2eWachtwoordAccounts,

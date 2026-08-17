@@ -4,6 +4,7 @@
 // harde regels en ruimt alles op in finally.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-scenario-doorrekening.ts
+import "./lib/prodGuard";
 import {
   db,
   fieAkPostenTable,

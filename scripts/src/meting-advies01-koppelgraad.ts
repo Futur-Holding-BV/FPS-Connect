@@ -20,6 +20,7 @@
 // meetaccount wordt gedeactiveerd.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/meting-advies01-koppelgraad.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq, inArray } from "drizzle-orm";

@@ -283,6 +283,12 @@ function ContactpersonenTab({ klantId }: { klantId: number }) {
                     <ImportBadge bron={c.bron} importId={c.import_id} />
                   </div>
                   {c.functie && <div className="text-xs text-muted-foreground">{c.functie}</div>}
+                  {c.mail_onbestelbaar_op && (
+                    <div className="text-xs text-red-600 mt-0.5">
+                      E-mailadres onbestelbaar sinds {new Date(c.mail_onbestelbaar_op).toLocaleDateString("nl-NL")}
+                      {c.mail_onbestelbaar_reden ? ` — ${c.mail_onbestelbaar_reden}` : ""} (valt buiten mailings)
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                     {c.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>}
                     {c.telefoon && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.telefoon}</span>}

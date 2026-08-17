@@ -15,6 +15,7 @@
 //      oude allocatie in dezelfde transactie terug (geen verweesd verbruik);
 //      DELETE daarna geeft het nieuwe slot terug.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-uren01c-concurrency.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { authenticator } from "otplib";

@@ -7821,6 +7821,8 @@ export const ListCrmKlantenResponseItem = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -7927,6 +7929,8 @@ export const GetCrmKlantResponse = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -8026,6 +8030,8 @@ export const UpdateCrmKlantResponse = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })).optional(),
@@ -8092,6 +8098,8 @@ export const ListCrmContactpersonenResponseItem = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8162,6 +8170,8 @@ export const UpdateCrmContactpersoonResponse = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8552,6 +8562,8 @@ export const ListCrmContactpersonenAllResponseItem = zod.object({
   "opmerkingen": zod.string().nullish(),
   "laatste_contact_datum": zod.string().nullish(),
   "volgende_actie": zod.string().nullish(),
+  "mail_onbestelbaar_op": zod.string().nullish(),
+  "mail_onbestelbaar_reden": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

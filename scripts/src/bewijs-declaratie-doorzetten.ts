@@ -3,6 +3,7 @@
 // B: doorzetten van een ingediende declaratie slaat velden op + blijft goedkeurbaar
 // C: fail-closed randen (zelf, concept-status, niet-beoordelaar als doel)
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-declaratie-doorzetten.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
 import { db, gebruikersTable, medewerkersTable, declaratiesTable, salarisMutatiesTable } from "@workspace/db";

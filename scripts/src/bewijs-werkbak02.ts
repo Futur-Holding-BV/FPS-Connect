@@ -18,6 +18,7 @@
 //       (herordent niets; lijstvolgorde onaangetast).
 //   11. Telling gelijkende titels → docs/metingen/werkbak02-gelijkende-titels.md.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-werkbak02.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { and, eq, inArray, like, sql } from "drizzle-orm";

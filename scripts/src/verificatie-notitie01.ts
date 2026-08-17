@@ -1,5 +1,6 @@
 // NOTITIE_01 — bewijsscript. Test via HTTP (nooit api-server-source importeren)
 // + @workspace/db voor opzet/backdating. Draaien: pnpm --filter @workspace/scripts run tsx src/verificatie-notitie01.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and, like } from "drizzle-orm";
 import bcrypt from "bcryptjs";

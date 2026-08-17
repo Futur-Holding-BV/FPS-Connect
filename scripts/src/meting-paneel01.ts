@@ -4,6 +4,7 @@
 //   1. blijft de sessie in beide geldig?
 //   2. wat gebeurt er als beide dezelfde calculatie wijzigen (wie wint)?
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/meting-paneel01.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { inArray, like } from "drizzle-orm";
 import { authenticator } from "otplib";

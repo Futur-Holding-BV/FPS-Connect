@@ -10,6 +10,7 @@
 //     niets (lijst leeg, teller 0); hoofdbeheerder ziet ook alleen-René-items.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-werkbak.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import bcrypt from "bcryptjs";
 import {

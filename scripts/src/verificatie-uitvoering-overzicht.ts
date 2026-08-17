@@ -12,6 +12,7 @@
  *
  * Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-uitvoering-overzicht.ts
  */
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import {

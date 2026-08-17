@@ -1,6 +1,7 @@
 // BOUW_01 §6 — bewijsscript retour-saldering toebehoren-verbruik.
 // Test via HTTP (nooit api-server-source importeren) + @workspace/db voor opzet/cleanup.
 // Draaien: pnpm --filter @workspace/scripts run tsx src/verificatie-toebehoren-retour.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, inArray } from "drizzle-orm";
 import { db, artikelenTable, voorraadTable, voorraadMutatiesTable } from "@workspace/db";

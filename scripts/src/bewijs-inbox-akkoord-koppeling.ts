@@ -7,6 +7,7 @@
 //   3. POST /opdrachten/:id/akkoord (grond B, document_id uit stap 1) → 201
 // Test via HTTP tegen de draaiende api-server (nooit api-server-source importeren).
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-inbox-akkoord-koppeling.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq, like, inArray } from "drizzle-orm";

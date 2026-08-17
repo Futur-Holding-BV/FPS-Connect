@@ -1,6 +1,7 @@
 // AI_01 vervolg (17-08-2026) — bewijsscript generieke leerlus-route.
 // Test via HTTP (nooit api-server-source importeren) + @workspace/db voor controle/opruimen.
 // Draaien: pnpm --filter @workspace/scripts run tsx src/verificatie-ai-veld-correctie.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and } from "drizzle-orm";
 import { db, aiVeldCorrectiesTable } from "@workspace/db";

@@ -13,6 +13,7 @@
 //   3. Draai exact de T2-query van GET /api/metingen/bewaking02 en assert de dagen.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-bewaking02-t2.ts
+import "./lib/prodGuard";
 import { sql } from "drizzle-orm";
 
 import { db } from "@workspace/db";

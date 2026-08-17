@@ -13,7 +13,8 @@ import { join, extname } from "path";
 import { createHash } from "crypto";
 import { logger } from "../lib/logger";
 
-const QUARANTAINE_DIR = "/home/runner/workspace/data/quarantine";
+// Opslagmap voor quarantaine; overschrijfbaar per omgeving (VPS ≠ Replit).
+const QUARANTAINE_DIR = process.env["QUARANTAINE_DIR"] ?? "/home/runner/workspace/data/quarantine";
 const QUARANTAINE_META_DIR = join(QUARANTAINE_DIR, ".meta");
 
 export interface QuarantaineMeta {

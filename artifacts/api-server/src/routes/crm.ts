@@ -15,7 +15,7 @@ import {
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, ilike, or, and, count, inArray } from "drizzle-orm";
+import { eq, desc, ilike, or, and, count, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { CRM_CONCURRENT_PROFIEL_PROMPT, CRM_RELATIEVOORSTEL_PROMPT } from "../lib/aiPrompts";
@@ -74,6 +74,8 @@ const mapContactpersoon = (c: typeof crmContactpersonenTable.$inferSelect) => ({
   volgende_actie: c.volgende_actie,
   bron: c.bron,
   import_id: c.importId ?? null,
+  mail_onbestelbaar_op: c.mailOnbestelbaarOp ? iso(c.mailOnbestelbaarOp) : null,
+  mail_onbestelbaar_reden: c.mailOnbestelbaarReden ?? null,
   aangemaakt_op: iso(c.aangemaaktOp),
   bijgewerkt_op: iso(c.bijgewerktOp),
 });
@@ -329,14 +331,55 @@ router.post("/crm/klanten/:id/contactpersonen", schrijven, async (req, res): Pro
 router.patch("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, functie, email, telefoon, mobiel, linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie } = req.body;
+    const id = parseId(req.params.id);
+    // Nieuw/gewijzigd e-mailadres begint schoon: de oude onbestelbaar-status
+    // hoort niet mee te verhuizen naar een adres dat nog nooit geprobeerd is.
+    let resetOnbestelbaar = {};
+    if (email !== undefined) {
+      const [huidig] = await db
+        .select({ email: crmContactpersonenTable.email })
+        .from(crmContactpersonenTable)
+        .where(eq(crmContactpersonenTable.id, id));
+      if (huidig && (huidig.email ?? "") !== (email ?? "")) {
+        resetOnbestelbaar = { mailOnbestelbaarOp: null, mailOnbestelbaarReden: null };
+      }
+    }
     const [c] = await db
       .update(crmContactpersonenTable)
-      .set({ naam, functie, email, telefoon, mobiel, linkedinUrl: linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie, bijgewerktOp: new Date() })
-      .where(eq(crmContactpersonenTable.id, parseId(req.params.id)))
+      .set({ naam, functie, email, telefoon, mobiel, linkedinUrl: linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie, ...resetOnbestelbaar, bijgewerktOp: new Date() })
+      .where(eq(crmContactpersonenTable.id, id))
       .returning();
     if (!c) return void res.status(404).json({ error: "Contactpersoon niet gevonden" });
     if (c.klantId != null) invalideerContext("klant", c.klantId);
     res.json(mapContactpersoon(c));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── ONBESTELBARE ADRESSEN ────────────────────────────────────────────────────
+// Werklijst van alle contactpersonen met een onbestelbaar (gekaatst) e-mailadres,
+// met organisatie erbij. Afhandelen = nieuw adres (PATCH, wist de status) of
+// afvoeren (DELETE). Deze contacten vallen automatisch buiten elke doelgroep.
+router.get("/crm/onbestelbaar", lezen, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select({
+        contact: crmContactpersonenTable,
+        organisatie_naam: crmKlantenTable.naam,
+      })
+      .from(crmContactpersonenTable)
+      .leftJoin(crmKlantenTable, eq(crmContactpersonenTable.klantId, crmKlantenTable.id))
+      .where(isNotNull(crmContactpersonenTable.mailOnbestelbaarOp))
+      .orderBy(desc(crmContactpersonenTable.mailOnbestelbaarOp));
+    res.json({
+      items: rijen.map((r) => ({
+        ...mapContactpersoon(r.contact),
+        organisatie_naam: r.organisatie_naam ?? null,
+      })),
+      aantal: rijen.length,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

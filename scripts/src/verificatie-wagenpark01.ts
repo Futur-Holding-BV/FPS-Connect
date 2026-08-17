@@ -1,6 +1,7 @@
 // WAGENPARK_01 — bewijsscript (§8 acceptatie-eisen). Test via HTTP (nooit
 // api-server-source importeren) + @workspace/db voor opzet/inspectie/cleanup.
 // Draaien: pnpm --filter @workspace/scripts run tsx src/verificatie-wagenpark01.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and, like, desc, isNull, inArray } from "drizzle-orm";
 import {

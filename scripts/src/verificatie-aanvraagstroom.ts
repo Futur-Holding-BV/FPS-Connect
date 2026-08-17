@@ -15,6 +15,7 @@
 //   H. Intake-instellingen: GET/PATCH persoonlijke-mailbox-toggle (zonder mailkoppeling → 404).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-aanvraagstroom.ts
+import "./lib/prodGuard";
 import { execFileSync } from "node:child_process";
 import { eq, inArray, and, like } from "drizzle-orm";
 import { authenticator } from "otplib";

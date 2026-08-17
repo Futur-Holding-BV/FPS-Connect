@@ -11,6 +11,7 @@
  * Gebruikt het vaste e2e-web-admin account (hoofdbeheerder) via de dev-API
  * over https (Secure cookie).
  */
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { db } from "@workspace/db";
 import { gebruikersTable, medewerkersTable } from "@workspace/db/schema";

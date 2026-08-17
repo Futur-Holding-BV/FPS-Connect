@@ -24,7 +24,7 @@ export type ClamAvResultaat =
 
 const DB_DIR = process.env["CLAMAV_DB_DIR"] ?? "/home/runner/workspace/data/clamav-db";
 const TIMEOUT_MS = parseInt(process.env["CLAMAV_TIMEOUT_MS"] ?? "30000", 10);
-const CLAMSCAN = "/nix/store/j01wsla7rfrgjv3605l561mni4b4ka05-clamav-1.4.3/bin/clamscan";
+const CLAMSCAN = process.env["CLAMAV_BIN"] ?? "/nix/store/j01wsla7rfrgjv3605l561mni4b4ka05-clamav-1.4.3/bin/clamscan";
 
 let _beschikbaar: boolean | null = null;
 

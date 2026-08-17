@@ -2,6 +2,7 @@
 // A: SCAB-mailconcept valt terug op boekhouder_email als scab_email_adres leeg is
 // B: ondertekening van de fallback-mail gebruikt werkgevernaam + intern aanspreekpunt
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-bedrijfsgegevens-doorwerking.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
 import { db, werkgeversTable, salarisMutatiesTable, scabMailsTable } from "@workspace/db";

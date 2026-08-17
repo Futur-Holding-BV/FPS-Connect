@@ -29979,6 +29979,10 @@ components:
           type: ["string", "null"]
         volgende_actie:
           type: ["string", "null"]
+        mail_onbestelbaar_op:
+          type: ["string", "null"]
+        mail_onbestelbaar_reden:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:

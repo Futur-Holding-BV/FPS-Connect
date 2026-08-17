@@ -7,6 +7,7 @@
 //   6. 409 bij tweede bevestig; hergebruik → nieuw bronbestand; duplicaatdetectie
 //   7. Bibliotheek-lijst en importlog in DB
 // Ruimt eigen testdata op (ook bij falen).
+import "./lib/prodGuard";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { eq, inArray } from "drizzle-orm";

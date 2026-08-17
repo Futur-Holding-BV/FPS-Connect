@@ -9,6 +9,7 @@
 //   5. BEWIJS B: de declaratie staat automatisch op "verwerkt".
 //   6. Tegenproef: alsnog afwijzen ná goedkeuring ruimt de concept-mutatie op.
 //   7. Opruimen: testrijen verwijderen.
+import "./lib/prodGuard";
 import { eq, and } from "drizzle-orm";
 import {
   db,

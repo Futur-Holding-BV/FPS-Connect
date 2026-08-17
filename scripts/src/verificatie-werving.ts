@@ -14,6 +14,7 @@
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-werving.ts
 // Ruimt de aangemaakte testkandidaten in finally weer op.
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

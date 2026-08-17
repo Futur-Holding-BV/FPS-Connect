@@ -19,6 +19,7 @@
 //     verbruikt géén fiscaal nummer; tweede keer definitief → 409 (§4.6).
 //
 // Uitsluitend voor de dev-omgeving; ruimt alles zelf op.
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";

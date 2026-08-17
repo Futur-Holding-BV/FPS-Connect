@@ -11,6 +11,7 @@
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-mailbox-syncbewaking.ts
 // Testdata wordt in het finally-blok opgeruimd.
 
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";

@@ -5,6 +5,7 @@
 // alles op in finally — net als bewijs-financieel-ak.ts.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-ak-echte-jaarcijfers.ts
+import "./lib/prodGuard";
 import {
   db,
   fieAkAdviezenTable,

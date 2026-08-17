@@ -4,6 +4,7 @@
 // C: nieuwe documenttypes bestelbon + mandagstaat draaien mee
 // D: tweede bulk-run doet niets (bestaande concepten blijven onaangeroerd)
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-studio-bulk.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, inArray } from "drizzle-orm";
 import { db, werkgeversTable, documentStudioModellenTable } from "@workspace/db";

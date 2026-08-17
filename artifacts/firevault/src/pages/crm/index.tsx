@@ -51,6 +51,7 @@ export default function CrmDashboardPagina() {
     ...(heeftNiveau("marketing", 3)
       ? [{ href: "/crm/marketing", label: "Marketing", icon: Megaphone, beschrijving: "Doelgroepen, sjablonen en campagnes" }]
       : []),
+    { href: "/crm/onbestelbaar", label: "Onbestelbare adressen", icon: AlertCircle, beschrijving: "Gekaatste e-mailadressen: corrigeren of afvoeren" },
     { href: "/crm/kennisbibliotheek", label: "Kennisbibliotheek", icon: BookOpen, beschrijving: "Documenten en naslag" },
   ];
 

@@ -12,6 +12,7 @@
 //   F. Route-volgorde: GET /facturen/signalen wordt niet opgeslokt door /facturen/:id.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-factuurstroom.ts
+import "./lib/prodGuard";
 import { eq, inArray } from "drizzle-orm";
 import { authenticator } from "otplib";
 

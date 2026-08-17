@@ -10,6 +10,7 @@
 //   4. Server-side geweigerd op /api/facturen, /api/offertes en /api/gebouwen.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-loon-boekhouder.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";

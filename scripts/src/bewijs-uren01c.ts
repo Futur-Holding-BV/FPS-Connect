@@ -15,6 +15,7 @@
 //       geen blokkade (factuur wordt wél definitief).
 //   17. Concept-uren leveren geen mandagstaat op → 422.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-uren01c.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

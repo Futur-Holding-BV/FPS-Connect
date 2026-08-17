@@ -5,6 +5,7 @@
 // wegwerpgebruiker mét herkomst_profiel_id, haal de onboarding-context op en
 // controleer de nieuwe velden. Ruimt de wegwerpgebruiker en het admin-account
 // in finally weer op.
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
 

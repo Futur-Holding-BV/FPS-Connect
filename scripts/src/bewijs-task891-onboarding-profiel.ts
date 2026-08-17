@@ -10,6 +10,7 @@
 //      en er wordt dan ook géén account aangemaakt (fail-closed).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-task891-onboarding-profiel.ts
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

@@ -23,6 +23,7 @@
 // node_modules geladen — geen bronimport, alleen de generieke Excel-schrijver.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-prijs01.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, like, inArray, isNull } from "drizzle-orm";

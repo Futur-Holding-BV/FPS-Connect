@@ -568,6 +568,11 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
     }
   } else if (yaraResultaat.status === "niet_beschikbaar") {
     yaraStatus = "niet_beschikbaar";
+    // Fail-closed: een ontbrekende scanner mag nooit betekenen dat bestanden
+    // ongescand worden doorgelaten. In quarantaine tot een beheerder vrijgeeft.
+    bevindingen.push({ categorie: "yara", beschrijving: "YARA-scanner niet beschikbaar op deze server (zet YARA_BIN/YARA_RULES_PAD)", ernst: "hoog" });
+    inQuarantaine = true;
+    quarantaineReden ??= "Bestandsscanner (YARA) niet beschikbaar — bestand niet gecontroleerd.";
   } else {
     yaraStatus = "fout";
   }
@@ -585,6 +590,11 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
   } else if (clamavResultaat.status === "fout") {
     clamavStatus = "fout";
     bevindingen.push({ categorie: "antivirus", beschrijving: `ClamAV fout: ${clamavResultaat.reden}`, ernst: "midden" });
+  } else if (clamavResultaat.status === "niet_beschikbaar") {
+    // Fail-closed: zonder virusscanner geen stilzwijgende acceptatie.
+    bevindingen.push({ categorie: "antivirus", beschrijving: "ClamAV niet beschikbaar op deze server (zet CLAMAV_BIN/CLAMAV_DB_DIR)", ernst: "hoog" });
+    inQuarantaine = true;
+    quarantaineReden ??= "Virusscanner (ClamAV) niet beschikbaar — bestand niet gecontroleerd.";
   }
 
   // ── 8. Link-extractie + URL-reputatie + AI inhoudsanalyse ────────────────────

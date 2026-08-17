@@ -12,6 +12,7 @@
 //     juiste medewerker + documenttype voor (medewerker_voorstel/document_type_voorstel).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-contract-extractie.ts
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

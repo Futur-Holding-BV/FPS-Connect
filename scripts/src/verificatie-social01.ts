@@ -11,6 +11,7 @@
 //     stilzwijgend "geplaatst" — kanaalrij eindigt op mislukt/concept en er
 //     staat ALTIJD een werkbak-taak (bron social_publicatie) voor de planner.
 //  5. Koppelingen-CRUD (crm 4) — tokens nooit in het antwoord.
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and, like, inArray } from "drizzle-orm";
 import {

@@ -14,6 +14,7 @@
 //   5. Cleanup (ook bij falen): document verwijderen (cascade) + e2e-accounts archiveren.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-jaarrekening-cascade.ts
+import "./lib/prodGuard";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 

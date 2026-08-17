@@ -16,6 +16,7 @@
 //
 // Draaien (vanaf de repo-root):
 //   DATABASE_URL='postgres://...' pnpm --filter @workspace/scripts exec tsx src/meting-ai01-prod.ts
+import "./lib/prodGuard";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";

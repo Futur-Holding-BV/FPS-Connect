@@ -3,6 +3,7 @@
 // Renovatie), niet meer de hardcoded twee.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-planning-wm-filter.ts
+import "./lib/prodGuard";
 import { chromium } from "@playwright/test";
 import { authenticator } from "otplib";
 

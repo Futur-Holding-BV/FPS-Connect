@@ -3,6 +3,7 @@
 // ruimt op in finally.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-ak-dashboard-screenshot.ts
+import "./lib/prodGuard";
 import path from "node:path";
 
 import { chromium } from "@playwright/test";

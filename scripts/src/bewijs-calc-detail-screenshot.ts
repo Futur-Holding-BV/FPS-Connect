@@ -2,6 +2,7 @@
 // rekenblad-kader, kaarten Financieel & AI-hulp) in licht én donker thema.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-calc-detail-screenshot.ts
+import "./lib/prodGuard";
 import path from "node:path";
 
 import { chromium } from "@playwright/test";

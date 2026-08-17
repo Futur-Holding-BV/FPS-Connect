@@ -13,6 +13,7 @@
 //      tabel kent het veld simpelweg niet (aparte tabel naast projectinkoop).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-np-inkoop01.ts
+import "./lib/prodGuard";
 import { execFileSync } from "node:child_process";
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";

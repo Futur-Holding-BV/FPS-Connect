@@ -15,6 +15,7 @@
 //  7. Toegangscontrole: zonder sessie geeft dezelfde URL 401 (zelfde slot als MERK_01).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-storage-links.ts
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

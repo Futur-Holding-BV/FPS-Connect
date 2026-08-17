@@ -6,6 +6,7 @@
 //  3. GET /inbox/stats telt het item mee in het veld "verwerkt".
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-inbox-aanvraag-verwerkt.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq, inArray, like } from "drizzle-orm";

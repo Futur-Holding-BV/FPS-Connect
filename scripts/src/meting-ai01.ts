@@ -4,6 +4,7 @@
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/meting-ai01.ts
 // LET OP: meet de database waar DATABASE_URL naar wijst. Voor productiecijfers
 // moet ditzelfde script op de productieomgeving draaien.
+import "./lib/prodGuard";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";

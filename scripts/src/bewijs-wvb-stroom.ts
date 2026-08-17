@@ -8,6 +8,7 @@
 //     vaststellen → signaal opgelost.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-wvb-stroom.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import {
   db,

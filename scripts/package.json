@@ -19,6 +19,7 @@
     "clean-stale-dist": "tsx ./src/clean-stale-dist.ts",
     "check-codegen-stale": "tsx ./src/check-codegen-stale.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
+    "opruim-bewijsdata": "tsx ./src/opruim-bewijsdata.ts",
     "check-dubbele-routes": "tsx ./src/check-dubbele-routes.ts",
     "klantloos-check": "tsx ./src/klantloos-check.ts",
     "broncode-export": "tsx ./src/broncode-export.ts",

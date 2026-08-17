@@ -8,6 +8,7 @@
 //
 // Uitsluitend voor dev; seedt eigen data en ruimt alles op in finally.
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-concurrency-ak.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import {
   db,

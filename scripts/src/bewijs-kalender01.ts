@@ -14,6 +14,7 @@
 //   12. Server-antwoord voor de monteur: collectief + eigen verlof + eigen APK,
 //       géén collega-verlof of wagenpark-breed.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-kalender01.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

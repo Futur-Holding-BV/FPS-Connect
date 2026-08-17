@@ -12,6 +12,7 @@
 // vreemde server. Na afloop wordt alleen de eigen procesgroep afgesloten.
 //
 // Draaien: pnpm --filter @workspace/scripts run bewijs-herschik-ci
+import "./lib/prodGuard";
 import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
 import net from "node:net";

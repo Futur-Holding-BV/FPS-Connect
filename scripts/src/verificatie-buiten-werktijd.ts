@@ -1,5 +1,6 @@
 // Verificatie: werktijdvensters + rapport ritten buiten werktijd (task 842).
 // Bewijst het businessscenario end-to-end via HTTP tegen de dev api-server.
+import "./lib/prodGuard";
 import { db } from "@workspace/db";
 import {
   voertuigenTable, wagenparkRittenTable, wagenparkWerktijdvenstersTable,

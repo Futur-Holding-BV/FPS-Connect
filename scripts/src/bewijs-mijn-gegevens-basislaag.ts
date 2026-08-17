@@ -5,6 +5,7 @@
 // modulerechten blijven onverkort gelden voor andermans gegevens.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-mijn-gegevens-basislaag.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
 import { db, medewerkersTable, gebruikersTable } from "@workspace/db";

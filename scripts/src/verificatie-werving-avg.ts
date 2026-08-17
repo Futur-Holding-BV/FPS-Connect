@@ -8,6 +8,7 @@
 // 4. Bewijst: rij weg (API 404) én cv-bestand weg (download uit storage faalt).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-werving-avg.ts
+import "./lib/prodGuard";
 import { execSync } from "node:child_process";
 import { db, wervingKandidatenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";

@@ -14,6 +14,7 @@
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-mail-wachtrij-herstel.ts
 
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import {

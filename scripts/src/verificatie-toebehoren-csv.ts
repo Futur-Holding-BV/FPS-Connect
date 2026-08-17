@@ -2,6 +2,7 @@
  * Bewijs voor taak 858: GET /magazijn/toebehoren-verbruik levert nu
  * aantal_zonder_prijs per periode en per artikel, incl. van/tot-filter.
  */
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import {
   E2E_WEB_ADMIN_EMAIL, E2E_WEB_ADMIN_WACHTWOORD, E2E_WEB_ADMIN_TOTP_SECRET,

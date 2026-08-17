@@ -1,6 +1,7 @@
 // HRM AI-voorstellen — bewijsscript voor lege-voorstel-reparatie.
 // Test via HTTP (nooit api-server-source importeren) + @workspace/db voor opzet.
 // Draaien: pnpm --filter @workspace/scripts run tsx src/verificatie-hrm-voorstel-leeg.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and } from "drizzle-orm";
 import { db, medewerkersTable, hrmAiVoorstellenTable } from "@workspace/db";

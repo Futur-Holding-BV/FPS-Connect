@@ -1,6 +1,7 @@
 // AKKOORD_01 — bewijs: de akkoordpoort onder uren en inkoop werkt echt.
 // Test via HTTP tegen de draaiende api-server (nooit api-server-source importeren).
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-akkoord01.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq, like, inArray } from "drizzle-orm";

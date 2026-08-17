@@ -3,6 +3,7 @@
 // B: expliciet null maakt de velden weer leeg
 // C: weggelaten velden blijven onaangeraakt (PATCH-semantiek)
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-werkgever-bedrijfsgegevens.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";
 import { db, werkgeversTable } from "@workspace/db";

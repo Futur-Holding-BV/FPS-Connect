@@ -16,6 +16,7 @@
 // sendMail-acceptatie (geen MailFout) + succes-rij in mail_logboek.
 //
 // Uitsluitend voor de dev-omgeving; ruimt alles zelf op.
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";

@@ -5,6 +5,7 @@
  *
  * Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-backup-alarm.ts
  */
+import "./lib/prodGuard";
 import path from "path";
 import { fileURLToPath } from "url";
 

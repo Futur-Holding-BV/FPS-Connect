@@ -9,6 +9,7 @@
 //   5. Niet-stroom inkoopfactuur (klaar_voor_boeking): accorderen werkt nog (200)
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-factuur-ingang.ts
+import "./lib/prodGuard";
 import { inArray, eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 

@@ -4,6 +4,7 @@
 // Patroon: HTTP tegen de lokale api-server (handmatige draai is hoofdbeheerder-
 // only), seeds/cleanup via @workspace/db, ✓/rood, opruimen in finally.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-bewaking02.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq, inArray, like, or, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

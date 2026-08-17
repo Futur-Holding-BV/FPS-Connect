@@ -9,6 +9,7 @@
 //   6. Toestemming vragen plaatst werkbak-items bij projectleider en René.
 //   7. Weekcontrole: vakantieweek (verlof telt mee) geeft GEEN onvolledig-alarm.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-uren01.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

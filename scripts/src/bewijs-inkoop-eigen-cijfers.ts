@@ -14,6 +14,7 @@
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-inkoop-eigen-cijfers.ts
 
+import "./lib/prodGuard";
 import {
   db,
   eenheidsprijzenTable,

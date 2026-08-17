@@ -15,6 +15,7 @@
 //   9. Leerlus: 9 correcties doen NIETS; de 10e activeert de few-shot,
 //      zichtbaar via geleerd_van_correcties; uitzetbaar via instelling.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-ai01.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { existsSync } from "node:fs";
 import { and, eq, inArray, like } from "drizzle-orm";

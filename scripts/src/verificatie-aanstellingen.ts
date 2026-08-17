@@ -2,6 +2,7 @@
 // functies (aanstellingen) voor een medewerker via de API werken.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-aanstellingen.ts <medewerkerId>
 // Maakt een test-aanstelling aan en ruimt die direct weer op (geen datawijziging).
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

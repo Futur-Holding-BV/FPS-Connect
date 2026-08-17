@@ -1492,6 +1492,10 @@ export interface CrmContactpersoon {
   laatste_contact_datum?: string | null;
   /** @nullable */
   volgende_actie?: string | null;
+  /** @nullable */
+  mail_onbestelbaar_op?: string | null;
+  /** @nullable */
+  mail_onbestelbaar_reden?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

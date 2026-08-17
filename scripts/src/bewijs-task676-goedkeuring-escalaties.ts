@@ -14,6 +14,7 @@
 //   4. dedupe: een tweede bewakingsrun maakt géén dubbele escalaties aan.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-task676-goedkeuring-escalaties.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { and, eq, inArray, like } from "drizzle-orm";
 import { authenticator } from "otplib";

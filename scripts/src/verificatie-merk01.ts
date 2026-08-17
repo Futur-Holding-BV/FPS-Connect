@@ -15,6 +15,7 @@
 //  5. Opdracht is alleen gevuld bij handmatige uploads (gemelde scope-afwijking).
 //  6. Gebouw-ACL: een beperkte veldgebruiker ziet alleen foto's van zijn
 //     toegewezen gebouwen — ook in de bulk-download (fail-closed, met melding).
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import bcrypt from "bcryptjs";
 import { eq, like, inArray } from "drizzle-orm";

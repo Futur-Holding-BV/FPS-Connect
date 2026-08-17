@@ -34,6 +34,7 @@
 // de gevonden soorten worden gelogd.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-advies01.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";

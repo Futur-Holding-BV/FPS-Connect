@@ -1,6 +1,7 @@
 // Task #873 — bewijs: calculatieregels herschikken binnen een hoofdstuk zonder
 // dat de ouder-kindrelatie breekt. Test via HTTP tegen de draaiende api-server.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-task873-herschik.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq, inArray, like } from "drizzle-orm";

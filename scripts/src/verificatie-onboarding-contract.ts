@@ -11,6 +11,7 @@
 //   7. GET  /medewerkers/onboarding-context/999999      → 404 USER_NOT_FOUND
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-onboarding-contract.ts
+import "./lib/prodGuard";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 import { db, medewerkersTable } from "@workspace/db";

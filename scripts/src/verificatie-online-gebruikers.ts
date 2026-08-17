@@ -3,6 +3,7 @@
 // 2. Zet laatst_online van het e2e-adminaccount op nu (simuleert actieve collega).
 // 3. GET /api/mijn/online-gebruikers → bevat die collega, niet jezelf.
 // 4. Zet laatst_online 10 minuten terug → collega verdwijnt uit de lijst.
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   setupE2eWebAdminAccount,

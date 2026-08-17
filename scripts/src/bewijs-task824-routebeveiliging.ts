@@ -2,6 +2,7 @@
 // projecten/opname/workflow-routes; medewerker MET recht (niveau 4 overal)
 // werkt ongewijzigd. Maakt twee tijdelijke accounts, logt in via HTTP en
 // ruimt in finally weer op. Alleen in dev.
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { eq } from "drizzle-orm";

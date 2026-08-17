@@ -8,6 +8,7 @@
 // HTTP met de draaiende API en leest/schrijft via @workspace/db.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-calcinvoer01.ts
+import "./lib/prodGuard";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";

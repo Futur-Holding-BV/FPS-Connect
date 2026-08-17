@@ -3,6 +3,7 @@
 // baan opent. De baan rendert het bestaande scherm; dat scherm haalt zijn data
 // bij de bestaande API — en die weigert.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-paneel01-rechten.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { like } from "drizzle-orm";
 import { authenticator } from "otplib";

@@ -10,6 +10,7 @@
 //   4. Fase 0-telling levert alle T-secties, ook bij lege tabellen (nul is antwoord).
 //      + telling is hoofdbeheerder-only (403 voor anderen).
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-materiaal01.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";

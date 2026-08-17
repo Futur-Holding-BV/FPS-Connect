@@ -6,6 +6,7 @@
 //     (statussen blijven ongewijzigd = advies is voorstel, geen actie).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-wagenpark-afstootadvies.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { db, voertuigenTable } from "@workspace/db";
 import { wagenparkKostenTable, wagenparkOnderhoudTable } from "@workspace/db/schema";

@@ -37,6 +37,7 @@ import CrmSocial from "@/pages/crm/social";
 import CrmMerkenkast from "@/pages/crm/merkenkast";
 import CrmBeeldbank from "@/pages/crm/beeldbank";
 import CrmAanvragen from "@/pages/crm/aanvragen";
+import CrmOnbestelbaar from "@/pages/crm/onbestelbaar";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
@@ -471,6 +472,7 @@ export function ConnectRoutes() {
         <Route path="/crm/merkenkast" component={CrmMerkenkast} />
         <Route path="/crm/beeldbank" component={CrmBeeldbank} />
         <Route path="/crm/kennisbibliotheek" component={CrmKennisbibliotheek} />
+        <Route path="/crm/onbestelbaar" component={CrmOnbestelbaar} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/crm" component={CrmKlanten} />
 

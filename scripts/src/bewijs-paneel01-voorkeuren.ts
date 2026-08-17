@@ -6,6 +6,7 @@
 //   3. Een TWEEDE gebruiker ziet die voorkeur NIET (strikte eigen-rijen-scope).
 //   4. DELETE /mijn/voorkeuren/:sleutel verwijdert hem; GET toont hem daarna niet meer.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-paneel01-voorkeuren.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { inArray } from "drizzle-orm";
 import { authenticator } from "otplib";

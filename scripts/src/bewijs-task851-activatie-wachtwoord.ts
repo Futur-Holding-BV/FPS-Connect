@@ -10,6 +10,7 @@
 //   4. Opruimen: wegwerpaccount verwijderd.
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-task851-activatie-wachtwoord.ts
+import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 
 import bcrypt from "bcryptjs";

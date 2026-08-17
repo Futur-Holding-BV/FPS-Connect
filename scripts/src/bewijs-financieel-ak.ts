@@ -3,6 +3,7 @@
 // toetst de acceptatiepunten en ruimt alles op in finally.
 //
 // Draaien: S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-financieel-ak.ts
+import "./lib/prodGuard";
 import {
   db,
   fieAkAdviezenTable,

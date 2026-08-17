@@ -40,6 +40,13 @@ on:
           Zie docs/PRODUCTION_RUNBOOK.md, sectie "Noodfix: gate bewust passeren".
         required: false
         default: ""
+      test_faalmail:
+        description: >-
+          Typ TEST om de run bewust te laten falen vóór de server wordt
+          aangeraakt, puur om de faalmelding per e-mail te testen.
+          Productie wordt hierbij nooit geraakt.
+        required: false
+        default: ""
 
 # Nooit twee deployments tegelijk; een lopende deploy wordt nooit geannuleerd,
 # een nieuwe push wacht netjes tot de vorige klaar is.
@@ -100,19 +107,46 @@ jobs:
       - name: Installeer dependencies (voor controles)
         run: pnpm install --frozen-lockfile
 
+      # Elke kritieke stap schrijft eerst zijn naam naar /tmp/faalstap.txt en
+      # spiegelt zijn uitvoer naar /tmp/stap-uitvoer.log. Faalt de run, dan
+      # weet de faalmail-stap onderaan precies wélke stap brak en wat de
+      # laatste uitvoerregels waren (HERSTEL_MAIL_01 punt 4).
       - name: Controle 1/3 — typecheck
         if: github.event.inputs.noodfix != 'NOODFIX'
-        run: pnpm run typecheck
+        run: |
+          set -euo pipefail
+          echo "Controle 1/3 — typecheck" > /tmp/faalstap.txt
+          pnpm run typecheck 2>&1 | tee /tmp/stap-uitvoer.log
 
       - name: Controle 2/3 — dubbele-routes-controle
         if: github.event.inputs.noodfix != 'NOODFIX'
-        run: pnpm --filter @workspace/scripts run check-dubbele-routes
+        run: |
+          set -euo pipefail
+          echo "Controle 2/3 — dubbele-routes-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/scripts run check-dubbele-routes 2>&1 | tee /tmp/stap-uitvoer.log
 
       # KLANTLOOS_01 fase 3: faalt zodra de klantrol of een "of klant"-
       # autorisatievariant terugkeert in Connect.
       - name: Controle 3/3 — klantloos-controle
         if: github.event.inputs.noodfix != 'NOODFIX'
-        run: pnpm --filter @workspace/scripts run klantloos-check
+        run: |
+          set -euo pipefail
+          echo "Controle 3/3 — klantloos-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/scripts run klantloos-check 2>&1 | tee /tmp/stap-uitvoer.log
+
+      # Testmodus voor de faalmelding: faalt bewust vóór de server wordt
+      # aangeraakt, zodat de faalmail (met stapnaam + uitvoer) end-to-end
+      # bewezen kan worden zonder productie te raken.
+      - name: Faalmail-test (bewust falen)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_faalmail == 'TEST'
+        run: |
+          set -euo pipefail
+          echo "Faalmail-test (bewust falen)" > /tmp/faalstap.txt
+          {
+            echo "Dit is een bewuste testfout om de faalmelding te controleren."
+            echo "De productieserver is NIET aangeraakt."
+          } | tee /tmp/stap-uitvoer.log
+          exit 1
 
       - name: SSH-sleutel en hostkey instellen
         env:
@@ -121,6 +155,8 @@ jobs:
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
+          echo "SSH-sleutel en hostkey instellen" > /tmp/faalstap.txt
+          : > /tmp/stap-uitvoer.log
           echo "controles-en-install|$(date +%s)" >> /tmp/mijlpalen.txt
 
           if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_SSH_HOST:-}" ]; then
@@ -154,13 +190,17 @@ jobs:
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
+          echo "Deployscript naar de server kopiëren" > /tmp/faalstap.txt
+          : > /tmp/stap-uitvoer.log
+          # Vanaf hier raken we de productieserver aan; de faalmail meldt dat.
+          echo "PROD_AANGERAAKT=1" >> "$GITHUB_ENV"
           if [ -z "${PROD_SSH_USER:-}" ]; then
             echo "FOUT: GitHub Secret PROD_SSH_USER ontbreekt." >&2
             exit 1
           fi
           scp -i ~/.ssh/deploy_key -P "${PROD_SSH_PORT}" \
             scripts/deploy-production.sh \
-            "${PROD_SSH_USER}@${PROD_SSH_HOST}:/tmp/deploy-production.sh"
+            "${PROD_SSH_USER}@${PROD_SSH_HOST}:/tmp/deploy-production.sh" 2>&1 | tee /tmp/stap-uitvoer.log
 
       - name: Deploy uitvoeren op de VPS
         id: deploy
@@ -170,6 +210,7 @@ jobs:
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
+          echo "Deploy uitvoeren op de VPS" > /tmp/faalstap.txt
           # De exitcode van het script op de server bepaalt direct het
           # resultaat van deze stap: iedere fout stopt de workflow (pipefail
           # laat de ssh-exitcode door de tee heen). De uitvoer gaat óók naar
@@ -185,7 +226,7 @@ jobs:
           fi
           ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
-            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log
+            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log /tmp/stap-uitvoer.log
           echo "vps-deploy|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── Smoketest na deploy ─────────────────────────────────────────────────
@@ -200,6 +241,8 @@ jobs:
           SMOKETEST_PASSWORD: ${{ secrets.SMOKETEST_PASSWORD }}
         run: |
           set -euo pipefail
+          echo "Smoketest uitvoeren" > /tmp/faalstap.txt
+          exec > >(tee /tmp/stap-uitvoer.log) 2>&1
 
           if [ -z "${SMOKETEST_EMAIL:-}" ] || [ -z "${SMOKETEST_PASSWORD:-}" ]; then
             echo "WAARSCHUWING: SMOKETEST_EMAIL en/of SMOKETEST_PASSWORD ontbreekt als GitHub Actions secret; smoketest wordt overgeslagen." >&2
@@ -690,18 +733,43 @@ jobs:
           fi
 
           COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+
+          # Welke stap faalde? Elke kritieke stap schrijft zijn naam naar
+          # /tmp/faalstap.txt vóór hij begint; de laatste inhoud is dus de
+          # stap die brak. Smoketest-uitkomst blijft apart benoemd.
+          FAAL_STAP=$(cat /tmp/faalstap.txt 2>/dev/null || echo "onbekende stap (vóór de eerste controle)")
           SMOKETEST_OK="${{ steps.smoketest.outcome }}"
           if [ "$SMOKETEST_OK" = "failure" ]; then
-            REDEN="Post-deploy smoketest gefaald: /api/healthz, login of /api/gebruikers reageert niet correct op connect.fps-one.nl."
+            REDEN="Post-deploy smoketest gefaald: de site op connect.fps-one.nl reageert niet correct."
           else
-            REDEN="Deploy-stap gefaald (build, migratie of containers-up op de VPS)."
+            REDEN="Stap '${FAAL_STAP}' is gefaald."
           fi
+
+          # Laatste uitvoerregels van de gefaalde stap (indien vastgelegd).
+          UITVOER_STAART=$(tail -n 15 /tmp/stap-uitvoer.log 2>/dev/null || echo "(geen uitvoer vastgelegd)")
+          [ -n "$UITVOER_STAART" ] || UITVOER_STAART="(geen uitvoer vastgelegd)"
+
+          # Prodstatus in één zin: is de server al aangeraakt of niet?
+          if [ "${PROD_AANGERAAKT:-0}" = "1" ]; then
+            PROD_STATUS="Let op: de productieserver was al aangeraakt toen de fout optrad — controleer of connect.fps-one.nl nog goed draait."
+          else
+            PROD_STATUS="De fout trad op vóórdat de productieserver werd aangeraakt — productie draait ongewijzigd door."
+          fi
+
           BODY=$(cat <<EOF
           Productie-release GEFAALD.
 
           Commit: ${GITHUB_SHA}
           Omschrijving: ${COMMIT_MSG}
+          Gefaalde stap: ${FAAL_STAP}
           Reden: ${REDEN}
+          ${PROD_STATUS}
+
+          Laatste uitvoer van de gefaalde stap:
+          ------------------------------------
+          ${UITVOER_STAART}
+          ------------------------------------
+
           Actions-run: ${RUN_URL}
 
           Controleer de run-logs en de productiestatus zo snel mogelijk.

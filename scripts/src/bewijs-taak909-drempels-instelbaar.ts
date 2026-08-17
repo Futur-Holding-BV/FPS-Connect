@@ -1,6 +1,7 @@
 // Bewijs taak #909 — BEWAKING_02-drempels instelbaar via instellingen-endpoint.
 // PUT /info/instellingen zet de drie drempels; GET geeft ze terug; validatie 400.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-taak909-drempels-instelbaar.ts
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";

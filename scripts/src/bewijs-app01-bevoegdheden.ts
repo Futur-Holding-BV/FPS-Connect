@@ -8,6 +8,7 @@
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-app01-bevoegdheden.ts
 // Vereist: api-server workflow draait lokaal.
+import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";

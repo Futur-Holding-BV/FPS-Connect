@@ -1,0 +1,43 @@
+name: Opruimen bewijs-testdata (productie)
+
+# Handmatig te starten opschoonactie (HERSTEL_MAIL_01 punt 3):
+# zoekt in productie naar door bewijsscripts achtergelaten testdata
+# (organisaties/campagnes/sjablonen/doelgroepen "Bewijs*", contacten op
+# @fps.local / @bewijs-onbestelbaar-fps.nl) en rapporteert die.
+# Standaard droogdraai; alleen met input verwijder=VERWIJDER wordt er
+# daadwerkelijk opgeruimd. Gebruikt dezelfde SMOKETEST-secrets als de
+# post-deploy smoketest.
+
+on:
+  workflow_dispatch:
+    inputs:
+      verwijder:
+        description: 'Typ VERWIJDER om de vondsten echt op te ruimen (anders droogdraai).'
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  opruimen:
+    name: Bewijs-testdata scannen/opruimen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Installeer dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Scan (en eventueel opruimen)
+        env:
+          API_BASIS: https://connect.fps-one.nl/api
+          SMOKETEST_EMAIL: ${{ secrets.SMOKETEST_EMAIL }}
+          SMOKETEST_PASSWORD: ${{ secrets.SMOKETEST_PASSWORD }}
+          # Bewuste prodGuard-vrijstelling: dit is de expliciete opschoonactie.
+          PROD_LEZEN_TOEGESTAAN: "1"
+          VERWIJDER: ${{ github.event.inputs.verwijder == 'VERWIJDER' && '1' || '0' }}
+        run: pnpm --filter @workspace/scripts run opruim-bewijsdata

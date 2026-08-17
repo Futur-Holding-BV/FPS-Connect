@@ -24,8 +24,9 @@ export type YaraResultaat =
   | { status: "fout"; reden: string }
   | { status: "niet_beschikbaar" };
 
-const YARA_BIN = "/nix/store/i7r20q1qdsl75f06d0hfm27sgl5i3006-yara-4.5.2/bin/yara";
-const RULES_PAD = "/home/runner/workspace/config/yara/fps-security.yar";
+const YARA_BIN = process.env["YARA_BIN"] ?? "/nix/store/i7r20q1qdsl75f06d0hfm27sgl5i3006-yara-4.5.2/bin/yara";
+// Pad naar de YARA-regels; overschrijfbaar per omgeving (VPS ≠ Replit).
+const RULES_PAD = process.env["YARA_RULES_PAD"] ?? "/home/runner/workspace/config/yara/fps-security.yar";
 const TIMEOUT_MS = 15000;
 
 const ERNST_MAP: Record<string, YaraBevinding["ernst"]> = {

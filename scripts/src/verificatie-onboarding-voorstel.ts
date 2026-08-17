@@ -7,6 +7,7 @@
 // niet-lege bevoegdheden draagt (fundament voor de rechten-preview).
 //
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-onboarding-voorstel.ts
+import "./lib/prodGuard";
 import {
   setupE2eWebAccount,
   archiveerE2eWebAccount,

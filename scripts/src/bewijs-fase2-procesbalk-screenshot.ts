@@ -5,6 +5,7 @@
 // Draaien:
 //   OFFERTE_ID=<id> OPDRACHT_ID=<id> OPNAME_ID=<id> \
 //   S3_BUCKET=dummy pnpm --filter @workspace/scripts exec tsx src/bewijs-fase2-procesbalk-screenshot.ts
+import "./lib/prodGuard";
 import path from "node:path";
 
 import { chromium, type Page } from "@playwright/test";

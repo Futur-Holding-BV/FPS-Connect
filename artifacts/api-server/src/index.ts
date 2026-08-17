@@ -24,6 +24,7 @@ import { planDagelijkseComplianceControle } from "./services/biae/jobs/complianc
 import { planDagelijkseBewakingsloop } from "./lib/bewakingsloop";
 import { planSocialPublicaties } from "./services/socialService";
 import { herstelVastgelopenMailWachtrijItems } from "./services/email";
+import { controleerScannerPaden } from "./lib/scannerPadenCheck";
 
 const rawPort = process.env["PORT"];
 
@@ -60,6 +61,10 @@ ensureSessionTable()
       }
 
       logger.info({ port }, "Server listening");
+      // HERSTEL_MAIL_01 punt 1 — controleer of scanner-/quarantainepaden bestaan.
+      void controleerScannerPaden().catch((err) =>
+        logger.error({ err }, "Scannerpaden-controle mislukt"),
+      );
       planDagelijksBackup();
       planDagelijksePortaalOpruiming();
       planDagelijkseAvgOpruiming();

@@ -2,6 +2,7 @@
 // doelgroepen, sjablonen, campagnes, proef-verplichting, wachtrij-verzending
 // en publiek afmelden. Test via HTTP + @workspace/db voor opzet/cleanup.
 // Draaien: cd scripts && npx tsx src/verificatie-marketing-fase1.ts
+import "./lib/prodGuard";
 import { authenticator } from "otplib";
 import { eq, and, inArray } from "drizzle-orm";
 import {
