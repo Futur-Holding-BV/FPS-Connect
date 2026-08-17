@@ -1,3 +1,9 @@
+## 2026-08-17 — RECHTEN_BOEKHOUDER_01: leesrecht financieel voor de externe boekhouder
+
+- Profiel "Externe boekhouder" (lib/permissies) uitgebreid met leesrecht niveau 1 op financieel en financieel_vertrouwelijk; salarisarchief/salaris_mutaties/boekhouder_portaal ongewijzigd, projecten/offertes/opdrachten blijven dicht.
+- Migratie 0074 werkt het systeemprofiel én bestaande accounts met herkomst_profiel_id bij (GREATEST-merge: nooit verlagen, idempotent).
+- Route-audit financieel/financieel_vertrouwelijk niveau 1: muterende/exporterende routes opgetild naar niveau 2 (facturen upload-url, POST /facturen, PATCH /facturen/:id, ai-uitlezen, ter-goedkeuring-indienen, historisch-archief Excel-export). Bewuste uitzonderingen op niveau 1: bevestig-inkoop (persoonsgebonden via inkoperId), beoordelen-medewerker (nu ook persoonsgebonden via nieuwe beoordelaarId-guard) en factuur-opmerkingen (dialoog van die flow).
+
 ## 2026-08-17 — HERSTEL_MAIL_01: deploy-blokkade, onbestelbare adressen, prod-guard, rijkere faalmail
 
 - **Punt 1 — deploy-blokkade & scanner-paden.** Virus-/YARA-scannerpaden zijn nu env-overschrijfbaar (YARA_RULES_PAD, CLAMAV_BIN, quarantainemap) en `controleerScannerPaden()` logt bij het opstarten luid welke paden ontbreken, inclusief de env-var om ze te zetten. De absolute-pad-import die de deploy brak was al gefixt; de eerstvolgende groene deploy-run is het bewijs.

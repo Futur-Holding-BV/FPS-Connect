@@ -68,8 +68,11 @@ function bepaalFactuurDocumentType(f: { type: string; subtype?: string | null })
 }
 
 function sessionUserId(req: Request): number | null {
+  // Let op: het sessieveld heet userId (gebruikerId bestaat niet — die cast
+  // compileerde wél maar leverde altijd null op, waardoor o.a. de
+  // inkoper-/beoordelaar-guards stil faalden).
   const sess = req.session as unknown as Record<string, unknown>;
-  const uid = sess["gebruikerId"];
+  const uid = sess["userId"];
   return typeof uid === "number" ? uid : null;
 }
 function paramInt(val: unknown): number {
@@ -195,7 +198,7 @@ async function mandagstatenVoorVerkoopfactuur(
 }
 
 // ── GET /facturen/upload-url ───────────────────────────────────────────────────
-router.post("/facturen/upload-url", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/upload-url", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const { bestandsnaam } = req.body as { bestandsnaam?: string };
   if (!bestandsnaam) { res.status(400).json({ error: "bestandsnaam is verplicht" }); return; }
   try {
@@ -237,7 +240,7 @@ router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request
 });
 
 // ── POST /facturen ─────────────────────────────────────────────────────────────
-router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as {
     type?: string; subtype?: string | null; factuurnummer?: string; factuurdatum?: string; vervaldatum?: string;
     omschrijving?: string; relatienaam?: string; relatie_code?: string; relatie_adres?: string;
@@ -397,7 +400,7 @@ router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), asy
 });
 
 // ── GET /facturen/historisch-archief/excel ─────────────────────────────────────
-router.get("/facturen/historisch-archief/excel", requireBevoegdheid("financieel", 1), async (_req: Request, res: Response): Promise<void> => {
+router.get("/facturen/historisch-archief/excel", requireBevoegdheid("financieel", 2), async (_req: Request, res: Response): Promise<void> => {
   const rijen = await db.select().from(facturenTable)
     .where(eq(facturenTable.status, "historisch"))
     .orderBy(desc(facturenTable.factuurdatum));
@@ -933,7 +936,7 @@ router.get("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Req
 });
 
 // ── PATCH /facturen/:id ────────────────────────────────────────────────────────
-router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.patch("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const body = req.body as Record<string, unknown>;
 
@@ -1004,7 +1007,7 @@ router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: 
 // ── POST /facturen/:id/ai-uitlezen ─────────────────────────────────────────────
 // Fase 2: Uitgebreide AI-extractie — regels, IBAN-verificatie, leverancierherkenning,
 // G-rekening-signalering. AI stelt voor; administratie keurt goed.
-router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const resultaat = await leesFactuurUitMetAi(id, req.log);
   if (!resultaat.ok) { res.status(resultaat.status).json({ error: resultaat.error }); return; }
@@ -1107,7 +1110,7 @@ router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), asy
 // Wordt gebruikt wanneer het beleidsscherm een goedkeuringsregel voor dit factuurtype
 // en bedrag heeft ingesteld. Na goedkeuring door de motor wordt de factuur automatisch
 // op klaar_voor_accountview + geaccordeerd gezet (via pasObjectStatusToe).
-router.post("/facturen/:id/ter-goedkeuring-indienen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+router.post("/facturen/:id/ter-goedkeuring-indienen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -1859,6 +1862,14 @@ router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financiee
   }
 
   const userId = sessionUserId(req);
+  // RECHTEN_BOEKHOUDER_01 — deze stap staat bewust op niveau 1 (doorgestuurde
+  // medewerkers hebben vaak niet meer), maar is persoonsgebonden en fail-closed:
+  // alleen de toegewezen beoordelaar mag hier iets wijzigen; zonder toegewezen
+  // beoordelaar of zonder ingelogde gebruiker wordt geweigerd.
+  if (!factuur.beoordelaarId || !userId || userId !== factuur.beoordelaarId) {
+    res.status(403).json({ error: "Alleen de toegewezen medewerker kan deze factuur beoordelen." });
+    return;
+  }
 
   if (actie === "afkeuren") {
     if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
