@@ -2917,6 +2917,7 @@ KOLOM|medewerkers|gebruiker_id|integer|YES|
 KOLOM|medewerkers|id|integer|NO|nextval('medewerkers_id_seq'::regclass)
 KOLOM|medewerkers|import_id|integer|YES|
 KOLOM|medewerkers|in_dienst_sinds|text|YES|
+KOLOM|medewerkers|inleen_einddatum|text|YES|
 KOLOM|medewerkers|leidinggevende_id|integer|YES|
 KOLOM|medewerkers|medewerker_status|text|YES|'concept'::text
 KOLOM|medewerkers|mobiel|text|YES|

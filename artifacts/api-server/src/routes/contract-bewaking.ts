@@ -476,6 +476,32 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
     });
   }
 
+  // 3) Inleen-einddatum: eigen veld op de medewerker (dienstverband uitzend/inhuur)
+  const inleners = await db
+    .select({ id: medewerkersTable.id, naam: medewerkersTable.naam, inleenEinddatum: medewerkersTable.inleenEinddatum })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNotNull(medewerkersTable.inleenEinddatum),
+        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
+      ),
+    );
+  for (const inlener of inleners) {
+    if (!inlener.inleenEinddatum) continue;
+    const dagen = dagenTot(inlener.inleenEinddatum);
+    if (dagen > CRUCIALE_URGENT_DAGEN) continue;
+    zetAlsUrgenter({
+      medewerker_id: inlener.id,
+      naam: inlener.naam,
+      datum: inlener.inleenEinddatum,
+      dagen_tot: dagen,
+      bron: "contract",
+      label: "Inleentermijn afloop",
+      reden: `Inleen-/inhuurperiode eindigt op ${inlener.inleenEinddatum}.`,
+    });
+  }
+
   return [...perMedewerkerBron.values()];
 }
 
@@ -545,6 +571,32 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
       dagen_tot: zr.dagen_tot,
       urgent: zr.urgent,
       reden: zr.reden,
+    });
+  }
+
+  // 3) Inleen-einddatum: eigen veld op de medewerker (dienstverband uitzend/inhuur)
+  const inleners = await db
+    .select({ id: medewerkersTable.id, inleenEinddatum: medewerkersTable.inleenEinddatum })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNotNull(medewerkersTable.inleenEinddatum),
+        inArray(medewerkersTable.dienstverband, ["uitzend", "inhuur"]),
+      ),
+    );
+  for (const inlener of inleners) {
+    if (!inlener.inleenEinddatum || !naamPerId.has(inlener.id)) continue;
+    const dagen = dagenTot(inlener.inleenEinddatum);
+    zetAlsUrgenter({
+      medewerker_id: inlener.id,
+      naam: naamPerId.get(inlener.id)!,
+      datum: inlener.inleenEinddatum,
+      dagen_tot: dagen,
+      urgent: dagen <= URGENT_DAGEN,
+      bron: "contract",
+      label: "Inleentermijn afloop",
+      reden: `Inleen-/inhuurperiode eindigt op ${inlener.inleenEinddatum}.`,
     });
   }
 

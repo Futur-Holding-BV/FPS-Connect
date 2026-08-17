@@ -104,6 +104,11 @@ export interface Medewerker {
      * @nullable
      */
   uitzendbureau_naam?: string | null;
+  /**
+     * Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
+     * @nullable
+     */
+  inleen_einddatum?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

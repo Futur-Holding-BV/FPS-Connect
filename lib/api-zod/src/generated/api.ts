@@ -11434,6 +11434,7 @@ export const ListMedewerkersResponseItem = zod.object({
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "inleen_einddatum": zod.string().nullish().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11475,6 +11476,7 @@ export const CreateMedewerkerBody = zod.object({
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
@@ -11648,6 +11650,7 @@ export const GetMedewerkerResponse = zod.object({
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "inleen_einddatum": zod.string().nullish().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11692,6 +11695,7 @@ export const UpdateMedewerkerBody = zod.object({
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
@@ -11736,6 +11740,7 @@ export const UpdateMedewerkerResponse = zod.object({
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "inleen_einddatum": zod.string().nullish().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12420,6 +12425,7 @@ export const OffboardMedewerkerResponse = zod.object({
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "inleen_einddatum": zod.string().nullish().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12472,6 +12478,7 @@ export const SchermMedewerkerAfResponse = zod.object({
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
   "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "inleen_einddatum": zod.string().nullish().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

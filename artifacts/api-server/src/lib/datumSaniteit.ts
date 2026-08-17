@@ -7,7 +7,7 @@
 // moeten deze helpers gebruiken — nooit een eigen lossere check.
 
 export const DATUMVELDEN_MEDEWERKER = [
-  "in_dienst_sinds", "uit_dienst_per", "geboortedatum", "rijbewijs_vervaldatum",
+  "in_dienst_sinds", "uit_dienst_per", "inleen_einddatum", "geboortedatum", "rijbewijs_vervaldatum",
   "vca_vervaldatum", "ehbo_vervaldatum", "bhv_vervaldatum",
 ] as const;
 

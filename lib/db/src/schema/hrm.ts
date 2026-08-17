@@ -122,6 +122,10 @@ export const medewerkersTable = pgTable("medewerkers", {
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
   // Verwijzing naar de organisatie in crm_klanten (type uitzendbureau/inlener).
   uitzendbureauId: integer("uitzendbureau_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
+  // Inleen-einddatum: de datum waarop de inleen- of inhuurperiode formeel afloopt.
+  // Alleen relevant bij dienstverband "uitzend" of "inhuur". Wordt meegenomen in
+  // GET /contract-bewaking/cruciale-datums zodat de kaart een rode datum kan tonen.
+  inleenEinddatum: text("inleen_einddatum"),
   contracturenPerWeek: real("contracturen_per_week"),
   // Deeltijdpercentage (0-100); null = afgeleid uit contracturen/CAO-norm.
   deeltijdPercentage: real("deeltijd_percentage"),

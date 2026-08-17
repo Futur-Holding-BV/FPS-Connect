@@ -6132,6 +6132,11 @@ export interface Medewerker {
      * @nullable
      */
   uitzendbureau_naam?: string | null;
+  /**
+     * Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
+     * @nullable
+     */
+  inleen_einddatum?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -6183,6 +6188,8 @@ export interface MedewerkerInput {
      * @nullable
      */
   uitzendbureau_id?: number | null;
+  /** Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur". */
+  inleen_einddatum?: string;
   /** Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO). */
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
