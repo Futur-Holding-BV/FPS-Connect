@@ -5409,6 +5409,101 @@ export interface SpotAiVoorstelPersistInput {
   meerdere_doorvoeren_doorgang?: boolean;
 }
 
+/**
+ * Map variant (kleur/wit/zwart/liggend/vierkant/transparant) naar downloadbare URL.
+ */
+export type MerkenkastWerkgeverLogoVarianten = {[key: string]: string};
+
+export type MerkenkastWerkgeverMerkKleurenItem = {
+  naam: string;
+  hex: string;
+};
+
+export interface MerkenkastWerkgever {
+  werkgever_id: number;
+  naam: string;
+  /**
+     * Downloadbare URL van het hoofdlogo.
+     * @nullable
+     */
+  logo_url?: string | null;
+  /** Map variant (kleur/wit/zwart/liggend/vierkant/transparant) naar downloadbare URL. */
+  logo_varianten: MerkenkastWerkgeverLogoVarianten;
+  primaire_kleur: string;
+  merk_kleuren: MerkenkastWerkgeverMerkKleurenItem[];
+  /** @nullable */
+  lettertype?: string | null;
+  /** @nullable */
+  omschrijving_kort?: string | null;
+  /** @nullable */
+  omschrijving_lang?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  plaats?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  btw?: string | null;
+  /** @nullable */
+  iban?: string | null;
+}
+
+export type BeeldbankFotoBron = typeof BeeldbankFotoBron[keyof typeof BeeldbankFotoBron];
+
+
+export const BeeldbankFotoBron = {
+  spot: 'spot',
+  opname: 'opname',
+  inspectie: 'inspectie',
+  upload: 'upload',
+} as const;
+
+export interface BeeldbankFoto {
+  bron: BeeldbankFotoBron;
+  bron_id: number;
+  volgnummer: number;
+  url: string;
+  /** @nullable */
+  object_path?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  opdracht_titel?: string | null;
+  /** @nullable */
+  werksoort?: string | null;
+  /** @nullable */
+  fase?: string | null;
+  /** @nullable */
+  gemaakt_op?: string | null;
+  /** @nullable */
+  gemaakt_door?: string | null;
+  /** @nullable */
+  bijschrift?: string | null;
+}
+
+/**
+ * MERK_01: map logo-variant (kleur/wit/zwart/liggend/vierkant/transparant) naar object-storage pad.
+ */
+export type WerkgeverLogoVarianten = {[key: string]: string};
+
+export type WerkgeverMerkKleurenItem = {
+  naam: string;
+  hex: string;
+};
+
 export interface Werkgever {
   id: number;
   naam: string;
@@ -5453,6 +5548,25 @@ export interface Werkgever {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** MERK_01: map logo-variant (kleur/wit/zwart/liggend/vierkant/transparant) naar object-storage pad. */
+  logo_varianten?: WerkgeverLogoVarianten;
+  /** MERK_01: extra merkkleuren naast de primaire kleur. */
+  merk_kleuren?: WerkgeverMerkKleurenItem[];
+  /**
+     * MERK_01: naam van het huisstijl-lettertype.
+     * @nullable
+     */
+  lettertype?: string | null;
+  /**
+     * MERK_01: korte standaard-bedrijfsomschrijving.
+     * @nullable
+     */
+  omschrijving_kort?: string | null;
+  /**
+     * MERK_01: lange standaard-bedrijfsomschrijving.
+     * @nullable
+     */
+  omschrijving_lang?: string | null;
   /** @nullable */
   iban?: string | null;
   /**
@@ -5491,9 +5605,24 @@ export interface Werkgever {
   bijgewerkt_op: string;
 }
 
+export type WerkgeverInputLogoVarianten = {[key: string]: string};
+
+export type WerkgeverInputMerkKleurenItem = {
+  naam: string;
+  hex: string;
+};
+
 export interface WerkgeverInput {
   naam: string;
   cao?: string;
+  logo_varianten?: WerkgeverInputLogoVarianten;
+  merk_kleuren?: WerkgeverInputMerkKleurenItem[];
+  /** @nullable */
+  lettertype?: string | null;
+  /** @nullable */
+  omschrijving_kort?: string | null;
+  /** @nullable */
+  omschrijving_lang?: string | null;
   /** @nullable */
   logo_document_id?: number | null;
   /** @nullable */
@@ -18678,6 +18807,69 @@ hoeveelheid?: number;
 
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
+};
+
+export type ListBeeldbankFotosParams = {
+bron?: ListBeeldbankFotosBron;
+fase?: string;
+gebouw_id?: number;
+werksoort?: string;
+zoek?: string;
+van?: string;
+tot?: string;
+limit?: number;
+offset?: number;
+};
+
+export type ListBeeldbankFotosBron = typeof ListBeeldbankFotosBron[keyof typeof ListBeeldbankFotosBron];
+
+
+export const ListBeeldbankFotosBron = {
+  spot: 'spot',
+  opname: 'opname',
+  inspectie: 'inspectie',
+  upload: 'upload',
+} as const;
+
+export type ListBeeldbankFotos200 = {
+  totaal: number;
+  fotos: BeeldbankFoto[];
+};
+
+export type CreateBeeldbankUploadBody = {
+  object_path: string;
+  /** @nullable */
+  bijschrift?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  werksoort?: string | null;
+};
+
+export type CreateBeeldbankUpload201 = {
+  id: number;
+};
+
+export type DownloadBeeldbankZipBodyItemsItemBron = typeof DownloadBeeldbankZipBodyItemsItemBron[keyof typeof DownloadBeeldbankZipBodyItemsItemBron];
+
+
+export const DownloadBeeldbankZipBodyItemsItemBron = {
+  spot: 'spot',
+  opname: 'opname',
+  inspectie: 'inspectie',
+  upload: 'upload',
+} as const;
+
+export type DownloadBeeldbankZipBodyItemsItem = {
+  bron: DownloadBeeldbankZipBodyItemsItemBron;
+  bron_id: number;
+  volgnummer?: number;
+};
+
+export type DownloadBeeldbankZipBody = {
+  items: DownloadBeeldbankZipBodyItemsItem[];
 };
 
 export type ListSocialBerichtenParams = {

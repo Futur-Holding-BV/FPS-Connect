@@ -10592,6 +10592,14 @@ export const ListWerkgeversResponseItem = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
+  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
+  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
+  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -10617,6 +10625,14 @@ export const ListWerkgeversResponse = zod.array(ListWerkgeversResponseItem)
 export const CreateWerkgeverBody = zod.object({
   "naam": zod.string(),
   "cao": zod.string().optional(),
+  "logo_varianten": zod.record(zod.string(), zod.string()).optional(),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})).optional(),
+  "lettertype": zod.string().nullish(),
+  "omschrijving_kort": zod.string().nullish(),
+  "omschrijving_lang": zod.string().nullish(),
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
@@ -10676,6 +10692,14 @@ export const GetWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
+  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
+  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
+  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -10704,6 +10728,14 @@ export const UpdateWerkgeverParams = zod.object({
 export const UpdateWerkgeverBody = zod.object({
   "naam": zod.string(),
   "cao": zod.string().optional(),
+  "logo_varianten": zod.record(zod.string(), zod.string()).optional(),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})).optional(),
+  "lettertype": zod.string().nullish(),
+  "omschrijving_kort": zod.string().nullish(),
+  "omschrijving_lang": zod.string().nullish(),
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
@@ -10753,6 +10785,14 @@ export const UpdateWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "logo_varianten": zod.record(zod.string(), zod.string()).optional().describe('MERK_01: map logo-variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar object-storage pad.'),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})).optional().describe('MERK_01: extra merkkleuren naast de primaire kleur.'),
+  "lettertype": zod.string().nullish().describe('MERK_01: naam van het huisstijl-lettertype.'),
+  "omschrijving_kort": zod.string().nullish().describe('MERK_01: korte standaard-bedrijfsomschrijving.'),
+  "omschrijving_lang": zod.string().nullish().describe('MERK_01: lange standaard-bedrijfsomschrijving.'),
   "iban": zod.string().nullish(),
   "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
   "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
@@ -34921,6 +34961,109 @@ export const GetMarktspiegelOnderzoekResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "klaar_op": zod.string().nullish()
 })
+
+
+/**
+ * @summary Merkenkast — merkgegevens per actieve werkmaatschappij (crm 3)
+ */
+export const ListMerkenkastResponseItem = zod.object({
+  "werkgever_id": zod.number(),
+  "naam": zod.string(),
+  "logo_url": zod.string().nullish().describe('Downloadbare URL van het hoofdlogo.'),
+  "logo_varianten": zod.record(zod.string(), zod.string()).describe('Map variant (kleur\/wit\/zwart\/liggend\/vierkant\/transparant) naar downloadbare URL.'),
+  "primaire_kleur": zod.string(),
+  "merk_kleuren": zod.array(zod.object({
+  "naam": zod.string(),
+  "hex": zod.string()
+})),
+  "lettertype": zod.string().nullish(),
+  "omschrijving_kort": zod.string().nullish(),
+  "omschrijving_lang": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "plaats": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "iban": zod.string().nullish()
+})
+export const ListMerkenkastResponse = zod.array(ListMerkenkastResponseItem)
+
+
+/**
+ * @summary Volledig merkpakket (logo's + merkgegevens) als zip (crm 3)
+ */
+export const DownloadMerkenkastPakketParams = zod.object({
+  "werkgeverId": zod.coerce.number()
+})
+
+export const DownloadMerkenkastPakketResponse = zod.unknown()
+
+
+/**
+ * @summary Beeldbank — zoeken/filteren over spot-, opname-, inspectiefoto's en uploads (crm 3, gebouw-ACL)
+ */
+export const ListBeeldbankFotosQueryParams = zod.object({
+  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']).optional(),
+  "fase": zod.coerce.string().optional(),
+  "gebouw_id": zod.coerce.number().optional(),
+  "werksoort": zod.coerce.string().optional(),
+  "zoek": zod.coerce.string().optional(),
+  "van": zod.coerce.string().optional(),
+  "tot": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListBeeldbankFotosResponse = zod.object({
+  "totaal": zod.number(),
+  "fotos": zod.array(zod.object({
+  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']),
+  "bron_id": zod.number(),
+  "volgnummer": zod.number(),
+  "url": zod.string(),
+  "object_path": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "werksoort": zod.string().nullish(),
+  "fase": zod.string().nullish(),
+  "gemaakt_op": zod.string().nullish(),
+  "gemaakt_door": zod.string().nullish(),
+  "bijschrift": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Handmatige upload registreren in de beeldbank (crm 3)
+ */
+export const CreateBeeldbankUploadBody = zod.object({
+  "object_path": zod.string(),
+  "bijschrift": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "werksoort": zod.string().nullish()
+})
+
+export const CreateBeeldbankUploadResponse = zod.void()
+
+
+/**
+ * @summary Bulk-download van beeldbankfoto's als zip (crm 3, ACL per foto opnieuw afgedwongen)
+ */
+export const DownloadBeeldbankZipBody = zod.object({
+  "items": zod.array(zod.object({
+  "bron": zod.enum(['spot', 'opname', 'inspectie', 'upload']),
+  "bron_id": zod.number(),
+  "volgnummer": zod.number().optional()
+}))
+})
+
+export const DownloadBeeldbankZipResponse = zod.unknown()
 
 
 /**

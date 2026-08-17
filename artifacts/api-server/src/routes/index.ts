@@ -132,6 +132,8 @@ import "../services/workflow-configs";
 import wervingRouter from "./werving";
 import marketingRouter, { marketingPubliekRouter } from "./marketing";
 import socialRouter from "./social";
+import merkenkastRouter from "./merkenkast";
+import beeldbankRouter from "./beeldbank";
 
 const router: IRouter = Router();
 
@@ -181,6 +183,8 @@ router.use(infoRouter);
 router.use(crmRouter);
 router.use(marketingRouter);
 router.use(socialRouter);
+router.use(merkenkastRouter);
+router.use(beeldbankRouter);
 router.use(aanvragenRouter);
 router.use(inboxRouter);
 router.use(emailsRouter);

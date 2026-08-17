@@ -38,6 +38,15 @@ export const werkgeversTable = pgTable("werkgevers", {
   handtekeningUrl: text("handtekening_url"),
   logoUrl: text("logo_url"),
   primaireKleur: text("primaire_kleur").default("#F23B0D"),
+  // MERK_01 — Merkenkast: deze werkgeverrij is de ÉNE huisstijl-bron voor
+  // documentopmaak én merkenkast. Logo-varianten: map variant → object-pad
+  // (bv. { "wit": "/objects/algemeen/…", "vierkant": … }). Merkkleuren:
+  // [{ naam, hex }]. Nooit een tweede logo-opslagplek naast deze kolommen.
+  logoVarianten: jsonb("logo_varianten").notNull().default({}),
+  merkKleuren: jsonb("merk_kleuren").notNull().default([]),
+  lettertype: text("lettertype"),
+  omschrijvingKort: text("omschrijving_kort"),
+  omschrijvingLang: text("omschrijving_lang"),
   iban: text("iban"),
   koptekstPositie: text("koptekst_positie"),
   voettekstPositie: text("voettekst_positie"),

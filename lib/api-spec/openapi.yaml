@@ -28035,6 +28035,177 @@ paths:
         "404":
           description: Niet gevonden
 
+  # ── MERK_01: merkenkast en beeldbank (crm niveau 3) ──────────────────────
+  /merkenkast:
+    get:
+      operationId: listMerkenkast
+      tags: [crm]
+      summary: Merkenkast — merkgegevens per actieve werkmaatschappij (crm 3)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MerkenkastWerkgever"
+
+  /merkenkast/{werkgeverId}/pakket:
+    get:
+      operationId: downloadMerkenkastPakket
+      tags: [crm]
+      summary: Volledig merkpakket (logo's + merkgegevens) als zip (crm 3)
+      parameters:
+        - in: path
+          name: werkgeverId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Zip-bestand
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Werkmaatschappij niet gevonden
+
+  /beeldbank/fotos:
+    get:
+      operationId: listBeeldbankFotos
+      tags: [crm]
+      summary: Beeldbank — zoeken/filteren over spot-, opname-, inspectiefoto's en uploads (crm 3, gebouw-ACL)
+      parameters:
+        - in: query
+          name: bron
+          schema:
+            type: string
+            enum: [spot, opname, inspectie, upload]
+        - in: query
+          name: fase
+          schema:
+            type: string
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: werksoort
+          schema:
+            type: string
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: van
+          schema:
+            type: string
+        - in: query
+          name: tot
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totaal, fotos]
+                properties:
+                  totaal:
+                    type: integer
+                  fotos:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BeeldbankFoto"
+    post:
+      operationId: createBeeldbankUpload
+      tags: [crm]
+      summary: Handmatige upload registreren in de beeldbank (crm 3)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [object_path]
+              properties:
+                object_path:
+                  type: string
+                bijschrift:
+                  type: ["string", "null"]
+                gebouw_id:
+                  type: ["integer", "null"]
+                opdracht_id:
+                  type: ["integer", "null"]
+                werksoort:
+                  type: ["string", "null"]
+      responses:
+        "201":
+          description: Geregistreerd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: integer
+        "400":
+          description: Ongeldig object_path
+
+  /beeldbank/download:
+    post:
+      operationId: downloadBeeldbankZip
+      tags: [crm]
+      summary: Bulk-download van beeldbankfoto's als zip (crm 3, ACL per foto opnieuw afgedwongen)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [bron, bron_id]
+                    properties:
+                      bron:
+                        type: string
+                        enum: [spot, opname, inspectie, upload]
+                      bron_id:
+                        type: integer
+                      volgnummer:
+                        type: integer
+      responses:
+        "200":
+          description: Zip-bestand
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Ongeldige selectie
+        "404":
+          description: Geen van de foto's beschikbaar binnen de toegang
+
   /social/kanaaleisen:
     get:
       operationId: listSocialKanaaleisen
@@ -35022,6 +35193,93 @@ components:
             controlevlag zodat de projectleider deze kan beoordelen.
 
     # ── HRM / Personeel ───────────────────────────────────────────────────
+    MerkenkastWerkgever:
+      type: object
+      required: [werkgever_id, naam, logo_varianten, merk_kleuren, primaire_kleur]
+      properties:
+        werkgever_id:
+          type: integer
+        naam:
+          type: string
+        logo_url:
+          type: ["string", "null"]
+          description: Downloadbare URL van het hoofdlogo.
+        logo_varianten:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map variant (kleur/wit/zwart/liggend/vierkant/transparant) naar downloadbare URL.
+        primaire_kleur:
+          type: string
+        merk_kleuren:
+          type: array
+          items:
+            type: object
+            required: [naam, hex]
+            properties:
+              naam:
+                type: string
+              hex:
+                type: string
+        lettertype:
+          type: ["string", "null"]
+        omschrijving_kort:
+          type: ["string", "null"]
+        omschrijving_lang:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        plaats:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        kvk:
+          type: ["string", "null"]
+        btw:
+          type: ["string", "null"]
+        iban:
+          type: ["string", "null"]
+
+    BeeldbankFoto:
+      type: object
+      required: [bron, bron_id, volgnummer, url]
+      properties:
+        bron:
+          type: string
+          enum: [spot, opname, inspectie, upload]
+        bron_id:
+          type: integer
+        volgnummer:
+          type: integer
+        url:
+          type: string
+        object_path:
+          type: ["string", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        opdracht_id:
+          type: ["integer", "null"]
+        opdracht_titel:
+          type: ["string", "null"]
+        werksoort:
+          type: ["string", "null"]
+        fase:
+          type: ["string", "null"]
+        gemaakt_op:
+          type: ["string", "null"]
+        gemaakt_door:
+          type: ["string", "null"]
+        bijschrift:
+          type: ["string", "null"]
+
     Werkgever:
       type: object
       required: [id, naam, cao, actief, aangemaakt_op, bijgewerkt_op]
@@ -35066,6 +35324,31 @@ components:
         primaire_kleur:
           type: ["string", "null"]
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D) voor de documentopmaak.
+        logo_varianten:
+          type: object
+          additionalProperties:
+            type: string
+          description: "MERK_01: map logo-variant (kleur/wit/zwart/liggend/vierkant/transparant) naar object-storage pad."
+        merk_kleuren:
+          type: array
+          items:
+            type: object
+            required: [naam, hex]
+            properties:
+              naam:
+                type: string
+              hex:
+                type: string
+          description: "MERK_01: extra merkkleuren naast de primaire kleur."
+        lettertype:
+          type: ["string", "null"]
+          description: "MERK_01: naam van het huisstijl-lettertype."
+        omschrijving_kort:
+          type: ["string", "null"]
+          description: "MERK_01: korte standaard-bedrijfsomschrijving."
+        omschrijving_lang:
+          type: ["string", "null"]
+          description: "MERK_01: lange standaard-bedrijfsomschrijving."
         iban:
           type: ["string", "null"]
         koptekst_positie:
@@ -35108,6 +35391,26 @@ components:
           type: string
         cao:
           type: string
+        logo_varianten:
+          type: object
+          additionalProperties:
+            type: string
+        merk_kleuren:
+          type: array
+          items:
+            type: object
+            required: [naam, hex]
+            properties:
+              naam:
+                type: string
+              hex:
+                type: string
+        lettertype:
+          type: ["string", "null"]
+        omschrijving_kort:
+          type: ["string", "null"]
+        omschrijving_lang:
+          type: ["string", "null"]
         logo_document_id:
           type: ["integer", "null"]
         briefpapier_document_id:

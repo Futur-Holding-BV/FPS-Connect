@@ -37,6 +37,8 @@ INDEX|avg_verwerkers|avg_verwerkers_pkey
 INDEX|backup_records|backup_records_pkey
 INDEX|backup_records|backup_records_slug_unique
 INDEX|bedrijfssluitingen|bedrijfssluitingen_pkey
+INDEX|beeldbank_uploads|beeldbank_uploads_gebouw_idx
+INDEX|beeldbank_uploads|beeldbank_uploads_pkey
 INDEX|bekwaamheden|bekwaamheden_pkey
 INDEX|bewaking_draaien|bewaking_draaien_pkey
 INDEX|boekhouder_uploads|boekhouder_uploads_pkey
@@ -873,6 +875,14 @@ KOLOM|bedrijfssluitingen|id|integer|NO|nextval('bedrijfssluitingen_id_seq'::regc
 KOLOM|bedrijfssluitingen|naam|text|NO|
 KOLOM|bedrijfssluitingen|omschrijving|text|YES|
 KOLOM|bedrijfssluitingen|type|text|NO|'bedrijfssluiting'::text
+KOLOM|beeldbank_uploads|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|beeldbank_uploads|bijschrift|text|YES|
+KOLOM|beeldbank_uploads|gebouw_id|integer|YES|
+KOLOM|beeldbank_uploads|gemaakt_door_id|integer|YES|
+KOLOM|beeldbank_uploads|id|integer|NO|nextval('beeldbank_uploads_id_seq'::regclass)
+KOLOM|beeldbank_uploads|object_path|text|NO|
+KOLOM|beeldbank_uploads|opdracht_id|integer|YES|
+KOLOM|beeldbank_uploads|werksoort|text|YES|
 KOLOM|bekwaamheden|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|bekwaamheden|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|bekwaamheden|categorie|text|NO|'werkzaamheid'::text
@@ -4958,14 +4968,19 @@ KOLOM|werkgevers|intern_contact_naam|text|YES|
 KOLOM|werkgevers|kenmerk_prefix|text|YES|
 KOLOM|werkgevers|koptekst_positie|text|YES|
 KOLOM|werkgevers|kvk|text|YES|
+KOLOM|werkgevers|lettertype|text|YES|
 KOLOM|werkgevers|logo_document_id|integer|YES|
 KOLOM|werkgevers|logo_url|text|YES|
+KOLOM|werkgevers|logo_varianten|jsonb|NO|'{}'::jsonb
 KOLOM|werkgevers|loonperiode|text|YES|'maandelijks'::text
 KOLOM|werkgevers|marge_boven|numeric|YES|
 KOLOM|werkgevers|marge_links|numeric|YES|
 KOLOM|werkgevers|marge_onder|numeric|YES|
 KOLOM|werkgevers|marge_rechts|numeric|YES|
+KOLOM|werkgevers|merk_kleuren|jsonb|NO|'[]'::jsonb
 KOLOM|werkgevers|naam|text|NO|
+KOLOM|werkgevers|omschrijving_kort|text|YES|
+KOLOM|werkgevers|omschrijving_lang|text|YES|
 KOLOM|werkgevers|personeelsbeleid|text|YES|
 KOLOM|werkgevers|plaats|text|YES|
 KOLOM|werkgevers|postcode|text|YES|

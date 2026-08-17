@@ -160,6 +160,8 @@ import type {
   ConstructieTemplate,
   ConstructieTemplateInput,
   CreateActiepuntBody,
+  CreateBeeldbankUpload201,
+  CreateBeeldbankUploadBody,
   CreateBevindingHerstel201,
   CreateCollectieveVrijeDagen201,
   CreateCollectieveVrijeDagenBody,
@@ -243,6 +245,7 @@ import type {
   DossierDocument,
   DossierDocumentInput,
   DossierInput,
+  DownloadBeeldbankZipBody,
   DownloadUrlResultaat,
   DraaiWerkbakBewaking200,
   DuplicaatCheckInput,
@@ -560,6 +563,8 @@ import type {
   ListAvgInzageverzoeken200,
   ListAvgInzageverzoekenParams,
   ListBedrijfssluitingenParams,
+  ListBeeldbankFotos200,
+  ListBeeldbankFotosParams,
   ListBiaeComplianceSignalenParams,
   ListBiaeEventsParams,
   ListBrandstofImportenParams,
@@ -710,6 +715,7 @@ import type {
   MeldingOntvangst,
   MeldingOverzichtItem,
   MeldingUpdate,
+  MerkenkastWerkgever,
   MijnAuto,
   MijnCertificaten,
   MijnMedewerkerInfo,
@@ -97771,6 +97777,384 @@ export function useGetMarktspiegelOnderzoek<TData = Awaited<ReturnType<typeof ge
 
 
 
+
+export const getListMerkenkastUrl = () => {
+
+
+
+
+  return `/api/merkenkast`
+}
+
+/**
+ * @summary Merkenkast — merkgegevens per actieve werkmaatschappij (crm 3)
+ */
+export const listMerkenkast = async ( options?: RequestInit): Promise<MerkenkastWerkgever[]> => {
+
+  return customFetch<MerkenkastWerkgever[]>(getListMerkenkastUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMerkenkastQueryKey = () => {
+    return [
+    `/api/merkenkast`
+    ] as const;
+    }
+
+
+export const getListMerkenkastQueryOptions = <TData = Awaited<ReturnType<typeof listMerkenkast>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMerkenkast>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMerkenkastQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMerkenkast>>> = ({ signal }) => listMerkenkast({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMerkenkast>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMerkenkastQueryResult = NonNullable<Awaited<ReturnType<typeof listMerkenkast>>>
+export type ListMerkenkastQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Merkenkast — merkgegevens per actieve werkmaatschappij (crm 3)
+ */
+
+export function useListMerkenkast<TData = Awaited<ReturnType<typeof listMerkenkast>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMerkenkast>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMerkenkastQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDownloadMerkenkastPakketUrl = (werkgeverId: number,) => {
+
+
+
+
+  return `/api/merkenkast/${werkgeverId}/pakket`
+}
+
+/**
+ * @summary Volledig merkpakket (logo's + merkgegevens) als zip (crm 3)
+ */
+export const downloadMerkenkastPakket = async (werkgeverId: number, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadMerkenkastPakketUrl(werkgeverId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadMerkenkastPakketQueryKey = (werkgeverId: number,) => {
+    return [
+    `/api/merkenkast/${werkgeverId}/pakket`
+    ] as const;
+    }
+
+
+export const getDownloadMerkenkastPakketQueryOptions = <TData = Awaited<ReturnType<typeof downloadMerkenkastPakket>>, TError = ErrorType<void>>(werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadMerkenkastPakket>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadMerkenkastPakketQueryKey(werkgeverId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadMerkenkastPakket>>> = ({ signal }) => downloadMerkenkastPakket(werkgeverId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: werkgeverId !== null && werkgeverId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadMerkenkastPakket>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadMerkenkastPakketQueryResult = NonNullable<Awaited<ReturnType<typeof downloadMerkenkastPakket>>>
+export type DownloadMerkenkastPakketQueryError = ErrorType<void>
+
+
+/**
+ * @summary Volledig merkpakket (logo's + merkgegevens) als zip (crm 3)
+ */
+
+export function useDownloadMerkenkastPakket<TData = Awaited<ReturnType<typeof downloadMerkenkastPakket>>, TError = ErrorType<void>>(
+ werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadMerkenkastPakket>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadMerkenkastPakketQueryOptions(werkgeverId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBeeldbankFotosUrl = (params?: ListBeeldbankFotosParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/beeldbank/fotos?${stringifiedParams}` : `/api/beeldbank/fotos`
+}
+
+/**
+ * @summary Beeldbank — zoeken/filteren over spot-, opname-, inspectiefoto's en uploads (crm 3, gebouw-ACL)
+ */
+export const listBeeldbankFotos = async (params?: ListBeeldbankFotosParams, options?: RequestInit): Promise<ListBeeldbankFotos200> => {
+
+  return customFetch<ListBeeldbankFotos200>(getListBeeldbankFotosUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBeeldbankFotosQueryKey = (params?: ListBeeldbankFotosParams,) => {
+    return [
+    `/api/beeldbank/fotos`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBeeldbankFotosQueryOptions = <TData = Awaited<ReturnType<typeof listBeeldbankFotos>>, TError = ErrorType<unknown>>(params?: ListBeeldbankFotosParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBeeldbankFotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBeeldbankFotosQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBeeldbankFotos>>> = ({ signal }) => listBeeldbankFotos(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBeeldbankFotos>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBeeldbankFotosQueryResult = NonNullable<Awaited<ReturnType<typeof listBeeldbankFotos>>>
+export type ListBeeldbankFotosQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Beeldbank — zoeken/filteren over spot-, opname-, inspectiefoto's en uploads (crm 3, gebouw-ACL)
+ */
+
+export function useListBeeldbankFotos<TData = Awaited<ReturnType<typeof listBeeldbankFotos>>, TError = ErrorType<unknown>>(
+ params?: ListBeeldbankFotosParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBeeldbankFotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBeeldbankFotosQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBeeldbankUploadUrl = () => {
+
+
+
+
+  return `/api/beeldbank/fotos`
+}
+
+/**
+ * @summary Handmatige upload registreren in de beeldbank (crm 3)
+ */
+export const createBeeldbankUpload = async (createBeeldbankUploadBody: CreateBeeldbankUploadBody, options?: RequestInit): Promise<CreateBeeldbankUpload201> => {
+
+  return customFetch<CreateBeeldbankUpload201>(getCreateBeeldbankUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createBeeldbankUploadBody)
+  }
+);}
+
+
+
+
+export const getCreateBeeldbankUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBeeldbankUpload>>, TError,{data: BodyType<CreateBeeldbankUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBeeldbankUpload>>, TError,{data: BodyType<CreateBeeldbankUploadBody>}, TContext> => {
+
+const mutationKey = ['createBeeldbankUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBeeldbankUpload>>, {data: BodyType<CreateBeeldbankUploadBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBeeldbankUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBeeldbankUploadMutationResult = NonNullable<Awaited<ReturnType<typeof createBeeldbankUpload>>>
+    export type CreateBeeldbankUploadMutationBody = BodyType<CreateBeeldbankUploadBody>
+    export type CreateBeeldbankUploadMutationError = ErrorType<void>
+
+    /**
+ * @summary Handmatige upload registreren in de beeldbank (crm 3)
+ */
+export const useCreateBeeldbankUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBeeldbankUpload>>, TError,{data: BodyType<CreateBeeldbankUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBeeldbankUpload>>,
+        TError,
+        {data: BodyType<CreateBeeldbankUploadBody>},
+        TContext
+      > => {
+      return useMutation(getCreateBeeldbankUploadMutationOptions(options));
+    }
+
+export const getDownloadBeeldbankZipUrl = () => {
+
+
+
+
+  return `/api/beeldbank/download`
+}
+
+/**
+ * @summary Bulk-download van beeldbankfoto's als zip (crm 3, ACL per foto opnieuw afgedwongen)
+ */
+export const downloadBeeldbankZip = async (downloadBeeldbankZipBody: DownloadBeeldbankZipBody, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadBeeldbankZipUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(downloadBeeldbankZipBody)
+  }
+);}
+
+
+
+
+export const getDownloadBeeldbankZipMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof downloadBeeldbankZip>>, TError,{data: BodyType<DownloadBeeldbankZipBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof downloadBeeldbankZip>>, TError,{data: BodyType<DownloadBeeldbankZipBody>}, TContext> => {
+
+const mutationKey = ['downloadBeeldbankZip'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof downloadBeeldbankZip>>, {data: BodyType<DownloadBeeldbankZipBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  downloadBeeldbankZip(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DownloadBeeldbankZipMutationResult = NonNullable<Awaited<ReturnType<typeof downloadBeeldbankZip>>>
+    export type DownloadBeeldbankZipMutationBody = BodyType<DownloadBeeldbankZipBody>
+    export type DownloadBeeldbankZipMutationError = ErrorType<void>
+
+    /**
+ * @summary Bulk-download van beeldbankfoto's als zip (crm 3, ACL per foto opnieuw afgedwongen)
+ */
+export const useDownloadBeeldbankZip = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof downloadBeeldbankZip>>, TError,{data: BodyType<DownloadBeeldbankZipBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof downloadBeeldbankZip>>,
+        TError,
+        {data: BodyType<DownloadBeeldbankZipBody>},
+        TContext
+      > => {
+      return useMutation(getDownloadBeeldbankZipMutationOptions(options));
+    }
 
 export const getListSocialKanaaleisenUrl = () => {
 

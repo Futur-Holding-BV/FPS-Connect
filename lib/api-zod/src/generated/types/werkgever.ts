@@ -5,6 +5,8 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { WerkgeverLogoVarianten } from './werkgeverLogoVarianten';
+import type { WerkgeverMerkKleurenItem } from './werkgeverMerkKleurenItem';
 
 export interface Werkgever {
   id: number;
@@ -50,6 +52,25 @@ export interface Werkgever {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** MERK_01: map logo-variant (kleur/wit/zwart/liggend/vierkant/transparant) naar object-storage pad. */
+  logo_varianten?: WerkgeverLogoVarianten;
+  /** MERK_01: extra merkkleuren naast de primaire kleur. */
+  merk_kleuren?: WerkgeverMerkKleurenItem[];
+  /**
+     * MERK_01: naam van het huisstijl-lettertype.
+     * @nullable
+     */
+  lettertype?: string | null;
+  /**
+     * MERK_01: korte standaard-bedrijfsomschrijving.
+     * @nullable
+     */
+  omschrijving_kort?: string | null;
+  /**
+     * MERK_01: lange standaard-bedrijfsomschrijving.
+     * @nullable
+     */
+  omschrijving_lang?: string | null;
   /** @nullable */
   iban?: string | null;
   /**

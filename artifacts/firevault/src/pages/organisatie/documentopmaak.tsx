@@ -22,7 +22,203 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useListWerkgevers, useUpdateWerkgever, type Werkgever } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
-import { Loader2, Upload, Palette } from "lucide-react";
+import { Loader2, Upload, Palette, Plus, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+// ── MERK_01: merkenkast-velden op de werkgever ─────────────────────────────
+const LOGO_VARIANTEN: Array<{ sleutel: string; label: string; donker?: boolean }> = [
+  { sleutel: "kleur", label: "Kleur" },
+  { sleutel: "wit", label: "Wit", donker: true },
+  { sleutel: "zwart", label: "Zwart" },
+  { sleutel: "liggend", label: "Liggend" },
+  { sleutel: "vierkant", label: "Vierkant" },
+  { sleutel: "transparant", label: "Transparant" },
+];
+
+const storageUrl = (pad: string) =>
+  pad.startsWith("/") ? `/api/storage${pad}` : `/api/storage/objects/${pad}`;
+
+function MerkenkastVelden({
+  werkgever,
+  uploadFile,
+  opslaan,
+}: {
+  werkgever: Werkgever;
+  uploadFile: (f: File) => Promise<{ objectPath?: string } | null | undefined>;
+  opslaan: (data: Partial<{
+    logo_varianten: Record<string, string>;
+    merk_kleuren: Array<{ naam: string; hex: string }>;
+    lettertype: string | null;
+    omschrijving_kort: string | null;
+    omschrijving_lang: string | null;
+  }>) => Promise<void>;
+}) {
+  const { toast } = useToast();
+  const [bezigVariant, setBezigVariant] = useState<string | null>(null);
+  const [lettertype, setLettertype] = useState(werkgever.lettertype ?? "");
+  const [kort, setKort] = useState(werkgever.omschrijving_kort ?? "");
+  const [lang, setLang] = useState(werkgever.omschrijving_lang ?? "");
+  const [nieuweKleurNaam, setNieuweKleurNaam] = useState("");
+  const [nieuweKleurHex, setNieuweKleurHex] = useState("#212631");
+  const [tekstBezig, setTekstBezig] = useState(false);
+
+  // Bij wissel van werkmaatschappij de lokale velden verversen.
+  useEffect(() => {
+    setLettertype(werkgever.lettertype ?? "");
+    setKort(werkgever.omschrijving_kort ?? "");
+    setLang(werkgever.omschrijving_lang ?? "");
+  }, [werkgever.id, werkgever.lettertype, werkgever.omschrijving_kort, werkgever.omschrijving_lang]);
+
+  const varianten = (werkgever.logo_varianten ?? {}) as Record<string, string>;
+  const kleuren = (werkgever.merk_kleuren ?? []) as Array<{ naam: string; hex: string }>;
+
+  const uploadVariant = async (sleutel: string, bestand: File | undefined) => {
+    if (!bestand) return;
+    setBezigVariant(sleutel);
+    try {
+      const res = await uploadFile(bestand);
+      if (!res?.objectPath) throw new Error("Uploaden mislukt");
+      await opslaan({ logo_varianten: { ...varianten, [sleutel]: res.objectPath } });
+      toast({ title: "Logo-variant opgeslagen" });
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    } finally {
+      setBezigVariant(null);
+    }
+  };
+
+  const verwijderVariant = async (sleutel: string) => {
+    const nieuw = { ...varianten };
+    delete nieuw[sleutel];
+    try { await opslaan({ logo_varianten: nieuw }); }
+    catch { toast({ title: "Opslaan mislukt", variant: "destructive" }); }
+  };
+
+  const voegKleurToe = async () => {
+    if (!nieuweKleurNaam.trim()) return;
+    try {
+      await opslaan({ merk_kleuren: [...kleuren, { naam: nieuweKleurNaam.trim(), hex: nieuweKleurHex }] });
+      setNieuweKleurNaam("");
+    } catch { toast({ title: "Opslaan mislukt", variant: "destructive" }); }
+  };
+
+  const verwijderKleur = async (index: number) => {
+    try { await opslaan({ merk_kleuren: kleuren.filter((_, i) => i !== index) }); }
+    catch { toast({ title: "Opslaan mislukt", variant: "destructive" }); }
+  };
+
+  const bewaarTeksten = async () => {
+    setTekstBezig(true);
+    try {
+      await opslaan({
+        lettertype: lettertype.trim() || null,
+        omschrijving_kort: kort.trim() || null,
+        omschrijving_lang: lang.trim() || null,
+      });
+      toast({ title: "Merkgegevens opgeslagen" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    } finally {
+      setTekstBezig(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8" data-testid="merkenkast-velden">
+      {/* Logo-varianten */}
+      <div>
+        <h3 className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Logo-varianten (merkenkast)</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {LOGO_VARIANTEN.map((v) => {
+            const pad = varianten[v.sleutel];
+            return (
+              <div key={v.sleutel} className="border border-slate-200 rounded-md p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-slate-600">{v.label}</span>
+                  {pad ? (
+                    <button type="button" className="text-slate-400 hover:text-red-500" onClick={() => verwijderVariant(v.sleutel)}
+                      aria-label={`Verwijder ${v.label}`}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                {pad ? (
+                  <img src={storageUrl(pad)} alt={`Logo ${v.label}`}
+                    className={`h-12 w-full object-contain rounded ${v.donker ? "bg-slate-800 p-1" : "bg-white"}`} />
+                ) : (
+                  <div className="h-12 border border-dashed border-slate-300 rounded flex items-center justify-center text-[11px] text-slate-400 bg-slate-50">
+                    Nog niet ingesteld
+                  </div>
+                )}
+                <label className="mt-2 block">
+                  <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden"
+                    disabled={bezigVariant !== null}
+                    onChange={(e) => { void uploadVariant(v.sleutel, e.target.files?.[0]); e.target.value = ""; }} />
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 cursor-pointer">
+                    {bezigVariant === v.sleutel ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                    {pad ? "Vervangen" : "Uploaden"}
+                  </span>
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Extra merkkleuren */}
+      <div>
+        <h3 className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Extra merkkleuren</h3>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {kleuren.map((k, index) => (
+            <span key={`${k.hex}-${index}`} className="inline-flex items-center gap-2 border border-slate-200 rounded-md px-2 py-1 text-xs">
+              <span className="h-4 w-4 rounded border" style={{ backgroundColor: k.hex }} />
+              {k.naam} <span className="font-mono text-slate-400">{k.hex}</span>
+              <button type="button" className="text-slate-400 hover:text-red-500" onClick={() => verwijderKleur(index)} aria-label={`Verwijder ${k.naam}`}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {kleuren.length === 0 ? <span className="text-xs text-slate-400">Nog geen extra kleuren.</span> : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <Input className="w-40 h-8 text-xs" placeholder="Naam (bv. Donker)" value={nieuweKleurNaam}
+            onChange={(e) => setNieuweKleurNaam(e.target.value)} />
+          <input type="color" value={nieuweKleurHex} onChange={(e) => setNieuweKleurHex(e.target.value)}
+            className="h-8 w-12 rounded border border-slate-200 cursor-pointer p-0.5 bg-white" />
+          <Button size="sm" variant="outline" onClick={voegKleurToe} disabled={!nieuweKleurNaam.trim()} type="button">
+            <Plus className="h-3.5 w-3.5 mr-1" />Toevoegen
+          </Button>
+        </div>
+      </div>
+
+      {/* Lettertype + standaardteksten */}
+      <div>
+        <h3 className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Lettertype en standaardteksten</h3>
+        <div className="space-y-3 max-w-xl">
+          <div>
+            <Label className="text-xs text-slate-500">Lettertype</Label>
+            <Input className="h-8 text-sm" placeholder="bv. Inter, Montserrat" value={lettertype}
+              onChange={(e) => setLettertype(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">Korte omschrijving</Label>
+            <Textarea rows={2} value={kort} onChange={(e) => setKort(e.target.value)}
+              placeholder="Eén à twee zinnen over de werkmaatschappij" />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">Lange omschrijving</Label>
+            <Textarea rows={5} value={lang} onChange={(e) => setLang(e.target.value)}
+              placeholder="Uitgebreide bedrijfsomschrijving voor offertes en marketing" />
+          </div>
+          <Button size="sm" onClick={bewaarTeksten} disabled={tekstBezig} type="button" data-testid="merkenkast-teksten-opslaan">
+            {tekstBezig ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}Opslaan
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
   const logoUrl = w.logo_url
@@ -445,6 +641,20 @@ export default function DocumentopmaakOrganisatie() {
                   </div>
                 </div>
               </div>
+
+              {/* MERK_01 — merkenkast-uitbreiding: logo-varianten, extra kleuren,
+                  lettertype en standaardteksten. Zelfde bron als de documentopmaak;
+                  de CRM-merkenkast leest deze velden alleen. */}
+              <MerkenkastVelden
+                werkgever={geselecteerdeWerkgever}
+                uploadFile={uploadFile}
+                opslaan={async (data) => {
+                  await updateWerkgever.mutateAsync({
+                    id: geselecteerdeWerkgever.id,
+                    data: { naam: geselecteerdeWerkgever.naam, ...data },
+                  });
+                }}
+              />
             </div>
           )}
 

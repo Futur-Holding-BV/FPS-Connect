@@ -123,6 +123,12 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   handtekening_url: w.handtekeningUrl,
   logo_url: w.logoUrl,
   primaire_kleur: w.primaireKleur ?? "#F23B0D",
+  // MERK_01 — merkenkast-velden (zelfde bron als documentopmaak)
+  logo_varianten: (w.logoVarianten ?? {}) as Record<string, string>,
+  merk_kleuren: (w.merkKleuren ?? []) as Array<{ naam: string; hex: string }>,
+  lettertype: w.lettertype ?? null,
+  omschrijving_kort: w.omschrijvingKort ?? null,
+  omschrijving_lang: w.omschrijvingLang ?? null,
   iban: w.iban,
   koptekst_positie: w.koptekstPositie,
   voettekst_positie: w.voettekstPositie,
@@ -218,7 +224,7 @@ router.get("/werkgevers/:id", lezen, async (req, res): Promise<void> => {
 router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email, logo_varianten, merk_kleuren, lettertype, omschrijving_kort, omschrijving_lang } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -258,6 +264,12 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           scabEmailAdres: scab_email_adres !== undefined ? scab_email_adres : undefined,
           internContactNaam: intern_contact_naam !== undefined ? intern_contact_naam : undefined,
           internContactEmail: intern_contact_email !== undefined ? intern_contact_email : undefined,
+          // MERK_01 — merkenkast-velden (jsonb: alleen overschrijven als meegegeven)
+          logoVarianten: logo_varianten !== undefined && typeof logo_varianten === "object" && logo_varianten !== null ? logo_varianten : undefined,
+          merkKleuren: merk_kleuren !== undefined && Array.isArray(merk_kleuren) ? merk_kleuren : undefined,
+          lettertype: lettertype !== undefined ? lettertype : undefined,
+          omschrijvingKort: omschrijving_kort !== undefined ? omschrijving_kort : undefined,
+          omschrijvingLang: omschrijving_lang !== undefined ? omschrijving_lang : undefined,
           bijgewerktOp: new Date(),
         })
         .where(eq(werkgeversTable.id, id))

@@ -5,10 +5,20 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { WerkgeverInputLogoVarianten } from './werkgeverInputLogoVarianten';
+import type { WerkgeverInputMerkKleurenItem } from './werkgeverInputMerkKleurenItem';
 
 export interface WerkgeverInput {
   naam: string;
   cao?: string;
+  logo_varianten?: WerkgeverInputLogoVarianten;
+  merk_kleuren?: WerkgeverInputMerkKleurenItem[];
+  /** @nullable */
+  lettertype?: string | null;
+  /** @nullable */
+  omschrijving_kort?: string | null;
+  /** @nullable */
+  omschrijving_lang?: string | null;
   /** @nullable */
   logo_document_id?: number | null;
   /** @nullable */

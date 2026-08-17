@@ -25,8 +25,11 @@ import {
   opnameFotosTable,
   opnameItemsTable,
   opnamesTable,
+  inspectiesTable,
+  inspectieBevindingen,
+  beeldbankUploadsTable,
 } from "@workspace/db";
-import { eq, inArray, or } from "drizzle-orm";
+import { eq, inArray, like, or } from "drizzle-orm";
 import { isBeperktTotToegewezen } from "../utils/rol";
 import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
 
@@ -61,7 +64,7 @@ async function zoekGebouwenVoorLegacyPad(objectPath: string): Promise<number[]> 
     `/api/storage/thumbnails/${rest}`,
   ];
 
-  const [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen] =
+  const [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen, inspectieFotos, beeldbankUploads] =
     await Promise.all([
       db
         .select({ gebouwId: voorzieningenTable.gebouwId })
@@ -91,10 +94,21 @@ async function zoekGebouwenVoorLegacyPad(objectPath: string): Promise<number[]> 
             inArray(spotAiVoorstellenTable.fotoNaUrl, varianten),
           ),
         ),
+      // Inspectiefoto's: foto_urls is een JSON-tekstarray op de bevinding.
+      db
+        .select({ gebouwId: inspectiesTable.gebouwId })
+        .from(inspectieBevindingen)
+        .innerJoin(inspectiesTable, eq(inspectieBevindingen.inspectieId, inspectiesTable.id))
+        .where(or(...varianten.map((v) => like(inspectieBevindingen.fotoUrls, `%${JSON.stringify(v)}%`)))),
+      // Handmatige beeldbank-uploads.
+      db
+        .select({ gebouwId: beeldbankUploadsTable.gebouwId })
+        .from(beeldbankUploadsTable)
+        .where(inArray(beeldbankUploadsTable.objectPath, varianten)),
     ]);
 
   const gebouwen = new Set<number>();
-  for (const rows of [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen]) {
+  for (const rows of [spotFotos, tekeningen, plattegronden, opnameFotos, aiVoorstellen, inspectieFotos, beeldbankUploads]) {
     for (const r of rows) {
       if (r.gebouwId != null) gebouwen.add(r.gebouwId);
     }

@@ -80,3 +80,4 @@ export * from "./actiepunten";
 export * from "./kalender";
 export * from "./voorkeuren";
 export * from "./werving";
+export * from "./beeldbank";

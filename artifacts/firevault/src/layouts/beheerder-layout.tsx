@@ -30,7 +30,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound, Link2,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserMinus, UserPlus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
+  UserMinus, UserPlus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor, Images,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
   Users2, Star,
@@ -832,7 +832,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={(location === "/crm" || location.startsWith("/crm/")) && !location.startsWith("/crm/marketing") && !location.startsWith("/crm/social")}
+                          isActive={(location === "/crm" || location.startsWith("/crm/")) && !location.startsWith("/crm/marketing") && !location.startsWith("/crm/social") && !location.startsWith("/crm/merkenkast") && !location.startsWith("/crm/beeldbank")}
                         >
                           <Link href="/crm">
                             <Contact />
@@ -868,6 +868,34 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <Link href="/crm/social">
                             <Share2 />
                             <span>Social media</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      )}
+                      {/* Merkenkast + Beeldbank (MERK_01) — crm 3 = bekijken,
+                          zoeken en downloaden (zelfde grens als de API-routes). */}
+                      {heeftNiveau("crm", 3) && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.startsWith("/crm/merkenkast")}
+                        >
+                          <Link href="/crm/merkenkast">
+                            <Palette />
+                            <span>Merkenkast</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      )}
+                      {heeftNiveau("crm", 3) && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.startsWith("/crm/beeldbank")}
+                        >
+                          <Link href="/crm/beeldbank">
+                            <Images />
+                            <span>Beeldbank</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
