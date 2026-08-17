@@ -66,21 +66,21 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
 - **Niet-fataal voor merge:** als de push mislukt, waarschuwt het script maar stopt het post-merge proces niet
 - **Token-validatie:** vóór elke push valideert het script het token via de GitHub API (`/user`); een verlopen token geeft een expliciete foutmelding met vernieuwingsinstructies (geen stille fout)
 - **Bijna-verlopen waarschuwing:** als de vervaldatum binnen 14 dagen valt, print Stap 7 een waarschuwing in de post-merge logs
-- **Dagelijkse health-check:** `.github/workflows/token-health-check.yml` controleert elke dag om 08:00 UTC of het token nog geldig is en stuurt een e-mail aan René als het verlopen of bijna-verlopen is
+- **Dagelijkse health-check:** `.github/workflows/token-health-check.yml` controleert elke dag om 08:00 UTC het pushtoken en de pushketen. De check toetst het Actions-secret `FPS_PUSH_TOKEN` alleen als de sha256 overeenkomt met `docs/push-token-vingerafdruk.json` (de vingerafdruk van het token dat Replit wérkelijk gebruikt), meet de werkelijkheid (laatste push op main + laatste geslaagde deploy) en mailt uitsluitend vastgestelde feiten — nooit een aangenomen toestand
 - **Handmatig herstellen bij mislukking:** zie de sectie "GITHUB_TOKEN_PUSH vernieuwen" hieronder
 
 ---
 
 ## GITHUB_TOKEN_PUSH vernieuwen
 
-`GITHUB_TOKEN_PUSH` is een persoonlijk access-token (PAT) van het GitHub-account `vinkrene-jpg`. PAT's hebben een vervaldatum. Als het token verloopt stopt de automatische deploy-keten. De dagelijkse health-check (`token-health-check.yml`) stuurt een e-mail zodra het token verlopen is of binnen 14 dagen verloopt.
+`GITHUB_TOKEN_PUSH` is een persoonlijk access-token (PAT) van het GitHub-account `vinkrene-jpg`. PAT's hebben een vervaldatum. Als het token verloopt kan Replit geen nieuwe code meer naar GitHub pushen; de productie-omgeving draait door en reeds gepushte code wordt gewoon uitgerold (de deploy-keten loopt via SSH-secrets en gebruikt dit token niet) — er verschijnen alleen geen nieuwe releases meer. De dagelijkse health-check (`token-health-check.yml`) stuurt een e-mail zodra het token verlopen is of binnen 14 dagen verloopt.
 
 ### Stappen om het token te vernieuwen
 
 1. **Nieuw token aanmaken of bestaande verlengen**
    - Ga naar [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens) (ingelogd als `vinkrene-jpg`)
    - Kies het bestaande deploy-token en verleng het, of maak een nieuw token aan
-   - Vereiste scope: **Contents: Write** op de `Futur-Holding-BV/FPS-Connect` repository (fine-grained PAT) of `repo` (classic PAT). Let op: sinds de verhuizing van de repo naar de organisatie moet het token (van account `vinkrene-jpg`) expliciet toegang hebben op de organisatie-repo.
+   - Vereiste scopes: **Contents: Read and write** én **Workflows: Read and write** op de `Futur-Holding-BV/FPS-Connect` repository (fine-grained PAT; zonder Workflows-recht weigert GitHub elke push die `.github/workflows/`-bestanden raakt) of `repo` + `workflow` (classic PAT). Let op: sinds de verhuizing van de repo naar de organisatie moet het token (van account `vinkrene-jpg`) expliciet toegang hebben op de organisatie-repo.
    - Stel de vervaldatum in op maximaal 1 jaar; noteer de nieuwe vervaldatum
 
 2. **Replit Secret bijwerken**
@@ -88,12 +88,17 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
    - Ga naar het slotje (Secrets) in de linker zijbalk
    - Zoek `GITHUB_TOKEN_PUSH` en vervang de waarde door het nieuwe token
 
-3. **GitHub Actions Secret bijwerken**
+3. **Vingerafdruk bijwerken (verplicht)**
+   - Open een Replit-shell en draai `scripts/git/update-token-vingerafdruk.sh`
+   - Commit en push het gewijzigde `docs/push-token-vingerafdruk.json`
+   - Dit bestand (sha256 + vervaldatum, geen geheim) is voor de health-check de bron van waarheid over welk token Replit wérkelijk gebruikt
+
+4. **GitHub Actions Secret bijwerken (aanbevolen)**
    - Ga naar `github.com/Futur-Holding-BV/FPS-Connect` > Settings > Secrets and variables > Actions
    - Zoek `FPS_PUSH_TOKEN` en vervang de waarde door het nieuwe token (Actions-secretnamen mogen niet met `GITHUB_` beginnen; dit is hetzelfde PAT als het Replit-secret `GITHUB_TOKEN_PUSH`)
-   - Dit secret is nodig voor de dagelijkse health-check workflow
+   - Alleen met deze kopie kan de health-check het token live tegen de GitHub API toetsen; wijkt de kopie af van de vingerafdruk, dan meldt de check "ander token" en beweert hij niets over het echte pushtoken
 
-4. **Controleer de werking**
+5. **Controleer de werking**
    - Open een Replit-shell en voer uit:
      ```bash
      curl -sS -H "Authorization: token $GITHUB_TOKEN_PUSH" https://api.github.com/user
@@ -103,20 +108,21 @@ Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflo
 
 ### Welke twee plekken moeten gesynchroniseerd blijven
 
-| Locatie | Secretnaam | Gebruikt door |
+| Locatie | Naam | Gebruikt door |
 |---|---|---|
-| Replit Secrets | `GITHUB_TOKEN_PUSH` | `scripts/post-merge.sh` (Stap 7) |
-| GitHub repo Secrets | `FPS_PUSH_TOKEN` | `.github/workflows/token-health-check.yml` |
+| Replit Secrets | `GITHUB_TOKEN_PUSH` | `scripts/post-merge.sh` (Stap 7) — het token dat wérkelijk pusht |
+| Repo-bestand | `docs/push-token-vingerafdruk.json` | health-check: vingerafdruk (sha256 + vervaldatum) van het echte pushtoken |
+| GitHub repo Secrets | `FPS_PUSH_TOKEN` | `.github/workflows/token-health-check.yml` — optionele kopie voor live toetsing |
 
-> **Let op:** de Actions-secretnaam is `FPS_PUSH_TOKEN` (niet `GITHUB_TOKEN_PUSH`), omdat GitHub Actions-secretnamen niet met `GITHUB_` mogen beginnen. Beide bevatten dezelfde PAT-waarde.
+> **Let op:** de Actions-secretnaam is `FPS_PUSH_TOKEN` (niet `GITHUB_TOKEN_PUSH`), omdat GitHub Actions-secretnamen niet met `GITHUB_` mogen beginnen. Alle drie horen bij hetzelfde PAT.
 
 ### Benodigde GitHub Actions secrets token-health-check
 
-De workflow `.github/workflows/token-health-check.yml` vereist vijf verplichte GitHub Actions secrets. De workflow valideert actief of de vier Azure/mail-secrets aanwezig zijn; ontbreekt er één, dan faalt de workflow direct met een expliciete foutmelding en een lijst van de ontbrekende secrets. Daarnaast is `FPS_PUSH_TOKEN` nodig zodat de workflow het token zelf kan controleren — ontbreekt dit secret, dan rapporteert de workflow `status=ontbreekt` (token onbekend) en probeert vervolgens alsnog de mail te sturen.
+De workflow `.github/workflows/token-health-check.yml` valideert actief of de vier Azure/mail-secrets aanwezig zijn wanneer er gemaild moet worden; ontbreekt er één, dan faalt de workflow met een expliciete foutmelding en een lijst van de ontbrekende secrets. `FPS_PUSH_TOKEN` is optioneel: mét (en alleen bij sha256-match met de vingerafdruk) toetst de workflow het token live tegen de GitHub API; zonder rapporteert hij `secret_ontbreekt` en bewaakt hij de vervaldatum uit `docs/push-token-vingerafdruk.json` — zonder aannames over de pushketen, die apart gemeten wordt (laatste push + laatste geslaagde deploy).
 
 | Secret | Doel | Gevalideerd door workflow |
 |---|---|---|
-| `FPS_PUSH_TOKEN` | PAT waarvan de geldigheid wordt gecontroleerd (zelfde waarde als Replit-secret `GITHUB_TOKEN_PUSH`) | Nee — token wordt als `ontbreekt` gerapporteerd |
+| `FPS_PUSH_TOKEN` | Optionele kopie van het pushtoken voor live toetsing (zelfde waarde als Replit-secret `GITHUB_TOKEN_PUSH`) | Nee — status `secret_ontbreekt`, vervaldatum uit vingerafdrukbestand |
 | `AZURE_TENANT_ID` | Microsoft Graph OAuth — tenant voor Graph-mailkoppeling | **Ja — ontbreken → `exit 1`** |
 | `AZURE_CLIENT_ID` | Microsoft Graph OAuth — client-id van de Azure-app | **Ja — ontbreken → `exit 1`** |
 | `AZURE_CLIENT_SECRET` | Microsoft Graph OAuth — client-secret van de Azure-app | **Ja — ontbreken → `exit 1`** |

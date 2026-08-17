@@ -1,20 +1,31 @@
 name: GitHub push-token gezondheidscheck
 
 # ─── Doel ────────────────────────────────────────────────────────────────────
-# GITHUB_TOKEN_PUSH is een persoonlijk access-token (PAT) met vervaldatum.
-# Als het verloopt breekt de automatische deploy-keten (post-merge.sh Stap 7)
-# stilletjes. Deze workflow controleert dagelijks of het token nog geldig is
-# en stuurt een e-mail naar René zodra het verlopen is of binnen 14 dagen
-# verloopt.
+# Het pushtoken (Replit-secret GITHUB_TOKEN_PUSH) is een persoonlijk
+# access-token (PAT) met vervaldatum. Verloopt het, dan kan Replit geen code
+# meer naar GitHub pushen. Belangrijk om precies te zijn over de gevolgen:
+#  - de productie-omgeving draait gewoon door;
+#  - reeds gepushte code wordt gewoon uitgerold (deploys lopen via SSH-secrets
+#    en gebruiken dit token NIET);
+#  - alleen NIEUWE wijzigingen bereiken GitHub niet meer, dus er verschijnen
+#    geen nieuwe releases totdat het token vernieuwd is.
 #
-# Benodigde GitHub Secrets (dezelfde als deploy.yml):
-#   FPS_PUSH_TOKEN  — hetzelfde PAT als Replit-secret GITHUB_TOKEN_PUSH
-#                     (Actions-secretnamen mogen niet met GITHUB_ beginnen)
+# Deze check meldt uitsluitend wat hij heeft vastgesteld, en toetst de
+# werkelijkheid (laatste push, laatste geslaagde deploy) voordat hij mailt.
+#
+# Het echte pushtoken leeft alleen in Replit; GitHub Actions kan het niet
+# lezen. Daarom werkt de check met twee bronnen:
+#  1. docs/push-token-vingerafdruk.json — door Replit vastgelegde, niet-geheime
+#     vingerafdruk (sha256 + vervaldatum) van het token dat wérkelijk pusht.
+#     Bijwerken bij tokenrotatie: scripts/git/update-token-vingerafdruk.sh.
+#  2. Actions-secret FPS_PUSH_TOKEN — optionele kopie van hetzelfde PAT. Alleen
+#     als de sha256 overeenkomt met de vingerafdruk zegt een API-check op deze
+#     secret iets over het echte pushtoken; anders wordt dat expliciet gemeld
+#     en telt de secret-check niet mee.
+#
+# Benodigde GitHub Secrets voor de mail (dezelfde als deploy.yml):
 #   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET  — voor Graph-mail
 #   MAIL_FROM / MAIL_MAILBOX / RENE_ALERT_EMAIL
-#
-# Let op: het PAT moet als Actions-secret FPS_PUSH_TOKEN zijn ingesteld
-# (naast het Replit-secret GITHUB_TOKEN_PUSH). Zie PRODUCTION_RUNBOOK.md.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -25,77 +36,100 @@ on:
 
 jobs:
   check-token:
-    name: Controleer GITHUB_TOKEN_PUSH
+    name: Controleer pushtoken en pushketen
     runs-on: ubuntu-latest
 
     steps:
-      - name: Token valideren via GitHub API
-        id: token-check
+      - name: Repository uitchecken (voor de vingerafdruk)
+        uses: actions/checkout@v4
+
+      - name: Werkelijkheid meten en token toetsen
+        id: toets
         env:
-          # Let op: Actions-secretnamen mogen niet met GITHUB_ beginnen; daarom heet
-          # de Actions-secret FPS_PUSH_TOKEN (zelfde PAT als Replit-secret GITHUB_TOKEN_PUSH).
-          GITHUB_TOKEN_PUSH: ${{ secrets.FPS_PUSH_TOKEN }}
+          FPS_PUSH_TOKEN: ${{ secrets.FPS_PUSH_TOKEN }}
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          if [ -z "${GITHUB_TOKEN_PUSH:-}" ]; then
-            echo "FOUT: GITHUB_TOKEN_PUSH is niet ingesteld als GitHub Actions secret." >&2
-            echo "status=ontbreekt" >> "$GITHUB_OUTPUT"
-            exit 0
+          # ── 1. Vingerafdruk van het echte pushtoken inlezen ────────────────
+          VINGERAFDRUK_BESTAND="docs/push-token-vingerafdruk.json"
+          FP_SHA=""; FP_VERLOOPT=""
+          if [ -f "$VINGERAFDRUK_BESTAND" ]; then
+            FP_SHA=$(node -e "console.log(require('./${VINGERAFDRUK_BESTAND}').sha256||'')")
+            FP_VERLOOPT=$(node -e "console.log(require('./${VINGERAFDRUK_BESTAND}').verloopt_op||'')")
           fi
 
-          # Haal headers op inclusief de verloopdatum van het token
-          HEADERS_FILE=$(mktemp)
-          HTTP_CODE=$(curl -sS \
-            -o /tmp/gh-user.json \
-            -D "$HEADERS_FILE" \
-            -w "%{http_code}" \
-            -H "Authorization: token ${GITHUB_TOKEN_PUSH}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/user)
+          # ── 2. Werkelijkheid meten: laatste push + laatste geslaagde deploy ─
+          LAATSTE_PUSH=$(curl -fsS -H "Authorization: Bearer ${GH_API_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/commits/main" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);console.log(j.commit.committer.date+' — '+j.commit.message.split('\n')[0].slice(0,80))})" \
+            || echo "onbekend")
+          LAATSTE_DEPLOY=$(curl -fsS -H "Authorization: Bearer ${GH_API_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/actions/workflows/deploy.yml/runs?status=success&per_page=1" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const r=(JSON.parse(d).workflow_runs||[])[0];console.log(r?r.updated_at:'geen geslaagde run gevonden')})" \
+            || echo "onbekend")
+          echo "Laatste push op main: ${LAATSTE_PUSH}"
+          echo "Laatste geslaagde deploy: ${LAATSTE_DEPLOY}"
+          {
+            echo "laatste_push=${LAATSTE_PUSH}"
+            echo "laatste_deploy=${LAATSTE_DEPLOY}"
+          } >> "$GITHUB_OUTPUT"
 
-          EXPIRY=$(grep -i "github-authentication-token-expiration:" "$HEADERS_FILE" \
-            | tr -d '\r' | cut -d' ' -f2- | xargs || echo "")
-          rm -f "$HEADERS_FILE"
-
-          if [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
-            echo "FOUT: GITHUB_TOKEN_PUSH is verlopen of ongeldig (HTTP $HTTP_CODE)." >&2
-            cat /tmp/gh-user.json >&2 || true
-            echo "status=verlopen" >> "$GITHUB_OUTPUT"
-            echo "expiry=${EXPIRY}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "WAARSCHUWING: GitHub API gaf onverwachte HTTP-code: $HTTP_CODE" >&2
-            echo "status=onbekend" >> "$GITHUB_OUTPUT"
-            echo "expiry=${EXPIRY}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          LOGIN=$(node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).login||'?')}catch(e){console.log('?')}})" < /tmp/gh-user.json)
-          echo "Token is geldig. Gebruiker: ${LOGIN}"
-
-          if [ -n "${EXPIRY}" ]; then
-            EXPIRY_TS=$(date -d "${EXPIRY}" +%s 2>/dev/null || echo "0")
-            NOW_TS=$(date +%s)
-            DAYS_LEFT=$(( (EXPIRY_TS - NOW_TS) / 86400 ))
-            echo "Token verloopt over ${DAYS_LEFT} dagen (${EXPIRY})."
-            if [ "$DAYS_LEFT" -le 14 ]; then
-              echo "WAARSCHUWING: Token verloopt binnen 14 dagen." >&2
-              echo "status=verloopt_binnenkort" >> "$GITHUB_OUTPUT"
-            else
-              echo "status=geldig" >> "$GITHUB_OUTPUT"
-            fi
+          # ── 3. Secret-toets: alleen geldig als hij het échte token is ──────
+          STATUS="onbepaald"; EXPIRY="${FP_VERLOOPT}"; SECRET_ZEGT_IETS="nee"
+          if [ -z "${FPS_PUSH_TOKEN:-}" ]; then
+            STATUS="secret_ontbreekt"
+            echo "Actions-secret FPS_PUSH_TOKEN is niet gezet; live API-toets van het pushtoken is hier niet mogelijk." >&2
           else
-            # Geen vervaldatum in headers — token heeft geen ingestelde vervaldatum
-            echo "Geen vervaldatum gevonden in API-respons (mogelijk eeuwigdurend token)."
-            echo "status=geldig" >> "$GITHUB_OUTPUT"
+            SECRET_SHA=$(printf %s "$FPS_PUSH_TOKEN" | sha256sum | cut -d' ' -f1)
+            if [ -n "$FP_SHA" ] && [ "$SECRET_SHA" != "$FP_SHA" ]; then
+              STATUS="ander_token"
+              echo "FPS_PUSH_TOKEN is een ÁNDER token dan Replit gebruikt om te pushen (sha256 wijkt af van docs/push-token-vingerafdruk.json)." >&2
+            else
+              SECRET_ZEGT_IETS="ja"
+              HEADERS_FILE=$(mktemp)
+              HTTP_CODE=$(curl -sS -o /tmp/gh-user.json -D "$HEADERS_FILE" -w "%{http_code}" \
+                -H "Authorization: token ${FPS_PUSH_TOKEN}" https://api.github.com/user)
+              LIVE_EXPIRY=$(grep -i "github-authentication-token-expiration:" "$HEADERS_FILE" \
+                | tr -d '\r' | cut -d' ' -f2- | xargs || echo "")
+              rm -f "$HEADERS_FILE"
+              [ -n "$LIVE_EXPIRY" ] && EXPIRY="$LIVE_EXPIRY"
+              if [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
+                STATUS="verlopen"
+              elif [ "$HTTP_CODE" -ne 200 ]; then
+                STATUS="api_onbereikbaar"
+              else
+                STATUS="geldig"
+              fi
+            fi
           fi
-          echo "expiry=${EXPIRY}" >> "$GITHUB_OUTPUT"
 
-      - name: Waarschuwingsmail sturen bij verlopen of bijna-verlopen token
-        if: steps.token-check.outputs.status != 'geldig'
+          # ── 4. Vervaldatum bewaken (uit live check of vingerafdruk) ────────
+          if [ "$STATUS" = "geldig" ] || [ "$STATUS" = "secret_ontbreekt" ] || [ "$STATUS" = "ander_token" ]; then
+            if [ -n "$EXPIRY" ]; then
+              EXPIRY_TS=$(date -d "$EXPIRY" +%s 2>/dev/null || echo 0)
+              DAYS_LEFT=$(( (EXPIRY_TS - $(date +%s)) / 86400 ))
+              echo "Vervaldatum pushtoken: ${EXPIRY} (over ${DAYS_LEFT} dagen; bron: $([ "$SECRET_ZEGT_IETS" = ja ] && echo 'live API' || echo 'vingerafdrukbestand'))."
+              if [ "$EXPIRY_TS" -gt 0 ] && [ "$DAYS_LEFT" -le 0 ]; then
+                STATUS="verlopen_volgens_vingerafdruk"
+                [ "$SECRET_ZEGT_IETS" = "ja" ] && STATUS="verlopen"
+              elif [ "$EXPIRY_TS" -gt 0 ] && [ "$DAYS_LEFT" -le 14 ]; then
+                STATUS="verloopt_binnenkort"
+              fi
+              echo "days_left=${DAYS_LEFT}" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+          {
+            echo "status=${STATUS}"
+            echo "expiry=${EXPIRY}"
+            echo "secret_zegt_iets=${SECRET_ZEGT_IETS}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Eindstatus: ${STATUS}"
+
+      - name: Melding mailen (alleen bij een vastgesteld probleem)
+        if: ${{ !contains(fromJSON('["geldig"]'), steps.toets.outputs.status) }}
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -103,30 +137,94 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@fpsbrandpreventie.nl' }}
           MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
           RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
-          TOKEN_STATUS: ${{ steps.token-check.outputs.status }}
-          TOKEN_EXPIRY: ${{ steps.token-check.outputs.expiry }}
+          TOKEN_STATUS: ${{ steps.toets.outputs.status }}
+          TOKEN_EXPIRY: ${{ steps.toets.outputs.expiry }}
+          DAYS_LEFT: ${{ steps.toets.outputs.days_left }}
+          LAATSTE_PUSH: ${{ steps.toets.outputs.laatste_push }}
+          LAATSTE_DEPLOY: ${{ steps.toets.outputs.laatste_deploy }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
 
           ONTBREKENDE_SECRETS=""
-          [ -z "${AZURE_TENANT_ID:-}" ]   && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_TENANT_ID"
-          [ -z "${AZURE_CLIENT_ID:-}" ]   && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_CLIENT_ID"
+          [ -z "${AZURE_TENANT_ID:-}" ]     && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_TENANT_ID"
+          [ -z "${AZURE_CLIENT_ID:-}" ]     && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_CLIENT_ID"
           [ -z "${AZURE_CLIENT_SECRET:-}" ] && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} AZURE_CLIENT_SECRET"
-          [ -z "${RENE_EMAIL:-}" ]         && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} RENE_ALERT_EMAIL"
-
+          [ -z "${RENE_EMAIL:-}" ]          && ONTBREKENDE_SECRETS="${ONTBREKENDE_SECRETS} RENE_ALERT_EMAIL"
           if [ -n "$ONTBREKENDE_SECRETS" ]; then
-            echo "FOUT: De volgende GitHub Actions secrets ontbreken waardoor de waarschuwingsmail niet verstuurd kan worden:" >&2
-            for S in $ONTBREKENDE_SECRETS; do echo "  - $S" >&2; done
-            echo "" >&2
+            echo "FOUT: mail kan niet verstuurd worden; ontbrekende Actions-secrets:${ONTBREKENDE_SECRETS}" >&2
             echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
-            echo "" >&2
-            echo "Configureer de ontbrekende secrets via:" >&2
-            echo "  github.com/Futur-Holding-BV/FPS-Connect > Settings > Secrets and variables > Actions" >&2
-            echo "" >&2
-            echo "Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'Benodigde GitHub Actions secrets token-health-check')" >&2
             exit 1
           fi
+
+          # Feitenblok dat in élke melding meegaat — gemeten, niet aangenomen.
+          FEITEN="Vastgestelde feiten op het moment van deze controle:
+              - Laatste push op main: ${LAATSTE_PUSH:-onbekend}
+              - Laatste geslaagde productie-deploy: ${LAATSTE_DEPLOY:-onbekend}
+              - De productie-omgeving en de deploy-keten zelf gebruiken dit token niet;
+                reeds gepushte code wordt gewoon uitgerold en de site draait door."
+
+          GEVOLG="Gevolg als het pushtoken werkelijk ongeldig is: Replit kan geen nieuwe
+              wijzigingen naar GitHub pushen, dus er verschijnen geen nieuwe releases
+              totdat het token vernieuwd is. Er wordt niets gepauzeerd of stilgezet."
+
+          HERSTEL="Herstelstappen bij vernieuwen:
+              1. github.com/settings/personal-access-tokens → token 'Replit push FPS-Connect'
+                 verlengen of opnieuw aanmaken (Contents én Workflows: Read and write op
+                 Futur-Holding-BV/FPS-Connect).
+              2. Replit → Secrets → GITHUB_TOKEN_PUSH bijwerken.
+              3. In de Replit-shell: scripts/git/update-token-vingerafdruk.sh draaien en
+                 het gewijzigde docs/push-token-vingerafdruk.json laten committen/pushen.
+              4. Optioneel maar aanbevolen: GitHub → Settings → Secrets → Actions →
+                 FPS_PUSH_TOKEN dezelfde waarde geven, dan kan deze check het token live toetsen."
+
+          case "${TOKEN_STATUS}" in
+            verlopen)
+              ONDERWERP="FPS Connect: pushtoken is verlopen of ongeldig (live geverifieerd)"
+              KERN="Het token in FPS_PUSH_TOKEN — per vingerafdruk hetzelfde token als Replit
+              gebruikt om te pushen — wordt door de GitHub API geweigerd (401/403)." ;;
+            verlopen_volgens_vingerafdruk)
+              ONDERWERP="FPS Connect: pushtoken voorbij vastgelegde vervaldatum — controleer"
+              KERN="Volgens docs/push-token-vingerafdruk.json is het pushtoken op
+              ${TOKEN_EXPIRY:-?} verlopen. Een live toets was niet mogelijk (geen bruikbare
+              FPS_PUSH_TOKEN-kopie); toets dus de werkelijkheid: is de laatste push hieronder
+              recent, dan werkt het token mogelijk nog en is het vingerafdrukbestand verouderd." ;;
+            verloopt_binnenkort)
+              ONDERWERP="FPS Connect: pushtoken verloopt over ${DAYS_LEFT:-?} dagen"
+              KERN="Het pushtoken verloopt op ${TOKEN_EXPIRY:-onbekend}. Nu is er nog niets
+              aan de hand; vernieuw het token vóór die datum om te voorkomen dat nieuwe
+              wijzigingen GitHub niet meer bereiken." ;;
+            ander_token)
+              ONDERWERP="FPS Connect: tokenbewaking kijkt naar een ander token dan Replit gebruikt"
+              KERN="De Actions-secret FPS_PUSH_TOKEN bevat een ÁNDER token dan het token
+              waarmee Replit werkelijk pusht (sha256 wijkt af van docs/push-token-vingerafdruk.json).
+              Deze controle kan het echte pushtoken daardoor niet live toetsen; over de
+              geldigheid ervan wordt hier dus níéts beweerd. Vervaldatum volgens
+              vingerafdruk: ${TOKEN_EXPIRY:-onbekend}. Zet FPS_PUSH_TOKEN op dezelfde waarde
+              als de Replit-secret GITHUB_TOKEN_PUSH (herstelstap 4) om dit op te lossen." ;;
+            secret_ontbreekt)
+              ONDERWERP="FPS Connect: tokenbewaking kan pushtoken niet live toetsen (FPS_PUSH_TOKEN ontbreekt)"
+              KERN="De Actions-secret FPS_PUSH_TOKEN is niet gezet. Dat zegt niets over het
+              echte pushtoken — Replit pusht met de Replit-secret GITHUB_TOKEN_PUSH, die hier
+              niet leesbaar is. De bewaking valt terug op de vastgelegde vervaldatum:
+              ${TOKEN_EXPIRY:-onbekend}. Zet FPS_PUSH_TOKEN (herstelstap 4) voor live toetsing." ;;
+            *)
+              ONDERWERP="FPS Connect: tokenbewaking kon status niet bepalen (${TOKEN_STATUS})"
+              KERN="De controle kon de tokenstatus niet vaststellen (bijv. GitHub API tijdelijk
+              onbereikbaar). Geen conclusie over het pushtoken; zie de feiten hieronder." ;;
+          esac
+
+          BERICHT="${KERN}
+
+              ${FEITEN}
+
+              ${GEVOLG}
+
+              ${HERSTEL}
+
+              Actions-run: ${RUN_URL}"
+          # Inspringing (nodig voor geldige YAML-blokscalar) weer verwijderen
+          BERICHT=$(printf '%s\n' "$BERICHT" | sed 's/^              //')
 
           ACCESS_TOKEN=$(curl -fsS -X POST \
             "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
@@ -135,62 +233,11 @@ jobs:
             -d "scope=https://graph.microsoft.com/.default" \
             -d "grant_type=client_credentials" \
             | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
-
           if [ -z "$ACCESS_TOKEN" ]; then
-            echo "FOUT: Kon geen Graph-accesstoken ophalen. Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET (client-credentials stroom)." >&2
+            echo "FOUT: Kon geen Graph-accesstoken ophalen; melding niet verzonden." >&2
             echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
-            echo "Waarschuwingsmail kon niet verstuurd worden — token-probleem onzichtbaar voor René." >&2
             exit 1
           fi
-
-          case "${TOKEN_STATUS}" in
-            verlopen|ontbreekt)
-              ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH verlopen — automatische deploy GEPAUZEERD"
-              BERICHT="De GITHUB_TOKEN_PUSH die FPS Connect gebruikt om code naar GitHub te pushen is verlopen of ontbreekt.
-
-              Status: ${TOKEN_STATUS}
-              Actions-run: ${RUN_URL}
-
-              Automatische deploys naar connect.fps-one.nl zijn GEPAUZEERD totdat het token vernieuwd is.
-
-              Stappen om te herstellen:
-              1. Ga naar https://github.com/settings/personal-access-tokens
-              2. Maak een nieuw PAT aan (of verleng het bestaande) met 'Contents: Write' scope op de Futur-Holding-BV/FPS-Connect repo
-              3. Kopieer het nieuwe token
-              4. Update Replit: open de Replit-editor > Secrets > GITHUB_TOKEN_PUSH (vervang de waarde)
-              5. Update GitHub: ga naar github.com/Futur-Holding-BV/FPS-Connect > Settings > Secrets and variables > Actions > FPS_PUSH_TOKEN (vervang de waarde)
-              6. Verifieer: open een Replit-shell en voer uit: curl -sS -H \"Authorization: token JOUWTOKEN\" https://api.github.com/user
-
-              Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
-              ;;
-            verloopt_binnenkort)
-              ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH verloopt binnenkort — actie vereist"
-              BERICHT="De GITHUB_TOKEN_PUSH verloopt binnenkort. Vernieuw het token om een onderbreking in de automatische deploy-keten te voorkomen.
-
-              Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
-              Actions-run: ${RUN_URL}
-
-              Stappen:
-              1. Ga naar https://github.com/settings/personal-access-tokens
-              2. Verleng het bestaande token of maak een nieuw PAT aan met 'Contents: Write' scope op de Futur-Holding-BV/FPS-Connect repo
-              3. Update Replit Secrets: GITHUB_TOKEN_PUSH
-              4. Update GitHub Actions Secrets: FPS_PUSH_TOKEN
-
-              Zie ook: docs/PRODUCTION_RUNBOOK.md (sectie 'GITHUB_TOKEN_PUSH vernieuwen')."
-              ;;
-            *)
-              ONDERWERP="FPS Connect: GITHUB_TOKEN_PUSH status onbekend — controleer handmatig"
-              BERICHT="De dagelijkse token-gezondheidscheck kon de status van GITHUB_TOKEN_PUSH niet bepalen.
-
-              Status: ${TOKEN_STATUS}
-              Vervaldatum: ${TOKEN_EXPIRY:-onbekend}
-              Actions-run: ${RUN_URL}
-
-              Controleer handmatig of de automatische deploy-keten nog werkt via de GitHub Actions-tab."
-              ;;
-          esac
-          # Inspringing (nodig voor geldige YAML-blokscalar) weer verwijderen
-          BERICHT=$(printf '%s\n' "$BERICHT" | sed 's/^              //')
 
           PAYLOAD=$(MAIL_ONDERWERP="$ONDERWERP" MAIL_BERICHT="$BERICHT" node -e "
             const body = {
@@ -205,22 +252,15 @@ jobs:
             console.log(JSON.stringify(body));
           ")
 
-          HTTP_CODE=$(curl -sS \
-            -o /tmp/graph-response.json \
-            -w "%{http_code}" \
+          HTTP_CODE=$(curl -sS -o /tmp/graph-response.json -w "%{http_code}" \
             -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
-
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "Waarschuwingsmail verzonden naar René."
+            echo "Melding verzonden naar René (status: ${TOKEN_STATUS})."
           else
-            echo "FOUT: Verzenden van waarschuwingsmail gaf HTTP ${HTTP_CODE} — René heeft de melding niet ontvangen." >&2
-            # Foutdetails zonder credential-waarden (graph-response bevat geen secrets)
+            echo "FOUT: Verzenden gaf HTTP ${HTTP_CODE} — melding niet afgeleverd." >&2
             cat /tmp/graph-response.json >&2 || true
-            echo "" >&2
-            echo "=== TOKEN STATUS: ${TOKEN_STATUS} (verloopt: ${TOKEN_EXPIRY:-onbekend}) ===" >&2
-            echo "Controleer: MAIL_MAILBOX (${MAIL_MAILBOX}) moet send-as rechten hebben via de Azure-app." >&2
             exit 1
           fi

@@ -1,0 +1,7 @@
+{
+  "toelichting": "Vingerafdruk van het GitHub-pushtoken dat Replit werkelijk gebruikt (Replit-secret GITHUB_TOKEN_PUSH). Bijwerken bij elke tokenrotatie: scripts/git/update-token-vingerafdruk.sh. De sha256-hash is niet omkeerbaar en bevat geen geheim.",
+  "sha256": "7e734385310fdc72bf07f957398091ba2473688ad7350995536a01a160b18df6",
+  "github_login": "vinkrene-jpg",
+  "verloopt_op": "2027-08-17 15:24:53 UTC",
+  "vastgelegd_op": "2026-08-17T08:35:30Z"
+}

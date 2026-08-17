@@ -1,3 +1,17 @@
+## 2026-08-17 — Tokenbewaking herbouwd: meet feiten in plaats van aannames (valse "deploys GEPAUZEERD"-mail)
+
+- **Uitvoering:** herstel bewaking | **Kwaliteit:** hoog | **Risico:** laag (alleen bewaking/docs, geen applicatiecode)
+
+De dagelijkse token-gezondheidscheck mailde "GITHUB_TOKEN_PUSH ontbreekt — automatische deploys GEPAUZEERD" terwijl er die dag tien uitrollen slaagden. Twee fouten: (1) de check keek naar de Actions-secret FPS_PUSH_TOKEN — een ander token dan Replit werkelijk gebruikt om te pushen; (2) de meldtekst beweerde een toestand (deploys gepauzeerd) die nergens op getoetst was én feitelijk onmogelijk is: de deploy-keten loopt via SSH-secrets en gebruikt dit token helemaal niet.
+
+Herbouw van `.github/workflows/token-health-check.yml`:
+- **Vingerafdruk van het echte token**: Replit legt sha256 + vervaldatum van GITHUB_TOKEN_PUSH vast in `docs/push-token-vingerafdruk.json` (niet-geheim; bijwerken via nieuw `scripts/git/update-token-vingerafdruk.sh` bij elke rotatie). De check toetst FPS_PUSH_TOKEN alleen live als de sha256 matcht; anders status `ander_token` en géén bewering over het echte token.
+- **Werkelijkheidstoets**: elke melding bevat gemeten feiten (laatste push op main, laatste geslaagde deploy-run) en beschrijft het echte gevolg van een verlopen token: geen nieuwe pushes/releases — productie draait door, niets wordt gepauzeerd.
+- Statussen gescheiden: `geldig`, `verloopt_binnenkort`, `verlopen` (live geverifieerd), `verlopen_volgens_vingerafdruk`, `ander_token`, `secret_ontbreekt` — elk met een eigen, feitelijke mailtekst.
+- Runbook bijgewerkt (rotatiestappen incl. vingerafdruk, Workflows-scope-vereiste voor het PAT).
+
+Controle op de overige bewakingen: deploy-mails (OTA-skip/-fout, tijd- en schijfbewaking, faalmelding) en in-app bewakingen (mailbox-sync, contractbewaking, BEWAKING_02) melden alleen gemeten uitkomsten — geen andere ongetoetste toestand-claims gevonden.
+
 ## 2026-08-17 — MARKETING_01 Fase 1: marketingfundament (doelgroepen, sjablonen, campagnes, toestemming)
 
 - **Uitvoering:** Fase 1 van Deel A | **Kwaliteit:** hoog | **Risico:** laag (nieuwe module, bestaand gedrag ongewijzigd)

@@ -26,3 +26,8 @@ fatigue) and always exits 0 on its own errors so a broken notification path
 never masks the real deploy failure in the Actions UI.
 
 **DEPLOY_SNELHEID_01 (aug 2026):** OTA-stap alleen bij wijzigingen in artifacts/monteur-app, lib/api-client-react of lib/ontwerp én alleen --platform android; api/caddy-builds mét cache (migrate blijft --no-cache, schema-in-image). Tijdbewaking: serverscript print TIJD|stap|Ns, workflow tee't ssh-uitvoer en mailt via dezelfde Graph-flow bij >480s of SCHIJF_ALARM (schijf na prune nog >85%); uitrol wordt daarop niet afgebroken, mail komt altijd van de Actions-runner.
+
+## Bewaking mag alleen gemeten feiten melden (les 17 aug 2026)
+Token-health-check mailde "deploys GEPAUZEERD" terwijl 10 deploys slaagden: hij toetste de Actions-secret FPS_PUSH_TOKEN (ander token dan Replit's echte pushtoken) en beweerde ongetoetst een gevolg dat architectonisch onmogelijk was (deploy-keten loopt via SSH, niet via het PAT).
+**Regel:** een bewakingsmelding beschrijft (a) wat exact is vastgesteld, (b) gemeten werkelijkheid (laatste push, laatste geslaagde deploy-run) en (c) het feitelijke gevolg — nooit een aangenomen toestand.
+**Patroon:** het echte pushtoken leeft alleen in Replit; Actions verifieert identiteit via niet-geheime sha256-vingerafdruk in docs/push-token-vingerafdruk.json (bijwerken met scripts/git/update-token-vingerafdruk.sh bij rotatie). FPS_PUSH_TOKEN is optionele kopie; alleen bij hash-match zegt een live-toets iets. Het PAT kan geen Actions-secrets zetten (403) — secret-sync is handwerk van René.
