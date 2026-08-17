@@ -66,7 +66,7 @@ export default function JaarplanningPagina() {
   })).filter((m) => m.nationaal.length > 0 || m.bedrijf.length > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Jaarplanning</h1>

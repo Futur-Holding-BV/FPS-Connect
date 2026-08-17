@@ -42,7 +42,7 @@ export default function UitboardenPagina() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Uitboarden</h1>
         <p className="text-muted-foreground mt-1">

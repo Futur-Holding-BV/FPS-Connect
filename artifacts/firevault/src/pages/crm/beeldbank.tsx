@@ -196,7 +196,7 @@ export default function CrmBeeldbank() {
   };
 
   return (
-    <div className="space-y-4 p-4 md:p-6" data-testid="pagina-beeldbank">
+    <div className="max-w-6xl mx-auto space-y-4 p-4 md:p-6" data-testid="pagina-beeldbank">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 data-paginatitel className="text-xl font-semibold">Beeldbank</h1>

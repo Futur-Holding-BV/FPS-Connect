@@ -153,7 +153,7 @@ export default function JaarAfsluitingPagina() {
   const JAREN = [HUIDIG_JAAR - 2, HUIDIG_JAAR - 1, HUIDIG_JAAR];
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 data-paginatitel className="text-2xl font-bold">Jaarafsluiting verlof</h1>

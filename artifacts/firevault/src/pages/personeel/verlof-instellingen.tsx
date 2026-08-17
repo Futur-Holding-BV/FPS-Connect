@@ -190,7 +190,7 @@ export default function VerlofInstellingenPagina() {
   const JAREN = [HUIDIG_JAAR - 1, HUIDIG_JAAR, HUIDIG_JAAR + 1];
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 data-paginatitel className="text-2xl font-bold">Verlof-instellingen</h1>

@@ -92,7 +92,7 @@ export default function CapaciteitsplanningPagina() {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 data-paginatitel className="text-2xl font-bold">Capaciteitsplanning</h1>
         <p className="text-muted-foreground text-sm mt-1">

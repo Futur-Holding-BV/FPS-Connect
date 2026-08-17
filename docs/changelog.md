@@ -1,3 +1,8 @@
+## 2026-08-17 — Paginabreedte begrensd op brede schermen (Externen + 7 andere pagina's)
+
+- Externen werd paginabreed getrokken waardoor tekst en knoppen tegen de rechterrand stonden; de pagina is nu begrensd op dezelfde maximale breedte als de rest (max-w-6xl, gecentreerd).
+- Zelfde correctie doorgevoerd op: Capaciteitsplanning, Jaarafsluiting, Jaarplanning, Uitboarden, Verlof-instellingen, Werving-detail en Beeldbank — de enige pagina's die de breedtebegrenzing nog misten.
+
 ## 2026-08-17 — MOBIEL_01: onderbalk-ruimte, wijkende zwevende knop en tabelpatroon Organisaties
 
 - Onderbalk (Uitloggen/NIEUWS) dekt de laatste kaart niet meer af: pagina-onderruimte rekent nu balkhoogte + veilig gebied van de telefoon mee (viewport-fit=cover, env(safe-area-inset-bottom)); gemeten 31px vrije ruimte op 402px.
