@@ -34,6 +34,7 @@ import {
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
   Users2, Star,
+  Megaphone,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -831,7 +832,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/crm" || location.startsWith("/crm/")}
+                          isActive={(location === "/crm" || location.startsWith("/crm/")) && !location.startsWith("/crm/marketing")}
                         >
                           <Link href="/crm">
                             <Contact />
@@ -839,6 +840,22 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      {/* Marketing — zelfde rechtencontrole als de pagina: de Marketing-API
+                          vereist crm 3 (beheren) voor alle lees/beheer-endpoints; verzenden
+                          gate't de pagina intern op crm 4. */}
+                      {heeftNiveau("crm", 3) && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.startsWith("/crm/marketing")}
+                        >
+                          <Link href="/crm/marketing">
+                            <Megaphone />
+                            <span>Marketing</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      )}
                     </SidebarMenu>
               </TweeTrapsHoofdstuk>
               )}

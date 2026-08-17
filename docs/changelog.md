@@ -1,3 +1,9 @@
+## 2026-08-17 — Marketing-ingang in de zijbalk onder Commercie
+
+- **Uitvoering:** kleine navigatie-uitbreiding | **Kwaliteit:** hoog | **Risico:** laag (alleen sidebar)
+
+Marketing was alleen bereikbaar via de tegel op het CRM-dashboard. Nu staat er een eigen menu-item "Marketing" onder het hoofdstuk Commercie, zichtbaar vanaf **crm-niveau 3** — gelijk aan de Marketing-API die alle lees/beheer-endpoints op niveau 3 gate't (verzenden blijft niveau 4, dat regelt de pagina intern). Het CRM-item markeert /crm/marketing niet langer als "actief CRM".
+
 ## 2026-08-17 — Documentherkenning: nooit stil mislukken, grenzen opgeheven, contract-extractie met vindplaats, prod-binaries
 
 - **Uitvoering:** herstel + uitbreiding documentpijplijn | **Kwaliteit:** hoog | **Risico:** midden (Dockerfile-wijziging bewijsbaar bij volgende deploy)
