@@ -22,9 +22,14 @@ import {
 } from "@workspace/db/schema";
 import { and, eq, gte, lte, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
+import {
+  LOGO_STORAGE_PREFIX,
+  resolveWerkgeverLogoSubPath,
+  berekenWerkgeverLogoPad,
+} from "./werkgever-logo-pad";
 
-// DDS-kleur (huisstijl) — voldoende voor de kop.
-const DDS_KLEUR = "#F23B0D";
+// Fallback-kleur wanneer geen werkgever-branding beschikbaar is.
+const FALLBACK_KLEUR = "#F23B0D";
 
 const objectStorage = new ObjectStorageService();
 
@@ -114,6 +119,7 @@ interface MedewerkerRij {
   naam: string;
   geboortedatum: string | null;
   bsn: string | null;
+  werkgeverId: number | null;   // voor deterministische branding-selectie
   perDag: number[];             // index 0=ma … 6=zo
   weektotaal: number;
 }
@@ -135,6 +141,7 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
       naam: medewerkersTable.naam,
       geboortedatum: medewerkersTable.geboortedatum,
       bsn: medewerkersTable.bsn,
+      werkgeverId: medewerkersTable.werkgeverId,
     })
     .from(urenRegistratiesTable)
     .leftJoin(medewerkersTable, eq(urenRegistratiesTable.medewerkerId, medewerkersTable.id))
@@ -172,6 +179,7 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
         naam: u.naam ?? `Medewerker #${u.medewerkerId}`,
         geboortedatum: u.geboortedatum ?? null,
         bsn: u.bsn ?? null,
+        werkgeverId: u.werkgeverId ?? null,
         perDag: [0, 0, 0, 0, 0, 0, 0],
         weektotaal: 0,
       };
@@ -191,25 +199,72 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
   return { rijen: [...perMedewerker.values()].sort((a, b) => a.naam.localeCompare(b.naam)), urenTotaal };
 }
 
-// Werkgever-branding (zoals DDS): naam van de werkgever van de medewerkers op de
-// mandagstaat. Neemt de werkgever van de eerste medewerker met een gekoppelde
-// werkgever; minimaal de naam (§6c PDF-kop). Valt terug op "FPS".
-async function bepaalOnderaannemer(medewerkerNamen: string[]): Promise<string> {
-  // Zoek de werkgever via de medewerkers die op deze mandagstaat staan.
-  if (medewerkerNamen.length === 0) return "FPS";
-  const rows = await db
-    .select({ werkgeverNaam: werkgeversTable.naam })
-    .from(medewerkersTable)
-    .leftJoin(werkgeversTable, eq(medewerkersTable.werkgeverId, werkgeversTable.id))
-    .where(inArray(medewerkersTable.naam, medewerkerNamen));
-  const naam = rows.find((r) => r.werkgeverNaam)?.werkgeverNaam;
-  return naam ?? "FPS";
+interface WerkgeverBranding {
+  naam: string;
+  primaireKleur: string;
+  logoUrl: string | null;
+}
+
+// Werkgever-branding: naam, huisstijlkleur en logo van de dominante werkgever
+// op de mandagstaat. "Dominant" = werkgever met de meeste medewerkers in de
+// lijst; bij gelijke telling wint de laagste werkgever-ID (deterministisch).
+// Zoekt uitsluitend op werkgever-ID's uit de rijen — nooit op naam.
+async function bepaalWerkgeverBranding(rijen: MedewerkerRij[]): Promise<WerkgeverBranding> {
+  const fallback: WerkgeverBranding = { naam: "FPS", primaireKleur: FALLBACK_KLEUR, logoUrl: null };
+
+  // Tel per werkgever-ID hoeveel medewerkers op de mandagstaat staan.
+  const telPerWerkgever = new Map<number, number>();
+  for (const r of rijen) {
+    if (r.werkgeverId == null) continue;
+    telPerWerkgever.set(r.werkgeverId, (telPerWerkgever.get(r.werkgeverId) ?? 0) + 1);
+  }
+  if (telPerWerkgever.size === 0) return fallback;
+
+  // Kies de werkgever met de meeste medewerkers; bij gelijke telling: laagste ID.
+  const dominantId = [...telPerWerkgever.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+
+  const [werkgever] = await db
+    .select({
+      naam: werkgeversTable.naam,
+      primaireKleur: werkgeversTable.primaireKleur,
+      logoUrl: werkgeversTable.logoUrl,
+    })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.id, dominantId))
+    .limit(1);
+
+  if (!werkgever) return fallback;
+  return {
+    naam: werkgever.naam,
+    primaireKleur: werkgever.primaireKleur ?? FALLBACK_KLEUR,
+    logoUrl: werkgever.logoUrl ?? null,
+  };
+}
+
+// ── Logo-buffer download ──────────────────────────────────────────────────────
+// Werkgever-logos MOETEN opgeslagen zijn onder het "werkgevers/"-prefix zodat
+// server-side downloads nooit documenten met eigen gebouw/document-ACL kunnen
+// raken. Uploads buiten dit prefix worden geweigerd. De PATCH /werkgevers/:id
+// route migreert /objects/algemeen/<uuid>-paden naar werkgevers/<id>/logo.<ext>
+// op het moment van opslaan. Zie lib/werkgever-logo-pad.ts voor de pure helpers.
+
+async function haalLogoBuffer(logoUrl: string): Promise<Buffer | null> {
+  try {
+    const subPath = resolveWerkgeverLogoSubPath(logoUrl);
+    if (subPath === null) return null;
+    return await objectStorage.downloadBestandBuffer(subPath);
+  } catch {
+    return null;
+  }
 }
 
 const DAGKOPPEN = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
 function tekenPdf(opts: {
   onderaannemer: string;
+  primaireKleur: string;
+  logoBuffer: Buffer | null;
   opdrachtTitel: string;
   werknummer: string | null;
   opdrachtgever: string | null;
@@ -226,8 +281,18 @@ function tekenPdf(opts: {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    // ── Kop met FPS/werkgever-branding (DDS-kleur) ──
-    doc.fillColor(DDS_KLEUR).fontSize(18).font("Helvetica-Bold").text(opts.onderaannemer, { continued: false });
+    const merkKleur = opts.primaireKleur || FALLBACK_KLEUR;
+
+    // ── Kop: logo (indien beschikbaar) + werkgever-naam in merkkleur ──
+    if (opts.logoBuffer) {
+      try {
+        doc.image(opts.logoBuffer, doc.page.margins.left, doc.y, { height: 36, fit: [120, 36] });
+        doc.moveDown(2.8);
+      } catch {
+        // Logo kon niet worden gerenderd — sla over en ga door met tekstkop
+      }
+    }
+    doc.fillColor(merkKleur).fontSize(18).font("Helvetica-Bold").text(opts.onderaannemer, { continued: false });
     doc.fillColor("#000000").fontSize(14).font("Helvetica-Bold").text("Mandagenregister", { align: "left" });
     doc.moveDown(0.3);
 
@@ -298,7 +363,7 @@ function tekenPdf(opts: {
     const kolA = startX;
     const kolB = startX + helft + 20;
     doc.text("Opdrachtgever", kolA, y);
-    doc.text("Onderaannemer (FPS)", kolB, y);
+    doc.text(`Onderaannemer (${opts.onderaannemer})`, kolB, y);
     y += 40;
     doc.moveTo(kolA, y).lineTo(kolA + helft - 40, y).strokeColor("#000000").stroke();
     doc.moveTo(kolB, y).lineTo(kolB + helft - 40, y).strokeColor("#000000").stroke();
@@ -338,10 +403,13 @@ export async function genereerMandagstaat(opdrachtId: number, jaar: number, week
     gebouwNaam = g?.naam ?? null;
   }
 
-  const onderaannemer = await bepaalOnderaannemer(rijen.map((r) => r.naam));
+  const branding = await bepaalWerkgeverBranding(rijen);
+  const logoBuffer = branding.logoUrl ? await haalLogoBuffer(branding.logoUrl) : null;
 
   const pdf = await tekenPdf({
-    onderaannemer,
+    onderaannemer: branding.naam,
+    primaireKleur: branding.primaireKleur,
+    logoBuffer,
     opdrachtTitel: opdracht.titel,
     werknummer: opdracht.werknummer ?? null,
     opdrachtgever: opdracht.opdrachtgever ?? null,
