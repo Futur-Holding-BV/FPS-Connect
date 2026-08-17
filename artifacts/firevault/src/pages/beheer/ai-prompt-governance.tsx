@@ -440,7 +440,7 @@ export default function AiPromptGovernance() {
       <div className="flex items-center gap-3">
         <Shield className="w-7 h-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">AI Change Governance</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">AI Change Governance</h1>
           <p className="text-sm text-muted-foreground">Centrale beveiligingslaag voor alle AI-aanroepen — prompt-classificatie, injectie-detectie en wijzigingsbeheer.</p>
         </div>
       </div>

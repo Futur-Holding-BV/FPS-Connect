@@ -207,7 +207,7 @@ export default function EenheidsprijzenBeheer() {
         </Button>
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-semibold">Eenheidsprijzenbibliotheek</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Eenheidsprijzenbibliotheek</h1>
         </div>
         <div className="ml-auto flex gap-2">
           {magSysteemLezen && (

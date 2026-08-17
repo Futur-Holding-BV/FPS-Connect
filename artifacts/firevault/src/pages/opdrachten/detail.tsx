@@ -868,7 +868,7 @@ export default function OpdrachtDetailPagina() {
         )}
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold tracking-tight">{opdracht.titel}</h1>
+            <h1 data-paginatitel className="text-xl font-bold tracking-tight">{opdracht.titel}</h1>
             {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
             <ProcesBalk
               stappen={[{ sleutel: "actief", label: "Actief" }, { sleutel: "afgerond", label: "Afgerond" }]}

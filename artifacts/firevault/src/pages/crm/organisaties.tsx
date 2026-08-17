@@ -102,7 +102,7 @@ export default function OrganisatiesPagina() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Organisaties</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Organisaties</h1>
           <p className="text-xs text-muted-foreground">{gefilterd.length} van {orgs.length} organisaties</p>
         </div>
         <Button onClick={() => setNieuwOpen(true)} size="sm" className="gap-1">

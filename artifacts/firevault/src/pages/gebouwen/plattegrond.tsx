@@ -1510,7 +1510,7 @@ export default function Plattegrond() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight">{verdieping?.naam ?? "Plattegrond"}</h1>
+              <h1 data-paginatitel className="text-xl font-bold tracking-tight">{verdieping?.naam ?? "Plattegrond"}</h1>
               <Badge variant="outline" className="text-xs">{gebouw?.naam}</Badge>
             </div>
             <p className="text-xs text-muted-foreground">

@@ -297,7 +297,7 @@ export default function MarktspiegelPagina() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ScanSearch className="h-6 w-6" />
-          <h1 className="text-2xl font-semibold">Marktspiegel</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold">Marktspiegel</h1>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-1" /> Nieuw onderzoek

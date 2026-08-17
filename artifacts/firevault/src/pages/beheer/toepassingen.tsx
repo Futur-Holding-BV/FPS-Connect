@@ -96,7 +96,7 @@ export default function ToepassingenBeheer() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Toepassingen</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Toepassingen</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Beheer de label-catalogus van geteste producten en systemen per applicatie-type.
           </p>

@@ -150,7 +150,7 @@ export default function FactuurstroomBewakingPagina() {
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-semibold flex items-center gap-2">
             <Inbox className="h-6 w-6" /> Factuurbewaking
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

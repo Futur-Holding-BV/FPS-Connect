@@ -76,7 +76,7 @@ export default function FinancieelDashboardPagina() {
       <PaginaHulp pagina="facturen-dashboard" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Financieel overzicht</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Financieel overzicht</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Factuurverwerking en AccountView-koppeling
           </p>

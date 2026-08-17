@@ -43,7 +43,7 @@ export default function ContactpersonenPagina() {
           <Button variant="ghost" size="sm" className="gap-1 pl-1"><ArrowLeft className="w-4 h-4" /> CRM</Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Contactpersonen</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Contactpersonen</h1>
           <p className="text-xs text-muted-foreground">{(contacten as CrmContactpersoon[]).length} contactpersonen</p>
         </div>
       </div>

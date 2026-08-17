@@ -203,7 +203,7 @@ export default function ScabMailPage() {
         <div className="flex items-center gap-3">
           <Mail className="text-primary" size={24} />
           <div>
-            <h1 className="text-2xl font-semibold">Loonaanlevering salarismails</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">Loonaanlevering salarismails</h1>
             <p className="text-sm text-muted-foreground">
               AI genereert een conceptmail op basis van geaccordeerde mutaties — altijd eerst controleren vóór verzending
             </p>

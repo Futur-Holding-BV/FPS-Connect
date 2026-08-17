@@ -130,7 +130,7 @@ export default function KennisbibliothkeekPagina() {
           <BookOpen className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">Kennisbibliotheek</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Kennisbibliotheek</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Commerciële bedrijfskennis van FPS — leer hoe ervaren accountmanagers werken
           </p>

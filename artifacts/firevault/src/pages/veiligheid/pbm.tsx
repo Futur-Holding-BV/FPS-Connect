@@ -181,7 +181,7 @@ export default function PbmPagina() {
       <PaginaHulp pagina="veiligheid-pbm" />
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">PBM & Veiligheidsbeheer</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">PBM & Veiligheidsbeheer</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Persoonlijke beschermingsmiddelen en veiligheidskritische bedrijfsmiddelen
           </p>

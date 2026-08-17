@@ -194,7 +194,7 @@ export default function CrmBeeldbank() {
     <div className="space-y-4 p-4 md:p-6" data-testid="pagina-beeldbank">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Beeldbank</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Beeldbank</h1>
           <p className="text-sm text-muted-foreground">
             Echt beeld van eigen werk: spot-, opname- en inspectiefoto's plus handmatige uploads.
           </p>

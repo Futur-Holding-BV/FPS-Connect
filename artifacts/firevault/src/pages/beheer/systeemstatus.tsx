@@ -122,7 +122,7 @@ export default function SysteemstatusBeheer() {
     <div className="space-y-6 p-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Systeemstatus</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold tracking-tight">Systeemstatus</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Actuele versie-informatie en verbindingsstatus van de productieomgeving.
           </p>

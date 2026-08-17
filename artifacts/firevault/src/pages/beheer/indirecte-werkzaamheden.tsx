@@ -98,7 +98,7 @@ export default function IndirecteWerkzaamhedenPagina() {
     <div className="space-y-6 max-w-5xl mx-auto p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Indirecte werkzaamheden</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Indirecte werkzaamheden</h1>
           <p className="text-muted-foreground text-sm mt-1">Beheer de lijst met indirecte urencodes voor opdrachten.</p>
         </div>
       </div>

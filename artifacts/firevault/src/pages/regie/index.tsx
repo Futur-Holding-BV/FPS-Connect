@@ -114,7 +114,7 @@ export default function RegiePagina() {
         <div className="flex items-center gap-3">
           <ClipboardList className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-xl font-semibold">Regiewerk</h1>
+            <h1 data-paginatitel className="text-xl font-semibold">Regiewerk</h1>
             <p className="text-sm text-muted-foreground">Werkelijk bestede uren, materiaal en bewijsvoering</p>
           </div>
         </div>

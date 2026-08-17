@@ -134,7 +134,7 @@ export default function KlaarVoorExportPagina() {
       {/* Koptekst */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
             <ArrowUpRight className="h-6 w-6 text-primary" />
             Klaar voor AccountView
           </h1>

@@ -193,7 +193,7 @@ export default function VerlofInstellingenPagina() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Verlof-instellingen</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Verlof-instellingen</h1>
           <p className="text-muted-foreground text-sm mt-1">Aanvraagtermijnen, feestdagen en automatische goedkeuring</p>
         </div>
         <div className="flex items-center gap-2">

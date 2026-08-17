@@ -1542,7 +1542,7 @@ export default function WorkflowDesignerPagina() {
       <div className="flex shrink-0 items-center justify-between border-b bg-white px-6 py-4">
         <div className="flex items-center gap-3">
           <GitBranch className="h-5 w-5 text-orange-500" />
-          <h1 className="text-lg font-semibold text-gray-900">Workflow Designer</h1>
+          <h1 data-paginatitel className="text-lg font-semibold text-gray-900">Workflow Designer</h1>
 
           {workflows && workflows.length > 0 && (
             <DropdownMenu>

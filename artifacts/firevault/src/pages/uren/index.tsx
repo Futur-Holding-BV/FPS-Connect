@@ -793,7 +793,7 @@ export default function UrenPagina() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Urenregistratie</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Urenregistratie</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Overzicht van geregistreerde uren en weekstaten
           </p>

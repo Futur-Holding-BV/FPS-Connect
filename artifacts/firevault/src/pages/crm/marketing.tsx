@@ -80,7 +80,7 @@ export default function CrmMarketingPagina() {
       <div className="flex items-center gap-3">
         <Megaphone className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Marketing</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Marketing</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Doelgroepen, mailsjablonen en campagnes — alleen naar relaties met vastgelegde toestemming
           </p>

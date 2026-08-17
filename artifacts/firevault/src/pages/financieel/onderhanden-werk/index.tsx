@@ -187,7 +187,7 @@ export default function OnderhandenWerkPagina() {
       <PaginaHulp pagina="onderhanden-werk" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Onderhanden werk</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold">Onderhanden werk</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Financieel voortgangsoverzicht per project — peildatum bepaalt welke uren en facturen meegenomen worden.
           </p>

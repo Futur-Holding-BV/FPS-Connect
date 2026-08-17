@@ -127,7 +127,7 @@ export default function WervingDetailPagina() {
             <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold">{kandidaat.naam}</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">{kandidaat.naam}</h1>
             <p className="text-sm text-muted-foreground">
               {kandidaat.functie_naam ?? "Onbekende functie"} · via {kandidaat.kanaal}
               {kandidaat.email ? ` · ${kandidaat.email}` : ""}{kandidaat.telefoon ? ` · ${kandidaat.telefoon}` : ""}

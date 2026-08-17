@@ -38,7 +38,7 @@ export default function FeedbackBeheer() {
           <MessageSquarePlus className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Feedback</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Feedback</h1>
           <p className="text-sm text-muted-foreground">Reacties en beoordelingen van gebruikers</p>
         </div>
       </div>

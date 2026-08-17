@@ -111,7 +111,7 @@ export default function ModulesCalculatie() {
       {/* Paginakop */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Calculaties</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold text-foreground">Calculaties</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Kostprijsbegrotingen voor brandpreventie- en bouwwerkzaamheden
           </p>

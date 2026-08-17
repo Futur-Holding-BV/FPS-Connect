@@ -176,7 +176,7 @@ export default function ConcurrentenPagina() {
           <Button variant="ghost" size="sm" className="gap-1 pl-1"><ArrowLeft className="w-4 h-4" /> CRM</Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Concurrenten</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Concurrenten</h1>
           <p className="text-xs text-muted-foreground">{concurrenten.length} concurrenten getraceerd</p>
         </div>
         <Button onClick={() => { setVelden(leegVelden); setNieuwOpen(true); }} size="sm" className="gap-1">

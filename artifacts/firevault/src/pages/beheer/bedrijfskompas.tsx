@@ -1524,7 +1524,7 @@ export default function BedrijfskompasPage() {
       {/* Koptekst */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 data-paginatitel className="text-xl font-semibold flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" />
             Bedrijfskompas
           </h1>

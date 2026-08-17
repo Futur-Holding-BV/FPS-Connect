@@ -328,3 +328,19 @@
   color: #ffffff;
   caret-color: #ffffff;
 }
+
+/* NAV_01: gekleurd hoofdstuk-merkteken vóór de paginatitel. De layout zet
+   data-hoofdstuk + --hoofdstuk-actief op de inhoudcontainer wanneer de route
+   bij een menuhoofdstuk hoort; de paginatitel meldt zich opt-in aan met
+   data-paginatitel (nooit automatisch op elke h1 — geneste previews renderen
+   eigen h1's). Kleur = merkteken, nooit achtergrond met tekst. */
+[data-hoofdstuk] [data-paginatitel]::before {
+  content: "";
+  display: inline-block;
+  width: 0.32em;
+  height: 0.95em;
+  margin-right: 0.45em;
+  border-radius: 9999px;
+  background-color: hsl(var(--hoofdstuk-actief));
+  vertical-align: -0.08em;
+}

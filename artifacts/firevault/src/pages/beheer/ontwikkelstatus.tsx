@@ -581,7 +581,7 @@ export default function Ontwikkelstatus() {
           <ListChecks className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ontwikkelstatus</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Ontwikkelstatus</h1>
           <p className="text-sm text-muted-foreground">
             Per module: wat af is, wat in ontwikkeling is, wat nu testbaar is in de preview en wat nog gepland staat
           </p>

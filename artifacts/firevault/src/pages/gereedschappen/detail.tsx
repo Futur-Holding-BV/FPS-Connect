@@ -329,7 +329,7 @@ export default function GereedschapDetailPagina() {
               </span>
             )}
           </div>
-          <h1 className="text-xl font-bold">{gereedschap.omschrijving}</h1>
+          <h1 data-paginatitel className="text-xl font-bold">{gereedschap.omschrijving}</h1>
           {gereedschap.merk && (
             <p className="text-sm text-muted-foreground">
               {[gereedschap.merk, gereedschap.type].filter(Boolean).join(" ")}

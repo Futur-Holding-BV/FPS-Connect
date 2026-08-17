@@ -26,7 +26,7 @@ export default function UitvoeringOverzichtPagina() {
       <div className="flex items-center gap-3">
         <HardHat className="h-6 w-6 text-primary shrink-0" />
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold">Uitvoering</h1>
+          <h1 data-paginatitel className="text-xl md:text-2xl font-semibold">Uitvoering</h1>
           <p className="text-sm text-muted-foreground">
             Opdrachten die nu in uitvoering of oplevering zijn
           </p>

@@ -113,7 +113,7 @@ export default function SepaBestandenPagina() {
     <div className="p-6 space-y-6 max-w-5xl">
       <PaginaHulp pagina="sepa-bestanden" />
       <div>
-        <h1 className="text-2xl font-semibold">SEPA-betaalbestanden</h1>
+        <h1 data-paginatitel className="text-2xl font-semibold">SEPA-betaalbestanden</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Upload en beheer SEPA-betaalbestanden (PAIN.001 XML) voor salarisbetalingen.
         </p>

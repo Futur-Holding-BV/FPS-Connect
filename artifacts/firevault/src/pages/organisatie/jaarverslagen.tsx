@@ -139,7 +139,7 @@ export default function JaarverslagenPagina() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Jaarverslagen &amp; Rekeningen</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Jaarverslagen &amp; Rekeningen</h1>
           <p className="text-muted-foreground mt-1">Jaarrekeningen, jaarverslagen en financiële rapportages per boekjaar.</p>
         </div>
         <Button onClick={openNieuw}>

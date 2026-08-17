@@ -445,7 +445,7 @@ export default function BedrijfsdocumentenPagina() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bedrijfsdocumenten</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Bedrijfsdocumenten</h1>
           <p className="text-muted-foreground mt-1">
             Contracten, vergunningen, certificaten en overige interne bedrijfsdocumenten.
           </p>

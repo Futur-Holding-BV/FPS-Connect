@@ -132,7 +132,7 @@ export default function CrmMerkenkast() {
   return (
     <div className="space-y-4 p-4 md:p-6" data-testid="pagina-merkenkast">
       <div>
-        <h1 className="text-xl font-semibold">Merkenkast</h1>
+        <h1 data-paginatitel className="text-xl font-semibold">Merkenkast</h1>
         <p className="text-sm text-muted-foreground">
           De huisstijl per werkmaatschappij, uit dezelfde bron als de documentopmaak. Download losse
           bestanden of het volledige pakket voor CapCut, Canva en andere ontwerpprogramma's.

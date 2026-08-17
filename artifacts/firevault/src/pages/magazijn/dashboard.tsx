@@ -436,7 +436,7 @@ export default function MagazijnDashboard() {
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold">Magazijn dashboard</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">Magazijn dashboard</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>

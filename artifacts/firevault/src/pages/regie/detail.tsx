@@ -818,7 +818,7 @@ export default function RegieDetailPagina() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-semibold">{opdracht.titel}</h1>
+            <h1 data-paginatitel className="text-xl font-semibold">{opdracht.titel}</h1>
             <Badge className="bg-primary/10 text-primary border-primary/20 font-semibold text-xs">REGIE</Badge>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">

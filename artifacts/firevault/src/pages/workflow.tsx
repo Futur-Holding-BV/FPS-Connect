@@ -189,7 +189,7 @@ export default function WorkflowPagina() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Workflow</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Workflow</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Jouw werk in volgorde: sterren gaan voor, dan einddatum, dan gewicht, dan ouderdom.
             Elke plaats is uitgelegd. De volgorde staat vast — AI verandert die nooit.

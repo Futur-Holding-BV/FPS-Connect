@@ -61,7 +61,7 @@ export default function InkoopOverzicht() {
       <PaginaHulp pagina="inkoop-overzicht" />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <ShoppingCart className="h-6 w-6" />
             Inkoopoverzicht
           </h1>

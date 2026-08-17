@@ -183,7 +183,7 @@ export default function PicklijstDetailPagina() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold">
+          <h1 data-paginatitel className="text-xl font-semibold">
             {pick.opdracht_titel ?? "Picklijst"} #{pick.id}
           </h1>
           <div className="flex items-center gap-2 mt-1">

@@ -323,7 +323,7 @@ export default function VeiligheidMeldingenPagina() {
       <PaginaHulp pagina="veiligheid-meldingen" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <AlertTriangle className="w-6 h-6 text-orange-600" />
             Veiligheidsmeldingen
           </h1>

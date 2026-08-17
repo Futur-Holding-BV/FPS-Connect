@@ -402,7 +402,7 @@ export default function ObjectRechtenBeheer() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Object-rechten</h1>
+        <h1 data-paginatitel className="text-xl font-semibold">Object-rechten</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Verleen gebruikers extra toegang tot specifieke objecten (gebouwen, projecten, dossiers)
           onafhankelijk van hun module-bevoegdheden. Tijdelijke rechten vervallen automatisch.

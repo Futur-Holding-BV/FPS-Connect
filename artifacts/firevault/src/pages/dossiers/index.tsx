@@ -134,7 +134,7 @@ export default function DossiersPagina() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Organisatiedocumenten</h1>
+          <h1 data-paginatitel className="text-2xl font-bold text-foreground">Organisatiedocumenten</h1>
           <p className="text-sm text-muted-foreground">
             Handboeken, instructies, procedures en beleidsdocumenten voor de organisatie.
           </p>

@@ -157,7 +157,7 @@ export default function AuditTrailPagina() {
           <ScrollText className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audit trail</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Audit trail</h1>
           <p className="text-sm text-muted-foreground">
             Volledige geschiedenis van alle wijzigingen — {totaal.toLocaleString("nl-NL")} regels
           </p>

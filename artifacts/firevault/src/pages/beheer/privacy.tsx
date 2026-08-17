@@ -190,7 +190,7 @@ export default function BeheerPrivacyPagina() {
             <ShieldCheck className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Privacy by Design — AVG-matrix</h1>
+            <h1 data-paginatitel className="text-xl font-semibold">Privacy by Design — AVG-matrix</h1>
             <p className="text-sm text-muted-foreground">AVG-privacyvereisten per module in FPS Connect</p>
           </div>
         </div>

@@ -42,7 +42,7 @@ export default function MagazijnVoorraadPagina() {
     <div className="p-6 space-y-4">
       <PaginaHulp pagina="magazijn-voorraad" />
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Voorraad</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">Voorraad</h1>
         {kanSchrijven && (
           <Button size="sm" onClick={() => setShowCorrectie(true)}>
             <Plus className="h-4 w-4 mr-1" /> Correctie boeken

@@ -1400,7 +1400,7 @@ export default function MedewerkerDetailPagina() {
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-foreground truncate">{medewerker.naam}</h1>
+              <h1 data-paginatitel className="text-2xl font-bold text-foreground truncate">{medewerker.naam}</h1>
               <ImportBadge bron={medewerker.bron} importId={medewerker.import_id} />
             </div>
             <p className="text-sm text-muted-foreground">

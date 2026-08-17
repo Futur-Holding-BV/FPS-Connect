@@ -416,7 +416,7 @@ export default function VisualLibraryBeheer() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Visual Library</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Visual Library</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Goedgekeurde visuals voor de AI Visual Guidance Engine — tekeningen, referentiefoto's en animaties.
           </p>

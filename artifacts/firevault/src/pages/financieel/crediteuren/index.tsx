@@ -326,7 +326,7 @@ export default function CredieurenInboxPagina() {
       <PaginaHulp pagina="crediteuren" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Crediteuren — Inbox</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold tracking-tight">Crediteuren — Inbox</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Beoordeel inkomende facturen voordat ze naar de boekhouding gaan.
           </p>

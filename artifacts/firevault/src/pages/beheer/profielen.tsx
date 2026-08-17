@@ -188,7 +188,7 @@ export default function ProfielenBeheer() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Bevoegdheidsprofielen</h1>
+            <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Bevoegdheidsprofielen</h1>
             <p className="text-sm text-muted-foreground">
               Presets met vaste bevoegdheden per module, toepasbaar bij het bewerken van gebruikers
             </p>

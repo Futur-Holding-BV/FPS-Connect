@@ -151,7 +151,7 @@ export default function OffertesPagina() {
       <PaginaHulp pagina="offertes" />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Offertes</h1>
+          <h1 data-paginatitel className="text-2xl font-bold text-foreground">Offertes</h1>
           <p className="text-sm text-muted-foreground">
             Offertes voorbereiden — begrotingsregels uit spots, handmatig afronden. Geen automatische verzending.
           </p>

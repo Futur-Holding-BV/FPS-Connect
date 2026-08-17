@@ -106,7 +106,7 @@ export default function MagazijnRetourenPagina() {
   return (
     <div className="p-6 space-y-6">
       <PaginaHulp pagina="magazijn-retouren" />
-      <h1 className="text-2xl font-bold">Retour</h1>
+      <h1 data-paginatitel className="text-2xl font-bold">Retour</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>

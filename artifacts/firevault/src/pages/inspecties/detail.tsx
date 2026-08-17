@@ -484,7 +484,7 @@ export default function InspectieDetail() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold">
+            <h1 data-paginatitel className="text-xl font-bold">
               {TYPE_LABEL[inspectie.type ?? ""] ?? inspectie.type}
             </h1>
             <Badge variant="outline" className={STATUS_KLEUR[inspectie.status ?? ""]}>

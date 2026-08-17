@@ -224,7 +224,7 @@ export default function DeclaratieDetailPagina() {
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-xl font-bold flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             Declaratie #{declaratie.id}
           </h1>

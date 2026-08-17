@@ -343,7 +343,7 @@ export default function MagazijnVoorraadwaardePagina() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Voorraadwaarde</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Voorraadwaarde</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Totale inkoopwaarde van de huidige voorraad, uitgesplitst per categorie, leverancier en locatie.
           </p>

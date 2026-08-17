@@ -569,7 +569,7 @@ export default function VeiligheidToolboxenPagina() {
       {/* Koptekst */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
             Toolbox Center
           </h1>

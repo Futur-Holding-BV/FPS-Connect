@@ -386,7 +386,7 @@ export default function AiAanroepenPagina() {
           <Bot className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI-aanroeplogging</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">AI-aanroeplogging</h1>
           <p className="text-sm text-muted-foreground">
             Overzicht van AI-aanroepen, gebruikte context en voorstellen
           </p>

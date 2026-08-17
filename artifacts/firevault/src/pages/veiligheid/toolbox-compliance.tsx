@@ -124,7 +124,7 @@ export default function ToolboxCompliancePagina() {
       {/* Koptekst */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-primary" />
             Toolbox Compliance
           </h1>

@@ -876,7 +876,7 @@ export default function ProposalStudio() {
             </Link>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
+                <h1 data-paginatitel className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
                 {/* Procesbalk (herbruikbaar patroon Projectaanpak) */}
                 <ProcesBalk
                   stappen={[

@@ -335,7 +335,7 @@ export default function DocumentopmaakOrganisatie() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-8">
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 px-8 py-10 text-center max-w-md">
-          <h1 className="text-lg font-bold text-slate-900 mb-2">Geen toegang</h1>
+          <h1 data-paginatitel className="text-lg font-bold text-slate-900 mb-2">Geen toegang</h1>
           <p className="text-sm text-slate-500">
             Documentopmaak is beschikbaar voor hoofdbeheerders. Vraag een hoofdbeheerder om toegang.
           </p>

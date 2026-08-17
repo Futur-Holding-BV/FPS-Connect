@@ -194,7 +194,7 @@ export default function SalarisarchiefBatchDetailPagina() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold">{batch.omschrijving ?? `Batch #${batch.id}`}</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">{batch.omschrijving ?? `Batch #${batch.id}`}</h1>
           <p className="text-sm text-muted-foreground">
             {batch.periode_jaar ? `${MAANDEN[batch.periode_maand ?? 1]} ${batch.periode_jaar} · ` : ""}
             {batch.totaal_bestanden} bestanden · Geupload door {batch.uploader_naam ?? "onbekend"} op {fmtDatum(batch.aangemaakt_op)}

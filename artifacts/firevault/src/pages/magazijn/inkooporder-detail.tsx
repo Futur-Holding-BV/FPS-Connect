@@ -154,7 +154,7 @@ export default function InkooporderDetailPagina() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold">{order.nummer ?? `Inkooporder #${order.id}`}</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">{order.nummer ?? `Inkooporder #${order.id}`}</h1>
           <div className="flex items-center gap-2 mt-1">
             <Badge className={STATUS_KLEUR[order.status] ?? "bg-gray-100 text-gray-700"}>
               {STATUS_LABELS[order.status] ?? order.status}

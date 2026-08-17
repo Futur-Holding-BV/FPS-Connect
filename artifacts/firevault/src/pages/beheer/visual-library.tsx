@@ -723,7 +723,7 @@ export default function VisualLibraryBeheer() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Visual Library</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Visual Library</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Beheer goedgekeurde visuals voor de Visual Guidance Engine (VGE).
             Alleen actieve visuals worden aan monteurs getoond.

@@ -265,7 +265,7 @@ export default function VeiligheidLmraPagina() {
       <PaginaHulp pagina="veiligheid-lmra" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <ClipboardCheck className="w-6 h-6 text-orange-600" />
             LMRA
           </h1>

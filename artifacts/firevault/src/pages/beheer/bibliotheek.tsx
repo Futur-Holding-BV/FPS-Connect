@@ -1903,7 +1903,7 @@ export default function Bibliotheek() {
           <BookOpen className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bibliotheek</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Bibliotheek</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Centrale stamgegevens voor applicaties, productsoorten, fabrikanten en brand- en rookwerendheidsklassen.
             Items uit de bibliotheek zijn beschikbaar als keuzemenu bij het registreren van concrete spots in gebouwen.

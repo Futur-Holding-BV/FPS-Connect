@@ -1098,7 +1098,7 @@ export default function WerkInboxPagina() {
       {/* Paginaheader */}
       <div className="px-6 py-4 border-b flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Werkinbox</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Werkinbox</h1>
           {ongelezen > 0 && (
             <Badge className="bg-primary text-primary-foreground">{ongelezen} ongelezen</Badge>
           )}

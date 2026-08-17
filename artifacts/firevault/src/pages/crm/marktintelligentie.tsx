@@ -168,7 +168,7 @@ export default function MarktintelligentiePagina() {
           <Button variant="ghost" size="sm" className="gap-1 pl-1"><ArrowLeft className="w-4 h-4" /> CRM</Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Marktinzicht</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Marktinzicht</h1>
           <p className="text-xs text-muted-foreground">{gefilterd.length} signalen & berichten</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAiScan} disabled={scan.isPending}>

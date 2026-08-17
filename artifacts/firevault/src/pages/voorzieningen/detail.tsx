@@ -330,7 +330,7 @@ export default function VoorzieningDetail() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight">{voorziening.objectnummer}</h1>
+            <h1 data-paginatitel className="text-2xl font-bold tracking-tight">{voorziening.objectnummer}</h1>
             <Badge variant="outline" className={statusKleur[voorziening.status ?? "concept"]}>
               {voorziening.status === "goedgekeurd" ? <CheckCircle className="h-3 w-3 mr-1" /> : voorziening.status === "afgekeurd" ? <AlertCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
               {statusLabel[voorziening.status ?? "concept"] ?? voorziening.status}

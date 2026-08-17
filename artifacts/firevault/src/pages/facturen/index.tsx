@@ -144,7 +144,7 @@ export default function FacturenPagina() {
       {/* Koptekst */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
             <Receipt className="h-6 w-6 text-primary" />
             Factuurverwerking
           </h1>

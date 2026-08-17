@@ -44,7 +44,7 @@ export default function UitboardenPagina() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Uitboarden</h1>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Uitboarden</h1>
         <p className="text-muted-foreground mt-1">
           Medewerkers formeel uitschrijven uit de organisatie. Het uitboardingproces legt de uitdienstdatum vast,
           genereert een arbeidsgetuigenis en deactiveert het account.

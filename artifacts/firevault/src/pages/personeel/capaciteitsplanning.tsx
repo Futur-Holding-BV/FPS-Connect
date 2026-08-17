@@ -94,7 +94,7 @@ export default function CapaciteitsplanningPagina() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Capaciteitsplanning</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">Capaciteitsplanning</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Bezettingsgraad, verlof en ziektetrends per week
         </p>

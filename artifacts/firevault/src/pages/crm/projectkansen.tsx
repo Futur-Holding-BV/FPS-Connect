@@ -121,7 +121,7 @@ export default function ProjectkansenPagina() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Projectkansen</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Projectkansen</h1>
           <p className="text-xs text-muted-foreground">{gefilterd.length} kansen &bull; Gewogen pijplijn: {euro(totaalGewogen)}</p>
         </div>
         <Button onClick={() => setNieuwOpen(true)} size="sm" className="gap-1">

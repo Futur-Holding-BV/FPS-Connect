@@ -356,7 +356,7 @@ export default function GoedkeuringenDashboard() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <LayoutDashboard className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold">Goedkeuringen — dashboard</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Goedkeuringen — dashboard</h1>
         </div>
         {magBewaking && (
           <TooltipProvider delayDuration={200}>

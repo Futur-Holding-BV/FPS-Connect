@@ -84,7 +84,7 @@ export default function MailWachtrijBeheer() {
   return (
     <div className="space-y-6 p-6" data-testid="pagina-mail-wachtrij">
       <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
+        <h1 data-paginatitel className="text-2xl font-semibold flex items-center gap-2">
           <ShieldCheck className="h-6 w-6" /> Mail-wachtrij
         </h1>
         <p className="text-muted-foreground mt-1">

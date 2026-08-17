@@ -720,7 +720,7 @@ export default function GoedkeuringsbeleidBeheer() {
       <div className="flex items-center gap-3">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">Goedkeuringsbeleid</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Goedkeuringsbeleid</h1>
           <p className="text-sm text-muted-foreground">
             Financiële grenzen, vier-ogen-regels en goedkeuringsaanvragen voor offertes, facturen, inkoop en overige documenten
           </p>

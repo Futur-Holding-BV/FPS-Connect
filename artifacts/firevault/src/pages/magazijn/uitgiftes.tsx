@@ -221,7 +221,7 @@ export default function MagazijnUitgiftesPagina() {
   return (
     <div className="p-6 space-y-6">
       <PaginaHulp pagina="magazijn-uitgiftes" />
-      <h1 className="text-2xl font-bold">Uitgifte</h1>
+      <h1 data-paginatitel className="text-2xl font-bold">Uitgifte</h1>
 
       {voorraadFout && (
         <Alert variant="destructive">

@@ -566,7 +566,7 @@ export default function PersoneelPagina() {
     <div className="max-w-6xl mx-auto space-y-6">
       <PaginaHulp pagina="personeel" />
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Personeel / HRM</h1>
+        <h1 data-paginatitel className="text-2xl font-bold text-foreground">Personeel / HRM</h1>
         <p className="text-sm text-muted-foreground">
           Medewerkers, functiehuis, opleidingen en verlof binnen de FPS Groep.
         </p>

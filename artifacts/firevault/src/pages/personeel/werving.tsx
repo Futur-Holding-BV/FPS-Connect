@@ -105,7 +105,7 @@ export default function WervingPagina() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Werving</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold">Werving</h1>
           <p className="text-sm text-muted-foreground">
             Registratie en gespreksvoorbereiding. De AI toetst het cv aan de functie en stelt vragen op — zij geeft nooit een oordeel of score.
           </p>

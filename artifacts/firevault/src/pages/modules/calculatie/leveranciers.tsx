@@ -243,7 +243,7 @@ export default function ModulesCalculatieLeveranciers() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Leveranciers & artikelen</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold text-slate-900">Leveranciers & artikelen</h1>
           <p className="text-sm text-muted-foreground">Beheer uw leverancierslijsten en productcatalogus</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => navigate("/modules/calculatie/eenheidsprijzen")}>

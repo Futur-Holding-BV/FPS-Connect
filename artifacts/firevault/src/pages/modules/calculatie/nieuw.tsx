@@ -153,7 +153,7 @@ export default function ModulesCalculatieNieuw() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Nieuwe calculatie</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold text-slate-900">Nieuwe calculatie</h1>
           <p className="text-sm text-muted-foreground">Vul de basisgegevens in om te beginnen</p>
         </div>
       </div>

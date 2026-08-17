@@ -59,7 +59,7 @@ export default function MagazijnArtikelenPagina() {
     <div className="p-6 space-y-4">
       <PaginaHulp pagina="magazijn-artikelen" />
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Artikelen</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">Artikelen</h1>
         <div className="flex items-center gap-2">
           {geselecteerd.size > 0 && (
             <Button variant="outline" size="sm" onClick={drukBarcodesAf}>

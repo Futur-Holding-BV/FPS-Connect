@@ -51,7 +51,7 @@ export default function JarrekeningPagina() {
           <div>
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-muted-foreground" />
-              <h1 className="text-2xl font-semibold">Jaarrekening — OHW</h1>
+              <h1 data-paginatitel className="text-2xl font-semibold">Jaarrekening — OHW</h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Onderhanden werk per 31 december — balanspost voor de jaarrekening.

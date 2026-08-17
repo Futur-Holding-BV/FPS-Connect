@@ -253,7 +253,7 @@ export default function GereedschappenPagina() {
         <div className="flex items-center gap-3">
           <Wrench className="h-6 w-6 text-[#F23B0D]" />
           <div>
-            <h1 className="text-xl font-bold">Gereedschappen</h1>
+            <h1 data-paginatitel className="text-xl font-bold">Gereedschappen</h1>
             <p className="text-sm text-muted-foreground">Centraal register voor machines en gereedschappen</p>
           </div>
         </div>

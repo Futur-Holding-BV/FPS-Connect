@@ -304,7 +304,7 @@ export default function ContractDetail() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold">{contract.contractnummer}</h1>
+            <h1 data-paginatitel className="text-2xl font-bold">{contract.contractnummer}</h1>
             <Badge variant="outline" className={statusKleur[contract.status] ?? ""}>
               {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
             </Badge>

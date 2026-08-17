@@ -30,7 +30,7 @@ export default function OnderhoudModule() {
         <div>
           <div className="flex items-center gap-2">
             <Wrench className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Onderhoud</h1>
+            <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Onderhoud</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             Contractbeheer, werkbonnen en onderhoudsplanning

@@ -75,7 +75,7 @@ export default function PlanningMedewerkers() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Medewerkers planning</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold text-slate-900">Medewerkers planning</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Overzicht van actieve medewerkers en hun beschikbaarheid
           </p>

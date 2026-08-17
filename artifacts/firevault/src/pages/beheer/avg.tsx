@@ -833,7 +833,7 @@ export default function AvgBeheer() {
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-center gap-2">
         <ShieldAlert className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-semibold">AVG-verzoeken</h1>
+        <h1 data-paginatitel className="text-xl font-semibold">AVG-verzoeken</h1>
       </div>
 
       {/* Statistieken */}

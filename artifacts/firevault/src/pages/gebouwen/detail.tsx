@@ -771,7 +771,7 @@ export default function GebouwDetail() {
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight leading-tight">
+            <h1 data-paginatitel className="text-2xl font-bold tracking-tight leading-tight">
               {gebouw.projectnummer
                 ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`
                 : gebouw.naam}

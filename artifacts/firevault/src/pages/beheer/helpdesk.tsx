@@ -51,7 +51,7 @@ export default function HelpdeskBeheer() {
           <LifeBuoy className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Helpdesk</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Helpdesk</h1>
           <p className="text-sm text-muted-foreground">Vragen en verzoeken van gebruikers beheren</p>
         </div>
       </div>

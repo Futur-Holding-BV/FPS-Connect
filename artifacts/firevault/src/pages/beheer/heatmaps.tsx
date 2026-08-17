@@ -25,7 +25,7 @@ export default function Heatmaps() {
           <Activity className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Heatmaps</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Heatmaps</h1>
           <p className="text-sm text-muted-foreground">
             Visualisatie van klik- en muisgedrag van gebruikers per pagina
           </p>

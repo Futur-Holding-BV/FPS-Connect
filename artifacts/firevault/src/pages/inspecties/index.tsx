@@ -66,7 +66,7 @@ export default function Inspecties() {
       <PaginaHulp pagina="inspecties" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("inspecties.titel")}</h1>
+          <h1 data-paginatitel className="text-3xl font-bold tracking-tight">{t("inspecties.titel")}</h1>
           <p className="text-muted-foreground mt-1">{t("inspecties.ondertitel")}</p>
         </div>
         <Button asChild>

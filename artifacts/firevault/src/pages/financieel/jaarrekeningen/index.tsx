@@ -518,7 +518,7 @@ export default function JaarrekeningenValidatiePagina() {
           <div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-              <h1 className="text-2xl font-semibold">Jaarrekeningen</h1>
+              <h1 data-paginatitel className="text-2xl font-semibold">Jaarrekeningen</h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Vertrouwelijke (geconsolideerde) jaarrekeningen — controleer en keur de geëxtraheerde kerncijfers goed.

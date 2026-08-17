@@ -82,7 +82,7 @@ export default function OudMedewerkersPagina() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Oud-medewerkers</h1>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Oud-medewerkers</h1>
         <p className="text-muted-foreground mt-1">
           Voormalige medewerkers die zijn uitgeboardd of inactief zijn gesteld. Gegevens zoals
           verlof, loon en NAW blijven bewaard totdat ze worden dichtgezet.

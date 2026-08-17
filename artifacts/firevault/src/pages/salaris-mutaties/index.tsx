@@ -291,7 +291,7 @@ export default function SalarisMutatiesPage() {
         <div className="flex items-center gap-3">
           <ClipboardList className="text-primary" size={24} />
           <div>
-            <h1 className="text-2xl font-semibold">Salarismutaties</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">Salarismutaties</h1>
             <p className="text-sm text-muted-foreground">Mutaties per loonperiode verzamelen, accorderen en doorsturen naar de loonverwerker</p>
           </div>
         </div>

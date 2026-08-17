@@ -146,7 +146,7 @@ export default function PrijsafsprakenBeheerPagina() {
             <Handshake className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Prijsafspraken</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">Prijsafspraken</h1>
             <p className="text-sm text-muted-foreground">
               Afgesproken jaarprijzen per leverancier. Een afspraak wordt nooit
               overschreven; een gewijzigde prijs of periode is een nieuwe afspraak.

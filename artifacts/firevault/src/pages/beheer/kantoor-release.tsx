@@ -508,7 +508,7 @@ export default function KantoorReleaseDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Kantoor Release Dashboard</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Kantoor Release Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Versie- en releasebeheer van FPS Connect voor kantoorgebruik
           </p>

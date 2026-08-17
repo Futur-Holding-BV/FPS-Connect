@@ -382,7 +382,7 @@ export default function MailboxenBeheer() {
   return (
     <div className="p-6 max-w-4xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold flex items-center gap-2">
+        <h1 data-paginatitel className="text-xl font-semibold flex items-center gap-2">
           <Inbox className="h-5 w-5" /> Gedeelde mailboxen
         </h1>
         <p className="text-sm text-muted-foreground mt-1">

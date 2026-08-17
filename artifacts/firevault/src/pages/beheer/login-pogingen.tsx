@@ -32,7 +32,7 @@ export default function LoginPogingen() {
           <ShieldAlert className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Login-pogingen</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Login-pogingen</h1>
           <p className="text-sm text-muted-foreground">
             Overzicht van aanmeldingen met risicosignalen voor nieuw apparaat of IP-adres
           </p>

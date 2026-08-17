@@ -187,7 +187,7 @@ export default function SnagstreamDetailPagina() {
             <div className="flex items-start gap-3">
               <FileArchive className="h-8 w-8 text-primary mt-0.5 shrink-0" />
               <div>
-                <h1 className="text-xl font-semibold text-slate-900">{r.bestandsnaam}</h1>
+                <h1 data-paginatitel className="text-xl font-semibold text-slate-900">{r.bestandsnaam}</h1>
                 <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
                   {r.opdrachtgever && <span>{r.opdrachtgever}</span>}
                   {r.project_naam && <span>· {r.project_naam}</span>}

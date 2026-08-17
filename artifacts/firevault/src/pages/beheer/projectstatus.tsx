@@ -194,7 +194,7 @@ export default function ProjectstatusPagina() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Projectstatus</h1>
+        <h1 data-paginatitel className="text-2xl font-semibold">Projectstatus</h1>
         <p className="text-sm text-muted-foreground mt-1">
           FPS Connect — technische en functionele status. Bijgewerkt: juni 2026.
           Volledig dossier: <code className="text-xs bg-muted px-1 py-0.5 rounded">docs/PROJECT_INTELLIGENCE_DOSSIER.md</code>

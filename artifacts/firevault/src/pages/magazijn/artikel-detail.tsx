@@ -100,7 +100,7 @@ export default function MagazijnArtikelDetailPagina() {
           <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Terug</Button>
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <Package className="h-6 w-6 text-muted-foreground" />
             {artikel.naam}
             {artikel.code && <span className="text-base text-muted-foreground font-normal">({artikel.code})</span>}

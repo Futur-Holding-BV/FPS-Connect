@@ -127,7 +127,7 @@ export default function OpnameDetailPagina() {
             <ClipboardList className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{opname.naam}</h1>
+            <h1 data-paginatitel className="text-xl font-bold">{opname.naam}</h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
               {opname.gebouw_naam && (
                 <span className="flex items-center gap-1">

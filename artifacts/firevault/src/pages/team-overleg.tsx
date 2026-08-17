@@ -324,7 +324,7 @@ export default function TeamOverlegPagina() {
   if (geenToegang) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Team &amp; overleg</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">Team &amp; overleg</h1>
         <Alert variant="destructive">
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle>Geen toegang</AlertTitle>

@@ -54,7 +54,7 @@ export default function UitzendbureauKoppelingenPagina() {
   return (
     <div className="space-y-6 p-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold">Uitzendbureau-koppelingen</h1>
+        <h1 data-paginatitel className="text-2xl font-semibold">Uitzendbureau-koppelingen</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Vrije-tekstnamen van uitzendbureaus en onderaannemers die nog niet aan een organisatie
           in het CRM zijn gekoppeld. Kies per naam de juiste organisatie; bij twijfel niet koppelen.

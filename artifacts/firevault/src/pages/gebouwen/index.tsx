@@ -411,7 +411,7 @@ export default function Gebouwen() {
       <PaginaHulp pagina="gebouwen" />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("gebouwen.titel")}</h1>
+          <h1 data-paginatitel className="text-3xl font-bold tracking-tight">{t("gebouwen.titel")}</h1>
           <p className="text-muted-foreground mt-1">{t("gebouwen.ondertitel")}</p>
         </div>
         <div className="flex w-full sm:w-auto items-center gap-3">

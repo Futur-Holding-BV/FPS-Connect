@@ -104,7 +104,7 @@ export default function AkDashboardPagina() {
     <div className="space-y-6 p-6" data-testid="pagina-ak-dashboard">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Algemene kosten</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold">Algemene kosten</h1>
           <p className="text-sm text-muted-foreground">
             AK-verhouding per boekjaar en werkmaatschappij — percentage berekend over de productie
             (gefactureerde omzet + mutatie onderhanden projecten), niet alleen over gefactureerde omzet.

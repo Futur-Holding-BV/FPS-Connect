@@ -171,7 +171,7 @@ export default function WerkmaatschappijPagina() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Werkmaatschappijen</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Werkmaatschappijen</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Werkmaatschappijen binnen de FPS Groep. Medewerkers, functies, verlofsoorten en
             documenten worden aan een werkmaatschappij gekoppeld.

@@ -658,7 +658,7 @@ export default function AiLogPagina() {
       <div className="flex items-center gap-3">
         <Bot className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">AI-aanroepen</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">AI-aanroepen</h1>
           <p className="text-sm text-muted-foreground">
             Inzicht in alle AI-aanroepen per module, entiteit en periode
           </p>

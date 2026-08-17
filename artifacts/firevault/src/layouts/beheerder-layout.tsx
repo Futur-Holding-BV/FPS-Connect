@@ -1894,11 +1894,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           ? "overflow-hidden flex flex-col"
           : "overflow-y-auto",
       )}>
-        {/* NAV_01: dunne accentlijn in de hoofdstukkleur boven de pagina */}
+        {/* NAV_01: accentlijn in de hoofdstukkleur boven de pagina (prominenter sinds aug 2026) */}
         {hoofdstukVanRoute(location) && (
           <div
             aria-hidden
-            className="h-0.5 w-full flex-shrink-0"
+            className="h-1 w-full flex-shrink-0"
             style={{ backgroundColor: `hsl(var(--hoofdstuk-${hoofdstukVanRoute(location)}))` }}
           />
         )}
@@ -1946,7 +1946,18 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         ) : (
-          <div className="p-3 md:p-4 xl:p-6" style={{ paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)' }}>
+          <div
+            className="p-3 md:p-4 xl:p-6"
+            // NAV_01: gekleurd merkteken bij de paginatitel (CSS in index.css op
+            // [data-hoofdstuk]); alleen actief wanneer de route een hoofdstuk heeft.
+            {...(hoofdstukVanRoute(location) ? { "data-hoofdstuk": "" } : {})}
+            style={{
+              paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)',
+              ...(hoofdstukVanRoute(location)
+                ? ({ "--hoofdstuk-actief": `var(--hoofdstuk-${hoofdstukVanRoute(location)})` } as React.CSSProperties)
+                : {}),
+            }}
+          >
             {children}
           </div>
         )}

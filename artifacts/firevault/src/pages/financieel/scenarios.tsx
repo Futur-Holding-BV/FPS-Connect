@@ -238,7 +238,7 @@ export default function ScenariosPagina() {
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-semibold flex items-center gap-2">
             <GitCompareArrows className="h-6 w-6" /> Wat-als-scenario's
           </h1>
           <p className="text-sm text-muted-foreground max-w-2xl mt-1">

@@ -52,7 +52,7 @@ export default function CrmDashboardPagina() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">CRM & Marktinzicht</h1>
+        <h1 data-paginatitel className="text-2xl font-bold">CRM & Marktinzicht</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Relatiebeheer, pipeline en marktpositie</p>
       </div>
 

@@ -1259,7 +1259,7 @@ export default function ModulesPlanning() {
           {/* Koptekst */}
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">Planning</h1>
+              <h1 data-paginatitel className="text-2xl font-semibold text-slate-900">Planning</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{headerLabel}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">

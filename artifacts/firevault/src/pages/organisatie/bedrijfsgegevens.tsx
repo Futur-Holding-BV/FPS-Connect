@@ -47,7 +47,7 @@ export default function BedrijfsgegevensPagina() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bedrijfsgegevens</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Bedrijfsgegevens</h1>
           <p className="text-muted-foreground mt-1">KVK-gegevens, IBAN, contactinformatie en stamgegevens per werkmaatschappij.</p>
         </div>
         <Card>

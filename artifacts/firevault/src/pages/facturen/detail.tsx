@@ -400,7 +400,7 @@ export default function FactuurDetailPagina() {
               <Receipt className="h-8 w-8 text-primary mt-0.5 shrink-0" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-semibold text-slate-900">
+                  <h1 data-paginatitel className="text-xl font-semibold text-slate-900">
                     {f.factuurnummer ?? f.bestandsnaam ?? `Factuur #${f.id}`}
                   </h1>
                   {f.kenmerk && (

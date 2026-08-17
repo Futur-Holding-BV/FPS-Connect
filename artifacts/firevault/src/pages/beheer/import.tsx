@@ -271,7 +271,7 @@ export default function ImportPagina() {
     return (
       <div className="p-6 max-w-xl mx-auto mt-12 text-center space-y-3">
         <ShieldAlert className="h-10 w-10 mx-auto text-muted-foreground" />
-        <h1 className="text-lg font-semibold">Geen toegang</h1>
+        <h1 data-paginatitel className="text-lg font-semibold">Geen toegang</h1>
         <p className="text-sm text-muted-foreground">
           Je hebt geen rechten om gegevens te importeren. Importeren vereist
           beheerrecht op de module waar de gegevens thuishoren.

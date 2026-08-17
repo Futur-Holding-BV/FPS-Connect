@@ -255,7 +255,7 @@ function TypeKiezer({ onKies }: { onKies: (s: Stroom) => void }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Onboarden</h1>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Onboarden</h1>
         <p className="text-muted-foreground mt-1">
           Kies het type indiensttreding. Elk type heeft een eigen intake met de juiste velden en vervolgstappen.
         </p>

@@ -781,7 +781,7 @@ export default function WagenparkDetailPagina() {
               </div>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl font-bold font-mono">{voertuig.kenteken}</h1>
+                  <h1 data-paginatitel className="text-2xl font-bold font-mono">{voertuig.kenteken}</h1>
                   <Badge className={STATUS_KLEUR[voertuig.status] ?? "bg-gray-100 text-gray-700"}>
                     {voertuig.status.replace("_", " ")}
                   </Badge>

@@ -97,7 +97,7 @@ export default function CrmSocialPagina() {
         <div className="flex items-center gap-3">
           <Share2 className="h-7 w-7 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Social media</h1>
+            <h1 data-paginatitel className="text-2xl font-bold">Social media</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Berichten plannen en publiceren per werkmaatschappij — LinkedIn, Facebook, Instagram en TikTok
             </p>

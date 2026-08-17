@@ -692,7 +692,7 @@ export default function SecurityValidation() {
       <div className="flex items-center gap-3">
         <Shield className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Security Validation Platform</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Security Validation Platform</h1>
           <p className="text-sm text-muted-foreground">
             Continu geautomatiseerd beveiligingstesten voor FPS Connect en FPS One
           </p>

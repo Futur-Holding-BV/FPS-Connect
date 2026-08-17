@@ -206,7 +206,7 @@ export default function VoorzieningQr() {
               <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">QR-label</h1>
+              <h1 data-paginatitel className="text-xl font-bold tracking-tight">QR-label</h1>
               <p className="text-sm text-muted-foreground">{voorziening.objectnummer} — {TYPEN[voorziening.type ?? ""] ?? voorziening.type}</p>
             </div>
           </div>

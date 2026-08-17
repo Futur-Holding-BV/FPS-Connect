@@ -164,7 +164,7 @@ export default function MailBeheer() {
           <Mail className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Mailinstellingen</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Mailinstellingen</h1>
           <p className="text-sm text-muted-foreground">
             Microsoft 365-koppeling voor uitgaande e-mail en opdrachtbevestigingen.
           </p>

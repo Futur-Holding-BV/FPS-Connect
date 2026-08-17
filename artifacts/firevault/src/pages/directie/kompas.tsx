@@ -871,7 +871,7 @@ function KompasInhoud() {
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Bedrijfskompas</h1>
+          <h1 data-paginatitel className="text-xl font-bold">Bedrijfskompas</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Realtime financieel directie-overzicht — prognose, bezettingsgraad en orderportefeuille
           </p>

@@ -245,7 +245,7 @@ export default function ModulesCalculatieImport() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">Import controleren</h1>
+              <h1 data-paginatitel className="text-2xl font-semibold text-foreground">Import controleren</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {analyse.bestandsnaam} — controleer de herkende gegevens voordat de calculatie wordt aangemaakt
               </p>

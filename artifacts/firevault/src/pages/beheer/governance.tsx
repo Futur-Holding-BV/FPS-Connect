@@ -603,7 +603,7 @@ export default function GovernancePagina() {
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-destructive" />
-            <h1 className="text-lg font-semibold">Governance & Risk Engine</h1>
+            <h1 data-paginatitel className="text-lg font-semibold">Governance & Risk Engine</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Centrale risicobeoordeling van iedere schrijfactie in het platform. Kritieke acties worden geblokkeerd en staan ter beoordeling in de wachtrij.

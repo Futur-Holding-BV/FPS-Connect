@@ -186,7 +186,7 @@ export default function WagenparkBuitenWerktijdPagina() {
         </Button>
         <Clock className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Ritten buiten werktijd</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Ritten buiten werktijd</h1>
           <p className="text-sm text-muted-foreground">
             Signaleer mogelijk privégebruik per voertuig, binnen configureerbare werktijdvensters
           </p>

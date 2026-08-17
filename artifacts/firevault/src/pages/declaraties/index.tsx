@@ -202,7 +202,7 @@ export default function DeclaratiesPagina() {
       <PaginaHulp pagina="declaraties" />
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <Receipt className="h-6 w-6" />
             Declaraties
           </h1>

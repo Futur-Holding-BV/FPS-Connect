@@ -139,7 +139,7 @@ export default function WagenparkPagina() {
         <div className="flex items-center gap-3">
           <Truck className="h-7 w-7 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Wagenpark</h1>
+            <h1 data-paginatitel className="text-2xl font-bold">Wagenpark</h1>
             <p className="text-sm text-muted-foreground">
               Voertuigen, onderhoud, kosten en Traxgo-koppeling
             </p>

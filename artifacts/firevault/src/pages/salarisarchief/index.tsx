@@ -127,7 +127,7 @@ export default function SalarisarchiefPagina() {
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-2xl font-semibold">Salarisarchief</h1>
+        <h1 data-paginatitel className="text-2xl font-semibold">Salarisarchief</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Upload loonstroken, jaaropgaven en andere salarisdocumenten voor medewerkers.
         </p>

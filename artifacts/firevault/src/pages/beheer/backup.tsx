@@ -358,7 +358,7 @@ export default function BackupBeheer() {
           <div className="flex items-center gap-3">
             <HardDrive className="h-6 w-6 text-muted-foreground" />
             <div>
-              <h1 className="text-xl font-semibold">Back-up &amp; Herstel</h1>
+              <h1 data-paginatitel className="text-xl font-semibold">Back-up &amp; Herstel</h1>
               <p className="text-sm text-muted-foreground">
                 Beheer databaseback-ups en herstel de omgeving indien nodig
               </p>

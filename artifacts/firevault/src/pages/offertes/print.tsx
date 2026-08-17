@@ -271,7 +271,7 @@ export default function OffertePrintPagina() {
             </div>
           </div>
           <div className="px-16 py-12 flex-1">
-            <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
+            <h1 data-paginatitel className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
               {s.titel}
             </h1>
             <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">

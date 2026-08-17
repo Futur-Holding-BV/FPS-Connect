@@ -139,7 +139,7 @@ export default function MetingenMateriaalBeheer() {
     <div className="space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <h1 className="text-xl font-semibold">Meting inkoopgebruik (MATERIAAL_01)</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Meting inkoopgebruik (MATERIAAL_01)</h1>
           <p className="text-sm text-muted-foreground">
             Read-only telling van alle inkoopsporen. Nulwaarden zijn een antwoord — de duiding is aan de directie.
           </p>

@@ -399,7 +399,7 @@ export default function UitvoeringDetailPagina() {
               <Skeleton className="h-7 w-64" />
             ) : (
               <>
-                <h1 className="text-lg md:text-2xl font-semibold truncate">
+                <h1 data-paginatitel className="text-lg md:text-2xl font-semibold truncate">
                   {opdracht?.werknummer ? `${opdracht.werknummer} — ` : ""}{opdracht?.titel ?? "Opdracht"}
                 </h1>
                 <p className="text-sm text-muted-foreground truncate">

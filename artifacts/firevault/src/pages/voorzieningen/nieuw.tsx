@@ -99,7 +99,7 @@ export default function VoorzieningNieuw() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nieuwe toepassing</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Nieuwe toepassing</h1>
           <p className="text-muted-foreground text-sm">
             Voeg een productsoort of product toe aan de centrale bibliotheek.
           </p>

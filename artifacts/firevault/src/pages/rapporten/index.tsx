@@ -358,7 +358,7 @@ export default function RapportenPagina() {
     <div className="space-y-6">
       {/* Paginakop */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Rapportenbibliotheek</h1>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Rapportenbibliotheek</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Centraal overzicht van alle concept- en definitieve opleverrapporten, over alle gebouwen heen.
         </p>

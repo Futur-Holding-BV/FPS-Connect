@@ -114,7 +114,7 @@ export default function CrmKlantDetail() {
         </div>
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-foreground">{klant.naam}</h1>
+            <h1 data-paginatitel className="text-2xl font-bold text-foreground">{klant.naam}</h1>
             <ImportBadge bron={(klant as { bron?: string | null }).bron} importId={(klant as { import_id?: number | null }).import_id} />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">

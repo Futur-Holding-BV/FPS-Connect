@@ -73,7 +73,7 @@ export default function PwaTest() {
       <div className="flex items-center gap-3">
         <Smartphone className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">Mobiele test — FPS Connect PWA</h1>
+          <h1 data-paginatitel className="text-xl font-semibold">Mobiele test — FPS Connect PWA</h1>
           <p className="text-sm text-muted-foreground">
             Interne testpagina voor hoofdbeheerders
           </p>

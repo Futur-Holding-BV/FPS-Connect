@@ -210,7 +210,7 @@ export default function MagazijnInkoopordersPagina() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Inkooporders</h1>
+          <h1 data-paginatitel className="text-2xl font-semibold">Inkooporders</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Bestelworkflow voor magazijnvulling — van concept tot ontvangst
           </p>

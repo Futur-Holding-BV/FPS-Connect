@@ -187,7 +187,7 @@ export default function ContractenPagina() {
     <div className="p-4 md:p-6 space-y-5 max-w-7xl mx-auto">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-semibold flex items-center gap-2">
             <ScrollText className="w-6 h-6 text-primary" />
             Contracten &amp; polissen
           </h1>

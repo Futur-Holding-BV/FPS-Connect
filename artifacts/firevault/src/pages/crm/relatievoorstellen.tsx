@@ -83,7 +83,7 @@ export default function CrmRelatievoorstellenPagina() {
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-amber-500" /> AI-relatievoorstellen
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">

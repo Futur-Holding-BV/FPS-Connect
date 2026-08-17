@@ -277,7 +277,7 @@ export default function WagenparkFormPagina() {
         </Button>
       </div>
 
-      <h1 className="text-2xl font-bold">
+      <h1 data-paginatitel className="text-2xl font-bold">
         {isBewerken ? "Voertuig bewerken" : "Voertuig toevoegen"}
       </h1>
 

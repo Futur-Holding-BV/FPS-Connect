@@ -519,7 +519,7 @@ export default function DocumentStudioPagina() {
       {/* Paginaheader */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Document Studio</h1>
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Document Studio</h1>
           <p className="text-muted-foreground mt-1">
             Beheer referentiemodellen en Connect-templates per documenttype, per werkmaatschappij.
           </p>

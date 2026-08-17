@@ -460,7 +460,7 @@ export default function BrandstofImportPage() {
 
       {/* Koptekst */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">MKB Brandstof import</h1>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">MKB Brandstof import</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Importeer brandstof- en laadkosten vanuit MKB Brandstof facturen (PDF, UBL/Peppol of e-mail).
           Regels worden automatisch aan voertuigen gekoppeld. Onzekere koppelingen controleert u handmatig

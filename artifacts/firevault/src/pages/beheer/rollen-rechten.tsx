@@ -548,7 +548,7 @@ export default function RollenRechtenBeheer() {
         <div className="flex items-center gap-3">
           <KeyRound className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-xl font-semibold">Rollen &amp; Rechten</h1>
+            <h1 data-paginatitel className="text-xl font-semibold">Rollen &amp; Rechten</h1>
             <p className="text-sm text-muted-foreground">
               Overzicht van rolprofielen, moduletoegang en navigatiestatus
             </p>

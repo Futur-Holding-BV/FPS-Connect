@@ -120,7 +120,7 @@ export default function MagazijnMutatiesPagina() {
   return (
     <div className="p-6 space-y-4">
       <PaginaHulp pagina="magazijn-mutaties" />
-      <h1 className="text-2xl font-bold">Mutaties</h1>
+      <h1 data-paginatitel className="text-2xl font-bold">Mutaties</h1>
 
       {/* Batch-export blok */}
       <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-3">

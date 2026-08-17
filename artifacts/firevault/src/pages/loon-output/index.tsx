@@ -80,7 +80,7 @@ export default function LoonOutputPage() {
         <div className="flex items-center gap-3">
           <FileText className="text-primary" size={24} />
           <div>
-            <h1 className="text-2xl font-semibold">Loon-output bestanden</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">Loon-output bestanden</h1>
             <p className="text-sm text-muted-foreground">Loonstroken, jaaropgaven en overige output van de salarisverwerker</p>
           </div>
         </div>

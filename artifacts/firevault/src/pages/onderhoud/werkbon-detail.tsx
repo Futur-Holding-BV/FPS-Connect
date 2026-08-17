@@ -180,7 +180,7 @@ export default function WerkbonDetail() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold">{werkbon.titel}</h1>
+            <h1 data-paginatitel className="text-2xl font-bold">{werkbon.titel}</h1>
             <Badge variant="outline" className={statusKleur[werkbon.status] ?? ""}>
               {statusLabel[werkbon.status] ?? werkbon.status}
             </Badge>

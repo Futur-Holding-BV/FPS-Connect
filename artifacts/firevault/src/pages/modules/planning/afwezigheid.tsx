@@ -167,7 +167,7 @@ export default function PlanningAfwezigheid() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Afwezigheid</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold text-slate-900">Afwezigheid</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Vakantie, ziekte, verlof en opleidingen beheren
             </p>

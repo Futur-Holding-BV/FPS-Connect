@@ -328,7 +328,7 @@ export default function ReleaseReadiness() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 data-paginatitel className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
             Release Readiness
           </h1>

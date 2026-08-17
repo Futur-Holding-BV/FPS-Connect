@@ -247,7 +247,7 @@ export default function JaarkalenderPagina() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Jaarkalender</h1>
+          <h1 data-paginatitel className="text-2xl font-bold">Jaarkalender</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Feestdagen, collectieve vrije dagen, verlof, keuringen, verjaardagen en afspraken — {jaar}
           </p>

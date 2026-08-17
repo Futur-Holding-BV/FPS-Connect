@@ -84,7 +84,7 @@ export default function BoekhouderPage() {
         <div className="flex items-center gap-3">
           <LayoutDashboard className="text-primary" size={24} />
           <div>
-            <h1 className="text-2xl font-semibold">Boekhouderportaal</h1>
+            <h1 data-paginatitel className="text-2xl font-semibold">Boekhouderportaal</h1>
             <p className="text-sm text-muted-foreground">Documenten voor de externe boekhouder — uploads en overzichten</p>
           </div>
         </div>
