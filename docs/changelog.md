@@ -60,6 +60,13 @@ Na architect-review aangescherpt: (a) download-URLs wijzen nu naar de bestaande,
 Bewijs: `scripts/src/verificatie-merk01.ts` — 37/37 groen via https-sessie: 401/403-afscherming, huisstijlvelden PATCH→merkenkast, merkpakket-zip incl. ontbrekend-melding, aggregatie van alle vier bronnen met filters, gebouw-ACL voor beperkte veldgebruiker (lezen én uploaden; gebouw B onzichtbaar), echte afhandeling van de download-URL en bulk-zip met ACL-herafdwinging + OVERGESLAGEN-melding.
 
 
+## 2026-08-17 — Bestelbonnen en mandagstaten draaien nu in de goedgekeurde huisstijl uit
+
+Documenten die tot nu toe altijd de vaste FPS-oranje kleur (#F23B0D) gebruikten, nemen nu de accentkleur op uit het goedgekeurde Document Studio-model van de werkmaatschappij. Zonder goedgekeurd model valt alles terug op de standaard DDS-kleur.
+
+- **Mandagstaat-PDF (server-side):** `genereerMandagstaat()` in `lib/mandagstaat.ts` leidt de werkgever af uit de medewerkers op de mandagstaat, vraagt het actieve Studio-model op via `haalActiefStudioKleur()` en geeft de kleur door aan `tekenPdf()` als `accentKleur`. De PDF-kop (bedrijfsnaam) kleurt nu in de huisstijlkleur van de goedgekeurde werkmaatschappij.
+- **Bestelbon-e-mail (POST /magazijn/bestelbonnen):** accepteert nu optioneel `werkgever_id` in de body. Bij een geldig werkgever-id wordt het actieve bestelbon-Studio-model opgezocht; de e-mailkop gebruikt de primaire kleur én de naam van de werkmaatschappij als afzender.
+- **Inkooporder-e-mail (POST /magazijn/inkooporders/:id/verstuur):** leidt de werkgever server-side af via de sessiegebruiker (medewerker-werkgever-koppeling). Past het actieve bestelbon-Studio-model toe op kop, kleur en afsluiting; html-opmaak opgewaardeerd naar hetzelfde responsive blok als de overige transactionele mails.
 ## 2026-08-17 — Kies per salarismutatie wat er in de SCAB-mail meegaat
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

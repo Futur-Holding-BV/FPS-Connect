@@ -54,6 +54,7 @@ async function buildAll() {
       "oracledb",
       "mongodb-client-encryption",
       "nodemailer",
+      "archiver",
       // @sentry/node gebruikt OpenTelemetry require-hooks die niet
       // bundelbaar zijn; blijft als runtime-dependency geïnstalleerd.
       "@sentry/node",

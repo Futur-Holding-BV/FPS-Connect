@@ -1545,6 +1545,47 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
       leverancier = lev ?? null;
     }
 
+    // ── Document Studio: actieve huisstijlkleur voor 'bestelbon' ─────────────
+    // Werkgever wordt server-side afgeleid via de sessiegebruiker (medewerker →
+    // werkgever), zodat een aanroeper nooit een andere werkgever kan injecteren.
+    // Zonder goedgekeurd model valt de mail terug op DDS_KLEUR.
+    const DDS_KLEUR = "#F23B0D";
+    let accentKleur = DDS_KLEUR;
+    let werkgeverNaam: string | null = null;
+    if (userId) {
+      const [medewerkerRij] = await db
+        .select({ werkgeverId: medewerkersTable.werkgeverId })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, userId))
+        .limit(1);
+      const werkgeverId = medewerkerRij?.werkgeverId ?? null;
+      if (werkgeverId) {
+        const [studioRij] = await db
+          .select({ connectTemplateJson: documentStudioModellenTable.connectTemplateJson })
+          .from(documentStudioModellenTable)
+          .where(and(
+            eq(documentStudioModellenTable.werkgeverId, werkgeverId),
+            eq(documentStudioModellenTable.documentType, "bestelbon"),
+            eq(documentStudioModellenTable.status, "goedgekeurd"),
+          ))
+          .limit(1);
+        if (studioRij?.connectTemplateJson) {
+          try {
+            const tmpl = JSON.parse(studioRij.connectTemplateJson) as { kleurschema?: { primair?: string } };
+            accentKleur = tmpl.kleurschema?.primair ?? DDS_KLEUR;
+          } catch { /* gebruik DDS_KLEUR */ }
+        }
+        const [wgRij] = await db
+          .select({ naam: werkgeversTable.naam })
+          .from(werkgeversTable)
+          .where(eq(werkgeversTable.id, werkgeverId))
+          .limit(1);
+        werkgeverNaam = wgRij?.naam ?? null;
+      }
+    }
+    const afzenderNaam = werkgeverNaam ?? "FPS Brandpreventie";
+    // ─────────────────────────────────────────────────────────────────────────
+
     const datumStr = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
 
     // Werkgever bepalen voor huisstijl: via sessiegebruiker → medewerker → werkgever; fallback = eerste actieve werkgever

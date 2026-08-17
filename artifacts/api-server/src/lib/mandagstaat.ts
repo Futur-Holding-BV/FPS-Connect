@@ -10,7 +10,6 @@
 // goedgekeurd (of vergrendeld) heeft. Concept/ingediend telt niet mee; is er
 // daardoor niets, dan is er geen genereerbare mandagstaat.
 import PDFDocument from "pdfkit";
-import { storageObjectsUrl } from "./storageObjectsUrl";
 import { db } from "@workspace/db";
 import {
   urenRegistratiesTable,
@@ -24,9 +23,7 @@ import {
 import { and, eq, gte, lte, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import {
-  LOGO_STORAGE_PREFIX,
   resolveWerkgeverLogoSubPath,
-  berekenWerkgeverLogoPad,
 } from "./werkgever-logo-pad";
 
 // Fallback-kleur wanneer geen werkgever-branding beschikbaar is.
@@ -117,6 +114,7 @@ export interface MandagstaatResultaat {
 }
 
 interface MedewerkerRij {
+  medewerkerId: number;         // bewaard zodat werkgever via ID (niet naam) wordt opgezocht
   naam: string;
   geboortedatum: string | null;
   bsn: string | null;
@@ -177,6 +175,7 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
     let rij = perMedewerker.get(u.medewerkerId);
     if (!rij) {
       rij = {
+        medewerkerId: u.medewerkerId,
         naam: u.naam ?? `Medewerker #${u.medewerkerId}`,
         geboortedatum: u.geboortedatum ?? null,
         bsn: u.bsn ?? null,
@@ -199,6 +198,8 @@ async function verzamelGoedgekeurdeUren(opdrachtId: number, jaar: number, week: 
 
   return { rijen: [...perMedewerker.values()].sort((a, b) => a.naam.localeCompare(b.naam)), urenTotaal };
 }
+
+
 
 interface WerkgeverBranding {
   naam: string;
