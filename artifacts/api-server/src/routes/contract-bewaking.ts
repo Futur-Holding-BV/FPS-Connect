@@ -25,12 +25,13 @@ const schrijven = requireBevoegdheid("personeel", 2);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function dagenTot(eindDatum: string): number {
-  const nu = new Date();
-  nu.setHours(0, 0, 0, 0);
+// Exported with an optional clock parameter so tests can inject a fixed date.
+export function dagenTot(eindDatum: string, nu: Date = new Date()): number {
+  const ref = new Date(nu);
+  ref.setHours(0, 0, 0, 0);
   const eind = new Date(eindDatum);
   eind.setHours(0, 0, 0, 0);
-  return Math.round((eind.getTime() - nu.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round((eind.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function ketenregelingCheck(contracten: Array<{ contracttype: string; startDatum: string; eindDatum: string | null }>): string | null {
@@ -281,6 +282,89 @@ export function maandTerug(isoDatum: string): string {
   return `${doelJaar}-${String(doelMaand).padStart(2, "0")}-${String(doelDag).padStart(2, "0")}`;
 }
 
+// ── Geëxporteerde pure helpers voor cruciale-datums ───────────────────────────
+// Clock-injecteerbaar (nu-parameter) zodat unit-tests deterministisch zijn.
+// De routehandler en haalCrucialeDatumItems() roepen deze helpers aan;
+// de logica staat dus op één plek en is onafhankelijk testbaar.
+
+export const URGENT_DAGEN = 30;
+export const DBA_MAANDEN_GRENS = 9;
+
+export type CruciaalContractResultaat = {
+  datum: string;
+  label: string;
+  dagen_tot: number;
+  urgent: boolean;
+  reden: string;
+};
+
+/**
+ * Berekent de cruciale datum voor een tijdelijk arbeidscontract:
+ * - duur >= 180 dagen → uiterste aanzegdatum (maandTerug(einddatum), Wet Aanzegging)
+ * - duur < 180 dagen  → einddatum zelf
+ */
+export function berekenContractCrucialeDatum(
+  contract: { startDatum: string; eindDatum: string },
+  nu: Date = new Date(),
+): CruciaalContractResultaat {
+  const duurDagen = Math.round(
+    (new Date(contract.eindDatum).getTime() - new Date(contract.startDatum).getTime()) /
+      (1000 * 60 * 60 * 24),
+  );
+  let datum = contract.eindDatum;
+  let label = "Contract loopt af";
+  let reden = `Tijdelijk contract eindigt op ${contract.eindDatum}.`;
+  if (duurDagen >= 180) {
+    datum = maandTerug(contract.eindDatum);
+    label = "Uiterste aanzegdatum";
+    reden = `Uiterlijk ${datum} schriftelijk aanzeggen (contract eindigt ${contract.eindDatum}, Wet Aanzegging).`;
+  }
+  const dagen = dagenTot(datum, nu);
+  return { datum, label, dagen_tot: dagen, urgent: dagen <= URGENT_DAGEN, reden };
+}
+
+export type CruciaalZzpResultaat = {
+  datum: string;
+  dagen_tot: number;
+  urgent: boolean;
+  label: string;
+  reden: string;
+  dbaRisico: boolean;
+  verbandMaanden: number;
+};
+
+/**
+ * Berekent de cruciale datum voor een set ZZP-overeenkomsten van één medewerker.
+ * Geeft null terug als er geen lopende/komende overeenkomst is (>90 dagen verlopen).
+ */
+export function berekenZzpCrucialeDatum(
+  overeenkomsten: Array<{ startDatum: string; eindDatum: string }>,
+  nu: Date = new Date(),
+): CruciaalZzpResultaat | null {
+  const lopend = overeenkomsten
+    .filter((o) => dagenTot(o.eindDatum, nu) >= -90)
+    .sort((a, b) => a.eindDatum.localeCompare(b.eindDatum))[0];
+  if (!lopend) return null;
+  const dagen = dagenTot(lopend.eindDatum, nu);
+  const eersteStart = overeenkomsten.map((o) => o.startDatum).sort()[0];
+  const laatsteEind = overeenkomsten.map((o) => o.eindDatum).sort().slice(-1)[0];
+  const verbandMaanden =
+    (new Date(laatsteEind).getTime() - new Date(eersteStart).getTime()) /
+    (1000 * 60 * 60 * 24 * 30);
+  const dbaRisico = verbandMaanden >= DBA_MAANDEN_GRENS;
+  return {
+    datum: lopend.eindDatum,
+    dagen_tot: dagen,
+    urgent: dagen <= URGENT_DAGEN || dbaRisico,
+    label: dbaRisico ? "ZZP: DBA-risico" : "ZZP-overeenkomst loopt af",
+    reden: dbaRisico
+      ? `ZZP-verband loopt al ${Math.round(verbandMaanden)} maanden (grens ${DBA_MAANDEN_GRENS}); risico op schijnzelfstandigheid (Wet DBA). Overeenkomst eindigt ${lopend.eindDatum}.`
+      : `ZZP-overeenkomst eindigt op ${lopend.eindDatum} (Wet DBA: einddatum verplicht).`,
+    dbaRisico,
+    verbandMaanden,
+  };
+}
+
 // ── Cruciale datums per medewerker ───────────────────────────────────────────
 // Afgeleide view (geen kopieën): per actieve medewerker de meest urgente
 // naderende deadline. Bronnen: 1) tijdelijke arbeidsovereenkomsten (uiterste
@@ -288,8 +372,8 @@ export function maandTerug(isoDatum: string): string {
 // einddatum zelf); 2) ZZP-overeenkomsten (einddatum, Wet DBA) + waarschuwing
 // wanneer het totale ZZP-verband te lang dreigt te lopen (>= 9 maanden).
 
-const CRUCIALE_URGENT_DAGEN = 30;
-const CRUCIALE_DBA_MAANDEN_GRENS = 9;
+const CRUCIALE_URGENT_DAGEN = URGENT_DAGEN;
+const CRUCIALE_DBA_MAANDEN_GRENS = DBA_MAANDEN_GRENS;
 
 export type CrucialeDatumItem = {
   medewerker_id: number;
@@ -396,9 +480,6 @@ export async function haalCrucialeDatumItems(): Promise<CrucialeDatumItem[]> {
 }
 
 router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promise<void> => {
-  const URGENT_DAGEN = 30;
-  const DBA_MAANDEN_GRENS = 9;
-
   const medewerkers = await db
     .select({ id: medewerkersTable.id, naam: medewerkersTable.naam })
     .from(medewerkersTable)
@@ -421,7 +502,7 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
     if (!bestaand || item.dagen_tot < bestaand.dagen_tot) perMedewerker.set(item.medewerker_id, item);
   };
 
-  // 1) Tijdelijke arbeidsovereenkomsten
+  // 1) Tijdelijke arbeidsovereenkomsten — via geëxporteerde pure helper
   const contracten = await db
     .select()
     .from(arbeidsovereenkomstenTable)
@@ -429,32 +510,20 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
   for (const c of contracten) {
     if (!c.eindDatum || !naamPerId.has(c.medewerkerId)) continue;
     if (c.contracttype !== "bepaalde_tijd" && c.contracttype !== "oproep") continue;
-    const duurDagen = Math.round(
-      (new Date(c.eindDatum).getTime() - new Date(c.startDatum).getTime()) / (1000 * 60 * 60 * 24),
-    );
-    let datum = c.eindDatum;
-    let label = "Contract loopt af";
-    let reden = `Tijdelijk contract eindigt op ${c.eindDatum}.`;
-    if (duurDagen >= 180) {
-      // Wet Aanzegging: uiterlijk 1 maand vóór einddatum schriftelijk aanzeggen.
-      datum = maandTerug(c.eindDatum);
-      label = "Uiterste aanzegdatum";
-      reden = `Uiterlijk ${datum} schriftelijk aanzeggen (contract eindigt ${c.eindDatum}, Wet Aanzegging).`;
-    }
-    const dagen = dagenTot(datum);
+    const cr = berekenContractCrucialeDatum({ startDatum: c.startDatum, eindDatum: c.eindDatum });
     zetAlsUrgenter({
       medewerker_id: c.medewerkerId,
       naam: naamPerId.get(c.medewerkerId)!,
-      datum,
-      dagen_tot: dagen,
-      urgent: dagen <= URGENT_DAGEN,
       bron: "contract",
-      label,
-      reden,
+      datum: cr.datum,
+      label: cr.label,
+      dagen_tot: cr.dagen_tot,
+      urgent: cr.urgent,
+      reden: cr.reden,
     });
   }
 
-  // 2) ZZP-overeenkomsten (Wet DBA)
+  // 2) ZZP-overeenkomsten (Wet DBA) — via geëxporteerde pure helper
   const zzp = await db
     .select()
     .from(zzpOvereenkomstenTable)
@@ -465,31 +534,17 @@ router.get("/contract-bewaking/cruciale-datums", lezen, async (_req, res): Promi
     (zzpPerMedewerker.get(o.medewerkerId) ?? zzpPerMedewerker.set(o.medewerkerId, []).get(o.medewerkerId)!).push(o);
   }
   for (const [medewerkerId, overeenkomsten] of zzpPerMedewerker) {
-    // Lopende/komende overeenkomst met de dichtstbijzijnde einddatum
-    const lopend = overeenkomsten
-      .filter((o) => dagenTot(o.eindDatum) >= -90)
-      .sort((a, b) => a.eindDatum.localeCompare(b.eindDatum))[0];
-    if (!lopend) continue;
-    const dagen = dagenTot(lopend.eindDatum);
-
-    // DBA-duurcheck: totale verband vanaf eerste start tot laatste einde
-    const eersteStart = overeenkomsten.map((o) => o.startDatum).sort()[0];
-    const laatsteEind = overeenkomsten.map((o) => o.eindDatum).sort().slice(-1)[0];
-    const verbandMaanden =
-      (new Date(laatsteEind).getTime() - new Date(eersteStart).getTime()) / (1000 * 60 * 60 * 24 * 30);
-    const dbaRisico = verbandMaanden >= DBA_MAANDEN_GRENS;
-
+    const zr = berekenZzpCrucialeDatum(overeenkomsten);
+    if (!zr) continue;
     zetAlsUrgenter({
       medewerker_id: medewerkerId,
       naam: naamPerId.get(medewerkerId)!,
-      datum: lopend.eindDatum,
-      dagen_tot: dagen,
-      urgent: dagen <= URGENT_DAGEN || dbaRisico,
       bron: "zzp",
-      label: dbaRisico ? "ZZP: DBA-risico" : "ZZP-overeenkomst loopt af",
-      reden: dbaRisico
-        ? `ZZP-verband loopt al ${Math.round(verbandMaanden)} maanden (grens ${DBA_MAANDEN_GRENS}); risico op schijnzelfstandigheid (Wet DBA). Overeenkomst eindigt ${lopend.eindDatum}.`
-        : `ZZP-overeenkomst eindigt op ${lopend.eindDatum} (Wet DBA: einddatum verplicht).`,
+      datum: zr.datum,
+      label: zr.label,
+      dagen_tot: zr.dagen_tot,
+      urgent: zr.urgent,
+      reden: zr.reden,
     });
   }
 
