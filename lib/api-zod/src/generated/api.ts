@@ -11031,6 +11031,7 @@ export const ListMedewerkersResponseItem = zod.object({
   "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
+  "afgeschermd_op": zod.string().nullish().describe('Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-\/contactgegevens meer terug.'),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
@@ -11244,6 +11245,7 @@ export const GetMedewerkerResponse = zod.object({
   "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
+  "afgeschermd_op": zod.string().nullish().describe('Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-\/contactgegevens meer terug.'),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
@@ -11331,6 +11333,7 @@ export const UpdateMedewerkerResponse = zod.object({
   "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
+  "afgeschermd_op": zod.string().nullish().describe('Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-\/contactgegevens meer terug.'),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
@@ -12015,6 +12018,59 @@ export const OffboardMedewerkerResponse = zod.object({
   "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
+  "afgeschermd_op": zod.string().nullish().describe('Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-\/contactgegevens meer terug.'),
+  "opmerkingen": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
+  "uitzendbureau_naam": zod.string().nullish().describe('Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Gegevens dichtzetten (AVG-afscherming) van een oud-medewerker — data blijft bewaard, persoonsgegevens niet meer opvraagbaar
+ */
+export const SchermMedewerkerAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SchermMedewerkerAfResponse = zod.object({
+  "bron": zod.string().nullish(),
+  "import_id": zod.number().nullish(),
+  "id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "leidinggevende_id": zod.number().nullish().describe('Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder\/HRM blijven altijd fallback\/override).'),
+  "leidinggevende_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "dienstverband": zod.string(),
+  "contracturen_per_week": zod.number().nullish(),
+  "deeltijd_percentage": zod.number().nullish().describe('Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)'),
+  "in_dienst_sinds": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
+  "noodcontact_naam": zod.string().nullish(),
+  "noodcontact_telefoon": zod.string().nullish(),
+  "geboortedatum": zod.string().nullish(),
+  "geboorteplaats": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "woonplaats": zod.string().nullish(),
+  "rijbewijs": zod.string().nullish(),
+  "rijbewijs_vervaldatum": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().nullish().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
+  "cv_tekst": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "afgeschermd_op": zod.string().nullish().describe('Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-\/contactgegevens meer terug.'),
   "opmerkingen": zod.string().nullish(),
   "bedrijf_uitzendbureau": zod.string().nullish(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),

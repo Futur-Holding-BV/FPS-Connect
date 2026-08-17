@@ -1,3 +1,9 @@
+## 2026-08-17 — Offboarding sluit direct uit + gegevens dichtzetten (AVG-afscherming)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Bij het afronden van een offboarding kan de oud-medewerker nu direct nergens meer in: naast het deactiveren van het account worden ook alle bestaande websessies vernietigd (mobiele bearer-tokens vielen al per request uit op actief-check). Nieuw: personeelszaken (schrijfrecht personeel of hoofdbeheerder) kan de gegevens van een oud-medewerker "dichtzetten" via POST /medewerkers/:id/afschermen — verlof, loon en NAW blijven in de database bewaard (bewaarplicht), maar de API geeft persoons-/contactgegevens (NAW, telefoon, e-mail, geboortedatum, rijbewijs, CV, opmerkingen) daarna niet meer terug. Alleen mogelijk voor oud-medewerkers; dubbel of op actieve medewerkers geeft 409. UI: knop "Gegevens dichtzetten" + badge "Afgeschermd" op de oud-medewerkerspagina met bevestigingsdialoog. Migratie 0058 (kolom afgeschermd_op). Ook de duplicate-check (onboarding) is dichtgezet: afgeschermde medewerkers zijn er onvindbaar en het gekoppelde gebruikersaccount geeft alleen bij een exacte e-mailmatch een geredigeerd "bestaand account"-resultaat (geen naam/e-mail, deelstring-zoeken levert niets op). Bewijs: scripts/src/bewijs-offboard-uitsluiting.ts — 17/17 groen (websessie én bearer dood na offboard, herinloggen web+mobiel geweigerd, strip-gedrag, data bewaard, duplicate-check lekvrij). Architect-review: PASS.
+
 ## 2026-08-16 — Automatische OTA-update monteur-app bewezen werkend
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

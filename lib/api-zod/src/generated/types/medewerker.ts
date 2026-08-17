@@ -85,6 +85,11 @@ export interface Medewerker {
   /** @nullable */
   cv_tekst?: string | null;
   actief: boolean;
+  /**
+     * Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-/contactgegevens meer terug.
+     * @nullable
+     */
+  afgeschermd_op?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
   /** @nullable */

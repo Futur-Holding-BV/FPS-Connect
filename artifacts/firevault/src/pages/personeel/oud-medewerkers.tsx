@@ -1,11 +1,25 @@
 import { useState } from "react";
-import { useListMedewerkers } from "@workspace/api-client-react";
+import { useListMedewerkers, useSchermMedewerkerAf } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserX, Search } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useRol } from "@/hooks/use-rol";
+import { UserX, Search, Lock } from "lucide-react";
 import { Link } from "wouter";
 
 function initialen(naam: string): string {
@@ -29,6 +43,12 @@ function formatDatum(s: string | null | undefined): string {
 export default function OudMedewerkersPagina() {
   const { data: medewerkers, isLoading } = useListMedewerkers();
   const [zoek, setZoek] = useState("");
+  const [afschermId, setAfschermId] = useState<number | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const schermAf = useSchermMedewerkerAf();
+  const { echteRol, bevoegdheden } = useRol();
+  const magAfschermen = echteRol === "hoofdbeheerder" || (bevoegdheden.personeel ?? 0) >= 2;
 
   const oud = (medewerkers ?? []).filter(
     (m) => !m.actief || (m.uit_dienst_per && new Date(m.uit_dienst_per) <= new Date()),
@@ -44,12 +64,28 @@ export default function OudMedewerkersPagina() {
     );
   });
 
+  const afschermMedewerker = oud.find((m) => m.id === afschermId);
+
+  async function voerAfschermingUit() {
+    if (afschermId == null) return;
+    try {
+      await schermAf.mutateAsync({ id: afschermId });
+      await queryClient.invalidateQueries();
+      toast({ title: "Gegevens dichtgezet", description: "De persoonsgegevens van deze oud-medewerker zijn afgeschermd." });
+    } catch {
+      toast({ title: "Dichtzetten mislukt", variant: "destructive" });
+    } finally {
+      setAfschermId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Oud-medewerkers</h1>
         <p className="text-muted-foreground mt-1">
-          Voormalige medewerkers die zijn uitgeboardd of inactief zijn gesteld.
+          Voormalige medewerkers die zijn uitgeboardd of inactief zijn gesteld. Gegevens zoals
+          verlof, loon en NAW blijven bewaard totdat ze worden dichtgezet.
         </p>
       </div>
 
@@ -92,11 +128,33 @@ export default function OudMedewerkersPagina() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <Badge variant="secondary" className="text-xs">Inactief</Badge>
+                    <div className="flex items-center gap-1">
+                      {m.afgeschermd_op ? (
+                        <Badge variant="secondary" className="text-xs">
+                          <Lock className="h-3 w-3 mr-1" /> Afgeschermd
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Inactief</Badge>
+                      )}
+                    </div>
                     {m.uit_dienst_per && (
                       <span className="text-xs text-muted-foreground">
                         Uit dienst {formatDatum(m.uit_dienst_per)}
                       </span>
+                    )}
+                    {magAfschermen && !m.afgeschermd_op && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAfschermId(m.id);
+                        }}
+                      >
+                        <Lock className="h-3 w-3 mr-1" /> Gegevens dichtzetten
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -109,6 +167,26 @@ export default function OudMedewerkersPagina() {
       {!isLoading && gefilterd.length > 0 && (
         <p className="text-xs text-muted-foreground">{gefilterd.length} oud-medewerker{gefilterd.length !== 1 ? "s" : ""}</p>
       )}
+
+      <AlertDialog open={afschermId != null} onOpenChange={(open) => { if (!open) setAfschermId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gegevens dichtzetten?</AlertDialogTitle>
+            <AlertDialogDescription>
+              De persoonsgegevens (NAW, contact, geboortedatum, rijbewijs, CV en opmerkingen) van{" "}
+              <strong>{afschermMedewerker?.naam}</strong> worden afgeschermd en zijn daarna niet meer
+              zichtbaar in FPS Connect. De onderliggende gegevens (verlof, loon) blijven bewaard voor
+              de wettelijke bewaarplicht. Dit kan niet via het scherm worden teruggedraaid.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={voerAfschermingUit} disabled={schermAf.isPending}>
+              {schermAf.isPending ? "Bezig..." : "Dichtzetten"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

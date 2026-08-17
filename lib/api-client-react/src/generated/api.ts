@@ -33730,6 +33730,76 @@ export const useOffboardMedewerker = <TError = ErrorType<unknown>,
       return useMutation(getOffboardMedewerkerMutationOptions(options));
     }
 
+export const getSchermMedewerkerAfUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/afschermen`
+}
+
+/**
+ * @summary Gegevens dichtzetten (AVG-afscherming) van een oud-medewerker — data blijft bewaard, persoonsgegevens niet meer opvraagbaar
+ */
+export const schermMedewerkerAf = async (id: number, options?: RequestInit): Promise<Medewerker> => {
+
+  return customFetch<Medewerker>(getSchermMedewerkerAfUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSchermMedewerkerAfMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof schermMedewerkerAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof schermMedewerkerAf>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['schermMedewerkerAf'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof schermMedewerkerAf>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  schermMedewerkerAf(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SchermMedewerkerAfMutationResult = NonNullable<Awaited<ReturnType<typeof schermMedewerkerAf>>>
+
+    export type SchermMedewerkerAfMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gegevens dichtzetten (AVG-afscherming) van een oud-medewerker — data blijft bewaard, persoonsgegevens niet meer opvraagbaar
+ */
+export const useSchermMedewerkerAf = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof schermMedewerkerAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof schermMedewerkerAf>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSchermMedewerkerAfMutationOptions(options));
+    }
+
 export const getListCaoKeuzesUrl = (id: number,) => {
 
 

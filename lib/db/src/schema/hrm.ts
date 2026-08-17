@@ -142,6 +142,10 @@ export const medewerkersTable = pgTable("medewerkers", {
   // (naam + foto, geen leeftijd/geboortejaar). Standaard uit; medewerker zet dit zelf aan.
   verjaardagZichtbaar: boolean("verjaardag_zichtbaar").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
+  // Afscherming (AVG): gezet door personeelszaken wanneer de persoonsgegevens
+  // van een oud-medewerker niet meer relevant zijn. Data blijft bewaard, maar
+  // de API geeft NAW-/contactvelden dan niet meer terug.
+  afgeschermdOp: timestamp("afgeschermd_op"),
   opmerkingen: text("opmerkingen"),
   // Onboarding-wizard status en tussentijdse voortgang (jsonb per stap).
   // medewerker_status: concept | in_voorbereiding | wacht_op_documenten |

@@ -56,6 +56,7 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { analyseerCvBestand, analyseerOnboardingTekst } from "../lib/cvAnalyse";
 import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
+import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { logAudit } from "../lib/audit";
 import crypto from "node:crypto";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
@@ -767,6 +768,24 @@ router.delete("/opleidingen/:id", schrijven, async (req, res): Promise<void> => 
 });
 
 // ── Medewerkers ─────────────────────────────────────────────────────────────
+// Afscherming (AVG): zodra personeelszaken de gegevens van een oud-medewerker
+// heeft dichtgezet (afgeschermd_op gezet), geeft de API de persoons-/contact-
+// gegevens niet meer terug. De data zelf blijft bewaard (bewaarplicht).
+const AFGESCHERMDE_VELDEN = [
+  "email", "telefoon", "mobiel", "noodcontact_naam", "noodcontact_telefoon",
+  "geboortedatum", "geboorteplaats", "adres", "postcode", "woonplaats",
+  "rijbewijs", "rijbewijs_vervaldatum", "cv_tekst", "opmerkingen",
+] as const;
+
+function pasAfschermingToe<T extends Record<string, unknown>>(json: T, afgeschermdOp: Date | null | undefined): T {
+  if (!afgeschermdOp) return json;
+  const kopie: Record<string, unknown> = { ...json };
+  for (const veld of AFGESCHERMDE_VELDEN) {
+    if (veld in kopie) kopie[veld] = null;
+  }
+  return kopie as T;
+}
+
 async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
   let functieNaam: string | null = null;
   if (m.functieId != null) {
@@ -788,7 +807,7 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     const [org] = await db.select({ naam: crmKlantenTable.naam }).from(crmKlantenTable).where(eq(crmKlantenTable.id, m.uitzendbureauId));
     uitzendbureauNaam = org?.naam ?? null;
   }
-  return {
+  return pasAfschermingToe({
     id: m.id,
     gebruiker_id: m.gebruikerId,
     gebruiker_rol: gebruikerRol,
@@ -824,12 +843,13 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     bhv_vervaldatum: m.bhvVervaldatum ?? null,
     cv_tekst: m.cvTekst ?? null,
     actief: m.actief,
+    afgeschermd_op: m.afgeschermdOp ? iso(m.afgeschermdOp) : null,
     opmerkingen: m.opmerkingen,
     bron: m.bron,
     import_id: m.importId ?? null,
     aangemaakt_op: iso(m.aangemaaktOp),
     bijgewerkt_op: iso(m.bijgewerktOp),
-  };
+  }, m.afgeschermdOp);
 }
 
 router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
@@ -843,7 +863,7 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
       .leftJoin(leidinggevenden, eq(medewerkersTable.leidinggevendeId, leidinggevenden.id))
       .orderBy(medewerkersTable.naam);
     res.json(
-      rijen.map((r) => ({
+      rijen.map((r) => pasAfschermingToe({
         id: r.m.id,
         gebruiker_id: r.m.gebruikerId,
         gebruiker_rol: r.gebruikerRol ?? null,
@@ -875,12 +895,13 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
         bhv_vervaldatum: r.m.bhvVervaldatum ?? null,
         cv_tekst: r.m.cvTekst ?? null,
         actief: r.m.actief,
+        afgeschermd_op: r.m.afgeschermdOp ? iso(r.m.afgeschermdOp) : null,
         opmerkingen: r.m.opmerkingen,
         bron: r.m.bron,
         import_id: r.m.importId ?? null,
         aangemaakt_op: iso(r.m.aangemaaktOp),
         bijgewerkt_op: iso(r.m.bijgewerktOp),
-      })),
+      }, r.m.afgeschermdOp)),
     );
   } catch (err) {
     req.log.error(err);
@@ -4395,6 +4416,11 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res): Promise<vo
         .update(gebruikersTable)
         .set({ actief: false })
         .where(eq(gebruikersTable.id, m.gebruikerId));
+      // Directe uitsluiting: bestaande websessies vernietigen zodat de
+      // oud-medewerker niet tot sessie-expiratie ingelogd blijft. Mobiele
+      // bearer-tokens vallen vanzelf uit: de bearer-middleware controleert
+      // gebruikers.actief bij elke request.
+      await beeindigSessiesVanGebruiker(m.gebruikerId);
     }
 
     req.log.info({ medewerker_id: id, uit_dienst_per, reden }, "Offboard uitgevoerd");
@@ -4419,6 +4445,42 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res): Promise<vo
       cao: bijgewerkt.cao ?? null,
       bijgewerkt_op: bijgewerkt.bijgewerktOp?.toISOString() ?? null,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Gegevens dichtzetten (AVG-afscherming) van een oud-medewerker. Alleen voor
+// personeelszaken met schrijfrecht. De onderliggende data (verlof, loon, NAW)
+// blijft in de database bewaard voor de wettelijke bewaarplicht, maar de API
+// geeft persoons-/contactgegevens vanaf dat moment niet meer terug.
+router.post("/medewerkers/:id/afschermen", schrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [m] = await db.select().from(medewerkersTable).where(eq(medewerkersTable.id, id));
+    if (!m) return void res.status(404).json({ error: "Niet gevonden" });
+
+    const uitDienst = !m.actief || (m.uitDienstPer != null && new Date(m.uitDienstPer) <= new Date());
+    if (!uitDienst) {
+      return void res.status(409).json({ error: "Alleen oud-medewerkers (uit dienst) kunnen worden afgeschermd." });
+    }
+    if (m.afgeschermdOp) {
+      return void res.status(409).json({ error: `Deze medewerker is al afgeschermd sinds ${iso(m.afgeschermdOp)}.` });
+    }
+
+    const [bijgewerkt] = await db
+      .update(medewerkersTable)
+      .set({ afgeschermdOp: new Date(), bijgewerktOp: new Date() })
+      .where(and(eq(medewerkersTable.id, id), isNull(medewerkersTable.afgeschermdOp)))
+      .returning();
+    if (!bijgewerkt) {
+      return void res.status(409).json({ error: "Deze medewerker is al afgeschermd." });
+    }
+
+    req.log.info({ medewerker_id: id }, "Oud-medewerker afgeschermd (gegevens dichtgezet)");
+    invalideerContext("medewerker", id);
+    return void res.json(await medewerkerNaarJson(bijgewerkt));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

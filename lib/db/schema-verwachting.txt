@@ -2809,6 +2809,7 @@ KOLOM|medewerker_opleidingen|verloopt_op|text|YES|
 KOLOM|medewerkers|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|medewerkers|actief|boolean|NO|true
 KOLOM|medewerkers|adres|text|YES|
+KOLOM|medewerkers|afgeschermd_op|timestamp without time zone|YES|
 KOLOM|medewerkers|bedrijf_uitzendbureau|text|YES|
 KOLOM|medewerkers|bhv_vervaldatum|text|YES|
 KOLOM|medewerkers|bijgewerkt_op|timestamp without time zone|NO|now()

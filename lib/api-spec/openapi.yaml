@@ -9710,6 +9710,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Medewerker"
 
+  /medewerkers/{id}/afschermen:
+    post:
+      operationId: schermMedewerkerAf
+      tags: [personeel]
+      summary: Gegevens dichtzetten (AVG-afscherming) van een oud-medewerker — data blijft bewaard, persoonsgegevens niet meer opvraagbaar
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+
   /medewerkers/{id}/cao-keuzes:
     get:
       operationId: listCaoKeuzes
@@ -34542,6 +34561,9 @@ components:
           type: ["string", "null"]
         actief:
           type: boolean
+        afgeschermd_op:
+          type: ["string", "null"]
+          description: Moment waarop personeelszaken de gegevens heeft dichtgezet (AVG-afscherming); daarna geeft de API geen persoons-/contactgegevens meer terug.
         opmerkingen:
           type: ["string", "null"]
         bedrijf_uitzendbureau:

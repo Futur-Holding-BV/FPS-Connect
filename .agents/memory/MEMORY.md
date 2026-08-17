@@ -150,3 +150,4 @@
 - [Objectopslag-cleanup bij delete](storage-cleanup-bij-delete.md) — DELETE-routes met bestand_pad moeten opslag opruimen (ook parent-cascade); pad valideren, fout=warn+doorgaan.
 - [Document Studio bulk-generatie](studio-bulk-generatie.md) — claim via advisory lock + tussenstatus 'genererend' vóór AI-aanroep; referentie optioneel; single-routes moeten 'genererend' kennen.
 - [Uitvoering-module (/uitvoering)](uitvoering-module.md) — overzicht+detail hergebruiken opdracht-tabs; geen doeltype 'opdracht' in dokoppeltabel; overzicht-endpoint zonder bedragen op projecten:1.
+- [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.

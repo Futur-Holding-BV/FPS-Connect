@@ -8,7 +8,7 @@ import {
   hrmOnboardingTakenTable,
   hrmAiVoorstellenTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
@@ -41,7 +41,9 @@ router.post("/medewerkers/duplicate-check", lezen, async (req, res): Promise<voi
     conditions.push(ilike(medewerkersTable.email, `%${email.trim()}%`));
   }
 
-  // 1. Zoek in medewerkers (inclusief gearchiveerde / inactieve)
+  // 1. Zoek in medewerkers (inclusief gearchiveerde / inactieve).
+  // Afgeschermde oud-medewerkers (AVG-afscherming) worden volledig uitgesloten:
+  // hun e-mail/geboortedatum mag via deze route niet terugvindbaar zijn.
   const medewerkerRijen = conditions.length > 0
     ? await db
         .select({
@@ -52,19 +54,31 @@ router.post("/medewerkers/duplicate-check", lezen, async (req, res): Promise<voi
           actief: medewerkersTable.actief,
         })
         .from(medewerkersTable)
-        .where(or(...conditions))
+        .where(and(or(...conditions), isNull(medewerkersTable.afgeschermdOp)))
         .limit(10)
     : [];
 
-  // 2. Zoek ook in gebruikers-accounts (oud-gebruikers zonder medewerker-record)
+  // 2. Zoek ook in gebruikers-accounts (oud-gebruikers zonder medewerker-record).
+  // Accounts die gekoppeld zijn aan een afgeschermde oud-medewerker mogen hier
+  // GEEN naam/e-mail prijsgeven: alleen bij een exacte e-mailmatch komt een
+  // geredigeerd "bestaand account"-resultaat terug (duplicaat-preventie blijft
+  // werken, vissen op deelstrings kan niet).
   const gebruikerRijen: Array<{ id: number; naam: string; email: string | null }> = [];
+  const afgeschermdeAccounts: Array<{ id: number }> = [];
   if (email && email.trim().length >= 3) {
     const gRows = await db
-      .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email })
+      .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, afgeschermdOp: medewerkersTable.afgeschermdOp })
       .from(gebruikersTable)
+      .leftJoin(medewerkersTable, eq(medewerkersTable.gebruikerId, gebruikersTable.id))
       .where(ilike(gebruikersTable.email, `%${email.trim()}%`))
       .limit(5);
     for (const g of gRows) {
+      if (g.afgeschermdOp) {
+        if (g.email && g.email.toLowerCase() === email.trim().toLowerCase()) {
+          afgeschermdeAccounts.push({ id: g.id });
+        }
+        continue;
+      }
       const al = medewerkerRijen.some(
         (r) => r.email && g.email && r.email.toLowerCase() === g.email.toLowerCase(),
       );
@@ -103,7 +117,16 @@ router.post("/medewerkers/duplicate-check", lezen, async (req, res): Promise<voi
     }))
     .filter((r) => r.gelijkenis_score >= 0.4);
 
-  const merged = [...resultatenMedewerkers, ...resultatenGebruikers]
+  const resultatenAfgeschermd = afgeschermdeAccounts.map((a) => ({
+    id: a.id,
+    naam: "Bestaand account (gegevens afgeschermd)",
+    email: null as string | null,
+    geboortedatum: null as string | null,
+    gelijkenis_score: 1,
+    type: "gebruiker_account" as const,
+  }));
+
+  const merged = [...resultatenMedewerkers, ...resultatenGebruikers, ...resultatenAfgeschermd]
     .sort((a, b) => b.gelijkenis_score - a.gelijkenis_score)
     .slice(0, 10);
 
