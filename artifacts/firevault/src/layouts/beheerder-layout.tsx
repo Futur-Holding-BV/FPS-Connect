@@ -840,10 +840,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      {/* Marketing — zelfde rechtencontrole als de pagina: de Marketing-API
-                          vereist crm 3 (beheren) voor alle lees/beheer-endpoints; verzenden
-                          gate't de pagina intern op crm 4. */}
-                      {heeftNiveau("crm", 3) && (
+                      {/* Marketing — eigen module in de rechtenmatrix: de Marketing-API
+                          vereist marketing 3 (beheren) voor alle lees/beheer-endpoints;
+                          verzenden gate't de pagina intern op marketing 4. */}
+                      {heeftNiveau("marketing", 3) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild

@@ -73,7 +73,7 @@ export default function CrmMarketingPagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
-  const magVerzenden = heeftNiveau("crm", 4);
+  const magVerzenden = heeftNiveau("marketing", 4);
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">

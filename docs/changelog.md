@@ -1,3 +1,10 @@
+## 2026-08-17 — Eigen module "Marketing" in de rechtenmatrix (MARKETING_02)
+
+- Marketing (doelgroepen, sjablonen, campagnes) is losgekoppeld van de CRM-module en heeft nu een eigen module `marketing` in de bevoegdheden-matrix (akkoord René): niveau 3 = beheren + proefverzenden, niveau 4 = campagnes écht verzenden en stoppen.
+- Presets: Commercieel krijgt marketing 3; Directie krijgt marketing 4 (expliciete keuze René). Overige presets en handmatige profielen blijven op 0 (fail-closed); toekennen kan via Rollen & Rechten.
+- Migratie `0069_marketing-module.sql` tilt systeem-presets én daaruit afgeleide gebruikers mee (alleen-verhogend, idempotent).
+- Backend `marketing.ts` gate't nu op `marketing` 3/4; toestemming-beheer op contactpersonen blijft bewust onder `crm` 2. Sidebar-link en verzendknoppen volgen de nieuwe module.
+
 ## 2026-08-17 — KLEURACCENT_01: hoofdstukkleur doorgetrokken in het werkscherm
 
 - **Uitvoering:** UI-verfijning firevault (NAV_01/KLEURACCENT_01) | **Kwaliteit:** hoog | **Risico:** laag (alleen CSS + twee data-attributen; tokens ongewijzigd)

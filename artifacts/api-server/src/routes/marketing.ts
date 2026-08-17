@@ -1,10 +1,11 @@
 // MARKETING_01 — doelgroepen, sjablonen en campagnes.
 //
-// Rechten (akkoord René 17-08-2026): marketing hoort bij module "crm".
-//   - crm niveau 3 = marketing beheren (doelgroepen, sjablonen, campagnes
-//     opstellen, proefverzending naar jezelf)
-//   - crm niveau 4 = een campagne écht verzenden naar een doelgroep (en
-//     stoppen) — profiel Commercieel heeft crm 4.
+// Rechten (akkoord René 17-08-2026): eigen module "marketing" in de matrix.
+//   - marketing niveau 3 = marketing beheren (doelgroepen, sjablonen,
+//     campagnes opstellen, proefverzending naar jezelf) — preset Commercieel.
+//   - marketing niveau 4 = een campagne écht verzenden naar een doelgroep
+//     (en stoppen) — preset Directie.
+// Toestemming-beheer op contactpersonen blijft onder crm (niveau 2).
 //
 // Toestemming is een harde serverpoort (marketingService): wie geen
 // toestemming heeft valt uit élke doelgroep en verzending, niet omzeilbaar.
@@ -37,8 +38,8 @@ import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { logger } from "../lib/logger";
 
 const router = Router();
-const beheren = requireBevoegdheid("crm", 3);
-const verzenden = requireBevoegdheid("crm", 4);
+const beheren = requireBevoegdheid("marketing", 3);
+const verzenden = requireBevoegdheid("marketing", 4);
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 

@@ -48,6 +48,12 @@ export const MODULES = [
     omschrijving: "Relatiebeheer en commerciele opvolging",
   },
   {
+    id: "marketing",
+    label: "Marketing",
+    omschrijving:
+      "Marketingcampagnes: doelgroepen, sjablonen en campagnes. Niveau 3 = beheren en proefverzenden, niveau 4 = campagnes écht verzenden en stoppen",
+  },
+  {
     id: "abonnementen",
     label: "Abonnementen",
     omschrijving: "Abonnementen en pakketten",
@@ -362,7 +368,7 @@ export const PRESETS: Preset[] = [
     groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 1,
-      crm: 4, abonnementen: 4, offertes: 3, projecten: 3,
+      crm: 4, marketing: 3, abonnementen: 4, offertes: 3, projecten: 3,
     }),
   },
   {
@@ -385,7 +391,7 @@ export const PRESETS: Preset[] = [
     groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
-      rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
+      rapportages: 4, bibliotheek: 2, crm: 4, marketing: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, projecten: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
       goedkeuring: 4, declaraties: 4,
