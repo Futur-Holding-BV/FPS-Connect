@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { SNAGSTREAM_RAPPORT_ANALYSE_PROMPT } from "../lib/aiPrompts";
+import { normaliseerStorageUrl } from "../lib/storageObjectsUrl";
 import {
   db,
   snagstreamRapportenTable,
@@ -146,9 +147,12 @@ router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwe
 
   // Bouw een toegankelijke download-URL
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];
-  const downloadUrl = devDomain
-    ? `https://${devDomain}/api/storage/files?path=${encodeURIComponent(rapport.pdfUrl)}`
-    : rapport.pdfUrl;
+  const genormaliseerdePdfUrl = normaliseerStorageUrl(rapport.pdfUrl);
+  // Alleen relatieve (interne) paden krijgen het dev-domein ervoor; een externe
+  // http(s)-URL blijft ongewijzigd.
+  const downloadUrl = devDomain && genormaliseerdePdfUrl.startsWith("/")
+    ? `https://${devDomain}${genormaliseerdePdfUrl}`
+    : genormaliseerdePdfUrl;
 
   try {
     await db.update(snagstreamRapportenTable)

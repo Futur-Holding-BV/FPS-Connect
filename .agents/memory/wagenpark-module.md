@@ -3,7 +3,7 @@ name: Wagenpark-module patronen
 description: WAGENPARK_01-beslissingen — voertuigdocumenten, mijn-auto scoping, RDW, sync-dedupe, garagemail
 ---
 
-- Voertuigdocumenten hergebruiken `documenten` + `document_koppelingen` (doelType `voertuig`). **Download uitsluitend via de eigen route** `GET /wagenpark/voertuigen/:id/documenten/:documentId/download` (koppeling-check + scan-gate); de generieke `/storage/objects`-route kent geen voertuig-ACL. `/api/storage/files?path=...` bestaat NIET als route (offertes/snagstream gebruiken die vorm alleen als string in mails).
+- Voertuigdocumenten hergebruiken `documenten` + `document_koppelingen` (doelType `voertuig`). **Download uitsluitend via de eigen route** `GET /wagenpark/voertuigen/:id/documenten/:documentId/download` (koppeling-check + scan-gate); de generieke `/storage/objects`-route kent geen voertuig-ACL. `/api/storage/files?path=...` bestaat NIET als route; alle generatoren gebruiken sinds aug 2026 storageObjectsUrl().
 - Verwijderen = koppeling unlinken; document pas archiveren als géén koppelingen resteren (many-to-many, anders data-loss bij andere doelen).
 - Server-side uploads (multer memory) moeten `scanBestandBytes` draaien VÓÓR opslag, fail-closed, met `objectPad` in de scan-input zodat de download-gate (`haalScanStatusOpVoorPad`) matcht.
 - `GET /wagenpark/mijn-auto` = requireAuth zonder module-recht, scoping op `(await effectieveContext(req)).userId` (LET OP: effectieveContext is async, uit `utils/rol`, niet uit middlewares/auth).

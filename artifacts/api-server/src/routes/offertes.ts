@@ -6,6 +6,7 @@
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
 import { execSync } from "child_process";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
+import { storageObjectsUrl } from "../lib/storageObjectsUrl";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -1606,7 +1607,7 @@ Als geen enkel beeld past, antwoord met {"keuzes":[]}.`;
         // Privacycontrole: echte praktijkfoto's kunnen personen of kentekens bevatten
         // en vragen om handmatige controle vóór opname in een klantdocument.
         const isPraktijkfoto = v.visualType === "referentiefoto" || v.bronType === "praktijkfoto";
-        const storageUrl = (pad: string) => `/api/storage/files?path=${encodeURIComponent(pad)}`;
+        const storageUrl = (pad: string) => storageObjectsUrl(pad);
         return {
           visual_id: v.id,
           naam: v.naam,

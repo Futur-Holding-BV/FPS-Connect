@@ -17,14 +17,17 @@ export const LOGO_STORAGE_PREFIX = "werkgevers/";
  * opaque storage-subPath, of null als het pad niet is toegestaan.
  *
  * Geaccepteerde vormen:
- *   - "/api/storage/files?path=<URL-encoded subPath>"
+ *   - "/api/storage/objects/<subPath>"  (canonieke download-URL)
+ *   - "/api/storage/files?path=<URL-encoded subPath>"  (historisch dood formaat)
  *   - "/objects/<subPath>"  (canonical pad na uploadBestand)
  *   - kale subPath (geen "/" of "http"-prefix)
  * Geweigerd: externe http(s)-URLs, onbekende root-paden, paden buiten LOGO_STORAGE_PREFIX.
  */
 export function resolveWerkgeverLogoSubPath(logoUrl: string): string | null {
   let subPath: string;
-  if (logoUrl.startsWith("/api/storage/files?path=")) {
+  if (logoUrl.startsWith("/api/storage/objects/")) {
+    subPath = decodeURIComponent(logoUrl.slice("/api/storage/objects/".length));
+  } else if (logoUrl.startsWith("/api/storage/files?path=")) {
     subPath = decodeURIComponent(logoUrl.replace("/api/storage/files?path=", ""));
   } else if (logoUrl.startsWith("/objects/")) {
     subPath = logoUrl.slice("/objects/".length);

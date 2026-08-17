@@ -17,7 +17,13 @@ describe("resolveWerkgeverLogoSubPath", () => {
     );
   });
 
-  it("accepteert een /api/storage/files?path=werkgevers/-pad (URL-encoded)", () => {
+  it("accepteert de canonieke /api/storage/objects/werkgevers/-URL", () => {
+    expect(resolveWerkgeverLogoSubPath("/api/storage/objects/werkgevers/2/logo.svg")).toBe(
+      "werkgevers/2/logo.svg",
+    );
+  });
+
+  it("accepteert een /api/storage/files?path=werkgevers/-pad (historisch dood formaat)", () => {
     const encoded = "/api/storage/files?path=" + encodeURIComponent("werkgevers/2/logo.svg");
     expect(resolveWerkgeverLogoSubPath(encoded)).toBe("werkgevers/2/logo.svg");
   });

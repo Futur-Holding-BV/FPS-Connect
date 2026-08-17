@@ -235,7 +235,7 @@ async function main(): Promise<void> {
       `AI las "${factuur.factuurnummer}", verwacht "${FACTUURNUMMER}"`);
     eis(factuur.leverancierId === leverancierId, "stap 2 leveranciersregister-koppeling",
       `leverancierId=${factuur.leverancierId}, verwacht ${leverancierId} (uit leveranciers, niet crm_klanten)`);
-    eis(factuur.pdfUrl != null && factuur.pdfUrl.includes("/api/storage/files"), "stap 2 PDF-opslag", String(factuur.pdfUrl));
+    eis(factuur.pdfUrl != null && factuur.pdfUrl.startsWith("/api/storage/objects/"), "stap 2 PDF-opslag", String(factuur.pdfUrl));
 
     // Deterministisch routeringsbewijs: de PDF is bewust volledig en eenduidig,
     // dus de AI mag géén onzekere velden melden. Er is een goedgekeurde

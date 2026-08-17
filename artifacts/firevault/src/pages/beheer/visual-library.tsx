@@ -1,3 +1,4 @@
+import { normaliseerStorageUrl } from "@/lib/storage-url";
 import { useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -149,7 +150,9 @@ function useLocalStorage<T>(sleutel: string, standaard: T): [T, (v: T | ((prev: 
 function storageUrl(pad: string): string {
   if (!pad) return "";
   if (/^https?:\/\//i.test(pad)) return pad;
-  return `/api/storage/files?path=${encodeURIComponent(pad)}`;
+  // Canonieke storage-route (zelfde toegangscontrole als de beeldbank/MERK_01);
+  // /api/storage/files heeft nooit bestaan.
+  return normaliseerStorageUrl(pad);
 }
 
 function visualTypeLabel(waarde: string): string {

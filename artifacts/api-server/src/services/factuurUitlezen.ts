@@ -9,6 +9,7 @@ import {
 import { eq, and, ilike, desc } from "drizzle-orm";
 import type { Logger } from "pino";
 import { aiGateway } from "../lib/aiGateway";
+import { normaliseerStorageUrl } from "../lib/storageObjectsUrl";
 import { FACTUUR_UITLEZEN_PROMPT } from "../lib/aiPrompts";
 
 export type ParsedRegel = {
@@ -77,9 +78,12 @@ export async function leesFactuurUitMetAi(factuurId: number, log: Logger): Promi
   if (!factuur.pdfUrl) return { ok: false, status: 422, error: "Geen PDF gekoppeld aan deze factuur" };
 
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];
-  const downloadUrl = devDomain
-    ? `https://${devDomain}/api/storage/files?path=${encodeURIComponent(factuur.pdfUrl)}`
-    : factuur.pdfUrl;
+  const genormaliseerdePdfUrl = normaliseerStorageUrl(factuur.pdfUrl);
+  // Alleen relatieve (interne) paden krijgen het dev-domein ervoor; een externe
+  // http(s)-URL blijft ongewijzigd.
+  const downloadUrl = devDomain && genormaliseerdePdfUrl.startsWith("/")
+    ? `https://${devDomain}${genormaliseerdePdfUrl}`
+    : genormaliseerdePdfUrl;
 
   try {
     await db.update(facturenTable).set({ status: "ai_gelezen", bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));

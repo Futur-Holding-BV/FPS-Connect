@@ -27,6 +27,7 @@ import {
   type FactuurSignaalType,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { storageObjectsUrl } from "../lib/storageObjectsUrl";
 import { stuurPushNaarGebruiker } from "../lib/pushService";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { analyseerFactuurVoorStroom, type FactuurStroomVelden } from "../lib/documentIntelligence";
@@ -301,7 +302,7 @@ async function verwerkFactuurBijlage(
     const veiligeNaam = bijlage.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const subPath = `facturen/mailstroom/${Date.now()}-${veiligeNaam}`;
     await objectStorage.uploadBestand(subPath, buffer, mime);
-    pdfUrl = `/api/storage/files?path=${encodeURIComponent(subPath)}`;
+    pdfUrl = storageObjectsUrl(subPath);
   } catch (err) {
     logger.warn({ err }, "factuurstroom: PDF opslaan mislukt");
   }

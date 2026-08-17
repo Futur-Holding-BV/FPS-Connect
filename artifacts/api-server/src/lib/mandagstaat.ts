@@ -10,6 +10,7 @@
 // goedgekeurd (of vergrendeld) heeft. Concept/ingediend telt niet mee; is er
 // daardoor niets, dan is er geen genereerbare mandagstaat.
 import PDFDocument from "pdfkit";
+import { storageObjectsUrl } from "./storageObjectsUrl";
 import { db } from "@workspace/db";
 import {
   urenRegistratiesTable,
@@ -501,7 +502,7 @@ export async function weekenVoorFactuur(opdrachtId: number, van: string | null, 
 // ── Object storage voor de factuurbijlage (§6c.2) ─────────────────────────────
 // Slaat een gegenereerde mandagstaat-PDF op naast de factuur, zodat aantoonbaar
 // is dat hij "met de factuur meegaat". Retourneert een storage-URL (zelfde vorm
-// als factuur-PDF's: /api/storage/files?path=...).
+// als factuur-PDF's: /api/storage/objects/<subPath>).
 export async function slaMandagstaatOp(opts: {
   factuurId: number;
   opdrachtId: number;
@@ -511,7 +512,7 @@ export async function slaMandagstaatOp(opts: {
 }): Promise<string> {
   const subPath = `facturen/${opts.factuurId}/mandagstaten/mandagstaat-opdracht${opts.opdrachtId}-${opts.jaar}-week${opts.week}.pdf`;
   await objectStorage.uploadBestand(subPath, opts.pdf, "application/pdf");
-  return `/api/storage/files?path=${encodeURIComponent(subPath)}`;
+  return storageObjectsUrl(subPath);
 }
 
 // ── Factuurkoppeling (§6c.2/§9.16) — hoge-orde helper ─────────────────────────

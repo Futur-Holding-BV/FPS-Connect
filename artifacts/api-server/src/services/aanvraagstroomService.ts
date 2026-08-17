@@ -20,6 +20,7 @@ import {
   werkInboxTokensTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { storageObjectsUrl } from "../lib/storageObjectsUrl";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { analyseerAanvraagVoorStroom, type AanvraagStroomVelden } from "../lib/documentIntelligence";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
@@ -189,7 +190,7 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
         const veiligeNaam = b.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const subPath = `aanvragen/mailstroom/${Date.now()}-${veiligeNaam}`;
         await objectStorage.uploadBestand(subPath, buffer, b.contentType);
-        opgeslagenBijlagen.push({ naam: b.name, url: `/api/storage/files?path=${encodeURIComponent(subPath)}` });
+        opgeslagenBijlagen.push({ naam: b.name, url: storageObjectsUrl(subPath) });
       } catch (err) {
         logger.warn({ err, naam: b.name }, "aanvraagstroom: bijlage opslaan mislukt");
       }

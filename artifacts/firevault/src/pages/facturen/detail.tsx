@@ -33,6 +33,7 @@ import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoo
 import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { normaliseerStorageUrl } from "@/lib/storage-url";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -867,7 +868,7 @@ export default function FactuurDetailPagina() {
         <div className="flex items-center gap-2 text-sm">
           <Eye className="h-4 w-4 text-muted-foreground" />
           <a
-            href={`/api/storage/files?path=${encodeURIComponent(f.pdf_url)}`}
+            href={normaliseerStorageUrl(f.pdf_url)}
             target="_blank"
             rel="noreferrer"
             className="text-primary hover:underline"
