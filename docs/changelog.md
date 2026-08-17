@@ -1,3 +1,9 @@
+## 2026-08-17 — Naam "FPS Connect" beter zichtbaar in navigatie en welkomstpagina
+
+- Het volledige logo-plaatje (met kleine, onleesbare "FPS Connect"-tekst en wit blok) is vervangen door een vrijstaand schild-icoon (transparante achtergrond, `assets/logo-fps-schild.png`) met daarnaast de naam "FPS Connect" als echte tekst — scherp op elk formaat en leesbaar in licht én donker schema.
+- Doorgevoerd op: sidebar-header beheerderlayout, mobiele topbalk en het linkerpaneel van de welkomstpagina.
+- Bewijs: Playwright-screenshots licht/donker van welkomstpagina en planning-sidebar.
+
 ## 2026-08-17 — Werkmaatschappij-keuzelijsten live uit de werkgevers-API
 
 - Het planning-filter en alle HRM-dropdowns (onboarding, medewerkerdetail, functiebeheer) tonen nu álle actieve werkmaatschappijen uit de database — de vanmorgen aangemaakte FPS Bouw en Renovatie verschijnt direct, zonder codewijziging bij een volgende nieuwe BV.

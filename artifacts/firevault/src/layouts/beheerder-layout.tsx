@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import logoFpsConnect from "@/assets/logo-fps-connect.png";
+import logoFpsSchild from "@/assets/logo-fps-schild.png";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
@@ -356,11 +356,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
-            <img
-              src={logoFpsConnect}
-              alt="FPS Connect"
-              className="h-8 w-auto flex-shrink-0 group-data-[collapsible=icon]:hidden"
-            />
+            <div className="flex items-center gap-2 min-w-0 group-data-[collapsible=icon]:hidden">
+              <img
+                src={logoFpsSchild}
+                alt="FPS Connect"
+                className="h-8 w-auto flex-shrink-0"
+              />
+              <span className="truncate text-base font-bold tracking-tight text-sidebar-foreground">
+                FPS <span className="font-semibold text-muted-foreground">Connect</span>
+              </span>
+            </div>
             <SidebarTrigger
               className="ml-auto shrink-0 group-data-[collapsible=icon]:ml-0"
               title="Menu in-/uitklappen"
@@ -1911,7 +1916,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           (location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? "flex-shrink-0" : "sticky top-0",
         )}>
           <SidebarTrigger className="md:hidden" title="Menu openen" />
-          <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
+          <span className="flex items-center gap-1.5 md:hidden min-w-0">
+            <img src={logoFpsSchild} alt="FPS Connect" className="h-5 w-auto flex-shrink-0" />
+            <span className="truncate text-sm font-bold tracking-tight text-foreground">
+              FPS <span className="font-semibold text-muted-foreground">Connect</span>
+            </span>
+          </span>
           <TerugKnop />
           <div className="ml-auto flex items-center gap-2">
             {paneelBeschikbaar && <BanenMenu />}

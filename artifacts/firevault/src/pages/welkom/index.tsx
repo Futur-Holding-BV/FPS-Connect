@@ -1,3 +1,4 @@
+import logoFpsSchild from "@/assets/logo-fps-schild.png";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
@@ -81,12 +82,15 @@ export default function WelkomScherm() {
 
       {/* Linkerpaneel */}
       <aside className="w-64 shrink-0 bg-[#1a1f2b] flex flex-col py-8 px-6">
-        <div className="mb-10">
+        <div className="mb-10 flex items-center gap-2.5">
           <img
-            src="/logo-fps-connect.png"
+            src={logoFpsSchild}
             alt="FPS Connect"
-            className="h-7 w-auto"
+            className="h-9 w-auto shrink-0"
           />
+          <span className="text-lg font-bold tracking-tight text-white">
+            FPS <span className="font-semibold text-white/60">Connect</span>
+          </span>
         </div>
 
         <div className="flex-1 space-y-1">
