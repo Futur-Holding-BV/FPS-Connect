@@ -41,6 +41,8 @@ export interface SlimUploadSuggestie {
   impact_omschrijving: string;
   vereist_bevestiging: boolean;
   directe_actie_beschrijving: string;
+  // Reden waarom het document niet gelezen kon worden (null = leesbaar)
+  lees_probleem: string | null;
   // Toegangscontrole (toegevoegd door route handler op basis van sessie)
   mag_uploaden: boolean;
   beperkingen: string[];
@@ -85,6 +87,7 @@ async function classificeerBestand(
     impact_omschrijving: analyse.impact_omschrijving,
     vereist_bevestiging: analyse.vereist_bevestiging,
     directe_actie_beschrijving: analyse.directe_actie_beschrijving,
+    lees_probleem: analyse.lees_probleem,
     mag_uploaden: true,
     beperkingen: [],
   };

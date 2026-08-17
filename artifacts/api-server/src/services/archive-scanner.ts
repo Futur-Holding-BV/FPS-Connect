@@ -37,6 +37,17 @@ const RAR4_MAGIC = [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00];
 const RAR5_MAGIC = [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00];
 const SEVENZ_MAGIC = [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c];
 
+// 7z-binary bepalen: expliciet pad via env, anders PATH (prod: p7zip-full in
+// het Docker-image), anders het Nix-pad van de dev-omgeving.
+import { existsSync } from "fs";
+function vind7z(): string {
+  if (process.env.SEVENZIP_PAD) return process.env.SEVENZIP_PAD;
+  for (const kandidaat of ["/usr/bin/7z", "/usr/bin/7zz", "/nix/store/7ygwq9dks5kmdjkia8zh71fs1mfkzf0j-p7zip-17.06/bin/7z"]) {
+    if (existsSync(kandidaat)) return kandidaat;
+  }
+  return "7z"; // laatste kans: PATH-resolutie door execFile
+}
+
 const GEBLOKKEERDE_EXT = new Set([
   ".exe", ".bat", ".cmd", ".com", ".scr", ".ps1", ".psc1",
   ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".jar",
@@ -160,22 +171,59 @@ async function scan7z(bytes: Buffer, type: "7z" | "rar"): Promise<ArchiefScanRes
   const namen: string[] = [];
   let wachtwoordBeveiligd = false;
 
-  const SEVENZ = "/nix/store/7ygwq9dks5kmdjkia8zh71fs1mfkzf0j-p7zip-17.06/bin/7z";
   const tmpPad = join(tmpdir(), `fps-arch-${randomBytes(8).toString("hex")}.${type}`);
 
   try {
     await writeFile(tmpPad, bytes, { mode: 0o600 });
 
-    const uitvoer = await new Promise<string>((resolve) => {
+    // Fail-closed: als 7z niet uitgevoerd kan worden (niet geïnstalleerd), mag
+    // het archief NIET stilzwijgend als "schoon" doorgaan — inhoud is dan
+    // oncontroleerbaar en wordt geblokkeerd.
+    const uitvoer = await new Promise<string>((resolve, reject) => {
       execFile(
-        SEVENZ,
+        vind7z(),
         ["l", "-slt", tmpPad],
         { timeout: 15000 },
-        (_err, stdout, stderr) => {
+        (err, stdout, stderr) => {
+          const errno = err as (NodeJS.ErrnoException & { killed?: boolean }) | null;
+          if (errno && (errno.code === "ENOENT" || errno.code === "EACCES")) {
+            reject(new Error("7z-scanner niet beschikbaar op deze server"));
+            return;
+          }
+          if (errno?.killed) {
+            reject(new Error("7z-scan afgebroken (timeout) — archiefinhoud niet controleerbaar"));
+            return;
+          }
+          // Sommige exitcodes (bv. wachtwoordfouten) leveren wél bruikbare
+          // uitvoer — maar een fout ZONDER uitvoer is oncontroleerbaar en
+          // mag nooit als "schoon" doorgaan.
+          const uitvoer = (stdout + "\n" + stderr).trim();
+          if (errno && uitvoer.length === 0) {
+            reject(new Error(`7z-scan mislukt zonder uitvoer (${errno.message ?? "onbekende fout"})`));
+            return;
+          }
           resolve(stdout + "\n" + stderr);
         },
       );
+    }).catch(async (err) => {
+      await unlink(tmpPad).catch(() => {});
+      logger.error({ err, type }, "archive-scanner: 7z niet beschikbaar — archief geblokkeerd (fail-closed)");
+      return null;
     });
+
+    if (uitvoer === null) {
+      return {
+        isArchief: true,
+        archiefType: type,
+        wachtwoordBeveiligd: false,
+        bevindingen: [{
+          beschrijving: "Archiefscan kon niet worden uitgevoerd — inhoud niet controleerbaar; geblokkeerd (fail-closed)",
+          ernst: "kritiek",
+          geblokkeerd: true,
+        }],
+        bestandsNamenInArchief: [],
+      };
+    }
 
     if (uitvoer.includes("Wrong password") || uitvoer.includes("Encrypted = +")) {
       wachtwoordBeveiligd = true;

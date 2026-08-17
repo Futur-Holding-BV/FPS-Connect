@@ -16,7 +16,7 @@
 import { db, werkgeversTable, documentStudioModellenTable, documentClassificatieCorrectiesTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { aiGateway, heeftGateway } from "./aiGateway";
-import { renderPdfPagina, renderPdfPaginas, haalPdfTekst, resizeAfbeelding, VISION_RENDER_DPI, VISION_MAX_PIXELS, VISION_JPEG_KWALITEIT } from "./pdfVisie";
+import { renderPdfPagina, renderPdfPaginas, renderPdfPaginasMetStatus, haalPdfTekst, resizeAfbeelding, VISION_RENDER_DPI, VISION_MAX_PIXELS, VISION_JPEG_KWALITEIT } from "./pdfVisie";
 import { extraheerPdfTekst } from "./pdfTekst";
 import { inspecteerDocument } from "./documentInspectie";
 import { logger } from "./logger";
@@ -87,7 +87,31 @@ export interface DocumentIntelligenceResultaat {
   impact_omschrijving: string;
   vereist_bevestiging: boolean;
   directe_actie_beschrijving: string;
+  /**
+   * Gevuld wanneer het document niet (volledig) gelezen kon worden: geen
+   * tekstlaag én geen bruikbare paginaweergave. De classificatie is dan
+   * fail-closed ("onbekend") en deze reden hoort zichtbaar te zijn bij het
+   * document zelf — nooit een stil leeg resultaat of een verzonnen categorie.
+   */
+  lees_probleem: string | null;
   bewijs: BewijsStap[];
+}
+
+// Maximaal aantal pagina's dat voor vision gerenderd wordt. Arbeidscontracten
+// en rapporten zijn vaak langer dan 5 pagina's; belangrijke bepalingen staan
+// achterin, dus de laatste pagina wordt altijd meegenomen.
+export const MAX_VISION_PAGINAS = 10;
+
+/**
+ * Kort lange documenttekst in voor een AI-prompt zónder het einde te verliezen:
+ * kop + staart met een expliciete overslag-markering. Bepalingen achterin een
+ * contract (opzegtermijn, concurrentiebeding, ondertekening) blijven zichtbaar.
+ */
+export function kortTekstInKopStaart(tekst: string, maxKop = 12000, maxStaart = 6000): string {
+  const t = tekst.trim();
+  if (t.length <= maxKop + maxStaart) return t;
+  const overgeslagen = t.length - maxKop - maxStaart;
+  return `${t.slice(0, maxKop)}\n\n[... ${overgeslagen} tekens overgeslagen (middendeel) ...]\n\n${t.slice(t.length - maxStaart)}`;
 }
 
 // ── Stap 1+2: bestandstype herkennen + tekstextractie ─────────────────────────
@@ -387,7 +411,7 @@ async function aiContentAnalyse(
   }
 
   const tekstInfo = tekst && tekst.trim().length > 0
-    ? `Geëxtraheerde tekst (${tekst.trim().length} tekens):\n${tekst.trim().slice(0, 6000)}`
+    ? `Geëxtraheerde tekst (${tekst.trim().length} tekens):\n${kortTekstInKopStaart(tekst)}`
     : "Geëxtraheerde tekst: GEEN — het bestand bevat geen machine-leesbare tekst.";
   const toelichtingInfo = toelichting && toelichting.trim().length > 0
     ? `\nGebruikerscontext: ${toelichting.trim().slice(0, 500)}`
@@ -656,22 +680,33 @@ export async function classificeerDocument(input: {
   });
 
   let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+  let leesProbleem: string | null = null;
   if (input.buffer && inspectie.vereistVisueleAnalyse) {
     if (mime === "application/pdf" && inspectie.visuelePrioriteitPaginas.length > 0) {
-      // Multi-pagina vision: render de prioriteitspagina's (max 5, DOCUMENT_01 §3.5)
-      const teRenderen = inspectie.visuelePrioriteitPaginas.slice(0, 5);
+      // Multi-pagina vision: render de prioriteitspagina's (max MAX_VISION_PAGINAS,
+      // DOCUMENT_01 §3.5) en neem altijd de laatste pagina mee — bepalingen
+      // achterin (contracten!) mogen niet buiten beeld vallen.
+      const teRenderen = inspectie.visuelePrioriteitPaginas.slice(0, MAX_VISION_PAGINAS);
       const totaal = inspectie.paginaAantal ?? teRenderen.length;
+      if (totaal > 0 && !teRenderen.includes(totaal)) {
+        if (teRenderen.length >= MAX_VISION_PAGINAS) teRenderen[teRenderen.length - 1] = totaal;
+        else teRenderen.push(totaal);
+      }
       try {
-        afbeeldingen = await renderPdfPaginas(input.buffer, teRenderen);
+        const render = await renderPdfPaginasMetStatus(input.buffer, teRenderen);
+        afbeeldingen = render.paginas;
         bewijs.push({
           stap: "vision_multi_pagina",
           resultaat: `${afbeeldingen.length} pagina('s) gerenderd`,
           detail: `pagina's ${teRenderen.join(", ")} op ${VISION_RENDER_DPI} DPI, max ${VISION_MAX_PIXELS}px, JPEG ${VISION_JPEG_KWALITEIT}, detail=high`
-            + (totaal > 5 ? ` — LET OP: document heeft ${totaal} pagina's, alleen de eerste 5 prioriteitspagina's zijn aangeboden` : ""),
+            + (totaal > MAX_VISION_PAGINAS ? ` — LET OP: document heeft ${totaal} pagina's, ${teRenderen.length} prioriteitspagina's (incl. laatste) zijn aangeboden` : "")
+            + (render.fout ? ` — rendering mislukt: ${render.fout}` : ""),
         });
+        if (render.fout && inspectie.isPixelBased) leesProbleem = render.fout;
       } catch (err) {
         logger.warn({ err }, "documentIntelligence: multi-pagina vision mislukt");
         bewijs.push({ stap: "vision_multi_pagina", resultaat: "mislukt", detail: "PDF-rendering niet beschikbaar" });
+        if (inspectie.isPixelBased) leesProbleem = "PDF-rendering niet beschikbaar op deze server";
       }
     } else {
       // Afbeeldingsbestand of enkel-pagina fallback
@@ -685,8 +720,11 @@ export async function classificeerDocument(input: {
         });
       } else {
         bewijs.push({ stap: "vision_afbeelding", resultaat: "niet toegepast", detail: inspectie.isPixelBased ? "pixel-based maar rendering niet beschikbaar" : "tekst aanwezig, geen vision nodig" });
+        if (inspectie.isPixelBased) leesProbleem = "Afbeelding kon niet worden omgezet naar leesbare AI-invoer (niet-ondersteund of beschadigd bestand)";
       }
     }
+  } else if (input.buffer == null && inspectie.vereistVisueleAnalyse && inspectie.isPixelBased) {
+    leesProbleem = "Geen bestandsinhoud beschikbaar voor visuele analyse";
   } else if (!inspectie.vereistVisueleAnalyse) {
     bewijs.push({
       stap: "vision_strategie",
@@ -762,6 +800,49 @@ export async function classificeerDocument(input: {
     }
   } catch (err) {
     logger.warn({ err }, "documentIntelligence: Correcties ophalen mislukt");
+  }
+
+  // ── Fail-closed: niets leesbaars → géén AI-analyse, géén verzonnen categorie ──
+  // Zonder tekstlaag én zonder gerenderde pagina's heeft de AI niets om op te
+  // classificeren; elk antwoord zou fabulatie zijn. We geven "onbekend" terug
+  // met een expliciete, zichtbare reden bij het document.
+  // "Bruikbare tekst" is meer dan niet-leeg: een handvol rommeltekens uit een
+  // scan is geen basis voor classificatie (minimum 40 tekens).
+  const bruikbareTekst = !!extractie.tekst && extractie.tekst.trim().length >= 40;
+  const heeftLeesbareInvoer = bruikbareTekst || afbeeldingen.length > 0;
+  if (!heeftLeesbareInvoer) {
+    if (!leesProbleem) {
+      leesProbleem = extractie.tekst && extractie.tekst.trim().length > 0
+        ? "Document bevat vrijwel geen leesbare tekst en kon niet als afbeelding worden gelezen"
+        : "Document bevat geen machine-leesbare tekst en kon niet als afbeelding worden gelezen";
+    }
+    bewijs.push({ stap: "leesbaarheid", resultaat: "onleesbaar", detail: leesProbleem });
+    return {
+      categorie: "onbekend",
+      subtype: null,
+      voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+      redenering: `Document kon niet gelezen worden: ${leesProbleem}. Classificatie is daarom niet uitgevoerd — controleer het bestand of voer de gegevens handmatig in.`,
+      vertrouwen: "laag",
+      vertrouwen_score: 0,
+      ai_beschikbaar: heeftGateway(),
+      vision_gebruikt: false,
+      tekst_gevonden: false,
+      ai_model: null,
+      gevonden_gegevens: {},
+      alternatieven: [],
+      organisatie: null,
+      jaar: null,
+      module_bestemming: CATEGORIE_MODULE["onbekend"],
+      opslaglocatie: bepaalOpslaglocatie("onbekend", CATEGORIE_MODULE["onbekend"], null, null, null),
+      beveiligingsprofiel: null,
+      documentstatus: null,
+      impact_niveau: "geen",
+      impact_omschrijving: "",
+      vereist_bevestiging: true,
+      directe_actie_beschrijving: "",
+      lees_probleem: leesProbleem,
+      bewijs,
+    };
   }
 
   const aiAnalyse = await aiContentAnalyse(
@@ -902,6 +983,7 @@ export async function classificeerDocument(input: {
     impact_omschrijving: basis.impact_omschrijving,
     vereist_bevestiging: basis.vereist_bevestiging,
     directe_actie_beschrijving: basis.directe_actie_beschrijving,
+    lees_probleem: leesProbleem,
     bewijs,
   };
 }

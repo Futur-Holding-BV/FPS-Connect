@@ -119,6 +119,27 @@ const NIVEAUS = [
 
 const OPLEIDING_STATUSSEN = ["gepland", "behaald", "verlopen", "vrijgesteld"] as const;
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
+
+// Gerichte AI-contractextractie: veldvorm zoals /ai-contract-analyse die teruggeeft.
+interface ContractAiVeld {
+  waarde: string | number | null;
+  vindplaats: { pagina: number | null; citaat: string } | null;
+}
+const CONTRACT_AI_VELD_LABELS: Array<[string, string]> = [
+  ["functie", "Functie"],
+  ["datum_in_dienst", "Datum in dienst"],
+  ["contract_type", "Contracttype"],
+  ["einddatum", "Einddatum"],
+  ["proeftijd", "Proeftijd"],
+  ["uren_per_week", "Uren per week"],
+  ["salaris", "Salaris"],
+  ["salaris_periodiciteit", "Salarisperiodiciteit"],
+  ["cao", "CAO"],
+  ["opzegtermijn", "Opzegtermijn"],
+  ["concurrentiebeding", "Concurrentiebeding"],
+  ["relatiebeding", "Relatiebeding"],
+  ["werkmaatschappij", "Werkmaatschappij"],
+];
 const DIENSTVERBAND_LABELS: Record<string, string> = {
   vast: "Vaste medewerker",
   tijdelijk: "Tijdelijk contract",
@@ -732,6 +753,7 @@ export default function MedewerkerDetailPagina() {
   const [aanstellingAiBezig, setAanstellingAiBezig] = useState(false);
   const [aanstellingAiVoorstel, setAanstellingAiVoorstel] = useState(false);
   const [aanstellingAiToelichting, setAanstellingAiToelichting] = useState<string | null>(null);
+  const [aanstellingAiVelden, setAanstellingAiVelden] = useState<Record<string, ContractAiVeld> | null>(null);
   // Snel toevoegen van een extra functie vanuit het Profiel-bewerken-dialoog.
   const [snelFunctieId, setSnelFunctieId] = useState<string>("");
 
@@ -1051,6 +1073,11 @@ export default function MedewerkerDetailPagina() {
           typeof data.ai_toelichting === "string" ? data.ai_toelichting : null,
           matchFunctie == null && data.functie_naam ? `Functie "${data.functie_naam}" niet gevonden in het functiehuis — controleer handmatig.` : null,
         ].filter(Boolean).join(" ") || null
+      );
+      setAanstellingAiVelden(
+        typeof data.velden === "object" && data.velden !== null
+          ? (data.velden as Record<string, ContractAiVeld>)
+          : null
       );
     } catch {
       toast({ title: "Verbinding mislukt bij AI invullen", variant: "destructive" });
@@ -1637,6 +1664,26 @@ export default function MedewerkerDetailPagina() {
                   AI-voorstel ingevuld vanuit het arbeidscontract. Controleer en pas aan waar nodig.
                   {aanstellingAiToelichting ? ` ${aanstellingAiToelichting}` : ""}
                 </span>
+              </div>
+            )}
+            {aanstellingAiVoorstel && aanstellingAiVelden && (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-[11px] font-semibold text-amber-800">Uit het contract gelezen (met vindplaats):</p>
+                {CONTRACT_AI_VELD_LABELS.map(([sleutel, label]) => {
+                  const veld = aanstellingAiVelden[sleutel];
+                  if (!veld || veld.waarde == null || veld.waarde === "") return null;
+                  return (
+                    <div key={sleutel} className="text-[11px] text-amber-900 leading-snug">
+                      <span className="font-medium">{label}:</span> {String(veld.waarde)}
+                      {veld.vindplaats && (
+                        <span className="text-amber-700/80">
+                          {" "}({veld.vindplaats.pagina ? `p. ${veld.vindplaats.pagina} — ` : ""}&ldquo;{veld.vindplaats.citaat}&rdquo;)
+                        </span>
+                      )}
+                      {!veld.vindplaats && <span className="text-amber-700/80"> (geen vindplaats — controleer zelf)</span>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </DialogHeader>

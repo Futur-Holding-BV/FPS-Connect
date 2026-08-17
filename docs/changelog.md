@@ -1,3 +1,16 @@
+## 2026-08-17 — Documentherkenning: nooit stil mislukken, grenzen opgeheven, contract-extractie met vindplaats, prod-binaries
+
+- **Uitvoering:** herstel + uitbreiding documentpijplijn | **Kwaliteit:** hoog | **Risico:** midden (Dockerfile-wijziging bewijsbaar bij volgende deploy)
+
+Vier samenhangende verbeteringen aan de documentpijplijn:
+
+1. **Onleesbaar = zichtbaar, nooit verzonnen.** Nieuw veld `lees_probleem` door de hele keten: `classificeerDocument` geeft fail-closed "onbekend" terug (zonder AI-aanroep) mét expliciete reden wanneer een document geen tekstlaag heeft én geen pagina als afbeelding kon worden gelezen. Reden wordt opgeslagen op inbox-items (migratie **0062**, kolom `lees_probleem`), meegegeven bij herclassificatie, teruggegeven door Slim Upload (rode banner in de uploadbalk) en gevoed aan de HRM-veldenextractie (duidelijke foutmelding i.p.v. generieke tekst).
+2. **Grenzen opgeheven.** Tekst voor AI-analyse niet meer afgekapt op 6.000 tekens maar kop+staart (12k+6k, met markering) zodat bepalingen achterin meedoen; vision van max 5 → max 10 pagina's, waarbij de **laatste pagina altijd** wordt meegenomen (slotbepalingen/ondertekening).
+3. **Arbeidscontract-extractie met vindplaats.** `POST /medewerkers/:id/ai-contract-analyse` herbouwd: volledige tekst (kop+staart tot 30k) met paginamarkeringen, vision-fallback voor gescande contracten, en per veld `{waarde, vindplaats: {pagina, citaat}}` voor functie, datum in dienst, bepaalde/onbepaalde tijd + einddatum, proeftijd, uren/week, salaris + periodiciteit, CAO, opzegtermijn, concurrentie- en relatiebeding. Waarde zonder vindplaats wordt als "controleer zelf" getoond; onleesbaar contract geeft 422 met reden. Oude topvelden blijven voor het aanstellingsformulier; het formulier toont nu de gelezen velden mét citaat.
+4. **Prod-binaries.** `deploy/Dockerfile.api` installeert nu poppler-utils (pdftoppm → vision op prod), postgresql-client-16 via PGDG (dagelijkse back-up draaide op prod dagelijks stuk), chromium+fonts (offerte-PDF en PIM-rapport gaven 503) en p7zip-full. De archiefscanner gebruikte een hardcoded Nix-pad en liet archieven bij een exec-fout **stil als schoon door** — nu fail-closed: 7z niet beschikbaar → kritieke geblokkeerde bevinding; binary wordt via env/PATH/Nix geresolved.
+
+Bewijs: typecheck api-server + firevault groen; fail-closed pad live aangetoond (rommel-PDF → categorie "onbekend", `lees_probleem` gevuld, geen AI-aanroep). Dockerfile-effect is pas bij de volgende deploy via Actions te bewijzen.
+
 ## 2026-08-17 — Tokenbewaking herbouwd: meet feiten in plaats van aannames (valse "deploys GEPAUZEERD"-mail)
 
 - **Uitvoering:** herstel bewaking | **Kwaliteit:** hoog | **Risico:** laag (alleen bewaking/docs, geen applicatiecode)

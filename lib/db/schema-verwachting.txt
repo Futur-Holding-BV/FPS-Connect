@@ -2345,6 +2345,7 @@ KOLOM|inbox_items|geupload_op|timestamp without time zone|NO|now()
 KOLOM|inbox_items|goedgekeurd_door|integer|YES|
 KOLOM|inbox_items|goedgekeurd_op|timestamp without time zone|YES|
 KOLOM|inbox_items|id|integer|NO|nextval('inbox_items_id_seq'::regclass)
+KOLOM|inbox_items|lees_probleem|text|YES|
 KOLOM|inbox_items|mimetype|text|YES|
 KOLOM|inbox_items|mogelijk_duplicaat|boolean|NO|false
 KOLOM|inbox_items|opmerkingen|text|YES|

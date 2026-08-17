@@ -90,7 +90,10 @@ export async function extracteerHrmVeldenUitBuffer(
   const isOnbekend = subtype === "onbekend" || subtype === "Onbekend";
   const geenVelden = !heeftBruikbareVelden(velden);
 
-  if (isOnbekend || (resultaat.vertrouwen === "laag" && geenVelden)) {
+  if (resultaat.lees_probleem) {
+    velden.succes = false;
+    velden.foutmelding = `Document kon niet gelezen worden: ${resultaat.lees_probleem}. Voer de gegevens handmatig in.`;
+  } else if (isOnbekend || (resultaat.vertrouwen === "laag" && geenVelden)) {
     velden.succes = false;
     velden.foutmelding =
       "Documentanalyse kon geen persoonsgegevens uitlezen. " +

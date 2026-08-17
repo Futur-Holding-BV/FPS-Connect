@@ -60,6 +60,7 @@ interface SlimUploadSuggestie {
   impact_omschrijving: string;
   vereist_bevestiging: boolean;
   directe_actie_beschrijving: string;
+  lees_probleem?: string | null;
   mag_uploaden: boolean;
   beperkingen: string[];
 }
@@ -674,6 +675,20 @@ function BeslisScherm({
 
   return (
     <div className="space-y-4">
+      {/* Onleesbaar document: expliciete reden, geen verzonnen categorie */}
+      {suggestie.lees_probleem && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-red-800">Document kon niet gelezen worden</p>
+            <p className="text-xs text-red-700 mt-0.5 leading-relaxed">
+              {suggestie.lees_probleem}. Er is daarom geen automatische herkenning uitgevoerd —
+              kies zelf de juiste categorie of controleer het bestand.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* AI-herkenning wijkt af van automatiseringsregel */}
       {aiOverschreeftRegel && (
         <div className="rounded-md border border-sky-200 bg-sky-50 p-3 flex items-start gap-2">

@@ -129,6 +129,7 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
   geconsolideerd_override: item.geconsolideerdeOverride ?? null,
   ai_opslaglocatie: item.aiOpslaglocatie,
   ai_bewijs: parseBewijs(item.aiBewijs),
+  lees_probleem: item.leesProbleem ?? null,
   duplicaat_van: item.duplicaatVan,
   mogelijk_duplicaat: item.mogelijkDuplicaat,
   goedgekeurd_door: item.goedgekeurdDoor,
@@ -307,6 +308,7 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
         aiGeconsolideerd: geconsolideerdWaarde,
         aiOpslaglocatie: opslaglocatieWaarde,
         aiBewijs: JSON.stringify(analyse.bewijs),
+        leesProbleem: analyse.lees_probleem,
         snagstreamOpdrachtgever: isSnagstream ? (analyse.organisatie ?? analyse.gevonden_gegevens.opdrachtgever ?? null) : null,
         snagstreamGebouw: isSnagstream ? (analyse.gevonden_gegevens.locatie ?? analyse.gevonden_gegevens.gebouw ?? null) : null,
         snagstreamProject: isSnagstream ? (analyse.gevonden_gegevens.project ?? null) : null,
@@ -1274,6 +1276,7 @@ router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void>
             aiGeconsolideerd: aiGeconsolideerd,
             aiOpslaglocatie: opslaglocatie,
             aiBewijs: JSON.stringify(analyse.bewijs),
+            leesProbleem: analyse.lees_probleem,
             bijgewerktOp: new Date(),
           })
           .where(eq(inboxItemsTable.id, item.id));

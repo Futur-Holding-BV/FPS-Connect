@@ -53,6 +53,32 @@ RUN pnpm deploy --filter @workspace/api-server --prod --legacy /app/deploy
 
 FROM node:24-slim AS runtime
 
+# Externe programma's die de api-server op runtime aanroept:
+#  - poppler-utils (pdftoppm): PDF→afbeelding voor AI-vision (document-
+#    classificatie van scans zonder tekstlaag, contract-analyse)
+#  - postgresql-client-16 (pg_dump/psql): dagelijkse back-up + herstel draaien
+#    ín deze container (backupService); versie 16 moet matchen met de server
+#  - chromium + fonts: offerte-PDF en PIM-adviesrapport-PDF (headless render)
+#  - p7zip-full (7z): archief-veiligheidsscan van 7z/RAR-uploads (fail-closed:
+#    zonder binary worden zulke archieven geblokkeerd)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      poppler-utils \
+      postgresql-client-16 \
+      chromium \
+      fonts-liberation fonts-dejavu-core \
+      p7zip-full \
+ && apt-get purge -y curl gnupg \
+ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN addgroup --system fps && adduser --system --ingroup fps fps
 WORKDIR /app
 

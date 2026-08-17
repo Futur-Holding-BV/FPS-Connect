@@ -45,6 +45,9 @@ export const inboxItemsTable = pgTable("inbox_items", {
   geconsolideerdeOverride: boolean("geconsolideerd_override"),
   aiOpslaglocatie: text("ai_opslaglocatie"),
   aiBewijs: text("ai_bewijs"),
+  // Reden waarom het document niet gelezen kon worden (geen tekstlaag én geen
+  // bruikbare paginaweergave). NULL = leesbaar. Zichtbaar in het detailscherm.
+  leesProbleem: text("lees_probleem"),
   duplicaatVan: integer("duplicaat_van"),
   mogelijkDuplicaat: boolean("mogelijk_duplicaat").notNull().default(false),
   goedgekeurdDoor: integer("goedgekeurd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
