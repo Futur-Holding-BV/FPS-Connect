@@ -15,6 +15,7 @@ import {
 import type {
   GereedschapInput, BruikleenInput, GereedschapMeldingInput, GereedschapAiVoorstel,
 } from "@workspace/api-client-react";
+import { pasVoorstelToeOpFormulier, isAnalyseVerzoekActueel } from "@/lib/gereedschapAiVoorstel";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useListMedewerkers } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,6 +106,15 @@ export default function GereedschapDetailPagina() {
   // Leerlus: bewaar het overgenomen AI-voorstel zodat we bij opslaan per veld
   // kunnen vastleggen wat de gebruiker uiteindelijk (evt. na bewerking) opslaat.
   const overgenomenVoorstelRef = useRef<GereedschapAiVoorstel | null>(null);
+
+  // Touched-field tracking (identiek patroon als in het registratieformulier):
+  // ref = altijd actueel ook tijdens async AI-aanroep; state = voor re-renders.
+  const aangeraakteVeldenRef = useRef<Set<string>>(new Set());
+  const [, setAangeraakteVelden] = useState<Set<string>>(new Set());
+
+  // Session-token: verhoogd bij elke reset of nieuw fotoselect zodat late
+  // AI-responses na sluiten / heropenen van het bewerkdialoog worden genegeerd.
+  const analIsRequestIdRef = useRef(0);
 
   const getUploadUrl = useGetGereedschapUploadUrl();
   const analyseAi = useAnalyseGereedschapFoto();
@@ -219,60 +229,86 @@ export default function GereedschapDetailPagina() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gereedschap) return <div className="p-6 text-muted-foreground">Gereedschap niet gevonden.</div>;
 
+  /** Markeer een veld als handmatig aangeraakt; AI overschrijft het daarna niet meer. */
+  function raakVeldAan(veld: string) {
+    const nieuw = new Set([...aangeraakteVeldenRef.current, veld]);
+    aangeraakteVeldenRef.current = nieuw;
+    setAangeraakteVelden(nieuw);
+  }
+
   async function handleFotoSelectie(e: React.ChangeEvent<HTMLInputElement>) {
     const bestand = e.target.files?.[0];
     if (!bestand) return;
+    // Nieuw foto-verzoek: verhoog teller zodat een eventueel nog-lopende
+    // vorige analyse haar respons negeert.
+    const requestId = ++analIsRequestIdRef.current;
     setFotoFout(null);
     setAiVoorstel(null);
     setFotoPreview(URL.createObjectURL(bestand));
     setFotoUploaden(true);
     try {
       const urlData = await getUploadUrl.mutateAsync();
+      // Guard na upload-URL-fetch: dialoog kan zijn gesloten tijdens het wachten.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       const { upload_url, object_path } = urlData as { upload_url: string; object_path: string };
       const uploadResp = await fetch(upload_url, {
         method: "PUT",
         headers: { "Content-Type": bestand.type || "image/jpeg" },
         body: bestand,
       });
+      // Guard na bestand-upload: dialoog kan zijn gesloten tijdens de upload.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       if (!uploadResp.ok) throw new Error("Foto uploaden mislukt");
       setBewerkFormulier((f) => ({ ...f, foto_url: object_path }));
       setFotoUploaden(false);
       setAiLaden(true);
       const voorstel = await analyseAi.mutateAsync({ id: gereedschapId, data: { foto_url: object_path } });
+      // Guard na AI-analyse: dialoog kan zijn gesloten of nieuwe foto geselecteerd.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       setAiVoorstel(voorstel as GereedschapAiVoorstel);
     } catch (err) {
-      setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+      if (isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) {
+        setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+      }
     } finally {
-      setFotoUploaden(false);
-      setAiLaden(false);
+      // Laad-indicatoren alleen wissen als dit verzoek nog actueel is; anders
+      // zou een verouderd verzoek de spinner van de nieuwe sessie kunnen wissen.
+      if (isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) {
+        setFotoUploaden(false);
+        setAiLaden(false);
+      }
       if (fotoInputRef.current) fotoInputRef.current.value = "";
     }
   }
 
   function accepteerVoorstel() {
     if (!aiVoorstel) return;
-    setBewerkFormulier((f) => ({
-      ...f,
-      omschrijving: aiVoorstel.omschrijving || f.omschrijving,
-      merk: aiVoorstel.merk ?? f.merk,
-      type: aiVoorstel.type ?? f.type,
-      categorie: aiVoorstel.categorie || f.categorie,
-      aandrijving: aiVoorstel.aandrijving || f.aandrijving,
-      met_snoer: aiVoorstel.met_snoer ?? f.met_snoer,
-      accu_inbegrepen: aiVoorstel.accu_inbegrepen ?? f.accu_inbegrepen,
-      lader_inbegrepen: aiVoorstel.lader_inbegrepen ?? f.lader_inbegrepen,
-      koffer_inbegrepen: aiVoorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
-      keuringsplichtig: aiVoorstel.keuringsplichtig ?? f.keuringsplichtig,
-      opmerkingen: aiVoorstel.staat_indicatie
+    const aangeraakt = aangeraakteVeldenRef.current;
+    setBewerkFormulier((f) => {
+      // Gebruik de gemeenschappelijke merge-helper zodat aangeraakte velden
+      // beschermd zijn, ook als de gebruiker al iets had getypt voor acceptatie.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const merged = pasVoorstelToeOpFormulier(f as any, aiVoorstel, aangeraakt);
+      // staat_indicatie → opmerkingen is een speciale transformatie buiten de utility.
+      const opmerkingen = !aangeraakt.has("opmerkingen") && aiVoorstel.staat_indicatie
         ? `Staat bij wijziging: ${aiVoorstel.staat_indicatie}`
-        : f.opmerkingen,
-    }));
+        : (merged.opmerkingen ?? f.opmerkingen ?? null);
+      return { ...merged, opmerkingen } as Partial<GereedschapInput>;
+    });
     // Leerlus: onthoud het overgenomen voorstel voor vastlegging bij opslaan.
     overgenomenVoorstelRef.current = aiVoorstel;
     setAiVoorstel(null);
   }
 
   function openBewerken() {
+    // Nieuwe bewerksessie: verhoog session-token, reset touched-velden én
+    // laad-indicatoren direct — zodat een heropend dialoog niet vastzit in
+    // "Uploaden…"/"AI analyseert…" van een vorige, geannuleerde sessie.
+    analIsRequestIdRef.current++;
+    aangeraakteVeldenRef.current = new Set();
+    setAangeraakteVelden(new Set());
+    setFotoUploaden(false);
+    setAiLaden(false);
     setBewerkFormulier({
       omschrijving: gereedschap!.omschrijving,
       gegraveerd_nummer: gereedschap!.gegraveerd_nummer,
@@ -539,7 +575,19 @@ export default function GereedschapDetailPagina() {
       </Tabs>
 
       <Dialog open={bewerkOpen} onOpenChange={(open) => {
-        if (!open) { setAiVoorstel(null); setFotoPreview(null); setFotoFout(null); }
+        if (!open) {
+          // Session-token verhogen zodat een nog-lopende analyse haar respons negeert.
+          analIsRequestIdRef.current++;
+          aangeraakteVeldenRef.current = new Set();
+          setAangeraakteVelden(new Set());
+          // Laad-indicatoren direct wissen; het verouderde finally doet dit niet
+          // (token klopt niet meer) zodat de nieuwe sessie schoon opent.
+          setFotoUploaden(false);
+          setAiLaden(false);
+          setAiVoorstel(null);
+          setFotoPreview(null);
+          setFotoFout(null);
+        }
         setBewerkOpen(open);
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -608,7 +656,7 @@ export default function GereedschapDetailPagina() {
               <Label>Omschrijving</Label>
               <Input
                 value={bewerkFormulier.omschrijving ?? ""}
-                onChange={(e) => setBewerkFormulier((f) => ({ ...f, omschrijving: e.target.value }))}
+                onChange={(e) => { raakVeldAan("omschrijving"); setBewerkFormulier((f) => ({ ...f, omschrijving: e.target.value })); }}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -652,7 +700,7 @@ export default function GereedschapDetailPagina() {
               <Label>Opmerkingen</Label>
               <Input
                 value={bewerkFormulier.opmerkingen ?? ""}
-                onChange={(e) => setBewerkFormulier((f) => ({ ...f, opmerkingen: e.target.value || null }))}
+                onChange={(e) => { raakVeldAan("opmerkingen"); setBewerkFormulier((f) => ({ ...f, opmerkingen: e.target.value || null })); }}
               />
             </div>
           </div>

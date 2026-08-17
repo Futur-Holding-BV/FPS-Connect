@@ -22,6 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { ListCard } from "@/components/ui/list-card";
 import { Plus, Wrench, Search, User, Camera, Sparkles, AlertTriangle } from "lucide-react";
+import { pasVoorstelToeOpFormulier, isAnalyseVerzoekActueel } from "@/lib/gereedschapAiVoorstel";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -95,7 +96,20 @@ export default function GereedschappenPagina() {
   const [statusFilter, setStatusFilter] = useState("alle");
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [formulier, setFormulier] = useState<GereedschapInput>(leegFormulier);
+  // Ref én state bijhouden: de ref is altijd actueel (ook tijdens een async
+  // AI-aanroep), de state dient voor re-renders. pasVoorstelToe leest de ref
+  // zodat velden die de gebruiker invult terwijl "AI analyseert…" zichtbaar is
+  // toch beschermd zijn tegen overschrijven.
+  const aangeraakteVeldenRef = useRef<Set<string>>(new Set());
+  const [aangeraakteVelden, setAangeraakteVelden] = useState<Set<string>>(new Set());
   const [opslaan, setOpslaan] = useState(false);
+
+  /** Markeer een veld als handmatig aangeraakt; AI overschrijft het daarna niet meer. */
+  function raakVeldAan(veld: string) {
+    const nieuw = new Set([...aangeraakteVeldenRef.current, veld]);
+    aangeraakteVeldenRef.current = nieuw;
+    setAangeraakteVelden(nieuw);
+  }
 
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
@@ -109,6 +123,11 @@ export default function GereedschappenPagina() {
   // vastleggen wat de gebruiker uiteindelijk overneemt.
   const aiVoorstelRef = useRef<GereedschapAiVoorstel | null>(null);
   const veldCorrectieMutatie = useAiVeldCorrectie();
+
+  // Session-token: verhoogd bij elke reset of nieuw fotoselect; de async
+  // handler vergelijkt na de await en negeert de respons als hij verouderd is.
+  // Voorkomt dat een late AI-respons een al-gereset formulier opnieuw vult.
+  const analIsRequestIdRef = useRef(0);
 
   const queryClient = useQueryClient();
 
@@ -130,13 +149,7 @@ export default function GereedschappenPagina() {
         // Leerlus: pas na een succesvolle opslag vastleggen.
         logAiVeldCorrecties(variables.data);
         queryClient.invalidateQueries({ queryKey: ["listGereedschappen"] });
-        setNieuwOpen(false);
-        setFormulier(leegFormulier);
-        setOpslaan(false);
-        setFotoPreview(null);
-        setFotoObjectPad(null);
-        setAiVoorstel(null);
-        aiVoorstelRef.current = null;
+        sluitEnReset();
       },
       onError: () => setOpslaan(false),
     },
@@ -145,6 +158,9 @@ export default function GereedschappenPagina() {
   async function handleFotoSelectie(e: React.ChangeEvent<HTMLInputElement>) {
     const bestand = e.target.files?.[0];
     if (!bestand) return;
+    // Elke foto start een nieuw verzoek; verhoog de teller zodat een eventueel
+    // nog-lopend vorig verzoek zijn respons zal negeren.
+    const requestId = ++analIsRequestIdRef.current;
     setFotoFout(null);
     setAiVoorstel(null);
     aiVoorstelRef.current = null;
@@ -152,62 +168,75 @@ export default function GereedschappenPagina() {
     setFotoUploaden(true);
     try {
       const urlData = await getUploadUrl.mutateAsync();
+      // Guard na upload-URL-fetch: dialog kan zijn gesloten tijdens het wachten.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       const { upload_url, object_path } = urlData as { upload_url: string; object_path: string };
       const uploadResp = await fetch(upload_url, {
         method: "PUT",
         headers: { "Content-Type": bestand.type || "image/jpeg" },
         body: bestand,
       });
+      // Guard na bestand-upload: dialog kan zijn gesloten tijdens de upload.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       if (!uploadResp.ok) throw new Error("Foto uploaden mislukt");
       setFotoObjectPad(object_path);
       setFormulier((f) => ({ ...f, foto_url: object_path }));
       setFotoUploaden(false);
       setAiLaden(true);
       const voorstel = await analyseAi.mutateAsync({ id: 0, data: { foto_url: object_path } });
+      // Guard na AI-analyse: dialog kan zijn gesloten of nieuwe foto geselecteerd.
+      if (!isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) return;
       // Direct invullen: de AI-herkenning gaat meteen het formulier in;
       // de gebruiker controleert en past aan waar nodig (amber = AI-ingevuld).
       pasVoorstelToe(voorstel as GereedschapAiVoorstel);
       setAiVoorstel(voorstel as GereedschapAiVoorstel);
       aiVoorstelRef.current = voorstel as GereedschapAiVoorstel;
     } catch (err) {
-      setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+      if (isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) {
+        setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+      }
     } finally {
-      setFotoUploaden(false);
-      setAiLaden(false);
+      // Laad-indicatoren alleen wissen als dit verzoek nog actueel is; anders
+      // zou een verouderd verzoek de spinner van de nieuwe sessie kunnen wissen.
+      if (isAnalyseVerzoekActueel(requestId, analIsRequestIdRef.current)) {
+        setFotoUploaden(false);
+        setAiLaden(false);
+      }
       if (fotoInputRef.current) fotoInputRef.current.value = "";
     }
   }
 
-  // Vult het formulier direct met de AI-herkenning van de foto. Alleen velden
-  // waar de AI iets over zegt worden gezet; handmatig al ingevulde tekst wordt
-  // niet overschreven door een lege AI-waarde.
+  // Vult het formulier in met de AI-herkenning van de foto. Aangeraakte velden
+  // worden nooit overschreven, ook niet als de AI een niet-lege waarde geeft.
+  // Leest aangeraakteVeldenRef.current (niet de state) zodat velden die de
+  // gebruiker invult terwijl de AI-aanroep loopt altijd beschermd zijn.
+  // Zie: artifacts/firevault/src/lib/gereedschapAiVoorstel.ts (regressietest).
   function pasVoorstelToe(voorstel: GereedschapAiVoorstel) {
-    setFormulier((f) => ({
-      ...f,
-      omschrijving: voorstel.omschrijving?.trim() || f.omschrijving,
-      merk: voorstel.merk?.trim() || f.merk,
-      type: voorstel.type?.trim() || f.type,
-      categorie: voorstel.categorie?.trim() || f.categorie,
-      aandrijving: voorstel.aandrijving?.trim() || f.aandrijving,
-      met_snoer: voorstel.met_snoer ?? f.met_snoer,
-      accu_inbegrepen: voorstel.accu_inbegrepen ?? f.accu_inbegrepen,
-      lader_inbegrepen: voorstel.lader_inbegrepen ?? f.lader_inbegrepen,
-      koffer_inbegrepen: voorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
-      keuringsplichtig: voorstel.keuringsplichtig ?? f.keuringsplichtig,
-      opmerkingen: voorstel.staat_indicatie?.trim()
-        ? `Staat bij registratie: ${voorstel.staat_indicatie.trim()}`
-        : f.opmerkingen,
-    }));
+    const aangeraakt = aangeraakteVeldenRef.current;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setFormulier((f) => pasVoorstelToeOpFormulier(f as any, voorstel, aangeraakt) as unknown as GereedschapInput);
   }
 
-  function sluitNieuwDialog() {
+  /** Eén reset-routine die zowel bij opslaan (onSuccess) als bij annuleren wordt aangeroepen. */
+  function sluitEnReset() {
+    // Verhoog de session-token zodat elke nog-lopende AI-analyse haar respons
+    // negeert en het formulier niet opnieuw vult na de reset.
+    analIsRequestIdRef.current++;
     setNieuwOpen(false);
     setFormulier(leegFormulier);
+    aangeraakteVeldenRef.current = new Set();
+    setAangeraakteVelden(new Set());
     setFotoPreview(null);
     setFotoObjectPad(null);
     setAiVoorstel(null);
     aiVoorstelRef.current = null;
     setFotoFout(null);
+    // Laad-indicatoren direct wissen zodat een heropend dialoog niet vastzit
+    // in "Uploaden…"/"AI analyseert…". Het verouderde finally weigert dit te
+    // doen (token klopt niet meer), dus de reset is de enige die het wist.
+    setFotoUploaden(false);
+    setAiLaden(false);
+    setOpslaan(false);
   }
 
   // Leerlus: legt per door de foto-AI voorgesteld veld vast wat er uiteindelijk
@@ -365,7 +394,7 @@ export default function GereedschappenPagina() {
         </div>
       )}
 
-      <Dialog open={nieuwOpen} onOpenChange={(open) => { if (!open) sluitNieuwDialog(); else setNieuwOpen(true); }}>
+      <Dialog open={nieuwOpen} onOpenChange={(open) => { if (!open) sluitEnReset(); else setNieuwOpen(true); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gereedschap registreren</DialogTitle>
@@ -425,7 +454,7 @@ export default function GereedschappenPagina() {
               <Input
                 placeholder="bijv. Boormachine, Slijptol"
                 value={formulier.omschrijving}
-                onChange={(e) => setFormulier((f) => ({ ...f, omschrijving: e.target.value }))}
+                onChange={(e) => { raakVeldAan("omschrijving"); setFormulier((f) => ({ ...f, omschrijving: e.target.value })); }}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -435,7 +464,7 @@ export default function GereedschappenPagina() {
                   placeholder="bijv. boormachine, zaag, klimmaterieel"
                   list="gereedschap-categorie-suggesties"
                   value={formulier.categorie ?? ""}
-                  onChange={(e) => setFormulier((f) => ({ ...f, categorie: e.target.value }))}
+                  onChange={(e) => { raakVeldAan("categorie"); setFormulier((f) => ({ ...f, categorie: e.target.value })); }}
                 />
                 {/* BOUW_01 §7: klimmaterieel is een categorie binnen gereedschappen —
                     erft daarmee automatisch de keuring-/inspectievelden. */}
@@ -451,7 +480,7 @@ export default function GereedschappenPagina() {
                 <Label>Aandrijving <span className="text-red-500">*</span></Label>
                 <Select
                   value={formulier.aandrijving ?? "handgereedschap"}
-                  onValueChange={(v) => setFormulier((f) => ({ ...f, aandrijving: v }))}
+                  onValueChange={(v) => { raakVeldAan("aandrijving"); setFormulier((f) => ({ ...f, aandrijving: v })); }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -468,7 +497,7 @@ export default function GereedschappenPagina() {
                 <Input
                   placeholder="bijv. Makita, Bosch"
                   value={formulier.merk ?? ""}
-                  onChange={(e) => setFormulier((f) => ({ ...f, merk: e.target.value || null }))}
+                  onChange={(e) => { raakVeldAan("merk"); setFormulier((f) => ({ ...f, merk: e.target.value || null })); }}
                 />
               </div>
               <div className="space-y-1">
@@ -476,7 +505,7 @@ export default function GereedschappenPagina() {
                 <Input
                   placeholder="bijv. DHP484"
                   value={formulier.type ?? ""}
-                  onChange={(e) => setFormulier((f) => ({ ...f, type: e.target.value || null }))}
+                  onChange={(e) => { raakVeldAan("type"); setFormulier((f) => ({ ...f, type: e.target.value || null })); }}
                 />
               </div>
             </div>
@@ -543,7 +572,7 @@ export default function GereedschappenPagina() {
                   <input
                     type="checkbox"
                     checked={(formulier as unknown as Record<string, unknown>)[key] as boolean ?? false}
-                    onChange={(e) => setFormulier((f) => ({ ...f, [key]: e.target.checked }))}
+                    onChange={(e) => { raakVeldAan(key); setFormulier((f) => ({ ...f, [key]: e.target.checked })); }}
                     className="rounded"
                   />
                   {label}
@@ -573,12 +602,12 @@ export default function GereedschappenPagina() {
               <Label>Opmerkingen</Label>
               <Input
                 value={formulier.opmerkingen ?? ""}
-                onChange={(e) => setFormulier((f) => ({ ...f, opmerkingen: e.target.value || null }))}
+                onChange={(e) => { raakVeldAan("opmerkingen"); setFormulier((f) => ({ ...f, opmerkingen: e.target.value || null })); }}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={sluitNieuwDialog}>Annuleren</Button>
+            <Button variant="outline" onClick={sluitEnReset}>Annuleren</Button>
             <Button
               onClick={handleOpslaan}
               disabled={!formulier.omschrijving || opslaan || fotoUploaden || aiLaden}
