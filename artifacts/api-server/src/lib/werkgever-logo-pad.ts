@@ -6,11 +6,23 @@
  */
 
 /**
- * Alle werkgever-logo's moeten opgeslagen zijn onder dit prefix.
- * Paden buiten dit prefix kunnen documenten met eigen ACL bevatten en
- * worden door haalLogoBuffer geweigerd.
+ * Primair storage-prefix voor werkgever-logo's na migratie.
+ * Alle nieuwe uploads worden hier opgeslagen via PATCH /werkgevers/:id.
  */
-export const LOGO_STORAGE_PREFIX = "werkgevers/";
+export const LOGO_PRIMARY_PREFIX = "werkgevers/";
+
+/**
+ * Legacy prefix — logo's opgeslagen vóór de migratie (standaard upload-pad).
+ * Worden tijdelijk ondersteund voor lezen totdat een backfill is uitgevoerd.
+ * De PATCH /werkgevers/:id route migreert naar LOGO_PRIMARY_PREFIX bij opslaan.
+ */
+export const LOGO_LEGACY_PREFIX = "algemeen/";
+
+/**
+ * Geaccepteerde afbeeldingsextensies voor werkgever-logo's.
+ * SVG wordt bewust uitgesloten: PDFKit ondersteunt geen SVG-rendering.
+ */
+export const LOGO_TOEGESTANE_EXTENSIES = [".png", ".jpg", ".jpeg", ".webp", ".gif"] as const;
 
 /**
  * Vertaalt een logo_url (zoals opgeslagen in werkgevers.logo_url) naar een
@@ -20,7 +32,9 @@ export const LOGO_STORAGE_PREFIX = "werkgevers/";
  *   - "/api/storage/files?path=<URL-encoded subPath>"
  *   - "/objects/<subPath>"  (canonical pad na uploadBestand)
  *   - kale subPath (geen "/" of "http"-prefix)
- * Geweigerd: externe http(s)-URLs, onbekende root-paden, paden buiten LOGO_STORAGE_PREFIX.
+ *
+ * Geweigerd: externe http(s)-URLs, onbekende root-paden, paden buiten de
+ * werkgever- of legacy algemeen-prefix.
  */
 export function resolveWerkgeverLogoSubPath(logoUrl: string): string | null {
   let subPath: string;
@@ -37,8 +51,19 @@ export function resolveWerkgeverLogoSubPath(logoUrl: string): string | null {
   } else {
     subPath = logoUrl;
   }
-  if (!subPath.startsWith(LOGO_STORAGE_PREFIX)) return null;
+  // Primair pad (na migratie) of legacy pad (vóór migratie, tijdelijk ondersteund).
+  if (!subPath.startsWith(LOGO_PRIMARY_PREFIX) && !subPath.startsWith(LOGO_LEGACY_PREFIX)) {
+    return null;
+  }
   return subPath;
+}
+
+/**
+ * Geeft true als het gegeven subPath naar een SVG-bestand wijst.
+ * PDFKit ondersteunt SVG niet; uploads worden geweigerd en downloads overgeslagen.
+ */
+export function isSvgSubPath(subPath: string): boolean {
+  return subPath.toLowerCase().endsWith(".svg");
 }
 
 /**
@@ -51,5 +76,5 @@ export function resolveWerkgeverLogoSubPath(logoUrl: string): string | null {
 export function berekenWerkgeverLogoPad(werkgeverId: number, origSubPath: string): string {
   const lastDot = origSubPath.lastIndexOf(".");
   const ext = lastDot >= 0 ? origSubPath.slice(lastDot) : "";
-  return `werkgevers/${werkgeverId}/logo${ext}`;
+  return `${LOGO_PRIMARY_PREFIX}${werkgeverId}/logo${ext}`;
 }

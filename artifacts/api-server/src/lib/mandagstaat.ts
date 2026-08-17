@@ -23,8 +23,8 @@ import {
 import { and, eq, gte, lte, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import {
-  LOGO_STORAGE_PREFIX,
   resolveWerkgeverLogoSubPath,
+  isSvgSubPath,
   berekenWerkgeverLogoPad,
 } from "./werkgever-logo-pad";
 
@@ -253,6 +253,9 @@ async function haalLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   try {
     const subPath = resolveWerkgeverLogoSubPath(logoUrl);
     if (subPath === null) return null;
+    // SVG wordt niet ondersteund door PDFKit — sla logo over.
+    // Nieuwe SVG-uploads worden al geweigerd door PATCH /werkgevers/:id.
+    if (isSvgSubPath(subPath)) return null;
     return await objectStorage.downloadBestandBuffer(subPath);
   } catch {
     return null;

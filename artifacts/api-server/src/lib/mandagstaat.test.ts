@@ -2,16 +2,18 @@ import { describe, it, expect } from "vitest";
 import {
   resolveWerkgeverLogoSubPath,
   berekenWerkgeverLogoPad,
-  LOGO_STORAGE_PREFIX,
+  isSvgSubPath,
+  LOGO_PRIMARY_PREFIX,
+  LOGO_LEGACY_PREFIX,
 } from "./werkgever-logo-pad";
 
 // ── resolveWerkgeverLogoSubPath ───────────────────────────────────────────────
-// Bevestigt dat werkgever-logo-paden worden geaccepteerd en alle andere paden
-// worden afgewezen. Dit garandeert dat haalLogoBuffer nooit objecten met een
-// eigen document-ACL kan downloaden via een door een beheerder ingestelde URL.
+// Bevestigt dat werkgever-logo-paden (primair + legacy) worden geaccepteerd en
+// alle overige paden worden afgewezen. Dit garandeert dat haalLogoBuffer nooit
+// objecten met een eigen document-ACL kan downloaden via een ingestelde URL.
 
 describe("resolveWerkgeverLogoSubPath", () => {
-  it("accepteert een /objects/werkgevers/-pad en retourneert de subPath", () => {
+  it("accepteert een /objects/werkgevers/-pad (primair) en retourneert de subPath", () => {
     expect(resolveWerkgeverLogoSubPath("/objects/werkgevers/1/logo.png")).toBe(
       "werkgevers/1/logo.png",
     );
@@ -22,14 +24,22 @@ describe("resolveWerkgeverLogoSubPath", () => {
     expect(resolveWerkgeverLogoSubPath(encoded)).toBe("werkgevers/2/logo.svg");
   });
 
-  it("accepteert een kale werkgevers/-subpath", () => {
+  it("accepteert een kale werkgevers/-subpath (primair)", () => {
     expect(resolveWerkgeverLogoSubPath("werkgevers/3/logo.jpg")).toBe(
       "werkgevers/3/logo.jpg",
     );
   });
 
-  it("wijst /objects/algemeen/-paden af (upload-standaardpad vóór migratie)", () => {
-    expect(resolveWerkgeverLogoSubPath("/objects/algemeen/abc123.png")).toBeNull();
+  it("accepteert /objects/algemeen/-paden (legacy, vóór migratie)", () => {
+    // Bestaande werkgever-logo's zijn opgeslagen onder algemeen/ vóór de migratie.
+    // Ze worden tijdelijk ondersteund voor lezen totdat een backfill is uitgevoerd.
+    expect(resolveWerkgeverLogoSubPath("/objects/algemeen/abc123.png")).toBe(
+      "algemeen/abc123.png",
+    );
+  });
+
+  it("accepteert een kale algemeen/-subpath (legacy)", () => {
+    expect(resolveWerkgeverLogoSubPath("algemeen/uuid.jpeg")).toBe("algemeen/uuid.jpeg");
   });
 
   it("wijst externe http-URLs af (SSRF-preventie)", () => {
@@ -42,8 +52,30 @@ describe("resolveWerkgeverLogoSubPath", () => {
     expect(resolveWerkgeverLogoSubPath("/objects/documenten/1/factuur.pdf")).toBeNull();
   });
 
-  it("LOGO_STORAGE_PREFIX is 'werkgevers/' (bewaker-invariant)", () => {
-    expect(LOGO_STORAGE_PREFIX).toBe("werkgevers/");
+  it("LOGO_PRIMARY_PREFIX is 'werkgevers/'", () => {
+    expect(LOGO_PRIMARY_PREFIX).toBe("werkgevers/");
+  });
+
+  it("LOGO_LEGACY_PREFIX is 'algemeen/'", () => {
+    expect(LOGO_LEGACY_PREFIX).toBe("algemeen/");
+  });
+});
+
+// ── isSvgSubPath ──────────────────────────────────────────────────────────────
+// SVG wordt niet ondersteund door PDFKit. Uploads worden geweigerd bij PATCH
+// en downloads worden overgeslagen in haalLogoBuffer.
+
+describe("isSvgSubPath", () => {
+  it("herkent .svg extensie (case-insensitive)", () => {
+    expect(isSvgSubPath("werkgevers/1/logo.svg")).toBe(true);
+    expect(isSvgSubPath("werkgevers/1/logo.SVG")).toBe(true);
+    expect(isSvgSubPath("algemeen/abc123.svg")).toBe(true);
+  });
+
+  it("laat PNG/JPEG/WebP passeren", () => {
+    expect(isSvgSubPath("werkgevers/1/logo.png")).toBe(false);
+    expect(isSvgSubPath("werkgevers/1/logo.jpg")).toBe(false);
+    expect(isSvgSubPath("werkgevers/1/logo.webp")).toBe(false);
   });
 });
 
@@ -74,5 +106,11 @@ describe("berekenWerkgeverLogoPad", () => {
     const resolved = resolveWerkgeverLogoSubPath(`/objects/${doelSubPath}`);
     expect(resolved).toBe(doelSubPath);
     expect(resolved).not.toBeNull();
+  });
+
+  it("het gemigreerde pad is geen SVG (invariant)", () => {
+    // Migratie kopieert bestand inclusief extensie; PNG/JPEG blijft geen SVG.
+    const doelSubPath = berekenWerkgeverLogoPad(3, "algemeen/logo.png");
+    expect(isSvgSubPath(doelSubPath)).toBe(false);
   });
 });

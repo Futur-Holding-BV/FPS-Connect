@@ -220,9 +220,14 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
     const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
+    // SVG wordt niet ondersteund door PDFKit — weiger SVG-logo's bij opslaan.
+    if (logo_url && typeof logo_url === "string" && logo_url.toLowerCase().endsWith(".svg")) {
+      return void res.status(400).json({ error: "SVG-logo's worden niet ondersteund. Gebruik PNG, JPEG of WebP." });
+    }
+
     // Migreer logo-URL van /objects/algemeen/<uuid> naar werkgevers/<id>/logo.<ext>
     // zodat haalLogoBuffer in de mandagstaat nooit paden buiten het werkgever-prefix
-    // hoeft te accepteren. Mislukte migratie laat het pad ongewijzigd.
+    // hoeft te accepteren. Mislukte migratie laat het pad ongewijzigd (legacy pad blijft leesbaar).
     let effectiefLogoUrl: string | null | undefined = logo_url !== undefined ? (logo_url ?? null) : undefined;
     if (logo_url && typeof logo_url === "string" && logo_url.startsWith("/objects/algemeen/")) {
       try {
