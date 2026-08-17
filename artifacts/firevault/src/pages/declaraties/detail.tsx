@@ -24,6 +24,9 @@ import {
   useListDeclaratieBeoordelaars,
   getListDeclaratieBeoordelaarsQueryKey,
   type DeclaratieInputCategorie,
+  useGetMijnMedewerker,
+  getGetMijnMedewerkerQueryKey,
+  getListMijnDeclaratiesQueryKey,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -63,13 +66,23 @@ export default function DeclaratieDetailPagina() {
   const queryClient = useQueryClient();
   const { heeftNiveau } = useBevoegdheid();
 
-  const magIndienen    = heeftNiveau("declaraties", 2);
   const magBeoordelen  = heeftNiveau("declaraties", 3);
   const magVerwerken   = heeftNiveau("declaraties", 4);
 
   const { data: declaratie, isLoading } = useGetDeclaratie(id, {
     query: { queryKey: getGetDeclaratieQueryKey(id), enabled: !!id },
   });
+
+  // Basislaag eigen gegevens: concept-acties (bewerken/indienen/verwijderen)
+  // volgen het eigenaarschap, exact zoals de backend afdwingt (PATCH/DELETE/
+  // indienen zijn eigenaar-only, ongeacht modulerechten).
+  const { data: mijnMedewerker } = useGetMijnMedewerker({
+    query: { queryKey: getGetMijnMedewerkerQueryKey(), retry: false },
+  });
+  const magIndienen = mijnMedewerker != null && declaratie?.medewerker_id === mijnMedewerker.id;
+  // Terug/na-verwijderen: eigenaren zonder declaraties-modulerecht horen op de
+  // eigen-gegevens-lijst uit te komen, niet op de afgeschermde modulepagina.
+  const terugPad = heeftNiveau("declaraties", 1) ? "/declaraties" : "/mijn/declaraties";
 
   const { mutateAsync: bewerk, isPending: isBezig } = useUpdateDeclaratie();
   const { mutateAsync: verwijder, isPending: verwijdert } = useDeleteDeclaratie();
@@ -111,6 +124,7 @@ export default function DeclaratieDetailPagina() {
     await bewerk({ id, data: { categorie: editCategorie, omschrijving: editOmschrijving, bedrag_totaal_cents: bedragCents, datum: editDatum } });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
     setBewerkOpen(false);
   }
 
@@ -118,12 +132,14 @@ export default function DeclaratieDetailPagina() {
     await dien_in({ id });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
   }
 
   async function goedkeuren() {
     await keur_goed({ id });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
   }
 
   async function afwijzen() {
@@ -131,6 +147,7 @@ export default function DeclaratieDetailPagina() {
     await wijs_af({ id, data: { afwijzingsreden: afwijzingsreden.trim() } });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
     setAfwijsOpen(false);
   }
 
@@ -138,6 +155,7 @@ export default function DeclaratieDetailPagina() {
     await verwerk({ id });
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
   }
 
   async function doorzetten() {
@@ -160,6 +178,7 @@ export default function DeclaratieDetailPagina() {
     }
     await queryClient.invalidateQueries({ queryKey: getGetDeclaratieQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
     setDoorzetOpen(false);
     setDoorzetNaar("");
     setDoorzetToelichting("");
@@ -168,7 +187,8 @@ export default function DeclaratieDetailPagina() {
   async function verwijderen() {
     await verwijder({ id });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
-    navigeer("/declaraties");
+    await queryClient.invalidateQueries({ queryKey: getListMijnDeclaratiesQueryKey() });
+    navigeer(terugPad);
   }
 
   if (isLoading) {
@@ -179,7 +199,7 @@ export default function DeclaratieDetailPagina() {
     return (
       <div className="p-6">
         <p className="text-muted-foreground">Declaratie niet gevonden.</p>
-        <Button variant="ghost" className="mt-4 gap-2" onClick={() => navigeer("/declaraties")}>
+        <Button variant="ghost" className="mt-4 gap-2" onClick={() => navigeer(terugPad)}>
           <ArrowLeft className="h-4 w-4" />
           Terug naar overzicht
         </Button>
@@ -196,7 +216,7 @@ export default function DeclaratieDetailPagina() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <PaginaHulp pagina="declaratie-detail" />
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigeer("/declaraties")}>
+        <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigeer(terugPad)}>
           <ArrowLeft className="h-4 w-4" />
           Overzicht
         </Button>

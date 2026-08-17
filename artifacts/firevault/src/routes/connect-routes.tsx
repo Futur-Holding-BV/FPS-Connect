@@ -181,6 +181,8 @@ import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail
 import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import MailVoorkeurenPagina from "@/pages/mijn/mail-voorkeuren";
+import MijnDeclaratiesPagina from "@/pages/mijn/declaraties";
+import MijnVerlofPagina from "@/pages/mijn/verlof";
 import AiLogBeheer from "@/pages/beheer/ai-log";
 import GovernancePagina from "@/pages/beheer/governance";
 import SecurityIntakePagina from "@/pages/beheer/security-intake";
@@ -554,6 +556,8 @@ export function ConnectRoutes() {
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
         <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />
         <Route path="/mijn/mail-voorkeuren" component={MailVoorkeurenPagina} />
+        <Route path="/mijn/declaraties" component={MijnDeclaratiesPagina} />
+        <Route path="/mijn/verlof" component={MijnVerlofPagina} />
 
 
         {/* ── Overig ── */}

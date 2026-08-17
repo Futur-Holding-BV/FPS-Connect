@@ -81,7 +81,7 @@ function DeclaratieRij({ declaratie }: { declaratie: Declaratie }) {
   );
 }
 
-function NieuweDeclaratieDialog({ open, onSluit }: { open: boolean; onSluit: () => void }) {
+export function NieuweDeclaratieDialog({ open, onSluit, naOpslaan }: { open: boolean; onSluit: () => void; naOpslaan?: () => Promise<unknown> }) {
   const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useCreateDeclaratie();
   const [categorie, setCategorie] = useState<DeclaratieInputCategorie>("reiskosten");
@@ -95,6 +95,7 @@ function NieuweDeclaratieDialog({ open, onSluit }: { open: boolean; onSluit: () 
     if (isNaN(bedragCents) || bedragCents <= 0) return;
     await mutateAsync({ data: { categorie, omschrijving, bedrag_totaal_cents: bedragCents, datum } });
     await queryClient.invalidateQueries({ queryKey: getListDeclaratiesQueryKey() });
+    if (naOpslaan) await naOpslaan();
     setCategorie("reiskosten"); setOmschrijving(""); setBedrag(""); setDatum(new Date().toISOString().slice(0, 10));
     onSluit();
   }

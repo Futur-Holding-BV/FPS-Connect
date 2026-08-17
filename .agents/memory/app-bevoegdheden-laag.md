@@ -12,3 +12,5 @@ description: Hoe menu-filtering, schermguards en basisrecht eigen gegevens werke
 
 **Why:** rechten zichtbaar maken in de UI zonder tweede waarheid naast de server; eerdere incidenten met client-side rechtenberekening.
 **How to apply:** nieuw menu-item of scherm in de monteur-app → meet eerst de route-middleware, voeg `vereist` toe in menu.tsx en wrap het scherm in BevoegdheidGuard met dezelfde eis.
+
+**Basislaag eigen gegevens geldt ook voor web (aug 2026):** zijbalk-hoofdstuk "Mijn gegevens" (sleutel `mijn`) in beheerder-layout is altijd zichtbaar, óók voor uitvoerend veld; /mijn/declaraties, /mijn/verlof, /mijn/salarisdocumenten en /uren zijn alleen-inloggen (backend scoopt eigen medewerker). Declaratie-detail: concept-acties (bewerken/indienen/verwijderen) zijn eigenaar-gebaseerd via useGetMijnMedewerker, exact zoals de backend (eigenaar-only ongeacht modulerechten); beoordelen/verwerken blijven niveau 3/4. Bekende gemelde mismatch: uren-pagina isManager gebruikt heeftNiveau("uren",1) terwijl backend personeel:1/2 hanteert — niet stilzwijgend aanpassen.

@@ -335,6 +335,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     herstelStandaard,
     isAangepast,
   } = useSidebarHoofdstukken("sidebar_hoofdstukken", [
+    "mijn",
     "projectaanpak",
     "magazijn",
     "commercie",
@@ -398,6 +399,54 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <span>Standaardvolgorde herstellen</span>
                 </button>
               )}
+
+              {/* Mijn gegevens — basislaag eigen gegevens (APP_01 §4): altijd
+                  zichtbaar voor iedere ingelogde medewerker, ongeacht profiel.
+                  Backendroutes zijn alleen-inloggen en scopen op de eigen
+                  medewerker; modulerechten gelden alleen voor andermans data. */}
+              <TweeTrapsHoofdstuk
+                sleutel="mijn"
+                titel="Mijn gegevens"
+                positie={hoofdstukPositie("mijn")}
+                onVerplaats={verplaatsHoofdstuk}
+                open={hoofdstukOpen("mijn")}
+                onOpenChange={(open) => setHoofdstukOpen("mijn", open)}
+              >
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/uren" || location.startsWith("/uren/")}>
+                      <Link href="/uren">
+                        <Clock />
+                        <span>Mijn uren</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/mijn/declaraties"}>
+                      <Link href="/mijn/declaraties">
+                        <Receipt />
+                        <span>Mijn declaraties</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/mijn/verlof"}>
+                      <Link href="/mijn/verlof">
+                        <CalendarCheck2 />
+                        <span>Mijn verlof</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/mijn/salarisdocumenten"}>
+                      <Link href="/mijn/salarisdocumenten">
+                        <FileText />
+                        <span>Mijn loonstroken</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </TweeTrapsHoofdstuk>
 
               {/* Projectaanpak — workflow in volgorde */}
               {!isUitvoerendVeld && (

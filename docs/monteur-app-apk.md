@@ -85,5 +85,5 @@ De app haalt de update op bij de volgende start (tweede start = actief). Een nie
 
 ## Buiten scope / bekende punten
 
-- **iOS:** niet gebouwd (vereist Apple Developer-account, €99/jaar). Monteurs met een iPhone kunnen deze APK niet gebruiken — inventariseer of die er zijn.
+- **iOS:** definitief besloten (17 aug 2026, taak #886): er komt **geen iOS-build en geen Apple Developer-account**. Medewerkers met een iPhone werken in de webapp (FPS Connect PWA). Zie docs/besluit-geen-ios-build.md.
 - De biometriecode zelf is in deze opdracht niet gewijzigd (`context/auth.tsx` zet biometrie alleen op web uit; dat blijft zo).
