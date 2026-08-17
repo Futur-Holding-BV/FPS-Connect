@@ -50,7 +50,7 @@ export default function CrmDashboardPagina() {
   ];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto">
       <div>
         <h1 data-paginatitel className="text-2xl font-bold">CRM & Marktinzicht</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Relatiebeheer, pipeline en marktpositie</p>
@@ -58,11 +58,11 @@ export default function CrmDashboardPagina() {
 
       {/* Statistieken */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       ) : dash && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -118,7 +118,7 @@ export default function CrmDashboardPagina() {
       )}
 
       {/* Navigatiekaarten */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {nav.map(({ href, label, icon: Icon, beschrijving }) => (
           <Link key={href} href={href}>
             <Card className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all">
