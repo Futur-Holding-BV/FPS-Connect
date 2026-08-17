@@ -198,7 +198,8 @@ export interface LogContext {
   entiteitId?: number | null;
   /** Naam van de gebruikte prompt (bv. constante uit aiPrompts.ts) — verplicht (AI_01 §6.4). */
   promptNaam: string;
-  promptVersie?: string | null;
+  /** Versie van de gebruikte prompt (bv. PROMPT.versie) — verplicht (AI_01 vervolg 17-08-2026). */
+  promptVersie: string;
 
   // ── Flat businesscontext-velden ────────────────────────────────────────────
   /** Type workflow (bijv. "offerte", "opleverrapport", "inkoopplanning"). */
@@ -333,6 +334,26 @@ function logAanroep(record: {
   });
 }
 
+// ── Poortwachter: verplichte logcontext (AI_01 vervolg 17-08-2026) ───────────
+//
+// Elke aanroep MOET module, functie, promptNaam én promptVersie meegeven.
+// Ontbreekt er één, dan gaat de aanroep niet door de poort: we loggen een
+// geweigerd record (zodat het gat zichtbaar blijft in Beheer > AI-aanroepen)
+// en geven een nette fout terug. Geen fallbacks meer naar "onbekend"/NULL.
+
+const AI_CONTEXT_FOUT =
+  "AI-aanroep geweigerd: onvolledige logcontext (module, functie, promptNaam en promptVersie zijn verplicht).";
+
+function ontbrekendeContextVelden(logCtx: LogContext | undefined): string[] {
+  const ontbreekt: string[] = [];
+  const leeg = (v: unknown): boolean => typeof v !== "string" || v.trim() === "";
+  if (leeg(logCtx?.module)) ontbreekt.push("module");
+  if (leeg(logCtx?.functie)) ontbreekt.push("functie");
+  if (leeg(logCtx?.promptNaam)) ontbreekt.push("promptNaam");
+  if (leeg(logCtx?.promptVersie)) ontbreekt.push("promptVersie");
+  return ontbreekt;
+}
+
 // ── Singleton gateway ─────────────────────────────────────────────────────────
 
 const STANDAARD_TIMEOUT_MS = 60_000;
@@ -368,6 +389,35 @@ class AiGatewayService {
     logCtx: LogContext,
   ): Promise<ChatResultaat> {
     timeoutMs ??= STANDAARD_TIMEOUT_MS;
+    // ── Poortwachter: onvolledige logcontext = niet door de poort ────────────
+    {
+      const ontbreekt = ontbrekendeContextVelden(logCtx);
+      if (ontbreekt.length > 0) {
+        logger.error({ module: logCtx?.module, functie: logCtx?.functie, ontbreekt }, "AI-aanroep geweigerd: onvolledige logcontext");
+        logAanroep({
+          module: logCtx?.module?.trim() || "onbekend",
+          functie: logCtx?.functie?.trim() || null,
+          gebruikerId: logCtx?.gebruikerId ?? null,
+          entiteitstype: logCtx?.entiteitstype ?? null,
+          entiteitId: logCtx?.entiteitId ?? null,
+          modelSlot: slot,
+          modelNaam: MODEL_REGISTRY[slot],
+          promptNaam: logCtx?.promptNaam?.trim() || null,
+          promptVersie: logCtx?.promptVersie?.trim() || null,
+          promptHash: extractSystemPromptHash(params),
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          geschatteKostenEur: null,
+          duurMs: null,
+          status: "geweigerd",
+          foutmelding: `Onvolledige logcontext: ${ontbreekt.join(", ")} ontbreekt`,
+          contextJson: bouwContextJson(logCtx),
+          uitvoerTekst: null,
+        });
+        return { ok: false, fout: AI_CONTEXT_FOUT };
+      }
+    }
     // ── Punt 25: begrenzing per gebruiker + dagplafond ───────────────────────
     if (!binnenGebruikersLimiet(logCtx?.gebruikerId)) {
       logger.warn({ gebruikerId: logCtx?.gebruikerId, module: logCtx?.module }, "AI-aanroep geblokkeerd: gebruikerslimiet per minuut");
@@ -528,6 +578,35 @@ class AiGatewayService {
   ): Promise<ChatResultaat> {
     timeoutMs ??= STANDAARD_TIMEOUT_MS;
     const model = MODEL_REGISTRY[slot];
+    // ── Poortwachter: onvolledige logcontext = niet door de poort ────────────
+    {
+      const ontbreekt = ontbrekendeContextVelden(logCtx);
+      if (ontbreekt.length > 0) {
+        logger.error({ module: logCtx?.module, functie: logCtx?.functie, ontbreekt }, "AI responses-aanroep geweigerd: onvolledige logcontext");
+        logAanroep({
+          module: logCtx?.module?.trim() || "onbekend",
+          functie: logCtx?.functie?.trim() || null,
+          gebruikerId: logCtx?.gebruikerId ?? null,
+          entiteitstype: logCtx?.entiteitstype ?? null,
+          entiteitId: logCtx?.entiteitId ?? null,
+          modelSlot: slot,
+          modelNaam: model,
+          promptNaam: logCtx?.promptNaam?.trim() || null,
+          promptVersie: logCtx?.promptVersie?.trim() || null,
+          promptHash: null,
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          geschatteKostenEur: null,
+          duurMs: null,
+          status: "geweigerd",
+          foutmelding: `Onvolledige logcontext: ${ontbreekt.join(", ")} ontbreekt`,
+          contextJson: bouwContextJson(logCtx),
+          uitvoerTekst: null,
+        });
+        return { ok: false, fout: AI_CONTEXT_FOUT };
+      }
+    }
     const contextJson = bouwContextJson(logCtx);
     let pogingen = 0;
     const start = Date.now();

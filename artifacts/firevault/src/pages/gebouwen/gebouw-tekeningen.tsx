@@ -6,6 +6,7 @@ import {
   useDeleteGebouwTekening,
   useCreateVerdieping,
   useAiAnalyseTekening,
+  useAiVeldCorrectie,
 } from "@workspace/api-client-react";
 import type {
   Verdieping,
@@ -78,6 +79,7 @@ export default function GebouwTekeningen({
   const verwijderTekening = useDeleteGebouwTekening();
   const maakVerdieping = useCreateVerdieping();
   const analyseTekening = useAiAnalyseTekening();
+  const veldCorrectieMutatie = useAiVeldCorrectie();
   const {
     uploadFile,
     isUploading,
@@ -170,6 +172,35 @@ export default function GebouwTekeningen({
     lastBestandRef.current = null;
   }
 
+  // Leerlus: legt per door de tekening-AI voorgesteld veld vast wat er
+  // uiteindelijk (evt. na bewerking) is opgeslagen. Fire-and-forget: fouten
+  // blijven stil (console.debug) en de flow wordt nooit geblokkeerd.
+  function logTekeningCorrecties(opgeslagenNaam: string, opgeslagenType: string) {
+    const voorstel = aiVoorstel;
+    if (!voorstel) return;
+    const velden: Array<[string, string, string]> = [
+      ["naam", voorstel.tekening_naam?.trim() ?? "", opgeslagenNaam],
+      ["type", voorstel.tekening_type?.trim() ?? "", opgeslagenType],
+    ];
+    for (const [veld, aiWaarde, gekozen] of velden) {
+      // Alleen loggen waar de AI daadwerkelijk een (niet-leeg) voorstel gaf.
+      if (!aiWaarde) continue;
+      veldCorrectieMutatie.mutate(
+        {
+          data: {
+            veld_naam: `tekening.${veld}`,
+            ai_voorstel: aiWaarde,
+            gekozen,
+            tekst_fragment: opgeslagenNaam.slice(0, 200) || undefined,
+          },
+        },
+        {
+          onError: (err) => console.debug("veld-correctie loggen mislukt", err),
+        },
+      );
+    }
+  }
+
   async function opslaan() {
     if (!naam.trim() || !objectPath) return;
     setFout("");
@@ -191,17 +222,21 @@ export default function GebouwTekeningen({
       } else if (verdiepingId !== GEEN_BOUWLAAG) {
         verdieping_id = Number(verdiepingId);
       }
+      const opgeslagenNaam = naam.trim();
+      const opgeslagenType = veiligType(type);
       await maakTekening.mutateAsync({
         id: gebouwId,
         data: {
-          naam: naam.trim(),
-          type: veiligType(type),
+          naam: opgeslagenNaam,
+          type: opgeslagenType,
           schaal: schaal || undefined,
           url: objectPath,
           verdieping_id,
           zichtbaar_monteur: zichtbaarMonteur,
         },
       });
+      // Leerlus: vastleggen ná succesvolle opslag.
+      logTekeningCorrecties(opgeslagenNaam, opgeslagenType);
       reset();
       queryClient.invalidateQueries();
     } catch {

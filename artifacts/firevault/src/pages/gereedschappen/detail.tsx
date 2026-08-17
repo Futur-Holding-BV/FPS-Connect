@@ -10,6 +10,7 @@ import {
   useVerwerkRetourgave,
   useGetGereedschapUploadUrl,
   useAnalyseGereedschapFoto,
+  useAiVeldCorrectie,
 } from "@workspace/api-client-react";
 import type {
   GereedschapInput, BruikleenInput, GereedschapMeldingInput, GereedschapAiVoorstel,
@@ -101,8 +102,13 @@ export default function GereedschapDetailPagina() {
   const [aiVoorstel, setAiVoorstel] = useState<GereedschapAiVoorstel | null>(null);
   const [fotoFout, setFotoFout] = useState<string | null>(null);
 
+  // Leerlus: bewaar het overgenomen AI-voorstel zodat we bij opslaan per veld
+  // kunnen vastleggen wat de gebruiker uiteindelijk (evt. na bewerking) opslaat.
+  const overgenomenVoorstelRef = useRef<GereedschapAiVoorstel | null>(null);
+
   const getUploadUrl = useGetGereedschapUploadUrl();
   const analyseAi = useAnalyseGereedschapFoto();
+  const veldCorrectieMutatie = useAiVeldCorrectie();
 
   const { data: gereedschap, isLoading } = useGetGereedschap(gereedschapId);
   const { data: bruikleenHistory } = useListGereedschapBruikleen(gereedschapId);
@@ -130,13 +136,46 @@ export default function GereedschapDetailPagina() {
 
   const updateGereedschap = useUpdateGereedschap({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
+        // Leerlus: pas na een succesvolle opslag vastleggen wat de gebruiker
+        // overnam t.o.v. het AI-fotovoorstel (fire-and-forget, blokkeert niet).
+        logAiVeldCorrecties(variables.data as GereedschapInput);
         queryClient.invalidateQueries({ queryKey: ["getGereedschap", gereedschapId] });
         queryClient.invalidateQueries({ queryKey: ["listGereedschappen"] });
         setBewerkOpen(false);
       },
     },
   });
+
+  // Legt per door de foto-AI voorgesteld veld vast wat er is opgeslagen.
+  // Alleen velden met een niet-leeg AI-voorstel worden gelogd.
+  function logAiVeldCorrecties(opgeslagen: Partial<GereedschapInput>) {
+    const voorstel = overgenomenVoorstelRef.current;
+    if (!voorstel) return;
+    const velden: Array<[string, string, string]> = [
+      ["omschrijving", voorstel.omschrijving?.trim() ?? "", opgeslagen.omschrijving ?? ""],
+      ["merk", voorstel.merk?.trim() ?? "", opgeslagen.merk ?? ""],
+      ["type", voorstel.type?.trim() ?? "", opgeslagen.type ?? ""],
+      ["categorie", voorstel.categorie?.trim() ?? "", opgeslagen.categorie ?? ""],
+      ["aandrijving", voorstel.aandrijving?.trim() ?? "", opgeslagen.aandrijving ?? ""],
+    ];
+    for (const [veld, aiWaarde, gekozen] of velden) {
+      if (!aiWaarde) continue;
+      veldCorrectieMutatie.mutate(
+        {
+          data: {
+            veld_naam: `gereedschap.${veld}`,
+            ai_voorstel: aiWaarde,
+            gekozen,
+            tekst_fragment: (opgeslagen.omschrijving ?? "").slice(0, 200) || undefined,
+          },
+        },
+        {
+          onError: (err) => console.debug("veld-correctie loggen mislukt", err),
+        },
+      );
+    }
+  }
 
   const maakBruikleen = useCreateBruikleen({
     mutation: {
@@ -228,6 +267,8 @@ export default function GereedschapDetailPagina() {
         ? `Staat bij wijziging: ${aiVoorstel.staat_indicatie}`
         : f.opmerkingen,
     }));
+    // Leerlus: onthoud het overgenomen voorstel voor vastlegging bij opslaan.
+    overgenomenVoorstelRef.current = aiVoorstel;
     setAiVoorstel(null);
   }
 
@@ -258,6 +299,7 @@ export default function GereedschapDetailPagina() {
     });
     setFotoPreview(null);
     setAiVoorstel(null);
+    overgenomenVoorstelRef.current = null;
     setFotoFout(null);
     setBewerkOpen(true);
   }

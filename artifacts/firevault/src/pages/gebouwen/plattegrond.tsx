@@ -31,6 +31,7 @@ import {
   useAssignClusterMonteur,
   useAiSpotvoorstel,
   useBewaarSpotAiVoorstel,
+  useAiVeldCorrectie,
   useListOpnamePlattegrondItems,
   useUpdateOpnameItem,
 } from "@workspace/api-client-react";
@@ -595,6 +596,10 @@ export default function Plattegrond() {
   const addFoto = useAddFoto();
   const aiSpotvoorstel = useAiSpotvoorstel();
   const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
+  // Generieke leerlus: log per veld waarvoor de spot-AI een voorstel gaf en wat
+  // de gebruiker uiteindelijk bewaarde. Fire-and-forget — mag de plaatsflow
+  // nooit blokkeren of vertragen.
+  const aiVeldCorrectie = useAiVeldCorrectie();
 
   const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
   const maakScheiding = useCreateScheiding();
@@ -1388,6 +1393,36 @@ export default function Plattegrond() {
         } catch (err) {
           // Het opslaan van de leerset is niet kritiek voor het aanmaken van de spot.
           console.warn("AI-leerset opslaan mislukt", err);
+        }
+
+        // Generieke leerlus (AI_01): log per voorgesteld veld "spot.<veld>" met
+        // ai_voorstel = de AI-waarde en gekozen = de bewaarde waarde (afwijking of
+        // gelijk). Alleen loggen voor velden waar de AI daadwerkelijk iets voorstelde.
+        const fragment = (nieuwForm.objectnummer || "").slice(0, 200);
+        const logVeld = (veld: string, aiWaarde: string, gekozenWaarde: string) => {
+          if (!aiWaarde) return;
+          aiVeldCorrectie.mutate({
+            data: {
+              veld_naam: `spot.${veld}`,
+              ai_voorstel: aiWaarde,
+              gekozen: gekozenWaarde,
+              tekst_fragment: fragment || undefined,
+            },
+          });
+        };
+        if (aiVoorstel.type_code) {
+          logVeld("type", aiVoorstel.type_code, nieuwForm.type || "");
+        }
+        if (aiVoorstel.wand_of_plafond) {
+          logVeld("wand_of_plafond", aiVoorstel.wand_of_plafond, nieuwForm.wand_of_plafond || "");
+        }
+        // Toepassing/applicatie: de AI stelt de best-scorende suggestie voor; de
+        // gekozen waarde is het uiteindelijk geselecteerde label (naam), of leeg
+        // als de gebruiker de suggestie afwees.
+        const aiToepassing = aiVoorstel.toepassing_suggesties?.[0];
+        if (aiToepassing?.naam) {
+          const gekozenLabel = (nieuwLabelData as any[]).find((l) => nieuwLabelIds.includes(l.id));
+          logVeld("toepassing", aiToepassing.naam, gekozenLabel?.naam ?? "");
         }
       }
     }

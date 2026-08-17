@@ -421,7 +421,15 @@ router.post(
               aantal: sql<number>`count(*)::int`,
             })
             .from(aiVeldCorrectiesTable)
-            .where(ne(aiVeldCorrectiesTable.aiVoorstel, aiVeldCorrectiesTable.gekozen))
+            .where(and(
+              ne(aiVeldCorrectiesTable.aiVoorstel, aiVeldCorrectiesTable.gekozen),
+              // Alleen bedrijfsdocument-velden meenemen: ai_veld_correcties bevat
+              // sinds de generieke leerlus (17-08-2026) ook rijen van andere
+              // schermen (spot.*, formulier.*, calc_plak.*, ...) — die mogen de
+              // bedrijfsdocumenten-few-shot niet beïnvloeden (vergiftigingsrisico
+              // + verkeerd domein).
+              inArray(aiVeldCorrectiesTable.veldNaam, [...GELDIGE_VELDEN]),
+            ))
             .groupBy(aiVeldCorrectiesTable.veldNaam),
         ]);
 

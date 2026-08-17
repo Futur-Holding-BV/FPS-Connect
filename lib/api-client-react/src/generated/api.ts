@@ -67,6 +67,7 @@ import type {
   AiSuggestiesOrgVerzekeringen200,
   AiTaakInvoer,
   AiTaakResultaat,
+  AiVeldCorrectieInput,
   AiVoorstelFunctieInput,
   AkkoordAiVoorstel,
   AkkoordAiVoorstelBody,
@@ -81011,6 +81012,76 @@ export const useAiCentraalInvullen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiCentraalInvullenMutationOptions(options));
+    }
+
+export const getAiVeldCorrectieUrl = () => {
+
+
+
+
+  return `/api/ai/veld-correctie`
+}
+
+/**
+ * @summary Generieke leerlus — AI-voorstel vs. gebruikerskeuze vastleggen (AI_01)
+ */
+export const aiVeldCorrectie = async (aiVeldCorrectieInput: AiVeldCorrectieInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAiVeldCorrectieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiVeldCorrectieInput)
+  }
+);}
+
+
+
+
+export const getAiVeldCorrectieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVeldCorrectie>>, TError,{data: BodyType<AiVeldCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiVeldCorrectie>>, TError,{data: BodyType<AiVeldCorrectieInput>}, TContext> => {
+
+const mutationKey = ['aiVeldCorrectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiVeldCorrectie>>, {data: BodyType<AiVeldCorrectieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiVeldCorrectie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiVeldCorrectieMutationResult = NonNullable<Awaited<ReturnType<typeof aiVeldCorrectie>>>
+    export type AiVeldCorrectieMutationBody = BodyType<AiVeldCorrectieInput>
+    export type AiVeldCorrectieMutationError = ErrorType<void>
+
+    /**
+ * @summary Generieke leerlus — AI-voorstel vs. gebruikerskeuze vastleggen (AI_01)
+ */
+export const useAiVeldCorrectie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVeldCorrectie>>, TError,{data: BodyType<AiVeldCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiVeldCorrectie>>,
+        TError,
+        {data: BodyType<AiVeldCorrectieInput>},
+        TContext
+      > => {
+      return useMutation(getAiVeldCorrectieMutationOptions(options));
     }
 
 export const getAiInvullenOrganisatieUrl = () => {

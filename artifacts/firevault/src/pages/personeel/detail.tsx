@@ -50,6 +50,7 @@ import {
   getListCaoKeuzesQueryKey,
   useListAiVoorstellen,
   usePatchAiVoorstel,
+  useAiVeldCorrectie,
   useHeranalyseerDossier,
   useListHrmMiddelen,
   useCreateHrmMiddel,
@@ -764,6 +765,7 @@ export default function MedewerkerDetailPagina() {
   const { data: aiVoorstellen = [] } = useListAiVoorstellen(id);
   const heranalyseer = useHeranalyseerDossier();
   const beoordeelVoorstel = usePatchAiVoorstel();
+  const veldCorrectieMut = useAiVeldCorrectie();
 
   async function heranalyseerDossier() {
     try {
@@ -776,9 +778,32 @@ export default function MedewerkerDetailPagina() {
   }
 
   async function voorstelBeoordelen(voorstelId: number, status: string, correctie_tekst?: string) {
+    const voorstel = aiVoorstellen.find((v) => v.id === voorstelId);
     try {
       await beoordeelVoorstel.mutateAsync({ voorstelId, data: { status, correctie_tekst } });
       await queryClient.invalidateQueries({ queryKey: getListAiVoorstellenQueryKey(id) });
+      // Leerlus (AI_01): pas ná een geslaagde beoordeling vastleggen wat de AI
+      // voorstelde en wat de gebruiker ervan maakte. Fire-and-forget.
+      const aiVoorstel = voorstel?.voorgestelde_waarde ?? "";
+      if (aiVoorstel) {
+        // gekozen: overnemen ⇒ ai_voorstel; correctietekst ⇒ die tekst; afwijzen/later ⇒ leeg.
+        const gekozen =
+          status === "goedgekeurd"
+            ? (correctie_tekst && correctie_tekst.trim() ? correctie_tekst : aiVoorstel)
+            : "";
+        const soort = voorstel?.veld && /^[a-z0-9_]+$/.test(voorstel.veld) ? voorstel.veld : "tekst";
+        veldCorrectieMut.mutate(
+          {
+            data: {
+              veld_naam: `hrm_voorstel.${soort}`,
+              ai_voorstel: aiVoorstel,
+              gekozen,
+              tekst_fragment: medewerker?.naam ? medewerker.naam.slice(0, 200) : undefined,
+            },
+          },
+          { onError: (err) => console.debug("hrm_voorstel veld-correctie loggen mislukt", err) },
+        );
+      }
     } catch {
       toast({ title: "Beoordeling mislukt", variant: "destructive" });
     }
@@ -2261,7 +2286,7 @@ export default function MedewerkerDetailPagina() {
           <TabsContent value="ai-voorstellen" className="space-y-3">
             <AiVoorstelKaart
               voorstellen={aiVoorstellen}
-              onBeoordeel={(id, status) => voorstelBeoordelen(id, status)}
+              onBeoordeel={(id, status, correctieTekst) => voorstelBeoordelen(id, status, correctieTekst)}
               magSchrijven={magSchrijven}
               onBulkAccepteerAanvullingen={
                 magSchrijven

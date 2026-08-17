@@ -8,6 +8,7 @@ import {
   useListGebouwPartijen,
   useUpdateGebouw,
   useListWerkgevers,
+  useAiVeldCorrectie,
   getGetGebouwEmailSamenvattingQueryKey,
   getListGebouwPartijenQueryKey,
 } from "@workspace/api-client-react";
@@ -589,6 +590,12 @@ export function Projectformulier({
   const update = useUpdateGebouwEmailSamenvatting();
   const genereer = useGenerateGebouwEmailSamenvatting();
   const wijzigGebouw = useUpdateGebouw();
+  // Generieke leerlus (AI_01): log per onderdeel wat de AI oorspronkelijk
+  // voorstelde tegenover de door de beheerder bevestigde tekst. Fire-and-forget.
+  const aiVeldCorrectie = useAiVeldCorrectie();
+  // Oorspronkelijk gegenereerde AI-tekst per onderdeel — vastgelegd bij generatie
+  // (server-samenvatting of herbereken) vóór de handmatige bewerking.
+  const aiOorspronkelijkRef = useRef<Partial<Record<VeldSleutel, string>>>({});
   const { data: partijen } = useListGebouwPartijen(gebouwId);
   const { data: werkgevers } = useListWerkgevers();
 
@@ -627,6 +634,16 @@ export function Projectformulier({
       tekeningen: samenvatting.tekeningen ?? "",
       risicos: samenvatting.risicos ?? "",
     });
+    // Leg de door de AI gegenereerde tekst vast als startpunt voor de leerlus:
+    // wat er nu uit de server komt is het AI-voorstel vóór handmatige bewerking.
+    aiOorspronkelijkRef.current = {
+      opdrachtomschrijving: samenvatting.opdrachtomschrijving ?? "",
+      opdrachtgever: samenvatting.opdrachtgever ?? "",
+      afspraken: samenvatting.afspraken ?? "",
+      actiepunten: samenvatting.actiepunten ?? "",
+      besluiten: samenvatting.besluiten ?? "",
+      risicos: samenvatting.risicos ?? "",
+    };
     setLocalContacten(samenvatting.contactpersonen ?? []);
     setVersie(stempel);
   }, [samenvatting, versie]);
@@ -687,6 +704,26 @@ export function Projectformulier({
       });
       await invalidate();
       await queryClient.invalidateQueries();
+      // Generieke leerlus (AI_01): log per onderdeel "projectsamenvatting.<veld>"
+      // met ai_voorstel = oorspronkelijk gegenereerde tekst en gekozen = de
+      // bevestigde tekst. Alleen loggen waar de AI daadwerkelijk iets voorstelde.
+      const fragment = (gebouw.naam || "").slice(0, 200);
+      const teLoggen: VeldSleutel[] = [
+        "opdrachtomschrijving", "opdrachtgever", "afspraken",
+        "actiepunten", "besluiten", "risicos",
+      ];
+      for (const veld of teLoggen) {
+        const aiTekst = aiOorspronkelijkRef.current[veld] ?? "";
+        if (!aiTekst) continue;
+        aiVeldCorrectie.mutate({
+          data: {
+            veld_naam: `projectsamenvatting.${veld}`,
+            ai_voorstel: aiTekst,
+            gekozen: form[veld] ?? "",
+            tekst_fragment: fragment || undefined,
+          },
+        });
+      }
       setBewerken(false);
       setVersie(null);
       toast({ title: bevestigen ? "Projectgegevens bevestigd" : "Projectgegevens opgeslagen" });

@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { Sparkles, Loader2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAiCentraalInvullen } from "@workspace/api-client-react";
+import { useAiCentraalInvullen, useAiVeldCorrectie } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Saneert een veldnaam naar de door de server toegestane suffix [a-z0-9_]+.
+// camelCase e.d. wordt gelowercased; overige tekens worden underscores.
+function saneerVeldNaam(naam: string): string {
+  return naam
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
 
 export type AiFormulierType =
   | "crm_organisatie"
@@ -75,7 +84,27 @@ export function AiInvullenKnop({
 }: Props) {
   const { toast } = useToast();
   const mutatie = useAiCentraalInvullen();
+  const veldCorrectieMutatie = useAiVeldCorrectie();
   const [voorstel, setVoorstel] = useState<Record<string, string | null> | null>(null);
+
+  // Leerlus: legt per gevuld AI-voorstelveld vast wat de gebruiker ermee deed
+  // (fire-and-forget, mag nooit de flow blokkeren; fouten blijven stil).
+  function logVeldCorrectie(veldNaam: string, aiVoorstel: string, gekozen: string) {
+    const suffix = saneerVeldNaam(veldNaam);
+    if (!suffix) return;
+    veldCorrectieMutatie.mutate(
+      {
+        data: {
+          veld_naam: `formulier.${formulierType}.${suffix}`,
+          ai_voorstel: aiVoorstel,
+          gekozen,
+        },
+      },
+      {
+        onError: (err) => console.debug("veld-correctie loggen mislukt", err),
+      },
+    );
+  }
 
   const labels: Record<string, string> = {
     ...(STANDAARD_LABELS[formulierType] ?? {}),
@@ -113,7 +142,22 @@ export function AiInvullenKnop({
         .filter(([, v]) => v !== null && v !== "")
         .map(([k, v]) => [k, v as string]),
     );
+    // Leerlus: alle gevulde voorstellen worden ongewijzigd overgenomen ⇒ ai_voorstel === gekozen.
+    for (const [k, v] of Object.entries(over)) {
+      logVeldCorrectie(k, v as string, v as string);
+    }
     onVoorstellen(over);
+    setVoorstel(null);
+  }
+
+  // Gebruiker wijst het voorstel expliciet af (kruisje of "Negeren").
+  // Leerlus: elk gevuld voorstelveld krijgt gekozen = "" (afgewezen).
+  function negeerVoorstel() {
+    if (voorstel) {
+      for (const [k, v] of gevuldVoorstel) {
+        logVeldCorrectie(k, v as string, "");
+      }
+    }
     setVoorstel(null);
   }
 
@@ -142,7 +186,7 @@ export function AiInvullenKnop({
             </p>
             <button
               type="button"
-              onClick={() => setVoorstel(null)}
+              onClick={negeerVoorstel}
               className="text-amber-500 hover:text-amber-800 transition-colors"
             >
               <X className="h-3.5 w-3.5" />
@@ -176,7 +220,7 @@ export function AiInvullenKnop({
               size="sm"
               variant="ghost"
               className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
-              onClick={() => setVoorstel(null)}
+              onClick={negeerVoorstel}
             >
               Negeren
             </Button>

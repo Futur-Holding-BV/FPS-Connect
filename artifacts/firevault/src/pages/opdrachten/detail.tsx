@@ -9,6 +9,7 @@ import {
   useVaststellenWerkbegroting,
   useAiAnalyseWerkbegroting,
   useBeoordeelWerkbegrotingAiVoorstel,
+  useAiVeldCorrectie,
   useGetNacalculatie,
   useListOpdrachtPlanningUren,
   usePatchWerkbegrotingRegel,
@@ -85,6 +86,35 @@ function euro(n: number | null | undefined) {
 function uren(n: number | null | undefined) {
   const v = n ?? 0;
   return `${v.toFixed(1)} u`;
+}
+
+// Compacte tekstweergave van het PIM-analysevoorstel voor de leerlus (AI_01).
+// Vat samenvatting, inkoop-/arbeidsvoorstellen en risico's samen; max 4000 tekens.
+function pimVoorstelCompact(analyse: Record<string, unknown> | null | undefined): string {
+  if (!analyse) return "";
+  const delen: string[] = [];
+  if (typeof analyse.samenvatting === "string" && analyse.samenvatting.trim()) {
+    delen.push(`Samenvatting: ${analyse.samenvatting.trim()}`);
+  }
+  const inkoop = analyse.inkoop_voorstellen;
+  if (Array.isArray(inkoop) && inkoop.length > 0) {
+    const regels = (inkoop as Array<{ post?: string; voorstel?: string }>)
+      .map((v) => `- ${v.post ?? ""}: ${v.voorstel ?? ""}`.trim())
+      .join("\n");
+    delen.push(`Inkoop-voorstellen:\n${regels}`);
+  }
+  const arbeid = analyse.arbeid_voorstellen;
+  if (Array.isArray(arbeid) && arbeid.length > 0) {
+    const regels = (arbeid as Array<{ post?: string; voorstel?: string }>)
+      .map((v) => `- ${v.post ?? ""}: ${v.voorstel ?? ""}`.trim())
+      .join("\n");
+    delen.push(`Arbeid-voorstellen:\n${regels}`);
+  }
+  const risicos = analyse.risicos;
+  if (Array.isArray(risicos) && risicos.length > 0) {
+    delen.push(`Aandachtspunten:\n${(risicos as string[]).map((r) => `- ${r}`).join("\n")}`);
+  }
+  return delen.join("\n\n").slice(0, 4000);
 }
 
 const OPDRACHT_STATUS: Record<string, { label: string; kleur: string }> = {
@@ -736,6 +766,35 @@ export default function OpdrachtDetailPagina() {
     },
   });
 
+  const veldCorrectieMut = useAiVeldCorrectie();
+
+  // Leerlus (AI_01): leg het PIM-analysevoorstel vast bij bevestigen/negeren.
+  // Fire-and-forget — de beoordeling zelf blijft leidend en wordt nooit geblokkeerd.
+  function beoordeelPimVoorstel(beslissing: "geaccepteerd" | "genegeerd") {
+    const compact = pimVoorstelCompact(aiAnalyse);
+    const fragment = opdracht?.titel ? String(opdracht.titel).slice(0, 200) : undefined;
+    beoordeelMutatie.mutate(
+      { id: opdrachtId, data: { beslissing } },
+      {
+        onSuccess: () => {
+          // Pas ná een geslaagde beoordeling vastleggen. Fire-and-forget.
+          if (!compact) return;
+          veldCorrectieMut.mutate(
+            {
+              data: {
+                veld_naam: "pim.voorstel",
+                ai_voorstel: compact,
+                gekozen: beslissing === "geaccepteerd" ? compact : "",
+                tekst_fragment: fragment,
+              },
+            },
+            { onError: (err) => console.debug("pim veld-correctie loggen mislukt", err) },
+          );
+        },
+      },
+    );
+  }
+
   const aiChatMut = useAiChatWerkbegroting();
 
   const updateOpdrachtMut = useUpdateOpdracht({
@@ -1032,7 +1091,7 @@ export default function OpdrachtDetailPagina() {
                     size="sm"
                     className="h-7 text-xs"
                     disabled={beoordeelMutatie.isPending}
-                    onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "geaccepteerd" } })}
+                    onClick={() => beoordeelPimVoorstel("geaccepteerd")}
                   >
                     <Check className="h-3 w-3 mr-1" />
                     {beoordeelMutatie.isPending ? "Bezig..." : "Voorstel bevestigen"}
@@ -1042,7 +1101,7 @@ export default function OpdrachtDetailPagina() {
                     variant="outline"
                     className="h-7 text-xs"
                     disabled={beoordeelMutatie.isPending}
-                    onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "genegeerd" } })}
+                    onClick={() => beoordeelPimVoorstel("genegeerd")}
                   >
                     Negeren
                   </Button>
@@ -1640,7 +1699,7 @@ export default function OpdrachtDetailPagina() {
                       size="sm"
                       className="h-7 text-xs"
                       disabled={beoordeelMutatie.isPending}
-                      onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "geaccepteerd" } })}
+                      onClick={() => beoordeelPimVoorstel("geaccepteerd")}
                     >
                       <Check className="h-3 w-3 mr-1" />
                       {beoordeelMutatie.isPending ? "Bezig..." : "Bevestigen"}
@@ -1650,7 +1709,7 @@ export default function OpdrachtDetailPagina() {
                       variant="outline"
                       className="h-7 text-xs"
                       disabled={beoordeelMutatie.isPending}
-                      onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "genegeerd" } })}
+                      onClick={() => beoordeelPimVoorstel("genegeerd")}
                     >
                       Negeren
                     </Button>

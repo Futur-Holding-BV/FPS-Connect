@@ -122,6 +122,26 @@ async function main(): Promise<void> {
   console.log("");
   console.log(`Logging-dekking: ${zonderNaam["totaal"]} aanroepen totaal, waarvan ${zonderNaam["zonder_promptnaam"]} zonder promptnaam en ${zonderNaam["module_onbekend"]} met module onbekend/leeg.`);
   console.log("Let op: door dat logginggat betekent 'niet herleidbaar' niet automatisch 'nooit gebruikt'.");
+
+  // ── 5. Attributie van niet-gelabelde aanroepen (tokenraadsel) ──────────────
+  // Groepeert alle aanroepen zonder promptnaam of met module onbekend/leeg op
+  // model + prompt_hash + periode, met een uitvoervoorbeeld, zodat de bron
+  // herleidbaar is. Historische context: vóór commit 34255f8 (10 aug 2026)
+  // dwong de gateway geen logcontext af; alles van vóór die datum is per
+  // definitie ongelabeld.
+  const attributie = await q(`
+    select model_naam, coalesce(prompt_hash,'(geen)') as prompt_hash,
+      min(aangemaakt_op)::date as vanaf, max(aangemaakt_op)::date as tot,
+      count(*) as n, coalesce(sum(total_tokens),0) as tokens,
+      round(coalesce(avg(total_tokens),0)) as gem_tokens,
+      left(regexp_replace(max(uitvoer_tekst), E'[\\n\\r]+', ' ', 'g'), 90) as uitvoer_voorbeeld
+    from ai_aanroepen
+    where (prompt_naam is null or prompt_naam = '' or module is null or module in ('', 'onbekend'))
+    group by 1,2 order by tokens desc limit 25`);
+  console.log("\n5. Attributie van niet-gelabelde aanroepen (op model + prompt-hash)\n");
+  console.log(tabel(attributie, ["model_naam", "prompt_hash", "vanaf", "tot", "n", "tokens", "gem_tokens", "uitvoer_voorbeeld"]));
+  console.log("Duiding: prompt_hash '(geen)' + JSON met \"signalen\" = de dagelijkse Scout-marktsignalenrun (chat zonder system-rol);");
+  console.log("Responses-API-aanroepen loggen momenteel geen prompt_hash en geen tokens.");
 }
 
 main()

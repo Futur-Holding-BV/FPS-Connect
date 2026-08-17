@@ -9614,6 +9614,15 @@ export interface CalcPlakAnalyseInput {
   bijzonderheden?: string;
 }
 
+export interface AiVeldCorrectieInput {
+  /** Whitelist op prefix, bv. formulier.gebouw.bouwjaar, spot.type, gereedschap.merk, incident.omschrijving, hrm_voorstel.tekst, offerte_email.tekst, projectsamenvatting.tekst */
+  veld_naam: string;
+  ai_voorstel: string;
+  gekozen: string;
+  hash?: string;
+  tekst_fragment?: string;
+}
+
 export interface CalcPlakVeldCorrectieInput {
   /** Whitelist: calc_plak.omschrijving | .hoeveelheid | .eenheid | .tarief | .mu_per_eenheid | .normtijd | .artikel */
   veld_naam: string;

@@ -13,6 +13,7 @@ import {
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
   useUpdateVoorziening,
+  useAiVeldCorrectie,
 } from "@workspace/api-client-react";
 import type { SpotAiVoorstelResultaat, Label } from "@workspace/api-client-react";
 import { ApplicatieKiezer } from "@/components/ApplicatieKiezer";
@@ -137,6 +138,9 @@ export default function Plattegrond() {
   const voegFotoToe = useAddFoto();
   const aiSpotvoorstel = useAiSpotvoorstel();
   const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
+  // Leerlus: generieke AI-veldcorrectie (fire-and-forget). Zelfde veld_namen als
+  // de web-variant (spot.type, spot.wand_of_plafond, spot.toepassing).
+  const veldCorrectie = useAiVeldCorrectie();
 
   const { syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } = useSync();
   const { checkAchievements } = useAchievement();
@@ -390,6 +394,27 @@ export default function Plattegrond() {
         for (const url of naFotos) {
           await voegFotoToe.mutateAsync({ id: nieuwId, data: { fase: "na", url } });
         }
+        // Leerlus: leg per door de AI voorgesteld veld vast wat de monteur
+        // uiteindelijk heeft opgeslagen. Fire-and-forget — mag de flow nooit
+        // blokkeren. Zelfde veld_namen als de web-variant.
+        if (aiVoorstel) {
+          const fragment = (form.objectnummer || "").slice(0, 200) || undefined;
+          const logVeld = (veldNaam: string, aiWaarde: string, gekozen: string) => {
+            if (!aiWaarde.trim()) return; // alleen loggen waar de AI iets voorstelde
+            veldCorrectie.mutate({
+              data: { veld_naam: veldNaam, ai_voorstel: aiWaarde, gekozen, tekst_fragment: fragment },
+            });
+          };
+          logVeld("spot.type", aiVoorstel.type_code ?? "", form.type);
+          logVeld("spot.wand_of_plafond", aiVoorstel.wand_of_plafond ?? "", form.wand_of_plafond);
+          // Toepassing: de AI stelt een label voor (score > 0). ai_voorstel = het
+          // voorgestelde label_id; gekozen = de opgeslagen label_ids.
+          const topToepassing = aiVoorstel.toepassing_suggesties?.[0];
+          if (topToepassing && topToepassing.score > 0) {
+            logVeld("spot.toepassing", String(topToepassing.label_id), labelIds.join(","));
+          }
+        }
+
         // Leerset: bewaar het AI-voorstel + de uiteindelijke keuze. De server
         // berekent de afwijking en markeert de spot eventueel voor beheerder-controle.
         if (aiVoorstel) {

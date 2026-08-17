@@ -23395,6 +23395,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/AiInvullenResultaat"
 
+  /ai/veld-correctie:
+    post:
+      operationId: aiVeldCorrectie
+      tags: [ai]
+      summary: Generieke leerlus — AI-voorstel vs. gebruikerskeuze vastleggen (AI_01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiVeldCorrectieInput"
+      responses:
+        "204":
+          description: Opgeslagen
+        "400":
+          description: Ongeldige invoer
+
   # ── Organisatie — AI ──────────────────────────────────────────────────────────
   /organisatie/ai-invullen:
     post:
@@ -40196,6 +40213,25 @@ components:
         bijzonderheden:
           type: string
           description: Vrije notities van de calculator
+
+    AiVeldCorrectieInput:
+      type: object
+      required: [veld_naam, ai_voorstel, gekozen]
+      properties:
+        veld_naam:
+          type: string
+          description: >-
+            Whitelist op prefix, bv. formulier.gebouw.bouwjaar, spot.type,
+            gereedschap.merk, incident.omschrijving, hrm_voorstel.tekst,
+            offerte_email.tekst, projectsamenvatting.tekst
+        ai_voorstel:
+          type: string
+        gekozen:
+          type: string
+        hash:
+          type: string
+        tekst_fragment:
+          type: string
 
     CalcPlakVeldCorrectieInput:
       type: object

@@ -91,6 +91,7 @@ export * from './aiSuggestiesOrgVerzekeringen200';
 export * from './aiTaakInvoer';
 export * from './aiTaakResultaat';
 export * from './aiTaakResultaatStatus';
+export * from './aiVeldCorrectieInput';
 export * from './aiVoorstelFunctieInput';
 export * from './akkoordAiVoorstel';
 export * from './akkoordAiVoorstelBody';

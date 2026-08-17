@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useGetScabMails, usePostScabMailsGenereer,
   usePatchScabMailsId, usePostScabMailsIdVerzend,
+  useAiVeldCorrectie,
 } from "@workspace/api-client-react";
 import { useListWerkgevers } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +101,12 @@ export default function ScabMailPage() {
   const genereer = usePostScabMailsGenereer();
   const patchMail = usePatchScabMailsId();
   const verzendMutatie = usePostScabMailsIdVerzend();
+  // Generieke leerlus (AI_01): log wat de AI voor onderwerp/inhoud voorstelde
+  // tegenover de daadwerkelijk verzonden tekst. Fire-and-forget.
+  const aiVeldCorrectie = useAiVeldCorrectie();
+  // Oorspronkelijk gegenereerde AI-tekst per mail-id (vóór handmatige bewerking),
+  // vastgelegd bij generatie zodat we bij verzenden kunnen vergelijken.
+  const aiOorspronkelijkRef = useRef<Record<number, { onderwerp: string; inhoud: string }>>({});
 
   const [bewerkForm, setBewerkForm] = useState({ onderwerp: "", inhoud: "", scab_email_adres: "" });
 
@@ -128,7 +135,7 @@ export default function ScabMailPage() {
 
   async function doGenereer() {
     if (!genereerWerkmaatschappij) return;
-    await genereer.mutateAsync({
+    const nieuweMail = await genereer.mutateAsync({
       data: {
         werkmaatschappij: genereerWerkmaatschappij,
         werkgever_id: genereerWerkgeverId ?? undefined,
@@ -136,13 +143,48 @@ export default function ScabMailPage() {
         periode_maand: maand,
       },
     });
+    // Leg de door de AI gegenereerde tekst vast als startpunt voor de leerlus.
+    if (nieuweMail?.id != null) {
+      aiOorspronkelijkRef.current[nieuweMail.id] = {
+        onderwerp: nieuweMail.onderwerp ?? "",
+        inhoud: nieuweMail.inhoud ?? "",
+      };
+    }
     setGenereerDialogOpen(false);
     refetch();
   }
 
   async function doVerzend() {
     if (!verzendDialogOpen) return;
-    await verzendMutatie.mutateAsync({ id: verzendDialogOpen.id });
+    const mail = verzendDialogOpen;
+    await verzendMutatie.mutateAsync({ id: mail.id });
+    // Generieke leerlus (AI_01): log wat de AI voor onderwerp/inhoud voorstelde
+    // tegenover de verzonden tekst. Alleen loggen als het AI-origineel bekend is
+    // (mail in deze sessie gegenereerd). Fire-and-forget.
+    const aiOrig = aiOorspronkelijkRef.current[mail.id];
+    if (aiOrig) {
+      const fragment = (mail.werkmaatschappij || "").slice(0, 200);
+      if (aiOrig.onderwerp) {
+        aiVeldCorrectie.mutate({
+          data: {
+            veld_naam: "scab_mail.onderwerp",
+            ai_voorstel: aiOrig.onderwerp,
+            gekozen: mail.onderwerp ?? "",
+            tekst_fragment: fragment || undefined,
+          },
+        });
+      }
+      if (aiOrig.inhoud) {
+        aiVeldCorrectie.mutate({
+          data: {
+            veld_naam: "scab_mail.tekst",
+            ai_voorstel: aiOrig.inhoud,
+            gekozen: mail.inhoud ?? "",
+            tekst_fragment: fragment || undefined,
+          },
+        });
+      }
+    }
     setVerzendDialogOpen(null);
     refetch();
   }

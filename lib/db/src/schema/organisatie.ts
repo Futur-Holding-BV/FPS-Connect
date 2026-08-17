@@ -88,6 +88,9 @@ export const aiVeldCorrectiesTable = pgTable("ai_veld_correcties", {
   veldNaam: text("veld_naam").notNull(),
   aiVoorstel: text("ai_voorstel").notNull(),
   gekozen: text("gekozen").notNull(),
+  // Audit (migratie 0059): wie sloeg deze correctie in — herleidbaarheid tegen
+  // vergiftiging van de leerdata. Bestaande rijen: NULL.
+  gebruikerId: integer("gebruiker_id"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 

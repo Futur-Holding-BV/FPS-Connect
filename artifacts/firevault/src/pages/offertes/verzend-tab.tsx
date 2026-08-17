@@ -15,6 +15,7 @@ import {
   useGetOfferteKlantContractUploadUrl,
   useDeleteOfferteKlantContract,
   useGenereerOfferteContractAdvies,
+  useAiVeldCorrectie,
   getListOffertePortaalTokensQueryKey,
   getListOfferteTrackingQueryKey,
   getListOfferteVragenQueryKey,
@@ -323,6 +324,13 @@ export function VerzendTab({
   const maakToken = useCreateOffertePortaalToken();
   const aiEmail = useCreateOfferteAiEmail();
   const verzend = useVerzendOfferte();
+  // Generieke leerlus (AI_01): log wat de AI voor onderwerp/tekst voorstelde
+  // tegenover de daadwerkelijk verzonden tekst. Fire-and-forget.
+  const aiVeldCorrectie = useAiVeldCorrectie();
+  // Oorspronkelijk door de AI gegenereerde onderwerp + tekst, vastgelegd bij
+  // generatie zodat we bij verzenden het voorstel met de verzonden tekst kunnen
+  // vergelijken.
+  const aiEmailVoorstelRef = useRef<{ onderwerp: string; tekst: string } | null>(null);
   const beantwoord = useBeantwoordOfferteVraag();
   const werkOfferte = useUpdateOfferte();
   const uploadUrlMutatie = useGetOfferteKlantContractUploadUrl();
@@ -359,11 +367,13 @@ export function VerzendTab({
       try {
         const voorstel = await aiEmail.mutateAsync({ id: offerteId });
         setEmailVoorstel(voorstel);
+        const tekst = [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n");
+        aiEmailVoorstelRef.current = { onderwerp: voorstel.onderwerp, tekst };
         setEmailForm((f) => ({
           ...f,
           naar_naam: f.naar_naam || opdrachtgever || "",
           onderwerp: voorstel.onderwerp,
-          tekst: [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n"),
+          tekst,
         }));
       } catch {
         // stil falen
@@ -419,10 +429,12 @@ export function VerzendTab({
     try {
       const voorstel = await aiEmail.mutateAsync({ id: offerteId });
       setEmailVoorstel(voorstel);
+      const tekst = [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n");
+      aiEmailVoorstelRef.current = { onderwerp: voorstel.onderwerp, tekst };
       setEmailForm((f) => ({
         ...f,
         onderwerp: voorstel.onderwerp,
-        tekst: [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n"),
+        tekst,
       }));
       toast({ title: "AI-voorstel gegenereerd" });
     } catch {
@@ -467,9 +479,37 @@ export function VerzendTab({
         },
       });
       await qc.invalidateQueries({ queryKey: getListOfferteTrackingQueryKey(offerteId) });
+      // Generieke leerlus (AI_01): log wat de AI voorstelde tegenover de
+      // verzonden onderwerp/tekst. Alleen loggen waar de AI daadwerkelijk iets
+      // voorstelde. Fire-and-forget — mag de verzendflow niet blokkeren.
+      const aiVoorstelEmail = aiEmailVoorstelRef.current;
+      if (aiVoorstelEmail) {
+        const fragment = (titel || opdrachtgever || "").slice(0, 200);
+        if (aiVoorstelEmail.onderwerp) {
+          aiVeldCorrectie.mutate({
+            data: {
+              veld_naam: "offerte_email.onderwerp",
+              ai_voorstel: aiVoorstelEmail.onderwerp,
+              gekozen: emailForm.onderwerp.trim(),
+              tekst_fragment: fragment || undefined,
+            },
+          });
+        }
+        if (aiVoorstelEmail.tekst) {
+          aiVeldCorrectie.mutate({
+            data: {
+              veld_naam: "offerte_email.tekst",
+              ai_voorstel: aiVoorstelEmail.tekst,
+              gekozen: emailForm.tekst.trim(),
+              tekst_fragment: fragment || undefined,
+            },
+          });
+        }
+      }
       toast({ title: "E-mail verzonden" });
       setEmailForm({ naar_email: "", naar_naam: opdrachtgever ?? "", onderwerp: "", tekst: "" });
       setEmailVoorstel(null);
+      aiEmailVoorstelRef.current = null;
     } catch {
       toast({ title: "Verzenden mislukt", variant: "destructive" });
     }

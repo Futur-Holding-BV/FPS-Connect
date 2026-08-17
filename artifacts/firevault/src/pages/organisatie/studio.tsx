@@ -9,6 +9,7 @@ import {
   useGoedkeurenStudioTemplate,
   useAnalyseerStudioHuisstijl,
   useGenereerOntbrekendeStudioModellen,
+  useAiVeldCorrectie,
   useUpdateWerkgever,
   getListDocumentStudioModellenQueryKey,
   getListStudioWerkgeversQueryKey,
@@ -171,6 +172,7 @@ export default function DocumentStudioPagina() {
   const analyseerHuisstijl = useAnalyseerStudioHuisstijl();
   const bulkGenereer       = useGenereerOntbrekendeStudioModellen();
   const updateWerkgever    = useUpdateWerkgever();
+  const veldCorrectieMut   = useAiVeldCorrectie();
 
   const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId);
   const aiModel = aiModelId ? modellen.find((m) => m.id === aiModelId) : null;
@@ -454,6 +456,28 @@ export default function DocumentStudioPagina() {
     }
     try {
       await updateWerkgever.mutateAsync({ id: geselecteerdeWerkgever.id, data: payload as WerkgeverInput });
+      // Leerlus (AI_01): pas ná de geslaagde toepassing per veld vastleggen wat
+      // de AI voorstelde en welke waarde de gebruiker overnam. Fire-and-forget.
+      for (const [veld, beslissing] of geaccepteerdeHuisstijlVelden) {
+        const aiWaarde = huisstijlVoorstel?.voorstel?.[veld as HuisstijlVeld];
+        const aiVoorstel = aiWaarde === null || aiWaarde === undefined ? "" : String(aiWaarde);
+        if (!aiVoorstel) continue;
+        const gekozen =
+          beslissing.waarde === null || beslissing.waarde === undefined ? "" : String(beslissing.waarde);
+        veldCorrectieMut.mutate(
+          {
+            data: {
+              veld_naam: `studio_huisstijl.${veld}`,
+              ai_voorstel: aiVoorstel,
+              gekozen,
+              tekst_fragment: geselecteerdeWerkgever.naam
+                ? geselecteerdeWerkgever.naam.slice(0, 200)
+                : undefined,
+            },
+          },
+          { onError: (err) => console.debug("studio_huisstijl veld-correctie loggen mislukt", err) },
+        );
+      }
       void queryClient.invalidateQueries({ queryKey: getListStudioWerkgeversQueryKey() });
       void queryClient.invalidateQueries({ queryKey: getListWerkgeversQueryKey() });
       toast({

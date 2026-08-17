@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import {
   useListGereedschappen, useCreateGereedschap,
   useGetGereedschapUploadUrl, useAnalyseGereedschapFoto,
+  useAiVeldCorrectie,
 } from "@workspace/api-client-react";
 import type { GereedschapInput, Gereedschap, GereedschapAiVoorstel } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -104,6 +105,11 @@ export default function GereedschappenPagina() {
   const [aiVoorstel, setAiVoorstel] = useState<GereedschapAiVoorstel | null>(null);
   const [fotoFout, setFotoFout] = useState<string | null>(null);
 
+  // Leerlus: bewaar het AI-fotovoorstel zodat we bij opslaan per veld kunnen
+  // vastleggen wat de gebruiker uiteindelijk overneemt.
+  const aiVoorstelRef = useRef<GereedschapAiVoorstel | null>(null);
+  const veldCorrectieMutatie = useAiVeldCorrectie();
+
   const queryClient = useQueryClient();
 
   const params = {
@@ -120,7 +126,9 @@ export default function GereedschappenPagina() {
 
   const maakAan = useCreateGereedschap({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
+        // Leerlus: pas na een succesvolle opslag vastleggen.
+        logAiVeldCorrecties(variables.data);
         queryClient.invalidateQueries({ queryKey: ["listGereedschappen"] });
         setNieuwOpen(false);
         setFormulier(leegFormulier);
@@ -128,6 +136,7 @@ export default function GereedschappenPagina() {
         setFotoPreview(null);
         setFotoObjectPad(null);
         setAiVoorstel(null);
+        aiVoorstelRef.current = null;
       },
       onError: () => setOpslaan(false),
     },
@@ -138,6 +147,7 @@ export default function GereedschappenPagina() {
     if (!bestand) return;
     setFotoFout(null);
     setAiVoorstel(null);
+    aiVoorstelRef.current = null;
     setFotoPreview(URL.createObjectURL(bestand));
     setFotoUploaden(true);
     try {
@@ -158,6 +168,7 @@ export default function GereedschappenPagina() {
       // de gebruiker controleert en past aan waar nodig (amber = AI-ingevuld).
       pasVoorstelToe(voorstel as GereedschapAiVoorstel);
       setAiVoorstel(voorstel as GereedschapAiVoorstel);
+      aiVoorstelRef.current = voorstel as GereedschapAiVoorstel;
     } catch (err) {
       setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
     } finally {
@@ -195,7 +206,39 @@ export default function GereedschappenPagina() {
     setFotoPreview(null);
     setFotoObjectPad(null);
     setAiVoorstel(null);
+    aiVoorstelRef.current = null;
     setFotoFout(null);
+  }
+
+  // Leerlus: legt per door de foto-AI voorgesteld veld vast wat er uiteindelijk
+  // is opgeslagen (fire-and-forget; fouten blijven stil, blokkeert de flow niet).
+  function logAiVeldCorrecties(opgeslagen: GereedschapInput) {
+    const voorstel = aiVoorstelRef.current;
+    if (!voorstel) return;
+    const velden: Array<[string, string, string]> = [
+      ["omschrijving", voorstel.omschrijving?.trim() ?? "", opgeslagen.omschrijving ?? ""],
+      ["merk", voorstel.merk?.trim() ?? "", opgeslagen.merk ?? ""],
+      ["type", voorstel.type?.trim() ?? "", opgeslagen.type ?? ""],
+      ["categorie", voorstel.categorie?.trim() ?? "", opgeslagen.categorie ?? ""],
+      ["aandrijving", voorstel.aandrijving?.trim() ?? "", opgeslagen.aandrijving ?? ""],
+    ];
+    for (const [veld, aiWaarde, gekozen] of velden) {
+      // Alleen loggen waar de AI daadwerkelijk een (niet-leeg) voorstel gaf.
+      if (!aiWaarde) continue;
+      veldCorrectieMutatie.mutate(
+        {
+          data: {
+            veld_naam: `gereedschap.${veld}`,
+            ai_voorstel: aiWaarde,
+            gekozen,
+            tekst_fragment: (opgeslagen.omschrijving ?? "").slice(0, 200) || undefined,
+          },
+        },
+        {
+          onError: (err) => console.debug("veld-correctie loggen mislukt", err),
+        },
+      );
+    }
   }
 
   function handleOpslaan() {

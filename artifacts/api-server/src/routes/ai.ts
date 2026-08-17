@@ -252,4 +252,82 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
   }
 });
 
+// ── POST /ai/veld-correctie — generieke leerlus (AI_01 vervolg 17-08-2026) ────
+//
+// Centrale vastlegging van "AI-voorstel vs. wat de gebruiker ervan maakte" voor
+// alle schermen die geen eigen correctie-route hebben. Zelfde tabel en semantiek
+// als bedrijfsdocumenten/calculatie: ai_voorstel == gekozen betekent overgenomen,
+// afwijkend betekent gecorrigeerd. Whitelist op veld-prefix (per scherm) zodat
+// er geen vrije tekst als veldnaam in de leerbron terechtkomt.
+import { aiVeldCorrectiesTable } from "@workspace/db";
+
+const AI_CORRECTIE_PREFIXES = [
+  // Centrale AI-invullen-knop (formulieren)
+  "formulier.crm_organisatie", "formulier.crm_contactpersoon", "formulier.gebouw",
+  "formulier.leverancier", "formulier.werkmaatschappij", "formulier.concurrent",
+  "formulier.wagenpark_voertuig", "formulier.medewerker", "formulier.magazijn_artikel",
+  // Spot-AI (plattegrond web + monteur-app)
+  "spot",
+  // Overige schermen met een concreet AI-voorstel dat wordt overgenomen/aangepast
+  "gereedschap", "incident", "hrm_voorstel", "tekening", "projectsamenvatting",
+  "offerte_email", "scab_mail", "toolbox", "pim", "studio_huisstijl", "financieel_contract",
+] as const;
+
+const VELD_SUFFIX_RE = /^[a-z0-9_]+$/;
+
+// Eenvoudige in-memory rate-limiter per gebruiker (review-bevinding: de route
+// is bewust breed toegankelijk, dus begrens misbruik/vergiftiging in volume).
+// 120 correcties per uur is ruim boven normaal gebruik (een formulier logt er
+// hooguit ~10 per opslag).
+const CORRECTIE_LIMIET_PER_UUR = 120;
+const correctieTellers = new Map<number, { vanaf: number; n: number }>();
+
+function correctieToegestaan(gebruikerId: number): boolean {
+  const nu = Date.now();
+  const t = correctieTellers.get(gebruikerId);
+  if (!t || nu - t.vanaf > 60 * 60 * 1000) {
+    correctieTellers.set(gebruikerId, { vanaf: nu, n: 1 });
+    return true;
+  }
+  t.n += 1;
+  return t.n <= CORRECTIE_LIMIET_PER_UUR;
+}
+
+function isToegestaanCorrectieVeld(veldNaam: string): boolean {
+  for (const prefix of AI_CORRECTIE_PREFIXES) {
+    if (veldNaam.startsWith(prefix + ".")) {
+      return VELD_SUFFIX_RE.test(veldNaam.slice(prefix.length + 1));
+    }
+  }
+  return false;
+}
+
+router.post("/ai/veld-correctie", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const { veld_naam, ai_voorstel, gekozen, hash, tekst_fragment } = req.body as Record<string, unknown>;
+    if (!veld_naam || ai_voorstel === undefined || ai_voorstel === null || gekozen === undefined || gekozen === null) {
+      return void res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
+    }
+    if (!isToegestaanCorrectieVeld(String(veld_naam))) {
+      return void res.status(400).json({ error: "Ongeldig veld" });
+    }
+    const gebruikerId = req.session.userId ?? null;
+    if (gebruikerId !== null && !correctieToegestaan(gebruikerId)) {
+      return void res.status(429).json({ error: "Te veel correcties; probeer het later opnieuw" });
+    }
+    await db.insert(aiVeldCorrectiesTable).values({
+      gebruikerId,
+      hash: hash ? String(hash).slice(0, 64) : null,
+      tekstFragment: tekst_fragment ? String(tekst_fragment).slice(0, 500) : null,
+      veldNaam: String(veld_naam),
+      aiVoorstel: String(ai_voorstel).slice(0, 4000),
+      gekozen: String(gekozen).slice(0, 4000),
+    });
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 export default router;

@@ -671,6 +671,7 @@ KOLOM|ai_prompt_scans|risico_score|integer|NO|0
 KOLOM|ai_prompt_scans|rol|text|YES|
 KOLOM|ai_veld_correcties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|ai_veld_correcties|ai_voorstel|text|NO|
+KOLOM|ai_veld_correcties|gebruiker_id|integer|YES|
 KOLOM|ai_veld_correcties|gekozen|text|NO|
 KOLOM|ai_veld_correcties|hash|text|YES|
 KOLOM|ai_veld_correcties|id|integer|NO|nextval('ai_veld_correcties_id_seq'::regclass)

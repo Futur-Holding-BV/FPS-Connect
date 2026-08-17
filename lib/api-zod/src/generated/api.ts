@@ -28921,6 +28921,20 @@ export const AiCentraalInvullenResponse = zod.object({
 
 
 /**
+ * @summary Generieke leerlus — AI-voorstel vs. gebruikerskeuze vastleggen (AI_01)
+ */
+export const AiVeldCorrectieBody = zod.object({
+  "veld_naam": zod.string().describe('Whitelist op prefix, bv. formulier.gebouw.bouwjaar, spot.type, gereedschap.merk, incident.omschrijving, hrm_voorstel.tekst, offerte_email.tekst, projectsamenvatting.tekst'),
+  "ai_voorstel": zod.string(),
+  "gekozen": zod.string(),
+  "hash": zod.string().optional(),
+  "tekst_fragment": zod.string().optional()
+})
+
+export const AiVeldCorrectieResponse = zod.void()
+
+
+/**
  * @summary AI prefill bedrijfsgegevens op basis van bedrijfsnaam
  */
 export const AiInvullenOrganisatieBody = zod.object({

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { LegeStatus } from "@/components/LegeStatus";
 import {
   ActivityIndicator,
@@ -22,9 +22,11 @@ import {
   useGetVeiligheidIncidenten,
   usePostVeiligheidIncidenten,
   usePostVeiligheidIncidentenAiVoorstel,
+  useAiVeldCorrectie,
   useGetMijnLmraOpenstaand,
   getGetVeiligheidIncidentenQueryKey,
   type VeiligheidIncident,
+  type VeiligheidIncidentAiVoorstel,
   type LmraOpenstaandItem,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
@@ -139,11 +141,21 @@ function IncidentenScherm() {
     request: { headers: { Authorization: `Bearer ${token}` } },
   });
 
+  // Leerlus: AI-veldcorrecties vastleggen (fire-and-forget). Het AI-voorstel dat
+  // bij "AI-voorstel ophalen" is opgehaald bewaren we in een ref, zodat we bij
+  // het versturen van het incident per voorgesteld veld de uiteindelijke keuze
+  // kunnen loggen.
+  const veldCorrectie = useAiVeldCorrectie({
+    request: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const aiVoorstelRef = useRef<VeiligheidIncidentAiVoorstel | null>(null);
+
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   const openFormulier = () => {
     setForm(leegForm());
     setStap("type");
+    aiVoorstelRef.current = null;
     setFormulierOpen(true);
   };
 
@@ -162,6 +174,7 @@ function IncidentenScherm() {
           opdracht_naam: form.opdrachtNaam || null,
         },
       });
+      aiVoorstelRef.current = resultaat;
       setForm(f => ({
         ...f,
         omschrijving: resultaat.omschrijving || f.omschrijving,
@@ -189,6 +202,35 @@ function IncidentenScherm() {
       Alert.alert("Verplicht veld", "Vul de omschrijving in.");
       return;
     }
+    // Leerlus: leg per door de AI voorgesteld veld vast wat er uiteindelijk
+    // wordt verstuurd. Fire-and-forget — mag de flow nooit blokkeren.
+    const voorstel = aiVoorstelRef.current;
+    if (voorstel) {
+      const logVeld = (veldNaam: string, aiWaarde: string, gekozen: string) => {
+        if (!aiWaarde.trim()) return; // alleen loggen waar de AI daadwerkelijk iets voorstelde
+        veldCorrectie.mutate({
+          data: {
+            veld_naam: veldNaam,
+            ai_voorstel: aiWaarde,
+            gekozen,
+            tekst_fragment: form.locatieOmschrijving.slice(0, 200) || undefined,
+          },
+        });
+      };
+      logVeld("incident.omschrijving", voorstel.omschrijving, form.omschrijving);
+      logVeld("incident.oorzaak", voorstel.oorzaak, form.oorzaak);
+      logVeld(
+        "incident.genomen_maatregelen",
+        (voorstel.genomen_maatregelen ?? []).join(", "),
+        form.genoemenMaatregelen.join(", "),
+      );
+      logVeld(
+        "incident.meldplichtig",
+        String(voorstel.meldplichtig_indicatie),
+        String(form.meldplichtig),
+      );
+    }
+
     aanmaken.mutate({
       data: {
         type: form.type,
