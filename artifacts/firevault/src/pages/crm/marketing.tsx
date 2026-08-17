@@ -359,7 +359,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
             const sj = sjablonen.find((s) => s.id === c.sjabloon_id);
             return (
               <Card key={c.id}>
-                <CardContent className="py-4">
+                <CardContent className="py-4" data-testid={`campagne-kaart-${c.id}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -376,11 +376,11 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
                       <Button size="sm" variant="ghost" onClick={() => setDetailId(c.id)}><Eye className="h-4 w-4" /></Button>
                       {(c.status === "concept" || c.status === "gepland") && (
                         <>
-                          <Button size="sm" variant="outline" disabled={proef.isPending} onClick={() => proef.mutate({ id: c.id })}>
+                          <Button data-testid="btn-proef" size="sm" variant="outline" disabled={proef.isPending} onClick={() => proef.mutate({ id: c.id })}>
                             <FlaskConical className="h-4 w-4 mr-1" />Proef
                           </Button>
                           {magVerzenden && (
-                            <Button size="sm" disabled={verzend.isPending || !c.proef_verzonden_op} onClick={() => setVerzendBevestig(c)}>
+                            <Button data-testid="btn-verzenden" size="sm" disabled={verzend.isPending || !c.proef_verzonden_op} onClick={() => setVerzendBevestig(c)}>
                               <Send className="h-4 w-4 mr-1" />Verzenden
                             </Button>
                           )}
@@ -388,7 +388,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
                         </>
                       )}
                       {magVerzenden && (c.status === "verzendend" || c.status === "gepland") && (
-                        <Button size="sm" variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate({ id: c.id, data: { reden: "handmatig gestopt" } })}>
+                        <Button data-testid="btn-stoppen" size="sm" variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate({ id: c.id, data: { reden: "handmatig gestopt" } })}>
                           <StopCircle className="h-4 w-4 mr-1" />Stop
                         </Button>
                       )}

@@ -79,6 +79,29 @@ export const E2E_UURCODES_APP_EMAIL = "e2e-app-uurcodes@fps.local";
 export const E2E_UURCODES_APP_WACHTWOORD = "E2eUurcodesApp!2026";
 export const E2E_UURCODES_APP_TOTP_SECRET = "OBUXG5DFOJRWK4TL";
 
+// Vier accounts voor de marketing-rechten-e2e (web-marketing-rechten.spec.ts).
+// Bewust gescheiden van alle andere e2e-accounts: de vier profielen dekken de
+// grenzen af tussen crm- en marketing-modules (migratie 0069).
+//   CRM-only   : crm:3, marketing:0  → sidebar CRM ✓, Marketing ✗; API 403
+//   Mktg-only  : marketing:3, crm:0  → sidebar Marketing ✓, CRM ✗
+//   Commercieel: crm:4, marketing:3  → Proef-knop ✓, Verzenden-knop ✗
+//   Directie   : crm:4, marketing:4  → Proef-knop ✓, Verzenden-knop ✓
+export const E2E_MKTG_CRM_EMAIL = "e2e-mktg-crm@fps.local";
+export const E2E_MKTG_CRM_WACHTWOORD = "E2eMktgCrm!2026";
+export const E2E_MKTG_CRM_TOTP_SECRET = "NBRWG33EOBTG64TF";
+
+export const E2E_MKTG_ONLY_EMAIL = "e2e-mktg-only@fps.local";
+export const E2E_MKTG_ONLY_WACHTWOORD = "E2eMktgOnly!2026";
+export const E2E_MKTG_ONLY_TOTP_SECRET = "MNUGK3TFOIQHK4TF";
+
+export const E2E_MKTG_COM_EMAIL = "e2e-mktg-com@fps.local";
+export const E2E_MKTG_COM_WACHTWOORD = "E2eMktgCom!2026";
+export const E2E_MKTG_COM_TOTP_SECRET = "OBQWK3TFOVRXK3TF";
+
+export const E2E_MKTG_DIR_EMAIL = "e2e-mktg-dir@fps.local";
+export const E2E_MKTG_DIR_WACHTWOORD = "E2eMktgDir!2026";
+export const E2E_MKTG_DIR_TOTP_SECRET = "NRXXK3TFOBTGK4DJ";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -302,6 +325,50 @@ export async function setupE2eUurcodesAppAccount(): Promise<number> {
 
 export async function archiveerE2eUurcodesAppAccount(): Promise<void> {
   await archiveerAccount(E2E_UURCODES_APP_EMAIL);
+}
+
+/** Richt de vier marketing-rechtentestaccounts in (idempotent). */
+export async function setupE2eMarketingRechtenAccounts(): Promise<void> {
+  await maakOfUpdateE2eAccount({
+    email: E2E_MKTG_CRM_EMAIL,
+    wachtwoord: E2E_MKTG_CRM_WACHTWOORD,
+    totpSecret: E2E_MKTG_CRM_TOTP_SECRET,
+    naam: "E2E Mktg CRM-only",
+    rol: "gebruiker",
+    bevoegdheden: { crm: 3 },
+  });
+  await maakOfUpdateE2eAccount({
+    email: E2E_MKTG_ONLY_EMAIL,
+    wachtwoord: E2E_MKTG_ONLY_WACHTWOORD,
+    totpSecret: E2E_MKTG_ONLY_TOTP_SECRET,
+    naam: "E2E Mktg Marketing-only",
+    rol: "gebruiker",
+    bevoegdheden: { marketing: 3 },
+  });
+  await maakOfUpdateE2eAccount({
+    email: E2E_MKTG_COM_EMAIL,
+    wachtwoord: E2E_MKTG_COM_WACHTWOORD,
+    totpSecret: E2E_MKTG_COM_TOTP_SECRET,
+    naam: "E2E Mktg Commercieel",
+    rol: "gebruiker",
+    bevoegdheden: { crm: 4, marketing: 3 },
+  });
+  await maakOfUpdateE2eAccount({
+    email: E2E_MKTG_DIR_EMAIL,
+    wachtwoord: E2E_MKTG_DIR_WACHTWOORD,
+    totpSecret: E2E_MKTG_DIR_TOTP_SECRET,
+    naam: "E2E Mktg Directie",
+    rol: "gebruiker",
+    bevoegdheden: { crm: 4, marketing: 4 },
+  });
+}
+
+/** Archiveert de vier marketing-rechtentestaccounts. */
+export async function archiveerE2eMarketingRechtenAccounts(): Promise<void> {
+  await archiveerAccount(E2E_MKTG_CRM_EMAIL);
+  await archiveerAccount(E2E_MKTG_ONLY_EMAIL);
+  await archiveerAccount(E2E_MKTG_COM_EMAIL);
+  await archiveerAccount(E2E_MKTG_DIR_EMAIL);
 }
 
 // Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het
