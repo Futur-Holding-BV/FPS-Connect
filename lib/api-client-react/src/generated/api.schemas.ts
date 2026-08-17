@@ -1874,6 +1874,7 @@ export interface InboxStats {
   ter_beoordeling: number;
   goedgekeurd: number;
   verplaatst: number;
+  verwerkt?: number;
   afgewezen: number;
   snagstream_rapporten?: number;
   laag_betrouwbaarheid?: number;
@@ -1900,6 +1901,7 @@ export interface InboxItem {
   geupload_door?: number | null;
   /** @nullable */
   geupload_op?: string | null;
+  /** nieuw | geanalyseerd | ter_beoordeling | goedgekeurd | verplaatst | verwerkt | afgewezen. "verwerkt" = de aanvraag is volledig afgehandeld (o.a. via POST /inbox/offerte-aanvraag). */
   status: string;
   /** @nullable */
   document_categorie?: string | null;
@@ -8733,6 +8735,7 @@ export interface PortaalVraagItem {
   /** @nullable */
   beantwoord_op?: string | null;
 }
+
 export interface PortaalOfferte {
   id: number;
   /** @nullable */
@@ -18284,3 +18287,4 @@ hoeveelheid?: number;
 export type BeeindigPrijsafspraakBody = {
   geldig_tot: string;
 };
+

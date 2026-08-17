@@ -12,6 +12,7 @@ export interface InboxStats {
   ter_beoordeling: number;
   goedgekeurd: number;
   verplaatst: number;
+  verwerkt?: number;
   afgewezen: number;
   snagstream_rapporten?: number;
   laag_betrouwbaarheid?: number;

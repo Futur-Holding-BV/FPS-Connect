@@ -29661,6 +29661,8 @@ components:
           type: integer
         verplaatst:
           type: integer
+        verwerkt:
+          type: integer
         afgewezen:
           type: integer
         snagstream_rapporten:
@@ -29688,6 +29690,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
+          description: 'nieuw | geanalyseerd | ter_beoordeling | goedgekeurd | verplaatst | verwerkt | afgewezen. "verwerkt" = de aanvraag is volledig afgehandeld (o.a. via POST /inbox/offerte-aanvraag).'
         document_categorie:
           type: ["string", "null"]
         document_subtype:

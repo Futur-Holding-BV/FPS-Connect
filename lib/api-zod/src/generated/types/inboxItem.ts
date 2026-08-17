@@ -20,6 +20,7 @@ export interface InboxItem {
   geupload_door?: number | null;
   /** @nullable */
   geupload_op?: string | null;
+  /** nieuw | geanalyseerd | ter_beoordeling | goedgekeurd | verplaatst | verwerkt | afgewezen. "verwerkt" = de aanvraag is volledig afgehandeld (o.a. via POST /inbox/offerte-aanvraag). */
   status: string;
   /** @nullable */
   document_categorie?: string | null;

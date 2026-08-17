@@ -163,11 +163,12 @@ router.get("/inbox/stats", lezen, async (req, res): Promise<void> => {
     const terBeoordeling = items.filter((i) => i.status === "ter_beoordeling").length;
     const goedgekeurd = items.filter((i) => i.status === "goedgekeurd").length;
     const verplaatst = items.filter((i) => i.status === "verplaatst").length;
+    const verwerkt = items.filter((i) => i.status === "verwerkt").length;
     const afgewezen = items.filter((i) => i.status === "afgewezen").length;
     const snagstream = items.filter((i) => i.documentCategorie === "snagstream_rapport").length;
     const laagBetrouwbaarheid = items.filter((i) => i.aiBetrouwbaarheid === "laag" && i.status !== "afgewezen").length;
 
-    res.json({ totaal, nieuw, ter_beoordeling: terBeoordeling, goedgekeurd, verplaatst, afgewezen, snagstream_rapporten: snagstream, laag_betrouwbaarheid: laagBetrouwbaarheid });
+    res.json({ totaal, nieuw, ter_beoordeling: terBeoordeling, goedgekeurd, verplaatst, verwerkt, afgewezen, snagstream_rapporten: snagstream, laag_betrouwbaarheid: laagBetrouwbaarheid });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -889,7 +890,10 @@ router.post(
           bestandsgrootte: emailBestand?.size ?? null,
           mimetype: emailBestand?.mimetype ?? null,
           geuploadDoor: gebruikerId,
-          status: "geanalyseerd",
+          // Aanvraag is in dit verzoek volledig afgehandeld (offerte + evt. gebouw/opname
+          // aangemaakt en gekoppeld) — markeer direct als verwerkt zodat de beheerder
+          // ziet dat deze mail niet meer op actie wacht.
+          status: "verwerkt",
           documentCategorie: "offerte_aanvraag",
           bestemming: "Offertes",
           aiBetrouwbaarheid: heeftGateway() ? "hoog" : "midden",

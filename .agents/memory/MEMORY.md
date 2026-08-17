@@ -67,9 +67,7 @@
 - [Mobiele biometrische app-lock](mobiele-app-lock.md) — slot rond bearer-sessie; publieke token=null gate't fetch-laag ÉN SyncProvider; centrale gate in _layout (per-scherm redirects omzeilen slot); web vergrendelt nooit; v1 alleen bij opstart.
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [Werk-inbox OAuth scopes & state](werkinbox-oauth-scopes.md) — refresh nooit met scope-param; scope-opslag fail-closed uit token-response; callback sessie-gebonden one-time nonce; redirect-URI vast, nooit uit headers.
-- [Mail-wachtrij goedkeuring](mail-wachtrij.md) — verstuurMail() default naar wachtrij, mens keurt goed; direct:true alleen bij expliciete verstuur-handeling; atomaire claim + dedupe-index; CSRF-guard op POSTs.
-- [Mailguard testdomeinen](mail-testdomein-guard.md) — alle mail-paden onderdrukken test-/voorbeelddomeinen (isTestAdres); e2e-KETEN01 veroorzaakte anders elke run een bounce in de postbus; dev kán mailen.
-- [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.
+- [Mail: wachtrij/testdomein/M365](mail-wachtrij.md) — zie ook mail-testdomein-guard.md en mail-microsoft365.md: wachtrij-default+goedkeuring; testdomeinen onderdrukken; MAIL_FROM vs MAIL_MAILBOX.
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.
 - [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.
@@ -115,7 +113,7 @@
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
 - [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
-- [Dev-API sessiebewijs](dev-api-sessie-bewijs.md) + [Prod curl-sessiebewijs](prod-curl-sessie-bewijs.md) — Secure-cookies eisen https (dev-domein, nooit localhost); #HttpOnly_ jar-regels; SQL via stdin pipen tegen shell-mangeling.
+- [Sessie-bewijs dev & prod via https](dev-api-sessie-bewijs.md) — Secure-cookies eisen https (nooit http://localhost); prod-details in prod-curl-sessie-bewijs.md (#HttpOnly_ jar, SQL via stdin).
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; schemawijziging sinds SCHEMA_01 via genummerde migratie (zie schema-migratieketen).
 - [Factuurstroom pijplijn-verificatie](factuurstroom-verificatie.md) — Graph-randje injecteerbaar; inkoperroute matcht nooit (leveranciers- vs crm_klanten-id's), verwacht directieroute.
 - [Factuurstroom FACTUUR_02](factuurstroom.md) — één mail-ingang, gesloten afwijsredenen, inkoperstap nooit te omzeilen, claim teruggeven bij fout, rekeningwissel nooit stil; restpunten legacy-intake/idempotentie.

@@ -419,6 +419,19 @@ function GebouwInboxAanvragen({ gebouwId }: { gebouwId: number }) {
                     <Badge variant="outline" className="text-xs">
                       Offerte-aanvraag
                     </Badge>
+                    {item.status === "verwerkt" ? (
+                      <Badge variant="secondary" className="text-xs text-muted-foreground">
+                        Verwerkt
+                      </Badge>
+                    ) : item.status === "afgewezen" ? (
+                      <Badge variant="secondary" className="text-xs text-muted-foreground">
+                        Afgewezen
+                      </Badge>
+                    ) : (
+                      <Badge className="text-xs bg-amber-100 text-amber-700 hover:bg-amber-100">
+                        Te verwerken
+                      </Badge>
+                    )}
                     {item.gekoppelde_entiteit_naam && (
                       <span>{item.gekoppelde_entiteit_naam}</span>
                     )}
