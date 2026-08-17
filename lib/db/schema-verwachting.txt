@@ -740,6 +740,7 @@ KOLOM|app_instellingen|ai_maandelijkse_export_email|text|YES|
 KOLOM|app_instellingen|ai_maandelijkse_export_laatst_verzonden_maand|text|YES|
 KOLOM|app_instellingen|bijgewerkt_door_id|integer|YES|
 KOLOM|app_instellingen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|app_instellingen|campagne_verzendtempo_per_minuut|integer|NO|6
 KOLOM|app_instellingen|extra_disclaimer|text|YES|
 KOLOM|app_instellingen|heatmap_tracking_ingeschakeld|boolean|NO|false
 KOLOM|app_instellingen|id|integer|NO|nextval('app_instellingen_id_seq'::regclass)

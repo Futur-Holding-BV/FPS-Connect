@@ -2117,6 +2117,7 @@ export type MarketingCampagneStatus = typeof MarketingCampagneStatus[keyof typeo
 export const MarketingCampagneStatus = {
   concept: 'concept',
   gepland: 'gepland',
+  voorbereiden: 'voorbereiden',
   verzendend: 'verzendend',
   verzonden: 'verzonden',
   gestopt: 'gestopt',
@@ -2156,6 +2157,13 @@ export type MarketingCampagneDetail = MarketingCampagne & {
   ontvangers: MarketingCampagneDetailOntvangers;
 };
 
+export interface MarketingVerzendtempo {
+  /**
+     * @minimum 1
+     * @maximum 60
+     */
+  tempo_per_minuut: number;
+}
 export interface MarketingCampagneInput {
   naam?: string;
   /** @nullable */
@@ -18914,3 +18922,10 @@ export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
 
+export interface MarketingVerzendtempoInput {
+  /**
+     * @minimum 1
+     * @maximum 60
+     */
+  tempo_per_minuut: number;
+}

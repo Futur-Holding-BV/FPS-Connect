@@ -1,5 +1,5 @@
 // MARKETING_01 — doelgroepen, sjablonen en campagnes (module crm).
-// crm 3 = beheren + proefverzending; crm 4 = daadwerkelijk verzenden/stoppen.
+// marketing 3 = beheren + proefverzending; marketing 4 = daadwerkelijk verzenden/stoppen.
 // Toestemming is server-side een harde poort; de UI toont alleen wat mag.
 import { useMemo, useState } from "react";
 import {
@@ -18,6 +18,9 @@ import {
   useVerstuurMarketingCampagneProef,
   useVerstuurMarketingCampagne,
   useStopMarketingCampagne,
+  useGetMarketingVerzendtempo,
+  useUpdateMarketingVerzendtempo,
+  getGetMarketingVerzendtempoQueryKey,
   getListMarketingDoelgroepenQueryKey,
   getListMarketingDoelgroepLedenQueryKey,
   getListMarketingSjablonenQueryKey,
@@ -52,6 +55,7 @@ import { Megaphone, Users, FileText, Send, FlaskConical, StopCircle, Trash2, Plu
 const STATUS_LABEL: Record<string, string> = {
   concept: "Concept",
   gepland: "Gepland",
+  voorbereiden: "Voorbereiden",
   verzendend: "Verzendend",
   verzonden: "Verzonden",
   gestopt: "Gestopt",
@@ -59,6 +63,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-gray-100 text-gray-600 border-gray-200",
   gepland: "bg-blue-100 text-blue-700 border-blue-200",
+  voorbereiden: "bg-amber-100 text-amber-700 border-amber-200",
   verzendend: "bg-amber-100 text-amber-700 border-amber-200",
   verzonden: "bg-emerald-100 text-emerald-700 border-emerald-200",
   gestopt: "bg-red-100 text-red-700 border-red-200",
@@ -286,8 +291,65 @@ function SjablonenTab({ qc, toast }: { qc: ReturnType<typeof useQueryClient>; to
   );
 }
 
-// ─── Campagnes ───────────────────────────────────────────────────────────────
+// ─── Verzendtempo (gedoseerde verzender) ─────────────────────────────────────
+// marketing 3 mag het tempo zien; wijzigen vereist marketing 4 (het tempo stuurt de
+// daadwerkelijke verzending). Server valideert 1–60 per minuut (422).
 
+function VerzendtempoRegeling({ magVerzenden, qc, toast }: {
+  magVerzenden: boolean;
+  qc: ReturnType<typeof useQueryClient>;
+  toast: ReturnType<typeof useToast>["toast"];
+}) {
+  const { data: tempo, isLoading } = useGetMarketingVerzendtempo();
+  const [invoer, setInvoer] = useState<string | null>(null);
+  const wijzig = useUpdateMarketingVerzendtempo({
+    mutation: {
+      onSuccess: (r) => {
+        void qc.invalidateQueries({ queryKey: getGetMarketingVerzendtempoQueryKey() });
+        setInvoer(null);
+        toast({ title: `Verzendtempo ingesteld op ${r.tempo_per_minuut} per minuut` });
+      },
+      onError: (e) => toast({
+        title: ((e as { response?: { data?: { fout?: string } } })?.response?.data?.fout) ?? "Tempo wijzigen mislukt",
+        variant: "destructive",
+      }),
+    },
+  });
+  const huidig = tempo?.tempo_per_minuut;
+  const waarde = invoer ?? (huidig !== undefined ? String(huidig) : "");
+  const getal = Number(waarde);
+  const geldig = Number.isInteger(getal) && getal >= 1 && getal <= 60;
+  return (
+    <Card>
+      <CardContent className="py-3 flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Verzendtempo</p>
+          <p className="text-xs text-muted-foreground">
+            Goedgekeurde campagnemails gaan automatisch gespreid de deur uit — {isLoading ? "…" : `${huidig ?? "?"} per minuut`} — zodat de mailserver geen spam-piek produceert. Stoppen en afmelden werken altijd per direct.
+          </p>
+        </div>
+        {magVerzenden && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Input
+              type="number" min={1} max={60} className="w-20" data-testid="invoer-verzendtempo"
+              value={waarde}
+              onChange={(e) => setInvoer(e.target.value)}
+              disabled={isLoading || wijzig.isPending}
+            />
+            <span className="text-xs text-muted-foreground">per minuut</span>
+            <Button
+              size="sm" variant="outline" data-testid="knop-verzendtempo-opslaan"
+              disabled={isLoading || wijzig.isPending || !geldig || getal === huidig}
+              onClick={() => wijzig.mutate({ data: { tempo_per_minuut: getal } })}
+            >
+              Opslaan
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 function CampagnesTab({ magVerzenden, qc, toast }: {
   magVerzenden: boolean;
   qc: ReturnType<typeof useQueryClient>;
@@ -328,7 +390,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
   });
   const verzend = useVerstuurMarketingCampagne({
     mutation: {
-      onSuccess: (r) => { invalideer(); setVerzendBevestig(null); toast({ title: `${r.ingepland ?? 0} berichten in de mailwachtrij geplaatst`, description: "Een beheerder verstuurt ze gespreid vanuit de wachtrij." }); },
+      onSuccess: (r) => { invalideer(); setVerzendBevestig(null); toast({ title: `${r.ingepland ?? 0} berichten in de mailwachtrij geplaatst`, description: "Ze worden vanaf nu automatisch gespreid verstuurd volgens het ingestelde tempo." }); },
       onError: (e) => { setVerzendBevestig(null); toast({ title: foutmelding(e), variant: "destructive" }); },
     },
   });
@@ -346,10 +408,11 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Verzenden vereist een proefverzending naar jezelf en loopt altijd via de mailwachtrij{magVerzenden ? "" : " — je hebt beheerrechten, verzenden vereist een hoger recht"}.
+          Verzenden vereist een proefverzending naar jezelf; na jouw goedkeuring gaan de berichten automatisch gespreid de deur uit{magVerzenden ? "" : " — je hebt beheerrechten, verzenden vereist een hoger recht"}.
         </p>
         <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1.5" />Nieuwe campagne</Button>
       </div>
+      <VerzendtempoRegeling magVerzenden={magVerzenden} qc={qc} toast={toast} />
       {isLoading ? <Skeleton className="h-32 w-full" /> : campagnes.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nog geen campagnes.</CardContent></Card>
       ) : (
@@ -387,7 +450,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
                           <Button size="sm" variant="ghost" onClick={() => verwijder.mutate({ id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </>
                       )}
-                      {magVerzenden && (c.status === "verzendend" || c.status === "gepland") && (
+                      {magVerzenden && (c.status === "verzendend" || c.status === "voorbereiden" || c.status === "gepland") && (
                         <Button data-testid="btn-stoppen" size="sm" variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate({ id: c.id, data: { reden: "handmatig gestopt" } })}>
                           <StopCircle className="h-4 w-4 mr-1" />Stop
                         </Button>
@@ -463,7 +526,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
           <AlertDialogHeader>
             <AlertDialogTitle>Campagne verzenden?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{verzendBevestig?.naam}" wordt klaargezet voor alle doelgroepleden met toestemming. De berichten gaan in de mailwachtrij en worden daarvandaan gespreid verstuurd.
+              "{verzendBevestig?.naam}" wordt klaargezet voor alle doelgroepleden met toestemming. Dit is de eenmalige goedkeuring: de berichten gaan in de mailwachtrij en worden automatisch gespreid verstuurd volgens het ingestelde tempo. Stoppen kan op elk moment.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -976,6 +976,8 @@ export * from './marketingDoelgroepInput';
 export * from './marketingDoelgroepLid';
 export * from './marketingSjabloon';
 export * from './marketingSjabloonInput';
+export * from './marketingVerzendtempo';
+export * from './marketingVerzendtempoInput';
 export * from './marktspiegelOnderzoek';
 export * from './marktspiegelOnderzoekAanleiding';
 export * from './marktspiegelOnderzoekInput';

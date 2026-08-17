@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, mailWachtrijTable, gebruikersTable } from "@workspace/db";
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { db, mailWachtrijTable, gebruikersTable, marketingCampagneOntvangersTable } from "@workspace/db";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   verstuurMailWachtrijItem,
@@ -8,6 +8,7 @@ import {
   herstelVastgelopenMailWachtrijItems,
   MailFout,
 } from "../services/email";
+import { rondCampagneAfIndienKlaar } from "../services/marketingService";
 import { logger } from "../lib/logger";
 
 // Mail-wachtrij: alle systeem-/notificatiemails wachten hier op een expliciete
@@ -110,6 +111,20 @@ router.get("/mail-wachtrij/telling", alleenBeheerder, async (_req, res) => {
 router.post("/mail-wachtrij/:id/verstuur", eisSameOrigin, alleenBeheerder, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return void res.status(400).json({ error: "Ongeldig id" });
+  // MARKETING_01: campagne-items gaan uitsluitend via de gedoseerde verzender.
+  // Handmatig versturen zou het ingestelde tempo omzeilen (spam-stoot), dus
+  // die items zijn hier hard geblokkeerd; afwijzen mag wél handmatig.
+  const [item] = await db
+    .select({ campagneOntvangerId: mailWachtrijTable.campagneOntvangerId })
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.id, id))
+    .limit(1);
+  if (!item) return void res.status(404).json({ error: "Wachtrij-item niet gevonden" });
+  if (item.campagneOntvangerId) {
+    return void res.status(422).json({
+      error: "Campagnemails worden automatisch gedoseerd verstuurd en kunnen niet handmatig worden verzonden",
+    });
+  }
   try {
     await verstuurMailWachtrijItem(id, sessieUserId(req));
     res.json({ ok: true });
@@ -128,7 +143,21 @@ router.post("/mail-wachtrij/:id/afwijzen", eisSameOrigin, alleenBeheerder, async
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return void res.status(400).json({ error: "Ongeldig id" });
   try {
-    await wijsMailWachtrijItemAf(id, sessieUserId(req));
+    const { campagneOntvangerId } = await wijsMailWachtrijItemAf(id, sessieUserId(req));
+    if (campagneOntvangerId != null) {
+      // Campagne-item: de gekoppelde ontvanger terminal zetten en de
+      // afrondingscontrole draaien — anders blijft een campagne waarvan het
+      // laatste item handmatig is afgewezen eeuwig op "verzendend" staan.
+      const [ontvanger] = await db
+        .update(marketingCampagneOntvangersTable)
+        .set({ status: "overgeslagen" })
+        .where(and(
+          eq(marketingCampagneOntvangersTable.id, campagneOntvangerId),
+          eq(marketingCampagneOntvangersTable.status, "gepland"),
+        ))
+        .returning({ campagneId: marketingCampagneOntvangersTable.campagneId });
+      if (ontvanger) await rondCampagneAfIndienKlaar(ontvanger.campagneId);
+    }
     res.json({ ok: true });
   } catch (err) {
     const melding = err instanceof Error ? err.message : "Onbekende fout";

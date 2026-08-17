@@ -25,6 +25,7 @@ import { planDagelijkseBewakingsloop } from "./lib/bewakingsloop";
 import { planSocialPublicaties } from "./services/socialService";
 import { herstelVastgelopenMailWachtrijItems } from "./services/email";
 import { controleerScannerPaden } from "./lib/scannerPadenCheck";
+import { planCampagneVerzender } from "./services/campagneVerzender";
 
 const rawPort = process.env["PORT"];
 
@@ -90,6 +91,9 @@ ensureSessionTable()
       planDagelijkseBewakingsloop();
       // SOCIAL_01 — publicatieplanner (elke minuut) + verloopbewaking koppelingen.
       planSocialPublicaties();
+      // MARKETING_01 — gedoseerde verzender: verstuurt goedgekeurde
+      // campagnemails gespreid (n per minuut, instelbaar) uit de mailwachtrij.
+      planCampagneVerzender();
       // Mail-wachtrij hardening: herstel items die tijdens verzenden zijn
       // gecrasht (status "verzenden" > 10 min) → terugzetten naar "mislukt".
       // Meteen bij start uitvoeren, daarna elke 5 minuten herhalen.

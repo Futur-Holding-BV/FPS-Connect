@@ -9,8 +9,10 @@
 //
 // Toestemming is een harde serverpoort (marketingService): wie geen
 // toestemming heeft valt uit élke doelgroep en verzending, niet omzeilbaar.
-// Verzenden loopt over de bestaande mailwachtrij (fail-closed, gespreid:
-// een beheerder verstuurt per item of in porties, nooit één stoot).
+// Verzenden loopt over de bestaande mailwachtrij (fail-closed). Na de
+// éénmalige goedkeuring (POST /campagnes/:id/verzenden) verstuurt de
+// gedoseerde verzender (campagneVerzender.ts) de items gespreid — n per
+// minuut, instelbaar — nooit als één stoot.
 import { Router } from "express";
 import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
@@ -22,6 +24,7 @@ import {
   mailWachtrijTable,
   gebruikersTable,
   crmContactpersonenTable,
+  appInstellingenTable,
   type DoelgroepCriteria,
 } from "@workspace/db";
 import { eq, and, desc, count, inArray } from "drizzle-orm";
@@ -33,7 +36,10 @@ import {
   vulSjabloonVelden,
   verwerkAfmelding,
   annuleerWachtendeCampagneMails,
+  rondCampagneAfIndienKlaar,
+  ruimGestopteCampagneOp,
 } from "../services/marketingService";
+import { haalCampagneVerzendtempo, TEMPO_MIN, TEMPO_MAX } from "../services/campagneVerzender";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { logger } from "../lib/logger";
 
@@ -293,6 +299,37 @@ router.delete("/marketing/sjablonen/:id", beheren, async (req, res) => {
   return res.json({ ok: true });
 });
 
+// ─── Verzendtempo (gedoseerde verzender) ─────────────────────────────────────
+// Mails per minuut voor de automatische, gespreide verzending van
+// goedgekeurde campagnemails. Lezen mag met beheren (marketing 3), wijzigen alleen
+// met verzenden (marketing 4) — het tempo raakt de daadwerkelijke verzending.
+
+router.get("/marketing/verzendtempo", beheren, async (_req, res) => {
+  return res.json({ tempo_per_minuut: await haalCampagneVerzendtempo() });
+});
+
+router.patch("/marketing/verzendtempo", verzenden, async (req, res) => {
+  const ruw = Number(req.body?.tempo_per_minuut);
+  if (!Number.isInteger(ruw) || ruw < TEMPO_MIN || ruw > TEMPO_MAX) {
+    return res.status(422).json({ fout: `tempo_per_minuut moet een geheel getal zijn tussen ${TEMPO_MIN} en ${TEMPO_MAX}` });
+  }
+  const [instelling] = await db
+    .select({ id: appInstellingenTable.id })
+    .from(appInstellingenTable)
+    .orderBy(appInstellingenTable.id)
+    .limit(1);
+  if (instelling) {
+    await db
+      .update(appInstellingenTable)
+      .set({ campagneVerzendtempoPerMinuut: ruw, bijgewerktOp: new Date(), bijgewerktDoorId: req.session.userId ?? null })
+      .where(eq(appInstellingenTable.id, instelling.id));
+  } else {
+    await db.insert(appInstellingenTable).values({ campagneVerzendtempoPerMinuut: ruw, bijgewerktDoorId: req.session.userId ?? null });
+  }
+  logger.info({ tempo: ruw, doorId: req.session.userId }, "Campagne-verzendtempo gewijzigd");
+  return res.json({ ok: true, tempo_per_minuut: ruw });
+});
+
 // ─── Campagnes ───────────────────────────────────────────────────────────────
 
 const mapCampagne = (c: typeof marketingCampagnesTable.$inferSelect) => ({
@@ -446,10 +483,14 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
     return res.status(422).json({ fout: "De doelgroep bevat op dit moment niemand met toestemming" });
   }
 
-  // Atomaire statusovergang: maar één verzendactie kan slagen.
+  // Atomaire statusovergang: maar één verzendactie kan slagen. Eerst naar de
+  // tussenstatus "voorbereiden": de gedoseerde verzender en de
+  // afrondingscontrole kijken alleen naar "verzendend", dus zolang de wachtrij
+  // nog wordt gevuld kan de campagne niet halverwege als "verzonden" worden
+  // afgerond (race: eerste item verzonden vóór de rest bestaat).
   const geclaimd = await db
     .update(marketingCampagnesTable)
-    .set({ status: "verzendend", gestartOp: new Date() })
+    .set({ status: "voorbereiden", gestartOp: new Date() })
     .where(and(eq(marketingCampagnesTable.id, id), inArray(marketingCampagnesTable.status, ["concept", "gepland"])))
     .returning();
   if (geclaimd.length === 0) {
@@ -458,7 +499,19 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
 
   let ingepland = 0;
   let overgeslagen = 0;
+  let teller = 0;
   for (const lid of leden) {
+    // Annuleringsbewust opbouwen: als de campagne intussen is gestopt (mag
+    // ook tijdens "voorbereiden"), stop dan met rijen aanmaken. De definitieve
+    // opruiming van al aangemaakte rijen gebeurt hieronder wanneer de
+    // activering niet slaagt.
+    if (teller++ % 20 === 0) {
+      const [huidig] = await db
+        .select({ status: marketingCampagnesTable.status })
+        .from(marketingCampagnesTable)
+        .where(eq(marketingCampagnesTable.id, id));
+      if (huidig?.status !== "voorbereiden") break;
+    }
     const token = randomBytes(24).toString("hex");
     const [ontvanger] = await db
       .insert(marketingCampagneOntvangersTable)
@@ -511,6 +564,26 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
     }
     ingepland++;
   }
+  // Alle rijen staan klaar — nu pas activeren. Als de campagne intussen is
+  // gestopt (stoppen mag ook tijdens voorbereiden), blijft die stop staan.
+  const [geactiveerd] = await db
+    .update(marketingCampagnesTable)
+    .set({ status: "verzendend" })
+    .where(and(eq(marketingCampagnesTable.id, id), eq(marketingCampagnesTable.status, "voorbereiden")))
+    .returning();
+  if (!geactiveerd) {
+    // Gestopt tijdens de opbouw: de opbouw kan ná het stopmoment nog rijen
+    // hebben aangemaakt die de stop-route niet zag. Ruim álles alsnog op,
+    // zodat er geen wachtende items of geplande ontvangers achterblijven.
+    await ruimGestopteCampagneOp(id, "campagne gestopt tijdens voorbereiden");
+    logger.info({ campagneId: id }, "Campagne gestopt tijdens voorbereiden — wachtrij opgeruimd");
+    return res.json({ ok: true, ingepland: 0, overgeslagen, gestopt: true });
+  }
+  // Randgeval: als élke ontvanger bij het klaarzetten al is overgeslagen
+  // (bv. alle mails vielen samen met bestaande wachtrij-items), ligt er niets
+  // voor de verzender en moet de campagne alsnog direct afronden — anders
+  // blijft ze eeuwig op "verzendend" staan.
+  await rondCampagneAfIndienKlaar(id);
   logger.info({ campagneId: id, ingepland, overgeslagen }, "Campagne in mailwachtrij geplaatst");
   return res.json({ ok: true, ingepland, overgeslagen });
 });
@@ -525,31 +598,13 @@ router.post("/marketing/campagnes/:id/stoppen", verzenden, async (req, res) => {
       gestoptOp: new Date(),
       gestoptReden: req.body?.reden ? String(req.body.reden) : "handmatig gestopt",
     })
-    .where(and(eq(marketingCampagnesTable.id, id), inArray(marketingCampagnesTable.status, ["gepland", "verzendend"])))
+    .where(and(eq(marketingCampagnesTable.id, id), inArray(marketingCampagnesTable.status, ["gepland", "voorbereiden", "verzendend"])))
     .returning();
   if (!c) return res.status(409).json({ fout: "Alleen een geplande of verzendende campagne kan worden gestopt" });
-  // Alle nog wachtende wachtrij-items van deze campagne afwijzen — ongeacht
-  // ontvangerstatus (ook een inmiddels afgemelde ontvanger kan nog een
-  // wachtend item hebben als de afmeld-opruiming ooit gemist is).
-  const alleOntvangers = await db
-    .select({ id: marketingCampagneOntvangersTable.id, status: marketingCampagneOntvangersTable.status })
-    .from(marketingCampagneOntvangersTable)
-    .where(eq(marketingCampagneOntvangersTable.campagneId, id));
-  const alleIds = alleOntvangers.map((o) => o.id);
-  const geplandeIds = alleOntvangers.filter((o) => o.status === "gepland").map((o) => o.id);
-  if (alleIds.length > 0) {
-    await db
-      .update(mailWachtrijTable)
-      .set({ status: "afgewezen", foutdetail: "campagne gestopt", verwerktOp: new Date() })
-      .where(and(inArray(mailWachtrijTable.campagneOntvangerId, alleIds), eq(mailWachtrijTable.status, "wachtend")));
-  }
-  if (geplandeIds.length > 0) {
-    await db
-      .update(marketingCampagneOntvangersTable)
-      .set({ status: "overgeslagen" })
-      .where(inArray(marketingCampagneOntvangersTable.id, geplandeIds));
-  }
-  return res.json({ ok: true, vervallen: geplandeIds.length });
+  // Alle nog wachtende wachtrij-items afwijzen en geplande ontvangers
+  // terminal maken — gedeeld met het verzend-endpoint (stop tijdens opbouw).
+  const { vervallen } = await ruimGestopteCampagneOp(id, "campagne gestopt");
+  return res.json({ ok: true, vervallen });
 });
 
 export default router;

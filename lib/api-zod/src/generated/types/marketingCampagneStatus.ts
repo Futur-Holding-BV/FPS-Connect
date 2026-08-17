@@ -12,6 +12,7 @@ export type MarketingCampagneStatus = typeof MarketingCampagneStatus[keyof typeo
 export const MarketingCampagneStatus = {
   concept: 'concept',
   gepland: 'gepland',
+  voorbereiden: 'voorbereiden',
   verzendend: 'verzendend',
   verzonden: 'verzonden',
   gestopt: 'gestopt',

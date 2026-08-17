@@ -90,7 +90,9 @@ export default function MailWachtrijBeheer() {
         <p className="text-muted-foreground mt-1">
           Systeem- en notificatiemails worden pas verzonden na uw expliciete goedkeuring.
           Alleen account-mails (uitnodiging, wachtwoord-reset) en mails die een medewerker
-          zelf met een verstuur-knop verstuurt, gaan direct.
+          zelf met een verstuur-knop verstuurt, gaan direct. Campagnemails worden
+          na goedkeuring van de campagne automatisch gedoseerd verstuurd en zijn
+          hier alleen af te wijzen.
         </p>
       </div>
 
@@ -138,14 +140,19 @@ export default function MailWachtrijBeheer() {
                     </Button>
                     {(item.status === "wachtend" || item.status === "mislukt") && (
                       <>
-                        <Button
-                          size="sm"
-                          onClick={() => actie.mutate({ id: item.id, soort: "verstuur" })}
-                          disabled={actie.isPending}
-                          data-testid={`knop-verstuur-${item.id}`}
-                        >
-                          <Send className="h-4 w-4 mr-1" /> Versturen
-                        </Button>
+                        {/* Campagnemails gaan uitsluitend via de gedoseerde
+                            verzender (server weigert handmatig versturen met
+                            422); afwijzen mag wél altijd handmatig. */}
+                        {item.soort !== "campagne" && (
+                          <Button
+                            size="sm"
+                            onClick={() => actie.mutate({ id: item.id, soort: "verstuur" })}
+                            disabled={actie.isPending}
+                            data-testid={`knop-verstuur-${item.id}`}
+                          >
+                            <Send className="h-4 w-4 mr-1" /> Versturen
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"

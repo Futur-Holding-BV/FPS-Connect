@@ -429,7 +429,10 @@ async function plaatsInMailWachtrij(opties: {
  */
 export async function verstuurMailWachtrijItem(
   id: number,
-  verwerktDoorId: number,
+  // null = automatische gedoseerde verzender (MARKETING_01) — de menselijke
+  // goedkeuring is dan de eenmalige campagne-goedkeuring, vastgelegd op de
+  // campagne zelf en op aangevraagd_door_id van het wachtrij-item.
+  verwerktDoorId: number | null,
 ): Promise<void> {
   // Atomaire claim: alleen wie de status daadwerkelijk omzet mag verzenden.
   // Voorkomt dat twee beheerders (of een gelijktijdige afwijzing) dezelfde
@@ -545,20 +548,38 @@ export async function herstelVastgelopenMailWachtrijItems(
         ),
       ),
     )
-    .returning({ id: mailWachtrijTable.id });
+    .returning({ id: mailWachtrijTable.id, campagneOntvangerId: mailWachtrijTable.campagneOntvangerId });
   if (hersteld.length > 0) {
     logger.warn(
       { aantalHersteld: hersteld.length, drempelMinuten },
       "Vastgelopen mail-wachtrij items hersteld naar 'mislukt'",
     );
+    // Campagne-items: de gedoseerde verzender pakt alleen "wachtend" op, dus
+    // een naar "mislukt" hersteld campagne-item zou de campagne permanent laten
+    // hangen. Zet de gekoppelde ontvanger terminal (overgeslagen) en draai de
+    // afrondingscontrole — handmatig versturen van campagne-items is bewust
+    // geblokkeerd, dus dit is het enige pad dat de campagne laat doorlopen.
+    const { markeerOntvangerOvergeslagen } = await import("./marketingService");
+    for (const item of hersteld) {
+      if (item.campagneOntvangerId != null) {
+        await markeerOntvangerOvergeslagen(item.campagneOntvangerId).catch((err) =>
+          logger.error({ err, ontvangerId: item.campagneOntvangerId }, "Ontvanger overslaan na herstel mislukt"),
+        );
+      }
+    }
   }
   return hersteld.length;
 }
-/** Wijst een wachtrij-item af: de mail wordt nooit verzonden. */
+/**
+ * Wijst een wachtrij-item af: de mail wordt nooit verzonden.
+ * Retourneert de gekoppelde campagne-ontvanger (indien campagne-item), zodat
+ * de aanroeper die terminal kan zetten en de campagne-afronding kan draaien —
+ * elk terminaal pad moet de campagne kunnen afronden.
+ */
 export async function wijsMailWachtrijItemAf(
   id: number,
   verwerktDoorId: number,
-): Promise<void> {
+): Promise<{ campagneOntvangerId: number | null }> {
   // Conditionele afwijzing: alleen vanuit wachtend/mislukt — een item dat
   // (net) geclaimd of verzonden is, kan niet meer worden afgewezen.
   const afgewezen = await db
@@ -570,7 +591,7 @@ export async function wijsMailWachtrijItemAf(
         inArray(mailWachtrijTable.status, ["wachtend", "mislukt"]),
       ),
     )
-    .returning({ id: mailWachtrijTable.id });
+    .returning({ id: mailWachtrijTable.id, campagneOntvangerId: mailWachtrijTable.campagneOntvangerId });
   if (afgewezen.length === 0) {
     const [bestaand] = await db
       .select({ status: mailWachtrijTable.status })
@@ -580,6 +601,7 @@ export async function wijsMailWachtrijItemAf(
     if (!bestaand) throw new Error("Wachtrij-item niet gevonden");
     throw new Error(`Item is al verwerkt (status: ${bestaand.status})`);
   }
+  return { campagneOntvangerId: afgewezen[0]?.campagneOntvangerId ?? null };
 }
 
 async function verstuurMailDirect(opties: {

@@ -250,6 +250,13 @@ Bij het genereren of bewerken van een concept-SCAB-mail (loonperiodebrief aan de
 - Bewijs: scripts/src/bewijs-mijn-gegevens-basislaag.ts — 16/16 groen. Lib-fixes: lib/db en lib/api-client-react dist herbouwd na merge-drift (stale compiled declarations). Firevault-imports scab-mail/index.tsx: dubbele useState, ontbrekende ListChecks en useGetScabMailsIdMutaties toegevoegd. — 16/16 groen (rechtenloos account bereikt alle eigen-gegevens-routes incl. volledige concept-levenscyclus declaratie: aanmaken, detail, bewerken, indienen, verwijderen; module-lijsten blijven 403). Declaratie-detail: concept-acties nu eigenaarschap-gebaseerd (conform backend) i.p.v. declaraties:2; terugknop context-bewust. Architect-review: PASS.
 
 
+## 2026-08-17 — Campagnes gaan nu vanzelf gedoseerd de deur uit na één goedkeuring
+
+- **Uitvoering:** MARKETING_01 Deel A vervolg (api-server) | **Kwaliteit:** hoog | **Risico:** laag (alleen campagnemail; per-item goedkeuring blijft voor alle overige mail)
+
+Tot nu toe moest een beheerder elke campagnemail apart vanuit de mailwachtrij versturen — bij grotere doelgroepen onwerkbaar. Nu is de goedkeuring éénmalig: zodra een campagne (na de verplichte proef) wordt verzonden, verstuurt een automatische verzender de klaargezette mails gespreid, standaard 6 per minuut. Het tempo is instelbaar (1–60 per minuut) op de marketingpagina, door wie ook campagnes mag verzenden. Zo blijft verzenden praktisch zonder dat de mailserver een spam-piek produceert en als spammer aangemerkt wordt.
+
+De bestaande waarborgen blijven volledig staan: vlak vóór élke verzending draait opnieuw de toestemmings- en statuscontrole, dus afmelden, toestemming intrekken of de campagne stoppen werkt per direct — ook midden in een lopende verzending. Bewijs: scripts/src/bewijs-campagne-dosering.ts (13 controles, waaronder stoppen mídden in het verzenden: daarna gaat er niets meer uit en worden resterende ontvangers netjes overgeslagen; gemeten tussenpoos klopte met het ingestelde tempo).
 ## 2026-08-17 — App-installatielink (PWA) meegestuurd bij nieuwe medewerker-uitnodiging (#1027)
 
 - De uitnodigingsmail bevat nu een sectie **"FPS Connect ook op uw telefoon"** met iPhone (Safari → "Zet op beginscherm") en Android (Chrome → "App installeren") instructies, plus de directe PWA-link (`/connect/planning`). Sectie verschijnt alleen als `PUBLIEKE_APP_URL` of een Replit-domein beschikbaar is (fail-closed).

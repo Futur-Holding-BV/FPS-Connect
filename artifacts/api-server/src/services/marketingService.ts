@@ -115,37 +115,77 @@ export async function handelCampagneVerzendingAf(ontvangerId: number, onderwerp:
         datum: new Date().toISOString().slice(0, 10),
       });
     }
-    // Campagne afronden zodra niets meer op verzending wacht.
-    const [rest] = await db
-      .select({ aantal: count() })
-      .from(marketingCampagneOntvangersTable)
-      .where(
-        and(
-          eq(marketingCampagneOntvangersTable.campagneId, ontvanger.campagneId),
-          eq(marketingCampagneOntvangersTable.status, "gepland"),
-        ),
-      );
-    if ((rest?.aantal ?? 0) === 0) {
-      await db
-        .update(marketingCampagnesTable)
-        .set({ status: "verzonden", afgerondOp: new Date(), bijgewerktOp: new Date() })
-        .where(
-          and(
-            eq(marketingCampagnesTable.id, ontvanger.campagneId),
-            eq(marketingCampagnesTable.status, "verzendend"),
-          ),
-        );
-    }
+    await rondCampagneAfIndienKlaar(ontvanger.campagneId);
   } catch (err) {
     logger.error({ err, ontvangerId }, "Campagne-terugkoppeling na verzending mislukt");
   }
 }
 
 /**
- * Afmelden zonder inloggen via de publieke token. Idempotent: een tweede
- * klik op dezelfde link blijft een nette bevestiging geven.
- * Retourneert null bij een onbekende token.
+ * Gedeelde afrondingscontrole: zodra geen enkele ontvanger meer op verzending
+ * wacht ("gepland"), gaat de campagne van verzendend naar verzonden. Moet ná
+ * élke terminale ontvanger-overgang draaien — óók bij overslaan/blokkeren,
+ * anders blijft een campagne waarvan alle resterende ontvangers geblokkeerd
+ * raakten (bv. massale toestemmingsintrekking) eeuwig op "verzendend" staan.
  */
+export async function rondCampagneAfIndienKlaar(campagneId: number): Promise<void> {
+  const [rest] = await db
+    .select({ aantal: count() })
+    .from(marketingCampagneOntvangersTable)
+    .where(
+      and(
+        eq(marketingCampagneOntvangersTable.campagneId, campagneId),
+        eq(marketingCampagneOntvangersTable.status, "gepland"),
+      ),
+    );
+  if ((rest?.aantal ?? 0) === 0) {
+    await db
+      .update(marketingCampagnesTable)
+      .set({ status: "verzonden", afgerondOp: new Date(), bijgewerktOp: new Date() })
+      .where(
+        and(
+          eq(marketingCampagnesTable.id, campagneId),
+          eq(marketingCampagnesTable.status, "verzendend"),
+        ),
+      );
+  }
+}
+
+/**
+ * Ruimt een gestopte campagne volledig op: alle nog wachtende wachtrij-items
+ * afwijzen en alle nog geplande ontvangers terminal maken (overgeslagen), in
+ * één transactie. Aangeroepen vanuit /stoppen én vanuit het verzend-endpoint
+ * wanneer de activering na de wachtrij-opbouw mislukt omdat de campagne
+ * intussen is gestopt — de opbouw kan ná het stopmoment nog rijen hebben
+ * aangemaakt, en die mogen nooit als "wachtend"/"gepland" achterblijven.
+ */
+export async function ruimGestopteCampagneOp(
+  campagneId: number,
+  reden: string,
+): Promise<{ vervallen: number }> {
+  return db.transaction(async (tx) => {
+    const alleOntvangers = await tx
+      .select({ id: marketingCampagneOntvangersTable.id, status: marketingCampagneOntvangersTable.status })
+      .from(marketingCampagneOntvangersTable)
+      .where(eq(marketingCampagneOntvangersTable.campagneId, campagneId));
+    const alleIds = alleOntvangers.map((o) => o.id);
+    const geplandeIds = alleOntvangers.filter((o) => o.status === "gepland").map((o) => o.id);
+    if (alleIds.length > 0) {
+      await tx
+        .update(mailWachtrijTable)
+        .set({ status: "afgewezen", foutdetail: reden, verwerktOp: new Date() })
+        .where(and(inArray(mailWachtrijTable.campagneOntvangerId, alleIds), eq(mailWachtrijTable.status, "wachtend")));
+    }
+    if (geplandeIds.length > 0) {
+      await tx
+        .update(marketingCampagneOntvangersTable)
+        .set({ status: "overgeslagen" })
+        .where(inArray(marketingCampagneOntvangersTable.id, geplandeIds));
+    }
+    return { vervallen: geplandeIds.length };
+  });
+}
+
 /**
  * Annuleert alle nog wachtende campagnemails van een contactpersoon (over álle
  * campagnes). Aangeroepen bij afmelden én bij het intrekken van toestemming —
@@ -160,15 +200,39 @@ export async function annuleerWachtendeCampagneMails(
     .from(marketingCampagneOntvangersTable)
     .where(eq(marketingCampagneOntvangersTable.contactpersoonId, contactpersoonId));
   if (items.length === 0) return;
-  await db
-    .update(mailWachtrijTable)
-    .set({ status: "afgewezen", foutdetail: reden, verwerktOp: new Date() })
-    .where(
-      and(
-        inArray(mailWachtrijTable.campagneOntvangerId, items.map((o) => o.id)),
-        eq(mailWachtrijTable.status, "wachtend"),
-      ),
+  // Wachtrij-items afwijzen én de bijbehorende geplande ontvangers terminal
+  // maken, in één transactie. Zonder de ontvanger-overgang zou een campagne
+  // waarvan álle resterende ontvangers zich afmelden/toestemming intrekken
+  // eeuwig op "verzendend" blijven staan: de verzender vindt geen wachtend
+  // item meer, maar de afrondingscontrole ziet nog "gepland"-ontvangers.
+  const geraakt = await db.transaction(async (tx) => {
+    await tx
+      .update(mailWachtrijTable)
+      .set({ status: "afgewezen", foutdetail: reden, verwerktOp: new Date() })
+      .where(
+        and(
+          inArray(mailWachtrijTable.campagneOntvangerId, items.map((o) => o.id)),
+          eq(mailWachtrijTable.status, "wachtend"),
+        ),
+      );
+    return tx
+      .update(marketingCampagneOntvangersTable)
+      .set({ status: "afgemeld", afgemeldOp: new Date() })
+      .where(
+        and(
+          inArray(marketingCampagneOntvangersTable.id, items.map((o) => o.id)),
+          eq(marketingCampagneOntvangersTable.status, "gepland"),
+        ),
+      )
+      .returning({ campagneId: marketingCampagneOntvangersTable.campagneId });
+  });
+  // Afrondingscontrole per geraakte campagne (fouten hier mogen de
+  // afmeld-/intrekkingsflow nooit breken).
+  for (const campagneId of new Set(geraakt.map((g) => g.campagneId))) {
+    await rondCampagneAfIndienKlaar(campagneId).catch((err) =>
+      logger.error({ err, campagneId }, "Campagne-afronding na annulering mislukt"),
     );
+  }
 }
 
 /**
@@ -213,7 +277,7 @@ export async function controleerCampagneItemVerzendbaar(
 
 /** Markeert een ontvanger als overgeslagen (bv. na een geblokkeerde verzending). */
 export async function markeerOntvangerOvergeslagen(ontvangerId: number): Promise<void> {
-  await db
+  const [ontvanger] = await db
     .update(marketingCampagneOntvangersTable)
     .set({ status: "overgeslagen" })
     .where(
@@ -221,7 +285,16 @@ export async function markeerOntvangerOvergeslagen(ontvangerId: number): Promise
         eq(marketingCampagneOntvangersTable.id, ontvangerId),
         eq(marketingCampagneOntvangersTable.status, "gepland"),
       ),
+    )
+    .returning({ campagneId: marketingCampagneOntvangersTable.campagneId });
+  // Ook een overgeslagen ontvanger kan de laatste openstaande zijn — dezelfde
+  // afrondingscontrole als na een geslaagde verzending (fouten nooit doorgeven:
+  // de wachtrijafhandeling mag hier niet op breken).
+  if (ontvanger) {
+    await rondCampagneAfIndienKlaar(ontvanger.campagneId).catch((err) =>
+      logger.error({ err, ontvangerId }, "Campagne-afronding na overslaan mislukt"),
     );
+  }
 }
 
 export async function verwerkAfmelding(token: string): Promise<{ reedsAfgemeld: boolean } | null> {
@@ -256,6 +329,12 @@ export async function verwerkAfmelding(token: string): Promise<{ reedsAfgemeld: 
   // Een nog niet verzonden campagnemail voor deze contactpersoon (over álle
   // campagnes) direct uit de wachtrij halen — afmelden is per direct.
   await annuleerWachtendeCampagneMails(ontvanger.contactpersoonId, "contactpersoon afgemeld");
+  // De eigen ontvanger is hierboven al terminal gezet (dus buiten het bereik
+  // van de annuleerhelper) — de afrondingscontrole voor déze campagne moet
+  // daarom hier expliciet draaien.
+  await rondCampagneAfIndienKlaar(ontvanger.campagneId).catch((err) =>
+    logger.error({ err, campagneId: ontvanger.campagneId }, "Campagne-afronding na afmelding mislukt"),
+  );
   if (ontvanger.klantId) {
     await db.insert(crmCommunicatieTable).values({
       klantId: ontvanger.klantId,

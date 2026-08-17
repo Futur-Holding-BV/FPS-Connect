@@ -102,6 +102,10 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   // BEWAKING_02 §7.4 — drempels commerciële keten (dagen). Startstanden zijn
   // conservatieve standaarden: fase 0 (11-08-2026) mat een nog onbenutte keten.
   offerteReactieBewakingDagen: integer("offerte_reactie_bewaking_dagen").notNull().default(7),
+  // MARKETING_01 — gedoseerde campagne-verzender: mails per minuut (1–60).
+  // De verzender verstuurt goedgekeurde campagnemails gespreid uit de
+  // mailwachtrij; dit tempo bepaalt de tussenpoos (60/tempo seconden).
+  campagneVerzendtempoPerMinuut: integer("campagne_verzendtempo_per_minuut").notNull().default(6),
   offerteBekekenBewakingDagen: integer("offerte_bekeken_bewaking_dagen").notNull().default(5),
   opnameCalculatieBewakingDagen: integer("opname_calculatie_bewaking_dagen").notNull().default(14),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

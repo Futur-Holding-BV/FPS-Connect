@@ -8063,6 +8063,38 @@ paths:
         "404":
           description: Niet gevonden
 
+  /marketing/verzendtempo:
+    get:
+      operationId: getMarketingVerzendtempo
+      tags: [marketing]
+      summary: Verzendtempo van de gedoseerde campagne-verzender (mails per minuut)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingVerzendtempo"
+    patch:
+      operationId: updateMarketingVerzendtempo
+      tags: [marketing]
+      summary: Verzendtempo wijzigen (1–60 per minuut, marketing niveau 4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingVerzendtempoInput"
+      responses:
+        "200":
+          description: Gewijzigd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingVerzendtempo"
+        "422":
+          description: Ongeldig tempo
+
   /marketing/campagnes:
     get:
       operationId: listMarketingCampagnes
@@ -30906,7 +30938,7 @@ components:
           type: ["integer", "null"]
         status:
           type: string
-          enum: [concept, gepland, verzendend, verzonden, gestopt]
+          enum: [concept, gepland, voorbereiden, verzendend, verzonden, gestopt]
         gepland_op:
           type: ["string", "null"]
         proef_verzonden_op:
@@ -30934,6 +30966,24 @@ components:
               type: object
               additionalProperties:
                 type: integer
+
+    MarketingVerzendtempo:
+      type: object
+      required: [tempo_per_minuut]
+      properties:
+        tempo_per_minuut:
+          type: integer
+          minimum: 1
+          maximum: 60
+
+    MarketingVerzendtempoInput:
+      type: object
+      required: [tempo_per_minuut]
+      properties:
+        tempo_per_minuut:
+          type: integer
+          minimum: 1
+          maximum: 60
 
     MarketingCampagneInput:
       type: object
