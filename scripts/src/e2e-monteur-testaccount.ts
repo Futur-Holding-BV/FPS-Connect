@@ -64,6 +64,21 @@ export const E2E_BEDRAGEN2_EMAIL = "e2e-web-bedragen2@fps.local";
 export const E2E_BEDRAGEN2_WACHTWOORD = "E2eBedragen2!2026";
 export const E2E_BEDRAGEN2_TOTP_SECRET = "NBSWY3DPO5XXE3DE";
 
+// Vast account voor de uurcodes-zonder-projectenrecht-e2e
+// (web-uren-uurcodes-recht.spec.ts): een veldgebruiker ZONDER projectenrecht
+// (projecten:0) zodat GET /opdrachten/:id/uurcodes een echte 403 geeft en de
+// nette uitleg (data-testid melding-uurcodes-geen-recht) zichtbaar moet worden.
+export const E2E_UURCODES_EMAIL = "e2e-web-uurcodes@fps.local";
+export const E2E_UURCODES_WACHTWOORD = "E2eUurcodes!2026";
+export const E2E_UURCODES_TOTP_SECRET = "MJUXG5DFOJRWK2LK";
+
+// Zelfde scenario voor de monteur-app-suite (monteur-uren-uurcodes-recht.spec.ts).
+// Bewust een APART account: de web- en monteur-suite draaien parallel in de
+// validatiepijplijn en mogen elkaars accounts nooit archiveren/hergebruiken.
+export const E2E_UURCODES_APP_EMAIL = "e2e-app-uurcodes@fps.local";
+export const E2E_UURCODES_APP_WACHTWOORD = "E2eUurcodesApp!2026";
+export const E2E_UURCODES_APP_TOTP_SECRET = "OBUXG5DFOJRWK4TL";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -255,6 +270,38 @@ export async function setupE2eBedragenAccounts(): Promise<{
     bevoegdheden: { projecten: 2 },
   });
   return { niveau1Id, niveau2Id };
+}
+
+// Vast account voor web-uren-uurcodes-recht.spec.ts: bewust GEEN projecten-
+// recht (en verder alleen wat basisinzage) zodat de uurcodelijst per opdracht
+// server-side met 403 wordt geweigerd.
+export async function setupE2eUurcodesAccount(): Promise<number> {
+  return maakOfUpdateE2eAccount({
+    email: E2E_UURCODES_EMAIL,
+    naam: "E2E Uurcodes Zonder Recht",
+    wachtwoord: E2E_UURCODES_WACHTWOORD,
+    totpSecret: E2E_UURCODES_TOTP_SECRET,
+    bevoegdheden: { planning: 1 },
+  });
+}
+
+export async function archiveerE2eUurcodesAccount(): Promise<void> {
+  await archiveerAccount(E2E_UURCODES_EMAIL);
+}
+
+// App-variant (monteur-suite) van het uurcodes-zonder-recht-account.
+export async function setupE2eUurcodesAppAccount(): Promise<number> {
+  return maakOfUpdateE2eAccount({
+    email: E2E_UURCODES_APP_EMAIL,
+    naam: "E2E App Uurcodes Zonder Recht",
+    wachtwoord: E2E_UURCODES_APP_WACHTWOORD,
+    totpSecret: E2E_UURCODES_APP_TOTP_SECRET,
+    bevoegdheden: { planning: 1 },
+  });
+}
+
+export async function archiveerE2eUurcodesAppAccount(): Promise<void> {
+  await archiveerAccount(E2E_UURCODES_APP_EMAIL);
 }
 
 // Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het

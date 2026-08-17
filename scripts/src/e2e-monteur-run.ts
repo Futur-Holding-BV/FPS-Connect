@@ -13,7 +13,10 @@ import { mkdirSync, rmSync, statSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 
-import { archiveerE2eAccount } from "./e2e-monteur-testaccount";
+import {
+  archiveerE2eAccount,
+  archiveerE2eUurcodesAppAccount,
+} from "./e2e-monteur-testaccount";
 
 const WORKSPACE_ROOT = new URL("../../", import.meta.url).pathname;
 
@@ -307,6 +310,7 @@ async function main(): Promise<void> {
     // activeert het opnieuw via de idempotente seeder.
     try {
       await archiveerE2eAccount();
+      await archiveerE2eUurcodesAppAccount();
       log("E2e-testaccount gearchiveerd en gedeactiveerd.");
     } catch (err) {
       log(`Waarschuwing: opruimen e2e-testaccount mislukt: ${(err as Error).message}`);

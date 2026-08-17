@@ -27,7 +27,7 @@ export default defineConfig({
   // Alleen de monteur-spec draaien; de web-spec (web-gebouw-detail.spec.ts)
   // gebruikt een aparte config (playwright.web.config.ts) met de Vite baseURL
   // en mag niet meelopen in de monteur-suite (Expo-baseURL, geen #email veld).
-  testMatch: ["**/startmenu.spec.ts"],
+  testMatch: ["**/startmenu.spec.ts", "**/monteur-*.spec.ts"],
   // Een koude Expo-load is traag; ruime timeouts zodat de test niet flaky is.
   // Worst-case: 3 pogingen × 90s + 2 TOTP-vensterwachten × 30s = 330s → 480s.
   timeout: 480_000,

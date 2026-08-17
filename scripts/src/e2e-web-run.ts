@@ -16,6 +16,7 @@ import https from "node:https";
 import {
   archiveerE2eBedragenAccounts,
   archiveerE2eUitvoeringAccounts,
+  archiveerE2eUurcodesAccount,
   archiveerE2eWebAccount,
   archiveerE2eWebAdminAccount,
 } from "./e2e-monteur-testaccount";
@@ -300,6 +301,7 @@ async function main(): Promise<void> {
       await archiveerE2eWebAdminAccount();
       await archiveerE2eBedragenAccounts();
       await archiveerE2eUitvoeringAccounts();
+      await archiveerE2eUurcodesAccount();
       log("E2e-testaccounts gearchiveerd en gedeactiveerd.");
     } catch (err) {
       log(`Waarschuwing: opruimen e2e-testaccounts mislukt: ${(err as Error).message}`);
