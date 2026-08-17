@@ -11260,6 +11260,106 @@ paths:
               schema:
                 $ref: "#/components/schemas/PoortwachterMijlpaal"
 
+  /hrm/poortwachter/{dossierId}/mijlpalen/{type}/klaarzetten:
+    post:
+      operationId: klaarzettenPoortwachterMijlpaal
+      tags: [hrm]
+      summary: Mijlpaal klaarzetten voor vrijgave (stap 1, personeel niveau 2)
+      parameters:
+        - in: path
+          name: dossierId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PoortwachterKlaarzettenInput"
+      responses:
+        "200":
+          description: Bijgewerkte mijlpaal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterMijlpaal"
+
+  /hrm/poortwachter/{dossierId}/mijlpalen/{type}/klaarzetten-ongedaan:
+    post:
+      operationId: klaarzettenOngedaanPoortwachterMijlpaal
+      tags: [hrm]
+      summary: Klaarzetten terugnemen zolang nog niet vrijgegeven
+      parameters:
+        - in: path
+          name: dossierId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Bijgewerkte mijlpaal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterMijlpaal"
+
+  /hrm/poortwachter/{dossierId}/mijlpalen/{type}/vrijgeven:
+    post:
+      operationId: vrijgevenPoortwachterMijlpaal
+      tags: [hrm]
+      summary: Klaargezette mijlpaal vrijgeven (stap 2, hrm_vrijgave niveau 3)
+      parameters:
+        - in: path
+          name: dossierId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Bijgewerkte mijlpaal (nu afgerond)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterMijlpaal"
+
+  /hrm/poortwachter/{dossierId}/mijlpalen/{type}/terugsturen:
+    post:
+      operationId: terugsturenPoortwachterMijlpaal
+      tags: [hrm]
+      summary: Klaargezette mijlpaal met reden terugsturen (hrm_vrijgave niveau 3)
+      parameters:
+        - in: path
+          name: dossierId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PoortwachterTerugsturenInput"
+      responses:
+        "200":
+          description: Bijgewerkte mijlpaal (terug naar klaarzetten)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterMijlpaal"
+
   /wagenpark/meldingen/{id}/doorzetten-garage:
     post:
       operationId: doorzettenNaarGarage
@@ -50851,6 +50951,12 @@ components:
         afgerond_op: { type: string, format: date-time, nullable: true }
         notitie: { type: string, nullable: true }
         bijgewerkt_door_naam: { type: string, nullable: true }
+        klaargezet_op: { type: string, format: date-time, nullable: true }
+        klaargezet_door_naam: { type: string, nullable: true }
+        vrijgegeven_door_naam: { type: string, nullable: true }
+        teruggestuurd_reden: { type: string, nullable: true }
+        teruggestuurd_op: { type: string, format: date-time, nullable: true }
+        teruggestuurd_door_naam: { type: string, nullable: true }
 
     PoortwachterDossier:
       type: object
@@ -50871,6 +50977,17 @@ components:
       properties:
         afgerond: { type: boolean }
         notitie: { type: string }
+
+    PoortwachterKlaarzettenInput:
+      type: object
+      properties:
+        notitie: { type: string }
+
+    PoortwachterTerugsturenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden: { type: string }
 
     DoorzettenGarageInput:
       type: object

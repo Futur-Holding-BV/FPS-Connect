@@ -3704,8 +3704,14 @@ KOLOM|poortwachter_mijlpalen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|poortwachter_mijlpalen|deadline_datum|text|NO|
 KOLOM|poortwachter_mijlpalen|dossier_id|integer|NO|
 KOLOM|poortwachter_mijlpalen|id|integer|NO|nextval('poortwachter_mijlpalen_id_seq'::regclass)
+KOLOM|poortwachter_mijlpalen|klaargezet_door_id|integer|YES|
+KOLOM|poortwachter_mijlpalen|klaargezet_op|timestamp without time zone|YES|
 KOLOM|poortwachter_mijlpalen|notitie|text|YES|
+KOLOM|poortwachter_mijlpalen|teruggestuurd_door_id|integer|YES|
+KOLOM|poortwachter_mijlpalen|teruggestuurd_op|timestamp without time zone|YES|
+KOLOM|poortwachter_mijlpalen|teruggestuurd_reden|text|YES|
 KOLOM|poortwachter_mijlpalen|type|text|NO|
+KOLOM|poortwachter_mijlpalen|vrijgegeven_door_id|integer|YES|
 KOLOM|prijsafspraken|aangemaakt_door|integer|YES|
 KOLOM|prijsafspraken|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|prijsafspraken|artikel_id|integer|YES|

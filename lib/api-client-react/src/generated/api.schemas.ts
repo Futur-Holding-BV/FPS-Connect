@@ -16756,6 +16756,12 @@ export interface PoortwachterMijlpaal {
   afgerond_op?: string | null;
   notitie?: string | null;
   bijgewerkt_door_naam?: string | null;
+  klaargezet_op?: string | null;
+  klaargezet_door_naam?: string | null;
+  vrijgegeven_door_naam?: string | null;
+  teruggestuurd_reden?: string | null;
+  teruggestuurd_op?: string | null;
+  teruggestuurd_door_naam?: string | null;
 }
 
 export interface PoortwachterDossier {
@@ -16770,6 +16776,14 @@ export interface PoortwachterDossier {
 export interface PoortwachterMijlpaalInput {
   afgerond?: boolean;
   notitie?: string;
+}
+
+export interface PoortwachterKlaarzettenInput {
+  notitie?: string;
+}
+
+export interface PoortwachterTerugsturenInput {
+  reden: string;
 }
 
 export interface DoorzettenGarageInput {

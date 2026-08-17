@@ -1,3 +1,14 @@
+## 2026-08-17 — RECHTEN_HRM_02: HRM-adviseur ingeperkt + Poortwachter twee-stapsvrijgave (vier-ogen)
+
+- **Punt 2 — profiel HRM-adviseur**: gebruikers 4 → 1 (alleen inzien; alle muterende gebruikersroutes zaten al op niveau 4, dus niveau 1 dekt uitsluitend GET /gebruikers). Nieuw: hrm_vrijgave 3. Profiel Directie krijgt óók hrm_vrijgave 3.
+- **Punt 3 — migratie 0075**: nieuwe modulesleutel `hrm_vrijgave` (label "HRM-vrijgave") in de matrix; systeemprofielen HRM-adviseur/Directie en hun herkomstgebruikers bijgewerkt (LEAST voor verlagen gebruikers, GREATEST voor hrm_vrijgave, idempotent). Bijgewerkte bestaande accounts: 0 (HRM-adviseur) + 0 (Directie) — er hangen nog geen accounts aan deze profielen.
+- **Punt 4 — Poortwachter twee-stapsvrijgave**: mijlpalen kennen nu klaarzetten (personeel:2) en vrijgeven (hrm_vrijgave:3) als gescheiden handelingen; de vrijgever mag nooit de klaarzetter zijn (403, server-side). Direct afronden via PATCH is geblokkeerd (422); PATCH doet alleen nog notities. Nieuwe routes: POST /hrm/poortwachter/:dossierId/mijlpalen/:type/{klaarzetten, klaarzetten-ongedaan, vrijgeven, terugsturen} (terugsturen eist een reden; die blijft zichtbaar bij de mijlpaal tot opnieuw klaarzetten). Vrijgave is definitief (bewuste beperking: geen ongedaan-route). Bestaande afgeronde mijlpalen blijven afgerond (afgerond_op blijft dé afrondingsmarker).
+- **Routefix**: de bestaande poortwachter-routes stonden zonder /hrm-prefix op de server terwijl de OpenAPI-spec (en dus de webclient) /hrm/... aanroept — de dossier-sheet deed het daardoor sinds bouwstuk 1 niet via de web-UI. Alle 7 routes nu op /hrm/... conform spec.
+- **Bewaking**: mijlpaal die >3 dagen klaarstaat zonder vrijgave → werkbak-taak ("doen") voor wie hrm_vrijgave:3 heeft, vóór de deadline-vensterfilter zodat ook verre deadlines niet blijven hangen.
+- **Frontend** (poortwachter-sheet): status "Wacht op vrijgave", klaarzetten/ongedaan-knoppen (personeel≥2), vrijgeven/terugsturen-knoppen met verplichte reden (hrm_vrijgave≥3), teruggestuurd-reden zichtbaar, klaarzetter+vrijgever met naam bij afgeronde mijlpalen.
+- **Atomaire overgangen**: elke statusovergang (klaarzetten/ongedaan/vrijgeven/terugsturen) is één conditionele UPDATE mét de verwachte huidige status (incl. vier-ogen-voorwaarde) in de WHERE; gelijktijdige conflicterende verzoeken krijgen 403/409 en kunnen een afgeronde audittrail nooit overschrijven of wissen (architect-review-bevinding).
+- Bewijs: `scripts/src/bewijs-hrm-vrijgave.ts` — 19/19 groen (incl. vier-ogen-403, middleware-403, terugstuur-flow, twee parallelle race-checks, profielcontrole).
+
 ## 2026-08-17 — RECHTEN_BOEKHOUDER_01: leesrecht financieel voor de externe boekhouder
 
 - Profiel "Externe boekhouder" (lib/permissies) uitgebreid met leesrecht niveau 1 op financieel en financieel_vertrouwelijk; salarisarchief/salaris_mutaties/boekhouder_portaal ongewijzigd, projecten/offertes/opdrachten blijven dicht.

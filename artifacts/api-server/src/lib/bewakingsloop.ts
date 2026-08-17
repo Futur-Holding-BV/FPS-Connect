@@ -202,6 +202,28 @@ async function voedPoortwachter(): Promise<{ nieuw: number; afgehandeld: number 
     // HRM_01 §2.1: signaal op 21 en 7 dagen vóór; buiten termijn blijft staan
     // tot afgerond. Einde loondoorbetaling eerder (60 dagen).
     const venster = m.type === "einde_loondoorbetaling" ? 60 : 21;
+    // RECHTEN_HRM_02 §4 — staat een mijlpaal langer dan 3 dagen klaar zonder
+    // vrijgave, dan verschijnt dat als taak bij wie de vrijgavebevoegdheid
+    // heeft. Dit staat bewust vóór de venster-check: ook een mijlpaal met een
+    // verre deadline mag niet blijven hangen op vrijgave.
+    if (m.klaargezetOp) {
+      const dagenKlaar = Math.floor((Date.now() - m.klaargezetOp.getTime()) / 86400000);
+      if (dagenKlaar > 3) {
+        items.push({
+          soort: "doen",
+          bron: "poortwachter",
+          titel: `Poortwachter: ${label} voor ${medewerkerNaam} wacht ${dagenKlaar} dagen op vrijgave`,
+          omschrijving: `Klaargezet op ${m.klaargezetOp.toISOString().slice(0, 10)}, deadline ${m.deadlineDatum}. Zonder vrijgave telt de mijlpaal niet als afgerond en loopt de deadline door.`,
+          vereisteModule: "hrm_vrijgave",
+          vereistNiveau: 3,
+          gewicht: dagen < 0 ? 100 : 80,
+          actiePad: `/personeel/${medewerkerId}`,
+          herkomstType: "poortwachter_mijlpaal",
+          herkomstId: m.id,
+          dedupSleutel: `poortwachter:vrijgave:${m.id}`,
+        });
+      }
+    }
     if (dagen > venster) continue;
     const buitenTermijn = dagen < 0;
     items.push({

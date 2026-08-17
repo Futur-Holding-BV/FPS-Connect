@@ -1850,6 +1850,8 @@ export default function PersoneelPagina() {
       <PoortwachterSheet
         ziekmeldingId={poortwachterZiekmeldingId}
         onOpenChange={(open) => { if (!open) setPoortwachterZiekmeldingId(null); }}
+        magSchrijven={magSchrijven}
+        magVrijgeven={echteRol === "hoofdbeheerder" || (bevoegdheden.hrm_vrijgave ?? 0) >= 3}
       />
 
       <Dialog open={verwijderZiekId !== null} onOpenChange={(o) => !o && setVerwijderZiekId(null)}>

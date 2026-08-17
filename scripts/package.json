@@ -27,6 +27,7 @@
     "pre-publish-validatie": "tsx ./src/pre-publish-validatie.ts",
     "e2e-biae-bewijs": "tsx ./src/e2e-biae-bewijs.ts",
     "bewijs-herschik-ci": "tsx ./src/bewijs-herschik-run.ts",
+    "bewijs-hrm-vrijgave": "tsx ./src/bewijs-hrm-vrijgave.ts",
     "bewijs-materiaal01-fase3": "tsx ./src/bewijs-materiaal01-fase3.ts",
     "bewijs-materiaal01-fase3-ci": "tsx ./src/bewijs-materiaal01-fase3-run.ts",
     "bewijs-task676-escalaties": "tsx ./src/bewijs-task676-goedkeuring-escalaties.ts",

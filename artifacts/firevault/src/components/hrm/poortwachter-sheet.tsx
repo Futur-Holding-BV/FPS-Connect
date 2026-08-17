@@ -12,12 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2, Circle, AlertTriangle, Clock, Loader2, ChevronDown, ChevronUp,
+  Send, Undo2, ShieldCheck, CornerUpLeft,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   useGetPoortwachterDossier,
   usePatchPoortwachterMijlpaal,
+  useKlaarzettenPoortwachterMijlpaal,
+  useKlaarzettenOngedaanPoortwachterMijlpaal,
+  useVrijgevenPoortwachterMijlpaal,
+  useTerugsturenPoortwachterMijlpaal,
   getGetPoortwachterDossierQueryKey,
 } from "@workspace/api-client-react";
 import type { PoortwachterMijlpaal } from "@workspace/api-client-react";
@@ -25,6 +30,10 @@ import type { PoortwachterMijlpaal } from "@workspace/api-client-react";
 interface Props {
   ziekmeldingId: number | null;
   onOpenChange: (open: boolean) => void;
+  /** personeel >= 2: notities bewerken en mijlpalen klaarzetten */
+  magSchrijven: boolean;
+  /** hrm_vrijgave >= 3: klaargezette mijlpalen vrijgeven of terugsturen */
+  magVrijgeven: boolean;
 }
 
 function fmtDatum(iso: string | null | undefined): string {
@@ -37,9 +46,12 @@ function dagenTot(deadline: string): number {
   return Math.floor((new Date(deadline).getTime() - nu.getTime()) / 86400000);
 }
 
-function StatusBadge({ status, deadline_datum }: { status: string; deadline_datum: string }) {
+function StatusBadge({ status, deadline_datum, klaargezet }: { status: string; deadline_datum: string; klaargezet: boolean }) {
   if (status === "afgerond") return (
     <Badge className="bg-green-100 text-green-800 border-0 text-xs">Afgerond</Badge>
+  );
+  if (klaargezet) return (
+    <Badge className="bg-blue-100 text-blue-800 border-0 text-xs">Wacht op vrijgave</Badge>
   );
   if (status === "buiten_termijn") return (
     <Badge className="bg-red-100 text-red-800 border-0 text-xs">Termijn verstreken</Badge>
@@ -68,32 +80,48 @@ function StatusIcon({ status }: { status: string }) {
 }
 
 function MijlpaalRij({
-  mijlpaal, dossierId, magSchrijven,
+  mijlpaal, dossierId, ziekmeldingId, magSchrijven, magVrijgeven,
 }: {
   mijlpaal: PoortwachterMijlpaal;
   dossierId: number;
+  ziekmeldingId: number;
   magSchrijven: boolean;
+  magVrijgeven: boolean;
 }) {
   const [uitgevouwen, setUitgevouwen] = useState(
     mijlpaal.status === "buiten_termijn" || mijlpaal.status === "nadert",
   );
   const [notitie, setNotitie] = useState(mijlpaal.notitie ?? "");
   const [notitieGewijzigd, setNotitieGewijzigd] = useState(false);
+  const [terugsturenOpen, setTerugsturenOpen] = useState(false);
+  const [terugstuurReden, setTerugstuurReden] = useState("");
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { mutate: patch, isPending } = usePatchPoortwachterMijlpaal({
+
+  const isKlaargezet = !!mijlpaal.klaargezet_op && mijlpaal.status !== "afgerond";
+
+  function foutmelding(err: unknown): string {
+    const e = err as { response?: { data?: { error?: string } } };
+    return e?.response?.data?.error ?? "Actie mislukt";
+  }
+  const mutationOpties = {
     mutation: {
       onSuccess: () => {
-        void qc.invalidateQueries({ queryKey: getGetPoortwachterDossierQueryKey(dossierId) });
+        void qc.invalidateQueries({ queryKey: getGetPoortwachterDossierQueryKey(ziekmeldingId) });
         setNotitieGewijzigd(false);
+        setTerugsturenOpen(false);
+        setTerugstuurReden("");
       },
-      onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+      onError: (err: unknown) =>
+        toast({ title: foutmelding(err), variant: "destructive" }),
     },
-  });
-
-  function toggleAfgerond() {
-    patch({ dossierId, type: mijlpaal.type, data: { afgerond: mijlpaal.status !== "afgerond" } });
-  }
+  };
+  const { mutate: patch, isPending: patchPending } = usePatchPoortwachterMijlpaal(mutationOpties);
+  const { mutate: klaarzetten, isPending: klaarzettenPending } = useKlaarzettenPoortwachterMijlpaal(mutationOpties);
+  const { mutate: klaarzettenOngedaan, isPending: ongedaanPending } = useKlaarzettenOngedaanPoortwachterMijlpaal(mutationOpties);
+  const { mutate: vrijgeven, isPending: vrijgevenPending } = useVrijgevenPoortwachterMijlpaal(mutationOpties);
+  const { mutate: terugsturen, isPending: terugsturenPending } = useTerugsturenPoortwachterMijlpaal(mutationOpties);
+  const isPending = patchPending || klaarzettenPending || ongedaanPending || vrijgevenPending || terugsturenPending;
 
   function slaNotitieOp() {
     patch({ dossierId, type: mijlpaal.type, data: { notitie } });
@@ -101,6 +129,7 @@ function MijlpaalRij({
 
   const ringKleur =
     mijlpaal.status === "afgerond" ? "border-l-green-400" :
+    isKlaargezet ? "border-l-blue-400" :
     mijlpaal.status === "buiten_termijn" ? "border-l-red-400" :
     mijlpaal.status === "nadert" ? "border-l-amber-400" :
     "border-l-transparent";
@@ -119,7 +148,7 @@ function MijlpaalRij({
             Deadline: {fmtDatum(mijlpaal.deadline_datum)}
           </div>
         </div>
-        <StatusBadge status={mijlpaal.status} deadline_datum={mijlpaal.deadline_datum} />
+        <StatusBadge status={mijlpaal.status} deadline_datum={mijlpaal.deadline_datum} klaargezet={isKlaargezet} />
         {uitgevouwen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
       </button>
 
@@ -154,19 +183,78 @@ function MijlpaalRij({
             )}
           </div>
 
-          {magSchrijven && (
-            <div className="flex items-center gap-2 pt-1">
-              {mijlpaal.status !== "afgerond" ? (
-                <Button size="sm" onClick={toggleAfgerond} disabled={isPending} className="text-xs gap-1.5">
-                  {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                  Afgerond markeren
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={toggleAfgerond} disabled={isPending} className="text-xs gap-1.5 text-muted-foreground">
-                  {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  Markering ongedaan maken
+          {/* Statusinformatie twee-stapsvrijgave */}
+          {mijlpaal.status === "afgerond" && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
+              {mijlpaal.klaargezet_door_naam ? `Klaargezet door ${mijlpaal.klaargezet_door_naam}` : "Afgerond"}
+              {mijlpaal.vrijgegeven_door_naam ? `, vrijgegeven door ${mijlpaal.vrijgegeven_door_naam}` : ""}
+            </p>
+          )}
+          {isKlaargezet && (
+            <p className="text-xs text-blue-800 flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Klaargezet{mijlpaal.klaargezet_door_naam ? ` door ${mijlpaal.klaargezet_door_naam}` : ""} op {fmtDatum(mijlpaal.klaargezet_op)} — wacht op vrijgave door iemand anders.
+            </p>
+          )}
+          {!isKlaargezet && mijlpaal.status !== "afgerond" && mijlpaal.teruggestuurd_reden && (
+            <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+              <CornerUpLeft className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                Teruggestuurd{mijlpaal.teruggestuurd_door_naam ? ` door ${mijlpaal.teruggestuurd_door_naam}` : ""}
+                {mijlpaal.teruggestuurd_op ? ` op ${fmtDatum(mijlpaal.teruggestuurd_op)}` : ""}: {mijlpaal.teruggestuurd_reden}
+              </span>
+            </div>
+          )}
+
+          {mijlpaal.status !== "afgerond" && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {!isKlaargezet && magSchrijven && (
+                <Button size="sm" onClick={() => klaarzetten({ dossierId, type: mijlpaal.type, data: {} })} disabled={isPending} className="text-xs gap-1.5">
+                  {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Klaarzetten voor vrijgave
                 </Button>
               )}
+              {isKlaargezet && magSchrijven && (
+                <Button size="sm" variant="outline" onClick={() => klaarzettenOngedaan({ dossierId, type: mijlpaal.type })} disabled={isPending} className="text-xs gap-1.5 text-muted-foreground">
+                  {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                  Klaarzetten ongedaan maken
+                </Button>
+              )}
+              {isKlaargezet && magVrijgeven && (
+                <>
+                  <Button size="sm" onClick={() => vrijgeven({ dossierId, type: mijlpaal.type })} disabled={isPending} className="text-xs gap-1.5">
+                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                    Vrijgeven
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setTerugsturenOpen((v) => !v)} disabled={isPending} className="text-xs gap-1.5">
+                    <CornerUpLeft className="h-3.5 w-3.5" />
+                    Terugsturen
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {isKlaargezet && magVrijgeven && terugsturenOpen && (
+            <div className="space-y-2 pt-1">
+              <Textarea
+                value={terugstuurReden}
+                onChange={(e) => setTerugstuurReden(e.target.value)}
+                placeholder="Reden voor terugsturen (verplicht)..."
+                className="text-sm min-h-[56px]"
+                disabled={isPending}
+              />
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => terugsturen({ dossierId, type: mijlpaal.type, data: { reden: terugstuurReden } })}
+                disabled={isPending || !terugstuurReden.trim()}
+                className="text-xs gap-1.5"
+              >
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CornerUpLeft className="h-3.5 w-3.5" />}
+                Terugsturen met reden
+              </Button>
             </div>
           )}
         </div>
@@ -175,7 +263,7 @@ function MijlpaalRij({
   );
 }
 
-export function PoortwachterSheet({ ziekmeldingId, onOpenChange }: Props) {
+export function PoortwachterSheet({ ziekmeldingId, onOpenChange, magSchrijven, magVrijgeven }: Props) {
   const open = ziekmeldingId !== null;
   const { data: dossier, isLoading, isError } = useGetPoortwachterDossier(
     ziekmeldingId ?? 0,
@@ -246,7 +334,9 @@ export function PoortwachterSheet({ ziekmeldingId, onOpenChange }: Props) {
                 key={m.type}
                 mijlpaal={m}
                 dossierId={dossier.id}
-                magSchrijven
+                ziekmeldingId={ziekmeldingId ?? 0}
+                magSchrijven={magSchrijven}
+                magVrijgeven={magVrijgeven}
               />
             ))}
           </div>

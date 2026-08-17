@@ -529,6 +529,14 @@ export const poortwachterMijlpalenTable = pgTable("poortwachter_mijlpalen", {
   afgerondOp: timestamp("afgerond_op"),
   notitie: text("notitie"),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // RECHTEN_HRM_02 §4 — vier-ogenprincipe: klaarzetten (personeel:2) en
+  // vrijgeven (hrm_vrijgave:3) zijn twee handelingen door twee mensen.
+  klaargezetOp: timestamp("klaargezet_op"),
+  klaargezetDoorId: integer("klaargezet_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  vrijgegevenDoorId: integer("vrijgegeven_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  teruggestuurdReden: text("teruggestuurd_reden"),
+  teruggestuurdOp: timestamp("teruggestuurd_op"),
+  teruggestuurdDoorId: integer("teruggestuurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

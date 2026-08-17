@@ -13569,7 +13569,13 @@ export const ListPoortwachterDossiersResponseItem = zod.object({
   "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
   "afgerond_op": zod.coerce.date().nullish(),
   "notitie": zod.string().nullish(),
-  "bijgewerkt_door_naam": zod.string().nullish()
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
 }))
 })
 export const ListPoortwachterDossiersResponse = zod.array(ListPoortwachterDossiersResponseItem)
@@ -13598,7 +13604,13 @@ export const GetPoortwachterDossierResponse = zod.object({
   "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
   "afgerond_op": zod.coerce.date().nullish(),
   "notitie": zod.string().nullish(),
-  "bijgewerkt_door_naam": zod.string().nullish()
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
 }))
 })
 
@@ -13626,7 +13638,133 @@ export const PatchPoortwachterMijlpaalResponse = zod.object({
   "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
   "afgerond_op": zod.coerce.date().nullish(),
   "notitie": zod.string().nullish(),
-  "bijgewerkt_door_naam": zod.string().nullish()
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
+})
+
+
+/**
+ * @summary Mijlpaal klaarzetten voor vrijgave (stap 1, personeel niveau 2)
+ */
+export const KlaarzettenPoortwachterMijlpaalParams = zod.object({
+  "dossierId": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const KlaarzettenPoortwachterMijlpaalBody = zod.object({
+  "notitie": zod.string().optional()
+})
+
+export const KlaarzettenPoortwachterMijlpaalResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
+})
+
+
+/**
+ * @summary Klaarzetten terugnemen zolang nog niet vrijgegeven
+ */
+export const KlaarzettenOngedaanPoortwachterMijlpaalParams = zod.object({
+  "dossierId": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const KlaarzettenOngedaanPoortwachterMijlpaalResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
+})
+
+
+/**
+ * @summary Klaargezette mijlpaal vrijgeven (stap 2, hrm_vrijgave niveau 3)
+ */
+export const VrijgevenPoortwachterMijlpaalParams = zod.object({
+  "dossierId": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const VrijgevenPoortwachterMijlpaalResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
+})
+
+
+/**
+ * @summary Klaargezette mijlpaal met reden terugsturen (hrm_vrijgave niveau 3)
+ */
+export const TerugsturenPoortwachterMijlpaalParams = zod.object({
+  "dossierId": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const TerugsturenPoortwachterMijlpaalBody = zod.object({
+  "reden": zod.string()
+})
+
+export const TerugsturenPoortwachterMijlpaalResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish(),
+  "klaargezet_op": zod.coerce.date().nullish(),
+  "klaargezet_door_naam": zod.string().nullish(),
+  "vrijgegeven_door_naam": zod.string().nullish(),
+  "teruggestuurd_reden": zod.string().nullish(),
+  "teruggestuurd_op": zod.coerce.date().nullish(),
+  "teruggestuurd_door_naam": zod.string().nullish()
 })
 
 

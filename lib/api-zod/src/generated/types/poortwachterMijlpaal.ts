@@ -18,4 +18,10 @@ export interface PoortwachterMijlpaal {
   afgerond_op?: Date | null;
   notitie?: string | null;
   bijgewerkt_door_naam?: string | null;
+  klaargezet_op?: Date | null;
+  klaargezet_door_naam?: string | null;
+  vrijgegeven_door_naam?: string | null;
+  teruggestuurd_reden?: string | null;
+  teruggestuurd_op?: Date | null;
+  teruggestuurd_door_naam?: string | null;
 }

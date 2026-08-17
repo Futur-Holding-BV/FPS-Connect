@@ -143,6 +143,11 @@ export const MODULES = [
     omschrijving: "AI-conceptmails aan SCAB voor FPS Bouw en Renovatie salarisverwerking",
   },
   {
+    id: "hrm_vrijgave",
+    label: "HRM-vrijgave",
+    omschrijving: "Klaargezette Poortwachter-mijlpalen inzien (niveau 1) en vrijgeven of terugsturen (niveau 3) — functiescheiding: klaarzetten en vrijgeven zijn twee handelingen door twee mensen",
+  },
+  {
     id: "boekhouder_portaal",
     label: "Boekhouderportaal",
     omschrijving: "Externe boekhouder: upload/download documenten, mutatieoverzicht, SEPA, jaarrekening",
@@ -394,8 +399,12 @@ export const PRESETS: Preset[] = [
   {
     naam: "HRM-adviseur",
     groep: "HRM & Personeel",
+    // RECHTEN_HRM_02: gebruikers teruggebracht naar niveau 1 (inzien) — het
+    // onboarden gebeurt niet vanuit deze rol; accountbeheer blijft bij de
+    // beheerder. hrm_vrijgave 3 = Poortwachter-mijlpalen vrijgeven/terugsturen.
     bevoegdheden: matrix({
-      personeel: 4, gebruikers: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
+      personeel: 4, gebruikers: 1, dossiers: 1, rapportages: 1, salarisarchief: 3,
+      hrm_vrijgave: 3,
     }),
   },
   {
@@ -406,7 +415,7 @@ export const PRESETS: Preset[] = [
       rapportages: 4, bibliotheek: 2, crm: 4, marketing: 4, social: 4, merk: 3, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, projecten: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
-      goedkeuring: 4, declaraties: 4,
+      goedkeuring: 4, declaraties: 4, hrm_vrijgave: 3,
     }),
   },
   {

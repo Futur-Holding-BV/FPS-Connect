@@ -887,8 +887,10 @@ import type {
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   PoortwachterDossier,
+  PoortwachterKlaarzettenInput,
   PoortwachterMijlpaal,
   PoortwachterMijlpaalInput,
+  PoortwachterTerugsturenInput,
   PortaalAfwijzenInput,
   PortaalAiUitlegInput,
   PortaalHandtekeningInput,
@@ -39143,6 +39145,296 @@ export const usePatchPoortwachterMijlpaal = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatchPoortwachterMijlpaalMutationOptions(options));
+    }
+
+export const getKlaarzettenPoortwachterMijlpaalUrl = (dossierId: number,
+    type: string,) => {
+
+
+
+
+  return `/api/hrm/poortwachter/${dossierId}/mijlpalen/${type}/klaarzetten`
+}
+
+/**
+ * @summary Mijlpaal klaarzetten voor vrijgave (stap 1, personeel niveau 2)
+ */
+export const klaarzettenPoortwachterMijlpaal = async (dossierId: number,
+    type: string,
+    poortwachterKlaarzettenInput?: PoortwachterKlaarzettenInput, options?: RequestInit): Promise<PoortwachterMijlpaal> => {
+
+  return customFetch<PoortwachterMijlpaal>(getKlaarzettenPoortwachterMijlpaalUrl(dossierId,type),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(poortwachterKlaarzettenInput)
+  }
+);}
+
+
+
+
+export const getKlaarzettenPoortwachterMijlpaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data?: BodyType<PoortwachterKlaarzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data?: BodyType<PoortwachterKlaarzettenInput>}, TContext> => {
+
+const mutationKey = ['klaarzettenPoortwachterMijlpaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>, {dossierId: number;type: string;data?: BodyType<PoortwachterKlaarzettenInput>}> = (props) => {
+          const {dossierId,type,data} = props ?? {};
+
+          return  klaarzettenPoortwachterMijlpaal(dossierId,type,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KlaarzettenPoortwachterMijlpaalMutationResult = NonNullable<Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>>
+    export type KlaarzettenPoortwachterMijlpaalMutationBody = BodyType<PoortwachterKlaarzettenInput> | undefined
+    export type KlaarzettenPoortwachterMijlpaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mijlpaal klaarzetten voor vrijgave (stap 1, personeel niveau 2)
+ */
+export const useKlaarzettenPoortwachterMijlpaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data?: BodyType<PoortwachterKlaarzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof klaarzettenPoortwachterMijlpaal>>,
+        TError,
+        {dossierId: number;type: string;data?: BodyType<PoortwachterKlaarzettenInput>},
+        TContext
+      > => {
+      return useMutation(getKlaarzettenPoortwachterMijlpaalMutationOptions(options));
+    }
+
+export const getKlaarzettenOngedaanPoortwachterMijlpaalUrl = (dossierId: number,
+    type: string,) => {
+
+
+
+
+  return `/api/hrm/poortwachter/${dossierId}/mijlpalen/${type}/klaarzetten-ongedaan`
+}
+
+/**
+ * @summary Klaarzetten terugnemen zolang nog niet vrijgegeven
+ */
+export const klaarzettenOngedaanPoortwachterMijlpaal = async (dossierId: number,
+    type: string, options?: RequestInit): Promise<PoortwachterMijlpaal> => {
+
+  return customFetch<PoortwachterMijlpaal>(getKlaarzettenOngedaanPoortwachterMijlpaalUrl(dossierId,type),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getKlaarzettenOngedaanPoortwachterMijlpaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext> => {
+
+const mutationKey = ['klaarzettenOngedaanPoortwachterMijlpaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>, {dossierId: number;type: string}> = (props) => {
+          const {dossierId,type} = props ?? {};
+
+          return  klaarzettenOngedaanPoortwachterMijlpaal(dossierId,type,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KlaarzettenOngedaanPoortwachterMijlpaalMutationResult = NonNullable<Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>>
+
+    export type KlaarzettenOngedaanPoortwachterMijlpaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klaarzetten terugnemen zolang nog niet vrijgegeven
+ */
+export const useKlaarzettenOngedaanPoortwachterMijlpaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof klaarzettenOngedaanPoortwachterMijlpaal>>,
+        TError,
+        {dossierId: number;type: string},
+        TContext
+      > => {
+      return useMutation(getKlaarzettenOngedaanPoortwachterMijlpaalMutationOptions(options));
+    }
+
+export const getVrijgevenPoortwachterMijlpaalUrl = (dossierId: number,
+    type: string,) => {
+
+
+
+
+  return `/api/hrm/poortwachter/${dossierId}/mijlpalen/${type}/vrijgeven`
+}
+
+/**
+ * @summary Klaargezette mijlpaal vrijgeven (stap 2, hrm_vrijgave niveau 3)
+ */
+export const vrijgevenPoortwachterMijlpaal = async (dossierId: number,
+    type: string, options?: RequestInit): Promise<PoortwachterMijlpaal> => {
+
+  return customFetch<PoortwachterMijlpaal>(getVrijgevenPoortwachterMijlpaalUrl(dossierId,type),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVrijgevenPoortwachterMijlpaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext> => {
+
+const mutationKey = ['vrijgevenPoortwachterMijlpaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>, {dossierId: number;type: string}> = (props) => {
+          const {dossierId,type} = props ?? {};
+
+          return  vrijgevenPoortwachterMijlpaal(dossierId,type,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VrijgevenPoortwachterMijlpaalMutationResult = NonNullable<Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>>
+
+    export type VrijgevenPoortwachterMijlpaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klaargezette mijlpaal vrijgeven (stap 2, hrm_vrijgave niveau 3)
+ */
+export const useVrijgevenPoortwachterMijlpaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vrijgevenPoortwachterMijlpaal>>,
+        TError,
+        {dossierId: number;type: string},
+        TContext
+      > => {
+      return useMutation(getVrijgevenPoortwachterMijlpaalMutationOptions(options));
+    }
+
+export const getTerugsturenPoortwachterMijlpaalUrl = (dossierId: number,
+    type: string,) => {
+
+
+
+
+  return `/api/hrm/poortwachter/${dossierId}/mijlpalen/${type}/terugsturen`
+}
+
+/**
+ * @summary Klaargezette mijlpaal met reden terugsturen (hrm_vrijgave niveau 3)
+ */
+export const terugsturenPoortwachterMijlpaal = async (dossierId: number,
+    type: string,
+    poortwachterTerugsturenInput: PoortwachterTerugsturenInput, options?: RequestInit): Promise<PoortwachterMijlpaal> => {
+
+  return customFetch<PoortwachterMijlpaal>(getTerugsturenPoortwachterMijlpaalUrl(dossierId,type),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(poortwachterTerugsturenInput)
+  }
+);}
+
+
+
+
+export const getTerugsturenPoortwachterMijlpaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterTerugsturenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterTerugsturenInput>}, TContext> => {
+
+const mutationKey = ['terugsturenPoortwachterMijlpaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>, {dossierId: number;type: string;data: BodyType<PoortwachterTerugsturenInput>}> = (props) => {
+          const {dossierId,type,data} = props ?? {};
+
+          return  terugsturenPoortwachterMijlpaal(dossierId,type,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TerugsturenPoortwachterMijlpaalMutationResult = NonNullable<Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>>
+    export type TerugsturenPoortwachterMijlpaalMutationBody = BodyType<PoortwachterTerugsturenInput>
+    export type TerugsturenPoortwachterMijlpaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klaargezette mijlpaal met reden terugsturen (hrm_vrijgave niveau 3)
+ */
+export const useTerugsturenPoortwachterMijlpaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterTerugsturenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof terugsturenPoortwachterMijlpaal>>,
+        TError,
+        {dossierId: number;type: string;data: BodyType<PoortwachterTerugsturenInput>},
+        TContext
+      > => {
+      return useMutation(getTerugsturenPoortwachterMijlpaalMutationOptions(options));
     }
 
 export const getDoorzettenNaarGarageUrl = (id: number,) => {

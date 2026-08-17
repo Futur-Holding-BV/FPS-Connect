@@ -49,7 +49,7 @@ import {
 import { ObjectStorageService } from "../lib/objectStorage";
 import { isRedelijkeDatum, ongeldigeDatumvelden } from "../lib/datumSaniteit";
 import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
-import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, isNotNull, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
@@ -5562,9 +5562,10 @@ function mijlpaalStatus(deadlineDatum: string, afgerondOp: Date | null): "afgero
 
 function mapMijlpaalRow(
   rij: typeof poortwachterMijlpalenTable.$inferSelect,
-  bijgewerktDoorNaam: string | null,
+  namen: Map<number, string>,
 ) {
   const def = POORTWACHTER_MIJLPALEN_DEF.find((d) => d.type === rij.type);
+  const naamVan = (id: number | null) => (id != null ? namen.get(id) ?? null : null);
   return {
     id: rij.id,
     dossier_id: rij.dossierId,
@@ -5575,21 +5576,49 @@ function mapMijlpaalRow(
     status: mijlpaalStatus(rij.deadlineDatum, rij.afgerondOp),
     afgerond_op: rij.afgerondOp?.toISOString() ?? null,
     notitie: rij.notitie ?? null,
-    bijgewerkt_door_naam: bijgewerktDoorNaam,
+    bijgewerkt_door_naam: naamVan(rij.bijgewerktDoorId),
+    // RECHTEN_HRM_02 §4 — twee-stapsvrijgave
+    klaargezet_op: rij.klaargezetOp?.toISOString() ?? null,
+    klaargezet_door_naam: naamVan(rij.klaargezetDoorId),
+    vrijgegeven_door_naam: naamVan(rij.vrijgegevenDoorId),
+    teruggestuurd_reden: rij.teruggestuurdReden ?? null,
+    teruggestuurd_op: rij.teruggestuurdOp?.toISOString() ?? null,
+    teruggestuurd_door_naam: naamVan(rij.teruggestuurdDoorId),
   };
+}
+
+async function namenVoorMijlpalen(
+  rijen: (typeof poortwachterMijlpalenTable.$inferSelect)[],
+): Promise<Map<number, string>> {
+  const ids = new Set<number>();
+  for (const r of rijen) {
+    for (const id of [r.bijgewerktDoorId, r.klaargezetDoorId, r.vrijgegevenDoorId, r.teruggestuurdDoorId]) {
+      if (id != null) ids.add(id);
+    }
+  }
+  if (ids.size === 0) return new Map();
+  const rows = await db
+    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+    .from(gebruikersTable)
+    .where(inArray(gebruikersTable.id, [...ids]));
+  return new Map(rows.map((r) => [r.id, r.naam]));
 }
 
 async function haalMijlpalenVoorDossier(dossierId: number) {
   return db
-    .select({ mijlpaal: poortwachterMijlpalenTable, naam: gebruikersTable.naam })
+    .select()
     .from(poortwachterMijlpalenTable)
-    .leftJoin(gebruikersTable, eq(gebruikersTable.id, poortwachterMijlpalenTable.bijgewerktDoorId))
     .where(eq(poortwachterMijlpalenTable.dossierId, dossierId))
     .orderBy(poortwachterMijlpalenTable.deadlineDatum);
 }
 
+async function mapMijlpalen(rijen: (typeof poortwachterMijlpalenTable.$inferSelect)[]) {
+  const namen = await namenVoorMijlpalen(rijen);
+  return rijen.map((r) => mapMijlpaalRow(r, namen));
+}
+
 // GET /poortwachter — overzicht alle dossiers (voor signalering op dashboard)
-router.get("/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
+router.get("/hrm/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
   const dossierRows = await db
     .select({
       dossier: poortwachterDossiersTable,
@@ -5609,7 +5638,7 @@ router.get("/poortwachter", requireBevoegdheid("personeel", 1), async (req, res)
       medewerker_id: d.dossier.medewerkerId,
       medewerker_naam: d.medewerker_naam,
       start_datum: d.start_datum,
-      mijlpalen: mijlpalen.map((m) => mapMijlpaalRow(m.mijlpaal, m.naam ?? null)),
+      mijlpalen: await mapMijlpalen(mijlpalen),
     };
   }));
 
@@ -5617,7 +5646,7 @@ router.get("/poortwachter", requireBevoegdheid("personeel", 1), async (req, res)
 });
 
 // GET /ziekmeldingen/:id/poortwachter — dossier ophalen of aanmaken (idempotent)
-router.get("/ziekmeldingen/:id/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
+router.get("/hrm/ziekmeldingen/:id/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
   const ziekmeldingId = parseInt(String(req.params.id), 10);
   if (isNaN(ziekmeldingId)) return void res.status(400).json({ error: "Ongeldig id" });
 
@@ -5661,46 +5690,197 @@ router.get("/ziekmeldingen/:id/poortwachter", requireBevoegdheid("personeel", 1)
     medewerker_id: dossier.medewerkerId,
     medewerker_naam: medewerker.naam,
     start_datum: ziekmelding.startDatum,
-    mijlpalen: mijlpalen.map((m) => mapMijlpaalRow(m.mijlpaal, m.naam ?? null)),
+    mijlpalen: await mapMijlpalen(mijlpalen),
   });
 });
 
-// PATCH /poortwachter/:dossierId/mijlpalen/:type — mijlpaal afvinken of notitie bijwerken
-router.patch("/poortwachter/:dossierId/mijlpalen/:type", requireBevoegdheid("personeel", 2), async (req, res): Promise<void> => {
-  const dossierId = parseInt(String(req.params.dossierId), 10);
-  if (isNaN(dossierId)) return void res.status(400).json({ error: "Ongeldig dossier-id" });
-  const type = String(req.params.type);
+// ── RECHTEN_HRM_02 §4 — twee-stapsvrijgave ────────────────────────────────────
+// Klaarzetten (personeel:2) en vrijgeven/terugsturen (hrm_vrijgave:3) zijn twee
+// handelingen door twee verschillende mensen. Afgerond = uitsluitend na vrijgave.
 
-  const { afgerond, notitie } = req.body as { afgerond?: boolean; notitie?: string };
-
-  const [bestaand] = await db
+async function haalMijlpaal(dossierId: number, type: string) {
+  const [rij] = await db
     .select()
     .from(poortwachterMijlpalenTable)
     .where(and(eq(poortwachterMijlpalenTable.dossierId, dossierId), eq(poortwachterMijlpalenTable.type, type)));
-  if (!bestaand) return void res.status(404).json({ error: "Mijlpaal niet gevonden" });
+  return rij;
+}
 
-  const gebruikerId: number | null = (req.session as { userId?: number }).userId ?? null;
-  const update: Partial<typeof poortwachterMijlpalenTable.$inferInsert> = {
-    bijgewerktOp: new Date(),
-    bijgewerktDoorId: gebruikerId,
-  };
-  if (afgerond === true && !bestaand.afgerondOp) update.afgerondOp = new Date();
-  if (afgerond === false) update.afgerondOp = null;
-  if (notitie !== undefined) update.notitie = notitie;
-
+// Voert een statusovergang uit als één conditionele UPDATE: `voorwaarde`
+// codeert de verwachte huidige status, zodat twee gelijktijdige verzoeken
+// (bv. dubbel vrijgeven, of vrijgeven vs. klaarzetten-ongedaan) nooit allebei
+// kunnen slagen (TOCTOU). Nul bijgewerkte rijen ⇒ null; de route herleest dan
+// en geeft een gerichte 403/404/409.
+async function schrijfMijlpaalAtomair(
+  dossierId: number,
+  type: string,
+  voorwaarde: ReturnType<typeof and>,
+  update: Partial<typeof poortwachterMijlpalenTable.$inferInsert>,
+) {
   const [bijgewerkt] = await db
     .update(poortwachterMijlpalenTable)
     .set(update)
-    .where(and(eq(poortwachterMijlpalenTable.dossierId, dossierId), eq(poortwachterMijlpalenTable.type, type)))
+    .where(and(
+      eq(poortwachterMijlpalenTable.dossierId, dossierId),
+      eq(poortwachterMijlpalenTable.type, type),
+      voorwaarde,
+    ))
     .returning();
+  if (!bijgewerkt) return null;
+  const namen = await namenVoorMijlpalen([bijgewerkt]);
+  return mapMijlpaalRow(bijgewerkt, namen);
+}
 
-  let naam: string | null = null;
-  if (bijgewerkt.bijgewerktDoorId) {
-    const [g] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, bijgewerkt.bijgewerktDoorId));
-    naam = g?.naam ?? null;
+// Bepaalt na een mislukte conditionele UPDATE de juiste foutrespons op basis
+// van de actuele rij.
+async function pwtConflict(res: { status: (c: number) => { json: (b: unknown) => unknown } }, dossierId: number, type: string): Promise<void> {
+  const actueel = await haalMijlpaal(dossierId, type);
+  if (!actueel) return void res.status(404).json({ error: "Mijlpaal niet gevonden" });
+  if (actueel.afgerondOp) return void res.status(409).json({ error: "Mijlpaal is al vrijgegeven en afgerond" });
+  if (actueel.klaargezetOp) return void res.status(409).json({ error: "Mijlpaal staat al klaar voor vrijgave" });
+  return void res.status(409).json({ error: "Mijlpaal staat niet klaar voor vrijgave" });
+}
+
+function pwtParams(req: { params: Record<string, unknown> }): { dossierId: number; type: string } | null {
+  const dossierId = parseInt(String(req.params.dossierId), 10);
+  if (isNaN(dossierId)) return null;
+  return { dossierId, type: String(req.params.type) };
+}
+
+function pwtUserId(req: { session: unknown }): number | null {
+  const uid = (req.session as { userId?: number }).userId;
+  return typeof uid === "number" ? uid : null;
+}
+
+// PATCH /poortwachter/:dossierId/mijlpalen/:type — notitie bijwerken.
+// Direct afronden kan sinds RECHTEN_HRM_02 niet meer: dat loopt via
+// klaarzetten (personeel:2) en vrijgeven (hrm_vrijgave:3).
+router.patch("/hrm/poortwachter/:dossierId/mijlpalen/:type", requireBevoegdheid("personeel", 2), async (req, res): Promise<void> => {
+  const p = pwtParams(req);
+  if (!p) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+
+  const { afgerond, notitie } = req.body as { afgerond?: boolean; notitie?: string };
+  if (afgerond !== undefined) {
+    return void res.status(422).json({
+      error: "Direct afronden is vervallen: zet de mijlpaal klaar voor vrijgave; iemand met vrijgavebevoegdheid rondt af.",
+    });
   }
+  if (notitie === undefined) return void res.status(400).json({ error: "notitie is verplicht" });
 
-  return void res.json(mapMijlpaalRow(bijgewerkt, naam));
+  const gebruikerId = pwtUserId(req);
+  const bijgewerkt = await schrijfMijlpaalAtomair(p.dossierId, p.type, undefined, {
+    notitie,
+    bijgewerktOp: new Date(),
+    bijgewerktDoorId: gebruikerId,
+  });
+  if (!bijgewerkt) return void res.status(404).json({ error: "Mijlpaal niet gevonden" });
+  return void res.json(bijgewerkt);
+});
+
+// POST .../klaarzetten — stap 1 (personeel:2): invullen en klaarzetten voor vrijgave.
+router.post("/hrm/poortwachter/:dossierId/mijlpalen/:type/klaarzetten", requireBevoegdheid("personeel", 2), async (req, res): Promise<void> => {
+  const p = pwtParams(req);
+  if (!p) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+  const gebruikerId = pwtUserId(req);
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+
+  const { notitie } = req.body as { notitie?: string };
+  const bijgewerkt = await schrijfMijlpaalAtomair(p.dossierId, p.type,
+    and(isNull(poortwachterMijlpalenTable.afgerondOp), isNull(poortwachterMijlpalenTable.klaargezetOp)),
+    {
+      ...(notitie !== undefined ? { notitie } : {}),
+      klaargezetOp: new Date(),
+      klaargezetDoorId: gebruikerId,
+      // Een nieuw klaarzetten na terugsturen wist de oude terugstuurreden.
+      teruggestuurdReden: null,
+      teruggestuurdOp: null,
+      teruggestuurdDoorId: null,
+      bijgewerktOp: new Date(),
+      bijgewerktDoorId: gebruikerId,
+    });
+  if (!bijgewerkt) return void pwtConflict(res, p.dossierId, p.type);
+  return void res.json(bijgewerkt);
+});
+
+// POST .../klaarzetten-ongedaan — stap 1 terugnemen (personeel:2), zolang niet vrijgegeven.
+router.post("/hrm/poortwachter/:dossierId/mijlpalen/:type/klaarzetten-ongedaan", requireBevoegdheid("personeel", 2), async (req, res): Promise<void> => {
+  const p = pwtParams(req);
+  if (!p) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+  const gebruikerId = pwtUserId(req);
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+
+  const bijgewerkt = await schrijfMijlpaalAtomair(p.dossierId, p.type,
+    and(isNull(poortwachterMijlpalenTable.afgerondOp), isNotNull(poortwachterMijlpalenTable.klaargezetOp)),
+    {
+      klaargezetOp: null,
+      klaargezetDoorId: null,
+      bijgewerktOp: new Date(),
+      bijgewerktDoorId: gebruikerId,
+    });
+  if (!bijgewerkt) return void pwtConflict(res, p.dossierId, p.type);
+  return void res.json(bijgewerkt);
+});
+
+// POST .../vrijgeven — stap 2 (hrm_vrijgave:3): pas hierna telt de mijlpaal als
+// afgerond. Vier-ogen: de vrijgever mag niet dezelfde zijn als de klaarzetter.
+router.post("/hrm/poortwachter/:dossierId/mijlpalen/:type/vrijgeven", requireBevoegdheid("hrm_vrijgave", 3), async (req, res): Promise<void> => {
+  const p = pwtParams(req);
+  if (!p) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+  const gebruikerId = pwtUserId(req);
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+
+  // Vier-ogen zit ín de UPDATE-voorwaarde: klaargezet_door_id mag niet de
+  // vrijgever zijn (NULL-veilige check — klaargezet zonder bekende klaarzetter
+  // laten we bewust toe, de klaarzet-route dwingt een userId af).
+  const bijgewerkt = await schrijfMijlpaalAtomair(p.dossierId, p.type,
+    and(
+      isNull(poortwachterMijlpalenTable.afgerondOp),
+      isNotNull(poortwachterMijlpalenTable.klaargezetOp),
+      or(
+        isNull(poortwachterMijlpalenTable.klaargezetDoorId),
+        ne(poortwachterMijlpalenTable.klaargezetDoorId, gebruikerId),
+      ),
+    ),
+    {
+      afgerondOp: new Date(),
+      vrijgegevenDoorId: gebruikerId,
+      bijgewerktOp: new Date(),
+      bijgewerktDoorId: gebruikerId,
+    });
+  if (!bijgewerkt) {
+    const actueel = await haalMijlpaal(p.dossierId, p.type);
+    if (actueel && !actueel.afgerondOp && actueel.klaargezetOp && actueel.klaargezetDoorId === gebruikerId) {
+      return void res.status(403).json({ error: "Vrijgeven moet door iemand anders dan degene die klaarzette (vier-ogenprincipe)." });
+    }
+    return void pwtConflict(res, p.dossierId, p.type);
+  }
+  return void res.json(bijgewerkt);
+});
+
+// POST .../terugsturen — (hrm_vrijgave:3) klaargezette mijlpaal met reden terug
+// naar de klaarzetter; die ziet de reden bij de mijlpaal.
+router.post("/hrm/poortwachter/:dossierId/mijlpalen/:type/terugsturen", requireBevoegdheid("hrm_vrijgave", 3), async (req, res): Promise<void> => {
+  const p = pwtParams(req);
+  if (!p) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+  const gebruikerId = pwtUserId(req);
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+
+  const { reden } = req.body as { reden?: string };
+  if (!reden?.trim()) return void res.status(422).json({ error: "Een reden is verplicht bij terugsturen" });
+
+  const bijgewerkt = await schrijfMijlpaalAtomair(p.dossierId, p.type,
+    and(isNull(poortwachterMijlpalenTable.afgerondOp), isNotNull(poortwachterMijlpalenTable.klaargezetOp)),
+    {
+      // Terug naar de klaarzet-stap; wie klaarzette blijft zichtbaar.
+      klaargezetOp: null,
+      teruggestuurdReden: reden.trim(),
+      teruggestuurdOp: new Date(),
+      teruggestuurdDoorId: gebruikerId,
+      bijgewerktOp: new Date(),
+      bijgewerktDoorId: gebruikerId,
+    });
+  if (!bijgewerkt) return void pwtConflict(res, p.dossierId, p.type);
+  return void res.json(bijgewerkt);
 });
 
 export default router;
