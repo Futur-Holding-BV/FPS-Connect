@@ -2096,6 +2096,7 @@ KOLOM|gebruikers|telefoon|text|YES|
 KOLOM|gebruikers|token_versie|integer|NO|0
 KOLOM|gebruikers|totp_secret|text|YES|
 KOLOM|gebruikers|twee_factor_ingeschakeld|boolean|NO|false
+KOLOM|gebruikers|twee_factor_vrijgesteld|boolean|NO|false
 KOLOM|gebruikers|uitnodiging_geaccepteerd_op|timestamp without time zone|YES|
 KOLOM|gebruikers|uitnodiging_geopend_op|timestamp without time zone|YES|
 KOLOM|gebruikers|uitnodiging_opnieuw_verstuurd_op|timestamp without time zone|YES|

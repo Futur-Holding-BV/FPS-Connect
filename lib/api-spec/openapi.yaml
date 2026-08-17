@@ -34128,7 +34128,7 @@ components:
       properties:
         status:
           type: string
-          enum: [setup_2fa, verify_2fa]
+          enum: [setup_2fa, verify_2fa, ingelogd]
 
     TweeFactorSetup:
       type: object

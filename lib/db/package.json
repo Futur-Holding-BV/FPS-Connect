@@ -16,14 +16,16 @@
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "schema-healthcheck": "node ./scripts/schema-healthcheck.mjs",
     "check-hernoeming": "node ./scripts/check-migratie-hernoeming.mjs",
-    "check-wijziging": "node ./scripts/check-migratie-wijziging.mjs"
+    "check-wijziging": "node ./scripts/check-migratie-wijziging.mjs",
+    "smoketest-account": "node ./scripts/smoketest-account.mjs"
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.1",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.21.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "bcryptjs": "^3.0.2"
   },
   "devDependencies": {
     "@types/node": "catalog:",

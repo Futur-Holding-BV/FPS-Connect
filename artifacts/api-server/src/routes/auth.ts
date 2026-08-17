@@ -255,6 +255,27 @@ router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> 
     delete req.session.pendingTaal;
     delete req.session.pendingActivatieToken;
     verlaagLoginRateTeller(req);
+    // Smoketest-serviceaccount: expliciet vrijgesteld van 2FA (vlag alleen
+    // via lib/db/scripts/smoketest-account.mjs te zetten). Volledige sessie
+    // direct, met dezelfde boekhouding als na een geslaagde 2FA-stap.
+    if (g.tweeFactorVrijgesteld) {
+      req.session.userId = g.id;
+      req.session.rol = g.rol;
+      delete req.session.pendingUserId;
+      await db
+        .update(gebruikersTable)
+        .set({ laatstOnline: new Date() })
+        .where(eq(gebruikersTable.id, g.id));
+      await resetMislukteInlogpogingen(g.id);
+      await legLoginPogingVast({
+        gebruikerId: g.id,
+        email: g.email,
+        ip: verzoekIp(req),
+        userAgent: verzoekUserAgent(req),
+        gelukt: true,
+      });
+      return void res.json({ status: "ingelogd" });
+    }
     if (g.tweeFactorIngeschakeld && g.totpSecret) {
       return void res.json({ status: "verify_2fa" });
     }
@@ -374,6 +395,9 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
       g = rij;
     }
     req.session.userId = pendingId;
+    // Rol in de sessie zetten: de governance-middleware leest req.session.rol
+    // en blokkeert kritieke acties anders ook voor hoofdbeheerders (rol=null).
+    req.session.rol = g!.rol;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
     delete req.session.pendingWachtwoordHash;
@@ -438,6 +462,9 @@ router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<voi
       })
       .where(eq(gebruikersTable.id, g.id));
     req.session.userId = g.id;
+    // Rol in de sessie zetten: de governance-middleware leest req.session.rol
+    // en blokkeert kritieke acties anders ook voor hoofdbeheerders (rol=null).
+    req.session.rol = g.rol;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
     await resetMislukteInlogpogingen(g.id);

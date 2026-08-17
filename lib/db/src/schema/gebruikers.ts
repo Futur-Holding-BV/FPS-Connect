@@ -13,6 +13,10 @@ export const gebruikersTable = pgTable("gebruikers", {
   wachtwoord: text("wachtwoord"),
   totpSecret: text("totp_secret"),
   tweeFactorIngeschakeld: boolean("twee_factor_ingeschakeld").notNull().default(false),
+  // Vrijstelling van verplichte 2FA — uitsluitend voor het smoketest-
+  // serviceaccount (deploy.yml). Alleen te zetten via het beheerscript
+  // lib/db/scripts/smoketest-account.mjs, nooit via UI of API.
+  tweeFactorVrijgesteld: boolean("twee_factor_vrijgesteld").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   isHoofdtester: boolean("is_hoofdtester").notNull().default(false),
@@ -136,7 +140,17 @@ export const wachtwoordResetTokensTable = pgTable(
   (t) => [index("wrt_token_idx").on(t.token)],
 );
 
-export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });
+// Beveiligingsvelden expliciet uitgesloten: dit schema mag nooit als
+// mass-assignment-ingang dienen voor 2FA-status/-vrijstelling, TOTP-secret
+// of vergrendel-/tokenstate. Die velden worden uitsluitend door dedicated
+// flows (2FA-setup, beheerscripts, lockout-logica) geschreven.
+export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({
+  id: true,
+  aangemaaktOp: true,
+  tweeFactorVrijgesteld: true,
+  tweeFactorIngeschakeld: true,
+  totpSecret: true,
+});
 export type InsertGebruiker = z.infer<typeof insertGebruikerSchema>;
 export type Gebruiker = typeof gebruikersTable.$inferSelect;
 export type Profiel = typeof profielenTable.$inferSelect;

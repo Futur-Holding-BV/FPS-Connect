@@ -9,6 +9,8 @@ description: Waarom DELETE /gebouwen/:id (en andere "kritiek"-geclassificeerde a
 
 **Why:** ontdekt bij het bouwen van de e2e-test "nieuw gebouw aanmaken" (juli 2026): de cleanup via `DELETE /api/gebouwen/:id` faalde met 403 ondanks een hoofdbeheerder-sessie. Dit is geen testfout maar een app-beperking.
 
+**Status (17 aug 2026): GEFIXT** — login (2FA-afronding én 2FA-vrijgestelde accounts) zet nu `req.session.rol`; DELETE /gebouwen/:id werkt voor hoofdbeheerder-cookiesessies (smoketest-bewijs 204). Let op reviewer-restpunt: de rol staat 12u gecached in de sessie; degradatie/deactivering trekt lopende sessies niet in.
+
 **How to apply:**
 - E2e-cleanup van aangemaakte entiteiten die onder governance-"kritiek" vallen: verwijder direct via de database (`@workspace/db` import in de spec), niet via de API. Zie `scripts/e2e/web-gebouw-aanmaken.spec.ts`.
 - Wie dit ooit echt fixt: zet de rol bij login in de sessie, of laat governance de rol via de permissieservice/gebruikerslookup bepalen in plaats van `sessie.rol`. Niet "even" de middleware omzeilen.

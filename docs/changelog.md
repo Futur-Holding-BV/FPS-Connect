@@ -1,3 +1,10 @@
+## 2026-08-17 — Smoketest-serviceaccount voor de post-deploy controle
+
+- Nieuw beheerscript `pnpm --filter @workspace/db run smoketest-account` (lib/db/scripts/smoketest-account.mjs): maakt idempotent het vaste smoketest-account `smoketest@fps-brandpreventie.nl` aan (wachtwoord uit omgevingsvariabele `SMOKETEST_PASSWORD`, minimaal 16 tekens — staat nooit in de repo). Draaibaar op de productieserver via de bestaande migrate-container.
+- Nieuwe kolom `gebruikers.twee_factor_vrijgesteld` (migratie 0073): de loginroute geeft een vrijgesteld account direct een volledige sessie (`{status:"ingelogd"}`), omdat de smoketest geen TOTP-stap kan doorlopen. De vlag is uitsluitend via het beheerscript of directe SQL te zetten, nooit via UI of API.
+- Rol in de sessie wordt nu bij élke login gezet (`req.session.rol`): de governance-engine blokkeerde kritieke acties (zoals gebouw verwijderen) anders óók voor hoofdbeheerders omdat de rol in cookie-sessies nooit werd gevuld.
+- Het account krijgt rol hoofdbeheerder (vereist door de governance-engine voor de verwijder-check) met een minimale bevoegdheden-matrix (gebruikers:1, gebouwen:4) als documentatie van wat de smoketest werkelijk gebruikt. Alle 15 smoketest-checks zijn in de ontwikkelomgeving end-to-end bewezen (login 200, lijsten 200, gebouw aanmaken/bijwerken/verwijderen 200/200/204).
+
 ## 2026-08-17 — Werk-inbox-teller ook op hoofdstuknaam Communicatie
 
 - Het rode rondje met het aantal ongelezen werk-inbox-mails is nu ook zichtbaar op de hoofdstuknaam "Communicatie" in de sidebar (net als bij Goedkeuring en Declaraties), zodat je het aantal ziet zonder het hoofdstuk te openen. Het hoofdstukrondje telt ongelezen chatberichten en ongelezen, niet-afgehandelde werk-inbox-mails samen.

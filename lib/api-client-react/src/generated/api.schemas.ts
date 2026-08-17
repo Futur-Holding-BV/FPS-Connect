@@ -4634,6 +4634,7 @@ export type LoginResultaatStatus = typeof LoginResultaatStatus[keyof typeof Logi
 export const LoginResultaatStatus = {
   setup_2fa: 'setup_2fa',
   verify_2fa: 'verify_2fa',
+  ingelogd: 'ingelogd',
 } as const;
 
 export interface LoginResultaat {
@@ -18894,3 +18895,4 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+

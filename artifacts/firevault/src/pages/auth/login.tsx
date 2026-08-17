@@ -194,6 +194,11 @@ export default function LoginPagina() {
         wachtwoord: wachtwoordWaarde,
       });
       setCode("");
+      if (resultaat.status === "ingelogd") {
+        // 2FA-vrijgesteld serviceaccount (smoketest): sessie is al volledig.
+        window.location.assign(import.meta.env.BASE_URL);
+        return;
+      }
       if (resultaat.status === "setup_2fa") {
         const data = await tweeFactorSetup();
         setSetupData(data);
