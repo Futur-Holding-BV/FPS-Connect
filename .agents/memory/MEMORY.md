@@ -154,3 +154,4 @@
 - [Social & Merk modules](marketing-module.md) — social en merk losgekoppeld van crm (social 3/4, merk 1/3); veldprofielen niets; huisstijl-beheer blijft organisatiebeheer.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [MOBIEL_01 responsief patroon](mobiel01-responsief-patroon.md) — onderbalk via --bottom-bar-hoogte (safe-area zit al in de var!), FAB wegschuiven+rusttuck, tabel met stapel-per-breakpoint; dev-banner vertekent metingen.
+- [Deploybewaking adaptief](deploy-bewaking-adaptief.md) — tijdmelding alleen >1,5× mediaan laatste 10 runs + dagcap (marker op VPS, actions:read vereist); typecheck in api-image alleen bij NOODFIX (TYPECHECK_IN_IMAGE).
