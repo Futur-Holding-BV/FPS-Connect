@@ -1,3 +1,7 @@
+## 2026-08-17 — Medewerkerkaart: kopieerbare download-link telefoonapp
+
+- Op elke medewerkerkaart (personeel/detail) staat nu een blok "Telefoonapp" met de publieke installatielink (/app), klikbaar én met kopieerknop (clipboard + prompt-fallback). Zo kan iedereen de download-link direct doorgeven, bv. via WhatsApp.
+
 ## 2026-08-17 — Personeel: zoekfilter, eigen/inleen-scheiding, cruciale datums + sidebar-signalen
 
 - Personeelsoverzicht: zoekveld (naam/functie/werkmaatschappij/e-mail); eigen medewerkers alfabetisch, inleners (dienstverband uitzend/inhuur) alfabetisch onder een scheidingslijn "Inleen".

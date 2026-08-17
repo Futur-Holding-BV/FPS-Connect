@@ -106,8 +106,47 @@ import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
   MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
-  Building2, Star, Sparkles, CheckCircle2,
+  Building2, Star, Sparkles, CheckCircle2, Smartphone, Copy,
 } from "lucide-react";
+
+// Kopieerbare download-link voor de telefoonapp (publieke installatiepagina /app).
+// Op elke medewerkerkaart zichtbaar zodat iedereen de link kan doorgeven.
+function AppDownloadLink() {
+  const { toast } = useToast();
+  const basis = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const link = `${window.location.origin}${basis}/app`;
+  async function kopieer() {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: "Download-link gekopieerd", description: link });
+    } catch {
+      // Fallback (bv. geen clipboard-permissie): selecteerbare prompt
+      window.prompt("Kopieer de download-link:", link);
+    }
+  }
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+        <Smartphone className="h-3.5 w-3.5" /> Telefoonapp
+      </div>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <a href={link} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline truncate" title={link}>
+          {link.replace(/^https?:\/\//, "")}
+        </a>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 px-2 text-xs shrink-0"
+          onClick={kopieer}
+          title="Download-link kopiëren"
+        >
+          <Copy className="h-3 w-3 mr-1" />
+          Kopieer
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 const NIVEAUS = [
   { waarde: "niet_bevoegd", label: "Niet bevoegd" },
@@ -1520,6 +1559,7 @@ export default function MedewerkerDetailPagina() {
             <div className="text-xs font-medium text-muted-foreground">In dienst sinds</div>
             <div className="text-sm">{fmtDatum(medewerker.in_dienst_sinds)}</div>
           </div>
+          <AppDownloadLink />
           {medewerker.uit_dienst_per && (
             <div className="space-y-1.5">
               <div className="text-xs font-medium text-muted-foreground">Uit dienst per</div>
