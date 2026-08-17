@@ -344,3 +344,55 @@
   background-color: hsl(var(--hoofdstuk-actief));
   vertical-align: -0.08em;
 }
+
+/* ── KLEURACCENT_01: hoofdstukkleur doortrekken in het werkscherm ──────────
+   Alles hieronder werkt uitsluitend binnen [data-hoofdstuk] (gezet door de
+   layout wanneer de route een hoofdstuk heeft) en gebruikt --hoofdstuk-actief
+   (schema-afhankelijke tokens uit @workspace/ontwerp). Regels:
+   - primaire actieknoppen behouden hun eigen kleur (worden hier niet geraakt);
+   - waarschuwing/fout/succes winnen altijd: de kaartrand- en pictogramregels
+     staan in @layer base, zodat Tailwind-utilities (@layer utilities, later in
+     de cascade) zoals border-amber-200 of text-destructive altijd voorgaan;
+   - kleur op tekst alleen als merkteken/rand — nooit tekst op een verzadigd
+     gekleurd vlak (WCAG AA, zie ontwerpsysteem);
+   - alles achter @supports color-mix: zonder ondersteuning geen accent,
+     nooit een kapotte kleur. */
+
+/* Actief tabblad: onderstreping in de hoofdstukkleur, tekst blijft de normale
+   voorgrond. Bewust ongelayerd: dit MOET de standaard border-primary-utility
+   van TabsTrigger overschrijven. Geen color-mix nodig. */
+[data-hoofdstuk] [role="tab"][data-state="active"] {
+  border-bottom-color: hsl(var(--hoofdstuk-actief));
+  color: hsl(var(--foreground));
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  [data-hoofdstuk] {
+    /* Zachte randtint en licht vlak: hoofdstukkleur gemengd met de basis. */
+    --hoofdstuk-rand: color-mix(in srgb, hsl(var(--hoofdstuk-actief)) 35%, hsl(var(--border)));
+    --hoofdstuk-vlak: color-mix(in srgb, hsl(var(--hoofdstuk-actief)) 12%, transparent);
+  }
+
+  @layer base {
+    /* Kaarten en panelen: zachte hoofdstuk-tint in de rand. In @layer base
+       zodat expliciete border-utilities (amber/destructive/succes) winnen. */
+    [data-hoofdstuk] [data-kaart] {
+      border-color: var(--hoofdstuk-rand);
+    }
+
+    /* Pictogram in een kaart-/sectiekop kleurt mee met het hoofdstuk; een
+       eigen semantische tekstkleur-utility op het pictogram wint altijd. */
+    [data-hoofdstuk] [data-kaart-titel] > svg,
+    [data-hoofdstuk] [data-sectiekop] > svg {
+      color: hsl(var(--hoofdstuk-actief));
+    }
+  }
+
+  /* Actieve staat van schakelknoppen/segmentkeuzes (Radix data-state="on"):
+     licht hoofdstuk-vlak + randlijn; tekst blijft de normale voorgrond.
+     Bewust ongelayerd: vervangt de neutrale bg-accent-actiefstaat. */
+  [data-hoofdstuk] [data-state="on"]:not([role="tab"]) {
+    background-color: var(--hoofdstuk-vlak);
+    box-shadow: inset 0 0 0 1px var(--hoofdstuk-rand);
+  }
+}
