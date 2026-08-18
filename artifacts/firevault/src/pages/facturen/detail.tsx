@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { GrootboekSelect } from "@/components/grootboek-select";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 // FACTUUR_02 §4 — gesloten afwijsredenlijst (geen vrije tekst)
@@ -1479,7 +1480,11 @@ export default function FactuurDetailPagina() {
               </div>
               <div>
                 <Label>Grootboekrekening</Label>
-                <Input className="mt-1 font-mono" placeholder="4000" value={bewerkVelden["grootboekrekening"] ?? ""} onChange={(e) => bewerkVeld("grootboekrekening", e.target.value)} />
+                <GrootboekSelect
+                  className="mt-1"
+                  value={bewerkVelden["grootboekrekening"] ?? ""}
+                  onChange={(v) => bewerkVeld("grootboekrekening", v ?? "")}
+                />
               </div>
               <div>
                 <Label>Kostenplaats</Label>

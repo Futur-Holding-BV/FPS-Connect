@@ -204,6 +204,9 @@ INDEX|goedkeuring_stappen|goedkeuring_stappen_aanvraag_idx
 INDEX|goedkeuring_stappen|goedkeuring_stappen_pkey
 INDEX|governance_checks|governance_checks_pkey
 INDEX|governance_wachtrij|governance_wachtrij_pkey
+INDEX|grootboekrekeningen|grootboekrekeningen_pkey
+INDEX|grootboekrekeningen|grootboekrekeningen_wg_idx
+INDEX|grootboekrekeningen|grootboekrekeningen_wg_nummer_uniek
 INDEX|helpdesk_tickets|helpdesk_tickets_pkey
 INDEX|hrm_ai_voorstellen|hrm_ai_voorstellen_pkey
 INDEX|hrm_middelen|hrm_middelen_pkey
@@ -2291,6 +2294,15 @@ KOLOM|governance_wachtrij|id|integer|NO|nextval('governance_wachtrij_id_seq'::re
 KOLOM|governance_wachtrij|opmerking|text|YES|
 KOLOM|governance_wachtrij|status|text|NO|'wacht'::text
 KOLOM|governance_wachtrij|vereist_rol|text|NO|
+KOLOM|grootboekrekeningen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|grootboekrekeningen|actief|boolean|NO|true
+KOLOM|grootboekrekeningen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|grootboekrekeningen|bron|text|NO|'import'::text
+KOLOM|grootboekrekeningen|id|integer|NO|nextval('grootboekrekeningen_id_seq'::regclass)
+KOLOM|grootboekrekeningen|nummer|text|NO|
+KOLOM|grootboekrekeningen|omschrijving|text|NO|''::text
+KOLOM|grootboekrekeningen|soort|text|YES|
+KOLOM|grootboekrekeningen|werkgever_id|integer|NO|
 KOLOM|helpdesk_tickets|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|helpdesk_tickets|bericht|text|NO|
 KOLOM|helpdesk_tickets|bijgewerkt_op|timestamp without time zone|NO|now()

@@ -239,6 +239,75 @@ export class AccountViewClient {
   }
 
   /**
+   * Haalt het rekeningschema (grootboekrekeningen) op uit AccountView.
+   *
+   * ADMINISTRATIE_01: dit is een MEETBAAR pad — of de gekoppelde AccountView-
+   * omgeving dit endpoint ondersteunt, verschilt per installatie. Fail-soft:
+   * we verzinnen nooit rekeningen; bij testmodus, ontbrekende configuratie,
+   * een niet-ondersteund endpoint (404/405) of verbindingsfout komt
+   * { beschikbaar: false } terug met de exacte reden + HTTP-status, zodat de
+   * beheerpagina kan melden of de koppeling dit toestaat.
+   */
+  async haalGrootboekrekeningen(): Promise<{
+    beschikbaar: boolean;
+    rekeningen?: Array<{ nummer: string; omschrijving: string; soort: string | null }>;
+    httpStatus?: number;
+    reden?: string;
+  }> {
+    if (this.config.testmodus) {
+      return { beschikbaar: false, reden: "AccountView staat in testmodus — het rekeningschema wordt niet opgehaald." };
+    }
+    if (!this.config.apiEndpoint || !this.config.apiGebruiker || !this.config.apiKey) {
+      return { beschikbaar: false, reden: "AccountView-koppeling is niet volledig geconfigureerd." };
+    }
+    const base = this.config.apiEndpoint.replace(/\/$/, "");
+    const url = `${base}/api/grootboekrekeningen?administratie=${encodeURIComponent(this.config.administratiecode)}`;
+    const credentials = Buffer.from(`${this.config.apiGebruiker}:${this.config.apiKey}`).toString("base64");
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { "Authorization": `Basic ${credentials}`, "Accept": "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!resp.ok) {
+        const reden = resp.status === 404 || resp.status === 405
+          ? `De AccountView-koppeling ondersteunt het rekeningschema-endpoint niet (HTTP ${resp.status}). Gebruik het inlezen van een lijst.`
+          : `AccountView gaf HTTP ${resp.status} terug voor het rekeningschema.`;
+        return { beschikbaar: false, httpStatus: resp.status, reden };
+      }
+      const data = (await resp.json()) as unknown;
+      const lijst = Array.isArray(data)
+        ? data
+        : (data && typeof data === "object"
+          ? ((data as Record<string, unknown>)["Rekeningen"] ?? (data as Record<string, unknown>)["rekeningen"] ?? (data as Record<string, unknown>)["items"])
+          : null);
+      if (!Array.isArray(lijst)) {
+        return { beschikbaar: false, httpStatus: resp.status, reden: "AccountView leverde geen bruikbare rekeninglijst terug." };
+      }
+      const rekeningen: Array<{ nummer: string; omschrijving: string; soort: string | null }> = [];
+      for (const r of lijst) {
+        const rr = r as Record<string, unknown>;
+        const nummer = rr["Nummer"] ?? rr["nummer"] ?? rr["Rekening"] ?? rr["rekening"] ?? rr["AccountId"] ?? rr["code"];
+        const omschrijving = rr["Omschrijving"] ?? rr["omschrijving"] ?? rr["Naam"] ?? rr["naam"] ?? "";
+        const soort = rr["Soort"] ?? rr["soort"] ?? rr["Type"] ?? rr["type"] ?? null;
+        if (nummer != null && String(nummer).trim()) {
+          rekeningen.push({
+            nummer: String(nummer).trim(),
+            omschrijving: String(omschrijving ?? "").trim(),
+            soort: soort == null ? null : String(soort).trim() || null,
+          });
+        }
+      }
+      if (rekeningen.length === 0) {
+        return { beschikbaar: false, httpStatus: resp.status, reden: "AccountView gaf een lege of onleesbare rekeninglijst terug." };
+      }
+      return { beschikbaar: true, httpStatus: resp.status, rekeningen };
+    } catch (err) {
+      return { beschikbaar: false, reden: `Rekeningschema niet opgehaald: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+
+  /**
    * Ping AccountView om te controleren of de configuratie klopt.
    */
   async pingVerbinding(): Promise<{ bereikbaar: boolean; fout?: string }> {

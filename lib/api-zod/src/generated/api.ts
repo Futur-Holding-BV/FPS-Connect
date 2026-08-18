@@ -24513,6 +24513,73 @@ export const UpdateAccountviewInstellingenResponse = zod.object({
 
 
 /**
+ * @summary Rekeningschema (grootboekrekeningen) ophalen
+ */
+export const ListGrootboekrekeningenQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const ListGrootboekrekeningenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "nummer": zod.string(),
+  "omschrijving": zod.string(),
+  "soort": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListGrootboekrekeningenResponse = zod.array(ListGrootboekrekeningenResponseItem)
+
+
+/**
+ * @summary Rekeningschema ophalen uit AccountView (meting + sync)
+ */
+export const SyncGrootboekAccountviewResponse = zod.object({
+  "beschikbaar": zod.boolean(),
+  "http_status": zod.number().nullish(),
+  "reden": zod.string().nullish(),
+  "aantal": zod.number().optional(),
+  "toegevoegd": zod.number().optional(),
+  "bijgewerkt": zod.number().optional(),
+  "gedeactiveerd": zod.number().optional()
+})
+
+
+/**
+ * @summary Rekeningschema inlezen uit een lijst
+ */
+export const ImportGrootboekrekeningenBody = zod.object({
+  "werkgever_id": zod.number(),
+  "regels": zod.string().optional().describe('Eén rekening per regel: nummer;omschrijving;soort'),
+  "rekeningen": zod.array(zod.object({
+  "nummer": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "soort": zod.string().nullish()
+})).optional()
+})
+
+export const ImportGrootboekrekeningenResponse = zod.void()
+
+
+/**
+ * @summary Meting van gebruikte grootboekrekeningnummers versus het schema
+ */
+export const GetGrootboekGebruikResponse = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "schema_aantal": zod.number(),
+  "totaal_nummers_in_gebruik": zod.number(),
+  "niet_in_schema": zod.array(zod.string()).nullish(),
+  "items": zod.array(zod.object({
+  "nummer": zod.string(),
+  "totaal": zod.number(),
+  "bronnen": zod.record(zod.string(), zod.number()),
+  "in_schema": zod.boolean().nullish()
+}))
+})
+
+
+/**
  * @summary Historisch factuurarchief downloaden als Excel
  */
 export const DownloadHistorischeFacturenExcelResponse = zod.unknown()

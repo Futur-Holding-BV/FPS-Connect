@@ -12237,6 +12237,64 @@ export interface SnagstreamUploadUrlResponse {
   object_path: string;
 }
 
+export interface Grootboekrekening {
+  id: number;
+  werkgever_id: number;
+  nummer: string;
+  omschrijving: string;
+  soort?: string | null;
+  actief: boolean;
+  bron: string;
+  bijgewerkt_op?: string;
+}
+
+export interface GrootboekSyncResultaat {
+  beschikbaar: boolean;
+  http_status?: number | null;
+  reden?: string | null;
+  aantal?: number;
+  toegevoegd?: number;
+  bijgewerkt?: number;
+  gedeactiveerd?: number;
+}
+
+export type GrootboekImportInputRekeningenItem = {
+  nummer: string;
+  omschrijving?: string;
+  soort?: string | null;
+};
+
+export interface GrootboekImportInput {
+  werkgever_id: number;
+  /** Eén rekening per regel: nummer;omschrijving;soort */
+  regels?: string;
+  rekeningen?: GrootboekImportInputRekeningenItem[];
+}
+
+export interface GrootboekImportResultaat {
+  aantal: number;
+  toegevoegd: number;
+  bijgewerkt: number;
+  gedeactiveerd: number;
+}
+
+export type GrootboekGebruikItemsItemBronnen = {[key: string]: number};
+
+export type GrootboekGebruikItemsItem = {
+  nummer: string;
+  totaal: number;
+  bronnen: GrootboekGebruikItemsItemBronnen;
+  in_schema?: boolean | null;
+};
+
+export interface GrootboekGebruik {
+  werkgever_id?: number | null;
+  schema_aantal: number;
+  totaal_nummers_in_gebruik: number;
+  niet_in_schema?: string[] | null;
+  items: GrootboekGebruikItemsItem[];
+}
+
 export type AccountviewInstellingenBtwCodes = { [key: string]: unknown } | null;
 
 export type AccountviewInstellingenKostenplaatsen = { [key: string]: unknown } | null;
@@ -18734,6 +18792,10 @@ gebouw_id?: number;
 
 export type OvernemenSnagstreamSnag201 = {
   voorziening_id: number;
+};
+
+export type ListGrootboekrekeningenParams = {
+werkgever_id?: number;
 };
 
 export type ListFacturenParams = {

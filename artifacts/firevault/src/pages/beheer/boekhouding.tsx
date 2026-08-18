@@ -11,7 +11,12 @@ import {
   useCreateProjectMapping,
   useUpdateProjectMapping,
   useDeleteProjectMapping,
+  useListGrootboekrekeningen,
+  useSyncGrootboekAccountview,
+  useImportGrootboekrekeningen,
+  useGetGrootboekGebruik,
 } from "@workspace/api-client-react";
+import { GrootboekSelect } from "@/components/grootboek-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -123,6 +128,9 @@ export default function BoekhoudingBeheer() {
           </TabsTrigger>
           <TabsTrigger value="projecten" className="flex items-center gap-1.5">
             <FolderOpen className="h-3.5 w-3.5" />Project-mapping
+          </TabsTrigger>
+          <TabsTrigger value="rekeningschema" className="flex items-center gap-1.5">
+            <Hash className="h-3.5 w-3.5" />Rekeningschema
           </TabsTrigger>
           <TabsTrigger value="factuurnummers" className="flex items-center gap-1.5">
             <Hash className="h-3.5 w-3.5" />Factuurnummers
@@ -297,11 +305,10 @@ export default function BoekhoudingBeheer() {
                 </div>
                 <div>
                   <Label>Standaard grootboekrekening</Label>
-                  <Input
+                  <GrootboekSelect
                     className="mt-1"
-                    placeholder="4000"
                     value={veld("grootboek_standaard", inst?.grootboek_standaard) as string}
-                    onChange={(e) => setVeld("grootboek_standaard", e.target.value)}
+                    onChange={(v) => setVeld("grootboek_standaard", v ?? "")}
                   />
                 </div>
               </div>
@@ -348,21 +355,19 @@ export default function BoekhoudingBeheer() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Grootboekrekening voorraad</Label>
-                  <Input
-                    className="mt-1 font-mono"
-                    placeholder="3000"
+                  <GrootboekSelect
+                    className="mt-1"
                     value={veld("grootboek_voorraad", inst?.grootboek_voorraad) as string}
-                    onChange={(e) => setVeld("grootboek_voorraad", e.target.value)}
+                    onChange={(v) => setVeld("grootboek_voorraad", v ?? "")}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Debet-rekening bij inkoop (bijv. 3000)</p>
                 </div>
                 <div>
                   <Label>Grootboekrekening inkoopkosten</Label>
-                  <Input
-                    className="mt-1 font-mono"
-                    placeholder="7000"
+                  <GrootboekSelect
+                    className="mt-1"
                     value={veld("grootboek_inkoop_kosten", inst?.grootboek_inkoop_kosten) as string}
-                    onChange={(e) => setVeld("grootboek_inkoop_kosten", e.target.value)}
+                    onChange={(v) => setVeld("grootboek_inkoop_kosten", v ?? "")}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Credit-rekening bij inkoop (bijv. 7000)</p>
                 </div>
@@ -394,6 +399,11 @@ export default function BoekhoudingBeheer() {
           </div>
         </TabsContent>
 
+        {/* Tab: Rekeningschema */}
+        <TabsContent value="rekeningschema" className="mt-4">
+          <RekeningschemaTab werkgeverId={inst?.werkgever_id ?? null} />
+        </TabsContent>
+
         {/* Tab: Relatie-mapping */}
         <TabsContent value="relaties" className="mt-4">
           <RelateMappingTab />
@@ -409,6 +419,200 @@ export default function BoekhoudingBeheer() {
           <FactuurnummerTellersTab />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── Tab: Rekeningschema (ADMINISTRATIE_01) ────────────────────────────────────
+// Rekeningschema per werkmaatschappij: ophalen uit AccountView (meting: de
+// pagina meldt exact of de koppeling dat toestaat) of een lijst inlezen.
+// Daaronder de gebruiksmeting: welke nummers zijn in gebruik en welke staan
+// niet in het schema (de aangeleerde typefouten).
+function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
+  const queryClient = useQueryClient();
+  const invalideer = () => {
+    queryClient.invalidateQueries({ queryKey: ["grootboekrekeningen"] });
+    queryClient.invalidateQueries({ queryKey: ["grootboek-gebruik"] });
+  };
+  const { data: rekeningen } = useListGrootboekrekeningen(
+    werkgeverId != null ? { werkgever_id: werkgeverId } : undefined,
+    { query: { queryKey: ["grootboekrekeningen", werkgeverId ?? "alle"] } },
+  );
+  const { data: gebruik } = useGetGrootboekGebruik({ query: { queryKey: ["grootboek-gebruik"] } });
+  const syncMut = useSyncGrootboekAccountview({ mutation: { onSuccess: invalideer } });
+  const importMut = useImportGrootboekrekeningen({ mutation: { onSuccess: invalideer } });
+  const [importTekst, setImportTekst] = useState("");
+  const [importFout, setImportFout] = useState<string | null>(null);
+  const syncResultaat = syncMut.data as { beschikbaar?: boolean; reden?: string | null; http_status?: number | null; aantal?: number } | undefined;
+
+  async function lijstInlezen() {
+    setImportFout(null);
+    if (werkgeverId == null) {
+      setImportFout("Stel eerst bij Instellingen in voor welke werkmaatschappij deze administratie boekt.");
+      return;
+    }
+    try {
+      await importMut.mutateAsync({ data: { werkgever_id: werkgeverId, regels: importTekst } });
+      setImportTekst("");
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } };
+      setImportFout(e.response?.data?.error ?? String(err));
+    }
+  }
+
+  const actieveRekeningen = (rekeningen ?? []).filter((r) => r.actief);
+  const typefouten = (gebruik?.items ?? []).filter((i) => i.in_schema === false);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Rekeningschema vullen</CardTitle>
+          <CardDescription>
+            Grootboekrekening is overal een keuzelijst uit dit schema — vrije tekst is vervallen.
+            Haal het schema op uit AccountView, of lees een lijst in (één rekening per regel: nummer;omschrijving;soort).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
+              {syncMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wifi className="h-4 w-4 mr-2" />}
+              Ophalen uit AccountView
+            </Button>
+            {syncResultaat && (
+              syncResultaat.beschikbaar
+                ? <span className="flex items-center gap-1 text-sm text-green-700">
+                    <CheckCircle2 className="h-4 w-4" /> {syncResultaat.aantal} rekeningen opgehaald uit AccountView
+                  </span>
+                : <span className="flex items-start gap-1 text-sm text-amber-700">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>De koppeling staat dit (nu) niet toe{syncResultaat.http_status ? ` (HTTP ${syncResultaat.http_status})` : ""}: {syncResultaat.reden ?? "onbekende reden"} Lees hieronder een lijst in.</span>
+                  </span>
+            )}
+          </div>
+          <Separator />
+          <div>
+            <Label>Lijst inlezen{werkgeverId == null ? " (koppel eerst een werkmaatschappij bij Instellingen)" : ""}</Label>
+            <textarea
+              className="mt-1 w-full min-h-32 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+              placeholder={"4000;Inkoop materialen;kosten\n4100;Uitbesteed werk;kosten\n8000;Omzet montage;opbrengsten"}
+              value={importTekst}
+              onChange={(e) => setImportTekst(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3">
+              <Button onClick={lijstInlezen} disabled={importMut.isPending || !importTekst.trim()}>
+                {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Lijst inlezen
+              </Button>
+              {importMut.isSuccess && !importFout && (
+                <span className="flex items-center gap-1 text-sm text-green-700">
+                  <CheckCircle2 className="h-4 w-4" /> Ingelezen
+                </span>
+              )}
+              {importFout && <span className="text-sm text-red-600">{importFout}</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Schema ({actieveRekeningen.length} rekeningen)</CardTitle>
+          <CardDescription>Nummer, omschrijving en soort per rekening. Rekeningen die uit de bron verdwijnen worden gedeactiveerd, niet gewist.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {actieveRekeningen.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nog geen rekeningschema ingelezen.</p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto border rounded-md">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr className="border-b text-xs text-muted-foreground">
+                    <th className="px-3 py-2 text-left font-medium">Nummer</th>
+                    <th className="px-3 py-2 text-left font-medium">Omschrijving</th>
+                    <th className="px-3 py-2 text-left font-medium">Soort</th>
+                    <th className="px-3 py-2 text-left font-medium">Bron</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actieveRekeningen.map((r) => (
+                    <tr key={r.id} className="border-b last:border-0">
+                      <td className="px-3 py-1.5 font-mono">{r.nummer}</td>
+                      <td className="px-3 py-1.5">{r.omschrijving || "—"}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground">{r.soort ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{r.bron}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Gebruikte rekeningnummers</CardTitle>
+          <CardDescription>
+            Alle nummers die nu in Connect in gebruik zijn (facturen, factuurregels, leveranciers, aangeleerde
+            categorisaties en instellingen) — en welke daarvan niet in het schema voorkomen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {gebruik == null ? (
+            <p className="text-sm text-muted-foreground">Laden…</p>
+          ) : (
+            <>
+              {gebruik.schema_aantal === 0 ? (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  Er is nog geen schema ingelezen — typefouten kunnen pas worden aangewezen zodra het schema gevuld is.
+                </div>
+              ) : typefouten.length === 0 ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  Alle gebruikte nummers staan in het schema.
+                </div>
+              ) : (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{typefouten.length} nummer{typefouten.length !== 1 ? "s" : ""} in gebruik dat niet in het schema staat: <span className="font-mono">{typefouten.map((t) => t.nummer).join(", ")}</span></span>
+                </div>
+              )}
+              <div className="max-h-72 overflow-y-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-50">
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="px-3 py-2 text-left font-medium">Nummer</th>
+                      <th className="px-3 py-2 text-right font-medium">Aantal</th>
+                      <th className="px-3 py-2 text-left font-medium">Waar</th>
+                      <th className="px-3 py-2 text-left font-medium">In schema</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(gebruik.items ?? []).map((i) => (
+                      <tr key={i.nummer} className="border-b last:border-0">
+                        <td className="px-3 py-1.5 font-mono">{i.nummer}</td>
+                        <td className="px-3 py-1.5 text-right">{i.totaal}</td>
+                        <td className="px-3 py-1.5 text-xs text-muted-foreground">
+                          {Object.entries(i.bronnen ?? {}).map(([b, n]) => `${b} (${n})`).join(", ")}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          {i.in_schema == null
+                            ? <span className="text-xs text-muted-foreground">n.v.t.</span>
+                            : i.in_schema
+                              ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              : <span className="flex items-center gap-1 text-xs text-red-700"><AlertTriangle className="h-3.5 w-3.5" /> nee</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

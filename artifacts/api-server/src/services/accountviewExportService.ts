@@ -18,6 +18,8 @@ import { controleerFactuurAdministratieBv } from "./factuurWerkmaatschappij";
 import {
   db,
   facturenTable,
+  factuurRegelsTable,
+  grootboekrekeningenTable,
   accountviewInstellingenTable,
   accountviewExportLogsTable,
   gebruikersTable,
@@ -30,6 +32,41 @@ import { checkVereistGoedkeuring, haalOpenAanvraag } from "./goedkeuring-engine"
 import { stuurAccountviewBoekingMisluktMail } from "./email";
 
 type Factuur = typeof facturenTable.$inferSelect;
+
+/**
+ * Rekeningschema-poort (ADMINISTRATIE_01): een factuur kan niet geboekt worden
+ * op een grootboekrekening die niet in het schema van die werkmaatschappij
+ * staat. De poort dwingt af zodra het schema van de BV gevuld is; zolang er
+ * nog geen schema is ingelezen (installatie-overgang) laat hij door — de
+ * gebruik-meting op de beheerpagina maakt dat gat zichtbaar.
+ * Gecontroleerd worden de effectieve koprekening (factuur of standaard) én
+ * alle regelrekeningen van de factuur.
+ */
+export async function controleerGrootboekSchema(
+  werkgeverId: number,
+  factuurId: number,
+  effectieveKoprekening: string | null | undefined,
+): Promise<string | null> {
+  const schema = await db
+    .select({ nummer: grootboekrekeningenTable.nummer })
+    .from(grootboekrekeningenTable)
+    .where(and(eq(grootboekrekeningenTable.werkgeverId, werkgeverId), eq(grootboekrekeningenTable.actief, true)));
+  if (schema.length === 0) return null; // nog geen schema ingelezen voor deze BV
+  const toegestaan = new Set(schema.map((s) => s.nummer));
+  const fout: string[] = [];
+  const kop = (effectieveKoprekening ?? "").trim();
+  if (kop && !toegestaan.has(kop)) fout.push(kop);
+  const regels = await db
+    .select({ n: factuurRegelsTable.grootboekrekening })
+    .from(factuurRegelsTable)
+    .where(eq(factuurRegelsTable.factuurId, factuurId));
+  for (const r of regels) {
+    const n = (r.n ?? "").trim();
+    if (n && !toegestaan.has(n) && !fout.includes(n)) fout.push(n);
+  }
+  if (fout.length === 0) return null;
+  return `Grootboekrekening ${fout.join(", ")} staat niet in het rekeningschema van deze werkmaatschappij. Kies een rekening uit het schema, of werk het schema bij via Beheer → Boekhouding.`;
+}
 
 // Zelfde afleiding als in routes/facturen.ts — klein en stabiel genoeg om hier
 // te herhalen zonder een circulaire import te introduceren.
@@ -202,6 +239,25 @@ export async function exporteerFactuurNaarAccountView(
     return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: her.bvFout };
   }
   const versInst = her.inst;
+
+  // Rekeningschema-poort (ADMINISTRATIE_01): boeken buiten het schema van de
+  // gekoppelde BV wordt geweigerd — ná de claim, op de verse snapshot.
+  if (versInst.werkgeverId != null) {
+    const schemaFout = await controleerGrootboekSchema(
+      versInst.werkgeverId,
+      factuurId,
+      factuur.grootboekrekening ?? versInst.grootboekStandaard,
+    );
+    if (schemaFout) {
+      // Claim teruggeven volgens het bestaande patroon: status error + reden.
+      await db.update(facturenTable).set({
+        accountviewStatus: "error",
+        accountviewFout: schemaFout,
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, factuurId));
+      return { ok: false, httpStatus: 422, fout: "Grootboekrekening niet in rekeningschema", detail: schemaFout };
+    }
+  }
 
   const client = maakAccountViewClient(versInst);
   const dagboek = factuur.dagboek ?? (factuur.type === "verkoop" ? versInst.dagboekVerkoop : versInst.dagboekInkoop) ?? "INK";

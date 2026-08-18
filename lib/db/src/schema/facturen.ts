@@ -564,3 +564,23 @@ export const factuurImportLogTable = pgTable("factuur_import_log", {
 }));
 
 export type FactuurImportLog = typeof factuurImportLogTable.$inferSelect;
+
+// ── Rekeningschema per werkmaatschappij (ADMINISTRATIE_01) ─────────────────────
+// Grootboekrekening was overal vrije tekst; dit schema is de enige keuzelijst.
+// Gevuld via AccountView-sync of een ingelezen lijst. De exportservice weigert
+// boeken op een nummer buiten het schema zodra het schema van die BV gevuld is.
+export const grootboekrekeningenTable = pgTable("grootboekrekeningen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull(), // FK werkgevers in migratie 0088
+  nummer: text("nummer").notNull(),
+  omschrijving: text("omschrijving").notNull().default(""),
+  soort: text("soort"),                       // bijv. kosten | opbrengsten | balans
+  actief: boolean("actief").notNull().default(true),
+  bron: text("bron").notNull().default("import"), // accountview | import
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekNummerPerWerkgever: unique("grootboekrekeningen_wg_nummer_uniek").on(t.werkgeverId, t.nummer),
+}));
+
+export type Grootboekrekening = typeof grootboekrekeningenTable.$inferSelect;

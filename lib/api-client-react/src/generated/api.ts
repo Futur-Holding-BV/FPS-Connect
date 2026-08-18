@@ -465,6 +465,11 @@ import type {
   GoedkeuringBeleidsregel,
   GoedkeuringBeleidsregelInput,
   GoedkeuringDashboardItem,
+  GrootboekGebruik,
+  GrootboekImportInput,
+  GrootboekImportResultaat,
+  GrootboekSyncResultaat,
+  Grootboekrekening,
   HallOfFameEntry,
   HandelAanvraagSignaalAf200,
   HealthStatus,
@@ -595,6 +600,7 @@ import type {
   ListGoedkeuringAanvragenParams,
   ListGoedkeuringBeleidsregelsParams,
   ListGoedkeuringDashboardParams,
+  ListGrootboekrekeningenParams,
   ListInboxItemsParams,
   ListInkoopoverzichtParams,
   ListInspectiesParams,
@@ -69132,6 +69138,307 @@ export const useUpdateAccountviewInstellingen = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateAccountviewInstellingenMutationOptions(options));
     }
+
+export const getListGrootboekrekeningenUrl = (params?: ListGrootboekrekeningenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/grootboekrekeningen?${stringifiedParams}` : `/api/grootboekrekeningen`
+}
+
+/**
+ * @summary Rekeningschema (grootboekrekeningen) ophalen
+ */
+export const listGrootboekrekeningen = async (params?: ListGrootboekrekeningenParams, options?: RequestInit): Promise<Grootboekrekening[]> => {
+
+  return customFetch<Grootboekrekening[]>(getListGrootboekrekeningenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGrootboekrekeningenQueryKey = (params?: ListGrootboekrekeningenParams,) => {
+    return [
+    `/api/grootboekrekeningen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGrootboekrekeningenQueryOptions = <TData = Awaited<ReturnType<typeof listGrootboekrekeningen>>, TError = ErrorType<unknown>>(params?: ListGrootboekrekeningenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGrootboekrekeningen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGrootboekrekeningenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGrootboekrekeningen>>> = ({ signal }) => listGrootboekrekeningen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGrootboekrekeningen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGrootboekrekeningenQueryResult = NonNullable<Awaited<ReturnType<typeof listGrootboekrekeningen>>>
+export type ListGrootboekrekeningenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Rekeningschema (grootboekrekeningen) ophalen
+ */
+
+export function useListGrootboekrekeningen<TData = Awaited<ReturnType<typeof listGrootboekrekeningen>>, TError = ErrorType<unknown>>(
+ params?: ListGrootboekrekeningenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGrootboekrekeningen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGrootboekrekeningenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSyncGrootboekAccountviewUrl = () => {
+
+
+
+
+  return `/api/grootboekrekeningen/sync-accountview`
+}
+
+/**
+ * @summary Rekeningschema ophalen uit AccountView (meting + sync)
+ */
+export const syncGrootboekAccountview = async ( options?: RequestInit): Promise<GrootboekSyncResultaat> => {
+
+  return customFetch<GrootboekSyncResultaat>(getSyncGrootboekAccountviewUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncGrootboekAccountviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncGrootboekAccountview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncGrootboekAccountview>>, TError,void, TContext> => {
+
+const mutationKey = ['syncGrootboekAccountview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncGrootboekAccountview>>, void> = () => {
+
+
+          return  syncGrootboekAccountview(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncGrootboekAccountviewMutationResult = NonNullable<Awaited<ReturnType<typeof syncGrootboekAccountview>>>
+
+    export type SyncGrootboekAccountviewMutationError = ErrorType<void>
+
+    /**
+ * @summary Rekeningschema ophalen uit AccountView (meting + sync)
+ */
+export const useSyncGrootboekAccountview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncGrootboekAccountview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncGrootboekAccountview>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncGrootboekAccountviewMutationOptions(options));
+    }
+
+export const getImportGrootboekrekeningenUrl = () => {
+
+
+
+
+  return `/api/grootboekrekeningen/import`
+}
+
+/**
+ * @summary Rekeningschema inlezen uit een lijst
+ */
+export const importGrootboekrekeningen = async (grootboekImportInput: GrootboekImportInput, options?: RequestInit): Promise<GrootboekImportResultaat> => {
+
+  return customFetch<GrootboekImportResultaat>(getImportGrootboekrekeningenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(grootboekImportInput)
+  }
+);}
+
+
+
+
+export const getImportGrootboekrekeningenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importGrootboekrekeningen>>, TError,{data: BodyType<GrootboekImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importGrootboekrekeningen>>, TError,{data: BodyType<GrootboekImportInput>}, TContext> => {
+
+const mutationKey = ['importGrootboekrekeningen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importGrootboekrekeningen>>, {data: BodyType<GrootboekImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importGrootboekrekeningen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportGrootboekrekeningenMutationResult = NonNullable<Awaited<ReturnType<typeof importGrootboekrekeningen>>>
+    export type ImportGrootboekrekeningenMutationBody = BodyType<GrootboekImportInput>
+    export type ImportGrootboekrekeningenMutationError = ErrorType<void>
+
+    /**
+ * @summary Rekeningschema inlezen uit een lijst
+ */
+export const useImportGrootboekrekeningen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importGrootboekrekeningen>>, TError,{data: BodyType<GrootboekImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importGrootboekrekeningen>>,
+        TError,
+        {data: BodyType<GrootboekImportInput>},
+        TContext
+      > => {
+      return useMutation(getImportGrootboekrekeningenMutationOptions(options));
+    }
+
+export const getGetGrootboekGebruikUrl = () => {
+
+
+
+
+  return `/api/grootboekrekeningen/gebruik`
+}
+
+/**
+ * @summary Meting van gebruikte grootboekrekeningnummers versus het schema
+ */
+export const getGrootboekGebruik = async ( options?: RequestInit): Promise<GrootboekGebruik> => {
+
+  return customFetch<GrootboekGebruik>(getGetGrootboekGebruikUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGrootboekGebruikQueryKey = () => {
+    return [
+    `/api/grootboekrekeningen/gebruik`
+    ] as const;
+    }
+
+
+export const getGetGrootboekGebruikQueryOptions = <TData = Awaited<ReturnType<typeof getGrootboekGebruik>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGrootboekGebruik>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGrootboekGebruikQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGrootboekGebruik>>> = ({ signal }) => getGrootboekGebruik({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGrootboekGebruik>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGrootboekGebruikQueryResult = NonNullable<Awaited<ReturnType<typeof getGrootboekGebruik>>>
+export type GetGrootboekGebruikQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Meting van gebruikte grootboekrekeningnummers versus het schema
+ */
+
+export function useGetGrootboekGebruik<TData = Awaited<ReturnType<typeof getGrootboekGebruik>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGrootboekGebruik>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGrootboekGebruikQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getDownloadHistorischeFacturenExcelUrl = () => {
 

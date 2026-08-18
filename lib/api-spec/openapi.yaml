@@ -20118,6 +20118,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/AccountviewInstellingen"
 
+  /grootboekrekeningen:
+    get:
+      operationId: listGrootboekrekeningen
+      summary: Rekeningschema (grootboekrekeningen) ophalen
+      tags: [Instellingen]
+      parameters:
+        - name: werkgever_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lijst van grootboekrekeningen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Grootboekrekening"
+
+  /grootboekrekeningen/sync-accountview:
+    post:
+      operationId: syncGrootboekAccountview
+      summary: Rekeningschema ophalen uit AccountView (meting + sync)
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Meet- en syncresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekSyncResultaat"
+        "422":
+          description: Koppeling heeft nog geen werkmaatschappij
+
+  /grootboekrekeningen/import:
+    post:
+      operationId: importGrootboekrekeningen
+      summary: Rekeningschema inlezen uit een lijst
+      tags: [Instellingen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrootboekImportInput"
+      responses:
+        "201":
+          description: Ingelezen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekImportResultaat"
+        "422":
+          description: Geen bruikbare rekeningen in de aanlevering
+
+  /grootboekrekeningen/gebruik:
+    get:
+      operationId: getGrootboekGebruik
+      summary: Meting van gebruikte grootboekrekeningnummers versus het schema
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Gebruiksmeting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekGebruik"
+
   /facturen/historisch-archief/excel:
     get:
       operationId: downloadHistorischeFacturenExcel
@@ -45791,6 +45860,119 @@ components:
           type: string
         object_path:
           type: string
+
+    Grootboekrekening:
+      type: object
+      required: [id, werkgever_id, nummer, omschrijving, actief, bron]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: integer
+        nummer:
+          type: string
+        omschrijving:
+          type: string
+        soort:
+          type: string
+          nullable: true
+        actief:
+          type: boolean
+        bron:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    GrootboekSyncResultaat:
+      type: object
+      required: [beschikbaar]
+      properties:
+        beschikbaar:
+          type: boolean
+        http_status:
+          type: integer
+          nullable: true
+        reden:
+          type: string
+          nullable: true
+        aantal:
+          type: integer
+        toegevoegd:
+          type: integer
+        bijgewerkt:
+          type: integer
+        gedeactiveerd:
+          type: integer
+
+    GrootboekImportInput:
+      type: object
+      required: [werkgever_id]
+      properties:
+        werkgever_id:
+          type: integer
+        regels:
+          type: string
+          description: "Eén rekening per regel: nummer;omschrijving;soort"
+        rekeningen:
+          type: array
+          items:
+            type: object
+            required: [nummer]
+            properties:
+              nummer:
+                type: string
+              omschrijving:
+                type: string
+              soort:
+                type: string
+                nullable: true
+
+    GrootboekImportResultaat:
+      type: object
+      required: [aantal, toegevoegd, bijgewerkt, gedeactiveerd]
+      properties:
+        aantal:
+          type: integer
+        toegevoegd:
+          type: integer
+        bijgewerkt:
+          type: integer
+        gedeactiveerd:
+          type: integer
+
+    GrootboekGebruik:
+      type: object
+      required: [schema_aantal, totaal_nummers_in_gebruik, items]
+      properties:
+        werkgever_id:
+          type: integer
+          nullable: true
+        schema_aantal:
+          type: integer
+        totaal_nummers_in_gebruik:
+          type: integer
+        niet_in_schema:
+          type: array
+          nullable: true
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [nummer, totaal, bronnen]
+            properties:
+              nummer:
+                type: string
+              totaal:
+                type: integer
+              bronnen:
+                type: object
+                additionalProperties:
+                  type: integer
+              in_schema:
+                type: boolean
+                nullable: true
 
     AccountviewInstellingen:
       type: object

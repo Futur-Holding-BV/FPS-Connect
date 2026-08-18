@@ -36,7 +36,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
-import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending, hercontroleerBvNaClaim } from "../services/accountviewExportService";
+import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending, hercontroleerBvNaClaim, controleerGrootboekSchema } from "../services/accountviewExportService";
 import crypto from "crypto";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import {
@@ -2247,6 +2247,18 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
   if (her.bvFout !== null) { res.status(422).json({ error: "Werkmaatschappij-controle geweigerd", detail: her.bvFout }); return; }
   const versInst = her.inst;
 
+  // Rekeningschema-poort (ADMINISTRATIE_01): ook de forceer-herexport mag
+  // nooit buiten het schema van de gekoppelde BV boeken.
+  if (versInst.werkgeverId != null) {
+    const schemaFout = await controleerGrootboekSchema(versInst.werkgeverId, id, factuur.grootboekrekening ?? versInst.grootboekStandaard);
+    if (schemaFout) {
+      await db.update(facturenTable).set({ accountviewStatus: "error", accountviewFout: schemaFout, bijgewerktOp: new Date() })
+        .where(eq(facturenTable.id, id));
+      res.status(422).json({ error: "Grootboekrekening niet in rekeningschema", detail: schemaFout });
+      return;
+    }
+  }
+
   const client = maakAccountViewClient(versInst);
 
   const boekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
@@ -2396,6 +2408,18 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
       continue;
     }
     const versInst = her.inst;
+
+    // Rekeningschema-poort (ADMINISTRATIE_01): batch-export mag evenmin
+    // buiten het schema van de gekoppelde BV boeken.
+    if (versInst.werkgeverId != null) {
+      const schemaFout = await controleerGrootboekSchema(versInst.werkgeverId, fid, factuur.grootboekrekening ?? versInst.grootboekStandaard);
+      if (schemaFout) {
+        await db.update(facturenTable).set({ accountviewStatus: "error", accountviewFout: schemaFout, bijgewerktOp: new Date() })
+          .where(eq(facturenTable.id, fid));
+        resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: schemaFout, testmodus: versInst.testmodus });
+        continue;
+      }
+    }
     const client = maakAccountViewClient(versInst);
 
     const batchBoekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";

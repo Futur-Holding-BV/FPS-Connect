@@ -25,6 +25,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { GrootboekSelect } from "@/components/grootboek-select";
 import { Link } from "wouter";
 
 export default function LeverancierDetailPagina() {
@@ -642,7 +643,10 @@ function BewerkModal({
               </div>
               <div className="space-y-1">
                 <Label>Standaard grootboekrekening</Label>
-                <Input {...veld("grootboekrekening")} placeholder="bijv. 4100" className="font-mono" />
+                <GrootboekSelect
+                  value={form["grootboekrekening"] ?? ""}
+                  onChange={(v) => setForm((p) => ({ ...p, grootboekrekening: v ?? "" }))}
+                />
               </div>
               <div className="space-y-1">
                 <Label>Standaard kostenplaats</Label>
