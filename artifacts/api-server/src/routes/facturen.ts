@@ -887,7 +887,10 @@ router.post("/facturen/:id/bevestig-inkoop", requireBevoegdheid("financieel", 2)
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.status !== "wacht_op_inkoper") { res.status(409).json({ error: "Deze factuur wacht niet op bevestiging van de inkoper." }); return; }
   const userId = sessionUserId(req);
-  if (factuur.inkoperId && userId !== factuur.inkoperId) {
+  // Fail-closed: zonder toegewezen inkoper of zonder ingelogde gebruiker wordt
+  // geweigerd, net als bij beoordelen-medewerker. Zo kan een factuur in
+  // wacht_op_inkoper nooit door willekeurig financieel-personeel bevestigd worden.
+  if (!factuur.inkoperId || !userId || userId !== factuur.inkoperId) {
     res.status(403).json({ error: "Alleen de toegewezen inkoper kan deze bestelling bevestigen." });
     return;
   }
