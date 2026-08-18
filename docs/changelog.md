@@ -1,3 +1,9 @@
+## 2026-08-19 — KETEN_01 hermeting proces 1–5 (meting, geen reparatie)
+
+- Nieuwe gescopeerde meetspec `scripts/e2e/web-keten-1-5.spec.ts` (aanvraag → opname → calculatie → offerte → akkoord, zonder vangnet-opdracht); resultaten in `scripts/e2e-resultaten/keten01-run2/`, rapport in `docs/metingen/KETEN_01_hermeting-1-5.md`.
+- Uitkomst: proces 1–3 doorlopen; proces 4 vastgelopen op NIEUWE breuk (offertelijst-filter op calculatie ontbreekt in het héle contract: hook verstuurt `calculatie_id` nooit én GET /offertes kent geen queryparameter → procesbalk denkt dat er al een offerte is en biedt "Maak offerte" niet aan); proces 5 gevolgschade + bekend "schijnbaar gelukt"-gat B1 (portaal-ondertekenen verstuurt nooit, code onveranderd geverifieerd).
+- Meetscript-correctie: fase-1-spec sloeg de processtap "Intern akkoord" over; hermeting-spec klikt die nu eerst.
+
 ## 2026-08-18 — FINANCIEEL_KETEN_01: financiële keten gemeten en gerepareerd
 
 - Vier nieuwe werkbak-voeders: geblokkeerde facturen, mislukte AccountView-exports, verkoopfacturen over de vervaldatum, en "project afgesloten maar OHW nog open" — geld dat op een mens wacht staat nu in de werkbak i.p.v. verstopt in schermen.
