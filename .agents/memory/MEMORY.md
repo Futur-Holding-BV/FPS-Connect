@@ -154,4 +154,5 @@
 - [Voorraadtelling bevroren](voorraadtelling.md) — vastgestelde telling leest alléén bevroren kolommen; vaststellen=één tx met correctiemutaties (referentie voorraadtelling); mutatie na vaststellen=409.
 - [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
 - [Medewerker-create twee routes + conceptfase](medewerker-create-routes.md) — UI gebruikt POST /medewerkers (óók concept zonder startdatum); side-effects fail-safe overslaan + PATCH-pad met duplicate-guard + tx; uren 0..48.
+- [Maandtoolbox popup & bouw-scope](toolbox-maandopdracht.md) — verplichte toolbox alleen bouw-functies; afronden=atomaire upsert (uniek 0086); dialog-scoped "Sluiten" in e2e; lange e2e via workflow.
 - [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — push blokkeert bij >300 regels diff per bestand; bewuste herschrijving = [grote-wijziging] in commit-boodschap.
