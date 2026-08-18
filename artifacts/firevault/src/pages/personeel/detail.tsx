@@ -1224,6 +1224,7 @@ export default function MedewerkerDetailPagina() {
       dienstverband: medewerker.dienstverband,
       bedrijf_uitzendbureau: medewerker.bedrijf_uitzendbureau ?? undefined,
       uitzendbureau_id: medewerker.uitzendbureau_id ?? null,
+      zzp_bedrijfsnaam: medewerker.zzp_bedrijfsnaam ?? undefined,
       inleen_einddatum: medewerker.inleen_einddatum ?? undefined,
       contracturen_per_week: medewerker.contracturen_per_week ?? null,
       in_dienst_sinds: medewerker.in_dienst_sinds ?? undefined,
@@ -1701,7 +1702,8 @@ export default function MedewerkerDetailPagina() {
               {DIENSTVERBAND_LABELS[medewerker.dienstverband] ?? medewerker.dienstverband}
               {medewerker.contracturen_per_week != null ? ` — ${medewerker.contracturen_per_week} uur/week` : ""}
               {medewerker.deeltijd_percentage != null ? ` (${medewerker.deeltijd_percentage}%)` : ""}
-              {medewerker.bedrijf_uitzendbureau ? ` (${medewerker.bedrijf_uitzendbureau})` : ""}
+              {medewerker.zzp_bedrijfsnaam ? ` — ${medewerker.zzp_bedrijfsnaam}` : ""}
+              {medewerker.bedrijf_uitzendbureau ? (medewerker.dienstverband === "zzp" ? ` (ingehuurd door ${medewerker.bedrijf_uitzendbureau})` : ` (${medewerker.bedrijf_uitzendbureau})`) : ""}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -2783,15 +2785,26 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>
-                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined, uitzendbureau_id: (v === "uitzend" || v === "inhuur") ? profielForm.uitzendbureau_id : null })}>
+                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined, uitzendbureau_id: (v === "uitzend" || v === "inhuur" || v === "zzp") ? profielForm.uitzendbureau_id : null, zzp_bedrijfsnaam: v === "zzp" ? (profielForm.zzp_bedrijfsnaam ?? "") : undefined })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              {(profielForm.dienstverband === "uitzend" || profielForm.dienstverband === "inhuur") && (
+              {profielForm.dienstverband === "zzp" && (
+                <div className="space-y-1.5">
+                  <Label>Eigen bedrijfsnaam (ZZP)</Label>
+                  <Input
+                    value={profielForm.zzp_bedrijfsnaam ?? ""}
+                    onChange={(e) => setProfielForm({ ...profielForm, zzp_bedrijfsnaam: e.target.value || undefined })}
+                    placeholder="bijv. Jansen Installatietechniek"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Handelsnaam van de eigen onderneming van de ZZP'er (KvK).</p>
+                </div>
+              )}
+              {(profielForm.dienstverband === "uitzend" || profielForm.dienstverband === "inhuur" || profielForm.dienstverband === "zzp") && (
                 <UitzendbureauSelect
                   idPrefix="mdw-uitzendbureau"
-                  label={profielForm.dienstverband === "uitzend" ? "Uitzendbureau" : "Bedrijf / onderaannemer"}
+                  label={profielForm.dienstverband === "uitzend" ? "Uitzendbureau" : profielForm.dienstverband === "zzp" ? "Ingehuurd door (organisatie)" : "Bedrijf / onderaannemer"}
                   uitzendbureauId={profielForm.uitzendbureau_id}
                   tekst={profielForm.bedrijf_uitzendbureau ?? ""}
                   onChange={({ uitzendbureau_id, tekst }) =>

@@ -2945,6 +2945,7 @@ KOLOM|medewerkers|werkgever_id|integer|YES|
 KOLOM|medewerkers|werkmaatschappij|text|NO|'FPS Brandpreventie'::text
 KOLOM|medewerkers|wizard_voortgang|jsonb|YES|
 KOLOM|medewerkers|woonplaats|text|YES|
+KOLOM|medewerkers|zzp_bedrijfsnaam|text|YES|
 KOLOM|migratie_0025_leverancier_rapport|crm_naam|text|YES|
 KOLOM|migratie_0025_leverancier_rapport|factuur_id|integer|NO|
 KOLOM|migratie_0025_leverancier_rapport|gemigreerd_op|timestamp without time zone|NO|now()

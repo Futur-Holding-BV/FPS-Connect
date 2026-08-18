@@ -152,6 +152,8 @@ interface VastForm {
 interface ZzpForm {
   naam: string;
   bedrijfsnaam: string;
+  ingehuurd_door_id: number | null;
+  ingehuurd_door_tekst: string;
   kvk: string;
   btw: string;
   functie_id: number | null;
@@ -187,6 +189,8 @@ const LEEG_VAST: VastForm = {
 const LEEG_ZZP: ZzpForm = {
   naam: "",
   bedrijfsnaam: "",
+  ingehuurd_door_id: null,
+  ingehuurd_door_tekst: "",
   kvk: "",
   btw: "",
   functie_id: null,
@@ -1000,15 +1004,45 @@ function VastFormulier({
     setMedewerkerDraftId(resumeId);
     setHuidigStap((wizardStatus as WizardStatus).huidig_stap ?? 1);
     const data = ((wizardStatus as WizardStatus).wizard_voortgang as Record<string, unknown> | null) ?? {};
-    const vd = (data.voortgang_data as Partial<VastForm> | null) ?? {};
-    if (Object.keys(vd).length > 0) {
-      setForm((f) => ({ ...f, ...vd }));
+    // De server bewaart de voortgang per stap onder `stap_N` en de gezagheb-
+    // bende positie in `_huidig_stap`. Herstel dáárvandaan: wie teruggaat en
+    // op een eerdere stap opnieuw bewaart, mag geen verouderde latere snapshot
+    // teruggespeeld krijgen. Terugval: dichtstbijzijnde niet-lege stap ≤ de
+    // huidige, dan de hoogste niet-lege stap, dan het buitenste niveau
+    // (pre-stap-concepten).
+    const huidig = (wizardStatus as WizardStatus).huidig_stap ?? 1;
+    let bron: Record<string, unknown> = data;
+    const isGevuld = (e: unknown): e is Record<string, unknown> =>
+      !!e && typeof e === "object" && Object.keys(e as object).length > 0;
+    const stapNummers = Object.keys(data)
+      .filter((k) => /^stap_\d+$/.test(k))
+      .map((k) => Number(k.slice(5)))
+      .filter((n) => isGevuld(data[`stap_${n}`]));
+    const kandidaat =
+      stapNummers.includes(huidig) ? huidig
+      : stapNummers.filter((n) => n < huidig).sort((a, b) => b - a)[0]
+        ?? stapNummers.sort((a, b) => b - a)[0];
+    if (kandidaat !== undefined) {
+      bron = data[`stap_${kandidaat}`] as Record<string, unknown>;
     }
-    const restoredTaken = data.onboardingTaken as Record<string, boolean> | null;
+    // Nieuw formaat: `form`; legacy: `voortgang_data` binnen de stap. Sommige
+    // oude concepten zijn dubbel genest (stap_N.voortgang_data.voortgang_data,
+    // met cvExtra e.d. in de tussenwrapper) — dan één laag extra afpellen.
+    let vd = ((bron.form ?? bron.voortgang_data) as Record<string, unknown> | null) ?? {};
+    if (vd && typeof vd.voortgang_data === "object" && vd.voortgang_data !== null) {
+      bron = vd;
+      vd = vd.voortgang_data as Record<string, unknown>;
+    }
+    if (Object.keys(vd).length > 0) {
+      setForm((f) => ({ ...f, ...(vd as Partial<VastForm>) }));
+    }
+    const restoredCvExtra = bron.cvExtra as CvExtraVelden | null;
+    if (restoredCvExtra && Object.keys(restoredCvExtra).length > 0) setCvExtra((e) => ({ ...e, ...restoredCvExtra }));
+    const restoredTaken = bron.onboardingTaken as Record<string, boolean> | null;
     if (restoredTaken) setOnboardingTaken(restoredTaken);
-    const restoredDeadlines = data.onboardingDeadlines as Record<string, string> | null;
+    const restoredDeadlines = bron.onboardingDeadlines as Record<string, string> | null;
     if (restoredDeadlines) setOnboardingDeadlines(restoredDeadlines);
-    const restoredMiddelen = data.geselecteerdeMiddelen as string[] | null;
+    const restoredMiddelen = bron.geselecteerdeMiddelen as string[] | null;
     if (restoredMiddelen) setGeselecteerdeMiddelen(restoredMiddelen);
   }, [wizardStatus, resumeId, medewerkerDraftId]);
 
@@ -1064,6 +1098,19 @@ function VastFormulier({
     }
   }
 
+  // Eén nesting: de server hangt dit object zelf onder `stap_N`.
+  function bouwVoortgangData(): Record<string, unknown> {
+    return { form: { ...form }, cvExtra, geselecteerdeMiddelen, onboardingTaken, onboardingDeadlines };
+  }
+
+  function meldOpslagFout() {
+    toast({
+      title: "Tussentijds opslaan mislukt",
+      description: "Uw voortgang is mogelijk niet bewaard. Controleer de verbinding en probeer de volgende stap opnieuw.",
+      variant: "destructive",
+    });
+  }
+
   async function gaVolgende() {
     if (huidigStap === 2 && !form.naam.trim()) {
       toast({ title: "Naam is verplicht voor de volgende stap", variant: "destructive" });
@@ -1090,7 +1137,11 @@ function VastFormulier({
       try {
         const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
         setMedewerkerDraftId(concept.id);
-        const r = await slaVoortgangOp.mutateAsync({ id: concept.id, data: { stap: 3, medewerker_status: "concept" } });
+        // Ook bij de eerste stap-overgang meteen de formulierdata bewaren.
+        const r = await slaVoortgangOp.mutateAsync({
+          id: concept.id,
+          data: { stap: 3, medewerker_status: "concept", voortgang_data: bouwVoortgangData() },
+        });
         if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
@@ -1101,16 +1152,17 @@ function VastFormulier({
           });
           return;
         }
-        // Andere fouten zijn niet fataal: wizard loopt door zonder server-side persistentie
+        // Niet fataal (wizard loopt door), maar wel zichtbaar melden.
+        meldOpslagFout();
       }
-    } else if (medewerkerDraftId && huidigStap > 2) {
+    } else if (medewerkerDraftId && huidigStap >= 2) {
       const volgende = Math.min(huidigStap + 1, TOTAAL_STAPPEN);
       try {
         const r = await slaVoortgangOp.mutateAsync({
           id: medewerkerDraftId,
           data: {
             stap: volgende,
-            voortgang_data: { voortgang_data: { ...form }, cvExtra, geselecteerdeMiddelen, onboardingTaken, onboardingDeadlines } as unknown as Record<string, unknown>,
+            voortgang_data: bouwVoortgangData(),
             ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
           },
         });
@@ -1120,6 +1172,8 @@ function VastFormulier({
           toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
           return;
         }
+        // Niet fataal (wizard loopt door), maar wel zichtbaar melden.
+        meldOpslagFout();
       }
     }
     setHuidigStap((s) => Math.min(s + 1, TOTAAL_STAPPEN));
@@ -2209,7 +2263,10 @@ function ZzpFormulier({
         functie_id: form.functie_id ?? undefined,
         werkmaatschappij: form.werkmaatschappij,
         dienstverband: "zzp",
-        bedrijf_uitzendbureau: form.bedrijfsnaam.trim() || undefined,
+        // Eigen onderneming van de ZZP'er apart; bureau-veld = inhurende partij.
+        zzp_bedrijfsnaam: form.bedrijfsnaam.trim() || undefined,
+        uitzendbureau_id: form.ingehuurd_door_id,
+        bedrijf_uitzendbureau: form.ingehuurd_door_tekst.trim() || undefined,
         in_dienst_sinds: form.start_datum || undefined,
         uit_dienst_per: form.eind_datum || undefined,
       };
@@ -2260,6 +2317,15 @@ function ZzpFormulier({
           <Input placeholder="bijv. Jansen Installatietechniek" value={form.bedrijfsnaam} onChange={(e) => setForm({ ...form, bedrijfsnaam: e.target.value })} />
           <p className="text-xs text-muted-foreground">Handelsnaam zoals ingeschreven bij de Kamer van Koophandel.</p>
         </div>
+
+        <UitzendbureauSelect
+          idPrefix="zzp-ingehuurd-door"
+          label="Ingehuurd door (organisatie)"
+          uitzendbureauId={form.ingehuurd_door_id}
+          tekst={form.ingehuurd_door_tekst}
+          onChange={({ uitzendbureau_id, tekst }) =>
+            setForm({ ...form, ingehuurd_door_id: uitzendbureau_id, ingehuurd_door_tekst: tekst })}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">

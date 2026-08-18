@@ -105,6 +105,11 @@ export interface Medewerker {
      */
   uitzendbureau_naam?: string | null;
   /**
+     * Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP'er. Bij dienstverband zzp verwijst uitzendbureau_id naar de inhurende partij.
+     * @nullable
+     */
+  zzp_bedrijfsnaam?: string | null;
+  /**
      * Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
      * @nullable
      */

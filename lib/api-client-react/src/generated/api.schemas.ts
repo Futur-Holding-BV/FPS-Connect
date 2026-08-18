@@ -6181,6 +6181,11 @@ export interface Medewerker {
      */
   uitzendbureau_naam?: string | null;
   /**
+     * Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP'er. Bij dienstverband zzp verwijst uitzendbureau_id naar de inhurende partij.
+     * @nullable
+     */
+  zzp_bedrijfsnaam?: string | null;
+  /**
      * Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
      * @nullable
      */
@@ -6232,10 +6237,15 @@ export interface MedewerkerInput {
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;
   /**
-     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+     * Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau, de inlener of (bij zzp) de inhurende partij.
      * @nullable
      */
   uitzendbureau_id?: number | null;
+  /**
+     * Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP'er; los van de inhurende partij.
+     * @nullable
+     */
+  zzp_bedrijfsnaam?: string | null;
   /** Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur". */
   inleen_einddatum?: string;
   /** Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO). */
@@ -19049,4 +19059,3 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
-

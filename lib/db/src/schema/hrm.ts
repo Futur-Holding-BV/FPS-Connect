@@ -147,6 +147,10 @@ export const medewerkersTable = pgTable("medewerkers", {
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
   // Verwijzing naar de organisatie in crm_klanten (type uitzendbureau/inlener).
   uitzendbureauId: integer("uitzendbureau_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
+  // Eigen bedrijfsnaam van een ZZP'er (KvK-handelsnaam). Bij dienstverband zzp
+  // is bedrijfUitzendbureau/uitzendbureauId voortaan de ínhurende partij; de
+  // eigen onderneming van de ZZP'er staat hier apart.
+  zzpBedrijfsnaam: text("zzp_bedrijfsnaam"),
   // Inleen-einddatum: de datum waarop de inleen- of inhuurperiode formeel afloopt.
   // Alleen relevant bij dienstverband "uitzend" of "inhuur". Wordt meegenomen in
   // GET /contract-bewaking/cruciale-datums zodat de kaart een rode datum kan tonen.

@@ -36232,6 +36232,9 @@ components:
         uitzendbureau_naam:
           type: ["string", "null"]
           description: Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).
+        zzp_bedrijfsnaam:
+          type: ["string", "null"]
+          description: Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP'er. Bij dienstverband zzp verwijst uitzendbureau_id naar de inhurende partij.
         inleen_einddatum:
           type: ["string", "null"]
           description: Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
@@ -36310,7 +36313,10 @@ components:
           type: string
         uitzendbureau_id:
           type: ["integer", "null"]
-          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+          description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau, de inlener of (bij zzp) de inhurende partij.
+        zzp_bedrijfsnaam:
+          type: ["string", "null"]
+          description: Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP'er; los van de inhurende partij.
         inleen_einddatum:
           type: string
           description: Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".

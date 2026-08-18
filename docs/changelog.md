@@ -327,6 +327,11 @@ De veiliggestelde tak `vorm01-fase6-wip` is verzoend met main. Analyse toonde da
 - **Fix:** Mijn auto had geen `bezigLaden`-guard, waardoor een koude deep-link de token-herstel-race verloor (→ /login → /menu). Guard toegevoegd conform het vaste patroon.
 - **Bewijs (gevulde gegevens, eis René):** `scripts/src/vorm01-testdata.ts` zaait nu ook een testvoertuig (VORM-01-B, chauffeur = e2e-account); `vorm01-schermafdrukken.ts` neemt het scherm mijn-auto mee. Schermafdrukken in docs/metingen/vorm01/na: mijn-werk toont 7 VORM01-spots in 2 gebouwen met statusmerken en onderregels; mijn-auto toont het gekoppelde voertuig met kenteken, km-stand en meldingen-sectie. Typecheck monteur-app + scripts groen.
 
+
+## 2026-08-18 — Onboarding: wizard onthoudt gegevens weer + ZZP'er "ingehuurd door" instelbaar
+
+- **Wizard-persistentie hersteld** (`onboarden.tsx`): de tussentijdse opslag schreef de formulierdata dubbel genest weg (client wikkelde in `voortgang_data`, server nogmaals onder `stap_N`) terwijl het hervatten op het buitenste niveau zocht — functie/werkmaatschappij en andere velden kwamen dus nooit terug. Opslag is nu één nesting (`stap_N.form`), het hervatten leest de meest recente stap (met terugval voor oude dubbel-geneste én pre-stap-concepten), cvExtra wordt ook hersteld, de formulierdata wordt al bij de éérste stap-overgang bewaard, en een mislukte tussentijdse opslag geeft nu een zichtbare melding i.p.v. stil te falen.
+- **ZZP "ingehuurd door"**: nieuwe kolom `medewerkers.zzp_bedrijfsnaam` (migratie 0079) bewaart de eigen KvK-handelsnaam van de ZZP'er apart; het bureau-veld (`uitzendbureau_id` → crm_klanten + naam-cache) is bij dienstverband zzp voortaan de ínhurende partij. ZZP-onboarding heeft een "Ingehuurd door (organisatie)"-koppeling gekregen en misbruikt het bureau-tekstveld niet meer; het medewerker-bewerkscherm toont bij zzp nu ook de eigen bedrijfsnaam plus de inhuurder-koppeling. Bewijs: `scripts/src/verificatie-onboarding-1091.ts` (17 checks groen, incl. legacy-concept leesbaarheid en Fernando-scenario).
 ## 2026-08-18 — Contractbewaking zichtbaar: kritieke-datumskaart op personeelsprofiel + badge in sidebar
 
 
