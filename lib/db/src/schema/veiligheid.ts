@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, jsonb, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { gebouwenTable } from "./gebouwen";
 import { medewerkersTable } from "./hrm";
@@ -80,7 +80,10 @@ export const toolboxMaandStatusTable = pgTable("toolbox_maand_status", {
   vraag: text("vraag"),
   voltooIdOp: timestamp("voltooid_op"),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // Eén statusrij per (opdracht, gebruiker) — migratie 0086 (taak #1139).
+  uniqueIndex("toolbox_maand_status_opdracht_gebruiker_uniek").on(t.opdrachtId, t.gebruikerId),
+]);
 
 export type ToolboxMaandOpdracht = typeof toolboxMaandOpdrachtenTable.$inferSelect;
 export type ToolboxMaandStatus = typeof toolboxMaandStatusTable.$inferSelect;

@@ -14,7 +14,7 @@ import * as Updates from "expo-updates";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Modal, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Modal, Platform, Pressable, Text, View } from "react-native";
 import { isUitvoerendVeld } from "@/lib/buitendienst";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,6 +35,7 @@ import {
   useGetAiDrempelStatus,
   type AiDrempelStatus,
 } from "@workspace/api-client-react";
+import { ToolboxDetailModal } from "@/components/ToolboxDetailModal";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 
@@ -125,9 +126,12 @@ function LmraBewaker() {
 function ToolboxPopupBewaker() {
   const c = useColors();
   const { token } = useAuth();
-  const router = useRouter();
   const { data: opdracht, refetch } = useGetMijnToolboxMaandopdracht();
   const uitstellenMut = useUitstellenToolboxMaandopdracht();
+  // Terwijl de gebruiker de toolbox daadwerkelijk doet, mag de blokkerende
+  // popup NIET over het scherm liggen — anders is de afrondflow onbereikbaar
+  // (deadlock, gemeld 18-08-2026 met screenshot).
+  const [doetToolbox, setDoetToolbox] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -135,7 +139,30 @@ function ToolboxPopupBewaker() {
     return () => clearInterval(timer);
   }, [token, refetch]);
 
-  if (!token || !opdracht || (opdracht as any).voltooid === true) return null;
+  if (!token || !opdracht) return null;
+
+  const toolboxId = (opdracht as any).toolbox_id as number | undefined;
+
+  // Toolbox-flow open: toon de detailmodal in plaats van de blokkade. Deze
+  // branch staat vóór de voltooid-check, anders unmount een geslaagde
+  // afronding (refetch → voltooid=true) de modal midden in het succes-scherm.
+  if (doetToolbox && toolboxId != null) {
+    return (
+      <ToolboxDetailModal
+        toolboxId={toolboxId}
+        visible
+        onSluit={() => {
+          setDoetToolbox(false);
+          // Bij een geslaagde afronding heeft de server de maandopdracht
+          // voltooid — verse status ophalen zodat de popup verdwijnt.
+          void refetch();
+        }}
+        onAfgerond={() => void refetch()}
+      />
+    );
+  }
+
+  if ((opdracht as any).voltooid === true) return null;
 
   const kanUitstellen = (opdracht as any).kan_uitstellen === true;
   const toolboxTitel = (opdracht as any).toolbox_titel ?? "Verplichte toolbox";
@@ -151,7 +178,8 @@ function ToolboxPopupBewaker() {
       await uitstellenMut.mutateAsync({ id: opdrachtId });
       void refetch();
     } catch {
-      // stil falen — popup blijft zichtbaar
+      Alert.alert("Uitstellen mislukt", "Het uitstel kon niet worden geregistreerd. Probeer het opnieuw of rond de toolbox nu af.");
+      void refetch();
     }
   }
 
@@ -198,8 +226,9 @@ function ToolboxPopupBewaker() {
               : "De uitstelperiode is verstreken. Voltooi deze toolbox om door te gaan."}
           </Text>
           <Pressable
-            onPress={() => router.push("/toolboxen")}
-            style={{ backgroundColor: c.warning, borderRadius: c.radius, padding: ruimte.m + 2, alignItems: "center", marginBottom: kanUitstellen ? ruimte.s + 2 : 0 }}
+            onPress={() => setDoetToolbox(true)}
+            disabled={toolboxId == null}
+            style={{ backgroundColor: c.warning, borderRadius: c.radius, padding: ruimte.m + 2, alignItems: "center", marginBottom: kanUitstellen ? ruimte.s + 2 : 0, opacity: toolboxId == null ? 0.6 : 1 }}
           >
             <Text style={{ color: c.warningForeground, fontWeight: "700", fontSize: 16 }}>Toolbox nu doen</Text>
           </Pressable>

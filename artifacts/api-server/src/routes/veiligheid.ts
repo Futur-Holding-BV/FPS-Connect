@@ -36,6 +36,38 @@ const lezenVeiligheid = requireBevoegdheid("toolbox", 1);
 const schrijvenVeiligheid = requireBevoegdheid("toolbox", 3);
 const verwijderenVeiligheid = requireBevoegdheid("toolbox", 4);
 
+// De maandelijkse verplichte toolbox geldt voor íédereen (de maandopdracht-
+// routes staan op requireAuth). Wie geen toolbox-modulerecht heeft moet de
+// verplichte toolbox tóch kunnen openen en afronden, anders zit die gebruiker
+// vast achter de blokkerende popup (taak #1139). Deze middleware laat de
+// specifieke toolbox van de huidige maandopdracht door zonder modulerecht.
+const lezenVeiligheidOfMaandtoolbox: typeof lezenVeiligheid = async (req, res, next) => {
+  const toolboxId = Number(req.params.id);
+  if (req.session.userId && Number.isInteger(toolboxId) && (await isBouwGebruiker(req.session.userId))) {
+    try {
+      const nu = new Date();
+      const [opdracht] = await db
+        .select({ id: toolboxMaandOpdrachtenTable.id })
+        .from(toolboxMaandOpdrachtenTable)
+        .where(
+          and(
+            eq(toolboxMaandOpdrachtenTable.toolboxId, toolboxId),
+            eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()),
+            eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1),
+          ),
+        )
+        .limit(1);
+      if (opdracht) {
+        next();
+        return;
+      }
+    } catch {
+      // Val terug op de normale bevoegdheidscheck.
+    }
+  }
+  return lezenVeiligheid(req, res, next);
+};
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function addMonths(date: Date, months: number): Date {
@@ -246,7 +278,7 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, res): Promise<void> => {
+veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheidOfMaandtoolbox, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const userId = req.session.userId!;
@@ -518,7 +550,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
 
 // ── AFRONDEN ──────────────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, async (req, res): Promise<void> => {
+veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheidOfMaandtoolbox, async (req, res): Promise<void> => {
   try {
     const toolboxId = parseInt(String(req.params.id));
     const userId = req.session.userId!;
@@ -572,9 +604,41 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, asy
       })
       .returning();
 
+    const geslaagd = score >= Math.ceil(Math.max(maxScore, 1) * (toolbox.minScore / 100));
+
+    // Maandopdracht-koppeling: is deze toolbox de verplichte maandtoolbox van
+    // de huidige maand, dan telt een geslaagde afronding ook als voltooiing van
+    // de maandopdracht. Anders blijft de verplichte popup staan terwijl de
+    // gebruiker de toolbox aantoonbaar heeft gedaan (deadlock, gemeld 18-08-2026).
+    if (geslaagd) {
+      try {
+        const [maandOpdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
+          .where(and(
+            eq(toolboxMaandOpdrachtenTable.toolboxId, toolboxId),
+            eq(toolboxMaandOpdrachtenTable.jaar, now.getFullYear()),
+            eq(toolboxMaandOpdrachtenTable.maand, now.getMonth() + 1),
+          ))
+          .limit(1);
+        if (maandOpdracht) {
+          // Atomaire upsert (unieke index op opdracht_id+gebruiker_id,
+          // migratie 0086): voltooid_op alleen zetten als die nog leeg is.
+          await db.insert(toolboxMaandStatusTable)
+            .values({ opdrachtId: maandOpdracht.id, gebruikerId: userId, voltooIdOp: now, bijgewerktOp: now })
+            .onConflictDoUpdate({
+              target: [toolboxMaandStatusTable.opdrachtId, toolboxMaandStatusTable.gebruikerId],
+              set: { voltooIdOp: now, bijgewerktOp: now },
+              setWhere: sql`${toolboxMaandStatusTable.voltooIdOp} IS NULL`,
+            });
+        }
+      } catch (koppelErr) {
+        // Afronding zelf is geregistreerd; koppeling mag de respons niet breken.
+        req.log.error(koppelErr, "POST /veiligheid/toolboxen/:id/afronden — maandopdracht-koppeling");
+      }
+    }
+
     res.status(201).json({
       ...mapAfronding({ ...afronding, minScorePct: toolbox.minScore / 100 } as unknown as Record<string, unknown>),
-      geslaagd: score >= Math.ceil(Math.max(maxScore, 1) * (toolbox.minScore / 100)),
+      geslaagd,
     });
   } catch (err) {
     req.log.error(err, "POST /veiligheid/toolboxen/:id/afronden");
@@ -1832,10 +1896,35 @@ async function haalToolboxOp(toolboxId: number) {
   return tb ?? null;
 }
 
+// De maandtoolbox is alleen verplicht voor mensen die op de bouw komen
+// (besluit René, 18-08-2026): monteurs, timmermannen, uitvoerders,
+// werkvoorbereiders en projectleiders. Kantoorfuncties krijgen géén
+// maandopdracht-popup.
+const BOUW_FUNCTIES = [
+  "Monteur",
+  "Onderhoudsmonteur",
+  "Timmerman",
+  "Uitvoerder",
+  "Werkvoorbereider",
+  "Projectleider",
+];
+
+async function isBouwGebruiker(userId: number): Promise<boolean> {
+  const [g] = await db
+    .select({ functietitels: gebruikersTable.functietitels })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId))
+    .limit(1);
+  const titels = g?.functietitels ?? [];
+  return titels.some((t) => BOUW_FUNCTIES.includes(t));
+}
+
 veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId;
     if (!userId) return void res.status(401).json({ error: "Niet ingelogd" });
+    // Alleen bouw-functies krijgen de verplichte maandtoolbox.
+    if (!(await isBouwGebruiker(userId))) return void res.json(null);
     const nu = new Date();
     const [opdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
       .where(and(eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()), eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1)))
