@@ -901,6 +901,7 @@ export * from './listMijnActiviteitenParams';
 export * from './listMijnVerlofCorrectiesParams';
 export * from './listModCalculatiesParams';
 export * from './listMuisGebeurtenissenParams';
+export * from './listOffertesParams';
 export * from './listOnderhandenWerkParams';
 export * from './listOnderhoudParams';
 export * from './listOnderhoudscontractenParams';

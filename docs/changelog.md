@@ -1,3 +1,12 @@
+## 2026-08-19 — KETEN_01 breuken gerepareerd: keten 1–5 volledig groen (voor de generale)
+
+- Breuk 1 (offertefilter): GET `/api/offertes` kent nu de queryparameter `calculatie_id` en de calculatiepagina gebruikt de getypte hook (geen `as any`-cast meer) — de procesbalk biedt "Maak offerte" weer correct aan.
+- Portaal-crash gerepareerd: bij een offerte zonder `geldigheid_dagen` of datum gooide de "Geldig tot"-berekening `new Date(NaN).toISOString()` → RangeError → hele klantportaal op de foutpagina. Nu valt de weergave terug op "x dagen".
+- Akkoordgrond A hersteld: het portaal zet historisch `status="geaccepteerd"` bij ondertekening, maar de opdracht-route keek alleen naar `status="ondertekend"` — een via het portaal getekende offerte leverde een opdracht zónder akkoord op. De route erkent nu ook `portaal_status="ondertekend"` (echte handtekening in `offerte_handtekeningen`).
+- Portaal-ondertekenen faalt niet meer stil: als de handtekening niet uit het canvas komt, ziet de klant nu een duidelijke foutmelding i.p.v. een knop die "niets doet".
+- Verzendformulier: het e-mailadres-veld stond onnodig achter het AI-skeleton (AI vult dat veld nooit) — trage AI blokkeerde het hele formulier; veld wordt nu altijd getoond.
+- Meetspec KETEN_01 verbeterd: klikte per ongeluk de status-doorzetknop "Verzenden" i.p.v. de wizard-stap; wacht nu op de procesknop bij trage load; stale ingebakken diagnose-tekst verwijderd; portaal-consolefouten worden gelogd. Bewijs: `web-keten-1-5.spec.ts` — proces 1b t/m 5 allemaal DOORLOPEN, opdracht met `akkoord_grond=ondertekening`.
+
 ## 2026-08-19 — UITROL_BEWAKING_01: productie bewaakt zichzelf op achterlopen
 
 - Fase 0 (meting): 373 deploy-runs in augustus — 237 geslaagd, 74 gefaald, 60 geannuleerd; falende stappen per run opgehaald uit GitHub Actions (meest: "Deploy uitvoeren op de VPS", "Controle 1/3 — typecheck", CI-poort, tijd-/schijfbewaking).

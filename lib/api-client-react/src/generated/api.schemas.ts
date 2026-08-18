@@ -18490,6 +18490,13 @@ export type GetZiekmeldingenStatistiekenParams = {
 jaar?: number;
 };
 
+export type ListOffertesParams = {
+/**
+ * Alleen offertes die aan deze calculatie gekoppeld zijn (procesbalk "Maak offerte")
+ */
+calculatie_id?: number;
+};
+
 export type VerzendOfferte200 = {
   ok?: boolean;
 };

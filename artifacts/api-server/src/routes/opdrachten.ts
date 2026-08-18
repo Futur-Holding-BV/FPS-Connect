@@ -178,7 +178,11 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
     // AKKOORD_01 §2 grond A: is de offerte al ondertekend, dan wordt het
     // akkoord automatisch vastgelegd bij het aanmaken van de opdracht —
     // er bestaat geen ander aanmaakmoment "bij ondertekening" (gemeten).
-    const autoAkkoord = offerte.status === "ondertekend";
+    // Grond A geldt bij een ondertekende offerte. Het portaal zet historisch
+    // status="geaccepteerd" + portaal_status="ondertekend" (de handtekening
+    // staat in offerte_handtekeningen); de handmatige studio-flow zet
+    // status="ondertekend". Beide zijn een echte ondertekening.
+    const autoAkkoord = offerte.status === "ondertekend" || offerte.portaalStatus === "ondertekend";
 
     // Bestaande opdracht voor deze offerte ophalen
     const [bestaande] = await db.select().from(opdrachtenTable)

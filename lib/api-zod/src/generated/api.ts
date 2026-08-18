@@ -14724,6 +14724,10 @@ export const DeleteVoorwaardenSetResponse = zod.void()
 /**
  * @summary Offertes ophalen
  */
+export const ListOffertesQueryParams = zod.object({
+  "calculatie_id": zod.coerce.number().optional().describe('Alleen offertes die aan deze calculatie gekoppeld zijn (procesbalk \"Maak offerte\")')
+})
+
 export const ListOffertesResponseItem = zod.object({
   "id": zod.number(),
   "projectkans_id": zod.number().nullish(),

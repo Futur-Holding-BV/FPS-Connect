@@ -630,6 +630,7 @@ import type {
   ListMijnVerlofCorrectiesParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
+  ListOffertesParams,
   ListOnderhandenWerkParams,
   ListOnderhoudParams,
   ListOnderhoudscontractenParams,
@@ -42920,20 +42921,27 @@ export const useDeleteVoorwaardenSet = <TError = ErrorType<unknown>,
       return useMutation(getDeleteVoorwaardenSetMutationOptions(options));
     }
 
-export const getListOffertesUrl = () => {
+export const getListOffertesUrl = (params?: ListOffertesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/offertes`
+  return stringifiedParams.length > 0 ? `/api/offertes?${stringifiedParams}` : `/api/offertes`
 }
 
 /**
  * @summary Offertes ophalen
  */
-export const listOffertes = async ( options?: RequestInit): Promise<Offerte[]> => {
+export const listOffertes = async (params?: ListOffertesParams, options?: RequestInit): Promise<Offerte[]> => {
 
-  return customFetch<Offerte[]>(getListOffertesUrl(),
+  return customFetch<Offerte[]>(getListOffertesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -42946,23 +42954,23 @@ export const listOffertes = async ( options?: RequestInit): Promise<Offerte[]> =
 
 
 
-export const getListOffertesQueryKey = () => {
+export const getListOffertesQueryKey = (params?: ListOffertesParams,) => {
     return [
-    `/api/offertes`
+    `/api/offertes`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListOffertesQueryOptions = <TData = Awaited<ReturnType<typeof listOffertes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListOffertesQueryOptions = <TData = Awaited<ReturnType<typeof listOffertes>>, TError = ErrorType<unknown>>(params?: ListOffertesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListOffertesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListOffertesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOffertes>>> = ({ signal }) => listOffertes({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOffertes>>> = ({ signal }) => listOffertes(params, { signal, ...requestOptions });
 
 
 
@@ -42980,11 +42988,11 @@ export type ListOffertesQueryError = ErrorType<unknown>
  */
 
 export function useListOffertes<TData = Awaited<ReturnType<typeof listOffertes>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListOffertesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListOffertesQueryOptions(options)
+  const queryOptions = getListOffertesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

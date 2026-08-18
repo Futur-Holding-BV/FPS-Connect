@@ -302,18 +302,25 @@ test("KETEN_01 hermeting: proces 1 t/m 5", async ({ page }) => {
     await kiek(page, "p4-offerte-voor");
     // Procesbalk: een verse calculatie staat op 'concept'; de knop "Maak offerte"
     // verschijnt pas ná de stap "Intern akkoord" (bewuste processtap, geen gat).
-    const internAkkoord = page.getByRole("button", { name: /^Intern akkoord$/ }).first();
-    if (await internAkkoord.isVisible().catch(() => false)) {
-      await internAkkoord.click();
-      await page.getByRole("button", { name: /Bevestigen|Intern akkoord/i }).last().click().catch(() => {});
-      await page.waitForTimeout(1500);
+    // De klik landt soms niet (re-render race) — opnieuw proberen zolang de
+    // knop er nog staat; pas als hij verdwijnt is de status echt gewijzigd.
+    // Wacht tot de procesknop er überhaupt is (trage load → isVisible() false
+    // zou de stap anders stilletjes overslaan en verderop laten stranden).
+    await page.getByTestId("knop-volgende-stap").first().waitFor({ state: "visible", timeout: 20_000 });
+    for (let poging = 0; poging < 3; poging++) {
+      const internAkkoord = page.getByRole("button", { name: /^Intern akkoord$/ }).first();
+      if (!(await internAkkoord.isVisible().catch(() => false))) break;
+      await internAkkoord.click().catch((e) => console.log("[KETEN01] intern-akkoord-klik faalde:", (e as Error).message.slice(0, 300)));
+      await page.waitForTimeout(2000);
     }
     await page.getByRole("button", { name: /Maak offerte/i }).first().click();
     await page.waitForURL(/\/offertes\/\d+/, { timeout: 20_000 });
     keten.offerteId = Number(page.url().match(/offertes\/(\d+)/)?.[1] ?? 0);
     // Verzendtab → ondertekeningspagina → e-mail invullen → versturen.
-    // Wizard-stap is een knop met nummer + label "Verzenden".
-    await page.getByRole("button", { name: /Verzenden/ }).first().click();
+    // Wizard-stap is een knop met nummer + label "Verzenden". LET OP: er is óók
+    // een status-doorzetknop "Verzenden" (wijzigStatus) — /Verzenden/.first()
+    // klikte dié, waardoor de status flipte zonder dat er iets verstuurd werd.
+    await page.getByRole("button").filter({ hasText: /^7\s*Verzenden$/ }).first().click();
     await page.waitForTimeout(1500);
     const modus = page.getByText("Ondertekeningspagina", { exact: true }).first();
     if (await modus.isVisible().catch(() => false)) await modus.click();
@@ -343,6 +350,14 @@ test("KETEN_01 hermeting: proces 1 t/m 5", async ({ page }) => {
   try {
     expect(keten.portaalToken, "portaallink nodig").toBeTruthy();
     const klantPagina = await page.context().newPage(); // de klant klikt de link uit de mail
+    // Diagnose: een React-crash in het portaal uit zich als errorboundary zonder
+    // context — log de échte JS-fout zodat de meting de oorzaak kan benoemen.
+    klantPagina.on("pageerror", (e) => console.log("[KETEN01] portaal pageerror:", e.message));
+    klantPagina.on("console", (m) => {
+      if (m.type() !== "error") return;
+      void Promise.all(m.args().map((a) => a.jsonValue().catch(() => String(a))))
+        .then((parts) => console.log("[KETEN01] portaal console.error:", JSON.stringify(parts).slice(0, 900)));
+    });
     await klantPagina.goto(`/portaal/${keten.portaalToken}`);
     await kiek(klantPagina, "p5-portaal-voor");
     klantPagina.setDefaultTimeout(10_000);
@@ -386,7 +401,7 @@ test("KETEN_01 hermeting: proces 1 t/m 5", async ({ page }) => {
     }
   } catch (err) {
     await kiek(page, "p5-vastgelopen");
-    noteer("4b/5 portaal-tekenen → opdracht", "vastgelopen", `APP-BEVINDING: 'Definitief akkoord geven' doet niets — op stap 2 is het handtekening-canvas ontkoppeld (unmount → canvasRef null) waardoor bevestigHandtekening stil retourneert en er nooit een POST /portaal/:token/ondertekenen vertrekt. Testfout uitgesloten (geen serverhit in log). Oorspr. fout: ${(err as Error).message.slice(0, 120)}`);
+    noteer("4b/5 portaal-tekenen → opdracht", "vastgelopen", (err as Error).message.slice(0, 200));
   }
 
   // De test zelf faalt niet op rode ketenstappen: dit is een meting.

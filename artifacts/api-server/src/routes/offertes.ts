@@ -394,6 +394,13 @@ const wmAlias = alias(werkgeversTable, "wm_werk");
 
 router.get("/offertes", lezen, async (req, res): Promise<void> => {
   try {
+    // KETEN_01 breuk 1: de calculatie-detailpagina filtert op calculatie_id om
+    // te bepalen of er al een offerte bestaat (procesbalk "Maak offerte").
+    // Zonder serverfilter "zag" een verse calculatie álle offertes.
+    const calcIdRuw = req.query.calculatie_id;
+    const calcId = typeof calcIdRuw === "string" && /^\d+$/.test(calcIdRuw)
+      ? Number(calcIdRuw)
+      : null;
     const rijen = await db
       .select({
         o: offertesTable,
@@ -412,6 +419,7 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
       .leftJoin(modCalcHeadersTable, eq(offertesTable.calculatieId, modCalcHeadersTable.id))
       .leftJoin(crmKlantenTable, eq(offertesTable.klantId, crmKlantenTable.id))
       .leftJoin(gebruikersTable, eq(offertesTable.behandeldDoorId, gebruikersTable.id))
+      .where(calcId !== null ? eq(offertesTable.calculatieId, calcId) : undefined)
       .orderBy(desc(offertesTable.aangemaaktOp));
 
     // Per-offerte AI acceptatiescore (aandeel door AI voorgestelde regels).

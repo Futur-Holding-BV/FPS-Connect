@@ -12286,6 +12286,13 @@ paths:
       operationId: listOffertes
       tags: [offertes]
       summary: Offertes ophalen
+      parameters:
+        - name: calculatie_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Alleen offertes die aan deze calculatie gekoppeld zijn (procesbalk "Maak offerte")
       responses:
         "200":
           description: OK

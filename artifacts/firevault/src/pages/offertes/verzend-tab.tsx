@@ -822,15 +822,14 @@ export function VerzendTab({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>E-mailadres klant *</Label>
-              {aiEmail.isPending
-                ? <Skeleton className="h-9 w-full" />
-                : <Input
-                    type="email"
-                    value={emailForm.naar_email}
-                    onChange={(e) => setEmailForm((f) => ({ ...f, naar_email: e.target.value }))}
-                    placeholder="klant@bedrijf.nl"
-                  />
-              }
+              {/* AI vult dit veld nooit — dus nooit achter de AI-skeleton
+                  verstoppen; anders blokkeert een trage AI het hele formulier. */}
+              <Input
+                type="email"
+                value={emailForm.naar_email}
+                onChange={(e) => setEmailForm((f) => ({ ...f, naar_email: e.target.value }))}
+                placeholder="klant@bedrijf.nl"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Naam (optioneel)</Label>

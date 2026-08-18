@@ -179,10 +179,15 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   }
 
   async function bevestigHandtekening() {
-    if (!heeftHandtekening || !sigNaam.trim()) return;
-    // Gebruik de vastgelegde data-URL (canvas is op de naam-stap niet meer gemount)
+    if (!sigNaam.trim()) return;
+    // Gebruik de vastgelegde data-URL (canvas is op de naam-stap niet meer gemount).
+    // Ontbreekt die, dan NOOIT stil terugkeren ("schijnbaar gelukt"-gat B1):
+    // de klant moet zien dat er iets mis is en terug kunnen naar stap 1.
     const dataUrl = sigDataUrl;
-    if (!dataUrl) return;
+    if (!heeftHandtekening || !dataUrl) {
+      setOndertekenfout("Uw handtekening is niet goed doorgekomen. Ga terug naar stap 1 en zet uw handtekening opnieuw.");
+      return;
+    }
     setBezig(true);
     setOndertekenfout(null);
     try {
@@ -440,9 +445,9 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
             <div>
               <p className="text-xs text-muted-foreground">Geldig tot</p>
               <p className="text-sm font-medium mt-0.5">
-                {o.datum
+                {o.datum && o.geldigheid_dagen != null && Number.isFinite(new Date(o.datum).getTime())
                   ? datumNL(new Date(new Date(o.datum).getTime() + o.geldigheid_dagen * 86400000).toISOString())
-                  : `${o.geldigheid_dagen} dagen`}
+                  : `${o.geldigheid_dagen ?? 30} dagen`}
               </p>
             </div>
             <div>

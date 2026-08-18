@@ -37,6 +37,7 @@ import {
   useUpdateModCalcEenheid,
   useDeleteModCalcEenheid,
   getListModCalcEenhedenQueryKey,
+  getListOffertesQueryKey,
   type ModCalcInkoopItem,
   type CalcEenheid,
   useListEenheidsprijzen,
@@ -2295,7 +2296,10 @@ export default function ModulesCalculatieDetail() {
   const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
   const { data: inkoopItems = [] } = useListModCalcInkoopItems(id, { query: { queryKey: getListModCalcInkoopItemsQueryKey(id), enabled: id > 0 } });
   const { data: eenheden = [] } = useListModCalcEenheden(id, { query: { queryKey: getListModCalcEenhedenQueryKey(id), enabled: id > 0 } });
-  const { data: offertes = [] } = (useListOffertes as any)({ calculatie_id: id }, { query: { enabled: id > 0 } });
+  const { data: offertes = [] } = useListOffertes(
+    { calculatie_id: id },
+    { query: { queryKey: getListOffertesQueryKey({ calculatie_id: id }), enabled: id > 0 } },
+  );
   const { data: bronbestanden = [] } = useListEnkBronbestanden(
     { calculatie_id: id },
     { query: { queryKey: ["enk-bronbestanden-calc", id], enabled: id > 0 } },
