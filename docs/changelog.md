@@ -1,3 +1,7 @@
+## 2026-08-18 — Spoedherstel: achtergebleven terugvaltest-sabotage uit de API-start verwijderd
+
+- Het bewust kapotte startblok uit het terugvalbewijs van HERSTEL_BUNDEL_01 ("ROLLBACKTEST HERSTEL_BUNDEL_01", bedoeld voor uitsluitend de weggegooide testtak) bleek via de merge van taak #1061 tóch op main te staan: de dev-api crashte direct bij het opstarten en de eerstvolgende push zou een bewust kapotte api naar productie hebben gestuurd. Blok verwijderd; `artifacts/api-server/src/index.ts` is weer byte-identiek aan de laatst geverifieerde versie (bb3fd02a). Dev-api start groen, healthz ok; de rest van de #1061-merge (e2e-testbestanden) is gecontroleerd en in orde.
+
 ## 2026-08-18 — HERSTEL_BUNDEL_01: prod-storing verholpen + deploy-terugval waterdicht
 
 - **Oorzaak storing 18 aug**: `@workspace/calculatie` stond in de external-lijst van `artifacts/api-server/build.mjs`. In het productie-image staat het pakket dan als onvertaalde TypeScript in node_modules en weigert Node het te laden (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`) — de api crashte direct bij het opstarten en de site lag plat. In dev viel dit niet op doordat de pnpm-symlink buiten node_modules oplost en Node de types daar wél zelf stript. Fix: regel verwijderd; het pakket wordt nu — net als `@workspace/db` — gewoon meegebundeld. Bewezen: bundel bevat de kernfuncties en start lokaal op in productiestand.
