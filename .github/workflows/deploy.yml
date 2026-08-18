@@ -233,9 +233,12 @@ jobs:
           else
             TYPECHECK_IN_IMAGE=0
           fi
+          # DEPLOY_COMMIT: de exacte commit van deze run. Een dispatch op een
+          # tak rolt zo die tak uit (terugval-testruns); een push naar main
+          # blijft gewoon de main-commit uitrollen.
           ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
-            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log /tmp/stap-uitvoer.log
+            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} DEPLOY_COMMIT=${GITHUB_SHA} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log /tmp/stap-uitvoer.log
           echo "vps-deploy|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── Smoketest na deploy ─────────────────────────────────────────────────

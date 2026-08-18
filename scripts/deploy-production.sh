@@ -137,12 +137,17 @@ stap_tijd "databaseback-up"
 echo "=== STAP 3: git fetch origin ==="
 git fetch origin
 
-# ─── STAP 4: werkmap exact gelijk zetten aan origin/main ────────────────────
-# reset --hard (geen pull): de server volgt main altijd exact, ook na een
-# force-push of lokale servercommit. De ongetrackte deploy/.env.production
-# en deploy/db-backups/ blijven hierbij onaangeroerd.
-echo "=== STAP 4: git reset --hard origin/main ==="
-git reset --hard origin/main
+# ─── STAP 4: werkmap exact gelijk zetten aan de uitgerolde commit ────────────
+# reset --hard (geen pull): de server volgt de uitgerolde commit altijd exact,
+# ook na een force-push of lokale servercommit. De ongetrackte
+# deploy/.env.production en deploy/db-backups/ blijven hierbij onaangeroerd.
+# DEPLOY_COMMIT komt uit de workflow (GITHUB_SHA): een handmatige dispatch op
+# een tak rolt zo écht die tak uit (nodig voor terugval-testruns) in plaats
+# van stilzwijgend origin/main. Zonder DEPLOY_COMMIT (handmatig draaien op de
+# server) blijft origin/main het veilige standaarddoel.
+DEPLOY_DOEL="${DEPLOY_COMMIT:-origin/main}"
+echo "=== STAP 4: git reset --hard ${DEPLOY_DOEL} ==="
+git reset --hard "${DEPLOY_DOEL}"
 echo "Server staat nu op commit: $(git rev-parse HEAD)"
 
 # Versie-informatie voor de images: wordt via build-args in beide images
@@ -263,8 +268,21 @@ ${COMPOSE} build caddy
 stap_tijd "caddy-image-bouwen"
 
 # ─── STAP 8: containers starten ──────────────────────────────────────────────
+# LET OP (18 aug 2026): `up -d` mag het script hier NIET afbreken. Toen de
+# nieuwe api-container bij het opstarten crashte, faalde `up -d` zelf
+# ("dependency failed to start") en stopte set -e het script vóórdat de
+# healthcheck en de automatische rollback hieronder ooit draaiden — de kapotte
+# stack bleef staan (Caddy hercreëerd maar nooit gestart, site plat). Een
+# mislukte start valt daarom bewust door naar de healthcheck, die de rollback
+# aftrapt. De api-crashlog wordt direct getoond zodat de oorzaak in de
+# Actions-run zichtbaar is.
 echo "=== STAP 8: docker compose up -d ==="
-${COMPOSE} up -d --remove-orphans db api caddy
+if ! ${COMPOSE} up -d --remove-orphans db api caddy; then
+  echo "WAARSCHUWING: 'docker compose up' meldde een fout (containerstart mislukt?)." >&2
+  echo "--- Api-crashlog (startfout) ---" >&2
+  ${COMPOSE} logs --tail=100 api >&2 || true
+  echo "Door naar de healthcheck; die rolt zo nodig automatisch terug." >&2
+fi
 stap_tijd "containers-starten"
 
 # ─── STAP 9 + 10: healthcheck; alleen slagen bij status ok ───────────────────
@@ -288,8 +306,14 @@ if [ "${VORIGE_COMMIT}" = "$(git rev-parse HEAD)" ]; then
   echo "WAARSCHUWING: geen vorige commit om naar terug te rollen (eerste deploy?)." >&2
 else
   git reset --hard "${VORIGE_COMMIT}"
-  ${COMPOSE} build api caddy
-  ${COMPOSE} up -d --remove-orphans db api caddy
+  # Ook hier mag een falende build/start het script niet afbreken (set -e):
+  # de healthcheck hieronder is het oordeel en meldt anders nooit dat
+  # handmatige interventie nodig is.
+  ${COMPOSE} build api caddy || echo "WAARSCHUWING: rollback-build meldde een fout." >&2
+  if ! ${COMPOSE} up -d --remove-orphans db api caddy; then
+    echo "WAARSCHUWING: 'docker compose up' faalde ook tijdens de rollback." >&2
+    ${COMPOSE} logs --tail=100 api >&2 || true
+  fi
 fi
 
 echo "Healthcheck na rollback gestart..."

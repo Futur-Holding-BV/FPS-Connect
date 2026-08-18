@@ -1,15 +1,16 @@
 ---
-name: Calculatie esbuild externals & pnpm-link
-description: @workspace/calculatie must be in api-server build.mjs externals and pnpm-installed in firevault & api-server before typecheck passes.
+name: Workspace-pakketten & api-server bundel
+description: Workspace-pakketten NOOIT in build.mjs externals (prod-crash ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING); wel pnpm install per artifact.
 ---
 
-# @workspace/calculatie — esbuild externals & pnpm link
+# Workspace-pakketten in de api-serverbundel
 
 ## Rule
-`@workspace/calculatie` is a workspace package used by both the api-server and firevault.
-- **build.mjs externals**: add `"@workspace/calculatie"` to the `external` array in `artifacts/api-server/build.mjs` so esbuild does not try to bundle it.
-- **pnpm link**: run `pnpm install --filter @workspace/api-server` and `pnpm install --filter @workspace/firevault` after adding the dependency so the symlinks appear in their respective node_modules.
+Workspace-pakketten (`@workspace/calculatie`, `@workspace/db`, …) moeten door esbuild MEEGEBUNDELD worden — zet ze NOOIT in de `external`-lijst van `artifacts/api-server/build.mjs`.
 
-**Why:** esbuild cannot bundle workspace packages — it needs them as externals. Without the symlink, tsc cannot resolve the types either, blocking both the typecheck pre-push hook and the code reviewer.
+**Why:** op 18 aug 2026 stond `@workspace/calculatie` in externals. In het productie-Docker-image staat het pakket dan als onvertaalde TypeScript ín node_modules en weigert Node het te laden (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`): api crashte bij opstarten, hele site plat. In dev merk je dit NIET: de pnpm-symlink lost op naar `lib/<pakket>/src` buiten node_modules, waar Node 24 types wél zelf stript. Lokale prod-sim met de dev-node_modules bewijst dus niets over dit faalpad — grep de dist op `from "@workspace/` (moet 0 zijn).
 
-**How to apply:** whenever `@workspace/calculatie` (or another new workspace lib) shows "Cannot find module" errors in firevault/api-server tsc or esbuild, run pnpm install for both packages and add the lib to build.mjs externals.
+**How to apply:**
+- Nieuw workspace-pakket gebruiken in api-server/firevault: `pnpm install --filter <artifact>` zodat de symlink bestaat (anders faalt tsc/typecheck met "Cannot find module").
+- esbuild bundelt de TS-bron gewoon mee; externals zijn alleen voor echte npm-deps met native/dynamiek-problemen.
+- Controle na build: `grep -c '@workspace/' artifacts/api-server/dist/index.mjs` → 0, en de dist bevat herkenbare functies uit het pakket.

@@ -96,7 +96,7 @@
 - [Lege-staat vindbaarheid](lege-staat-vindbaarheid.md) — beheeringangen nooit verbergen bij 0 rijen; conditie alleen op de lijst, toevoegknop + lege-staat altijd tonen.
 - [Login rate-limit diagnose](login-rate-limit-diagnose.md) — "correct wachtwoord, kan niet inloggen" = vaak IP-limiter (gedeeld kantoor-IP); 429 vóór logging dus login_pogingen leeg bewijst niets; limiter wissen = api-server herstart.
 - [AI-slot keuze interactief](ai-slot-keuze.md) — interactieve AI-knoppen NIET op "reasoning"/gpt-5 (7+ min hang); gebruik "default"/gpt-4o + max_tokens; veiligheid altijd server-side clampen.
-- [Calculatie esbuild externals & pnpm-link](calculatie-esbuild-externals.md) — @workspace/calculatie moet in build.mjs externals + pnpm install --filter per artifact vóór typecheck slaagt.
+- [Workspace-pakketten & api-bundel](calculatie-esbuild-externals.md) — workspace-pakketten NOOIT in build.mjs externals (prod-crash TS-stripping in node_modules; dev-symlink verhult het); wel pnpm install per artifact.
 - [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/files?path=... (NIET rauw objectPath); AI stelt voor, mens accepteert, tonen alleen bij toon_fotos.
 - [Governance sessie-rol](governance-sessie-rol.md) — GEFIXT aug 2026: login zet req.session.rol; restpunt: rol 12u sessie-gecached, degradatie trekt sessies niet in. Smoketest-account = 2FA-vrijgesteld (twee_factor_vrijgesteld, alleen via db-script).
 - [BIAE centrale event-bus](biae-engine.md) — 7 motoren als dunne capability-adapters op één bus; onderliggende engines ongewijzigd; nieuwe proceskoppeling = event publiceren; compliance_signalen faalt stil zonder db push.
