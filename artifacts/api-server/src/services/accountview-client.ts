@@ -308,6 +308,72 @@ export class AccountViewClient {
   }
 
   /**
+   * Haal de btw-codes van de administratie op (ADMINISTRATIE_02 §1).
+   * Zelfde fail-soft meetgedrag als haalGrootboekrekeningen: we verzinnen
+   * nooit codes; bij testmodus, ontbrekende configuratie, een niet-ondersteund
+   * endpoint of verbindingsfout komt { beschikbaar: false } terug met reden.
+   */
+  async haalBtwCodes(): Promise<{
+    beschikbaar: boolean;
+    codes?: Array<{ code: string; omschrijving: string; percentage: number | null }>;
+    httpStatus?: number;
+    reden?: string;
+  }> {
+    if (this.config.testmodus) {
+      return { beschikbaar: false, reden: "AccountView staat in testmodus — de btw-codes worden niet opgehaald." };
+    }
+    if (!this.config.apiEndpoint || !this.config.apiGebruiker || !this.config.apiKey) {
+      return { beschikbaar: false, reden: "AccountView-koppeling is niet volledig geconfigureerd." };
+    }
+    const base = this.config.apiEndpoint.replace(/\/$/, "");
+    const url = `${base}/api/btwcodes?administratie=${encodeURIComponent(this.config.administratiecode)}`;
+    const credentials = Buffer.from(`${this.config.apiGebruiker}:${this.config.apiKey}`).toString("base64");
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { "Authorization": `Basic ${credentials}`, "Accept": "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!resp.ok) {
+        const reden = resp.status === 404 || resp.status === 405
+          ? `De AccountView-koppeling ondersteunt het btw-codes-endpoint niet (HTTP ${resp.status}). Gebruik het inlezen van een lijst.`
+          : `AccountView gaf HTTP ${resp.status} terug voor de btw-codes.`;
+        return { beschikbaar: false, httpStatus: resp.status, reden };
+      }
+      const data = (await resp.json()) as unknown;
+      const lijst = Array.isArray(data)
+        ? data
+        : (data && typeof data === "object"
+          ? ((data as Record<string, unknown>)["BtwCodes"] ?? (data as Record<string, unknown>)["btw_codes"] ?? (data as Record<string, unknown>)["items"])
+          : null);
+      if (!Array.isArray(lijst)) {
+        return { beschikbaar: false, httpStatus: resp.status, reden: "AccountView leverde geen bruikbare btw-codelijst terug." };
+      }
+      const codes: Array<{ code: string; omschrijving: string; percentage: number | null }> = [];
+      for (const r of lijst) {
+        const rr = r as Record<string, unknown>;
+        const code = rr["Code"] ?? rr["code"] ?? rr["BtwCode"] ?? rr["btw_code"];
+        const omschrijving = rr["Omschrijving"] ?? rr["omschrijving"] ?? rr["Naam"] ?? rr["naam"] ?? "";
+        const pctRaw = rr["Percentage"] ?? rr["percentage"] ?? rr["Tarief"] ?? rr["tarief"];
+        const pct = pctRaw == null ? null : Number(pctRaw);
+        if (code != null && String(code).trim()) {
+          codes.push({
+            code: String(code).trim(),
+            omschrijving: String(omschrijving ?? "").trim(),
+            percentage: pct != null && Number.isFinite(pct) ? pct : null,
+          });
+        }
+      }
+      if (codes.length === 0) {
+        return { beschikbaar: false, httpStatus: resp.status, reden: "AccountView gaf een lege of onleesbare btw-codelijst terug." };
+      }
+      return { beschikbaar: true, httpStatus: resp.status, codes };
+    } catch (err) {
+      return { beschikbaar: false, reden: `Btw-codes niet opgehaald: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+
+  /**
    * Ping AccountView om te controleren of de configuratie klopt.
    */
   async pingVerbinding(): Promise<{ bereikbaar: boolean; fout?: string }> {

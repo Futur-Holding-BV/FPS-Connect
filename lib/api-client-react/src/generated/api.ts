@@ -75,6 +75,7 @@ import type {
   AlgemeneInkoop,
   AlgemeneInkoopInput,
   AlgemeneInkoopUpdate,
+  AnnuleerBetaalbatch200,
   AnonimiseerAvgGebruiker200,
   AppInstellingen,
   AppInstellingenInput,
@@ -104,6 +105,8 @@ import type {
   Bekwaamheid,
   BekwaamheidInput,
   BeoordelenInput,
+  Betaalbatch,
+  BevestigBetaalbatch200,
   BevindingFotoInput,
   BevindingHerstellInput,
   BewakingDraai,
@@ -126,6 +129,9 @@ import type {
   BruikleenOndertekeningInput,
   BruikleenOvereenkomst,
   BruikleenRetourgaveInput,
+  BtwCode,
+  BtwGebruik,
+  BtwImportInput,
   CalcAdvies,
   CalcAdviesAnalyse,
   CalcAdviesAnalyseInput,
@@ -162,6 +168,8 @@ import type {
   CreateActiepuntBody,
   CreateBeeldbankUpload201,
   CreateBeeldbankUploadBody,
+  CreateBetaalbatch201,
+  CreateBetaalbatchBody,
   CreateBevindingHerstel201,
   CreateCollectieveVrijeDagen201,
   CreateCollectieveVrijeDagenBody,
@@ -248,6 +256,7 @@ import type {
   DownloadBeeldbankZipBody,
   DownloadUrlResultaat,
   DraaiWerkbakBewaking200,
+  DriewegControle,
   DuplicaatCheckInput,
   DuplicaatCheckResultaat,
   EenheidsPrijs,
@@ -515,6 +524,7 @@ import type {
   InkoopbonVerzendInput,
   Inkoopcoach,
   InkoopcoachAdviezen,
+  InkooporderSuggesties,
   InkoopoverzichtItem,
   InkoopplanRegel,
   InkoopplanRegelAanmaken,
@@ -547,6 +557,8 @@ import type {
   KlantReactieInput,
   KoppelFactuurLeverancier200,
   KoppelFactuurLeverancierBody,
+  KoppelInkoopbon200,
+  KoppelInkoopbonBody,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -573,9 +585,12 @@ import type {
   ListBedrijfssluitingenParams,
   ListBeeldbankFotos200,
   ListBeeldbankFotosParams,
+  ListBetaalbareFacturen200,
+  ListBetaalbareFacturenParams,
   ListBiaeComplianceSignalenParams,
   ListBiaeEventsParams,
   ListBrandstofImportenParams,
+  ListBtwCodesParams,
   ListCollectieveVrijeDagenParams,
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
@@ -69439,6 +69454,980 @@ export function useGetGrootboekGebruik<TData = Awaited<ReturnType<typeof getGroo
 
 
 
+
+export const getListBtwCodesUrl = (params?: ListBtwCodesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/btw-codes?${stringifiedParams}` : `/api/btw-codes`
+}
+
+/**
+ * @summary Btw-codes (schema per administratie) ophalen
+ */
+export const listBtwCodes = async (params?: ListBtwCodesParams, options?: RequestInit): Promise<BtwCode[]> => {
+
+  return customFetch<BtwCode[]>(getListBtwCodesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBtwCodesQueryKey = (params?: ListBtwCodesParams,) => {
+    return [
+    `/api/btw-codes`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBtwCodesQueryOptions = <TData = Awaited<ReturnType<typeof listBtwCodes>>, TError = ErrorType<unknown>>(params?: ListBtwCodesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBtwCodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBtwCodesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBtwCodes>>> = ({ signal }) => listBtwCodes(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBtwCodes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBtwCodesQueryResult = NonNullable<Awaited<ReturnType<typeof listBtwCodes>>>
+export type ListBtwCodesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Btw-codes (schema per administratie) ophalen
+ */
+
+export function useListBtwCodes<TData = Awaited<ReturnType<typeof listBtwCodes>>, TError = ErrorType<unknown>>(
+ params?: ListBtwCodesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBtwCodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBtwCodesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSyncBtwCodesAccountviewUrl = () => {
+
+
+
+
+  return `/api/btw-codes/sync-accountview`
+}
+
+/**
+ * @summary Btw-codes ophalen uit AccountView (meting + sync)
+ */
+export const syncBtwCodesAccountview = async ( options?: RequestInit): Promise<GrootboekSyncResultaat> => {
+
+  return customFetch<GrootboekSyncResultaat>(getSyncBtwCodesAccountviewUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncBtwCodesAccountviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncBtwCodesAccountview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncBtwCodesAccountview>>, TError,void, TContext> => {
+
+const mutationKey = ['syncBtwCodesAccountview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncBtwCodesAccountview>>, void> = () => {
+
+
+          return  syncBtwCodesAccountview(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncBtwCodesAccountviewMutationResult = NonNullable<Awaited<ReturnType<typeof syncBtwCodesAccountview>>>
+
+    export type SyncBtwCodesAccountviewMutationError = ErrorType<void>
+
+    /**
+ * @summary Btw-codes ophalen uit AccountView (meting + sync)
+ */
+export const useSyncBtwCodesAccountview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncBtwCodesAccountview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncBtwCodesAccountview>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncBtwCodesAccountviewMutationOptions(options));
+    }
+
+export const getImportBtwCodesUrl = () => {
+
+
+
+
+  return `/api/btw-codes/import`
+}
+
+/**
+ * @summary Btw-codes inlezen uit een lijst
+ */
+export const importBtwCodes = async (btwImportInput: BtwImportInput, options?: RequestInit): Promise<GrootboekImportResultaat> => {
+
+  return customFetch<GrootboekImportResultaat>(getImportBtwCodesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(btwImportInput)
+  }
+);}
+
+
+
+
+export const getImportBtwCodesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importBtwCodes>>, TError,{data: BodyType<BtwImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importBtwCodes>>, TError,{data: BodyType<BtwImportInput>}, TContext> => {
+
+const mutationKey = ['importBtwCodes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importBtwCodes>>, {data: BodyType<BtwImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importBtwCodes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportBtwCodesMutationResult = NonNullable<Awaited<ReturnType<typeof importBtwCodes>>>
+    export type ImportBtwCodesMutationBody = BodyType<BtwImportInput>
+    export type ImportBtwCodesMutationError = ErrorType<void>
+
+    /**
+ * @summary Btw-codes inlezen uit een lijst
+ */
+export const useImportBtwCodes = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importBtwCodes>>, TError,{data: BodyType<BtwImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importBtwCodes>>,
+        TError,
+        {data: BodyType<BtwImportInput>},
+        TContext
+      > => {
+      return useMutation(getImportBtwCodesMutationOptions(options));
+    }
+
+export const getGetBtwGebruikUrl = () => {
+
+
+
+
+  return `/api/btw-codes/gebruik`
+}
+
+/**
+ * @summary Meting van gebruikte btw-codes versus het schema
+ */
+export const getBtwGebruik = async ( options?: RequestInit): Promise<BtwGebruik> => {
+
+  return customFetch<BtwGebruik>(getGetBtwGebruikUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBtwGebruikQueryKey = () => {
+    return [
+    `/api/btw-codes/gebruik`
+    ] as const;
+    }
+
+
+export const getGetBtwGebruikQueryOptions = <TData = Awaited<ReturnType<typeof getBtwGebruik>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBtwGebruik>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBtwGebruikQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBtwGebruik>>> = ({ signal }) => getBtwGebruik({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBtwGebruik>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBtwGebruikQueryResult = NonNullable<Awaited<ReturnType<typeof getBtwGebruik>>>
+export type GetBtwGebruikQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Meting van gebruikte btw-codes versus het schema
+ */
+
+export function useGetBtwGebruik<TData = Awaited<ReturnType<typeof getBtwGebruik>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBtwGebruik>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBtwGebruikQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetInkooporderSuggestieUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/inkooporder-suggestie`
+}
+
+/**
+ * @summary Kandidaat-inkooporders voor een inkoopfactuur (I-nummer of leverancier+bedrag)
+ */
+export const getInkooporderSuggestie = async (id: number, options?: RequestInit): Promise<InkooporderSuggesties> => {
+
+  return customFetch<InkooporderSuggesties>(getGetInkooporderSuggestieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInkooporderSuggestieQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/inkooporder-suggestie`
+    ] as const;
+    }
+
+
+export const getGetInkooporderSuggestieQueryOptions = <TData = Awaited<ReturnType<typeof getInkooporderSuggestie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInkooporderSuggestie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInkooporderSuggestieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInkooporderSuggestie>>> = ({ signal }) => getInkooporderSuggestie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInkooporderSuggestie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInkooporderSuggestieQueryResult = NonNullable<Awaited<ReturnType<typeof getInkooporderSuggestie>>>
+export type GetInkooporderSuggestieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Kandidaat-inkooporders voor een inkoopfactuur (I-nummer of leverancier+bedrag)
+ */
+
+export function useGetInkooporderSuggestie<TData = Awaited<ReturnType<typeof getInkooporderSuggestie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInkooporderSuggestie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInkooporderSuggestieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getKoppelInkoopbonUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/koppel-inkoopbon`
+}
+
+/**
+ * @summary Inkoopfactuur met één handeling aan een inkooporder koppelen (of ontkoppelen)
+ */
+export const koppelInkoopbon = async (id: number,
+    koppelInkoopbonBody: KoppelInkoopbonBody, options?: RequestInit): Promise<KoppelInkoopbon200> => {
+
+  return customFetch<KoppelInkoopbon200>(getKoppelInkoopbonUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(koppelInkoopbonBody)
+  }
+);}
+
+
+
+
+export const getKoppelInkoopbonMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelInkoopbon>>, TError,{id: number;data: BodyType<KoppelInkoopbonBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelInkoopbon>>, TError,{id: number;data: BodyType<KoppelInkoopbonBody>}, TContext> => {
+
+const mutationKey = ['koppelInkoopbon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelInkoopbon>>, {id: number;data: BodyType<KoppelInkoopbonBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  koppelInkoopbon(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelInkoopbonMutationResult = NonNullable<Awaited<ReturnType<typeof koppelInkoopbon>>>
+    export type KoppelInkoopbonMutationBody = BodyType<KoppelInkoopbonBody>
+    export type KoppelInkoopbonMutationError = ErrorType<void>
+
+    /**
+ * @summary Inkoopfactuur met één handeling aan een inkooporder koppelen (of ontkoppelen)
+ */
+export const useKoppelInkoopbon = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelInkoopbon>>, TError,{id: number;data: BodyType<KoppelInkoopbonBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelInkoopbon>>,
+        TError,
+        {id: number;data: BodyType<KoppelInkoopbonBody>},
+        TContext
+      > => {
+      return useMutation(getKoppelInkoopbonMutationOptions(options));
+    }
+
+export const getGetDriewegControleUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/drieweg-controle`
+}
+
+/**
+ * @summary Drie-weg-vergelijking bestelling/ontvangst/factuur voor een inkoopfactuur
+ */
+export const getDriewegControle = async (id: number, options?: RequestInit): Promise<DriewegControle> => {
+
+  return customFetch<DriewegControle>(getGetDriewegControleUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDriewegControleQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/drieweg-controle`
+    ] as const;
+    }
+
+
+export const getGetDriewegControleQueryOptions = <TData = Awaited<ReturnType<typeof getDriewegControle>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDriewegControle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDriewegControleQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDriewegControle>>> = ({ signal }) => getDriewegControle(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDriewegControle>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDriewegControleQueryResult = NonNullable<Awaited<ReturnType<typeof getDriewegControle>>>
+export type GetDriewegControleQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Drie-weg-vergelijking bestelling/ontvangst/factuur voor een inkoopfactuur
+ */
+
+export function useGetDriewegControle<TData = Awaited<ReturnType<typeof getDriewegControle>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDriewegControle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDriewegControleQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBetaalbatchesUrl = () => {
+
+
+
+
+  return `/api/betaalbatches`
+}
+
+/**
+ * @summary Crediteuren-betaalbatches
+ */
+export const listBetaalbatches = async ( options?: RequestInit): Promise<Betaalbatch[]> => {
+
+  return customFetch<Betaalbatch[]>(getListBetaalbatchesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBetaalbatchesQueryKey = () => {
+    return [
+    `/api/betaalbatches`
+    ] as const;
+    }
+
+
+export const getListBetaalbatchesQueryOptions = <TData = Awaited<ReturnType<typeof listBetaalbatches>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBetaalbatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBetaalbatchesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBetaalbatches>>> = ({ signal }) => listBetaalbatches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBetaalbatches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBetaalbatchesQueryResult = NonNullable<Awaited<ReturnType<typeof listBetaalbatches>>>
+export type ListBetaalbatchesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Crediteuren-betaalbatches
+ */
+
+export function useListBetaalbatches<TData = Awaited<ReturnType<typeof listBetaalbatches>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBetaalbatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBetaalbatchesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBetaalbatchUrl = () => {
+
+
+
+
+  return `/api/betaalbatches`
+}
+
+/**
+ * @summary Betaalbatch aanmaken (valideert elke factuur fail-closed)
+ */
+export const createBetaalbatch = async (createBetaalbatchBody: CreateBetaalbatchBody, options?: RequestInit): Promise<CreateBetaalbatch201> => {
+
+  return customFetch<CreateBetaalbatch201>(getCreateBetaalbatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createBetaalbatchBody)
+  }
+);}
+
+
+
+
+export const getCreateBetaalbatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBetaalbatch>>, TError,{data: BodyType<CreateBetaalbatchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBetaalbatch>>, TError,{data: BodyType<CreateBetaalbatchBody>}, TContext> => {
+
+const mutationKey = ['createBetaalbatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBetaalbatch>>, {data: BodyType<CreateBetaalbatchBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBetaalbatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBetaalbatchMutationResult = NonNullable<Awaited<ReturnType<typeof createBetaalbatch>>>
+    export type CreateBetaalbatchMutationBody = BodyType<CreateBetaalbatchBody>
+    export type CreateBetaalbatchMutationError = ErrorType<void>
+
+    /**
+ * @summary Betaalbatch aanmaken (valideert elke factuur fail-closed)
+ */
+export const useCreateBetaalbatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBetaalbatch>>, TError,{data: BodyType<CreateBetaalbatchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBetaalbatch>>,
+        TError,
+        {data: BodyType<CreateBetaalbatchBody>},
+        TContext
+      > => {
+      return useMutation(getCreateBetaalbatchMutationOptions(options));
+    }
+
+export const getListBetaalbareFacturenUrl = (params: ListBetaalbareFacturenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/betaalbatches/betaalbare-facturen?${stringifiedParams}` : `/api/betaalbatches/betaalbare-facturen`
+}
+
+/**
+ * @summary Betaalbare inkoopfacturen voor een werkmaatschappij (met redenen)
+ */
+export const listBetaalbareFacturen = async (params: ListBetaalbareFacturenParams, options?: RequestInit): Promise<ListBetaalbareFacturen200> => {
+
+  return customFetch<ListBetaalbareFacturen200>(getListBetaalbareFacturenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBetaalbareFacturenQueryKey = (params?: ListBetaalbareFacturenParams,) => {
+    return [
+    `/api/betaalbatches/betaalbare-facturen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBetaalbareFacturenQueryOptions = <TData = Awaited<ReturnType<typeof listBetaalbareFacturen>>, TError = ErrorType<void>>(params: ListBetaalbareFacturenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBetaalbareFacturen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBetaalbareFacturenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBetaalbareFacturen>>> = ({ signal }) => listBetaalbareFacturen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBetaalbareFacturen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBetaalbareFacturenQueryResult = NonNullable<Awaited<ReturnType<typeof listBetaalbareFacturen>>>
+export type ListBetaalbareFacturenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Betaalbare inkoopfacturen voor een werkmaatschappij (met redenen)
+ */
+
+export function useListBetaalbareFacturen<TData = Awaited<ReturnType<typeof listBetaalbareFacturen>>, TError = ErrorType<void>>(
+ params: ListBetaalbareFacturenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBetaalbareFacturen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBetaalbareFacturenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDownloadBetaalbatchPain001Url = (id: number,) => {
+
+
+
+
+  return `/api/betaalbatches/${id}/pain001`
+}
+
+/**
+ * @summary SEPA-betaalbestand (pain.001) van de batch downloaden
+ */
+export const downloadBetaalbatchPain001 = async (id: number, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getDownloadBetaalbatchPain001Url(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadBetaalbatchPain001QueryKey = (id: number,) => {
+    return [
+    `/api/betaalbatches/${id}/pain001`
+    ] as const;
+    }
+
+
+export const getDownloadBetaalbatchPain001QueryOptions = <TData = Awaited<ReturnType<typeof downloadBetaalbatchPain001>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadBetaalbatchPain001>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadBetaalbatchPain001QueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadBetaalbatchPain001>>> = ({ signal }) => downloadBetaalbatchPain001(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadBetaalbatchPain001>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadBetaalbatchPain001QueryResult = NonNullable<Awaited<ReturnType<typeof downloadBetaalbatchPain001>>>
+export type DownloadBetaalbatchPain001QueryError = ErrorType<void>
+
+
+/**
+ * @summary SEPA-betaalbestand (pain.001) van de batch downloaden
+ */
+
+export function useDownloadBetaalbatchPain001<TData = Awaited<ReturnType<typeof downloadBetaalbatchPain001>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadBetaalbatchPain001>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadBetaalbatchPain001QueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBevestigBetaalbatchUrl = (id: number,) => {
+
+
+
+
+  return `/api/betaalbatches/${id}/bevestigen`
+}
+
+/**
+ * @summary Batch in één handeling bevestigen; facturen gaan op betaald
+ */
+export const bevestigBetaalbatch = async (id: number, options?: RequestInit): Promise<BevestigBetaalbatch200> => {
+
+  return customFetch<BevestigBetaalbatch200>(getBevestigBetaalbatchUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBevestigBetaalbatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigBetaalbatch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigBetaalbatch>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['bevestigBetaalbatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigBetaalbatch>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  bevestigBetaalbatch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigBetaalbatchMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigBetaalbatch>>>
+
+    export type BevestigBetaalbatchMutationError = ErrorType<void>
+
+    /**
+ * @summary Batch in één handeling bevestigen; facturen gaan op betaald
+ */
+export const useBevestigBetaalbatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigBetaalbatch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigBetaalbatch>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBevestigBetaalbatchMutationOptions(options));
+    }
+
+export const getAnnuleerBetaalbatchUrl = (id: number,) => {
+
+
+
+
+  return `/api/betaalbatches/${id}/annuleren`
+}
+
+/**
+ * @summary Niet-bevestigde batch annuleren (facturen worden weer betaalbaar)
+ */
+export const annuleerBetaalbatch = async (id: number, options?: RequestInit): Promise<AnnuleerBetaalbatch200> => {
+
+  return customFetch<AnnuleerBetaalbatch200>(getAnnuleerBetaalbatchUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnnuleerBetaalbatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof annuleerBetaalbatch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof annuleerBetaalbatch>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['annuleerBetaalbatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof annuleerBetaalbatch>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  annuleerBetaalbatch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnnuleerBetaalbatchMutationResult = NonNullable<Awaited<ReturnType<typeof annuleerBetaalbatch>>>
+
+    export type AnnuleerBetaalbatchMutationError = ErrorType<void>
+
+    /**
+ * @summary Niet-bevestigde batch annuleren (facturen worden weer betaalbaar)
+ */
+export const useAnnuleerBetaalbatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof annuleerBetaalbatch>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof annuleerBetaalbatch>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAnnuleerBetaalbatchMutationOptions(options));
+    }
 
 export const getDownloadHistorischeFacturenExcelUrl = () => {
 

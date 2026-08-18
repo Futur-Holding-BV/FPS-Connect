@@ -6,6 +6,7 @@ import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { leveranciersTable } from "./leveranciers";
+import { werkgeversTable } from "./hrm";
 
 // ── AccountView instellingen (singleton per installatie) ──────────────────────
 // NUMMER_01 §4.6 — fiscale factuurreeks per BV: teller onder slot, toegekend
@@ -584,3 +585,55 @@ export const grootboekrekeningenTable = pgTable("grootboekrekeningen", {
 }));
 
 export type Grootboekrekening = typeof grootboekrekeningenTable.$inferSelect;
+
+// ── Btw-codes per administratie (ADMINISTRATIE_02 §1) ─────────────────────────
+// Btw-code was overal vrije tekst; deze tabel is de enige keuzelijst.
+// Gevuld via AccountView-sync of een ingelezen lijst. De exportservice weigert
+// boeken met een code buiten het schema zodra het schema van die BV gevuld is.
+// ── ADMINISTRATIE_02 §3: crediteuren-betaalbatch (SEPA pain.001) ─────────────
+// Achter de akkoord-schakelaar app_instellingen.betaalbatch_actief (standaard
+// uit) totdat de directie uitdrukkelijk akkoord geeft. Migratie 0090.
+export const betaalbatchesTable = pgTable("betaalbatches", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull().references(() => werkgeversTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("concept"), // concept | bestand_aangemaakt | bevestigd | geannuleerd
+  uitvoerdatum: text("uitvoerdatum").notNull(),
+  debiteurIban: text("debiteur_iban").notNull(),
+  debiteurNaam: text("debiteur_naam").notNull(),
+  totaalBedrag: numeric("totaal_bedrag", { precision: 12, scale: 2 }).notNull().default("0"),
+  aantalBetalingen: integer("aantal_betalingen").notNull().default(0),
+  bestandReferentie: text("bestand_referentie"),
+  bestandAangemaaktOp: timestamp("bestand_aangemaakt_op"),
+  bevestigdOp: timestamp("bevestigd_op"),
+  bevestigdDoor: integer("bevestigd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const betaalbatchRegelsTable = pgTable("betaalbatch_regels", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id").notNull().references(() => betaalbatchesTable.id, { onDelete: "cascade" }),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+  crediteurNaam: text("crediteur_naam").notNull(),
+  crediteurIban: text("crediteur_iban").notNull(),
+  bedrag: numeric("bedrag", { precision: 12, scale: 2 }).notNull(),
+  omschrijving: text("omschrijving").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [uniqueIndex("betaalbatch_regels_factuur_uniek").on(t.factuurId)]);
+
+export const btwCodesTable = pgTable("btw_codes", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull(), // FK werkgevers in migratie 0089
+  code: text("code").notNull(),
+  omschrijving: text("omschrijving").notNull().default(""),
+  percentage: real("percentage"),
+  actief: boolean("actief").notNull().default(true),
+  bron: text("bron").notNull().default("import"), // accountview | import
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekeCodePerWerkgever: unique("btw_codes_wg_code_uniek").on(t.werkgeverId, t.code),
+}));
+
+export type BtwCode = typeof btwCodesTable.$inferSelect;

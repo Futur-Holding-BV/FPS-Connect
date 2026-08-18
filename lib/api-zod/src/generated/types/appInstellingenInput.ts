@@ -16,6 +16,8 @@ export interface AppInstellingenInput {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** ADMINISTRATIE_02 §3 — akkoord-schakelaar crediteuren-betaalbatch (alleen hoofdbeheerder). Standaard uit. */
+  betaalbatch_actief?: boolean;
   /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan. */
   ai_leren_van_correcties_ingeschakeld?: boolean;
   /**

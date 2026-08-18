@@ -40,11 +40,17 @@ INDEX|bedrijfssluitingen|bedrijfssluitingen_pkey
 INDEX|beeldbank_uploads|beeldbank_uploads_gebouw_idx
 INDEX|beeldbank_uploads|beeldbank_uploads_pkey
 INDEX|bekwaamheden|bekwaamheden_pkey
+INDEX|betaalbatch_regels|betaalbatch_regels_factuur_uniek
+INDEX|betaalbatch_regels|betaalbatch_regels_pkey
+INDEX|betaalbatches|betaalbatches_pkey
 INDEX|bewaking_draaien|bewaking_draaien_pkey
 INDEX|boekhouder_uploads|boekhouder_uploads_pkey
 INDEX|brandstof_importen|brandstof_importen_pkey
 INDEX|brandstof_regels|brandstof_regels_pkey
 INDEX|bruikleen_overeenkomsten|bruikleen_overeenkomsten_pkey
+INDEX|btw_codes|btw_codes_pkey
+INDEX|btw_codes|btw_codes_wg_code_uniek
+INDEX|btw_codes|btw_codes_wg_idx
 INDEX|calc_plak_analyses|calc_plak_analyses_calculatie_id_idx
 INDEX|calc_plak_analyses|calc_plak_analyses_pkey
 INDEX|calculatie_regels|calculatie_regels_pkey
@@ -755,6 +761,7 @@ KOLOM|app_instellingen|ai_leren_van_correcties_ingeschakeld|boolean|NO|true
 KOLOM|app_instellingen|ai_maandelijkse_export_dag|integer|YES|
 KOLOM|app_instellingen|ai_maandelijkse_export_email|text|YES|
 KOLOM|app_instellingen|ai_maandelijkse_export_laatst_verzonden_maand|text|YES|
+KOLOM|app_instellingen|betaalbatch_actief|boolean|NO|false
 KOLOM|app_instellingen|bijgewerkt_door_id|integer|YES|
 KOLOM|app_instellingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|app_instellingen|campagne_verzendtempo_per_minuut|integer|NO|6
@@ -920,6 +927,29 @@ KOLOM|bekwaamheden|onderwerp|text|NO|
 KOLOM|bekwaamheden|opmerking|text|YES|
 KOLOM|bekwaamheden|vastgesteld_door|text|YES|
 KOLOM|bekwaamheden|vastgesteld_op|text|YES|
+KOLOM|betaalbatch_regels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|betaalbatch_regels|batch_id|integer|NO|
+KOLOM|betaalbatch_regels|bedrag|numeric|NO|
+KOLOM|betaalbatch_regels|crediteur_iban|text|NO|
+KOLOM|betaalbatch_regels|crediteur_naam|text|NO|
+KOLOM|betaalbatch_regels|factuur_id|integer|NO|
+KOLOM|betaalbatch_regels|id|integer|NO|nextval('betaalbatch_regels_id_seq'::regclass)
+KOLOM|betaalbatch_regels|omschrijving|text|NO|
+KOLOM|betaalbatches|aangemaakt_door|integer|YES|
+KOLOM|betaalbatches|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|betaalbatches|aantal_betalingen|integer|NO|0
+KOLOM|betaalbatches|bestand_aangemaakt_op|timestamp without time zone|YES|
+KOLOM|betaalbatches|bestand_referentie|text|YES|
+KOLOM|betaalbatches|bevestigd_door|integer|YES|
+KOLOM|betaalbatches|bevestigd_op|timestamp without time zone|YES|
+KOLOM|betaalbatches|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|betaalbatches|debiteur_iban|text|NO|
+KOLOM|betaalbatches|debiteur_naam|text|NO|
+KOLOM|betaalbatches|id|integer|NO|nextval('betaalbatches_id_seq'::regclass)
+KOLOM|betaalbatches|status|text|NO|'concept'::text
+KOLOM|betaalbatches|totaal_bedrag|numeric|NO|0
+KOLOM|betaalbatches|uitvoerdatum|text|NO|
+KOLOM|betaalbatches|werkgever_id|integer|NO|
 KOLOM|bewaking_draaien|fout|text|YES|
 KOLOM|bewaking_draaien|gestart_op|timestamp without time zone|NO|now()
 KOLOM|bewaking_draaien|id|integer|NO|nextval('bewaking_draaien_id_seq'::regclass)
@@ -1000,6 +1030,15 @@ KOLOM|bruikleen_overeenkomsten|pdf_url|text|YES|
 KOLOM|bruikleen_overeenkomsten|staat_bij_inname|text|YES|
 KOLOM|bruikleen_overeenkomsten|staat_bij_uitgifte|text|YES|
 KOLOM|bruikleen_overeenkomsten|uitgegever_door_id|integer|YES|
+KOLOM|btw_codes|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|btw_codes|actief|boolean|NO|true
+KOLOM|btw_codes|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|btw_codes|bron|text|NO|'import'::text
+KOLOM|btw_codes|code|text|NO|
+KOLOM|btw_codes|id|integer|NO|nextval('btw_codes_id_seq'::regclass)
+KOLOM|btw_codes|omschrijving|text|NO|''::text
+KOLOM|btw_codes|percentage|real|YES|
+KOLOM|btw_codes|werkgever_id|integer|NO|
 KOLOM|calc_plak_analyses|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|calc_plak_analyses|alleen_artikel|integer|NO|0
 KOLOM|calc_plak_analyses|alleen_normtijd|integer|NO|0

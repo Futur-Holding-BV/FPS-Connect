@@ -22,6 +22,8 @@ export interface AppInstellingen {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** ADMINISTRATIE_02 §3 — akkoord-schakelaar voor de crediteuren-betaalbatch (SEPA pain.001). Standaard uit; gaat pas aan na uitdrukkelijk akkoord van de directie. */
+  betaalbatch_actief?: boolean;
   /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan. */
   ai_leren_van_correcties_ingeschakeld?: boolean;
   /**

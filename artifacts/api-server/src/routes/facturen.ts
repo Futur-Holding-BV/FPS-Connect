@@ -1,5 +1,5 @@
 import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
-import { kenmerkVoorFactuur } from "../lib/kenmerk";
+import { kenmerkVoorFactuur, formatNummer, herzieningsLetter } from "../lib/kenmerk";
 import { bepaalFactuurWerkmaatschappij, controleerFactuurAdministratieBv } from "../services/factuurWerkmaatschappij";
 import { Router } from "express";
 import type { Request, Response } from "express";
@@ -9,6 +9,8 @@ import {
   db,
   facturenTable,
   accountviewInstellingenTable,
+  grootboekrekeningenTable,
+  btwCodesTable,
   accountviewExportLogsTable,
   factuurOpmerkingenTable,
   factuurRegelsTable,
@@ -28,15 +30,17 @@ import {
   werkgeversTable,
   factuurSignalenTable,
   factuurTijdlijnTable,
+  inkoopbonnenTable,
+  inkoopbonRegelsTable,
   FACTUUR_AFWIJSREDENEN,
   type FactuurAfwijsredenCode,
 } from "@workspace/db";
-import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike } from "drizzle-orm";
+import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
-import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending, hercontroleerBvNaClaim, controleerGrootboekSchema } from "../services/accountviewExportService";
+import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending, hercontroleerBvNaClaim, controleerBoekingsschema } from "../services/accountviewExportService";
 import crypto from "crypto";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import {
@@ -1632,16 +1636,204 @@ router.get("/facturen/:id/categorisatie-voorstel", requireBevoegdheid("financiee
     .limit(1);
 
   if (!patroon || patroon.aantal < 2) { res.json({ voorstel: null }); return; }
+
+  // ADMINISTRATIE_02 §1: aangeleerde voorkeuren blijven bestaan, maar het
+  // voorstel verwijst voortaan naar het schema. Een aangeleerde waarde die
+  // niet (meer) in het schema van de gekoppelde BV staat (typefout van de
+  // eerste keer) wordt niet meer voorgesteld — die wordt als buiten_schema
+  // gemeld zodat de gebruiker bewust kiest.
+  let grootboekVoorstel: string | null = patroon.grootboekrekening;
+  let btwVoorstel: string | null = patroon.btwCode;
+  const buitenSchema: string[] = [];
+  const [avInst] = await db.select({ werkgeverId: accountviewInstellingenTable.werkgeverId })
+    .from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  if (avInst?.werkgeverId != null) {
+    if (grootboekVoorstel) {
+      const [inSchema] = await db.select({ id: grootboekrekeningenTable.id }).from(grootboekrekeningenTable)
+        .where(and(eq(grootboekrekeningenTable.werkgeverId, avInst.werkgeverId), eq(grootboekrekeningenTable.nummer, grootboekVoorstel), eq(grootboekrekeningenTable.actief, true))).limit(1);
+      const [heeftSchema] = await db.select({ id: grootboekrekeningenTable.id }).from(grootboekrekeningenTable)
+        .where(and(eq(grootboekrekeningenTable.werkgeverId, avInst.werkgeverId), eq(grootboekrekeningenTable.actief, true))).limit(1);
+      if (heeftSchema && !inSchema) { buitenSchema.push(`grootboekrekening ${grootboekVoorstel}`); grootboekVoorstel = null; }
+    }
+    if (btwVoorstel) {
+      const [inSchema] = await db.select({ id: btwCodesTable.id }).from(btwCodesTable)
+        .where(and(eq(btwCodesTable.werkgeverId, avInst.werkgeverId), eq(btwCodesTable.code, btwVoorstel), eq(btwCodesTable.actief, true))).limit(1);
+      const [heeftSchema] = await db.select({ id: btwCodesTable.id }).from(btwCodesTable)
+        .where(and(eq(btwCodesTable.werkgeverId, avInst.werkgeverId), eq(btwCodesTable.actief, true))).limit(1);
+      if (heeftSchema && !inSchema) { buitenSchema.push(`btw-code ${btwVoorstel}`); btwVoorstel = null; }
+    }
+  }
+
   res.json({
     voorstel: {
-      grootboekrekening: patroon.grootboekrekening,
+      grootboekrekening: grootboekVoorstel,
       kostenplaats: patroon.kostenplaats,
       categorie: patroon.categorie,
-      btw_code: patroon.btwCode,
+      btw_code: btwVoorstel,
       aantal: patroon.aantal,
       laatst_bevestigd_op: patroon.laatstBevestigdOp.toISOString(),
+      buiten_schema: buitenSchema.length > 0 ? buitenSchema : null,
     },
   });
+});
+
+// ── ADMINISTRATIE_02 §2: drie-weg-controle bestelling/ontvangst/factuur ──────
+// De projectinkoop (I-nummers) kent nog GEEN ontvangst-aantallen per regel;
+// alleen de grove bonstatus (concept→goedgekeurd→besteld→geleverd) bestaat.
+// De vergelijking meldt dat eerlijk (geleverd_registratie: "ontbreekt") in
+// plaats van te doen alsof de derde weg bestaat — zie docs/metingen.
+
+function naarBedrag(v: string | number | null | undefined): number | null {
+  if (v == null) return null;
+  const n = typeof v === "number" ? v : Number.parseFloat(v);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+async function berekenDriewegControle(factuurId: number) {
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1);
+  if (!factuur) return null;
+  if (factuur.inkoopbonId == null) {
+    return {
+      gekoppeld: false as const,
+      zonder_bestelling: factuur.type === "inkoop",
+      besteld_bedrag: null, gefactureerd_bedrag: naarBedrag(factuur.bedragExclBtw),
+      verschil_bedrag: null, afwijking: false,
+      geleverd_registratie: "ontbreekt" as const, leveringsstatus: null,
+      bon: null,
+    };
+  }
+  const [bon] = await db.select().from(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, factuur.inkoopbonId)).limit(1);
+  if (!bon) {
+    return {
+      gekoppeld: false as const, zonder_bestelling: true,
+      besteld_bedrag: null, gefactureerd_bedrag: naarBedrag(factuur.bedragExclBtw),
+      verschil_bedrag: null, afwijking: false,
+      geleverd_registratie: "ontbreekt" as const, leveringsstatus: null, bon: null,
+    };
+  }
+  // Besteld: bontotaal, of de som van de regels als het totaal niet is gezet.
+  let besteld = naarBedrag(bon.totaalBedrag);
+  if (besteld == null) {
+    const [som] = await db.select({ t: sql<string>`coalesce(sum(${inkoopbonRegelsTable.totaal}), 0)` })
+      .from(inkoopbonRegelsTable).where(eq(inkoopbonRegelsTable.inkoopbonId, bon.id));
+    besteld = naarBedrag(som?.t ?? null);
+  }
+  // Gefactureerd: alle (niet-afgekeurde) inkoopfacturen op dezelfde bon samen,
+  // zodat deelfacturen niet elk apart "goedkoper dan besteld" lijken.
+  const [gefac] = await db.select({ t: sql<string>`coalesce(sum(${facturenTable.bedragExclBtw}), 0)` })
+    .from(facturenTable)
+    .where(and(eq(facturenTable.inkoopbonId, bon.id), ne(facturenTable.status, "afgekeurd")));
+  const gefactureerd = naarBedrag(gefac?.t ?? null) ?? 0;
+  const verschil = besteld == null ? null : Math.round((gefactureerd - besteld) * 100) / 100;
+  const afwijking = verschil != null && Math.abs(verschil) > 0.01;
+  return {
+    gekoppeld: true as const, zonder_bestelling: false,
+    besteld_bedrag: besteld, gefactureerd_bedrag: gefactureerd,
+    verschil_bedrag: verschil, afwijking,
+    // Derde weg: alleen de grove bonstatus bestaat, geen ontvangst-aantallen.
+    geleverd_registratie: "ontbreekt" as const,
+    leveringsstatus: bon.status,
+    bon: {
+      id: bon.id,
+      kenmerk: formatNummer("I", bon.nummer) + herzieningsLetter(bon.herziening ?? 0),
+      leverancier: bon.leverancier,
+      status: bon.status,
+      opdracht_id: bon.opdrachtId,
+    },
+  };
+}
+
+// Suggesties: I-nummer in de factuurtekst is de sterkste match; daarnaast
+// leverancier + bedrag (±5%) op bestelde/geleverde bonnen.
+router.get("/facturen/:id/inkooporder-suggestie", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = Number.parseInt(String(req.params.id ?? ""), 10);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+  if (factuur.type !== "inkoop") { res.json({ kandidaten: [] }); return; }
+
+  const kandidaten: Array<{ inkoopbon_id: number; kenmerk: string; leverancier: string; status: string; totaal_bedrag: number | null; reden: string; zekerheid: "hoog" | "gemiddeld" }> = [];
+  const gezien = new Set<number>();
+  const maakKandidaat = (bon: typeof inkoopbonnenTable.$inferSelect, reden: string, zekerheid: "hoog" | "gemiddeld") => {
+    if (gezien.has(bon.id)) return;
+    gezien.add(bon.id);
+    kandidaten.push({
+      inkoopbon_id: bon.id,
+      kenmerk: formatNummer("I", bon.nummer) + herzieningsLetter(bon.herziening ?? 0),
+      leverancier: bon.leverancier, status: bon.status,
+      totaal_bedrag: naarBedrag(bon.totaalBedrag), reden, zekerheid,
+    });
+  };
+
+  // 1. I-nummer in factuurtekst (omschrijving/opmerkingen/AI-metadata).
+  const tekst = [factuur.omschrijving, factuur.opmerkingen, JSON.stringify(factuur.aiMetadata ?? "")].join(" ");
+  const nummers = new Set<number>();
+  for (const m of tekst.matchAll(/\bI\s?-?0*(\d{1,6})[a-z]?\b/gi)) {
+    const n = Number.parseInt(m[1]!, 10);
+    if (Number.isFinite(n)) nummers.add(n);
+  }
+  if (nummers.size > 0) {
+    const opNummer = await db.select().from(inkoopbonnenTable)
+      .where(inArray(inkoopbonnenTable.nummer, [...nummers]));
+    for (const bon of opNummer) maakKandidaat(bon, `Inkoopnummer ${formatNummer("I", bon.nummer)} staat op de factuur`, "hoog");
+  }
+
+  // 2. Zelfde leverancier + bedrag binnen 5% (alleen bestelde/geleverde bonnen).
+  const bedrag = naarBedrag(factuur.bedragExclBtw);
+  if (factuur.leverancierId != null && bedrag != null && bedrag > 0) {
+    const opLeverancier = await db.select().from(inkoopbonnenTable)
+      .where(and(
+        eq(inkoopbonnenTable.leverancierId, factuur.leverancierId),
+        inArray(inkoopbonnenTable.status, ["besteld", "geleverd"]),
+      ));
+    for (const bon of opLeverancier) {
+      const bt = naarBedrag(bon.totaalBedrag);
+      if (bt != null && bt > 0 && Math.abs(bt - bedrag) / bt <= 0.05) {
+        maakKandidaat(bon, `Zelfde leverancier, bedrag wijkt minder dan 5% af van ${bt.toFixed(2)}`, "gemiddeld");
+      }
+    }
+  }
+
+  res.json({ kandidaten: kandidaten.slice(0, 10) });
+});
+
+// Koppelen met één handeling; daarna draait de vergelijking direct en gaat de
+// factuur bij een afwijking naar controle mét het verschil erbij — niet stil
+// doorlaten en niet stil weigeren.
+router.post("/facturen/:id/koppel-inkoopbon", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = Number.parseInt(String(req.params.id ?? ""), 10);
+  const inkoopbonId = req.body?.inkoopbon_id == null ? null : Number.parseInt(String(req.body.inkoopbon_id), 10);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+  if (factuur.type !== "inkoop") { res.status(422).json({ error: "Alleen inkoopfacturen kunnen aan een inkooporder worden gekoppeld" }); return; }
+
+  if (inkoopbonId != null) {
+    const [bon] = await db.select().from(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, inkoopbonId)).limit(1);
+    if (!bon) { res.status(404).json({ error: "Inkooporder niet gevonden" }); return; }
+    await db.update(facturenTable)
+      .set({ inkoopbonId, opdrachtId: factuur.opdrachtId ?? bon.opdrachtId, bijgewerktOp: new Date() })
+      .where(eq(facturenTable.id, id));
+  } else {
+    await db.update(facturenTable).set({ inkoopbonId: null, bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
+  }
+
+  const controle = await berekenDriewegControle(id);
+  if (controle?.afwijking && !factuur.geaccordeerd) {
+    const melding = `Drie-weg-controle: gefactureerd €${controle.gefactureerd_bedrag?.toFixed(2)} wijkt €${Math.abs(controle.verschil_bedrag ?? 0).toFixed(2)} af van besteld €${controle.besteld_bedrag?.toFixed(2)} (${controle.bon?.kenmerk}).`;
+    await db.update(facturenTable)
+      .set({ status: "controle_nodig", bijgewerktOp: new Date() })
+      .where(and(eq(facturenTable.id, id), inArray(facturenTable.status, ["ontvangen", "ai_gelezen", "klaar_voor_boeking", "controle_nodig"])));
+    await db.insert(factuurOpmerkingenTable).values({
+      factuurId: id, tekst: `[Drie-weg-controle] ${melding}`,
+    });
+  }
+  res.json({ gekoppeld: inkoopbonId != null, controle });
+});
+
+router.get("/facturen/:id/drieweg-controle", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = Number.parseInt(String(req.params.id ?? ""), 10);
+  const controle = await berekenDriewegControle(id);
+  if (!controle) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+  res.json(controle);
 });
 
 // ── GET /facturen/:id/contractcontrole ────────────────────────────────────────
@@ -2250,11 +2442,11 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
   // Rekeningschema-poort (ADMINISTRATIE_01): ook de forceer-herexport mag
   // nooit buiten het schema van de gekoppelde BV boeken.
   if (versInst.werkgeverId != null) {
-    const schemaFout = await controleerGrootboekSchema(versInst.werkgeverId, id, factuur.grootboekrekening ?? versInst.grootboekStandaard);
+    const schemaFout = await controleerBoekingsschema(versInst.werkgeverId, id, factuur.grootboekrekening ?? versInst.grootboekStandaard, factuur.btwCode);
     if (schemaFout) {
       await db.update(facturenTable).set({ accountviewStatus: "error", accountviewFout: schemaFout, bijgewerktOp: new Date() })
         .where(eq(facturenTable.id, id));
-      res.status(422).json({ error: "Grootboekrekening niet in rekeningschema", detail: schemaFout });
+      res.status(422).json({ error: "Boekingsgegevens niet in schema", detail: schemaFout });
       return;
     }
   }
@@ -2412,7 +2604,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
     // Rekeningschema-poort (ADMINISTRATIE_01): batch-export mag evenmin
     // buiten het schema van de gekoppelde BV boeken.
     if (versInst.werkgeverId != null) {
-      const schemaFout = await controleerGrootboekSchema(versInst.werkgeverId, fid, factuur.grootboekrekening ?? versInst.grootboekStandaard);
+      const schemaFout = await controleerBoekingsschema(versInst.werkgeverId, fid, factuur.grootboekrekening ?? versInst.grootboekStandaard, factuur.btwCode);
       if (schemaFout) {
         await db.update(facturenTable).set({ accountviewStatus: "error", accountviewFout: schemaFout, bijgewerktOp: new Date() })
           .where(eq(facturenTable.id, fid));

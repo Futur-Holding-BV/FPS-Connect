@@ -20,6 +20,7 @@ import {
   facturenTable,
   factuurRegelsTable,
   grootboekrekeningenTable,
+  btwCodesTable,
   accountviewInstellingenTable,
   accountviewExportLogsTable,
   gebruikersTable,
@@ -66,6 +67,53 @@ export async function controleerGrootboekSchema(
   }
   if (fout.length === 0) return null;
   return `Grootboekrekening ${fout.join(", ")} staat niet in het rekeningschema van deze werkmaatschappij. Kies een rekening uit het schema, of werk het schema bij via Beheer → Boekhouding.`;
+}
+
+/**
+ * Btw-schemapoort (ADMINISTRATIE_02 §1): controleer kop- en regel-btw-codes
+ * tegen het btw-schema van de werkmaatschappij. Zelfde besluit als het
+ * rekeningschema: een leeg schema laat door (anders valt de boekingsstroom
+ * stil vóór het schema is ingelezen); een gevuld schema is hard.
+ */
+export async function controleerBtwSchema(
+  werkgeverId: number,
+  factuurId: number,
+  effectieveKopBtwCode: string | null | undefined,
+): Promise<string | null> {
+  const schema = await db
+    .select({ code: btwCodesTable.code })
+    .from(btwCodesTable)
+    .where(and(eq(btwCodesTable.werkgeverId, werkgeverId), eq(btwCodesTable.actief, true)));
+  if (schema.length === 0) return null; // nog geen btw-schema ingelezen voor deze BV
+  const toegestaan = new Set(schema.map((s) => s.code));
+  const fout: string[] = [];
+  const kop = (effectieveKopBtwCode ?? "").trim();
+  if (kop && !toegestaan.has(kop)) fout.push(kop);
+  const regels = await db
+    .select({ c: factuurRegelsTable.btwCode })
+    .from(factuurRegelsTable)
+    .where(eq(factuurRegelsTable.factuurId, factuurId));
+  for (const r of regels) {
+    const c = (r.c ?? "").trim();
+    if (c && !toegestaan.has(c) && !fout.includes(c)) fout.push(c);
+  }
+  if (fout.length === 0) return null;
+  return `Btw-code ${fout.join(", ")} staat niet in het btw-schema van deze werkmaatschappij. Kies een code uit het schema, of werk het schema bij via Beheer → Boekhouding.`;
+}
+
+/**
+ * Gecombineerde schemapoort voor alle exportpaden: rekeningschema + btw-schema.
+ * Geeft de eerste fout terug, of null als beide poorten passeren.
+ */
+export async function controleerBoekingsschema(
+  werkgeverId: number,
+  factuurId: number,
+  effectieveKoprekening: string | null | undefined,
+  effectieveKopBtwCode: string | null | undefined,
+): Promise<string | null> {
+  const gbFout = await controleerGrootboekSchema(werkgeverId, factuurId, effectieveKoprekening);
+  if (gbFout) return gbFout;
+  return await controleerBtwSchema(werkgeverId, factuurId, effectieveKopBtwCode);
 }
 
 // Zelfde afleiding als in routes/facturen.ts — klein en stabiel genoeg om hier
@@ -243,10 +291,11 @@ export async function exporteerFactuurNaarAccountView(
   // Rekeningschema-poort (ADMINISTRATIE_01): boeken buiten het schema van de
   // gekoppelde BV wordt geweigerd — ná de claim, op de verse snapshot.
   if (versInst.werkgeverId != null) {
-    const schemaFout = await controleerGrootboekSchema(
+    const schemaFout = await controleerBoekingsschema(
       versInst.werkgeverId,
       factuurId,
       factuur.grootboekrekening ?? versInst.grootboekStandaard,
+      factuur.btwCode,
     );
     if (schemaFout) {
       // Claim teruggeven volgens het bestaande patroon: status error + reden.

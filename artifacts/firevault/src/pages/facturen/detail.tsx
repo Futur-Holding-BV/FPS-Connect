@@ -28,6 +28,9 @@ import {
   useKoppelFactuurLeverancier,
   useListLeveranciers,
   useGetFactuurPrijscontrole,
+  useGetDriewegControle,
+  useGetInkooporderSuggestie,
+  useKoppelInkoopbon,
 } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
@@ -56,6 +59,7 @@ import {
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { GrootboekSelect } from "@/components/grootboek-select";
+import { BtwSelect } from "@/components/btw-select";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 // FACTUUR_02 §4 — gesloten afwijsredenlijst (geen vrije tekst)
@@ -784,6 +788,9 @@ export default function FactuurDetailPagina() {
         </Card>
       </div>
 
+      {/* Drie-weg-controle bestelling/ontvangst/factuur (ADMINISTRATIE_02 §2) */}
+      {f.type === "inkoop" && <DriewegKaart factuurId={id} />}
+
       {/* G-rekening verdeelsleutel */}
       {f.g_rekening_van_toepassing && f.g_rekening_bedrag && f.bedrag_incl_btw && (() => {
         const totaal = parseFloat(f.bedrag_incl_btw);
@@ -1462,17 +1469,11 @@ export default function FactuurDetailPagina() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>BTW-code</Label>
-                <Select value={bewerkVelden["btw_code"] ?? ""} onValueChange={(v) => bewerkVeld("btw_code", v)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selecteer BTW-code" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="H">H — 21% hoog tarief</SelectItem>
-                    <SelectItem value="L">L — 9% laag tarief</SelectItem>
-                    <SelectItem value="V">V — BTW verlegd (onderaannemer)</SelectItem>
-                    <SelectItem value="0">0 — Vrijgesteld</SelectItem>
-                  </SelectContent>
-                </Select>
+                <BtwSelect
+                  className="mt-1"
+                  value={bewerkVelden["btw_code"] ?? ""}
+                  onChange={(v) => bewerkVeld("btw_code", v ?? "")}
+                />
               </div>
               <div>
                 <Label>Dagboek</Label>
@@ -1751,6 +1752,127 @@ function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
           <div className="px-3 py-1.5 border-t text-[11px] text-muted-foreground">
             {prijscontrole.aantal_niet_te_toetsen} regel{prijscontrole.aantal_niet_te_toetsen !== 1 ? "s" : ""} kon niet tegen een jaarprijs worden getoetst.
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Drie-weg-controle bestelling/ontvangst/factuur (ADMINISTRATIE_02 §2) ─────
+// Toont de koppeling met de inkooporder (I-nummer), suggesties bij geen
+// koppeling, en de vergelijking besteld/geleverd/gefactureerd. De derde weg
+// (ontvangst-aantallen) bestaat nog niet in de projectinkoop — dat wordt hier
+// eerlijk gemeld in plaats van verzonnen.
+function DriewegKaart({ factuurId }: { factuurId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const invalideer = () => {
+    queryClient.invalidateQueries({ queryKey: ["drieweg", factuurId] });
+    queryClient.invalidateQueries({ queryKey: ["inkooporder-suggestie", factuurId] });
+    queryClient.invalidateQueries({ queryKey: ["factuur", factuurId] });
+    queryClient.invalidateQueries({ queryKey: ["factuur-opmerkingen", factuurId] });
+  };
+  const { data: controle } = useGetDriewegControle(
+    factuurId,
+    { query: { queryKey: ["drieweg", factuurId], enabled: factuurId > 0 } },
+  );
+  const { data: suggesties } = useGetInkooporderSuggestie(
+    factuurId,
+    { query: { queryKey: ["inkooporder-suggestie", factuurId], enabled: factuurId > 0 && controle?.gekoppeld === false } },
+  );
+  const koppelMut = useKoppelInkoopbon({
+    mutation: {
+      onSuccess: (r) => {
+        invalideer();
+        if (r.controle?.afwijking) {
+          toast({ title: "Gekoppeld — afwijking gevonden", description: "De factuur is naar controle gezet met het verschil erbij.", variant: "destructive" });
+        } else {
+          toast({ title: r.gekoppeld ? "Gekoppeld aan inkooporder" : "Koppeling verwijderd" });
+        }
+      },
+      onError: () => toast({ title: "Koppelen mislukt", variant: "destructive" }),
+    },
+  });
+
+  if (!controle) return null;
+  const bedrag = (v: number | null | undefined) => v == null ? "—" : `€ ${v.toFixed(2)}`;
+
+  return (
+    <Card className={controle.afwijking ? "border-red-200 bg-red-50/30" : undefined}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <ArrowLeftRight className="h-4 w-4" />
+          Drie-weg-controle (bestelling · levering · factuur)
+          {controle.zonder_bestelling && (
+            <Badge variant="outline" className="ml-1 border-amber-300 text-amber-700">Zonder bestelling</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {controle.gekoppeld && controle.bon ? (
+          <>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-muted-foreground">Inkooporder:</span>
+              <span className="font-mono">{controle.bon.kenmerk}</span>
+              <span className="text-muted-foreground">({controle.bon.leverancier}, status {controle.bon.status})</span>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                onClick={() => koppelMut.mutate({ id: factuurId, data: { inkoopbon_id: null } })}
+                disabled={koppelMut.isPending}>
+                Ontkoppelen
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Veld label="Besteld (excl. btw)"><span className="font-mono">{bedrag(controle.besteld_bedrag)}</span></Veld>
+              <Veld label="Geleverd">
+                <span className="text-xs text-amber-700 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  geen ontvangstregistratie{controle.leveringsstatus ? ` (bonstatus: ${controle.leveringsstatus})` : ""}
+                </span>
+              </Veld>
+              <Veld label="Gefactureerd (alle facturen op deze order)"><span className="font-mono">{bedrag(controle.gefactureerd_bedrag)}</span></Veld>
+            </div>
+            {controle.afwijking ? (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-red-800 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Gefactureerd wijkt <span className="font-mono">{bedrag(Math.abs(controle.verschil_bedrag ?? 0))}</span> af van besteld — factuur staat op controle.</span>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-green-800 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Gefactureerd komt overeen met besteld.
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-muted-foreground">
+              Deze inkoopfactuur is niet aan een inkooporder gekoppeld en is daarmee herkenbaar als
+              factuur zonder bestelling.
+            </p>
+            {(suggesties?.kandidaten ?? []).length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Gevonden kandidaten:</p>
+                {(suggesties?.kandidaten ?? []).map((k) => (
+                  <div key={k.inkoopbon_id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                    <div className="min-w-0">
+                      <span className="font-mono">{k.kenmerk}</span>
+                      <span className="ml-2 text-muted-foreground">{k.leverancier}</span>
+                      {k.totaal_bedrag != null && <span className="ml-2 font-mono text-xs">€ {k.totaal_bedrag.toFixed(2)}</span>}
+                      <p className="text-xs text-muted-foreground truncate">{k.reden}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {k.zekerheid === "hoog" && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">zeker</Badge>}
+                      <Button size="sm" className="h-7 text-xs"
+                        onClick={() => koppelMut.mutate({ id: factuurId, data: { inkoopbon_id: k.inkoopbon_id } })}
+                        disabled={koppelMut.isPending}>
+                        Koppelen
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

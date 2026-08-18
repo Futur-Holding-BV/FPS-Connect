@@ -24,6 +24,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         opdrachtbevestiging_auto_verzenden: false,
         moments_verjaardag_ingeschakeld: true,
         heatmap_tracking_ingeschakeld: false,
+        betaalbatch_actief: false,
         ai_leren_van_correcties_ingeschakeld: true,
         ai_kostendrempel_eur: null,
         prijsafwijking_marge_pct: 2,
@@ -55,6 +56,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestigingAutoVerzenden,
       moments_verjaardag_ingeschakeld: instelling.momentsVerjaardagIngeschakeld,
       heatmap_tracking_ingeschakeld: instelling.heatmapTrackingIngeschakeld,
+      betaalbatch_actief: instelling.betaalbatchActief,
       ai_leren_van_correcties_ingeschakeld: instelling.aiLerenVanCorrectiesIngeschakeld,
       ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
       ai_maandelijkse_export_dag: instelling.aiMaandelijkseExportDag,
@@ -90,6 +92,7 @@ router.put(
         opdrachtbevestiging_auto_verzenden,
         moments_verjaardag_ingeschakeld,
         heatmap_tracking_ingeschakeld,
+        betaalbatch_actief,
         ai_leren_van_correcties_ingeschakeld,
         ai_kostendrempel_eur,
         ai_maandelijkse_export_dag,
@@ -109,6 +112,7 @@ router.put(
           opdrachtbevestiging_auto_verzenden?: boolean;
           moments_verjaardag_ingeschakeld?: boolean;
           heatmap_tracking_ingeschakeld?: boolean;
+          betaalbatch_actief?: boolean;
           ai_leren_van_correcties_ingeschakeld?: boolean;
           ai_kostendrempel_eur?: number | null;
           ai_maandelijkse_export_dag?: number | null;
@@ -122,6 +126,13 @@ router.put(
           opname_calculatie_bewaking_dagen?: number;
         };
       const gebruikerId = req.session.userId!;
+
+      // ADMINISTRATIE_02 §3 — de akkoord-schakelaar voor de betaalbatch mag
+      // alleen door de hoofdbeheerder worden omgezet (uitdrukkelijk akkoord).
+      if (typeof betaalbatch_actief === "boolean" && !req.permissies?.isHoofdbeheerder) {
+        res.status(403).json({ error: "Alleen de hoofdbeheerder kan de betaalbatch-schakelaar omzetten" });
+        return;
+      }
 
       const [bestaand] = await db
         .select({
@@ -150,6 +161,10 @@ router.put(
           : {}),
         ...(typeof heatmap_tracking_ingeschakeld === "boolean"
           ? { heatmapTrackingIngeschakeld: heatmap_tracking_ingeschakeld }
+          : {}),
+        // ADMINISTRATIE_02 §3 — akkoord-schakelaar crediteuren-betaalbatch.
+        ...(typeof betaalbatch_actief === "boolean"
+          ? { betaalbatchActief: betaalbatch_actief }
           : {}),
         ...(typeof ai_leren_van_correcties_ingeschakeld === "boolean"
           ? { aiLerenVanCorrectiesIngeschakeld: ai_leren_van_correcties_ingeschakeld }
@@ -255,6 +270,7 @@ router.put(
         opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
         moments_verjaardag_ingeschakeld: result.momentsVerjaardagIngeschakeld,
         heatmap_tracking_ingeschakeld: result.heatmapTrackingIngeschakeld,
+        betaalbatch_actief: result.betaalbatchActief,
         ai_leren_van_correcties_ingeschakeld: result.aiLerenVanCorrectiesIngeschakeld,
         ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
         ai_maandelijkse_export_dag: result.aiMaandelijkseExportDag,

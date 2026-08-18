@@ -1,3 +1,9 @@
+## 2026-08-18 — ADMINISTRATIE_02: btw-schema, drie-weg-controle en betaalbatch (SEPA)
+
+- **Btw-codes per BV** (migratie 0089): sync uit AccountView of lijst-import in Beheer → Boekhouding; keuzelijst op factuur- en leveranciersdetail; boekingspoort weigert btw-codes buiten het schema (422); categorisatievoorstel toetst voorstellen aan het schema; gebruiksmeting wijst typefouten aan. Bewijs: verificatie-grootboekschema.ts 23/23.
+- **Drie-weg-controle op inkoopfacturen**: koppeling factuur ↔ inkooporder met suggesties (I-nummer of leverancier+bedrag), vergelijking besteld vs. gefactureerd (deelfacturen tellen op), afwijking → controle + systeemopmerking, "zonder bestelling"-herkenning. Derde weg (ontvangst) wordt eerlijk als ontbrekend gemeld — voorstel voor ontvangstregistratie in docs/antwoorden/ADMINISTRATIE_02.md.
+- **Crediteuren-betaalbatch met SEPA pain.001** (migratie 0090): pagina Facturen → Betaalbatch; fail-closed selectie (geaccordeerd+geboekt, geldig IBAN, BV-match, geen G-rekening), pain.001.001.03-generator, bevestigen in één handeling zet facturen op betaald. **Staat achter akkoord-schakelaar betaalbatch_actief (standaard UIT) tot René akkoord geeft.** Bewijs: verificatie-betaalbatch.ts 12/12.
+
 ## 2026-08-18 — Rekeningschema per werkmaatschappij (ADMINISTRATIE_01)
 
 - **Aanleiding René**: het rekeningschema per werkmaatschappij uit AccountView halen en bijhouden; grootboekrekening overal een keuzelijst i.p.v. vrije tekst; een factuur kan niet geboekt worden op een rekening buiten het schema; en een meting welke nummers in gebruik zijn maar niet in het schema staan (aangeleerde typefouten).

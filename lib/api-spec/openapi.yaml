@@ -20187,6 +20187,308 @@ paths:
               schema:
                 $ref: "#/components/schemas/GrootboekGebruik"
 
+  /btw-codes:
+    get:
+      operationId: listBtwCodes
+      summary: Btw-codes (schema per administratie) ophalen
+      tags: [Instellingen]
+      parameters:
+        - name: werkgever_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lijst van btw-codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BtwCode"
+
+  /btw-codes/sync-accountview:
+    post:
+      operationId: syncBtwCodesAccountview
+      summary: Btw-codes ophalen uit AccountView (meting + sync)
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Meet- en syncresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekSyncResultaat"
+        "422":
+          description: Koppeling heeft nog geen werkmaatschappij
+
+  /btw-codes/import:
+    post:
+      operationId: importBtwCodes
+      summary: Btw-codes inlezen uit een lijst
+      tags: [Instellingen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BtwImportInput"
+      responses:
+        "201":
+          description: Ingelezen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekImportResultaat"
+        "422":
+          description: Geen bruikbare btw-codes in de aanlevering
+
+  /btw-codes/gebruik:
+    get:
+      operationId: getBtwGebruik
+      summary: Meting van gebruikte btw-codes versus het schema
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Gebruiksmeting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BtwGebruik"
+
+  /facturen/{id}/inkooporder-suggestie:
+    get:
+      operationId: getInkooporderSuggestie
+      summary: Kandidaat-inkooporders voor een inkoopfactuur (I-nummer of leverancier+bedrag)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Kandidatenlijst
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InkooporderSuggesties"
+
+  /facturen/{id}/koppel-inkoopbon:
+    post:
+      operationId: koppelInkoopbon
+      summary: Inkoopfactuur met één handeling aan een inkooporder koppelen (of ontkoppelen)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inkoopbon_id:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Gekoppeld; drie-weg-controle direct uitgevoerd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gekoppeld]
+                properties:
+                  gekoppeld:
+                    type: boolean
+                  controle:
+                    $ref: "#/components/schemas/DriewegControle"
+        "422":
+          description: Alleen inkoopfacturen kunnen worden gekoppeld
+
+  /facturen/{id}/drieweg-controle:
+    get:
+      operationId: getDriewegControle
+      summary: Drie-weg-vergelijking bestelling/ontvangst/factuur voor een inkoopfactuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vergelijking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriewegControle"
+
+  /betaalbatches:
+    get:
+      operationId: listBetaalbatches
+      summary: Crediteuren-betaalbatches
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Batches, nieuwste eerst
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Betaalbatch"
+    post:
+      operationId: createBetaalbatch
+      summary: Betaalbatch aanmaken (valideert elke factuur fail-closed)
+      tags: [Facturen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [werkgever_id, uitvoerdatum, factuur_ids]
+              properties:
+                werkgever_id:
+                  type: integer
+                uitvoerdatum:
+                  type: string
+                factuur_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status]
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  totaal_bedrag:
+                    type: number
+                  aantal_betalingen:
+                    type: integer
+        "422":
+          description: Niet alle facturen betaalbaar, of geen crediteuren-rekening
+        "423":
+          description: Betaalbatch staat uit (wacht op directie-akkoord)
+
+  /betaalbatches/betaalbare-facturen:
+    get:
+      operationId: listBetaalbareFacturen
+      summary: Betaalbare inkoopfacturen voor een werkmaatschappij (met redenen)
+      tags: [Facturen]
+      parameters:
+        - name: werkgever_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Beoordeling per factuur
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BetaalbareFactuur"
+        "423":
+          description: Betaalbatch staat uit (wacht op directie-akkoord)
+
+  /betaalbatches/{id}/pain001:
+    get:
+      operationId: downloadBetaalbatchPain001
+      summary: SEPA-betaalbestand (pain.001) van de batch downloaden
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: XML-bestand
+          content:
+            application/xml:
+              schema:
+                type: string
+        "423":
+          description: Betaalbatch staat uit (wacht op directie-akkoord)
+
+  /betaalbatches/{id}/bevestigen:
+    post:
+      operationId: bevestigBetaalbatch
+      summary: Batch in één handeling bevestigen; facturen gaan op betaald
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bevestigd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                  facturen_betaald:
+                    type: integer
+        "422":
+          description: Alleen bestand_aangemaakt kan worden bevestigd
+        "423":
+          description: Betaalbatch staat uit (wacht op directie-akkoord)
+
+  /betaalbatches/{id}/annuleren:
+    post:
+      operationId: annuleerBetaalbatch
+      summary: Niet-bevestigde batch annuleren (facturen worden weer betaalbaar)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Geannuleerd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+        "422":
+          description: Een bevestigde batch kan niet worden geannuleerd
+
   /facturen/historisch-archief/excel:
     get:
       operationId: downloadHistorischeFacturenExcel
@@ -34921,6 +35223,9 @@ components:
         heatmap_tracking_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.
+        betaalbatch_actief:
+          type: boolean
+          description: ADMINISTRATIE_02 §3 — akkoord-schakelaar voor de crediteuren-betaalbatch (SEPA pain.001). Standaard uit; gaat pas aan na uitdrukkelijk akkoord van de directie.
         ai_leren_van_correcties_ingeschakeld:
           type: boolean
           description: AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.
@@ -34981,6 +35286,9 @@ components:
         heatmap_tracking_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.
+        betaalbatch_actief:
+          type: boolean
+          description: ADMINISTRATIE_02 §3 — akkoord-schakelaar crediteuren-betaalbatch (alleen hoofdbeheerder). Standaard uit.
         ai_leren_van_correcties_ingeschakeld:
           type: boolean
           description: AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan.
@@ -45882,6 +46190,208 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+
+    Betaalbatch:
+      type: object
+      required: [id, werkgever_id, status, uitvoerdatum, totaal_bedrag, aantal_betalingen]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: integer
+        werkgever_naam:
+          type: string
+          nullable: true
+        status:
+          type: string
+        uitvoerdatum:
+          type: string
+        totaal_bedrag:
+          type: number
+        aantal_betalingen:
+          type: integer
+        bestand_referentie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bevestigd_op:
+          type: string
+          nullable: true
+
+    BetaalbareFactuur:
+      type: object
+      required: [factuur_id, bedrag, betaalbaar]
+      properties:
+        factuur_id:
+          type: integer
+        factuurnummer:
+          type: string
+          nullable: true
+        relatienaam:
+          type: string
+          nullable: true
+        bedrag:
+          type: number
+        vervaldatum:
+          type: string
+          nullable: true
+        crediteur_iban:
+          type: string
+          nullable: true
+        betaalbaar:
+          type: boolean
+        reden:
+          type: string
+          nullable: true
+
+    InkooporderSuggesties:
+      type: object
+      required: [kandidaten]
+      properties:
+        kandidaten:
+          type: array
+          items:
+            type: object
+            required: [inkoopbon_id, kenmerk, leverancier, status, reden, zekerheid]
+            properties:
+              inkoopbon_id:
+                type: integer
+              kenmerk:
+                type: string
+              leverancier:
+                type: string
+              status:
+                type: string
+              totaal_bedrag:
+                type: number
+                nullable: true
+              reden:
+                type: string
+              zekerheid:
+                type: string
+                enum: [hoog, gemiddeld]
+
+    DriewegControle:
+      type: object
+      required: [gekoppeld, zonder_bestelling, afwijking, geleverd_registratie]
+      properties:
+        gekoppeld:
+          type: boolean
+        zonder_bestelling:
+          type: boolean
+        besteld_bedrag:
+          type: number
+          nullable: true
+        gefactureerd_bedrag:
+          type: number
+          nullable: true
+        verschil_bedrag:
+          type: number
+          nullable: true
+        afwijking:
+          type: boolean
+        geleverd_registratie:
+          type: string
+          description: '"ontbreekt" zolang projectinkoop geen ontvangst-aantallen kent'
+        leveringsstatus:
+          type: string
+          nullable: true
+        bon:
+          type: object
+          nullable: true
+          required: [id, kenmerk, leverancier, status]
+          properties:
+            id:
+              type: integer
+            kenmerk:
+              type: string
+            leverancier:
+              type: string
+            status:
+              type: string
+            opdracht_id:
+              type: integer
+              nullable: true
+
+    BtwCode:
+      type: object
+      required: [id, werkgever_id, code, omschrijving, actief, bron]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: integer
+        code:
+          type: string
+        omschrijving:
+          type: string
+        percentage:
+          type: number
+          nullable: true
+        actief:
+          type: boolean
+        bron:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    BtwImportInput:
+      type: object
+      required: [werkgever_id]
+      properties:
+        werkgever_id:
+          type: integer
+        regels:
+          type: string
+          description: "Eén code per regel: code;omschrijving;percentage"
+        codes:
+          type: array
+          items:
+            type: object
+            required: [code]
+            properties:
+              code:
+                type: string
+              omschrijving:
+                type: string
+              percentage:
+                type: number
+                nullable: true
+
+    BtwGebruik:
+      type: object
+      required: [schema_aantal, totaal_codes_in_gebruik, items]
+      properties:
+        werkgever_id:
+          type: integer
+          nullable: true
+        schema_aantal:
+          type: integer
+        totaal_codes_in_gebruik:
+          type: integer
+        niet_in_schema:
+          type: array
+          nullable: true
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [code, totaal, bronnen]
+            properties:
+              code:
+                type: string
+              totaal:
+                type: integer
+              bronnen:
+                type: object
+                additionalProperties:
+                  type: integer
+              in_schema:
+                type: boolean
+                nullable: true
 
     GrootboekSyncResultaat:
       type: object

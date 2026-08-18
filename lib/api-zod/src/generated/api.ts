@@ -7716,6 +7716,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
+  "betaalbatch_actief": zod.boolean().optional().describe('ADMINISTRATIE_02 §3 — akkoord-schakelaar voor de crediteuren-betaalbatch (SEPA pain.001). Standaard uit; gaat pas aan na uitdrukkelijk akkoord van de directie.'),
   "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
@@ -7744,6 +7745,7 @@ export const UpdateInfoInstellingenBody = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.'),
+  "betaalbatch_actief": zod.boolean().optional().describe('ADMINISTRATIE_02 §3 — akkoord-schakelaar crediteuren-betaalbatch (alleen hoofdbeheerder). Standaard uit.'),
   "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
@@ -7766,6 +7768,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
+  "betaalbatch_actief": zod.boolean().optional().describe('ADMINISTRATIE_02 §3 — akkoord-schakelaar voor de crediteuren-betaalbatch (SEPA pain.001). Standaard uit; gaat pas aan na uitdrukkelijk akkoord van de directie.'),
   "ai_leren_van_correcties_ingeschakeld": zod.boolean().optional().describe('AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
@@ -24576,6 +24579,238 @@ export const GetGrootboekGebruikResponse = zod.object({
   "bronnen": zod.record(zod.string(), zod.number()),
   "in_schema": zod.boolean().nullish()
 }))
+})
+
+
+/**
+ * @summary Btw-codes (schema per administratie) ophalen
+ */
+export const ListBtwCodesQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const ListBtwCodesResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "percentage": zod.number().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListBtwCodesResponse = zod.array(ListBtwCodesResponseItem)
+
+
+/**
+ * @summary Btw-codes ophalen uit AccountView (meting + sync)
+ */
+export const SyncBtwCodesAccountviewResponse = zod.object({
+  "beschikbaar": zod.boolean(),
+  "http_status": zod.number().nullish(),
+  "reden": zod.string().nullish(),
+  "aantal": zod.number().optional(),
+  "toegevoegd": zod.number().optional(),
+  "bijgewerkt": zod.number().optional(),
+  "gedeactiveerd": zod.number().optional()
+})
+
+
+/**
+ * @summary Btw-codes inlezen uit een lijst
+ */
+export const ImportBtwCodesBody = zod.object({
+  "werkgever_id": zod.number(),
+  "regels": zod.string().optional().describe('Eén code per regel: code;omschrijving;percentage'),
+  "codes": zod.array(zod.object({
+  "code": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "percentage": zod.number().nullish()
+})).optional()
+})
+
+export const ImportBtwCodesResponse = zod.void()
+
+
+/**
+ * @summary Meting van gebruikte btw-codes versus het schema
+ */
+export const GetBtwGebruikResponse = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "schema_aantal": zod.number(),
+  "totaal_codes_in_gebruik": zod.number(),
+  "niet_in_schema": zod.array(zod.string()).nullish(),
+  "items": zod.array(zod.object({
+  "code": zod.string(),
+  "totaal": zod.number(),
+  "bronnen": zod.record(zod.string(), zod.number()),
+  "in_schema": zod.boolean().nullish()
+}))
+})
+
+
+/**
+ * @summary Kandidaat-inkooporders voor een inkoopfactuur (I-nummer of leverancier+bedrag)
+ */
+export const GetInkooporderSuggestieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInkooporderSuggestieResponse = zod.object({
+  "kandidaten": zod.array(zod.object({
+  "inkoopbon_id": zod.number(),
+  "kenmerk": zod.string(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "totaal_bedrag": zod.number().nullish(),
+  "reden": zod.string(),
+  "zekerheid": zod.enum(['hoog', 'gemiddeld'])
+}))
+})
+
+
+/**
+ * @summary Inkoopfactuur met één handeling aan een inkooporder koppelen (of ontkoppelen)
+ */
+export const KoppelInkoopbonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KoppelInkoopbonBody = zod.object({
+  "inkoopbon_id": zod.number().nullish()
+})
+
+export const KoppelInkoopbonResponse = zod.object({
+  "gekoppeld": zod.boolean(),
+  "controle": zod.object({
+  "gekoppeld": zod.boolean(),
+  "zonder_bestelling": zod.boolean(),
+  "besteld_bedrag": zod.number().nullish(),
+  "gefactureerd_bedrag": zod.number().nullish(),
+  "verschil_bedrag": zod.number().nullish(),
+  "afwijking": zod.boolean(),
+  "geleverd_registratie": zod.string().describe('\"ontbreekt\" zolang projectinkoop geen ontvangst-aantallen kent'),
+  "leveringsstatus": zod.string().nullish(),
+  "bon": zod.object({
+  "id": zod.number(),
+  "kenmerk": zod.string(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "opdracht_id": zod.number().nullish()
+}).nullish()
+}).optional()
+})
+
+
+/**
+ * @summary Drie-weg-vergelijking bestelling/ontvangst/factuur voor een inkoopfactuur
+ */
+export const GetDriewegControleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDriewegControleResponse = zod.object({
+  "gekoppeld": zod.boolean(),
+  "zonder_bestelling": zod.boolean(),
+  "besteld_bedrag": zod.number().nullish(),
+  "gefactureerd_bedrag": zod.number().nullish(),
+  "verschil_bedrag": zod.number().nullish(),
+  "afwijking": zod.boolean(),
+  "geleverd_registratie": zod.string().describe('\"ontbreekt\" zolang projectinkoop geen ontvangst-aantallen kent'),
+  "leveringsstatus": zod.string().nullish(),
+  "bon": zod.object({
+  "id": zod.number(),
+  "kenmerk": zod.string(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "opdracht_id": zod.number().nullish()
+}).nullish()
+})
+
+
+/**
+ * @summary Crediteuren-betaalbatches
+ */
+export const ListBetaalbatchesResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "uitvoerdatum": zod.string(),
+  "totaal_bedrag": zod.number(),
+  "aantal_betalingen": zod.number(),
+  "bestand_referentie": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bevestigd_op": zod.string().nullish()
+})
+export const ListBetaalbatchesResponse = zod.array(ListBetaalbatchesResponseItem)
+
+
+/**
+ * @summary Betaalbatch aanmaken (valideert elke factuur fail-closed)
+ */
+export const CreateBetaalbatchBody = zod.object({
+  "werkgever_id": zod.number(),
+  "uitvoerdatum": zod.string(),
+  "factuur_ids": zod.array(zod.number())
+})
+
+export const CreateBetaalbatchResponse = zod.void()
+
+
+/**
+ * @summary Betaalbare inkoopfacturen voor een werkmaatschappij (met redenen)
+ */
+export const ListBetaalbareFacturenQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number()
+})
+
+export const ListBetaalbareFacturenResponse = zod.object({
+  "items": zod.array(zod.object({
+  "factuur_id": zod.number(),
+  "factuurnummer": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "bedrag": zod.number(),
+  "vervaldatum": zod.string().nullish(),
+  "crediteur_iban": zod.string().nullish(),
+  "betaalbaar": zod.boolean(),
+  "reden": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary SEPA-betaalbestand (pain.001) van de batch downloaden
+ */
+export const DownloadBetaalbatchPain001Params = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DownloadBetaalbatchPain001Response = zod.unknown()
+
+
+/**
+ * @summary Batch in één handeling bevestigen; facturen gaan op betaald
+ */
+export const BevestigBetaalbatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigBetaalbatchResponse = zod.object({
+  "status": zod.string(),
+  "facturen_betaald": zod.number().optional()
+})
+
+
+/**
+ * @summary Niet-bevestigde batch annuleren (facturen worden weer betaalbaar)
+ */
+export const AnnuleerBetaalbatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnnuleerBetaalbatchResponse = zod.object({
+  "status": zod.string()
 })
 
 

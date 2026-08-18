@@ -15,6 +15,10 @@ import {
   useSyncGrootboekAccountview,
   useImportGrootboekrekeningen,
   useGetGrootboekGebruik,
+  useListBtwCodes,
+  useSyncBtwCodesAccountview,
+  useImportBtwCodes,
+  useGetBtwGebruik,
 } from "@workspace/api-client-react";
 import { GrootboekSelect } from "@/components/grootboek-select";
 import { useQueryClient } from "@tanstack/react-query";
@@ -613,7 +617,151 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
           )}
         </CardContent>
       </Card>
+
+      <BtwSchemaSectie werkgeverId={werkgeverId} />
     </div>
+  );
+}
+
+// ── Btw-codes per administratie (ADMINISTRATIE_02 §1) ─────────────────────────
+// Zelfde patroon als het rekeningschema: sync uit AccountView (meet & meldt),
+// lijst inlezen, schemalijst en gebruiksmeting met typefout-detectie.
+function BtwSchemaSectie({ werkgeverId }: { werkgeverId: number | null }) {
+  const queryClient = useQueryClient();
+  const invalideer = () => {
+    queryClient.invalidateQueries({ queryKey: ["btw-codes"] });
+    queryClient.invalidateQueries({ queryKey: ["btw-gebruik"] });
+  };
+  const { data: codes } = useListBtwCodes(
+    werkgeverId != null ? { werkgever_id: werkgeverId } : undefined,
+    { query: { queryKey: ["btw-codes", werkgeverId ?? "gekoppeld"] } },
+  );
+  const { data: gebruik } = useGetBtwGebruik({ query: { queryKey: ["btw-gebruik"] } });
+  const syncMut = useSyncBtwCodesAccountview({ mutation: { onSuccess: invalideer } });
+  const importMut = useImportBtwCodes({ mutation: { onSuccess: invalideer } });
+  const [importTekst, setImportTekst] = useState("");
+  const [importFout, setImportFout] = useState<string | null>(null);
+  const syncResultaat = syncMut.data as { beschikbaar?: boolean; reden?: string | null; http_status?: number | null; aantal?: number } | undefined;
+
+  async function lijstInlezen() {
+    setImportFout(null);
+    if (werkgeverId == null) {
+      setImportFout("Stel eerst bij Instellingen in voor welke werkmaatschappij deze administratie boekt.");
+      return;
+    }
+    try {
+      await importMut.mutateAsync({ data: { werkgever_id: werkgeverId, regels: importTekst } });
+      setImportTekst("");
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } };
+      setImportFout(e.response?.data?.error ?? String(err));
+    }
+  }
+
+  const actieveCodes = (codes ?? []).filter((c) => c.actief);
+  const typefouten = (gebruik?.items ?? []).filter((i) => i.in_schema === false);
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Btw-codes vullen</CardTitle>
+          <CardDescription>
+            Btw-code is overal een keuzelijst uit dit schema. Haal de codes op uit AccountView, of lees
+            een lijst in (één code per regel: code;omschrijving;percentage). Zolang het schema leeg is,
+            geldt de standaardlijst H/L/V/0.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
+              {syncMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wifi className="h-4 w-4 mr-2" />}
+              Ophalen uit AccountView
+            </Button>
+            {syncResultaat && (
+              syncResultaat.beschikbaar
+                ? <span className="flex items-center gap-1 text-sm text-green-700">
+                    <CheckCircle2 className="h-4 w-4" /> {syncResultaat.aantal} btw-codes opgehaald uit AccountView
+                  </span>
+                : <span className="flex items-start gap-1 text-sm text-amber-700">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>De koppeling staat dit (nu) niet toe{syncResultaat.http_status ? ` (HTTP ${syncResultaat.http_status})` : ""}: {syncResultaat.reden ?? "onbekende reden"} Lees hieronder een lijst in.</span>
+                  </span>
+            )}
+          </div>
+          <Separator />
+          <div>
+            <Label>Lijst inlezen{werkgeverId == null ? " (koppel eerst een werkmaatschappij bij Instellingen)" : ""}</Label>
+            <textarea
+              className="mt-1 w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+              placeholder={"H;Hoog tarief;21\nL;Laag tarief;9\nV;Verlegd;0\n0;Vrijgesteld;0"}
+              value={importTekst}
+              onChange={(e) => setImportTekst(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3">
+              <Button onClick={lijstInlezen} disabled={importMut.isPending || !importTekst.trim()}>
+                {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Lijst inlezen
+              </Button>
+              {importMut.isSuccess && !importFout && (
+                <span className="flex items-center gap-1 text-sm text-green-700">
+                  <CheckCircle2 className="h-4 w-4" /> Ingelezen
+                </span>
+              )}
+              {importFout && <span className="text-sm text-red-600">{importFout}</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Btw-schema ({actieveCodes.length} codes)</CardTitle>
+          <CardDescription>Codes die uit de bron verdwijnen worden gedeactiveerd, niet gewist.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {actieveCodes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nog geen btw-schema ingelezen — de standaardlijst H/L/V/0 geldt.</p>
+          ) : (
+            <div className="max-h-60 overflow-y-auto border rounded-md">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr className="border-b text-xs text-muted-foreground">
+                    <th className="px-3 py-2 text-left font-medium">Code</th>
+                    <th className="px-3 py-2 text-left font-medium">Omschrijving</th>
+                    <th className="px-3 py-2 text-right font-medium">Percentage</th>
+                    <th className="px-3 py-2 text-left font-medium">Bron</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actieveCodes.map((c) => (
+                    <tr key={c.id} className="border-b last:border-0">
+                      <td className="px-3 py-1.5 font-mono">{c.code}</td>
+                      <td className="px-3 py-1.5">{c.omschrijving || "—"}</td>
+                      <td className="px-3 py-1.5 text-right">{c.percentage != null ? `${c.percentage}%` : "—"}</td>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.bron}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {gebruik != null && gebruik.schema_aantal > 0 && (
+            typefouten.length === 0 ? (
+              <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Alle gebruikte btw-codes staan in het schema.
+              </div>
+            ) : (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{typefouten.length} btw-code{typefouten.length !== 1 ? "s" : ""} in gebruik die niet in het schema staat: <span className="font-mono">{typefouten.map((t) => t.code).join(", ")}</span></span>
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }
 

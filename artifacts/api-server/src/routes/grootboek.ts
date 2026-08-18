@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import {
   db,
   grootboekrekeningenTable,
+  btwCodesTable,
   accountviewInstellingenTable,
   facturenTable,
   factuurRegelsTable,
@@ -233,6 +234,193 @@ router.get("/grootboekrekeningen/gebruik", requireBevoegdheid("systeem", 1), asy
     schema_aantal: schemaAantal,
     totaal_nummers_in_gebruik: items.length,
     niet_in_schema: schemaAantal > 0 ? items.filter((i) => i.in_schema === false).map((i) => i.nummer) : null,
+    items,
+  });
+});
+
+// ═══ Btw-codes per administratie (ADMINISTRATIE_02 §1) ════════════════════════
+// Zelfde patroon als het rekeningschema: keuzelijst per BV, gevuld via
+// AccountView-sync (meetbaar) of ingelezen lijst; verdwenen codes worden
+// gedeactiveerd, nooit gewist.
+
+function mapBtwCode(r: typeof btwCodesTable.$inferSelect) {
+  return {
+    id: r.id,
+    werkgever_id: r.werkgeverId,
+    code: r.code,
+    omschrijving: r.omschrijving,
+    percentage: r.percentage ?? null,
+    actief: r.actief,
+    bron: r.bron,
+    bijgewerkt_op: r.bijgewerktOp.toISOString(),
+  };
+}
+
+async function upsertBtwSchema(
+  werkgeverId: number,
+  codes: Array<{ code: string; omschrijving: string; percentage: number | null }>,
+  bron: "accountview" | "import",
+): Promise<{ toegevoegd: number; bijgewerkt: number; gedeactiveerd: number }> {
+  const uniek = [...new Map(codes.map((c) => [c.code, c])).values()];
+  return await db.transaction(async (tx) => {
+    const bestaand = await tx
+      .select({ id: btwCodesTable.id, code: btwCodesTable.code, actief: btwCodesTable.actief })
+      .from(btwCodesTable)
+      .where(eq(btwCodesTable.werkgeverId, werkgeverId));
+    const bestaandeCodes = new Set(bestaand.map((b) => b.code));
+    const nieuweCodes = new Set(uniek.map((c) => c.code));
+    let toegevoegd = 0;
+    let bijgewerkt = 0;
+    let gedeactiveerd = 0;
+    for (const c of uniek) {
+      await tx.insert(btwCodesTable)
+        .values({ werkgeverId, code: c.code, omschrijving: c.omschrijving, percentage: c.percentage, bron })
+        .onConflictDoUpdate({
+          target: [btwCodesTable.werkgeverId, btwCodesTable.code],
+          set: { omschrijving: c.omschrijving, percentage: c.percentage, actief: true, bron, bijgewerktOp: new Date() },
+        });
+      if (bestaandeCodes.has(c.code)) bijgewerkt++; else toegevoegd++;
+    }
+    for (const b of bestaand) {
+      if (!nieuweCodes.has(b.code) && b.actief) {
+        await tx.update(btwCodesTable)
+          .set({ actief: false, bijgewerktOp: new Date() })
+          .where(eq(btwCodesTable.id, b.id));
+        gedeactiveerd++;
+      }
+    }
+    return { toegevoegd, bijgewerkt, gedeactiveerd };
+  });
+}
+
+// GET /btw-codes?werkgever_id=1 — keuzelijst; zonder parameter de gekoppelde BV.
+router.get("/btw-codes", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const wgRaw = req.query["werkgever_id"];
+  let wgId = wgRaw == null ? null : Number(wgRaw);
+  if (wgId == null || !Number.isFinite(wgId)) {
+    const [inst] = await db.select({ werkgeverId: accountviewInstellingenTable.werkgeverId })
+      .from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+    wgId = inst?.werkgeverId ?? null;
+  }
+  if (wgId == null) { res.json([]); return; }
+  const rijen = await db.select().from(btwCodesTable)
+    .where(eq(btwCodesTable.werkgeverId, wgId))
+    .orderBy(btwCodesTable.code);
+  res.json(rijen.map(mapBtwCode));
+});
+
+// POST /btw-codes/sync-accountview — meet en meldt of de koppeling dit toestaat.
+router.post("/btw-codes/sync-accountview", requireBevoegdheid("systeem", 2), async (req: Request, res: Response): Promise<void> => {
+  const [inst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  if (!inst || inst.werkgeverId == null) {
+    res.status(422).json({
+      beschikbaar: false,
+      reden: "De AccountView-koppeling heeft nog geen werkmaatschappij (BV) — stel die eerst in bij Boekhouding.",
+    });
+    return;
+  }
+  const client = maakAccountViewClient(inst);
+  const resultaat = await client.haalBtwCodes();
+  if (!resultaat.beschikbaar || !resultaat.codes) {
+    res.status(200).json({ beschikbaar: false, http_status: resultaat.httpStatus ?? null, reden: resultaat.reden ?? "Onbekende reden" });
+    return;
+  }
+  const telling = await upsertBtwSchema(inst.werkgeverId, resultaat.codes, "accountview");
+  res.json({ beschikbaar: true, http_status: resultaat.httpStatus ?? null, aantal: resultaat.codes.length, ...telling });
+});
+
+// POST /btw-codes/import — lijst inlezen voor één BV.
+// Body: { werkgever_id, regels: "H;Hoog 21%;21\n..." } of { werkgever_id, codes: [{code, omschrijving, percentage}] }.
+router.post("/btw-codes/import", requireBevoegdheid("systeem", 2), async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  const wgId = Number(body["werkgever_id"]);
+  if (!Number.isFinite(wgId)) { res.status(400).json({ error: "werkgever_id is verplicht" }); return; }
+  const [wg] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, wgId));
+  if (!wg) { res.status(404).json({ error: "Werkmaatschappij niet gevonden" }); return; }
+  let codes: Array<{ code: string; omschrijving: string; percentage: number | null }> = [];
+  if (Array.isArray(body["codes"])) {
+    for (const r of body["codes"] as Array<Record<string, unknown>>) {
+      const code = String(r["code"] ?? "").trim();
+      if (!code) continue;
+      const pct = r["percentage"] == null ? null : Number(r["percentage"]);
+      codes.push({
+        code,
+        omschrijving: String(r["omschrijving"] ?? "").trim(),
+        percentage: pct != null && Number.isFinite(pct) ? pct : null,
+      });
+    }
+  } else if (typeof body["regels"] === "string") {
+    for (const regel of (body["regels"] as string).split(/\r?\n/)) {
+      const kaal = regel.trim();
+      if (!kaal || kaal.startsWith("#")) continue;
+      const delen = kaal.split(/[;\t]|,(?=\S)/).map((d) => d.trim());
+      const code = delen[0] ?? "";
+      if (!code || /^code$/i.test(code)) continue;
+      const pct = delen[2] ? Number(delen[2].replace(",", ".").replace("%", "")) : null;
+      codes.push({ code, omschrijving: delen[1] ?? "", percentage: pct != null && Number.isFinite(pct) ? pct : null });
+    }
+  }
+  const uniek = new Map(codes.map((c) => [c.code, c]));
+  codes = [...uniek.values()];
+  if (codes.length === 0) {
+    res.status(422).json({ error: "Geen bruikbare btw-codes gevonden in de aanlevering (verwacht: code;omschrijving;percentage per regel)." });
+    return;
+  }
+  const telling = await upsertBtwSchema(wgId, codes, "import");
+  res.status(201).json({ aantal: codes.length, ...telling });
+});
+
+// GET /btw-codes/gebruik — meting: welke btw-codes zijn in gebruik, waar, hoe
+// vaak — en welke daarvan niet in het schema van de gekoppelde BV voorkomen.
+router.get("/btw-codes/gebruik", requireBevoegdheid("systeem", 1), async (req: Request, res: Response): Promise<void> => {
+  const gebruik = new Map<string, { code: string; bronnen: Record<string, number> }>();
+  const tel = (code: string | null | undefined, bron: string, n = 1) => {
+    const kaal = (code ?? "").trim();
+    if (!kaal) return;
+    const rec = gebruik.get(kaal) ?? { code: kaal, bronnen: {} };
+    rec.bronnen[bron] = (rec.bronnen[bron] ?? 0) + n;
+    gebruik.set(kaal, rec);
+  };
+
+  const fk = await db.select({ c: facturenTable.btwCode, n: sql<number>`count(*)::int` })
+    .from(facturenTable).groupBy(facturenTable.btwCode);
+  for (const r of fk) tel(r.c, "facturen", r.n);
+  const fr = await db.select({ c: factuurRegelsTable.btwCode, n: sql<number>`count(*)::int` })
+    .from(factuurRegelsTable).groupBy(factuurRegelsTable.btwCode);
+  for (const r of fr) tel(r.c, "factuurregels", r.n);
+  const lev = await db.select({ c: leveranciersTable.btwCodeDefault, n: sql<number>`count(*)::int` })
+    .from(leveranciersTable).groupBy(leveranciersTable.btwCodeDefault);
+  for (const r of lev) tel(r.c, "leveranciers", r.n);
+  const cat = await db.select({ c: leverancierCategorisatieTable.btwCode, n: sql<number>`count(*)::int` })
+    .from(leverancierCategorisatieTable).groupBy(leverancierCategorisatieTable.btwCode);
+  for (const r of cat) tel(r.c, "leverancier_categorisatie", r.n);
+
+  const [inst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  const wgId = inst?.werkgeverId ?? null;
+  const schemaCodes = new Set<string>();
+  let schemaAantal = 0;
+  if (wgId != null) {
+    const schema = await db.select({ code: btwCodesTable.code })
+      .from(btwCodesTable)
+      .where(and(eq(btwCodesTable.werkgeverId, wgId), eq(btwCodesTable.actief, true)));
+    schemaAantal = schema.length;
+    for (const s of schema) schemaCodes.add(s.code);
+  }
+
+  const items = [...gebruik.values()]
+    .map((g) => ({
+      code: g.code,
+      totaal: Object.values(g.bronnen).reduce((a, b) => a + b, 0),
+      bronnen: g.bronnen,
+      in_schema: schemaAantal > 0 ? schemaCodes.has(g.code) : null,
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code, "nl", { numeric: true }));
+
+  res.json({
+    werkgever_id: wgId,
+    schema_aantal: schemaAantal,
+    totaal_codes_in_gebruik: items.length,
+    niet_in_schema: schemaAantal > 0 ? items.filter((i) => i.in_schema === false).map((i) => i.code) : null,
     items,
   });
 });

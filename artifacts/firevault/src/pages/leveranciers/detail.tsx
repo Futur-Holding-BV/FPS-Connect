@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { GrootboekSelect } from "@/components/grootboek-select";
+import { BtwSelect } from "@/components/btw-select";
 import { Link } from "wouter";
 
 export default function LeverancierDetailPagina() {
@@ -654,21 +655,10 @@ function BewerkModal({
               </div>
               <div className="space-y-1 col-span-2">
                 <Label>Standaard BTW-code</Label>
-                <Select
+                <BtwSelect
                   value={form["btw_code_default"] ?? ""}
-                  onValueChange={(v) => setForm((p) => ({ ...p, btw_code_default: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Geen standaard ingesteld" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Geen standaard</SelectItem>
-                    <SelectItem value="H">H — 21% hoog tarief</SelectItem>
-                    <SelectItem value="L">L — 9% laag tarief</SelectItem>
-                    <SelectItem value="V">V — BTW verlegd (onderaannemer)</SelectItem>
-                    <SelectItem value="0">0 — Vrijgesteld</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onChange={(v) => setForm((p) => ({ ...p, btw_code_default: v ?? "" }))}
+                />
               </div>
             </div>
             <div className="space-y-1 col-span-2">

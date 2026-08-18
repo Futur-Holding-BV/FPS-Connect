@@ -6,7 +6,7 @@ import { authenticator } from "otplib";
 import { eq, like } from "drizzle-orm";
 import {
   db, gebouwenTable, facturenTable, factuurRegelsTable,
-  grootboekrekeningenTable, accountviewInstellingenTable, werkgeversTable,
+  grootboekrekeningenTable, btwCodesTable, accountviewInstellingenTable, werkgeversTable,
 } from "@workspace/db";
 import {
   setupE2eWebAdminAccount,
@@ -68,6 +68,7 @@ async function schoonOp(werkgeverId: number | null) {
   await db.delete(gebouwenTable).where(eq(gebouwenTable.naam, MARKER));
   if (werkgeverId != null) {
     await db.delete(grootboekrekeningenTable).where(eq(grootboekrekeningenTable.werkgeverId, werkgeverId));
+    await db.delete(btwCodesTable).where(eq(btwCodesTable.werkgeverId, werkgeverId));
   }
 }
 
@@ -180,6 +181,113 @@ async function main() {
     check("batch-export buiten schema → mislukt met schemareden",
       batch.status === 200 ? batchStr.includes("rekeningschema") : batchStr.includes("rekeningschema"),
       `${batch.status} ${batchStr.slice(0, 300)}`);
+
+    // ── ADMINISTRATIE_02 §1: btw-codes ────────────────────────────────────────
+    // Bewijs 11: btw-lijst inlezen + keuzelijst-endpoint.
+    const btwImp = await api(admin, "POST", "/btw-codes/import", {
+      werkgever_id: wg.id,
+      regels: "H;Hoog tarief;21\nL;Laag tarief;9\nV;Verlegd;0",
+    });
+    const btwImpJ = btwImp.json as { toegevoegd?: number };
+    check("btw-import lijst → 201, 3 toegevoegd", btwImp.status === 201 && btwImpJ.toegevoegd === 3, JSON.stringify(btwImp.json));
+    const btwLijst = await api(admin, "GET", `/btw-codes?werkgever_id=${wg.id}`);
+    const btwRijen = btwLijst.json as Array<{ code: string; omschrijving: string; percentage: number | null }>;
+    check("GET /btw-codes levert schema met omschrijving+percentage",
+      btwLijst.status === 200 && btwRijen.some((c) => c.code === "H" && c.omschrijving === "Hoog tarief" && c.percentage === 21),
+      JSON.stringify(btwLijst.json).slice(0, 200));
+
+    // Bewijs 12: herimport zonder V deactiveert (niet wissen).
+    const btwImp2 = await api(admin, "POST", "/btw-codes/import", {
+      werkgever_id: wg.id, regels: "H;Hoog tarief;21\nL;Laag tarief;9",
+    });
+    const btwImpJ2 = btwImp2.json as { gedeactiveerd?: number };
+    check("btw-herimport deactiveert verdwenen code", btwImp2.status === 201 && btwImpJ2.gedeactiveerd === 1, JSON.stringify(btwImp2.json));
+
+    // Bewijs 13: btw-sync-meting antwoordt gestructureerd (meet & meldt).
+    const btwSync = await api(admin, "POST", "/btw-codes/sync-accountview");
+    const btwSyncJ = btwSync.json as { beschikbaar?: boolean; reden?: string };
+    check("btw-sync-meting antwoordt gestructureerd",
+      btwSync.status === 200 && typeof btwSyncJ.beschikbaar === "boolean" && (btwSyncJ.beschikbaar || !!btwSyncJ.reden),
+      JSON.stringify(btwSync.json));
+
+    // Bewijs 14: gebruik-meting wijst een btw-typefout aan.
+    await db.update(facturenTable).set({ btwCode: "HH" }).where(eq(facturenTable.id, factuurFout!.id));
+    const btwGebruik = await api(admin, "GET", "/btw-codes/gebruik");
+    const btwGebJ = btwGebruik.json as { niet_in_schema?: string[] };
+    check("btw-gebruik-meting wijst HH aan als niet-in-schema",
+      btwGebruik.status === 200 && (btwGebJ.niet_in_schema ?? []).includes("HH"),
+      JSON.stringify(btwGebruik.json).slice(0, 300));
+
+    // Bewijs 15: boekingspoort weigert een btw-code buiten het schema —
+    // rekening staat wél in het schema, dus dit bewijst de btw-poort apart.
+    await db.update(facturenTable)
+      .set({ grootboekrekening: "4000", accountviewStatus: null, accountviewFout: null, accountviewBoekingId: null })
+      .where(eq(facturenTable.id, factuurFout!.id));
+    const btwExp = await api(admin, "POST", `/facturen/${factuurFout!.id}/export-accountview`);
+    const btwWeiger = JSON.stringify(btwExp.json);
+    check("export met btw-code buiten schema → 422 met leesbare reden",
+      btwExp.status === 422 && btwWeiger.includes("btw-schema"), `${btwExp.status} ${btwWeiger}`);
+
+    // Bewijs 16: met schema-btw-code boekt de factuur wél (testmodus).
+    await db.update(facturenTable)
+      .set({ btwCode: "H", accountviewStatus: null, accountviewFout: null })
+      .where(eq(facturenTable.id, factuurFout!.id));
+    const btwExp2 = await api(admin, "POST", `/facturen/${factuurFout!.id}/export-accountview`);
+    check("export met schema-btw-code slaagt (testmodus)", btwExp2.status === 200, `${btwExp2.status} ${JSON.stringify(btwExp2.json).slice(0, 200)}`);
+
+    // ── ADMINISTRATIE_02 §2: drie-weg-controle ────────────────────────────────
+    // Bewijs 17: ongekoppelde inkoopfactuur is herkenbaar als "zonder bestelling".
+    const dw0 = await api(admin, "GET", `/facturen/${factuurFout!.id}/drieweg-controle`);
+    const dw0J = dw0.json as { gekoppeld?: boolean; zonder_bestelling?: boolean };
+    check("ongekoppelde factuur → zonder_bestelling", dw0.status === 200 && dw0J.gekoppeld === false && dw0J.zonder_bestelling === true, JSON.stringify(dw0.json));
+
+    // Opzet: opdracht + inkoopbon (I-nummer) met totaal 100.00.
+    const { opdrachtenTable, inkoopbonnenTable } = await import("@workspace/db");
+    const [opdracht] = await db.insert(opdrachtenTable).values({
+      titel: MARKER, status: "concept",
+    } as typeof opdrachtenTable.$inferInsert).returning();
+    const [bon] = await db.insert(inkoopbonnenTable).values({
+      opdrachtId: opdracht!.id, leverancier: "Bewijs Leverancier", totaalBedrag: 100,
+      status: "besteld",
+    } as typeof inkoopbonnenTable.$inferInsert).returning();
+
+    // Bewijs 18: suggestie op I-nummer in de factuuromschrijving.
+    await db.update(facturenTable)
+      .set({ omschrijving: `Levering conform ${"I" + String(bon!.nummer).padStart(3, "0")}` })
+      .where(eq(facturenTable.id, factuurFout!.id));
+    const sug = await api(admin, "GET", `/facturen/${factuurFout!.id}/inkooporder-suggestie`);
+    const sugJ = sug.json as { kandidaten?: Array<{ inkoopbon_id: number; zekerheid: string }> };
+    check("suggestie herkent I-nummer op de factuur (zekerheid hoog)",
+      sug.status === 200 && (sugJ.kandidaten ?? []).some((k) => k.inkoopbon_id === bon!.id && k.zekerheid === "hoog"),
+      JSON.stringify(sug.json).slice(0, 300));
+
+    // Bewijs 19: koppelen zonder afwijking (100 == 100) → geen controle-status.
+    const kop1 = await api(admin, "POST", `/facturen/${factuurFout!.id}/koppel-inkoopbon`, { inkoopbon_id: bon!.id });
+    const kop1J = kop1.json as { gekoppeld?: boolean; controle?: { afwijking?: boolean; besteld_bedrag?: number; gefactureerd_bedrag?: number } };
+    check("koppelen: besteld 100 == gefactureerd 100 → geen afwijking",
+      kop1.status === 200 && kop1J.gekoppeld === true && kop1J.controle?.afwijking === false, JSON.stringify(kop1.json).slice(0, 300));
+
+    // Bewijs 20: bedrag wijkt af → koppelen zet factuur op controle mét verschil.
+    await db.update(facturenTable)
+      .set({ bedragExclBtw: "112.50", status: "ontvangen", geaccordeerd: false })
+      .where(eq(facturenTable.id, factuurFout!.id));
+    const kop2 = await api(admin, "POST", `/facturen/${factuurFout!.id}/koppel-inkoopbon`, { inkoopbon_id: bon!.id });
+    const kop2J = kop2.json as { controle?: { afwijking?: boolean; verschil_bedrag?: number } };
+    const [naKoppel] = await db.select({ status: facturenTable.status }).from(facturenTable).where(eq(facturenTable.id, factuurFout!.id));
+    check("afwijkend bedrag → afwijking + status controle_nodig + verschil 12.50",
+      kop2.status === 200 && kop2J.controle?.afwijking === true && kop2J.controle?.verschil_bedrag === 12.5 && naKoppel?.status === "controle_nodig",
+      `${JSON.stringify(kop2.json).slice(0, 300)} status=${naKoppel?.status}`);
+
+    // Bewijs 21: derde weg (ontvangst) wordt eerlijk gemeld als ontbrekend.
+    const dw1 = await api(admin, "GET", `/facturen/${factuurFout!.id}/drieweg-controle`);
+    const dw1J = dw1.json as { geleverd_registratie?: string; leveringsstatus?: string };
+    check("geleverd_registratie = ontbreekt (bonstatus wel zichtbaar)",
+      dw1.status === 200 && dw1J.geleverd_registratie === "ontbreekt" && dw1J.leveringsstatus === "besteld", JSON.stringify(dw1.json).slice(0, 200));
+
+    // Opruimen drieweg-opzet.
+    await db.update(facturenTable).set({ inkoopbonId: null, opdrachtId: null }).where(eq(facturenTable.id, factuurFout!.id));
+    await db.delete(inkoopbonnenTable).where(eq(inkoopbonnenTable.id, bon!.id));
+    await db.delete(opdrachtenTable).where(eq(opdrachtenTable.id, opdracht!.id));
   } finally {
     // Oorspronkelijke instellingen exact terugzetten + testdata opruimen.
     await db.update(accountviewInstellingenTable).set({

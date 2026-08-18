@@ -88,6 +88,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
   aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
   aiMaandelijkseExportDag: integer("ai_maandelijkse_export_dag"), // 1-28, null = uit
+  // ADMINISTRATIE_02 §3 — crediteuren-betaalbatch (SEPA pain.001). Standaard UIT;
+  // gaat pas aan na uitdrukkelijk akkoord van de directie (René).
+  betaalbatchActief: boolean("betaalbatch_actief").notNull().default(false),
   aiMaandelijkseExportEmail: text("ai_maandelijkse_export_email"),
   aiMaandelijkseExportLaatstVerzondenMaand: text("ai_maandelijkse_export_laatst_verzonden_maand"), // 'JJJJ-MM'
   // AANVRAAG_01 — instelbare reactietijdgrenzen (bedrijfskeuze, nooit in code vastleggen).

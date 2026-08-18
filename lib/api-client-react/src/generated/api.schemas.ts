@@ -4822,6 +4822,8 @@ export interface AppInstellingen {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** ADMINISTRATIE_02 §3 — akkoord-schakelaar voor de crediteuren-betaalbatch (SEPA pain.001). Standaard uit; gaat pas aan na uitdrukkelijk akkoord van de directie. */
+  betaalbatch_actief?: boolean;
   /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties. Aan = AI-analyses mogen leren van eerdere gebruikerscorrecties (few-shot, met tien-waarnemingen-rem). Uit = geen few-shot, geen bijsturing. Standaard aan. */
   ai_leren_van_correcties_ingeschakeld?: boolean;
   /**
@@ -4873,6 +4875,8 @@ export interface AppInstellingenInput {
   moments_verjaardag_ingeschakeld?: boolean;
   /** Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit. */
   heatmap_tracking_ingeschakeld?: boolean;
+  /** ADMINISTRATIE_02 §3 — akkoord-schakelaar crediteuren-betaalbatch (alleen hoofdbeheerder). Standaard uit. */
+  betaalbatch_actief?: boolean;
   /** AI_01 §4 — organisatiebrede schakelaar voor de leerlus van correcties (alleen beheerder). Standaard aan. */
   ai_leren_van_correcties_ingeschakeld?: boolean;
   /**
@@ -12248,6 +12252,114 @@ export interface Grootboekrekening {
   bijgewerkt_op?: string;
 }
 
+export interface Betaalbatch {
+  id: number;
+  werkgever_id: number;
+  werkgever_naam?: string | null;
+  status: string;
+  uitvoerdatum: string;
+  totaal_bedrag: number;
+  aantal_betalingen: number;
+  bestand_referentie?: string | null;
+  aangemaakt_op?: string;
+  bevestigd_op?: string | null;
+}
+
+export interface BetaalbareFactuur {
+  factuur_id: number;
+  factuurnummer?: string | null;
+  relatienaam?: string | null;
+  bedrag: number;
+  vervaldatum?: string | null;
+  crediteur_iban?: string | null;
+  betaalbaar: boolean;
+  reden?: string | null;
+}
+
+export type InkooporderSuggestiesKandidatenItemZekerheid = typeof InkooporderSuggestiesKandidatenItemZekerheid[keyof typeof InkooporderSuggestiesKandidatenItemZekerheid];
+
+
+export const InkooporderSuggestiesKandidatenItemZekerheid = {
+  hoog: 'hoog',
+  gemiddeld: 'gemiddeld',
+} as const;
+
+export type InkooporderSuggestiesKandidatenItem = {
+  inkoopbon_id: number;
+  kenmerk: string;
+  leverancier: string;
+  status: string;
+  totaal_bedrag?: number | null;
+  reden: string;
+  zekerheid: InkooporderSuggestiesKandidatenItemZekerheid;
+};
+
+export interface InkooporderSuggesties {
+  kandidaten: InkooporderSuggestiesKandidatenItem[];
+}
+
+export type DriewegControleBon = {
+  id: number;
+  kenmerk: string;
+  leverancier: string;
+  status: string;
+  opdracht_id?: number | null;
+} | null;
+
+export interface DriewegControle {
+  gekoppeld: boolean;
+  zonder_bestelling: boolean;
+  besteld_bedrag?: number | null;
+  gefactureerd_bedrag?: number | null;
+  verschil_bedrag?: number | null;
+  afwijking: boolean;
+  /** "ontbreekt" zolang projectinkoop geen ontvangst-aantallen kent */
+  geleverd_registratie: string;
+  leveringsstatus?: string | null;
+  bon?: DriewegControleBon;
+}
+
+export interface BtwCode {
+  id: number;
+  werkgever_id: number;
+  code: string;
+  omschrijving: string;
+  percentage?: number | null;
+  actief: boolean;
+  bron: string;
+  bijgewerkt_op?: string;
+}
+
+export type BtwImportInputCodesItem = {
+  code: string;
+  omschrijving?: string;
+  percentage?: number | null;
+};
+
+export interface BtwImportInput {
+  werkgever_id: number;
+  /** Eén code per regel: code;omschrijving;percentage */
+  regels?: string;
+  codes?: BtwImportInputCodesItem[];
+}
+
+export type BtwGebruikItemsItemBronnen = {[key: string]: number};
+
+export type BtwGebruikItemsItem = {
+  code: string;
+  totaal: number;
+  bronnen: BtwGebruikItemsItemBronnen;
+  in_schema?: boolean | null;
+};
+
+export interface BtwGebruik {
+  werkgever_id?: number | null;
+  schema_aantal: number;
+  totaal_codes_in_gebruik: number;
+  niet_in_schema?: string[] | null;
+  items: BtwGebruikItemsItem[];
+}
+
 export interface GrootboekSyncResultaat {
   beschikbaar: boolean;
   http_status?: number | null;
@@ -18796,6 +18908,49 @@ export type OvernemenSnagstreamSnag201 = {
 
 export type ListGrootboekrekeningenParams = {
 werkgever_id?: number;
+};
+
+export type ListBtwCodesParams = {
+werkgever_id?: number;
+};
+
+export type KoppelInkoopbonBody = {
+  inkoopbon_id?: number | null;
+};
+
+export type KoppelInkoopbon200 = {
+  gekoppeld: boolean;
+  controle?: DriewegControle;
+};
+
+export type CreateBetaalbatchBody = {
+  werkgever_id: number;
+  uitvoerdatum: string;
+  factuur_ids: number[];
+};
+
+export type CreateBetaalbatch201 = {
+  id: number;
+  status: string;
+  totaal_bedrag?: number;
+  aantal_betalingen?: number;
+};
+
+export type ListBetaalbareFacturenParams = {
+werkgever_id: number;
+};
+
+export type ListBetaalbareFacturen200 = {
+  items: BetaalbareFactuur[];
+};
+
+export type BevestigBetaalbatch200 = {
+  status: string;
+  facturen_betaald?: number;
+};
+
+export type AnnuleerBetaalbatch200 = {
+  status: string;
 };
 
 export type ListFacturenParams = {
