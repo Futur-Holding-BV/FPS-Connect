@@ -109,3 +109,17 @@ uri = "file://attached_assets/bewijs/crm-mobiel-onder.png"
 type = "image"
 title = "CRM-overzicht op telefoonbreedte (doorgescrold)"
 description = "Navigatiekaarten: Organisaties, Contactpersonen, Aanvragen, Projectkansen, Concurrenten."
+
+[[outputs]]
+id = "7jkHL7XiX02YOKvWN_0n7"
+uri = "file://screenshots/monteuromgeving-app-opent2.png"
+type = "image"
+title = "Wat er opent na installatie"
+description = "Productie https://connect.fps-one.nl/app/ — de monteuromgeving (FPS Monteur login), niet Connect-desktop."
+
+[[outputs]]
+id = "UgiEE7NRLYUDGFyCNb5yJ"
+uri = "file://screenshots/monteur-beginscherm-icoon.png"
+type = "image"
+title = "Beginscherm-icoon (FPS Monteur)"
+description = "Het icoon dat op het beginscherm komt: /app/icons/pwa-512.png uit het manifest van de monteuromgeving, met naam \"FPS Monteur\"."
