@@ -111,6 +111,37 @@ healthcheck() {
   return 1
 }
 
+# ─── Versiecheck als functie ──────────────────────────────────────────────────
+# Controleert dat /api/versie de verwachte commit meldt. Defense-in-depth naast
+# de healthcheck: als de nieuwe containers niet starten maar de oude stack nog
+# draait, geeft /api/healthz "status":"ok" terwijl de verkeerde code loopt.
+# Neemt één argument: de volledige (lange) SHA van de verwachte commit.
+# Vergelijkt met de korte hash die de API teruggeeft (GIT_COMMIT = --short).
+versiecheck() {
+  local verwachte_lang="$1"
+  local verwachte_kort
+  verwachte_kort="$(git rev-parse --short "${verwachte_lang}")"
+  echo "Versiecheck: verwacht commit ${verwachte_kort} op https://connect.fps-one.nl/api/versie ..."
+  local pogingen=6   # 6 x 5s = max ~30s extra wachttijd na geslaagde healthcheck
+  local i
+  for i in $(seq 1 "${pogingen}"); do
+    local antwoord commit_in_api
+    antwoord="$(curl -fsS --max-time 10 https://connect.fps-one.nl/api/versie 2>/dev/null || true)"
+    # Haalt het commit-veld op zonder externe afhankelijkheden (geen jq/node vereist).
+    commit_in_api="$(printf '%s' "${antwoord}" | grep -o '"commit":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
+    if [ "${commit_in_api}" = "${verwachte_kort}" ]; then
+      echo "Versiecheck geslaagd: /api/versie meldt commit ${commit_in_api} (verwacht ${verwachte_kort})."
+      return 0
+    fi
+    echo "Versiecheck: API meldt '${commit_in_api}', verwacht '${verwachte_kort}' (poging ${i}/${pogingen}), 5s wachten..."
+    sleep 5
+  done
+  echo "FOUT: /api/versie meldt niet de verwachte commit na ${pogingen} pogingen." >&2
+  echo "  Verwacht (kort): ${verwachte_kort}" >&2
+  echo "  Laatste API-antwoord: ${antwoord}" >&2
+  return 1
+}
+
 # ─── STAP 2: databaseback-up (bestaande compose backup-opdracht) ─────────────
 # --profile backup is vereist: de backup-service zit in het "backup"-profiel
 # en is standaard uitgesloten van compose-commando's zonder die vlag.
@@ -136,6 +167,20 @@ stap_tijd "databaseback-up"
 # ─── STAP 3: nieuwste code ophalen ───────────────────────────────────────────
 echo "=== STAP 3: git fetch origin ==="
 git fetch origin
+
+# ─── DEPLOY_COMMIT validatie ─────────────────────────────────────────────────
+# DEPLOY_COMMIT (= GITHUB_SHA uit de workflow) moet een volledige 40-tekens
+# hex-SHA zijn. Een lege waarde is toegestaan: dan wordt origin/main gebruikt.
+# Een ingevulde waarde die géén geldige SHA is (bijv. een taknaam of typefouten)
+# wordt hier direct afgeblokt, vóórdat git reset --hard er iets mee doet.
+if [ -n "${DEPLOY_COMMIT:-}" ]; then
+  if ! printf '%s' "${DEPLOY_COMMIT}" | grep -qE '^[0-9a-f]{40}$'; then
+    echo "FOUT: DEPLOY_COMMIT '${DEPLOY_COMMIT}' is geen geldige volledige hex-SHA (40 tekens)." >&2
+    echo "Verwacht: 40 hexadecimale tekens (0-9, a-f). Controleer de workflow-configuratie." >&2
+    exit 1
+  fi
+  echo "DEPLOY_COMMIT validatie OK: ${DEPLOY_COMMIT}"
+fi
 
 # ─── STAP 4: werkmap exact gelijk zetten aan de uitgerolde commit ────────────
 # reset --hard (geen pull): de server volgt de uitgerolde commit altijd exact,
@@ -285,14 +330,25 @@ if ! ${COMPOSE} up -d --remove-orphans db api caddy; then
 fi
 stap_tijd "containers-starten"
 
-# ─── STAP 9 + 10: healthcheck; alleen slagen bij status ok ───────────────────
-echo "=== STAP 9/10: healthcheck ==="
+# ─── STAP 9 + 10: healthcheck + versiecheck; beide moeten slagen ─────────────
+# De healthcheck bewijst dat de API antwoordt. De versiecheck bewijst daarna
+# dat de JUISTE release antwoordt. Zonder versiecheck zou een scenario waarbij
+# de nieuwe containers crashen maar de oude stack nog draait als geslaagd
+# worden gemarkeerd.
+echo "=== STAP 9/10: healthcheck + versiecheck ==="
+DEPLOY_VERSIE_COMMIT="$(git rev-parse HEAD)"
+VERSIECHECK_GESLAAGD=0
 if healthcheck; then
   stap_tijd "healthcheck"
-  # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
-  docker image prune -f --filter "until=72h" || true
-  echo "Deploy voltooid: release is gezond."
-  exit 0
+  if versiecheck "${DEPLOY_VERSIE_COMMIT}"; then
+    # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
+    docker image prune -f --filter "until=72h" || true
+    echo "Deploy voltooid: release is gezond en de juiste versie draait."
+    exit 0
+  fi
+  echo "FOUT: healthcheck geslaagd maar versiecheck faalde — de OUDE containers draaien nog." >&2
+  echo "Automatische rollback wordt gestart..." >&2
+  VERSIECHECK_GESLAAGD=1   # markeer dat healthcheck slaagde maar versiecheck niet (voor logging)
 fi
 
 # ─── Automatische rollback (behouden uit de bestaande workflow) ──────────────
@@ -325,7 +381,14 @@ fi
 
 echo "Healthcheck na rollback gestart..."
 if healthcheck; then
-  echo "Rollback geslaagd: productie draait weer op de vorige gezonde versie (${VORIGE_COMMIT})." >&2
+  # Versiecheck na rollback: bevestig dat de VORIGE commit draait en niet
+  # per ongeluk een onbekende tussenstap (bijv. gecachte nieuwe image).
+  if versiecheck "${VORIGE_COMMIT}"; then
+    echo "Rollback geslaagd: productie draait weer op de vorige gezonde versie (${VORIGE_COMMIT})." >&2
+  else
+    echo "FOUT: rollback-healthcheck slaagde maar versiecheck meldt verkeerde commit." >&2
+    echo "Handmatige interventie vereist — zie deploy/ROLLBACK_PRODUCTION.md (Niveau 2)." >&2
+  fi
 else
   echo "FOUT: rollback-healthcheck faalt OOK. Handmatige interventie vereist — zie deploy/ROLLBACK_PRODUCTION.md (Niveau 2)." >&2
 fi
