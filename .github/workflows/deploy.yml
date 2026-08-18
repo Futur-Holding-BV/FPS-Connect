@@ -124,9 +124,11 @@ jobs:
 
           echo "Controleer CI-status voor commit ${GITHUB_SHA}..."
 
-          # Wacht maximaal 3 minuten als de CI net gestart is (push-events
-          # voor de deploy en CI starten vrijwel gelijktijdig).
-          MAX_WACHT=180
+          # Wacht tot 20 minuten: push-events voor deploy en CI starten
+          # vrijwel gelijktijdig en de CI-run zelf duurt ~10 minuten. Met de
+          # oude 3 minuten gaf de poort het op terwijl CI nog liep en faalde
+          # élke push-deploy (18-08-2026).
+          MAX_WACHT=1200
           INTERVAL=15
           GEWACHT=0
           CI_UITKOMST="onbekend"
