@@ -73,4 +73,16 @@ pnpm run typecheck || {
   echo "[pre-push] GEBLOKKEERD: typecheck faalt — push niet uitgevoerd." >&2
   exit 1
 }
+
+# ─── 4. Migratienummer-botsingscontrole (MIGRATIE_DUBBEL / SCHEMA_01) ─────────
+# Incident 18-08-2026: botsing 0083 blokkeerde alle uitrol. De controle
+# bestond al in CI maar pas ná de push — hier wordt ze ook pre-push afgedwongen.
+# Bij een botsing geeft de melding het eerstvolgende vrije nummer én het
+# stap-voor-stap herstelpatroon (HERNUMMERD-entry in migrate.mjs stap 2b).
+echo "[pre-push] Migratienummer-controle (MIGRATIE_DUBBEL/SCHEMA_01)..."
+pnpm --filter @workspace/db run check-hernoeming || {
+  echo "[pre-push] GEBLOKKEERD: migratienummer-botsing gedetecteerd — push niet uitgevoerd." >&2
+  exit 1
+}
+
 echo "[pre-push] Alle controles groen — push gaat door."

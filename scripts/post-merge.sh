@@ -223,6 +223,15 @@ trap '_stuur_faalmelding "$_HUIDIGE_STAP" "$_MERGE_SHA"' ERR
 
 pnpm install --frozen-lockfile
 
+# Stap 0b: Migratienummer-botsingscontrole (MIGRATIE_DUBBEL / SCHEMA_01)
+# Vangt dubbele migratienummers en hernoemde/verwijderde bestanden op VOOR de
+# migratierunner ze tegenkomt. Incident 18-08-2026: botsing 0083 blokkeerde
+# alle uitrol; de controle bestond al (check-hernoeming) maar draaide pas in
+# CI ná de push. Door hem hier te herhalen wordt een botsing direct bij de
+# merge gesignaleerd in de Replit workflow-log.
+_HUIDIGE_STAP="Stap 0b: migratienummer-botsingscontrole (MIGRATIE_DUBBEL)"
+pnpm --filter @workspace/db run check-hernoeming
+
 # Stap 1-3 (SCHEMA_01): genummerde migraties draaien + drift-check.
 # De oude keten apply-additive → reconcile → drizzle-kit push --force is
 # vervallen: push is bevroren sinds SCHEMA_01 en liep in non-TTY merges vast
