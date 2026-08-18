@@ -151,6 +151,7 @@
 - [Marketingmodule (MARKETING_01)](marketing-module.md) + [Social-mediamodule (SOCIAL_01)](social-module.md) — consent-poort in élke query, wachtrij/kanaaleisen fail-closed, publicatiemotor nooit stil (⇒ werkbak-taak), adapters=stubs tot OAuth.
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/); archiver v8=named ZipArchive.
+- [Voorraadtelling bevroren](voorraadtelling.md) — vastgestelde telling leest alléén bevroren kolommen; vaststellen=één tx met correctiemutaties (referentie voorraadtelling); mutatie na vaststellen=409.
 - [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
 - [Medewerker-create twee routes + conceptfase](medewerker-create-routes.md) — UI gebruikt POST /medewerkers (óók concept zonder startdatum); side-effects fail-safe overslaan + PATCH-pad met duplicate-guard + tx; uren 0..48.
 - [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — push blokkeert bij >300 regels diff per bestand; bewuste herschrijving = [grote-wijziging] in commit-boodschap.

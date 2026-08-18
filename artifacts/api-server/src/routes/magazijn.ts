@@ -21,6 +21,8 @@ import {
   magazijnInkooporderRegelsTable,
   magazijnPicklijstenTable,
   magazijnPicklijstRegelsTable,
+  voorraadTellingenTable,
+  voorraadTellingRegelsTable,
   medewerkersTable,
   planningItemsTable,
   werkgeversTable,
@@ -28,6 +30,7 @@ import {
   documentStudioModellenTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, ilike, lt, lte, gte, sql, gt, inArray, isNotNull } from "drizzle-orm";
+import { naarCenten, naarEuro, rond2 } from "@workspace/calculatie";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { haalOntvangstIban } from "../lib/werkgeverIban";
@@ -163,6 +166,14 @@ function mapArtikelMagazijn(r: typeof artikelenTable.$inferSelect, leverancierNa
 // For negative deltas (uitgifte/correctie), call AFTER validating available stock at the
 // call site. hoeveelheid never drops below 0 (GREATEST guard).
 
+// Gedeelde serialisatiegrens voor ALLE voorraadwijzigende paden: het artikelrecord
+// FOR UPDATE vergrendelen vóór lezen/beslissen/schrijven van de voorraad. Zo
+// serialiseren gewone mutaties óók met een lopende telling-vaststelling, zelfs
+// wanneer er (nog) geen voorraadrij bestaat om te locken.
+async function vergrendelArtikel(exec: DbExec, artikelId: number): Promise<void> {
+  await exec.execute(sql`SELECT id FROM artikelen WHERE id = ${artikelId} FOR UPDATE`);
+}
+
 async function bijwerkenVoorraad(
   exec: DbExec,
   artikelId: number,
@@ -177,6 +188,8 @@ async function bijwerkenVoorraad(
   // BOUW_01 §6: verbruik dat niet op een project mag landen
   kostenrubriek?: string | null,
 ) {
+  await vergrendelArtikel(exec, artikelId);
+
   const whereExpr = locatieId != null
     ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, locatieId))
     : and(eq(voorraadTable.artikelId, artikelId), sql`${voorraadTable.locatieId} IS NULL`);
@@ -952,7 +965,11 @@ router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res): Promise<
     const type = str(body.type) ?? "correctie";
     const userId = req.session?.userId as number | undefined;
 
-    await bijwerkenVoorraad(db, artikelId, locatieId, delta, type, userId, null, null, str(body.omschrijving));
+    // In een transactie zodat de artikel-lock in bijwerkenVoorraad de hele
+    // lees+schrijf-cyclus omspant (serialisatie met telling-vaststellen).
+    await db.transaction(async (tx) => {
+      await bijwerkenVoorraad(tx, artikelId, locatieId, delta, type, userId, null, null, str(body.omschrijving));
+    });
 
     res.status(201).json({ ok: true });
   } catch (err) {
@@ -1081,17 +1098,16 @@ router.post("/magazijn/reserveringen", aanmaken, async (req, res): Promise<void>
 
     const userId = req.session?.userId as number | undefined;
 
-    // Controleer vrije voorraad vóór de transactie (snelle pre-check)
-    const voorraadRijen = await db.select().from(voorraadTable)
-      .where(eq(voorraadTable.artikelId, artikelId));
-    const totaalVrij = voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
-
-    if (totaalVrij < hoeveelheid) {
-      res.status(409).json({ error: `Onvoldoende vrije voorraad (${totaalVrij} beschikbaar, ${hoeveelheid} gevraagd)` }); return;
-    }
-
-    // Alle mutaties binnen één transactie voor atomiciteit
+    // Alle mutaties binnen één transactie voor atomiciteit; lezen en beslissen
+    // pas ná de artikel-lock (gedeelde serialisatiegrens met telling-vaststellen).
     const res_ = await db.transaction(async (tx) => {
+      await vergrendelArtikel(tx, artikelId);
+      const voorraadRijen = await tx.select().from(voorraadTable)
+        .where(eq(voorraadTable.artikelId, artikelId));
+      const totaalVrij = voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
+      if (totaalVrij < hoeveelheid) {
+        return { onvoldoende: totaalVrij } as const;
+      }
       const [reservering] = await tx.insert(reserveringenTable).values({
         artikelId,
         opdrachtId: body.opdracht_id ? Number(body.opdracht_id) : null,
@@ -1127,6 +1143,9 @@ router.post("/magazijn/reserveringen", aanmaken, async (req, res): Promise<void>
       return reservering;
     });
 
+    if ("onvoldoende" in res_) {
+      res.status(409).json({ error: `Onvoldoende vrije voorraad (${res_.onvoldoende} beschikbaar, ${hoeveelheid} gevraagd)` }); return;
+    }
     const [artikel] = await db.select({ naam: artikelenTable.naam }).from(artikelenTable).where(eq(artikelenTable.id, artikelId)).limit(1);
     res.status(201).json(mapReservering(res_, { artikel_naam: artikel?.naam ?? null }));
   } catch (err) {
@@ -1154,6 +1173,7 @@ router.patch("/magazijn/reserveringen/:id/annuleer", schrijven, async (req, res)
       ));
 
     const bijgewerkt = await db.transaction(async (tx) => {
+      await vergrendelArtikel(tx, reservering.artikelId);
       // Vrijgave per betrokken voorraad-rij
       for (const m of resMutaties) {
         const whereExpr = m.locatieId != null
@@ -1226,47 +1246,38 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
 
     const userId = req.session?.userId as number | undefined;
 
-    // Pre-validatie: controleer per regel of er voldoende (vrije) voorraad is.
-    // Bij een gekoppelde reservering telt de gereserveerde hoeveelheid mee als beschikbaar.
-    for (const regel of regels) {
-      const artikelId = Number(regel.artikel_id);
-      const hoeveelheid = Number(regel.hoeveelheid);
-      const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
-
-      const voorraadRijen = await db.select().from(voorraadTable)
-        .where(eq(voorraadTable.artikelId, artikelId));
-
-      if (regel.reservering_id) {
-        // Uitgifte via reservering: totale hoeveelheid (incl. gereserveerd) moet volstaan
-        const totaal = voorraadRijen.reduce((s, v) => s + (v.hoeveelheid ?? 0), 0);
-        if (totaal < hoeveelheid) {
-          res.status(422).json({
-            code: "ONVOLDOENDE_VOORRAAD",
-            beschikbaar: totaal,
-            error: `Onvoldoende voorraad voor artikel ${artikelId}: ${totaal} aanwezig, ${hoeveelheid} gevraagd`,
-          }); return;
-        }
-      } else {
-        // Directe uitgifte: alleen vrije voorraad op de gevraagde locatie
-        const beschikbaar = locatieId != null
-          ? voorraadRijen.filter(v => v.locatieId === locatieId).reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0)
-          : voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
-        if (beschikbaar < hoeveelheid) {
-          res.status(422).json({
-            code: "ONVOLDOENDE_VOORRAAD",
-            beschikbaar,
-            error: `Onvoldoende vrije voorraad voor artikel ${artikelId}: ${beschikbaar} vrij, ${hoeveelheid} gevraagd`,
-          }); return;
-        }
-      }
-    }
-
-    // Voer alle mutaties atomisch uit
+    // Voer alle mutaties atomisch uit. Beschikbaarheidscontrole gebeurt BINNEN
+    // de transactie, direct ná de artikel-lock: lezen → beslissen → schrijven
+    // onder dezelfde lock, zodat twee gelijktijdige uitgiftes nooit allebei de
+    // controle passeren (de tweede ziet de al-verlaagde stand en krijgt 422).
     await db.transaction(async (tx) => {
       for (const regel of regels) {
         const artikelId = Number(regel.artikel_id);
         const hoeveelheid = Number(regel.hoeveelheid);
         const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
+        // Gedeelde serialisatiegrens met telling-vaststellen en andere mutatiepaden
+        await vergrendelArtikel(tx, artikelId);
+
+        const voorraadRijen = await tx.select().from(voorraadTable)
+          .where(eq(voorraadTable.artikelId, artikelId));
+        if (regel.reservering_id) {
+          // Uitgifte via reservering: totale hoeveelheid (incl. gereserveerd) moet volstaan
+          const totaal = voorraadRijen.reduce((s, v) => s + (v.hoeveelheid ?? 0), 0);
+          if (totaal < hoeveelheid) {
+            throw new OnvoldoendeVoorraadFout(totaal,
+              `Onvoldoende voorraad voor artikel ${artikelId}: ${totaal} aanwezig, ${hoeveelheid} gevraagd`);
+          }
+        } else {
+          // Directe uitgifte: alleen vrije voorraad op de gevraagde locatie
+          const beschikbaar = locatieId != null
+            ? voorraadRijen.filter(v => v.locatieId === locatieId).reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0)
+            : voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
+          if (beschikbaar < hoeveelheid) {
+            throw new OnvoldoendeVoorraadFout(beschikbaar,
+              `Onvoldoende vrije voorraad voor artikel ${artikelId}: ${beschikbaar} vrij, ${hoeveelheid} gevraagd`);
+          }
+        }
+
         const kostenrubriek = await bepaalKostenrubriek(tx, artikelId, opdrachtId ?? null);
 
         if (regel.reservering_id) {
@@ -1346,6 +1357,10 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
 
     res.status(201).json({ ok: true, opdracht_id: opdrachtId, regels: regels.map(r => ({ artikel_id: r.artikel_id, hoeveelheid: r.hoeveelheid })) });
   } catch (err) {
+    if (err instanceof OnvoldoendeVoorraadFout) {
+      res.status(422).json({ code: "ONVOLDOENDE_VOORRAAD", beschikbaar: err.beschikbaar, error: err.message });
+      return;
+    }
     logger.error({ err }, "magazijn uitgifte fout");
     res.status(500).json({ error: "Serverfout" });
   }
@@ -1434,6 +1449,10 @@ router.post("/magazijn/verplaatsingen", aanmaken, async (req, res): Promise<void
     const omschrijving = String(body.omschrijving ?? "Verplaatsing");
 
     await db.transaction(async (tx) => {
+      // Serialisatiegrens: lezen/beslissen/schrijven pas ná de artikel-lock,
+      // zodat een gelijktijdige telling-vaststelling nooit tussen onze lees- en
+      // schrijfstap kan vallen (stale absolute hoeveelheden).
+      await vergrendelArtikel(tx, artikelId);
       // Afname van-locatie
       const voorraadVan = vanLocatieId != null
         ? await tx.select().from(voorraadTable)
@@ -1962,8 +1981,12 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
 
     const isRetour = scan.scanType === "retour";
 
+    // Eén transactie + artikel-lock per item: gedeelde serialisatiegrens
+    // met telling-vaststellen (én atomaire scan-goedkeuring).
+    await db.transaction(async (db) => {
     for (const item of artikelen) {
       if (!item.artikel_id || item.hoeveelheid <= 0) continue;
+      await vergrendelArtikel(db, item.artikel_id);
 
       if (isRetour) {
         // Retour: hoeveelheid toevoegen aan voorraad op de aanbevolen locatie
@@ -2054,6 +2077,7 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
         }
       }
     }
+    });
 
     const [updated] = await db
       .update(magazijnStellingscansTable)
@@ -2566,6 +2590,8 @@ router.post("/magazijn/inkooporders/:id/ontvang", schrijven, async (req, res) =>
 
         if (inkomend.ontvangen_hoeveelheid > 0) {
           const locatieId = inkomend.locatie_id ?? null;
+          // Gedeelde serialisatiegrens met telling-vaststellen
+          await vergrendelArtikel(tx, bestaandeRegel.artikelId);
           const [bestaandVoorraad] = await tx
             .select()
             .from(voorraadTable)
@@ -2949,6 +2975,8 @@ router.post("/picklijsten/:id/verwerk", schrijven, async (req, res) => {
 
         if (!bestaandeRegel) continue;
 
+        // Gedeelde serialisatiegrens met telling-vaststellen
+        await vergrendelArtikel(tx, bestaandeRegel.artikelId);
         // Bepaal de vrije voorraad (hoeveelheid - gereserveerd) voor dit artikel/locatie
         const [bestaandVoorraad] = await tx
           .select()
@@ -3145,6 +3173,491 @@ router.post("/ai-bestelsuggesties", requireBevoegdheid("magazijn", 1), async (re
   } catch (err) {
     logger.error({ err }, "AI bestelsuggesties fout");
     return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Voorraadtellingen (VOORRAADTELLING fase 1 — bevroren telling, peildatum)
+// Rechten: lezen=1, regels invullen=3 (aanmaken), vaststellen/verwijderen=4 (beheer).
+// Na vaststellen is de telling onwijzigbaar: elke mutatie geeft 409.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TELLING_GRONDSLAGEN = ["inkoopprijs", "laatste_inkoopprijs", "gewogen_gemiddelde"] as const;
+type TellingGrondslag = typeof TELLING_GRONDSLAGEN[number];
+
+// Exacte 2-decimalen aritmetiek via de calculatie-rekenkern (centen, teken-
+// symmetrisch): nooit IEEE-754-producten direct afronden. 0,30 × 3,35 moet
+// €1,01 opleveren (1,005 → half-weg-van-nul), niet €1,00.
+const r2 = (n: number) => rond2(n);
+/** aantal × prijs exact: beide naar centen, product in 1/10000 euro, dan half-weg-van-nul naar hele centen. */
+function geldMaal(aantal: number, prijs: number): number {
+  const v = (naarCenten(aantal) * naarCenten(prijs)) / 100;
+  return naarEuro(v >= 0 ? Math.round(v) : -Math.round(-v));
+}
+/** a − b exact op centen. */
+const verschil2 = (a: number, b: number) => naarEuro(naarCenten(a) - naarCenten(b));
+/** a + b exact op centen. */
+const optel2 = (a: number, b: number) => naarEuro(naarCenten(a) + naarCenten(b));
+
+// Sentinel-fout voor beschikbaarheidscontroles die BINNEN een transactie (ná de
+// artikel-lock) falen: rolt de hele transactie terug en wordt als 422 beantwoord.
+class OnvoldoendeVoorraadFout extends Error {
+  constructor(public beschikbaar: number, melding: string) {
+    super(melding);
+    this.name = "OnvoldoendeVoorraadFout";
+  }
+}
+
+// Prijs van een artikel volgens de grondslag van de telling (null = onbekend, fail-closed)
+function grondslagPrijs(a: { inkoopprijs: number | null; laatsteInkoopprijs: number | null; gemiddeldInkoopprijs: number | null }, grondslag: string): number | null {
+  switch (grondslag) {
+    case "inkoopprijs":         return a.inkoopprijs ?? null;
+    case "laatste_inkoopprijs": return a.laatsteInkoopprijs ?? null;
+    case "gewogen_gemiddelde":  return a.gemiddeldInkoopprijs ?? null;
+    default: return null;
+  }
+}
+
+function mapTelling(r: typeof voorraadTellingenTable.$inferSelect, extra?: { aangemaakt_door_naam?: string | null; vastgesteld_door_naam?: string | null; aantal_regels?: number }) {
+  return {
+    id: r.id,
+    peildatum: r.peildatum,
+    grondslag: r.grondslag,
+    status: r.status,
+    omschrijving: r.omschrijving ?? null,
+    aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+    aangemaakt_door_naam: extra?.aangemaakt_door_naam ?? null,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    vastgesteld_door_id: r.vastgesteldDoorId ?? null,
+    vastgesteld_door_naam: extra?.vastgesteld_door_naam ?? null,
+    vastgesteld_op: iso(r.vastgesteldOp ?? null),
+    aantal_regels: extra?.aantal_regels ?? 0,
+  };
+}
+
+function mapTellingRegel(
+  r: typeof voorraadTellingRegelsTable.$inferSelect,
+  extra?: { geteld_door_naam?: string | null; administratieve_voorraad_live?: number | null; laatste_beweging_live?: Date | null },
+  vastgesteld?: boolean,
+) {
+  // Voor een vastgestelde telling komen stand en laatste beweging ALTIJD uit de
+  // bevroren kolommen; voor een open telling tonen we de live administratie.
+  const admin = vastgesteld ? (r.administratieveVoorraad ?? null) : (extra?.administratieve_voorraad_live ?? null);
+  const beweging = vastgesteld ? (r.laatsteBewegingOp ?? null) : (extra?.laatste_beweging_live ?? null);
+  return {
+    id: r.id,
+    telling_id: r.tellingId,
+    artikel_id: r.artikelId ?? null,
+    artikel_naam: r.artikelNaam,
+    artikel_code: r.artikelCode ?? null,
+    eenheid: r.eenheid,
+    locatie_id: r.locatieId ?? null,
+    locatie_naam: r.locatieNaam ?? null,
+    geteld_aantal: r.geteldAantal,
+    administratieve_voorraad: admin,
+    verschil_aantal: admin != null ? verschil2(r.geteldAantal, admin) : null,
+    prijs: r.prijs ?? null,
+    waarde: r.waarde ?? null,
+    laatste_beweging_op: iso(beweging),
+    bevestigd: r.bevestigd,
+    geteld_door_id: r.geteldDoorId ?? null,
+    geteld_door_naam: extra?.geteld_door_naam ?? null,
+    geteld_op: iso(r.geteldOp ?? null),
+  };
+}
+
+// Live administratieve stand voor een regel: de voorraadrij die exact bij
+// (artikel, locatie) hoort — dezelfde rij waarop bij vaststellen de correctie boekt.
+async function liveAdminStand(exec: DbExec, artikelId: number, locatieId: number | null): Promise<number> {
+  const whereExpr = locatieId != null
+    ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, locatieId))
+    : and(eq(voorraadTable.artikelId, artikelId), sql`${voorraadTable.locatieId} IS NULL`);
+  const rij = await exec.select({ hoeveelheid: voorraadTable.hoeveelheid }).from(voorraadTable).where(whereExpr).limit(1);
+  return rij.length > 0 ? rij[0].hoeveelheid : 0;
+}
+
+// GET: alle tellingen
+router.get("/magazijn/tellingen", lezen, async (_req, res): Promise<void> => {
+  try {
+    const maker = sql<string | null>`(SELECT naam FROM gebruikers WHERE id = ${voorraadTellingenTable.aangemaaktDoorId})`;
+    const vaststeller = sql<string | null>`(SELECT naam FROM gebruikers WHERE id = ${voorraadTellingenTable.vastgesteldDoorId})`;
+    const regels = sql<number>`(SELECT count(*)::int FROM voorraad_telling_regels WHERE telling_id = ${voorraadTellingenTable.id})`;
+    const rijen = await db.select({
+      telling: voorraadTellingenTable,
+      aangemaakt_door_naam: maker,
+      vastgesteld_door_naam: vaststeller,
+      aantal_regels: regels,
+    })
+      .from(voorraadTellingenTable)
+      .orderBy(desc(voorraadTellingenTable.aangemaaktOp));
+    res.json(rijen.map(r => mapTelling(r.telling, r)));
+  } catch (err) {
+    logger.error({ err }, "tellingen lijst fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: telling aanmaken (peildatum + vaste waarderingsgrondslag)
+router.post("/magazijn/tellingen", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const peildatum = str(body.peildatum);
+    const grondslag = str(body.grondslag);
+    const echteDatum = peildatum && /^\d{4}-\d{2}-\d{2}$/.test(peildatum)
+      && new Date(`${peildatum}T00:00:00Z`).toISOString().slice(0, 10) === peildatum;
+    if (!echteDatum) {
+      res.status(422).json({ error: "peildatum (JJJJ-MM-DD) is verplicht" }); return;
+    }
+    if (!grondslag || !TELLING_GRONDSLAGEN.includes(grondslag as TellingGrondslag)) {
+      res.status(422).json({ error: "grondslag moet inkoopprijs, laatste_inkoopprijs of gewogen_gemiddelde zijn" }); return;
+    }
+    const [rij] = await db.insert(voorraadTellingenTable).values({
+      peildatum,
+      grondslag,
+      omschrijving: str(body.omschrijving),
+      aangemaaktDoorId: (req.session?.userId as number | undefined) ?? null,
+    }).returning();
+    res.status(201).json(mapTelling(rij));
+  } catch (err) {
+    logger.error({ err }, "telling aanmaken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// GET: telling-detail met regels
+router.get("/magazijn/tellingen/:id", lezen, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const [telling] = await db.select().from(voorraadTellingenTable).where(eq(voorraadTellingenTable.id, id)).limit(1);
+    if (!telling) { res.status(404).json({ error: "Telling niet gevonden" }); return; }
+
+    const tellerNaam = sql<string | null>`(SELECT naam FROM gebruikers WHERE id = ${voorraadTellingRegelsTable.geteldDoorId})`;
+    const regels = await db.select({ regel: voorraadTellingRegelsTable, geteld_door_naam: tellerNaam })
+      .from(voorraadTellingRegelsTable)
+      .where(eq(voorraadTellingRegelsTable.tellingId, id))
+      .orderBy(asc(voorraadTellingRegelsTable.artikelNaam), asc(voorraadTellingRegelsTable.id));
+
+    const vastgesteld = telling.status === "vastgesteld";
+    let liveStand = new Map<string, number>();
+    let liveBeweging = new Map<number, Date>();
+    if (!vastgesteld && regels.length > 0) {
+      const artikelIds = [...new Set(regels.map(r => r.regel.artikelId).filter((v): v is number => v != null))];
+      if (artikelIds.length > 0) {
+        const voorraadRijen = await db.select().from(voorraadTable).where(inArray(voorraadTable.artikelId, artikelIds));
+        liveStand = new Map(voorraadRijen.map(v => [`${v.artikelId}:${v.locatieId ?? "null"}`, v.hoeveelheid]));
+        const bewegingen = await db.select({
+          artikelId: voorraadMutatiesTable.artikelId,
+          laatste: sql<Date>`max(${voorraadMutatiesTable.aangemaaktOp})`,
+        })
+          .from(voorraadMutatiesTable)
+          .where(inArray(voorraadMutatiesTable.artikelId, artikelIds))
+          .groupBy(voorraadMutatiesTable.artikelId);
+        liveBeweging = new Map(bewegingen.map(b => [b.artikelId, new Date(b.laatste)]));
+      }
+    }
+
+    const makerNaam = telling.aangemaaktDoorId
+      ? (await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, telling.aangemaaktDoorId)).limit(1))[0]?.naam ?? null
+      : null;
+    const vaststellerNaam = telling.vastgesteldDoorId
+      ? (await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, telling.vastgesteldDoorId)).limit(1))[0]?.naam ?? null
+      : null;
+
+    res.json({
+      ...mapTelling(telling, { aangemaakt_door_naam: makerNaam, vastgesteld_door_naam: vaststellerNaam, aantal_regels: regels.length }),
+      regels: regels.map(r => mapTellingRegel(r.regel, {
+        geteld_door_naam: r.geteld_door_naam,
+        administratieve_voorraad_live: r.regel.artikelId != null
+          ? (liveStand.get(`${r.regel.artikelId}:${r.regel.locatieId ?? "null"}`) ?? 0)
+          : null,
+        laatste_beweging_live: r.regel.artikelId != null ? (liveBeweging.get(r.regel.artikelId) ?? null) : null,
+      }, vastgesteld)),
+    });
+  } catch (err) {
+    logger.error({ err }, "telling detail fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: regel invullen/corrigeren/bevestigen (upsert op artikel × locatie)
+router.post("/magazijn/tellingen/:id/regels", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const body = req.body as Record<string, unknown>;
+    const artikelId = Number(body.artikel_id);
+    const geteld = num(body.geteld_aantal);
+    if (!artikelId || geteld == null || geteld < 0) {
+      res.status(422).json({ error: "artikel_id en geteld_aantal (>= 0) zijn verplicht" }); return;
+    }
+    const locatieId = body.locatie_id ? Number(body.locatie_id) : null;
+    const bevestigd = body.bevestigd === true;
+    const userId = req.session?.userId as number | undefined;
+
+    // Transactie + FOR UPDATE op de telling: een regel-mutatie serialiseert
+    // volledig vóór of ná een lopende vaststelling (nooit ertussenin).
+    const uitkomst = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Telling is vastgesteld en onwijzigbaar" };
+
+      const [artikel] = await tx.select().from(artikelenTable).where(eq(artikelenTable.id, artikelId)).limit(1);
+      if (!artikel) return { fout: 422 as const, melding: "Artikel niet gevonden" };
+      const locatie = locatieId != null
+        ? (await tx.select().from(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, locatieId)).limit(1))[0] ?? null
+        : null;
+      if (locatieId != null && !locatie) return { fout: 422 as const, melding: "Locatie niet gevonden" };
+
+      const whereRegel = and(
+        eq(voorraadTellingRegelsTable.tellingId, id),
+        eq(voorraadTellingRegelsTable.artikelId, artikelId),
+        locatieId != null ? eq(voorraadTellingRegelsTable.locatieId, locatieId) : sql`${voorraadTellingRegelsTable.locatieId} IS NULL`,
+      );
+      const [bestaand] = await tx.select().from(voorraadTellingRegelsTable).where(whereRegel).limit(1);
+
+      let rij;
+      if (bestaand) {
+        [rij] = await tx.update(voorraadTellingRegelsTable)
+          .set({ geteldAantal: r2(geteld), bevestigd, geteldDoorId: userId ?? null, geteldOp: new Date() })
+          .where(eq(voorraadTellingRegelsTable.id, bestaand.id))
+          .returning();
+      } else {
+        [rij] = await tx.insert(voorraadTellingRegelsTable).values({
+          tellingId: id,
+          artikelId,
+          artikelNaam: artikel.naam,
+          artikelCode: artikel.code ?? null,
+          eenheid: artikel.eenheid,
+          locatieId,
+          locatieNaam: locatie?.naam ?? null,
+          geteldAantal: r2(geteld),
+          bevestigd,
+          geteldDoorId: userId ?? null,
+          geteldOp: new Date(),
+        }).returning();
+      }
+      return { rij, bestaand: !!bestaand };
+    });
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    const { rij, bestaand } = uitkomst;
+    if (!rij) { res.status(500).json({ error: "Serverfout" }); return; }
+    const adminLive = await liveAdminStand(db, artikelId, locatieId);
+    const [beweging] = await db.select({ laatste: sql<string | null>`max(${voorraadMutatiesTable.aangemaaktOp})` })
+      .from(voorraadMutatiesTable).where(eq(voorraadMutatiesTable.artikelId, artikelId));
+    res.status(bestaand ? 200 : 201).json(mapTellingRegel(rij, {
+      administratieve_voorraad_live: adminLive,
+      laatste_beweging_live: beweging?.laatste ? new Date(beweging.laatste) : null,
+    }, false));
+  } catch (err) {
+    logger.error({ err }, "telling regel fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// DELETE: regel verwijderen (alleen zolang de telling open is)
+router.delete("/magazijn/tellingen/:id/regels/:regelId", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const regelId = Number(req.params.regelId);
+    // Zelfde vergrendeling als de upsert: eerst de telling FOR UPDATE, dan pas muteren.
+    const uitkomst = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Telling is vastgesteld en onwijzigbaar" };
+      const verwijderd = await tx.delete(voorraadTellingRegelsTable)
+        .where(and(eq(voorraadTellingRegelsTable.id, regelId), eq(voorraadTellingRegelsTable.tellingId, id)))
+        .returning({ id: voorraadTellingRegelsTable.id });
+      if (verwijderd.length === 0) return { fout: 404 as const, melding: "Regel niet gevonden" };
+      return { ok: true as const };
+    });
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "telling regel verwijderen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// GET: verschillenlijst (administratie vs. geteld, in aantal én geld)
+router.get("/magazijn/tellingen/:id/verschillen", lezen, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const [telling] = await db.select().from(voorraadTellingenTable).where(eq(voorraadTellingenTable.id, id)).limit(1);
+    if (!telling) { res.status(404).json({ error: "Telling niet gevonden" }); return; }
+    const vastgesteld = telling.status === "vastgesteld";
+
+    const regels = await db.select().from(voorraadTellingRegelsTable)
+      .where(eq(voorraadTellingRegelsTable.tellingId, id))
+      .orderBy(asc(voorraadTellingRegelsTable.artikelNaam), asc(voorraadTellingRegelsTable.id));
+
+    const artikelIds = [...new Set(regels.map(r => r.artikelId).filter((v): v is number => v != null))];
+    const artikelen = artikelIds.length > 0
+      ? await db.select().from(artikelenTable).where(inArray(artikelenTable.id, artikelIds))
+      : [];
+    const artikelMap = new Map(artikelen.map(a => [a.id, a]));
+
+    const uit = [];
+    let totaalGeteldWaarde = 0;
+    let totaalVerschilWaarde = 0;
+    let zonderPrijs = 0;
+    for (const r of regels) {
+      // Vastgesteld: alles uit de bevroren kolommen. Open: live administratie + actuele grondslagprijs.
+      const admin = vastgesteld
+        ? (r.administratieveVoorraad ?? 0)
+        : (r.artikelId != null ? await liveAdminStand(db, r.artikelId, r.locatieId ?? null) : 0);
+      const prijs = vastgesteld
+        ? (r.prijs ?? null)
+        : (r.artikelId != null ? grondslagPrijs(artikelMap.get(r.artikelId) ?? { inkoopprijs: null, laatsteInkoopprijs: null, gemiddeldInkoopprijs: null }, telling.grondslag) : null);
+      const verschilAantal = verschil2(r.geteldAantal, admin);
+      const verschilWaarde = prijs != null ? geldMaal(verschilAantal, prijs) : null;
+      const geteldWaarde = vastgesteld ? (r.waarde ?? null) : (prijs != null ? geldMaal(r.geteldAantal, prijs) : null);
+      if (prijs == null) zonderPrijs += 1;
+      if (geteldWaarde != null) totaalGeteldWaarde = optel2(totaalGeteldWaarde, geteldWaarde);
+      if (verschilWaarde != null) totaalVerschilWaarde = optel2(totaalVerschilWaarde, verschilWaarde);
+      uit.push({
+        regel_id: r.id,
+        artikel_id: r.artikelId ?? null,
+        artikel_naam: r.artikelNaam,
+        artikel_code: r.artikelCode ?? null,
+        eenheid: r.eenheid,
+        locatie_id: r.locatieId ?? null,
+        locatie_naam: r.locatieNaam ?? null,
+        administratieve_voorraad: admin,
+        geteld_aantal: r.geteldAantal,
+        verschil_aantal: verschilAantal,
+        prijs,
+        geteld_waarde: geteldWaarde,
+        verschil_waarde: verschilWaarde,
+        bevestigd: r.bevestigd,
+      });
+    }
+
+    res.json({
+      telling_id: telling.id,
+      peildatum: telling.peildatum,
+      grondslag: telling.grondslag,
+      status: telling.status,
+      regels: uit,
+      totaal_geteld_waarde: totaalGeteldWaarde,
+      totaal_verschil_waarde: totaalVerschilWaarde,
+      regels_zonder_prijs: zonderPrijs,
+    });
+  } catch (err) {
+    logger.error({ err }, "telling verschillen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: vaststellen — bevriezen + correctiemutaties boeken in ÉÉN transactie
+router.post("/magazijn/tellingen/:id/vaststellen", beheer, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.session?.userId as number | undefined;
+
+    const resultaat = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const };
+      if (telling.status === "vastgesteld") return { fout: 409 as const };
+
+      // Kindrijen ook vergrendelen zodat een gelijktijdige regel-mutatie
+      // volledig vóór of ná de vaststelling serialiseert (nooit ertussenin).
+      const regels = await tx.select().from(voorraadTellingRegelsTable)
+        .where(eq(voorraadTellingRegelsTable.tellingId, id)).for("update");
+      if (regels.length === 0) return { fout: 422 as const, melding: "Telling heeft geen regels" };
+      const onbevestigd = regels.filter(r => !r.bevestigd).length;
+      if (onbevestigd > 0) return { fout: 422 as const, melding: `${onbevestigd} regel(s) nog niet bevestigd` };
+
+      let correcties = 0;
+      for (const r of regels) {
+        if (r.artikelId == null) continue;
+        // Artikelrecord FOR UPDATE = gedeelde serialisatiegrens met bijwerkenVoorraad,
+        // óók als er (nog) geen voorraadrij bestaat (dan valt er niets anders te locken).
+        const [artikel] = await tx.select().from(artikelenTable)
+          .where(eq(artikelenTable.id, r.artikelId)).for("update").limit(1);
+        const prijs = artikel ? grondslagPrijs(artikel, telling.grondslag) : null;
+        // Voorraadrij FOR UPDATE: een gewone voorraadmutatie (uitgifte/retour/correctie)
+        // serialiseert dan vóór of ná deze vaststelling — de bevroren stand en de
+        // geboekte correctie blijven consistent met de werkelijke voorraad.
+        const voorraadWhere = r.locatieId != null
+          ? and(eq(voorraadTable.artikelId, r.artikelId), eq(voorraadTable.locatieId, r.locatieId))
+          : and(eq(voorraadTable.artikelId, r.artikelId), sql`${voorraadTable.locatieId} IS NULL`);
+        const vergrendeld = await tx.select({ hoeveelheid: voorraadTable.hoeveelheid })
+          .from(voorraadTable).where(voorraadWhere).for("update").limit(1);
+        const admin = vergrendeld.length > 0 ? vergrendeld[0]!.hoeveelheid : 0;
+        const [beweging] = await tx.select({ laatste: sql<Date>`max(${voorraadMutatiesTable.aangemaaktOp})` })
+          .from(voorraadMutatiesTable).where(eq(voorraadMutatiesTable.artikelId, r.artikelId));
+
+        // Bevriezen: stand, prijs, waarde en laatste beweging op de regel
+        await tx.update(voorraadTellingRegelsTable).set({
+          administratieveVoorraad: admin,
+          prijs,
+          waarde: prijs != null ? geldMaal(r.geteldAantal, prijs) : null,
+          laatsteBewegingOp: beweging?.laatste ? new Date(beweging.laatste) : null,
+        }).where(eq(voorraadTellingRegelsTable.id, r.id));
+
+        // Verschil boeken als correctiemutatie met verwijzing naar de telling
+        const delta = verschil2(r.geteldAantal, admin);
+        if (delta !== 0) {
+          correcties += 1;
+          await bijwerkenVoorraad(
+            tx, r.artikelId, r.locatieId ?? null, delta, "correctie", userId,
+            "voorraadtelling", telling.id,
+            `Voorraadtelling #${telling.id} (peildatum ${telling.peildatum})`,
+          );
+        }
+      }
+
+      const [bijgewerkt] = await tx.update(voorraadTellingenTable).set({
+        status: "vastgesteld",
+        vastgesteldDoorId: userId ?? null,
+        vastgesteldOp: new Date(),
+      }).where(eq(voorraadTellingenTable.id, id)).returning();
+
+      return { telling: bijgewerkt, correcties };
+    });
+
+    if ("fout" in resultaat && resultaat.fout != null) {
+      const melding = resultaat.fout === 404 ? "Telling niet gevonden"
+        : resultaat.fout === 409 ? "Telling is al vastgesteld"
+        : ("melding" in resultaat ? resultaat.melding : null) ?? "Ongeldig verzoek";
+      res.status(resultaat.fout).json({ error: melding });
+      return;
+    }
+    if (!resultaat.telling) { res.status(500).json({ error: "Serverfout" }); return; }
+    const vaststellerNaam = userId != null
+      ? (await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1))[0]?.naam ?? null
+      : null;
+    res.json({ ...mapTelling(resultaat.telling, { vastgesteld_door_naam: vaststellerNaam }), correcties_geboekt: resultaat.correcties });
+  } catch (err) {
+    logger.error({ err }, "telling vaststellen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// DELETE: open telling verwijderen (beheer); vastgesteld = 409
+router.delete("/magazijn/tellingen/:id", beheer, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    // Zelfde vergrendeling als de regel-mutaties: FOR UPDATE + status-hercheck ná de lock,
+    // zodat een delete nooit een net-vastgestelde telling (met bewijs) kan wegvagen.
+    const uitkomst = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Vastgestelde telling kan niet worden verwijderd" };
+      await tx.delete(voorraadTellingenTable).where(and(
+        eq(voorraadTellingenTable.id, id),
+        eq(voorraadTellingenTable.status, "open"),
+      ));
+      return { ok: true as const };
+    });
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "telling verwijderen fout");
+    res.status(500).json({ error: "Serverfout" });
   }
 });
 

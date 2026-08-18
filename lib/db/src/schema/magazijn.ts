@@ -1,5 +1,5 @@
 import {
-  pgTable, serial, text, integer, real, boolean, timestamp, unique, jsonb,
+  pgTable, serial, text, integer, real, numeric, boolean, timestamp, unique, jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { artikelenTable } from "./artikelen";
@@ -33,9 +33,10 @@ export const voorraadTable = pgTable(
     id:           serial("id").primaryKey(),
     artikelId:    integer("artikel_id").notNull().references(() => artikelenTable.id, { onDelete: "cascade" }),
     locatieId:    integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
-    hoeveelheid:  real("hoeveelheid").notNull().default(0),
-    gereserveerd: real("gereserveerd").notNull().default(0),
-    besteld:      real("besteld").notNull().default(0),
+    // VOORRAADTELLING: exact (numeric) sinds migratie 0083 — geen float meer
+    hoeveelheid:  numeric("hoeveelheid", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    gereserveerd: numeric("gereserveerd", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    besteld:      numeric("besteld", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
     bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   },
   (t) => [unique("voorraad_artikel_locatie").on(t.artikelId, t.locatieId)],
@@ -50,8 +51,8 @@ export const voorraadMutatiesTable = pgTable("voorraad_mutaties", {
   artikelId:       integer("artikel_id").notNull().references(() => artikelenTable.id, { onDelete: "cascade" }),
   locatieId:       integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
   type:            text("type").notNull(),   // inkoop | uitgifte | retour | correctie | reservering | vrijgave
-  hoeveelheid:     real("hoeveelheid").notNull(),   // altijd positief
-  delta:           real("delta").notNull(),          // positief = toename, negatief = afname
+  hoeveelheid:     numeric("hoeveelheid", { precision: 12, scale: 2, mode: "number" }).notNull(),   // altijd positief (exact sinds 0079)
+  delta:           numeric("delta", { precision: 12, scale: 2, mode: "number" }).notNull(),          // positief = toename, negatief = afname
   referentieType:  text("referentie_type"),          // opdracht | inkoopbon | reservering | null
   referentieId:    integer("referentie_id"),
   opdrachtId:      integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
@@ -63,6 +64,57 @@ export const voorraadMutatiesTable = pgTable("voorraad_mutaties", {
   aangemaaktOp:        timestamp("aangemaakt_op").notNull().defaultNow(),
   accountviewExportOp: timestamp("accountview_export_op"),
 });
+
+// ═══════════════════════════════════════════════════════════
+// Voorraadtellingen (bevroren telling met peildatum — VOORRAADTELLING fase 1)
+// Statusmachine: open → vastgesteld. Na vaststellen zijn telling én regels
+// onwijzigbaar (server-side afgedwongen); alle waarden staan bevroren in
+// deze tabellen, nooit berekend over de actuele voorraad.
+// ═══════════════════════════════════════════════════════════
+
+export const voorraadTellingenTable = pgTable("voorraad_tellingen", {
+  id:               serial("id").primaryKey(),
+  peildatum:        text("peildatum").notNull(),          // YYYY-MM-DD (meestal 31 december)
+  // Waarderingsgrondslag — vaste keuze per telling, vastgelegd bij aanmaken:
+  // inkoopprijs | laatste_inkoopprijs | gewogen_gemiddelde
+  grondslag:        text("grondslag").notNull(),
+  status:           text("status").notNull().default("open"),   // open | vastgesteld
+  omschrijving:     text("omschrijving"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp:     timestamp("aangemaakt_op").notNull().defaultNow(),
+  vastgesteldDoorId: integer("vastgesteld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  vastgesteldOp:    timestamp("vastgesteld_op"),
+});
+
+export const voorraadTellingRegelsTable = pgTable(
+  "voorraad_telling_regels",
+  {
+    id:          serial("id").primaryKey(),
+    tellingId:   integer("telling_id").notNull().references(() => voorraadTellingenTable.id, { onDelete: "cascade" }),
+    // FK set-null zodat een bevroren regel het verwijderen van een artikel overleeft;
+    // naam/eenheid staan als snapshot op de regel.
+    artikelId:   integer("artikel_id").references(() => artikelenTable.id, { onDelete: "set null" }),
+    artikelNaam: text("artikel_naam").notNull(),
+    artikelCode: text("artikel_code"),
+    eenheid:     text("eenheid").notNull().default("st"),
+    locatieId:   integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
+    locatieNaam: text("locatie_naam"),
+    // Aantallen en geld exact (numeric), nooit real
+    geteldAantal:            numeric("geteld_aantal", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    // Administratieve stand op het bevriezingsmoment (bij vaststellen definitief)
+    administratieveVoorraad: numeric("administratieve_voorraad", { precision: 12, scale: 2, mode: "number" }),
+    // Bevroren bij vaststellen: prijs volgens de grondslag van de telling + waarde
+    prijs:                   numeric("prijs", { precision: 12, scale: 2, mode: "number" }),
+    waarde:                  numeric("waarde", { precision: 12, scale: 2, mode: "number" }),
+    // Incourantie-inzicht: laatste mutatie van het artikel (snapshot bij vaststellen)
+    laatsteBewegingOp:       timestamp("laatste_beweging_op"),
+    bevestigd:    boolean("bevestigd").notNull().default(false),
+    geteldDoorId: integer("geteld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+    geteldOp:     timestamp("geteld_op"),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (t) => [unique("telling_regel_artikel_locatie").on(t.tellingId, t.artikelId, t.locatieId)],
+);
 
 // ═══════════════════════════════════════════════════════════
 // Reserveringen

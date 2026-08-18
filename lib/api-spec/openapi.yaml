@@ -24999,6 +24999,177 @@ paths:
         "400":
           description: Configuratiefout of ongeldig datumbereik
 
+  /magazijn/tellingen:
+    get:
+      operationId: listVoorraadTellingen
+      tags: [magazijn]
+      summary: Voorraadtellingen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadTelling"
+    post:
+      operationId: createVoorraadTelling
+      tags: [magazijn]
+      summary: Voorraadtelling aanmaken met peildatum en waarderingsgrondslag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorraadTellingAanmaken"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTelling"
+        "422":
+          description: Ongeldige invoer
+
+  /magazijn/tellingen/{id}:
+    get:
+      operationId: getVoorraadTelling
+      tags: [magazijn]
+      summary: Voorraadtelling-detail met regels
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTellingDetail"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteVoorraadTelling
+      tags: [magazijn]
+      summary: Open telling verwijderen (vastgesteld geeft 409)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+
+  /magazijn/tellingen/{id}/regels:
+    post:
+      operationId: upsertVoorraadTellingRegel
+      tags: [magazijn]
+      summary: Tellingregel invullen/corrigeren/bevestigen (upsert op artikel × locatie)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorraadTellingRegelInvoer"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTellingRegel"
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTellingRegel"
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+        "422":
+          description: Ongeldige invoer
+
+  /magazijn/tellingen/{id}/regels/{regelId}:
+    delete:
+      operationId: deleteVoorraadTellingRegel
+      tags: [magazijn]
+      summary: Tellingregel verwijderen (alleen zolang de telling open is)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+
+  /magazijn/tellingen/{id}/verschillen:
+    get:
+      operationId: getVoorraadTellingVerschillen
+      tags: [magazijn]
+      summary: Verschillenlijst administratie vs. geteld, in aantal én geld
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTellingVerschillen"
+        "404":
+          description: Niet gevonden
+
+  /magazijn/tellingen/{id}/vaststellen:
+    post:
+      operationId: stelVoorraadTellingVast
+      tags: [magazijn]
+      summary: Telling vaststellen — bevriezen en verschillen als correctiemutaties boeken (atomair)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vastgesteld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorraadTellingVastgesteld"
+        "409":
+          description: Telling is al vastgesteld
+        "422":
+          description: Geen regels of nog onbevestigde regels
+
   /magazijn/mutaties:
     get:
       operationId: listVoorraadMutaties
@@ -49366,6 +49537,109 @@ components:
           items:
             $ref: "#/components/schemas/MagazijnExportResultaat"
 
+    VoorraadTellingAanmaken:
+      type: object
+      required: [peildatum, grondslag]
+      properties:
+        peildatum: {type: string, description: "JJJJ-MM-DD"}
+        grondslag: {type: string, enum: [inkoopprijs, laatste_inkoopprijs, gewogen_gemiddelde]}
+        omschrijving: {type: ["string", "null"]}
+    VoorraadTelling:
+      type: object
+      required: [id, peildatum, grondslag, status, aangemaakt_op, aantal_regels]
+      properties:
+        id: {type: integer}
+        peildatum: {type: string}
+        grondslag: {type: string, enum: [inkoopprijs, laatste_inkoopprijs, gewogen_gemiddelde]}
+        status: {type: string, enum: [open, vastgesteld]}
+        omschrijving: {type: ["string", "null"]}
+        aangemaakt_door_id: {type: ["integer", "null"]}
+        aangemaakt_door_naam: {type: ["string", "null"]}
+        aangemaakt_op: {type: string}
+        vastgesteld_door_id: {type: ["integer", "null"]}
+        vastgesteld_door_naam: {type: ["string", "null"]}
+        vastgesteld_op: {type: ["string", "null"]}
+        aantal_regels: {type: integer}
+    VoorraadTellingRegelInvoer:
+      type: object
+      required: [artikel_id, geteld_aantal]
+      properties:
+        artikel_id: {type: integer}
+        locatie_id: {type: ["integer", "null"]}
+        geteld_aantal: {type: number}
+        bevestigd: {type: boolean}
+    VoorraadTellingRegel:
+      type: object
+      required: [id, telling_id, artikel_naam, eenheid, geteld_aantal, bevestigd]
+      properties:
+        id: {type: integer}
+        telling_id: {type: integer}
+        artikel_id: {type: ["integer", "null"]}
+        artikel_naam: {type: string}
+        artikel_code: {type: ["string", "null"]}
+        eenheid: {type: string}
+        locatie_id: {type: ["integer", "null"]}
+        locatie_naam: {type: ["string", "null"]}
+        geteld_aantal: {type: number}
+        administratieve_voorraad: {type: ["number", "null"]}
+        verschil_aantal: {type: ["number", "null"]}
+        prijs: {type: ["number", "null"]}
+        waarde: {type: ["number", "null"]}
+        laatste_beweging_op: {type: ["string", "null"]}
+        bevestigd: {type: boolean}
+        geteld_door_id: {type: ["integer", "null"]}
+        geteld_door_naam: {type: ["string", "null"]}
+        geteld_op: {type: ["string", "null"]}
+    VoorraadTellingDetail:
+      allOf:
+        - $ref: "#/components/schemas/VoorraadTelling"
+        - type: object
+          required: [regels]
+          properties:
+            regels:
+              type: array
+              items:
+                $ref: "#/components/schemas/VoorraadTellingRegel"
+    VoorraadTellingVerschilRegel:
+      type: object
+      required: [regel_id, artikel_naam, eenheid, administratieve_voorraad, geteld_aantal, verschil_aantal, bevestigd]
+      properties:
+        regel_id: {type: integer}
+        artikel_id: {type: ["integer", "null"]}
+        artikel_naam: {type: string}
+        artikel_code: {type: ["string", "null"]}
+        eenheid: {type: string}
+        locatie_id: {type: ["integer", "null"]}
+        locatie_naam: {type: ["string", "null"]}
+        administratieve_voorraad: {type: number}
+        geteld_aantal: {type: number}
+        verschil_aantal: {type: number}
+        prijs: {type: ["number", "null"]}
+        geteld_waarde: {type: ["number", "null"]}
+        verschil_waarde: {type: ["number", "null"]}
+        bevestigd: {type: boolean}
+    VoorraadTellingVerschillen:
+      type: object
+      required: [telling_id, peildatum, grondslag, status, regels, totaal_geteld_waarde, totaal_verschil_waarde, regels_zonder_prijs]
+      properties:
+        telling_id: {type: integer}
+        peildatum: {type: string}
+        grondslag: {type: string}
+        status: {type: string}
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/VoorraadTellingVerschilRegel"
+        totaal_geteld_waarde: {type: number}
+        totaal_verschil_waarde: {type: number}
+        regels_zonder_prijs: {type: integer}
+    VoorraadTellingVastgesteld:
+      allOf:
+        - $ref: "#/components/schemas/VoorraadTelling"
+        - type: object
+          required: [correcties_geboekt]
+          properties:
+            correcties_geboekt: {type: integer}
     VoorraadMutatie:
       type: object
       required: [id, artikel_id, type, hoeveelheid, delta, aangemaakt_op]

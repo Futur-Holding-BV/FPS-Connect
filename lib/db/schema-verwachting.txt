@@ -432,6 +432,9 @@ INDEX|vge_effectiviteitslog|idx_vge_log_visual_spot_stap
 INDEX|vge_effectiviteitslog|vge_effectiviteitslog_pkey
 INDEX|voertuigen|voertuigen_pkey
 INDEX|voorraad_mutaties|voorraad_mutaties_pkey
+INDEX|voorraad_telling_regels|telling_regel_artikel_locatie
+INDEX|voorraad_telling_regels|voorraad_telling_regels_pkey
+INDEX|voorraad_tellingen|voorraad_tellingen_pkey
 INDEX|voorraad|voorraad_artikel_locatie
 INDEX|voorraad|voorraad_pkey
 INDEX|voorziening_labels|voorziening_labels_pkey
@@ -805,14 +808,14 @@ KOLOM|artikelen|certificeringen|ARRAY|YES|
 KOLOM|artikelen|code|text|YES|
 KOLOM|artikelen|compatibele_artikel_ids|ARRAY|YES|
 KOLOM|artikelen|eenheid|text|NO|'st'::text
-KOLOM|artikelen|gemiddeld_inkoopprijs|real|YES|
+KOLOM|artikelen|gemiddeld_inkoopprijs|numeric|YES|
 KOLOM|artikelen|gewenste_voorraad|real|YES|
 KOLOM|artikelen|goedgekeurd_door_fps|boolean|NO|false
 KOLOM|artikelen|id|integer|NO|nextval('artikelen_id_seq'::regclass)
 KOLOM|artikelen|import_id|integer|YES|
-KOLOM|artikelen|inkoopprijs|real|YES|
+KOLOM|artikelen|inkoopprijs|numeric|YES|
 KOLOM|artikelen|kb_notities|text|YES|
-KOLOM|artikelen|laatste_inkoopprijs|real|YES|
+KOLOM|artikelen|laatste_inkoopprijs|numeric|YES|
 KOLOM|artikelen|leverancier_id|integer|YES|
 KOLOM|artikelen|leveranciers_artikel_nr|text|YES|
 KOLOM|artikelen|locatie_id|integer|YES|
@@ -4654,9 +4657,9 @@ KOLOM|voertuigen|werkgever_id|integer|YES|
 KOLOM|voorraad_mutaties|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voorraad_mutaties|accountview_export_op|timestamp without time zone|YES|
 KOLOM|voorraad_mutaties|artikel_id|integer|NO|
-KOLOM|voorraad_mutaties|delta|real|NO|
+KOLOM|voorraad_mutaties|delta|numeric|NO|
 KOLOM|voorraad_mutaties|gebruiker_id|integer|YES|
-KOLOM|voorraad_mutaties|hoeveelheid|real|NO|
+KOLOM|voorraad_mutaties|hoeveelheid|numeric|NO|
 KOLOM|voorraad_mutaties|id|integer|NO|nextval('voorraad_mutaties_id_seq'::regclass)
 KOLOM|voorraad_mutaties|kostenrubriek|text|YES|
 KOLOM|voorraad_mutaties|locatie_id|integer|YES|
@@ -4665,11 +4668,37 @@ KOLOM|voorraad_mutaties|opdracht_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_type|text|YES|
 KOLOM|voorraad_mutaties|type|text|NO|
+KOLOM|voorraad_telling_regels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|voorraad_telling_regels|administratieve_voorraad|numeric|YES|
+KOLOM|voorraad_telling_regels|artikel_code|text|YES|
+KOLOM|voorraad_telling_regels|artikel_id|integer|YES|
+KOLOM|voorraad_telling_regels|artikel_naam|text|NO|
+KOLOM|voorraad_telling_regels|bevestigd|boolean|NO|false
+KOLOM|voorraad_telling_regels|eenheid|text|NO|'st'::text
+KOLOM|voorraad_telling_regels|geteld_aantal|numeric|NO|0
+KOLOM|voorraad_telling_regels|geteld_door_id|integer|YES|
+KOLOM|voorraad_telling_regels|geteld_op|timestamp without time zone|YES|
+KOLOM|voorraad_telling_regels|id|integer|NO|nextval('voorraad_telling_regels_id_seq'::regclass)
+KOLOM|voorraad_telling_regels|laatste_beweging_op|timestamp without time zone|YES|
+KOLOM|voorraad_telling_regels|locatie_id|integer|YES|
+KOLOM|voorraad_telling_regels|locatie_naam|text|YES|
+KOLOM|voorraad_telling_regels|prijs|numeric|YES|
+KOLOM|voorraad_telling_regels|telling_id|integer|NO|
+KOLOM|voorraad_telling_regels|waarde|numeric|YES|
+KOLOM|voorraad_tellingen|aangemaakt_door_id|integer|YES|
+KOLOM|voorraad_tellingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|voorraad_tellingen|grondslag|text|NO|
+KOLOM|voorraad_tellingen|id|integer|NO|nextval('voorraad_tellingen_id_seq'::regclass)
+KOLOM|voorraad_tellingen|omschrijving|text|YES|
+KOLOM|voorraad_tellingen|peildatum|text|NO|
+KOLOM|voorraad_tellingen|status|text|NO|'open'::text
+KOLOM|voorraad_tellingen|vastgesteld_door_id|integer|YES|
+KOLOM|voorraad_tellingen|vastgesteld_op|timestamp without time zone|YES|
 KOLOM|voorraad|artikel_id|integer|NO|
-KOLOM|voorraad|besteld|real|NO|0
+KOLOM|voorraad|besteld|numeric|NO|0
 KOLOM|voorraad|bijgewerkt_op|timestamp without time zone|NO|now()
-KOLOM|voorraad|gereserveerd|real|NO|0
-KOLOM|voorraad|hoeveelheid|real|NO|0
+KOLOM|voorraad|gereserveerd|numeric|NO|0
+KOLOM|voorraad|hoeveelheid|numeric|NO|0
 KOLOM|voorraad|id|integer|NO|nextval('voorraad_id_seq'::regclass)
 KOLOM|voorraad|locatie_id|integer|YES|
 KOLOM|voorziening_labels|id|integer|NO|nextval('voorziening_labels_id_seq'::regclass)

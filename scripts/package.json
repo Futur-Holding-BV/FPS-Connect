@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "bewijs-voorraadtelling": "tsx ./src/bewijs-voorraadtelling.ts",
     "security-scan": "tsx ./src/security-scan.ts",
     "seed-applicaties": "tsx ./src/seed-applicaties.ts",
     "seed-studio-opleverrapport": "tsx ./src/seed-studio-opleverrapport.ts",

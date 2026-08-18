@@ -904,6 +904,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location.startsWith("/magazijn/tellingen")}
+                            >
+                              <Link href="/magazijn/tellingen">
+                                <Calculator />
+                                <span>Tellingen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                           {toonGereedschappen && (
                             <SidebarMenuItem className="pl-5">
                               <SidebarMenuButton

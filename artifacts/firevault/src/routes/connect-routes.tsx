@@ -125,6 +125,9 @@ import MagazijnInkooporderDetailPagina from "@/pages/magazijn/inkooporder-detail
 import MagazijnPicklijstenPagina from "@/pages/magazijn/picklijsten";
 import MagazijnPicklijstDetailPagina from "@/pages/magazijn/picklijst-detail";
 import MagazijnVoorraadwaardePagina from "@/pages/magazijn/voorraadwaarde";
+import MagazijnTellingenPagina from "@/pages/magazijn/tellingen";
+import MagazijnTellingDetailPagina from "@/pages/magazijn/telling-detail";
+import MagazijnTellingPrintPagina from "@/pages/magazijn/telling-print";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -532,6 +535,9 @@ export function ConnectRoutes() {
         <Route path="/magazijn/picklijsten" component={MagazijnPicklijstenPagina} />
         <Route path="/magazijn/picklijsten/:id" component={MagazijnPicklijstDetailPagina} />
         <Route path="/magazijn/voorraadwaarde" component={MagazijnVoorraadwaardePagina} />
+        <Route path="/magazijn/tellingen" component={MagazijnTellingenPagina} />
+        <Route path="/magazijn/tellingen/:id/print" component={MagazijnTellingPrintPagina} />
+        <Route path="/magazijn/tellingen/:id" component={MagazijnTellingDetailPagina} />
 
         {/* ── Financieel extra ── */}
         <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />

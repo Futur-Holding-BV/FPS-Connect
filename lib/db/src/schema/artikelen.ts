@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, numeric, boolean, timestamp } from "drizzle-orm/pg-core";
 import { leveranciersTable } from "./leveranciers";
 
 export const artikelenTable = pgTable("artikelen", {
@@ -18,11 +18,11 @@ export const artikelenTable = pgTable("artikelen", {
   leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
   leveranciersArtikelNr: text("leveranciers_artikel_nr"),
 
-  // Prijzen
-  inkoopprijs: real("inkoopprijs"),                      // excl. BTW
+  // Prijzen — de drie inkoopgrondslagen exact (numeric) sinds migratie 0083
+  inkoopprijs: numeric("inkoopprijs", { precision: 12, scale: 2, mode: "number" }),          // excl. BTW
   verkoopprijs: real("verkoopprijs"),                    // excl. BTW
-  gemiddeldInkoopprijs: real("gemiddeld_inkoopprijs"),   // gewogen gemiddelde
-  laatsteInkoopprijs: real("laatste_inkoopprijs"),       // meest recente inkoop
+  gemiddeldInkoopprijs: numeric("gemiddeld_inkoopprijs", { precision: 12, scale: 2, mode: "number" }),   // gewogen gemiddelde
+  laatsteInkoopprijs: numeric("laatste_inkoopprijs", { precision: 12, scale: 2, mode: "number" }),       // meest recente inkoop
   btwPercentage: integer("btw_percentage").notNull().default(21),
 
   // Magazijn
