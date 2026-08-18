@@ -144,3 +144,4 @@
 - [Rekeningschema grootboek](grootboek-rekeningschema.md) — schema per BV; keuzelijst overal; boekingspoort ná claim (leeg schema = doorlaten, bewust); AccountView-ophalen = fail-soft meting; module-id is "financieel" niet "facturen".
 - [Financiële keten](financieel-keten.md) — 4 werkbak-voeders financieel; OHW-voeder alleen afgesloten statussen; async time-out terminaal (worker alleen vanuit 'bezig'); delete-audit via RETURNING; open voorleg-punten René.
 - [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — push blokkeert bij >300 regels diff per bestand; bewuste herschrijving = [grote-wijziging] in commit-boodschap.
+- [Offerte-status split](offerte-status-split.md) — portaal schrijft status=geaccepteerd, studio=ondertekend; "getekend?"-checks moeten beide kennen (of portaal_status=ondertekend gebruiken).
