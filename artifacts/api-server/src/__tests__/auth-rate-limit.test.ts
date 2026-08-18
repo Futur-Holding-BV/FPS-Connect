@@ -79,6 +79,9 @@ vi.mock("@workspace/db", () => {
     },
     gebruikersTable: { id: {}, email: {}, $inferSelect: {} },
     wachtwoordResetTokensTable: { id: {}, token: {}, verlooptOp: {}, gebruiktOp: {}, gebruikerId: {} },
+    // GEBRUIKERS_01 externe adviseur: auth.ts leest deze tabel bij elke login;
+    // de select-mock geeft testGebruiker terug (zonder toegangTot) → geen blokkade.
+    externeAdviseursTable: { id: {}, gebruikerId: {}, toegangTot: {}, $inferSelect: {} },
   };
 });
 
