@@ -20,33 +20,49 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # CI_SIGNAAL_01: elke stap schrijft eerst zijn naam naar /tmp/faalstap.txt
+      # zodat de terugmelding onderaan bij rood de gefaalde taak kan noemen.
       - name: Installeer dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "Installeer dependencies" > /tmp/faalstap.txt
+          pnpm install --frozen-lockfile
 
       - name: Typecheck alle packages
-        run: pnpm run typecheck
+        run: |
+          echo "Typecheck alle packages" > /tmp/faalstap.txt
+          pnpm run typecheck
 
       # HERSTEL_01: dubbele methode+pad-declaraties = stille dode code (Express
       # neemt de eerste); vandaag twee keer ontstaan bij merges.
       - name: Dubbele-routes-controle
-        run: pnpm --filter @workspace/scripts run check-dubbele-routes
+        run: |
+          echo "Dubbele-routes-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/scripts run check-dubbele-routes
 
       # KLANTLOOS_01 fase 3: faalt zodra de klantrol of een "of klant"-
       # autorisatievariant terugkeert in Connect.
       - name: Klantloos-controle
-        run: pnpm --filter @workspace/scripts run klantloos-check
+        run: |
+          echo "Klantloos-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/scripts run klantloos-check
 
       # SESSIE_01: verbiedt session["gebruikerId"] (het veld heet userId) en
       # session["naam"]/session["gebruikerNaam"] (bestaan niet in SessionData).
       # Vangt de stille autorisatie-breuk die in aug 2026 in 8+ routes zat.
       - name: Sessieveld-antipatroon-controle
-        run: pnpm --filter @workspace/api-server run check-sessie-velden
+        run: |
+          echo "Sessieveld-antipatroon-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/api-server run check-sessie-velden
 
       - name: Build api-server
-        run: pnpm --filter @workspace/api-server run build
+        run: |
+          echo "Build api-server" > /tmp/faalstap.txt
+          pnpm --filter @workspace/api-server run build
 
       - name: Build firevault (frontend)
-        run: PORT=3000 BASE_PATH=/ pnpm --filter @workspace/firevault run build
+        run: |
+          echo "Build firevault (frontend)" > /tmp/faalstap.txt
+          PORT=3000 BASE_PATH=/ pnpm --filter @workspace/firevault run build
         env:
           NODE_ENV: production
 
@@ -56,10 +72,68 @@ jobs:
       # Zie docs/schema-migratieketen.md §Bewaker.
       - name: Migratie-hernoeming-controle
         run: |
+          echo "Migratie-hernoeming-controle" > /tmp/faalstap.txt
           git fetch origin main --depth=1
           pnpm --filter @workspace/db run check-hernoeming
 
       # CONTRACT_01 — bewakingstests voor aanzegdatums en DBA-grens draaien bij
       # elke PR zodat een falende berekening niet ongemerkt wordt gemerged.
       - name: Contract-bewaking unit-tests
-        run: pnpm test
+        run: |
+          echo "Contract-bewaking unit-tests" > /tmp/faalstap.txt
+          pnpm test
+
+      # CI_SIGNAAL_01 — meld de conclusie van deze run terug aan Connect zodat
+      # een rode bouwcontrole op main automatisch een actiepunt bij de
+      # hoofdbeheerder opent (en groen het weer sluit). Alleen op main-pushes;
+      # nooit fataal voor de run zelf. Zelfde gedeelde sleutel als de
+      # deploy-terugmelding (UITROL_RAPPORT_SLEUTEL).
+      - name: Terugmelding aan Connect (alleen main)
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          UITROL_RAPPORT_SLEUTEL: ${{ secrets.UITROL_RAPPORT_SLEUTEL }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BASE_URL: https://connect.fps-one.nl
+        run: |
+          set -euo pipefail
+          if [ -z "${UITROL_RAPPORT_SLEUTEL:-}" ]; then
+            echo "UITROL_RAPPORT_SLEUTEL ontbreekt als GitHub Actions secret; terugmelding wordt overgeslagen." >&2
+            exit 0
+          fi
+          if [ "${JOB_STATUS}" = "cancelled" ]; then
+            echo "Run geannuleerd (ingehaald door nieuwere push); geen terugmelding nodig."
+            exit 0
+          fi
+          CONCLUSIE="failure"
+          [ "${JOB_STATUS}" = "success" ] && CONCLUSIE="success"
+          GEFAALDE_TAAK=""
+          if [ "$CONCLUSIE" = "failure" ]; then
+            if [ -f /tmp/faalstap.txt ]; then
+              GEFAALDE_TAAK="Typecheck & build — $(head -c 250 /tmp/faalstap.txt | tr -d '\n' || true)"
+            else
+              GEFAALDE_TAAK="Typecheck & build — onbekend (vroege voorbereidingsstap: checkout/setup)"
+            fi
+          fi
+          BODY=$(CONCLUSIE="$CONCLUSIE" GEFAALDE_TAAK="$GEFAALDE_TAAK" node -e "
+            console.log(JSON.stringify({
+              commit: process.env.GITHUB_SHA,
+              conclusie: process.env.CONCLUSIE,
+              gefaalde_taak: process.env.GEFAALDE_TAAK || null,
+              run_url: process.env.RUN_URL,
+              run_id: Number(process.env.GITHUB_RUN_ID) || null,
+              run_attempt: Number(process.env.GITHUB_RUN_ATTEMPT) || null,
+            }));
+          ")
+          HTTP_CODE=$(curl -sS -o /tmp/ci-rapport-resp.json -w "%{http_code}" --max-time 20 \
+            -X POST "${BASE_URL}/api/ci/rapport" \
+            -H "Content-Type: application/json" \
+            -H "X-Uitrol-Sleutel: ${UITROL_RAPPORT_SLEUTEL}" \
+            -d "$BODY" || echo "000")
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "CI-conclusie teruggemeld aan Connect (conclusie=${CONCLUSIE})."
+          else
+            echo "Terugmelden gaf HTTP ${HTTP_CODE} (niet fataal; de bewakingsloop mist dan één meting)." >&2
+            cat /tmp/ci-rapport-resp.json >&2 || true
+            exit 0
+          fi

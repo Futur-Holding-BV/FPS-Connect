@@ -61,6 +61,7 @@ INDEX|chat_berichten|chat_berichten_pkey
 INDEX|chat_deelnemers|chat_deelnemers_gesprek_gebruiker
 INDEX|chat_deelnemers|chat_deelnemers_pkey
 INDEX|chat_gesprekken|chat_gesprekken_pkey
+INDEX|ci_rapporten|ci_rapporten_pkey
 INDEX|clusters|clusters_pkey
 INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_pkey
 INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_uniek
@@ -1093,6 +1094,14 @@ KOLOM|chat_gesprekken|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|chat_gesprekken|id|integer|NO|nextval('chat_gesprekken_id_seq'::regclass)
 KOLOM|chat_gesprekken|naam|text|YES|
 KOLOM|chat_gesprekken|type|text|NO|'direct'::text
+KOLOM|ci_rapporten|commit_sha|text|NO|
+KOLOM|ci_rapporten|conclusie|text|NO|
+KOLOM|ci_rapporten|gefaalde_taak|text|YES|
+KOLOM|ci_rapporten|gemeld_op|timestamp without time zone|NO|now()
+KOLOM|ci_rapporten|id|integer|NO|nextval('ci_rapporten_id_seq'::regclass)
+KOLOM|ci_rapporten|run_attempt|bigint|YES|
+KOLOM|ci_rapporten|run_id|bigint|YES|
+KOLOM|ci_rapporten|run_url|text|YES|
 KOLOM|clusters|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|clusters|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|clusters|gebouw_id|integer|NO|

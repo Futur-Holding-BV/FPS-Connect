@@ -58,6 +58,7 @@ import {
   opnamesTable,
   calculatiesTable,
   uitrolRapportenTable,
+  ciRapportenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
@@ -551,7 +552,11 @@ async function voedVerlofverjaring(): Promise<{ nieuw: number; afgehandeld: numb
 // falende stap. Dedup-sleutel bevat het verwachte commit: zodra een volgende
 // uitrol slaagt (versies weer gelijk) reconcilieert syncBron het item
 // automatisch dicht. In dev (geen GIT_COMMIT) doet deze voeder niets.
-export async function voedUitrolAchterloop(): Promise<{ nieuw: number; afgehandeld: number }> {
+export function voedUitrolAchterloop(): Promise<{ nieuw: number; afgehandeld: number }> {
+  return serialiseer("uitrol_achterloop", voedUitrolAchterloopIntern);
+}
+
+async function voedUitrolAchterloopIntern(): Promise<{ nieuw: number; afgehandeld: number }> {
   const draaiend = process.env.GIT_COMMIT ?? "";
   const items: WerkbakInvoer[] = [];
   if (draaiend && draaiend !== "onbekend") {
@@ -587,6 +592,67 @@ export async function voedUitrolAchterloop(): Promise<{ nieuw: number; afgehande
     }
   }
   return syncBron("uitrol_achterloop", items);
+}
+
+// Race-bescherming (architect-review CI_SIGNAAL_01): een voeder leest eerst de
+// laatste stand en reconcilieert dan de werkbak — twee vrijwel gelijktijdige
+// terugmeldingen kunnen in omgekeerde volgorde reconciliëren (oud groen wist
+// nieuw rood). De api-server is één proces, dus een promise-ketting per bron
+// serialiseert lezen+reconciliëren volledig.
+const voederKettingen = new Map<string, Promise<unknown>>();
+function serialiseer<T>(bron: string, fn: () => Promise<T>): Promise<T> {
+  const vorige = voederKettingen.get(bron) ?? Promise.resolve();
+  const beurt = vorige.then(fn, fn);
+  voederKettingen.set(bron, beurt.catch(() => {}));
+  return beurt;
+}
+
+// CI_SIGNAAL_01 — de CI-workflow (Typecheck & build) meldt na élke main-run
+// zijn conclusie via POST /ci/rapport. Is de laatste melding rood, dan komt er
+// één actiepunt bij de hoofdbeheerder mét de gefaalde taak en het commit.
+// Dedup-sleutel bevat het commit: zodra een nieuwere main-run groen meldt,
+// levert deze voeder een lege lijst en reconcilieert syncBron het item
+// automatisch dicht. Ordening op run_id (monotoon) zodat een vertraagd
+// binnengekomen oude melding nooit "de laatste" kan worden.
+export function voedCiRood(): Promise<{ nieuw: number; afgehandeld: number }> {
+  return serialiseer("ci_rood", voedCiRoodIntern);
+}
+
+async function voedCiRoodIntern(): Promise<{ nieuw: number; afgehandeld: number }> {
+  // Re-runs delen een run_id; de hoogste poging (run_attempt) is de eindstand,
+  // ook als een rapport van een eerdere poging vertraagd binnenkomt.
+  const [laatste] = await db
+    .select()
+    .from(ciRapportenTable)
+    .orderBy(
+      sql`${ciRapportenTable.runId} DESC NULLS LAST`,
+      sql`${ciRapportenTable.runAttempt} DESC NULLS LAST`,
+      desc(ciRapportenTable.id),
+    )
+    .limit(1);
+  const items: WerkbakInvoer[] = [];
+  if (laatste && laatste.conclusie === "failure") {
+    const kort = laatste.commitSha.slice(0, 8);
+    const regels = [
+      `Gefaalde taak: ${laatste.gefaaldeTaak || "onbekend"}`,
+      `Commit: ${kort}`,
+      "Zolang de bouwcontrole rood is, staat de uitrol naar productie stil.",
+      laatste.runUrl ? `Actions-run: ${laatste.runUrl}` : null,
+    ].filter(Boolean);
+    items.push({
+      soort: "doen",
+      bron: "ci_rood",
+      titel: `Bouwcontrole op main is rood (commit ${kort})`,
+      omschrijving: regels.join("\n"),
+      alleenHoofdbeheerder: true,
+      gewicht: 90,
+      actiePad: "/beheer/systeemstatus",
+      herkomstType: "ci_rapport",
+      herkomstId: laatste.id,
+      dedupSleutel: `ci-rood:${kort}`,
+    });
+  }
+  return syncBron("ci_rood", items);
 }
 
 async function voedFactuursignalen(): Promise<{ nieuw: number; afgehandeld: number }> {
@@ -2065,6 +2131,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["opdracht_zonder_akkoord", voedOpdrachtZonderAkkoord],
     // UITROL_BEWAKING_01 — productie loopt achter op de laatst gemelde uitrol.
     ["uitrol_achterloop", voedUitrolAchterloop],
+    // CI_SIGNAAL_01 — bouwcontrole op main is rood.
+    ["ci_rood", voedCiRood],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

@@ -117,6 +117,8 @@ export const WERKBAK_BRONNEN = [
   // gemelde uitrol verwachtte → actiepunt voor de hoofdbeheerder, mét de
   // falende stap erbij. Sluit zichzelf zodra een volgende uitrol slaagt.
   "uitrol_achterloop",
+  // CI_SIGNAAL_01 — bouwcontrole (Typecheck & build) op main is rood.
+  "ci_rood",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

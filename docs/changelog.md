@@ -1,3 +1,13 @@
+## 2026-08-19 — CI_SIGNAAL_01: rode bouwcontrole op main is direct zichtbaar
+
+- De CI-workflow (Typecheck & build) meldt na élke main-run zijn conclusie aan Connect (POST `/api/ci/rapport`, nieuwe tabel `ci_rapporten`, migratie 0092). Zelfde beveiliging als de uitrol-terugmelding: gedeelde sleutel `UITROL_RAPPORT_SLEUTEL`, fail-closed (503 zonder configuratie, 401 bij foute sleutel).
+- Werkbak: nieuwe bron `ci_rood` — is de laatste main-run rood, dan staat er automatisch één actiepunt bij de hoofdbeheerder met de gefaalde taak, het commit en de Actions-link. Zodra main weer groen bouwt, sluit het actiepunt zichzelf (dedup per commit + syncBron-reconciliatie). Geannuleerde runs worden genegeerd.
+- Elke CI-stap schrijft nu een faalstap-marker zodat de melding de échte gefaalde taak noemt, ook bij vroege fouten.
+- Versiestempel: `/api/versie` vergelijkt productie voortaan met de nieuwste gemelde main-commit uit uitrol- én CI-rapporten (CI meldt élke main-push, ook als de deploy vroeg strandt). De versie-badge rechtsboven — zichtbaar tijdens het dagelijks werken — kleurt amber met uitleg zodra productie achterloopt op main.
+- Race-bestendig (na architect-review): lezen+reconciliëren per bron geserialiseerd via een promise-ketting (geldt nu ook voor de uitrol-voeder), en re-runs worden geordend op `run_attempt` zodat een vertraagd rapport van een oude poging de eindstand nooit overschrijft.
+- Bewezen op een testinstantie: 503/401/400-poorten, cancelled genegeerd, actiepunt open bij failure (met taak+commit+link), automatisch dicht bij een nieuwere groene run; plus drie concurrency-scenario's (gelijktijdig oud-groen/nieuw-rood, re-run groen, vertraagde oude poging).
+- Vereist (eenmalig, René): GitHub Actions secret `UITROL_RAPPORT_SLEUTEL` — dezelfde die voor de uitrol-bewaking nog openstaat; één sleutel bedient beide terugmeldingen.
+
 ## 2026-08-19 — KETEN_01 breuken gerepareerd: keten 1–5 volledig groen (voor de generale)
 
 - Breuk 1 (offertefilter): GET `/api/offertes` kent nu de queryparameter `calculatie_id` en de calculatiepagina gebruikt de getypte hook (geen `as any`-cast meer) — de procesbalk biedt "Maak offerte" weer correct aan.

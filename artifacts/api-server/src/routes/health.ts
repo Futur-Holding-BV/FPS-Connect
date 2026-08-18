@@ -50,8 +50,16 @@ async function bepaalAchterloop(): Promise<{ achterloop: boolean; verwacht: stri
   let verwacht = "";
   try {
     if (COMMIT !== "onbekend") {
+      // CI_SIGNAAL_01: de nieuwste gemelde main-commit komt uit uitrol- ÉN
+      // ci-rapporten (CI meldt élke main-push, ook als de deploy vroeg strandt).
+      // GitHub run-id's zijn per repository monotoon over workflows heen, dus
+      // over beide tabellen samen ordenen op run_id is deterministisch.
       const rijen = await db.execute(
-        sql`SELECT commit_sha FROM uitrol_rapporten ORDER BY run_id DESC NULLS LAST, id DESC LIMIT 1`,
+        sql`SELECT commit_sha FROM (
+              SELECT commit_sha, run_id, id, 1 AS b FROM uitrol_rapporten
+              UNION ALL
+              SELECT commit_sha, run_id, id, 2 AS b FROM ci_rapporten
+            ) m ORDER BY run_id DESC NULLS LAST, b, id DESC LIMIT 1`,
       );
       const sha = (rijen.rows?.[0] as { commit_sha?: string } | undefined)?.commit_sha ?? "";
       if (sha) {
