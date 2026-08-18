@@ -12,4 +12,9 @@ export interface OpdrachtPatch {
   werknummer?: string;
   /** UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten */
   mandagstaat_vereist?: boolean;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk, ook op de opdracht wijzigbaar
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
 }

@@ -35,6 +35,10 @@ export const accountviewInstellingenTable = pgTable("accountview_instellingen", 
   grootboekVoorraad: text("grootboek_voorraad"),
   grootboekInkoopKosten: text("grootboek_inkoop_kosten"),
   magazijnExportActief: boolean("magazijn_export_actief").notNull().default(false),
+  // ADMINISTRATIE_01 fase 3: welke werkmaatschappij (BV) deze AccountView-
+  // koppeling/administratie toebehoort. Boeken wordt fail-closed geweigerd
+  // zolang dit leeg is of de factuur-BV afwijkt. Soft ref, FK in migratie 0082.
+  werkgeverId: integer("werkgever_id"),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 

@@ -7410,6 +7410,13 @@ export interface Offerte {
   gebouw_id?: number | null;
   /** @nullable */
   gebouw_naam?: string | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk — vastgelegd op de offerte; gebouw levert alleen de default
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
   /** @nullable */
   klant_id?: number | null;
   /** @nullable */
@@ -7529,6 +7536,11 @@ export interface OfferteInput {
   offertenummer?: string;
   /** @nullable */
   gebouw_id?: number | null;
+  /**
+     * BV van het werk; leeg bij aanmaken = default uit het gebouw
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
   /** @nullable */
   klant_id?: number | null;
   /** @nullable */
@@ -7891,6 +7903,11 @@ export interface Opdracht {
   calculatie_id?: number | null;
   /** @nullable */
   gebouw_id?: number | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk (geërfd van de offerte, wijzigbaar)
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
   /** @nullable */
   project_id?: number | null;
   titel: string;
@@ -8030,6 +8047,11 @@ export interface OpdrachtPatch {
   werknummer?: string;
   /** UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten */
   mandagstaat_vereist?: boolean;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk, ook op de opdracht wijzigbaar
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
 }
 
 /**
@@ -8572,6 +8594,34 @@ export const OpdrachtNacalculatieWerktypeBron = {
   fallback: 'fallback',
 } as const;
 
+export interface NacalculatieBvRegel {
+  medewerker_naam: string;
+  /** @nullable */
+  medewerker_bv_id?: number | null;
+  /** @nullable */
+  medewerker_bv_naam?: string | null;
+  uren: number;
+  /**
+     * true = medewerker-BV wijkt af van werk-BV; null = niet te bepalen
+     * @nullable
+     */
+  afwijkend?: boolean | null;
+}
+
+/**
+ * ADMINISTRATIE_01 fase 3: per medewerker de BV van de medewerker naast de BV van het werk; afwijking is zichtbaar, geen doorbelasting.
+ */
+export interface NacalculatieBvControle {
+  /** @nullable */
+  werk_bv_id?: number | null;
+  /** @nullable */
+  werk_bv_naam?: string | null;
+  regels: NacalculatieBvRegel[];
+  afwijkende_uren: number;
+  /** Uren waarvan medewerker-BV of werk-BV onbekend is (nooit stil als 'goed' behandeld) */
+  onbekende_uren: number;
+}
+
 export interface OpdrachtNacalculatie {
   opdracht_id: number;
   /** Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend. */
@@ -8584,6 +8634,7 @@ export interface OpdrachtNacalculatie {
   verbruikte_uren: number;
   verschil?: number;
   regels: OpdrachtNacalculatieRegel[];
+  bv_controle?: NacalculatieBvControle;
   /** Begrote materiaalkosten uit werkbegroting */
   begroting_materiaal_bedrag: number;
   /** Werkelijke materiaalkosten (magazijn-uitgiftes + goedgekeurde inkoopregels) */
@@ -12117,6 +12168,11 @@ export interface AccountviewInstellingen {
   grootboek_voorraad?: string | null;
   grootboek_inkoop_kosten?: string | null;
   magazijn_export_actief?: boolean;
+  /**
+     * ADMINISTRATIE_01 fase 3: voor welke werkmaatschappij (BV) deze administratie boekt; leeg = boeken geweigerd
+     * @nullable
+     */
+  werkgever_id?: number | null;
   bijgewerkt_op?: string;
 }
 
@@ -12129,6 +12185,11 @@ export type AccountviewInstellingenInputDebiteurMapping = { [key: string]: unkno
 export type AccountviewInstellingenInputCrediteurMapping = { [key: string]: unknown } | null;
 
 export interface AccountviewInstellingenInput {
+  /**
+     * Voor welke werkmaatschappij (BV) deze administratie boekt
+     * @nullable
+     */
+  werkgever_id?: number | null;
   api_endpoint?: string | null;
   administratiecode?: string | null;
   api_gebruiker?: string | null;
@@ -12255,6 +12316,18 @@ export interface Factuur {
   bestandsnaam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk (offerte → opdracht → gebouw-default)
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
+  /**
+     * offerte | opdracht | gebouw | null
+     * @nullable
+     */
+  werkmaatschappij_bron?: string | null;
   ai_metadata?: FactuurAiMetadata;
   status: string;
   geblokkeerd: boolean;

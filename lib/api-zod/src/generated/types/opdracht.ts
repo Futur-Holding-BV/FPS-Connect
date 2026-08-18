@@ -14,6 +14,11 @@ export interface Opdracht {
   calculatie_id?: number | null;
   /** @nullable */
   gebouw_id?: number | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk (geërfd van de offerte, wijzigbaar)
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
   /** @nullable */
   project_id?: number | null;
   titel: string;

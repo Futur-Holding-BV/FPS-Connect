@@ -11,6 +11,11 @@ import type { AccountviewInstellingenInputDebiteurMapping } from './accountviewI
 import type { AccountviewInstellingenInputKostenplaatsen } from './accountviewInstellingenInputKostenplaatsen';
 
 export interface AccountviewInstellingenInput {
+  /**
+     * Voor welke werkmaatschappij (BV) deze administratie boekt
+     * @nullable
+     */
+  werkgever_id?: number | null;
   api_endpoint?: string | null;
   administratiecode?: string | null;
   api_gebruiker?: string | null;

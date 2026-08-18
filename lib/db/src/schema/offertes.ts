@@ -72,6 +72,11 @@ export const offertesTable = pgTable("offertes", {
   offertenummer: text("offertenummer"),
   titel: text("titel").notNull(),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  // ADMINISTRATIE_01 fase 3 (René, 18-08-2026): de werkmaatschappij hangt aan
+  // de OFFERTE (het werk), niet aan het gebouw. Het gebouw levert alleen de
+  // standaardwaarde bij aanmaken; hier wijzigbaar en vastgelegd.
+  // Soft ref in TS (werkgevers zit in ander schemabestand); harde FK in migratie 0082.
+  werkmaatschappijId: integer("werkmaatschappij_id"),
   klantId: integer("klant_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
   sjabloonId: integer("sjabloon_id").references(() => offerteSjablonenTable.id, { onDelete: "set null" }),
   opdrachtgever: text("opdrachtgever"),

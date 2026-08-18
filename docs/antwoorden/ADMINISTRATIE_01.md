@@ -49,3 +49,15 @@ rest ongewijzigd (was al zo gebouwd in fase 1+2).
 - **Leveranciersmodel als voorbeeld** (fase 2): klopt — `leveranciers` heeft al IBAN + tenaamstelling + aparte G-rekening; dat model wordt de basis voor de werkmaatschappij-rekeninglijst, uitgebreid met doelen en wijzigingslog.
 - **Loonherkenning**: de SEPA-intake matcht de werkgever nu op het enkele `werkgevers.iban`-veld (sterkste check). Die gaat in fase 2 over op de rekening met doel "loon"; omdat elke werkmaatschappij een eigen nummer heeft, blijft de match eenduidig en valt er nooit terug op een nummer van een andere BV.
 - **INKOOP_BOEKING_01 is al gebouwd** en gedraagt zich conform de nieuwe eis "niet automatisch boeken zolang de scheiding ontbreekt": de automaat staat achter `export_actief` (overal UIT). De werkmaatschappij↔administratie-controle komt er in fase 3 bij.
+
+## Fase 3 (18 augustus 2026) — gebouwd
+
+Beide correcties van René zijn verwerkt:
+
+1. **BV hangt aan het werk**: offerte en opdracht dragen `werkmaatschappij_id`. Gebouw levert alleen de default bij aanmaken van de offerte; de keuze is op offerte (studio, status concept) en opdracht (detailkop) wijzigbaar. Opdracht erft van de offerte. Migratie `0082` (backfill offertes ← gebouw, opdrachten ← offerte/gebouw).
+2. **Uren bedrijfsbreed, afwijking zichtbaar**: nacalculatie bevat `bv_controle` — per medewerker de eigen BV naast de werk-BV, met totalen voor afwijkende én onbekende uren (onbekend wordt nooit stil als "goed" behandeld). Geen doorbelasting gebouwd.
+
+Verder:
+- Factuur-BV via keten offerte → opdracht → gebouw-default, bron zichtbaar (`werkmaatschappij_bron`); factuur-print gebruikt deze keten en blokkeert bij onbepaalbare BV.
+- AccountView-koppeling kreeg een verplicht BV-veld (geen backfill, bewust fail-closed): boeken wordt geweigerd zonder koppeling-BV, bij onbepaalbare factuur-BV en bij mismatch — op álle paden (service, forceer-herexport, batch).
+- Bewijs: `scripts/src/verificatie-administratie01-fase3.ts`, 18/18 groen.

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useGetAccountviewInstellingen,
   useUpdateAccountviewInstellingen,
+  useListWerkgevers,
   useListRelatieMapping,
   useCreateRelatieMapping,
   useUpdateRelatieMapping,
@@ -38,6 +39,7 @@ export default function BoekhoudingBeheer() {
   const { data: instellingen, isLoading } = useGetAccountviewInstellingen({
     query: { queryKey: ["accountview-instellingen"] },
   });
+  const { data: werkgevers } = useListWerkgevers();
 
   const updateMut = useUpdateAccountviewInstellingen({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accountview-instellingen"] }) },
@@ -62,6 +64,10 @@ export default function BoekhoudingBeheer() {
 
   async function opslaan() {
     const payload: Record<string, unknown> = { ...form };
+    // werkgever_id gaat als number of null (leeg = bewust ontkoppeld → boeken geblokkeerd)
+    if ("werkgever_id" in payload) {
+      payload["werkgever_id"] = payload["werkgever_id"] === "" ? null : Number(payload["werkgever_id"]);
+    }
     await updateMut.mutateAsync({ data: payload as Parameters<typeof updateMut.mutateAsync>[0]["data"] });
     setOpgeslagen(true);
     setTimeout(() => setOpgeslagen(false), 3000);
@@ -163,6 +169,24 @@ export default function BoekhoudingBeheer() {
                     value={veld("administratiecode", inst?.administratiecode) as string}
                     onChange={(e) => setVeld("administratiecode", e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>Werkmaatschappij van deze administratie</Label>
+                  <select
+                    data-testid="select-accountview-werkgever"
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={String(veld("werkgever_id", inst?.werkgever_id == null ? "" : String(inst.werkgever_id)))}
+                    onChange={(e) => setVeld("werkgever_id", e.target.value)}
+                  >
+                    <option value="">— Niet ingesteld (boeken geblokkeerd) —</option>
+                    {(werkgevers ?? []).map((w) => (
+                      <option key={w.id} value={String(w.id)}>{w.naam}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Voor welke BV deze administratie boekt. Zolang dit leeg is, of een factuur bij een
+                    andere BV hoort, wordt boeken naar AccountView geweigerd.
+                  </p>
                 </div>
                 <div>
                   <Label>API-gebruiker</Label>

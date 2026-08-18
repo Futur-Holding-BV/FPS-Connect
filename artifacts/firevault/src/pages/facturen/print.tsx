@@ -7,8 +7,6 @@ import {
   useListStudioWerkgevers,
   useGetDocumentStudioModel,
   getGetDocumentStudioModelQueryKey,
-  useGetGebouw,
-  getGetGebouwQueryKey,
 } from "@workspace/api-client-react";
 import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { FactuurTemplateA } from "@/components/documentopmaak/FamilieA";
@@ -36,14 +34,12 @@ export default function FactuurPrintPagina() {
   const { data: werkgevers } = useListWerkgevers();
   const { data: studioWerkgevers } = useListStudioWerkgevers();
 
-  // ADMINISTRATIE_01 (review-hardening): de werkmaatschappij op de factuur
-  // volgt de documenteigen keten factuur → gebouw → werkgever — nooit de
-  // actieve UI-context, anders drukt BV A's factuur BV B's rekening af.
-  const factuurGebouwId = (factuur as Record<string, unknown> | undefined)?.["gebouw_id"] as number | null | undefined;
-  const { data: factuurGebouw, isLoading: gebouwLaden } = useGetGebouw(factuurGebouwId ?? 0, {
-    query: { queryKey: getGetGebouwQueryKey(factuurGebouwId ?? 0), enabled: !!factuurGebouwId, retry: false },
-  });
-  const factuurWerkgeverId = (factuurGebouw as Record<string, unknown> | undefined)?.["werkgever_id"] as number | null | undefined;
+  // ADMINISTRATIE_01 fase 3: de werkmaatschappij op de factuur is documenteigen
+  // en komt van de server via de keten offerte → opdracht → gebouw-default
+  // (besluit René 18-08-2026: de BV hangt aan het werk, het gebouw levert
+  // alleen de standaardwaarde) — nooit de actieve UI-context, anders drukt
+  // BV A's factuur BV B's rekening af.
+  const factuurWerkgeverId = (factuur as Record<string, unknown> | undefined)?.["werkmaatschappij_id"] as number | null | undefined;
 
   const studioWerkgeverId = (() => {
     if (!factuurWerkgeverId) return null;
@@ -61,14 +57,14 @@ export default function FactuurPrintPagina() {
   const gebruiktModel = pinnedModelId ? (pinnedModel ?? null) : actiefModel;
   const gebruiktModelLaden = pinnedModelId ? pinnedModelLaden : modelLaden;
 
-  const klaar = !factuurLaden && !regelsLaden && !!factuur && (!factuurGebouwId || !gebouwLaden);
+  const klaar = !factuurLaden && !regelsLaden && !!factuur;
   // Zonder fiscaal factuurnummer is de factuur niet afdrukbaar: een terugval
   // op het interne id zet een betekenisloos nummer op een uitgaand document.
   const heeftFactuurnummer = !!factuur?.factuurnummer;
-  // Zonder werkmaatschappij-keten (factuur → gebouw → werkgever) is de factuur
-  // evenmin afdrukbaar: terugvallen op een andere BV zou verkeerde
+  // Zonder werkmaatschappij (offerte/opdracht zonder BV en geen gebouw-default)
+  // is de factuur niet afdrukbaar: terugvallen op een andere BV zou verkeerde
   // bedrijfsgegevens/rekeningnummers op een uitgaand document zetten.
-  const heeftWerkmaatschappij = !!factuurGebouwId && !!factuurWerkgeverId;
+  const heeftWerkmaatschappij = !!factuurWerkgeverId;
 
   useEffect(() => {
     if (klaar && heeftFactuurnummer && heeftWerkmaatschappij) {
@@ -92,9 +88,9 @@ export default function FactuurPrintPagina() {
           <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
           <p className="font-semibold text-foreground">Werkmaatschappij onbekend</p>
           <p className="text-sm">
-            Deze factuur is niet aan een gebouw met werkmaatschappij gekoppeld, waardoor de juiste
-            bedrijfsgegevens en het juiste rekeningnummer niet te bepalen zijn. Koppel de factuur
-            eerst aan een gebouw met werkmaatschappij; er wordt bewust nooit teruggevallen op een andere BV.
+            Deze factuur is niet herleidbaar tot een werkmaatschappij: er staat geen BV op de
+            gekoppelde offerte of opdracht en er is geen gebouw-default. Stel de werkmaatschappij
+            in op het werk (offerte/opdracht); er wordt bewust nooit teruggevallen op een andere BV.
           </p>
         </div>
       </div>

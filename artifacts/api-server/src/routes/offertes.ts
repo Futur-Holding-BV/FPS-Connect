@@ -47,6 +47,7 @@ import {
 import { ObjectStorageService } from "../lib/objectStorage";
 import { kenmerkVoorOfferte, formatNummer } from "../lib/kenmerk";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -298,6 +299,17 @@ router.delete("/offerte-hoofdstukken/:id", schrijven, async (req, res): Promise<
 });
 
 // ── Offertes ────────────────────────────────────────────────────────────────
+// ADMINISTRATIE_01 fase 3 helpers: BV op het werk, gebouw = default-leverancier.
+async function werkmaatschappijBestaat(id: number): Promise<boolean> {
+  const [w] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, id));
+  return !!w;
+}
+async function werkmaatschappijVanGebouw(gebouwId: number | null): Promise<number | null> {
+  if (gebouwId == null) return null;
+  const [g] = await db.select({ werkgeverId: gebouwenTable.werkgeverId }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
+  return g?.werkgeverId ?? null;
+}
+
 async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
   let gebouwNaam: string | null = null;
   if (o.gebouwId != null) {
@@ -319,9 +331,18 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     const [c] = await db.select({ naam: modCalcHeadersTable.naam }).from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, o.calculatieId));
     calculatieNaam = c?.naam ?? null;
   }
+  let werkmaatschappijNaam: string | null = null;
+  if (o.werkmaatschappijId != null) {
+    const [w] = await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, o.werkmaatschappijId));
+    werkmaatschappijNaam = w?.naam ?? null;
+  }
   return {
     id: o.id,
     nummer: o.nummer,
+    // ADMINISTRATIE_01 fase 3: BV van het werk — vastgelegd op de offerte,
+    // gebouw levert alleen de default bij aanmaken.
+    werkmaatschappij_id: o.werkmaatschappijId,
+    werkmaatschappij_naam: werkmaatschappijNaam,
     // NUMMER_01 §4.3: bevroren momentopname na verzenden, anders live berekend
     kenmerk: o.kenmerk ?? (await kenmerkVoorOfferte(o.id)),
     gekopieerd_van_id: o.gekopieerdVanId,
@@ -367,6 +388,10 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
   };
 }
 
+// ADMINISTRATIE_01 fase 3: aparte alias — de gewone werkgevers-join hierboven
+// dient het kenmerk-prefix (gebouw-keten), deze de BV van het werk zelf.
+const wmAlias = alias(werkgeversTable, "wm_werk");
+
 router.get("/offertes", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
@@ -378,10 +403,12 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
         calcNummer: modCalcHeadersTable.nummer,
         klantNaam: crmKlantenTable.naam,
         behandeldDoorNaam: gebruikersTable.naam,
+        wmNaam: wmAlias.naam,
       })
       .from(offertesTable)
       .leftJoin(gebouwenTable, eq(offertesTable.gebouwId, gebouwenTable.id))
       .leftJoin(werkgeversTable, eq(gebouwenTable.werkgeverId, werkgeversTable.id))
+      .leftJoin(wmAlias, eq(offertesTable.werkmaatschappijId, wmAlias.id))
       .leftJoin(modCalcHeadersTable, eq(offertesTable.calculatieId, modCalcHeadersTable.id))
       .leftJoin(crmKlantenTable, eq(offertesTable.klantId, crmKlantenTable.id))
       .leftJoin(gebruikersTable, eq(offertesTable.behandeldDoorId, gebruikersTable.id))
@@ -440,6 +467,8 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
         titel: r.o.titel,
         gebouw_id: r.o.gebouwId,
         gebouw_naam: r.gebouwNaam ?? null,
+        werkmaatschappij_id: r.o.werkmaatschappijId ?? null,
+        werkmaatschappij_naam: r.wmNaam ?? null,
         klant_id: r.o.klantId,
         klant_naam: r.klantNaam ?? null,
         sjabloon_id: r.o.sjabloonId,
@@ -473,8 +502,10 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
 
 router.post("/offertes", schrijven, async (req, res): Promise<void> => {
   try {
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, projectkans_id, calculatie_id } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, projectkans_id, calculatie_id, werkmaatschappij_id } = req.body;
     if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
+    if (werkmaatschappij_id != null && !(await werkmaatschappijBestaat(werkmaatschappij_id)))
+      return void res.status(400).json({ error: "werkmaatschappij_id verwijst niet naar een bestaande werkmaatschappij" });
     // NUMMER_01 §4.3: de schakel calculatie → offerte; verwijzing moet bestaan
     // en het gebouw volgt automatisch mee als het niet apart is opgegeven.
     let calculatieId: number | null = null;
@@ -488,13 +519,18 @@ router.post("/offertes", schrijven, async (req, res): Promise<void> => {
       calculatieId = c.id;
       gebouwIdUitCalc = c.gebouwId;
     }
+    // ADMINISTRATIE_01 fase 3: het gebouw levert alleen de STANDAARDWAARDE
+    // voor de werkmaatschappij; expliciete keuze in de body wint altijd.
+    const effectiefGebouwId = gebouw_id ?? gebouwIdUitCalc ?? null;
+    const wmDefault = werkmaatschappij_id ?? (await werkmaatschappijVanGebouw(effectiefGebouwId));
     const [o] = await db
       .insert(offertesTable)
       .values({
         titel,
         offertenummer,
         calculatieId,
-        gebouwId: gebouw_id ?? gebouwIdUitCalc ?? null,
+        werkmaatschappijId: wmDefault,
+        gebouwId: effectiefGebouwId,
         klantId: klant_id ?? null,
         sjabloonId: sjabloon_id ?? null,
         opdrachtgever,
@@ -685,7 +721,11 @@ router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
       return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst, verzend_type } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst, verzend_type, werkmaatschappij_id } = req.body;
+    const { behandeld_door_id } = req.body;
+    // ADMINISTRATIE_01 fase 3: BV van het werk is wijzigbaar op de offerte.
+    if (werkmaatschappij_id !== undefined && werkmaatschappij_id !== null && !(await werkmaatschappijBestaat(werkmaatschappij_id)))
+      return void res.status(400).json({ error: "werkmaatschappij_id verwijst niet naar een bestaande werkmaatschappij" });
 
     // Status via de WorkflowEngine
     if (status !== undefined) {
@@ -765,6 +805,7 @@ router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
           ...(vervolg_opties !== undefined && { vervolgOpties: vervolg_opties }),
           ...(vervolg_tekst !== undefined && { vervolgTekst: vervolg_tekst }),
           ...(verzend_type !== undefined && { verzendType: verzend_type }),
+          ...(werkmaatschappij_id !== undefined && { werkmaatschappijId: werkmaatschappij_id }),
           bijgewerktOp: new Date(),
         })
         .where(eq(offertesTable.id, offerteId))
@@ -2155,6 +2196,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
         voorwaardenSetId: offertesTable.voorwaardenSetId,
         voorwaarden: offertesTable.voorwaarden,
         gebouwId: offertesTable.gebouwId,
+        werkmaatschappijId: offertesTable.werkmaatschappijId,
       })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
@@ -2305,27 +2347,31 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
 
     // Pin het actieve Document Studio-model (offerte-type) op het moment van
     // verzenden, zodat latere wijzigingen aan het model deze verzonden offerte
-    // niet meer beïnvloeden. Resolutie via de directe FK-keten gebouw→werkgever
-    // (geen naam-matching). Geen actief model gevonden = geen harde fout.
+    // niet meer beïnvloeden. ADMINISTRATIE_01 fase 3: resolutie via de BV van
+    // het WERK (offerte.werkmaatschappijId), met de gebouw-werkgever alleen
+    // als fallback voor legacy-offertes zonder BV (geen naam-matching).
+    // Geen actief model gevonden = geen harde fout.
     let studioModelId: number | null = null;
-    if (offerte.gebouwId) {
+    let modelWerkgeverId: number | null = offerte.werkmaatschappijId ?? null;
+    if (!modelWerkgeverId && offerte.gebouwId) {
       const [gebouw] = await db
         .select({ werkgeverId: gebouwenTable.werkgeverId })
         .from(gebouwenTable)
         .where(eq(gebouwenTable.id, offerte.gebouwId));
-      if (gebouw?.werkgeverId) {
-        const [actiefModel] = await db
-          .select({ id: documentStudioModellenTable.id })
-          .from(documentStudioModellenTable)
-          .where(
-            and(
-              eq(documentStudioModellenTable.werkgeverId, gebouw.werkgeverId),
-              eq(documentStudioModellenTable.documentType, "offerte"),
-              eq(documentStudioModellenTable.status, "goedgekeurd"),
-            ),
-          );
-        studioModelId = actiefModel?.id ?? null;
-      }
+      modelWerkgeverId = gebouw?.werkgeverId ?? null;
+    }
+    if (modelWerkgeverId) {
+      const [actiefModel] = await db
+        .select({ id: documentStudioModellenTable.id })
+        .from(documentStudioModellenTable)
+        .where(
+          and(
+            eq(documentStudioModellenTable.werkgeverId, modelWerkgeverId),
+            eq(documentStudioModellenTable.documentType, "offerte"),
+            eq(documentStudioModellenTable.status, "goedgekeurd"),
+          ),
+        );
+      studioModelId = actiefModel?.id ?? null;
     }
 
     // NUMMER_01 §4.3+§4.10: bij verzenden wordt het berekende kenmerk als

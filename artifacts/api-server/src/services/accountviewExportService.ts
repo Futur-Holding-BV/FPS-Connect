@@ -14,6 +14,7 @@
 //   hoofdbeheerder(s) en blijft de handmatige exportknop gewoon werken.
 
 import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { controleerFactuurAdministratieBv } from "./factuurWerkmaatschappij";
 import {
   db,
   facturenTable,
@@ -130,6 +131,18 @@ export async function exporteerFactuurNaarAccountView(
   const [inst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
   if (!inst) return { ok: false, httpStatus: 503, fout: "AccountView is niet geconfigureerd" };
 
+  // ADMINISTRATIE_01 fase 3 (eis 3.6/4.4): harde werkmaatschappij↔administratie-
+  // controle vóór élke boeking, fail-closed. Boeken kan alleen als (a) op de
+  // koppeling vastligt voor welke BV deze administratie boekt, (b) de BV van
+  // de factuur bepaalbaar is (offerte → opdracht → gebouw-default), en (c)
+  // beide overeenkomen. Elke andere situatie weigert met een leesbare reden.
+  {
+    const bvFout = await controleerFactuurAdministratieBv(factuur, inst.werkgeverId ?? null);
+    if (bvFout) {
+      return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: bvFout };
+    }
+  }
+
   // Atomaire claim vlak vóór de externe call — voorkomt dat twee gelijktijdige
   // triggers (auto + handmatig, of dubbelklik) dezelfde boeking twee keer verzenden.
   const geclaimdVoorVerzending = await claimAccountviewVerzending(factuurId);
@@ -138,6 +151,22 @@ export async function exporteerFactuurNaarAccountView(
       ok: false, httpStatus: 409, fout: "Verzending loopt al of factuur is al geboekt",
       detail: "Er loopt al een verzending naar AccountView voor deze factuur, of hij is intussen al succesvol geboekt.",
     };
+  }
+
+  // Hercontrole ná de claim (TOCTOU): de BV op offerte/opdracht en de
+  // koppeling-BV blijven muteerbaar, dus vlak vóór de externe call nog één
+  // keer vers toetsen. Bij weigering wordt de claim netjes teruggegeven.
+  {
+    const [versInst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+    const bvFout = await controleerFactuurAdministratieBv(factuur, versInst?.werkgeverId ?? null);
+    if (bvFout) {
+      await db.update(facturenTable).set({
+        accountviewStatus: "error",
+        accountviewFout: bvFout,
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, factuurId));
+      return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: bvFout };
+    }
   }
 
   const client = maakAccountViewClient(inst);

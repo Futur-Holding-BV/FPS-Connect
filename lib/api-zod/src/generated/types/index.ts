@@ -1051,6 +1051,8 @@ export * from './moment';
 export * from './momentType';
 export * from './muisGebeurtenis';
 export * from './muisGebeurtenisBatch';
+export * from './nacalculatieBvControle';
+export * from './nacalculatieBvRegel';
 export * from './nacalculatieRegel';
 export * from './nationaalMaandpunt';
 export * from './nieuwsItem';

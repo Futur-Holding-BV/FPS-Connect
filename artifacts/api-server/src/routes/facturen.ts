@@ -1,5 +1,6 @@
 import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { kenmerkVoorFactuur } from "../lib/kenmerk";
+import { bepaalFactuurWerkmaatschappij, controleerFactuurAdministratieBv } from "../services/factuurWerkmaatschappij";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as XLSX from "xlsx";
@@ -79,6 +80,7 @@ function paramInt(val: unknown): number {
 
 
 async function mapFactuur(r: typeof facturenTable.$inferSelect) {
+  const factuurBv = await bepaalFactuurWerkmaatschappij(r);
   const [gebouw] = r.gebouwId
     ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, r.gebouwId)).limit(1)
     : [null];
@@ -120,6 +122,10 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     bestandsnaam: r.bestandsnaam,
     gebouw_id: r.gebouwId,
     gebouw_naam: gebouw?.naam ?? null,
+    // ADMINISTRATIE_01 fase 3: BV van het werk (offerte → opdracht → gebouw-default)
+    werkmaatschappij_id: factuurBv?.id ?? null,
+    werkmaatschappij_naam: factuurBv?.naam ?? null,
+    werkmaatschappij_bron: factuurBv?.bron ?? null,
     ai_metadata: r.aiMetadata,
     status: r.status,
     geblokkeerd: r.geblokkeerd,
@@ -416,21 +422,16 @@ router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), asy
     return;
   }
 
-  // BV bepalen via offerte → gebouw → werkgever (of direct gebouw → werkgever).
-  let werkgeverId: number | null = null;
-  let gebouwId = factuur.gebouwId;
-  if (!gebouwId && factuur.offerteId) {
-    const [o] = await db.select({ gebouwId: offertesTable.gebouwId }).from(offertesTable).where(eq(offertesTable.id, factuur.offerteId));
-    gebouwId = o?.gebouwId ?? null;
-  }
-  if (gebouwId) {
-    const [g] = await db.select({ werkgeverId: gebouwenTable.werkgeverId }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
-    werkgeverId = g?.werkgeverId ?? null;
-  }
+  // ADMINISTRATIE_01 fase 3: de fiscale reeks volgt de BV van het WERK via
+  // dezelfde gedeelde keten als print/export (offerte → opdracht →
+  // gebouw-default) — nooit een eigen afwijkende afleiding, anders krijgt
+  // een factuur van BV B het nummer uit de reeks van BV A.
+  const factuurBv = await bepaalFactuurWerkmaatschappij(factuur);
+  const werkgeverId = factuurBv?.id ?? null;
   if (!werkgeverId) {
     res.status(422).json({
       error: "Geen BV bepaalbaar voor de fiscale reeks",
-      detail: "Koppel de factuur (via de offerte) aan een gebouw met een werkgever/BV; het fiscale factuurnummer is per BV.",
+      detail: "Stel de werkmaatschappij in op het werk (offerte/opdracht) of koppel de factuur aan een gebouw met BV; het fiscale factuurnummer is per BV.",
     });
     return;
   }
@@ -2218,6 +2219,13 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
   const [inst] = await db.select().from(accountviewInstellingenTable).limit(1);
   if (!inst?.apiGebruiker) { res.status(503).json({ error: "AccountView niet geconfigureerd" }); return; }
 
+  // ADMINISTRATIE_01 fase 3: ook de forceer-herexport passeert de harde
+  // werkmaatschappij↔administratie-controle — geen achterdeur.
+  {
+    const bvFout = await controleerFactuurAdministratieBv(factuur, inst.werkgeverId ?? null);
+    if (bvFout) { res.status(422).json({ error: bvFout }); return; }
+  }
+
   const client = maakAccountViewClient(inst);
 
   const boekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
@@ -2349,6 +2357,14 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
     if (factuur.geblokkeerd || !factuur.geaccordeerd) {
       resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: "Niet akkoord of geblokkeerd", testmodus: inst.testmodus });
       continue;
+    }
+    // ADMINISTRATIE_01 fase 3: harde BV↔administratie-controle ook in batch.
+    {
+      const bvFout = await controleerFactuurAdministratieBv(factuur, inst.werkgeverId ?? null);
+      if (bvFout) {
+        resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: bvFout, testmodus: inst.testmodus });
+        continue;
+      }
     }
     // INKOOP_BOEKING_01: gedeelde verzend-claim tegen dubbele boekingen
     // (blokkeert ook her-verzenden van al succesvol geboekte facturen via batch).

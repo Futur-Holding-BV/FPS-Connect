@@ -33,6 +33,7 @@ import {
   getGetPimQueryKey,
 } from "@workspace/api-client-react";
 import type { Werkbegroting, OpdrachtNacalculatie } from "@workspace/api-client-react";
+import { useListWerkgevers } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorWerkvoorbereiderPanel from "@/components/ai-senior-werkvoorbereider-panel";
 import { Button } from "@/components/ui/button";
@@ -644,6 +645,7 @@ export default function OpdrachtDetailPagina() {
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
   const { data: nacalculatie } = useGetNacalculatie(opdrachtId);
+  const { data: werkgevers } = useListWerkgevers();
   const { data: planningUren } = useListOpdrachtPlanningUren(opdrachtId);
 
   // ── PIM — AI Regisseur ────────────────────────────────────────────────────────
@@ -939,6 +941,27 @@ export default function OpdrachtDetailPagina() {
             </div>
           </div>
           {opdracht.werknummer && <p className="text-xs text-muted-foreground mt-0.5">{opdracht.werknummer}</p>}
+          {/* ADMINISTRATIE_01 fase 3: BV van het werk — geërfd van de offerte, hier wijzigbaar */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-xs text-muted-foreground">Werkmaatschappij:</span>
+            {kanSchrijven ? (
+              <select
+                data-testid="select-opdracht-werkmaatschappij"
+                className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                value={(opdracht as unknown as Record<string, unknown>)["werkmaatschappij_id"] == null ? "" : String((opdracht as unknown as Record<string, unknown>)["werkmaatschappij_id"])}
+                onChange={(e) => updateOpdrachtMut.mutate({ id: opdrachtId, data: { werkmaatschappij_id: e.target.value === "" ? null : Number(e.target.value) } as any })}
+              >
+                <option value="">— Onbekend —</option>
+                {(werkgevers ?? []).map((w) => (
+                  <option key={w.id} value={String(w.id)}>{w.naam}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs font-medium">
+                {(werkgevers ?? []).find((w) => w.id === (opdracht as unknown as Record<string, unknown>)["werkmaatschappij_id"])?.naam ?? "Onbekend"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1435,6 +1458,56 @@ export default function OpdrachtDetailPagina() {
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
             <div className="space-y-4">
+              {/* ADMINISTRATIE_01 fase 3: BV-controle — medewerker-BV naast werk-BV (melden, geen doorbelasting) */}
+              {nacalculatie.bv_controle && (
+                <Card data-testid="kaart-bv-controle">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      Werkmaatschappij-controle
+                      {(nacalculatie.bv_controle.afwijkende_uren > 0 || nacalculatie.bv_controle.onbekende_uren > 0) ? (
+                        <Badge variant="secondary" className="border-amber-200 bg-amber-50 text-amber-800">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          {nacalculatie.bv_controle.afwijkende_uren > 0 && <>{nacalculatie.bv_controle.afwijkende_uren.toLocaleString("nl-NL")} uur andere BV</>}
+                          {nacalculatie.bv_controle.afwijkende_uren > 0 && nacalculatie.bv_controle.onbekende_uren > 0 && " · "}
+                          {nacalculatie.bv_controle.onbekende_uren > 0 && <>{nacalculatie.bv_controle.onbekende_uren.toLocaleString("nl-NL")} uur BV onbekend</>}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-muted-foreground">Alle uren binnen eigen BV</Badge>
+                      )}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Werk-BV: {nacalculatie.bv_controle.werk_bv_naam ?? "onbekend"} — uren blijven bedrijfsbreed geboekt; dit is een melding, geen doorbelasting.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs text-muted-foreground border-b">
+                          <th className="py-1.5 font-medium">Medewerker</th>
+                          <th className="py-1.5 font-medium">BV medewerker</th>
+                          <th className="py-1.5 font-medium text-right">Uren</th>
+                          <th className="py-1.5 font-medium text-right">Afwijkend</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {nacalculatie.bv_controle.regels.map((r, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="py-1.5">{r.medewerker_naam}</td>
+                            <td className="py-1.5">{r.medewerker_bv_naam ?? <span className="text-muted-foreground">onbekend</span>}</td>
+                            <td className="py-1.5 text-right">{r.uren.toLocaleString("nl-NL")}</td>
+                            <td className="py-1.5 text-right">
+                              {r.afwijkend === true ? <Badge variant="secondary" className="border-amber-200 bg-amber-50 text-amber-800">andere BV</Badge>
+                                : r.afwijkend === false ? <span className="text-muted-foreground text-xs">—</span>
+                                : <Badge variant="secondary" className="text-muted-foreground">onbekend</Badge>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Print-only kop: opdrachttitel, werknummer en datum */}
               <div className="hidden print:block mb-2">
                 <h1 className="text-lg font-bold">{opdracht.titel}</h1>

@@ -7,6 +7,7 @@ import { useZetAssistentLabel } from "@/lib/assistent-context";
 import {
   useGetOfferte,
   useUpdateOfferte,
+  useListWerkgevers,
   useListVoorwaardenSets,
   useListOfferteSecties,
   useCreateOfferteSectie,
@@ -237,6 +238,7 @@ export default function ProposalStudio() {
   const aantalOnbeantwoord = (vragen ?? []).filter((v) => v.antwoord === null || v.antwoord === undefined).length;
 
   const werkOfferte = useUpdateOfferte();
+  const { data: alleWerkgevers } = useListWerkgevers();
   const intrekkenMutatie = useIntrekkenOfferte();
   const { data: voorwaardenSets } = useListVoorwaardenSets();
 
@@ -908,6 +910,32 @@ export default function ProposalStudio() {
               {offerte.offertenummer && (
                 <p className="text-xs text-muted-foreground mt-0.5">{offerte.offertenummer}</p>
               )}
+              {/* ADMINISTRATIE_01 fase 3: BV van het werk — gebouw levert alleen de default */}
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-xs text-muted-foreground">Werkmaatschappij:</span>
+                {kanSchrijven && offerte.status === "concept" ? (
+                  <select
+                    data-testid="select-offerte-werkmaatschappij"
+                    className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                    value={(offerte as unknown as Record<string, unknown>)["werkmaatschappij_id"] == null ? "" : String((offerte as unknown as Record<string, unknown>)["werkmaatschappij_id"])}
+                    onChange={(e) =>
+                      werkOfferte.mutate(
+                        { id: offerteId, data: { werkmaatschappij_id: e.target.value === "" ? null : Number(e.target.value) } as any },
+                        { onSuccess: () => void queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) }) },
+                      )
+                    }
+                  >
+                    <option value="">— Onbekend —</option>
+                    {(alleWerkgevers ?? []).map((w) => (
+                      <option key={w.id} value={String(w.id)}>{w.naam}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs font-medium">
+                    {((offerte as unknown as Record<string, unknown>)["werkmaatschappij_naam"] as string | null) ?? "Onbekend"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

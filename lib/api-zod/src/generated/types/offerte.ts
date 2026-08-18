@@ -32,6 +32,13 @@ export interface Offerte {
   gebouw_id?: number | null;
   /** @nullable */
   gebouw_naam?: string | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk — vastgelegd op de offerte; gebouw levert alleen de default
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
   /** @nullable */
   klant_id?: number | null;
   /** @nullable */

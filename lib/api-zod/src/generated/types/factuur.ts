@@ -45,6 +45,18 @@ export interface Factuur {
   bestandsnaam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  /**
+     * ADMINISTRATIE_01 fase 3: BV van het werk (offerte → opdracht → gebouw-default)
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
+  /**
+     * offerte | opdracht | gebouw | null
+     * @nullable
+     */
+  werkmaatschappij_bron?: string | null;
   ai_metadata?: FactuurAiMetadata;
   status: string;
   geblokkeerd: boolean;

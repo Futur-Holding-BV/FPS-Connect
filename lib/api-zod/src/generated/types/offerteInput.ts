@@ -14,6 +14,11 @@ export interface OfferteInput {
   offertenummer?: string;
   /** @nullable */
   gebouw_id?: number | null;
+  /**
+     * BV van het werk; leeg bij aanmaken = default uit het gebouw
+     * @nullable
+     */
+  werkmaatschappij_id?: number | null;
   /** @nullable */
   klant_id?: number | null;
   /** @nullable */

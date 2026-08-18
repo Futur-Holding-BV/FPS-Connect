@@ -37958,6 +37958,11 @@ components:
           type: ["integer", "null"]
         gebouw_naam:
           type: ["string", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+          description: "ADMINISTRATIE_01 fase 3: BV van het werk — vastgelegd op de offerte; gebouw levert alleen de default"
+        werkmaatschappij_naam:
+          type: ["string", "null"]
         klant_id:
           type: ["integer", "null"]
         klant_naam:
@@ -38064,6 +38069,9 @@ components:
           type: string
         gebouw_id:
           type: ["integer", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+          description: "BV van het werk; leeg bij aanmaken = default uit het gebouw"
         klant_id:
           type: ["integer", "null"]
         sjabloon_id:
@@ -38644,6 +38652,9 @@ components:
           type: ["integer", "null"]
         gebouw_id:
           type: ["integer", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+          description: "ADMINISTRATIE_01 fase 3: BV van het werk (geërfd van de offerte, wijzigbaar)"
         project_id:
           type: ["integer", "null"]
         titel:
@@ -38871,6 +38882,9 @@ components:
         mandagstaat_vereist:
           type: boolean
           description: "UREN_01 §6c.2: alleen beheer-schrijfrecht mag dit zetten"
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+          description: "ADMINISTRATIE_01 fase 3: BV van het werk, ook op de opdracht wijzigbaar"
 
     AanvraagInput:
       type: object
@@ -39539,6 +39553,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OpdrachtNacalculatieRegel"
+        bv_controle:
+          $ref: "#/components/schemas/NacalculatieBvControle"
         begroting_materiaal_bedrag:
           type: number
           description: Begrote materiaalkosten uit werkbegroting
@@ -39554,6 +39570,41 @@ components:
         materiaal_inkoop_kosten:
           type: number
           description: Kosten uit inkoopregels met status besteld of geleverd
+
+    NacalculatieBvControle:
+      type: object
+      description: "ADMINISTRATIE_01 fase 3: per medewerker de BV van de medewerker naast de BV van het werk; afwijking is zichtbaar, geen doorbelasting."
+      required: [regels, afwijkende_uren, onbekende_uren]
+      properties:
+        werk_bv_id:
+          type: ["integer", "null"]
+        werk_bv_naam:
+          type: ["string", "null"]
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/NacalculatieBvRegel"
+        afwijkende_uren:
+          type: number
+        onbekende_uren:
+          type: number
+          description: "Uren waarvan medewerker-BV of werk-BV onbekend is (nooit stil als 'goed' behandeld)"
+
+    NacalculatieBvRegel:
+      type: object
+      required: [medewerker_naam, uren]
+      properties:
+        medewerker_naam:
+          type: string
+        medewerker_bv_id:
+          type: ["integer", "null"]
+        medewerker_bv_naam:
+          type: ["string", "null"]
+        uren:
+          type: number
+        afwijkend:
+          type: ["boolean", "null"]
+          description: "true = medewerker-BV wijkt af van werk-BV; null = niet te bepalen"
 
     OpdrachtChecklistItem:
       type: object
@@ -45412,12 +45463,18 @@ components:
           nullable: true
         magazijn_export_actief:
           type: boolean
+        werkgever_id:
+          type: ["integer", "null"]
+          description: "ADMINISTRATIE_01 fase 3: voor welke werkmaatschappij (BV) deze administratie boekt; leeg = boeken geweigerd"
         bijgewerkt_op:
           type: string
 
     AccountviewInstellingenInput:
       type: object
       properties:
+        werkgever_id:
+          type: ["integer", "null"]
+          description: "Voor welke werkmaatschappij (BV) deze administratie boekt"
         api_endpoint:
           type: string
           nullable: true
@@ -45620,6 +45677,14 @@ components:
         gebouw_naam:
           type: string
           nullable: true
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+          description: "ADMINISTRATIE_01 fase 3: BV van het werk (offerte → opdracht → gebouw-default)"
+        werkmaatschappij_naam:
+          type: ["string", "null"]
+        werkmaatschappij_bron:
+          type: ["string", "null"]
+          description: "offerte | opdracht | gebouw | null"
         ai_metadata:
           type: object
           additionalProperties: true

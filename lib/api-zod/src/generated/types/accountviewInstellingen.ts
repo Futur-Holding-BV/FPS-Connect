@@ -27,5 +27,10 @@ export interface AccountviewInstellingen {
   grootboek_voorraad?: string | null;
   grootboek_inkoop_kosten?: string | null;
   magazijn_export_actief?: boolean;
+  /**
+     * ADMINISTRATIE_01 fase 3: voor welke werkmaatschappij (BV) deze administratie boekt; leeg = boeken geweigerd
+     * @nullable
+     */
+  werkgever_id?: number | null;
   bijgewerkt_op?: string;
 }

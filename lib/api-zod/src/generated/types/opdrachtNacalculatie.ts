@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { NacalculatieBvControle } from './nacalculatieBvControle';
 import type { OpdrachtNacalculatieRegel } from './opdrachtNacalculatieRegel';
 import type { OpdrachtNacalculatieWerktypeBron } from './opdrachtNacalculatieWerktypeBron';
 
@@ -20,6 +21,7 @@ export interface OpdrachtNacalculatie {
   verbruikte_uren: number;
   verschil?: number;
   regels: OpdrachtNacalculatieRegel[];
+  bv_controle?: NacalculatieBvControle;
   /** Begrote materiaalkosten uit werkbegroting */
   begroting_materiaal_bedrag: number;
   /** Werkelijke materiaalkosten (magazijn-uitgiftes + goedgekeurde inkoopregels) */

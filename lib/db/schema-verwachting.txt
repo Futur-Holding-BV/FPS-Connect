@@ -595,6 +595,7 @@ KOLOM|accountview_instellingen|id|integer|NO|nextval('accountview_instellingen_i
 KOLOM|accountview_instellingen|kostenplaatsen|jsonb|YES|'{}'::jsonb
 KOLOM|accountview_instellingen|magazijn_export_actief|boolean|NO|false
 KOLOM|accountview_instellingen|testmodus|boolean|NO|true
+KOLOM|accountview_instellingen|werkgever_id|integer|YES|
 KOLOM|accountview_project_mapping|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|accountview_project_mapping|accountview_kostenplaats|text|YES|
 KOLOM|accountview_project_mapping|accountview_projectcode|text|YES|
@@ -3328,6 +3329,7 @@ KOLOM|offertes|verzend_type|text|NO|'ondertekening'::text
 KOLOM|offertes|voorwaarden_set_id|integer|YES|
 KOLOM|offertes|voorwaarden_snapshot|text|YES|
 KOLOM|offertes|voorwaarden|text|YES|
+KOLOM|offertes|werkmaatschappij_id|integer|YES|
 KOLOM|onderaannemer_orders|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|onderaannemer_orders|bedrag_excl_btw|real|YES|
 KOLOM|onderaannemer_orders|bedrijf|text|YES|
@@ -3426,6 +3428,7 @@ KOLOM|opdrachten|project_id|integer|YES|
 KOLOM|opdrachten|status|text|NO|'actief'::text
 KOLOM|opdrachten|titel|text|NO|
 KOLOM|opdrachten|type|text|NO|'vast'::text
+KOLOM|opdrachten|werkmaatschappij_id|integer|YES|
 KOLOM|opdrachten|werknummer|text|YES|
 KOLOM|opdrachtgever_voorkeuren|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|opdrachtgever_voorkeuren|documentvereisten|text|YES|

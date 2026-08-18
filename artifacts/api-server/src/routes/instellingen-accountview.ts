@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { db, accountviewInstellingenTable } from "@workspace/db";
+import { db, accountviewInstellingenTable, werkgeversTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakAccountViewClient } from "../services/accountview-client";
@@ -32,6 +32,8 @@ function mapInstellingen(r: typeof accountviewInstellingenTable.$inferSelect) {
     debiteur_mapping: r.debiteuerMapping,
     crediteur_mapping: r.crediteurMapping,
     export_actief: r.exportActief,
+    // ADMINISTRATIE_01 fase 3: voor welke BV deze administratie boekt.
+    werkgever_id: r.werkgeverId ?? null,
     grootboek_voorraad: r.grootboekVoorraad ?? null,
     grootboek_inkoop_kosten: r.grootboekInkoopKosten ?? null,
     magazijn_export_actief: r.magazijnExportActief,
@@ -68,6 +70,16 @@ router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), asyn
   if ("grootboek_voorraad" in body) updateData.grootboekVoorraad = body["grootboek_voorraad"] as string | null;
   if ("grootboek_inkoop_kosten" in body) updateData.grootboekInkoopKosten = body["grootboek_inkoop_kosten"] as string | null;
   if ("magazijn_export_actief" in body) updateData.magazijnExportActief = Boolean(body["magazijn_export_actief"]);
+  // ADMINISTRATIE_01 fase 3: voor welke BV deze administratie boekt (verplicht
+  // vóór er geboekt kan worden — de exportservice weigert fail-closed zonder).
+  if ("werkgever_id" in body) {
+    const wgId = body["werkgever_id"] == null ? null : Number(body["werkgever_id"]);
+    if (wgId != null) {
+      const [w] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, wgId));
+      if (!w) { res.status(400).json({ error: "werkgever_id verwijst niet naar een bestaande werkmaatschappij" }); return; }
+    }
+    updateData.werkgeverId = wgId;
+  }
 
   // Zorg dat rij 1 bestaat
   await getOrCreateInstellingen();

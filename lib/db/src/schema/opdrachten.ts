@@ -18,6 +18,9 @@ export const opdrachtenTable = pgTable("opdrachten", {
   offerteId: integer("offerte_id"),
   calculatieId: integer("calculatie_id").references(() => modCalcHeadersTable.id, { onDelete: "set null" }),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  // ADMINISTRATIE_01 fase 3: BV van het werk — geërfd van de offerte bij
+  // aanmaken, wijzigbaar op de opdracht. Soft ref in TS, harde FK in migratie 0082.
+  werkmaatschappijId: integer("werkmaatschappij_id"),
   projectId: integer("project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   titel: text("titel").notNull(),
   werknummer: text("werknummer"),

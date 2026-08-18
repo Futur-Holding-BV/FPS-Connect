@@ -13,6 +13,7 @@ import {
   planningItemsTable,
   urenRegistratiesTable,
   medewerkersTable,
+  werkgeversTable,
   gebruikersTable,
   gebouwenTable,
   reserveringenTable,
@@ -77,6 +78,8 @@ function mapOpdracht(
     id: o.id,
     offerte_id: o.offerteId ?? null,
     calculatie_id: o.calculatieId ?? null,
+    // ADMINISTRATIE_01 fase 3: BV van het werk (geërfd van offerte, wijzigbaar)
+    werkmaatschappij_id: o.werkmaatschappijId ?? null,
     gebouw_id: o.gebouwId ?? null,
     project_id: o.projectId ?? null,
     titel: o.titel,
@@ -193,6 +196,8 @@ router.post("/offertes/:id/maak-opdracht", maakOpdrachtRecht, async (req, res): 
     const [opdracht] = await tx.insert(opdrachtenTable).values({
       offerteId,
       calculatieId: calcId,
+      // ADMINISTRATIE_01 fase 3: BV van het werk erft van de offerte.
+      werkmaatschappijId: offerte.werkmaatschappijId ?? null,
       gebouwId: offerte.gebouwId ?? null,
       projectId: offerte.autoProjectId ?? null,
       titel: opdrachtTitel,
@@ -726,9 +731,15 @@ router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
   try {
-    const { status, omschrijving, werknummer, mandagstaat_vereist } = req.body as {
+    const { status, omschrijving, werknummer, mandagstaat_vereist, werkmaatschappij_id } = req.body as {
       status?: string; omschrijving?: string; werknummer?: string; mandagstaat_vereist?: boolean;
+      werkmaatschappij_id?: number | null;
     };
+    // ADMINISTRATIE_01 fase 3: BV van het werk is ook op de opdracht wijzigbaar.
+    if (werkmaatschappij_id !== undefined && werkmaatschappij_id !== null) {
+      const [w] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, werkmaatschappij_id));
+      if (!w) { res.status(400).json({ error: "werkmaatschappij_id verwijst niet naar een bestaande werkmaatschappij" }); return; }
+    }
 
     // Status via de WorkflowEngine
     if (status !== undefined) {
@@ -750,6 +761,7 @@ router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
     if (werknummer !== undefined) update.werknummer = werknummer;
     // §6c.2: alleen beheer-schrijfrecht (deze route eist al 'projecten':3).
     if (mandagstaat_vereist !== undefined) update.mandagstaatVereist = mandagstaat_vereist === true;
+    if (werkmaatschappij_id !== undefined) update.werkmaatschappijId = werkmaatschappij_id;
 
     const [updated] = await db.update(opdrachtenTable).set(update).where(eq(opdrachtenTable.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
@@ -1009,11 +1021,55 @@ router.get("/opdrachten/:id/nacalculatie", metBedragen, async (req, res): Promis
       .where(eq(planningItemsTable.opdrachtId, id));
     const planningUren = planningItems.reduce((acc, p) => acc + p.uren, 0);
 
-    // Verbruikte uren uit uren_registraties
-    const urenRegels = await db.select({ nettoUren: urenRegistratiesTable.nettoUren })
+    // Verbruikte uren uit uren_registraties — inclusief de BV van de
+    // medewerker (ADMINISTRATIE_01 fase 3: uren blijven bedrijfsbreed, maar
+    // elke urenregel meldt medewerker-BV vs. werk-BV; afwijking is zichtbaar
+    // in de nacalculatie. Bewust GEEN doorbelasting tussen BV's.)
+    const urenRegels = await db.select({
+      nettoUren: urenRegistratiesTable.nettoUren,
+      medewerkerId: medewerkersTable.id,
+      medewerkerNaam: medewerkersTable.naam,
+      medewerkerBvId: medewerkersTable.werkgeverId,
+      medewerkerBvNaam: werkgeversTable.naam,
+    })
       .from(urenRegistratiesTable)
+      .leftJoin(medewerkersTable, eq(urenRegistratiesTable.medewerkerId, medewerkersTable.id))
+      .leftJoin(werkgeversTable, eq(medewerkersTable.werkgeverId, werkgeversTable.id))
       .where(eq(urenRegistratiesTable.opdrachtId, id));
     const verbruikteUren = urenRegels.reduce((acc, u) => acc + u.nettoUren, 0);
+
+    // BV-controle: werk-BV van de opdracht naast de BV van elke medewerker.
+    const [werkBv] = opdracht.werkmaatschappijId != null
+      ? await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, opdracht.werkmaatschappijId))
+      : [null];
+    const perMedewerker = new Map<string, { medewerker_naam: string; medewerker_bv_id: number | null; medewerker_bv_naam: string | null; uren: number }>();
+    for (const u of urenRegels) {
+      const sleutel = `${u.medewerkerId ?? "onbekend"}`;
+      const bestaand = perMedewerker.get(sleutel);
+      if (bestaand) bestaand.uren += u.nettoUren;
+      else perMedewerker.set(sleutel, {
+        medewerker_naam: u.medewerkerNaam ?? "Onbekende medewerker",
+        medewerker_bv_id: u.medewerkerBvId ?? null,
+        medewerker_bv_naam: u.medewerkerBvNaam ?? null,
+        uren: u.nettoUren,
+      });
+    }
+    // Afwijkend = beide BV's bekend en verschillend; onbekende BV's worden
+    // apart gemeld (nooit stil als "goed" behandeld — fail-closed zichtbaar).
+    const bvRegels = [...perMedewerker.values()].map((r) => ({
+      ...r,
+      uren: Math.round(r.uren * 100) / 100,
+      afwijkend: opdracht.werkmaatschappijId != null && r.medewerker_bv_id != null
+        ? r.medewerker_bv_id !== opdracht.werkmaatschappijId
+        : null,
+    }));
+    const bvControle = {
+      werk_bv_id: opdracht.werkmaatschappijId ?? null,
+      werk_bv_naam: werkBv?.naam ?? null,
+      regels: bvRegels,
+      afwijkende_uren: Math.round(bvRegels.filter((r) => r.afwijkend === true).reduce((a, r) => a + r.uren, 0) * 100) / 100,
+      onbekende_uren: Math.round(bvRegels.filter((r) => r.afwijkend === null).reduce((a, r) => a + r.uren, 0) * 100) / 100,
+    };
 
     const begrotingUren = begroting?.totaalArbeidUren ?? 0;
 
@@ -1125,6 +1181,8 @@ router.get("/opdrachten/:id/nacalculatie", metBedragen, async (req, res): Promis
       verbruikte_uren: verbruikteUren,
       verschil: begrotingUren - verbruikteUren,
       regels: nacalculatieRegels,
+      // ADMINISTRATIE_01 fase 3: BV medewerker vs. BV werk per urenregel.
+      bv_controle: bvControle,
       begroting_materiaal_bedrag,
       werkelijke_materiaal_bedrag,
       verschil_materiaal,
