@@ -58,3 +58,8 @@ jobs:
         run: |
           git fetch origin main --depth=1
           pnpm --filter @workspace/db run check-hernoeming
+
+      # CONTRACT_01 — bewakingstests voor aanzegdatums en DBA-grens draaien bij
+      # elke PR zodat een falende berekening niet ongemerkt wordt gemerged.
+      - name: Contract-bewaking unit-tests
+        run: pnpm test
