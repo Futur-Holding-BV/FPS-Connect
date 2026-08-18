@@ -2,6 +2,25 @@
 
 Dit document groeit per fase mee. Metingen staan in `docs/metingen/ADMINISTRATIE_01-fase0.md`.
 
+## Akkoord René op fase 0 (18 augustus 2026) — met twee correcties op §2
+
+1. **Werkmaatschappij hangt aan de OFFERTE/OPDRACHT, niet aan het gebouw.** Het
+   gebouw mag de standaardwaarde leveren, maar de BV is op het werk zelf
+   wijzigbaar en wordt dáár vastgelegd. Reden: één pand kan werk van meerdere
+   BV's hebben, en het gebouwveld mag leeg zijn. Dit vervangt de voorstellen
+   "per werkmaatschappij, afgeleid (via gebouw→werkgever)" voor
+   offertes/projecten en opdrachten uit de fase-0-meting. Gevolg voor het
+   gebouwde: de factuur-print bindt nu nog aan factuur→gebouw→werkgever — dat
+   wordt in fase 3 vervangen door de documenteigen BV van de offerte/opdracht
+   (gebouw blijft alleen default-leverancier).
+2. **Uren en declaraties blijven bedrijfsbreed**, maar elke urenregel meldt
+   zowel de BV van de medewerker als de BV van het werk; wijken die af, dan is
+   dat zichtbaar in de nacalculatie. **Geen doorbelasting tussen BV's bouwen**
+   — die beslissing neemt René later.
+
+Rechtenvoorstel akkoord: bankrekening-mutaties achter Financieel niveau 4, de
+rest ongewijzigd (was al zo gebouwd in fase 1+2).
+
 ## Fase 1+2 (18 augustus 2026) — gebouwd
 
 - **Rechtenkeuze René verwerkt**: bankrekening-mutaties (toevoegen/wijzigen/verwijderen) vereisen **Financieel & Facturatie niveau 4**; alle overige bedrijfsgegevens blijven bewerkbaar op Personeel niveau 2. Bewezen: zonder Financieel 4 geeft de API 403.
