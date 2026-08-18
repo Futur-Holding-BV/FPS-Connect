@@ -37,6 +37,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { logActiviteit } from "../lib/activiteit";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
@@ -1089,7 +1090,18 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: R
 // ── DELETE /facturen/:id ───────────────────────────────────────────────────────
 router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
-  await db.delete(facturenTable).where(eq(facturenTable.id, id));
+  // FINANCIEEL_KETEN_01: verwijderen is een besluit — leg vast wie, wat en
+  // wanneer. Via RETURNING: alleen een daadwerkelijk verwijderde rij wordt
+  // gelogd (geen vals log bij gelijktijdige verwijdering).
+  const [f] = await db.delete(facturenTable).where(eq(facturenTable.id, id))
+    .returning({ factuurnummer: facturenTable.factuurnummer, relatienaam: facturenTable.relatienaam, bedrag: facturenTable.bedragInclBtw });
+  if (f) {
+    await logActiviteit({
+      type: "factuur_verwijderd",
+      omschrijving: `Factuur verwijderd: ${f.relatienaam ?? "onbekend"} ${f.factuurnummer ?? `#${id}`}${f.bedrag ? ` (€${f.bedrag})` : ""}`,
+      gebruikerId: req.session?.userId ?? null,
+    });
+  }
   res.status(204).send();
 });
 

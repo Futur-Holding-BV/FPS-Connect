@@ -1,3 +1,11 @@
+## 2026-08-18 — FINANCIEEL_KETEN_01: financiële keten gemeten en gerepareerd
+
+- Vier nieuwe werkbak-voeders: geblokkeerde facturen, mislukte AccountView-exports, verkoopfacturen over de vervaldatum, en "project afgesloten maar OHW nog open" — geld dat op een mens wacht staat nu in de werkbak i.p.v. verstopt in schermen.
+- Besluitvastlegging: handmatige OHW-waardering eist toelichting (422 zonder) en logt wie/wat; factuur verwijderen, scenario aanmaken/verwijderen en AK-post aan/uit worden gelogd.
+- Marktspiegel-onderzoek dat >30 min op "bezig" hangt wordt eerlijk "mislukt" met reden; meerjarenoverzicht kiest bij dubbele goedgekeurde kerncijfers deterministisch het nieuwste.
+- Meting per onderdeel in docs/metingen/FINANCIEEL_KETEN_01-meting.md; antwoord + voorleg-punten (btw-definities, contractkosten, crediteuridentiteit) in docs/antwoorden/FINANCIEEL_KETEN_01.md.
+- Bewijs: scripts/src/verificatie-financieel-keten.ts (15/15), vitest 497 passed.
+
 ## 2026-08-18 — ADMINISTRATIE_02: btw-schema, drie-weg-controle en betaalbatch (SEPA)
 
 - **Btw-codes per BV** (migratie 0089): sync uit AccountView of lijst-import in Beheer → Boekhouding; keuzelijst op factuur- en leveranciersdetail; boekingspoort weigert btw-codes buiten het schema (422); categorisatievoorstel toetst voorstellen aan het schema; gebruiksmeting wijst typefouten aan. Bewijs: verificatie-grootboekschema.ts 23/23.

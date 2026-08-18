@@ -59,7 +59,7 @@ import {
   calculatiesTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { syncBron, meldWerkbakItem, type WerkbakInvoer } from "./werkbakService";
 import { beoordeelVorigeWeek, bouwWeekControleItems, bouwTvtOpnameItems } from "./weekControle";
@@ -67,6 +67,7 @@ import { vindGebruikersMetFunctietitel } from "./bouwMeldingen";
 import { haalInkoopHistorie, artikelSleutel, MIN_WAARNEMINGEN_INKOOP } from "./inkoopEigenCijfers";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { voerContractBewakingUit, haalCrucialeDatumItems } from "../routes/contract-bewaking";
+import { berekenItems as berekenOhwItems } from "../routes/onderhanden-werk";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
 
@@ -1856,6 +1857,118 @@ async function voedOpdrachtZonderAkkoord(): Promise<{ nieuw: number; afgehandeld
   return syncBron("opdracht_zonder_akkoord", items);
 }
 
+
+// ── FINANCIEEL_KETEN_01 — toestanden die op een mens wachtten zonder dat die
+// mens iets te zien kreeg. Vier voeders: geblokkeerd geld, mislukte exports,
+// verlopen verkoopfacturen en afgesloten projecten met open OHW.
+
+// Geblokkeerde facturen: geld dat stil staat tot iemand de blokkade opheft of
+// de factuur afkeurt. Zonder voeder was dit alleen een filter in het factuurscherm.
+async function voedGeblokkeerdeFacturen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const rijen = await db
+    .select({ id: facturenTable.id, relatienaam: facturenTable.relatienaam, factuurnummer: facturenTable.factuurnummer, bedrag: facturenTable.bedragInclBtw })
+    .from(facturenTable)
+    .where(and(
+      eq(facturenTable.geblokkeerd, true),
+      notInArray(facturenTable.status, ["afgekeurd", "historisch"]),
+    ));
+  const items: WerkbakInvoer[] = rijen.map((f) => ({
+    soort: "doen" as const,
+    bron: "factuur_geblokkeerd" as const,
+    titel: `Geblokkeerde factuur: ${f.relatienaam ?? "onbekend"} ${f.factuurnummer ?? `#${f.id}`}${f.bedrag ? ` (€${f.bedrag})` : ""}`,
+    omschrijving: "Hef de blokkade op of keur de factuur af; de reden staat op de factuurpagina.",
+    vereisteModule: "financieel",
+    vereistNiveau: 2,
+    gewicht: 70,
+    actiePad: `/facturen/${f.id}`,
+    herkomstType: "factuur",
+    herkomstId: f.id,
+    dedupSleutel: `factuur_geblokkeerd:${f.id}`,
+  }));
+  return syncBron("factuur_geblokkeerd", items);
+}
+
+// Mislukte AccountView-export: de factuur staat op fout_bij_verzending en wacht
+// op herexport of correctie — dat mag niet alleen in het exportlog blijven.
+async function voedExportfouten(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const rijen = await db
+    .select({ id: facturenTable.id, relatienaam: facturenTable.relatienaam, factuurnummer: facturenTable.factuurnummer })
+    .from(facturenTable)
+    .where(eq(facturenTable.status, "fout_bij_verzending"));
+  const items: WerkbakInvoer[] = rijen.map((f) => ({
+    soort: "doen" as const,
+    bron: "factuur_exportfout" as const,
+    titel: `Export naar AccountView mislukt: ${f.relatienaam ?? "onbekend"} ${f.factuurnummer ?? `#${f.id}`}`,
+    omschrijving: "Bekijk de foutmelding in het exportlog en herexporteer of corrigeer de boekgegevens.",
+    vereisteModule: "financieel",
+    vereistNiveau: 2,
+    gewicht: 75,
+    actiePad: `/facturen/${f.id}`,
+    herkomstType: "factuur",
+    herkomstId: f.id,
+    dedupSleutel: `factuur_exportfout:${f.id}`,
+  }));
+  return syncBron("factuur_exportfout", items);
+}
+
+// Verkoopfacturen over de vervaldatum die niet betaald zijn: dit is de
+// liquiditeitskant — inning wacht op een mens (herinnering/incasso op de factuur).
+async function voedVervallenVerkoopfacturen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const rijen = await db
+    .select({ id: facturenTable.id, relatienaam: facturenTable.relatienaam, factuurnummer: facturenTable.factuurnummer, vervaldatum: facturenTable.vervaldatum, bedrag: facturenTable.bedragInclBtw })
+    .from(facturenTable)
+    .where(and(
+      eq(facturenTable.type, "verkoop"),
+      eq(facturenTable.geblokkeerd, false),
+      notInArray(facturenTable.status, ["afgekeurd", "historisch", "concept"]),
+      isNotNull(facturenTable.vervaldatum),
+      sql`${facturenTable.vervaldatum} < ${vandaag}`,
+      sql`(${facturenTable.betaalstatus} IS NULL OR ${facturenTable.betaalstatus} <> 'betaald')`,
+    ));
+  const items: WerkbakInvoer[] = rijen.map((f) => ({
+    soort: "doen" as const,
+    bron: "verkoopfactuur_vervallen" as const,
+    titel: `Verkoopfactuur over vervaldatum: ${f.relatienaam ?? "onbekend"} ${f.factuurnummer ?? `#${f.id}`}${f.bedrag ? ` (€${f.bedrag})` : ""}`,
+    omschrijving: `Vervaldatum was ${f.vervaldatum}. Stuur een herinnering of start incasso vanaf de factuurpagina.`,
+    vereisteModule: "financieel",
+    vereistNiveau: 2,
+    gewicht: 65,
+    actiePad: `/facturen/${f.id}`,
+    herkomstType: "factuur",
+    herkomstId: f.id,
+    dedupSleutel: `verkoopfactuur_vervallen:${f.id}`,
+  }));
+  return syncBron("verkoopfactuur_vervallen", items);
+}
+
+// Afgesloten projecten met open OHW: waarde die op de balans blijft hangen
+// terwijl het project klaar is — factureren of afwaarderen is een menselijk besluit.
+async function voedOhwSignalen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const peildatum = new Date().toISOString().slice(0, 10);
+  // Alleen de afgesloten statussen doorrekenen (begrensde set) — nooit de hele
+  // opdrachtenportefeuille aggregeren in de sequentiële bewakingsloop.
+  const ohwItems = [
+    ...(await berekenOhwItems(peildatum, "afgerond")),
+    ...(await berekenOhwItems(peildatum, "geannuleerd")),
+  ];
+  const open = ohwItems.filter((i) => i.signaleringen.includes("Project afgesloten maar OHW nog open"));
+  const items: WerkbakInvoer[] = open.map((i) => ({
+    soort: "doen" as const,
+    bron: "ohw_signaal" as const,
+    titel: `Project afgesloten maar OHW nog open: ${i.titel ?? `opdracht #${i.opdracht_id}`} (€${Math.round(i.waarde_ohw)})`,
+    omschrijving: "Factureer het restant of pas de OHW-waardering aan (met toelichting) zodat de balans klopt.",
+    vereisteModule: "financieel",
+    vereistNiveau: 2,
+    gewicht: 60,
+    actiePad: "/financieel/onderhanden-werk",
+    herkomstType: "opdracht",
+    herkomstId: i.opdracht_id,
+    dedupSleutel: `ohw_signaal:afgesloten:${i.opdracht_id}`,
+  }));
+  return syncBron("ohw_signaal", items);
+}
+
 export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: number; afgehandeld: number } | { fout: string }>> {
   // Overlap-guard: een tweede (handmatige) draai tijdens een lopende draai kan
   // via reconciliatie een halfgesynchroniseerde set als stale afsluiten.
@@ -1878,6 +1991,11 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["verlofaanvragen", voedVerlofaanvragen],
     ["facturen_ter_goedkeuring", voedFacturenTerGoedkeuring],
     ["betaalbatches", voedBetaalbatches],
+    // FINANCIEEL_KETEN_01 — financiële toestanden die op een mens wachten.
+    ["facturen_geblokkeerd", voedGeblokkeerdeFacturen],
+    ["facturen_exportfout", voedExportfouten],
+    ["verkoopfacturen_vervallen", voedVervallenVerkoopfacturen],
+    ["ohw_signalen", voedOhwSignalen],
     ["conceptantwoorden", voedConceptantwoorden],
     ["mail_antwoorden", voedMailAntwoorden],
     ["weekstaat_controle", voedWeekstaatControle],

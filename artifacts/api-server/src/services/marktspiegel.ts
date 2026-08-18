@@ -239,14 +239,16 @@ export async function voerMarktspiegelUit(onderzoekId: number): Promise<void> {
     await db
       .update(marktspiegelOnderzoekenTable)
       .set({ status: "klaar", resultaat: gefilterd, fout: null, klaarOp: new Date() })
-      .where(eq(marktspiegelOnderzoekenTable.id, onderzoekId));
+      // Alleen afronden als het onderzoek nog "bezig" is: een time-out (30 min,
+      // gezet door de lijstroute) is terminaal en mag niet herrijzen.
+      .where(and(eq(marktspiegelOnderzoekenTable.id, onderzoekId), eq(marktspiegelOnderzoekenTable.status, "bezig")));
   } catch (err) {
     const bericht = err instanceof Error ? err.message : "Onbekende fout";
     logger.error({ err, onderzoekId }, "marktspiegel uitvoeren mislukt");
     await db
       .update(marktspiegelOnderzoekenTable)
       .set({ status: "fout", fout: bericht.slice(0, 500), klaarOp: new Date() })
-      .where(eq(marktspiegelOnderzoekenTable.id, onderzoekId))
+      .where(and(eq(marktspiegelOnderzoekenTable.id, onderzoekId), eq(marktspiegelOnderzoekenTable.status, "bezig")))
       .catch(() => undefined);
   }
 }

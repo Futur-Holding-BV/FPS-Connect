@@ -738,7 +738,11 @@ router.get("/financieel/meerjarenoverzicht", requireAuth, lezen, async (req, res
       })
       .from(financieleKerncijfersTable)
       .innerJoin(financieleDocumentenTable, eq(financieleKerncijfersTable.documentId, financieleDocumentenTable.id))
-      .where(and(...filters));
+      .where(and(...filters))
+      // FINANCIEEL_KETEN_01: bij dubbele goedgekeurde cijfers voor dezelfde
+      // sleutel/boekjaar wint deterministisch het nieuwste kerncijfer (hoogste
+      // id overschrijft in de aggregatie hieronder) — nooit toevalsvolgorde.
+      .orderBy(financieleKerncijfersTable.id);
 
     // Beschikbare entiteiten (voor de keuzelijst).
     const entiteitenSet = new Set<string>();

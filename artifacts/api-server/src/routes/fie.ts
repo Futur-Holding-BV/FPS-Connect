@@ -16,6 +16,7 @@ import {
 } from "@workspace/db";
 import { eq, ne, desc, and, inArray, sql as sqlRaw } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { logActiviteit } from "../lib/activiteit";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
 import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsingPerJaar, bepaalLoonkostenDekking, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
@@ -479,6 +480,7 @@ router.post("/fie/begrotingen/:id/scenario", schrijven, async (req: Request, res
 
   try {
     const scenario = await kopieerBegrotingAlsScenario(basisId, naam, aannamesR.json);
+    await logActiviteit({ type: "fie_scenario", omschrijving: `Scenario aangemaakt: "${naam}" (vanuit begroting #${basisId})`, gebruikerId: req.session?.userId ?? null });
     res.status(201).json(mapScenario(scenario));
   } catch (e) {
     if (e instanceof ScenarioFout) { res.status(e.status).json({ error: e.message }); return; }
@@ -520,6 +522,7 @@ router.delete("/fie/scenarios/:id", schrijven, async (req: Request, res: Respons
     .where(eq(fieJaarbegrotingenTable.id, id)).limit(1);
   if (!bestaand || bestaand.status !== "scenario") { res.status(404).json({ error: "Scenario niet gevonden" }); return; }
   await db.delete(fieJaarbegrotingenTable).where(eq(fieJaarbegrotingenTable.id, id));
+  await logActiviteit({ type: "fie_scenario", omschrijving: `Scenario verwijderd: "${bestaand.scenarioNaam ?? bestaand.boekjaar}"`, gebruikerId: req.session?.userId ?? null });
   res.status(204).end();
 });
 
@@ -607,6 +610,14 @@ router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response
     .set(updateData)
     .where(eq(fieAkPostenTable.id, id))
     .returning();
+
+  if (actief !== undefined && (actief as boolean) !== existing.actief) {
+    await logActiviteit({
+      type: "fie_ak_post",
+      omschrijving: `AK-post "${existing.omschrijving}" ${actief ? "geactiveerd" : "gedeactiveerd"} (begroting #${existing.begrotingId})`,
+      gebruikerId: req.session?.userId ?? null,
+    });
+  }
 
   const wgId = updated.werkgeverId;
   const [wg] = wgId

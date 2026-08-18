@@ -51,6 +51,13 @@ export const WERKBAK_BRONNEN = [
   "wagenpark_garagemail",
   // LEVERANCIER_01 §3.3: inkoopfactuur zonder koppeling aan het leveranciersregister.
   "factuur_zonder_leverancier",
+  // FINANCIEEL_KETEN_01: toestanden die op een mens wachten mogen niet in een
+  // submenu blijven hangen — geblokkeerd geld, mislukte exports, verlopen
+  // verkoopfacturen en afgesloten projecten met open OHW komen naar de werkbak.
+  "factuur_geblokkeerd",
+  "factuur_exportfout",
+  "verkoopfactuur_vervallen",
+  "ohw_signaal",
   // BOUW_01 §4: meer-/minderwerkmelding vanaf de bouwplaats → werkvoorbereider (doen) + vaste cc projectleider (weten).
   "meerwerk_melding",
   // BOUW_01 §5: materiaalaanvraag "wijkt af" of "weet ik niet" → eerst de werkvoorbereider.

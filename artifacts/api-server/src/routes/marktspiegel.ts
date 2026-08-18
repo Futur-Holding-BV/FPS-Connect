@@ -15,7 +15,7 @@
 // vaste paden staan bewust bovenaan.
 import { Router } from "express";
 import { db, marktspiegelOnderzoekenTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, lt } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   startMarktspiegelAsync,
@@ -51,6 +51,13 @@ function mapOnderzoek(r: Onderzoek) {
 // Lijst van onderzoeken, recent eerst.
 router.get("/marktspiegel", lezen, async (req, res): Promise<void> => {
   try {
+    // FINANCIEEL_KETEN_01: een gecrashte worker mag een onderzoek niet eeuwig
+    // op "bezig" laten hangen — na 30 minuten is dat aantoonbaar mislukt.
+    const staleGrens = new Date(Date.now() - 30 * 60 * 1000);
+    await db.update(marktspiegelOnderzoekenTable)
+      .set({ status: "fout", fout: "Onderzoek is vastgelopen (geen resultaat binnen 30 minuten)", klaarOp: new Date() })
+      .where(and(eq(marktspiegelOnderzoekenTable.status, "bezig"), lt(marktspiegelOnderzoekenTable.aangemaaktOp, staleGrens)));
+
     const rijen = await db
       .select()
       .from(marktspiegelOnderzoekenTable)

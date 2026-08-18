@@ -11,6 +11,7 @@ import {
   onderhandenWerkOverridesTable,
 } from "@workspace/db";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
 
@@ -89,7 +90,7 @@ function berekenSignaleringen(opts: {
 // Hoofd-aggregatiefunctie
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function berekenItems(peildatum: string, statusFilter?: string) {
+export async function berekenItems(peildatum: string, statusFilter?: string) {
   const peilDate = peildatum;
 
   const opdrachten = statusFilter
@@ -265,6 +266,14 @@ router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("fi
     opmerkingen?: string | null;
   };
 
+  // FINANCIEEL_KETEN_01: een handmatige waardering wijkt af van het rekenmodel
+  // en raakt de balans — die eist een vastgelegde toelichting (wie/wanneer volgt
+  // hieronder via bijgewerktDoorId + activiteitenlog).
+  if ((waarderingsmethode ?? "percentage_gereed") === "handmatig" && !(opmerkingen ?? "").trim()) {
+    res.status(422).json({ error: "Geef een toelichting bij een handmatige OHW-waardering" });
+    return;
+  }
+
   const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
   if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
 
@@ -276,6 +285,7 @@ router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("fi
     percentageGereed:   percentage_gereed ?? null,
     handmatigBedrag:    handmatig_bedrag != null ? String(handmatig_bedrag) : null,
     opmerkingen:        opmerkingen ?? null,
+    bijgewerktDoorId:   req.session?.userId ?? null,
     bijgewerktOp:       new Date(),
   };
 
@@ -285,6 +295,15 @@ router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("fi
   } else {
     await db.insert(onderhandenWerkOverridesTable).values({ opdrachtId, ...updateData });
   }
+
+  await logActiviteit({
+    type: "ohw_override",
+    omschrijving: `OHW-waardering aangepast voor opdracht #${opdrachtId}: methode ${updateData.waarderingsmethode}`
+      + (updateData.handmatigBedrag != null ? `, handmatig €${updateData.handmatigBedrag}` : "")
+      + (updateData.percentageGereed != null ? `, ${updateData.percentageGereed}% gereed` : "")
+      + ((opmerkingen ?? "").trim() ? ` — ${(opmerkingen ?? "").trim()}` : ""),
+    gebruikerId: req.session?.userId ?? null,
+  });
 
   const peildatum = new Date().toISOString().slice(0, 10);
   const items = await berekenItems(peildatum);
