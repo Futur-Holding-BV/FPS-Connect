@@ -34,7 +34,7 @@ export function dagenTot(eindDatum: string, nu: Date = new Date()): number {
   return Math.round((eind.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function ketenregelingCheck(contracten: Array<{ contracttype: string; startDatum: string; eindDatum: string | null }>): string | null {
+export function ketenregelingCheck(contracten: Array<{ contracttype: string; startDatum: string; eindDatum: string | null }>): string | null {
   // Wet Flexibele Arbeid: max 3 tijdelijke contracten in 3 jaar
   const tijdelijk = contracten.filter((c) => c.contracttype === "bepaalde_tijd" || c.contracttype === "oproep");
   if (tijdelijk.length >= 3) {

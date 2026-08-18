@@ -4,6 +4,7 @@ import {
   dagenTot,
   berekenContractCrucialeDatum,
   berekenZzpCrucialeDatum,
+  ketenregelingCheck,
   URGENT_DAGEN,
   DBA_MAANDEN_GRENS,
 } from "../routes/contract-bewaking";
@@ -338,5 +339,84 @@ describe("zetAlsUrgenter — meest urgente deadline wint (laagste dagen_tot)", (
     expect(winnaar.bron).toBe("contract");
     expect(winnaar.dagen_tot).toBe(cRes.dagen_tot);
     expect(winnaar.urgent).toBe(true);
+  });
+});
+
+// ── Unit-tests: ketenregelingCheck ───────────────────────────────────────────
+
+describe("ketenregelingCheck — ketenregeling Wet Flexibele Arbeid", () => {
+  // Hulpfunctie: maak een bepaalde-tijd contract op basis van jaar-offset
+  function bepaaldeTijdContract(startJaar: number, eindJaar: number, maand = 1, dag = 1) {
+    return {
+      contracttype: "bepaalde_tijd",
+      startDatum: `${startJaar}-${String(maand).padStart(2, "0")}-${String(dag).padStart(2, "0")}`,
+      eindDatum: `${eindJaar}-${String(maand).padStart(2, "0")}-${String(dag).padStart(2, "0")}`,
+    };
+  }
+
+  it("2 tijdelijke contracten → geen melding (drempel is 3)", () => {
+    const contracten = [
+      bepaaldeTijdContract(2024, 2025),
+      bepaaldeTijdContract(2025, 2026),
+    ];
+    expect(ketenregelingCheck(contracten)).toBeNull();
+  });
+
+  it("3 tijdelijke contracten → melding (ketenregel bereikt)", () => {
+    const contracten = [
+      bepaaldeTijdContract(2023, 2024),
+      bepaaldeTijdContract(2024, 2025),
+      bepaaldeTijdContract(2025, 2026),
+    ];
+    const melding = ketenregelingCheck(contracten);
+    expect(melding).not.toBeNull();
+    expect(melding).toMatch(/3 tijdelijke contracten/);
+    expect(melding).toMatch(/onbepaalde tijd/i);
+  });
+
+  it("aaneengesloten periode < 36 maanden → geen melding", () => {
+    // Twee contracten samen ±24 maanden (ruim onder de 36-maandsgrens)
+    const contracten = [
+      { contracttype: "bepaalde_tijd", startDatum: "2024-01-01", eindDatum: "2024-12-31" },
+      { contracttype: "bepaalde_tijd", startDatum: "2025-01-01", eindDatum: "2025-12-31" },
+    ];
+    expect(ketenregelingCheck(contracten)).toBeNull();
+  });
+
+  it("aaneengesloten periode > 36 maanden → melding (duurgrens overschreden)", () => {
+    // Twee contracten: samen ~40 maanden (jan 2022 t/m mei 2025)
+    const contracten = [
+      { contracttype: "bepaalde_tijd", startDatum: "2022-01-01", eindDatum: "2023-12-31" },
+      { contracttype: "bepaalde_tijd", startDatum: "2024-01-01", eindDatum: "2025-05-01" },
+    ];
+    const melding = ketenregelingCheck(contracten);
+    expect(melding).not.toBeNull();
+    expect(melding).toMatch(/langer dan 3 jaar/i);
+  });
+
+  it("onbepaalde-tijd contract telt niet mee voor de ketenregel", () => {
+    // 2 bepaalde-tijd + 1 onbepaalde-tijd → totaal tijdelijk = 2, geen melding
+    const contracten = [
+      { contracttype: "bepaalde_tijd", startDatum: "2023-01-01", eindDatum: "2024-01-01" },
+      { contracttype: "bepaalde_tijd", startDatum: "2024-01-01", eindDatum: "2025-01-01" },
+      { contracttype: "onbepaalde_tijd", startDatum: "2025-01-01", eindDatum: null },
+    ];
+    expect(ketenregelingCheck(contracten)).toBeNull();
+  });
+
+  it("oproepcontract telt wel mee als tijdelijk contract", () => {
+    // 2 bepaalde-tijd + 1 oproep = 3 tijdelijke → melding
+    const contracten = [
+      { contracttype: "bepaalde_tijd", startDatum: "2023-01-01", eindDatum: "2024-01-01" },
+      { contracttype: "bepaalde_tijd", startDatum: "2024-01-01", eindDatum: "2025-01-01" },
+      { contracttype: "oproep", startDatum: "2025-01-01", eindDatum: "2025-07-01" },
+    ];
+    const melding = ketenregelingCheck(contracten);
+    expect(melding).not.toBeNull();
+    expect(melding).toMatch(/3 tijdelijke contracten/);
+  });
+
+  it("lege lijst → geen melding", () => {
+    expect(ketenregelingCheck([])).toBeNull();
   });
 });
