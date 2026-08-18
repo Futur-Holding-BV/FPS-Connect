@@ -34,6 +34,26 @@ connect.fps-one.nl {
         }
     }
 
+    # Monteuromgeving (/app): Expo web-export van artifacts/monteur-app.
+    # Deze handles staan bewust VÓÓR de @static-handle, anders zouden
+    # /app/_expo/*.js en /app/sw.js door de desktop-static-handle uit
+    # /srv/public geserveerd worden (404).
+    redir /app /app/ permanent
+
+    handle /app/* {
+        root * /srv/app
+        uri strip_prefix /app
+
+        # index.html, sw.js en manifest nooit browser-cachen: de service
+        # worker regelt de update-cyclus (versie in cache-naam), de browser
+        # moet deze bestanden altijd vers kunnen ophalen na een uitrol.
+        @vers path / /index.html /sw.js /manifest.webmanifest /versie.json /asset-lijst.json
+        header @vers Cache-Control "no-cache"
+
+        try_files {path} /index.html
+        file_server
+    }
+
     # Statische bestanden: deterministisch op pad en extensie gematcht,
     # geen file-existence check, geen try_files, geen not file.
     # LET OP: meerdere matcher-soorten binnen één named matcher worden door

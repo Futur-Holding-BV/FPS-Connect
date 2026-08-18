@@ -41,6 +41,11 @@ self.addEventListener("fetch", (e) => {
   // API-verzoeken: altijd netwerk, nooit cachen
   if (url.pathname.startsWith("/api/")) return;
 
+  // Monteuromgeving (/app): heeft een eigen service worker met eigen scope.
+  // Deze (root-scope) worker mag die verzoeken nooit onderscheppen, anders
+  // krijgt de telefoon de Connect-shell in plaats van de monteur-app.
+  if (url.pathname === "/app" || url.pathname.startsWith("/app/")) return;
+
   // Vite dev-bestanden: nooit cachen (HMR tokens zijn sessie-specifiek)
   if (isViteDevBestand(url)) return;
 

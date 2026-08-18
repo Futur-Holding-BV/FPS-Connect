@@ -142,6 +142,33 @@ versiecheck() {
   return 1
 }
 
+# Controleert dat de monteuromgeving (/app, MONTEUR_NU_01) de nieuwe release
+# serveert. De caddy-image bakt versie.json met de korte commit in de
+# webexport; wijkt die af, dan draait een oude caddy-image en moet de deploy
+# als mislukt gelden (zelfde oordeel als de API-versiecheck).
+app_versiecheck() {
+  local verwachte_lang="$1"
+  local verwachte_kort
+  verwachte_kort="$(git rev-parse --short "${verwachte_lang}")"
+  echo "Versiecheck /app: verwacht commit ${verwachte_kort} op https://connect.fps-one.nl/app/versie.json ..."
+  local pogingen=6
+  local i
+  for i in $(seq 1 "${pogingen}"); do
+    local antwoord commit_in_app
+    antwoord="$(curl -fsS --max-time 10 https://connect.fps-one.nl/app/versie.json 2>/dev/null || true)"
+    commit_in_app="$(printf '%s' "${antwoord}" | grep -o '"commit":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
+    if [ "${commit_in_app}" = "${verwachte_kort}" ]; then
+      echo "Versiecheck /app geslaagd: versie.json meldt commit ${commit_in_app}."
+      return 0
+    fi
+    echo "Versiecheck /app: meldt '${commit_in_app}', verwacht '${verwachte_kort}' (poging ${i}/${pogingen}), 5s wachten..."
+    sleep 5
+  done
+  echo "FOUT: /app/versie.json meldt niet de verwachte commit na ${pogingen} pogingen." >&2
+  echo "  Laatste antwoord: ${antwoord}" >&2
+  return 1
+}
+
 # ─── STAP 2: databaseback-up (bestaande compose backup-opdracht) ─────────────
 # --profile backup is vereist: de backup-service zit in het "backup"-profiel
 # en is standaard uitgesloten van compose-commando's zonder die vlag.
@@ -340,13 +367,13 @@ DEPLOY_VERSIE_COMMIT="$(git rev-parse HEAD)"
 VERSIECHECK_GESLAAGD=0
 if healthcheck; then
   stap_tijd "healthcheck"
-  if versiecheck "${DEPLOY_VERSIE_COMMIT}"; then
+  if versiecheck "${DEPLOY_VERSIE_COMMIT}" && app_versiecheck "${DEPLOY_VERSIE_COMMIT}"; then
     # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
     docker image prune -f --filter "until=72h" || true
-    echo "Deploy voltooid: release is gezond en de juiste versie draait."
+    echo "Deploy voltooid: release is gezond en de juiste versie draait (API én /app)."
     exit 0
   fi
-  echo "FOUT: healthcheck geslaagd maar versiecheck faalde — de OUDE containers draaien nog." >&2
+  echo "FOUT: healthcheck geslaagd maar versiecheck (API of /app) faalde — de OUDE release draait mogelijk nog." >&2
   echo "Automatische rollback wordt gestart..." >&2
   VERSIECHECK_GESLAAGD=1   # markeer dat healthcheck slaagde maar versiecheck niet (voor logging)
 fi

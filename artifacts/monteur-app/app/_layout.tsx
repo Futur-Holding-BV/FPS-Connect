@@ -14,7 +14,8 @@ import * as Updates from "expo-updates";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Platform, Pressable, Text, View } from "react-native";
+import { isUitvoerendVeld } from "@/lib/buitendienst";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ruimte } from "@workspace/ontwerp";
@@ -475,9 +476,25 @@ function PicklijstBewaker() {
 }
 
 function RootLayoutNav() {
-  const { bezigLaden, vergrendeld, token } = useAuth();
+  const { bezigLaden, vergrendeld, token, gebruiker } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Web (/app): de monteuromgeving is er voor buitendienstprofielen. Wie geen
+  // buitendienstprofiel heeft (kantoor, hoofdbeheerder) gaat naar het gewone
+  // Connect op hetzelfde domein. Native app blijft ongewijzigd.
+  useEffect(() => {
+    if (Platform.OS !== "web" || bezigLaden || !token || !gebruiker) return;
+    // Alleen wanneer de app daadwerkelijk onder /app draait (productie-export
+    // met baseUrl "/app"). In dev draait de web-app op de root van het
+    // expo-dev-domein: daar bestaat geen Connect op "/" en zou deze redirect
+    // een lus veroorzaken (o.a. e2e met hoofdbeheerder-testaccount).
+    const pad = window.location.pathname;
+    const onderApp = pad === "/app" || pad.startsWith("/app/");
+    if (onderApp && !isUitvoerendVeld(gebruiker)) {
+      window.location.replace("/");
+    }
+  }, [bezigLaden, token, gebruiker]);
 
   useEffect(() => {
     if (bezigLaden) return;

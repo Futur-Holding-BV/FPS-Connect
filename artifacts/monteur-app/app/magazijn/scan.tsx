@@ -928,6 +928,25 @@ function MagazijnScanScherm() {
               </Text>
             </Pressable>
           </View>
+        ) : Platform.OS === "web" ? (
+          // Web (/app in de browser): live barcode-scannen via expo-camera is
+          // hier niet beschikbaar. Geen doodlopende knop — bied direct de
+          // werkende terugval aan: artikel opzoeken op naam of code.
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: ruimte.xl, gap: ruimte.l }}>
+            <Ionicons name="barcode-outline" size={48} color={c.mutedForeground} />
+            <Text style={[tekstStijl("nadruk", c.foreground), { textAlign: "center" }]}>
+              Barcode scannen is niet beschikbaar in de browser
+            </Text>
+            <Text style={[tekstStijl("klein", c.mutedForeground), { textAlign: "center" }]}>
+              Zoek het artikel op naam of artikelcode. Scannen met de camera werkt in de geïnstalleerde app.
+            </Text>
+            <Pressable
+              onPress={() => setZoekOpen(true)}
+              style={{ backgroundColor: c.primary, borderRadius: c.radius, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.m }}
+            >
+              <Text style={tekstStijl("nadruk", c.primaryForeground)}>Artikel zoeken</Text>
+            </Pressable>
+          </View>
         ) : (
           <View style={{ flex: 1, position: "relative" }}>
             <CameraView

@@ -17,6 +17,19 @@ export default function AppInstallatiePagina() {
   const [storeUrl, setStoreUrl] = useState<string | null>(null);
   const [playStoreUrl, setPlayStoreUrl] = useState<string | null>(null);
 
+  // Sinds MONTEUR_NU_01 serveert de webserver op /app de echte
+  // monteuromgeving (Expo web-export). Deze SPA-pagina kan alleen nog
+  // verschijnen via een verouderde service-worker-cache of in een omgeving
+  // zonder die webuitvoer. Is de monteuromgeving bereikbaar, dan sturen we
+  // hard door zodat de gebruiker nooit op de wachtpagina blijft hangen.
+  useEffect(() => {
+    fetch("/app/versie.json", { cache: "no-store" })
+      .then((r) => {
+        if (r.ok) window.location.replace("/app/");
+      })
+      .catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     fetch(`${BASE}/api/auth/app-installatie-info`)
       .then((r) => (r.ok ? r.json() : { store_url: null, play_store_url: null }))

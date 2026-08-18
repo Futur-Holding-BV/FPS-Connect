@@ -6,7 +6,6 @@ import {
   useCreateOpnameFotoUploadUrl,
   useDeleteOpnameFoto,
 } from "@workspace/api-client-react";
-import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -36,6 +35,7 @@ import {
   slaOpnameItemOp,
 } from "@/lib/offlineCache";
 import { MAX_POGINGEN, WachtrijItem, laadWachtrij, voegToeAanWachtrij } from "@/lib/syncQueue";
+import { bewaarBestandUitUri, documentMap, lijstMap, maakMap } from "@/lib/bestanden";
 
 const SPOT_TYPEN = [
   { waarde: "branddeur", label: "Branddeur", kleur: "#ef4444" },
@@ -112,7 +112,7 @@ export default function OpnameItemDetail() {
     );
   }, [id]);
 
-  const fotoDir = `${FileSystem.documentDirectory ?? ""}opname-fotos/${id}/`;
+  const fotoDir = documentMap(`opname-fotos/${id}`);
 
   useEffect(() => {
     void herlaadWachtrijFotos();
@@ -159,12 +159,8 @@ export default function OpnameItemDetail() {
 
   // Laad lokale foto's
   useEffect(() => {
-    FileSystem.getInfoAsync(fotoDir).then((info) => {
-      if (info.exists && info.isDirectory) {
-        FileSystem.readDirectoryAsync(fotoDir).then((bestanden) => {
-          setLokaleFotos(bestanden.sort().map((b) => `${fotoDir}${b}`));
-        });
-      }
+    lijstMap(fotoDir).then((paden) => {
+      if (paden.length > 0) setLokaleFotos(paden);
     });
   }, [fotoDir]);
 
@@ -205,7 +201,7 @@ export default function OpnameItemDetail() {
 
   async function maakFotoMap() {
     if (!fotoMapGemaakt.current) {
-      await FileSystem.makeDirectoryAsync(fotoDir, { intermediates: true });
+      await maakMap(fotoDir);
       fotoMapGemaakt.current = true;
     }
   }
@@ -263,8 +259,7 @@ export default function OpnameItemDetail() {
       try {
         await maakFotoMap();
         const bestandsnaam = `foto_${Date.now()}.jpg`;
-        const lokaalPad = `${fotoDir}${bestandsnaam}`;
-        await FileSystem.copyAsync({ from: uri, to: lokaalPad });
+        const lokaalPad = await bewaarBestandUitUri(uri, fotoDir, bestandsnaam);
         setLokaleFotos((prev) => [...prev, lokaalPad]);
         await voegToeAanWachtrij({
           type: "upload_foto_lokaal",

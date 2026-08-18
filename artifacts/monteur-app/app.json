@@ -30,7 +30,9 @@
       "url": "https://u.expo.dev/bcb7fa55-571f-4162-a080-3a3f4761c8d9"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "output": "single",
+      "bundler": "metro"
     },
     "plugins": [
       [
@@ -51,7 +53,8 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "baseUrl": "/app"
     },
     "extra": {
       "eas": {

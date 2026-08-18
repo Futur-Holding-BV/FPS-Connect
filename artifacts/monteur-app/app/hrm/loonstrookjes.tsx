@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   Text,
@@ -68,6 +69,22 @@ export default function LoonstrookjesScherm() {
     try {
       const domain = API_DOMEIN;
       const base = domain ? `https://${domain}` : "";
+
+      if (Platform.OS === "web") {
+        // Web: geen bestandssysteem/Sharing — PDF ophalen en openen in
+        // een nieuw tabblad via een object-URL.
+        const res = await fetch(`${base}/api/mijn/salarisdocumenten/${id}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          Alert.alert("Download mislukt", "Het document kon niet worden geladen.");
+          return;
+        }
+        const blob = await res.blob();
+        window.open(URL.createObjectURL(blob), "_blank", "noopener");
+        return;
+      }
+
       const cacheUri = `${FileSystem.cacheDirectory ?? ""}loonstrookje_${id}.pdf`;
 
       const result = await FileSystem.downloadAsync(

@@ -6,7 +6,6 @@ import {
   useCreatePlanningMeerwerk,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -44,6 +43,7 @@ import {
   patchWerkorderStatusLokaal,
 } from "@/lib/offlineCache";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
+import { bewaarBestandUitUri, documentMap, lijstMap, maakMap, schrijfTekstBestand } from "@/lib/bestanden";
 
 const UITVOERING_LABEL: Record<string, string> = {
   gepland: "Gepland",
@@ -146,7 +146,7 @@ export default function WerkdagDetailScherm() {
   if (!token) return <Redirect href="/login" />;
 
   const id = parseInt(idParam ?? "0", 10);
-  const fotoDir = `${FileSystem.documentDirectory ?? ""}werkdag-fotos/${id}/`;
+  const fotoDir = documentMap(`werkdag-fotos/${id}`);
 
   const { data: werkorder, isLoading, isError, refetch } = useGetWerkdagItem(id);
   const [gecachedWerkorder, setGecachedWerkorder] = useState<Record<string, unknown> | null>(null);
@@ -159,14 +159,10 @@ export default function WerkdagDetailScherm() {
     }
   }, [isOnline, id, werkorder, isError]);
 
-  // Laad lokale foto's uit FileSystem bij start
+  // Laad lokale foto's uit de bestandslaag bij start
   useEffect(() => {
-    FileSystem.getInfoAsync(fotoDir).then((info) => {
-      if (info.exists && info.isDirectory) {
-        FileSystem.readDirectoryAsync(fotoDir).then((bestanden) => {
-          setLokaleFotos(bestanden.map((b) => `${fotoDir}${b}`));
-        });
-      }
+    lijstMap(fotoDir).then((paden) => {
+      if (paden.length > 0) setLokaleFotos(paden);
     });
   }, [fotoDir]);
 
@@ -252,7 +248,7 @@ export default function WerkdagDetailScherm() {
 
   async function maakFotoMap() {
     if (!fotoMapGemaakt.current) {
-      await FileSystem.makeDirectoryAsync(fotoDir, { intermediates: true });
+      await maakMap(fotoDir);
       fotoMapGemaakt.current = true;
     }
   }
@@ -305,20 +301,18 @@ export default function WerkdagDetailScherm() {
 
     await maakFotoMap();
     const bestandsnaam = `foto_${Date.now()}.jpg`;
-    const doel = `${fotoDir}${bestandsnaam}`;
-    await FileSystem.copyAsync({ from: result.assets[0].uri, to: doel });
+    const doel = await bewaarBestandUitUri(result.assets[0].uri, fotoDir, bestandsnaam);
     setLokaleFotos((prev) => [...prev, doel]);
   }
 
   async function slaHandtekeningOp(svgData: string) {
     setHandtekeningBezig(true);
     try {
-      const pad = `${FileSystem.documentDirectory ?? ""}werkdag-handtekeningen/werkdag_${id}.svg`;
-      await FileSystem.makeDirectoryAsync(
-        `${FileSystem.documentDirectory ?? ""}werkdag-handtekeningen`,
-        { intermediates: true },
+      const pad = await schrijfTekstBestand(
+        documentMap("werkdag-handtekeningen"),
+        `werkdag_${id}.svg`,
+        svgData,
       );
-      await FileSystem.writeAsStringAsync(pad, svgData);
       await voegToeAanWachtrij({
         type: "create_handtekening",
         lokaalPad: pad,

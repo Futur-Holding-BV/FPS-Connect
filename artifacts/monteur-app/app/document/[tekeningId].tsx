@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import {
   ActivityIndicator,
   Image,
@@ -69,6 +70,19 @@ export default function DocumentViewer() {
             setDataUri(d);
             setStatus("gereed");
           }
+        } else if (Platform.OS === "web") {
+          // Web: PDF ophalen met token en in een nieuw tabblad openen —
+          // de browser heeft een eigen PDF-weergave; Sharing bestaat niet.
+          const res = await fetch(storageUrl, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error(`http ${res.status}`);
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          if (!actief) return;
+          cacheRef.current = objectUrl;
+          setStatus("gereed");
+          window.open(objectUrl, "_blank", "noopener");
         } else {
           // PDF / overig: downloaden naar cache, dan openen via Sharing
           const bestandsnaam = (naam ?? "document").replace(/[^a-zA-Z0-9._-]/g, "_") + (naam?.endsWith(".pdf") ? "" : ".pdf");
@@ -102,6 +116,10 @@ export default function DocumentViewer() {
 
   async function opnieuwOpenen() {
     if (!cacheRef.current) return;
+    if (Platform.OS === "web") {
+      window.open(cacheRef.current, "_blank", "noopener");
+      return;
+    }
     setStatus("openen");
     try {
       await Sharing.shareAsync(cacheRef.current, {

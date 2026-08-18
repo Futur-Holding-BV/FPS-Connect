@@ -15,6 +15,7 @@
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static: `mjs` verplicht in regexp; path+path_regexp in één matcher = AND (serveerde /logo-*.png als text/html) → alleen extensie-regexp gebruiken.
 - [KADER FPS Connect](kader-fps-connect.md) — attached_assets/KADER-FPS-Connect_*.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) + [Ontwikkelfilosofie](ontwikkelfilosofie.md) + [Changelog](changelog-verplichting.md) — taak pas gereed bij bewezen businessscenario; stabiliteit > functionaliteit; docs/changelog.md altijd bijwerken.
+- [Expo-app als web-PWA onder padprefix](monteur-webapp.md) — +html.tsx alleen bij output "static"; SW moet het volledige asset-manifest pre-cachen (anders geen koude offline start); root-SW moet subpad-scope overslaan.
 - [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.

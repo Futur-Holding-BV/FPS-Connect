@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -23,6 +24,9 @@ export type Gebruiker = {
   rol: string;
   avatar_url?: string | null;
   taal?: string | null;
+  // Functietitels (uit HRM) — op web gebruikt om buitendienstprofielen te
+  // herkennen (lib/buitendienst.ts); komt mee in de login/auth-me payload.
+  functietitels?: string[] | null;
   // Effectieve bevoegdheden (module → niveau), berekend door de server bij
   // login en ververst bij elke app-start. GEEN eigen berekening in de app.
   bevoegdheden?: Record<string, number>;
@@ -147,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let actief = true;
     (async () => {
       try {
-        const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+        const basis = `https://${API_DOMEIN}`;
         const resp = await fetch(`${basis}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -171,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const inloggen = useCallback(
     async (email: string, wachtwoord: string, code: string) => {
-      const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+      const basis = `https://${API_DOMEIN}`;
       const resp = await fetch(`${basis}/api/auth/mobile/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -15,10 +15,16 @@ import Constants from "expo-constants";
 import { API_DOMEIN } from "@/lib/apiDomein";
 
 const APP_VERSIE = Constants.expoConfig?.version ?? "1.0.0";
+// Bij de webuitvoer (/app) bakt de deploy-build commit en bouwtijd in via
+// EXPO_PUBLIC_-variabelen (zie deploy/Dockerfile.caddy); native builds
+// vallen terug op de statische bouwdatum uit de app-config.
+const BUILD_COMMIT = process.env.EXPO_PUBLIC_GIT_COMMIT ?? "";
+const BUILD_TIJD = process.env.EXPO_PUBLIC_BUILD_TIJD ?? "";
 const APP_BOUWDATUM: string =
-  typeof Constants.expoConfig?.extra?.bouwdatum === "string"
+  BUILD_TIJD ||
+  (typeof Constants.expoConfig?.extra?.bouwdatum === "string"
     ? Constants.expoConfig.extra.bouwdatum
-    : "2026-06-08";
+    : "2026-06-08");
 const APP_NAAM = "FPS Monteur";
 const APP_LEVERANCIER = "FPS Brandpreventie";
 
@@ -390,7 +396,7 @@ export default function InfoScherm() {
                 Versie
               </Text>
               <Text style={[tekstStijl("klein", c.foreground), { fontFamily: "Inter_600SemiBold" }]}>
-                v{APP_VERSIE}
+                v{APP_VERSIE}{BUILD_COMMIT ? ` (${BUILD_COMMIT})` : ""}
               </Text>
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

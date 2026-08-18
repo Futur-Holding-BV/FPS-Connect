@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import { API_DOMEIN } from "@/lib/apiDomein";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import React, {
@@ -25,6 +25,14 @@ import {
   PermanenteSyncFout,
 } from "@/lib/syncQueue";
 import { verwijderOfflineUren } from "@/lib/offlineCache";
+import {
+  bestandBestaat,
+  bestandGrootte,
+  bestandsnaamVan,
+  leesTekstBestand,
+  uploadBestandNaarUrl,
+  verwijderBestand,
+} from "@/lib/bestanden";
 
 // Haal een nette meldingstekst uit een 422-antwoord (bv. de akkoordpoort
 // die uren weigert met AKKOORD_ONTBREEKT). Retryen lost zo'n weigering niet
@@ -98,7 +106,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("gesynchroniseerd");
   const syncRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  const basis = `https://${API_DOMEIN}`;
 
   const herlaadAantal = useCallback(async () => {
     const actief = await aantalActief();
@@ -120,7 +128,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const verwijderd = await wisMislukteItems();
     for (const item of verwijderd) {
       if (item.type === "upload_foto_lokaal") {
-        await FileSystem.deleteAsync(item.lokaalPad, { idempotent: true });
+        await verwijderBestand(item.lokaalPad);
       }
     }
     await herlaadAantal();
@@ -131,7 +139,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const item = wachtrij.find((i) => i.id === id);
     await verwijderUitWachtrij(id);
     if (item?.type === "upload_foto_lokaal") {
-      await FileSystem.deleteAsync(item.lokaalPad, { idempotent: true });
+      await verwijderBestand(item.lokaalPad);
     }
     await herlaadAantal();
   }, [herlaadAantal]);
@@ -219,13 +227,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
         // ── Foto lokaal uploaden ───────────────────────────────────────────────
         case "upload_foto_lokaal": {
-          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
-          if (!fileInfo.exists) {
+          if (!(await bestandBestaat(item.lokaalPad))) {
             // Bestand niet meer beschikbaar (bijv. gewist) — stil doorgaan
             break;
           }
 
-          const naam = item.lokaalPad.split("/").pop() ?? "foto.jpg";
+          const naam = bestandsnaamVan(item.lokaalPad, `foto_${Date.now()}.jpg`);
           const urlResp = await fetch(
             `${basis}/api/opname/items/${item.itemId}/fotos/upload-url`,
             {
@@ -242,16 +249,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             upload_url: string;
           };
 
-          const uploadResult = await FileSystem.uploadAsync(
+          const uploadStatus = await uploadBestandNaarUrl(
             item.lokaalPad,
             upload_url,
-            {
-              httpMethod: "PUT",
-              headers: { "Content-Type": "image/jpeg" },
-            },
+            "image/jpeg",
           );
-          if (uploadResult.status >= 400) {
-            throw new Error(`Upload HTTP ${uploadResult.status}`);
+          if (uploadStatus >= 400) {
+            throw new Error(`Upload HTTP ${uploadStatus}`);
           }
           break;
         }
@@ -299,10 +303,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
         // ── Handtekening uploaden ──────────────────────────────────────────────
         case "create_handtekening": {
-          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
-          if (!fileInfo.exists) break; // Bestand weg — stil doorgaan
+          if (!(await bestandBestaat(item.lokaalPad))) break; // Bestand weg — stil doorgaan
 
-          const svgContent = await FileSystem.readAsStringAsync(item.lokaalPad);
+          const svgContent = await leesTekstBestand(item.lokaalPad);
           const r = await fetch(
             `${basis}/api/werkdag/${item.werkdagId}/handtekening`,
             {
@@ -324,14 +327,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         // ── PIM foto-analyse — offline gebufferd, upload + analyse bij hersync ──
         case "foto_analyse": {
           // 1. Upload lokale foto naar object storage
-          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
-          if (!fileInfo.exists) {
+          if (!(await bestandBestaat(item.lokaalPad))) {
             // Bestand gewist — stil doorgaan (item verwijderen uit wachtrij)
             break;
           }
 
-          const naam =
-            item.lokaalPad.split("/").pop() ?? `pim_analyse_${Date.now()}.jpg`;
+          const grootte = await bestandGrootte(item.lokaalPad);
+          const naam = bestandsnaamVan(item.lokaalPad, `pim_analyse_${Date.now()}.jpg`);
 
           const urlResp = await fetch(
             `${basis}/api/storage/uploads/request-url`,
@@ -340,7 +342,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
               headers,
               body: JSON.stringify({
                 name: naam,
-                size: fileInfo.size ?? 1,
+                size: grootte ?? 1,
                 contentType: "image/jpeg",
                 bestand_type: "foto",
               }),
@@ -352,13 +354,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             objectPath: string;
           };
 
-          const uploadResult = await FileSystem.uploadAsync(
+          const uploadStatus = await uploadBestandNaarUrl(
             item.lokaalPad,
             uploadURL,
-            { httpMethod: "PUT", headers: { "Content-Type": "image/jpeg" } },
+            "image/jpeg",
           );
-          if (uploadResult.status >= 300) {
-            throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+          if (uploadStatus >= 300) {
+            throw new Error(`Foto-upload HTTP ${uploadStatus}`);
           }
 
           // 2. Foto-analyse starten via API
@@ -380,10 +382,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           // 1. Upload offline genomen foto's (lokale file:// URI's)
           const extraFotoUrls: string[] = [];
           for (const lokaalPad of item.lokale_foto_paden ?? []) {
-            const fileInfo = await FileSystem.getInfoAsync(lokaalPad);
-            if (!fileInfo.exists) continue; // bestand gewist — overslaan
+            if (!(await bestandBestaat(lokaalPad))) continue; // bestand gewist — overslaan
 
-            const naam = lokaalPad.split("/").pop() ?? `pim_foto_${Date.now()}.jpg`;
+            const grootte = await bestandGrootte(lokaalPad);
+            const naam = bestandsnaamVan(lokaalPad, `pim_foto_${Date.now()}.jpg`);
 
             // Vraag presigned upload-URL aan
             const urlResp = await fetch(`${basis}/api/storage/uploads/request-url`, {
@@ -391,7 +393,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
               headers,
               body: JSON.stringify({
                 name: naam,
-                size: fileInfo.size ?? 1,
+                size: grootte ?? 1,
                 contentType: "image/jpeg",
                 bestand_type: "foto",
               }),
@@ -403,12 +405,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             };
 
             // Upload bestand via presigned URL
-            const uploadResult = await FileSystem.uploadAsync(lokaalPad, uploadURL, {
-              httpMethod: "PUT",
-              headers: { "Content-Type": "image/jpeg" },
-            });
-            if (uploadResult.status >= 300) {
-              throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+            const uploadStatus = await uploadBestandNaarUrl(lokaalPad, uploadURL, "image/jpeg");
+            if (uploadStatus >= 300) {
+              throw new Error(`Foto-upload HTTP ${uploadStatus}`);
             }
             extraFotoUrls.push(objectPath);
           }
@@ -441,16 +440,16 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           // 1. Upload eventuele lokale foto-URI's (bij storing/schade die offline aangemeld waren)
           const geuploadePaden: string[] = [];
           for (const lokaalPad of item.lokale_foto_paden) {
-            const fileInfo = await FileSystem.getInfoAsync(lokaalPad);
-            if (!fileInfo.exists) continue;
+            if (!(await bestandBestaat(lokaalPad))) continue;
 
-            const naam = lokaalPad.split("/").pop() ?? `melding_foto_${Date.now()}.jpg`;
+            const grootte = await bestandGrootte(lokaalPad);
+            const naam = bestandsnaamVan(lokaalPad, `melding_foto_${Date.now()}.jpg`);
             const urlResp = await fetch(`${basis}/api/storage/uploads/request-url`, {
               method: "POST",
               headers,
               body: JSON.stringify({
                 name: naam,
-                size: fileInfo.size ?? 1,
+                size: grootte ?? 1,
                 contentType: "image/jpeg",
                 bestand_type: "foto",
               }),
@@ -460,11 +459,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
               uploadURL: string;
               objectPath: string;
             };
-            const uploadResult = await FileSystem.uploadAsync(lokaalPad, uploadURL, {
-              httpMethod: "PUT",
-              headers: { "Content-Type": "image/jpeg" },
-            });
-            if (uploadResult.status >= 300) throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+            const uploadStatus = await uploadBestandNaarUrl(lokaalPad, uploadURL, "image/jpeg");
+            if (uploadStatus >= 300) throw new Error(`Foto-upload HTTP ${uploadStatus}`);
             geuploadePaden.push(objectPath);
           }
 

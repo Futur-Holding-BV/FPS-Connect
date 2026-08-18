@@ -1,3 +1,4 @@
+import { API_DOMEIN } from "@/lib/apiDomein";
 import React, {
   createContext,
   useCallback,
@@ -22,7 +23,7 @@ import {
 
 // ─── Configuratie ─────────────────────────────────────────────────────────────
 const PING_INTERVAL_MS = 30 * 1000;
-const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const basis = `https://${API_DOMEIN}`;
 
 async function ping(): Promise<boolean> {
   try {

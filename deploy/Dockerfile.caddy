@@ -27,6 +27,9 @@ COPY scripts/package.json                 scripts/
 COPY artifacts/firevault/package.json    artifacts/firevault/
 COPY artifacts/firevault/tsconfig.json   artifacts/firevault/
 
+COPY artifacts/monteur-app/package.json  artifacts/monteur-app/
+COPY artifacts/monteur-app/tsconfig.json artifacts/monteur-app/
+
 # --ignore-scripts voorkomt dat pnpm 'prepare: tsc --build' uitvoert
 # voor lib/api-client-react terwijl de bronbestanden er nog niet zijn.
 RUN pnpm install --frozen-lockfile --ignore-scripts
@@ -53,6 +56,37 @@ ENV VITE_FEATURE_WIZARD_ONBOARDING=${VITE_FEATURE_WIZARD_ONBOARDING}
 # Stap 3: Vite bouwt de frontend
 RUN pnpm --filter @workspace/firevault run build
 
+# Stap 3b: monteuromgeving (/app) — Expo web-export van de echte monteur-app.
+# EXPO_PUBLIC_-variabelen worden door Metro in de webbundel gebakken; de
+# service worker krijgt via sed de git-commit als cacheversie zodat elke
+# uitrol zonder handmatig cache-legen zichtbaar wordt (MONTEUR_NU_01).
+COPY artifacts/monteur-app/ artifacts/monteur-app/
+RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN EXPO_PUBLIC_DOMAIN=connect.fps-one.nl \
+    EXPO_PUBLIC_GIT_COMMIT=${GIT_COMMIT} \
+    EXPO_PUBLIC_BUILD_TIJD=${BUILD_TIJD} \
+    pnpm --filter @workspace/monteur-app exec expo export --platform web --output-dir dist-web
+RUN node artifacts/monteur-app/scripts/injecteer-pwa.mjs artifacts/monteur-app/dist-web/index.html
+RUN set -e; \
+    grep -q "manifest.webmanifest" artifacts/monteur-app/dist-web/index.html || (echo "FOUT: PWA-injectie ontbreekt in index.html" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/index.html || (echo "FOUT: monteur-app index.html ontbreekt" && exit 1); \
+    JS=$(ls artifacts/monteur-app/dist-web/_expo/static/js/web/*.js 2>/dev/null | head -1); \
+    test -n "$JS" || (echo "FOUT: geen JS-bundel in monteur-app dist-web" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/sw.js || (echo "FOUT: sw.js ontbreekt in monteur-app dist-web" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/manifest.webmanifest || (echo "FOUT: manifest ontbreekt in monteur-app dist-web" && exit 1); \
+    sed -i "s/__VERSIE__/${GIT_COMMIT}/" artifacts/monteur-app/dist-web/sw.js; \
+    grep -q "fps-monteur-${GIT_COMMIT}" artifacts/monteur-app/dist-web/sw.js || (echo "FOUT: sw.js versie niet vervangen" && exit 1); \
+    printf '{"commit":"%s","bouwtijd":"%s"}\n' "${GIT_COMMIT}" "${BUILD_TIJD}" > artifacts/monteur-app/dist-web/versie.json; \
+    # Precache-manifest: álle exportbestanden als /app/-paden, zodat de \
+    # service worker bij install de complete app cachet (koude offline start). \
+    (cd artifacts/monteur-app/dist-web && \
+      find . -type f ! -name sw.js ! -name asset-lijst.json ! -name versie.json ! -name metadata.json \
+        | sed 's|^\./|/app/|' \
+        | node -e 'const l=require("fs").readFileSync(0,"utf8").trim().split("\n");process.stdout.write(JSON.stringify(l))' \
+        > asset-lijst.json); \
+    grep -q "_expo/static/js/web/entry-" artifacts/monteur-app/dist-web/asset-lijst.json || (echo "FOUT: asset-lijst.json mist de entry-bundel" && exit 1); \
+    echo "Monteur-app webexport geverifieerd: $JS"
+
 # Stap 4: verificeer dat de builduitvoer compleet en consistent is.
 # Faalt hard als index.html, CSS of JS ontbreekt — voorkomt dat een
 # incomplete build gecached en uitgerold wordt.
@@ -71,5 +105,6 @@ FROM caddy:2-alpine AS runtime
 
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=frontend-builder /app/artifacts/firevault/dist/public /srv/public
+COPY --from=frontend-builder /app/artifacts/monteur-app/dist-web /srv/app
 
 EXPOSE 80 443

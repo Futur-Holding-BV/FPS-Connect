@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 import { STATUSKLEUREN, TYPEN } from "@/constants/spots";
@@ -146,7 +146,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
   var linesEl = null;
   var MINS = 0.15, MAXS = 10;
 
-  function post(o){ if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
+  function post(o){ if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); else if (window.parent && window.parent !== window) window.parent.postMessage('fps-plattegrond:'+JSON.stringify(o), '*'); }
   function apply(){ wrap.style.transform = 'translate('+tx+'px,'+ty+'px) scale('+scale+')'; wrap.style.setProperty('--inv', 1/scale); }
 
   function maakVisueleGroepen(lijst, drempel){
@@ -483,18 +483,37 @@ export const PdfPlattegrond = forwardRef<PdfPlattegrondHandle, Props>(function P
   ref,
 ) {
   const webRef = useRef<WebView>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [klaar, setKlaar] = useState(false);
+
+  // Eén injectiepad voor beide platforms: native via WebView-injectJavaScript,
+  // web via eval op het (same-origin) srcDoc-iframe.
+  const injecteer = React.useCallback((code: string) => {
+    if (Platform.OS === "web") {
+      const win = iframeRef.current?.contentWindow as
+        | (Window & { eval: (c: string) => unknown })
+        | null
+        | undefined;
+      try {
+        win?.eval(code);
+      } catch {
+        // iframe nog niet klaar — injectie herhaalt zich via 'klaar'-effects
+      }
+      return;
+    }
+    webRef.current?.injectJavaScript(code);
+  }, []);
 
   useImperativeHandle(
     ref,
     () => ({
       zoomNaar: (x: number, y: number, doelScale?: number) => {
-        webRef.current?.injectJavaScript(
+        injecteer(
           `window.__zoomNaar && window.__zoomNaar(${x}, ${y}, ${doelScale != null ? doelScale : "null"}); true;`,
         );
       },
     }),
-    [],
+    [injecteer],
   );
 
   const html = useMemo(
@@ -511,50 +530,87 @@ export const PdfPlattegrond = forwardRef<PdfPlattegrondHandle, Props>(function P
 
   useEffect(() => {
     if (!klaar) return;
-    webRef.current?.injectJavaScript(
+    injecteer(
       `window.__setSpots && window.__setSpots(${JSON.stringify(JSON.stringify(spots))}); true;`,
     );
-  }, [spots, klaar]);
+  }, [spots, klaar, injecteer]);
 
   useEffect(() => {
     if (!klaar) return;
-    webRef.current?.injectJavaScript(
+    injecteer(
       `window.__setScheidingen && window.__setScheidingen(${JSON.stringify(JSON.stringify(scheidingen))}); true;`,
     );
-  }, [scheidingen, klaar]);
+  }, [scheidingen, klaar, injecteer]);
 
   useEffect(() => {
     if (!klaar) return;
-    webRef.current?.injectJavaScript(
+    injecteer(
       `window.__setClusters && window.__setClusters(${JSON.stringify(JSON.stringify(clusters ?? []))}); true;`,
     );
-  }, [clusters, klaar]);
+  }, [clusters, klaar, injecteer]);
 
   useEffect(() => {
     if (!klaar) return;
-    webRef.current?.injectJavaScript(
+    injecteer(
       `window.__setPlace && window.__setPlace(${plaatsModus ? "true" : "false"}); true;`,
     );
-  }, [plaatsModus, klaar]);
+  }, [plaatsModus, klaar, injecteer]);
 
-  const opBericht = (e: WebViewMessageEvent) => {
-    try {
-      const m = JSON.parse(e.nativeEvent.data) as {
-        type: string;
-        x?: number;
-        y?: number;
-        id?: number;
-        ids?: number[];
-      };
-      if (m.type === "tap" && m.x != null && m.y != null) onTap(m.x, m.y);
-      else if (m.type === "spot" && m.id != null) onSpot(m.id);
-      else if (m.type === "cluster" && m.id != null) onCluster(m.id);
-      else if (m.type === "groep" && Array.isArray(m.ids) && m.x != null && m.y != null)
-        onGroep(m.ids, { x: m.x, y: m.y });
-    } catch {
-      // negeren
-    }
-  };
+  const verwerkBericht = React.useCallback(
+    (data: string) => {
+      try {
+        const m = JSON.parse(data) as {
+          type: string;
+          x?: number;
+          y?: number;
+          id?: number;
+          ids?: number[];
+        };
+        if (m.type === "tap" && m.x != null && m.y != null) onTap(m.x, m.y);
+        else if (m.type === "spot" && m.id != null) onSpot(m.id);
+        else if (m.type === "cluster" && m.id != null) onCluster(m.id);
+        else if (m.type === "groep" && Array.isArray(m.ids) && m.x != null && m.y != null)
+          onGroep(m.ids, { x: m.x, y: m.y });
+      } catch {
+        // negeren
+      }
+    },
+    [onTap, onSpot, onCluster, onGroep],
+  );
+
+  const opBericht = (e: WebViewMessageEvent) => verwerkBericht(e.nativeEvent.data);
+
+  // Web: berichten uit het iframe komen als window-message binnen met een
+  // herkenbaar prefix (zie post() in de gegenereerde HTML).
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const listener = (e: MessageEvent) => {
+      if (typeof e.data === "string" && e.data.startsWith("fps-plattegrond:")) {
+        verwerkBericht(e.data.slice("fps-plattegrond:".length));
+      }
+    };
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  }, [verwerkBericht]);
+
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.vlak}>
+        {React.createElement("iframe", {
+          ref: iframeRef,
+          srcDoc: html,
+          onLoad: () => setKlaar(true),
+          style: {
+            border: "none",
+            width: "100%",
+            height: "100%",
+            backgroundColor: CANVAS_ACHTERGROND,
+          },
+          title: "Plattegrond",
+        })}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.vlak}>

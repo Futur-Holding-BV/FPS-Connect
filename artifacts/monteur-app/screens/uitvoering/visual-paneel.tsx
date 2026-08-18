@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 
 import { useAuth } from "@/context/auth";
+import { API_DOMEIN } from "@/lib/apiDomein";
 import { useUitvoeringTheme } from "@/context/UitvoeringThemeContext";
 import { FotoAnalyseOverlay, normaliseerFotoAnalyseStatus } from "@/components/foto-analyse-overlay";
 import type { PimFotoAnalyse } from "@workspace/api-client-react";
@@ -45,7 +46,7 @@ export interface Guidance {
   max_visuals_getoond?: number;
 }
 
-const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const DOMEIN = API_DOMEIN;
 
 const VISUAL_LABELS: Record<string, string> = {
   detailtekening: "Tekening",

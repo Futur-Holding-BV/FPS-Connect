@@ -30,6 +30,30 @@ export function weigerProductie(doelUrl: string | undefined): void {
   process.exit(1);
 }
 
+/**
+ * Onvoorwaardelijke variant voor SCHRIJVENDE bewijsscripts: die mogen
+ * productie nooit raken, óók niet met PROD_LEZEN_TOEGESTAAN=1 (die
+ * vrijstelling is uitsluitend voor puur lezende scripts). Roep deze aan
+ * bovenaan elk script dat data aanmaakt of wijzigt.
+ */
+export function weigerProductieVoorSchrijvendScript(): void {
+  for (const doelUrl of [
+    process.env.API_BASIS,
+    process.env.BEWIJS_API_BASIS,
+    process.env.REPLIT_DEV_DOMAIN,
+    process.env.DATABASE_URL,
+  ]) {
+    if (!doelUrl) continue;
+    const laag = doelUrl.toLowerCase();
+    if (PROD_KENMERKEN.some((k) => laag.includes(k))) {
+      console.error(
+        `✖ prodGuard: dit script SCHRIJFT testdata en wijst naar PRODUCTIE (${doelUrl}). Geen enkele vrijstelling (ook PROD_LEZEN_TOEGESTAAN niet) staat dit toe.`,
+      );
+      process.exit(1);
+    }
+  }
+}
+
 // Side-effect: controleer meteen bij import op basis van álle env-vars die
 // scripts als doel gebruiken — ook de database-URL (scripts met directe
 // DB-toegang mogen evenmin naar een productiedatabase wijzen).

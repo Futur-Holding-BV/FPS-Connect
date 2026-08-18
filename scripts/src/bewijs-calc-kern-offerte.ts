@@ -10,6 +10,12 @@
  *   pnpm --filter @workspace/scripts exec tsx src/bewijs-calc-kern-offerte.ts
  */
 import "./lib/prodGuard";
+import { weigerProductieVoorSchrijvendScript } from "./lib/prodGuard";
+import { randomBytes } from "node:crypto";
+
+// Dit script SCHRIJFT testdata (gebruiker, calculaties, offertes) — productie
+// is onvoorwaardelijk verboden, ook met PROD_LEZEN_TOEGESTAAN=1.
+weigerProductieVoorSchrijvendScript();
 import bcrypt from "bcryptjs";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { authenticator } from "otplib";
@@ -23,8 +29,10 @@ import {
 } from "@workspace/db";
 
 const BASIS = `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
-const TOTP = "MFRGGZDFMZTWQ2LK";
-const WW = "BewijsCalcKern2026!";
+// Wegwerp-inloggegevens, per run willekeurig gegenereerd (nooit vaste
+// credentials in de repo); het testaccount wordt aan het eind opgeruimd.
+const TOTP = authenticator.generateSecret();
+const WW = `Bewijs-${randomBytes(18).toString("base64url")}`;
 
 let falen = 0;
 function check(naam: string, conditie: boolean, detail?: unknown): void {
