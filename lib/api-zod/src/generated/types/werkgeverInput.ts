@@ -56,8 +56,6 @@ export interface WerkgeverInput {
      */
   primaire_kleur?: string | null;
   /** @nullable */
-  iban?: string | null;
-  /** @nullable */
   koptekst_positie?: string | null;
   /** @nullable */
   voettekst_positie?: string | null;

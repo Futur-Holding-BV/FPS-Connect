@@ -8861,6 +8861,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/Werkgever"
 
+  /werkgevers/{id}/bankrekeningen:
+    post:
+      operationId: createWerkgeverBankrekening
+      tags: [personeel]
+      summary: Bankrekening toevoegen aan een werkmaatschappij (Financieel niveau 4)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkgeverBankrekeningInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WerkgeverBankrekening"
+        "400":
+          description: Ongeldige invoer (bijv. ongeldig IBAN)
+        "409":
+          description: IBAN bestaat al bij deze werkmaatschappij
+
+  /werkgevers/{id}/bankrekeningen/{rekeningId}:
+    patch:
+      operationId: updateWerkgeverBankrekening
+      tags: [personeel]
+      summary: Bankrekening wijzigen (Financieel niveau 4)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rekeningId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkgeverBankrekeningInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WerkgeverBankrekening"
+        "400":
+          description: Ongeldige invoer (bijv. ongeldig IBAN)
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteWerkgeverBankrekening
+      tags: [personeel]
+      summary: Bankrekening verwijderen (Financieel niveau 4)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rekeningId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
   /functies:
     get:
       operationId: listFuncties
@@ -35525,6 +35608,11 @@ components:
           description: "MERK_01: lange standaard-bedrijfsomschrijving."
         iban:
           type: ["string", "null"]
+          description: "Afgeleid veld (ADMINISTRATIE_01): IBAN van de rekening met doel 'ontvangst'. Niet meer direct schrijfbaar; beheer via /werkgevers/{id}/bankrekeningen."
+        bankrekeningen:
+          type: array
+          items:
+            $ref: "#/components/schemas/WerkgeverBankrekening"
         koptekst_positie:
           type: ["string", "null"]
           description: Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
@@ -35556,6 +35644,43 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+
+    WerkgeverBankrekening:
+      type: object
+      required: [id, werkgever_id, iban, tenaamstelling, doelen, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: integer
+        iban:
+          type: string
+        tenaamstelling:
+          type: string
+        doelen:
+          type: array
+          items:
+            type: string
+            enum: [ontvangst, crediteuren, loon, g_rekening]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WerkgeverBankrekeningInput:
+      type: object
+      required: [iban, tenaamstelling, doelen]
+      properties:
+        iban:
+          type: string
+        tenaamstelling:
+          type: string
+        doelen:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [ontvangst, crediteuren, loon, g_rekening]
 
     WerkgeverInput:
       type: object
@@ -35617,8 +35742,6 @@ components:
         primaire_kleur:
           type: ["string", "null"]
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D).
-        iban:
-          type: ["string", "null"]
         koptekst_positie:
           type: ["string", "null"]
         voettekst_positie:

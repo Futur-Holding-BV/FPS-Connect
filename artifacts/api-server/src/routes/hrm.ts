@@ -45,7 +45,11 @@ import {
   profielenTable,
   gebruikerProfielenTable,
   arbeidsovereenkomstenTable,
+  werkgeverBankrekeningenTable,
+  werkgeverBankrekeningLogsTable,
 } from "@workspace/db";
+import { isGeldigIban, normaliseerIban } from "../lib/iban";
+import { stuurBankrekeningGewijzigdMail } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { isRedelijkeDatum, ongeldigeDatumvelden } from "../lib/datumSaniteit";
 import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
@@ -106,7 +110,19 @@ function numeriekOfNull(v: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
+type BankrekeningRij = typeof werkgeverBankrekeningenTable.$inferSelect;
+
+const mapBankrekening = (r: BankrekeningRij) => ({
+  id: r.id,
+  werkgever_id: r.werkgeverId,
+  iban: r.iban,
+  tenaamstelling: r.tenaamstelling,
+  doelen: r.doelen,
+  aangemaakt_op: iso(r.aangemaaktOp),
+  bijgewerkt_op: iso(r.bijgewerktOp),
+});
+
+const mapWerkgever = (w: typeof werkgeversTable.$inferSelect, rekeningen: BankrekeningRij[] = []) => ({
   id: w.id,
   naam: w.naam,
   cao: w.cao,
@@ -131,7 +147,11 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   lettertype: w.lettertype ?? null,
   omschrijving_kort: w.omschrijvingKort ?? null,
   omschrijving_lang: w.omschrijvingLang ?? null,
-  iban: w.iban,
+  // ADMINISTRATIE_01: het enkele iban-veld is bevroren; het API-veld is nu
+  // afgeleid van de rekening met doel "ontvangst" van déze werkmaatschappij.
+  // Er wordt bewust nooit teruggevallen op de oude kolom of op een andere BV.
+  iban: rekeningen.find((r) => r.doelen.includes("ontvangst"))?.iban ?? null,
+  bankrekeningen: rekeningen.map(mapBankrekening),
   koptekst_positie: w.koptekstPositie,
   voettekst_positie: w.voettekstPositie,
   marge_boven: numeriekOfNull(w.margeBoven),
@@ -162,7 +182,8 @@ async function werkgeverIdVoor(werkmaatschappij: unknown): Promise<number | null
 router.get("/werkgevers", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(werkgeversTable).orderBy(werkgeversTable.naam);
-    res.json(rijen.map(mapWerkgever));
+    const rekeningen = await db.select().from(werkgeverBankrekeningenTable).orderBy(werkgeverBankrekeningenTable.id);
+    res.json(rijen.map((w) => mapWerkgever(w, rekeningen.filter((r) => r.werkgeverId === w.id))));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -171,7 +192,7 @@ router.get("/werkgevers", lezen, async (req, res): Promise<void> => {
 
 router.post("/werkgevers", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief } = req.body;
     if (!naam || typeof naam !== "string" || !naam.trim()) {
       return void res.status(400).json({ error: "naam is verplicht" });
     }
@@ -199,7 +220,8 @@ router.post("/werkgevers", schrijven, async (req, res): Promise<void> => {
         handtekeningUrl: handtekening_url ?? null,
         logoUrl: logo_url ?? null,
         primaireKleur: primaire_kleur ?? "#F23B0D",
-        iban: iban ?? null,
+        // ADMINISTRATIE_01: iban is hier bewust niet meer schrijfbaar —
+        // bankrekeningen lopen via /werkgevers/:id/bankrekeningen (Financieel 4).
         koptekstPositie: koptekst_positie ?? null,
         voettekstPositie: voettekst_positie ?? null,
         margeBoven: marge_boven != null ? String(marge_boven) : null,
@@ -220,7 +242,12 @@ router.get("/werkgevers/:id", lezen, async (req, res): Promise<void> => {
   try {
     const [w] = await db.select().from(werkgeversTable).where(eq(werkgeversTable.id, parseId(req.params.id)));
     if (!w) return void res.status(404).json({ error: "Werkgever niet gevonden" });
-    res.json(mapWerkgever(w));
+    const rekeningen = await db
+      .select()
+      .from(werkgeverBankrekeningenTable)
+      .where(eq(werkgeverBankrekeningenTable.werkgeverId, w.id))
+      .orderBy(werkgeverBankrekeningenTable.id);
+    res.json(mapWerkgever(w, rekeningen));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -230,7 +257,7 @@ router.get("/werkgevers/:id", lezen, async (req, res): Promise<void> => {
 router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email, logo_varianten, merk_kleuren, lettertype, omschrijving_kort, omschrijving_lang } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email, logo_varianten, merk_kleuren, lettertype, omschrijving_kort, omschrijving_lang } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     // SVG wordt niet ondersteund door PDFKit — weiger SVG-logo's bij opslaan.
@@ -277,7 +304,7 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
           logoUrl: effectiefLogoUrl,
           primaireKleur: primaire_kleur !== undefined ? primaire_kleur : undefined,
-          iban: iban !== undefined ? iban : undefined,
+          // ADMINISTRATIE_01: iban niet meer schrijfbaar via dit endpoint.
           koptekstPositie: koptekst_positie !== undefined ? koptekst_positie : undefined,
           voettekstPositie: voettekst_positie !== undefined ? voettekst_positie : undefined,
           margeBoven: marge_boven !== undefined ? (marge_boven != null ? String(marge_boven) : null) : undefined,
@@ -320,7 +347,197 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
 
     if (!w?.bijgewerkt) return void res.status(404).json({ error: "Werkgever niet gevonden" });
     for (const medId of w.herbenoemdeMedewerkerIds) invalideerContext("medewerker", medId);
-    res.json(mapWerkgever(w.bijgewerkt));
+    const rekeningen = await db
+      .select()
+      .from(werkgeverBankrekeningenTable)
+      .where(eq(werkgeverBankrekeningenTable.werkgeverId, id))
+      .orderBy(werkgeverBankrekeningenTable.id);
+    res.json(mapWerkgever(w.bijgewerkt, rekeningen));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bankrekeningen per werkmaatschappij (ADMINISTRATIE_01 fase 2) ───────────
+// Muteren mag uitsluitend met Financieel niveau 4 (keuze René, fase 0).
+// Elke wijziging wordt gelogd (wie/wanneer/wat) én per mail gemeld aan de
+// hoofdbeheerder(s) — een gewijzigd rekeningnummer mag nooit stil passeren.
+const bankMuteren = requireBevoegdheid("financieel", 4);
+const BANK_DOELEN = ["ontvangst", "crediteuren", "loon", "g_rekening"] as const;
+
+function parseBankrekeningInvoer(body: unknown): { iban: string; tenaamstelling: string; doelen: string[] } | { fout: string } {
+  const b = (body ?? {}) as Record<string, unknown>;
+  if (typeof b.iban !== "string" || !b.iban.trim()) return { fout: "iban is verplicht" };
+  const iban = normaliseerIban(b.iban);
+  if (!isGeldigIban(iban)) return { fout: "Ongeldig IBAN (controlegetal klopt niet)" };
+  if (typeof b.tenaamstelling !== "string" || !b.tenaamstelling.trim()) return { fout: "tenaamstelling is verplicht" };
+  if (!Array.isArray(b.doelen) || b.doelen.length === 0) return { fout: "minimaal één doel is verplicht" };
+  const doelen = [...new Set(b.doelen.map((d) => String(d)))];
+  const onbekend = doelen.filter((d) => !(BANK_DOELEN as readonly string[]).includes(d));
+  if (onbekend.length > 0) return { fout: `Onbekend doel: ${onbekend.join(", ")}` };
+  return { iban, tenaamstelling: b.tenaamstelling.trim(), doelen };
+}
+
+// Log-insert hoort in DEZELFDE transactie als de rekeningmutatie: zonder
+// auditregel mag een rekening nooit stil gewijzigd zijn (review-eis).
+async function schrijfBankrekeningLog(
+  tx: Pick<typeof db, "select" | "insert">,
+  req: { session?: { userId?: number } },
+  werkgever: { id: number; naam: string },
+  rekeningId: number | null,
+  actie: "toegevoegd" | "gewijzigd" | "verwijderd",
+  wijzigingen: Record<string, unknown>,
+): Promise<{ gebruikerNaam: string | null }> {
+  const gebruikerId = req.session?.userId ?? null;
+  let gebruikerNaam: string | null = null;
+  if (gebruikerId) {
+    const [g] = await tx.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, gebruikerId));
+    gebruikerNaam = g?.naam ?? null;
+  }
+  await tx.insert(werkgeverBankrekeningLogsTable).values({
+    werkgeverId: werkgever.id,
+    bankrekeningId: rekeningId,
+    actie,
+    wijzigingen,
+    gebruikerId,
+    gebruikerNaam,
+  });
+  return { gebruikerNaam };
+}
+
+// Mailmelding aan de hoofdbeheerder(s) via de reguliere mail-wachtrij, ná de
+// commit; een mailfout mag de mutatie zelf nooit blokkeren.
+async function mailBankrekeningWijziging(
+  werkgever: { id: number; naam: string },
+  actie: "toegevoegd" | "gewijzigd" | "verwijderd",
+  wijzigingen: Record<string, unknown>,
+  gebruikerNaam: string | null,
+): Promise<void> {
+  try {
+    const ontvangers = await db
+      .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)));
+    for (const o of ontvangers) {
+      if (!o.email) continue;
+      await stuurBankrekeningGewijzigdMail({
+        naarEmail: o.email,
+        naarNaam: o.naam,
+        werkgeverNaam: werkgever.naam,
+        actie,
+        wijzigingen,
+        doorNaam: gebruikerNaam,
+      });
+    }
+  } catch (err) {
+    logger.error({ err, werkgeverId: werkgever.id }, "Bankrekening-wijzigingsmail versturen mislukt");
+  }
+}
+
+// Unieke-index-schendingen vertalen naar nette 409's. De doel-indexes
+// (migratie 0080) dwingen af dat elk doel per werkmaatschappij maar aan één
+// rekening hangt — anders is het afgeleide werkgever-IBAN niet eenduidig.
+function uniekeRekeningFout(err: unknown): string | null {
+  const e = (err as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } } | null);
+  const code = e?.code ?? e?.cause?.code ?? null;
+  if (code !== "23505") return null;
+  const constraint = e?.constraint ?? e?.cause?.constraint ?? "";
+  const doelMatch = constraint.match(/^werkgever_bankrekening_doel_(\w+)_uniek$/);
+  if (doelMatch) {
+    const doel = doelMatch[1] === "g_rekening" ? "G-rekening" : doelMatch[1]!;
+    return `Het doel "${doel}" is al aan een andere rekening van deze werkmaatschappij toegewezen`;
+  }
+  return "Dit IBAN is al geregistreerd bij deze werkmaatschappij";
+}
+
+// Rekeningmutatie + auditlog in ÉÉN transactie; de mail gaat pas ná de commit
+// (fire-and-forget, nooit blokkerend). Zo bestaat er nooit een gewijzigde
+// rekening zonder logregel, en nooit een mail over een teruggerolde wijziging.
+router.post("/werkgevers/:id/bankrekeningen", bankMuteren, async (req, res): Promise<void> => {
+  try {
+    const werkgeverId = parseId(req.params.id);
+    const [w] = await db.select({ id: werkgeversTable.id, naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, werkgeverId));
+    if (!w) return void res.status(404).json({ error: "Werkgever niet gevonden" });
+    const invoer = parseBankrekeningInvoer(req.body);
+    if ("fout" in invoer) return void res.status(400).json({ error: invoer.fout });
+    const wijzigingen = { nieuw: { iban: invoer.iban, tenaamstelling: invoer.tenaamstelling, doelen: invoer.doelen } };
+    const { rij, gebruikerNaam } = await db.transaction(async (tx) => {
+      const [rij] = await tx
+        .insert(werkgeverBankrekeningenTable)
+        .values({ werkgeverId, iban: invoer.iban, tenaamstelling: invoer.tenaamstelling, doelen: invoer.doelen })
+        .returning();
+      const { gebruikerNaam } = await schrijfBankrekeningLog(tx, req, w, rij.id, "toegevoegd", wijzigingen);
+      return { rij, gebruikerNaam };
+    });
+    void mailBankrekeningWijziging(w, "toegevoegd", wijzigingen, gebruikerNaam);
+    res.status(201).json(mapBankrekening(rij));
+  } catch (err) {
+    const fout = uniekeRekeningFout(err);
+    if (fout) return void res.status(409).json({ error: fout });
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/werkgevers/:id/bankrekeningen/:rekeningId", bankMuteren, async (req, res): Promise<void> => {
+  try {
+    const werkgeverId = parseId(req.params.id);
+    const rekeningId = parseId(req.params.rekeningId);
+    const [w] = await db.select({ id: werkgeversTable.id, naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, werkgeverId));
+    if (!w) return void res.status(404).json({ error: "Werkgever niet gevonden" });
+    const invoer = parseBankrekeningInvoer(req.body);
+    if ("fout" in invoer) return void res.status(400).json({ error: invoer.fout });
+    const resultaat = await db.transaction(async (tx) => {
+      // FOR UPDATE: geen race tussen lezen (oud-snapshot) en bijwerken.
+      const [huidig] = await tx
+        .select()
+        .from(werkgeverBankrekeningenTable)
+        .where(and(eq(werkgeverBankrekeningenTable.id, rekeningId), eq(werkgeverBankrekeningenTable.werkgeverId, werkgeverId)))
+        .for("update");
+      if (!huidig) return null;
+      const [rij] = await tx
+        .update(werkgeverBankrekeningenTable)
+        .set({ iban: invoer.iban, tenaamstelling: invoer.tenaamstelling, doelen: invoer.doelen, bijgewerktOp: new Date() })
+        .where(eq(werkgeverBankrekeningenTable.id, rekeningId))
+        .returning();
+      const wijzigingen = {
+        oud: { iban: huidig.iban, tenaamstelling: huidig.tenaamstelling, doelen: huidig.doelen },
+        nieuw: { iban: rij.iban, tenaamstelling: rij.tenaamstelling, doelen: rij.doelen },
+      };
+      const { gebruikerNaam } = await schrijfBankrekeningLog(tx, req, w, rekeningId, "gewijzigd", wijzigingen);
+      return { rij, wijzigingen, gebruikerNaam };
+    });
+    if (!resultaat) return void res.status(404).json({ error: "Bankrekening niet gevonden" });
+    void mailBankrekeningWijziging(w, "gewijzigd", resultaat.wijzigingen, resultaat.gebruikerNaam);
+    res.json(mapBankrekening(resultaat.rij));
+  } catch (err) {
+    const fout = uniekeRekeningFout(err);
+    if (fout) return void res.status(409).json({ error: fout });
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/werkgevers/:id/bankrekeningen/:rekeningId", bankMuteren, async (req, res): Promise<void> => {
+  try {
+    const werkgeverId = parseId(req.params.id);
+    const rekeningId = parseId(req.params.rekeningId);
+    const [w] = await db.select({ id: werkgeversTable.id, naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, werkgeverId));
+    if (!w) return void res.status(404).json({ error: "Werkgever niet gevonden" });
+    const resultaat = await db.transaction(async (tx) => {
+      const [verwijderd] = await tx
+        .delete(werkgeverBankrekeningenTable)
+        .where(and(eq(werkgeverBankrekeningenTable.id, rekeningId), eq(werkgeverBankrekeningenTable.werkgeverId, werkgeverId)))
+        .returning();
+      if (!verwijderd) return null;
+      const wijzigingen = { oud: { iban: verwijderd.iban, tenaamstelling: verwijderd.tenaamstelling, doelen: verwijderd.doelen } };
+      const { gebruikerNaam } = await schrijfBankrekeningLog(tx, req, w, rekeningId, "verwijderd", wijzigingen);
+      return { wijzigingen, gebruikerNaam };
+    });
+    if (!resultaat) return void res.status(404).json({ error: "Bankrekening niet gevonden" });
+    void mailBankrekeningWijziging(w, "verwijderd", resultaat.wijzigingen, resultaat.gebruikerNaam);
+    res.status(204).end();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

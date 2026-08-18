@@ -72,10 +72,18 @@ try {
   // ── Opzet: werkgever met bekend IBAN + actieve verwerken-mailbox ────────────
   const [wg] = await db.insert(werkgeversTable).values({
     naam: `${MARK} Testwerkgever BV`,
-    iban: IBAN,
     scabEmailAdres: "loon@scab-e2e.nl",
   }).returning();
   werkgeverId = wg.id;
+  // ADMINISTRATIE_01 fase 2: het loonnummer staat niet meer op werkgevers.iban
+  // maar als bankrekening met doel "loon".
+  const { werkgeverBankrekeningenTable } = await import("@workspace/db");
+  await db.insert(werkgeverBankrekeningenTable).values({
+    werkgeverId: wg.id,
+    iban: IBAN,
+    tenaamstelling: `${MARK} Testwerkgever BV`,
+    doelen: ["loon"],
+  });
 
   const [mb] = await db.insert(werkInboxMailboxenTable).values({
     emailAdres: MAILBOX_ADRES,

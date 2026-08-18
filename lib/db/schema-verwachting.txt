@@ -483,6 +483,13 @@ INDEX|werkbegroting_adviezen|werkbegroting_adviezen_pkey
 INDEX|werkbegroting_regels|werkbegroting_regels_pkey
 INDEX|werkbonnen|werkbonnen_pkey
 INDEX|werkbonnen|werkbonnen_werkbonnummer_unique
+INDEX|werkgever_bankrekening_logs|werkgever_bankrekening_logs_pkey
+INDEX|werkgever_bankrekeningen|werkgever_bankrekening_doel_crediteuren_uniek
+INDEX|werkgever_bankrekeningen|werkgever_bankrekening_doel_g_rekening_uniek
+INDEX|werkgever_bankrekeningen|werkgever_bankrekening_doel_loon_uniek
+INDEX|werkgever_bankrekeningen|werkgever_bankrekening_doel_ontvangst_uniek
+INDEX|werkgever_bankrekeningen|werkgever_bankrekeningen_pkey
+INDEX|werkgever_bankrekeningen|werkgever_bankrekeningen_wg_iban_uniek
 INDEX|werkgevers|werkgevers_naam_unique
 INDEX|werkgevers|werkgevers_pkey
 INDEX|werving_kandidaten|werving_kandidaten_functie_idx
@@ -4968,6 +4975,21 @@ KOLOM|werkbonnen|titel|text|NO|
 KOLOM|werkbonnen|type|text|NO|'preventief'::text
 KOLOM|werkbonnen|uitvoer_datum|text|YES|
 KOLOM|werkbonnen|werkbonnummer|text|NO|
+KOLOM|werkgever_bankrekening_logs|actie|text|NO|
+KOLOM|werkgever_bankrekening_logs|bankrekening_id|integer|YES|
+KOLOM|werkgever_bankrekening_logs|gebruiker_id|integer|YES|
+KOLOM|werkgever_bankrekening_logs|gebruiker_naam|text|YES|
+KOLOM|werkgever_bankrekening_logs|id|integer|NO|nextval('werkgever_bankrekening_logs_id_seq'::regclass)
+KOLOM|werkgever_bankrekening_logs|tijdstip|timestamp without time zone|NO|now()
+KOLOM|werkgever_bankrekening_logs|werkgever_id|integer|NO|
+KOLOM|werkgever_bankrekening_logs|wijzigingen|jsonb|NO|'{}'::jsonb
+KOLOM|werkgever_bankrekeningen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werkgever_bankrekeningen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|werkgever_bankrekeningen|doelen|ARRAY|NO|'{}'::text[]
+KOLOM|werkgever_bankrekeningen|iban|text|NO|
+KOLOM|werkgever_bankrekeningen|id|integer|NO|nextval('werkgever_bankrekeningen_id_seq'::regclass)
+KOLOM|werkgever_bankrekeningen|tenaamstelling|text|NO|
+KOLOM|werkgever_bankrekeningen|werkgever_id|integer|NO|
 KOLOM|werkgevers|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|werkgevers|actief|boolean|NO|true
 KOLOM|werkgevers|adres|text|YES|

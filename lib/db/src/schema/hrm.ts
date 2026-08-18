@@ -66,6 +66,31 @@ export const werkgeversTable = pgTable("werkgevers", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// ADMINISTRATIE_01 fase 2 — bankrekeningen per werkmaatschappij. Vervangt het
+// enkele werkgevers.iban-veld (dat blijft als bevroren legacy-kolom staan).
+// Eén rekening kan meerdere doelen dragen: ontvangst, crediteuren, loon, g_rekening.
+export const werkgeverBankrekeningenTable = pgTable("werkgever_bankrekeningen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull().references(() => werkgeversTable.id, { onDelete: "cascade" }),
+  iban: text("iban").notNull(),
+  tenaamstelling: text("tenaamstelling").notNull(),
+  doelen: text("doelen").array().notNull().default([]),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => [uniqueIndex("werkgever_bankrekeningen_wg_iban_uniek").on(t.werkgeverId, t.iban)]);
+
+// Wijzigingslog op bankrekeningen: wie, wanneer en wat er veranderde.
+export const werkgeverBankrekeningLogsTable = pgTable("werkgever_bankrekening_logs", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull(),
+  bankrekeningId: integer("bankrekening_id"),
+  actie: text("actie").notNull(),
+  wijzigingen: jsonb("wijzigingen").notNull().default({}),
+  gebruikerId: integer("gebruiker_id"),
+  gebruikerNaam: text("gebruiker_naam"),
+  tijdstip: timestamp("tijdstip").notNull().defaultNow(),
+});
+
 // Functiehuis — per werkmaatschappij. Taken, verantwoordelijkheden, competenties,
 // opleidingsvereisten en doorgroeipad. Staat los van rol/bevoegdheden: de functie
 // beschrijft het werk, de bevoegdheden-matrix bepaalt de toegang.

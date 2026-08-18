@@ -1151,6 +1151,8 @@ import type {
   WerkdagItem,
   WerkdagStatusInput,
   Werkgever,
+  WerkgeverBankrekening,
+  WerkgeverBankrekeningInput,
   WerkgeverInput,
   WerkgeverSalarisConfig,
   WervingKanaalOverzicht,
@@ -30761,6 +30763,222 @@ export const useUpdateWerkgever = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateWerkgeverMutationOptions(options));
+    }
+
+export const getCreateWerkgeverBankrekeningUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}/bankrekeningen`
+}
+
+/**
+ * @summary Bankrekening toevoegen aan een werkmaatschappij (Financieel niveau 4)
+ */
+export const createWerkgeverBankrekening = async (id: number,
+    werkgeverBankrekeningInput: WerkgeverBankrekeningInput, options?: RequestInit): Promise<WerkgeverBankrekening> => {
+
+  return customFetch<WerkgeverBankrekening>(getCreateWerkgeverBankrekeningUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkgeverBankrekeningInput)
+  }
+);}
+
+
+
+
+export const getCreateWerkgeverBankrekeningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWerkgeverBankrekening>>, TError,{id: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWerkgeverBankrekening>>, TError,{id: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext> => {
+
+const mutationKey = ['createWerkgeverBankrekening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWerkgeverBankrekening>>, {id: number;data: BodyType<WerkgeverBankrekeningInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createWerkgeverBankrekening(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWerkgeverBankrekeningMutationResult = NonNullable<Awaited<ReturnType<typeof createWerkgeverBankrekening>>>
+    export type CreateWerkgeverBankrekeningMutationBody = BodyType<WerkgeverBankrekeningInput>
+    export type CreateWerkgeverBankrekeningMutationError = ErrorType<void>
+
+    /**
+ * @summary Bankrekening toevoegen aan een werkmaatschappij (Financieel niveau 4)
+ */
+export const useCreateWerkgeverBankrekening = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWerkgeverBankrekening>>, TError,{id: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWerkgeverBankrekening>>,
+        TError,
+        {id: number;data: BodyType<WerkgeverBankrekeningInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWerkgeverBankrekeningMutationOptions(options));
+    }
+
+export const getUpdateWerkgeverBankrekeningUrl = (id: number,
+    rekeningId: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}/bankrekeningen/${rekeningId}`
+}
+
+/**
+ * @summary Bankrekening wijzigen (Financieel niveau 4)
+ */
+export const updateWerkgeverBankrekening = async (id: number,
+    rekeningId: number,
+    werkgeverBankrekeningInput: WerkgeverBankrekeningInput, options?: RequestInit): Promise<WerkgeverBankrekening> => {
+
+  return customFetch<WerkgeverBankrekening>(getUpdateWerkgeverBankrekeningUrl(id,rekeningId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkgeverBankrekeningInput)
+  }
+);}
+
+
+
+
+export const getUpdateWerkgeverBankrekeningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkgeverBankrekening>>, TError,{id: number;rekeningId: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWerkgeverBankrekening>>, TError,{id: number;rekeningId: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext> => {
+
+const mutationKey = ['updateWerkgeverBankrekening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWerkgeverBankrekening>>, {id: number;rekeningId: number;data: BodyType<WerkgeverBankrekeningInput>}> = (props) => {
+          const {id,rekeningId,data} = props ?? {};
+
+          return  updateWerkgeverBankrekening(id,rekeningId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWerkgeverBankrekeningMutationResult = NonNullable<Awaited<ReturnType<typeof updateWerkgeverBankrekening>>>
+    export type UpdateWerkgeverBankrekeningMutationBody = BodyType<WerkgeverBankrekeningInput>
+    export type UpdateWerkgeverBankrekeningMutationError = ErrorType<void>
+
+    /**
+ * @summary Bankrekening wijzigen (Financieel niveau 4)
+ */
+export const useUpdateWerkgeverBankrekening = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkgeverBankrekening>>, TError,{id: number;rekeningId: number;data: BodyType<WerkgeverBankrekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWerkgeverBankrekening>>,
+        TError,
+        {id: number;rekeningId: number;data: BodyType<WerkgeverBankrekeningInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWerkgeverBankrekeningMutationOptions(options));
+    }
+
+export const getDeleteWerkgeverBankrekeningUrl = (id: number,
+    rekeningId: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}/bankrekeningen/${rekeningId}`
+}
+
+/**
+ * @summary Bankrekening verwijderen (Financieel niveau 4)
+ */
+export const deleteWerkgeverBankrekening = async (id: number,
+    rekeningId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWerkgeverBankrekeningUrl(id,rekeningId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWerkgeverBankrekeningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>, TError,{id: number;rekeningId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>, TError,{id: number;rekeningId: number}, TContext> => {
+
+const mutationKey = ['deleteWerkgeverBankrekening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>, {id: number;rekeningId: number}> = (props) => {
+          const {id,rekeningId} = props ?? {};
+
+          return  deleteWerkgeverBankrekening(id,rekeningId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWerkgeverBankrekeningMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>>
+
+    export type DeleteWerkgeverBankrekeningMutationError = ErrorType<void>
+
+    /**
+ * @summary Bankrekening verwijderen (Financieel niveau 4)
+ */
+export const useDeleteWerkgeverBankrekening = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>, TError,{id: number;rekeningId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWerkgeverBankrekening>>,
+        TError,
+        {id: number;rekeningId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWerkgeverBankrekeningMutationOptions(options));
     }
 
 export const getListFunctiesUrl = () => {

@@ -2,6 +2,19 @@
 
 Dit document groeit per fase mee. Metingen staan in `docs/metingen/ADMINISTRATIE_01-fase0.md`.
 
+## Fase 1+2 (18 augustus 2026) — gebouwd
+
+- **Rechtenkeuze René verwerkt**: bankrekening-mutaties (toevoegen/wijzigen/verwijderen) vereisen **Financieel & Facturatie niveau 4**; alle overige bedrijfsgegevens blijven bewerkbaar op Personeel niveau 2. Bewezen: zonder Financieel 4 geeft de API 403.
+- **Eén scherm**: Bedrijfsgegevens en Werkmaatschappijen zijn samengevoegd op `/organisatie/werkmaatschappijen` (tab per BV, álle velden van beide schermen aanwezig). De oude route `/organisatie/bedrijfsgegevens` verwijst door, oude links blijven werken.
+- **Bankrekeningen per werkmaatschappij**: IBAN + tenaamstelling + doelen (Ontvangst, Crediteuren, Loon, G-rekening — laatste optioneel). Meerdere doelen per rekening mogelijk. IBAN wordt genormaliseerd en mod-97-gecontroleerd (client én server); dubbele nummers binnen één BV geven 409.
+- **`iban` op de werkgever is nu een afgeleid veld** (rekening met doel "Ontvangst" van diezelfde BV) en is uit de invoer-API gehaald — het kan niet meer via het gewone werkgever-bewerken worden gezet (bewezen: PATCH met iban wordt genegeerd). Documenten pakken dus nooit het nummer van een andere BV.
+- **Ontbreken is zichtbaar, nooit stil**: het scherm wijst per BV in amber aan welk doel nog geen rekening heeft; factuur/documentvoorbeeld toont "⚠ geen ontvangstrekening ingesteld" in plaats van een demo-IBAN.
+- **Wijzigingslog + mail**: elke mutatie schrijft een logregel (wie/wanneer/oud/nieuw) en stuurt via het bestaande mailShell/wachtrij-mechanisme een melding aan de actieve hoofdbeheerders; een mailfout blokkeert de mutatie nooit.
+- **Loonherkenning** (SEPA-intake) matcht de werkgever voortaan op de rekening(en) met doel "Loon".
+- **Review-hardening**: één rekening per doel per BV (database-afgedwongen); mutatie+auditlog in één transactie, mail ná commit; factuur-print bindt aan factuur→gebouw→werkgever (blokkeert zichtbaar zonder keten); magazijn-bestelbonnen op afgeleid ontvangst-IBAN.
+- Bewijs: `scripts/src/verificatie-administratie01-fase12.ts` — 14/14 geslaagd, incl. doel-uniek- en cross-BV-toets ("andere WM pakt nooit dit nummer").
+- Migratie `0079` neemt een bestaand `werkgevers.iban` over als rekening met doelen ontvangst/crediteuren/loon (in dev leeg; in prod draait dit via de migratierunner mee in de deploy).
+
 ## Fase 0 (18 augustus 2026) — afgerond, wacht op akkoord René
 
 1. **Vier werkmaatschappijen, alle actief** (FPS Brandpreventie, FPS Bouw, FPS Bouw en Renovatie, FPS Onderhoud) — geen afwijking van de verwachting.

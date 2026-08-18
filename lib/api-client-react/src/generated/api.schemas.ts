@@ -5526,6 +5526,26 @@ export type WerkgeverMerkKleurenItem = {
   hex: string;
 };
 
+export type WerkgeverBankrekeningDoelenItem = typeof WerkgeverBankrekeningDoelenItem[keyof typeof WerkgeverBankrekeningDoelenItem];
+
+
+export const WerkgeverBankrekeningDoelenItem = {
+  ontvangst: 'ontvangst',
+  crediteuren: 'crediteuren',
+  loon: 'loon',
+  g_rekening: 'g_rekening',
+} as const;
+
+export interface WerkgeverBankrekening {
+  id: number;
+  werkgever_id: number;
+  iban: string;
+  tenaamstelling: string;
+  doelen: WerkgeverBankrekeningDoelenItem[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
 export interface Werkgever {
   id: number;
   naam: string;
@@ -5589,8 +5609,12 @@ export interface Werkgever {
      * @nullable
      */
   omschrijving_lang?: string | null;
-  /** @nullable */
+  /**
+     * Afgeleid veld (ADMINISTRATIE_01): IBAN van de rekening met doel 'ontvangst'. Niet meer direct schrijfbaar; beheer via /werkgevers/{id}/bankrekeningen.
+     * @nullable
+     */
   iban?: string | null;
+  bankrekeningen?: WerkgeverBankrekening[];
   /**
      * Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
      * @nullable
@@ -5625,6 +5649,23 @@ export interface Werkgever {
   intern_contact_email?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+export type WerkgeverBankrekeningInputDoelenItem = typeof WerkgeverBankrekeningInputDoelenItem[keyof typeof WerkgeverBankrekeningInputDoelenItem];
+
+
+export const WerkgeverBankrekeningInputDoelenItem = {
+  ontvangst: 'ontvangst',
+  crediteuren: 'crediteuren',
+  loon: 'loon',
+  g_rekening: 'g_rekening',
+} as const;
+
+export interface WerkgeverBankrekeningInput {
+  iban: string;
+  tenaamstelling: string;
+  /** @minItems 1 */
+  doelen: WerkgeverBankrekeningInputDoelenItem[];
 }
 
 export type WerkgeverInputLogoVarianten = {[key: string]: string};
@@ -5681,8 +5722,6 @@ export interface WerkgeverInput {
      * @nullable
      */
   primaire_kleur?: string | null;
-  /** @nullable */
-  iban?: string | null;
   /** @nullable */
   koptekst_positie?: string | null;
   /** @nullable */
@@ -18937,3 +18976,4 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+

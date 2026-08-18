@@ -56,7 +56,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -2130,6 +2130,39 @@ export async function stuurDeclaratieAfgewezenMail(opties: {
 // Automatische boeking naar AccountView is mislukt — de hoofdbeheerder moet dit
 // weten en kan alsnog handmatig exporteren. Zelfde mailmechanisme als alle
 // andere systeemmails (mailShell + verstuurMail).
+// ADMINISTRATIE_01 fase 2 — melding bij elke bankrekening-mutatie op een
+// werkmaatschappij. Loopt via het reguliere mail-mechanisme (verstuurMail).
+export async function stuurBankrekeningGewijzigdMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  werkgeverNaam: string;
+  actie: "toegevoegd" | "gewijzigd" | "verwijderd";
+  wijzigingen: Record<string, unknown>;
+  doorNaam?: string | null;
+}): Promise<void> {
+  const onderwerp = `Bankrekening ${opties.actie} bij ${opties.werkgeverNaam}`;
+  const basisUrl = publiekeAppUrl();
+  const detail = (label: string, r: unknown): string | null => {
+    if (!r || typeof r !== "object") return null;
+    const o = r as { iban?: string; tenaamstelling?: string; doelen?: string[] };
+    return `<strong>${label}:</strong> ${escapeHtml(o.iban ?? "?")} — ${escapeHtml(o.tenaamstelling ?? "?")} (${(o.doelen ?? []).map((d) => escapeHtml(String(d))).join(", ") || "geen doelen"})`;
+  };
+  const paragrafen = [
+    `Er is zojuist een bankrekening <strong>${opties.actie}</strong> bij werkmaatschappij <strong>${escapeHtml(opties.werkgeverNaam)}</strong>${opties.doorNaam ? ` door ${escapeHtml(opties.doorNaam)}` : ""}.`,
+    detail("Oude gegevens", (opties.wijzigingen as { oud?: unknown }).oud),
+    detail("Nieuwe gegevens", (opties.wijzigingen as { nieuw?: unknown }).nieuw),
+    "Heeft u deze wijziging niet verwacht? Controleer dan direct de bankrekeningen bij de werkmaatschappijen.",
+  ].filter((p): p is string => p != null);
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `Bankrekening ${opties.actie}`,
+    paragrafen,
+    knop: { label: "Bekijk werkmaatschappijen", link: `${basisUrl}/organisatie/werkmaatschappijen` },
+    voettekst: "Dit is een automatische veiligheidsmelding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
+  });
+  await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "bankrekening_gewijzigd" });
+}
+
 export async function stuurAccountviewBoekingMisluktMail(opties: {
   naarEmail: string;
   naarNaam?: string | null;

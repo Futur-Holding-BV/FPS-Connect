@@ -30,6 +30,7 @@ import {
 import { eq, and, asc, desc, ilike, lt, lte, gte, sql, gt, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { haalOntvangstIban } from "../lib/werkgeverIban";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -1596,14 +1597,14 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
       primaireKleur: werkgeversTable.primaireKleur,
       kvk: werkgeversTable.kvk,
       btw: werkgeversTable.btw,
-      iban: werkgeversTable.iban,
+      id: werkgeversTable.id,
       adres: werkgeversTable.adres,
       postcode: werkgeversTable.postcode,
       plaats: werkgeversTable.plaats,
       telefoon: werkgeversTable.telefoon,
       email: werkgeversTable.email,
     } as const;
-    type WerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; iban: string | null; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
+    type WerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; id: number; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
     let werkgever: WerkgeverBranding | null = null;
     if (userId) {
       const [med] = await db.select({ werkgeverId: medewerkersTable.werkgeverId })
@@ -1619,6 +1620,8 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
         .where(eq(werkgeversTable.actief, true)).orderBy(asc(werkgeversTable.id)).limit(1);
       werkgever = wg ?? null;
     }
+    // ADMINISTRATIE_01: IBAN is afgeleid uit de ontvangstrekening van déze BV.
+    const werkgeverIban = werkgever ? await haalOntvangstIban(werkgever.id) : null;
     const wgNaam = werkgever?.naam ?? "FPS Brandpreventie";
     const wgKleur = werkgever?.primaireKleur ?? "#F23B0D";
 
@@ -1642,7 +1645,7 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> 
       const voettekstDelen: string[] = [];
       if (werkgever?.kvk) voettekstDelen.push(`KVK: ${escapeHtml(werkgever.kvk)}`);
       if (werkgever?.btw) voettekstDelen.push(`BTW: ${escapeHtml(werkgever.btw)}`);
-      if (werkgever?.iban) voettekstDelen.push(`IBAN: ${escapeHtml(werkgever.iban)}`);
+      if (werkgeverIban) voettekstDelen.push(`IBAN: ${escapeHtml(werkgeverIban)}`);
       const adresRegel = [werkgever?.adres, werkgever?.postcode, werkgever?.plaats].filter(Boolean).map(s => escapeHtml(s!)).join(", ");
       const contactRegel = [werkgever?.telefoon, werkgever?.email].filter(Boolean).map(s => escapeHtml(s!)).join(" · ");
 
@@ -2423,14 +2426,14 @@ router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) =
       primaireKleur: werkgeversTable.primaireKleur,
       kvk: werkgeversTable.kvk,
       btw: werkgeversTable.btw,
-      iban: werkgeversTable.iban,
+      id: werkgeversTable.id,
       adres: werkgeversTable.adres,
       postcode: werkgeversTable.postcode,
       plaats: werkgeversTable.plaats,
       telefoon: werkgeversTable.telefoon,
       email: werkgeversTable.email,
     } as const;
-    type IoWerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; iban: string | null; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
+    type IoWerkgeverBranding = { naam: string; logoUrl: string | null; primaireKleur: string | null; kvk: string | null; btw: string | null; id: number; adres: string | null; postcode: string | null; plaats: string | null; telefoon: string | null; email: string | null };
     let ioWerkgever: IoWerkgeverBranding | null = null;
     if (order.gebouwId) {
       const [wg] = await db.select(io_werkgeverVelden).from(werkgeversTable)
@@ -2455,6 +2458,8 @@ router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) =
         .where(eq(werkgeversTable.actief, true)).orderBy(asc(werkgeversTable.id)).limit(1);
       ioWerkgever = wg ?? null;
     }
+    // ADMINISTRATIE_01: IBAN is afgeleid uit de ontvangstrekening van déze BV.
+    const ioWerkgeverIban = ioWerkgever ? await haalOntvangstIban(ioWerkgever.id) : null;
     const ioWgNaam = ioWerkgever?.naam ?? "FPS Brandpreventie";
     const ioWgKleur = ioWerkgever?.primaireKleur ?? "#F23B0D";
 
@@ -2470,7 +2475,7 @@ router.post("/magazijn/inkooporders/:id/verstuur", schrijven, async (req, res) =
     const ioVoettekstDelen: string[] = [];
     if (ioWerkgever?.kvk) ioVoettekstDelen.push(`KVK: ${escapeHtml(ioWerkgever.kvk)}`);
     if (ioWerkgever?.btw) ioVoettekstDelen.push(`BTW: ${escapeHtml(ioWerkgever.btw)}`);
-    if (ioWerkgever?.iban) ioVoettekstDelen.push(`IBAN: ${escapeHtml(ioWerkgever.iban)}`);
+    if (ioWerkgeverIban) ioVoettekstDelen.push(`IBAN: ${escapeHtml(ioWerkgeverIban)}`);
     const ioAdresRegel = [ioWerkgever?.adres, ioWerkgever?.postcode, ioWerkgever?.plaats].filter(Boolean).map(s => escapeHtml(s!)).join(", ");
     const ioContactRegel = [ioWerkgever?.telefoon, ioWerkgever?.email].filter(Boolean).map(s => escapeHtml(s!)).join(" · ");
 

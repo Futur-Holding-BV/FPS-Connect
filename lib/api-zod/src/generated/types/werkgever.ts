@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { WerkgeverBankrekening } from './werkgeverBankrekening';
 import type { WerkgeverLogoVarianten } from './werkgeverLogoVarianten';
 import type { WerkgeverMerkKleurenItem } from './werkgeverMerkKleurenItem';
 
@@ -71,8 +72,12 @@ export interface Werkgever {
      * @nullable
      */
   omschrijving_lang?: string | null;
-  /** @nullable */
+  /**
+     * Afgeleid veld (ADMINISTRATIE_01): IBAN van de rekening met doel 'ontvangst'. Niet meer direct schrijfbaar; beheer via /werkgevers/{id}/bankrekeningen.
+     * @nullable
+     */
   iban?: string | null;
+  bankrekeningen?: WerkgeverBankrekening[];
   /**
      * Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
      * @nullable

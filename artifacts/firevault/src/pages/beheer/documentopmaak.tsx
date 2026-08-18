@@ -159,9 +159,10 @@ export default function DocumentDesignSystem() {
       case "A2": return <InhoudspaginaA meta={{...DUMMY_META_KLANT, paginaNummer: 2}} mij={mij} />;
       case "A3": return <HoofdstukpaginaA meta={{...DUMMY_META_KLANT, paginaNummer: 8}} mij={mij} />;
       case "B1": return <VervolgpaginaB meta={DUMMY_META_HRM} mij={mij} />;
+      // ADMINISTRATIE_01: geen demo-IBAN meer — ontbreken zichtbaar aanwijzen.
       case "A4": return (
         <FactuurTemplateA
-          mij={{ ...mij, iban: mij.iban ?? "NL91 ABNA 0417 1643 00" }}
+          mij={{ ...mij, iban: mij.iban ?? "⚠ geen ontvangstrekening ingesteld" }}
           factuur={{
             nummer: "FACT-2025-0042",
             datum: "12 augustus 2026",

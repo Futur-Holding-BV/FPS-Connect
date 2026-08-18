@@ -122,7 +122,6 @@ export const PANEEL_GESCHIKTE_PADEN: string[] = [
   "/financieel/onderhanden-werk",
   "/organisatie/autopark",
   "/organisatie/verzekeringen",
-  "/organisatie/bedrijfsgegevens",
   "/organisatie/jaarverslagen",
   "/organisatie/bedrijfsdocumenten",
   "/uren",

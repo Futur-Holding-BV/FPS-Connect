@@ -7,6 +7,8 @@ import {
   useListStudioWerkgevers,
   useGetDocumentStudioModel,
   getGetDocumentStudioModelQueryKey,
+  useGetGebouw,
+  getGetGebouwQueryKey,
 } from "@workspace/api-client-react";
 import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { FactuurTemplateA } from "@/components/documentopmaak/FamilieA";
@@ -34,19 +36,20 @@ export default function FactuurPrintPagina() {
   const { data: werkgevers } = useListWerkgevers();
   const { data: studioWerkgevers } = useListStudioWerkgevers();
 
-  const actieveWerkgeverNaam = (() => {
-    try {
-      const v = localStorage.getItem("fps.actieve_werkgever");
-      const id = v ? Number(v) : null;
-      return id ? ((werkgevers ?? []).find((w) => w.id === id)?.naam ?? null) : null;
-    } catch { return null; }
-  })();
+  // ADMINISTRATIE_01 (review-hardening): de werkmaatschappij op de factuur
+  // volgt de documenteigen keten factuur → gebouw → werkgever — nooit de
+  // actieve UI-context, anders drukt BV A's factuur BV B's rekening af.
+  const factuurGebouwId = (factuur as Record<string, unknown> | undefined)?.["gebouw_id"] as number | null | undefined;
+  const { data: factuurGebouw, isLoading: gebouwLaden } = useGetGebouw(factuurGebouwId ?? 0, {
+    query: { queryKey: getGetGebouwQueryKey(factuurGebouwId ?? 0), enabled: !!factuurGebouwId, retry: false },
+  });
+  const factuurWerkgeverId = (factuurGebouw as Record<string, unknown> | undefined)?.["werkgever_id"] as number | null | undefined;
 
-  const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find((w) => actieveWerkgeverNaam && w.naam === actieveWerkgeverNaam)?.id
-    ?? (studioWerkgevers ?? [])[0]?.id
-    ?? null
-  );
+  const studioWerkgeverId = (() => {
+    if (!factuurWerkgeverId) return null;
+    const naam = (werkgevers ?? []).find((w) => w.id === factuurWerkgeverId)?.naam ?? null;
+    return naam ? ((studioWerkgevers ?? []).find((w) => w.naam === naam)?.id ?? null) : null;
+  })();
 
   const { model: actiefModel, isLoading: modelLaden } = useActiefStudioModel(studioWerkgeverId, "factuur");
 
@@ -58,13 +61,17 @@ export default function FactuurPrintPagina() {
   const gebruiktModel = pinnedModelId ? (pinnedModel ?? null) : actiefModel;
   const gebruiktModelLaden = pinnedModelId ? pinnedModelLaden : modelLaden;
 
-  const klaar = !factuurLaden && !regelsLaden && !!factuur;
+  const klaar = !factuurLaden && !regelsLaden && !!factuur && (!factuurGebouwId || !gebouwLaden);
   // Zonder fiscaal factuurnummer is de factuur niet afdrukbaar: een terugval
   // op het interne id zet een betekenisloos nummer op een uitgaand document.
   const heeftFactuurnummer = !!factuur?.factuurnummer;
+  // Zonder werkmaatschappij-keten (factuur → gebouw → werkgever) is de factuur
+  // evenmin afdrukbaar: terugvallen op een andere BV zou verkeerde
+  // bedrijfsgegevens/rekeningnummers op een uitgaand document zetten.
+  const heeftWerkmaatschappij = !!factuurGebouwId && !!factuurWerkgeverId;
 
   useEffect(() => {
-    if (klaar && heeftFactuurnummer) {
+    if (klaar && heeftFactuurnummer && heeftWerkmaatschappij) {
       document.documentElement.setAttribute("data-fps-print-ready", "1");
       const t = setTimeout(() => window.print(), 800);
       return () => {
@@ -76,7 +83,23 @@ export default function FactuurPrintPagina() {
     // hangen van een eerder bezochte, wél afdrukbare factuur in dezelfde SPA-sessie.
     document.documentElement.removeAttribute("data-fps-print-ready");
     return undefined;
-  }, [klaar, heeftFactuurnummer, factuur?.id]);
+  }, [klaar, heeftFactuurnummer, heeftWerkmaatschappij, factuur?.id]);
+
+  if (klaar && heeftFactuurnummer && !heeftWerkmaatschappij) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-geen-werkmaatschappij">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Werkmaatschappij onbekend</p>
+          <p className="text-sm">
+            Deze factuur is niet aan een gebouw met werkmaatschappij gekoppeld, waardoor de juiste
+            bedrijfsgegevens en het juiste rekeningnummer niet te bepalen zijn. Koppel de factuur
+            eerst aan een gebouw met werkmaatschappij; er wordt bewust nooit teruggevallen op een andere BV.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (klaar && !heeftFactuurnummer) {
     return (
@@ -117,9 +140,9 @@ export default function FactuurPrintPagina() {
   const accentKleur = templateJson?.kleurschema?.primair ?? "#F23B0D";
   const logoPositie = (templateJson?.koptekst?.logo_positie ?? "rechts") as "links" | "rechts" | "midden";
 
-  const werkgever = actieveWerkgeverNaam
-    ? ((werkgevers ?? []).find((w) => w.naam === actieveWerkgeverNaam) ?? (werkgevers ?? [])[0])
-    : ((werkgevers ?? [])[0] ?? null);
+  const werkgever = factuurWerkgeverId
+    ? ((werkgevers ?? []).find((w) => w.id === factuurWerkgeverId) ?? null)
+    : null;
 
   const studioLogo = (studioWerkgevers ?? []).find((w) => w.id === studioWerkgeverId)?.logo_url;
   const logoUrl = studioLogo
@@ -149,7 +172,10 @@ export default function FactuurPrintPagina() {
     website:            werkgever?.website ?? "",
     kvk:                werkgever?.kvk ?? "",
     btw:                werkgever?.btw ?? "",
-    iban:               werkgeverIban ?? "",
+    // ADMINISTRATIE_01: iban komt uit de ontvangstrekening van déze
+    // werkmaatschappij. Ontbreekt die, dan zichtbaar aanwijzen — nooit stil
+    // en nooit het nummer van een andere BV.
+    iban:               werkgeverIban ?? "⚠ geen ontvangstrekening ingesteld",
     voettekst:          werkgeverVoettekst ?? templateJson?.voettekst ?? "",
     voettekstPositie:   werkgeverVoettekstPositie as "links" | "midden" | "rechts",
     margeOnder:         werkgeverMargeOnder ?? undefined,

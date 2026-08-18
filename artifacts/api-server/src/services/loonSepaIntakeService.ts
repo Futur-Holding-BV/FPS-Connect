@@ -18,6 +18,7 @@ import {
   sepaBestandenTable,
   salarisdocumentAuditTable,
   werkgeversTable,
+  werkgeverBankrekeningenTable,
   werkInboxMailboxenTable,
   werkInboxMailsTable,
 } from "@workspace/db";
@@ -42,7 +43,9 @@ interface MailRij {
 interface WerkgeverRij {
   id: number;
   naam: string;
-  iban: string | null;
+  /** IBAN's van de bankrekeningen met doel "loon" van déze werkmaatschappij
+   *  (ADMINISTRATIE_01 fase 2 — nooit het nummer van een andere BV). */
+  loonIbans: string[];
   scabEmailAdres: string | null;
 }
 
@@ -59,7 +62,7 @@ export function bepaalWerkgever(
   afzenderEmail: string,
 ): WerkgeverRij | null {
   if (parsed.ibanOpdrachtgever) {
-    const opIban = werkgevers.filter((w) => w.iban && w.iban.replace(/\s/g, "").toUpperCase() === parsed.ibanOpdrachtgever);
+    const opIban = werkgevers.filter((w) => w.loonIbans.some((iban) => iban.replace(/\s/g, "").toUpperCase() === parsed.ibanOpdrachtgever));
     if (opIban.length === 1) return opIban[0];
     if (opIban.length > 1) return null;
   }
@@ -236,12 +239,22 @@ export async function verwerkLoonSepaMails(): Promise<{ verwerkt: number }> {
 
   if (mails.length === 0) return { verwerkt: 0 };
 
-  const werkgevers: WerkgeverRij[] = await db.select({
+  const werkgeverRijen = await db.select({
     id: werkgeversTable.id,
     naam: werkgeversTable.naam,
-    iban: werkgeversTable.iban,
     scabEmailAdres: werkgeversTable.scabEmailAdres,
   }).from(werkgeversTable);
+  // Loonrekeningen per werkmaatschappij (doel "loon") — de oude enkele
+  // iban-kolom is bevroren; matching loopt uitsluitend via deze lijst.
+  const loonRekeningen = await db.select({
+    werkgeverId: werkgeverBankrekeningenTable.werkgeverId,
+    iban: werkgeverBankrekeningenTable.iban,
+  }).from(werkgeverBankrekeningenTable)
+    .where(sql`'loon' = ANY(${werkgeverBankrekeningenTable.doelen})`);
+  const werkgevers: WerkgeverRij[] = werkgeverRijen.map((w) => ({
+    ...w,
+    loonIbans: loonRekeningen.filter((r) => r.werkgeverId === w.id).map((r) => r.iban),
+  }));
 
   let verwerkt = 0;
   for (const mail of mails) {
