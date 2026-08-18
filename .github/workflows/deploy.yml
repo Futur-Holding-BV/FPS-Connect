@@ -72,6 +72,25 @@ jobs:
       # omschrijving voor de faalmelding) beschikbaar te hebben.
       - uses: actions/checkout@v4
 
+      # ─── Testmarker-controle (ROLLBACKTEST/TERUGVALTEST) ─────────────────────
+      # Blokkeert de deploy als er een sabotage-/terugvaltest-marker in de
+      # api-server bronbestanden staat. Achtergrond: op 18 aug 2026 belandde
+      # een bewust kapot startblok via een taakmerge op main en veroorzaakte
+      # een mislukte deploy van ~10 min. Deze controle draait altijd als eerste
+      # en wordt bewust NIET door de noodfix-bypass overgeslagen: een sabotage-
+      # marker is nooit een deployment-blokkade die een noodfix rechtvaardigt.
+      # Uitzondering: takken waarvan de naam "terugvaltest" of "rollbacktest"
+      # bevat mogen de marker wél hebben (bewuste terugvaltest).
+      - name: Testmarker-controle (ROLLBACKTEST/TERUGVALTEST)
+        run: |
+          set -euo pipefail
+          echo "Testmarker-controle (ROLLBACKTEST/TERUGVALTEST)" > /tmp/faalstap.txt
+          # Takkenaam afleiden uit GITHUB_REF (bijv. refs/heads/terugvaltest/xyz → terugvaltest/xyz).
+          TAKNAAM="${GITHUB_REF#refs/heads/}"
+          bash scripts/check-testmarker.sh "${TAKNAAM}" 2>&1 | tee /tmp/stap-uitvoer.log
+          # Propageer de exitcode van het script (tee maskeert hem anders).
+          exit "${PIPESTATUS[0]}"
+
       # ─── Tijdbewaking (DEPLOY_SNELHEID_01 punt 4) ────────────────────────────
       # Starttijd en mijlpalen vastleggen; de bewakingsstap onderaan rekent er
       # de duur per fase mee uit en mailt René alleen bij een verslechtering

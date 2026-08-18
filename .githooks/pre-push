@@ -1,11 +1,14 @@
 #!/bin/sh
-# FPS Connect — git pre-push hook (taak #938)
+# FPS Connect — git pre-push hook (taak #938, uitgebreid in taak #1097)
 #
 # BLOKKEREND: een push gaat alleen door als
-#   1. de opmaakschade-controle slaagt op alle te pushen commits
+#   1. geen ROLLBACKTEST/TERUGVALTEST-testmarkers in api-server bronbestanden
+#      staan (scripts/check-testmarker.sh — vangt bewust kapotte startsblokken
+#      die via taakmerges op main kunnen belanden, zie incident 18 aug 2026),
+#   2. de opmaakschade-controle slaagt op alle te pushen commits
 #      (scripts/git/check-opmaakschade.mjs — vangt merge-/formatterschade
 #       zoals rapporten.ts op 15 aug 2026: 769 → 2071 regels), en
-#   2. de volledige workspace-typecheck groen is (pnpm run typecheck).
+#   3. de volledige workspace-typecheck groen is (pnpm run typecheck).
 #
 # Activeren gebeurt automatisch via core.hooksPath .githooks (zie de
 # prepare-stap in package.json). Er is bewust GEEN overslaan-vlag:
@@ -17,6 +20,18 @@ cd "$(git rev-parse --show-toplevel)"
 
 # $1 = naam van de remote waarheen gepusht wordt (of de URL bij een anonieme push).
 REMOTE_NAAM="${1:-}"
+
+# ─── 1. Testmarker-controle (ROLLBACKTEST/TERUGVALTEST) ───────────────────────
+# Blokkeert de push als er een sabotage-/terugvaltest-marker in de api-server
+# bronbestanden staat. Draait altijd als allereerste controle, vóór stdin wordt
+# gelezen. De takkenaam wordt afgeleid uit de huidige HEAD (de branch waarvan
+# gepusht wordt); terugvaltestrakken worden bewust uitgezonderd.
+echo "[pre-push] Testmarker-controle (ROLLBACKTEST/TERUGVALTEST)..."
+HUIDIGE_TAK="$(git branch --show-current 2>/dev/null || git symbolic-ref --short HEAD 2>/dev/null || echo "")"
+bash scripts/check-testmarker.sh "${HUIDIGE_TAK}" || {
+  echo "[pre-push] GEBLOKKEERD: testmarker aangetroffen — push niet uitgevoerd." >&2
+  exit 1
+}
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha> per te pushen ref.
 RANGES=""
