@@ -30674,6 +30674,14 @@ components:
         gebouwd_op:
           type: string
           description: ISO-tijdstip waarop het image gebouwd is (leeg in dev)
+        achterloop:
+          type: boolean
+          description: >-
+            true wanneer de laatst gemelde uitrol een nieuwere commit verwachtte
+            dan wat er nu draait (productie loopt achter op main)
+        verwacht_commit:
+          type: string
+          description: Korte hash van de laatst gemelde uitrol-commit (leeg indien onbekend)
 
     VersieStatus:
       type: object

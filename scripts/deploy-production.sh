@@ -235,6 +235,10 @@ export GIT_COMMIT="$(git rev-parse --short HEAD)"
 export GIT_COMMIT_LANG="$(git rev-parse HEAD)"
 export BUILD_TIJD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 export DEPLOY_NUMMER="$(date -u +%Y%m%d%H%M%S)"
+# UITROL_BEWAKING_01: gedeelde sleutel voor terugmeldingen van de workflow.
+# Reist base64-gecodeerd mee over SSH (shell-veilig, nooit rauw in de
+# commandoregel); leeg bij handmatig draaien (endpoint dan 503).
+export UITROL_RAPPORT_SLEUTEL="$(printf '%s' "${UITROL_RAPPORT_SLEUTEL_B64:-}" | base64 -d 2>/dev/null || true)"
 echo "Release-versie: ${BUILD_TIJD%%T*} — commit ${GIT_COMMIT} (deploy #${DEPLOY_NUMMER})"
 stap_tijd "code-ophalen"
 

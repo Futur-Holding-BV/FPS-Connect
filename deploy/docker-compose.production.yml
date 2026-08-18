@@ -115,6 +115,9 @@ services:
       # nooit het tijdelijke Replit-dev-domein in productie.
       PUBLIEKE_APP_URL: ${PUBLIEKE_APP_URL:-https://connect.fps-one.nl}
       PORT: "8080"
+      # UITROL_BEWAKING_01: sleutel waarmee de deploy-workflow uitrollen
+      # terugmeldt (POST /api/uitrol/rapport). Leeg = endpoint uit (503).
+      UITROL_RAPPORT_SLEUTEL: ${UITROL_RAPPORT_SLEUTEL:-}
       # BACKUP_01: statusbestanden van de externe kopie (read-only mounts hieronder)
       OFFSITE_BACKUP_DIR: /offsite-backup
       OFFSITE_NAS_DIR: /offsite-nas

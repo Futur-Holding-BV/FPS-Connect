@@ -459,9 +459,16 @@ jobs:
           # Dispatch-input nooit direct in run:-code interpoleren (injection-risico).
           # Hier doorgegeven als omgevingsvariabele en daarna veilig getest.
           NOODFIX_REDEN: ${{ github.event.inputs.noodfix_reden }}
+          # UITROL_BEWAKING_01: gedeelde sleutel waarmee de api-container
+          # terugmeldingen van deze workflow accepteert (POST /api/uitrol/rapport).
+          UITROL_RAPPORT_SLEUTEL: ${{ secrets.UITROL_RAPPORT_SLEUTEL }}
         run: |
           set -euo pipefail
           echo "Deploy uitvoeren op de VPS" > /tmp/faalstap.txt
+          # UITROL_BEWAKING_01: sleutel nooit rauw in de remote-commandoregel
+          # interpoleren (shell-metatekens = injectie-/breukrisico). Base64 is
+          # shell-veilig; het deployscript decodeert hem weer.
+          UITROL_SLEUTEL_B64="$(printf '%s' "${UITROL_RAPPORT_SLEUTEL:-}" | base64 -w0)"
           # De exitcode van het script op de server bepaalt direct het
           # resultaat van deze stap: iedere fout stopt de workflow (pipefail
           # laat de ssh-exitcode door de tee heen). De uitvoer gaat óók naar
@@ -480,7 +487,7 @@ jobs:
           # blijft gewoon de main-commit uitrollen.
           ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
-            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} DEPLOY_COMMIT=${GITHUB_SHA} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log /tmp/stap-uitvoer.log
+            "TYPECHECK_IN_IMAGE=${TYPECHECK_IN_IMAGE} DEPLOY_COMMIT=${GITHUB_SHA} UITROL_RAPPORT_SLEUTEL_B64=${UITROL_SLEUTEL_B64} bash /tmp/deploy-production.sh" 2>&1 | tee /tmp/deploy-output.log /tmp/stap-uitvoer.log
           echo "vps-deploy|$(date +%s)" >> /tmp/mijlpalen.txt
 
       # ─── Smoketest na deploy ─────────────────────────────────────────────────
@@ -1060,5 +1067,62 @@ jobs:
           else
             echo "Verzenden van faalmelding gaf HTTP $HTTP_CODE." >&2
             cat /tmp/graph-response.json >&2 || true
+            exit 0
+          fi
+
+      # ─── UITROL_BEWAKING_01: uitrol terugmelden aan Connect ─────────────────
+      # Na élke run (geslaagd of gefaald) meldt de runner aan de draaiende app
+      # welke commit uitgerold had moeten zijn, plus de falende stap. Connect
+      # vergelijkt dat met zijn eigen versie en opent/sluit automatisch een
+      # actiepunt in de werkbak van de hoofdbeheerder. Nooit fataal: bewaking
+      # mag een deploy niet breken.
+      - name: Uitrol terugmelden aan Connect
+        if: always()
+        env:
+          UITROL_RAPPORT_SLEUTEL: ${{ secrets.UITROL_RAPPORT_SLEUTEL }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BASE_URL: https://connect.fps-one.nl
+        run: |
+          set -euo pipefail
+          if [ -z "${UITROL_RAPPORT_SLEUTEL:-}" ]; then
+            echo "UITROL_RAPPORT_SLEUTEL ontbreekt als GitHub Actions secret; terugmelding wordt overgeslagen." >&2
+            exit 0
+          fi
+          if [ "${JOB_STATUS}" = "cancelled" ]; then
+            echo "Run geannuleerd (ingehaald door nieuwere push); geen terugmelding nodig."
+            exit 0
+          fi
+          CONCLUSIE="failure"
+          [ "${JOB_STATUS}" = "success" ] && CONCLUSIE="success"
+          FALENDE_STAP=""
+          if [ "$CONCLUSIE" = "failure" ]; then
+            if [ -f /tmp/faalstap.txt ]; then
+              FALENDE_STAP="$(head -c 300 /tmp/faalstap.txt | tr -d '\n' || true)"
+            else
+              # Faalde er iets vóór de eerste run-stap (checkout/action-setup),
+              # dan bestaat de marker nog niet — eerlijk melden i.p.v. gokken.
+              FALENDE_STAP="onbekend (vroege voorbereidingsstap: checkout/setup)"
+            fi
+          fi
+          BODY=$(CONCLUSIE="$CONCLUSIE" FALENDE_STAP="$FALENDE_STAP" node -e "
+            console.log(JSON.stringify({
+              commit: process.env.GITHUB_SHA,
+              conclusie: process.env.CONCLUSIE,
+              falende_stap: process.env.FALENDE_STAP || null,
+              run_url: process.env.RUN_URL,
+              run_id: Number(process.env.GITHUB_RUN_ID) || null,
+            }));
+          ")
+          HTTP_CODE=$(curl -sS -o /tmp/uitrol-rapport-resp.json -w "%{http_code}" --max-time 20 \
+            -X POST "${BASE_URL}/api/uitrol/rapport" \
+            -H "Content-Type: application/json" \
+            -H "X-Uitrol-Sleutel: ${UITROL_RAPPORT_SLEUTEL}" \
+            -d "$BODY" || echo "000")
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Uitrol teruggemeld aan Connect (conclusie=${CONCLUSIE})."
+          else
+            echo "Terugmelden gaf HTTP ${HTTP_CODE} (niet fataal; de bewakingsloop mist dan één meting)." >&2
+            cat /tmp/uitrol-rapport-resp.json >&2 || true
             exit 0
           fi

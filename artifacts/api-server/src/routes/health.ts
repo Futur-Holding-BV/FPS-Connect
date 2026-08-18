@@ -40,8 +40,42 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
-router.get("/versie", (_req, res) => {
-  res.json({ versie: VERSIE, commit: COMMIT, gebouwd_op: GEBOUWD_OP });
+// UITROL_BEWAKING_01: naast de eigen versie melden we of productie achterloopt
+// op de laatst gemelde uitrol (tabel uitrol_rapporten, gevuld door de
+// deploy-workflow). Kort gecachet zodat de badge-polling de DB niet belast.
+let achterloopCache: { tot: number; achterloop: boolean; verwacht: string } | null = null;
+async function bepaalAchterloop(): Promise<{ achterloop: boolean; verwacht: string }> {
+  if (achterloopCache && Date.now() < achterloopCache.tot) return achterloopCache;
+  let achterloop = false;
+  let verwacht = "";
+  try {
+    if (COMMIT !== "onbekend") {
+      const rijen = await db.execute(
+        sql`SELECT commit_sha FROM uitrol_rapporten ORDER BY run_id DESC NULLS LAST, id DESC LIMIT 1`,
+      );
+      const sha = (rijen.rows?.[0] as { commit_sha?: string } | undefined)?.commit_sha ?? "";
+      if (sha) {
+        verwacht = sha.slice(0, 8);
+        achterloop = !sha.startsWith(COMMIT);
+      }
+    }
+  } catch {
+    // Geen rapporten of DB-hapering: nooit de versie-informatie blokkeren.
+    achterloop = false;
+  }
+  achterloopCache = { tot: Date.now() + 30_000, achterloop, verwacht };
+  return achterloopCache;
+}
+
+router.get("/versie", async (_req, res): Promise<void> => {
+  const { achterloop, verwacht } = await bepaalAchterloop();
+  res.json({
+    versie: VERSIE,
+    commit: COMMIT,
+    gebouwd_op: GEBOUWD_OP,
+    achterloop,
+    verwacht_commit: verwacht,
+  });
 });
 
 // GET /api/status — productie-statusoverzicht (FASE 4)

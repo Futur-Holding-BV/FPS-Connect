@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import uitrolRouter from "./uitrol";
 import authRouter from "./auth";
 import uitnodigingRouter from "./uitnodiging";
 import installatieRouter from "./installatie";
@@ -142,6 +143,9 @@ const router: IRouter = Router();
 
 // Publieke routes
 router.use(healthRouter);
+// UITROL_BEWAKING_01: terugmelding van de deploy-runner — publiek pad,
+// beveiligd met gedeelde sleutel (zie routes/uitrol.ts), dus vóór requireAuth.
+router.use(uitrolRouter);
 router.use(authRouter);
 router.use(uitnodigingRouter);
 router.use(installatieRouter);

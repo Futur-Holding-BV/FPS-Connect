@@ -22,7 +22,9 @@ export const HealthCheckResponse = zod.object({
 export const GetVersieResponse = zod.object({
   "versie": zod.string().describe('Leesbaar versienummer, bijv. \"2026.07.13-458fd39\"'),
   "commit": zod.string().describe('Korte git-commithash van de build'),
-  "gebouwd_op": zod.string().describe('ISO-tijdstip waarop het image gebouwd is (leeg in dev)')
+  "gebouwd_op": zod.string().describe('ISO-tijdstip waarop het image gebouwd is (leeg in dev)'),
+  "achterloop": zod.boolean().optional().describe('true wanneer de laatst gemelde uitrol een nieuwere commit verwachtte dan wat er nu draait (productie loopt achter op main)'),
+  "verwacht_commit": zod.string().optional().describe('Korte hash van de laatst gemelde uitrol-commit (leeg indien onbekend)')
 })
 
 

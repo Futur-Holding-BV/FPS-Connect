@@ -57,6 +57,7 @@ import {
   offerteTrackingTable,
   opnamesTable,
   calculatiesTable,
+  uitrolRapportenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
@@ -543,6 +544,51 @@ async function voedVerlofverjaring(): Promise<{ nieuw: number; afgehandeld: numb
 }
 
 // §5: Factuursignalen → Jacqueline (financieel), rekeningnummer gewijzigd ook René (Weten).
+// UITROL_BEWAKING_01 — vergelijk de laatst gemelde uitrol (GitHub Actions
+// meldt na élke run het verwachte commit via POST /uitrol/rapport) met de
+// commit die dit proces daadwerkelijk draait (GIT_COMMIT uit het image).
+// Lopen die uiteen, dan komt er één actiepunt bij de hoofdbeheerder mét de
+// falende stap. Dedup-sleutel bevat het verwachte commit: zodra een volgende
+// uitrol slaagt (versies weer gelijk) reconcilieert syncBron het item
+// automatisch dicht. In dev (geen GIT_COMMIT) doet deze voeder niets.
+export async function voedUitrolAchterloop(): Promise<{ nieuw: number; afgehandeld: number }> {
+  const draaiend = process.env.GIT_COMMIT ?? "";
+  const items: WerkbakInvoer[] = [];
+  if (draaiend && draaiend !== "onbekend") {
+    // Ordening op run_id (GitHub run-id's lopen monotoon op): een vertraagd
+    // binnengekomen oude melding kan zo nooit "de laatste" worden. Re-runs
+    // delen een run_id; dan wint de nieuwste rij (id).
+    const [laatste] = await db
+      .select()
+      .from(uitrolRapportenTable)
+      .orderBy(sql`${uitrolRapportenTable.runId} DESC NULLS LAST`, desc(uitrolRapportenTable.id))
+      .limit(1);
+    if (laatste && !laatste.commitSha.startsWith(draaiend)) {
+      const kort = laatste.commitSha.slice(0, 8);
+      const regels = [
+        laatste.conclusie === "failure"
+          ? `Uitrol mislukt op stap: ${laatste.falendeStap || "onbekend"}`
+          : `Laatste uitrolmelding: ${laatste.conclusie} — maar de server draait een andere versie`,
+        `Verwacht commit: ${kort} · draaiend: ${draaiend}`,
+        laatste.runUrl ? `Actions-run: ${laatste.runUrl}` : null,
+      ].filter(Boolean);
+      items.push({
+        soort: "doen",
+        bron: "uitrol_achterloop",
+        titel: `Productie loopt achter: commit ${kort} is niet uitgerold`,
+        omschrijving: regels.join("\n"),
+        alleenHoofdbeheerder: true,
+        gewicht: 90,
+        actiePad: "/beheer/systeemstatus",
+        herkomstType: "uitrol_rapport",
+        herkomstId: laatste.id,
+        dedupSleutel: `uitrol-achterloop:${kort}`,
+      });
+    }
+  }
+  return syncBron("uitrol_achterloop", items);
+}
+
 async function voedFactuursignalen(): Promise<{ nieuw: number; afgehandeld: number }> {
   const signalen = await db
     .select({ s: factuurSignalenTable, relatienaam: facturenTable.relatienaam, factuurnummer: facturenTable.factuurnummer })
@@ -2017,6 +2063,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["opname_zonder_calculatie", voedOpnameZonderCalculatie],
     ["calculatie_zonder_offerte", voedCalculatieZonderOfferte],
     ["opdracht_zonder_akkoord", voedOpdrachtZonderAkkoord],
+    // UITROL_BEWAKING_01 — productie loopt achter op de laatst gemelde uitrol.
+    ["uitrol_achterloop", voedUitrolAchterloop],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

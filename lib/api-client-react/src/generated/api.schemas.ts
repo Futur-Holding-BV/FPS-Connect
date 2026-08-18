@@ -1400,6 +1400,10 @@ export interface VersieInfo {
   commit: string;
   /** ISO-tijdstip waarop het image gebouwd is (leeg in dev) */
   gebouwd_op: string;
+  /** true wanneer de laatst gemelde uitrol een nieuwere commit verwachtte dan wat er nu draait (productie loopt achter op main) */
+  achterloop?: boolean;
+  /** Korte hash van de laatst gemelde uitrol-commit (leeg indien onbekend) */
+  verwacht_commit?: string;
 }
 
 /**

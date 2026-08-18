@@ -418,6 +418,7 @@ INDEX|toolbox_berichten|toolbox_berichten_pkey
 INDEX|toolbox_maand_opdrachten|toolbox_maand_opdrachten_pkey
 INDEX|toolbox_maand_status|toolbox_maand_status_opdracht_gebruiker_uniek
 INDEX|toolbox_maand_status|toolbox_maand_status_pkey
+INDEX|uitrol_rapporten|uitrol_rapporten_pkey
 INDEX|uitvoerder_berichten|uitvoerder_berichten_pkey
 INDEX|uitvoerder_sessies|uitvoerder_sessies_pkey
 INDEX|uitvoeringsplan_taken|uitvoeringsplan_taken_pkey
@@ -4364,6 +4365,13 @@ KOLOM|toolbox_maand_status|laatste_uitgesteld|timestamp without time zone|YES|
 KOLOM|toolbox_maand_status|opdracht_id|integer|NO|
 KOLOM|toolbox_maand_status|voltooid_op|timestamp without time zone|YES|
 KOLOM|toolbox_maand_status|vraag|text|YES|
+KOLOM|uitrol_rapporten|commit_sha|text|NO|
+KOLOM|uitrol_rapporten|conclusie|text|NO|
+KOLOM|uitrol_rapporten|falende_stap|text|YES|
+KOLOM|uitrol_rapporten|gemeld_op|timestamp without time zone|NO|now()
+KOLOM|uitrol_rapporten|id|integer|NO|nextval('uitrol_rapporten_id_seq'::regclass)
+KOLOM|uitrol_rapporten|run_id|bigint|YES|
+KOLOM|uitrol_rapporten|run_url|text|YES|
 KOLOM|uitvoerder_berichten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|uitvoerder_berichten|foto_pad|text|YES|
 KOLOM|uitvoerder_berichten|id|integer|NO|nextval('uitvoerder_berichten_id_seq'::regclass)

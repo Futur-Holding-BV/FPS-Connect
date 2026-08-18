@@ -113,6 +113,10 @@ export const WERKBAK_BRONNEN = [
   // HRM_01 §2.3: uiterste aanzegdatum (Wet Aanzegging) of ZZP/Wet DBA-deadline
   // nadert binnen 30 dagen (of DBA-duurgrens bereikt) → HRM-beheerder (doen).
   "cruciale_deadlines_hrm",
+  // UITROL_BEWAKING_01: productie draait een andere commit dan de laatst
+  // gemelde uitrol verwachtte → actiepunt voor de hoofdbeheerder, mét de
+  // falende stap erbij. Sluit zichzelf zodra een volgende uitrol slaagt.
+  "uitrol_achterloop",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {

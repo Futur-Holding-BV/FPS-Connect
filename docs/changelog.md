@@ -1,3 +1,12 @@
+## 2026-08-19 — UITROL_BEWAKING_01: productie bewaakt zichzelf op achterlopen
+
+- Fase 0 (meting): 373 deploy-runs in augustus — 237 geslaagd, 74 gefaald, 60 geannuleerd; falende stappen per run opgehaald uit GitHub Actions (meest: "Deploy uitvoeren op de VPS", "Controle 1/3 — typecheck", CI-poort, tijd-/schijfbewaking).
+- Terugmelding: de deploy-workflow meldt ná élke run (geslaagd of gefaald, nooit fataal) het verwachte commit + falende stap aan POST `/api/uitrol/rapport` (nieuwe tabel `uitrol_rapporten`, migratie 0091). Endpoint fail-closed met gedeelde sleutel `UITROL_RAPPORT_SLEUTEL` (GitHub secret → via deployscript in de api-container; zonder sleutel 503).
+- Werkbak: nieuwe bron `uitrol_achterloop` + voeder in de bewakingsloop — draait productie een andere commit dan de laatst gemelde uitrol, dan komt er één actiepunt bij de hoofdbeheerder mét de falende stap en Actions-link; sluit zichzelf automatisch zodra een volgende uitrol slaagt (dedup per verwacht commit + syncBron-reconciliatie).
+- Zichtbaar: `GET /api/versie` geeft nu ook `achterloop` + `verwacht_commit`; de versie-badge rechtsboven kleurt amber met uitleg wanneer productie achterloopt.
+- Bewezen op een testinstantie: 401 zonder/met foute sleutel, 503 zonder configuratie, actiepunt open bij mismatch, automatisch dicht bij herstel, cancelled-runs genegeerd.
+- Nog nodig (eenmalig, René): GitHub Actions secret `UITROL_RAPPORT_SLEUTEL` zetten (willekeurige lange waarde); verder geen VPS-actie — de sleutel reist via de workflow mee naar de container.
+
 ## 2026-08-19 — KETEN_01 hermeting proces 1–5 (meting, geen reparatie)
 
 - Nieuwe gescopeerde meetspec `scripts/e2e/web-keten-1-5.spec.ts` (aanvraag → opname → calculatie → offerte → akkoord, zonder vangnet-opdracht); resultaten in `scripts/e2e-resultaten/keten01-run2/`, rapport in `docs/metingen/KETEN_01_hermeting-1-5.md`.

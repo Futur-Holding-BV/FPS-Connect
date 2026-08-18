@@ -21,17 +21,30 @@ export function VersieBadge() {
     data.commit !== "onbekend" &&
     WEB_COMMIT !== data.commit;
 
-  const titel = mismatch
-    ? `Let op: web en API draaien niet dezelfde versie.\nWeb: ${webLabel}\nAPI: ${apiLabel}`
-    : `Web: ${webLabel}\nAPI: ${apiLabel}`;
+  // UITROL_BEWAKING_01: de API meldt of productie achterloopt op de laatst
+  // gemelde uitrol (main). Zichtbaar in de balk waar je dagelijks langskomt.
+  const achterloop = data.achterloop === true;
+
+  const regels = [`Web: ${webLabel}`, `API: ${apiLabel}`];
+  if (mismatch) regels.unshift("Let op: web en API draaien niet dezelfde versie.");
+  if (achterloop) {
+    regels.unshift(
+      `Let op: productie loopt achter — verwacht commit ${data.verwacht_commit || "?"} is niet uitgerold. Zie het actiepunt in de werkbak.`,
+    );
+  }
+  const titel = regels.join("\n");
 
   return (
     <span
       title={titel}
       data-testid="versie-badge"
-      className="hidden sm:inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground select-all"
+      className={`hidden sm:inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] leading-none select-all ${
+        achterloop
+          ? "border-amber-500 bg-amber-100 text-amber-700"
+          : "border-border text-muted-foreground"
+      }`}
     >
-      {mismatch && <TriangleAlert className="h-3 w-3 text-amber-600" />}
+      {(mismatch || achterloop) && <TriangleAlert className="h-3 w-3 text-amber-600" />}
       v{data.versie}
     </span>
   );
