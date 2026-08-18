@@ -67,14 +67,26 @@ connect.fps-one.nl {
 
     handle @static {
         root * /srv/public
+
+        # sw.js/manifest/versiebestanden nooit browser-cachen: zonder expliciete
+        # Cache-Control mag de browser deze heuristisch vasthouden en blijven
+        # oude service workers/manifesten dagenlang hangen.
+        @rootvers path /sw.js /manifest.webmanifest /versie.json
+        header @rootvers Cache-Control "no-cache"
+
         file_server {
             precompressed gzip br
         }
     }
 
-    # SPA-fallback: alles wat niet matcht wordt index.html
+    # SPA-fallback: alles wat niet matcht wordt index.html.
+    # Altijd no-cache: HTML zonder Cache-Control werd heuristisch gecachet
+    # (etag+last-modified), waardoor telefoons die vóór de monteuromgeving
+    # ooit /app/ bezochten de oude desktop-HTML uit de HTTP-cache bleven
+    # tonen zonder de server nog te raadplegen.
     handle {
         root * /srv/public
+        header Cache-Control "no-cache"
         rewrite * /index.html
         file_server
     }

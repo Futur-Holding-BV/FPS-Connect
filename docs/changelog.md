@@ -1,3 +1,9 @@
+## 2026-08-18 — Telefoons bleven op /app/ de oude desktop-HTML uit hun cache tonen (no-cache headers)
+
+- **Probleem**: René kreeg op `connect.fps-one.nl/app/` hardnekkig de desktopomgeving, terwijl de server aantoonbaar de monteuromgeving serveert (titel "FPS Monteur", `versie.json` = `61363659`). Oorzaak: de desktop-HTML (SPA-fallback) en root-`sw.js` gingen zonder `Cache-Control` de deur uit, alleen met etag/last-modified. Browsers mogen zulke antwoorden **heuristisch cachen** — een telefoon die vóór MONTEUR_NU_01 ooit `/app/` bezocht (toen dat nog naar de desktop-SPA doorviel) bleef die oude HTML uit de eigen HTTP-cache tonen zonder de server nog te raadplegen.
+- **Fix** (`deploy/Caddyfile`): SPA-fallback (desktop-index.html) krijgt `Cache-Control: no-cache`, net als root-`sw.js`/`manifest.webmanifest`/`versie.json` in de @static-handle. De monteurbestanden onder `/app/` hadden dit al. Browsers moeten HTML voortaan altijd bij de server hervalideren; oude heuristische kopieën verlopen vanzelf (levensduur = 10% van de leeftijd sinds last-modified) en kunnen daarna nooit meer terugkeren.
+- Gecontroleerd en uitgesloten: DNS (één A-record, geen AAAA), service workers (root-sw slaat `/app` over sinds MONTEUR_NU_01, navigatie is network-first), Caddy-image (nieuw, `/app`-controle in de deploy liep groen).
+
 ## 2026-08-18 — App-installatie wijst nu naar de monteuromgeving (/app) i.p.v. Connect-desktop
 
 - **Probleem**: alle installatie-QR's en -links (activatiepagina, uitnodigingsmail, PWA-testpagina) wezen naar `/connect/planning`. Op elke Connect-pagina geldt het desktop-manifest, dus "Zet op beginscherm" leverde daar altijd de desktopomgeving op — nooit de monteuromgeving.
