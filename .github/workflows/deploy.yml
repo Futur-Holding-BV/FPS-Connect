@@ -261,17 +261,19 @@ jobs:
             exit 1
           fi
 
-          TOKEN=$(curl -fsS -X POST \
+          HTTP_TOKEN_CODE=$(curl -sS -o /tmp/token-resp.json -w "%{http_code}" -X POST \
             "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
             -d "client_id=${AZURE_CLIENT_ID}" \
             -d "client_secret=${AZURE_CLIENT_SECRET}" \
             -d "scope=https://graph.microsoft.com/.default" \
-            -d "grant_type=client_credentials" \
-            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+            -d "grant_type=client_credentials" || echo "000")
+          TOKEN=$(node -e "try{const d=require('fs').readFileSync('/tmp/token-resp.json','utf8');console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}" 2>/dev/null || echo "")
 
           if [ -z "${TOKEN}" ]; then
-            echo "::error::NOODFIX GEBLOKKEERD: kon geen Graph-token ophalen." \
-              "Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET." >&2
+            echo "::error::NOODFIX GEBLOKKEERD: kon geen Graph-token ophalen (HTTP ${HTTP_TOKEN_CODE})." \
+              "Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET in de GitHub-secrets." >&2
+            echo "Azure-antwoord:" >&2
+            cat /tmp/token-resp.json >&2 || true
             exit 1
           fi
 
@@ -885,15 +887,18 @@ jobs:
             exit 0
           fi
 
-          TOKEN=$(curl -fsS -X POST \
+          HTTP_TOKEN_CODE=$(curl -sS -o /tmp/token-resp.json -w "%{http_code}" -X POST \
             "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
             -d "client_id=${AZURE_CLIENT_ID}" \
             -d "client_secret=${AZURE_CLIENT_SECRET}" \
             -d "scope=https://graph.microsoft.com/.default" \
-            -d "grant_type=client_credentials" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+            -d "grant_type=client_credentials" || echo "000")
+          TOKEN=$(node -e "try{const d=require('fs').readFileSync('/tmp/token-resp.json','utf8');console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}" 2>/dev/null || echo "")
 
           if [ -z "$TOKEN" ]; then
-            echo "Kon geen Graph-token ophalen; bewakingsmelding kan niet verzonden worden." >&2
+            echo "Kon geen Graph-token ophalen (HTTP ${HTTP_TOKEN_CODE}); bewakingsmelding kan niet verzonden worden." >&2
+            echo "Azure-antwoord:" >&2
+            cat /tmp/token-resp.json >&2 || true
             exit 0
           fi
 
@@ -972,15 +977,18 @@ jobs:
             exit 0
           fi
 
-          TOKEN=$(curl -fsS -X POST \
+          HTTP_TOKEN_CODE=$(curl -sS -o /tmp/token-resp.json -w "%{http_code}" -X POST \
             "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
             -d "client_id=${AZURE_CLIENT_ID}" \
             -d "client_secret=${AZURE_CLIENT_SECRET}" \
             -d "scope=https://graph.microsoft.com/.default" \
-            -d "grant_type=client_credentials" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+            -d "grant_type=client_credentials" || echo "000")
+          TOKEN=$(node -e "try{const d=require('fs').readFileSync('/tmp/token-resp.json','utf8');console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}" 2>/dev/null || echo "")
 
           if [ -z "$TOKEN" ]; then
-            echo "Kon geen Graph-token ophalen; faalmelding kan niet verzonden worden." >&2
+            echo "Kon geen Graph-token ophalen (HTTP ${HTTP_TOKEN_CODE}); faalmelding kan niet verzonden worden." >&2
+            echo "Azure-antwoord:" >&2
+            cat /tmp/token-resp.json >&2 || true
             exit 0
           fi
 

@@ -1,3 +1,9 @@
+## 2026-08-18 — Deploy-faalmelding crashte bij verlopen Azure-secret (HTTP 401 → graceful exit)
+
+- **Probleem**: de stappen "Faalmelding e-mailen naar René" en "Tijd- en schijfbewaking" in `.github/workflows/deploy.yml` gebruikten `curl -fsS` om een Microsoft Graph-bearer-token op te halen. De `-f`-vlag laat curl met een niet-nul exitcode stoppen bij HTTP 4xx; onder `set -euo pipefail` brak daardoor het hele `TOKEN=$(curl ... | node ...)` kommando af vóórdat de graceful-exit-guard (`if [ -z "$TOKEN" ]`) bereikt werd. Gevolg: een verder geslaagde deploy kleurde rood, en echte faalmeldingen werden niet bezorgd (run 32147986350, 18-08-2026).
+- **Fix**: de `-f`-vlag verwijderd uit alle drie de token-aanroepen (noodfix, tijdbewaking, faalmelding). De respons wordt nu naar een tijdelijk bestand geschreven; de HTTP-statuscode wordt apart vastgelegd en gelogd (`HTTP ${HTTP_TOKEN_CODE}`), inclusief het volledige Azure-antwoord bij mislukken. De bewaking- en faalmeldingstap verlaten bij een leeg token met exit 0 (nooit de werkelijke uitroluitkomst maskeren); de noodfixtap blijft exit 1 (melding is daar verplicht).
+- **Nog te doen door René**: AZURE_CLIENT_SECRET vernieuwen in de Azure-portaal en de GitHub Actions-secrets bijwerken; zie `docs/antwoorden/GRAPH_MAIL_401_HERSTEL.md` voor de stap-voor-stap instructie. Gebruik daarna `test_faalmail=TEST` om de mailstap end-to-end te beproeven.
+
 ## 2026-08-18 — Migratie 0083-nummerbotsing hernummerd naar 0085 (CI-poort blokkeerde de deploy)
 
 - **Probleem**: de voorraadtelling-merge introduceerde `0083_voorraadtelling-en-magazijn-exact.sql`, terwijl `0083_zzp-bedrijfsnaam.sql` (zelf eerder hernummerd van 0079) al bestond én al op productie gedeployed was. De CI-hernoemingscontrole blokkeerde daardoor terecht álle deploys sinds de merge — ook de hoofdbeheerder-fix voor /app/.
