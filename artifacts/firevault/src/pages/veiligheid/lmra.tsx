@@ -37,6 +37,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
+// Sentinel-waarde: Radix Select crasht bij value="" (zelfde bug als profielen-bewerken)
+const GEEN_OPDRACHT = "__geen_opdracht__";
+
 const STANDAARD_RISICOS = [
   "Val van hoogte",
   "Beknelling",
@@ -489,9 +492,9 @@ export default function VeiligheidLmraPagina() {
                   Opdracht / project (optioneel)
                 </Label>
                 <Select
-                  value={formulier.opdracht_id !== null ? String(formulier.opdracht_id) : ""}
+                  value={formulier.opdracht_id !== null ? String(formulier.opdracht_id) : GEEN_OPDRACHT}
                   onValueChange={(v) => {
-                    if (!v) {
+                    if (v === GEEN_OPDRACHT) {
                       setFormulier((f) => ({ ...f, opdracht_id: null, project_naam: "" }));
                       return;
                     }
@@ -509,7 +512,7 @@ export default function VeiligheidLmraPagina() {
                     <SelectValue placeholder="Geen opdracht geselecteerd" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen opdracht</SelectItem>
+                    <SelectItem value={GEEN_OPDRACHT}>Geen opdracht</SelectItem>
                     {opdrachtOpties.map((o: LmraOpenstaandItem) => (
                       <SelectItem key={o.opdracht_id} value={String(o.opdracht_id)}>
                         <span className="flex items-center gap-2">

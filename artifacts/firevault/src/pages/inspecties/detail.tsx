@@ -50,6 +50,11 @@ function fotoSrc(path: string): string {
   return `/api/storage/${path}`;
 }
 
+// Sentinel-waarden: Radix Select crasht bij value="" (zelfde bug als profielen-bewerken)
+const GEEN_SPOT = "__geen_spot__";
+const GEEN_TOEWIJZING = "__geen_toewijzing__";
+const ZELFDE_INSPECTEUR = "__zelfde_inspecteur__";
+
 const BEVINDING_STATUS = {
   goed: { label: "Goed", kleur: "bg-green-100 text-green-800 border-green-200", icoon: CheckCircle2 },
   aandacht: { label: "Aandacht vereist", kleur: "bg-amber-100 text-amber-800 border-amber-200", icoon: AlertTriangle },
@@ -658,12 +663,12 @@ export default function InspectieDetail() {
           <div className="space-y-4 py-1">
             <div className="space-y-1.5">
               <Label>Spot (optioneel)</Label>
-              <Select value={addForm.voorziening_id} onValueChange={(v) => setAddForm((f) => ({ ...f, voorziening_id: v }))}>
+              <Select value={addForm.voorziening_id || GEEN_SPOT} onValueChange={(v) => setAddForm((f) => ({ ...f, voorziening_id: v === GEEN_SPOT ? "" : v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Algemene bevinding (geen spot)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Algemeen</SelectItem>
+                  <SelectItem value={GEEN_SPOT}>Algemeen</SelectItem>
                   {(voorzieningenData?.items ?? []).map((v) => (
                     <SelectItem key={v.id} value={String(v.id)}>
                       {v.objectnummer} — {v.type}
@@ -795,12 +800,12 @@ export default function InspectieDetail() {
             </div>
             <div className="space-y-1.5">
               <Label>Toewijzen aan (optioneel)</Label>
-              <Select value={herstellForm.toegewezen_aan_id} onValueChange={(v) => setHerstellForm((f) => ({ ...f, toegewezen_aan_id: v }))}>
+              <Select value={herstellForm.toegewezen_aan_id || GEEN_TOEWIJZING} onValueChange={(v) => setHerstellForm((f) => ({ ...f, toegewezen_aan_id: v === GEEN_TOEWIJZING ? "" : v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Niet toewijzen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Niet toewijzen</SelectItem>
+                  <SelectItem value={GEEN_TOEWIJZING}>Niet toewijzen</SelectItem>
                   {(toewijsbareGebruikers ?? []).map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.naam}
@@ -856,12 +861,12 @@ export default function InspectieDetail() {
             </div>
             <div className="space-y-1.5">
               <Label>Inspecteur (optioneel)</Label>
-              <Select value={herinspectieForm.inspecteur_id} onValueChange={(v) => setHerinspectieForm((f) => ({ ...f, inspecteur_id: v }))}>
+              <Select value={herinspectieForm.inspecteur_id || ZELFDE_INSPECTEUR} onValueChange={(v) => setHerinspectieForm((f) => ({ ...f, inspecteur_id: v === ZELFDE_INSPECTEUR ? "" : v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Zelfde als huidige inspectie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Zelfde inspecteur</SelectItem>
+                  <SelectItem value={ZELFDE_INSPECTEUR}>Zelfde inspecteur</SelectItem>
                   {(toewijsbareGebruikers ?? []).map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.naam}

@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import type { SnagstreamRapport } from "@workspace/api-client-react";
 
+// Sentinel-waarde: Radix Select crasht bij value="" (zelfde bug als profielen-bewerken)
+const GEEN_GEBOUW = "__geen_gebouw__";
+
 const STATUS_LABEL: Record<string, string> = {
   nieuw: "Nieuw",
   ai_uitgelezen: "AI uitgelezen",
@@ -241,12 +244,12 @@ export default function SnagstreamArchiefPagina() {
             </div>
             <div>
               <Label>Koppelen aan gebouw (optioneel)</Label>
-              <Select value={gebouwId} onValueChange={setGebouwId}>
+              <Select value={gebouwId || GEEN_GEBOUW} onValueChange={(v) => setGebouwId(v === GEEN_GEBOUW ? "" : v)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Kies een gebouw..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nog niet koppelen</SelectItem>
+                  <SelectItem value={GEEN_GEBOUW}>Nog niet koppelen</SelectItem>
                   {(gebouwen as Array<{ id: number; naam: string }>).map((g) => (
                     <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
                   ))}

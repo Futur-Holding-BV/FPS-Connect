@@ -33,6 +33,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bug, MessageCircleQuestion, Lightbulb, Image as ImageIcon, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Sentinel-waarde: Radix Select crasht bij value="" (zelfde bug als profielen-bewerken)
+const ALLE_FILTER = "__alle__";
+
 const TYPE_LABELS: Record<string, string> = {
   bug: "Bug",
   vraag: "Vraag",
@@ -309,12 +312,12 @@ export default function MeldingenBeheerPage() {
       <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Type</Label>
-          <Select value={filters.type ?? ""} onValueChange={(v) => filterWijzig("type", v || undefined)}>
+          <Select value={filters.type ?? ALLE_FILTER} onValueChange={(v) => filterWijzig("type", v === ALLE_FILTER ? undefined : v)}>
             <SelectTrigger className="h-8 w-36 text-xs">
               <SelectValue placeholder="Alle types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="" className="text-xs">Alle types</SelectItem>
+              <SelectItem value={ALLE_FILTER} className="text-xs">Alle types</SelectItem>
               <SelectItem value="bug" className="text-xs">Bug</SelectItem>
               <SelectItem value="vraag" className="text-xs">Vraag</SelectItem>
               <SelectItem value="verbetering" className="text-xs">Verbetering</SelectItem>
@@ -324,12 +327,12 @@ export default function MeldingenBeheerPage() {
 
         <div className="space-y-1">
           <Label className="text-xs">Urgentie</Label>
-          <Select value={filters.urgentie ?? ""} onValueChange={(v) => filterWijzig("urgentie", v || undefined)}>
+          <Select value={filters.urgentie ?? ALLE_FILTER} onValueChange={(v) => filterWijzig("urgentie", v === ALLE_FILTER ? undefined : v)}>
             <SelectTrigger className="h-8 w-40 text-xs">
               <SelectValue placeholder="Alle urgentie" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="" className="text-xs">Alle urgentie</SelectItem>
+              <SelectItem value={ALLE_FILTER} className="text-xs">Alle urgentie</SelectItem>
               <SelectItem value="laag" className="text-xs">Laag</SelectItem>
               <SelectItem value="normaal" className="text-xs">Normaal</SelectItem>
               <SelectItem value="hoog" className="text-xs">Hoog</SelectItem>
@@ -340,12 +343,12 @@ export default function MeldingenBeheerPage() {
 
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
-          <Select value={filters.status ?? ""} onValueChange={(v) => filterWijzig("status", v || undefined)}>
+          <Select value={filters.status ?? ALLE_FILTER} onValueChange={(v) => filterWijzig("status", v === ALLE_FILTER ? undefined : v)}>
             <SelectTrigger className="h-8 w-40 text-xs">
               <SelectValue placeholder="Alle statussen" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="" className="text-xs">Alle statussen</SelectItem>
+              <SelectItem value={ALLE_FILTER} className="text-xs">Alle statussen</SelectItem>
               <SelectItem value="nieuw" className="text-xs">Nieuw</SelectItem>
               <SelectItem value="in_behandeling" className="text-xs">In behandeling</SelectItem>
               <SelectItem value="opgelost" className="text-xs">Opgelost</SelectItem>

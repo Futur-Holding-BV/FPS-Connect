@@ -49,6 +49,9 @@ function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
 }
 
+// Sentinel-waarde: Radix Select crasht bij value="" (zelfde bug als profielen-bewerken)
+const GEEN_ARTIKEL = "__geen_artikel__";
+
 const TYPE_LABELS: Record<string, { label: string; kleur: string; omschrijving: string }> = {
   voorraad: { label: "Uit voorraad", kleur: "bg-emerald-50 text-emerald-800 border-emerald-200", omschrijving: "Direct leverbaar" },
   standaard: { label: "Standaard", kleur: "bg-blue-50 text-blue-800 border-blue-200", omschrijving: "1-2 weken" },
@@ -795,14 +798,14 @@ function OntvangstDialog({
                     <div className="space-y-1">
                       <Label className="text-xs">Magazijnartikel (optioneel)</Label>
                       <Select
-                        value={regels[i]?.artikel_id ?? ""}
-                        onValueChange={(v) => setRegels((prev) => prev.map((r, j) => j === i ? { ...r, artikel_id: v } : r))}
+                        value={regels[i]?.artikel_id || GEEN_ARTIKEL}
+                        onValueChange={(v) => setRegels((prev) => prev.map((r, j) => j === i ? { ...r, artikel_id: v === GEEN_ARTIKEL ? "" : v } : r))}
                       >
                         <SelectTrigger className="text-xs">
                           <SelectValue placeholder="Kies artikel..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Niet koppelen</SelectItem>
+                          <SelectItem value={GEEN_ARTIKEL}>Niet koppelen</SelectItem>
                           {(artikelen ?? []).map((a) => (
                             <SelectItem key={a.id} value={String(a.id)}>
                               {a.naam}
