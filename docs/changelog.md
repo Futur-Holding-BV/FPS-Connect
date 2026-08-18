@@ -1,3 +1,8 @@
+## 2026-08-18 — /app/ stuurde ingelogde hoofdbeheerder zelf terug naar de desktop (buitendienst-poort)
+
+- **Probleem**: René kreeg op zijn telefoon op `connect.fps-one.nl/app/` het ingelogde Connect-welkomstscherm i.p.v. de monteuromgeving, terwijl de server aantoonbaar de monteur-HTML serveert. Oorzaak zat in de app zelf: de buitendienst-poort in `artifacts/monteur-app/app/_layout.tsx` deed voor élke ingelogde gebruiker zonder buitendienstprofiel een `window.location.replace("/")` — en `isUitvoerendVeld()` sluit de hoofdbeheerder expliciet uit. De app laadde dus wél, zag de bestaande sessie en gooide hem direct naar de desktop. Anonieme controles (curl/screenshots zonder login) raakten die poort nooit, vandaar de eerdere tegenspraak tussen meting en telefoon.
+- **Oplossing**: de hoofdbeheerder mag de monteuromgeving altijd bekijken (toezicht/test); alleen overige niet-buitendienstprofielen gaan nog terug naar Connect. `isUitvoerendVeld()` zelf is ongewijzigd zodat de web-kant (verbergen kantoorhoofdstukken) niet meebeweegt.
+
 ## 2026-08-18 — Telefoons bleven op /app/ de oude desktop-HTML uit hun cache tonen (no-cache headers)
 
 - **Probleem**: René kreeg op `connect.fps-one.nl/app/` hardnekkig de desktopomgeving, terwijl de server aantoonbaar de monteuromgeving serveert (titel "FPS Monteur", `versie.json` = `61363659`). Oorzaak: de desktop-HTML (SPA-fallback) en root-`sw.js` gingen zonder `Cache-Control` de deur uit, alleen met etag/last-modified. Browsers mogen zulke antwoorden **heuristisch cachen** — een telefoon die vóór MONTEUR_NU_01 ooit `/app/` bezocht (toen dat nog naar de desktop-SPA doorviel) bleef die oude HTML uit de eigen HTTP-cache tonen zonder de server nog te raadplegen.

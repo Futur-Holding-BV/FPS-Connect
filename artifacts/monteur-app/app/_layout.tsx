@@ -491,7 +491,11 @@ function RootLayoutNav() {
     // een lus veroorzaken (o.a. e2e met hoofdbeheerder-testaccount).
     const pad = window.location.pathname;
     const onderApp = pad === "/app" || pad.startsWith("/app/");
-    if (onderApp && !isUitvoerendVeld(gebruiker)) {
+    // Hoofdbeheerder mag de monteuromgeving altijd bekijken (toezicht/test);
+    // alleen overige niet-buitendienstprofielen gaan terug naar Connect.
+    const magBlijven =
+      isUitvoerendVeld(gebruiker) || gebruiker.rol === "hoofdbeheerder";
+    if (onderApp && !magBlijven) {
       window.location.replace("/");
     }
   }, [bezigLaden, token, gebruiker]);
