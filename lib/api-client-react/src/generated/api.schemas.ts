@@ -14918,6 +14918,144 @@ export interface MagazijnBatchExportResultaat {
 }
 
 export type VoorraadTellingAanmakenGrondslag = typeof VoorraadTellingAanmakenGrondslag[keyof typeof VoorraadTellingAanmakenGrondslag];
+
+
+export const VoorraadTellingAanmakenGrondslag = {
+  inkoopprijs: 'inkoopprijs',
+  laatste_inkoopprijs: 'laatste_inkoopprijs',
+  gewogen_gemiddelde: 'gewogen_gemiddelde',
+} as const;
+
+export interface VoorraadTellingAanmaken {
+  /** JJJJ-MM-DD */
+  peildatum: string;
+  grondslag: VoorraadTellingAanmakenGrondslag;
+  /** @nullable */
+  omschrijving?: string | null;
+}
+
+export type VoorraadTellingGrondslag = typeof VoorraadTellingGrondslag[keyof typeof VoorraadTellingGrondslag];
+
+
+export const VoorraadTellingGrondslag = {
+  inkoopprijs: 'inkoopprijs',
+  laatste_inkoopprijs: 'laatste_inkoopprijs',
+  gewogen_gemiddelde: 'gewogen_gemiddelde',
+} as const;
+
+export type VoorraadTellingStatus = typeof VoorraadTellingStatus[keyof typeof VoorraadTellingStatus];
+
+
+export const VoorraadTellingStatus = {
+  open: 'open',
+  vastgesteld: 'vastgesteld',
+} as const;
+
+export interface VoorraadTelling {
+  id: number;
+  peildatum: string;
+  grondslag: VoorraadTellingGrondslag;
+  status: VoorraadTellingStatus;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  vastgesteld_door_id?: number | null;
+  /** @nullable */
+  vastgesteld_door_naam?: string | null;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  aantal_regels: number;
+}
+
+export interface VoorraadTellingRegelInvoer {
+  artikel_id: number;
+  /** @nullable */
+  locatie_id?: number | null;
+  geteld_aantal: number;
+  bevestigd?: boolean;
+}
+
+export interface VoorraadTellingRegel {
+  id: number;
+  telling_id: number;
+  /** @nullable */
+  artikel_id?: number | null;
+  artikel_naam: string;
+  /** @nullable */
+  artikel_code?: string | null;
+  eenheid: string;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** @nullable */
+  locatie_naam?: string | null;
+  geteld_aantal: number;
+  /** @nullable */
+  administratieve_voorraad?: number | null;
+  /** @nullable */
+  verschil_aantal?: number | null;
+  /** @nullable */
+  prijs?: number | null;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  laatste_beweging_op?: string | null;
+  bevestigd: boolean;
+  /** @nullable */
+  geteld_door_id?: number | null;
+  /** @nullable */
+  geteld_door_naam?: string | null;
+  /** @nullable */
+  geteld_op?: string | null;
+}
+
+export type VoorraadTellingDetail = VoorraadTelling & {
+  regels: VoorraadTellingRegel[];
+};
+
+export interface VoorraadTellingVerschilRegel {
+  regel_id: number;
+  /** @nullable */
+  artikel_id?: number | null;
+  artikel_naam: string;
+  /** @nullable */
+  artikel_code?: string | null;
+  eenheid: string;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** @nullable */
+  locatie_naam?: string | null;
+  administratieve_voorraad: number;
+  geteld_aantal: number;
+  verschil_aantal: number;
+  /** @nullable */
+  prijs?: number | null;
+  /** @nullable */
+  geteld_waarde?: number | null;
+  /** @nullable */
+  verschil_waarde?: number | null;
+  bevestigd: boolean;
+}
+
+export interface VoorraadTellingVerschillen {
+  telling_id: number;
+  peildatum: string;
+  grondslag: string;
+  status: string;
+  regels: VoorraadTellingVerschilRegel[];
+  totaal_geteld_waarde: number;
+  totaal_verschil_waarde: number;
+  regels_zonder_prijs: number;
+}
+
+export type VoorraadTellingVastgesteld = VoorraadTelling & {
+  correcties_geboekt: number;
+};
+
 export interface VoorraadMutatie {
   id: number;
   artikel_id: number;
@@ -19098,136 +19236,3 @@ export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
 
-export interface VoorraadTellingVerschilRegel {
-  regel_id: number;
-  /** @nullable */
-  artikel_id?: number | null;
-  artikel_naam: string;
-  /** @nullable */
-  artikel_code?: string | null;
-  eenheid: string;
-  /** @nullable */
-  locatie_id?: number | null;
-  /** @nullable */
-  locatie_naam?: string | null;
-  administratieve_voorraad: number;
-  geteld_aantal: number;
-  verschil_aantal: number;
-  /** @nullable */
-  prijs?: number | null;
-  /** @nullable */
-  geteld_waarde?: number | null;
-  /** @nullable */
-  verschil_waarde?: number | null;
-  bevestigd: boolean;
-}
-
-export interface VoorraadTellingVerschillen {
-  telling_id: number;
-  peildatum: string;
-  grondslag: string;
-  status: string;
-  regels: VoorraadTellingVerschilRegel[];
-  totaal_geteld_waarde: number;
-  totaal_verschil_waarde: number;
-  regels_zonder_prijs: number;
-}
-
-export const VoorraadTellingStatus = {
-  open: 'open',
-  vastgesteld: 'vastgesteld',
-} as const;
-
-export type VoorraadTellingGrondslag = typeof VoorraadTellingGrondslag[keyof typeof VoorraadTellingGrondslag];
-
-export const VoorraadTellingGrondslag = {
-  inkoopprijs: 'inkoopprijs',
-  laatste_inkoopprijs: 'laatste_inkoopprijs',
-  gewogen_gemiddelde: 'gewogen_gemiddelde',
-} as const;
-
-export interface VoorraadTellingRegel {
-  id: number;
-  telling_id: number;
-  /** @nullable */
-  artikel_id?: number | null;
-  artikel_naam: string;
-  /** @nullable */
-  artikel_code?: string | null;
-  eenheid: string;
-  /** @nullable */
-  locatie_id?: number | null;
-  /** @nullable */
-  locatie_naam?: string | null;
-  geteld_aantal: number;
-  /** @nullable */
-  administratieve_voorraad?: number | null;
-  /** @nullable */
-  verschil_aantal?: number | null;
-  /** @nullable */
-  prijs?: number | null;
-  /** @nullable */
-  waarde?: number | null;
-  /** @nullable */
-  laatste_beweging_op?: string | null;
-  bevestigd: boolean;
-  /** @nullable */
-  geteld_door_id?: number | null;
-  /** @nullable */
-  geteld_door_naam?: string | null;
-  /** @nullable */
-  geteld_op?: string | null;
-}
-
-export interface VoorraadTelling {
-  id: number;
-  peildatum: string;
-  grondslag: VoorraadTellingGrondslag;
-  status: VoorraadTellingStatus;
-  /** @nullable */
-  omschrijving?: string | null;
-  /** @nullable */
-  aangemaakt_door_id?: number | null;
-  /** @nullable */
-  aangemaakt_door_naam?: string | null;
-  aangemaakt_op: string;
-  /** @nullable */
-  vastgesteld_door_id?: number | null;
-  /** @nullable */
-  vastgesteld_door_naam?: string | null;
-  /** @nullable */
-  vastgesteld_op?: string | null;
-  aantal_regels: number;
-}
-
-export type VoorraadTellingStatus = typeof VoorraadTellingStatus[keyof typeof VoorraadTellingStatus];
-
-export interface VoorraadTellingAanmaken {
-  /** JJJJ-MM-DD */
-  peildatum: string;
-  grondslag: VoorraadTellingAanmakenGrondslag;
-  /** @nullable */
-  omschrijving?: string | null;
-}
-
-export type VoorraadTellingVastgesteld = VoorraadTelling & {
-  correcties_geboekt: number;
-};
-
-export const VoorraadTellingAanmakenGrondslag = {
-  inkoopprijs: 'inkoopprijs',
-  laatste_inkoopprijs: 'laatste_inkoopprijs',
-  gewogen_gemiddelde: 'gewogen_gemiddelde',
-} as const;
-
-export interface VoorraadTellingRegelInvoer {
-  artikel_id: number;
-  /** @nullable */
-  locatie_id?: number | null;
-  geteld_aantal: number;
-  bevestigd?: boolean;
-}
-
-export type VoorraadTellingDetail = VoorraadTelling & {
-  regels: VoorraadTellingRegel[];
-};
