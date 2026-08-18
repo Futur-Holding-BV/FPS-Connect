@@ -3,7 +3,7 @@ name: Projecten-sleutel & bedragen-strip
 description: Modulesleutel 'projecten' (BOUW_01) — niveau-semantiek, server-side bedragen-strip, meldingenroutes en valkuilen bij nieuwe lees-routes.
 ---
 
-# Projecten-sleutel (BOUW_01, goedgekeurd door René 09-08-2026)
+# Projecten-sleutel (BOUW_01, goedgekeurd door de beheerder 09-08-2026)
 
 Opdrachten (`routes/opdrachten.ts`) en werkvoorbereiding (`routes/werkvoorbereiding.ts`) vallen onder sleutel **`projecten`** met AFWIJKENDE niveau-semantiek: **1 = lezen zónder bedragen, 2 = lezen mét bedragen, 3 = schrijven** (niet de 1=lezen/2=schrijven-conventie). Alleen `POST /offertes/:id/maak-opdracht` blijft `offertes` 2. Materiaal-aanvragen behandelen = projecten 2/3.
 

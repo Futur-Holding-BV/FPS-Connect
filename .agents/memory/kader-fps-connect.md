@@ -3,7 +3,7 @@ name: KADER FPS Connect
 description: Verplicht projectkader — vóór elke opdracht lezen; harde regels binnenlaag/eenrichting/klantloos/migraties/geen productieremmen.
 ---
 
-René heeft `attached_assets/KADER-FPS-Connect_1786782872651.md` (15 aug 2026) neergezet met de opdracht: **lees dit vóór elke opdracht**.
+de beheerder heeft `attached_assets/KADER-FPS-Connect_1786782872651.md` (15 aug 2026) neergezet met de opdracht: **lees dit vóór elke opdracht**.
 
 Kern (details in het bestand zelf):
 - Connect = binnenlaag/ERP van FPS; géén enkele externe gebruiker. Klanten wonen in FPS One Platform (andere codebase/server).

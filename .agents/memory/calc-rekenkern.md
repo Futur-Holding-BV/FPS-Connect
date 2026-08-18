@@ -9,4 +9,4 @@ description: Eén gedeelde rekenkern voor alle calculatiebedragen; geldvelden ex
 - **De kern negeert een opgeslagen `totaal`-veld**: alles komt uit hoeveelheid×tarief (+arbeid/OA). Regels die alleen een bedrag dragen (bv. ENK-correctieregel) moeten dat bedrag dus in `tarief` zetten (hoeveelheid 1). `mapRegel` retourneert het kern-berekende totaal, niet de kolom.
 - Geldvelden zijn sinds migratie 0077 exact `numeric(12,2)` (drizzle `mode:"number"`); hoeveelheid/normtijd/mu blijven `real`. Nieuwe geldkolommen in de calculatiemodule altijd numeric(12,2).
 - **Why:** float-rekenwerk + verspreide formulevarianten gaven onnatelbare/afwijkende totalen tussen detail, print en offerte.
-- Natellingen Cityflat (€16.330,60) en De Grundel (€294.452,65) staan als skip-tests in lib/calculatie/src/kern.test.ts tot René de volledige regelbestanden aanlevert.
+- Natellingen Cityflat (€16.330,60) en De Grundel (€294.452,65) staan als skip-tests in lib/calculatie/src/kern.test.ts tot de beheerder de volledige regelbestanden aanlevert.

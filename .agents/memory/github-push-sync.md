@@ -25,7 +25,7 @@ Als GitHub-commits niet in de lokale history zitten (of andersom): check eerst m
 
 - `GITHUB_TOKEN_PUSH` heeft geen `actions`-recht: `/repos/.../actions/runs` geeft 403.
 - Commits-lijst (`/repos/.../commits`) en ref-info (`/repos/.../git/ref/heads/main`) werken wel met dezelfde token.
-- Repo heet `Futur-Holding-BV/FPS-Connect` (verhuisd van `vinkrene-jpg/fps-one`, aug 2026); PAT blijft van account vinkrene-jpg en moet toegang op de org-repo hebben; Actions-secret heet FPS_PUSH_TOKEN.
+- Repo heet `Futur-Holding-BV/FPS-Connect` (verhuisd aug 2026); PAT van het beheerder-account moet toegang op de org-repo hebben; Actions-secret heet FPS_PUSH_TOKEN.
 
 ## Productie-verificatie na deploy
 
@@ -53,4 +53,4 @@ Een push naar main triggert `.github/workflows/deploy.yml` (Docker-images bouwen
 
 - `git push` met GITHUB_TOKEN_PUSH wordt geweigerd zodra het commit `.github/workflows/*` wijzigt: "refusing to allow a Personal Access Token to ... without `workflow` scope". Fine-grained fix: Workflows R/W toevoegen (resource owner Futur-Holding-BV).
 - Omweg via de Replit GitHub-koppeling werkt óók niet: (a) de connector-proxy blokkeert elke URL met `.github` erin (Cloudflare-403 HTML), (b) de git-data-API (blob lukt, 201) faalt bij tree-create met 404 zodra het pad `.github/workflows/...` bevat — het koppelingstoken mist eveneens workflow-rechten.
-- **How to apply:** commit splitsen (workflow-bestand apart), rest pushen, workflow-commit lokaal laten staan en René vragen de scope toe te voegen; daarna gewoon `git push`.
+- **How to apply:** commit splitsen (workflow-bestand apart), rest pushen, workflow-commit lokaal laten staan en de beheerder vragen de scope toe te voegen; daarna gewoon `git push`.

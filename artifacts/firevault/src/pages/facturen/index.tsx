@@ -24,6 +24,7 @@ import {
 import type { Factuur } from "@workspace/api-client-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { GoedkeuringLabel } from "@/components/goedkeuring/goedkeuring-label";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
@@ -89,6 +90,8 @@ function PrijsafwijkingMaandkaart() {
 
 export default function FacturenPagina() {
   const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magMuteren = heeftNiveau("financieel", 2);
   const [tab, setTab] = useState<string>("alle");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bestand, setBestand] = useState<File | null>(null);
@@ -159,10 +162,12 @@ export default function FacturenPagina() {
               Klaar voor export
             </Button>
           </Link>
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
-            <Upload className="h-3.5 w-3.5 mr-1.5" />
-            Verkoopfactuur uploaden
-          </Button>
+          {magMuteren && (
+            <Button size="sm" onClick={() => setUploadOpen(true)}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Verkoopfactuur uploaden
+            </Button>
+          )}
         </div>
       </div>
 
@@ -190,7 +195,7 @@ export default function FacturenPagina() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        {isHistorischTab && (
+        {isHistorischTab && magMuteren && (
           <a href="/api/facturen/historisch-archief/excel" download>
             <Button size="sm" variant="outline">
               <FileDown className="h-3.5 w-3.5 mr-1.5" />
@@ -212,12 +217,14 @@ export default function FacturenPagina() {
             <p className="font-medium">Nog geen facturen</p>
             <p className="text-xs mt-1">Inkoopfacturen komen automatisch binnen via de factuurmailbox; verkoopfacturen kun je hier uploaden.</p>
           </div>
-          <div className="text-center pt-2">
-            <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Eerste verkoopfactuur uploaden
-            </Button>
-          </div>
+          {magMuteren && (
+            <div className="text-center pt-2">
+              <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Eerste verkoopfactuur uploaden
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-lg border overflow-hidden">
@@ -295,7 +302,7 @@ export default function FacturenPagina() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      {(f.status === "ontvangen" || f.status === "controle_nodig") && f.pdf_url && (
+                      {magMuteren && (f.status === "ontvangen" || f.status === "controle_nodig") && f.pdf_url && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -317,14 +324,16 @@ export default function FacturenPagina() {
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
                       </Link>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => { if (confirm("Factuur verwijderen?")) deleteMut.mutate({ id: f.id }); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {magMuteren && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => { if (confirm("Factuur verwijderen?")) deleteMut.mutate({ id: f.id }); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

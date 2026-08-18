@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 // FACTUUR_02 §4 — gesloten afwijsredenlijst (geen vrije tekst)
 const STROOM_AFWIJSREDENEN: Record<string, string> = {
@@ -117,6 +118,8 @@ export default function FactuurDetailPagina() {
   const [, params] = useRoute("/facturen/:id");
   const id = parseInt(params?.id ?? "0", 10);
   const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magMuteren = heeftNiveau("financieel", 2);
 
   const [bewerkOpen, setBewerkOpen] = useState(false);
   const [blokkerenOpen, setBlokkerenOpen] = useState(false);
@@ -433,7 +436,7 @@ export default function FactuurDetailPagina() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {kanAi && (
+              {magMuteren && kanAi && (
                 <Button size="sm" variant="outline" disabled={aiBezig} onClick={async () => { setAiBezig(true); try { await aiMut.mutateAsync({ id }); } catch { /* onError toast */ } finally { setAiBezig(false); } }}>
                   {aiBezig ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />AI bezig...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />AI uitlezen</>}
                 </Button>
@@ -441,59 +444,63 @@ export default function FactuurDetailPagina() {
               <Button size="sm" variant="outline" onClick={() => window.open(`/facturen/${id}/print`, "_blank")}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" />Afdrukken
               </Button>
-              <Button size="sm" variant="outline" onClick={() => openBewerk(f)}>Bewerken</Button>
-              {kanAccorderen && (
+              {magMuteren && (
+                <Button size="sm" variant="outline" onClick={() => openBewerk(f)}>Bewerken</Button>
+              )}
+              {magMuteren && kanAccorderen && (
                 <Button size="sm" disabled={accorderenMut.isPending} onClick={() => accorderenMut.mutate({ id })}>
                   {accorderenMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
                   Accorderen
                 </Button>
               )}
-              {kanExporteren && (
+              {magMuteren && kanExporteren && (
                 <Button size="sm" disabled={exportBezig} onClick={async () => { setExportBezig(true); await exportMut.mutateAsync({ id }); setExportBezig(false); }}>
                   {exportBezig ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Verzenden...</> : <><ArrowUpRight className="h-3.5 w-3.5 mr-1.5" />Verzenden naar AccountView</>}
                 </Button>
               )}
-              {heeftFout && (
+              {magMuteren && heeftFout && (
                 <Button size="sm" variant="outline" disabled={exportBezig} onClick={async () => { setExportBezig(true); await exportMut.mutateAsync({ id }); setExportBezig(false); }}>
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Opnieuw proberen
                 </Button>
               )}
-              {kanHerexport && (
+              {magMuteren && kanHerexport && (
                 <Button size="sm" variant="outline" onClick={() => { setHerexportReden(""); setHerexportOpen(true); }}>
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Herexport
                 </Button>
               )}
-              {kanDoorsturen && (
+              {magMuteren && kanDoorsturen && (
                 <Button size="sm" variant="outline" onClick={() => { setDoorstuurGebruikerId(""); setDoorstuurOpmerking(""); setDoorstuurOpen(true); }}>
                   <UserCheck className="h-3.5 w-3.5 mr-1.5" />Doorsturen naar medewerker
                 </Button>
               )}
-              {isTerBeoordelingMedewerker && (
+              {magMuteren && isTerBeoordelingMedewerker && (
                 <Button size="sm" variant="outline" onClick={() => { setMedActie("goedkeuren"); setMedAfkeurReden(""); setMedBeoordeelOpen(true); }}>
                   <UserCheck className="h-3.5 w-3.5 mr-1.5" />Beoordelen
                 </Button>
               )}
-              {kanAfkeuren && (
+              {magMuteren && kanAfkeuren && (
                 <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { setAfkeurReden(""); setAfkeurenOpen(true); }}>
                   <XCircle className="h-3.5 w-3.5 mr-1.5" />Afkeuren
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant={f.geblokkeerd ? "outline" : "ghost"}
-                className={f.geblokkeerd ? "" : "text-muted-foreground"}
-                onClick={() => {
-                  if (f.geblokkeerd) {
-                    blokkerenMut.mutate({ id, data: { geblokkeerd: false } });
-                  } else {
-                    setBlokkeringReden("");
-                    setBlokkerenOpen(true);
-                  }
-                }}
-              >
-                <Ban className="h-3.5 w-3.5 mr-1.5" />
-                {f.geblokkeerd ? "Deblokkeren" : "Blokkeren"}
-              </Button>
+              {magMuteren && (
+                <Button
+                  size="sm"
+                  variant={f.geblokkeerd ? "outline" : "ghost"}
+                  className={f.geblokkeerd ? "" : "text-muted-foreground"}
+                  onClick={() => {
+                    if (f.geblokkeerd) {
+                      blokkerenMut.mutate({ id, data: { geblokkeerd: false } });
+                    } else {
+                      setBlokkeringReden("");
+                      setBlokkerenOpen(true);
+                    }
+                  }}
+                >
+                  <Ban className="h-3.5 w-3.5 mr-1.5" />
+                  {f.geblokkeerd ? "Deblokkeren" : "Blokkeren"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -573,7 +580,8 @@ export default function FactuurDetailPagina() {
             documentType={docType}
             bedrag={f.bedrag_incl_btw ? parseFloat(f.bedrag_incl_btw) : null}
             omschrijving={`${typeLabel} ${f.factuurnummer ?? `#${id}`}${f.relatienaam ? ` — ${f.relatienaam}` : ""}`}
-            toonIndienKnop={!f.geaccordeerd && !f.geblokkeerd}
+            toonIndienKnop={magMuteren && !f.geaccordeerd && !f.geblokkeerd}
+            leesOnly={!magMuteren}
             onWijziging={() => invalideer()}
           />
         );
@@ -595,19 +603,19 @@ export default function FactuurDetailPagina() {
             <CardContent className="space-y-4">
               {/* Acties per stap */}
               <div className="flex flex-wrap gap-2">
-                {f.status === "wacht_op_inkoper" && (
+                {magMuteren && f.status === "wacht_op_inkoper" && (
                   <Button size="sm" onClick={() => bevestigInkoopMut.mutate({ id })} disabled={bevestigInkoopMut.isPending} data-testid="knop-bevestig-inkoop">
                     {bevestigInkoopMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCheck className="h-4 w-4 mr-1" />}
                     Bestelling klopt — bevestigen
                   </Button>
                 )}
-                {f.status === "wacht_op_goedkeuring" && (
+                {magMuteren && f.status === "wacht_op_goedkeuring" && (
                   <Button size="sm" onClick={() => goedkeurenStroomMut.mutate({ id })} disabled={goedkeurenStroomMut.isPending} data-testid="knop-goedkeuren-stroom">
                     {goedkeurenStroomMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
                     Goedkeuren — vrijgeven voor betaling
                   </Button>
                 )}
-                {!["afgekeurd", "klaar_voor_betaling", "verwerkt"].includes(f.status) && (
+                {magMuteren && !["afgekeurd", "klaar_voor_betaling", "verwerkt"].includes(f.status) && (
                   <Button size="sm" variant="destructive" onClick={() => setStroomAfwijzenOpen(true)} data-testid="knop-afwijzen-stroom">
                     <XCircle className="h-4 w-4 mr-1" /> Afwijzen…
                   </Button>
@@ -693,34 +701,38 @@ export default function FactuurDetailPagina() {
                   <p className="text-xs font-medium text-amber-800">
                     Nog niet gekoppeld aan een leverancier uit het leveranciersregister.
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Select value={leverancierKeuze} onValueChange={setLeverancierKeuze}>
-                      <SelectTrigger className="h-8 flex-1" data-testid="select-leverancier-koppelen">
-                        <SelectValue placeholder="Kies een leverancier…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {leveranciers.filter((l) => l.actief).map((l) => (
-                          <SelectItem key={l.id} value={String(l.id)}>{l.naam}{l.stad ? ` — ${l.stad}` : ""}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      disabled={!leverancierKeuze || koppeltLeverancier}
-                      onClick={() => koppelLeverancier({ id, data: { leverancier_id: Number(leverancierKeuze) } })}
-                      data-testid="button-leverancier-koppelen"
-                    >
-                      Koppelen
-                    </Button>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setNieuweLeverancierOpen(true)} data-testid="button-nieuwe-leverancier">
-                    Leverancier staat er niet bij? Nieuwe leverancier aanmaken
-                  </Button>
-                  <NieuweLeverancierDialoog
-                    open={nieuweLeverancierOpen}
-                    onOpenChange={setNieuweLeverancierOpen}
-                    onAangemaakt={(lev) => koppelLeverancier({ id, data: { leverancier_id: lev.id } })}
-                  />
+                  {magMuteren && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Select value={leverancierKeuze} onValueChange={setLeverancierKeuze}>
+                          <SelectTrigger className="h-8 flex-1" data-testid="select-leverancier-koppelen">
+                            <SelectValue placeholder="Kies een leverancier…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {leveranciers.filter((l) => l.actief).map((l) => (
+                              <SelectItem key={l.id} value={String(l.id)}>{l.naam}{l.stad ? ` — ${l.stad}` : ""}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          disabled={!leverancierKeuze || koppeltLeverancier}
+                          onClick={() => koppelLeverancier({ id, data: { leverancier_id: Number(leverancierKeuze) } })}
+                          data-testid="button-leverancier-koppelen"
+                        >
+                          Koppelen
+                        </Button>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setNieuweLeverancierOpen(true)} data-testid="button-nieuwe-leverancier">
+                        Leverancier staat er niet bij? Nieuwe leverancier aanmaken
+                      </Button>
+                      <NieuweLeverancierDialoog
+                        open={nieuweLeverancierOpen}
+                        onOpenChange={setNieuweLeverancierOpen}
+                        onAangemaakt={(lev) => koppelLeverancier({ id, data: { leverancier_id: lev.id } })}
+                      />
+                    </>
+                  )}
                 </div>
               )
             )}
@@ -916,7 +928,7 @@ export default function FactuurDetailPagina() {
               )}
             </CardTitle>
             <div className="flex items-center gap-2">
-              {f.betaalstatus !== "incasso" && f.betaalstatus !== "betaald" && (
+              {magMuteren && f.betaalstatus !== "incasso" && f.betaalstatus !== "betaald" && (
                 <>
                   <Button
                     size="sm"
@@ -1179,13 +1191,15 @@ export default function FactuurDetailPagina() {
                   )}
                   <div className="flex items-start justify-between gap-2">
                     <p className={`flex-1 leading-relaxed ${o.afgehandeld ? "line-through text-muted-foreground" : ""}`}>{o.tekst}</p>
-                    <button
-                      className={`shrink-0 mt-0.5 p-1 rounded hover:bg-slate-100 transition-colors ${o.afgehandeld ? "text-green-600" : "text-muted-foreground"}`}
-                      title={o.afgehandeld ? "Heropenen" : "Markeer als afgehandeld"}
-                      onClick={() => afhandelenMut.mutate({ id, oid: o.id, data: { afgehandeld: !o.afgehandeld } })}
-                    >
-                      <CheckCheck className="h-3.5 w-3.5" />
-                    </button>
+                    {magMuteren && (
+                      <button
+                        className={`shrink-0 mt-0.5 p-1 rounded hover:bg-slate-100 transition-colors ${o.afgehandeld ? "text-green-600" : "text-muted-foreground"}`}
+                        title={o.afgehandeld ? "Heropenen" : "Markeer als afgehandeld"}
+                        onClick={() => afhandelenMut.mutate({ id, oid: o.id, data: { afgehandeld: !o.afgehandeld } })}
+                      >
+                        <CheckCheck className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
                     <span className="font-medium text-slate-600">{o.gebruiker_naam ?? "Onbekend"}</span>
@@ -1193,49 +1207,53 @@ export default function FactuurDetailPagina() {
                     {o.afgehandeld && o.afgehandeld_door_naam && (
                       <span className="text-green-600">Afgehandeld door {o.afgehandeld_door_naam}</span>
                     )}
-                    <button
-                      className="ml-auto text-xs text-primary hover:underline"
-                      onClick={() => { setReplyOpId(o.id); opmerkingInputRef.current?.focus(); }}
-                    >
-                      Reageren
-                    </button>
+                    {magMuteren && (
+                      <button
+                        className="ml-auto text-xs text-primary hover:underline"
+                        onClick={() => { setReplyOpId(o.id); opmerkingInputRef.current?.focus(); }}
+                      >
+                        Reageren
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
 
-              {/* Nieuwe opmerking invoer */}
-              <div className="space-y-2 pt-1">
-                {replyOpId && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-slate-50 rounded px-2 py-1">
-                    <CornerDownRight className="h-3 w-3" />
-                    <span>Reactie op opmerking #{replyOpId}</span>
-                    <button className="ml-auto text-xs hover:text-foreground" onClick={() => setReplyOpId(null)}>Annuleren</button>
+              {/* Nieuwe opmerking invoer — alleen voor gebruikers met schrijfrecht */}
+              {magMuteren && (
+                <div className="space-y-2 pt-1">
+                  {replyOpId && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-slate-50 rounded px-2 py-1">
+                      <CornerDownRight className="h-3 w-3" />
+                      <span>Reactie op opmerking #{replyOpId}</span>
+                      <button className="ml-auto text-xs hover:text-foreground" onClick={() => setReplyOpId(null)}>Annuleren</button>
+                    </div>
+                  )}
+                  <Textarea
+                    ref={opmerkingInputRef}
+                    placeholder="Opmerking toevoegen…"
+                    value={nieuweTekst}
+                    onChange={(e) => setNieuweTekst(e.target.value)}
+                    rows={2}
+                    className="resize-none text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && nieuweTekst.trim()) {
+                        opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } });
+                      }
+                    }}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      disabled={!nieuweTekst.trim() || opmerkingToevoegenMut.isPending}
+                      onClick={() => opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } })}
+                    >
+                      {opmerkingToevoegenMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
+                      Plaatsen
+                    </Button>
                   </div>
-                )}
-                <Textarea
-                  ref={opmerkingInputRef}
-                  placeholder="Opmerking toevoegen…"
-                  value={nieuweTekst}
-                  onChange={(e) => setNieuweTekst(e.target.value)}
-                  rows={2}
-                  className="resize-none text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && nieuweTekst.trim()) {
-                      opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } });
-                    }
-                  }}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    disabled={!nieuweTekst.trim() || opmerkingToevoegenMut.isPending}
-                    onClick={() => opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } })}
-                  >
-                    {opmerkingToevoegenMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-                    Plaatsen
-                  </Button>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

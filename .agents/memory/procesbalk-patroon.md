@@ -11,6 +11,6 @@ Regels bij toepassen op een nieuwe pagina:
 - Mutatieknoppen altijd gaten op module-schrijfniveau (2) en verwijderen op niveau (4) — reviewer keurde ongegate knoppen af.
 - Kleur alleen via NAV_01-hoofdstuktokens en nooit als enig signaal; balk niet verbergen op smalle schermen (hij wrapt).
 
-**Why:** René wil één herkenbaar procesgevoel over alle Projectaanpak-detailpagina's; losse knoppenrijen groeiden onbeheersbaar.
+**Why:** de beheerder wil één herkenbaar procesgevoel over alle Projectaanpak-detailpagina's; losse knoppenrijen groeiden onbeheersbaar.
 
 Screenshot-bewijs met login + licht/donker: forceer `colorScheme` in de Playwright-browsercontext, anders wint de systeemvoorkeur van headless chromium over de app-themavoorkeur.

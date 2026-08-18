@@ -4,7 +4,7 @@ description: How the production deploy workflow notifies on failure, and why it 
 ---
 
 `.github/workflows/deploy.yml` has an `if: failure()` step after the deploy
-step that emails René when the SSH deploy step fails (build, migration, or
+step that emails de beheerder when the SSH deploy step fails (build, migration, or
 post-deploy healthcheck).
 
 **Why call Microsoft Graph directly from the runner instead of the app's

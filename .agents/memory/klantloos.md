@@ -5,7 +5,7 @@ description: De rol 'klant' is volledig uit Connect verwijderd (aug 2026); wat b
 
 **Regel:** Connect is de binnenlaag zonder externe gebruikers; klanten wonen in het (externe) Platform. De rol `klant` bestaat niet meer: geen klantPoort, geen `requireBevoegdheidOfKlant`, geen `isKlant` in permissies-engine/PermissieService/aiContext, geen klant-frontend.
 
-**Why:** René's besluit (aug 2026). Eén rechtenmodel (module-matrix) voor iedereen; het externe klantoppervlak wordt buiten Connect gebouwd.
+**Why:** de beheerder's besluit (aug 2026). Eén rechtenmodel (module-matrix) voor iedereen; het externe klantoppervlak wordt buiten Connect gebouwd.
 
 **How to apply:**
 - Nieuwe routes: altijd `requireBevoegdheid(module, niveau)`; nooit een "of klant"-variant terugbouwen.

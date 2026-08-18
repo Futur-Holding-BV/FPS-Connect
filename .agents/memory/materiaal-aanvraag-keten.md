@@ -1,6 +1,6 @@
 ---
 name: Materiaal-aanvraagketen (MATERIAAL_01)
-description: Werkbaksignaal-sluiting, meet-/herstelendpoints en de bewust niet-gebouwde fase 3 (keuze A/B/C aan René)
+description: Werkbaksignaal-sluiting, meet-/herstelendpoints en de bewust niet-gebouwde fase 3 (keuze A/B/C aan de beheerder)
 ---
 
 # Materiaal-aanvraagketen

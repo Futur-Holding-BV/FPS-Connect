@@ -1,12 +1,12 @@
 ---
-name: René functiehuis splitsing
-description: Rene is nu directeur-bedrijfsleider-projectleider in één functie; toekomstige splitsing vereist verantwoordelijkheids-herindeling
+name: de beheerder functiehuis splitsing
+description: de beheerder is nu directeur-bedrijfsleider-projectleider in één functie; toekomstige splitsing vereist verantwoordelijkheids-herindeling
 ---
 
 ## Huidige situatie (juli 2026)
 
-René heeft één gecombineerde functie: **directeur-bedrijfsleider-projectleider**.
-Alle verantwoordelijkheden die nu aan de "projectleider" zijn gekoppeld (PL-notificaties, bevoegdheden `offertes:2+`, incident-meldingen, planning-meldingen, etc.) zijn feitelijk belegd bij René in deze gecombineerde rol.
+de beheerder heeft één gecombineerde functie: **directeur-bedrijfsleider-projectleider**.
+Alle verantwoordelijkheden die nu aan de "projectleider" zijn gekoppeld (PL-notificaties, bevoegdheden `offertes:2+`, incident-meldingen, planning-meldingen, etc.) zijn feitelijk belegd bij de beheerder in deze gecombineerde rol.
 
 ## Toekomstige splitsing
 
@@ -25,7 +25,7 @@ Op dat moment moeten de verantwoordelijkheden die nu aan "projectleider" hangen,
 ## Aandachtspunt bij implementatie
 
 Vóór de splitsing is er geen bouwwerk nodig. Maar als een nieuwe projectleider of bedrijfsleider wordt aangemaakt:
-1. Controleer welke verantwoordelijkheden van René's gecombineerde functie naar wie overgaan.
+1. Controleer welke verantwoordelijkheden van de beheerder's gecombineerde functie naar wie overgaan.
 2. Pas notificatie-targeting aan (niet langer alleen `offertes:2+`, maar mogelijk op rol/functie-basis).
 3. Bespreek met de gebruiker of dit via de bevoegdhedenmatrix (preset) of via een aparte attribuutkolom moet.
 

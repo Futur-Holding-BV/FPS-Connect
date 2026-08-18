@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   AlertTriangle, Clock, Copy, CalendarClock, Banknote, ShieldAlert,
   HelpCircle, UserX, Scale, CheckCircle2, Loader2, ArrowUpRight, Inbox, Mail,
@@ -56,7 +57,7 @@ interface Mailbox {
   isFactuurmailbox: boolean;
 }
 
-function FactuurmailboxInstelling() {
+function FactuurmailboxInstelling({ magMuteren }: { magMuteren: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: mailboxen, isLoading } = useQuery({
@@ -103,12 +104,14 @@ function FactuurmailboxInstelling() {
                 </div>
                 <div className="flex items-center gap-2">
                   {m.isFactuurmailbox && <Badge variant="secondary">Factuurmailbox</Badge>}
-                  <Switch
-                    checked={m.isFactuurmailbox}
-                    disabled={wijzig.isPending}
-                    onCheckedChange={(aan) => wijzig.mutate({ id: m.id, isFactuurmailbox: aan })}
-                    data-testid={`switch-factuurmailbox-${m.id}`}
-                  />
+                  {magMuteren && (
+                    <Switch
+                      checked={m.isFactuurmailbox}
+                      disabled={wijzig.isPending}
+                      onCheckedChange={(aan) => wijzig.mutate({ id: m.id, isFactuurmailbox: aan })}
+                      data-testid={`switch-factuurmailbox-${m.id}`}
+                    />
+                  )}
                 </div>
               </div>
             ))}
@@ -122,6 +125,8 @@ function FactuurmailboxInstelling() {
 export default function FactuurstroomBewakingPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magMuteren = heeftNiveau("financieel", 2);
   const [tab, setTab] = useState<"open" | "afgehandeld">("open");
   const [afTeHandelen, setAfTeHandelen] = useState<FactuurSignaal | null>(null);
   const [notitie, setNotitie] = useState("");
@@ -164,7 +169,7 @@ export default function FactuurstroomBewakingPagina() {
         />
       </div>
 
-      <FactuurmailboxInstelling />
+      <FactuurmailboxInstelling magMuteren={magMuteren} />
 
       <div className="flex gap-2">
         <Button variant={tab === "open" ? "default" : "outline"} size="sm" onClick={() => setTab("open")} data-testid="tab-open">
@@ -218,7 +223,7 @@ export default function FactuurstroomBewakingPagina() {
                         </Button>
                       </Link>
                     )}
-                    {s.status === "open" && (
+                    {magMuteren && s.status === "open" && (
                       <Button size="sm" onClick={() => { setAfTeHandelen(s); setNotitie(""); }} data-testid={`knop-afhandelen-${s.id}`}>
                         Afhandelen
                       </Button>
@@ -250,13 +255,15 @@ export default function FactuurstroomBewakingPagina() {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setAfTeHandelen(null)}>Annuleren</Button>
-            <Button
-              disabled={afhandelen.isPending || (notitieVerplicht && notitie.trim().length < 5)}
-              onClick={() => { if (afTeHandelen) afhandelen.mutate({ id: afTeHandelen.id, data: { notitie: notitie.trim() || null } }); }}
-              data-testid="knop-bevestig-afhandelen"
-            >
-              {afhandelen.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Afhandelen
-            </Button>
+            {magMuteren && (
+              <Button
+                disabled={afhandelen.isPending || (notitieVerplicht && notitie.trim().length < 5)}
+                onClick={() => { if (afTeHandelen) afhandelen.mutate({ id: afTeHandelen.id, data: { notitie: notitie.trim() || null } }); }}
+                data-testid="knop-bevestig-afhandelen"
+              >
+                {afhandelen.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Afhandelen
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

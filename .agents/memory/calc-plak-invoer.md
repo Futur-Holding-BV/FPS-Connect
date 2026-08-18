@@ -9,4 +9,4 @@ description: Ontwerpregels voor de leveranciersproduct-plakflow op de calculatie
 - Koppelgraadmeting in calc_plak_analyses (migratie 0036): alleen minimale meetdata (fabrikant/aanduiding/eenheid/uitkomst, max 20). Correcties → ai_veld_correcties met veld_namen calc_plak.* (whitelist).
 - Upload-hardening: multer fileFilter (jpeg/png/webp/pdf) + magic-byte-check → 422 bij mismatch; multer-fouten naar 400/413.
 - **Let op:** artikel-tabel-export heet `modCalcArtekelenTable` (typo in schema, zo gelaten). Route-pad frontend is /modules/calculatie (enkelvoud).
-- **Why:** review vond stille nullen, verkeerde artikel-API en ontbrekende upload-validatie; opdracht verbiedt verzonnen prijzen/normtijden en URL-fetch server-side (aparte keuze met domein-allowlist als René dat later wil).
+- **Why:** review vond stille nullen, verkeerde artikel-API en ontbrekende upload-validatie; opdracht verbiedt verzonnen prijzen/normtijden en URL-fetch server-side (aparte keuze met domein-allowlist als de beheerder dat later wil).

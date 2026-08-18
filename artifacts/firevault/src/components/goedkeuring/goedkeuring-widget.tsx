@@ -35,6 +35,8 @@ interface GoedkeuringWidgetProps {
   omschrijving?: string | null;
   werkmaatschappijId?: number | null;
   toonIndienKnop?: boolean;
+  /** Verberg alle muterende acties (goedkeuren/afwijzen/intrekken) voor alleen-lezen gebruikers */
+  leesOnly?: boolean;
   onWijziging?: (aanvraag: GoedkeuringAanvraag) => void;
 }
 
@@ -95,6 +97,7 @@ export function GoedkeuringWidget({
   omschrijving = null,
   werkmaatschappijId = null,
   toonIndienKnop = false,
+  leesOnly = false,
   onWijziging,
 }: GoedkeuringWidgetProps) {
   const { toast } = useToast();
@@ -223,7 +226,7 @@ export function GoedkeuringWidget({
       {aanvraag.status === "afgewezen" && aanvraag.afwijzing_reden && (
         <p className="text-xs text-red-700">Reden: {aanvraag.afwijzing_reden}</p>
       )}
-      {aanvraag.status === "ingediend" && (
+      {!leesOnly && aanvraag.status === "ingediend" && (
         <div className="flex items-center gap-1 flex-wrap">
           {aanvraag.mag_goedkeuren && (
             <>

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import type { Factuur, FactuurCorrespondentie } from "@workspace/api-client-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 // ── Afkeurcategorieën ────────────────────────────────────────────────────────
 
@@ -488,6 +489,7 @@ function FactuurRij({
   onAkkoord,
   onAfwijzen,
   bezig,
+  magMuteren,
 }: {
   factuur: Factuur;
   isOpen: boolean;
@@ -497,6 +499,7 @@ function FactuurRij({
   onAkkoord: (id: number) => void;
   onAfwijzen: (id: number) => void;
   bezig: Record<string, number | null>;
+  magMuteren: boolean;
 }) {
   const confidence = aiConfidence(factuur);
   const confidencePct = confidence !== null ? Math.round(confidence * 100) : null;
@@ -575,21 +578,21 @@ function FactuurRij({
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
             >
-              {kanAiUitlezen && (
+              {magMuteren && kanAiUitlezen && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={aiBezig === factuur.id}
                   onClick={() => onAi(factuur.id)}>
                   {aiBezig === factuur.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                   AI
                 </Button>
               )}
-              {kanAccorderen && (
+              {magMuteren && kanAccorderen && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                   disabled={bezig["akkoord"] === factuur.id} onClick={() => onAkkoord(factuur.id)}>
                   {bezig["akkoord"] === factuur.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                   Akkoord
                 </Button>
               )}
-              {kanAfwijzen && (
+              {magMuteren && kanAfwijzen && (
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-700 border-red-200 hover:bg-red-50"
                   disabled={bezig["afwijzen"] === factuur.id} onClick={() => onAfwijzen(factuur.id)}>
                   <XCircle className="h-3 w-3" /> Afwijzen
@@ -649,6 +652,8 @@ function TellerKaart({
 export default function ControleboxPagina() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const magMuteren = heeftNiveau("financieel", 2);
   const [tab, setTab] = useState("inbox");
   const [filter, setFilter] = useState<"alle" | "inkoop" | "verkoop">("alle");
   const [openRij, setOpenRij] = useState<number | null>(null);
@@ -874,6 +879,7 @@ export default function ControleboxPagina() {
                 onAkkoord={handleAkkoord}
                 onAfwijzen={handleAfwijzen}
                 bezig={bezig}
+                magMuteren={magMuteren}
               />
             ))}
           </div>

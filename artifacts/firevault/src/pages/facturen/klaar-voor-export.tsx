@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { Factuur, AccountviewExportResultaat, BatchExportResultaat } from "@workspace/api-client-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 function euro(v?: string | null) {
   if (!v) return "—";
@@ -27,6 +28,8 @@ function euro(v?: string | null) {
 
 export default function KlaarVoorExportPagina() {
   const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magMuteren = heeftNiveau("financieel", 2);
   const [exportBezig, setExportBezig] = useState<number | null>(null);
   const [batchBezig, setBatchBezig] = useState(false);
   const [blokkerenOpen, setBlokkerenOpen] = useState(false);
@@ -143,7 +146,7 @@ export default function KlaarVoorExportPagina() {
             Selecteer meerdere facturen voor batchexport, of verzend per stuk.
           </p>
         </div>
-        {geselecteerd.size > 0 && (
+        {magMuteren && geselecteerd.size > 0 && (
           <Button
             onClick={handleBatchExport}
             disabled={batchBezig}
@@ -184,12 +187,14 @@ export default function KlaarVoorExportPagina() {
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="px-4 py-2.5 w-10">
-                  <Checkbox
-                    checked={alleGeselecteerd}
-                    data-state={gedeeltelijkGeselecteerd ? "indeterminate" : alleGeselecteerd ? "checked" : "unchecked"}
-                    onCheckedChange={toggleAlles}
-                    aria-label="Alles selecteren"
-                  />
+                  {magMuteren && (
+                    <Checkbox
+                      checked={alleGeselecteerd}
+                      data-state={gedeeltelijkGeselecteerd ? "indeterminate" : alleGeselecteerd ? "checked" : "unchecked"}
+                      onCheckedChange={toggleAlles}
+                      aria-label="Alles selecteren"
+                    />
+                  )}
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-slate-600">Factuur</th>
                 <th className="px-4 py-2.5 text-left font-medium text-slate-600">Relatie</th>
@@ -211,12 +216,14 @@ export default function KlaarVoorExportPagina() {
                 return (
                   <tr key={f.id} className={`hover:bg-slate-50/50 ${isGeselecteerd ? "bg-primary/5" : ""}`}>
                     <td className="px-4 py-3">
-                      <Checkbox
-                        checked={isGeselecteerd}
-                        disabled={!exporteerbaar}
-                        onCheckedChange={() => exporteerbaar && toggleFactuur(f.id)}
-                        aria-label={`Factuur ${f.factuurnummer ?? f.id} selecteren`}
-                      />
+                      {magMuteren && (
+                        <Checkbox
+                          checked={isGeselecteerd}
+                          disabled={!exporteerbaar}
+                          onCheckedChange={() => exporteerbaar && toggleFactuur(f.id)}
+                          aria-label={`Factuur ${f.factuurnummer ?? f.id} selecteren`}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -258,26 +265,30 @@ export default function KlaarVoorExportPagina() {
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
                         </Link>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0 text-slate-500"
-                          title="Blokkeren"
-                          onClick={() => { setBlokkerenFactuurId(f.id); setBlokkerenOpen(true); }}
-                        >
-                          <Ban className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={exportBezig === f.id || fouten.length > 0}
-                          title={fouten.length > 0 ? fouten.join(", ") : "Verzenden naar AccountView"}
-                          onClick={() => handleExport(f.id)}
-                        >
-                          {exportBezig === f.id
-                            ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Bezig...</>
-                            : <><ArrowUpRight className="h-3 w-3 mr-1" />Verzenden</>}
-                        </Button>
+                        {magMuteren && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-slate-500"
+                              title="Blokkeren"
+                              onClick={() => { setBlokkerenFactuurId(f.id); setBlokkerenOpen(true); }}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={exportBezig === f.id || fouten.length > 0}
+                              title={fouten.length > 0 ? fouten.join(", ") : "Verzenden naar AccountView"}
+                              onClick={() => handleExport(f.id)}
+                            >
+                              {exportBezig === f.id
+                                ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Bezig...</>
+                                : <><ArrowUpRight className="h-3 w-3 mr-1" />Verzenden</>}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -393,17 +404,19 @@ export default function KlaarVoorExportPagina() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBlokkerenOpen(false)}>Annuleren</Button>
-            <Button
-              variant="destructive"
-              disabled={blokkerenMut.isPending}
-              onClick={() => {
-                if (blokkerenFactuurId) {
-                  blokkerenMut.mutate({ id: blokkerenFactuurId, data: { geblokkeerd: true, reden: blokkeringReden || null } });
-                }
-              }}
-            >
-              Blokkeren
-            </Button>
+            {magMuteren && (
+              <Button
+                variant="destructive"
+                disabled={blokkerenMut.isPending}
+                onClick={() => {
+                  if (blokkerenFactuurId) {
+                    blokkerenMut.mutate({ id: blokkerenFactuurId, data: { geblokkeerd: true, reden: blokkeringReden || null } });
+                  }
+                }}
+              >
+                Blokkeren
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
