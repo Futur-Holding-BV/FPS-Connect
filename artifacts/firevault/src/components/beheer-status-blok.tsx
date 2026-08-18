@@ -23,6 +23,7 @@ interface BeheerStatus {
   aantalStoringen?: number;
   aantalAandacht?: number;
   doelUrl?: string;
+  storingen?: Array<{ naam: string; url: string }>;
 }
 
 async function haalBeheerStatus(): Promise<BeheerStatus> {
@@ -75,7 +76,7 @@ export function BeheerStatusBlok() {
               ? "1 openstaande storing"
               : `${status.aantalStoringen} openstaande storingen`}
           </div>
-          <p className="text-xs text-red-700 mt-0.5">Klik om te openen in het beheercentrum</p>
+          <p className="text-xs text-red-700 mt-0.5">Klik op een storing om die te openen in het beheercentrum</p>
         </div>
         <ChevronRight className="h-4 w-4 text-red-400" />
       </div>
@@ -108,12 +109,33 @@ export function BeheerStatusBlok() {
     );
   }
 
+  const storingen = status.verbinding ? (status.storingen ?? []) : [];
   const kaart = (
     <Card className={`cursor-pointer hover:bg-muted/40 transition-colors ${rand}`}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">Systeembewaking</CardTitle>
       </CardHeader>
-      <CardContent>{inhoud}</CardContent>
+      <CardContent>
+        {inhoud}
+        {storingen.length > 1 && (
+          <ul className="mt-3 space-y-1 border-t border-red-200 pt-2">
+            {storingen.map((s) => (
+              <li key={s.url}>
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs font-medium text-red-800 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ChevronRight className="h-3 w-3 shrink-0" />
+                  {s.naam}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
     </Card>
   );
 

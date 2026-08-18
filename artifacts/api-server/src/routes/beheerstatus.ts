@@ -27,7 +27,7 @@ const TIMEOUT_MS = 5000;
 router.get("/beheer-status", requireRol(), async (_req, res) => {
   const basis = (process.env.BEHEER_STATUS_URL ?? "").replace(/\/+$/, "");
   const sleutel = process.env.BEHEER_STATUS_SLEUTEL ?? "";
-  if (!basis || !sleutel) {
+  if (!basis || !sleutel || !basis.startsWith("https://")) {
     res.status(200).json({
       verbinding: false,
       reden: "Koppeling niet geconfigureerd (BEHEER_STATUS_URL / BEHEER_STATUS_SLEUTEL).",
@@ -41,6 +41,8 @@ router.get("/beheer-status", requireRol(), async (_req, res) => {
     const antwoord = await fetch(`${basis}/api/extern/status`, {
       headers: { "X-Lees-Sleutel": sleutel },
       signal: controller.signal,
+      // Nooit redirects volgen: de sleutel mag alleen naar het beheercentrum.
+      redirect: "error",
     });
     if (!antwoord.ok) {
       res.status(200).json({ verbinding: false, reden: `Beheercentrum antwoordde ${antwoord.status}.` });
@@ -52,6 +54,7 @@ router.get("/beheer-status", requireRol(), async (_req, res) => {
       aantalAandacht: number;
       doel: string;
       tijdstip: string;
+      storingen?: Array<{ naam: string; pad: string }>;
     };
     if (
       (data.zwaarste !== "rood" && data.zwaarste !== "aandacht" && data.zwaarste !== "rustig") ||
@@ -67,6 +70,12 @@ router.get("/beheer-status", requireRol(), async (_req, res) => {
       aantalAandacht: data.aantalAandacht,
       // Absolute link zodat de client geen basis-URL hoeft te kennen.
       doelUrl: `${basis}${typeof data.doel === "string" && data.doel.startsWith("/") ? data.doel : "/"}`,
+      // Per storing een eigen link zodat de klik altijd op de betreffende
+      // storing landt, ook als er meerdere openstaan (maximaal 10 tonen).
+      storingen: (Array.isArray(data.storingen) ? data.storingen : [])
+        .filter((s) => typeof s?.naam === "string" && typeof s?.pad === "string" && s.pad.startsWith("/"))
+        .slice(0, 10)
+        .map((s) => ({ naam: s.naam, url: `${basis}${s.pad}` })),
       tijdstip: data.tijdstip,
     });
   } catch {
