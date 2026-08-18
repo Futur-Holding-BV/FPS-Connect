@@ -32,12 +32,14 @@ on:
   # Of handmatig starten vanuit de GitHub Actions-tab
   workflow_dispatch:
     inputs:
-      noodfix:
+      noodfix_reden:
         description: >-
-          Typ NOODFIX om de pre-deploy controles (typecheck, dubbele-routes)
-          bewust over te slaan. Alleen gebruiken als productie
-          plat ligt en de controles zelf de blokkade zijn.
-          Zie docs/PRODUCTION_RUNBOOK.md, sectie "Noodfix: gate bewust passeren".
+          Geef hier de reden op om de CI-poort (en pre-deploy controles) bewust
+          te omzeilen. Niet-leeg = noodfix-modus: de poort wordt overgeslagen,
+          maar er gaat direct een melding naar René met jouw naam, de commit en
+          deze reden. Leeg laten = normale check blijft actief.
+          Gebruik alleen als productie plat ligt en CI rood is.
+          Zie docs/antwoorden/CI_DEPLOY_POORT.md voor de stap-voor-stap instructie.
         required: false
         default: ""
       test_faalmail:
@@ -61,6 +63,7 @@ concurrency:
 permissions:
   contents: read
   actions: read
+  checks: read
 
 jobs:
   deploy:
@@ -100,6 +103,219 @@ jobs:
           echo "DEPLOY_START=$(date +%s)" >> "$GITHUB_ENV"
           echo "start|$(date +%s)" > /tmp/mijlpalen.txt
 
+      # ─── CI-poort: blokkeer deploy als CI rood staat op deze commit ──────────
+      # Bij elke automatische push naar main (en bij handmatige dispatch zonder
+      # noodfix_reden op de main-branch) wordt de GitHub check-runs API bevraagd.
+      # Is de CI-job nog niet klaar of rood → deploy stopt met duidelijke melding.
+      # Bypass: workflow_dispatch met een niet-lege noodfix_reden overslaat deze
+      # stap, maar stuurt daarna direct een noodfix-melding naar René.
+      # Handmatige dispatch op een andere tak (terugvaltest-pad) slaat ook over.
+      - name: CI-poort — controleer CI-status op deze commit
+        if: >
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' &&
+           github.event.inputs.noodfix_reden == '' &&
+           github.ref == 'refs/heads/main')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "CI-poort — controleer CI-status op deze commit" > /tmp/faalstap.txt
+
+          echo "Controleer CI-status voor commit ${GITHUB_SHA}..."
+
+          # Wacht maximaal 3 minuten als de CI net gestart is (push-events
+          # voor de deploy en CI starten vrijwel gelijktijdig).
+          MAX_WACHT=180
+          INTERVAL=15
+          GEWACHT=0
+          CI_UITKOMST="onbekend"
+
+          while [ "${GEWACHT}" -lt "${MAX_WACHT}" ]; do
+            RESP=$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
+              2>/dev/null || echo "")
+
+            if [ -n "${RESP}" ]; then
+              CI_UITKOMST=$(echo "${RESP}" | node -e "
+                let d = '';
+                process.stdin.on('data', c => d += c);
+                process.stdin.on('end', () => {
+                  try {
+                    const runs = JSON.parse(d).check_runs || [];
+                    // Zoek alleen GitHub-Actions-runs met 'CI' of 'Typecheck' in de naam
+                    const ci = runs.filter(r =>
+                      r.app && r.app.slug === 'github-actions' &&
+                      (r.name === 'Typecheck & build' || r.name.toLowerCase().includes('ci'))
+                    );
+                    // Nog geen check-run aangemaakt: CI is net gestart of gepland.
+                    // Behandel als 'bezig' en blijf pollen tot de deadline.
+                    if (ci.length === 0) { console.log('geen-ci-nog'); return; }
+                    const nogBezig = ci.filter(r => r.status !== 'completed');
+                    if (nogBezig.length > 0) { console.log('bezig'); return; }
+                    const gefaald = ci.filter(
+                      r => r.conclusion !== 'success' && r.conclusion !== 'skipped'
+                    );
+                    if (gefaald.length > 0) {
+                      const namen = gefaald.map(r => r.name + ' (' + r.conclusion + ')').join(', ');
+                      process.stderr.write('Gefaalde CI-jobs: ' + namen + '\n');
+                      console.log('rood');
+                      return;
+                    }
+                    console.log('groen');
+                  } catch (e) { console.log('fout'); }
+                });
+              " 2>/tmp/ci-falen.txt || echo "fout")
+            else
+              CI_UITKOMST="fout"
+            fi
+
+            # Blijf pollen zolang CI nog bezig is, nog niet zichtbaar is, of
+            # de API tijdelijk niet bereikbaar was. Alleen 'groen' en 'rood'
+            # breken de lus onmiddellijk.
+            case "${CI_UITKOMST}" in
+              groen|rood) break ;;
+              bezig)
+                echo "CI draait nog op commit ${GITHUB_SHA} — wacht ${INTERVAL}s (totaal: ${GEWACHT}s)..."
+                ;;
+              geen-ci-nog)
+                echo "Geen CI-check-run zichtbaar voor ${GITHUB_SHA} — wacht ${INTERVAL}s (totaal: ${GEWACHT}s)..."
+                ;;
+              fout)
+                echo "GitHub API tijdelijk niet bereikbaar — wacht ${INTERVAL}s (totaal: ${GEWACHT}s)..."
+                ;;
+            esac
+            sleep "${INTERVAL}"
+            GEWACHT=$((GEWACHT + INTERVAL))
+          done
+
+          GEFAALDE_JOBS=$(cat /tmp/ci-falen.txt 2>/dev/null || echo "")
+
+          case "${CI_UITKOMST}" in
+            groen)
+              echo "CI-poort: GROEN — CI geslaagd op commit ${GITHUB_SHA}. Deploy mag doorgaan."
+              ;;
+            rood)
+              echo "::error::CI-POORT GEBLOKKEERD: de CI-run op commit ${GITHUB_SHA} is rood."
+              [ -n "${GEFAALDE_JOBS}" ] && echo "  ${GEFAALDE_JOBS}"
+              echo "Repareer de CI eerst, of gebruik handmatige workflow_dispatch met een"
+              echo "noodfix_reden om de poort te omzeilen (zie docs/antwoorden/CI_DEPLOY_POORT.md)."
+              exit 1
+              ;;
+            bezig)
+              echo "::error::CI-POORT GEBLOKKEERD: CI draait nog op commit ${GITHUB_SHA}"
+              echo "na ${MAX_WACHT}s wachten. Probeer later opnieuw of gebruik noodfix_reden."
+              exit 1
+              ;;
+            geen-ci-nog)
+              echo "::error::CI-POORT GEBLOKKEERD: geen CI-run aangemeld voor commit ${GITHUB_SHA}"
+              echo "na ${MAX_WACHT}s wachten. Controleer of de CI-workflow actief is, of gebruik noodfix_reden."
+              exit 1
+              ;;
+            *)
+              echo "::error::CI-POORT GEBLOKKEERD: kon de CI-status niet ophalen via GitHub API."
+              echo "Controleer de actions-rechten van de workflow, of gebruik noodfix_reden."
+              exit 1
+              ;;
+          esac
+
+      # ─── Noodfix-melding ──────────────────────────────────────────────────────
+      # Als noodfix_reden opgegeven is, is de CI-poort hierboven overgeslagen.
+      # Dit is bewust: een noodfix mag nooit stilzwijgend passeren. Hier wordt:
+      #  1. het gebruik zichtbaar gelogd (commit, tijdstip, persoon, reden), en
+      #  2. direct dezelfde faalmail verstuurd zodat René het weet.
+      - name: Noodfix — vastleggen en melding sturen
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.noodfix_reden != ''
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@fpsbrandpreventie.nl' }}
+          MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
+          RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NOODFIX_REDEN: ${{ github.event.inputs.noodfix_reden }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          TIJDSTIP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          echo "::warning::NOODFIX ACTIEF — CI-poort en pre-deploy controles bewust omzeild."
+          echo "  Commit  : ${GITHUB_SHA}"
+          echo "  Tijdstip: ${TIJDSTIP}"
+          echo "  Persoon : ${ACTOR}"
+          echo "  Reden   : ${NOODFIX_REDEN}"
+
+          # De noodfix-melding is verplicht: een bypass mag nooit stilzwijgend passeren.
+          # Ontbrekende mailconfig of een mislukte Graph-aanroep stopt de run vóór de
+          # deploy — zo weet René altijd van elke noodfix.
+          if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
+             [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
+            echo "::error::NOODFIX GEBLOKKEERD: mailconfig (AZURE_TENANT_ID / AZURE_CLIENT_ID /" \
+              "AZURE_CLIENT_SECRET / RENE_ALERT_EMAIL) ontbreekt als GitHub Actions secret." >&2
+            echo "Voeg de ontbrekende secrets toe voordat je de noodfix-route gebruikt," >&2
+            echo "zodat de verplichte audit-melding naar René kan worden verstuurd." >&2
+            exit 1
+          fi
+
+          TOKEN=$(curl -fsS -X POST \
+            "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+            -d "client_id=${AZURE_CLIENT_ID}" \
+            -d "client_secret=${AZURE_CLIENT_SECRET}" \
+            -d "scope=https://graph.microsoft.com/.default" \
+            -d "grant_type=client_credentials" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+
+          if [ -z "${TOKEN}" ]; then
+            echo "::error::NOODFIX GEBLOKKEERD: kon geen Graph-token ophalen." \
+              "Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET." >&2
+            exit 1
+          fi
+
+          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+
+          BODY=$(printf '%s\n' \
+            "NOODFIX: CI-poort handmatig omzeild." \
+            "" \
+            "Commit  : ${GITHUB_SHA}" \
+            "Bericht : ${COMMIT_MSG}" \
+            "Tijdstip: ${TIJDSTIP}" \
+            "Persoon : ${ACTOR}" \
+            "Reden   : ${NOODFIX_REDEN}" \
+            "" \
+            "De CI-poort is bewust overgeslagen. Controleer of de commit veilig is" \
+            "en zorg dat CI alsnog groen wordt gemaakt." \
+            "" \
+            "Actions-run: ${RUN_URL}")
+
+          PAYLOAD=$(MAIL_BODY="${BODY}" node -e "
+            const body = {
+              message: {
+                subject: 'FPS Connect: NOODFIX \u2014 CI-poort omzeild door ' + process.env.ACTOR,
+                body: { contentType: 'Text', content: process.env.MAIL_BODY },
+                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
+                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
+              },
+              saveToSentItems: false,
+            };
+            console.log(JSON.stringify(body));
+          ")
+
+          HTTP_CODE=$(curl -sS -o /tmp/noodfix-graph-response.json -w "%{http_code}" \
+            -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}")
+
+          if [ "${HTTP_CODE}" -ge 200 ] && [ "${HTTP_CODE}" -lt 300 ]; then
+            echo "Noodfix-melding verzonden naar René."
+          else
+            echo "::error::NOODFIX GEBLOKKEERD: verzenden van de audit-melding gaf HTTP ${HTTP_CODE}." >&2
+            cat /tmp/noodfix-graph-response.json >&2 || true
+            exit 1
+          fi
+
       # ─── Controles vóór de VPS wordt aangeraakt (MERGE_01 §3.2) ─────────────
       # De Docker-build bundelt met esbuild en controleert geen types; op
       # 8 aug 2026 belandde daardoor code met ongedefinieerde variabelen op
@@ -108,13 +324,13 @@ jobs:
       # Dit is geen goedkeuringspoort — elke push naar main rolt nog steeds
       # automatisch uit zodra de controles slagen.
       #
-      # Noodfix-bypass: alleen via handmatige workflow_dispatch met input
-      # noodfix=NOODFIX worden deze controles overgeslagen (gedocumenteerd in
-      # docs/PRODUCTION_RUNBOOK.md). Een gewone push kan de gate nooit omzeilen.
+      # Noodfix-bypass: workflow_dispatch met een niet-lege noodfix_reden
+      # slaat deze controles over (gedocumenteerd in
+      # docs/antwoorden/CI_DEPLOY_POORT.md).
       - name: Noodfix-bypass melden
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.noodfix == 'NOODFIX'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.noodfix_reden != ''
         run: |
-          echo "::warning::NOODFIX-BYPASS ACTIEF — pre-deploy controles worden bewust overgeslagen (handmatige dispatch)."
+          echo "::warning::NOODFIX-BYPASS ACTIEF — pre-deploy controles worden bewust overgeslagen."
 
       - uses: pnpm/action-setup@v4
 
@@ -131,14 +347,14 @@ jobs:
       # weet de faalmail-stap onderaan precies wélke stap brak en wat de
       # laatste uitvoerregels waren (HERSTEL_MAIL_01 punt 4).
       - name: Controle 1/3 — typecheck
-        if: github.event.inputs.noodfix != 'NOODFIX'
+        if: github.event.inputs.noodfix_reden == ''
         run: |
           set -euo pipefail
           echo "Controle 1/3 — typecheck" > /tmp/faalstap.txt
           pnpm run typecheck 2>&1 | tee /tmp/stap-uitvoer.log
 
       - name: Controle 2/3 — dubbele-routes-controle
-        if: github.event.inputs.noodfix != 'NOODFIX'
+        if: github.event.inputs.noodfix_reden == ''
         run: |
           set -euo pipefail
           echo "Controle 2/3 — dubbele-routes-controle" > /tmp/faalstap.txt
@@ -147,7 +363,7 @@ jobs:
       # KLANTLOOS_01 fase 3: faalt zodra de klantrol of een "of klant"-
       # autorisatievariant terugkeert in Connect.
       - name: Controle 3/3 — klantloos-controle
-        if: github.event.inputs.noodfix != 'NOODFIX'
+        if: github.event.inputs.noodfix_reden == ''
         run: |
           set -euo pipefail
           echo "Controle 3/3 — klantloos-controle" > /tmp/faalstap.txt
@@ -156,7 +372,7 @@ jobs:
       # SESSIE_01: verbiedt session["gebruikerId"] en session["naam"/"gebruikerNaam"].
       # Vangt de stille autorisatie-breuk die in aug 2026 in 8+ routes zat.
       - name: Sessieveld-antipatroon-controle
-        if: github.event.inputs.noodfix != 'NOODFIX'
+        if: github.event.inputs.noodfix_reden == ''
         run: |
           set -euo pipefail
           echo "Sessieveld-antipatroon-controle" > /tmp/faalstap.txt
@@ -236,6 +452,9 @@ jobs:
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
           PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          # Dispatch-input nooit direct in run:-code interpoleren (injection-risico).
+          # Hier doorgegeven als omgevingsvariabele en daarna veilig getest.
+          NOODFIX_REDEN: ${{ github.event.inputs.noodfix_reden }}
         run: |
           set -euo pipefail
           echo "Deploy uitvoeren op de VPS" > /tmp/faalstap.txt
@@ -244,10 +463,10 @@ jobs:
           # laat de ssh-exitcode door de tee heen). De uitvoer gaat óók naar
           # /tmp/deploy-output.log, zodat de tijd- en schijfbewaking onderaan
           # de TIJD|- en SCHIJF_ALARM|-regels van het script kan lezen.
-          # Typecheck in het api-image alleen bij NOODFIX (controles vooraf
+          # Typecheck in het api-image alleen bij noodfix (controles vooraf
           # overgeslagen); bij een normale deploy is de volledige workspace-
           # typecheck al op deze runner gedraaid en is herhalen pure dubbeling.
-          if [ "${{ github.event.inputs.noodfix }}" = "NOODFIX" ]; then
+          if [ -n "${NOODFIX_REDEN:-}" ]; then
             TYPECHECK_IN_IMAGE=1
           else
             TYPECHECK_IN_IMAGE=0

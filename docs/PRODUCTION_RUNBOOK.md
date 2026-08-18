@@ -209,14 +209,19 @@ controles zelf de blokkade zijn (kapotte CI-tooling, een typefout in een control
 script). Dat kan uitsluitend handmatig:
 
 1. Ga naar GitHub → Actions → workflow "Deploy naar productie" → **Run workflow**.
-2. Vul in het invoerveld `noodfix` exact de waarde `NOODFIX` in (hoofdletters).
-3. Start de run. De workflow logt een duidelijke waarschuwing
-   ("NOODFIX-BYPASS ACTIEF") en slaat alleen de drie controle-stappen over;
-   de deploy-stappen en de post-deploy smoketest draaien gewoon.
+2. Vul in het invoerveld **`noodfix_reden`** een korte maar duidelijke omschrijving
+   in waarom je de poort omzeilt, bijvoorbeeld:
+   `Critieke loginbug in prod — CI rood door flakey test, bug zit niet in deze commit.`
+3. Start de run. De workflow logt een waarschuwing ("NOODFIX ACTIEF") met commit-SHA,
+   tijdstip en jouw naam, en stuurt direct een e-mailmelding naar René.
+   De CI-poort én de pre-deploy controles worden overgeslagen; de deploy-stappen en
+   de post-deploy smoketest draaien gewoon.
 
-Een gewone push naar `main` kan de gate **nooit** omzeilen: de bypass werkt alleen
-via `workflow_dispatch` met die expliciete input. Herstel na een noodfix altijd zo
-snel mogelijk de reguliere situatie (controles groen op de eerstvolgende commit).
+Een gewone push naar `main` kan de poort **nooit** omzeilen: de bypass werkt alleen
+via `workflow_dispatch` met een niet-lege `noodfix_reden`. Elk gebruik wordt
+vastgelegd (run-log + e-mail). Herstel na een noodfix altijd zo snel mogelijk de
+reguliere situatie (CI groen op de eerstvolgende commit).
+Zie ook: `docs/antwoorden/CI_DEPLOY_POORT.md` voor de volledige instructiekaart.
 
 **Aanvullende handmatige smoketest na elke deploy:**
 
