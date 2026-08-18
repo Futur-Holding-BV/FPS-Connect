@@ -130,3 +130,17 @@ uri = "file://screenshots/prod-app-na-nocache-fix2.png"
 type = "image"
 title = "connect.fps-one.nl/app/ — monteuromgeving (na uitrol 1ea8c0b4)"
 description = "Zelf opgehaald na de uitrol: donkere FPS Monteur-omgeving met de draaiende laadschijf."
+
+[[outputs]]
+id = "cTwpqJu5y-uYvPeHZiXLe"
+uri = "file://screenshots/telefoon-hoofdbeheerder-na-fix.png"
+type = "image"
+title = "Telefoon-test: hoofdbeheerder blijft in de monteuromgeving"
+description = "Pixel 7-emulatie, ingelogd als hoofdbeheerder op /app/ — geen terugverwijzing meer naar de desktop."
+
+[[outputs]]
+id = "s8YYgdm0TfjycX9Ud_Ivi"
+uri = "file://screenshots/telefoon-kantoorgebruiker-bounce.png"
+type = "image"
+title = "Telefoon-test: kantoorgebruiker wordt naar Connect gestuurd"
+description = "Zelfde test met een kantoorgebruiker: die wordt (zoals ontworpen) uit /app/ naar de Connect-omgeving gestuurd — dit was exact wat René op zijn telefoon zag."

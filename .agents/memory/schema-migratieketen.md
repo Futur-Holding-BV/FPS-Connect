@@ -21,3 +21,6 @@ Tijdelijk gedeployde en daarna hernoemde/verwijderde migratiebestanden laten rij
 
 ## CI-bewaker (check-hernoeming)
 `lib/db/scripts/check-migratie-hernoeming.mjs` detecteert hernoemde/verwijderde migraties t.o.v. origin/main via `git diff --diff-filter=DR`. Faalt met exit 1 + expliciete SCHEMA_01-foutmelding. Script ook bereikbaar als `pnpm --filter @workspace/db run check-hernoeming` en Replit-validatiestap `migratie-hernoeming`. Volledig herstelpad staat in `docs/schema-migratieketen.md`.
+
+## Nummerbotsing na parallelle merges (0083, 18 aug 2026)
+Twee taken introduceren onafhankelijk hetzelfde migratienummer → check-hernoeming/CI-poort blokkeert álle deploys. Herstel: het NIEUWE (nog niet op prod gedraaide) bestand hernummeren naar het eerstvolgende vrije nummer, en in migrate.mjs een gerichte `HERNUMMERD`-reconciliatie (exact paar, alleen bij identieke checksum, vóór de pre-check) zodat dev/CI-databases met de oude registratienaam meebewegen. Alleen de dev-DB updaten is niet genoeg (architect-afwijzing): elke andere DB met de oude rij zou hard STOPpen.
