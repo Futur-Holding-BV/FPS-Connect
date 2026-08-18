@@ -913,7 +913,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 titel="Commercie"
                 positie={hoofdstukPositie("commercie")}
                 onVerplaats={verplaatsHoofdstuk}
-                open={hoofdstukOpen("commercie")}
+                open={hoofdstukOpen(
+                  "commercie",
+                  // Marketing-only gebruikers (geen CRM, social of merk) hebben
+                  // Commercie als enige werkgebied: start het hoofdstuk open zodat
+                  // ze na elke sessie direct hun pagina's zien. Niet persistent,
+                  // conform het bestaande "alles ingeklapt" beleid (2026-08-09).
+                  !toonCrm && heeftNiveau("marketing", 3) && !toonSocial && !toonMerk,
+                )}
                 onOpenChange={(open) => setHoofdstukOpen("commercie", open)}
               >
                     <SidebarMenu>
