@@ -69,3 +69,4 @@ dist-bewijs
 
 # Transient e2e test results (screenshots, JSON reports)
 scripts/e2e-resultaten/
+artifacts/monteur-app/dist-web/
