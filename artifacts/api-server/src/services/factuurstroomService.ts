@@ -17,6 +17,7 @@ import {
   factuurTijdlijnTable,
   factuurCorrespondentieTable,
   leveranciersTable,
+  leverancierCategorisatieTable,
   algemeneInkopenTable,
   gebruikersTable,
   werkInboxMailboxenTable,
@@ -926,3 +927,252 @@ export async function bewaakMailboxSync(): Promise<void> {
 }
 
 const SYNC_ALARM_HERHAAL_UREN = 24;
+
+// ── INKOOP_BOEKING_01: direct betaalde inkoop met een factuur-PDF als bon ─────
+//
+// Een geüploade PDF bij een direct betaalde algemene inkoop gaat door exact
+// dezelfde AI-lezing als een mailfactuur en wordt als inkoopfactuur aan de
+// inkoopregel gekoppeld. Een foto blijft gewoon een bon (geen factuur).
+//
+// Vergelijking (zelfde tolerantie als op rekening, koppelAlgemeneInkoop):
+// - bedrag incl. btw vs. het bij de inkoop ingevulde bedrag: max(€2, 2%);
+// - leverancier: genormaliseerde naamvergelijking met wat bij de inkoop staat;
+// - kostensoort van de inkoop wordt als voorstel op de factuur gezet (nooit
+//   een bestaande categorie overschrijven) — zelfde gedrag als op rekening.
+//
+// Klopt alles → factuur naar klaar_voor_accountview (mits er géén goedkeuring
+// vereist is — de goedkeuringsgate wordt nooit omzeild) en de inkoop wordt
+// afgerond. Wijkt iets af → bestaand signaal (algemene_inkoop_bedrag_afwijkend)
+// en de factuur blijft op controle_nodig staan; niets wordt stil verwerkt.
+
+export interface DirectBetaaldFactuurUitkomst {
+  factuurAangemaakt: boolean;
+  factuurId?: number;
+  uitkomst: "geen_factuur" | "niet_leesbaar" | "al_gekoppeld" | "afwijking" | "goedkeuring_vereist" | "klaar_voor_boeking";
+  melding: string; // gewone taal voor de gebruiker
+}
+
+export async function verwerkDirectBetaaldeBonFactuur(opties: {
+  inkoopId: number;
+  buffer: Buffer;
+  bestandsnaam: string;
+  subPath: string;          // opslagpad van de zojuist geüploade bon
+  gebruikerNaam: string | null;
+}): Promise<DirectBetaaldFactuurUitkomst> {
+  const { inkoopId, buffer, bestandsnaam, subPath, gebruikerNaam } = opties;
+
+  const [inkoop] = await db.select().from(algemeneInkopenTable)
+    .where(eq(algemeneInkopenTable.id, inkoopId)).limit(1);
+  if (!inkoop || inkoop.soort !== "direct_betaald") {
+    return { factuurAangemaakt: false, uitkomst: "geen_factuur", melding: "Deze inkoop is geen direct betaalde inkoop." };
+  }
+  if (inkoop.factuurId != null) {
+    return {
+      factuurAangemaakt: false, uitkomst: "al_gekoppeld",
+      melding: "Aan deze inkoop is al een factuur gekoppeld. De nieuwe upload is als bon bewaard maar niet opnieuw als factuur verwerkt.",
+    };
+  }
+
+  const analyse = await analyseerFactuurVoorStroom({ buffer, bestandsnaam, mime: "application/pdf" });
+  if (!analyse.ok || !analyse.velden) {
+    return {
+      factuurAangemaakt: false, uitkomst: "niet_leesbaar",
+      melding: `De PDF kon niet als factuur gelezen worden (${analyse.fout ?? "onbekende fout"}). De bon is wel bewaard; handel de inkoop handmatig af.`,
+    };
+  }
+  if (!analyse.is_factuur) {
+    return {
+      factuurAangemaakt: false, uitkomst: "geen_factuur",
+      melding: "De PDF is geen factuur (bijvoorbeeld een bon of pakbon). Hij is als bewijsstuk bewaard.",
+    };
+  }
+
+  const v = analyse.velden;
+  const onzeker = [...v.onzekere_velden];
+  const leverancier = await zoekLeverancier(v.leverancier_naam);
+  const bv = bepaalBv(v.tenaamstelling);
+  if (!bv && v.tenaamstelling) onzeker.push("tenaamstelling_bv");
+
+  // Dubbelcontrole — zelfde als in de mailstroom.
+  let dubbel = false;
+  if (v.factuurnummer) {
+    const bestaand = await db.select({ id: facturenTable.id }).from(facturenTable)
+      .where(and(
+        eq(facturenTable.type, "inkoop"),
+        eq(facturenTable.factuurnummer, v.factuurnummer),
+        leverancier ? eq(facturenTable.leverancierId, leverancier.id) : eq(facturenTable.relatienaam, v.leverancier_naam ?? ""),
+      )).limit(1);
+    dubbel = bestaand.length > 0;
+  }
+
+  // ── Vergelijking met de inkoopregel (zelfde tolerantie als op rekening) ─────
+  const afwijkingen: string[] = [];
+  if (inkoop.bedrag != null && v.bedrag_incl_btw != null) {
+    const verwacht = Number(inkoop.bedrag);
+    const verschil = Math.abs(v.bedrag_incl_btw - verwacht);
+    const tolerantie = Math.max(2, verwacht * 0.02); // 2% met een bodem van € 2
+    if (verschil > tolerantie) {
+      afwijkingen.push(`het factuurbedrag (€ ${v.bedrag_incl_btw}) wijkt af van het bij de inkoop ingevulde bedrag (€ ${verwacht})`);
+    }
+  } else if (v.bedrag_incl_btw == null) {
+    afwijkingen.push("het factuurbedrag kon niet van de factuur gelezen worden");
+  } else {
+    afwijkingen.push("bij de inkoop is geen bedrag ingevuld om tegen te controleren");
+  }
+  // Leverancier: vergelijk met wat bij de inkoop is ingevuld (naam genormaliseerd
+  // of gekoppelde leverancier-id). Niets ingevuld bij de inkoop = niets te vergelijken.
+  const inkoopLevNaam = inkoop.leverancierNaam?.trim() || null;
+  if (inkoopLevNaam || inkoop.leverancierId != null) {
+    const naamMatch = inkoopLevNaam && v.leverancier_naam
+      ? normaliseerBedrijfsnaam(inkoopLevNaam) === normaliseerBedrijfsnaam(v.leverancier_naam)
+      : false;
+    const idMatch = inkoop.leverancierId != null && leverancier != null && leverancier.id === inkoop.leverancierId;
+    if (!naamMatch && !idMatch) {
+      afwijkingen.push(`de leverancier op de factuur ("${v.leverancier_naam ?? "onbekend"}") wijkt af van de leverancier bij de inkoop ("${inkoopLevNaam ?? "#" + inkoop.leverancierId}")`);
+    }
+  }
+
+  // Goedkeuringsgate — nooit omzeilen: pas geaccordeerd + klaar_voor_accountview
+  // als er volgens het beleid géén goedkeuring vereist is. Dat geldt voor de
+  // factuur (beleid inkoop_factuur) ÉN voor de inkoopregel zelf: een inkoop die
+  // ter_goedkeuring staat of een open aanvraag heeft, mag hier nooit via een
+  // PDF-upload alsnog afgehandeld worden (fail-closed).
+  const { checkVereistGoedkeuring, haalOpenAanvraag } = await import("./goedkeuring-engine");
+  const { vereist: goedkeuringVereist } = await checkVereistGoedkeuring(
+    db, "inkoop_factuur", v.bedrag_incl_btw, null);
+  const openInkoopAanvraag = await haalOpenAanvraag(db, "algemene_inkoop", inkoopId);
+
+  const klopt = afwijkingen.length === 0;
+
+  // T3-zelflerende boekingsvoorstellen van deze leverancier (btw-code,
+  // grootboek, kostenplaats) — zelfde leer-tabel als bij handmatig accorderen.
+  let geleerd: { grootboekrekening: string | null; kostenplaats: string | null; btwCode: string | null } | null = null;
+  if (leverancier) {
+    const [rij] = await db.select({
+      grootboekrekening: leverancierCategorisatieTable.grootboekrekening,
+      kostenplaats: leverancierCategorisatieTable.kostenplaats,
+      btwCode: leverancierCategorisatieTable.btwCode,
+    }).from(leverancierCategorisatieTable)
+      .where(eq(leverancierCategorisatieTable.leverancierId, leverancier.id))
+      .orderBy(desc(leverancierCategorisatieTable.aantal)).limit(1);
+    geleerd = rij ?? null;
+  }
+
+  let factuurId = 0;
+  let magAfronden = false;
+  await db.transaction(async (tx) => {
+    // Herlees en vergrendel de inkoop binnen de transactie: alleen een nog
+    // vrijgegeven inkoop (status "open", geen open goedkeuringsaanvraag) mag
+    // automatisch worden afgerond.
+    const [vers] = await tx.select().from(algemeneInkopenTable)
+      .where(eq(algemeneInkopenTable.id, inkoopId)).for("update");
+    if (!vers || vers.factuurId != null) throw new Error("inkoop is intussen al aan een factuur gekoppeld");
+    magAfronden = klopt && !goedkeuringVereist && vers.status === "open" && !openInkoopAanvraag;
+
+    const [factuur] = await tx.insert(facturenTable).values({
+      type: "inkoop",
+      bron: "upload",
+      status: magAfronden ? "klaar_voor_accountview" : "controle_nodig",
+      aiGelezen: true,
+      factuurnummer: v.factuurnummer,
+      factuurdatum: v.factuurdatum,
+      vervaldatum: v.vervaldatum,
+      omschrijving: v.omschrijving ?? `Direct betaalde inkoop A${String(inkoop.nummer).padStart(3, "0")}`,
+      relatienaam: leverancier?.naam ?? v.leverancier_naam,
+      leverancierId: leverancier?.id ?? null,
+      bedragExclBtw: v.bedrag_excl_btw != null ? String(v.bedrag_excl_btw) : null,
+      btwBedrag: v.btw_bedrag != null ? String(v.btw_bedrag) : null,
+      bedragInclBtw: v.bedrag_incl_btw != null ? String(v.bedrag_incl_btw) : null,
+      ibanUitgelezen: v.iban,
+      gRekeningVanToepassing: v.loondeel_vermeld,
+      gRekeningBedrag: v.loondeel_bedrag != null ? String(v.loondeel_bedrag) : null,
+      tenaamstellingBv: bv,
+      pdfUrl: storageObjectsUrl(subPath),
+      bestandsnaam,
+      categorie: inkoop.kostensoort ?? null, // kostensoort van de inkoop als voorstel
+      grootboekrekening: geleerd?.grootboekrekening ?? null,
+      kostenplaats: geleerd?.kostenplaats ?? null,
+      btwCode: geleerd?.btwCode ?? null,
+      onzekereVelden: onzeker.length > 0 ? onzeker : null,
+      aiVoorstelStroom: { ...v, tenaamstelling_bv: bv, leverancier_id: leverancier?.id ?? null, gelezen_op: new Date().toISOString() },
+      opmerkingen: v.verwijzing ? `Verwijzing op factuur: ${v.verwijzing}` : null,
+      ...(magAfronden ? { geaccordeerd: true, geaccordeerdOp: new Date() } : {}),
+    }).returning();
+    factuurId = factuur!.id;
+
+    // Atomaire claim: alleen koppelen zolang de inkoop nog geen factuur heeft.
+    const geclaimd = await tx.update(algemeneInkopenTable)
+      .set({
+        factuurId,
+        factuurGekoppeldOp: new Date(),
+        bijgewerktOp: new Date(),
+        ...(magAfronden ? { status: "afgehandeld" } : {}),
+      })
+      .where(and(
+        eq(algemeneInkopenTable.id, inkoop.id),
+        isNull(algemeneInkopenTable.factuurId),
+      ))
+      .returning({ id: algemeneInkopenTable.id });
+    if (geclaimd.length !== 1) throw new Error("inkoop is intussen al aan een factuur gekoppeld");
+
+    const nummerWeergave = `A${String(inkoop.nummer).padStart(3, "0")}`;
+    await schrijfTijdlijn(factuurId,
+      `De factuur is als bewijsstuk geüpload bij direct betaalde inkoop ${nummerWeergave} en automatisch gelezen. ` +
+      `${leverancier ? `Herkend als factuur van ${leverancier.naam}.` : "De leverancier kon nog niet met zekerheid worden herkend."}`,
+      gebruikerNaam, tx);
+
+    if (dubbel) {
+      await maakSignaal({ type: "mogelijk_dubbel", factuurId,
+        omschrijving: `Factuur ${v.factuurnummer} van ${leverancier?.naam ?? v.leverancier_naam ?? "onbekende leverancier"} lijkt al eerder ontvangen te zijn.` }, tx);
+    }
+    if (!leverancier) {
+      await maakSignaal({ type: "onbekende_leverancier", factuurId,
+        omschrijving: `De leverancier "${v.leverancier_naam ?? "onbekend"}" is nog niet (eenduidig) bekend in het relatiebestand.` }, tx);
+    }
+    if (onzeker.length > 0) {
+      await maakSignaal({ type: "ai_onzeker", factuurId,
+        omschrijving: `Bij het lezen van de factuur bij inkoop ${nummerWeergave} is het systeem niet zeker over: ${onzeker.join(", ")}. Iemand moet dit nakijken.` }, tx);
+    }
+
+    if (!klopt) {
+      await maakSignaal({ type: "algemene_inkoop_bedrag_afwijkend", factuurId,
+        omschrijving: `De factuur bij direct betaalde inkoop ${nummerWeergave} wijkt af: ${afwijkingen.join("; ")}. Controleer dit voordat de factuur geboekt wordt.` }, tx);
+      await schrijfTijdlijn(factuurId,
+        `Let op: de factuur wijkt af van inkoop ${nummerWeergave} (${afwijkingen.join("; ")}). Dit is gemeld en wordt niet stil verwerkt.`, null, tx);
+    } else if (!magAfronden) {
+      await schrijfTijdlijn(factuurId,
+        goedkeuringVereist
+          ? `De factuur komt overeen met inkoop ${nummerWeergave}, maar vereist volgens het goedkeuringsbeleid eerst goedkeuring voordat hij geboekt kan worden.`
+          : `De factuur komt overeen met inkoop ${nummerWeergave}, maar de inkoop zelf is nog niet vrijgegeven (status "${vers.status}"${openInkoopAanvraag ? ", open goedkeuringsaanvraag" : ""}). De inkoop is niet automatisch afgerond.`,
+        null, tx);
+    } else {
+      await schrijfTijdlijn(factuurId,
+        `De factuur komt overeen met inkoop ${nummerWeergave} (leverancier en bedrag binnen de tolerantie). De factuur staat klaar voor boeking en de inkoop is afgerond.`, null, tx);
+    }
+  });
+
+  if (magAfronden) {
+    // Automatische boeking (fire-and-forget, ná de commit) — faalt hij, dan
+    // gaat de faalmail eruit en blijft handmatig exporteren gewoon mogelijk.
+    const { probeerAutomatischeBoeking } = await import("./accountviewExportService");
+    void probeerAutomatischeBoeking(factuurId, "direct betaalde inkoop met factuur-PDF").catch((err) => {
+      logger.error({ err, factuurId }, "auto-boeking na direct betaalde inkoop mislukt (onverwacht)");
+    });
+    return {
+      factuurAangemaakt: true, factuurId, uitkomst: "klaar_voor_boeking",
+      melding: "De PDF is als inkoopfactuur gelezen en komt overeen met deze inkoop. De factuur staat klaar voor boeking en de inkoop is afgerond.",
+    };
+  }
+  if (klopt) {
+    return {
+      factuurAangemaakt: true, factuurId, uitkomst: "goedkeuring_vereist",
+      melding: goedkeuringVereist
+        ? "De PDF is als inkoopfactuur gelezen en komt overeen met deze inkoop, maar vereist volgens het goedkeuringsbeleid eerst goedkeuring. Dien de factuur ter goedkeuring in via de factuurdetailpagina."
+        : "De PDF is als inkoopfactuur gelezen en komt overeen met deze inkoop, maar de inkoop zelf wacht nog op goedkeuring/vrijgave. De inkoop is daarom niet automatisch afgerond.",
+    };
+  }
+  return {
+    factuurAangemaakt: true, factuurId, uitkomst: "afwijking",
+    melding: `De PDF is als inkoopfactuur gelezen, maar wijkt af van deze inkoop: ${afwijkingen.join("; ")}. Er is een signaal aangemaakt; de inkoop is nog niet afgerond.`,
+  };
+}

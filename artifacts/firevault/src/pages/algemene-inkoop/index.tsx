@@ -164,10 +164,25 @@ export default function AlgemeneInkoopPagina() {
         const body = await resp.json().catch(() => null) as { error?: string } | null;
         throw new Error(body?.error ?? "Upload mislukt");
       }
-      const bijgewerkt = await resp.json() as AlgemeneInkoop;
+      const bijgewerkt = await resp.json() as AlgemeneInkoop & {
+        factuur_verwerking?: { factuurAangemaakt: boolean; uitkomst: string; melding: string } | null;
+      };
       vernieuw();
       setDetail(bijgewerkt);
-      toast({ title: "Bon toegevoegd" });
+      // INKOOP_BOEKING_01: een PDF bij direct betaald wordt als factuur gelezen —
+      // toon de uitkomst van die verwerking in gewone taal.
+      const fv = bijgewerkt.factuur_verwerking;
+      if (fv) {
+        toast({
+          title: fv.uitkomst === "klaar_voor_boeking" ? "Factuur herkend en inkoop afgerond"
+            : fv.factuurAangemaakt ? "Factuur aangemaakt — controle nodig"
+            : "Bon toegevoegd",
+          description: fv.melding,
+          ...(fv.uitkomst === "afwijking" ? { variant: "destructive" as const } : {}),
+        });
+      } else {
+        toast({ title: "Bon toegevoegd" });
+      }
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : "Upload mislukt", variant: "destructive" });
     } finally {

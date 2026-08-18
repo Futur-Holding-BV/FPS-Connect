@@ -265,6 +265,16 @@ async function pasObjectStatusToe(
             : {}),
         })
         .where(eq(facturenTable.id, aanvraag.objectId));
+
+      // INKOOP_BOEKING_01: zodra een factuur na goedkeuring op
+      // klaar_voor_accountview + geaccordeerd staat, automatisch naar
+      // AccountView boeken (fire-and-forget; faalmail bij mislukking).
+      if (directeActie.naarStatus === "klaar_voor_accountview" && directeActie.setGeaccordeerd) {
+        const { probeerAutomatischeBoeking } = await import("./accountviewExportService");
+        void probeerAutomatischeBoeking(aanvraag.objectId, "goedkeuring afgerond").catch((err) => {
+          logger.error({ err, factuurId: aanvraag.objectId }, "auto-boeking na goedkeuring mislukt (onverwacht)");
+        });
+      }
     } catch (err) {
       logger.error(
         { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },

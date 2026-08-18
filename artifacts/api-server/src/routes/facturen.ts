@@ -35,6 +35,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
+import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending } from "../services/accountviewExportService";
 import crypto from "crypto";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import {
@@ -1299,6 +1300,12 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), asy
     req.log.error(err, "leren van leverancier-categorisatie mislukt (niet-blokkerend)");
   }
 
+  // INKOOP_BOEKING_01: factuur staat nu op klaar_voor_accountview + geaccordeerd —
+  // probeer automatisch te boeken (fire-and-forget; faalmail bij mislukking).
+  void probeerAutomatischeBoeking(id, "handmatig geaccordeerd").catch((err) => {
+    req.log.error({ err, factuurId: id }, "auto-boeking na accorderen mislukt (onverwacht)");
+  });
+
   res.json(await mapFactuur(updated));
 });
 
@@ -1321,131 +1328,27 @@ router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 4), asyn
 // ── POST /facturen/:id/export-accountview ──────────────────────────────────────
 router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
-  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
-  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
-
-  // Blokkeer dubbele export
-  if (factuur.accountviewBoekingId && factuur.accountviewStatus === "success") {
-    res.status(409).json({
-      error: "Dubbele export geblokkeerd",
-      detail: `Deze factuur is al geëxporteerd naar AccountView (boekingId: ${factuur.accountviewBoekingId}).`,
+  // INKOOP_BOEKING_01: de exportkern (controles + boeking + logging) is verhuisd
+  // naar de gedeelde service zodat handmatige export en automatische boeking
+  // exact dezelfde route volgen.
+  const uitkomst = await exporteerFactuurNaarAccountView(id, sessionUserId(req));
+  if (!uitkomst.ok) {
+    res.status(uitkomst.httpStatus).json({
+      error: uitkomst.fout,
+      ...(uitkomst.detail ? { detail: uitkomst.detail } : {}),
+      ...(uitkomst.fouten ? { fouten: uitkomst.fouten } : {}),
+      ...(uitkomst.viaGoedkeuring ? { viaGoedkeuring: true } : {}),
     });
     return;
   }
-  if (factuur.geblokkeerd) {
-    res.status(409).json({ error: "Factuur is geblokkeerd" });
-    return;
-  }
-
-  // Governance-gate: als er een actieve goedkeuringsaanvraag loopt of vereist is,
-  // geef een expliciete melding zodat de exportknop niet cryptisch faalt.
-  {
-    const documentType = bepaalFactuurDocumentType(factuur);
-    const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
-    const { vereist: govVereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
-    if (govVereist && !factuur.geaccordeerd) {
-      const open = await haalOpenAanvraag(db, documentType, id);
-      res.status(422).json({
-        error: "Goedkeuring vereist voor AccountView-export",
-        detail: open
-          ? "Er loopt een openstaande goedkeuringsaanvraag voor deze factuur. Wacht op de uitkomst voor u naar AccountView exporteert."
-          : "Deze factuur vereist goedkeuring. Dien de factuur ter goedkeuring in via de knop op de detailpagina.",
-        viaGoedkeuring: true,
-      });
-      return;
-    }
-  }
-
-  // Valideer verplichte velden
-  const fouten: string[] = [];
-  if (!factuur.factuurnummer) fouten.push("Factuurnummer ontbreekt");
-  if (!factuur.factuurdatum) fouten.push("Factuurdatum ontbreekt");
-  if (!factuur.relatienaam) fouten.push("Relatienaam ontbreekt");
-  if (!factuur.bedragInclBtw) fouten.push("Bedrag incl. BTW ontbreekt");
-  if (!factuur.btwCode) fouten.push("BTW-code ontbreekt");
-  if (!factuur.geaccordeerd) fouten.push("Factuur is nog niet geaccordeerd");
-
-  if (fouten.length > 0) {
-    res.status(422).json({ error: "Factuur is niet exportklaar", fouten });
-    return;
-  }
-
-  // Haal AccountView instellingen op
-  const [inst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
-  if (!inst) {
-    res.status(503).json({ error: "AccountView is niet geconfigureerd" });
-    return;
-  }
-
-  const client = maakAccountViewClient(inst);
-  const dagboek = factuur.dagboek ?? (factuur.type === "verkoop" ? inst.dagboekVerkoop : inst.dagboekInkoop) ?? "INK";
-
-  const boeking: AccountviewBoeking = {
-    dagboek: dagboek ?? "INK",
-    administratiecode: inst.administratiecode ?? "",
-    factuurnummer: factuur.factuurnummer!,
-    factuurdatum: factuur.factuurdatum!,
-    vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
-    relatienaam: factuur.relatienaam!,
-    relatieCode: factuur.relatieCode ?? undefined,
-    omschrijving: factuur.omschrijving ?? `Factuur ${factuur.factuurnummer}`,
-    bedragExclBtw: parseFloat(factuur.bedragExclBtw ?? "0"),
-    btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
-    bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
-    btwCode: factuur.btwCode ?? undefined,
-    grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
-    kostenplaats: factuur.kostenplaats ?? undefined,
-    projectCode: factuur.projectCode ?? undefined,
-    type: factuur.type === "verkoop" ? "verkoop" : "inkoop",
-  };
-
-  const userId = sessionUserId(req);
-
-  // Maak log-entry aan
-  const [logEntry] = await db.insert(accountviewExportLogsTable).values({
-    factuurId: id,
-    gebruikerId: userId,
-    testmodus: inst.testmodus,
-    verzondenPayload: boeking as unknown as Record<string, unknown>,
-    status: "bezig",
-  }).returning();
-
-  const resultaat = await client.verzendBoeking(boeking);
-
-  // Bijwerken log-entry
-  await db.update(accountviewExportLogsTable).set({
-    accountviewResponse: resultaat.rawResponse as Record<string, unknown> | null,
-    httpStatus: resultaat.httpStatus ?? null,
-    status: resultaat.geslaagd ? "geslaagd" : "mislukt",
-    accountviewBoekingId: resultaat.boekingId ?? null,
-    foutmelding: resultaat.foutmelding ?? null,
-  }).where(eq(accountviewExportLogsTable.id, logEntry.id));
-
-  if (resultaat.geslaagd) {
-    await db.update(facturenTable).set({
-      accountviewBoekingId: resultaat.boekingId ?? null,
-      accountviewExportOp: new Date(),
-      accountviewStatus: "success",
-      accountviewFout: null,
-      status: "verwerkt",
-      bijgewerktOp: new Date(),
-    }).where(eq(facturenTable.id, id));
-  } else {
-    await db.update(facturenTable).set({
-      accountviewStatus: "error",
-      accountviewFout: resultaat.foutmelding ?? "Onbekende fout",
-      status: "fout_bij_verzending",
-      bijgewerktOp: new Date(),
-    }).where(eq(facturenTable.id, id));
-  }
 
   res.json({
-    status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+    status: uitkomst.geslaagd ? "geslaagd" : "mislukt",
     factuur_id: id,
-    boeking_id: resultaat.boekingId ?? null,
-    foutmelding: resultaat.foutmelding ?? null,
-    testmodus: inst.testmodus,
-    fouten: resultaat.foutDetails ?? [],
+    boeking_id: uitkomst.boekingId ?? null,
+    foutmelding: uitkomst.foutmelding ?? null,
+    testmodus: uitkomst.testmodus,
+    fouten: uitkomst.fouten ?? [],
   });
 });
 
@@ -2359,6 +2262,16 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
     return;
   }
 
+  // INKOOP_BOEKING_01: gedeelde verzend-claim tegen gelijktijdige verzendingen
+  // (herexport mag wél vanuit een eerder geslaagde boeking, vandaar de vlag).
+  if (!(await claimAccountviewVerzending(id, { herexport: true }))) {
+    res.status(409).json({
+      error: "Verzending loopt al",
+      detail: "Er loopt al een verzending naar AccountView voor deze factuur. Probeer het zo weer of controleer de export-logs.",
+    });
+    return;
+  }
+
   const userId = sessionUserId(req);
   const [logEntry] = await db.insert(accountviewExportLogsTable).values({
     factuurId: id,
@@ -2435,6 +2348,12 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
     }
     if (factuur.geblokkeerd || !factuur.geaccordeerd) {
       resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: "Niet akkoord of geblokkeerd", testmodus: inst.testmodus });
+      continue;
+    }
+    // INKOOP_BOEKING_01: gedeelde verzend-claim tegen dubbele boekingen
+    // (blokkeert ook her-verzenden van al succesvol geboekte facturen via batch).
+    if (!(await claimAccountviewVerzending(fid))) {
+      resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: "Er loopt al een verzending of de factuur is al geboekt", testmodus: inst.testmodus });
       continue;
     }
 

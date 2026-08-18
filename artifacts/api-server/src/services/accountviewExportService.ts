@@ -1,0 +1,293 @@
+// ─── AccountView-exportservice ────────────────────────────────────────────────
+//
+// INKOOP_BOEKING_01: één plek waar een factuur naar AccountView geboekt wordt.
+// De bestaande handmatige exportroute (POST /facturen/:id/export-accountview)
+// en de nieuwe automatische boeking gebruiken exact dezelfde kern, zodat de
+// controles (dubbele export, blokkade, goedkeuringsgate, verplichte velden)
+// nooit uit elkaar kunnen lopen.
+//
+// Automatische boeking is bewust fail-closed:
+// - alleen bij status klaar_voor_accountview + geaccordeerd + niet geblokkeerd;
+// - de goedkeuringsgate wordt op het moment van boeken opnieuw gecontroleerd;
+// - alleen als de beheerder de exportkoppeling heeft aangezet (export_actief);
+// - mislukt de boeking, dan gaat er een faalmail met de reden naar de
+//   hoofdbeheerder(s) en blijft de handmatige exportknop gewoon werken.
+
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import {
+  db,
+  facturenTable,
+  accountviewInstellingenTable,
+  accountviewExportLogsTable,
+  gebruikersTable,
+} from "@workspace/db";
+import { logger } from "../lib/logger";
+import { maakAccountViewClient, type AccountviewBoeking } from "./accountview-client";
+import { checkVereistGoedkeuring, haalOpenAanvraag } from "./goedkeuring-engine";
+import { stuurAccountviewBoekingMisluktMail } from "./email";
+
+type Factuur = typeof facturenTable.$inferSelect;
+
+// Zelfde afleiding als in routes/facturen.ts — klein en stabiel genoeg om hier
+// te herhalen zonder een circulaire import te introduceren.
+export function bepaalFactuurDocumentType(f: { type: string; subtype?: string | null }): string {
+  if (f.subtype === "creditnota") return "creditnota";
+  if (f.subtype === "prijsafwijking") return "prijsafwijking";
+  return f.type === "verkoop" ? "verkoop_factuur" : "inkoop_factuur";
+}
+
+export interface ExportUitkomst {
+  ok: boolean;
+  httpStatus: number;              // voorgestelde HTTP-status voor de route
+  fout?: string;
+  detail?: string;
+  fouten?: string[];
+  viaGoedkeuring?: boolean;
+  geslaagd?: boolean;
+  boekingId?: string | null;
+  foutmelding?: string | null;
+  testmodus?: boolean;
+}
+
+/**
+ * Atomaire verzend-claim tegen dubbele boekingen. Zet accountviewStatus op
+ * "verzenden" — maar alleen als er niet al een verzending loopt en (behalve
+ * bij herexport) de factuur niet al succesvol geboekt is. Een claim die door
+ * een crash blijft hangen, vervalt na 10 minuten. Alle verzendpaden (auto,
+ * handmatig, batch, herexport) moeten deze claim nemen vóór de externe call.
+ */
+export async function claimAccountviewVerzending(
+  factuurId: number,
+  opties?: { herexport?: boolean },
+): Promise<boolean> {
+  const staleGrens = new Date(Date.now() - 10 * 60 * 1000);
+  const vanuitStatussen = opties?.herexport ? ["error", "success"] : ["error"];
+  const geclaimd = await db.update(facturenTable)
+    .set({ accountviewStatus: "verzenden", bijgewerktOp: new Date() })
+    .where(and(
+      eq(facturenTable.id, factuurId),
+      eq(facturenTable.geblokkeerd, false),
+      or(
+        isNull(facturenTable.accountviewStatus),
+        inArray(facturenTable.accountviewStatus, vanuitStatussen),
+        // hangende claim ouder dan 10 minuten mag overgenomen worden
+        and(eq(facturenTable.accountviewStatus, "verzenden"), lt(facturenTable.bijgewerktOp, staleGrens)),
+      ),
+    ))
+    .returning({ id: facturenTable.id });
+  return geclaimd.length === 1;
+}
+
+/**
+ * Boekt één factuur naar AccountView. Voert alle bestaande controles uit en
+ * geeft een gestructureerde uitkomst terug die de route 1-op-1 kan serveren.
+ */
+export async function exporteerFactuurNaarAccountView(
+  factuurId: number,
+  gebruikerId: number | null,
+): Promise<ExportUitkomst> {
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1);
+  if (!factuur) return { ok: false, httpStatus: 404, fout: "Niet gevonden" };
+
+  // Blokkeer dubbele export
+  if (factuur.accountviewBoekingId && factuur.accountviewStatus === "success") {
+    return {
+      ok: false, httpStatus: 409, fout: "Dubbele export geblokkeerd",
+      detail: `Deze factuur is al geëxporteerd naar AccountView (boekingId: ${factuur.accountviewBoekingId}).`,
+    };
+  }
+  if (factuur.geblokkeerd) return { ok: false, httpStatus: 409, fout: "Factuur is geblokkeerd" };
+
+  // Governance-gate: als er een actieve goedkeuringsaanvraag loopt of vereist is,
+  // geef een expliciete melding zodat de export niet cryptisch faalt.
+  {
+    const documentType = bepaalFactuurDocumentType(factuur);
+    const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+    const { vereist: govVereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
+    if (govVereist && !factuur.geaccordeerd) {
+      const open = await haalOpenAanvraag(db, documentType, factuurId);
+      return {
+        ok: false, httpStatus: 422, fout: "Goedkeuring vereist voor AccountView-export",
+        detail: open
+          ? "Er loopt een openstaande goedkeuringsaanvraag voor deze factuur. Wacht op de uitkomst voor u naar AccountView exporteert."
+          : "Deze factuur vereist goedkeuring. Dien de factuur ter goedkeuring in via de knop op de detailpagina.",
+        viaGoedkeuring: true,
+      };
+    }
+  }
+
+  // Valideer verplichte velden
+  const fouten: string[] = [];
+  if (!factuur.factuurnummer) fouten.push("Factuurnummer ontbreekt");
+  if (!factuur.factuurdatum) fouten.push("Factuurdatum ontbreekt");
+  if (!factuur.relatienaam) fouten.push("Relatienaam ontbreekt");
+  if (!factuur.bedragInclBtw) fouten.push("Bedrag incl. BTW ontbreekt");
+  if (!factuur.btwCode) fouten.push("BTW-code ontbreekt");
+  if (!factuur.geaccordeerd) fouten.push("Factuur is nog niet geaccordeerd");
+  if (fouten.length > 0) return { ok: false, httpStatus: 422, fout: "Factuur is niet exportklaar", fouten };
+
+  // Haal AccountView instellingen op
+  const [inst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  if (!inst) return { ok: false, httpStatus: 503, fout: "AccountView is niet geconfigureerd" };
+
+  // Atomaire claim vlak vóór de externe call — voorkomt dat twee gelijktijdige
+  // triggers (auto + handmatig, of dubbelklik) dezelfde boeking twee keer verzenden.
+  const geclaimdVoorVerzending = await claimAccountviewVerzending(factuurId);
+  if (!geclaimdVoorVerzending) {
+    return {
+      ok: false, httpStatus: 409, fout: "Verzending loopt al of factuur is al geboekt",
+      detail: "Er loopt al een verzending naar AccountView voor deze factuur, of hij is intussen al succesvol geboekt.",
+    };
+  }
+
+  const client = maakAccountViewClient(inst);
+  const dagboek = factuur.dagboek ?? (factuur.type === "verkoop" ? inst.dagboekVerkoop : inst.dagboekInkoop) ?? "INK";
+
+  const boeking: AccountviewBoeking = {
+    dagboek: dagboek ?? "INK",
+    administratiecode: inst.administratiecode ?? "",
+    factuurnummer: factuur.factuurnummer!,
+    factuurdatum: factuur.factuurdatum!,
+    vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
+    relatienaam: factuur.relatienaam!,
+    relatieCode: factuur.relatieCode ?? undefined,
+    omschrijving: factuur.omschrijving ?? `Factuur ${factuur.factuurnummer}`,
+    bedragExclBtw: parseFloat(factuur.bedragExclBtw ?? "0"),
+    btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
+    bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
+    btwCode: factuur.btwCode ?? undefined,
+    grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+    kostenplaats: factuur.kostenplaats ?? undefined,
+    projectCode: factuur.projectCode ?? undefined,
+    type: factuur.type === "verkoop" ? "verkoop" : "inkoop",
+  };
+
+  // Maak log-entry aan
+  const [logEntry] = await db.insert(accountviewExportLogsTable).values({
+    factuurId,
+    gebruikerId,
+    testmodus: inst.testmodus,
+    verzondenPayload: boeking as unknown as Record<string, unknown>,
+    status: "bezig",
+  }).returning();
+
+  const resultaat = await client.verzendBoeking(boeking);
+
+  await db.update(accountviewExportLogsTable).set({
+    accountviewResponse: resultaat.rawResponse as Record<string, unknown> | null,
+    httpStatus: resultaat.httpStatus ?? null,
+    status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+    accountviewBoekingId: resultaat.boekingId ?? null,
+    foutmelding: resultaat.foutmelding ?? null,
+  }).where(eq(accountviewExportLogsTable.id, logEntry!.id));
+
+  if (resultaat.geslaagd) {
+    await db.update(facturenTable).set({
+      accountviewBoekingId: resultaat.boekingId ?? null,
+      accountviewExportOp: new Date(),
+      accountviewStatus: "success",
+      accountviewFout: null,
+      status: "verwerkt",
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, factuurId));
+  } else {
+    await db.update(facturenTable).set({
+      accountviewStatus: "error",
+      accountviewFout: resultaat.foutmelding ?? "Onbekende fout",
+      status: "fout_bij_verzending",
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, factuurId));
+  }
+
+  return {
+    ok: true,
+    httpStatus: 200,
+    geslaagd: resultaat.geslaagd,
+    boekingId: resultaat.boekingId ?? null,
+    foutmelding: resultaat.foutmelding ?? null,
+    testmodus: inst.testmodus,
+    fouten: resultaat.foutDetails ?? [],
+  };
+}
+
+/**
+ * INKOOP_BOEKING_01 §3 — automatische boeking.
+ *
+ * Wordt (fire-and-forget, ná de databasecommit) aangeroepen op de plekken waar
+ * een factuur op klaar_voor_accountview + geaccordeerd komt. Boekt alleen als
+ * er géén openstaande goedkeuring is en de beheerder de exportkoppeling heeft
+ * aangezet (export_actief). Mislukt de boeking, dan gaat er een faalmail met
+ * de reden naar de hoofdbeheerder(s); handmatig exporteren blijft mogelijk.
+ */
+export async function probeerAutomatischeBoeking(factuurId: number, aanleiding: string): Promise<void> {
+  try {
+    const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1);
+    if (!factuur) return;
+    if (factuur.status !== "klaar_voor_accountview" || !factuur.geaccordeerd || factuur.geblokkeerd) return;
+    if (factuur.accountviewBoekingId && factuur.accountviewStatus === "success") return;
+
+    const [inst] = await db.select().from(accountviewInstellingenTable)
+      .where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+    if (!inst || !inst.exportActief) {
+      logger.info({ factuurId, aanleiding },
+        "AccountView auto-boeking overgeslagen: exportkoppeling staat uit (export_actief)");
+      return;
+    }
+
+    // Openstaande goedkeuring = nooit automatisch boeken (fail-closed).
+    const documentType = bepaalFactuurDocumentType(factuur);
+    const open = await haalOpenAanvraag(db, documentType, factuurId);
+    if (open) {
+      logger.info({ factuurId, aanleiding }, "AccountView auto-boeking overgeslagen: openstaande goedkeuringsaanvraag");
+      return;
+    }
+
+    const uitkomst = await exporteerFactuurNaarAccountView(factuurId, null);
+    if (uitkomst.ok && uitkomst.geslaagd) {
+      logger.info({ factuurId, aanleiding, boekingId: uitkomst.boekingId, testmodus: uitkomst.testmodus },
+        "AccountView auto-boeking geslaagd");
+      return;
+    }
+
+    // Mislukt (controle-fout of AccountView-fout) → faalmail met reden.
+    const reden = uitkomst.ok
+      ? (uitkomst.foutmelding ?? "AccountView gaf een onbekende fout terug")
+      : [uitkomst.fout, uitkomst.detail, ...(uitkomst.fouten ?? [])].filter(Boolean).join(" — ");
+    logger.warn({ factuurId, aanleiding, reden }, "AccountView auto-boeking mislukt");
+    await stuurFaalmailNaarHoofdbeheerders(factuur, reden, aanleiding);
+  } catch (err) {
+    logger.error({ err, factuurId, aanleiding }, "AccountView auto-boeking: onverwachte fout");
+    try {
+      const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1);
+      if (factuur) {
+        await stuurFaalmailNaarHoofdbeheerders(factuur,
+          `Onverwachte fout tijdens automatisch boeken: ${err instanceof Error ? err.message : String(err)}`, aanleiding);
+      }
+    } catch (mailErr) {
+      logger.error({ err: mailErr, factuurId }, "AccountView auto-boeking: faalmail versturen mislukt");
+    }
+  }
+}
+
+async function stuurFaalmailNaarHoofdbeheerders(factuur: Factuur, reden: string, aanleiding: string): Promise<void> {
+  const ontvangers = await db.select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
+    .from(gebruikersTable)
+    .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)));
+  for (const o of ontvangers) {
+    if (!o.email) continue;
+    try {
+      await stuurAccountviewBoekingMisluktMail({
+        naarEmail: o.email,
+        naarNaam: o.naam,
+        factuurId: factuur.id,
+        factuurnummer: factuur.factuurnummer,
+        relatienaam: factuur.relatienaam,
+        bedragInclBtw: factuur.bedragInclBtw,
+        reden,
+        aanleiding,
+      });
+    } catch (err) {
+      logger.error({ err, factuurId: factuur.id, naar: o.email }, "AccountView-faalmail versturen mislukt");
+    }
+  }
+}

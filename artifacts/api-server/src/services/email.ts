@@ -56,7 +56,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -2124,4 +2124,38 @@ export async function stuurDeclaratieAfgewezenMail(opties: {
   } catch {
     // Stille fout — status is al opgeslagen
   }
+}
+
+// ── INKOOP_BOEKING_01: AccountView-boeking mislukt (faalmail) ─────────────────
+// Automatische boeking naar AccountView is mislukt — de hoofdbeheerder moet dit
+// weten en kan alsnog handmatig exporteren. Zelfde mailmechanisme als alle
+// andere systeemmails (mailShell + verstuurMail).
+export async function stuurAccountviewBoekingMisluktMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  factuurId: number;
+  factuurnummer?: string | null;
+  relatienaam?: string | null;
+  bedragInclBtw?: string | null;
+  reden: string;
+  aanleiding: string;
+}): Promise<void> {
+  const nr = opties.factuurnummer ? `factuur ${opties.factuurnummer}` : `factuur #${opties.factuurId}`;
+  const bedragTekst = opties.bedragInclBtw
+    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(parseFloat(opties.bedragInclBtw))
+    : null;
+  const onderwerp = `AccountView-boeking mislukt: ${nr}`;
+  const basisUrl = publiekeAppUrl();
+  const html = mailShell({
+    titel: "AccountView-boeking mislukt",
+    kopje: `${nr}${opties.relatienaam ? ` — ${escapeHtml(opties.relatienaam)}` : ""}${bedragTekst ? ` (${bedragTekst})` : ""}`,
+    paragrafen: [
+      `Het automatisch boeken van deze factuur naar AccountView is niet gelukt (${escapeHtml(opties.aanleiding)}).`,
+      `<strong>Reden:</strong> ${escapeHtml(opties.reden)}`,
+      "De factuur staat nog gewoon in FPS Connect. U kunt de oorzaak verhelpen en de factuur alsnog handmatig naar AccountView exporteren via de knop op de factuurdetailpagina.",
+    ],
+    knop: { label: "Bekijk factuur", link: `${basisUrl}/facturen/${opties.factuurId}` },
+    voettekst: "Dit is een automatische melding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
+  });
+  await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "accountview_boeking_mislukt" });
 }

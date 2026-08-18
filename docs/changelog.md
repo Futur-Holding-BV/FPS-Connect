@@ -1,3 +1,9 @@
+## 2026-08-18 — INKOOP_BOEKING_01: factuur-PDF bij direct betaalde inkoop + automatische AccountView-boeking
+
+- Een PDF die als bon wordt geüpload bij een direct betaalde algemene inkoop gaat nu door dezelfde AI-lezing als een mailfactuur en wordt als inkoopfactuur aan de inkoopregel gekoppeld; een foto blijft gewoon een bon. De factuur wordt vergeleken met de inkoop (leverancier genormaliseerd, bedrag incl. btw met de bestaande tolerantie max(€2, 2%); kostensoort als voorstel). Klopt alles en is er geen goedkeuring vereist → factuur klaar voor boeking en inkoop afgerond; wijkt iets af → bestaand signaal `algemene_inkoop_bedrag_afwijkend`, niets wordt stil verwerkt.
+- Automatische AccountView-boeking: zodra een factuur op klaar-voor-boeking + geaccordeerd staat zonder openstaande goedkeuring wordt hij automatisch geboekt (achter de bestaande instelling `export_actief`; testmodus wordt gerespecteerd). Handmatige en batch-export blijven ongewijzigd en delen nu dezelfde exportkern (`accountviewExportService`). Mislukt de boeking, dan gaat een faalmail met de reden naar de hoofdbeheerder(s) via het bestaande mailmechanisme.
+- Antwoorddocument met gemeten AccountView-instellingen en getoetste aannames: `docs/antwoorden/INKOOP_BOEKING_01.md`.
+
 ## 2026-08-18 — Spoedherstel: achtergebleven terugvaltest-sabotage uit de API-start verwijderd
 
 - Het bewust kapotte startblok uit het terugvalbewijs van HERSTEL_BUNDEL_01 ("ROLLBACKTEST HERSTEL_BUNDEL_01", bedoeld voor uitsluitend de weggegooide testtak) bleek via de merge van taak #1061 tóch op main te staan: de dev-api crashte direct bij het opstarten en de eerstvolgende push zou een bewust kapotte api naar productie hebben gestuurd. Blok verwijderd; `artifacts/api-server/src/index.ts` is weer byte-identiek aan de laatst geverifieerde versie (bb3fd02a). Dev-api start groen, healthz ok; de rest van de #1061-merge (e2e-testbestanden) is gecontroleerd en in orde.

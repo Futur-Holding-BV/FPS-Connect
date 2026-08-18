@@ -23,6 +23,7 @@ import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { scanBestandBytes, haalScanStatusOpVoorPad } from "../services/security-intake-engine";
 import { checkVereistGoedkeuring, haalOpenAanvraag } from "../services/goedkeuring-engine";
+import { verwerkDirectBetaaldeBonFactuur } from "../services/factuurstroomService";
 import { formatNummer } from "../lib/kenmerk";
 
 const router = Router();
@@ -255,7 +256,35 @@ router.post("/algemene-inkoop/:id/bon", toegang, uploadBon.single("bestand"), as
     const [nieuw] = await db.update(algemeneInkopenTable)
       .set({ bonPad, bijgewerktOp: new Date() })
       .where(eq(algemeneInkopenTable.id, id)).returning();
-    res.json(await metWeergave(nieuw!));
+
+    // INKOOP_BOEKING_01: een PDF bij een direct betaalde inkoop is een factuur —
+    // dezelfde AI-lezing als een mailfactuur, gekoppeld als inkoopfactuur.
+    // Een foto blijft gewoon een bon. Fout in de verwerking = bon blijft staan.
+    let factuurVerwerking: unknown = null;
+    if (rij.soort === "direct_betaald" && bestand.mimetype === "application/pdf") {
+      try {
+        const [gebruiker] = req.session.userId
+          ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable)
+              .where(eq(gebruikersTable.id, req.session.userId)).limit(1)
+          : [];
+        factuurVerwerking = await verwerkDirectBetaaldeBonFactuur({
+          inkoopId: id,
+          buffer: bestand.buffer,
+          bestandsnaam: bestand.originalname || "factuur.pdf",
+          subPath,
+          gebruikerNaam: gebruiker?.naam ?? null,
+        });
+      } catch (err) {
+        req.log.error({ err, inkoopId: id }, "algemene inkoop: factuurverwerking van pdf-bon mislukt");
+        factuurVerwerking = {
+          factuurAangemaakt: false, uitkomst: "niet_leesbaar",
+          melding: "De PDF is als bon bewaard, maar kon niet automatisch als factuur verwerkt worden. Handel de inkoop handmatig af.",
+        };
+      }
+    }
+
+    const [vers] = await db.select().from(algemeneInkopenTable).where(eq(algemeneInkopenTable.id, id));
+    res.json({ ...(await metWeergave(vers ?? nieuw!)), factuur_verwerking: factuurVerwerking });
   } catch (err) {
     req.log.error({ err }, "algemene inkoop: bon uploaden mislukt");
     res.status(500).json({ error: veiligeFoutmelding(err) });
