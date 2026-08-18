@@ -21,6 +21,8 @@ import {
   accountviewInstellingenTable,
   accountviewExportLogsTable,
   gebruikersTable,
+  factuurSignalenTable,
+  factuurTijdlijnTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { maakAccountViewClient, type AccountviewBoeking } from "./accountview-client";
@@ -276,6 +278,39 @@ export async function probeerAutomatischeBoeking(factuurId: number, aanleiding: 
       logger.info({ factuurId, aanleiding, boekingId: uitkomst.boekingId, testmodus: uitkomst.testmodus },
         "AccountView auto-boeking geslaagd");
       return;
+    }
+
+    // Ontbrekende verplichte boekvelden (btw-code, factuurnummer, …) → géén faalmail,
+    // maar een signaal + status terug naar controle_nodig. De achtergrondlus probeert
+    // dan niet elk kwartier opnieuw; de auto-boeking triggert vanzelf zodra iemand de
+    // ontbrekende gegevens invult en de factuur opnieuw accordeert.
+    if (!uitkomst.ok && uitkomst.httpStatus === 422 && uitkomst.fout === "Factuur is niet exportklaar") {
+      const ontbreekt = (uitkomst.fouten ?? []).join(", ");
+      logger.info({ factuurId, aanleiding, ontbreekt },
+        "AccountView auto-boeking uitgesteld: verplichte boekvelden ontbreken — signaal aangemaakt");
+
+      // Gededupliceerd signaal (unieke index op type+factuurId voor open signalen).
+      await db.insert(factuurSignalenTable).values({
+        type: "ontbrekende_boekgegevens",
+        factuurId,
+        omschrijving: `Factuur ${factuur.factuurnummer ?? `#${factuurId}`} van ${factuur.relatienaam ?? "onbekend"} ` +
+          `kan niet automatisch geboekt worden: ${ontbreekt}. ` +
+          `Vul de ontbrekende gegevens in en accordeer opnieuw om alsnog automatisch te boeken.`,
+      }).onConflictDoNothing();
+
+      // Status terug naar controle_nodig zodat de achtergrondlus stopt met opnieuw proberen.
+      await db.update(facturenTable).set({
+        status: "controle_nodig",
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, factuurId));
+
+      await db.insert(factuurTijdlijnTable).values({
+        factuurId,
+        tekst: `Automatisch boeken uitgesteld: ${ontbreekt}. Vul de ontbrekende boekvelden in en accordeer opnieuw.`,
+        gebruikerNaam: null,
+      });
+
+      return; // géén faalmail
     }
 
     // Mislukt (controle-fout of AccountView-fout) → faalmail met reden.

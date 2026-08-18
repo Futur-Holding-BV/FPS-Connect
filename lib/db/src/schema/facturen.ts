@@ -261,6 +261,10 @@ export const FACTUUR_SIGNAAL_TYPES = [
   // NP_INKOOP_01 — factuur gekoppeld aan algemene inkoop maar het bedrag wijkt
   // af van het verwachte bedrag; mag nooit stil geaccepteerd worden.
   "algemene_inkoop_bedrag_afwijkend",
+  // INKOOP_BOEKING_01 — verplichte boekvelden (btw-code, factuurnummer, …) ontbreken
+  // zodat automatisch boeken niet kan. Zodra de ontbrekende gegevens zijn ingevuld
+  // en de factuur opnieuw geaccordeerd wordt, boekt hij alsnog automatisch.
+  "ontbrekende_boekgegevens",
 ] as const;
 export type FactuurSignaalType = typeof FACTUUR_SIGNAAL_TYPES[number];
 
