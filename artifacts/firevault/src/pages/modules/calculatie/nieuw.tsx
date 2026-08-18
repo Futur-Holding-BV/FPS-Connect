@@ -109,10 +109,15 @@ export default function ModulesCalculatieNieuw() {
           ? `/modules/calculatie/${data.id}?adviesrapport=${adviesrapportId}`
           : `/modules/calculatie/${data.id}`);
       },
-      onError: () => {
+      onError: (err) => {
+        // Toon de werkelijke serverreden (bv. ontbrekende bevoegdheid) — een
+        // 403 mag nooit als "probeer het opnieuw" verschijnen (René, 18-08).
+        const data = (err as { data?: unknown })?.data;
+        const serverFout = data && typeof data === "object" && typeof (data as { error?: unknown }).error === "string"
+          ? (data as { error: string }).error : undefined;
         toast({
           title: "Fout bij aanmaken",
-          description: "De calculatie kon niet worden aangemaakt. Probeer het opnieuw.",
+          description: serverFout ?? "De calculatie kon niet worden aangemaakt. Probeer het opnieuw.",
           variant: "destructive",
         });
       },

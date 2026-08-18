@@ -150,3 +150,4 @@
 - [Offboarding & AVG-afscherming](offboarding-afscherming.md) — offboard vernietigt sessies; afgeschermd_op strip't persoonsgegevens (mappers+duplicate-check); nieuwe leesroutes moeten 'm respecteren.
 - [Merkenkast & Beeldbank (MERK_01)](merkenkast-beeldbank.md) — werkgever-huisstijl=enige merkbron; beeldbank=live 4-bronnen-aggregatie; /api/storage/files bestaat NIET (gebruik /api/storage/objects/); archiver v8=named ZipArchive.
 - [Arbeidscontract-extractie](contract-extractie.md) — 18 velden mét vindplaats-plicht (fail-closed), contract-overnemen → bewaking direct; slim-upload medewerker-voorstel alleen bij personeel:1.
+- [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — push blokkeert bij >300 regels diff per bestand; bewuste herschrijving = [grote-wijziging] in commit-boodschap.

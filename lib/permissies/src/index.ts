@@ -344,7 +344,9 @@ export const PRESETS: Preset[] = [
       // muteren; magazijn/gereedschappen 2.
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
-      planning: 3, toolbox: 3, calculaties: 1,
+      // CALC-RECHTEN (René, 18-08-2026): projectleider maakt zelf calculaties
+      // aan → calculaties 3 (was 1); zie ook migratie 0081 voor bestaande accounts.
+      planning: 3, toolbox: 3, calculaties: 3,
       financieel: 2, goedkeuring: 3, declaraties: 3,
       projecten: 3, magazijn: 2, gereedschappen: 2, merk: 1,
     }),
@@ -360,8 +362,10 @@ export const PRESETS: Preset[] = [
       rapportages: 2, bibliotheek: 3, crm: 1,
       financieel: 3,
       // BOUW_01 (René, 09-08-2026): werkvoorbereider pakt meldingen/aanvragen
-      // op en muteert inkoop en planning; leest calculatie.
-      projecten: 3, calculaties: 1, magazijn: 2, gereedschappen: 2, planning: 2,
+      // op en muteert inkoop en planning.
+      // CALC-RECHTEN (René, 18-08-2026): werkvoorbereider maakt zelf calculaties
+      // aan → calculaties 3 (was 1); zie ook migratie 0081 voor bestaande accounts.
+      projecten: 3, calculaties: 3, magazijn: 2, gereedschappen: 2, planning: 2,
     }),
   },
   {

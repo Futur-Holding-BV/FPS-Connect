@@ -132,6 +132,22 @@ export function requireRol(...toegestaneRollen: string[]): RequestHandler {
   };
 }
 
+// Een weigering wegens ontbrekende bevoegdheid moet de WERKELIJKE reden geven
+// (CALC-RECHTEN, René 18-08-2026): nooit een kaal "Geen toegang" dat de
+// frontend tot een misleidend "probeer het opnieuw" verleidt. Het antwoord
+// draagt module + vereist niveau + machineleesbare code, zodat schermen de
+// echte reden kunnen tonen.
+const NIVEAU_LABELS: Record<number, string> = { 1: "lezen", 2: "wijzigen", 3: "aanmaken", 4: "volledig beheer" };
+function bevoegdheidGeweigerd(module: string, minNiveau: number) {
+  const label = NIVEAU_LABELS[minNiveau] ?? String(minNiveau);
+  return {
+    error: `Geen bevoegdheid: hiervoor is voor de module '${module}' niveau ${minNiveau} (${label}) nodig. Vraag de beheerder om je rechten aan te passen.`,
+    code: "BEVOEGDHEID_ONTBREEKT",
+    module,
+    vereist_niveau: minNiveau,
+  };
+}
+
 export function requireBevoegdheid(module: ModuleId, minNiveau: number): RequestHandler {
   return async (
     req: Request,
@@ -147,7 +163,7 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
     if (req.permissies) {
       if (req.permissies.isHoofdbeheerder) { next(); return; }
       if (req.permissies.heeftModuleRecht(module, minNiveau)) { next(); return; }
-      res.status(403).json({ error: "Geen toegang" });
+      res.status(403).json(bevoegdheidGeweigerd(module, minNiveau));
       return;
     }
     try {
@@ -167,7 +183,7 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
       // Toegang komt puur uit de bevoegdheden-matrix.
       const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
       if (!heeftNiveau(bev, module, minNiveau)) {
-        res.status(403).json({ error: "Geen toegang" });
+        res.status(403).json(bevoegdheidGeweigerd(module, minNiveau));
         return;
       }
       next();

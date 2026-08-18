@@ -181,8 +181,12 @@ export function PlakInvoer({
           setOvergenomen({});
           setArtikelAangelegd({});
         },
-        onError: () => {
-          toast({ title: "Herkennen mislukt", description: "Probeer het opnieuw.", variant: "destructive" });
+        onError: (err) => {
+          // 403 e.d.: toon de werkelijke serverreden, nooit alleen "probeer opnieuw".
+          const data = (err as { data?: unknown })?.data;
+          const serverFout = data && typeof data === "object" && typeof (data as { error?: unknown }).error === "string"
+            ? (data as { error: string }).error : undefined;
+          toast({ title: "Herkennen mislukt", description: serverFout ?? "Probeer het opnieuw.", variant: "destructive" });
         },
       },
     );

@@ -1,3 +1,10 @@
+## 2026-08-18 — Calculatie aanmaken voor Projectleider en Werkvoorbereider + echte reden bij bevoegdheids-weigering
+
+- Gemeld door Ruben: calculatie aanmaken lukte niet. Oorzaak (geen storing): aanmaken vereist calculaties niveau 3 en alleen het profiel Calculatie had dat. **Projectleider en Werkvoorbereider gaan van niveau 1 (lezen) naar 3 (aanmaken)**; Commercieel (feitelijk 0) en Directie (1) blijven bewust ongewijzigd.
+- Migratie `0081` werkt de systeem-profielen én bestaande accounts bij: accounts gekoppeld via herkomst-profiel plus een vangnet voor accounts zonder koppeling waarvan de matrix exact de oude preset is. Alleen ophogen naar 3; handmatig hogere of afwijkende accounts blijven ongemoeid. De migratie meldt de aantallen in de deploy-log (migratierunner toont nu ook RAISE NOTICE).
+- Een weigering wegens ontbrekende bevoegdheid geeft voortaan de **werkelijke reden**: de 403 van `requireBevoegdheid` draagt module + vereist niveau + code `BEVOEGDHEID_ONTBREEKT` i.p.v. kaal "Geen toegang", en de calculatie-schermen (nieuw, plak-invoer) tonen die serverreden i.p.v. "probeer het opnieuw".
+- Bewijs: `scripts/src/verificatie-calc-rechten.ts` — 8/8 groen (presets, 403 met reden op niveau 1, aanmaken lukt op niveau 3, Commercieel/Directie ongewijzigd).
+
 ## 2026-08-18 — ADMINISTRATIE_01 fase 1+2: één werkmaatschappijen-scherm + bankrekeningen per BV
 
 - Bedrijfsgegevens en Werkmaatschappijen zijn samengevoegd tot één scherm op `/organisatie/werkmaatschappijen` (tab per BV, alle velden van beide oude schermen; geen veld verdwenen). De oude route `/organisatie/bedrijfsgegevens` verwijst automatisch door.
