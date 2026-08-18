@@ -102,6 +102,18 @@ export const E2E_MKTG_DIR_EMAIL = "e2e-mktg-dir@fps.local";
 export const E2E_MKTG_DIR_WACHTWOORD = "E2eMktgDir!2026";
 export const E2E_MKTG_DIR_TOTP_SECRET = "NRXXK3TFOBTGK4DJ";
 
+// Twee accounts voor de social-rechten-e2e (web-social-rechten.spec.ts).
+// Bewijs: campagnekoppeling in OpstellerDialog vereist marketing:3.
+//   Social-only   : social:3, marketing:0 → select-campagne NIET zichtbaar
+//   Social+Mktg   : social:3, marketing:3 → select-campagne WEL zichtbaar
+export const E2E_SOC_ONLY_EMAIL = "e2e-soc-only@fps.local";
+export const E2E_SOC_ONLY_WACHTWOORD = "E2eSocOnly!2026";
+export const E2E_SOC_ONLY_TOTP_SECRET = "NRSWK3TFOBTGK4ZZ";
+
+export const E2E_SOC_MKTG_EMAIL = "e2e-soc-mktg@fps.local";
+export const E2E_SOC_MKTG_WACHTWOORD = "E2eSocMktg!2026";
+export const E2E_SOC_MKTG_TOTP_SECRET = "OBSXK3TFOBTGK4YY";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -369,6 +381,32 @@ export async function archiveerE2eMarketingRechtenAccounts(): Promise<void> {
   await archiveerAccount(E2E_MKTG_ONLY_EMAIL);
   await archiveerAccount(E2E_MKTG_COM_EMAIL);
   await archiveerAccount(E2E_MKTG_DIR_EMAIL);
+}
+
+/** Richt de twee social-rechten-testaccounts in (idempotent). */
+export async function setupE2eSocialRechtenAccounts(): Promise<void> {
+  await maakOfUpdateE2eAccount({
+    email: E2E_SOC_ONLY_EMAIL,
+    wachtwoord: E2E_SOC_ONLY_WACHTWOORD,
+    totpSecret: E2E_SOC_ONLY_TOTP_SECRET,
+    naam: "E2E Social-only",
+    rol: "gebruiker",
+    bevoegdheden: { social: 3 },
+  });
+  await maakOfUpdateE2eAccount({
+    email: E2E_SOC_MKTG_EMAIL,
+    wachtwoord: E2E_SOC_MKTG_WACHTWOORD,
+    totpSecret: E2E_SOC_MKTG_TOTP_SECRET,
+    naam: "E2E Social+Marketing",
+    rol: "gebruiker",
+    bevoegdheden: { social: 3, marketing: 3 },
+  });
+}
+
+/** Archiveert de twee social-rechten-testaccounts. */
+export async function archiveerE2eSocialRechtenAccounts(): Promise<void> {
+  await archiveerAccount(E2E_SOC_ONLY_EMAIL);
+  await archiveerAccount(E2E_SOC_MKTG_EMAIL);
 }
 
 // Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het

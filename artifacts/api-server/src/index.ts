@@ -1,5 +1,10 @@
 // SENTRY_01: instrument.ts moet de allereerste import zijn, vóór ./app.
 import "./instrument";
+
+// TERUGVALTEST HERSTEL_BUNDEL_01: bewust kapotte start — alleen op deze tak!
+if (process.env.ROLLBACKTEST_UIT !== "1") {
+  throw new Error("ROLLBACKTEST HERSTEL_BUNDEL_01: bewust kapotte api-start om de automatische terugval te bewijzen");
+}
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
