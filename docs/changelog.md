@@ -1,3 +1,8 @@
+## 2026-08-18 — Migratie 0083-nummerbotsing hernummerd naar 0085 (CI-poort blokkeerde de deploy)
+
+- **Probleem**: de voorraadtelling-merge introduceerde `0083_voorraadtelling-en-magazijn-exact.sql`, terwijl `0083_zzp-bedrijfsnaam.sql` (zelf eerder hernummerd van 0079) al bestond én al op productie gedeployed was. De CI-hernoemingscontrole blokkeerde daardoor terecht álle deploys sinds de merge — ook de hoofdbeheerder-fix voor /app/.
+- **Fix**: het nieuwe bestand hernummerd naar `0085_voorraadtelling-en-magazijn-exact.sql` (eerstvolgende vrije nummer); de dev-registratie in `schema_migraties` bijgewerkt zodat de migratie niet opnieuw draait. Productie had het bestand nog niet uitgevoerd (deploys faalden), dus daar draait hij straks gewoon voor het eerst onder het nieuwe nummer.
+
 ## 2026-08-18 — /app/ stuurde ingelogde hoofdbeheerder zelf terug naar de desktop (buitendienst-poort)
 
 - **Probleem**: René kreeg op zijn telefoon op `connect.fps-one.nl/app/` het ingelogde Connect-welkomstscherm i.p.v. de monteuromgeving, terwijl de server aantoonbaar de monteur-HTML serveert. Oorzaak zat in de app zelf: de buitendienst-poort in `artifacts/monteur-app/app/_layout.tsx` deed voor élke ingelogde gebruiker zonder buitendienstprofiel een `window.location.replace("/")` — en `isUitvoerendVeld()` sluit de hoofdbeheerder expliciet uit. De app laadde dus wél, zag de bestaande sessie en gooide hem direct naar de desktop. Anonieme controles (curl/screenshots zonder login) raakten die poort nooit, vandaar de eerdere tegenspraak tussen meting en telefoon.
