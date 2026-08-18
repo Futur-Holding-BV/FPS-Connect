@@ -36,7 +36,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
-import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending } from "../services/accountviewExportService";
+import { exporteerFactuurNaarAccountView, probeerAutomatischeBoeking, claimAccountviewVerzending, hercontroleerBvNaClaim } from "../services/accountviewExportService";
 import crypto from "crypto";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import {
@@ -2226,12 +2226,33 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
     if (bvFout) { res.status(422).json({ error: bvFout }); return; }
   }
 
-  const client = maakAccountViewClient(inst);
+  // INKOOP_BOEKING_01: gedeelde verzend-claim tegen gelijktijdige verzendingen
+  // (herexport mag wél vanuit een eerder geslaagde boeking, vandaar de vlag).
+  const statusVoorClaim = factuur.accountviewStatus;
+  if (!(await claimAccountviewVerzending(id, { herexport: true }))) {
+    res.status(409).json({
+      error: "Verzending loopt al",
+      detail: "Er loopt al een verzending naar AccountView voor deze factuur. Probeer het zo weer of controleer de export-logs.",
+    });
+    return;
+  }
+
+  // ADMINISTRATIE_01 fase 3: hercontrole ná de claim (TOCTOU) — de BV op
+  // offerte/opdracht of de koppeling-BV kan intussen gewijzigd zijn. Bij
+  // weigering is de claim al teruggegeven (factuur op error gezet). Client en
+  // payload worden hieronder uitsluitend uit de gevalideerde verse snapshot
+  // opgebouwd, zodat een gelijktijdige samenhangende wijziging van factuur-BV
+  // én koppeling nooit met de oude administratiecode/credentials verzendt.
+  const her = await hercontroleerBvNaClaim(factuur);
+  if (her.bvFout !== null) { res.status(422).json({ error: "Werkmaatschappij-controle geweigerd", detail: her.bvFout }); return; }
+  const versInst = her.inst;
+
+  const client = maakAccountViewClient(versInst);
 
   const boekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
   const boeking: AccountviewBoeking = {
-    dagboek: boekType === "verkoop" ? (inst.dagboekVerkoop ?? "VRK") : (inst.dagboekInkoop ?? "INK"),
-    administratiecode: inst.administratiecode ?? "",
+    dagboek: boekType === "verkoop" ? (versInst.dagboekVerkoop ?? "VRK") : (versInst.dagboekInkoop ?? "INK"),
+    administratiecode: versInst.administratiecode ?? "",
     factuurnummer: factuur.factuurnummer!,
     factuurdatum: factuur.factuurdatum!,
     vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
@@ -2242,7 +2263,7 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
     btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
     bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
     btwCode: factuur.btwCode ?? undefined,
-    grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+    grootboekrekening: factuur.grootboekrekening ?? versInst.grootboekStandaard ?? undefined,
     kostenplaats: factuur.kostenplaats ?? undefined,
     projectCode: factuur.projectCode ?? undefined,
     type: boekType,
@@ -2253,6 +2274,8 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
 
   // F0 — Idempotency guard: blokkeer herexport met identieke payload die al geslaagd is.
   // Voorkomt dubbele boeking in AccountView bij meervoudig klikken of race-condition.
+  // Bewust ná de claim en op de verse payload; bij blokkade wordt de claim
+  // teruggegeven door de status van vóór de claim te herstellen.
   const [bestaandGelukt] = await db.select({ id: accountviewExportLogsTable.id })
     .from(accountviewExportLogsTable)
     .where(and(
@@ -2263,19 +2286,10 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
     .limit(1);
 
   if (bestaandGelukt) {
+    await db.update(facturenTable).set({ accountviewStatus: statusVoorClaim, bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
     res.status(409).json({
       error: "Identieke herexport geblokkeerd",
       detail: "Deze factuur is al met exact dezelfde gegevens succesvol geëxporteerd. Controleer de export-logs of pas de factuurgegevens aan.",
-    });
-    return;
-  }
-
-  // INKOOP_BOEKING_01: gedeelde verzend-claim tegen gelijktijdige verzendingen
-  // (herexport mag wél vanuit een eerder geslaagde boeking, vandaar de vlag).
-  if (!(await claimAccountviewVerzending(id, { herexport: true }))) {
-    res.status(409).json({
-      error: "Verzending loopt al",
-      detail: "Er loopt al een verzending naar AccountView voor deze factuur. Probeer het zo weer of controleer de export-logs.",
     });
     return;
   }
@@ -2284,7 +2298,7 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
   const [logEntry] = await db.insert(accountviewExportLogsTable).values({
     factuurId: id,
     gebruikerId: userId,
-    testmodus: inst.testmodus,
+    testmodus: versInst.testmodus,
     actie: "herexport",
     verzondenPayload: boeking as unknown as Record<string, unknown>,
     payloadHash,
@@ -2329,7 +2343,7 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
     factuur_id: id,
     boeking_id: resultaat.boekingId ?? null,
     foutmelding: resultaat.foutmelding ?? null,
-    testmodus: inst.testmodus,
+    testmodus: versInst.testmodus,
   });
   void updated;
 });
@@ -2344,7 +2358,6 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
   const [inst] = await db.select().from(accountviewInstellingenTable).limit(1);
   if (!inst?.apiGebruiker) { res.status(503).json({ error: "AccountView niet geconfigureerd" }); return; }
 
-  const client = maakAccountViewClient(inst);
   const userId = sessionUserId(req);
   const resultaten: Array<{ status: string; factuur_id: number; boeking_id: string | null; foutmelding: string | null; testmodus: boolean }> = [];
 
@@ -2373,10 +2386,22 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
       continue;
     }
 
+    // ADMINISTRATIE_01 fase 3: hercontrole ná de claim (TOCTOU) — vers
+    // getoetst vlak vóór de externe call; weigering geeft de claim terug.
+    // Client en payload worden per factuur uit de gevalideerde verse
+    // snapshot opgebouwd, nooit uit de vóór de claim gelezen rij.
+    const her = await hercontroleerBvNaClaim(factuur);
+    if (her.bvFout !== null) {
+      resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: her.bvFout, testmodus: inst.testmodus });
+      continue;
+    }
+    const versInst = her.inst;
+    const client = maakAccountViewClient(versInst);
+
     const batchBoekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
     const boeking: AccountviewBoeking = {
-      dagboek: batchBoekType === "verkoop" ? (inst.dagboekVerkoop ?? "VRK") : (inst.dagboekInkoop ?? "INK"),
-      administratiecode: inst.administratiecode ?? "",
+      dagboek: batchBoekType === "verkoop" ? (versInst.dagboekVerkoop ?? "VRK") : (versInst.dagboekInkoop ?? "INK"),
+      administratiecode: versInst.administratiecode ?? "",
       factuurnummer: factuur.factuurnummer!,
       factuurdatum: factuur.factuurdatum!,
       vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
@@ -2387,7 +2412,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
       btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
       bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
       btwCode: factuur.btwCode ?? undefined,
-      grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+      grootboekrekening: factuur.grootboekrekening ?? versInst.grootboekStandaard ?? undefined,
       kostenplaats: factuur.kostenplaats ?? undefined,
       projectCode: factuur.projectCode ?? undefined,
       type: factuur.type === "verkoop" ? "verkoop" : "inkoop",
@@ -2399,7 +2424,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
     const [logEntry] = await db.insert(accountviewExportLogsTable).values({
       factuurId: fid,
       gebruikerId: userId,
-      testmodus: inst.testmodus,
+      testmodus: versInst.testmodus,
       actie: "export",
       verzondenPayload: boeking as unknown as Record<string, unknown>,
       payloadHash,
@@ -2440,7 +2465,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
       factuur_id: fid,
       boeking_id: resultaat.boekingId ?? null,
       foutmelding: resultaat.foutmelding ?? null,
-      testmodus: inst.testmodus,
+      testmodus: versInst.testmodus,
     });
   }
 

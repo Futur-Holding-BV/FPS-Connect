@@ -60,4 +60,5 @@ Beide correcties van René zijn verwerkt:
 Verder:
 - Factuur-BV via keten offerte → opdracht → gebouw-default, bron zichtbaar (`werkmaatschappij_bron`); factuur-print gebruikt deze keten en blokkeert bij onbepaalbare BV.
 - AccountView-koppeling kreeg een verplicht BV-veld (geen backfill, bewust fail-closed): boeken wordt geweigerd zonder koppeling-BV, bij onbepaalbare factuur-BV en bij mismatch — op álle paden (service, forceer-herexport, batch).
-- Bewijs: `scripts/src/verificatie-administratie01-fase3.ts`, 18/18 groen.
+- TOCTOU-dicht op álle paden: elk verzendpad draait ná de verzend-claim en vlak vóór de externe call de gedeelde `hercontroleerBvNaClaim` (verse instellingen, claim-teruggave bij weigering) en bouwt client + boekingspayload uitsluitend uit de teruggegeven gevalideerde snapshot. Een BV-wijziging op offerte/opdracht of op de koppeling tijdens de verzending — ook een samenhangende wijziging van beide — kan dus nooit meer met oude administratiecode/credentials in de verkeerde administratie belanden.
+- Bewijs: `scripts/src/verificatie-administratie01-fase3.ts`, 20/20 groen (incl. batch-weigeringen); deterministisch race-bewijs `artifacts/api-server/src/scripts/verificatie-bv-hercontrole-toctou.ts`, 11/11 groen (incl. snapshot-binding).

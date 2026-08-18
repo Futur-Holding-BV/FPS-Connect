@@ -159,6 +159,18 @@ async function main(): Promise<void> {
     const r7c = await fetch(`${BASE}/api/facturen/${fLos.id}/forceer-herexport`, { method: "POST", headers: H, body: JSON.stringify({ reden: "bewijs" }) });
     const j7c = (await r7c.json()) as Record<string, unknown>;
     check("7c. factuur zonder herleidbare BV → 422 geweigerd", r7c.status === 422 && String(j7c["error"]).includes("onbekend"), { status: r7c.status, error: j7c["error"] });
+
+    // 7d/7e. Ook batch-export weigert fail-closed per factuur (geen achterdeur).
+    // fOfferte hangt aan BV B, koppeling boekt voor BV A; fLos heeft geen BV.
+    await db.update(facturenTable).set({ geaccordeerd: true }).where(inArray(facturenTable.id, [fOfferte.id, fLos.id]));
+    const r7d = await fetch(`${BASE}/api/facturen/batch-export`, { method: "POST", headers: H, body: JSON.stringify({ factuur_ids: [fOfferte.id, fLos.id] }) });
+    const j7d = (await r7d.json()) as { geslaagd?: number; resultaten?: Array<{ factuur_id: number; status: string; foutmelding: string | null }> };
+    const b1 = j7d.resultaten?.find((r) => r.factuur_id === fOfferte.id);
+    const b2 = j7d.resultaten?.find((r) => r.factuur_id === fLos.id);
+    check("7d. batch: BV-mismatch → mislukt met leesbare BV-reden",
+      b1?.status === "mislukt" && (b1?.foutmelding ?? "").includes("andere werkmaatschappij"), b1);
+    check("7e. batch: factuur zonder herleidbare BV → mislukt (nooit stil geboekt)",
+      j7d.geslaagd === 0 && b2?.status === "mislukt" && (b2?.foutmelding ?? "").includes("onbekend"), b2);
   } finally {
     // Opruimen (volgorde: afhankelijkheden eerst)
     if (opruimUren.length) await db.delete(urenRegistratiesTable).where(inArray(urenRegistratiesTable.id, opruimUren));

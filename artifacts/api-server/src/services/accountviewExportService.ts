@@ -82,6 +82,45 @@ export async function claimAccountviewVerzending(
 }
 
 /**
+ * ADMINISTRATIE_01 fase 3 — hercontrole ná de verzend-claim (TOCTOU).
+ *
+ * De BV op offerte/opdracht en de koppeling-BV blijven muteerbaar tussen de
+ * eerste controle en de externe call. Daarom moet élk verzendpad (service,
+ * forceer-herexport, batch-export) deze hercontrole draaien direct ná
+ * claimAccountviewVerzending en vlak vóór client.verzendBoeking. De
+ * AccountView-instellingen worden hier bewust VERS gelezen (niet de eerder
+ * opgehaalde rij) en controleerFactuurAdministratieBv leest de BV-keten
+ * (offerte → opdracht → gebouw) altijd live uit de database. Bij weigering
+ * wordt de claim teruggegeven door de factuur op error te zetten, en krijgt
+ * de aanroeper de leesbare weigering terug.
+ *
+ * Bij toestaan levert de hercontrole de VERSE instellingen-rij terug; de
+ * aanroeper MOET de AccountView-client en de boekingspayload uitsluitend uit
+ * deze gevalideerde snapshot opbouwen (nooit uit de vóór de claim gelezen
+ * rij) — anders kan een gelijktijdige, samenhangende wijziging van factuur-BV
+ * én koppeling de BV-toets doorstaan maar alsnog met de oude
+ * administratiecode/credentials verzenden.
+ */
+type AccountviewInstellingen = typeof accountviewInstellingenTable.$inferSelect;
+export async function hercontroleerBvNaClaim(
+  factuur: Pick<typeof facturenTable.$inferSelect, "id" | "offerteId" | "opdrachtId" | "gebouwId">,
+): Promise<{ bvFout: string; inst: null } | { bvFout: null; inst: AccountviewInstellingen }> {
+  const [versInst] = await db.select().from(accountviewInstellingenTable)
+    .where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  const bvFout = !versInst
+    ? "AccountView is niet (meer) geconfigureerd; de verzending is afgebroken."
+    : await controleerFactuurAdministratieBv(factuur, versInst.werkgeverId ?? null);
+  if (bvFout) {
+    await db.update(facturenTable).set({
+      accountviewStatus: "error",
+      accountviewFout: bvFout,
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, factuur.id));
+    return { bvFout, inst: null };
+  }
+  return { bvFout: null, inst: versInst! };
+}
+/**
  * Boekt één factuur naar AccountView. Voert alle bestaande controles uit en
  * geeft een gestructureerde uitkomst terug die de route 1-op-1 kan serveren.
  */
@@ -155,28 +194,21 @@ export async function exporteerFactuurNaarAccountView(
     };
   }
 
-  // Hercontrole ná de claim (TOCTOU): de BV op offerte/opdracht en de
-  // koppeling-BV blijven muteerbaar, dus vlak vóór de externe call nog één
-  // keer vers toetsen. Bij weigering wordt de claim netjes teruggegeven.
-  {
-    const [versInst] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
-    const bvFout = await controleerFactuurAdministratieBv(factuur, versInst?.werkgeverId ?? null);
-    if (bvFout) {
-      await db.update(facturenTable).set({
-        accountviewStatus: "error",
-        accountviewFout: bvFout,
-        bijgewerktOp: new Date(),
-      }).where(eq(facturenTable.id, factuurId));
-      return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: bvFout };
-    }
+  // Hercontrole ná de claim (TOCTOU): zie hercontroleerBvNaClaim. Client en
+  // payload worden hierna uitsluitend uit de gevalideerde verse snapshot
+  // (versInst) opgebouwd — nooit uit de vóór de claim gelezen rij.
+  const her = await hercontroleerBvNaClaim(factuur);
+  if (her.bvFout !== null) {
+    return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: her.bvFout };
   }
+  const versInst = her.inst;
 
-  const client = maakAccountViewClient(inst);
-  const dagboek = factuur.dagboek ?? (factuur.type === "verkoop" ? inst.dagboekVerkoop : inst.dagboekInkoop) ?? "INK";
+  const client = maakAccountViewClient(versInst);
+  const dagboek = factuur.dagboek ?? (factuur.type === "verkoop" ? versInst.dagboekVerkoop : versInst.dagboekInkoop) ?? "INK";
 
   const boeking: AccountviewBoeking = {
     dagboek: dagboek ?? "INK",
-    administratiecode: inst.administratiecode ?? "",
+    administratiecode: versInst.administratiecode ?? "",
     factuurnummer: factuur.factuurnummer!,
     factuurdatum: factuur.factuurdatum!,
     vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
@@ -187,7 +219,7 @@ export async function exporteerFactuurNaarAccountView(
     btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
     bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
     btwCode: factuur.btwCode ?? undefined,
-    grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+    grootboekrekening: factuur.grootboekrekening ?? versInst.grootboekStandaard ?? undefined,
     kostenplaats: factuur.kostenplaats ?? undefined,
     projectCode: factuur.projectCode ?? undefined,
     type: factuur.type === "verkoop" ? "verkoop" : "inkoop",
@@ -197,7 +229,7 @@ export async function exporteerFactuurNaarAccountView(
   const [logEntry] = await db.insert(accountviewExportLogsTable).values({
     factuurId,
     gebruikerId,
-    testmodus: inst.testmodus,
+    testmodus: versInst.testmodus,
     verzondenPayload: boeking as unknown as Record<string, unknown>,
     status: "bezig",
   }).returning();
@@ -236,7 +268,7 @@ export async function exporteerFactuurNaarAccountView(
     geslaagd: resultaat.geslaagd,
     boekingId: resultaat.boekingId ?? null,
     foutmelding: resultaat.foutmelding ?? null,
-    testmodus: inst.testmodus,
+    testmodus: versInst.testmodus,
     fouten: resultaat.foutDetails ?? [],
   };
 }
