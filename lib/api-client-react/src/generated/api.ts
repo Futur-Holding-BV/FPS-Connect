@@ -689,6 +689,7 @@ import type {
   MarketingCampagne,
   MarketingCampagneDetail,
   MarketingCampagneInput,
+  MarketingCampagneUpdateInput,
   MarketingDoelgroep,
   MarketingDoelgroepInput,
   MarketingDoelgroepLid,
@@ -696,6 +697,7 @@ import type {
   MarketingSjabloonInput,
   MarketingVerzendtempo,
   MarketingVerzendtempoInput,
+  MarketingWerkgeverOptie,
   MarktspiegelOnderzoek,
   MarktspiegelOnderzoekInput,
   Medewerker,
@@ -28055,6 +28057,83 @@ export const useDeleteMarketingSjabloon = <TError = ErrorType<void>,
       return useMutation(getDeleteMarketingSjabloonMutationOptions(options));
     }
 
+export const getListMarketingWerkgeverOptiesUrl = () => {
+
+
+
+
+  return `/api/marketing/werkgever-opties`
+}
+
+/**
+ * @summary Werkgevers beschikbaar voor campagne-branding (marketing:1, geen HR-data)
+ */
+export const listMarketingWerkgeverOpties = async ( options?: RequestInit): Promise<MarketingWerkgeverOptie[]> => {
+
+  return customFetch<MarketingWerkgeverOptie[]>(getListMarketingWerkgeverOptiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMarketingWerkgeverOptiesQueryKey = () => {
+    return [
+    `/api/marketing/werkgever-opties`
+    ] as const;
+    }
+
+
+export const getListMarketingWerkgeverOptiesQueryOptions = <TData = Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMarketingWerkgeverOptiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>> = ({ signal }) => listMarketingWerkgeverOpties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMarketingWerkgeverOptiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>>
+export type ListMarketingWerkgeverOptiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkgevers beschikbaar voor campagne-branding (marketing:1, geen HR-data)
+ */
+
+export function useListMarketingWerkgeverOpties<TData = Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMarketingWerkgeverOpties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMarketingWerkgeverOptiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetMarketingVerzendtempoUrl = () => {
 
 
@@ -28438,14 +28517,14 @@ export const getUpdateMarketingCampagneUrl = (id: number,) => {
  * @summary Campagne wijzigen (alleen concept/gepland)
  */
 export const updateMarketingCampagne = async (id: number,
-    marketingCampagneInput: MarketingCampagneInput, options?: RequestInit): Promise<OkResultaat> => {
+    marketingCampagneUpdateInput: MarketingCampagneUpdateInput, options?: RequestInit): Promise<OkResultaat> => {
 
   return customFetch<OkResultaat>(getUpdateMarketingCampagneUrl(id),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(marketingCampagneInput)
+    body: JSON.stringify(marketingCampagneUpdateInput)
   }
 );}
 
@@ -28453,8 +28532,8 @@ export const updateMarketingCampagne = async (id: number,
 
 
 export const getUpdateMarketingCampagneMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneUpdateInput>}, TContext> => {
 
 const mutationKey = ['updateMarketingCampagne'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -28466,7 +28545,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMarketingCampagne>>, {id: number;data: BodyType<MarketingCampagneInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMarketingCampagne>>, {id: number;data: BodyType<MarketingCampagneUpdateInput>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  updateMarketingCampagne(id,data,requestOptions)
@@ -28480,18 +28559,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateMarketingCampagneMutationResult = NonNullable<Awaited<ReturnType<typeof updateMarketingCampagne>>>
-    export type UpdateMarketingCampagneMutationBody = BodyType<MarketingCampagneInput>
+    export type UpdateMarketingCampagneMutationBody = BodyType<MarketingCampagneUpdateInput>
     export type UpdateMarketingCampagneMutationError = ErrorType<void>
 
     /**
  * @summary Campagne wijzigen (alleen concept/gepland)
  */
 export const useUpdateMarketingCampagne = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMarketingCampagne>>, TError,{id: number;data: BodyType<MarketingCampagneUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateMarketingCampagne>>,
         TError,
-        {id: number;data: BodyType<MarketingCampagneInput>},
+        {id: number;data: BodyType<MarketingCampagneUpdateInput>},
         TContext
       > => {
       return useMutation(getUpdateMarketingCampagneMutationOptions(options));
@@ -28777,6 +28856,83 @@ export const useStopMarketingCampagne = <TError = ErrorType<void>,
       > => {
       return useMutation(getStopMarketingCampagneMutationOptions(options));
     }
+
+export const getGetMarketingWerkgeverLogoUrl = (werkgeverId: number,) => {
+
+
+
+
+  return `/api/marketing/werkgever-logo/${werkgeverId}`
+}
+
+/**
+ * @summary Publieke logo-proxy voor werkmaatschappij (scope-begrensd, zonder inloggen)
+ */
+export const getMarketingWerkgeverLogo = async (werkgeverId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getGetMarketingWerkgeverLogoUrl(werkgeverId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMarketingWerkgeverLogoQueryKey = (werkgeverId: number,) => {
+    return [
+    `/api/marketing/werkgever-logo/${werkgeverId}`
+    ] as const;
+    }
+
+
+export const getGetMarketingWerkgeverLogoQueryOptions = <TData = Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>, TError = ErrorType<void>>(werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMarketingWerkgeverLogoQueryKey(werkgeverId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>> = ({ signal }) => getMarketingWerkgeverLogo(werkgeverId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: werkgeverId !== null && werkgeverId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMarketingWerkgeverLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>>
+export type GetMarketingWerkgeverLogoQueryError = ErrorType<void>
+
+
+/**
+ * @summary Publieke logo-proxy voor werkmaatschappij (scope-begrensd, zonder inloggen)
+ */
+
+export function useGetMarketingWerkgeverLogo<TData = Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>, TError = ErrorType<void>>(
+ werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingWerkgeverLogo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMarketingWerkgeverLogoQueryOptions(werkgeverId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMarketingAfmeldPaginaUrl = (token: string,) => {
 

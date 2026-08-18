@@ -304,6 +304,18 @@ Bij het genereren of bewerken van een concept-SCAB-mail (loonperiodebrief aan de
 - Bewijs: scripts/src/bewijs-mijn-gegevens-basislaag.ts — 16/16 groen. Lib-fixes: lib/db en lib/api-client-react dist herbouwd na merge-drift (stale compiled declarations). Firevault-imports scab-mail/index.tsx: dubbele useState, ontbrekende ListChecks en useGetScabMailsIdMutaties toegevoegd. — 16/16 groen (rechtenloos account bereikt alle eigen-gegevens-routes incl. volledige concept-levenscyclus declaratie: aanmaken, detail, bewerken, indienen, verwijderen; module-lijsten blijven 403). Declaratie-detail: concept-acties nu eigenaarschap-gebaseerd (conform backend) i.p.v. declaraties:2; terugknop context-bewust. Architect-review: PASS.
 
 
+## 2026-08-17 — Campagnemails dragen nu de eigen huisstijl van de werkmaatschappij
+
+- **Uitvoering:** feature api-server (MARKETING_01) | **Kwaliteit:** hoog | **Risico:** laag (additieve migratie; fallback naar FPS-stijl bij geen koppeling)
+
+Campagnemails hadden een hardcoded FPS-oranje (`#F23B0D`) topbalk en een vaste "FPS"-vermelding in de footer. Elke campagne kan nu aan een werkmaatschappij worden gekoppeld (`werkgever_id`); de mail-template en de publieke afmeldpagina halen dan automatisch de merkkleur (`primaire_kleur`) en het logo (`logo_url`) uit de werkgevers-tabel. Ontbreekt de koppeling, dan blijft de FPS-huisstijl de fallback — backwards-compatible.
+
+Scope van de wijziging:
+- Migratie `0069_marketing-campagne-werkgever.sql`: nieuw nullable `werkgever_id`-veld op `marketing_campagnes`.
+- `campagneMailHtml`: accepteert nu `branding` (kleur + logoUrl + naam) i.p.v. hardcoded oranje; logo verschijnt als afbeeldingblok boven de inhoud.
+- `maakAfmeldPagina` (publiek, zonder sessie): topborder en knop gebruiken de merkkleur; logo boven de kop. Branding wordt opgezocht via token → ontvanger → campagne → werkgever (één JOIN, fail-closed naar FPS-fallback).
+- Proefverzending en echte verzending roepen beide `haalWerkgeverBranding()` aan voor verzending.
+- Footer noemt de werkgevernaam i.p.v. altijd "FPS".
 ## 2026-08-17 — Campagnes gaan nu vanzelf gedoseerd de deur uit na één goedkeuring
 
 - **Uitvoering:** MARKETING_01 Deel A vervolg (api-server) | **Kwaliteit:** hoog | **Risico:** laag (alleen campagnemail; per-item goedkeuring blijft voor alle overige mail)

@@ -23,6 +23,7 @@ import {
   marketingCampagneOntvangersTable,
   mailWachtrijTable,
   gebruikersTable,
+  werkgeversTable,
   crmContactpersonenTable,
   appInstellingenTable,
   type DoelgroepCriteria,
@@ -42,10 +43,152 @@ import {
 import { haalCampagneVerzendtempo, TEMPO_MIN, TEMPO_MAX } from "../services/campagneVerzender";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { logger } from "../lib/logger";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { resolveWerkgeverLogoSubPath, LOGO_TOEGESTANE_EXTENSIES } from "../lib/werkgever-logo-pad";
+import { Readable } from "stream";
+
+const objectStorageService = new ObjectStorageService();
+
+// ─── Werkgever-branding ───────────────────────────────────────────────────────
+
+type MailBranding = {
+  kleur: string;       // CSS hex, bijv. "#F23B0D"
+  logoUrl: string | null;
+  naam: string;        // werkgevernaam voor footer-tekst
+};
+
+const FPS_FALLBACK: MailBranding = {
+  kleur: "#F23B0D",
+  logoUrl: null,
+  naam: "FPS",
+};
+
+/**
+ * Goedgekeurde afbeeldingsextensies voor werkgever-logo's — afgeleid van de
+ * canonieke lijst in werkgever-logo-pad.ts zodat beide altijd synchroon zijn.
+ */
+const LOGO_TOEGESTANE_EXTS: Set<string> = new Set(LOGO_TOEGESTANE_EXTENSIES);
+
+/**
+ * Controleert of een genormaliseerd subPath de exacte canonieke sleutel is van
+ * een logo dat toebehoort aan de opgegeven werkgever:
+ *   werkgevers/<werkgeverId>/logo.<goedgekeurde-ext>
+ *
+ * Geeft false voor:
+ * - Elk ander werkgever-ID in het pad (mismatch).
+ * - Subdirectories of traversal-segmenten.
+ * - Niet-afbeelding extensies.
+ * - Legacy objects/algemeen/-paden (die worden al door resolveWerkgeverLogoSubPath geblokkeerd).
+ */
+function isKanoniekeWerkgeversLogoSleutel(subPath: string, werkgeverId: number): boolean {
+  // Verwacht patroon: werkgevers/<werkgeverId>/logo.<ext>
+  const verwacht = `werkgevers/${werkgeverId}/`;
+  if (!subPath.startsWith(verwacht)) return false;
+  const rest = subPath.slice(verwacht.length);
+  // Geen extra schuine strepen (geen subdirectories of traversal).
+  if (rest.includes("/")) return false;
+  // Bestandsnaam moet beginnen met "logo" + goedgekeurde extensie.
+  const punt = rest.lastIndexOf(".");
+  if (punt < 0) return false;
+  const ext = rest.slice(punt).toLowerCase();
+  return rest.slice(0, punt) === "logo" && LOGO_TOEGESTANE_EXTS.has(ext);
+}
+
+/** HTML-entities escapen zodat onveilige waarden niet als markup worden geïnterpreteerd. */
+function escHtml(s: string): string {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/** Alleen geldige CSS hex-kleuren doorlaten; alles anders valt terug op FPS-oranje. */
+function saniteerKleur(kleur: string | null | undefined): string {
+  if (!kleur) return "#F23B0D";
+  return /^#[0-9a-fA-F]{3,6}$/.test(kleur.trim()) ? kleur.trim() : "#F23B0D";
+}
+
+/**
+ * Logo-URL geschikt maken voor gebruik in e-mailclients.
+ * - Absolute http(s)-URL's worden direct doorgelaten.
+ * - Relatieve paden (bijv. /api/storage/objects/...) worden omgezet naar
+ *   absolute URL's via publiekeAppUrl(). E-mailclients kunnen geen relatieve
+ *   paden ophalen; de publieke basis-URL is nodig.
+ * - data:-URL's en javascript:-URL's worden geblokkeerd.
+ */
+function saniteerLogoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const u = url.trim();
+  // Relatief pad → omzetten naar absolute URL
+  if (u.startsWith("/")) {
+    const basis = publiekeAppUrl();
+    if (!basis) return null; // geen publieke URL beschikbaar → logo weglaten
+    return `${basis}${u}`;
+  }
+  // Absolute URL → alleen http(s) toestaan
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return u;
+  } catch {
+    // ongeldige URL
+  }
+  return null;
+}
+
+async function haalWerkgeverBranding(werkgeverId: number | null | undefined): Promise<MailBranding> {
+  if (!werkgeverId) return FPS_FALLBACK;
+  const [w] = await db
+    .select({ primaireKleur: werkgeversTable.primaireKleur, logoUrl: werkgeversTable.logoUrl, naam: werkgeversTable.naam })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.id, werkgeverId))
+    .limit(1);
+  if (!w) return FPS_FALLBACK;
+
+  // Logo wordt geserveerd via de beperkte publieke proxy-route zodat e-mailclients
+  // het kunnen ophalen zonder sessie/auth.
+  //
+  // Beveiligingseis: de proxy-URL wordt ALLEEN gezet als het opgeslagen logo-pad
+  // exact voldoet aan de canonieke sleutel `werkgevers/<id>/logo.<ext>` én de <id>
+  // overeenkomt met de werkgever. Zo kunnen legacy-paden (objects/algemeen/...),
+  // externe URLs en paden van andere werkgevers nooit via de publieke route lekken.
+  let logoPubliekUrl: string | null = null;
+  if (w.logoUrl) {
+    const subPath = resolveWerkgeverLogoSubPath(w.logoUrl.trim());
+    if (subPath && isKanoniekeWerkgeversLogoSleutel(subPath, werkgeverId)) {
+      const basis = publiekeAppUrl();
+      if (basis) logoPubliekUrl = `${basis}/api/marketing/werkgever-logo/${werkgeverId}`;
+    }
+  }
+
+  return {
+    kleur: saniteerKleur(w.primaireKleur),
+    logoUrl: logoPubliekUrl,
+    naam: w.naam,
+  };
+}
 
 const router = Router();
+const lezen = requireBevoegdheid("marketing", 1);
 const beheren = requireBevoegdheid("marketing", 3);
 const verzenden = requireBevoegdheid("marketing", 4);
+
+/**
+ * GET /marketing/werkgever-opties
+ *
+ * Minimale werkgeverlijst voor campagne-branding: alleen id + naam.
+ * Vereist marketing:1 (geen personeel-recht) zodat Commercieel-gebruikers
+ * de werkmaatschappijkiezer in campagnes kunnen gebruiken.
+ * Geen gevoelige HR-data — uitsluitend de naam om een campagne aan te koppelen.
+ */
+router.get("/marketing/werkgever-opties", lezen, async (_req, res) => {
+  const rijen = await db
+    .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+    .from(werkgeversTable)
+    .orderBy(werkgeversTable.naam);
+  return res.json(rijen);
+});
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -77,7 +220,21 @@ const criteriaUit = (c: DoelgroepCriteria) => ({
 });
 
 // Huisstijl-mailwrapper voor campagnemails, altijd mét werkende afmeldlink.
-function campagneMailHtml(opties: { inhoudHtml: string; afmeldUrl: string }): string {
+// Branding (kleur, logo, naam) komt uit de werkgevers-tabel; fallback = FPS-stijl.
+// Alle dynamische waarden worden HTML-ge-escaped; kleur en logo-URL zijn
+// server-side al gevalideerd via saniteerKleur / saniteerLogoUrl.
+function campagneMailHtml(opties: {
+  inhoudHtml: string;
+  afmeldUrl: string;
+  branding: MailBranding;
+}): string {
+  const { kleur, logoUrl, naam } = opties.branding;
+  const veiligNaam = escHtml(naam);
+  const veiligLogoUrl = logoUrl ? escHtml(logoUrl) : null;
+  const veiligAfmeldUrl = escHtml(opties.afmeldUrl);
+  const logoBlok = veiligLogoUrl
+    ? `<tr><td style="padding:24px 40px 0;"><img src="${veiligLogoUrl}" alt="${veiligNaam}" style="max-height:48px;max-width:160px;object-fit:contain;" /></td></tr>`
+    : "";
   return `
 <!DOCTYPE html>
 <html lang="nl">
@@ -86,14 +243,15 @@ function campagneMailHtml(opties: { inhoudHtml: string; afmeldUrl: string }): st
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="background:#F23B0D;height:6px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:${kleur};height:6px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        ${logoBlok}
         <tr><td style="padding:32px 40px;">
           <div style="font-size:15px;line-height:1.6;color:#3f3f46;">${opties.inhoudHtml}</div>
         </td></tr>
         <tr><td style="padding:16px 40px 28px;border-top:1px solid #e4e4e7;">
           <p style="margin:0;font-size:12px;color:#a1a1aa;">
-            U ontvangt dit bericht omdat u toestemming gaf voor commerciële mail van FPS.
-            <a href="${opties.afmeldUrl}" style="color:#71717a;">Afmelden</a> kan altijd, zonder inloggen.
+            U ontvangt dit bericht omdat u toestemming gaf voor commerciële mail van ${veiligNaam}.
+            <a href="${veiligAfmeldUrl}" style="color:#71717a;">Afmelden</a> kan altijd, zonder inloggen.
           </p>
         </td></tr>
       </table>
@@ -336,6 +494,7 @@ const mapCampagne = (c: typeof marketingCampagnesTable.$inferSelect) => ({
   id: c.id,
   naam: c.naam,
   doel: c.doel,
+  werkgever_id: c.werkgeverId,
   doelgroep_id: c.doelgroepId,
   sjabloon_id: c.sjabloonId,
   status: c.status,
@@ -371,11 +530,21 @@ router.get("/marketing/campagnes/:id", beheren, async (req, res) => {
 router.post("/marketing/campagnes", beheren, async (req, res) => {
   const naam = String(req.body?.naam ?? "").trim();
   if (!naam) return res.status(422).json({ fout: "Naam is verplicht" });
+
+  // werkgever_id is verplicht zodat elke campagne direct huisstijl draagt.
+  const werkgeverId = req.body?.werkgever_id ? parseInt(String(req.body.werkgever_id), 10) : NaN;
+  if (!Number.isInteger(werkgeverId) || werkgeverId <= 0) {
+    return res.status(422).json({ fout: "Werkgever is verplicht" });
+  }
+  const [wg] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, werkgeverId)).limit(1);
+  if (!wg) return res.status(422).json({ fout: "Onbekende werkgever" });
+
   const [rij] = await db
     .insert(marketingCampagnesTable)
     .values({
       naam,
       doel: req.body?.doel ? String(req.body.doel) : null,
+      werkgeverId,
       doelgroepId: req.body?.doelgroep_id ? parseInt(String(req.body.doelgroep_id), 10) : null,
       sjabloonId: req.body?.sjabloon_id ? parseInt(String(req.body.sjabloon_id), 10) : null,
       geplandOp: req.body?.gepland_op ? new Date(String(req.body.gepland_op)) : null,
@@ -399,10 +568,32 @@ router.patch("/marketing/campagnes/:id", beheren, async (req, res) => {
     wijziging["naam"] = naam;
   }
   if (req.body?.doel !== undefined) wijziging["doel"] = req.body.doel ? String(req.body.doel) : null;
+  if (req.body?.werkgever_id !== undefined) {
+    // Ontkoppelen (null) is verboden — elke campagne moet altijd een werkgever dragen.
+    const wgId = req.body.werkgever_id ? parseInt(String(req.body.werkgever_id), 10) : NaN;
+    if (!Number.isInteger(wgId) || wgId <= 0) {
+      return res.status(422).json({ fout: "Werkgever is verplicht en kan niet worden ontkoppeld" });
+    }
+    const [wg] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).where(eq(werkgeversTable.id, wgId)).limit(1);
+    if (!wg) return res.status(422).json({ fout: "Onbekende werkgever" });
+    wijziging["werkgeverId"] = wgId;
+  }
   if (req.body?.doelgroep_id !== undefined) wijziging["doelgroepId"] = req.body.doelgroep_id ? parseInt(String(req.body.doelgroep_id), 10) : null;
   if (req.body?.sjabloon_id !== undefined) wijziging["sjabloonId"] = req.body.sjabloon_id ? parseInt(String(req.body.sjabloon_id), 10) : null;
   if (req.body?.gepland_op !== undefined) wijziging["geplandOp"] = req.body.gepland_op ? new Date(String(req.body.gepland_op)) : null;
-  await db.update(marketingCampagnesTable).set(wijziging).where(eq(marketingCampagnesTable.id, id));
+  // Atomaire update: voeg dezelfde statusvoorwaarde toe aan de WHERE zodat
+  // een gelijktijdige statusovergang (bv. verzenden) de PATCH niet meer laat
+  // slagen ná de claim — anders kan werkgever_id nog wijzigen ná de brandings-
+  // snapshot in de verzendroute.
+  const [bijgewerkt] = await db
+    .update(marketingCampagnesTable)
+    .set(wijziging)
+    .where(and(eq(marketingCampagnesTable.id, id), inArray(marketingCampagnesTable.status, ["concept", "gepland"])))
+    .returning({ id: marketingCampagnesTable.id });
+  if (!bijgewerkt) {
+    // Status is intussen veranderd (race): geef de actuele status terug.
+    return res.status(409).json({ fout: `Campagne met status '${c.status}' kan niet meer worden gewijzigd` });
+  }
   return res.json({ ok: true });
 });
 
@@ -422,6 +613,7 @@ router.post("/marketing/campagnes/:id/proef", beheren, async (req, res) => {
   const id = parseInt(String(req.params["id"]), 10);
   const [c] = await db.select().from(marketingCampagnesTable).where(eq(marketingCampagnesTable.id, id)).limit(1);
   if (!c) return res.status(404).json({ fout: "Campagne niet gevonden" });
+  if (!c.werkgeverId) return res.status(422).json({ fout: "Kies eerst een werkmaatschappij — de huisstijl is verplicht voor verzending" });
   if (!c.sjabloonId) return res.status(422).json({ fout: "Kies eerst een sjabloon" });
   const [sjabloon] = await db.select().from(marketingSjablonenTable).where(eq(marketingSjablonenTable.id, c.sjabloonId)).limit(1);
   if (!sjabloon) return res.status(422).json({ fout: "Sjabloon niet gevonden" });
@@ -434,13 +626,21 @@ router.post("/marketing/campagnes/:id/proef", beheren, async (req, res) => {
   const basis = publiekeAppUrl();
   if (!basis) return res.status(422).json({ fout: "Publieke app-URL onbekend — afmeldlink kan niet worden opgebouwd" });
 
-  const inhoud = vulSjabloonVelden(sjabloon.inhoud, { naam: ik.naam ?? "collega", organisatie: "FPS (proef)" });
-  const onderwerp = `[PROEF] ${vulSjabloonVelden(sjabloon.onderwerp, { naam: ik.naam ?? "collega", organisatie: "FPS (proef)" })}`;
+  const branding = await haalWerkgeverBranding(c.werkgeverId);
+  const organisatieNaam = `${branding.naam} (proef)`;
+  const inhoud = vulSjabloonVelden(sjabloon.inhoud, { naam: ik.naam ?? "collega", organisatie: organisatieNaam });
+  const onderwerp = `[PROEF] ${vulSjabloonVelden(sjabloon.onderwerp, { naam: ik.naam ?? "collega", organisatie: organisatieNaam })}`;
+  // Afmeldlink toont campagne-specifieke branding via ?campagne_id param
+  const proefAfmeldUrl = `${basis}/api/marketing/afmelden/voorbeeld?campagne_id=${id}`;
   await verstuurMail({
     naarEmail: ik.email,
     naarNaam: ik.naam,
     onderwerp,
-    html: campagneMailHtml({ inhoudHtml: tekstNaarHtml(inhoud), afmeldUrl: `${basis}/api/marketing/afmelden/voorbeeld` }),
+    html: campagneMailHtml({
+      inhoudHtml: tekstNaarHtml(inhoud),
+      afmeldUrl: proefAfmeldUrl,
+      branding,
+    }),
     soort: "campagne_proef",
     verstuurdDoorId: req.session.userId ?? null,
     direct: true, // expliciete menselijke handeling, naar jezelf
@@ -460,6 +660,9 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
   if (!c) return res.status(404).json({ fout: "Campagne niet gevonden" });
   if (c.status !== "concept" && c.status !== "gepland") {
     return res.status(409).json({ fout: `Campagne heeft status '${c.status}' en kan niet (opnieuw) worden verzonden` });
+  }
+  if (!c.werkgeverId) {
+    return res.status(422).json({ fout: "Kies eerst een werkmaatschappij — de huisstijl is verplicht voor verzending" });
   }
   if (!c.doelgroepId || !c.sjabloonId) {
     return res.status(422).json({ fout: "Campagne heeft een doelgroep én sjabloon nodig" });
@@ -497,6 +700,12 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
     return res.status(409).json({ fout: "Campagne wordt al verzonden" });
   }
 
+  // Lees werkgeverId uit de geclaimde rij (niet uit `c` dat vóór de claim is
+  // gelezen): ná de claim op "voorbereiden" blokkeert de PATCH-route verdere
+  // wijzigingen, dus dit is de stabiele waarde waarmee mail én afmeldpagina
+  // dezelfde huisstijl dragen.
+  const geclaimdWerkgeverId = geclaimd[0]!.werkgeverId!;
+  const branding = await haalWerkgeverBranding(geclaimdWerkgeverId);
   let ingepland = 0;
   let overgeslagen = 0;
   let teller = 0;
@@ -534,6 +743,7 @@ router.post("/marketing/campagnes/:id/verzenden", verzenden, async (req, res) =>
       html: campagneMailHtml({
         inhoudHtml: tekstNaarHtml(inhoud),
         afmeldUrl: `${basis}/api/marketing/afmelden/${ontvanger.afmeldToken}`,
+        branding,
       }),
       soort: "campagne",
       verstuurdDoorId: req.session.userId ?? null,
@@ -613,62 +823,165 @@ export default router;
 
 export const marketingPubliekRouter = Router();
 
-const maakAfmeldPagina = (titel: string, tekst: string) => `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>${titel}</title></head>
+/**
+ * GET /marketing/werkgever-logo/:werkgeverId
+ *
+ * Beperkte publieke proxy die uitsluitend het logo van een werkgever serveert,
+ * zonder authenticatie. Vereist zodat e-mailclients en bezoekers van de
+ * publieke afmeldpagina het logo kunnen ophalen.
+ *
+ * Scope-begrenzing:
+ * - Alleen paden die beginnen met /objects/werkgevers/ worden geserveerd.
+ * - Alle andere opslagpaden worden geweigerd (403).
+ * - Er is geen wildcard over de volledige opslag; alleen werkgever-logo's.
+ */
+marketingPubliekRouter.get("/marketing/werkgever-logo/:werkgeverId", async (req, res): Promise<void> => {
+  const werkgeverId = parseInt(String(req.params["werkgeverId"]), 10);
+  if (!Number.isFinite(werkgeverId)) { res.status(400).end(); return; }
+
+  const [w] = await db
+    .select({ logoUrl: werkgeversTable.logoUrl })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.id, werkgeverId))
+    .limit(1);
+
+  if (!w?.logoUrl) { res.status(404).end(); return; }
+
+  // Normaliseer het pad en valideer dat het exact overeenkomt met de canonieke
+  // sleutel van dít werkgever-ID. Zo worden legacy-paden (objects/algemeen/...),
+  // paden van andere werkgevers, traversal-segmenten en niet-afbeeldingstypen
+  // allemaal geweigerd — zonder dat we de opslag hoeven te raadplegen.
+  const subPath = resolveWerkgeverLogoSubPath(w.logoUrl.trim());
+  if (!subPath || !isKanoniekeWerkgeversLogoSleutel(subPath, werkgeverId)) {
+    res.status(403).end();
+    return;
+  }
+
+  // Reconstrueer het pad zoals objectStorageService het verwacht.
+  const logoPad = `/objects/${subPath}`;
+
+  try {
+    const objectFile = await objectStorageService.getObjectEntityFile(logoPad);
+    const response = await objectStorageService.downloadObject(objectFile);
+    res.status(response.status);
+    response.headers.forEach((value, key) => res.setHeader(key, value));
+    // Cache 1 uur publiek — logo's veranderen zelden en e-mails worden herladen.
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) { res.status(404).end(); return; }
+    logger.error({ err, werkgeverId }, "Fout bij ophalen werkgever-logo");
+    res.status(500).end();
+  }
+});
+
+// Branding opzoeken via afmeld-token (publieke route, geen sessie).
+async function haalBrandingViaToken(token: string): Promise<MailBranding> {
+  const [rij] = await db
+    .select({ werkgeverId: marketingCampagnesTable.werkgeverId })
+    .from(marketingCampagneOntvangersTable)
+    .innerJoin(marketingCampagnesTable, eq(marketingCampagneOntvangersTable.campagneId, marketingCampagnesTable.id))
+    .where(eq(marketingCampagneOntvangersTable.afmeldToken, token))
+    .limit(1);
+  return haalWerkgeverBranding(rij?.werkgeverId);
+}
+
+// Branding opzoeken voor de voorbeeld-afmeldpagina via campagne_id query-param.
+async function haalBrandingVoorVoorbeeld(campagneId: string | undefined): Promise<MailBranding> {
+  if (!campagneId) return FPS_FALLBACK;
+  const id = parseInt(campagneId, 10);
+  if (!Number.isFinite(id)) return FPS_FALLBACK;
+  const [c] = await db
+    .select({ werkgeverId: marketingCampagnesTable.werkgeverId })
+    .from(marketingCampagnesTable)
+    .where(eq(marketingCampagnesTable.id, id))
+    .limit(1);
+  return haalWerkgeverBranding(c?.werkgeverId);
+}
+
+function maakAfmeldPagina(opties: { titel: string; tekst: string; branding: MailBranding }): string {
+  const { titel, tekst, branding } = opties;
+  // Statische tekst/HTML (door code geleverd, niet door DB) hoeft niet ge-escaped;
+  // naam en logo-URL zijn al gesaniteerd via haalWerkgeverBranding.
+  const veiligNaam = escHtml(branding.naam);
+  const veiligLogoUrl = branding.logoUrl ? escHtml(branding.logoUrl) : null;
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>${escHtml(titel)}</title></head>
 <body style="margin:0;padding:48px 16px;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
-  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border-top:6px solid #F23B0D;">
-    <h1 style="margin:0 0 12px;font-size:20px;color:#212631;">${titel}</h1>
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border-top:6px solid ${branding.kleur};">
+    ${veiligLogoUrl ? `<img src="${veiligLogoUrl}" alt="${veiligNaam}" style="max-height:40px;max-width:140px;object-fit:contain;margin-bottom:20px;display:block;" />` : ""}
+    <h1 style="margin:0 0 12px;font-size:20px;color:#212631;">${escHtml(titel)}</h1>
     <p style="margin:0;font-size:15px;line-height:1.6;color:#3f3f46;">${tekst}</p>
   </div>
 </body></html>`;
+}
 
 marketingPubliekRouter.get("/marketing/afmelden/:token", async (req, res) => {
   const token = String(req.params["token"] ?? "");
   if (token === "voorbeeld") {
+    // Proef-afmeldpagina: branding uit ?campagne_id zodat proef = echte weergave.
+    const branding = await haalBrandingVoorVoorbeeld(req.query["campagne_id"] as string | undefined);
     return res
       .status(200)
       .type("html")
-      .send(maakAfmeldPagina("Voorbeeld-afmeldlink", "Dit was een proefverzending — er is niets afgemeld."));
+      .send(maakAfmeldPagina({
+        titel: "Voorbeeld-afmeldlink",
+        tekst: "Dit was een proefverzending — er is niets afgemeld.",
+        branding,
+      }));
   }
+  const branding = await haalBrandingViaToken(token);
   // GET heeft bewust géén bijwerking: mailscanners en virusfilters volgen
   // links automatisch en zouden anders ontvangers ongewild afmelden. De
   // pagina toont een bevestigingsknop die de afmelding via POST uitvoert.
+  const veiligNaam = escHtml(branding.naam);
   return res
     .status(200)
     .type("html")
     .send(
-      maakAfmeldPagina(
-        "Afmelden voor commerciële mail",
-        `Klik op de knop om u af te melden. U ontvangt dan geen campagnemail meer van FPS.
+      maakAfmeldPagina({
+        titel: "Afmelden voor commerciële mail",
+        tekst: `Klik op de knop om u af te melden. U ontvangt dan geen campagnemail meer van ${veiligNaam}.
         <form method="POST" action="" style="margin:20px 0 0;">
-          <button type="submit" style="background:#F23B0D;color:#fff;border:0;border-radius:6px;padding:12px 24px;font-size:15px;cursor:pointer;">Ja, meld mij af</button>
+          <button type="submit" style="background:${branding.kleur};color:#fff;border:0;border-radius:6px;padding:12px 24px;font-size:15px;cursor:pointer;">Ja, meld mij af</button>
         </form>`,
-      ),
+        branding,
+      }),
     );
 });
 
 marketingPubliekRouter.post("/marketing/afmelden/:token", async (req, res) => {
   const token = String(req.params["token"] ?? "");
-  const pagina = maakAfmeldPagina;
   if (token === "voorbeeld") {
+    const branding = await haalBrandingVoorVoorbeeld(req.query["campagne_id"] as string | undefined);
     return res
       .status(200)
       .type("html")
-      .send(pagina("Voorbeeld-afmeldlink", "Dit was een proefverzending — er is niets afgemeld."));
+      .send(maakAfmeldPagina({ titel: "Voorbeeld-afmeldlink", tekst: "Dit was een proefverzending — er is niets afgemeld.", branding }));
   }
-  const resultaat = await verwerkAfmelding(token);
+  const [branding, resultaat] = await Promise.all([
+    haalBrandingViaToken(token),
+    verwerkAfmelding(token),
+  ]);
   if (!resultaat) {
-    return res.status(404).type("html").send(pagina("Link niet gevonden", "Deze afmeldlink is niet (meer) geldig."));
+    return res.status(404).type("html").send(maakAfmeldPagina({ titel: "Link niet gevonden", tekst: "Deze afmeldlink is niet (meer) geldig.", branding }));
   }
+  const veiligNaam = escHtml(branding.naam);
   return res
     .status(200)
     .type("html")
     .send(
-      pagina(
-        "U bent afgemeld",
-        resultaat.reedsAfgemeld
-          ? "U was al afgemeld voor commerciële mail van FPS. U ontvangt geen campagnemail meer."
-          : "U ontvangt geen commerciële mail meer van FPS. Dit is direct verwerkt.",
-      ),
+      maakAfmeldPagina({
+        titel: "U bent afgemeld",
+        tekst: resultaat.reedsAfgemeld
+          ? `U was al afgemeld voor commerciële mail van ${veiligNaam}. U ontvangt geen campagnemail meer.`
+          : `U ontvangt geen commerciële mail meer van ${veiligNaam}. Dit is direct verwerkt.`,
+        branding,
+      }),
     );
 });

@@ -14,12 +14,14 @@ import {
   useListMarketingCampagnes,
   useGetMarketingCampagne,
   useCreateMarketingCampagne,
+  useUpdateMarketingCampagne,
   useDeleteMarketingCampagne,
   useVerstuurMarketingCampagneProef,
   useVerstuurMarketingCampagne,
   useStopMarketingCampagne,
   useGetMarketingVerzendtempo,
   useUpdateMarketingVerzendtempo,
+  useListMarketingWerkgeverOpties,
   getGetMarketingVerzendtempoQueryKey,
   getListMarketingDoelgroepenQueryKey,
   getListMarketingDoelgroepLedenQueryKey,
@@ -304,12 +306,12 @@ function VerzendtempoRegeling({ magVerzenden, qc, toast }: {
   const [invoer, setInvoer] = useState<string | null>(null);
   const wijzig = useUpdateMarketingVerzendtempo({
     mutation: {
-      onSuccess: (r) => {
+      onSuccess: (r: { tempo_per_minuut: number }) => {
         void qc.invalidateQueries({ queryKey: getGetMarketingVerzendtempoQueryKey() });
         setInvoer(null);
         toast({ title: `Verzendtempo ingesteld op ${r.tempo_per_minuut} per minuut` });
       },
-      onError: (e) => toast({
+      onError: (e: unknown) => toast({
         title: ((e as { response?: { data?: { fout?: string } } })?.response?.data?.fout) ?? "Tempo wijzigen mislukt",
         variant: "destructive",
       }),
@@ -358,9 +360,13 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
   const { data: campagnes = [], isLoading } = useListMarketingCampagnes();
   const { data: doelgroepen = [] } = useListMarketingDoelgroepen();
   const { data: sjablonen = [] } = useListMarketingSjablonen();
+  // useListMarketingWerkgeverOpties vereist marketing:1 (niet personeel:1) zodat
+  // ook Commercieel-gebruikers de werkmaatschappijkiezer kunnen gebruiken.
+  const { data: werkgevers = [] } = useListMarketingWerkgeverOpties();
   const [open, setOpen] = useState(false);
   const [naam, setNaam] = useState("");
   const [doel, setDoel] = useState("");
+  const [werkgeverId, setWerkgeverId] = useState("");
   const [doelgroepId, setDoelgroepId] = useState("");
   const [sjabloonId, setSjabloonId] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -375,7 +381,13 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
 
   const maak = useCreateMarketingCampagne({
     mutation: {
-      onSuccess: () => { invalideer(); setOpen(false); setNaam(""); setDoel(""); setDoelgroepId(""); setSjabloonId(""); toast({ title: "Campagne aangemaakt" }); },
+      onSuccess: () => { invalideer(); setOpen(false); setNaam(""); setDoel(""); setWerkgeverId(""); setDoelgroepId(""); setSjabloonId(""); toast({ title: "Campagne aangemaakt" }); },
+      onError: (e) => toast({ title: foutmelding(e), variant: "destructive" }),
+    },
+  });
+  const wijzig = useUpdateMarketingCampagne({
+    mutation: {
+      onSuccess: () => { invalideer(); toast({ title: "Campagne bijgewerkt" }); },
       onError: (e) => toast({ title: foutmelding(e), variant: "destructive" }),
     },
   });
@@ -390,7 +402,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
   });
   const verzend = useVerstuurMarketingCampagne({
     mutation: {
-      onSuccess: (r) => { invalideer(); setVerzendBevestig(null); toast({ title: `${r.ingepland ?? 0} berichten in de mailwachtrij geplaatst`, description: "Ze worden vanaf nu automatisch gespreid verstuurd volgens het ingestelde tempo." }); },
+      onSuccess: (r) => { invalideer(); setVerzendBevestig(null); toast({ title: `${r.ingepland ?? 0} berichten in de mailwachtrij geplaatst`, description: "Ze worden gespreid verstuurd volgens het ingestelde tempo." }); },
       onError: (e) => { setVerzendBevestig(null); toast({ title: foutmelding(e), variant: "destructive" }); },
     },
   });
@@ -408,7 +420,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Verzenden vereist een proefverzending naar jezelf; na jouw goedkeuring gaan de berichten automatisch gespreid de deur uit{magVerzenden ? "" : " — je hebt beheerrechten, verzenden vereist een hoger recht"}.
+          Verzenden vereist een proefverzending naar jezelf en loopt altijd via de mailwachtrij{magVerzenden ? "" : " — je hebt beheerrechten, verzenden vereist een hoger recht"}.
         </p>
         <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1.5" />Nieuwe campagne</Button>
       </div>
@@ -430,6 +442,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
                         <Badge variant="outline" className={STATUS_KLEUR[c.status] ?? ""}>{STATUS_LABEL[c.status] ?? c.status}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
+                        {(() => { const wg = werkgevers.find((w: { id: number; naam: string }) => w.id === c.werkgever_id); return wg ? `${wg.naam} · ` : ""; })()}
                         {dg ? `Doelgroep: ${dg.naam} (${dg.aantal_leden} leden)` : "Geen doelgroep"} · {sj ? `Sjabloon: ${sj.naam}` : "Geen sjabloon"}
                         {c.proef_verzonden_op ? " · proef verzonden" : " · nog geen proef"}
                       </p>
@@ -439,18 +452,31 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
                       <Button size="sm" variant="ghost" onClick={() => setDetailId(c.id)}><Eye className="h-4 w-4" /></Button>
                       {(c.status === "concept" || c.status === "gepland") && (
                         <>
-                          <Button data-testid="btn-proef" size="sm" variant="outline" disabled={proef.isPending} onClick={() => proef.mutate({ id: c.id })}>
+                          <Button
+                            data-testid="btn-proef"
+                            size="sm"
+                            variant="outline"
+                            disabled={proef.isPending || !c.werkgever_id}
+                            title={!c.werkgever_id ? "Kies eerst een werkmaatschappij om de huisstijl te bepalen" : undefined}
+                            onClick={() => proef.mutate({ id: c.id })}
+                          >
                             <FlaskConical className="h-4 w-4 mr-1" />Proef
                           </Button>
                           {magVerzenden && (
-                            <Button data-testid="btn-verzenden" size="sm" disabled={verzend.isPending || !c.proef_verzonden_op} onClick={() => setVerzendBevestig(c)}>
+                            <Button
+                              data-testid="btn-verzenden"
+                              size="sm"
+                              disabled={verzend.isPending || !c.proef_verzonden_op || !c.werkgever_id}
+                              title={!c.werkgever_id ? "Kies eerst een werkmaatschappij om de huisstijl te bepalen" : undefined}
+                              onClick={() => setVerzendBevestig(c)}
+                            >
                               <Send className="h-4 w-4 mr-1" />Verzenden
                             </Button>
                           )}
                           <Button size="sm" variant="ghost" onClick={() => verwijder.mutate({ id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </>
                       )}
-                      {magVerzenden && (c.status === "verzendend" || c.status === "voorbereiden" || c.status === "gepland") && (
+                      {magVerzenden && (c.status === "verzendend" || (c.status as string) === "voorbereiden" || c.status === "gepland") && (
                         <Button data-testid="btn-stoppen" size="sm" variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate({ id: c.id, data: { reden: "handmatig gestopt" } })}>
                           <StopCircle className="h-4 w-4 mr-1" />Stop
                         </Button>
@@ -471,6 +497,16 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
             <div><Label>Naam</Label><Input value={naam} onChange={(e) => setNaam(e.target.value)} /></div>
             <div><Label>Doel</Label><Input value={doel} onChange={(e) => setDoel(e.target.value)} placeholder="Bijv. onderhoudscontracten zorgsector" /></div>
             <div>
+              <Label>Werkmaatschappij</Label>
+              <Select value={werkgeverId} onValueChange={setWerkgeverId}>
+                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij (huisstijl)" /></SelectTrigger>
+                <SelectContent>
+                  {werkgevers.map((w: { id: number; naam: string }) => <SelectItem key={w.id} value={String(w.id)}>{w.naam}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Logo en merkkleur van de gekozen werkmaatschappij verschijnen in de mail en op de afmeldpagina.</p>
+            </div>
+            <div>
               <Label>Doelgroep</Label>
               <Select value={doelgroepId} onValueChange={setDoelgroepId}>
                 <SelectTrigger><SelectValue placeholder="Kies doelgroep" /></SelectTrigger>
@@ -487,13 +523,17 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
           </div>
           <DialogFooter>
             <Button
-              disabled={!naam.trim() || maak.isPending}
-              onClick={() => maak.mutate({ data: {
-                naam: naam.trim(),
-                doel: doel.trim() || null,
-                doelgroep_id: doelgroepId ? Number(doelgroepId) : null,
-                sjabloon_id: sjabloonId ? Number(sjabloonId) : null,
-              } })}
+              disabled={!naam.trim() || !werkgeverId || maak.isPending}
+              onClick={() => {
+                if (!werkgeverId) return;
+                maak.mutate({ data: {
+                  naam: naam.trim(),
+                  doel: doel.trim() || null,
+                  werkgever_id: Number(werkgeverId),
+                  doelgroep_id: doelgroepId ? Number(doelgroepId) : null,
+                  sjabloon_id: sjabloonId ? Number(sjabloonId) : null,
+                } });
+              }}
             >
               Aanmaken
             </Button>
@@ -505,10 +545,30 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
         <DialogContent>
           <DialogHeader><DialogTitle>{detail?.naam ?? "Campagne"}</DialogTitle></DialogHeader>
           {detail ? (
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               <p>Status: <Badge variant="outline" className={STATUS_KLEUR[detail.status] ?? ""}>{STATUS_LABEL[detail.status] ?? detail.status}</Badge></p>
               {detail.doel ? <p className="text-muted-foreground">{detail.doel}</p> : null}
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              {/* Werkgever-selector — bewerkbaar voor concept en gepland zodat bestaande campagnes branding kunnen krijgen */}
+              {(detail.status === "concept" || detail.status === "gepland") && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Werkmaatschappij (huisstijl)</Label>
+                  <Select
+                    value={detail.werkgever_id ? String(detail.werkgever_id) : ""}
+                    onValueChange={(v) => { if (v) wijzig.mutate({ id: detail.id, data: { werkgever_id: Number(v) } }); }}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Kies werkmaatschappij…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {werkgevers.map((w: { id: number; naam: string }) => <SelectItem key={w.id} value={String(w.id)}>{w.naam}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {!detail.werkgever_id && (
+                    <p className="text-xs text-amber-600 mt-1">⚠ Vereist vóór proef- en echte verzending</p>
+                  )}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {Object.entries(detail.ontvangers ?? {}).map(([status, aantal]) => (
                   <div key={status} className="flex justify-between border rounded px-3 py-1.5">
                     <span className="capitalize">{status}</span><span className="font-medium">{aantal}</span>
@@ -526,7 +586,7 @@ function CampagnesTab({ magVerzenden, qc, toast }: {
           <AlertDialogHeader>
             <AlertDialogTitle>Campagne verzenden?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{verzendBevestig?.naam}" wordt klaargezet voor alle doelgroepleden met toestemming. Dit is de eenmalige goedkeuring: de berichten gaan in de mailwachtrij en worden automatisch gespreid verstuurd volgens het ingestelde tempo. Stoppen kan op elk moment.
+              "{verzendBevestig?.naam}" wordt klaargezet voor alle doelgroepleden met toestemming. De berichten gaan in de mailwachtrij en worden daarvandaan gespreid verstuurd.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

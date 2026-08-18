@@ -6,12 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MarketingCampagneInput {
-  naam: string;
+/**
+ * Gedeeltelijke update van een campagne; alle velden optioneel. werkgever_id mag niet naar null worden gezet.
+ */
+export interface MarketingCampagneUpdateInput {
+  naam?: string;
   /** @nullable */
   doel?: string | null;
-  /** Verplicht — bepaalt logo en merkkleur van de huisstijl in de mail en op de afmeldpagina. */
-  werkgever_id: number;
+  /** Werkmaatschappij voor huisstijl — verplicht positief geheel getal (ontkoppelen is verboden). */
+  werkgever_id?: number;
   /** @nullable */
   doelgroep_id?: number | null;
   /** @nullable */

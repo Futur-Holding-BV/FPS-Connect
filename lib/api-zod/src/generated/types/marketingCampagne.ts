@@ -12,6 +12,11 @@ export interface MarketingCampagne {
   naam: string;
   /** @nullable */
   doel?: string | null;
+  /**
+     * Werkmaatschappij voor huisstijl in mail en op afmeldpagina.
+     * @nullable
+     */
+  werkgever_id?: number | null;
   /** @nullable */
   doelgroep_id?: number | null;
   /** @nullable */

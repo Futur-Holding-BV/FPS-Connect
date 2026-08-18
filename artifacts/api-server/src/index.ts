@@ -26,6 +26,7 @@ import { planSocialPublicaties } from "./services/socialService";
 import { herstelVastgelopenMailWachtrijItems } from "./services/email";
 import { controleerScannerPaden } from "./lib/scannerPadenCheck";
 import { planCampagneVerzender } from "./services/campagneVerzender";
+import { backfillWerkgeverLogos } from "./lib/backfillWerkgeverLogos";
 
 const rawPort = process.env["PORT"];
 
@@ -94,6 +95,12 @@ ensureSessionTable()
       // MARKETING_01 — gedoseerde verzender: verstuurt goedgekeurde
       // campagnemails gespreid (n per minuut, instelbaar) uit de mailwachtrij.
       planCampagneVerzender();
+      // MARKETING_01 — eenmalige backfill: legacy werkgever-logo's (objects/algemeen/)
+      // naar het canonieke pad (werkgevers/<id>/logo.<ext>) zodat de publieke
+      // marketing-proxy ze kan serveren zonder auth.
+      void backfillWerkgeverLogos().catch((err) =>
+        logger.warn({ err }, "[backfill-logos] Eenmalige logo-backfill mislukt"),
+      );
       // Mail-wachtrij hardening: herstel items die tijdens verzenden zijn
       // gecrasht (status "verzenden" > 10 min) → terugzetten naar "mislukt".
       // Meteen bij start uitvoeren, daarna elke 5 minuten herhalen.

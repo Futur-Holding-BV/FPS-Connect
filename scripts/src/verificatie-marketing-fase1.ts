@@ -15,6 +15,7 @@ import {
   marketingCampagnesTable,
   marketingCampagneOntvangersTable,
   mailWachtrijTable,
+  werkgeversTable,
 } from "@workspace/db";
 import {
   setupE2eWebAdminAccount,
@@ -109,6 +110,16 @@ async function main() {
     JSON.stringify(leden.json));
 
   console.log("\n3) Sjabloon + campagne");
+  // Haal een bestaande werkgever op — verplicht voor huisstijl per campagne.
+  const [eersteWerkgever] = await db
+    .select({ id: werkgeversTable.id, naam: werkgeversTable.naam, primaireKleur: werkgeversTable.primaireKleur })
+    .from(werkgeversTable)
+    .limit(1);
+  if (!eersteWerkgever) throw new Error("Geen werkgever in de DB — kan campagne niet testen");
+  const werkgeverId = eersteWerkgever.id;
+  const werkgeverKleur = eersteWerkgever.primaireKleur ?? "#F23B0D";
+  const werkgeverNaam = eersteWerkgever.naam;
+
   const sjb = await api(s, "POST", "/marketing/sjablonen", {
     naam: `Bewijssjabloon ${STEMPEL}`,
     onderwerp: `Bewijscampagne ${STEMPEL} voor {{organisatie}}`,
@@ -117,9 +128,15 @@ async function main() {
   check("sjabloon aangemaakt", sjb.status === 201, `status=${sjb.status}`);
   const cmp = await api(s, "POST", "/marketing/campagnes", {
     naam: `Bewijscampagne ${STEMPEL}`, doelgroep_id: dgId, sjabloon_id: sjb.json?.id,
+    werkgever_id: werkgeverId,
   });
   check("campagne aangemaakt", cmp.status === 201, `status=${cmp.status}`);
   const cmpId = cmp.json?.id as number;
+  // Campagne zonder werkgever_id mag niet aangemaakt worden.
+  const cmpZonderWg = await api(s, "POST", "/marketing/campagnes", {
+    naam: `Bewijscampagne-zonder-wg ${STEMPEL}`, doelgroep_id: dgId, sjabloon_id: sjb.json?.id,
+  });
+  check("campagne zonder werkgever → 422", cmpZonderWg.status === 422, `status=${cmpZonderWg.status}`);
 
   console.log("\n4) Verzenden vereist proef");
   const zonderProef = await api(s, "POST", `/marketing/campagnes/${cmpId}/verzenden`);
@@ -144,6 +161,30 @@ async function main() {
     JSON.stringify(wachtrij.map(w => ({ s: w.status, soort: w.soort }))));
   check("mail bevat persoonlijke afmeldlink",
     (wachtrij[0]?.html ?? "").includes(`/api/marketing/afmelden/${ontvangers[0]!.afmeldToken}`));
+  // Branding-invariant: mail-HTML én afmeldpagina moeten dezelfde werkgever-
+  // kleur en -naam bevatten als waarmee de campagne is aangemaakt.
+  const mailHtml = wachtrij[0]?.html ?? "";
+  check("mail-HTML bevat werkgever-merkkleur",
+    mailHtml.includes(werkgeverKleur),
+    `kleur=${werkgeverKleur}, html-fragment=${mailHtml.slice(0, 200)}`);
+  check("mail-HTML bevat werkgever-naam",
+    mailHtml.includes(werkgeverNaam),
+    `naam=${werkgeverNaam}`);
+  // Afmeldpagina (GET, zonder sessie) bevat dezelfde branding als de mail.
+  const afmeldVoorGet = await fetch(`${BASIS}/marketing/afmelden/${ontvangers[0]!.afmeldToken}`);
+  const afmeldVoorHtml = await afmeldVoorGet.text();
+  check("afmeldpagina (GET) bevat werkgever-merkkleur",
+    afmeldVoorHtml.includes(werkgeverKleur),
+    `kleur=${werkgeverKleur}`);
+  check("afmeldpagina (GET) bevat werkgever-naam",
+    afmeldVoorHtml.includes(werkgeverNaam),
+    `naam=${werkgeverNaam}`);
+  // Bevestig dat mail én afmeldpagina dezélfde kleur dragen (race-guard).
+  const kleurInMail = mailHtml.includes(werkgeverKleur);
+  const kleurInAfmeld = afmeldVoorHtml.includes(werkgeverKleur);
+  check("mail en afmeldpagina dragen identieke werkgever-merkkleur",
+    kleurInMail && kleurInAfmeld,
+    `mail=${kleurInMail}, afmeld=${kleurInAfmeld}`);
   const detail = await api(s, "GET", `/marketing/campagnes/${cmpId}`);
   check("campagnestatus = verzendend", detail.json?.status === "verzendend", JSON.stringify(detail.json?.status));
 

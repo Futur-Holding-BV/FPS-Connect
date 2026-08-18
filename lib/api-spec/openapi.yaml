@@ -8063,6 +8063,21 @@ paths:
         "404":
           description: Niet gevonden
 
+  /marketing/werkgever-opties:
+    get:
+      operationId: listMarketingWerkgeverOpties
+      tags: [marketing]
+      summary: Werkgevers beschikbaar voor campagne-branding (marketing:1, geen HR-data)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketingWerkgeverOptie"
+
   /marketing/verzendtempo:
     get:
       operationId: getMarketingVerzendtempo
@@ -8162,7 +8177,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MarketingCampagneInput"
+              $ref: "#/components/schemas/MarketingCampagneUpdateInput"
       responses:
         "200":
           description: Gewijzigd
@@ -8288,6 +8303,24 @@ paths:
                     type: integer
         "409":
           description: Alleen gepland/verzendend kan worden gestopt
+
+  /marketing/werkgever-logo/{werkgeverId}:
+    get:
+      operationId: getMarketingWerkgeverLogo
+      tags: [marketing]
+      summary: Publieke logo-proxy voor werkmaatschappij (scope-begrensd, zonder inloggen)
+      security: []
+      parameters:
+        - in: path
+          name: werkgeverId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Logo-afbeelding
+        "404":
+          description: Geen logo gevonden
 
   /marketing/afmelden/{token}:
     get:
@@ -31005,6 +31038,15 @@ components:
         inhoud:
           type: string
 
+    MarketingWerkgeverOptie:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+
     MarketingCampagne:
       type: object
       required: [id, naam, status]
@@ -31015,6 +31057,9 @@ components:
           type: string
         doel:
           type: ["string", "null"]
+        werkgever_id:
+          type: ["integer", "null"]
+          description: Werkmaatschappij voor huisstijl in mail en op afmeldpagina.
         doelgroep_id:
           type: ["integer", "null"]
         sjabloon_id:
@@ -31070,11 +31115,33 @@ components:
 
     MarketingCampagneInput:
       type: object
+      required: [naam, werkgever_id]
       properties:
         naam:
           type: string
         doel:
           type: ["string", "null"]
+        werkgever_id:
+          type: integer
+          description: Verplicht — bepaalt logo en merkkleur van de huisstijl in de mail en op de afmeldpagina.
+        doelgroep_id:
+          type: ["integer", "null"]
+        sjabloon_id:
+          type: ["integer", "null"]
+        gepland_op:
+          type: ["string", "null"]
+
+    MarketingCampagneUpdateInput:
+      type: object
+      description: Gedeeltelijke update van een campagne; alle velden optioneel. werkgever_id mag niet naar null worden gezet.
+      properties:
+        naam:
+          type: string
+        doel:
+          type: ["string", "null"]
+        werkgever_id:
+          type: integer
+          description: Werkmaatschappij voor huisstijl — verplicht positief geheel getal (ontkoppelen is verboden).
         doelgroep_id:
           type: ["integer", "null"]
         sjabloon_id:

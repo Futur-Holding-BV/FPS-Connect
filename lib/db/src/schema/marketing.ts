@@ -4,6 +4,7 @@ import { pgTable, serial, text, integer, timestamp, jsonb, unique, index } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
+import { werkgeversTable } from "./hrm";
 import { crmKlantenTable, crmContactpersonenTable } from "./crm";
 
 export const CAMPAGNE_STATUSSEN = ["concept", "gepland", "verzendend", "verzonden", "gestopt"] as const;
@@ -49,6 +50,7 @@ export const marketingCampagnesTable = pgTable("marketing_campagnes", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
   doel: text("doel"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   doelgroepId: integer("doelgroep_id").references(() => marketingDoelgroepenTable.id, { onDelete: "set null" }),
   sjabloonId: integer("sjabloon_id").references(() => marketingSjablonenTable.id, { onDelete: "set null" }),
   status: text("status").notNull().default("concept"),

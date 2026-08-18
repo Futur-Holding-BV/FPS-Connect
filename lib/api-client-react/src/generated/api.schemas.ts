@@ -2111,6 +2111,11 @@ export interface MarketingSjabloonInput {
   inhoud?: string;
 }
 
+export interface MarketingWerkgeverOptie {
+  id: number;
+  naam: string;
+}
+
 export type MarketingCampagneStatus = typeof MarketingCampagneStatus[keyof typeof MarketingCampagneStatus];
 
 
@@ -2128,6 +2133,11 @@ export interface MarketingCampagne {
   naam: string;
   /** @nullable */
   doel?: string | null;
+  /**
+     * Werkmaatschappij voor huisstijl in mail en op afmeldpagina.
+     * @nullable
+     */
+  werkgever_id?: number | null;
   /** @nullable */
   doelgroep_id?: number | null;
   /** @nullable */
@@ -2174,9 +2184,28 @@ export interface MarketingVerzendtempoInput {
 }
 
 export interface MarketingCampagneInput {
+  naam: string;
+  /** @nullable */
+  doel?: string | null;
+  /** Verplicht — bepaalt logo en merkkleur van de huisstijl in de mail en op de afmeldpagina. */
+  werkgever_id: number;
+  /** @nullable */
+  doelgroep_id?: number | null;
+  /** @nullable */
+  sjabloon_id?: number | null;
+  /** @nullable */
+  gepland_op?: string | null;
+}
+
+/**
+ * Gedeeltelijke update van een campagne; alle velden optioneel. werkgever_id mag niet naar null worden gezet.
+ */
+export interface MarketingCampagneUpdateInput {
   naam?: string;
   /** @nullable */
   doel?: string | null;
+  /** Werkmaatschappij voor huisstijl — verplicht positief geheel getal (ontkoppelen is verboden). */
+  werkgever_id?: number;
   /** @nullable */
   doelgroep_id?: number | null;
   /** @nullable */
@@ -19059,3 +19088,4 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+

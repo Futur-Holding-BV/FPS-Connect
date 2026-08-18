@@ -2816,6 +2816,7 @@ KOLOM|marketing_campagnes|proef_verzonden_door_id|integer|YES|
 KOLOM|marketing_campagnes|proef_verzonden_op|timestamp without time zone|YES|
 KOLOM|marketing_campagnes|sjabloon_id|integer|YES|
 KOLOM|marketing_campagnes|status|text|NO|'concept'::text
+KOLOM|marketing_campagnes|werkgever_id|integer|YES|
 KOLOM|marketing_doelgroepen|aangemaakt_door_id|integer|YES|
 KOLOM|marketing_doelgroepen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|marketing_doelgroepen|bijgewerkt_op|timestamp without time zone|NO|now()
