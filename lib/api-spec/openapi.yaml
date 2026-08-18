@@ -36336,6 +36336,13 @@ components:
           type: string
         contracturen_per_week:
           type: ["number", "null"]
+          description: 0 is geldig bij een oproep-/nul-urencontract.
+        contract_einddatum:
+          type: ["string", "null"]
+          description: >-
+            Einddatum van het eerste contract (YYYY-MM-DD) bij bepaalde tijd.
+            Bij invullen wordt direct een arbeidsovereenkomst aangemaakt zodat
+            de contractbewaking einddatum en aanzegtermijn oppakt.
         deeltijd_percentage:
           type: ["number", "null"]
           description: Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)

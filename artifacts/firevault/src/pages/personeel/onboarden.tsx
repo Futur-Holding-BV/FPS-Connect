@@ -145,6 +145,7 @@ interface VastForm {
   cao: string;
   dienstverband: string;
   contracturen_per_week: string;
+  contract_einddatum: string;
   in_dienst_sinds: string;
   verlofsoort_ids: number[];
 }
@@ -182,6 +183,7 @@ const LEEG_VAST: VastForm = {
   cao: caoVoorWerkmaatschappij(WERKMAATSCHAPPIJ_STD) ?? "",
   dienstverband: "vast",
   contracturen_per_week: "38",
+  contract_einddatum: "",
   in_dienst_sinds: new Date().toISOString().slice(0, 10),
   verlofsoort_ids: [],
 };
@@ -1204,8 +1206,9 @@ function VastFormulier({
     }
     const geldigeWm = v.werkmaatschappij && (WERKMAATSCHAPPIJEN as readonly string[]).includes(v.werkmaatschappij);
     const geldigDv = v.dienstverband && ["vast", "tijdelijk", "oproep", "stage"].includes(v.dienstverband);
-    const uren = v.contracturen_per_week ? Number(v.contracturen_per_week) : NaN;
-    const geldigeUren = Number.isFinite(uren) && uren > 0 && uren <= 48;
+    const uren = v.contracturen_per_week !== "" && v.contracturen_per_week != null ? Number(v.contracturen_per_week) : NaN;
+    // 0 is geldig: oproep-/nul-urencontract (GEBRUIKERS_01 §3).
+    const geldigeUren = Number.isFinite(uren) && uren >= 0 && uren <= 48;
     const startdatum = geldigeDatum(v.startdatum);
     const geboortedatum = geldigeDatum(v.geboortedatum);
 
@@ -1388,7 +1391,9 @@ function VastFormulier({
         werkmaatschappij: form.werkmaatschappij,
         cao: form.cao || undefined,
         dienstverband: form.dienstverband,
-        contracturen_per_week: form.contracturen_per_week ? Number(form.contracturen_per_week) : undefined,
+        // Lege string ≠ 0: nul contracturen is een geldige waarde (oproep/nul-uren).
+        contracturen_per_week: form.contracturen_per_week !== "" ? Number(form.contracturen_per_week) : undefined,
+        contract_einddatum: form.dienstverband !== "vast" && form.contract_einddatum ? form.contract_einddatum : undefined,
         in_dienst_sinds: form.in_dienst_sinds || undefined,
         verlofsoort_ids: form.verlofsoort_ids.length > 0 ? form.verlofsoort_ids : undefined,
         jaar: new Date().getFullYear(),
@@ -1821,6 +1826,19 @@ function VastFormulier({
               </SelectContent>
             </Select>
           </div>
+          {form.dienstverband !== "vast" && (
+            <div className="space-y-1.5">
+              <Label>Contract-einddatum (bepaalde tijd)</Label>
+              <Input
+                type="date"
+                value={form.contract_einddatum}
+                onChange={(e) => setForm({ ...form, contract_einddatum: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optioneel. Bij invullen bewaakt Connect automatisch de einddatum en de aanzegtermijn.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -2080,7 +2098,8 @@ function VastFormulier({
                   ["Werkmaatschappij", form.werkmaatschappij],
                   ["CAO", form.cao || "—"],
                   ["Dienstverband", form.dienstverband],
-                  ["Contracturen/week", form.contracturen_per_week ? `${form.contracturen_per_week} uur` : "—"],
+                  ["Contracturen/week", form.contracturen_per_week !== "" ? `${form.contracturen_per_week} uur` : "—"],
+                  ["Contract tot", form.contract_einddatum || "—"],
                   ["In dienst", form.in_dienst_sinds || "—"],
                   ["VCA geldig tot", cvExtra.vca_vervaldatum || "—"],
                   ["BHV geldig tot", cvExtra.bhv_vervaldatum || "—"],

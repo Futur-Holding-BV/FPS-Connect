@@ -1165,6 +1165,59 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
 });
 
 
+// GEBRUIKERS_01 §3 — vertaaltabel onboarding-dienstverband → contracttype van
+// de contractbewaking. Andere dienstverbanden (zzp, payroll, detachering,
+// directie) krijgen bewust géén arbeidsovereenkomst-record: geen eigen contract.
+const DIENSTVERBAND_NAAR_CONTRACTTYPE: Record<string, string> = {
+  vast: "onbepaalde_tijd",
+  tijdelijk: "bepaalde_tijd",
+  oproep: "oproep",
+  stage: "stage",
+};
+
+// Legt bij onboarding direct een arbeidsovereenkomst vast zodat de bestaande
+// contractbewaking (einddatum, aanzegtermijn, ketenregeling) meteen meeloopt.
+async function maakArbeidsovereenkomstBijOnboarding(opts: {
+  medewerkerId: number;
+  werkgeverId: number | null;
+  functieId: number | null;
+  dienstverband: string;
+  startDatum: string | null | undefined;
+  contractEinddatum: string | null;
+  cao: string | null;
+  uren: number | null;
+  aangemaaktDoorId: number | null;
+}, tx: Pick<typeof db, "insert" | "select"> = db): Promise<void> {
+  const contracttype = DIENSTVERBAND_NAAR_CONTRACTTYPE[opts.dienstverband];
+  if (!contracttype) return;
+  // Concept-medewerkers (wizard stap 1) hebben nog geen startdatum: dan nog
+  // géén contract — dat volgt bij de afronding (PATCH) met duplicate-guard.
+  if (!opts.startDatum) return;
+  // Duplicate-guard: nooit een tweede onboarding-contract naast een bestaand.
+  const [bestaand] = await tx
+    .select({ id: arbeidsovereenkomstenTable.id })
+    .from(arbeidsovereenkomstenTable)
+    .where(eq(arbeidsovereenkomstenTable.medewerkerId, opts.medewerkerId))
+    .limit(1);
+  if (bestaand) return;
+  await tx.insert(arbeidsovereenkomstenTable).values({
+    medewerkerId: opts.medewerkerId,
+    werkgeverId: opts.werkgeverId,
+    functieId: opts.functieId,
+    contracttype,
+    startDatum: opts.startDatum,
+    // null = onbepaalde tijd; bij tijdelijk/oproep/stage met bepaalde tijd gevuld.
+    eindDatum: contracttype === "onbepaalde_tijd" ? null : opts.contractEinddatum,
+    cao: opts.cao,
+    arbeidsduurPerWeek: opts.uren,
+    // Oproep-/nul-urencontract: bandbreedte vanaf 0 vastleggen.
+    urenMinPerWeek: contracttype === "oproep" ? 0 : null,
+    status: "actief",
+    notities: "Aangemaakt via onboarding.",
+    aangemaaktDoorId: opts.aangemaaktDoorId,
+  });
+}
+
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
     const {
@@ -1182,6 +1235,25 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         error: "Ongeldige datum (verwacht JJJJ-MM-DD met jaartal 1900\u20132100).",
         velden: fouteDatums,
       });
+    }
+
+    // Contracturen 0..48 — nul is geldig (oproep-/nul-urencontract, GEBRUIKERS_01 §3).
+    const urenWaarde = contracturen_per_week == null || contracturen_per_week === ""
+      ? null
+      : (typeof contracturen_per_week === "number" ? contracturen_per_week : Number(contracturen_per_week));
+    if (urenWaarde != null && (!Number.isFinite(urenWaarde) || urenWaarde < 0 || urenWaarde > 48)) {
+      return void res.status(400).json({ error: "Contracturen per week moeten tussen 0 en 48 liggen.", velden: ["contracturen_per_week"] });
+    }
+    // contract_einddatum (optioneel): geldige datum, ná de in-dienst-datum.
+    const contractEinddatum = typeof (req.body as Record<string, unknown>).contract_einddatum === "string" && String((req.body as Record<string, unknown>).contract_einddatum).trim()
+      ? String((req.body as Record<string, unknown>).contract_einddatum).trim()
+      : null;
+    if (contractEinddatum) {
+      const geldig = isRedelijkeDatum(contractEinddatum)
+        && (!in_dienst_sinds || new Date(`${contractEinddatum}T00:00:00`).getTime() > new Date(`${in_dienst_sinds}T00:00:00`).getTime());
+      if (!geldig) {
+        return void res.status(400).json({ error: "Contract-einddatum moet een geldige datum ná de in-dienst-datum zijn.", velden: ["contract_einddatum"] });
+      }
     }
 
     // Geconsolideerde onboarding: een medewerkerprofiel bestaat alleen als
@@ -1214,7 +1286,11 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
     }
 
     const wm = werkmaatschappij || "FPS Brandpreventie";
-    const [m] = await db
+    const werkgeverIdNieuw = await werkgeverIdVoor(wm);
+    // Medewerker + arbeidsovereenkomst atomair: nooit een definitieve
+    // medewerker zonder contract voor de bewaking (review-eis GEBRUIKERS_01).
+    const m = await db.transaction(async (tx) => {
+      const [rij] = await tx
       .insert(medewerkersTable)
       .values({
         naam,
@@ -1223,7 +1299,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         telefoon,
         mobiel,
         werkmaatschappij: wm,
-        werkgeverId: await werkgeverIdVoor(wm),
+        werkgeverId: werkgeverIdNieuw,
         functieId: functie_id ?? null,
         leidinggevendeId: leidinggevende_id ?? null,
         cao,
@@ -1252,6 +1328,22 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         opmerkingen,
       })
       .returning();
+
+      // Arbeidsovereenkomst in dezelfde transactie: bij een fout blijft er
+      // geen medewerker zonder contract (en geen geblokkeerde concept-retry) achter.
+      await maakArbeidsovereenkomstBijOnboarding({
+        medewerkerId: rij.id,
+        werkgeverId: rij.werkgeverId ?? null,
+        functieId: rij.functieId ?? null,
+        dienstverband: dienstverband || "vast",
+        startDatum: rij.inDienstSinds ?? in_dienst_sinds,
+        contractEinddatum: contractEinddatum,
+        cao: cao ?? null,
+        uren: urenWaarde,
+        aangemaaktDoorId: req.session.userId ?? null,
+      }, tx);
+      return rij;
+    });
 
     // Verlofsaldo opbouwen indien verlofsoort_ids meegegeven én een bekende CAO gebruikt wordt.
     const ids: number[] = Array.isArray(verlofsoort_ids)
@@ -1580,9 +1672,16 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
     const caoOptie = CAO_OPTIES.find((c) => c.naam === cao);
     if (!cao || !caoOptie) velden.push("cao");
 
-    // contracturen > 0 en <= 40
+    // contracturen 0..48 — nul is een geldige waarde bij een oproep-/nul-urencontract
+    // (GEBRUIKERS_01 §3); bovengrens 48 gelijkgetrokken met het onboardingscherm.
     const uren = typeof contracturen_per_week === "number" ? contracturen_per_week : Number(contracturen_per_week);
-    if (!Number.isFinite(uren) || uren <= 0 || uren > 40) velden.push("contracturen_per_week");
+    if (!Number.isFinite(uren) || uren < 0 || uren > 48) velden.push("contracturen_per_week");
+
+    // contract_einddatum (optioneel): geldige datum, ná in-dienst-datum.
+    const contract_einddatum = typeof (req.body as any).contract_einddatum === "string" && (req.body as any).contract_einddatum.trim()
+      ? (req.body as any).contract_einddatum.trim()
+      : null;
+    if (contract_einddatum && !isRedelijkeDatum(contract_einddatum)) velden.push("contract_einddatum");
 
     // in dienst sinds: geldige datum, niet in de toekomst
     let inDienstDatum: Date | null = null;
@@ -1598,6 +1697,11 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         if (d.getTime() > vandaag.getTime()) velden.push("in_dienst_sinds");
         else inDienstDatum = d;
       }
+    }
+
+    // Einddatum moet ná de in-dienst-datum liggen.
+    if (contract_einddatum && inDienstDatum && new Date(`${contract_einddatum}T00:00:00`).getTime() <= inDienstDatum.getTime()) {
+      velden.push("contract_einddatum");
     }
 
     if (velden.length > 0) {
@@ -1627,6 +1731,20 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         actief: true,
       })
       .returning();
+
+    // Arbeidsovereenkomst vastleggen zodat de contractbewaking (einddatum,
+    // aanzegtermijn, ketenregeling) direct meeloopt (GEBRUIKERS_01 §3).
+    await maakArbeidsovereenkomstBijOnboarding({
+      medewerkerId: m.id,
+      werkgeverId: m.werkgeverId ?? null,
+      functieId: m.functieId ?? null,
+      dienstverband: dienstverband || "vast",
+      startDatum: m.inDienstSinds ?? (in_dienst_sinds as string),
+      contractEinddatum: contract_einddatum,
+      cao: cao ?? null,
+      uren,
+      aangemaaktDoorId: req.session.userId ?? null,
+    });
 
     // Verlofsaldo opbouwen (pro-rata op basis van contracturen t.o.v. CAO-norm) —
     // gecentraliseerd zodat onboarding en latere medewerker-aanmaak dezelfde regels volgen.
@@ -1719,8 +1837,14 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         });
       }
     }
+    // contract_einddatum (optioneel, afrondpad van de onboarding-wizard).
+    const contractEinddatumPatch = typeof (req.body as Record<string, unknown>).contract_einddatum === "string" && String((req.body as Record<string, unknown>).contract_einddatum).trim()
+      ? String((req.body as Record<string, unknown>).contract_einddatum).trim()
+      : null;
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
-    const [m] = await db
+    // Update + eventuele contractaanmaak atomair (zie POST /medewerkers).
+    const m = await db.transaction(async (tx) => {
+    const [rij] = await tx
       .update(medewerkersTable)
       .set({
         naam,
@@ -1765,6 +1889,24 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       })
       .where(eq(medewerkersTable.id, parseId(req.params.id)))
       .returning();
+    // Wizard-afronding: zodra de startdatum bekend is en er nog geen
+    // arbeidsovereenkomst bestaat (duplicate-guard in de helper), leg die vast
+    // zodat de contractbewaking meeloopt (GEBRUIKERS_01 §3).
+    if (rij && rij.inDienstSinds) {
+      await maakArbeidsovereenkomstBijOnboarding({
+        medewerkerId: rij.id,
+        werkgeverId: rij.werkgeverId ?? null,
+        functieId: rij.functieId ?? null,
+        dienstverband: rij.dienstverband || "vast",
+        startDatum: rij.inDienstSinds,
+        contractEinddatum: contractEinddatumPatch,
+        cao: rij.cao ?? null,
+        uren: rij.contracturenPerWeek != null ? Number(rij.contracturenPerWeek) : null,
+        aangemaaktDoorId: req.session.userId ?? null,
+      }, tx);
+    }
+    return rij;
+    });
     if (!m) return void res.status(404).json({ error: "Medewerker niet gevonden" });
     invalideerContext("medewerker", m.id);
     res.json(await medewerkerNaarJson(m));

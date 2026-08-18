@@ -335,7 +335,7 @@ function RollenmatrixTab() {
                         })}
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-                            <Link href="/beheer/profielen">
+                            <Link href={`/beheer/profielen?profiel=${profiel.id}`}>
                               Bewerken
                               <ExternalLink className="ml-1 h-3 w-3" />
                             </Link>

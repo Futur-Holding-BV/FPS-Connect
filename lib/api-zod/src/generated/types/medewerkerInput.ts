@@ -20,8 +20,16 @@ export interface MedewerkerInput {
   leidinggevende_id?: number | null;
   cao?: string;
   dienstverband?: string;
-  /** @nullable */
+  /**
+     * 0 is geldig bij een oproep-/nul-urencontract.
+     * @nullable
+     */
   contracturen_per_week?: number | null;
+  /**
+     * Einddatum van het eerste contract (YYYY-MM-DD) bij bepaalde tijd. Bij invullen wordt direct een arbeidsovereenkomst aangemaakt zodat de contractbewaking einddatum en aanzegtermijn oppakt.
+     * @nullable
+     */
+  contract_einddatum?: string | null;
   /**
      * Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)
      * @nullable

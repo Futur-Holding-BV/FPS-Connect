@@ -1206,36 +1206,62 @@ export default function Gebruikers() {
               <p id="toevoegen-beschr" className="text-sm text-muted-foreground -mt-1">
                 Kies de functie van de nieuwe gebruiker. De standaardbevoegdheden worden automatisch vooringevuld.
               </p>
+              {/* Eén bron: alle profielen uit GET /profielen (vaste presets én
+                  zelfgemaakte). Een nieuw profiel verschijnt hier vanzelf.
+                  Hoofdbeheerder is een systeemrol (geen profiel) en staat er
+                  apart bij, alleen voor hoofdbeheerders. */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                {FUNCTIE_GROEPEN.filter((gr) => isHoofd || gr.naam !== "Hoofdbeheerder").map((gr) => {
-                  const Icon = gr.icon;
+                {isHoofd && (
+                  <button
+                    key="__hoofdbeheerder__"
+                    type="button"
+                    onClick={() => {
+                      setToevoegenForm((f) => ({
+                        ...f,
+                        rol: "hoofdbeheerder",
+                        functietitels: [],
+                        bevoegdheden: {},
+                        herkomst_profiel_id: null,
+                        profiel_ids: [],
+                      }));
+                      setToevoegenStap(2);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
+                  >
+                    <Crown className="h-4 w-4 flex-shrink-0 text-amber-600" />
+                    <div>
+                      <div className="text-sm font-medium leading-tight">Hoofdbeheerder</div>
+                      <div className="text-xs text-muted-foreground leading-tight">Volledig beheer</div>
+                    </div>
+                  </button>
+                )}
+                {(profielen ?? []).map((profiel: any) => {
+                  const bekend = FUNCTIE_GROEPEN.find((g) => g.naam === profiel.naam);
+                  const Icon = bekend?.icon ?? ShieldCheck;
+                  const kleur = bekend?.kleur ?? "text-slate-600";
                   return (
                     <button
-                      key={gr.naam}
+                      key={profiel.id}
                       type="button"
                       onClick={() => {
-                        const profiel = (profielen ?? []).find((p: any) => p.naam === gr.presetNaam);
-                        const bevoegdheden = profiel
-                          ? { ...(profiel.bevoegdheden ?? {}) } as Record<string, number>
-                          : {};
-                        const herkomstProfielId = profiel ? profiel.id : null;
-                        const functietitels = gr.rol === "gebruiker" ? [gr.naam] : [];
                         setToevoegenForm((f) => ({
                           ...f,
-                          rol: gr.rol,
-                          functietitels,
-                          bevoegdheden,
-                          herkomst_profiel_id: herkomstProfielId,
-                          profiel_ids: herkomstProfielId != null ? [herkomstProfielId] : [],
+                          rol: "gebruiker",
+                          functietitels: [profiel.naam],
+                          bevoegdheden: { ...(profiel.bevoegdheden ?? {}) } as Record<string, number>,
+                          herkomst_profiel_id: profiel.id,
+                          profiel_ids: [profiel.id],
                         }));
                         setToevoegenStap(2);
                       }}
                       className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
                     >
-                      <Icon className={`h-4 w-4 flex-shrink-0 ${gr.kleur}`} />
+                      <Icon className={`h-4 w-4 flex-shrink-0 ${kleur}`} />
                       <div>
-                        <div className="text-sm font-medium leading-tight">{gr.naam}</div>
-                        <div className="text-xs text-muted-foreground leading-tight">{gr.beschrijving}</div>
+                        <div className="text-sm font-medium leading-tight">{profiel.naam}</div>
+                        <div className="text-xs text-muted-foreground leading-tight">
+                          {profiel.groep ?? (profiel.systeem ? "Systeemprofiel" : "Eigen profiel")}
+                        </div>
                       </div>
                     </button>
                   );

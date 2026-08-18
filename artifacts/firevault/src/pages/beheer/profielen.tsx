@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useListProfielen,
   useCreateProfiel,
@@ -49,6 +49,10 @@ type ProfielForm = {
 
 const LEEG_FORM: ProfielForm = { id: null, naam: "", groep: null, bevoegdheden: {} };
 
+// Sentinel voor "geen categorie": Radix Select accepteert geen lege string als
+// item-waarde (runtime-error bij renderen van de dialoog).
+const GEEN_GROEP = "__geen__";
+
 export default function ProfielenBeheer() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -86,6 +90,19 @@ export default function ProfielenBeheer() {
     setFout(null);
     setDialoogOpen(true);
   }
+
+  // Deep-link vanuit de rollenmatrix: /beheer/profielen?profiel=<id> opent
+  // direct de bewerkdialoog van dat profiel (eenmalig, na laden van de lijst).
+  const deepLinkVerwerkt = useRef(false);
+  useEffect(() => {
+    if (deepLinkVerwerkt.current || profielen.length === 0) return;
+    const idTekst = new URLSearchParams(window.location.search).get("profiel");
+    if (!idTekst) { deepLinkVerwerkt.current = true; return; }
+    deepLinkVerwerkt.current = true;
+    const p = profielen.find((x) => x.id === Number(idTekst));
+    if (p) openBewerk(p as any);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profielen]);
 
   async function bewaar() {
     const naam = form.naam.trim();
@@ -370,14 +387,17 @@ export default function ProfielenBeheer() {
             <div className="space-y-1.5">
               <Label>Categorie</Label>
               <Select
-                value={form.groep ?? ""}
-                onValueChange={(v) => setForm((f) => ({ ...f, groep: v || null }))}
+                value={form.groep ?? GEEN_GROEP}
+                onValueChange={(v) => setForm((f) => ({ ...f, groep: v === GEEN_GROEP ? null : v }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Geen categorie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Geen categorie</SelectItem>
+                  {/* Radix Select verbiedt value="": een lege string gooit een
+                      runtime-error zodra de dialoog rendert, waardoor "Bewerken"
+                      ogenschijnlijk niets deed. Daarom een sentinel-waarde. */}
+                  <SelectItem value={GEEN_GROEP}>Geen categorie</SelectItem>
                   {GROEP_OPTIES.map((g) => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
