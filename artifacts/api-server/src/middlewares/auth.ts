@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import { db, gebruikersTable } from "@workspace/db";
+import { db, gebruikersTable, externeAdviseursTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
 import {
@@ -86,9 +86,18 @@ export async function blokkeerBijWachtwoordWijzigenVereist(
     return;
   }
   try {
+    // Eén query voor twee poorten: verplichte wachtwoordwijziging én de harde
+    // einddatum van externe adviseurs (GEBRUIKERS_01). De adviseurscheck moet
+    // per request draaien — een websessie (12u) of mobiel bearer-token (30d)
+    // die vóór de einddatum is uitgegeven, mag na het verstrijken van
+    // toegang_tot geen data-route meer bereiken.
     const [g] = await db
-      .select({ moetWachtwoordWijzigen: gebruikersTable.moetWachtwoordWijzigen })
+      .select({
+        moetWachtwoordWijzigen: gebruikersTable.moetWachtwoordWijzigen,
+        adviseurToegangTot: externeAdviseursTable.toegangTot,
+      })
       .from(gebruikersTable)
+      .leftJoin(externeAdviseursTable, eq(externeAdviseursTable.gebruikerId, gebruikersTable.id))
       .where(eq(gebruikersTable.id, id));
     if (g?.moetWachtwoordWijzigen) {
       res.status(403).json({
@@ -96,6 +105,17 @@ export async function blokkeerBijWachtwoordWijzigenVereist(
         code: "WACHTWOORD_WIJZIGEN_VEREIST",
       });
       return;
+    }
+    if (g?.adviseurToegangTot) {
+      // NL-kalenderdag; de einddag zelf blijft volledig geldig.
+      const vandaag = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Amsterdam" }).format(new Date());
+      if (g.adviseurToegangTot < vandaag) {
+        res.status(403).json({
+          error: `De toegang van dit externe-adviseursaccount is verlopen op ${g.adviseurToegangTot}. Neem contact op met de beheerder om de toegang te verlengen.`,
+          code: "ADVISEUR_TOEGANG_VERLOPEN",
+        });
+        return;
+      }
     }
     next();
   } catch (err) {

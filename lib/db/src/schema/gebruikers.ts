@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index, uniqueIndex, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -144,6 +144,27 @@ export const wachtwoordResetTokensTable = pgTable(
 // mass-assignment-ingang dienen voor 2FA-status/-vrijstelling, TOTP-secret
 // of vergrendel-/tokenstate. Die velden worden uitsluitend door dedicated
 // flows (2FA-setup, beheerscripts, lockout-logica) geschreven.
+// GEBRUIKERS_01 aanvulling (aug 2026): externe adviseur / dienstverlener
+// (bv. externe boekhouder, HRM-adviseur). Levert een dienst aan het bedrijf:
+// wél een account met functie en rechten, GEEN medewerkerprofiel, aanstelling,
+// contract, verlofopbouw of contractbewaking. De toegang_tot-datum wordt bij
+// het inloggen fail-closed gecontroleerd (auth.ts).
+export const externeAdviseursTable = pgTable("externe_adviseurs", {
+  id: serial("id").primaryKey(),
+  gebruikerId: integer("gebruiker_id")
+    .notNull()
+    .unique()
+    .references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  bedrijf: text("bedrijf").notNull(),
+  contactpersoon: text("contactpersoon"),
+  ingeschakeldVoor: text("ingeschakeld_voor").notNull(),
+  functietitel: text("functietitel"),
+  toegangTot: date("toegang_tot").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export type ExterneAdviseur = typeof externeAdviseursTable.$inferSelect;
+
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({
   id: true,
   aangemaaktOp: true,

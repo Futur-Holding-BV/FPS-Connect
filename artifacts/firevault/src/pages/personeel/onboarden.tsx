@@ -21,6 +21,7 @@ import {
   getGetOnboardingContextQueryKey,
   useDuplicateCheckMedewerker,
   useCreateOnboardingAccount,
+  useCreateExterneAdviseur,
 } from "@workspace/api-client-react";
 import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus, OnboardingContext } from "@workspace/api-client-react";
 import { leesEnWisCvOnboarding, type CvOnboardingStash } from "@/lib/cv-onboarding-stash";
@@ -42,7 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
   CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck, Loader2,
-  GraduationCap, Clock3, CreditCard, ArrowLeftRight, Crown, Upload, Check,
+  GraduationCap, Clock3, CreditCard, ArrowLeftRight, Crown, Upload, Check, Briefcase,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij, useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
@@ -55,7 +56,7 @@ function niveauKort(n: number): string {
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
-type Stroom = "vast" | "zzp" | "uitzend" | "stagiair" | "oproep" | "payroll" | "detachering" | "directie";
+type Stroom = "vast" | "zzp" | "uitzend" | "stagiair" | "oproep" | "payroll" | "detachering" | "directie" | "adviseur";
 type GenerieveStroom = "stagiair" | "oproep" | "payroll" | "detachering" | "directie";
 
 interface StRoomsKaart {
@@ -131,6 +132,19 @@ const STROMEN: StRoomsKaart[] = [
     icoon: <Crown className="h-7 w-7" />,
     kenmerken: ["DGA of statutair bestuurder", "Managementovereenkomst mogelijk", "Afwijkend regime WW / WIA", "Geen arbeidsovereenkomst bij DGA"],
     accent: "border-rose-200 hover:border-rose-400 hover:bg-rose-50/40",
+  },
+  {
+    id: "adviseur",
+    titel: "Externe adviseur / dienstverlener",
+    subtitel: "Levert een dienst aan het bedrijf",
+    icoon: <Briefcase className="h-7 w-7" />,
+    kenmerken: [
+      "Bijv. externe boekhouder of HRM-adviseur",
+      "Account met functie en rechten",
+      "Geen aanstelling, contract of verlofopbouw",
+      "Toegang geldt tot een vaste einddatum",
+    ],
+    accent: "border-slate-200 hover:border-slate-400 hover:bg-slate-50/40",
   },
 ];
 
@@ -2558,6 +2572,129 @@ function UitzendFormulier({
   );
 }
 
+// ─── Stap 2d: Externe adviseur / dienstverlener ──────────────────────────────
+// GEBRUIKERS_01 aanvulling: account met functie en rechten (via de accountstap),
+// maar bewust GEEN medewerkerprofiel, aanstelling, contract, verlofopbouw of
+// contractbewaking. Vastgelegd: bedrijf, contactpersoon, waarvoor ingeschakeld
+// en tot wanneer de toegang geldt (daarna wordt inloggen geblokkeerd).
+
+function AdviseurFormulier({
+  onTerug,
+  context,
+}: {
+  onTerug: () => void;
+  context: OnboardingContext;
+}) {
+  const [, navigate] = useLocation();
+  const [bedrijf, setBedrijf] = useState("");
+  const [contactpersoon, setContactpersoon] = useState("");
+  const [ingeschakeldVoor, setIngeschakeldVoor] = useState("");
+  const [functietitel, setFunctietitel] = useState("");
+  const [toegangTot, setToegangTot] = useState("");
+  const [gereed, setGereed] = useState(false);
+  const maak = useCreateExterneAdviseur();
+  const { toast } = useToast();
+
+  async function opslaan() {
+    if (!bedrijf.trim()) { toast({ title: "Bedrijf is verplicht", variant: "destructive" }); return; }
+    if (!ingeschakeldVoor.trim()) { toast({ title: "Vul in waarvoor deze adviseur is ingeschakeld", variant: "destructive" }); return; }
+    if (!toegangTot) { toast({ title: "Vul in tot wanneer de toegang geldt", variant: "destructive" }); return; }
+    try {
+      await maak.mutateAsync({
+        data: {
+          gebruiker_id: context.gebruiker_id,
+          bedrijf: bedrijf.trim(),
+          contactpersoon: contactpersoon.trim() || null,
+          ingeschakeld_voor: ingeschakeldVoor.trim(),
+          functietitel: functietitel.trim() || null,
+          toegang_tot: toegangTot,
+        },
+      });
+      setGereed(true);
+    } catch (err: unknown) {
+      const status = err && typeof err === "object" && "status" in err ? (err as { status: number }).status : null;
+      toast({
+        title: status === 409 ? "Al geregistreerd" : "Opslaan mislukt",
+        description:
+          status === 409
+            ? "Dit account heeft al een medewerkerprofiel of is al externe adviseur."
+            : "Probeer het opnieuw of neem contact op met de beheerder.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  if (gereed) {
+    return (
+      <div className="space-y-6 max-w-xl">
+        <div className="flex items-center gap-3">
+          <CheckCircle2 className="h-8 w-8 text-green-600" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Externe adviseur geregistreerd</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {context.naam} is vastgelegd als externe adviseur/dienstverlener met toegang tot {toegangTot}.
+            </p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground space-y-1">
+            <p>Er is bewust géén medewerkerprofiel, aanstelling, contract of verlofopbouw aangemaakt: een externe adviseur hoort niet in het personeelsbestand (Wet DBA).</p>
+            <p>Na de einddatum wordt inloggen automatisch geblokkeerd; de toegang is te verlengen via de beheerder.</p>
+          </CardContent>
+        </Card>
+        <Button onClick={() => navigate("/personeel?tab=medewerkers")}>Klaar</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-xl">
+      <div>
+        <Button variant="ghost" size="sm" onClick={onTerug} className="mb-2 -ml-2">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Terug
+        </Button>
+        <h1 data-paginatitel className="text-2xl font-bold tracking-tight">Externe adviseur / dienstverlener</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {context.naam} krijgt een account met functie en rechten, maar staat bewust buiten het
+          personeelsbestand: geen aanstelling, contract, verlofopbouw of contractbewaking.
+        </p>
+      </div>
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="adviseur-bedrijf">Bedrijf *</Label>
+            <Input id="adviseur-bedrijf" value={bedrijf} onChange={(e) => setBedrijf(e.target.value)} placeholder="Bijv. Administratiekantoor Jansen BV" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adviseur-contactpersoon">Contactpersoon</Label>
+            <Input id="adviseur-contactpersoon" value={contactpersoon} onChange={(e) => setContactpersoon(e.target.value)} placeholder="Naam van de contactpersoon bij het bedrijf" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adviseur-functietitel">Functie / rol</Label>
+            <Input id="adviseur-functietitel" value={functietitel} onChange={(e) => setFunctietitel(e.target.value)} placeholder="Bijv. Externe boekhouder, HRM-adviseur" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adviseur-ingeschakeld">Waarvoor ingeschakeld *</Label>
+            <Textarea id="adviseur-ingeschakeld" value={ingeschakeldVoor} onChange={(e) => setIngeschakeldVoor(e.target.value)} placeholder="Bijv. Verzorgen van de boekhouding en loonadministratie" rows={3} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adviseur-toegang-tot">Toegang geldt tot en met *</Label>
+            <Input id="adviseur-toegang-tot" type="date" value={toegangTot} onChange={(e) => setToegangTot(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Na deze datum wordt inloggen automatisch geblokkeerd. Verlengen kan later via de beheerder.</p>
+          </div>
+        </CardContent>
+      </Card>
+      <div className="flex gap-2">
+        <Button onClick={opslaan} disabled={maak.isPending}>
+          {maak.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Registreren
+        </Button>
+        <Button variant="outline" onClick={onTerug}>Annuleren</Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Stap 3: Succes ───────────────────────────────────────────────────────────
 
 function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerkerId: number; onNogEen: () => void }) {
@@ -2584,6 +2721,15 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
       cta: `/personeel/${medewerkerId}`,
       ctaLabel: "Profiel bekijken",
       ctaHref: `/personeel/${medewerkerId}`,
+    },
+    // Niet gebruikt: de adviseursflow heeft een eigen succes-scherm (geen
+    // medewerkerprofiel), maar het Record<Stroom,…>-type eist de sleutel.
+    adviseur: {
+      titel: "Externe adviseur geregistreerd",
+      tekst: "De externe adviseur is vastgelegd zonder medewerkerprofiel.",
+      cta: "/personeel?tab=medewerkers",
+      ctaLabel: "Naar personeelslijst",
+      ctaHref: "/personeel?tab=medewerkers",
     },
     stagiair: {
       titel: "Stagiair geregistreerd",
@@ -3079,6 +3225,14 @@ export default function OnboardenPagina() {
       <UitzendFormulier
         onTerug={() => setStroom(null)}
         onGereed={gereed}
+        context={context}
+      />
+    );
+  }
+  if (stroom === "adviseur") {
+    return (
+      <AdviseurFormulier
+        onTerug={() => setStroom(null)}
         context={context}
       />
     );

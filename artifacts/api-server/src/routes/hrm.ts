@@ -45,6 +45,7 @@ import {
   profielenTable,
   gebruikerProfielenTable,
   arbeidsovereenkomstenTable,
+  externeAdviseursTable,
   werkgeverBankrekeningenTable,
   werkgeverBankrekeningLogsTable,
 } from "@workspace/db";
@@ -1284,6 +1285,18 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         medewerker_id: alGekoppeld.id,
       });
     }
+    // GEBRUIKERS_01: een externe adviseur staat bewust buiten het personeels-
+    // bestand — wederzijdse exclusiviteit, dus ook dit pad weigert (409).
+    const [alsAdviseur] = await db
+      .select({ id: externeAdviseursTable.id })
+      .from(externeAdviseursTable)
+      .where(eq(externeAdviseursTable.gebruikerId, gebruikerId));
+    if (alsAdviseur) {
+      return void res.status(409).json({
+        error: "Dit account is geregistreerd als externe adviseur en hoort niet in het personeelsbestand.",
+        code: "IS_EXTERNE_ADVISEUR",
+      });
+    }
 
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const werkgeverIdNieuw = await werkgeverIdVoor(wm);
@@ -1640,6 +1653,21 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND", velden: ["gebruiker_id"] });
       }
       gebruiker = g;
+    }
+
+    // GEBRUIKERS_01: externe adviseurs staan bewust buiten het personeels-
+    // bestand — wederzijdse exclusiviteit, dus ook onboarding weigert (409).
+    if (gebruiker) {
+      const [alsAdviseur] = await db
+        .select({ id: externeAdviseursTable.id })
+        .from(externeAdviseursTable)
+        .where(eq(externeAdviseursTable.gebruikerId, gebruiker.id));
+      if (alsAdviseur) {
+        return void res.status(409).json({
+          error: "Dit account is geregistreerd als externe adviseur en hoort niet in het personeelsbestand.",
+          code: "IS_EXTERNE_ADVISEUR",
+        });
+      }
     }
 
     // dubbele medewerker voor dezelfde gebruiker voorkomen

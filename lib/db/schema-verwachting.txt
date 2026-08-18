@@ -103,6 +103,8 @@ INDEX|dossier_documenten|dossier_documenten_pkey
 INDEX|dossiers|dossiers_pkey
 INDEX|eenheidsprijzen|eenheidsprijzen_code_unique
 INDEX|eenheidsprijzen|eenheidsprijzen_pkey
+INDEX|externe_adviseurs|externe_adviseurs_gebruiker_id_key
+INDEX|externe_adviseurs|externe_adviseurs_pkey
 INDEX|fabrikanten|fabrikanten_naam_unique
 INDEX|fabrikanten|fabrikanten_pkey
 INDEX|facturen|facturen_mailstroom_bijlage_uniek
@@ -1472,6 +1474,15 @@ KOLOM|eenheidsprijzen|omschrijving|text|NO|
 KOLOM|eenheidsprijzen|opmerkingen|text|YES|
 KOLOM|eenheidsprijzen|prijsbasis_opmerking|text|YES|
 KOLOM|eenheidsprijzen|verkoopprijs|real|NO|0
+KOLOM|externe_adviseurs|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|externe_adviseurs|bedrijf|text|NO|
+KOLOM|externe_adviseurs|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|externe_adviseurs|contactpersoon|text|YES|
+KOLOM|externe_adviseurs|functietitel|text|YES|
+KOLOM|externe_adviseurs|gebruiker_id|integer|NO|
+KOLOM|externe_adviseurs|id|integer|NO|nextval('externe_adviseurs_id_seq'::regclass)
+KOLOM|externe_adviseurs|ingeschakeld_voor|text|NO|
+KOLOM|externe_adviseurs|toegang_tot|date|NO|
 KOLOM|fabrikanten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|fabrikanten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|fabrikanten|gearchiveerd|boolean|NO|false

@@ -9568,6 +9568,73 @@ paths:
               schema:
                 $ref: "#/components/schemas/OnboardingAccountConflict"
 
+  /externe-adviseurs:
+    get:
+      operationId: listExterneAdviseurs
+      tags: [personeel]
+      summary: Overzicht externe adviseurs/dienstverleners (personeel niveau 1)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExterneAdviseur"
+    post:
+      operationId: createExterneAdviseur
+      tags: [personeel]
+      summary: Registreer een bestaand gebruikersaccount als externe adviseur/dienstverlener (personeel niveau 2). Bewust zonder medewerkerprofiel, aanstelling, contract of verlofopbouw.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExterneAdviseurInput"
+      responses:
+        "201":
+          description: Geregistreerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExterneAdviseur"
+        "400":
+          description: Validatiefout
+        "404":
+          description: Gebruiker niet gevonden
+        "409":
+          description: Account heeft al een medewerkerprofiel of is al externe adviseur
+
+  /externe-adviseurs/{id}:
+    patch:
+      operationId: updateExterneAdviseur
+      tags: [personeel]
+      summary: Externe adviseur bijwerken of toegang verlengen (personeel niveau 2)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExterneAdviseurUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExterneAdviseur"
+        "400":
+          description: Validatiefout
+        "404":
+          description: Externe adviseur niet gevonden
+
   /uitzendbureau-koppelingen:
     get:
       operationId: listUitzendbureauKoppelingen
@@ -36623,6 +36690,68 @@ components:
         heeft_medewerkerprofiel:
           type: boolean
           description: Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet.
+
+    ExterneAdviseur:
+      type: object
+      required: [id, gebruiker_id, bedrijf, ingeschakeld_voor, toegang_tot]
+      description: Externe adviseur/dienstverlener (bv. externe boekhouder of HRM-adviseur) - account met functie en rechten, bewust zonder medewerkerprofiel, aanstelling, contract, verlofopbouw of contractbewaking.
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        naam:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        account_actief:
+          type: ["boolean", "null"]
+        bedrijf:
+          type: string
+        contactpersoon:
+          type: ["string", "null"]
+        ingeschakeld_voor:
+          type: string
+        functietitel:
+          type: ["string", "null"]
+        toegang_tot:
+          type: string
+          description: Laatste dag (JJJJ-MM-DD) waarop de toegang geldt; daarna wordt inloggen geblokkeerd.
+        aangemaakt_op:
+          type: ["string", "null"]
+
+    ExterneAdviseurInput:
+      type: object
+      required: [gebruiker_id, bedrijf, ingeschakeld_voor, toegang_tot]
+      properties:
+        gebruiker_id:
+          type: integer
+        bedrijf:
+          type: string
+        contactpersoon:
+          type: ["string", "null"]
+        ingeschakeld_voor:
+          type: string
+          description: Waarvoor de externe adviseur is ingeschakeld.
+        functietitel:
+          type: ["string", "null"]
+        toegang_tot:
+          type: string
+          description: Laatste geldige toegangsdag (JJJJ-MM-DD).
+
+    ExterneAdviseurUpdate:
+      type: object
+      properties:
+        bedrijf:
+          type: string
+        contactpersoon:
+          type: ["string", "null"]
+        ingeschakeld_voor:
+          type: string
+        functietitel:
+          type: ["string", "null"]
+        toegang_tot:
+          type: string
 
     OnboardingContext:
       type: object

@@ -261,6 +261,9 @@ import type {
   ExportAiAanroepenCsvParams,
   ExportGoedkeuringDashboardParams,
   ExportlogRegel,
+  ExterneAdviseur,
+  ExterneAdviseurInput,
+  ExterneAdviseurUpdate,
   Fabrikant,
   FabrikantInput,
   FabrikantUpdate,
@@ -33192,6 +33195,224 @@ export const useCreateOnboardingAccount = <TError = ErrorType<void | OnboardingA
         TContext
       > => {
       return useMutation(getCreateOnboardingAccountMutationOptions(options));
+    }
+
+export const getListExterneAdviseursUrl = () => {
+
+
+
+
+  return `/api/externe-adviseurs`
+}
+
+/**
+ * @summary Overzicht externe adviseurs/dienstverleners (personeel niveau 1)
+ */
+export const listExterneAdviseurs = async ( options?: RequestInit): Promise<ExterneAdviseur[]> => {
+
+  return customFetch<ExterneAdviseur[]>(getListExterneAdviseursUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListExterneAdviseursQueryKey = () => {
+    return [
+    `/api/externe-adviseurs`
+    ] as const;
+    }
+
+
+export const getListExterneAdviseursQueryOptions = <TData = Awaited<ReturnType<typeof listExterneAdviseurs>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExterneAdviseurs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExterneAdviseursQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExterneAdviseurs>>> = ({ signal }) => listExterneAdviseurs({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listExterneAdviseurs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListExterneAdviseursQueryResult = NonNullable<Awaited<ReturnType<typeof listExterneAdviseurs>>>
+export type ListExterneAdviseursQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Overzicht externe adviseurs/dienstverleners (personeel niveau 1)
+ */
+
+export function useListExterneAdviseurs<TData = Awaited<ReturnType<typeof listExterneAdviseurs>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExterneAdviseurs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListExterneAdviseursQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateExterneAdviseurUrl = () => {
+
+
+
+
+  return `/api/externe-adviseurs`
+}
+
+/**
+ * @summary Registreer een bestaand gebruikersaccount als externe adviseur/dienstverlener (personeel niveau 2). Bewust zonder medewerkerprofiel, aanstelling, contract of verlofopbouw.
+ */
+export const createExterneAdviseur = async (externeAdviseurInput: ExterneAdviseurInput, options?: RequestInit): Promise<ExterneAdviseur> => {
+
+  return customFetch<ExterneAdviseur>(getCreateExterneAdviseurUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externeAdviseurInput)
+  }
+);}
+
+
+
+
+export const getCreateExterneAdviseurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExterneAdviseur>>, TError,{data: BodyType<ExterneAdviseurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createExterneAdviseur>>, TError,{data: BodyType<ExterneAdviseurInput>}, TContext> => {
+
+const mutationKey = ['createExterneAdviseur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createExterneAdviseur>>, {data: BodyType<ExterneAdviseurInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createExterneAdviseur(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateExterneAdviseurMutationResult = NonNullable<Awaited<ReturnType<typeof createExterneAdviseur>>>
+    export type CreateExterneAdviseurMutationBody = BodyType<ExterneAdviseurInput>
+    export type CreateExterneAdviseurMutationError = ErrorType<void>
+
+    /**
+ * @summary Registreer een bestaand gebruikersaccount als externe adviseur/dienstverlener (personeel niveau 2). Bewust zonder medewerkerprofiel, aanstelling, contract of verlofopbouw.
+ */
+export const useCreateExterneAdviseur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExterneAdviseur>>, TError,{data: BodyType<ExterneAdviseurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createExterneAdviseur>>,
+        TError,
+        {data: BodyType<ExterneAdviseurInput>},
+        TContext
+      > => {
+      return useMutation(getCreateExterneAdviseurMutationOptions(options));
+    }
+
+export const getUpdateExterneAdviseurUrl = (id: number,) => {
+
+
+
+
+  return `/api/externe-adviseurs/${id}`
+}
+
+/**
+ * @summary Externe adviseur bijwerken of toegang verlengen (personeel niveau 2)
+ */
+export const updateExterneAdviseur = async (id: number,
+    externeAdviseurUpdate: ExterneAdviseurUpdate, options?: RequestInit): Promise<ExterneAdviseur> => {
+
+  return customFetch<ExterneAdviseur>(getUpdateExterneAdviseurUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externeAdviseurUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateExterneAdviseurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExterneAdviseur>>, TError,{id: number;data: BodyType<ExterneAdviseurUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateExterneAdviseur>>, TError,{id: number;data: BodyType<ExterneAdviseurUpdate>}, TContext> => {
+
+const mutationKey = ['updateExterneAdviseur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateExterneAdviseur>>, {id: number;data: BodyType<ExterneAdviseurUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateExterneAdviseur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExterneAdviseurMutationResult = NonNullable<Awaited<ReturnType<typeof updateExterneAdviseur>>>
+    export type UpdateExterneAdviseurMutationBody = BodyType<ExterneAdviseurUpdate>
+    export type UpdateExterneAdviseurMutationError = ErrorType<void>
+
+    /**
+ * @summary Externe adviseur bijwerken of toegang verlengen (personeel niveau 2)
+ */
+export const useUpdateExterneAdviseur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExterneAdviseur>>, TError,{id: number;data: BodyType<ExterneAdviseurUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateExterneAdviseur>>,
+        TError,
+        {id: number;data: BodyType<ExterneAdviseurUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateExterneAdviseurMutationOptions(options));
     }
 
 export const getListUitzendbureauKoppelingenUrl = () => {

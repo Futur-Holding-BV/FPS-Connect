@@ -11661,6 +11661,70 @@ export const CreateOnboardingAccountResponse = zod.void()
 
 
 /**
+ * @summary Overzicht externe adviseurs/dienstverleners (personeel niveau 1)
+ */
+export const ListExterneAdviseursResponseItem = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "naam": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "account_actief": zod.boolean().nullish(),
+  "bedrijf": zod.string(),
+  "contactpersoon": zod.string().nullish(),
+  "ingeschakeld_voor": zod.string(),
+  "functietitel": zod.string().nullish(),
+  "toegang_tot": zod.string().describe('Laatste dag (JJJJ-MM-DD) waarop de toegang geldt; daarna wordt inloggen geblokkeerd.'),
+  "aangemaakt_op": zod.string().nullish()
+}).describe('Externe adviseur\/dienstverlener (bv. externe boekhouder of HRM-adviseur) - account met functie en rechten, bewust zonder medewerkerprofiel, aanstelling, contract, verlofopbouw of contractbewaking.')
+export const ListExterneAdviseursResponse = zod.array(ListExterneAdviseursResponseItem)
+
+
+/**
+ * @summary Registreer een bestaand gebruikersaccount als externe adviseur/dienstverlener (personeel niveau 2). Bewust zonder medewerkerprofiel, aanstelling, contract of verlofopbouw.
+ */
+export const CreateExterneAdviseurBody = zod.object({
+  "gebruiker_id": zod.number(),
+  "bedrijf": zod.string(),
+  "contactpersoon": zod.string().nullish(),
+  "ingeschakeld_voor": zod.string().describe('Waarvoor de externe adviseur is ingeschakeld.'),
+  "functietitel": zod.string().nullish(),
+  "toegang_tot": zod.string().describe('Laatste geldige toegangsdag (JJJJ-MM-DD).')
+})
+
+export const CreateExterneAdviseurResponse = zod.void()
+
+
+/**
+ * @summary Externe adviseur bijwerken of toegang verlengen (personeel niveau 2)
+ */
+export const UpdateExterneAdviseurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateExterneAdviseurBody = zod.object({
+  "bedrijf": zod.string().optional(),
+  "contactpersoon": zod.string().nullish(),
+  "ingeschakeld_voor": zod.string().optional(),
+  "functietitel": zod.string().nullish(),
+  "toegang_tot": zod.string().optional()
+})
+
+export const UpdateExterneAdviseurResponse = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "naam": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "account_actief": zod.boolean().nullish(),
+  "bedrijf": zod.string(),
+  "contactpersoon": zod.string().nullish(),
+  "ingeschakeld_voor": zod.string(),
+  "functietitel": zod.string().nullish(),
+  "toegang_tot": zod.string().describe('Laatste dag (JJJJ-MM-DD) waarop de toegang geldt; daarna wordt inloggen geblokkeerd.'),
+  "aangemaakt_op": zod.string().nullish()
+}).describe('Externe adviseur\/dienstverlener (bv. externe boekhouder of HRM-adviseur) - account met functie en rechten, bewust zonder medewerkerprofiel, aanstelling, contract, verlofopbouw of contractbewaking.')
+
+
+/**
  * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
  */
 export const ListUitzendbureauKoppelingenResponse = zod.object({

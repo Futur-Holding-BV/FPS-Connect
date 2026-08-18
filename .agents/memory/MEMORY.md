@@ -111,6 +111,7 @@
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
 - [Calculatie-rekenkern (CALC_KERN_01)](calc-rekenkern.md) — @workspace/calculatie = enige rekenplek (centen, tekensymmetrisch ronden); kern negeert opgeslagen totaal → bedrag-only regels via tarief; geldvelden numeric(12,2).
 - [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.
+- [Externe adviseur](externe-adviseur.md) — adviseurs buiten personeelsbestand (geen medewerkers-rij); toegang_tot-poort per request in de globale middleware; wederzijdse 409-exclusiviteit met medewerker-aanmaakpaden.
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
 - [Sessie-bewijs dev & prod via https](dev-api-sessie-bewijs.md) — Secure-cookies eisen https (nooit http://localhost); prod-details in prod-curl-sessie-bewijs.md (#HttpOnly_ jar, SQL via stdin).
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; schemawijziging sinds SCHEMA_01 via genummerde migratie (zie schema-migratieketen).

@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
-import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
+import { db, gebruikersTable, wachtwoordResetTokensTable, externeAdviseursTable } from "@workspace/db";
 import { eq, and, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { maakToken } from "../lib/token";
 import { requireAuth } from "../middlewares/auth";
@@ -200,6 +200,28 @@ function verzoekUserAgent(req: { headers: Record<string, unknown> }): string | n
   return typeof ua === "string" ? ua : null;
 }
 
+// GEBRUIKERS_01 externe adviseur: is dit account een externe adviseur met een
+// verstreken toegang_tot-datum, dan wordt inloggen fail-closed geblokkeerd.
+// Datumvergelijking op tekst (JJJJ-MM-DD) tegen de kalenderdatum in NL-tijd,
+// zodat de laatste toegangsdag volledig geldig blijft.
+async function adviseurToegangVerlopen(gebruikerId: number): Promise<string | null> {
+  const [a] = await db
+    .select({ toegangTot: externeAdviseursTable.toegangTot })
+    .from(externeAdviseursTable)
+    .where(eq(externeAdviseursTable.gebruikerId, gebruikerId))
+    .limit(1);
+  if (!a) return null;
+  const vandaag = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Amsterdam" }).format(new Date());
+  return a.toegangTot < vandaag ? a.toegangTot : null;
+}
+
+function adviseurVerlopenRespons(toegangTot: string) {
+  return {
+    error: `De toegang van dit externe-adviseursaccount is verlopen op ${toegangTot}. Neem contact op met de beheerder om de toegang te verlengen.`,
+    code: "ADVISEUR_TOEGANG_VERLOPEN",
+  };
+}
+
 // POST /auth/login — stap 1: e-mail + wachtwoord
 router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
@@ -245,6 +267,10 @@ router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> 
         gelukt: false,
       });
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
+    }
+    const adviseurVerlopen = await adviseurToegangVerlopen(g.id);
+    if (adviseurVerlopen) {
+      return void res.status(403).json(adviseurVerlopenRespons(adviseurVerlopen));
     }
     req.session.pendingUserId = g.id;
     delete req.session.userId;
@@ -438,6 +464,13 @@ router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<voi
     if (!g || !g.totpSecret) {
       return void res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
     }
+    // GEBRUIKERS_01: hercontrole vlak vóór sessie-uitgifte — wie op de laatste
+    // geldige dag stap 1 passeerde, mag na de NL-datumgrens geen sessie meer
+    // krijgen via de 2FA-stap.
+    const adviseurVerlopen2fa = await adviseurToegangVerlopen(g.id);
+    if (adviseurVerlopen2fa) {
+      return void res.status(403).json(adviseurVerlopenRespons(adviseurVerlopen2fa));
+    }
     if (isVergrendeld(g.vergrendeldTot)) {
       return void res.status(423).json(vergrendeldRespons(g.vergrendeldTot!));
     }
@@ -513,6 +546,10 @@ router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise
     if (!ok) {
       await verwerkMislukteInlogpoging(g.id, g.misluktePogingen);
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
+    }
+    const adviseurVerlopenMobiel = await adviseurToegangVerlopen(g.id);
+    if (adviseurVerlopenMobiel) {
+      return void res.status(403).json(adviseurVerlopenRespons(adviseurVerlopenMobiel));
     }
     if (!g.tweeFactorIngeschakeld || !g.totpSecret) {
       return void res.status(403).json({

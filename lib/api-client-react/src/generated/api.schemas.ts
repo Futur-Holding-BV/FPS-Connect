@@ -6340,6 +6340,53 @@ export interface OnboardingAccountConflict {
 }
 
 /**
+ * Externe adviseur/dienstverlener (bv. externe boekhouder of HRM-adviseur) - account met functie en rechten, bewust zonder medewerkerprofiel, aanstelling, contract, verlofopbouw of contractbewaking.
+ */
+export interface ExterneAdviseur {
+  id: number;
+  gebruiker_id: number;
+  /** @nullable */
+  naam?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  account_actief?: boolean | null;
+  bedrijf: string;
+  /** @nullable */
+  contactpersoon?: string | null;
+  ingeschakeld_voor: string;
+  /** @nullable */
+  functietitel?: string | null;
+  /** Laatste dag (JJJJ-MM-DD) waarop de toegang geldt; daarna wordt inloggen geblokkeerd. */
+  toegang_tot: string;
+  /** @nullable */
+  aangemaakt_op?: string | null;
+}
+
+export interface ExterneAdviseurInput {
+  gebruiker_id: number;
+  bedrijf: string;
+  /** @nullable */
+  contactpersoon?: string | null;
+  /** Waarvoor de externe adviseur is ingeschakeld. */
+  ingeschakeld_voor: string;
+  /** @nullable */
+  functietitel?: string | null;
+  /** Laatste geldige toegangsdag (JJJJ-MM-DD). */
+  toegang_tot: string;
+}
+
+export interface ExterneAdviseurUpdate {
+  bedrijf?: string;
+  /** @nullable */
+  contactpersoon?: string | null;
+  ingeschakeld_voor?: string;
+  /** @nullable */
+  functietitel?: string | null;
+  toegang_tot?: string;
+}
+
+/**
  * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
  */
 export interface OnboardingContext {
