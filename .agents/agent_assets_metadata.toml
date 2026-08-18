@@ -123,3 +123,10 @@ uri = "file://screenshots/monteur-beginscherm-icoon.png"
 type = "image"
 title = "Beginscherm-icoon (FPS Monteur)"
 description = "Het icoon dat op het beginscherm komt: /app/icons/pwa-512.png uit het manifest van de monteuromgeving, met naam \"FPS Monteur\"."
+
+[[outputs]]
+id = "6Qa6oKDGGI0ex4coek702"
+uri = "file://screenshots/prod-app-na-nocache-fix2.png"
+type = "image"
+title = "connect.fps-one.nl/app/ — monteuromgeving (na uitrol 1ea8c0b4)"
+description = "Zelf opgehaald na de uitrol: donkere FPS Monteur-omgeving met de draaiende laadschijf."

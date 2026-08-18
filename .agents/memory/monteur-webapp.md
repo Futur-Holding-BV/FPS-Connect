@@ -10,3 +10,5 @@ description: Durable lessen voor het uitleveren van een Expo/React Native-app al
 - Same-origin srcDoc-iframe is een volwaardige web-vervanger voor react-native-webview: injectie via `contentWindow.eval`, berichten via `parent.postMessage` met een herkenbaar prefix.
 - **Why:** een native app webwaardig maken faalt stil op file-system/WebView/camera en op offline-herstart; deze valkuilen kwamen allemaal uit review of meting, niet uit de compiler.
 - **How to apply:** bij elke web-uitlevering van native schermen eerst per native API het browsergedrag meten; SW-offline-claims alleen doen na een koude-start-test zonder netwerk.
+
+**HTML zonder Cache-Control wordt heuristisch gecachet** — de desktop-SPA-fallback en root-sw.js gingen alleen met etag/last-modified de deur uit; een telefoon die vóór MONTEUR_NU_01 ooit /app/ bezocht bleef daardoor de oude desktop-HTML uit de eigen HTTP-cache tonen zonder de server te raadplegen. **Regel:** élke HTML/sw/manifest/versie-respons in Caddy expliciet `Cache-Control: no-cache` geven (sinds 1ea8c0b4 afgedwongen in deploy/Caddyfile, zowel /app-handle als @static en SPA-fallback).
