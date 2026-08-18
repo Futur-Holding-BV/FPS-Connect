@@ -1,3 +1,9 @@
+## 2026-08-18 — App-installatie wijst nu naar de monteuromgeving (/app) i.p.v. Connect-desktop
+
+- **Probleem**: alle installatie-QR's en -links (activatiepagina, uitnodigingsmail, PWA-testpagina) wezen naar `/connect/planning`. Op elke Connect-pagina geldt het desktop-manifest, dus "Zet op beginscherm" leverde daar altijd de desktopomgeving op — nooit de monteuromgeving.
+- **Fix**: elke installatie-ingang stuurt nu naar `/app/`, waar het eigen manifest van de FPS Monteur-omgeving geldt (naam "FPS Monteur", start_url `/app/`, eigen iconen). De activatiepagina biedt zelf geen installatie-instructie meer aan, maar een QR + knop "Open de monteuromgeving"; toevoegen aan het beginscherm gebeurt dáár. `GET /api/auth/pwa-qr` en `/api/auth/pwa-url` geven de `/app/`-link terug; de uitnodigingsmail idem.
+- **Meting manifest-per-pad** (`docs/metingen/PWA-manifesten-per-pad.md`): er staan géén twee manifesten op hetzelfde pad — `/manifest.webmanifest` (FPS Connect, scope `/`) en `/app/manifest.webmanifest` (FPS Monteur, scope `/app/`) zijn strikt gescheiden; ook de service workers respecteren die grens. Het probleem zat uitsluitend in de verwijzing.
+
 ## 2026-08-18 — GEBRUIKERS_01: profielenbron in onboarding, profielen bewerken gefixt, contractvorm + nul-urencontract
 
 - **Eén profielenbron in "Kies een functie"** (gebruikersbeheer): de keuzelijst rendert nu rechtstreeks `GET /profielen` — alle 18 vaste presets én zelfgemaakte profielen verschijnen automatisch. De hardcoded lijst van 12 (waardoor o.a. Onderhoudsmonteur, Planner, Calculatie, Directie, Administratie, Wagenparkbeheerder, Magazijnbeheerder en Externe inhuur onzichtbaar waren) is vervallen; Hoofdbeheerder staat er als aparte systeemrol bij (alleen voor hoofdbeheerders).

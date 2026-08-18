@@ -24,8 +24,18 @@ export default function AppInstallatiePagina() {
   // hard door zodat de gebruiker nooit op de wachtpagina blijft hangen.
   useEffect(() => {
     fetch("/app/versie.json", { cache: "no-store" })
-      .then((r) => {
-        if (r.ok) window.location.replace("/app/");
+      .then(async (r) => {
+        // Alleen doorsturen als versie.json aantoonbaar van de Expo-export
+        // komt: in dev geeft Vite voor onbekende paden gewoon SPA-HTML met
+        // status 200 terug — dat zou hier een redirectlus veroorzaken.
+        if (!r.ok) return;
+        const tekst = await r.text();
+        try {
+          const data = JSON.parse(tekst) as Record<string, unknown>;
+          if (data && typeof data === "object") window.location.replace("/app/");
+        } catch {
+          // Geen JSON → geen monteur-export aanwezig; op deze pagina blijven.
+        }
       })
       .catch(() => undefined);
   }, []);

@@ -30,8 +30,8 @@ export default function PwaTest() {
   useEffect(() => {
     fetch("/api/auth/pwa-url")
       .then((r) => r.json())
-      .then((d) => setAppUrl(d.url ?? window.location.origin + "/connect/planning"))
-      .catch(() => setAppUrl(window.location.origin + "/connect/planning"));
+      .then((d) => setAppUrl(d.url ?? window.location.origin + "/app/"))
+      .catch(() => setAppUrl(window.location.origin + "/app/"));
   }, []);
 
   // PWA-status controleren
@@ -192,8 +192,10 @@ export default function PwaTest() {
             </ol>
           </div>
           <p className="text-xs text-muted-foreground border-t pt-2">
+            De QR-code en link openen de monteuromgeving (/app/): alleen dáár
+            geldt het manifest van de FPS Monteur-app, zodat toevoegen aan het
+            beginscherm de monteuromgeving oplevert en niet de desktopomgeving.
             Na installatie start de app in volledig scherm, zonder adresbalk.
-            Internetverbinding is vereist voor alle gegevens.
           </p>
         </CardContent>
       </Card>

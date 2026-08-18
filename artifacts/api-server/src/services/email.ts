@@ -741,10 +741,11 @@ export async function stuurUitnodigingsmail(opties: {
     ? "Uw uitnodiging voor FPS Connect (herinnering)"
     : "U bent uitgenodigd voor FPS Connect";
 
-  // Bouw de PWA-installatielink op, zodat de ontvanger FPS Connect direct
-  // als app op de telefoon kan zetten na het activeren van het account.
+  // Bouw de installatielink op. Installeren gebeurt op /app/ — daar geldt het
+  // manifest van de monteuromgeving; vanaf Connect-pagina's zou het
+  // desktop-manifest winnen en de verkeerde omgeving op het beginscherm komen.
   const basisUrl = publiekeAppUrl();
-  const pwaUrl = basisUrl ? `${basisUrl}/connect/planning` : null;
+  const pwaUrl = basisUrl ? `${basisUrl}/app/` : null;
 
   // Genereer een inline QR-code als base64 PNG zodat de mail zelfvoorzienend
   // is — de ontvanger hoeft niet ingelogd te zijn om de afbeelding te laden.
@@ -765,12 +766,12 @@ export async function stuurUitnodigingsmail(opties: {
   const pwaBlok = pwaUrl
     ? `
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:28px 0 20px;" />
-      <h2 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#18181b;">&#128241; FPS Connect ook op uw telefoon</h2>
+      <h2 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#18181b;">&#128241; De FPS Monteur-app op uw telefoon</h2>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#3f3f46;">
-        Na het activeren kunt u FPS Connect ook als app installeren op uw smartphone.
-        Scan de QR-code hieronder of open de link op uw telefoon en volg de stappen voor uw apparaat.
+        Na het activeren kunt u de monteuromgeving als app op uw smartphone zetten.
+        Scan de QR-code hieronder of open de link op uw telefoon; op die pagina voegt u de app toe aan uw beginscherm.
       </p>
-      ${pwaQrDataUrl ? `<div style="text-align:center;margin:0 0 16px;"><img src="${pwaQrDataUrl}" alt="QR-code FPS Connect" width="160" height="160" style="border:1px solid #e4e4e7;border-radius:6px;" /></div>` : ""}
+      ${pwaQrDataUrl ? `<div style="text-align:center;margin:0 0 16px;"><img src="${pwaQrDataUrl}" alt="QR-code FPS Monteur" width="160" height="160" style="border:1px solid #e4e4e7;border-radius:6px;" /></div>` : ""}
       <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#18181b;">iPhone / iPad (Safari)</p>
       <ol style="margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.8;color:#3f3f46;">
         <li>Scan de QR-code of open de link hieronder in <strong>Safari</strong></li>

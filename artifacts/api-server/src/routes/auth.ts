@@ -732,7 +732,9 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "";
-    const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
+    // Installatie hoort op /app/ te gebeuren: daar geldt het manifest van de
+    // monteuromgeving (scope /app/). Op Connect-pagina's wint het desktop-manifest.
+    const url = domein ? `https://${domein}/app/` : "/app/";
     const qrBuffer = await QRCode.toBuffer(url, {
       type: "png",
       width: 360,
@@ -822,7 +824,9 @@ router.get("/auth/pwa-url", async (req, res): Promise<void> => {
   try {
     if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const domein = publiekeAppUrl()?.replace(/^https?:\/\//, "") ?? req.get("host") ?? "";
-    const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
+    // Installatie hoort op /app/ te gebeuren: daar geldt het manifest van de
+    // monteuromgeving (scope /app/). Op Connect-pagina's wint het desktop-manifest.
+    const url = domein ? `https://${domein}/app/` : "/app/";
     res.json({ url });
   } catch (err) {
     req.log.error(err);

@@ -383,46 +383,41 @@ export default function ActivatiePagina({ token }: Props) {
                 </p>
               </div>
 
-              {/* App-installatie sectie */}
+              {/* App-verwijzing: installeren gebeurt bewust NIET op deze pagina.
+                  Hier geldt het desktop-manifest van FPS Connect; wie hier
+                  "Zet op beginscherm" doet, krijgt de desktopomgeving. De
+                  monteuromgeving op /app/ heeft een eigen manifest — daar
+                  levert toevoegen aan het beginscherm de juiste app op. */}
               <div className="border border-zinc-100 rounded-lg bg-zinc-50 p-4 mb-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Smartphone className="h-4 w-4 text-zinc-600 shrink-0" />
-                  <p className="font-semibold text-sm text-zinc-800">FPS Connect ook op uw telefoon</p>
+                  <p className="font-semibold text-sm text-zinc-800">De FPS Monteur-app op uw telefoon</p>
                 </div>
                 <p className="text-xs text-zinc-500 mb-3">
-                  Installeer FPS Connect als app op uw smartphone voor snelle toegang, ook onderweg.
+                  Open de monteuromgeving en voeg de app dáár toe aan uw beginscherm
+                  (Safari: deelicoon → &ldquo;Zet op beginscherm&rdquo;; Chrome: menu ⋮ → &ldquo;App installeren&rdquo;).
                 </p>
 
-                {/* QR-code (indien beschikbaar) */}
+                {/* QR-code wijst naar /app/ (indien beschikbaar) */}
                 {pwaUrl && !pwaQrFout && (
                   <div className="flex justify-center mb-3">
                     <img
                       src={`${BASE}/api/auth/pwa-qr`}
-                      alt="QR-code om FPS Connect te openen"
+                      alt="QR-code om de FPS Monteur-app te openen"
                       className="w-32 h-32 border border-zinc-200 rounded-lg bg-white"
                       onError={() => setPwaQrFout(true)}
                     />
                   </div>
                 )}
 
-                <div className="space-y-3 text-xs text-zinc-600">
-                  <div>
-                    <p className="font-semibold text-zinc-700 mb-1">iPhone / iPad (Safari)</p>
-                    <ol className="list-decimal list-inside space-y-0.5">
-                      <li>Open de link hieronder in <strong>Safari</strong></li>
-                      <li>Tik op het deelicoon onderaan het scherm</li>
-                      <li>Kies <strong>&ldquo;Zet op beginscherm&rdquo;</strong> en bevestig</li>
-                    </ol>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-zinc-700 mb-1">Android (Chrome)</p>
-                    <ol className="list-decimal list-inside space-y-0.5">
-                      <li>Open de link hieronder in <strong>Chrome</strong></li>
-                      <li>Tik op het menu (⋮) rechtsboven</li>
-                      <li>Kies <strong>&ldquo;App installeren&rdquo;</strong> of &ldquo;Toevoegen aan beginscherm&rdquo;</li>
-                    </ol>
-                  </div>
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { window.location.href = pwaUrl || "/app/"; }}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Open de monteuromgeving
+                </Button>
 
                 {pwaUrl && (
                   <div className="mt-3 flex items-center gap-2 bg-white rounded border border-zinc-200 px-2.5 py-2">

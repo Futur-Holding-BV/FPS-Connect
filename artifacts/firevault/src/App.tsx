@@ -499,7 +499,7 @@ function Gate() {
   const isSpeciaalPad =
     pad.startsWith("/uitnodiging/") ||
     pad.startsWith("/portaal/") ||
-    pad === "/app" ||
+    pad === "/app" || pad === "/app/" ||
     pad === "/first-install" ||
     pad === "/wachtwoord-vergeten" ||
     pad === "/wachtwoord-reset";
@@ -517,7 +517,7 @@ function Gate() {
     const token = pad.replace("/portaal/", "");
     return <PortaalPagina token={token} />;
   }
-  if (pad === "/app") {
+  if (pad === "/app" || pad === "/app/") {
     return <AppInstallatiePagina />;
   }
   if (pad === "/first-install") {
