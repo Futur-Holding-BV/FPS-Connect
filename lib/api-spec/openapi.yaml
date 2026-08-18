@@ -36109,6 +36109,9 @@ components:
         uitzendbureau_naam:
           type: ["string", "null"]
           description: Naam van de gekoppelde organisatie (afgeleid, alleen-lezen).
+        inleen_einddatum:
+          type: ["string", "null"]
+          description: Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -36185,6 +36188,9 @@ components:
         uitzendbureau_id:
           type: ["integer", "null"]
           description: Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.
+        inleen_einddatum:
+          type: string
+          description: Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband "uitzend" of "inhuur".
         verlofsoort_ids:
           type: array
           items:

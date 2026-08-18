@@ -1064,6 +1064,7 @@ export default function MedewerkerDetailPagina() {
       dienstverband: medewerker.dienstverband,
       bedrijf_uitzendbureau: medewerker.bedrijf_uitzendbureau ?? undefined,
       uitzendbureau_id: medewerker.uitzendbureau_id ?? null,
+      inleen_einddatum: medewerker.inleen_einddatum ?? undefined,
       contracturen_per_week: medewerker.contracturen_per_week ?? null,
       in_dienst_sinds: medewerker.in_dienst_sinds ?? undefined,
       uit_dienst_per: medewerker.uit_dienst_per ?? undefined,
@@ -1564,6 +1565,14 @@ export default function MedewerkerDetailPagina() {
             <div className="space-y-1.5">
               <div className="text-xs font-medium text-muted-foreground">Uit dienst per</div>
               <div className="text-sm">{fmtDatum(medewerker.uit_dienst_per)}</div>
+            </div>
+          )}
+          {(medewerker.dienstverband === "uitzend" || medewerker.dienstverband === "inhuur") && medewerker.inleen_einddatum && (
+            <div className="space-y-1.5">
+              <div className="text-xs font-medium text-muted-foreground">Inleen-einddatum</div>
+              <div className={`text-sm font-medium ${new Date(medewerker.inleen_einddatum) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? "text-red-600" : ""}`}>
+                {fmtDatum(medewerker.inleen_einddatum)}
+              </div>
             </div>
           )}
           {(medewerker.noodcontact_naam || medewerker.noodcontact_telefoon) && (
@@ -2626,6 +2635,16 @@ export default function MedewerkerDetailPagina() {
                   onChange={({ uitzendbureau_id, tekst }) =>
                     setProfielForm({ ...profielForm, uitzendbureau_id, bedrijf_uitzendbureau: tekst || undefined })}
                 />
+              )}
+              {(profielForm.dienstverband === "uitzend" || profielForm.dienstverband === "inhuur") && (
+                <div className="space-y-1.5">
+                  <Label>Inleen-einddatum</Label>
+                  <DatePicker
+                    value={profielForm.inleen_einddatum ?? ""}
+                    onChange={(v) => setProfielForm({ ...profielForm, inleen_einddatum: v || undefined })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Datum waarop de inleen-/inhuurperiode formeel afloopt (rood op de kaart bij ≤ 30 dagen).</p>
+                </div>
               )}
               <div className="space-y-1.5">
                 <Label>CAO</Label>

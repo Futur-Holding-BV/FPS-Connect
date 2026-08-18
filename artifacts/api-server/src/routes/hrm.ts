@@ -864,6 +864,7 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     deeltijd_percentage: m.deeltijdPercentage ?? null,
     in_dienst_sinds: m.inDienstSinds,
     uit_dienst_per: m.uitDienstPer,
+    inleen_einddatum: m.inleenEinddatum ?? null,
     noodcontact_naam: m.noodcontactNaam,
     noodcontact_telefoon: m.noodcontactTelefoon,
     geboortedatum: m.geboortedatum ?? null,
@@ -916,6 +917,7 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
         contracturen_per_week: r.m.contracturenPerWeek,
         in_dienst_sinds: r.m.inDienstSinds,
         uit_dienst_per: r.m.uitDienstPer,
+        inleen_einddatum: r.m.inleenEinddatum ?? null,
         noodcontact_naam: r.m.noodcontactNaam,
         noodcontact_telefoon: r.m.noodcontactTelefoon,
         geboortedatum: r.m.geboortedatum ?? null,
@@ -950,7 +952,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
     const {
       naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id,
       leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, contracturen_per_week,
-      in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum,
+      in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum,
       geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum,
       vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen,
       verlofsoort_ids, jaar,
@@ -1013,6 +1015,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         contracturenPerWeek: contracturen_per_week ?? null,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,
+        inleenEinddatum: inleen_einddatum || null,
         noodcontactNaam: noodcontact_naam,
         noodcontactTelefoon: noodcontact_telefoon,
         geboortedatum: geboortedatum || null,
@@ -1480,7 +1483,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         velden: fouteDatumsPatch,
       });
     }
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, met de unieke index als laatste wacht).
     if (gebruiker_id != null) {
@@ -1520,6 +1523,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         deeltijdPercentage: deeltijd_percentage !== undefined ? (deeltijd_percentage === null ? null : Number(deeltijd_percentage)) : undefined,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,
+        inleenEinddatum: inleen_einddatum !== undefined ? (inleen_einddatum || null) : undefined,
         noodcontactNaam: noodcontact_naam,
         noodcontactTelefoon: noodcontact_telefoon,
         geboortedatum: geboortedatum !== undefined ? (geboortedatum || null) : undefined,
