@@ -12,7 +12,9 @@
  * - API-verkeer (/api/...): nooit door de service worker afgehandeld.
  */
 const VERSIE = "__VERSIE__";
-const CACHE = "fps-monteur-" + VERSIE;
+// Letterlijke naam (geen concatenatie): de deploy-build controleert met grep
+// dat "fps-monteur-<commit>" na de sed-vervanging echt in dit bestand staat.
+const CACHE = "fps-monteur-__VERSIE__";
 
 self.addEventListener("install", (event) => {
   // Volledige precache: de deploy-build schrijft asset-lijst.json met ÁLLE
