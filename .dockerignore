@@ -38,7 +38,7 @@ pnpm-debug.log*
 **/playwright-report
 
 # Niet-relevante artifacts voor de Caddy-image
-artifacts/monteur-app
+# (monteur-app is sinds MONTEUR_NU_01 nodig: Expo web-export naar /app)
 artifacts/mockup-sandbox
 attached_assets
 scripts/*
