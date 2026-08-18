@@ -683,6 +683,99 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, re
   })));
 });
 
+// GET /contract-bewaking/medewerkers/:medewerkerId/kritieke-datums
+// Alle kritieke tijdsdrukpunten voor één medewerker: einddatum contract,
+// uiterste aanzegdatum, proeftijd-einde, ketenregel, ZZP/DBA, inleen-einddatum.
+// Geen nieuwe berekeningen — hergebruikt de geëxporteerde pure helpers.
+router.get("/contract-bewaking/medewerkers/:medewerkerId/kritieke-datums", lezen, async (req, res): Promise<void> => {
+  const medewerkerId = parseInt(String(req.params.medewerkerId));
+  if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
+
+  const [medewerker] = await db
+    .select({ inleenEinddatum: medewerkersTable.inleenEinddatum, dienstverband: medewerkersTable.dienstverband })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.id, medewerkerId))
+    .limit(1);
+  if (!medewerker) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+
+  const contracten = await db
+    .select()
+    .from(arbeidsovereenkomstenTable)
+    .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
+    .orderBy(desc(arbeidsovereenkomstenTable.startDatum));
+
+  const actief = contracten.find((c) => c.status === "actief") ?? null;
+
+  // Ketenregel — over de volledige contracthistorie
+  const ketenregel = ketenregelingCheck(
+    contracten.map((c) => ({ contracttype: c.contracttype, startDatum: c.startDatum, eindDatum: c.eindDatum })),
+  );
+
+  // Einddatum huidig contract
+  let contract_eind: { datum: string; dagen_tot: number; contracttype: string; ernst: string } | null = null;
+  let aanzeg_datum: { datum: string; dagen_tot: number; reden: string; ernst: string } | null = null;
+
+  if (actief?.eindDatum) {
+    const dagenEinde = dagenTot(actief.eindDatum);
+    const ernst: string = dagenEinde < 0 ? "kritiek" : dagenEinde <= 30 ? "kritiek" : dagenEinde <= 60 ? "waarschuwing" : "info";
+    contract_eind = { datum: actief.eindDatum, dagen_tot: dagenEinde, contracttype: actief.contracttype, ernst };
+
+    if (actief.contracttype === "bepaalde_tijd" || actief.contracttype === "oproep") {
+      const cr = berekenContractCrucialeDatum({ startDatum: actief.startDatum, eindDatum: actief.eindDatum });
+      if (cr.datum !== actief.eindDatum) {
+        // Aanzegdatum = maand vóór einddatum (Wet Aanzegging)
+        const aanzegErnst: string = cr.dagen_tot < 0 ? "kritiek" : cr.dagen_tot <= 14 ? "kritiek" : cr.dagen_tot <= 30 ? "waarschuwing" : "info";
+        aanzeg_datum = { datum: cr.datum, dagen_tot: cr.dagen_tot, reden: cr.reden, ernst: aanzegErnst };
+      }
+    }
+  }
+
+  // Proeftijd-einde (toon t/m 14 dagen ná afloop)
+  let proeftijd_einde: { datum: string; dagen_tot: number } | null = null;
+  if (actief?.proeftijdDagen) {
+    const dt = new Date(actief.startDatum);
+    dt.setDate(dt.getDate() + actief.proeftijdDagen);
+    const proefStr = dt.toISOString().slice(0, 10);
+    const d = dagenTot(proefStr);
+    if (d >= -14) proeftijd_einde = { datum: proefStr, dagen_tot: d };
+  }
+
+  // ZZP / Wet DBA
+  const zzpRows = await db
+    .select()
+    .from(zzpOvereenkomstenTable)
+    .where(and(
+      eq(zzpOvereenkomstenTable.medewerkerId, medewerkerId),
+      inArray(zzpOvereenkomstenTable.status, ["ondertekend", "te_ondertekenen"]),
+    ));
+  const zzpRes = zzpRows.length > 0 ? berekenZzpCrucialeDatum(zzpRows) : null;
+
+  // Inleen-einddatum
+  const inleenStr = medewerker.inleenEinddatum ?? null;
+  const inleen = inleenStr
+    ? { datum: inleenStr, dagen_tot: dagenTot(inleenStr), dienstverband: medewerker.dienstverband }
+    : null;
+
+  res.json({
+    contract_eind,
+    aanzeg_datum,
+    proeftijd_einde,
+    ketenregel,
+    zzp: zzpRes
+      ? {
+          datum: zzpRes.datum,
+          dagen_tot: zzpRes.dagen_tot,
+          dba_risico: zzpRes.dbaRisico,
+          verband_maanden: Math.round(zzpRes.verbandMaanden),
+          label: zzpRes.label,
+          reden: zzpRes.reden,
+          ernst: zzpRes.dbaRisico ? "kritiek" : zzpRes.urgent ? "waarschuwing" : "info",
+        }
+      : null,
+    inleen,
+  });
+});
+
 // POST /contract-bewaking/medewerkers/:medewerkerId
 router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (req, res): Promise<void> => {
   const medewerkerId = parseInt(String(req.params.medewerkerId));

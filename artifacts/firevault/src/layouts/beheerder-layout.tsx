@@ -347,7 +347,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     label: string;
     reden: string;
   };
-  function useCrucialeDatums(actief: boolean): CruciaalItem[] {
+  // Geeft ALLE cruciale datums terug (niet gefilterd op urgent).
+  // ContractSignaalItems filtert zelf op urgent; ContractBewakingMenuBadge toont het totaal.
+  function useAlleCrucialeDatums(actief: boolean): CruciaalItem[] {
     const { data, refetch } = useQuery<{ items: CruciaalItem[]; urgent_aantal: number }>({
       queryKey: ["contract-bewaking", "cruciale-datums"],
       queryFn: async () => {
@@ -363,11 +365,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       const timer = setInterval(() => void refetch(), 5 * 60 * 1000);
       return () => clearInterval(timer);
     }, [refetch, actief]);
-    return actief ? (data?.items ?? []).filter((i) => i.urgent) : [];
+    return actief ? (data?.items ?? []) : [];
   }
 
   function ContractSignaalItems({ actief }: { actief: boolean }) {
-    const urgente = useCrucialeDatums(actief);
+    const alle = useAlleCrucialeDatums(actief);
+    const urgente = alle.filter((i) => i.urgent);
     if (urgente.length === 0) return null;
     return (
       <>
@@ -388,8 +391,21 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   }
 
   function ContractSignaalBadge({ actief }: { actief: boolean }) {
-    const urgente = useCrucialeDatums(actief);
+    const alle = useAlleCrucialeDatums(actief);
+    const urgente = alle.filter((i) => i.urgent);
     return <HoofdstukTelBadge aantal={urgente.length} label="dreigende contract-deadlines" />;
+  }
+
+  // Badge op het "Contractbewaking" sidebar-item: toont het totale aantal medewerkers
+  // met een naderende deadline (urgent + overige), niet alleen de urgente.
+  function ContractBewakingMenuBadge({ actief }: { actief: boolean }) {
+    const alle = useAlleCrucialeDatums(actief);
+    if (alle.length === 0) return null;
+    return (
+      <Badge className="ml-auto text-[10px] px-1.5 py-0 min-w-5 h-4 bg-primary group-data-[collapsible=icon]:hidden">
+        {alle.length}
+      </Badge>
+    );
   }
 
   function MagazijnKritiekBadge() {
@@ -1744,6 +1760,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/personeel/contracten">
                               <ScrollText />
                               <span>Contractbewaking</span>
+                              <ContractBewakingMenuBadge actief={isHoofdbeheerder || heeftNiveau("personeel", 1)} />
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

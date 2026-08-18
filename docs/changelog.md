@@ -300,3 +300,15 @@ De veiliggestelde tak `vorm01-fase6-wip` is verzoend met main. Analyse toonde da
 - **Security-fix (review):** POST/PATCH `/social/berichten` accepteerden een `campagne_id` onder alleen crm:3; campagne koppelen/wijzigen/ontkoppelen vereist nu server-side marketing:3 (hoofdbeheerder uitgezonderd) plus validatie dat de campagne bestaat. 9 route-level tests (crm-only vs marketing) groen.
 - **Fix:** Mijn auto had geen `bezigLaden`-guard, waardoor een koude deep-link de token-herstel-race verloor (→ /login → /menu). Guard toegevoegd conform het vaste patroon.
 - **Bewijs (gevulde gegevens, eis René):** `scripts/src/vorm01-testdata.ts` zaait nu ook een testvoertuig (VORM-01-B, chauffeur = e2e-account); `vorm01-schermafdrukken.ts` neemt het scherm mijn-auto mee. Schermafdrukken in docs/metingen/vorm01/na: mijn-werk toont 7 VORM01-spots in 2 gebouwen met statusmerken en onderregels; mijn-auto toont het gekoppelde voertuig met kenteken, km-stand en meldingen-sectie. Typecheck monteur-app + scripts groen.
+
+## 2026-08-18 — Contractbewaking zichtbaar: kritieke-datumskaart op personeelsprofiel + badge in sidebar
+
+
+### Bevinding bewakingsloop
+De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen dit). De reden dat de opdrachtgever niets zag: zonder medewerkers in het ≤30-dagenvenster returned `ContractSignaalItems` `null` en toonde de hoofdstuk-badge 0. De "Contractbewaking" sidebar-link was de enige ingang, maar trok geen aandacht bij lege signalen. Met de nieuwe badge op het menu-item (totaal) en de kaart op de medewerker is dit opgelost zonder bewakings-drempelwijzigingen.
+
+
+### Wat veranderd is
+- **Nieuwe backend route** `GET /api/contract-bewaking/medewerkers/:id/kritieke-datums`: geeft per medewerker alle kritieke tijdsdrukpunten terug — einddatum tijdelijk contract, uiterste aanzegdatum (Wet Aanzegging), proeftijd-einde, ketenregelstatus, ZZP-einddatum + DBA-risico en inleen-einddatum. Hergebruikt de bestaande pure helper-functies (`berekenContractCrucialeDatum`, `berekenZzpCrucialeDatum`, `ketenregelingCheck`), geen nieuwe berekeningen.
+- **Kritieke-datumskaart op de personeelskaart** (`pages/personeel/detail.tsx`): toont de bovenstaande datums in kleurgecodeerde tegels (blauw = info, oranje = waarschuwing, rood = kritiek). Laadt alleen voor gebruikers met `personeel ≥ 1`. Verdwijnt bij 0 kritieke datums, voldoet aan de lege-staat-regel.
+- **Badge op "Contractbewaking" in de sidebar** (`layouts/beheerder-layout.tsx`): toont het *totale* aantal medewerkers met een naderende deadline (niet alleen urgent). De bestaande urgente-shortcutlijst en hoofdstuk-badge (alleen urgent, ≤30 dagen) blijven onveranderd.

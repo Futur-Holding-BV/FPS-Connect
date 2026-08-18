@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -108,6 +108,166 @@ import {
   MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
   Building2, Star, Sparkles, CheckCircle2, Smartphone, Copy,
 } from "lucide-react";
+
+// ── Kritieke datums blok ──────────────────────────────────────────────────────
+// Toont per medewerker alle kritieke tijdsdrukpunten uit de contract-bewaking:
+// einddatum contract, uiterste aanzegdatum, proeftijd, ketenregel, ZZP/DBA,
+// inleen-einddatum. Gegevens komen rechtstreeks uit het bestaande endpoint —
+// geen nieuwe client-side berekeningen.
+
+type KritiekeDatumsData = {
+  contract_eind: { datum: string; dagen_tot: number; contracttype: string; ernst: string } | null;
+  aanzeg_datum: { datum: string; dagen_tot: number; reden: string; ernst: string } | null;
+  proeftijd_einde: { datum: string; dagen_tot: number } | null;
+  ketenregel: string | null;
+  zzp: {
+    datum: string; dagen_tot: number; dba_risico: boolean;
+    verband_maanden: number; label: string; reden: string; ernst: string;
+  } | null;
+  inleen: { datum: string; dagen_tot: number; dienstverband: string | null } | null;
+};
+
+function KritiekeDatumsBlok({ medewerkerId, tonen }: { medewerkerId: number; tonen: boolean }) {
+  const [data, setData] = useState<KritiekeDatumsData | null>(null);
+
+  useEffect(() => {
+    if (!tonen) return;
+    let annuleer = false;
+    fetch(`/api/contract-bewaking/medewerkers/${medewerkerId}/kritieke-datums`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: unknown) => { if (!annuleer) setData(d as KritiekeDatumsData | null); })
+      .catch(() => {});
+    return () => { annuleer = true; };
+  }, [medewerkerId, tonen]);
+
+  if (!tonen || !data) return null;
+
+  const heeftItems =
+    data.contract_eind || data.aanzeg_datum || data.proeftijd_einde ||
+    data.ketenregel || data.zzp || data.inleen;
+  if (!heeftItems) return null;
+
+  function dagLabel(d: number): string {
+    if (d < 0) return `${Math.abs(d)} dag${Math.abs(d) === 1 ? "" : "en"} geleden verlopen`;
+    if (d === 0) return "vandaag";
+    return `nog ${d} dag${d === 1 ? "" : "en"}`;
+  }
+
+  function fmtD(iso: string): string {
+    return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function ernstKlassen(ernst: string): string {
+    if (ernst === "kritiek") return "border-red-300 bg-red-50 text-red-800";
+    if (ernst === "waarschuwing") return "border-orange-200 bg-orange-50 text-orange-800";
+    return "border-blue-200 bg-blue-50 text-blue-800";
+  }
+
+  function ErnstIcoon({ ernst }: { ernst: string }) {
+    if (ernst === "kritiek") return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-600" />;
+    if (ernst === "waarschuwing") return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-orange-500" />;
+    return <CalendarClock className="h-3.5 w-3.5 shrink-0 text-blue-500" />;
+  }
+
+  const CT_LABELS: Record<string, string> = {
+    bepaalde_tijd: "Bepaalde tijd", onbepaalde_tijd: "Onbepaalde tijd",
+    oproep: "Oproepcontract", stage: "Stage", leer_werk: "Leer-werk",
+  };
+
+  function proeftijdErnst(d: number): string {
+    return d < 0 ? "kritiek" : d <= 7 ? "waarschuwing" : "info";
+  }
+  function inleenErnst(d: number): string {
+    return d < 0 ? "kritiek" : d <= 30 ? "kritiek" : d <= 60 ? "waarschuwing" : "info";
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-1.5 mb-3">
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kritieke datums</div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {data.contract_eind && (
+            <div className={`rounded-md border p-2.5 text-xs ${ernstKlassen(data.contract_eind.ernst)}`}>
+              <div className="flex items-start gap-1.5">
+                <ErnstIcoon ernst={data.contract_eind.ernst} />
+                <div className="min-w-0">
+                  <div className="font-medium">{CT_LABELS[data.contract_eind.contracttype] ?? data.contract_eind.contracttype} eindigt</div>
+                  <div>{fmtD(data.contract_eind.datum)}</div>
+                  <div className="text-[11px] opacity-75">{dagLabel(data.contract_eind.dagen_tot)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {data.aanzeg_datum && (
+            <div className={`rounded-md border p-2.5 text-xs ${ernstKlassen(data.aanzeg_datum.ernst)}`}>
+              <div className="flex items-start gap-1.5">
+                <ErnstIcoon ernst={data.aanzeg_datum.ernst} />
+                <div className="min-w-0">
+                  <div className="font-medium">Uiterste aanzegdatum</div>
+                  <div>{fmtD(data.aanzeg_datum.datum)}</div>
+                  <div className="text-[11px] opacity-75">{dagLabel(data.aanzeg_datum.dagen_tot)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {data.proeftijd_einde && (
+            <div className={`rounded-md border p-2.5 text-xs ${ernstKlassen(proeftijdErnst(data.proeftijd_einde.dagen_tot))}`}>
+              <div className="flex items-start gap-1.5">
+                <ErnstIcoon ernst={proeftijdErnst(data.proeftijd_einde.dagen_tot)} />
+                <div className="min-w-0">
+                  <div className="font-medium">Proeftijd afloopt</div>
+                  <div>{fmtD(data.proeftijd_einde.datum)}</div>
+                  <div className="text-[11px] opacity-75">{dagLabel(data.proeftijd_einde.dagen_tot)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {data.ketenregel && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 sm:col-span-2 lg:col-span-3">
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-medium">Ketenregeling</div>
+                  <div className="text-[11px] opacity-90 mt-0.5">{data.ketenregel}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {data.zzp && (
+            <div className={`rounded-md border p-2.5 text-xs ${ernstKlassen(data.zzp.ernst)}`}>
+              <div className="flex items-start gap-1.5">
+                <ErnstIcoon ernst={data.zzp.ernst} />
+                <div className="min-w-0">
+                  <div className="font-medium">{data.zzp.label}</div>
+                  <div>{fmtD(data.zzp.datum)}</div>
+                  {data.zzp.dba_risico && (
+                    <div className="text-[11px] opacity-75">{data.zzp.verband_maanden} mnd verband (grens 9 mnd)</div>
+                  )}
+                  <div className="text-[11px] opacity-75">{dagLabel(data.zzp.dagen_tot)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {data.inleen && (
+            <div className={`rounded-md border p-2.5 text-xs ${ernstKlassen(inleenErnst(data.inleen.dagen_tot))}`}>
+              <div className="flex items-start gap-1.5">
+                <ErnstIcoon ernst={inleenErnst(data.inleen.dagen_tot)} />
+                <div className="min-w-0">
+                  <div className="font-medium">Inleen-/inhuurperiode eindigt</div>
+                  <div>{fmtD(data.inleen.datum)}</div>
+                  <div className="text-[11px] opacity-75">{dagLabel(data.inleen.dagen_tot)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // Kopieerbare download-link voor de telefoonapp (publieke installatiepagina /app).
 // Op elke medewerkerkaart zichtbaar zodat iedereen de link kan doorgeven.
@@ -1855,6 +2015,8 @@ export default function MedewerkerDetailPagina() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <KritiekeDatumsBlok medewerkerId={Number(id)} tonen={(bevoegdheden.personeel ?? 0) >= 1} />
 
       <Tabs defaultValue="contracten">
         <TabsList>
