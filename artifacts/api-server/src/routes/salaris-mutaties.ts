@@ -5,7 +5,7 @@ import {
   medewerkersTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { SALARIS_MUTATIES_CONTROLE_PROMPT } from "../lib/aiPrompts";
 
@@ -67,9 +67,8 @@ router.post("/salaris-mutaties", schrijven, async (req: Request, res: Response):
     ingangsdatum, bron, notities,
   } = req.body;
 
-  const sess = req.session as { userId?: number; gebruikerNaam?: string };
-  const userId = sess.userId;
-  const gebruikerNaam = sess.gebruikerNaam ?? null;
+  const userId = req.session.userId;
+  const gebruikerNaam = await getSessionGebruikerNaam(req);
 
   let medewerkerNaam: string | null = null;
   if (medewerker_id) {
@@ -228,8 +227,6 @@ router.get("/salaris-mutaties/:id", lezen, async (req: Request, res: Response): 
 router.patch("/salaris-mutaties/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { type, omschrijving, ingangsdatum, status, akkoord, notities } = req.body;
-  const sess = req.session as { userId?: number; gebruikerNaam?: string };
-
   const updateData: Partial<typeof salarisMutatiesTable.$inferInsert> = {
     bijgewerktOp: new Date(),
   };
@@ -242,8 +239,8 @@ router.patch("/salaris-mutaties/:id", schrijven, async (req: Request, res: Respo
   if (akkoord !== undefined) {
     updateData.akkoord = akkoord;
     updateData.gecontroleerd = true;
-    updateData.gecontroleerdDoorId = sess.userId ?? null;
-    updateData.gecontroleerdDoorNaam = sess.gebruikerNaam ?? null;
+    updateData.gecontroleerdDoorId = req.session.userId ?? null;
+    updateData.gecontroleerdDoorNaam = await getSessionGebruikerNaam(req);
     updateData.gecontroleerdOp = new Date();
     updateData.status = akkoord ? "geaccordeerd" : "afgekeurd";
   }

@@ -6,7 +6,7 @@ import {
   salarisbatchesTable, salarisbestandenTable, sepaBestandenTable,
   salarisdocumentAuditTable, medewerkersTable,
 } from "@workspace/db";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
@@ -21,8 +21,8 @@ function sessieGebruikerId(req: Request): number | null {
   return req.session.userId ?? null;
 }
 
-function sessieGebruikerNaam(req: Request): string {
-  return ((req.session as unknown as Record<string, unknown>)["gebruikerNaam"] as string | undefined) ?? "Onbekend";
+async function sessieGebruikerNaam(req: Request): Promise<string> {
+  return (await getSessionGebruikerNaam(req)) ?? "Onbekend";
 }
 
 async function logAudit(params: {
@@ -206,7 +206,7 @@ router.post(
     }
 
     const userId = sessieGebruikerId(req);
-    const gebruikerNaam = sessieGebruikerNaam(req);
+    const gebruikerNaam = await sessieGebruikerNaam(req);
     const { omschrijving, periode_jaar, periode_maand, type: opgegeven_type } = req.body as {
       omschrijving?: string; periode_jaar?: string; periode_maand?: string; type?: string;
     };
@@ -309,7 +309,7 @@ router.post(
     if (!bestand) { res.status(400).json({ error: "Geen bestand meegestuurd" }); return; }
 
     const userId = sessieGebruikerId(req);
-    const gebruikerNaam = sessieGebruikerNaam(req);
+    const gebruikerNaam = await sessieGebruikerNaam(req);
     const { omschrijving, periode_jaar, periode_maand } = req.body as {
       omschrijving?: string; periode_jaar?: string; periode_maand?: string;
     };
@@ -469,7 +469,7 @@ router.patch("/salarisarchief/documenten/:id", requireBevoegdheid("salarisarchie
   if (!updated) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
   await logAudit({
     documentId: id,
     actie: medewerker_id !== undefined ? "koppelen" : "bewerken",
@@ -505,7 +505,7 @@ router.post("/salarisarchief/documenten/:id/publiceer", requireBevoegdheid("sala
   }).where(eq(salarisbestandenTable.id, id)).returning();
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
   await logAudit({ documentId: id, actie: "publiceren", gebruikerId: userId, gebruikerNaam, medewerkerId: doc.medewerkerId, documentType: doc.type, batchId: doc.batchId });
 
   const rows = await db
@@ -540,7 +540,7 @@ router.post("/salarisarchief/batch-publiceer", requireBevoegdheid("salarisarchie
   }
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
   for (const doc of tePubliceren) {
     await logAudit({ documentId: doc.id, actie: "publiceren", gebruikerId: userId, gebruikerNaam, medewerkerId: doc.medewerkerId, documentType: doc.type, batchId: doc.batchId });
   }
@@ -556,7 +556,7 @@ router.get("/salarisarchief/documenten/:id/download-url", requireBevoegdheid("sa
   if (!doc) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
   await logAudit({ documentId: id, actie: "downloaden", gebruikerId: userId, gebruikerNaam, medewerkerId: doc.medewerkerId, documentType: doc.type, batchId: doc.batchId });
 
   res.json({ url: `/api/salarisarchief/documenten/${id}/download` });
@@ -713,7 +713,7 @@ router.patch("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 2), asy
   }
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
 
   if (status === "gedownload") {
     patch.gedownloadDoorId = userId;
@@ -741,7 +741,7 @@ router.get("/sepa-bestanden/:id/download-url", requireBevoegdheid("salarisarchie
   if (!sepa) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
   const userId = sessieGebruikerId(req);
-  const gebruikerNaam = sessieGebruikerNaam(req);
+  const gebruikerNaam = await sessieGebruikerNaam(req);
   await logAudit({ sepaId: id, actie: "sepa_download", gebruikerId: userId, gebruikerNaam, documentType: "sepa" });
 
   res.json({ url: `/api/sepa-bestanden/${id}/download` });
@@ -830,7 +830,7 @@ router.post(
     }
 
     const userId = sessieGebruikerId(req);
-    const gebruikerNaam = sessieGebruikerNaam(req);
+    const gebruikerNaam = await sessieGebruikerNaam(req);
     const { omschrijving, periode_jaar, periode_maand, type: opgegeven_type } = req.body as {
       omschrijving?: string; periode_jaar?: string; periode_maand?: string; type?: string;
     };

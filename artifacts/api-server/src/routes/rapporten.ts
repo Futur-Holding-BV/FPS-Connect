@@ -89,7 +89,7 @@ function mapRapport(
 }
 
 function userId(req: Request): number | null {
-  return (req.session as { userId?: number }).userId ?? null;
+  return req.session.userId ?? null;
 }
 
 // ── GET /rapporten (cross-gebouw) ─────────────────────────────────────────────

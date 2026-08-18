@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, getSessionGebruikerNaam } from "../middlewares/auth";
 import {
   db,
   cqoRunsTable,
@@ -26,9 +26,8 @@ function alleenHoofdbeheerder(
 
 // POST /cqo/beoordeling — nieuwe CQO-beoordeling starten
 router.post("/cqo/beoordeling", requireAuth, alleenHoofdbeheerder, async (req, res) => {
-  const sessie = req.session as unknown as Record<string, unknown>;
-  const gebruikerId = (sessie["gebruikerId"] as number | null) ?? 0;
-  const gebruikerNaam = (sessie["naam"] as string | null) ?? "Onbekend";
+  const gebruikerId = req.session.userId ?? 0;
+  const gebruikerNaam = (await getSessionGebruikerNaam(req)) ?? "Onbekend";
 
   const versieLabel = typeof req.body?.versieLabel === "string"
     ? req.body.versieLabel.trim().slice(0, 100)

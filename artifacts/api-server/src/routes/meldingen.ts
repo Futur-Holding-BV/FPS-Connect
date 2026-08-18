@@ -39,16 +39,14 @@ router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const sess = { gebruikerId: req.session.userId, naam: undefined as string | undefined, rol: req.session.rol };
-
   const [melding] = await db.insert(gebruikersMeldingenTable).values({
     type: String(type),
     omschrijving: String(omschrijving),
     urgentie: String(urgentie),
     status: "nieuw",
-    gebruikerId: sess?.gebruikerId ?? null,
-    gebruikerNaam: sess?.naam ?? null,
-    gebruikerRol: sess?.rol ?? null,
+    gebruikerId: req.session.userId ?? null,
+    gebruikerNaam: null,
+    gebruikerRol: req.session.rol ?? null,
     pagina: pagina ? String(pagina) : null,
     browserInfo: browser_info ? String(browser_info) : null,
     screenshotData: screenshot_data ? String(screenshot_data) : null,
@@ -68,7 +66,7 @@ router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
             { role: "user", content: `Type: ${type}\nUrgentie: ${urgentie}\nPagina: ${pagina ?? "onbekend"}\nOmschrijving: ${omschrijving}` },
           ],
           max_tokens: 300,
-        }, 30_000, { module: "meldingen", functie: "eerste-reactie", gebruikerId: sess?.gebruikerId ?? null, promptNaam: MELDINGEN_EERSTE_REACTIE_PROMPT.naam, promptVersie: MELDINGEN_EERSTE_REACTIE_PROMPT.versie });
+        }, 30_000, { module: "meldingen", functie: "eerste-reactie", gebruikerId: req.session.userId ?? null, promptNaam: MELDINGEN_EERSTE_REACTIE_PROMPT.naam, promptVersie: MELDINGEN_EERSTE_REACTIE_PROMPT.versie });
 
         let classificatie = type === "bug" ? "ui-bug" : type === "vraag" ? "vraag" : "feature-request";
         if (resultaat.ok) {
@@ -180,12 +178,12 @@ router.patch("/meldingen/:id", alleenBeheerder, async (req, res): Promise<void> 
     return;
   }
 
-  const sess = { gebruikerId: req.session.userId };
+
   const nu = new Date();
 
   if (status !== undefined) {
     await db.update(gebruikersMeldingenTable)
-      .set({ status: String(status), behandeldDoor: sess?.gebruikerId ?? null, bijgewerktOp: nu })
+      .set({ status: String(status), behandeldDoor: req.session.userId ?? null, bijgewerktOp: nu })
       .where(eq(gebruikersMeldingenTable.id, id));
   }
   if (interne_notitie !== undefined) {

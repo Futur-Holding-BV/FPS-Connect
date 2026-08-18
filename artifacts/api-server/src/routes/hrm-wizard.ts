@@ -217,7 +217,7 @@ router.patch("/medewerkers/:id/wizard-voortgang", schrijven, async (req, res): P
     .where(eq(medewerkersTable.id, id));
 
   try {
-    const sessieGebruikerId = (req.session as { userId?: number }).userId ?? null;
+    const sessieGebruikerId = req.session.userId ?? null;
     await logActiviteit({
       type: "wizard_stap",
       gebruikerId: sessieGebruikerId,
@@ -294,7 +294,7 @@ router.patch("/medewerkers/ai-voorstellen/:voorstelId", schrijven, async (req, r
     return void res.status(400).json({ error: "Ongeldige status. Kies: goedgekeurd, afgewezen, later, open" });
   }
 
-  const gebruikerId: number | null = (req.session as { userId?: number }).userId ?? null;
+  const gebruikerId: number | null = req.session.userId ?? null;
 
   // Fail-closed: goedkeuren zonder over te nemen waarde is betekenisloos.
   if (status === "goedgekeurd") {
@@ -557,7 +557,7 @@ router.post("/medewerkers/:id/middelen", schrijven, async (req, res): Promise<vo
 
   if (!body.naam?.trim()) return void res.status(400).json({ error: "naam is verplicht" });
 
-  const gebruikerId: number | null = (req.session as { userId?: number }).userId ?? null;
+  const gebruikerId: number | null = req.session.userId ?? null;
 
   const [nieuw] = await db
     .insert(hrmMiddelenTable)

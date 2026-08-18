@@ -268,7 +268,7 @@ router.post("/adviseur/vraag", requireAuth, async (req, res): Promise<void> => {
   }
 
   try {
-    const userId = (req.session as { userId?: number }).userId;
+    const userId = req.session.userId;
     if (!userId) return void res.status(401).json({ error: "Niet ingelogd" });
 
     const { vraag, geschiedenis, context } = req.body as {

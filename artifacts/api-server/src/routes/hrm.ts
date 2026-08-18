@@ -51,7 +51,7 @@ import { isRedelijkeDatum, ongeldigeDatumvelden } from "../lib/datumSaniteit";
 import { berekenWerkgeverLogoPad } from "../lib/werkgever-logo-pad";
 import { eq, desc, and, ne, inArray, isNotNull, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { medewerkerIdVoorGebruiker } from "../services/medewerker-lookup";
@@ -458,8 +458,6 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
     if (!f) return void res.status(404).json({ error: "Functie niet gevonden" });
 
     if (profielWijziging) {
-      const sessie = req.session as unknown as Record<string, unknown> | undefined;
-
       // Cascade (Optie D): tel alle medewerkers wiens effectieve bevoegdheden nu
       // direct zijn vernieuwd door de profielwijziging. Omdat bevoegdheden altijd
       // on-the-fly worden berekend (geen stored cache), is de cascade onmiddellijk
@@ -484,11 +482,8 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
       }
 
       logAudit({
-        gebruikerId: (sessie?.userId as number | null | undefined) ?? null,
-        gebruikerNaam:
-          (sessie?.gebruikerNaam as string | null | undefined) ??
-          (sessie?.naam as string | null | undefined) ??
-          null,
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: await getSessionGebruikerNaam(req),
         ipAdres: req.ip ?? null,
         sessieId: null,
         module: "functies",
@@ -1428,7 +1423,6 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
 
     // Loondienst: concept-salarismutatie "Verloning nieuwe medewerker" klaarzetten voor SCAB.
     // Niet-blokkerend: als aanmaken mislukt gaat de onboarding gewoon door.
-    const onboardingSess = req.session as { userId?: number; gebruikerNaam?: string };
     const inDienstDate = inDienstDatum ?? new Date(in_dienst_sinds as string);
     try {
       await db.insert(salarisMutatiesTable).values({
@@ -1443,8 +1437,8 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         ingangsdatum: m.inDienstSinds ?? (in_dienst_sinds as string) ?? null,
         bron: "onboarding",
         status: "concept",
-        aangemaaktDoorId: onboardingSess.userId ?? null,
-        aangemaaktDoorNaam: onboardingSess.gebruikerNaam ?? null,
+        aangemaaktDoorId: req.session.userId ?? null,
+        aangemaaktDoorNaam: await getSessionGebruikerNaam(req),
       });
     } catch (mutatieErr) {
       req.log.warn({ err: mutatieErr, medewerkerId: m.id }, "onboarding: auto-salarismutatie aanmaken mislukt");
@@ -4972,7 +4966,7 @@ router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): 
     invalideerContext("medewerker", medId);
     logAudit({
       gebruikerId: req.session.userId ?? null,
-      gebruikerNaam: (req.session as unknown as Record<string, unknown>).gebruikerNaam as string | null ?? null,
+      gebruikerNaam: await getSessionGebruikerNaam(req),
       ipAdres: req.ip ?? null,
       sessieId: null,
       module: "personeel",
@@ -5747,9 +5741,8 @@ function pwtParams(req: { params: Record<string, unknown> }): { dossierId: numbe
   return { dossierId, type: String(req.params.type) };
 }
 
-function pwtUserId(req: { session: unknown }): number | null {
-  const uid = (req.session as { userId?: number }).userId;
-  return typeof uid === "number" ? uid : null;
+function pwtUserId(req: { session: { userId?: number } }): number | null {
+  return req.session.userId ?? null;
 }
 
 // PATCH /poortwachter/:dossierId/mijlpalen/:type — notitie bijwerken.

@@ -20,9 +20,7 @@ const objectStorage = new ObjectStorageService();
 
 // ── Sessie helper ─────────────────────────────────────────────────────────────
 function sessionUserId(req: Request): number | null {
-  const sess = req.session as unknown as Record<string, unknown>;
-  const uid = sess["gebruikerId"];
-  return typeof uid === "number" ? uid : null;
+  return req.session.userId ?? null;
 }
 
 // ── Helper: param → integer ───────────────────────────────────────────────────

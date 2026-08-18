@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { kantoorReleasesTable, releaseUpdateNotesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, getSessionGebruikerNaam } from "../middlewares/auth";
 
 const router = Router();
 
@@ -11,8 +11,7 @@ function alleenHoofdbeheerder(
   res: Parameters<typeof requireAuth>[1],
   next: Parameters<typeof requireAuth>[2],
 ) {
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
-  if (sessie?.["rol"] !== "hoofdbeheerder") {
+  if (req.session.rol !== "hoofdbeheerder") {
     res.status(403).json({ fout: "Alleen toegankelijk voor de hoofdbeheerder." });
     return;
   }
@@ -85,7 +84,6 @@ router.get("/kantoor-release/releases/:id", requireAuth, alleenHoofdbeheerder, a
 // ── POST /kantoor-release/releases ────────────────────────────────────────────
 
 router.post("/kantoor-release/releases", requireAuth, alleenHoofdbeheerder, async (req, res) => {
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
   const body = req.body as Record<string, string>;
   const { versienummer, label, samenvatting, commitInfo, dbVersie, bekendeBeperkingenJson,
           toegevoegd, verbeterd, opgelost, beveiliging, bekendeProblemen, instructies } = body;
@@ -105,8 +103,8 @@ router.post("/kantoor-release/releases", requireAuth, alleenHoofdbeheerder, asyn
       commitInfo: commitInfo?.trim() ?? null,
       dbVersie: dbVersie?.trim() ?? null,
       bekendeBeperkingenJson: bekendeBeperkingenJson ?? null,
-      vrijgegevenDoor: (sessie?.["gebruikerId"] as number | null) ?? null,
-      vrijgegevenDoorNaam: (sessie?.["naam"] as string | null) ?? "Onbekend",
+      vrijgegevenDoor: req.session.userId ?? null,
+      vrijgegevenDoorNaam: (await getSessionGebruikerNaam(req)) ?? "Onbekend",
     })
     .returning();
 
@@ -182,8 +180,6 @@ router.post("/kantoor-release/releases/:id/vrijgeven", requireAuth, alleenHoofdb
   const id = parseId(req.params["id"]);
   if (id === null) { res.status(400).json({ fout: "Ongeldig id" }); return; }
 
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
-
   const [release] = await db
     .select()
     .from(kantoorReleasesTable)
@@ -233,8 +229,8 @@ router.post("/kantoor-release/releases/:id/vrijgeven", requireAuth, alleenHoofdb
       isActief: true,
       status: "vrijgegeven",
       vrijgegevenOp: new Date(),
-      vrijgegevenDoor: (sessie?.["gebruikerId"] as number | null) ?? null,
-      vrijgegevenDoorNaam: (sessie?.["naam"] as string | null) ?? "Onbekend",
+      vrijgegevenDoor: req.session.userId ?? null,
+      vrijgegevenDoorNaam: (await getSessionGebruikerNaam(req)) ?? "Onbekend",
       vorigeVersieId: huidigeActieve?.id ?? null,
     })
     .where(eq(kantoorReleasesTable.id, id));
@@ -247,8 +243,6 @@ router.post("/kantoor-release/releases/:id/vrijgeven", requireAuth, alleenHoofdb
 router.post("/kantoor-release/releases/:id/rollback", requireAuth, alleenHoofdbeheerder, async (req, res) => {
   const id = parseId(req.params["id"]);
   if (id === null) { res.status(400).json({ fout: "Ongeldig id" }); return; }
-
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
 
   const [doelRelease] = await db
     .select()
@@ -269,8 +263,8 @@ router.post("/kantoor-release/releases/:id/rollback", requireAuth, alleenHoofdbe
       isActief: true,
       status: "vrijgegeven",
       vrijgegevenOp: new Date(),
-      vrijgegevenDoor: (sessie?.["gebruikerId"] as number | null) ?? null,
-      vrijgegevenDoorNaam: (sessie?.["naam"] as string | null) ?? "Onbekend",
+      vrijgegevenDoor: req.session.userId ?? null,
+      vrijgegevenDoorNaam: (await getSessionGebruikerNaam(req)) ?? "Onbekend",
     })
     .where(eq(kantoorReleasesTable.id, id));
 

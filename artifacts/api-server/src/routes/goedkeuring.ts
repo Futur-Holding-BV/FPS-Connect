@@ -21,7 +21,7 @@ import {
   type GoedkeuringEscalatie,
 } from "@workspace/db";
 import { and, eq, desc, inArray, or, sql } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
 import { logAudit } from "../lib/audit";
 import {
@@ -178,7 +178,7 @@ router.post(
         return;
       }
       const gebruikerId = req.session?.userId ?? null;
-      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
+      const gebruikerNaam = await getSessionGebruikerNaam(req);
       const nu = new Date();
       const [regel] = await db
         .insert(goedkeuringBeleidsregelsTable)
@@ -226,7 +226,7 @@ router.patch(
         return;
       }
       const gebruikerId = req.session?.userId ?? null;
-      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
+      const gebruikerNaam = await getSessionGebruikerNaam(req);
       const [regel] = await db
         .update(goedkeuringBeleidsregelsTable)
         .set({ ...parsed.data, bijgewerktOp: new Date() })
@@ -270,7 +270,7 @@ router.delete(
         return;
       }
       const gebruikerId = req.session?.userId ?? null;
-      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
+      const gebruikerNaam = await getSessionGebruikerNaam(req);
       await db.delete(goedkeuringBeleidsregelsTable).where(eq(goedkeuringBeleidsregelsTable.id, id));
       logAudit({
         gebruikerId,

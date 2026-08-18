@@ -2,7 +2,7 @@ import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import { db, securityScanRunsTable, securityTestResultatenTable, securityReleasesTable } from "@workspace/db";
 import { desc, eq, and, like, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, getSessionGebruikerNaam } from "../middlewares/auth";
 import { startScanRun, haalScanStats, ALLE_SCENARIOS } from "../services/security-validation/engine";
 import type { TestCategorie } from "../services/security-validation/types";
 
@@ -13,8 +13,7 @@ function alleenHoofdbeheerder(
   res: Parameters<typeof requireAuth>[1],
   next: Parameters<typeof requireAuth>[2],
 ) {
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
-  if (sessie?.rol !== "hoofdbeheerder") {
+  if (req.session.rol !== "hoofdbeheerder") {
     res.status(403).json({ fout: "Alleen toegankelijk voor de hoofdbeheerder." });
     return;
   }
@@ -36,9 +35,8 @@ router.get("/security-validation/bibliotheek", requireAuth, alleenHoofdbeheerder
 
 router.post("/security-validation/scan", requireAuth, alleenHoofdbeheerder, async (req, res) => {
   try {
-    const sessie = req.session as unknown as Record<string, unknown>;
-    const gebruikerId = sessie?.gebruikerId as number | null ?? null;
-    const gebruikerNaam = sessie?.naam as string | null ?? null;
+    const gebruikerId = req.session.userId ?? null;
+    const gebruikerNaam = await getSessionGebruikerNaam(req);
     const { versieLabel, categorieFilter } = req.body as { versieLabel?: string; categorieFilter?: TestCategorie[] };
 
     const baseUrl = (() => {
@@ -190,8 +188,7 @@ router.post("/security-validation/releases/:id/beoordelen", requireAuth, alleenH
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ fout: "Ongeldig ID" }); return; }
 
-  const sessie = req.session as unknown as Record<string, unknown>;
-  const gebruikerNaam = sessie?.naam as string ?? "Onbekend";
+  const gebruikerNaam = (await getSessionGebruikerNaam(req)) ?? "Onbekend";
   const { beslissing, opmerking } = req.body as { beslissing: "goedgekeurd" | "afgewezen"; opmerking?: string };
 
   if (!["goedgekeurd", "afgewezen"].includes(beslissing)) {

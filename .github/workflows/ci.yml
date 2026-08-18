@@ -36,6 +36,12 @@ jobs:
       - name: Klantloos-controle
         run: pnpm --filter @workspace/scripts run klantloos-check
 
+      # SESSIE_01: verbiedt session["gebruikerId"] (het veld heet userId) en
+      # session["naam"]/session["gebruikerNaam"] (bestaan niet in SessionData).
+      # Vangt de stille autorisatie-breuk die in aug 2026 in 8+ routes zat.
+      - name: Sessieveld-antipatroon-controle
+        run: pnpm --filter @workspace/api-server run check-sessie-velden
+
       - name: Build api-server
         run: pnpm --filter @workspace/api-server run build
 

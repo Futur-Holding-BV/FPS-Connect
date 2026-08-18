@@ -163,13 +163,13 @@ router.get("/pbm/items", lezenPbm, async (req, res): Promise<void> => {
 
 // ── GET /pbm/items/eigen ────────────────────────────────────────────────────
 router.get("/pbm/items/eigen", async (req, res): Promise<void> => {
-  const sess = { gebruikerId: req.session.userId };
-  if (!sess.gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+  const sessieUserId = req.session.userId;
+  if (!sessieUserId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const medewerker = await db
     .select({ id: medewerkersTable.id })
     .from(medewerkersTable)
-    .where(eq(medewerkersTable.gebruikerId, sess.gebruikerId))
+    .where(eq(medewerkersTable.gebruikerId, sessieUserId))
     .limit(1);
 
   if (!medewerker[0]) return void res.json([]);
@@ -185,7 +185,7 @@ router.get("/pbm/items/eigen", async (req, res): Promise<void> => {
 
 // ── POST /pbm/items ─────────────────────────────────────────────────────────
 router.post("/pbm/items", schrijvenPbm, async (req, res): Promise<void> => {
-  const sess = { gebruikerId: req.session.userId };
+  const sessieUserId = req.session.userId;
   const body = req.body as {
     medewerkerId?: number;
     medewerkerNaam?: string;
@@ -224,7 +224,7 @@ router.post("/pbm/items", schrijvenPbm, async (req, res): Promise<void> => {
       status: body.status ?? "actief",
       opmerkingen: body.opmerkingen,
       qrCode,
-      uitgeleendDoorId: sess.gebruikerId,
+      uitgeleendDoorId: sessieUserId,
       bijgewerktOp: new Date(),
     })
     .returning();
@@ -287,7 +287,7 @@ router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res): Promise
   const pbmItemId = parseInt(String(req.params.id), 10);
   if (isNaN(pbmItemId)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const sess = { gebruikerId: req.session.userId };
+  const sessieUserId = req.session.userId;
   const body = req.body as {
     datum?: string;
     fotoPaden?: string[];
@@ -306,7 +306,7 @@ router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res): Promise
       fotoPaden: body.fotoPaden ?? [],
       formeleStatus: body.formeleStatus ?? "in_behandeling",
       opmerkingen: body.opmerkingen,
-      beoordeeldDoorId: sess.gebruikerId,
+      beoordeeldDoorId: sessieUserId,
       beoordeeldDoorNaam: body.beoordeeldDoorNaam,
       bijgewerktOp: new Date(),
     })
@@ -399,7 +399,7 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
     }
 
     const datum = new Date().toISOString().slice(0, 10);
-    const sess = { gebruikerId: req.session.userId };
+    const sessieUserId = req.session.userId;
 
     const [inspectie] = await db
       .insert(pbmInspectiesTable)
@@ -412,7 +412,7 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
         aiSlijtage: parsed.slijtage ?? "onbekend",
         aiKeurNodig: Boolean(parsed.keur_nodig),
         formeleStatus: "in_behandeling",
-        beoordeeldDoorId: sess.gebruikerId,
+        beoordeeldDoorId: sessieUserId,
         bijgewerktOp: new Date(),
       })
       .returning();
@@ -454,7 +454,7 @@ router.get("/pbm/middelen", lezenPbm, async (req, res): Promise<void> => {
 
 // ── POST /pbm/middelen ──────────────────────────────────────────────────────
 router.post("/pbm/middelen", schrijvenPbm, async (req, res): Promise<void> => {
-  const sess = { gebruikerId: req.session.userId };
+  const sessieUserId = req.session.userId;
   const body = req.body as {
     type: string; naam: string; merk?: string; model?: string;
     serienummer?: string; locatie?: string; eigenaarNaam?: string;
@@ -470,7 +470,7 @@ router.post("/pbm/middelen", schrijvenPbm, async (req, res): Promise<void> => {
     .values({
       ...body,
       qrCode,
-      eigenaarId: sess.gebruikerId,
+      eigenaarId: sessieUserId,
       eigenaarNaam: body.eigenaarNaam,
       bijgewerktOp: new Date(),
     })
@@ -536,7 +536,7 @@ router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res): Prom
   const middelId = parseInt(String(req.params.id), 10);
   if (isNaN(middelId)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const sess = { gebruikerId: req.session.userId };
+  const sessieUserId = req.session.userId;
   const body = req.body as {
     datum?: string; fotoPaden?: string[]; bevindingen?: string;
     formeleStatus?: string; beoordeeldDoorNaam?: string;
@@ -550,7 +550,7 @@ router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res): Prom
       fotoPaden: body.fotoPaden ?? [],
       bevindingen: body.bevindingen,
       formeleStatus: body.formeleStatus ?? "in_behandeling",
-      beoordeeldDoorId: sess.gebruikerId,
+      beoordeeldDoorId: sessieUserId,
       beoordeeldDoorNaam: body.beoordeeldDoorNaam,
       bijgewerktOp: new Date(),
     })

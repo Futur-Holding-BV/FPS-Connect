@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, governanceChecksTable, governanceWachtrijTable, aiPromptScansTable, aiWijzigingsvoorstellenTable } from "@workspace/db";
 import { desc, eq, and, gte, lte, like, sql, count } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, getSessionGebruikerNaam } from "../middlewares/auth";
 import { haalGovernanceDashboard } from "../services/governance-engine";
 
 const router = Router();
@@ -9,8 +9,7 @@ const router = Router();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function alleenHoofdbeheerder(req: Parameters<typeof requireAuth>[0], res: Parameters<typeof requireAuth>[1], next: Parameters<typeof requireAuth>[2]) {
-  const sessie = req.session as unknown as Record<string, unknown> | undefined;
-  if (sessie?.rol !== "hoofdbeheerder") {
+  if (req.session.rol !== "hoofdbeheerder") {
     res.status(403).json({ fout: "Alleen toegankelijk voor de hoofdbeheerder." });
     return;
   }
@@ -108,7 +107,6 @@ router.get("/governance/wachtrij", alleenHoofdbeheerder, async (req, res) => {
 router.post("/governance/wachtrij/:id/goedkeuren", alleenHoofdbeheerder, async (req, res) => {
   const id = parseInt(req.params["id"] as string, 10);
   const { opmerking } = req.body as { opmerking?: string };
-  const sessie = req.session as unknown as Record<string, unknown>;
 
   const [bestaand] = await db
     .select()
@@ -125,8 +123,8 @@ router.post("/governance/wachtrij/:id/goedkeuren", alleenHoofdbeheerder, async (
     .update(governanceWachtrijTable)
     .set({
       status: "goedgekeurd",
-      goedgekeurdDoorId: sessie.userId as number,
-      goedgekeurdDoorNaam: (sessie.naam ?? sessie.gebruikerNaam) as string | null,
+      goedgekeurdDoorId: req.session.userId!,
+      goedgekeurdDoorNaam: await getSessionGebruikerNaam(req),
       opmerking: opmerking ?? null,
       afgehandeldOp: new Date(),
     })
@@ -140,7 +138,6 @@ router.post("/governance/wachtrij/:id/goedkeuren", alleenHoofdbeheerder, async (
 router.post("/governance/wachtrij/:id/afwijzen", alleenHoofdbeheerder, async (req, res) => {
   const id = parseInt(req.params["id"] as string, 10);
   const { opmerking } = req.body as { opmerking?: string };
-  const sessie = req.session as unknown as Record<string, unknown>;
 
   const [bestaand] = await db
     .select()
@@ -157,8 +154,8 @@ router.post("/governance/wachtrij/:id/afwijzen", alleenHoofdbeheerder, async (re
     .update(governanceWachtrijTable)
     .set({
       status: "afgewezen",
-      goedgekeurdDoorId: sessie.userId as number,
-      goedgekeurdDoorNaam: (sessie.naam ?? sessie.gebruikerNaam) as string | null,
+      goedgekeurdDoorId: req.session.userId!,
+      goedgekeurdDoorNaam: await getSessionGebruikerNaam(req),
       opmerking: opmerking ?? null,
       afgehandeldOp: new Date(),
     })
@@ -269,7 +266,6 @@ router.get("/governance/ai-wijzigingsvoorstellen", alleenHoofdbeheerder, async (
 router.post("/governance/ai-wijzigingsvoorstellen/:id/beoordelen", alleenHoofdbeheerder, async (req, res) => {
   const id = parseInt(String(req.params["id"]), 10);
   const { beslissing, opmerking } = req.body as { beslissing: "goedgekeurd" | "afgewezen"; opmerking?: string };
-  const sessie = req.session as unknown as Record<string, unknown>;
 
   if (beslissing !== "goedgekeurd" && beslissing !== "afgewezen") {
     res.status(400).json({ fout: "beslissing moet 'goedgekeurd' of 'afgewezen' zijn." });
@@ -291,8 +287,8 @@ router.post("/governance/ai-wijzigingsvoorstellen/:id/beoordelen", alleenHoofdbe
     .update(aiWijzigingsvoorstellenTable)
     .set({
       status: beslissing,
-      goedgekeurdDoorId: sessie.userId as number,
-      goedgekeurdDoorNaam: (sessie.naam ?? sessie.gebruikerNaam) as string | null,
+      goedgekeurdDoorId: req.session.userId!,
+      goedgekeurdDoorNaam: await getSessionGebruikerNaam(req),
       opmerking: opmerking ?? null,
       afgehandeldOp: new Date(),
     })

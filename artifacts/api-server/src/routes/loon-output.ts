@@ -6,7 +6,7 @@ import {
   medewerkersTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 const router = Router();
@@ -69,7 +69,6 @@ router.post(
     const bestand = req.file;
     if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
-    const sess = req.session as { userId?: number; gebruikerNaam?: string };
     const {
       type, werkmaatschappij, werkgever_id, periode_jaar, periode_maand,
       medewerker_id, bron, notities, upload_batch_ref,
@@ -110,8 +109,8 @@ router.post(
       status: "ontvangen",
       uploadBatchRef: upload_batch_ref ?? null,
       notities: notities ?? null,
-      uploaderId: sess.userId ?? null,
-      uploaderNaam: sess.gebruikerNaam ?? null,
+      uploaderId: req.session.userId ?? null,
+      uploaderNaam: (await getSessionGebruikerNaam(req)) ?? null,
     }).returning();
 
     return void res.status(201).json(mapBestand(bestandRij));
@@ -149,14 +148,13 @@ router.patch("/loon-output/:id", schrijven, async (req: Request, res: Response):
 
 router.post("/loon-output/:id/publiceer", requireBevoegdheid("salarisarchief", 3), async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
-  const sess = req.session as { userId?: number };
 
   const [updated] = await db
     .update(loonOutputBestandenTable)
     .set({
       zichtbaarMedewerker: true,
       gepubliceerdOp: new Date(),
-      gepubliceerdDoorId: sess.userId ?? null,
+      gepubliceerdDoorId: req.session.userId ?? null,
       status: "gepubliceerd",
       bijgewerktOp: new Date(),
     })

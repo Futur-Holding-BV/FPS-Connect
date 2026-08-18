@@ -16,7 +16,7 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, and, count, desc, isNull, isNotNull } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 const router = Router();
@@ -127,7 +127,6 @@ router.post(
     const bestand = req.file;
     if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
-    const sess = req.session as { userId?: number; gebruikerNaam?: string };
     const { map, werkgever_id, periode_jaar, periode_maand, omschrijving } = req.body;
 
     if (!map) return void res.status(400).json({ message: "map is verplicht" });
@@ -152,8 +151,8 @@ router.post(
       objectPath,
       bestandsgrootte: bestand.size,
       mimeType,
-      uploaderId: sess.userId ?? null,
-      uploaderNaam: sess.gebruikerNaam ?? null,
+      uploaderId: req.session.userId ?? null,
+      uploaderNaam: (await getSessionGebruikerNaam(req)) ?? null,
     }).returning();
 
     return void res.status(201).json(mapUpload(rij));
@@ -202,14 +201,13 @@ router.get("/boekhouder/declaraties", portaal, async (req: Request, res: Respons
 
 router.post("/boekhouder/declaraties/:id/verwerken", uploaden, async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  const sess = req.session as { userId?: number };
 
   // Alleen een goedgekeurde declaratie kan verwerkt worden — en maar één keer.
   const [rij] = await db.update(declaratiesTable)
     .set({
       status: "verwerkt",
       verwerkingOp: new Date(),
-      verwerktDoor: sess.userId ?? null,
+      verwerktDoor: req.session.userId ?? null,
       bijgewerktOp: new Date(),
     })
     .where(and(eq(declaratiesTable.id, id), eq(declaratiesTable.status, "goedgekeurd")))
@@ -256,12 +254,11 @@ router.get("/boekhouder/verlof", portaal, async (req: Request, res: Response): P
 
 router.post("/boekhouder/verlof/:id/verwerken", uploaden, async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  const sess = req.session as { userId?: number };
 
   const [rij] = await db.update(verlofAanvragenTable)
     .set({
       boekhouderVerwerktOp: new Date(),
-      boekhouderVerwerktDoorId: sess.userId ?? null,
+      boekhouderVerwerktDoorId: req.session.userId ?? null,
       bijgewerktOp: new Date(),
     })
     .where(and(
@@ -276,7 +273,7 @@ router.post("/boekhouder/verlof/:id/verwerken", uploaden, async (req: Request, r
   await db.insert(verlofAanvraagLogTable).values({
     verlofaanvraagId: rij.id,
     medewerkerId: rij.medewerkerId,
-    uitgevoerdDoorId: sess.userId ?? null,
+    uitgevoerdDoorId: req.session.userId ?? null,
     actie: "loon_verwerkt",
     oudStatus: "goedgekeurd",
     nieuwStatus: "goedgekeurd",

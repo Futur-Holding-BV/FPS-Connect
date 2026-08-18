@@ -10,7 +10,7 @@ import {
   medewerkersTable,
 } from "@workspace/db";
 import { eq, and, desc, asc, inArray, isNotNull, ne } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionGebruikerNaam } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { SCAB_MAIL_GENERATIE_PROMPT } from "../lib/aiPrompts";
@@ -95,7 +95,6 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     return void res.status(400).json({ message: "werkmaatschappij, periode_jaar en periode_maand zijn verplicht" });
   }
 
-  const sess = req.session as { userId?: number; gebruikerNaam?: string };
   const jaar = Number(periode_jaar);
   const maand = Number(periode_maand);
 
@@ -160,7 +159,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
       }, undefined, {
         module: "salaris",
         functie: "genereerScabMail",
-        gebruikerId: sess.userId ?? null,
+        gebruikerId: req.session.userId ?? null,
         promptNaam: SCAB_MAIL_GENERATIE_PROMPT.naam,
         promptVersie: SCAB_MAIL_GENERATIE_PROMPT.versie,
       });
@@ -194,8 +193,8 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     aantalMutaties: mutaties.length,
     mutatieIds: mutaties.map((m) => m.id),
     aiContextJson: { mutaties: mutaties.length, methode: heeftGateway() ? "gpt-4o" : "fallback" },
-    aangemaaktDoorId: sess.userId ?? null,
-    aangemaaktDoorNaam: sess.gebruikerNaam ?? null,
+    aangemaaktDoorId: req.session.userId ?? null,
+    aangemaaktDoorNaam: (await getSessionGebruikerNaam(req)) ?? null,
   }).returning();
 
   return void res.status(201).json(mapMail(mail));
@@ -373,7 +372,6 @@ router.patch("/scab-mails/:id", schrijven, async (req: Request, res: Response): 
 
 router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
-  const sess = req.session as { userId?: number; gebruikerNaam?: string };
 
   const [mail] = await db.select().from(scabMailsTable).where(eq(scabMailsTable.id, id));
   if (!mail) return void res.status(404).json({ message: "Niet gevonden" });
@@ -385,8 +383,8 @@ router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Resp
   const [updated] = await db.update(scabMailsTable).set({
     status: "verzonden",
     verzondOp: new Date(),
-    verzondDoorId: sess.userId ?? null,
-    verzondDoorNaam: sess.gebruikerNaam ?? null,
+    verzondDoorId: req.session.userId ?? null,
+    verzondDoorNaam: (await getSessionGebruikerNaam(req)) ?? null,
     bijgewerktOp: new Date(),
   }).where(and(
     eq(scabMailsTable.id, id),
@@ -421,7 +419,7 @@ router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Resp
         .set({
           status:       "verwerkt",
           verwerkingOp: new Date(),
-          verwerktDoor: sess.userId ?? null,
+          verwerktDoor: req.session.userId ?? null,
           bijgewerktOp: new Date(),
         })
         .where(and(
@@ -456,7 +454,6 @@ router.post(
     const bestand = req.file;
     if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
-    const sess = req.session as { userId?: number };
     const { type, omschrijving, is_gevoelig, medewerker_id } = req.body;
 
     const mimeType = bestand.mimetype || "application/octet-stream";
@@ -486,7 +483,7 @@ router.post(
       isGevoelig: is_gevoelig === "true" || is_gevoelig === true,
       medewerkerId: medewerker_id ? Number(medewerker_id) : null,
       medewerkerNaam,
-      aangemaaktDoorId: sess.userId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
     }).returning();
 
     return void res.status(201).json(mapBijlage(bijlage));

@@ -3,8 +3,12 @@ name: Sessieveld heet userId, niet gebruikerId
 description: Handlers die req.session.gebruikerId lezen falen altijd met 401 — het veld bestaat niet
 ---
 
-**Regel:** de express-session bevat alléén `userId` (en `rol`, `pendingUserId`, `pendingSecret` — zie lib/session.ts). Er bestaat geen `req.session.gebruikerId`; casts als `(req.session as { gebruikerId?: number }).gebruikerId` compileren maar leveren altijd `undefined` → de route geeft stil 401 voor web én mobiel.
+**Regel:** de express-session bevat alléén `userId`, `rol`, `pendingUserId`, `pendingSecret`, `werkInboxOAuthNonce` — zie lib/session.ts. Velden `naam`, `gebruikerNaam` en `gebruikerId` bestaan NIET; casts die ze lezen compileren maar leveren altijd `undefined`.
 
-**Why:** op 8 aug 2026 bleken ~21 handlers in 8 routebestanden (pbm, meldingen, uitvoerder, opname, hrm, offertes, magazijn, materiaal-aanvragen) dit dode veld te lezen en dus nooit te werken; TypeScript vangt het niet door de cast.
+**Why:** aug 2026: cqo.ts/snagstream.ts lazen `sess["gebruikerId"]` → altijd 0/null; governance.ts/goedkeuring.ts/salarisarchief.ts/hrm.ts lazen `session["naam"]`/`session["gebruikerNaam"]` → altijd null/"Onbekend". pbm.ts gebruikte een lokaal object `{ gebruikerId: req.session.userId }` wat verwarrend maar correct was.
 
-**How to apply:** gebruik altijd `req.session.userId` (of req.permissies). Bij "route doet niets / altijd 401"-klachten: grep eerst op `gebruikerId` in de sessie-cast. Nooit een nieuwe sessie-property via een cast introduceren — breid de SessionData-declaratie uit als er echt iets bij moet.
+**How to apply:**
+- Gebruik altijd `req.session.userId` of `getSessionUserId(req)` (helper in middlewares/auth.ts).
+- Voor de naam van de ingelogde gebruiker: `await getSessionGebruikerNaam(req)` (DB-opzoek, returnt `string | null`).
+- Nieuwe sessie-properties alleen via uitbreiding van de `SessionData`-declaratie in lib/session.ts.
+- CI-check: `pnpm --filter @workspace/api-server run check-sessie-velden` (scripts/check-sessie-velden.sh) vangt toekomstige sessie-anti-patronen.

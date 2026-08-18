@@ -16,6 +16,8 @@ declare module "express-session" {
     // Bindt de pending activatie aan de gebruikte uitnodigingstoken zodat een
     // stale sessie na consumptie van de uitnodiging niets meer kan schrijven.
     pendingActivatieToken?: string;
+    // One-time nonce voor werk-inbox OAuth-flow (anti-CSRF); na callback direct verwijderd.
+    werkInboxOAuthNonce?: string;
   }
 }
 

@@ -294,3 +294,33 @@ export function requireEnigeBevoegdheid(
     }
   };
 }
+
+/**
+ * Lees het geauthenticeerde userId uit de sessie — getypeerd, zonder cast.
+ * Gebruik deze helper overal waar je req.session.userId nodig hebt zodat
+ * typefouten (bijv. "gebruikerId") at compile-time worden gevangen in plaats
+ * van stilletjes null/undefined te leveren.
+ */
+export function getSessionUserId(req: Request): number | null {
+  return req.session.userId ?? null;
+}
+
+/**
+ * Zoek de weergavenaam van de ingelogde gebruiker op uit de database.
+ * Gebruik dit in routes die de naam moeten opslaan of loggen — nooit
+ * session["naam"] of session["gebruikerNaam"] lezen (die velden bestaan niet).
+ * Geeft null terug als de gebruiker niet ingelogd is of niet gevonden wordt.
+ */
+export async function getSessionGebruikerNaam(req: Request): Promise<string | null> {
+  const id = req.session.userId;
+  if (!id) return null;
+  try {
+    const [g] = await db
+      .select({ naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    return g?.naam ?? null;
+  } catch {
+    return null;
+  }
+}

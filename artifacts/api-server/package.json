@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts"
+    "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts",
+    "check-sessie-velden": "bash scripts/check-sessie-velden.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1070.0",

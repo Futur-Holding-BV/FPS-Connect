@@ -236,6 +236,16 @@ describe("Auth-route-uitsluiting via maakAuditMiddleware", () => {
       values: valuesMock,
     } as unknown as ReturnType<typeof db.insert>);
 
+    // Naam-opzoek doet een db.select; mocken zodat de fire-and-forget snel
+    // genoeg resolvet voor de 10ms wachttijd in de test.
+    const selectSpy = vi.spyOn(db, "select").mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([{ naam: "Test Gebruiker" }]),
+        }),
+      }),
+    } as unknown as ReturnType<typeof db.select>);
+
     const middleware = maakAuditMiddleware();
     const { req, res } = maakMockReqRes("POST", "/gebouwen");
 
@@ -249,6 +259,47 @@ describe("Auth-route-uitsluiting via maakAuditMiddleware", () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(insertSpy).toHaveBeenCalledTimes(1);
     insertSpy.mockRestore();
+    selectSpy.mockRestore();
+  });
+
+  it("logt WEL een audit-record ook als naam-opzoek mislukt", async () => {
+    const { maakAuditMiddleware } = await import("../lib/audit");
+    const { db } = await import("@workspace/db");
+
+    const valuesMock = vi.fn().mockResolvedValue(undefined);
+    const insertSpy = vi.spyOn(db, "insert").mockReturnValue({
+      values: valuesMock,
+    } as unknown as ReturnType<typeof db.insert>);
+
+    // Simuleer een falende naam-opzoek (DB-fout)
+    const selectSpy = vi.spyOn(db, "select").mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.reject(new Error("DB niet beschikbaar")),
+        }),
+      }),
+    } as unknown as ReturnType<typeof db.select>);
+
+    const middleware = maakAuditMiddleware();
+    const { req, res } = maakMockReqRes("POST", "/gebouwen");
+
+    await new Promise<void>((resolve) => {
+      middleware(req as never, res as never, resolve as NextFunction);
+    });
+
+    (res.json as (b: unknown) => unknown)({ id: 1, naam: "Testgebouw" });
+
+    // Wacht op fire-and-forget (inclusief foutafhandeling)
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Audit mag NOOIT worden overgeslagen bij een mislukte naam-opzoek
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    // Naam moet null zijn (fout afgevangen)
+    const auditorValues = valuesMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(auditorValues?.gebruikerNaam).toBeNull();
+
+    insertSpy.mockRestore();
+    selectSpy.mockRestore();
   });
 });
 

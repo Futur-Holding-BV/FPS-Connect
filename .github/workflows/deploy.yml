@@ -134,6 +134,15 @@ jobs:
           echo "Controle 3/3 — klantloos-controle" > /tmp/faalstap.txt
           pnpm --filter @workspace/scripts run klantloos-check 2>&1 | tee /tmp/stap-uitvoer.log
 
+      # SESSIE_01: verbiedt session["gebruikerId"] en session["naam"/"gebruikerNaam"].
+      # Vangt de stille autorisatie-breuk die in aug 2026 in 8+ routes zat.
+      - name: Sessieveld-antipatroon-controle
+        if: github.event.inputs.noodfix != 'NOODFIX'
+        run: |
+          set -euo pipefail
+          echo "Sessieveld-antipatroon-controle" > /tmp/faalstap.txt
+          pnpm --filter @workspace/api-server run check-sessie-velden 2>&1 | tee /tmp/stap-uitvoer.log
+
       # Testmodus voor de faalmelding: faalt bewust vóór de server wordt
       # aangeraakt, zodat de faalmail (met stapnaam + uitvoer) end-to-end
       # bewezen kan worden zonder productie te raken.

@@ -17,7 +17,7 @@ import {
   urenRegistratiesTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, getSessionUserId } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { PLANNING_REISTIJD_PROMPT } from "../lib/aiPrompts";
 
@@ -282,7 +282,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res): Promi
       dagNotities:    dag_notities  ? String(dag_notities)  : null,
       notities:       notities      ? String(notities)      : null,
       opGeslotenDag:  geslotenInfo.gesloten && isOverride,
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: getSessionUserId(req) ?? null,
     }).returning();
 
     const gebouw = row.gebouwId
@@ -417,7 +417,7 @@ router.post("/modules/planning/afwezigheid", schrijvenPlanning, async (req, res)
       datumEind: String(datum_eind),
       omschrijving: omschrijving ? String(omschrijving) : null,
       status: String(status),
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: getSessionUserId(req) ?? null,
     }).returning();
 
     res.status(201).json({
@@ -578,7 +578,7 @@ router.post("/modules/planning/bedrijfssluitingen", schrijvenPlanning, async (re
       datumEind: String(datum_eind),
       type: String(type),
       omschrijving: omschrijving ? String(omschrijving) : null,
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: getSessionUserId(req) ?? null,
     }).returning();
     res.status(201).json(mapSluiting(row));
   } catch (e) {
@@ -664,7 +664,7 @@ router.post("/modules/planning/begrotingen", aanmakenPlanning, async (req, res):
       hoofdUrenBegroot: Number(hoofd_uren_begroot),
       meerwerkUrenBegroot: Number(meerwerk_uren_begroot),
       omschrijving: omschrijving ? String(omschrijving) : null,
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: getSessionUserId(req) ?? null,
     }).returning();
 
     const gebouw = row.gebouwId

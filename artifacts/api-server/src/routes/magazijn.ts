@@ -1762,7 +1762,7 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res): Promise<void
     if (!foto_pad) return void res.status(400).json({ error: "foto_pad is verplicht" });
 
     const isRetour = scan_type === "retour";
-    const userId = (req.session as { userId?: number }).userId ?? null;
+    const userId = req.session.userId ?? null;
 
     // Scan aanmaken met status "analyseren"
     const [scan] = await db
@@ -1939,7 +1939,7 @@ router.get("/magazijn/stellingscans/:id", lezen, async (req, res): Promise<void>
 router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
-    const userId = (req.session as { userId?: number }).userId ?? null;
+    const userId = req.session.userId ?? null;
 
     const [scan] = await db
       .select()

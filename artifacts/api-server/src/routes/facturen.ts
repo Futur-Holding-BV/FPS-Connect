@@ -69,12 +69,8 @@ function bepaalFactuurDocumentType(f: { type: string; subtype?: string | null })
 }
 
 function sessionUserId(req: Request): number | null {
-  // Let op: het sessieveld heet userId (gebruikerId bestaat niet — die cast
-  // compileerde wél maar leverde altijd null op, waardoor o.a. de
-  // inkoper-/beoordelaar-guards stil faalden).
-  const sess = req.session as unknown as Record<string, unknown>;
-  const uid = sess["userId"];
-  return typeof uid === "number" ? uid : null;
+  // Het sessieveld heet userId — rechtstreeks opvragen, geen cast nodig.
+  return req.session.userId ?? null;
 }
 function paramInt(val: unknown): number {
   return parseInt(String(val), 10);

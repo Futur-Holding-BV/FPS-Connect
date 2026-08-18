@@ -81,7 +81,7 @@ function redirectUri(): string {
 }
 
 function gebruikerId(req: import("express").Request): number {
-  return (req.session as unknown as { userId: number }).userId;
+  return req.session.userId!;
 }
 
 async function gebruikersNaam(uid: number): Promise<string> {
@@ -134,7 +134,7 @@ router.get("/werk-inbox/oauth/start", requireAuth, (req, res) => {
   // alleen vanuit dezelfde browser-sessie die de flow startte (anti account-
   // linking-CSRF) en de nonce is na één gebruik verbruikt.
   const nonce = crypto.randomUUID();
-  (req.session as unknown as Record<string, unknown>)["werkInboxOAuthNonce"] = nonce;
+  req.session.werkInboxOAuthNonce = nonce;
   const state = maakOAuthState(gebruikerId(req), nonce);
   const url   = bouwAuthUrl(redirectUri(), state);
   res.redirect(url);
@@ -165,11 +165,10 @@ router.get("/werk-inbox/oauth/callback", async (req, res): Promise<void> => {
   // komen als de start (zelfde gebruiker, zelfde one-time nonce). Zonder deze
   // controle kan een aanvaller zijn eigen state aan een slachtoffer voeren en
   // diens Microsoft-account aan het aanvallers-FPS-account laten koppelen.
-  const sessie = req.session as unknown as { userId?: number } & Record<string, unknown>;
-  const sessieNonce = sessie["werkInboxOAuthNonce"];
-  delete sessie["werkInboxOAuthNonce"]; // one-time: altijd verbruiken
-  if (!sessie.userId || sessie.userId !== geverifieerd.uid || sessieNonce !== geverifieerd.nonce) {
-    req.log.warn({ uidState: geverifieerd.uid, uidSessie: sessie.userId ?? null }, "werk-inbox: OAuth-callback zonder bijpassende sessie geweigerd");
+  const sessieNonce = req.session.werkInboxOAuthNonce;
+  delete req.session.werkInboxOAuthNonce; // one-time: altijd verbruiken
+  if (!req.session.userId || req.session.userId !== geverifieerd.uid || sessieNonce !== geverifieerd.nonce) {
+    req.log.warn({ uidState: geverifieerd.uid, uidSessie: req.session.userId ?? null }, "werk-inbox: OAuth-callback zonder bijpassende sessie geweigerd");
     res.redirect("/werk-inbox?ms_error=ongeldige_state");
     return;
   }

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { db, auditLogTable } from "@workspace/db";
 import type { AuditLogInvoer } from "@workspace/db";
 import { logger } from "./logger";
+import { getSessionGebruikerNaam } from "../middlewares/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -339,41 +340,52 @@ export function maakAuditMiddleware() {
       if (res.statusCode < 400) {
         const info = routeNaarInfo(req);
         if (info) {
-          const sessie = req.session as unknown as Record<string, unknown> | undefined;
-          const gebruikerId = sessie?.userId as number | null | undefined;
-          const gebruikerNaam = sessie?.gebruikerNaam as string | null | undefined
-            ?? sessie?.naam as string | null | undefined
-            ?? null;
-          const rol = sessie?.rol as string | null | undefined ?? null;
+          // Naam wordt asynchroon opgezocht (DB-opzoek) en daarna pas gelogd;
+          // de response is al verstuurd dus dit is fire-and-forget.
+          const gebruikerId = req.session.userId ?? null;
+          const rol = req.session.rol ?? null;
+          const statuscode = res.statusCode;
+          const methode = req.method;
+          const pad = req.path;
 
           const gesaneerdBody =
             typeof body === "object" && body !== null
               ? saniteerPayload(body as Record<string, unknown>, info.entiteit)
               : null;
 
-          logAudit({
-            gebruikerId: gebruikerId ?? null,
-            gebruikerNaam: gebruikerNaam ?? null,
-            ipAdres: req.ip ?? null,
-            sessieId: null,
-            module: info.module,
-            actie: METHODE_NAAR_ACTIE[req.method] ?? "bijwerken",
-            entiteit: info.entiteit,
-            entiteitId: info.entiteitId,
-            entiteitNaam: null,
-            oudeWaarde: null,
-            nieuweWaarde: gesaneerdBody,
-            workflowStatus: null,
-            gebouwId: null,
-            medewerkerId: null,
-            documentId: null,
-            meta: {
-              methode: req.method,
-              pad: req.path,
-              statuscode: res.statusCode,
-              rol: rol ?? undefined,
-            } as Record<string, unknown>,
-          });
+          // Naam asynchroon ophalen; bij fout → null, maar logAudit wordt ALTIJD
+          // aangeroepen. De .catch(() => null) staat vóór .then() zodat een
+          // mislukte naam-opzoek nooit de audit-insert zelf blokkeert.
+          getSessionGebruikerNaam(req)
+            .catch(() => null)
+            .then((gebruikerNaam) => {
+              logAudit({
+                gebruikerId,
+                gebruikerNaam,
+                ipAdres: req.ip ?? null,
+                sessieId: null,
+                module: info.module,
+                actie: METHODE_NAAR_ACTIE[methode] ?? "bijwerken",
+                entiteit: info.entiteit,
+                entiteitId: info.entiteitId,
+                entiteitNaam: null,
+                oudeWaarde: null,
+                nieuweWaarde: gesaneerdBody,
+                workflowStatus: null,
+                gebouwId: null,
+                medewerkerId: null,
+                documentId: null,
+                meta: {
+                  methode,
+                  pad,
+                  statuscode,
+                  rol: rol ?? undefined,
+                } as Record<string, unknown>,
+              });
+            })
+            .catch(() => {
+              /* logAudit-fouten nooit naar request laten lekken */
+            });
         }
       }
 

@@ -177,7 +177,7 @@ router.post("/calculaties", calcSchrijven, async (req, res): Promise<void> => {
         opnameId,
         status: status ?? "concept",
         omschrijving: omschrijving ?? null,
-        aangemaaktDoorId: (req.session as { userId?: number }).userId ?? null,
+        aangemaaktDoorId: req.session.userId ?? null,
         bijgewerktOp: new Date(),
       })
       .returning();
@@ -248,7 +248,7 @@ router.post("/calculaties/:id/kopieer", calcSchrijven, async (req, res): Promise
           gekopieerdVanId: bron.id,
           status: "concept",
           omschrijving: bron.omschrijving,
-          aangemaaktDoorId: (req.session as { userId?: number }).userId ?? null,
+          aangemaaktDoorId: req.session.userId ?? null,
           bijgewerktOp: new Date(),
         })
         .returning();
@@ -503,7 +503,7 @@ Alleen het JSON object, geen uitleg.`;
       entiteitstype: "calculatie",
       entiteitId: calcId,
       calculatie_id: calcId,
-      gebruikerId: (req.session as { userId?: number }).userId ?? null,
+      gebruikerId: req.session.userId ?? null,
       promptNaam: "calculatie-begroting-suggesties",
       promptVersie: "1.0.0",
     });
