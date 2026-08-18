@@ -306,6 +306,13 @@ if [ "${VORIGE_COMMIT}" = "$(git rev-parse HEAD)" ]; then
   echo "WAARSCHUWING: geen vorige commit om naar terug te rollen (eerste deploy?)." >&2
 else
   git reset --hard "${VORIGE_COMMIT}"
+  # Versievariabelen verversen: anders bakt de rollback-rebuild het commitlabel
+  # van de KAPOTTE release in de images en meldt /api/versie de verkeerde
+  # commit terwijl de code wél de vorige gezonde versie is (gezien in de
+  # terugvaltestrun van 18 aug 2026).
+  export GIT_COMMIT="$(git rev-parse --short HEAD)"
+  export GIT_COMMIT_LANG="$(git rev-parse HEAD)"
+  export BUILD_TIJD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   # Ook hier mag een falende build/start het script niet afbreken (set -e):
   # de healthcheck hieronder is het oordeel en meldt anders nooit dat
   # handmatige interventie nodig is.
