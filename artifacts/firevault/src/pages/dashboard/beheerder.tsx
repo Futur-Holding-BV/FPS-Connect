@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRol } from "@/context/rol-context";
+import { BeheerStatusBlok } from "@/components/beheer-status-blok";
 import { useAuth } from "@/context/auth-context";
 import { Link } from "wouter";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -394,6 +395,9 @@ function OperationeelDashboard({
           })()}
         </div>
       )}
+
+      {/* Systeembewaking (alleen echte hoofdbeheerder) — BEHEERSTATUS_01 */}
+      <BeheerStatusBlok />
 
       {/* KPI kaarten */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

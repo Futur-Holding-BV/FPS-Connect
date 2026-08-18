@@ -134,6 +134,7 @@ import marketingRouter, { marketingPubliekRouter } from "./marketing";
 import socialRouter from "./social";
 import merkenkastRouter from "./merkenkast";
 import beeldbankRouter from "./beeldbank";
+import beheerstatusRouter from "./beheerstatus";
 
 const router: IRouter = Router();
 
@@ -167,6 +168,8 @@ router.use((req, _res, next) => {
 });
 
 router.use(dashboardRouter);
+// BEHEERSTATUS_01: alleen-lezen doorgeefluik naar het FPS-Beheercentrum
+router.use(beheerstatusRouter);
 router.use(gebouwenRouter);
 router.use(voorzieningenRouter);
 router.use(gebouwNotitiesRouter);
