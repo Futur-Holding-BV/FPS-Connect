@@ -1,3 +1,15 @@
+## 2026-08-19 — MONTEUR_PWA_INSTALL_01: Android-installatiepoort voor `/app/`
+
+- **Buildtime HTML-injectie**: de Expo `single`-export krijgt na iedere bouw manifest-, Apple-touch- en mobiele PWA-tags plus een service-workerregistratie met scope `/app/`; de injectie vult ieder ontbrekend onderdeel afzonderlijk aan en kan daardoor niet stil overslaan op een gedeeltelijk gevulde HTML-kop.
+- **Chrome-installatievoorwaarden**: de build faalt als manifest, 192/512/maskable-iconen, Apple-touch-icon, service worker, `/app/`-scope of fetch-handler ontbreken.
+- **Productiepoort na uitrol**: de publieke `/app/`-HTML wordt met een Android Chrome-user-agent gecontroleerd, waarna manifest, service worker en alle drie iconen met HTTP 200 en niet-leeg moeten worden opgehaald. Falen loopt door de bestaande deployfout en faalmail.
+
+## 2026-08-19 — MONTEUR_NAV_01: terugknopvangnet en zes radiale keuzes
+
+- **Terugknopvangnet**: mobiele schermen zonder eigen terugknop krijgen centraal een toegankelijke terugknop; schermen met een bestaande terugknop en de hoofd-/loginroutes worden uitgesloten zodat geen dubbele navigatie ontstaat.
+- **Zes radiale keuzes**: de radiale ring toont maximaal zes bevoegdheidsgefilterde hoofdingangen. De bestaande knop **Meer** blijft beschikbaar voor overige functies.
+- **Bewijs**: monteur-typecheck groen; mobiele browsertest bevestigt zes ringopties, behoud van **Meer**, een werkende centrale terugknop op Werkdag en geen dubbele knop op Documenten.
+
 ## 2026-08-19 — SIGNALEN_LINKS_01: directiesignalen openen hun onderliggende informatie
 
 - **Klikbare signalen**: FIE-observaties in Directiekompas en Bedrijfskompas (live én opgeslagen) en signalen in het liquiditeitsdashboard tonen nu een concrete vervolgactie en navigeren rechtstreeks naar de relevante begroting, offertepipeline, planning, facturen, crediteuren of liquiditeit.

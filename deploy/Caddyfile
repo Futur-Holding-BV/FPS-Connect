@@ -40,18 +40,32 @@ connect.fps-one.nl {
     # /srv/public geserveerd worden (404).
     redir /app /app/ permanent
 
-    handle /app/* {
-        root * /srv/app
-        uri strip_prefix /app
+    # Deze matcher ziet het oorspronkelijke pad vóór `uri strip_prefix`.
+    # Daarom staan de /app/-paden hier voluit; zo blijven de installatieschil,
+    # service worker en manifest na iedere uitrol vers op telefoons.
+    @appvers path /app/ /app/index.html /app/sw.js /app/manifest.webmanifest /app/versie.json /app/asset-lijst.json
+    header @appvers Cache-Control "no-cache"
 
-        # index.html, sw.js en manifest nooit browser-cachen: de service
-        # worker regelt de update-cyclus (versie in cache-naam), de browser
-        # moet deze bestanden altijd vers kunnen ophalen na een uitrol.
-        @vers path / /index.html /sw.js /manifest.webmanifest /versie.json /asset-lijst.json
-        header @vers Cache-Control "no-cache"
+    # Statische /app/-bestanden krijgen bewust géén SPA-fallback. Anders zou
+    # een ontbrekend icoon of manifest als index.html met HTTP 200 terugkomen
+    # en de PWA-productiepoort ten onrechte groen worden.
+    route {
+        @appstatic path_regexp appstatic ^/app/.*\.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml|wav|mp3|m4a|pdf)$
+        handle @appstatic {
+            root * /srv/app
+            uri strip_prefix /app
+            file_server {
+                precompressed gzip br
+            }
+        }
 
-        try_files {path} /index.html
-        file_server
+        handle /app/* {
+            root * /srv/app
+            uri strip_prefix /app
+
+            try_files {path} /index.html
+            file_server
+        }
     }
 
     # Statische bestanden: deterministisch op pad en extensie gematcht,

@@ -68,12 +68,24 @@ RUN EXPO_PUBLIC_DOMAIN=connect.fps-one.nl \
     pnpm --filter @workspace/monteur-app exec expo export --platform web --output-dir dist-web
 RUN node artifacts/monteur-app/scripts/injecteer-pwa.mjs artifacts/monteur-app/dist-web/index.html
 RUN set -e; \
-    grep -q "manifest.webmanifest" artifacts/monteur-app/dist-web/index.html || (echo "FOUT: PWA-injectie ontbreekt in index.html" && exit 1); \
     test -f artifacts/monteur-app/dist-web/index.html || (echo "FOUT: monteur-app index.html ontbreekt" && exit 1); \
+    grep -Fq '<link rel="manifest" href="/app/manifest.webmanifest" />' artifacts/monteur-app/dist-web/index.html || (echo "FOUT: manifest-koppeling ontbreekt in index.html" && exit 1); \
+    grep -Fq '<link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png" />' artifacts/monteur-app/dist-web/index.html || (echo "FOUT: apple-touch-icon ontbreekt in index.html" && exit 1); \
+    grep -Fq "navigator.serviceWorker.register('/app/sw.js',{scope:'/app/'" artifacts/monteur-app/dist-web/index.html || (echo "FOUT: service worker wordt niet met scope /app/ geregistreerd" && exit 1); \
+    test "$(grep -o 'rel=\"manifest\"' artifacts/monteur-app/dist-web/index.html | wc -l)" -eq 1 || (echo "FOUT: index.html bevat niet exact één manifest-koppeling" && exit 1); \
+    test "$(grep -o 'rel=\"apple-touch-icon\"' artifacts/monteur-app/dist-web/index.html | wc -l)" -eq 1 || (echo "FOUT: index.html bevat niet exact één apple-touch-icon" && exit 1); \
+    test "$(grep -o 'navigator.serviceWorker.register' artifacts/monteur-app/dist-web/index.html | wc -l)" -eq 1 || (echo "FOUT: index.html bevat niet exact één service-workerregistratie" && exit 1); \
     JS=$(ls artifacts/monteur-app/dist-web/_expo/static/js/web/*.js 2>/dev/null | head -1); \
     test -n "$JS" || (echo "FOUT: geen JS-bundel in monteur-app dist-web" && exit 1); \
     test -f artifacts/monteur-app/dist-web/sw.js || (echo "FOUT: sw.js ontbreekt in monteur-app dist-web" && exit 1); \
     test -f artifacts/monteur-app/dist-web/manifest.webmanifest || (echo "FOUT: manifest ontbreekt in monteur-app dist-web" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/icons/pwa-192.png || (echo "FOUT: PWA-icoon 192 ontbreekt" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/icons/pwa-512.png || (echo "FOUT: PWA-icoon 512/maskable ontbreekt" && exit 1); \
+    test -f artifacts/monteur-app/dist-web/icons/apple-touch-icon.png || (echo "FOUT: apple-touch-icon ontbreekt" && exit 1); \
+    grep -Fq '"scope": "/app/"' artifacts/monteur-app/dist-web/manifest.webmanifest || (echo "FOUT: manifest-scope is niet /app/" && exit 1); \
+    grep -Fq '"purpose": "maskable"' artifacts/monteur-app/dist-web/manifest.webmanifest || (echo "FOUT: maskable PWA-icoon ontbreekt in manifest" && exit 1); \
+    node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("artifacts/monteur-app/dist-web/manifest.webmanifest","utf8"));const heeft=(src,sizes,purpose)=>m.icons?.some((i)=>i.src===src&&i.sizes===sizes&&i.type==="image/png"&&String(i.purpose??"").split(/\s+/).includes(purpose));if(m.id!=="/app/"||m.scope!=="/app/"||m.start_url!=="/app/"||m.display!=="standalone"||!heeft("/app/icons/pwa-192.png","192x192","any")||!heeft("/app/icons/pwa-512.png","512x512","any")||!heeft("/app/icons/pwa-512.png","512x512","maskable")){console.error("FOUT: manifest voldoet niet aan de Chrome-installatie-eisen");process.exit(1)}'; \
+    grep -Fq 'self.addEventListener("fetch"' artifacts/monteur-app/dist-web/sw.js || (echo "FOUT: service worker mist fetch-handler" && exit 1); \
     sed -i "s/__VERSIE__/${GIT_COMMIT}/" artifacts/monteur-app/dist-web/sw.js; \
     grep -q "fps-monteur-${GIT_COMMIT}" artifacts/monteur-app/dist-web/sw.js || (echo "FOUT: sw.js versie niet vervangen" && exit 1); \
     printf '{"commit":"%s","bouwtijd":"%s"}\n' "${GIT_COMMIT}" "${BUILD_TIJD}" > artifacts/monteur-app/dist-web/versie.json; \

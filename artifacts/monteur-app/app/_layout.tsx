@@ -16,7 +16,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Alert, Modal, Platform, Pressable, Text, View } from "react-native";
 import { isUitvoerendVeld } from "@/lib/buitendienst";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ruimte } from "@workspace/ontwerp";
 
@@ -45,6 +45,89 @@ setAuthTokenGetter(() => getHuidigToken());
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const ROOT_ROUTES_ZONDER_TERUGKNOP = new Set([
+  "/",
+  "/login",
+  "/menu",
+  "/onboarding",
+  "/vergrendeld",
+]);
+
+const ROUTES_MET_EIGEN_TERUGKNOP = [
+  /^\/berichten$/,
+  /^\/binnenkort$/,
+  /^\/documenten(?:\/|$)/,
+  /^\/document\//,
+  /^\/fabrikanten$/,
+  /^\/gebouw\//,
+  /^\/gesprek\//,
+  /^\/hrm(?:\/|$)/,
+  /^\/info$/,
+  /^\/kalender$/,
+  /^\/kwartaalcontrole$/,
+  /^\/magazijn(?:\/|$)/,
+  /^\/materiaal-aanvraag\//,
+  /^\/mijn-auto$/,
+  /^\/mijn-werk$/,
+  /^\/opname\/.+/,
+  /^\/planning$/,
+  /^\/plattegrond\//,
+  /^\/privacy$/,
+  /^\/projecten(?:\/|$)/,
+  /^\/uitvoerder\//,
+  /^\/uitvoering\//,
+  /^\/uren$/,
+  /^\/veiligheid$/,
+  /^\/voertuig-melding$/,
+  /^\/werkbak$/,
+  /^\/werkdag\/.+/,
+];
+
+function AlgemeneTerugknop() {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const heeftEigenKnop = ROUTES_MET_EIGEN_TERUGKNOP.some((patroon) => patroon.test(pathname));
+  if (ROOT_ROUTES_ZONDER_TERUGKNOP.has(pathname) || heeftEigenKnop) return null;
+
+  return (
+    <Pressable
+      testID="algemene-terugknop"
+      accessibilityRole="button"
+      accessibilityLabel="Terug"
+      hitSlop={10}
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace("/menu");
+      }}
+      style={({ pressed }) => ({
+        position: "absolute",
+        top: insets.top + ruimte.s,
+        left: ruimte.m,
+        zIndex: 100,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: c.card,
+        borderWidth: 1,
+        borderColor: c.border,
+        opacity: pressed ? 0.72 : 1,
+        shadowColor: c.foreground,
+        shadowOpacity: 0.14,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+      })}
+    >
+      <Ionicons name="arrow-back" size={24} color={c.foreground} />
+    </Pressable>
+  );
+}
 
 function LmraBewaker() {
   const c = useColors();
@@ -590,6 +673,7 @@ function RootLayoutNav() {
         <Stack.Screen name="magazijn/picklijst/[id]" />
         <Stack.Screen name="magazijn/inkooporders" />
       </Stack>
+      <AlgemeneTerugknop />
     </>
   );
 }

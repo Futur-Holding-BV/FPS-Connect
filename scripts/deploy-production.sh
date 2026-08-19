@@ -169,6 +169,15 @@ app_versiecheck() {
   return 1
 }
 
+# Chrome-installatiepoort voor de monteur-PWA. Deze controle draait via dezelfde
+# publieke URL en Android user-agent als een telefoon. Een fout komt uit dit
+# deployscript terug als exit 1; de bestaande GitHub Actions-faalmail wordt
+# daardoor zonder aparte mailimplementatie geactiveerd.
+pwa_productiecheck() {
+  echo "PWA-controle: manifest, service worker en iconen op https://connect.fps-one.nl/app/ ..."
+  bash scripts/controleer-monteur-pwa.sh "https://connect.fps-one.nl/app/"
+}
+
 # ─── STAP 2: databaseback-up (bestaande compose backup-opdracht) ─────────────
 # --profile backup is vereist: de backup-service zit in het "backup"-profiel
 # en is standaard uitgesloten van compose-commando's zonder die vlag.
@@ -361,23 +370,25 @@ if ! ${COMPOSE} up -d --remove-orphans db api caddy; then
 fi
 stap_tijd "containers-starten"
 
-# ─── STAP 9 + 10: healthcheck + versiecheck; beide moeten slagen ─────────────
+# ─── STAP 9 + 10: healthcheck + versie-/PWA-check; alles moet slagen ─────────
 # De healthcheck bewijst dat de API antwoordt. De versiecheck bewijst daarna
 # dat de JUISTE release antwoordt. Zonder versiecheck zou een scenario waarbij
 # de nieuwe containers crashen maar de oude stack nog draait als geslaagd
 # worden gemarkeerd.
-echo "=== STAP 9/10: healthcheck + versiecheck ==="
+echo "=== STAP 9/10: healthcheck + versiecheck + PWA-controle ==="
 DEPLOY_VERSIE_COMMIT="$(git rev-parse HEAD)"
 VERSIECHECK_GESLAAGD=0
 if healthcheck; then
   stap_tijd "healthcheck"
-  if versiecheck "${DEPLOY_VERSIE_COMMIT}" && app_versiecheck "${DEPLOY_VERSIE_COMMIT}"; then
+  if versiecheck "${DEPLOY_VERSIE_COMMIT}" \
+    && app_versiecheck "${DEPLOY_VERSIE_COMMIT}" \
+    && pwa_productiecheck; then
     # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
     docker image prune -f --filter "until=72h" || true
-    echo "Deploy voltooid: release is gezond en de juiste versie draait (API én /app)."
+    echo "Deploy voltooid: release is gezond, de juiste versie draait en /app/ voldoet aan de PWA-installatiepoort."
     exit 0
   fi
-  echo "FOUT: healthcheck geslaagd maar versiecheck (API of /app) faalde — de OUDE release draait mogelijk nog." >&2
+  echo "FOUT: healthcheck geslaagd maar versiecheck of PWA-controle faalde." >&2
   echo "Automatische rollback wordt gestart..." >&2
   VERSIECHECK_GESLAAGD=1   # markeer dat healthcheck slaagde maar versiecheck niet (voor logging)
 fi

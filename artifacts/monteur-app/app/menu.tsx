@@ -160,7 +160,6 @@ export default function MenuScherm() {
 
   const meerActies: RadiaalActie[] = ([
     { sleutel: "werkbak", label: "Werkbak", icoon: "file-tray-full-outline", badge: werkbakAantal?.totaal ?? 0, onPress: () => router.push("/werkbak" as "/werkdag") },
-    // §4: eigen gegevens zijn een basisrecht; "Personeel" (anderen) vereist de module.
     { sleutel: "personeel", label: magPersoneel ? "Personeel" : "Mijn gegevens", icoon: "people-outline", onPress: () => router.push("/hrm") },
     { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
     { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },

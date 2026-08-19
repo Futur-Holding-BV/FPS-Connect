@@ -219,8 +219,8 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
   const rotatie = useSharedValue(0);
   const vorigeHoek = useSharedValue(0);
 
-  const zichtbaar = acties.slice(0, 10);
-  const totaal = zichtbaar.length;
+  const zichtbaar = acties.slice(0, 6);
+  const totaal = Math.max(zichtbaar.length, 1);
   const stap = (2 * Math.PI) / totaal;
 
   const minDim = Math.min(vlak.w, vlak.h);
@@ -504,7 +504,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
             {meerActies.length > 0 && (
               <>
                 <Pressable
-                  onPress={() => setMeerOpen((v) => !v)}
+                  onPress={() => setMeerOpen((waarde) => !waarde)}
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -512,9 +512,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     borderRadius: 999,
-                    backgroundColor: pressed
-                      ? "rgba(255,255,255,0.16)"
-                      : "rgba(255,255,255,0.09)",
+                    backgroundColor: pressed ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.09)",
                     marginBottom: meerOpen ? 16 : 0,
                   })}
                 >
@@ -528,14 +526,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                   />
                 </Pressable>
                 {meerOpen && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      gap: 16,
-                      justifyContent: "center",
-                    }}
-                  >
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, justifyContent: "center" }}>
                     {meerActies.map((actie) => (
                       <Pressable
                         key={actie.sleutel}
