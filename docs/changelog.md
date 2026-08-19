@@ -543,6 +543,13 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Uitrol**: `deploy/Dockerfile.caddy` bouwt de webexport mee (harde verificaties + PWA-injectie + versiestempel), `deploy/Caddyfile` serveert /app vóór de statische handle met no-cache op index/sw/manifest, en `scripts/deploy-production.sh` keurt een deploy pas goed als óók `/app/versie.json` de nieuwe commit meldt (anders automatische rollback). Antwoord: `docs/antwoorden/MONTEUR_NU_01.md`; meting: `docs/metingen/MONTEUR_NU_01-meting-vooraf.md`. Nameting op een echte telefoon volgt na de eerstvolgende productie-uitrol. Review-naloop: het bewijsscript bewijs-calc-kern-offerte (uit CALC_KERN_01) schrijft testdata en weigert productie nu onvoorwaardelijk (`weigerProductieVoorSchrijvendScript`, geen PROD_LEZEN_TOEGESTAAN-vrijstelling) en gebruikt per run willekeurig gegenereerde wegwerp-inloggegevens i.p.v. vaste credentials in de repo.
 
 
+## 2026-08-18 — GEBRUIKERS_01 gap: bestaande medewerkers zonder contract in contractbewaking
+
+- **Inventarisatie**: nieuw endpoint `GET /api/contract-bewaking/zonder-contract` geeft alle actieve medewerkers terug met een bewakingsplichtig dienstverband (vast/tijdelijk/oproep/stage) maar zonder rij in `arbeidsovereenkomsten`.
+- **Beheerder-gestuurde aanvulling**: `POST /api/contract-bewaking/zonder-contract/:medewerkerId/aanvullen` maakt per bevestiging een contract aan op basis van de bestaande medewerker-data (startdatum, dienstverband → contracttype, cao, uren). Duplicate-guard en 409 bij reeds bestaand contract; 422 bij ontbrekende startdatum.
+- **Frontend**: contractbewaking-pagina (`/personeel/contracten`) toont nu een amber-paneel "Medewerkers zonder arbeidsovereenkomst" voor beheerders (personeel:2). Per medewerker staan dienstverband, voorgesteld contracttype, functie en startdatum vermeld. Bij tijdelijk/oproep/stage is een optionele einddatum in te vullen vóór bevestiging. Na aanvullen verdwijnt de rij en herlaadt het dashboard.
+- Na aanvullen activeert de bestaande `voerContractBewakingUit()` direct signaleringen voor contracten mét einddatum.
+
 ## 2026-08-18 — INKOOP_BOEKING_01: geen faalmail-herhaling bij ontbrekende btw-code
 
 - **Ontbrekende boekvelden → controletaak, geen faalmail**: als een direct betaalde inkoopfactuur automatisch geboekt wordt maar de btw-code (of een ander verplicht boekingsveld) ontbreekt, stuurt het systeem nu één gededupliceerd signaal (`ontbrekende_boekgegevens`) en zet de factuur terug op `controle_nodig`. De achtergrondlus probeert daarna niet meer elke 15 minuten opnieuw te boeken — er gaat dus geen herhaalde faalmail naar de hoofdbeheerders.

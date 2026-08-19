@@ -15,7 +15,7 @@ import {
   verlofAanvragenTable,
   zzpOvereenkomstenTable,
 } from "@workspace/db/schema";
-import { eq, and, desc, inArray, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
@@ -1126,6 +1126,171 @@ Schrijf alles in het Nederlands.`;
     res.json({ samenvatting, aandachtspunten, wettelijke_risicos: risicos, ai_beschikbaar: true });
   } catch (err) {
     res.status(500).json({ error: "AI niet beschikbaar. Probeer later opnieuw." });
+  }
+});
+
+// ── Inventarisatie: medewerkers zonder arbeidsovereenkomst ────────────────────
+//
+// Vertaaltabel gelijk aan DIENSTVERBAND_NAAR_CONTRACTTYPE in hrm.ts: zzp,
+// payroll, detachering, directie vallen buiten de contractbewaking.
+const DIENSTVERBAND_BEWAKING_TYPES = ["vast", "tijdelijk", "oproep", "stage"] as const;
+const DIENSTVERBAND_NAAR_CONTRACTTYPE_CB: Record<string, string> = {
+  vast: "onbepaalde_tijd",
+  tijdelijk: "bepaalde_tijd",
+  oproep: "oproep",
+  stage: "stage",
+};
+
+// GET /contract-bewaking/zonder-contract
+// Actieve medewerkers met een bewakingsplichtig dienstverband maar zonder rij
+// in arbeidsovereenkomsten. Gebruikt door de beheerder om de gap te inventariseren.
+router.get("/contract-bewaking/zonder-contract", schrijven, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select({
+        id: medewerkersTable.id,
+        naam: medewerkersTable.naam,
+        dienstverband: medewerkersTable.dienstverband,
+        werkgever_id: medewerkersTable.werkgeverId,
+        functie_id: medewerkersTable.functieId,
+        in_dienst_sinds: medewerkersTable.inDienstSinds,
+        cao: medewerkersTable.cao,
+        uren: medewerkersTable.contracturenPerWeek,
+        werkgever_naam: werkgeversTable.naam,
+        functie_naam: functiesTable.naam,
+      })
+      .from(medewerkersTable)
+      .leftJoin(arbeidsovereenkomstenTable, eq(arbeidsovereenkomstenTable.medewerkerId, medewerkersTable.id))
+      .leftJoin(werkgeversTable, eq(werkgeversTable.id, medewerkersTable.werkgeverId))
+      .leftJoin(functiesTable, eq(functiesTable.id, medewerkersTable.functieId))
+      .where(
+        and(
+          eq(medewerkersTable.actief, true),
+          inArray(medewerkersTable.dienstverband, [...DIENSTVERBAND_BEWAKING_TYPES]),
+          isNull(arbeidsovereenkomstenTable.id),
+        ),
+      );
+    res.json(rijen);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /contract-bewaking/zonder-contract/:medewerkerId/aanvullen
+// Maakt een arbeidsovereenkomst aan voor een bestaande medewerker die er geen heeft.
+// Beheerder-gestuurde actie: voorstel tonen via GET, bevestigen via POST.
+// Body (optioneel): { eind_datum?: string } — bij bepaalde tijd/oproep/stage.
+// Race-vrij: duplicate-check + insert in één transactie met medewerker-advisory-lock.
+router.post("/contract-bewaking/zonder-contract/:medewerkerId/aanvullen", schrijven, async (req, res): Promise<void> => {
+  const medewerkerId = parseInt(String(req.params.medewerkerId));
+  if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
+
+  // Valideer eind_datum strikt voordat we de transactie opstarten.
+  const eindDatumRaw: unknown = req.body?.eind_datum;
+  let eindDatumGevraagd: string | null = null;
+  if (eindDatumRaw !== undefined && eindDatumRaw !== null && eindDatumRaw !== "") {
+    if (typeof eindDatumRaw !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(eindDatumRaw)) {
+      return void res.status(422).json({ error: "eind_datum moet het formaat YYYY-MM-DD hebben" });
+    }
+    eindDatumGevraagd = eindDatumRaw;
+  }
+
+  try {
+    const rij = await db.transaction(async (tx) => {
+      // Advisory lock per medewerker: voorkomt dat twee gelijktijdige aanroepen
+      // beide de duplicate-check doorstaan en twee contracten aanmaken.
+      // Normale contracthistorie (meerdere rijen voor dezelfde medewerker) blijft
+      // toegestaan — de lock bewaakt alleen deze atomaire check-dan-insert.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${medewerkerId})`);
+
+      const [medewerker] = await tx
+        .select({
+          id: medewerkersTable.id,
+          naam: medewerkersTable.naam,
+          dienstverband: medewerkersTable.dienstverband,
+          werkgeverId: medewerkersTable.werkgeverId,
+          functieId: medewerkersTable.functieId,
+          inDienstSinds: medewerkersTable.inDienstSinds,
+          cao: medewerkersTable.cao,
+          contracturenPerWeek: medewerkersTable.contracturenPerWeek,
+          actief: medewerkersTable.actief,
+        })
+        .from(medewerkersTable)
+        .where(and(eq(medewerkersTable.id, medewerkerId), eq(medewerkersTable.actief, true)))
+        .limit(1);
+
+      if (!medewerker) throw Object.assign(new Error("Medewerker niet gevonden of niet actief"), { status: 404 });
+
+      const contracttype = DIENSTVERBAND_NAAR_CONTRACTTYPE_CB[medewerker.dienstverband];
+      if (!contracttype) {
+        throw Object.assign(
+          new Error(`Dienstverband '${medewerker.dienstverband}' valt buiten de contractbewaking`),
+          { status: 422 },
+        );
+      }
+
+      if (!medewerker.inDienstSinds) {
+        throw Object.assign(
+          new Error("Medewerker heeft geen startdatum — voeg eerst 'in dienst sinds' toe op de medewerker-detailpagina"),
+          { status: 422 },
+        );
+      }
+
+      // Chronologievalidatie: einddatum mag niet vóór de startdatum liggen.
+      if (eindDatumGevraagd && contracttype !== "onbepaalde_tijd") {
+        if (eindDatumGevraagd <= medewerker.inDienstSinds) {
+          throw Object.assign(
+            new Error(`Einddatum (${eindDatumGevraagd}) mag niet vóór of op de startdatum (${medewerker.inDienstSinds}) liggen`),
+            { status: 422 },
+          );
+        }
+      }
+
+      // Duplicate-guard binnen de transactie: atomair door de advisory lock.
+      const [bestaand] = await tx
+        .select({ id: arbeidsovereenkomstenTable.id })
+        .from(arbeidsovereenkomstenTable)
+        .where(eq(arbeidsovereenkomstenTable.medewerkerId, medewerkerId))
+        .limit(1);
+      if (bestaand) throw Object.assign(new Error("Medewerker heeft al een arbeidsovereenkomst"), { status: 409 });
+
+      const eindDatum = contracttype === "onbepaalde_tijd" ? null : eindDatumGevraagd;
+
+      const [nieuw] = await tx
+        .insert(arbeidsovereenkomstenTable)
+        .values({
+          medewerkerId,
+          werkgeverId: medewerker.werkgeverId ?? null,
+          functieId: medewerker.functieId ?? null,
+          contracttype,
+          startDatum: medewerker.inDienstSinds,
+          // onbepaalde_tijd heeft geen einddatum; bij bepaalde_tijd/oproep/stage mag
+          // de beheerder een einddatum meegeven (ook later toe te voegen via PATCH).
+          eindDatum,
+          cao: medewerker.cao ?? null,
+          arbeidsduurPerWeek: medewerker.contracturenPerWeek ?? null,
+          urenMinPerWeek: contracttype === "oproep" ? 0 : null,
+          status: "actief",
+          notities: "Aangemaakt via contractbewaking — aanvulling bestaande medewerker (pre-GEBRUIKERS_01).",
+          aangemaaktDoorId: req.session.userId ?? null,
+        })
+        .returning();
+
+      return nieuw;
+    });
+
+    // Activeer bewaking voor dit contract als het een einddatum heeft.
+    if (rij.eindDatum) await voerContractBewakingUit();
+
+    res.status(201).json({ id: rij.id });
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    if (e.status && e.status >= 400 && e.status < 500) {
+      return void res.status(e.status).json({ error: e.message ?? "Ongeldige aanvraag" });
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

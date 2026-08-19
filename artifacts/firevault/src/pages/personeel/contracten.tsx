@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, ChevronRight, Clock, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { AlertTriangle, ChevronRight, Clock, RefreshCw, UserX, CheckCircle2, Loader2 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,19 @@ type Dashboard = {
   besluiten_in_behandeling: BesluitRegel[];
 };
 
+type ZonderContractRegel = {
+  id: number;
+  naam: string | null;
+  dienstverband: string;
+  werkgever_id: number | null;
+  functie_id: number | null;
+  in_dienst_sinds: string | null;
+  cao: string | null;
+  uren: number | null;
+  werkgever_naam: string | null;
+  functie_naam: string | null;
+};
+
 // ── Labels ───────────────────────────────────────────────────────────────────
 
 const CONTRACTTYPE_LABEL: Record<string, string> = {
@@ -67,6 +81,20 @@ const CONTRACTTYPE_LABEL: Record<string, string> = {
   oproep: "Oproepcontract",
   stage: "Stage",
   leer_werk: "Leer-werk",
+};
+
+const DIENSTVERBAND_CONTRACTTYPE: Record<string, string> = {
+  vast: "onbepaalde_tijd",
+  tijdelijk: "bepaalde_tijd",
+  oproep: "oproep",
+  stage: "stage",
+};
+
+const DIENSTVERBAND_LABEL: Record<string, string> = {
+  vast: "Vast",
+  tijdelijk: "Tijdelijk",
+  oproep: "Oproep",
+  stage: "Stage",
 };
 
 const ERNST_VARIANT: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
@@ -157,11 +185,186 @@ function BucketKaart({
   );
 }
 
+// ── Zonder-contract paneel ────────────────────────────────────────────────────
+
+function ZonderContractPaneel({ onAangevuld }: { onAangevuld: () => void }) {
+  const [lijst, setLijst] = useState<ZonderContractRegel[]>([]);
+  const [laden, setLaden] = useState(true);
+  const [fout, setFout] = useState<string | null>(null);
+  // Per-medewerker state: bezig met aanvullen, foutmelding, ingevulde einddatum
+  const [bezigId, setBezigId] = useState<number | null>(null);
+  const [aangevuldIds, setAangevuldIds] = useState<Set<number>>(new Set());
+  const [eindData, setEindData] = useState<Record<number, string>>({});
+  const [rijFout, setRijFout] = useState<Record<number, string>>({});
+
+  const laadLijst = useCallback(async () => {
+    setLaden(true);
+    setFout(null);
+    try {
+      const resp = await fetch("/api/contract-bewaking/zonder-contract");
+      if (!resp.ok) throw new Error("Kon lijst niet laden");
+      setLijst(await resp.json());
+    } catch {
+      setFout("Lijst kon niet worden geladen.");
+    } finally {
+      setLaden(false);
+    }
+  }, []);
+
+  useEffect(() => { laadLijst(); }, [laadLijst]);
+
+  async function aanvullen(medewerker: ZonderContractRegel) {
+    setBezigId(medewerker.id);
+    setRijFout((prev) => ({ ...prev, [medewerker.id]: "" }));
+    try {
+      const contracttype = DIENSTVERBAND_CONTRACTTYPE[medewerker.dienstverband];
+      const eindDatum = contracttype !== "onbepaalde_tijd" ? (eindData[medewerker.id] ?? null) : null;
+      const resp = await fetch(`/api/contract-bewaking/zonder-contract/${medewerker.id}/aanvullen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eind_datum: eindDatum || null }),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        setRijFout((prev) => ({ ...prev, [medewerker.id]: body.error ?? "Aanvullen mislukt" }));
+        return;
+      }
+      setAangevuldIds((prev) => new Set([...prev, medewerker.id]));
+      onAangevuld();
+    } finally {
+      setBezigId(null);
+    }
+  }
+
+  const zichtbaar = lijst.filter((m) => !aangevuldIds.has(m.id));
+
+  if (laden) {
+    return (
+      <div className="space-y-2">
+        {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+      </div>
+    );
+  }
+
+  if (fout) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>{fout}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (zichtbaar.length === 0 && aangevuldIds.size === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <UserX className="h-4 w-4 text-amber-600" />
+        <h2 className="text-sm font-semibold text-slate-700">Medewerkers zonder arbeidsovereenkomst</h2>
+        {zichtbaar.length > 0 && (
+          <Badge variant="outline" className="text-xs text-amber-700 border-amber-400">{zichtbaar.length}</Badge>
+        )}
+      </div>
+      <p className="text-xs text-slate-500 mb-3">
+        Deze medewerkers hebben een bewakingsplichtig dienstverband maar geen contract-record.
+        Bevestig per medewerker om ze op te nemen in de contractbewaking.
+      </p>
+      <Card className="border-l-4 border-amber-400 bg-amber-50">
+        <CardContent className="p-0">
+          {zichtbaar.length === 0 ? (
+            <div className="flex items-center gap-2 px-4 py-4 text-sm text-green-700">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              Alle medewerkers zijn aangevuld.
+            </div>
+          ) : (
+            <ul className="divide-y divide-amber-100">
+              {zichtbaar.map((m) => {
+                const contracttype = DIENSTVERBAND_CONTRACTTYPE[m.dienstverband];
+                const heeftEindDatum = contracttype && contracttype !== "onbepaalde_tijd";
+                const isBezig = bezigId === m.id;
+                const isAangevuld = aangevuldIds.has(m.id);
+                const rijFout2 = rijFout[m.id];
+
+                return (
+                  <li key={m.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link href={`/personeel/${m.id}?tab=contracten`}>
+                            <span className="text-sm font-medium text-slate-800 hover:underline cursor-pointer">
+                              {m.naam ?? "Onbekend"}
+                            </span>
+                          </Link>
+                          <Badge variant="secondary" className="text-xs">
+                            {DIENSTVERBAND_LABEL[m.dienstverband] ?? m.dienstverband}
+                          </Badge>
+                          {contracttype && (
+                            <span className="text-xs text-slate-500">
+                              → {CONTRACTTYPE_LABEL[contracttype] ?? contracttype}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {m.functie_naam ?? "Functie onbekend"}
+                          {m.werkgever_naam ? ` · ${m.werkgever_naam}` : ""}
+                          {m.in_dienst_sinds ? ` · In dienst sinds ${formatDatum(m.in_dienst_sinds)}` : " · Geen startdatum"}
+                        </p>
+                        {heeftEindDatum && !isAangevuld && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <label className="text-xs text-slate-600 shrink-0">Einddatum contract:</label>
+                            <Input
+                              type="date"
+                              className="h-7 text-xs w-40"
+                              value={eindData[m.id] ?? ""}
+                              onChange={(e) => setEindData((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                            />
+                            <span className="text-xs text-slate-400">(optioneel — later in te vullen)</span>
+                          </div>
+                        )}
+                        {rijFout2 && (
+                          <p className="text-xs text-red-600 mt-1">{rijFout2}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0">
+                        {isAangevuld ? (
+                          <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Aangevuld
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={isBezig || !m.in_dienst_sinds}
+                            onClick={() => aanvullen(m)}
+                            title={!m.in_dienst_sinds ? "Voeg eerst een startdatum toe op de medewerker-detailpagina" : undefined}
+                          >
+                            {isBezig ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                            ) : null}
+                            Aanvullen
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ── Hoofd-component ───────────────────────────────────────────────────────────
 
 export default function ContractbewakingPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const mag = heeftNiveau("personeel", 1);
+  const magSchrijven = heeftNiveau("personeel", 2);
 
   const [data, setData] = useState<Dashboard | null>(null);
   const [laden, setLaden] = useState(true);
@@ -232,6 +435,11 @@ export default function ContractbewakingPagina() {
           Vernieuwen
         </Button>
       </div>
+
+      {/* Medewerkers zonder contract — alleen zichtbaar voor schrijf-bevoegden */}
+      {magSchrijven && (
+        <ZonderContractPaneel onAangevuld={laadDashboard} />
+      )}
 
       {fout && (
         <Alert variant="destructive">
