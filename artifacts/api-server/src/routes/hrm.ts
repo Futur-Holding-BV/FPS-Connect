@@ -50,6 +50,7 @@ import {
   werkgeverBankrekeningLogsTable,
 } from "@workspace/db";
 import { isGeldigIban, normaliseerIban } from "../lib/iban";
+import { berekenLeeftijd, jongeWerknemerMelding } from "../lib/jongeWerknemerRegel";
 import { stuurBankrekeningGewijzigdMail } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { isRedelijkeDatum, ongeldigeDatumvelden } from "../lib/datumSaniteit";
@@ -1384,7 +1385,19 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
 
     invalideerContext("medewerker", m.id);
     const json = await medewerkerNaarJson(m);
-    res.status(201).json(collectieveDagenWaarschuwing ? { ...json, waarschuwing: collectieveDagenWaarschuwing } : json);
+
+    // ATW-melding voor jonge medewerkers (<18 jaar): niet-blokkerend, maar
+    // de onboarding-UI moet dit tonen zodat de beheerder bewust is van de regels.
+    const leeftijdNieuw = berekenLeeftijd(m.geboortedatum ?? null);
+    const jongeWerknemer = leeftijdNieuw !== null && leeftijdNieuw < 18
+      ? jongeWerknemerMelding(leeftijdNieuw, [])
+      : undefined;
+
+    res.status(201).json({
+      ...json,
+      ...(collectieveDagenWaarschuwing ? { waarschuwing: collectieveDagenWaarschuwing } : {}),
+      ...(jongeWerknemer ? { jonge_werknemer: jongeWerknemer } : {}),
+    });
   } catch (err) {
     // Race met gelijktijdige onboarding: de unieke index op gebruiker_id is de
     // laatste wacht; vertaal een unique-violation naar hetzelfde 409-contract.
@@ -1937,7 +1950,16 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
     });
     if (!m) return void res.status(404).json({ error: "Medewerker niet gevonden" });
     invalideerContext("medewerker", m.id);
-    res.json(await medewerkerNaarJson(m));
+    const jsonPatch = await medewerkerNaarJson(m);
+
+    // ATW-melding voor jonge medewerkers (<18 jaar): zowel bij eerste invoer
+    // als bij wijziging geboortedatum tonen zodat de beheerder altijd geïnformeerd is.
+    const leeftijdPatch = berekenLeeftijd(m.geboortedatum ?? null);
+    const jongeWerknemerPatch = leeftijdPatch !== null && leeftijdPatch < 18
+      ? jongeWerknemerMelding(leeftijdPatch, [])
+      : undefined;
+
+    res.json(jongeWerknemerPatch ? { ...jsonPatch, jonge_werknemer: jongeWerknemerPatch } : jsonPatch);
   } catch (err) {
     // Race met gelijktijdige koppeling: unieke index vangt het; zelfde 409-contract.
     if (isUniekeGebruikerKoppeling(err)) {
@@ -6270,6 +6292,62 @@ router.post("/hrm/poortwachter/:dossierId/mijlpalen/:type/terugsturen", requireB
     });
   if (!bijgewerkt) return void pwtConflict(res, p.dossierId, p.type);
   return void res.json(bijgewerkt);
+});
+
+// ── Jonge werknemers — ATW-overzicht ────────────────────────────────────────
+// Geeft alle actieve medewerkers terug die op de peildatum jonger dan 18 jaar
+// zijn, inclusief hun leeftijd en de van toepassing zijnde ATW-beperkingen.
+// Toegang: personeel-leesrecht (niveau 1); conform het bevoegdhedenschema.
+router.get("/hrm/jonge-werknemers", lezen, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select({
+        id: medewerkersTable.id,
+        naam: medewerkersTable.naam,
+        geboortedatum: medewerkersTable.geboortedatum,
+        werkmaatschappij: medewerkersTable.werkmaatschappij,
+        functieId: medewerkersTable.functieId,
+        inDienstSinds: medewerkersTable.inDienstSinds,
+        dienstverband: medewerkersTable.dienstverband,
+        contracturenPerWeek: medewerkersTable.contracturenPerWeek,
+        medewerkerStatus: medewerkersTable.medewerkerStatus,
+      })
+      .from(medewerkersTable)
+      .where(
+        and(
+          eq(medewerkersTable.actief, true),
+          isNull(medewerkersTable.afgeschermdOp),
+          isNotNull(medewerkersTable.geboortedatum),
+        ),
+      )
+      .orderBy(medewerkersTable.naam);
+
+    const vandaag = new Date();
+    const result = rijen
+      .map((r) => {
+        const leeftijd = berekenLeeftijd(r.geboortedatum ?? null, vandaag);
+        if (leeftijd === null || leeftijd >= 18) return null;
+        return {
+          id: r.id,
+          naam: r.naam,
+          geboortedatum: r.geboortedatum,
+          leeftijd,
+          werkmaatschappij: r.werkmaatschappij,
+          functie_id: r.functieId,
+          in_dienst_sinds: r.inDienstSinds,
+          dienstverband: r.dienstverband,
+          contracturen_per_week: r.contracturenPerWeek,
+          medewerker_status: r.medewerkerStatus,
+          atw_beperkingen: jongeWerknemerMelding(leeftijd, []).beperkingen,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ jonge_werknemers: result, totaal: result.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
 });
 
 export default router;

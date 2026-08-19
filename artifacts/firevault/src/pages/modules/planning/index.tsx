@@ -41,6 +41,7 @@ import {
   CheckCircle2, XCircle, Wrench, Car, AlertCircle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Constanten ─────────────────────────────────────────────────────────────
 
@@ -700,6 +701,7 @@ export default function ModulesPlanning() {
   const [nieuweSluitingType, setNieuweSluitingType] = useState("bedrijfssluiting");
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // ── Datum bereik ─────────────────────────────────────────────────────────
 
@@ -1010,11 +1012,25 @@ export default function ModulesPlanning() {
     try {
       if (bewerkenId) {
         const medewerker_id = dialoog.geselecteerdeMedewerkers[0] ?? undefined;
-        await updateMut.mutateAsync({ id: bewerkenId, data: { ...payload, medewerker_id } });
+        const bijgewerkt = await updateMut.mutateAsync({ id: bewerkenId, data: { ...payload, medewerker_id } });
+        const jwUpd = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+        if (jwUpd) {
+          const jwUpdDesc = jwUpd.schendingen && jwUpd.schendingen.length > 0
+            ? jwUpd.schendingen.map(s => s.omschrijving).join(" | ")
+            : (jwUpd.beperkingen?.[0]?.omschrijving ?? "ATW-beperkingen zijn van toepassing.");
+          toast({ title: `Let op: medewerker is ${jwUpd.leeftijd} jaar (minderjarig)`, description: jwUpdDesc });
+        }
       } else {
         const ids = dialoog.geselecteerdeMedewerkers.length ? dialoog.geselecteerdeMedewerkers : [undefined];
         for (const mid of ids) {
-          await createMut.mutateAsync({ data: { ...payload, medewerker_id: mid ?? null } });
+          const aangemaakt = await createMut.mutateAsync({ data: { ...payload, medewerker_id: mid ?? null } });
+          const jwCrt = (aangemaakt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+          if (jwCrt) {
+            const jwCrtDesc = jwCrt.schendingen && jwCrt.schendingen.length > 0
+              ? jwCrt.schendingen.map(s => s.omschrijving).join(" | ")
+              : (jwCrt.beperkingen?.[0]?.omschrijving ?? "ATW-beperkingen zijn van toepassing.");
+            toast({ title: `Let op: medewerker is ${jwCrt.leeftijd} jaar (minderjarig)`, description: jwCrtDesc });
+          }
         }
         queryClient.invalidateQueries({ queryKey: ["planning-items"] });
         sluitDialoog();

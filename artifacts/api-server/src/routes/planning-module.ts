@@ -16,8 +16,9 @@ import {
   planningMeerwerkTable,
   urenRegistratiesTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, ne, type SQL } from "drizzle-orm";
 import { requireBevoegdheid, getSessionUserId } from "../middlewares/auth";
+import { type AtwSchending, berekenLeeftijd, jongeWerknemerMelding, berekenAtwSchendingen, berekenPlanningBijdrageMinderjarig, isoWeekGrenzen, vierWekenGrenzen, overlapDagen, enumDagen, enumWeken, maandagPlusWeken } from "../lib/jongeWerknemerRegel";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { PLANNING_REISTIJD_PROMPT } from "../lib/aiPrompts";
 
@@ -289,7 +290,136 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res): Promi
       ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, row.gebouwId)).limit(1)
       : [];
 
-    res.status(201).json(mapItem(row, null, gebouw[0]?.naam ?? null));
+    // ATW-melding voor jonge medewerkers (16/17 jaar): niet-blokkerend.
+    // Geannuleerde items tellen niet mee — sla de volledige evaluatie over.
+    let jongeWerknemer: ReturnType<typeof jongeWerknemerMelding> | undefined;
+    if (row.medewerkerId && row.status !== "geannuleerd") {
+      const [med] = await db
+        .select({ geboortedatum: medewerkersTable.geboortedatum })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.id, row.medewerkerId))
+        .limit(1);
+      if (med?.geboortedatum) {
+        // Leeftijd op de planningsdatum zodat toekomstige/historische items correct
+        // worden beoordeeld rondom de 18e verjaardag.
+        const peildatum = new Date(`${datumStr}T00:00:00`);
+        const leeftijd = berekenLeeftijd(med.geboortedatum, peildatum);
+        if (leeftijd !== null && leeftijd < 18) {
+          const datumEindStr = row.datumEind ?? datumStr;
+          const { van: v4Van, tot: v4Tot } = vierWekenGrenzen(datumStr);
+
+          // Weken die het item zelf raakt (voor dag/week/4wk-check)
+          const itemWeken = enumWeken(datumStr, datumEindStr);
+          const lastMaandagStr = itemWeken.at(-1)!;
+
+          // Een item in week W draagt ook bij aan 4-weken-vensters die eindigen
+          // in W+1, W+2 en W+3 — die moeten ook gecontroleerd worden.
+          const extraWekenV4 = [1, 2, 3].map(n => maandagPlusWeken(lastMaandagStr, n));
+
+          // queryTot: dekt t/m Sunday van W+3 zodat items in die weken meegenomen
+          // worden in de 4-weken-totalen. Ook dagitems in die extra weken tellen mee.
+          const { tot: extendedSunday } = isoWeekGrenzen(extraWekenV4[2]!);
+          const queryTot = extendedSunday > v4Tot ? extendedSunday : v4Tot;
+
+          const alleItems = await db
+            .select({
+              uren: planningItemsTable.uren,
+              datumStart: planningItemsTable.datumStart,
+              datumEind:  planningItemsTable.datumEind,
+              tijdStart:  planningItemsTable.tijdStart,
+              tijdEind:   planningItemsTable.tijdEind,
+            })
+            .from(planningItemsTable)
+            .where(and(
+              eq(planningItemsTable.medewerkerId, row.medewerkerId),
+              ne(planningItemsTable.status, "geannuleerd"),
+              lte(planningItemsTable.datumStart, queryTot),
+              gte(planningItemsTable.datumEind ?? planningItemsTable.datumStart, v4Van),
+            ));
+
+          /**
+           * Bijdrage van item i aan een periode [van, tot], beperkt tot
+           * de dagen waarop de medewerker nog minderjarig is.
+           * uren = dagrate: bijdrage = uren × minderjarige_overlapdagen
+           * (geen deling — zie berekenPlanningBijdrageMinderjarig in regellib).
+           */
+          const bijdrageMinderjarig = (i: typeof alleItems[number], van: string, tot: string): number =>
+            berekenPlanningBijdrageMinderjarig(
+              { datumStart: i.datumStart, datumEind: i.datumEind, uren: i.uren },
+              van, tot, med.geboortedatum,
+            );
+
+          // ── Dag-check: elke gedekte datum afzonderlijk ─────────────────────
+          const dagMaxSchendingen: AtwSchending[] = [];
+          for (const d of enumDagen(datumStr, datumEindStr)) {
+            const lftDag = berekenLeeftijd(med.geboortedatum, new Date(`${d}T00:00:00`));
+            if (lftDag === null || lftDag >= 18) continue;
+            const dagTotaalD = alleItems.reduce((s, i) => s + bijdrageMinderjarig(i, d, d), 0);
+            if (dagTotaalD > 9) {
+              dagMaxSchendingen.push({
+                code: "dagmaximum_overschreden",
+                omschrijving: `Dagmaximum overschreden op ${d}: ${dagTotaalD.toFixed(1)} u (max. 9 u/dag, ATW art. 4:3 lid 1).`,
+              });
+            }
+          }
+
+          // ── Week-check + 4-weken-check voor het item zelf ─────────────────
+          const weekSchendingen: AtwSchending[] = [];
+          const v4GecontroleerdeVan = new Set<string>();
+          const v4Schendingen: AtwSchending[] = [];
+
+          for (const maandag of itemWeken) {
+            const { van: wVanW, tot: wTotW } = isoWeekGrenzen(maandag);
+            const weekTotaalW = alleItems.reduce((s, i) => s + bijdrageMinderjarig(i, wVanW, wTotW), 0);
+            if (weekTotaalW > 45) {
+              weekSchendingen.push({
+                code: "weekmaximum_overschreden",
+                omschrijving: `Weekmaximum overschreden in week ${wVanW}–${wTotW}: ${weekTotaalW.toFixed(1)} u (max. 45 u/week, ATW art. 4:3 lid 3).`,
+              });
+            }
+            const { van: v4VanW, tot: v4TotW } = vierWekenGrenzen(maandag);
+            if (!v4GecontroleerdeVan.has(v4VanW)) {
+              v4GecontroleerdeVan.add(v4VanW);
+              const v4TotaalW = alleItems.reduce((s, i) => s + bijdrageMinderjarig(i, v4VanW, v4TotW), 0);
+              if (v4TotaalW > 160) {
+                v4Schendingen.push({
+                  code: "vierwekengemiddelde_overschreden",
+                  omschrijving: `4-weken-gemiddelde overschreden in periode ${v4VanW}–${v4TotW}: ${v4TotaalW.toFixed(1)} u (max. 160 u/4 weken, ATW art. 4:3 lid 4).`,
+                });
+              }
+            }
+          }
+
+          // ── Extra 4-weken-vensters W+1..W+3 na het item ───────────────────
+          // Het nieuwe item draagt bij aan vensters die ná de item-weken eindigen.
+          for (const maandag of extraWekenV4) {
+            const { van: v4VanW, tot: v4TotW } = vierWekenGrenzen(maandag);
+            if (!v4GecontroleerdeVan.has(v4VanW)) {
+              v4GecontroleerdeVan.add(v4VanW);
+              const v4TotaalW = alleItems.reduce((s, i) => s + bijdrageMinderjarig(i, v4VanW, v4TotW), 0);
+              if (v4TotaalW > 160) {
+                v4Schendingen.push({
+                  code: "vierwekengemiddelde_overschreden",
+                  omschrijving: `4-weken-gemiddelde overschreden in periode ${v4VanW}–${v4TotW}: ${v4TotaalW.toFixed(1)} u (max. 160 u/4 weken, ATW art. 4:3 lid 4).`,
+                });
+              }
+            }
+          }
+
+          // ── Nacht-check (tijdinterval van het item zelf) ───────────────────
+          const nachtSchendingen = berekenAtwSchendingen({
+            leeftijd, dagTotaalUren: 0, weekTotaalUren: 0, vierWekenUren: 0,
+            tijdStart: row.tijdStart, tijdEind: row.tijdEind,
+          }).filter(s => s.code.startsWith("nachtdienst"));
+
+          const schendingen = [...dagMaxSchendingen, ...weekSchendingen, ...v4Schendingen, ...nachtSchendingen];
+          jongeWerknemer = jongeWerknemerMelding(leeftijd, schendingen);
+        }
+      }
+    }
+
+    const respons = mapItem(row, null, gebouw[0]?.naam ?? null);
+    res.status(201).json(jongeWerknemer ? { ...respons, jonge_werknemer: jongeWerknemer } : respons);
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -346,7 +476,118 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res):
       ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, row.gebouwId)).limit(1)
       : [];
 
-    res.json(mapItem(row, null, gebouw[0]?.naam ?? null));
+    // ATW-melding voor jonge medewerkers (16/17 jaar) bij wijziging planningsitem.
+    // Geannuleerde items tellen niet mee — sla de volledige evaluatie over.
+    let jongeWerknemerPatch: ReturnType<typeof jongeWerknemerMelding> | undefined;
+    if (row.medewerkerId && row.status !== "geannuleerd") {
+      const [med] = await db
+        .select({ geboortedatum: medewerkersTable.geboortedatum })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.id, row.medewerkerId))
+        .limit(1);
+      if (med?.geboortedatum) {
+        const patchDatum = row.datumStart;
+        const peildatumPatch = new Date(`${patchDatum}T00:00:00`);
+        const leeftijd = berekenLeeftijd(med.geboortedatum, peildatumPatch);
+        if (leeftijd !== null && leeftijd < 18) {
+          const datumEindStrP = row.datumEind ?? patchDatum;
+          const { van: v4VanP, tot: v4TotP } = vierWekenGrenzen(patchDatum);
+
+          const itemWekenP = enumWeken(patchDatum, datumEindStrP);
+          const lastMaandagStrP = itemWekenP.at(-1)!;
+          const extraWekenV4P = [1, 2, 3].map(n => maandagPlusWeken(lastMaandagStrP, n));
+          const { tot: extendedSundayP } = isoWeekGrenzen(extraWekenV4P[2]!);
+          const queryTotP = extendedSundayP > v4TotP ? extendedSundayP : v4TotP;
+
+          const alleItemsP = await db
+            .select({
+              uren:       planningItemsTable.uren,
+              datumStart: planningItemsTable.datumStart,
+              datumEind:  planningItemsTable.datumEind,
+              tijdStart:  planningItemsTable.tijdStart,
+              tijdEind:   planningItemsTable.tijdEind,
+            })
+            .from(planningItemsTable)
+            .where(and(
+              eq(planningItemsTable.medewerkerId, row.medewerkerId),
+              ne(planningItemsTable.status, "geannuleerd"),
+              lte(planningItemsTable.datumStart, queryTotP),
+              gte(planningItemsTable.datumEind ?? planningItemsTable.datumStart, v4VanP),
+            ));
+
+          /** Gedeelde helper — zelfde semantiek als in de POST-handler. */
+          const bijdragePMinderjarig = (i: typeof alleItemsP[number], van: string, tot: string): number =>
+            berekenPlanningBijdrageMinderjarig(
+              { datumStart: i.datumStart, datumEind: i.datumEind, uren: i.uren },
+              van, tot, med.geboortedatum,
+            );
+
+          const dagMaxSchendingenP: AtwSchending[] = [];
+          for (const d of enumDagen(patchDatum, datumEindStrP)) {
+            const lftDag = berekenLeeftijd(med.geboortedatum, new Date(`${d}T00:00:00`));
+            if (lftDag === null || lftDag >= 18) continue;
+            const dagTotaalD = alleItemsP.reduce((s, i) => s + bijdragePMinderjarig(i, d, d), 0);
+            if (dagTotaalD > 9) {
+              dagMaxSchendingenP.push({
+                code: "dagmaximum_overschreden",
+                omschrijving: `Dagmaximum overschreden op ${d}: ${dagTotaalD.toFixed(1)} u (max. 9 u/dag, ATW art. 4:3 lid 1).`,
+              });
+            }
+          }
+
+          const weekSchendingenP: AtwSchending[] = [];
+          const v4GecontroleerdeVanP = new Set<string>();
+          const v4SchendingenP: AtwSchending[] = [];
+
+          for (const maandag of itemWekenP) {
+            const { van: wVanW, tot: wTotW } = isoWeekGrenzen(maandag);
+            const weekTotaalW = alleItemsP.reduce((s, i) => s + bijdragePMinderjarig(i, wVanW, wTotW), 0);
+            if (weekTotaalW > 45) {
+              weekSchendingenP.push({
+                code: "weekmaximum_overschreden",
+                omschrijving: `Weekmaximum overschreden in week ${wVanW}–${wTotW}: ${weekTotaalW.toFixed(1)} u (max. 45 u/week, ATW art. 4:3 lid 3).`,
+              });
+            }
+            const { van: v4VanW, tot: v4TotW } = vierWekenGrenzen(maandag);
+            if (!v4GecontroleerdeVanP.has(v4VanW)) {
+              v4GecontroleerdeVanP.add(v4VanW);
+              const v4TotaalW = alleItemsP.reduce((s, i) => s + bijdragePMinderjarig(i, v4VanW, v4TotW), 0);
+              if (v4TotaalW > 160) {
+                v4SchendingenP.push({
+                  code: "vierwekengemiddelde_overschreden",
+                  omschrijving: `4-weken-gemiddelde overschreden in periode ${v4VanW}–${v4TotW}: ${v4TotaalW.toFixed(1)} u (max. 160 u/4 weken, ATW art. 4:3 lid 4).`,
+                });
+              }
+            }
+          }
+
+          for (const maandag of extraWekenV4P) {
+            const { van: v4VanW, tot: v4TotW } = vierWekenGrenzen(maandag);
+            if (!v4GecontroleerdeVanP.has(v4VanW)) {
+              v4GecontroleerdeVanP.add(v4VanW);
+              const v4TotaalW = alleItemsP.reduce((s, i) => s + bijdragePMinderjarig(i, v4VanW, v4TotW), 0);
+              if (v4TotaalW > 160) {
+                v4SchendingenP.push({
+                  code: "vierwekengemiddelde_overschreden",
+                  omschrijving: `4-weken-gemiddelde overschreden in periode ${v4VanW}–${v4TotW}: ${v4TotaalW.toFixed(1)} u (max. 160 u/4 weken, ATW art. 4:3 lid 4).`,
+                });
+              }
+            }
+          }
+
+          const nachtSchendingenP = berekenAtwSchendingen({
+            leeftijd, dagTotaalUren: 0, weekTotaalUren: 0, vierWekenUren: 0,
+            tijdStart: row.tijdStart, tijdEind: row.tijdEind,
+          }).filter(s => s.code.startsWith("nachtdienst"));
+
+          const schendingenP = [...dagMaxSchendingenP, ...weekSchendingenP, ...v4SchendingenP, ...nachtSchendingenP];
+          jongeWerknemerPatch = jongeWerknemerMelding(leeftijd, schendingenP);
+        }
+      }
+    }
+
+    const respons = mapItem(row, null, gebouw[0]?.naam ?? null);
+    res.json(jongeWerknemerPatch ? { ...respons, jonge_werknemer: jongeWerknemerPatch } : respons);
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

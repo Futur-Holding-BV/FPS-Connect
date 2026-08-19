@@ -543,6 +543,14 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Uitrol**: `deploy/Dockerfile.caddy` bouwt de webexport mee (harde verificaties + PWA-injectie + versiestempel), `deploy/Caddyfile` serveert /app vóór de statische handle met no-cache op index/sw/manifest, en `scripts/deploy-production.sh` keurt een deploy pas goed als óók `/app/versie.json` de nieuwe commit meldt (anders automatische rollback). Antwoord: `docs/antwoorden/MONTEUR_NU_01.md`; meting: `docs/metingen/MONTEUR_NU_01-meting-vooraf.md`. Nameting op een echte telefoon volgt na de eerstvolgende productie-uitrol. Review-naloop: het bewijsscript bewijs-calc-kern-offerte (uit CALC_KERN_01) schrijft testdata en weigert productie nu onvoorwaardelijk (`weigerProductieVoorSchrijvendScript`, geen PROD_LEZEN_TOEGESTAAN-vrijstelling) en gebruikt per run willekeurig gegenereerde wegwerp-inloggegevens i.p.v. vaste credentials in de repo.
 
 
+## 2026-08-18 — ATW-bewaking jonge werknemers (16/17 jaar)
+
+- **Nieuw: `GET /api/hrm/jonge-werknemers`** — geeft alle actieve medewerkers onder 18 jaar terug met leeftijd en toepasselijke ATW-beperkingen (max. 9u/dag, max. 45u/week, nachtdienstverbod 22:00–07:00, gevaarlijk werk alleen onder toezicht, 12u rusttijd, 30 min. pauze na 4,5u). Toegang: personeel niveau 1.
+- **Onboarding-signalering**: `POST /medewerkers` en `PATCH /medewerkers/:id` geven een niet-blokkerend `jonge_werknemer`-veld mee in de response als de medewerker onder 18 jaar is — inclusief leeftijd en lijst van ATW-beperkingen, zodat de beheerder direct geïnformeerd is.
+- **Planning-signalering**: `POST /modules/planning/items` en `PATCH /modules/planning/items/:id` voegen hetzelfde `jonge_werknemer`-veld toe wanneer de ingeplande medewerker minderjarig is. Uren na de 18e verjaardag tellen nooit mee in ATW-totalen (bijdrageMinderjarig per kalenderdag gefilterd).
+- **Compliance-monitoring**: dagelijkse BIAE-job genereert nu ook `jonge_werknemer_atw`-signalen (ernst: info) per actieve minderjarige medewerker — zichtbaar via de compliance-signalenlijst en het beheerscherm.
+- **Gedeelde regelmodule**: `artifacts/api-server/src/lib/jongeWerknemerRegel.ts` bevat alle ATW-logica als pure functies (`berekenLeeftijd`, `isMinderjarig`, `atwBeperkingen`, `jongeWerknemerMelding`) — één bron van waarheid voor alle routes en de compliance-job.
+- Wacht op René's besluit voor eventuele harde planningsblokkeringen (nu alleen waarschuwend). Zie taak #1124.
 ## 2026-08-18 — INKOOP_BOEKING_01: concurrentiebewijs + productiefix dubbele AccountView-boeking
 
 - Verificatiescript `artifacts/api-server/src/scripts/verificatie-concurrente-accountview-boeking.ts` bewijst op de dev-DB de drie door de architect gevraagde invarianten (12/12 groen):

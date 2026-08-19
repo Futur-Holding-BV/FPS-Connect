@@ -1255,10 +1255,12 @@ export default function MedewerkerDetailPagina() {
       return;
     }
     try {
-      await updMedewerker.mutateAsync({ id, data: { ...profielForm, naam: profielForm.naam.trim() } });
+      const bijgewerkt = await updMedewerker.mutateAsync({ id, data: { ...profielForm, naam: profielForm.naam.trim() } });
       await invalideerMedewerker();
       toast({ title: "Profiel bijgewerkt" });
       setProfielOpen(false);
+      const jw = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+      if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
     }

@@ -243,10 +243,25 @@ function PlanningBlokDialog({
       notities: notities || undefined,
     };
     try {
+      type JwVeld = { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> };
       if (isEdit && editItem) {
-        await bijwerken.mutateAsync({ id: editItem.id, data: payload as any });
+        const bijgewerkt = await bijwerken.mutateAsync({ id: editItem.id, data: payload as any });
+        const jw = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as JwVeld | undefined;
+        if (jw) {
+          const desc = jw.schendingen && jw.schendingen.length > 0
+            ? jw.schendingen.map(s => s.omschrijving).join(" | ")
+            : (jw.beperkingen?.[0]?.omschrijving ?? "ATW-beperkingen zijn van toepassing.");
+          toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: desc });
+        }
       } else {
-        await maakAan.mutateAsync({ data: payload as any });
+        const aangemaakt = await maakAan.mutateAsync({ data: payload as any });
+        const jw = (aangemaakt as unknown as Record<string, unknown>).jonge_werknemer as JwVeld | undefined;
+        if (jw) {
+          const desc = jw.schendingen && jw.schendingen.length > 0
+            ? jw.schendingen.map(s => s.omschrijving).join(" | ")
+            : (jw.beperkingen?.[0]?.omschrijving ?? "ATW-beperkingen zijn van toepassing.");
+          toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: desc });
+        }
       }
       await qc.invalidateQueries({ queryKey: ["listPlanningItems"] });
       onClose();

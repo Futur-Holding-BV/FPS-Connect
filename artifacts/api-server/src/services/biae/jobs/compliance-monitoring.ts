@@ -11,8 +11,10 @@ import {
   voorzieningenTable,
   documentKoppelingenTable,
   verlofSaldiTable,
+  medewerkersTable,
 } from "@workspace/db";
-import { and, eq, lt, sql, isNotNull } from "drizzle-orm";
+import { and, eq, lt, sql, isNotNull, isNull } from "drizzle-orm";
+import { berekenLeeftijd, atwBeperkingen } from "../../../lib/jongeWerknemerRegel";
 import { logger } from "../../../lib/logger";
 
 interface Bevinding {
@@ -144,11 +146,85 @@ async function regelVerlofsaldoBuitenCao(): Promise<number> {
   return rijen.length;
 }
 
+// Regel: actieve medewerkers in de leeftijdsband 16/17 jaar.
+// Signaleert dat de Arbeidstijdenwet-regels voor jongeren van toepassing zijn.
+// Ernst = "info": het is geen overtreding dat iemand minderjarig is, maar het
+// vraagt om actieve bewaking van werk- en rusttijden.
+//
+// Oplossen: signalen waarvan de predikaat niet meer klopt (medewerker is 18+
+// geworden, niet meer actief of afgeschermd) worden op "opgelost" gezet zodat
+// ze niet eindeloos open blijven.
+async function regelJongeWerknemers(): Promise<number> {
+  // ── Stap 1: alle actieve, niet-afgeschermde medewerkers met geboortedatum ──
+  const rijen = await db
+    .select({
+      id: medewerkersTable.id,
+      naam: medewerkersTable.naam,
+      geboortedatum: medewerkersTable.geboortedatum,
+    })
+    .from(medewerkersTable)
+    .where(
+      and(
+        eq(medewerkersTable.actief, true),
+        isNull(medewerkersTable.afgeschermdOp),
+        isNotNull(medewerkersTable.geboortedatum),
+      ),
+    );
+
+  const vandaag = new Date();
+  // Set met medewerker-IDs die nog steeds minderjarig én actief zijn.
+  const nogMinderjarig = new Set<number>();
+
+  let gevonden = 0;
+  for (const r of rijen) {
+    const leeftijd = berekenLeeftijd(r.geboortedatum, vandaag);
+    if (leeftijd === null || leeftijd >= 18) continue;
+    const beperkingen = atwBeperkingen(leeftijd);
+    const omschrijving =
+      `${r.naam} is ${leeftijd} jaar. Wettelijke ATW-beperkingen (ATW art. 4:3): ` +
+      beperkingen.map((b) => b.omschrijving).join(" | ");
+    await upsertSignaal({
+      regel: "jonge_werknemer_atw",
+      ernst: "info",
+      entiteitType: "medewerker",
+      entiteitId: r.id,
+      titel: `Jonge werknemer: ${r.naam} (${leeftijd} jaar)`,
+      omschrijving,
+      dedupSleutel: `jonge_werknemer_atw:${r.id}`,
+    });
+    nogMinderjarig.add(r.id);
+    gevonden++;
+  }
+
+  // ── Stap 2: openstaande signalen sluiten die niet meer van toepassing zijn ──
+  // (medewerker is inmiddels 18+, inactief of afgeschermd)
+  const openSignalen = await db
+    .select({ id: complianceSignalenTable.id, entiteitId: complianceSignalenTable.entiteitId })
+    .from(complianceSignalenTable)
+    .where(
+      and(
+        eq(complianceSignalenTable.regel, "jonge_werknemer_atw"),
+        eq(complianceSignalenTable.status, "open"),
+      ),
+    );
+
+  for (const sig of openSignalen) {
+    if (sig.entiteitId === null || nogMinderjarig.has(sig.entiteitId)) continue;
+    await db
+      .update(complianceSignalenTable)
+      .set({ status: "opgelost", opgelostOp: vandaag, bijgewerktOp: vandaag })
+      .where(eq(complianceSignalenTable.id, sig.id));
+  }
+
+  return gevonden;
+}
+
 async function draaiComplianceControle(): Promise<void> {
   const regels: Array<[string, () => Promise<number>]> = [
     ["certificaat_verlopen", regelVerlopenCertificaten],
     ["spot_zonder_document", regelSpotsZonderDocument],
     ["verlofsaldo_buiten_cao", regelVerlofsaldoBuitenCao],
+    ["jonge_werknemer_atw", regelJongeWerknemers],
   ];
   for (const [naam, fn] of regels) {
     try {

@@ -743,7 +743,9 @@ function GeneriekeWizard({
         jaar: new Date().getFullYear(),
       };
       if (medewerkerDraftId) {
-        await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        const bijgewerkt = await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        const jw = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+        if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
         await slaVoortgangOp.mutateAsync({
           id: medewerkerDraftId,
           data: {
@@ -755,6 +757,8 @@ function GeneriekeWizard({
         onGereed(medewerkerDraftId);
       } else {
         const nieuw = await maak.mutateAsync({ data: input });
+        const jw = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+        if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
         onGereed(nieuw.id);
       }
     } catch (err: unknown) {
@@ -2304,6 +2308,8 @@ function ZzpFormulier({
         uit_dienst_per: form.eind_datum || undefined,
       };
       const nieuw = await maak.mutateAsync({ data: input });
+      const jwZzp = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+      if (jwZzp) toast({ title: `Let op: medewerker is ${jwZzp.leeftijd} jaar (minderjarig)`, description: jwZzp.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
       onGereed(nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
@@ -2457,6 +2463,8 @@ function UitzendFormulier({
         opmerkingen: form.opmerkingen.trim() || undefined,
       };
       const nieuw = await maak.mutateAsync({ data: input });
+      const jw = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
+      if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
       onGereed(nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
