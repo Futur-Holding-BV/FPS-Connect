@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { GetFiePrognoseResponse } from "@workspace/api-zod";
-import { maakFiePrognoseResponse } from "./fiePrognoseResponse";
+import { GetFiePrognoseResponse } from "../../../../lib/api-zod/src/generated/api.ts";
+import { maakFiePrognoseResponse } from "./fiePrognoseResponse.ts";
 import {
   bepaalSignaalActie,
   FIE_SIGNAAL_TYPES,
   LIQUIDITEIT_SIGNAAL_TYPES,
-} from "./signaalActies";
+} from "./signaalActies.ts";
 
 const BEKENDE_TYPES = [...FIE_SIGNAAL_TYPES, ...LIQUIDITEIT_SIGNAAL_TYPES];
 
@@ -33,7 +33,7 @@ test("alle toegewezen actiepaden bestaan in de webrouter", async () => {
   );
   const paden = new Set(
     BEKENDE_TYPES.map((type) => bepaalSignaalActie(type).actie_pad).filter(
-      (pad): pad is string => pad !== null,
+      (pad) => pad !== null,
     ),
   );
 
