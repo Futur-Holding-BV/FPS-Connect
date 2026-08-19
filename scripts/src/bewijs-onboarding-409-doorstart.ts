@@ -5,8 +5,8 @@
  * e-mailadres een 409 teruggeeft mét doorstart-informatie:
  *   - code: EMAIL_ALREADY_EXISTS
  *   - bestaande_gebruiker_id: id van het bestaande account
- *   - heeft_medewerkerprofiel: alleen true bij een NIET-concept profiel
- *     (concept is hervatbaar via de wizard en blokkeert de doorstart niet)
+ *   - heeft_medewerkerprofiel: alleen true bij een afgerond/regulier profiel
+ *     (alle onafgeronde onboardingstatussen blijven hervatbaar)
  *
  * Gebruikt het vaste e2e-web-admin account (hoofdbeheerder) via de dev-API
  * over https (Secure cookie).
@@ -30,6 +30,8 @@ interface ConflictAntwoord {
   code?: string;
   bestaande_gebruiker_id?: number | null;
   heeft_medewerkerprofiel?: boolean;
+  bestaande_medewerker_id?: number | null;
+  medewerker_status?: string | null;
   status?: string;
   id?: number;
 }
@@ -111,23 +113,40 @@ async function main() {
   }
   console.log("✓ case B ok: conceptprofiel blokkeert de doorstart niet");
 
-  // Case C: bestaand account met NIET-concept medewerkerprofiel → blokkeert.
-  // Zet het conceptprofiel van case B tijdelijk op "actief".
+  // Case C: een wachtrijstatus is nog steeds een onafgeronde onboarding.
+  await db
+    .update(medewerkersTable)
+    .set({ medewerkerStatus: "in_voorbereiding" })
+    .where(eq(medewerkersTable.gebruikerId, aangemaakt.id));
+  res = await post("/medewerkers/onboarding-account", { naam: "Doorstart Wachtrij", email: emailZonder });
+  data = await alsJson(res);
+  console.log("Case C (wachtrijstatus):", res.status, JSON.stringify(data));
+  if (
+    res.status !== 409 ||
+    data.heeft_medewerkerprofiel !== false ||
+    data.bestaande_gebruiker_id !== aangemaakt.id ||
+    data.medewerker_status !== "in_voorbereiding"
+  ) {
+    throw new Error("FOUT: case C verwachtte een hervatbare wachtrijstatus");
+  }
+  console.log("✓ case C ok: in_voorbereiding blokkeert de doorstart niet");
+
+  // Case D: een actief medewerkerprofiel blokkeert een tweede onboarding.
   await db
     .update(medewerkersTable)
     .set({ medewerkerStatus: "actief" })
     .where(eq(medewerkersTable.gebruikerId, aangemaakt.id));
   res = await post("/medewerkers/onboarding-account", { naam: "Doorstart Met", email: emailZonder });
   data = await alsJson(res);
-  console.log("Case C (niet-concept profiel):", res.status, JSON.stringify(data));
+  console.log("Case D (actief profiel):", res.status, JSON.stringify(data));
   if (
     res.status !== 409 ||
     data.heeft_medewerkerprofiel !== true ||
     data.bestaande_gebruiker_id !== aangemaakt.id
   ) {
-    throw new Error("FOUT: case C verwachtte 409 met heeft_medewerkerprofiel=true");
+    throw new Error("FOUT: case D verwachtte 409 met heeft_medewerkerprofiel=true");
   }
-  console.log("✓ case C ok: 409 met heeft_medewerkerprofiel=true");
+  console.log("✓ case D ok: actief profiel blokkeert een tweede onboarding");
 
   // Opruimen testdata (concept-medewerker + account)
   await db.delete(medewerkersTable).where(eq(medewerkersTable.gebruikerId, aangemaakt.id));

@@ -164,13 +164,14 @@ async function main(): Promise<void> {
   {
     const r = await admin.patch(`/medewerkers/${medewerkerId}/wizard-voortgang`, {
       stap: 2,
-      medewerker_status: "in_aanmaken",
+      versie: 0,
+      medewerker_status: "in_voorbereiding",
       voortgang_data: { naam_ingevuld: true },
     });
     const b = await json<{ huidig_stap?: number; medewerker_status?: string }>(r);
     eis(r.status === 200 && b.huidig_stap === 2, "stap 3", `PATCH wizard-voortgang gaf ${r.status} ${JSON.stringify(b)}`);
-    eis(b.medewerker_status === "in_aanmaken", "stap 3", `medewerker_status onjuist: ${b.medewerker_status}`);
-    log(`STAP 3 PASS — wizard-voortgang: 200, huidig_stap=2, medewerker_status=in_aanmaken`);
+    eis(b.medewerker_status === "in_voorbereiding", "stap 3", `medewerker_status onjuist: ${b.medewerker_status}`);
+    log(`STAP 3 PASS — wizard-voortgang: 200, huidig_stap=2, medewerker_status=in_voorbereiding`);
   }
 
   // ── STAP 4: Middelen — POST → GET → PATCH → DELETE ─────────────────────────

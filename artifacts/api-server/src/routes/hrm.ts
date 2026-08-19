@@ -72,6 +72,7 @@ import crypto from "node:crypto";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
 import { stuurUitnodigingsmail, MailFout, MAIL_FOUT_OMSCHRIJVING } from "../services/email";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
+import { isHervatbareOnboardingStatus } from "../lib/hrmOnboardingStatus";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const hrmStorage = new ObjectStorageService();
@@ -1439,10 +1440,15 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
       return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
     }
     const [gekoppeld] = await db
-      .select({ id: medewerkersTable.id, medewerkerStatus: medewerkersTable.medewerkerStatus })
+      .select({
+        id: medewerkersTable.id,
+        medewerkerStatus: medewerkersTable.medewerkerStatus,
+        dienstverband: medewerkersTable.dienstverband,
+        wizardVoortgang: medewerkersTable.wizardVoortgang,
+      })
       .from(medewerkersTable)
       .where(eq(medewerkersTable.gebruikerId, gebruikerId));
-    if (gekoppeld && gekoppeld.medewerkerStatus !== "concept") {
+    if (gekoppeld && !isHervatbareOnboardingStatus(gekoppeld.medewerkerStatus)) {
       return void res.status(409).json({
         error: "Deze gebruiker heeft al een medewerkerprofiel.",
         code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
@@ -1461,12 +1467,27 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
         .where(eq(profielenTable.id, g.herkomstProfielId));
       accountProfielNaam = profiel?.naam ?? null;
     }
+    const wizardVoortgang =
+      (gekoppeld?.wizardVoortgang as Record<string, unknown> | null) ?? {};
+    const opgeslagenStroom =
+      typeof wizardVoortgang._onboarding_stroom === "string"
+        ? wizardVoortgang._onboarding_stroom
+        : null;
+    const onboardingStroom =
+      opgeslagenStroom ??
+      (gekoppeld?.dienstverband === "stage" ? "stagiair" : gekoppeld?.dienstverband ?? null);
+    const onboardingVersie =
+      typeof wizardVoortgang._versie === "number" ? wizardVoortgang._versie : 0;
+
     res.json({
       gebruiker_id: g.id,
       naam: g.naam,
       email: g.email ?? null,
       telefoon: g.telefoon ?? null,
       concept_medewerker_id: gekoppeld?.id ?? null,
+      onboarding_status: gekoppeld?.medewerkerStatus ?? null,
+      onboarding_stroom: onboardingStroom,
+      onboarding_versie: gekoppeld ? onboardingVersie : null,
       account_profiel_id: g.herkomstProfielId ?? null,
       account_profiel_naam: accountProfielNaam,
     });
@@ -1547,22 +1568,30 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
           .select({ id: gebruikersTable.id })
           .from(gebruikersTable)
           .where(sql`lower(${gebruikersTable.email}) = lower(${email.trim()})`);
-        // Statusbewust, gelijk aan de onboarding-context: alleen een
-        // niet-concept medewerkerprofiel blokkeert; een conceptprofiel is
-        // juist hervatbaar via de wizard (?userId=…).
+        // Statusbewust, gelijk aan de onboarding-context: alleen een afgerond
+        // of regulier medewerkerprofiel blokkeert. Alle onafgeronde
+        // onboardingstatussen zijn hervatbaar via de wizard (?userId=…).
         let heeftMedewerkerprofiel = false;
+        let medewerkerId: number | null = null;
+        let medewerkerStatus: string | null = null;
         if (bestaande) {
           const [profiel] = await db
             .select({ id: medewerkersTable.id, medewerkerStatus: medewerkersTable.medewerkerStatus })
             .from(medewerkersTable)
             .where(eq(medewerkersTable.gebruikerId, bestaande.id));
-          heeftMedewerkerprofiel = Boolean(profiel && profiel.medewerkerStatus !== "concept");
+          medewerkerId = profiel?.id ?? null;
+          medewerkerStatus = profiel?.medewerkerStatus ?? null;
+          heeftMedewerkerprofiel = Boolean(
+            profiel && !isHervatbareOnboardingStatus(profiel.medewerkerStatus),
+          );
         }
         return void res.status(409).json({
           error: "Dit e-mailadres is al in gebruik bij een andere gebruiker.",
           code: "EMAIL_ALREADY_EXISTS",
           bestaande_gebruiker_id: bestaande?.id ?? null,
           heeft_medewerkerprofiel: heeftMedewerkerprofiel,
+          bestaande_medewerker_id: medewerkerId,
+          medewerker_status: medewerkerStatus,
         });
       }
       throw err;
@@ -1861,7 +1890,16 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         velden: fouteDatumsPatch,
       });
     }
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, zzp_bedrijfsnaam, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, zzp_bedrijfsnaam, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen, onboarding_afronden, onboarding_versie, onboarding_stroom } = req.body;
+    if (
+      onboarding_afronden === true &&
+      (!Number.isInteger(onboarding_versie) || onboarding_versie < 0)
+    ) {
+      return void res.status(400).json({
+        error: "onboarding_versie is verplicht bij het afronden van een onboarding",
+        code: "INVALID_ONBOARDING_VERSION",
+      });
+    }
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, met de unieke index als laatste wacht).
     if (gebruiker_id != null) {
@@ -1884,7 +1922,43 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       : null;
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     // Update + eventuele contractaanmaak atomair (zie POST /medewerkers).
-    const m = await db.transaction(async (tx) => {
+    const resultaat = await db.transaction(async (tx) => {
+    let afgerondeWizardVoortgang: Record<string, unknown> | undefined;
+    if (onboarding_afronden === true) {
+      const [actueel] = await tx
+        .select({
+          medewerkerStatus: medewerkersTable.medewerkerStatus,
+          wizardVoortgang: medewerkersTable.wizardVoortgang,
+        })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.id, parseId(req.params.id)))
+        .for("update");
+      if (!actueel) return { soort: "niet-gevonden" as const };
+
+      const bestaandeVoortgang =
+        (actueel.wizardVoortgang as Record<string, unknown> | null) ?? {};
+      const actueleVersie =
+        typeof bestaandeVoortgang._versie === "number" ? bestaandeVoortgang._versie : 0;
+      if (
+        !isHervatbareOnboardingStatus(actueel.medewerkerStatus) ||
+        onboarding_versie !== actueleVersie
+      ) {
+        return {
+          soort: "onboarding-conflict" as const,
+          serverVersie: actueleVersie,
+          medewerkerStatus: actueel.medewerkerStatus,
+        };
+      }
+
+      afgerondeWizardVoortgang = {
+        ...bestaandeVoortgang,
+        _versie: actueleVersie + 1,
+        ...(typeof onboarding_stroom === "string" && onboarding_stroom
+          ? { _onboarding_stroom: onboarding_stroom }
+          : {}),
+      };
+    }
+
     const [rij] = await tx
       .update(medewerkersTable)
       .set({
@@ -1924,7 +1998,9 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         ehboVervaldatum: ehbo_vervaldatum !== undefined ? (ehbo_vervaldatum || null) : undefined,
         bhvVervaldatum: bhv_vervaldatum !== undefined ? (bhv_vervaldatum || null) : undefined,
         cvTekst: cv_tekst !== undefined ? (cv_tekst || null) : undefined,
-        actief,
+        actief: onboarding_afronden === true ? true : actief,
+        medewerkerStatus: onboarding_afronden === true ? "actief" : undefined,
+        wizardVoortgang: afgerondeWizardVoortgang,
         opmerkingen,
         bijgewerktOp: new Date(),
       })
@@ -1946,8 +2022,20 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         aangemaaktDoorId: req.session.userId ?? null,
       }, tx);
     }
-    return rij;
+    return { soort: "bijgewerkt" as const, rij };
     });
+    if (resultaat.soort === "niet-gevonden") {
+      return void res.status(404).json({ error: "Medewerker niet gevonden" });
+    }
+    if (resultaat.soort === "onboarding-conflict") {
+      return void res.status(409).json({
+        error: "De onboarding is elders bijgewerkt. Ververs de pagina en probeer opnieuw.",
+        code: "ONBOARDING_VERSION_CONFLICT",
+        server_versie: resultaat.serverVersie,
+        medewerker_status: resultaat.medewerkerStatus,
+      });
+    }
+    const m = resultaat.rij;
     if (!m) return void res.status(404).json({ error: "Medewerker niet gevonden" });
     invalideerContext("medewerker", m.id);
     const jsonPatch = await medewerkerNaarJson(m);

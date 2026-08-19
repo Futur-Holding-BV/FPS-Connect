@@ -6297,6 +6297,15 @@ export interface MedewerkerInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
+  /** Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate. */
+  onboarding_afronden?: boolean;
+  /**
+     * Verplichte versie uit wizard-status wanneer onboarding_afronden true is.
+     * @minimum 0
+     */
+  onboarding_versie?: number;
+  /** Wizardstroom die bij de atomaire afronding behouden blijft. */
+  onboarding_stroom?: string;
 }
 
 /**
@@ -6343,8 +6352,18 @@ export interface OnboardingAccountConflict {
   code: OnboardingAccountConflictCode;
   /** @nullable */
   bestaande_gebruiker_id: number | null;
-  /** Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet. */
+  /** Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar. */
   heeft_medewerkerprofiel: boolean;
+  /**
+     * Medewerker-id van de bestaande onafgeronde onboarding, indien aanwezig.
+     * @nullable
+     */
+  bestaande_medewerker_id?: number | null;
+  /**
+     * Huidige medewerkerstatus van het bestaande profiel.
+     * @nullable
+     */
+  medewerker_status?: string | null;
 }
 
 /**
@@ -6405,10 +6424,25 @@ export interface OnboardingContext {
   /** @nullable */
   telefoon?: string | null;
   /**
-     * Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
+     * Id van een bestaand hervatbaar onboardingprofiel voor deze gebruiker; de historische veldnaam blijft behouden voor compatibiliteit.
      * @nullable
      */
   concept_medewerker_id?: number | null;
+  /**
+     * Huidige status van de onafgeronde onboarding.
+     * @nullable
+     */
+  onboarding_status?: string | null;
+  /**
+     * Wizardtype van de onafgeronde onboarding, bijvoorbeeld vast, stagiair, oproep, payroll, detachering of directie.
+     * @nullable
+     */
+  onboarding_stroom?: string | null;
+  /**
+     * Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.
+     * @nullable
+     */
+  onboarding_versie?: number | null;
   /**
      * Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
      * @nullable
@@ -17944,6 +17978,11 @@ export interface WizardStatus {
   medewerker_status: string | null;
   huidig_stap: number;
   wizard_voortgang?: WizardStatusWizardVoortgang;
+  /**
+     * Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.
+     * @minimum 0
+     */
+  versie: number;
   /** Tijdstip van de laatste aanpassing (gebruik voor optimistic locking) */
   bijgewerkt_op?: string;
 }
@@ -17952,10 +17991,19 @@ export type WizardVoortgangInputVoortgangData = { [key: string]: unknown };
 
 export interface WizardVoortgangInput {
   stap: number;
+  /**
+     * Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.
+     * @minimum 0
+     */
+  versie: number;
   medewerker_status?: string;
   voortgang_data?: WizardVoortgangInputVoortgangData;
   /** Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren) */
   bijgewerkt_op?: string;
+  /** Wis de opgeslagen wizardvoortgang en zet een onafgeronde onboarding terug naar stap 1. Afgeronde of actieve profielen worden geweigerd. */
+  opnieuw_starten?: boolean;
+  /** Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten. */
+  onboarding_stroom?: string;
 }
 
 export interface HrmMiddel {

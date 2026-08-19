@@ -13,6 +13,11 @@ export interface WizardStatus {
   medewerker_status: string | null;
   huidig_stap: number;
   wizard_voortgang?: WizardStatusWizardVoortgang;
+  /**
+     * Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.
+     * @minimum 0
+     */
+  versie: number;
   /** Tijdstip van de laatste aanpassing (gebruik voor optimistic locking) */
   bijgewerkt_op?: Date;
 }

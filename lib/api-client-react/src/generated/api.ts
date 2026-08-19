@@ -33096,7 +33096,7 @@ export const getGetOnboardingContextUrl = (gebruikerId: number,) => {
 }
 
 /**
- * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + detectie van onafgeronde onboarding)
  */
 export const getOnboardingContext = async (gebruikerId: number, options?: RequestInit): Promise<OnboardingContext> => {
 
@@ -33143,7 +33143,7 @@ export type GetOnboardingContextQueryError = ErrorType<void>
 
 
 /**
- * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + detectie van onafgeronde onboarding)
  */
 
 export function useGetOnboardingContext<TData = Awaited<ReturnType<typeof getOnboardingContext>>, TError = ErrorType<void>>(
@@ -36918,7 +36918,7 @@ export const patchWizardVoortgang = async (id: number,
 
 
 
-export const getPatchWizardVoortgangMutationOptions = <TError = ErrorType<unknown>,
+export const getPatchWizardVoortgangMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext> => {
 
@@ -36947,12 +36947,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PatchWizardVoortgangMutationResult = NonNullable<Awaited<ReturnType<typeof patchWizardVoortgang>>>
     export type PatchWizardVoortgangMutationBody = BodyType<WizardVoortgangInput>
-    export type PatchWizardVoortgangMutationError = ErrorType<unknown>
+    export type PatchWizardVoortgangMutationError = ErrorType<void>
 
     /**
  * @summary Wizard-voortgang opslaan (tussentijds, per stap)
  */
-export const usePatchWizardVoortgang = <TError = ErrorType<unknown>,
+export const usePatchWizardVoortgang = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof patchWizardVoortgang>>,

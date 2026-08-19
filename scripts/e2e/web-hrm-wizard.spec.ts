@@ -196,6 +196,7 @@ test("wizard draft aanmaken (tussentijds opslaan)", async ({ page }) => {
   const patchRes = await page.request.patch(`/api/medewerkers/${medId}/wizard-voortgang`, {
     data: {
       stap: 3,
+      versie: 0,
       voortgang_data: { naam, stap2_voltooid: true },
     },
   });
@@ -226,7 +227,7 @@ test("wizard hervatten via wizard-status (save/resume)", async ({ page }) => {
 
   // Sla voortgang op
   await page.request.patch(`/api/medewerkers/${medId}/wizard-voortgang`, {
-    data: { stap: 5, voortgang_data: { naam, stap5_in_progress: true } },
+    data: { stap: 5, versie: 0, voortgang_data: { naam, stap5_in_progress: true } },
   });
 
   // Haal wizard-status op (hervatten)

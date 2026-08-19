@@ -11591,6 +11591,10 @@ export const ListMedewerkersResponse = zod.array(ListMedewerkersResponseItem)
 /**
  * @summary Medewerker aanmaken
  */
+export const createMedewerkerBodyOnboardingVersieMin = 0;
+
+
+
 export const CreateMedewerkerBody = zod.object({
   "naam": zod.string(),
   "gebruiker_id": zod.number().nullish(),
@@ -11627,14 +11631,17 @@ export const CreateMedewerkerBody = zod.object({
   "zzp_bedrijfsnaam": zod.string().nullish().describe('Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP\'er; los van de inhurende partij.'),
   "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
-  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
+  "onboarding_afronden": zod.boolean().optional().describe('Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.'),
+  "onboarding_versie": zod.number().min(createMedewerkerBodyOnboardingVersieMin).optional().describe('Verplichte versie uit wizard-status wanneer onboarding_afronden true is.'),
+  "onboarding_stroom": zod.string().optional().describe('Wizardstroom die bij de atomaire afronding behouden blijft.')
 })
 
 export const CreateMedewerkerResponse = zod.void()
 
 
 /**
- * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + detectie van onafgeronde onboarding)
  */
 export const GetOnboardingContextParams = zod.object({
   "gebruikerId": zod.coerce.number()
@@ -11645,7 +11652,10 @@ export const GetOnboardingContextResponse = zod.object({
   "naam": zod.string(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
-  "concept_medewerker_id": zod.number().nullish().describe('Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.'),
+  "concept_medewerker_id": zod.number().nullish().describe('Id van een bestaand hervatbaar onboardingprofiel voor deze gebruiker; de historische veldnaam blijft behouden voor compatibiliteit.'),
+  "onboarding_status": zod.string().nullish().describe('Huidige status van de onafgeronde onboarding.'),
+  "onboarding_stroom": zod.string().nullish().describe('Wizardtype van de onafgeronde onboarding, bijvoorbeeld vast, stagiair, oproep, payroll, detachering of directie.'),
+  "onboarding_versie": zod.number().nullish().describe('Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.'),
   "account_profiel_id": zod.number().nullish().describe('Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.'),
   "account_profiel_naam": zod.string().nullish().describe('Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.')
 }).describe('Identiteit van een te onboarden gebruikersaccount; naam\/email\/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.')
@@ -11877,6 +11887,10 @@ export const UpdateMedewerkerParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateMedewerkerBodyOnboardingVersieMin = 0;
+
+
+
 export const UpdateMedewerkerBody = zod.object({
   "naam": zod.string(),
   "gebruiker_id": zod.number().nullish(),
@@ -11913,7 +11927,10 @@ export const UpdateMedewerkerBody = zod.object({
   "zzp_bedrijfsnaam": zod.string().nullish().describe('Eigen bedrijfsnaam (KvK-handelsnaam) van de ZZP\'er; los van de inhurende partij.'),
   "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
-  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
+  "onboarding_afronden": zod.boolean().optional().describe('Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.'),
+  "onboarding_versie": zod.number().min(updateMedewerkerBodyOnboardingVersieMin).optional().describe('Verplichte versie uit wizard-status wanneer onboarding_afronden true is.'),
+  "onboarding_stroom": zod.string().optional().describe('Wizardstroom die bij de atomaire afronding behouden blijft.')
 })
 
 export const UpdateMedewerkerResponse = zod.object({
@@ -12879,11 +12896,16 @@ export const GetWizardStatusParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getWizardStatusResponseVersieMin = 0;
+
+
+
 export const GetWizardStatusResponse = zod.object({
   "id": zod.number(),
   "medewerker_status": zod.string().nullable(),
   "huidig_stap": zod.number(),
   "wizard_voortgang": zod.record(zod.string(), zod.unknown()).optional(),
+  "versie": zod.number().min(getWizardStatusResponseVersieMin).describe('Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.'),
   "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)')
 })
 
@@ -12895,18 +12917,30 @@ export const PatchWizardVoortgangParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const patchWizardVoortgangBodyVersieMin = 0;
+
+
+
 export const PatchWizardVoortgangBody = zod.object({
   "stap": zod.number(),
+  "versie": zod.number().min(patchWizardVoortgangBodyVersieMin).describe('Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.'),
   "medewerker_status": zod.string().optional(),
   "voortgang_data": zod.record(zod.string(), zod.unknown()).optional(),
-  "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren)')
+  "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren)'),
+  "opnieuw_starten": zod.boolean().optional().describe('Wis de opgeslagen wizardvoortgang en zet een onafgeronde onboarding terug naar stap 1. Afgeronde of actieve profielen worden geweigerd.'),
+  "onboarding_stroom": zod.string().optional().describe('Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten.')
 })
+
+export const patchWizardVoortgangResponseVersieMin = 0;
+
+
 
 export const PatchWizardVoortgangResponse = zod.object({
   "id": zod.number(),
   "medewerker_status": zod.string().nullable(),
   "huidig_stap": zod.number(),
   "wizard_voortgang": zod.record(zod.string(), zod.unknown()).optional(),
+  "versie": zod.number().min(patchWizardVoortgangResponseVersieMin).describe('Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.'),
   "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)')
 })
 

@@ -9520,7 +9520,7 @@ paths:
     get:
       operationId: getOnboardingContext
       tags: [personeel]
-      summary: Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+      summary: Onboarding-context van een gebruikersaccount (identiteit-prefill + detectie van onafgeronde onboarding)
       parameters:
         - in: path
           name: gebruikerId
@@ -9537,7 +9537,7 @@ paths:
         "404":
           description: Gebruiker niet gevonden (code USER_NOT_FOUND)
         "409":
-          description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
+          description: Gebruiker heeft al een afgerond of regulier medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
 
   /medewerkers/onboarding-account:
     post:
@@ -9747,6 +9747,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Medewerker"
+        "409":
+          description: Onboardingversie of -status is gewijzigd voordat de atomaire afronding kon worden opgeslagen.
         "404":
           description: Niet gevonden
     patch:
@@ -10667,6 +10669,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WizardStatus"
+        "400":
+          description: Ongeldige stap of onboardingstatus
+        "404":
+          description: Medewerker niet gevonden
+        "409":
+          description: Onboarding is afgerond, actief of gelijktijdig gewijzigd
 
   /medewerkers/{id}/ai-voorstellen:
     get:
@@ -37358,6 +37366,16 @@ components:
         jaar:
           type: integer
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
+        onboarding_afronden:
+          type: boolean
+          description: Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.
+        onboarding_versie:
+          type: integer
+          minimum: 0
+          description: Verplichte versie uit wizard-status wanneer onboarding_afronden true is.
+        onboarding_stroom:
+          type: string
+          description: Wizardstroom die bij de atomaire afronding behouden blijft.
 
     OnboardingAccountInput:
       type: object
@@ -37407,7 +37425,13 @@ components:
           type: ["integer", "null"]
         heeft_medewerkerprofiel:
           type: boolean
-          description: Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet.
+          description: Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar.
+        bestaande_medewerker_id:
+          type: ["integer", "null"]
+          description: Medewerker-id van de bestaande onafgeronde onboarding, indien aanwezig.
+        medewerker_status:
+          type: ["string", "null"]
+          description: Huidige medewerkerstatus van het bestaande profiel.
 
     ExterneAdviseur:
       type: object
@@ -37486,7 +37510,16 @@ components:
           type: ["string", "null"]
         concept_medewerker_id:
           type: ["integer", "null"]
-          description: Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
+          description: Id van een bestaand hervatbaar onboardingprofiel voor deze gebruiker; de historische veldnaam blijft behouden voor compatibiliteit.
+        onboarding_status:
+          type: ["string", "null"]
+          description: Huidige status van de onafgeronde onboarding.
+        onboarding_stroom:
+          type: ["string", "null"]
+          description: Wizardtype van de onafgeronde onboarding, bijvoorbeeld vast, stagiair, oproep, payroll, detachering of directie.
+        onboarding_versie:
+          type: ["integer", "null"]
+          description: Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.
         account_profiel_id:
           type: ["integer", "null"]
           description: Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
@@ -53390,7 +53423,7 @@ components:
 
     WizardStatus:
       type: object
-      required: [id, medewerker_status, huidig_stap]
+      required: [id, medewerker_status, huidig_stap, versie]
       properties:
         id:
           type: integer
@@ -53401,6 +53434,10 @@ components:
         wizard_voortgang:
           type: object
           additionalProperties: true
+        versie:
+          type: integer
+          minimum: 0
+          description: Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.
         bijgewerkt_op:
           type: string
           format: date-time
@@ -53408,10 +53445,14 @@ components:
 
     WizardVoortgangInput:
       type: object
-      required: [stap]
+      required: [stap, versie]
       properties:
         stap:
           type: integer
+        versie:
+          type: integer
+          minimum: 0
+          description: Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.
         medewerker_status:
           type: string
         voortgang_data:
@@ -53421,6 +53462,12 @@ components:
           type: string
           format: date-time
           description: Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren)
+        opnieuw_starten:
+          type: boolean
+          description: Wis de opgeslagen wizardvoortgang en zet een onafgeronde onboarding terug naar stap 1. Afgeronde of actieve profielen worden geweigerd.
+        onboarding_stroom:
+          type: string
+          description: Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten.
 
     HrmMiddel:
       type: object

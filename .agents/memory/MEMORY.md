@@ -13,7 +13,7 @@
 - [auth.ts terugkerende mangeling](auth-ts-mangling.md) — merges mangelen routes (auth.ts, 2x opname.ts): bodies onder verkeerde koppen; tsc=enige detector; herstel via checkout uit laatst geverifieerde commit; CI check-dubbele-routes vangt duplicaten.
 - [NUMMER_01 kenmerkketen](kenmerkketen.md) — nummers uit DB-sequences, kenmerk altijd berekend, bevriezen alleen bij versturen/definitief; offertes kopiëren=nieuw nummer, inkoop=letterherziening+snapshot.
 - [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
-- [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static: `mjs` verplicht in regexp; path+path_regexp in één matcher = AND (serveerde /logo-*.png als text/html) → alleen extensie-regexp gebruiken.
+- [Caddyfile statische routes](caddyfile-mjs.md) — mjs verplicht; matchers zijn AND; kapsel een geneste app in een specifieke handle vóór de algemene static-handle.
 - [KADER FPS Connect](kader-fps-connect.md) — attached_assets/KADER-FPS-Connect_*.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) + [Ontwikkelfilosofie](ontwikkelfilosofie.md) + [Changelog](changelog-verplichting.md) — taak pas gereed bij bewezen businessscenario; stabiliteit > functionaliteit; docs/changelog.md altijd bijwerken.
 - [Monteur-app](offline-first-monteur.md) + [web-PWA](monteur-webapp.md) + [app-lock](mobiele-app-lock.md) — offline-first AsyncStorage+SyncQueue; SW pre-cachet volledig manifest; biometrisch slot rond bearer-sessie, centrale gate in _layout.
@@ -102,6 +102,7 @@
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
 - [Externe adviseur](externe-adviseur.md) — adviseurs buiten personeelsbestand (geen medewerkers-rij); toegang_tot-poort per request in de globale middleware; wederzijdse 409-exclusiviteit met medewerker-aanmaakpaden.
 - [Geconsolideerde onboarding definitief](onboarding-geconsolideerd.md) — medewerkerprofielen alleen via Personeel/HRM; drieledige keuze in gebruikersbeheer is definitief vervallen (2026-08-07); wizard-flag staat aan in prod.
+- [Onboarding wizardversie](onboarding-wizard-versie.md) — elk opslagverzoek draagt _versie; definitieve profielvelden + statusovergang horen in dezelfde tx onder één rijlock.
 - [Sessie-bewijs dev & prod via https](dev-api-sessie-bewijs.md) — Secure-cookies eisen https (nooit http://localhost); prod-details in prod-curl-sessie-bewijs.md (#HttpOnly_ jar, SQL via stdin).
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; schemawijziging sinds SCHEMA_01 via genummerde migratie (zie schema-migratieketen).
 - [Factuurstroom FACTUUR_02](factuurstroom.md) + [verificatie](factuurstroom-verificatie.md) — één mail-ingang, gesloten afwijsredenen, inkoperstap nooit te omzeilen, claim teruggeven bij fout; inkoperroute matcht nooit (leveranciers- vs crm_klanten-id's).

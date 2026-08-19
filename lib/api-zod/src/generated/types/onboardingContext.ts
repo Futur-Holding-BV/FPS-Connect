@@ -17,10 +17,25 @@ export interface OnboardingContext {
   /** @nullable */
   telefoon?: string | null;
   /**
-     * Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
+     * Id van een bestaand hervatbaar onboardingprofiel voor deze gebruiker; de historische veldnaam blijft behouden voor compatibiliteit.
      * @nullable
      */
   concept_medewerker_id?: number | null;
+  /**
+     * Huidige status van de onafgeronde onboarding.
+     * @nullable
+     */
+  onboarding_status?: string | null;
+  /**
+     * Wizardtype van de onafgeronde onboarding, bijvoorbeeld vast, stagiair, oproep, payroll, detachering of directie.
+     * @nullable
+     */
+  onboarding_stroom?: string | null;
+  /**
+     * Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.
+     * @nullable
+     */
+  onboarding_versie?: number | null;
   /**
      * Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
      * @nullable

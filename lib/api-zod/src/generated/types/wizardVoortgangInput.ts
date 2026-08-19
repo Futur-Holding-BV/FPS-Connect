@@ -9,8 +9,17 @@ import type { WizardVoortgangInputVoortgangData } from './wizardVoortgangInputVo
 
 export interface WizardVoortgangInput {
   stap: number;
+  /**
+     * Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.
+     * @minimum 0
+     */
+  versie: number;
   medewerker_status?: string;
   voortgang_data?: WizardVoortgangInputVoortgangData;
   /** Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren) */
   bijgewerkt_op?: Date;
+  /** Wis de opgeslagen wizardvoortgang en zet een onafgeronde onboarding terug naar stap 1. Afgeronde of actieve profielen worden geweigerd. */
+  opnieuw_starten?: boolean;
+  /** Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten. */
+  onboarding_stroom?: string;
 }

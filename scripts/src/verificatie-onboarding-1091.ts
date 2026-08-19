@@ -146,7 +146,7 @@ async function main() {
       contracturen_per_week: "38",
     };
     const p1 = await api(admin, "PATCH", `/medewerkers/${fredId}/wizard-voortgang`, {
-      stap: 3, medewerker_status: "concept",
+      stap: 3, versie: 0, medewerker_status: "concept",
       voortgang_data: { form: formData, cvExtra: { mobiel: "0612345678" }, geselecteerdeMiddelen: ["laptop"], onboardingTaken: {}, onboardingDeadlines: {} },
     });
     check("wizard-voortgang stap 3 opgeslagen", p1.status === 200, `status ${p1.status}`);
@@ -166,11 +166,11 @@ async function main() {
     // opnieuw bewaard — hervatten moet de NIEUWE (eerdere) snapshot tonen,
     // niet de verouderde latere.
     await api(admin, "PATCH", `/medewerkers/${fredId}/wizard-voortgang`, {
-      stap: 7, voortgang_data: { form: { ...formData, functie_id: 999999, werkmaatschappij: "OUD-STALE" } },
+      stap: 7, versie: p1.json.versie, voortgang_data: { form: { ...formData, functie_id: 999999, werkmaatschappij: "OUD-STALE" } },
     });
     const gewijzigd = { ...formData, contracturen_per_week: "32" };
-    await api(admin, "PATCH", `/medewerkers/${fredId}/wizard-voortgang`, {
-      stap: 4, voortgang_data: { form: gewijzigd, cvExtra: { mobiel: "0611111111" } },
+    const pTerug = await api(admin, "PATCH", `/medewerkers/${fredId}/wizard-voortgang`, {
+      stap: 4, versie: (p1.json.versie as number) + 1, voortgang_data: { form: gewijzigd, cvExtra: { mobiel: "0611111111" } },
     });
     const stT = await api(admin, "GET", `/medewerkers/${fredId}/wizard-status`);
     check("na teruggaan: huidig_stap = 4", stT.json.huidig_stap === 4);
@@ -188,6 +188,7 @@ async function main() {
     await db.update(medewerkersTable).set({ wizardVoortgang: {} }).where(eq(medewerkersTable.id, fredId));
     const pOud = await api(admin, "PATCH", `/medewerkers/${fredId}/wizard-voortgang`, {
       stap: 4,
+      versie: 0,
       voortgang_data: {
         voortgang_data: { ...formData },
         cvExtra: { mobiel: "0687654321" },

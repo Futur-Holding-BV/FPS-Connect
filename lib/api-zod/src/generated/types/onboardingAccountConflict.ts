@@ -15,6 +15,16 @@ export interface OnboardingAccountConflict {
   code: OnboardingAccountConflictCode;
   /** @nullable */
   bestaande_gebruiker_id: number | null;
-  /** Alleen true bij een niet-concept medewerkerprofiel; een conceptprofiel is hervatbaar via de wizard en blokkeert de doorstart niet. */
+  /** Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar. */
   heeft_medewerkerprofiel: boolean;
+  /**
+     * Medewerker-id van de bestaande onafgeronde onboarding, indien aanwezig.
+     * @nullable
+     */
+  bestaande_medewerker_id?: number | null;
+  /**
+     * Huidige medewerkerstatus van het bestaande profiel.
+     * @nullable
+     */
+  medewerker_status?: string | null;
 }

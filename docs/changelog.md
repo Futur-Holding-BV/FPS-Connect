@@ -1,3 +1,11 @@
+## 2026-08-19 — HRM_ONBOARDING_HERSTART_01: vastgelopen onboarding hervatten of opnieuw beginnen
+
+- **Wachtrijstatussen hervatbaar**: niet alleen `concept`, maar ook de overige onafgeronde onboardingstatussen worden als lopende onboarding herkend; een bestaand account blokkeert daardoor niet langer met “bestaat al”.
+- **Veilige herstart**: bij een lopende onboarding kan Personeel kiezen tussen **Hervatten** en **Opnieuw beginnen**. Herstart wist uitsluitend de opgeslagen wizardvoortgang en wordt server-side geweigerd voor actieve, afgeronde of uit-dienst-profielen.
+- **Juiste stroom behouden**: vaste, generieke, ZZP- en uitzend/inhuur-onboardings openen het bestaande medewerkerprofiel in hun eigen wizard in plaats van een tweede profiel te proberen maken.
+- **Twee tabbladen fail-closed**: iedere wizardopslag draagt een oplopende versie; een verouderde tab krijgt atomair 409 en kan nieuwere antwoorden of een gelijktijdige statusovergang niet overschrijven.
+- **Geen tweede account**: de bestaande gebruikers- en medewerkerkoppeling blijft behouden, zodat e-mailuniekheid, uitnodiging en auditspoor intact blijven.
+
 ## 2026-08-19 — MONTEUR_PWA_INSTALL_01: Android-installatiepoort voor `/app/`
 
 - **Buildtime HTML-injectie**: de Expo `single`-export krijgt na iedere bouw manifest-, Apple-touch- en mobiele PWA-tags plus een service-workerregistratie met scope `/app/`; de injectie vult ieder ontbrekend onderdeel afzonderlijk aan en kan daardoor niet stil overslaan op een gedeeltelijk gevulde HTML-kop.
