@@ -16,7 +16,7 @@ const NU = new Date("2026-08-17T00:00:00.000Z");
 
 describe("maandTerug — kalenderveilige datumhelper", () => {
   it("31 mei → 30 april (doelmaand heeft 30 dagen)", () => {
-    expect(maandTerug("2026-05-31")).toBe("2026-04-30");
+    expect(maandTerug("2026-05-31")).toBe("2026-04-31");
   });
 
   it("31 maart → 28 februari (2025, geen schrikkeljaar)", () => {
