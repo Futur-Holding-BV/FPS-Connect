@@ -78,6 +78,7 @@ const LEEG = {
 };
 
 const DOMEIN = API_DOMEIN;
+const GEEN_WAND_OF_PLAFOND = "__geen__";
 
 // AI-voorstel kleurconventie (geel/amber tot bevestigd); web-equivalent amber-100/300/700.
 const AMBER_BG = "#FEF3C7";
@@ -753,12 +754,15 @@ export default function Plattegrond() {
               <View style={isAi("wand_of_plafond") ? amberVak : undefined}>
                 <ChipRij
                   opties={[
-                    { waarde: "", label: "Niet opgegeven" },
+                    { waarde: GEEN_WAND_OF_PLAFOND, label: "Niet opgegeven" },
                     ...WAND_PLAFOND_OPTIES.map((v) => ({ waarde: v, label: v === "wand" ? "Wand" : "Plafond" })),
                   ]}
-                  geselecteerd={form.wand_of_plafond}
+                  geselecteerd={form.wand_of_plafond || GEEN_WAND_OF_PLAFOND}
                   onKies={(v) => {
-                    setForm((f) => ({ ...f, wand_of_plafond: v }));
+                    setForm((f) => ({
+                      ...f,
+                      wand_of_plafond: v === GEEN_WAND_OF_PLAFOND ? "" : v,
+                    }));
                     raakAan("wand_of_plafond");
                   }}
                 />

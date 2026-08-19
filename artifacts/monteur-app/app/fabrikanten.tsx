@@ -11,6 +11,7 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
 const DOMEIN = API_DOMEIN;
+const GEEN_FABRIKANT = "__geen__";
 
 function Badge({ tekst, kleur, achtergrond }: { tekst: string; kleur: string; achtergrond: string }) {
   const c = useColors();
@@ -63,7 +64,7 @@ export default function FabrikantenScherm() {
   });
 
   const chipOpties = [
-    { waarde: "", label: "Alle" },
+    { waarde: GEEN_FABRIKANT, label: "Alle" },
     ...fabrikantNamen.map((naam) => ({ waarde: naam, label: naam })),
   ];
 
@@ -104,8 +105,8 @@ export default function FabrikantenScherm() {
         />
         <ChipRij
           opties={chipOpties}
-          geselecteerd={fabNaam ?? ""}
-          onKies={(w) => setFabNaam(w === "" ? null : w)}
+          geselecteerd={fabNaam ?? GEEN_FABRIKANT}
+          onKies={(w) => setFabNaam(w === GEEN_FABRIKANT ? null : w)}
         />
       </View>
 
