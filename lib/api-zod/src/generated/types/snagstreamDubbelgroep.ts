@@ -5,10 +5,9 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { SnagstreamRapport } from './snagstreamRapport';
 
-export type ListSnagstreamRapportenParams = {
-gebouw_id?: number;
-zoek?: string;
-jaar?: number;
-status?: string;
-};
+export interface SnagstreamDubbelgroep {
+  vingerafdruk: string;
+  rapporten: SnagstreamRapport[];
+}

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb, real, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -11,6 +11,10 @@ export const snagstreamRapportenTable = pgTable("snagstream_rapporten", {
   id: serial("id").primaryKey(),
   bestandsnaam: text("bestandsnaam").notNull(),
   pdfUrl: text("pdf_url").notNull(),
+  vingerafdruk: text("vingerafdruk"),
+  // Alleen true wanneer objectPath door de beveiligde Snagstream-uploadketen is uitgegeven.
+  // Bestaande client-supplied paden blijven false en mogen nooit storagecleanup activeren.
+  opslagBeheerd: boolean("opslag_beheerd").notNull().default(false),
   rapportdatum: text("rapportdatum"),
   opdrachtgever: text("opdrachtgever"),
   projectNaam: text("project_naam"),
@@ -21,6 +25,30 @@ export const snagstreamRapportenTable = pgTable("snagstream_rapporten", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// Kortlevende registratie tussen presigned upload en definitieve archiefopname.
+// Alleen het gekoppelde gebruiker-token mag het object als Snagstream-PDF voltooien.
+export const snagstreamUploadsTable = pgTable(
+  "snagstream_uploads",
+  {
+    id: serial("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    objectPath: text("object_path").notNull(),
+    bestandsnaam: text("bestandsnaam").notNull(),
+    vingerafdruk: text("vingerafdruk").notNull(),
+    bestandsgrootte: integer("bestandsgrootte").notNull(),
+    gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    verlooptOp: timestamp("verloopt_op").notNull(),
+    opruimPogingen: integer("opruim_pogingen").notNull().default(0),
+    opruimLaatstGeprobeerdOp: timestamp("opruim_laatst_geprobeerd_op"),
+    opruimFout: text("opruim_fout"),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("snagstream_uploads_object_path_unique_idx").on(table.objectPath),
+    index("snagstream_uploads_verloopt_op_idx").on(table.verlooptOp),
+  ],
+);
 
 export const insertSnagstreamRapportSchema = createInsertSchema(snagstreamRapportenTable).omit({
   id: true,

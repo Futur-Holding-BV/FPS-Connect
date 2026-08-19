@@ -4746,7 +4746,7 @@ export interface AuthGebruiker {
   is_hoofdtester?: boolean;
   /** Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset). */
   moet_wachtwoord_wijzigen?: boolean;
-  /** Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (Monteur/Timmerman/Uitvoerder/Onderhoudsmonteur, niet-hoofdbeheerder). */
+  /** Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid. */
   is_uitvoerend_veld?: boolean;
 }
 
@@ -7982,6 +7982,44 @@ export interface OfferteAnalytics {
 }
 
 export type OfferteBrandingContextFout = typeof OfferteBrandingContextFout[keyof typeof OfferteBrandingContextFout] | null;
+
+
+export const OfferteBrandingContextFout = {
+  geen_werkmaatschappij: 'geen_werkmaatschappij',
+  werkmaatschappij_niet_gevonden: 'werkmaatschappij_niet_gevonden',
+  model_niet_beschikbaar: 'model_niet_beschikbaar',
+} as const;
+
+export interface OfferteBrandingWerkgever {
+  id: number;
+  naam: string;
+  logo_url?: string | null;
+  primaire_kleur?: string | null;
+  adres?: string | null;
+  postcode?: string | null;
+  plaats?: string | null;
+  website?: string | null;
+  email?: string | null;
+  telefoon?: string | null;
+  kvk?: string | null;
+  btw?: string | null;
+}
+
+export interface OfferteBrandingModel {
+  id: number;
+  document_type: string;
+  werkgever_id: number;
+  versie?: number | null;
+  werkgever_naam?: string | null;
+  connect_template_json?: string | null;
+}
+
+export interface OfferteBrandingContext {
+  fout?: OfferteBrandingContextFout;
+  werkgever?: OfferteBrandingWerkgever | null;
+  model?: OfferteBrandingModel | null;
+}
+
 export interface OffertePortaalToken {
   id: number;
   token: string;
@@ -12223,10 +12261,20 @@ export interface VeiligheidDashboard {
 
 export type SnagstreamRapportAiMetadata = { [key: string]: unknown } | null;
 
+export interface SnagstreamZoekTreffer {
+  snag_id: number;
+  snagnummer?: string | null;
+  ruimte?: string | null;
+  verdieping?: string | null;
+  omschrijving?: string | null;
+  pdf_pagina?: number | null;
+}
+
 export interface SnagstreamRapport {
   id: number;
   bestandsnaam: string;
   pdf_url: string;
+  vingerafdruk?: string | null;
   rapportdatum?: string | null;
   opdrachtgever?: string | null;
   project_naam?: string | null;
@@ -12235,14 +12283,20 @@ export interface SnagstreamRapport {
   gebouw_naam?: string | null;
   ai_metadata?: SnagstreamRapportAiMetadata;
   uploader_naam?: string | null;
+  uploader_id?: number | null;
   snag_count?: number;
+  upload_dubbel?: boolean;
+  zoek_treffers?: SnagstreamZoekTreffer[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
 
 export interface SnagstreamRapportInput {
   bestandsnaam: string;
-  pdf_url: string;
+  upload_token: string;
+  /** @pattern ^[a-f0-9]{64}$ */
+  vingerafdruk: string;
+  naamconflict_bevestigd?: boolean;
   rapportdatum?: string | null;
   opdrachtgever?: string | null;
   project_naam?: string | null;
@@ -12297,11 +12351,54 @@ export interface SnagstreamOvernemenInput {
 export interface SnagstreamUploadUrlInput {
   bestandsnaam: string;
   bestandsgrootte: number;
+  /** @pattern ^[a-f0-9]{64}$ */
+  vingerafdruk: string;
 }
 
 export interface SnagstreamUploadUrlResponse {
   upload_url: string;
   object_path: string;
+  upload_token: string;
+}
+
+export interface SnagstreamUploadControleInput {
+  /** @minLength 1 */
+  bestandsnaam: string;
+  /** @pattern ^[a-f0-9]{64}$ */
+  vingerafdruk: string;
+}
+
+export type SnagstreamUploadControleUitkomst = typeof SnagstreamUploadControleUitkomst[keyof typeof SnagstreamUploadControleUitkomst];
+
+
+export const SnagstreamUploadControleUitkomst = {
+  nieuw: 'nieuw',
+  exact_dubbel: 'exact_dubbel',
+  naamconflict: 'naamconflict',
+} as const;
+
+export interface SnagstreamUploadControle {
+  uitkomst: SnagstreamUploadControleUitkomst;
+  bestaand_rapport?: SnagstreamRapport | null;
+  naamconflicten: SnagstreamRapport[];
+}
+
+export interface SnagstreamDubbelgroep {
+  vingerafdruk: string;
+  rapporten: SnagstreamRapport[];
+}
+
+export interface SnagstreamBackfillResultaat {
+  aangevuld: number;
+  mislukt: number;
+}
+
+export interface SnagstreamGebouwSamenvatting {
+  gebouw_id?: number | null;
+  gebouw_naam: string;
+  rapport_count: number;
+  snag_count: number;
+  recentste_rapportdatum?: string | null;
 }
 
 export interface Grootboekrekening {
@@ -19149,6 +19246,9 @@ export type GetVeiligheidIncidentenUploadUrl200 = {
 
 export type ListSnagstreamRapportenParams = {
 gebouw_id?: number;
+zoek?: string;
+jaar?: number;
+status?: string;
 };
 
 export type OvernemenSnagstreamSnag201 = {
@@ -19782,40 +19882,3 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
-
-
-export const OfferteBrandingContextFout = {
-  geen_werkmaatschappij: 'geen_werkmaatschappij',
-  werkmaatschappij_niet_gevonden: 'werkmaatschappij_niet_gevonden',
-  model_niet_beschikbaar: 'model_niet_beschikbaar',
-} as const;
-
-export interface OfferteBrandingModel {
-  id: number;
-  document_type: string;
-  werkgever_id: number;
-  versie?: number | null;
-  werkgever_naam?: string | null;
-  connect_template_json?: string | null;
-}
-
-export interface OfferteBrandingWerkgever {
-  id: number;
-  naam: string;
-  logo_url?: string | null;
-  primaire_kleur?: string | null;
-  adres?: string | null;
-  postcode?: string | null;
-  plaats?: string | null;
-  website?: string | null;
-  email?: string | null;
-  telefoon?: string | null;
-  kvk?: string | null;
-  btw?: string | null;
-}
-
-export interface OfferteBrandingContext {
-  fout?: OfferteBrandingContextFout;
-  werkgever?: OfferteBrandingWerkgever | null;
-  model?: OfferteBrandingModel | null;
-}

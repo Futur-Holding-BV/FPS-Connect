@@ -222,6 +222,12 @@ export class ObjectStorageService {
     return objectFile as unknown as StorageFile;
   }
 
+  /** Verwijder een privé-object via dezelfde backend-abstractie als lezen. */
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    const objectFile = await this.getObjectEntityFile(objectPath);
+    await objectFile.delete();
+  }
+
   /**
    * Download een StorageFile en retourneer een Web API Response.
    * isPublic bepaalt de Cache-Control header.
@@ -263,16 +269,23 @@ export class ObjectStorageService {
    * voor opslag in de database.
    *
    * Padstructuur:
+   *   Met vastePrefix: {vastePrefix}/{uuid}
    *   Met gebouwId + type: {gebouwId}/{type}s/{uuid}
    *   Zonder (of type=algemeen): algemeen/{uuid}
    */
   async getObjectEntityUploadURL(
     gebouwId?: number | null,
     bestandType?: BestandType | null,
+    vastePrefix?: string | null,
   ): Promise<{ uploadURL: string; objectPath: string }> {
     const objectId = randomUUID();
     let subPath: string;
-    if (gebouwId != null && bestandType && bestandType !== "algemeen") {
+    if (vastePrefix) {
+      if (!/^[a-z0-9-]+$/.test(vastePrefix)) {
+        throw new Error("Ongeldige vaste opslagprefix");
+      }
+      subPath = `${vastePrefix}/${objectId}`;
+    } else if (gebouwId != null && bestandType && bestandType !== "algemeen") {
       subPath = `${gebouwId}/${bestandType}s/${objectId}`;
     } else {
       subPath = `algemeen/${objectId}`;

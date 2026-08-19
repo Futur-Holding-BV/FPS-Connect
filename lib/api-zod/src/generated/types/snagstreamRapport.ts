@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SnagstreamRapportAiMetadata } from './snagstreamRapportAiMetadata';
+import type { SnagstreamZoekTreffer } from './snagstreamZoekTreffer';
 
 export interface SnagstreamRapport {
   id: number;
   bestandsnaam: string;
   pdf_url: string;
+  vingerafdruk?: string | null;
   rapportdatum?: string | null;
   opdrachtgever?: string | null;
   project_naam?: string | null;
@@ -19,7 +21,10 @@ export interface SnagstreamRapport {
   gebouw_naam?: string | null;
   ai_metadata?: SnagstreamRapportAiMetadata;
   uploader_naam?: string | null;
+  uploader_id?: number | null;
   snag_count?: number;
+  upload_dubbel?: boolean;
+  zoek_treffers?: SnagstreamZoekTreffer[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

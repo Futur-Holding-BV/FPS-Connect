@@ -26,6 +26,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   CopyObjectCommand,
+  DeleteObjectCommand,
   type GetObjectCommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -128,6 +129,12 @@ export class S3StorageFile implements StorageFile {
     } catch {
       return [false];
     }
+  }
+
+  async delete(): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: this.name }),
+    );
   }
 
   async setMetadata(options: { metadata: Record<string, string> }): Promise<void> {

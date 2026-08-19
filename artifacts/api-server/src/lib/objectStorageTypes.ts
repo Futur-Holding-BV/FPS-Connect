@@ -27,6 +27,9 @@ export interface StorageFile {
   /** Controleer of het object bestaat. Retourneert [boolean] (GCS-compatibel) */
   exists(): Promise<[boolean]>;
 
+  /** Verwijder het object uit de opslagbackend. */
+  delete(): Promise<unknown>;
+
   /**
    * Sla user-defined metadata op bij het object.
    * GCS: setMetadata({ metadata: { ... } })

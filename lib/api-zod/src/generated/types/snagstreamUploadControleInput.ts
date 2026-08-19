@@ -6,14 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SnagstreamRapportInput {
+export interface SnagstreamUploadControleInput {
+  /** @minLength 1 */
   bestandsnaam: string;
-  upload_token: string;
   /** @pattern ^[a-f0-9]{64}$ */
   vingerafdruk: string;
-  naamconflict_bevestigd?: boolean;
-  rapportdatum?: string | null;
-  opdrachtgever?: string | null;
-  project_naam?: string | null;
-  gebouw_id?: number | null;
 }

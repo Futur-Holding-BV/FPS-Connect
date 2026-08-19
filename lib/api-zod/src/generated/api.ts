@@ -7484,7 +7484,8 @@ export const TaalWijzigenResponse = zod.object({
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
 })
 
 
@@ -7634,7 +7635,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
 })
 
 
@@ -7659,7 +7661,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
 })
 
 
@@ -7686,7 +7689,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
 })
 
 
@@ -24376,14 +24380,19 @@ export const GetVeiligheidDashboardResponse = zod.object({
 /**
  * @summary Presigned upload-URL aanvragen voor Snagstream PDF
  */
+export const requestSnagstreamUploadUrlBodyVingerafdrukRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 export const RequestSnagstreamUploadUrlBody = zod.object({
   "bestandsnaam": zod.string(),
-  "bestandsgrootte": zod.number()
+  "bestandsgrootte": zod.number(),
+  "vingerafdruk": zod.string().regex(requestSnagstreamUploadUrlBodyVingerafdrukRegExp)
 })
 
 export const RequestSnagstreamUploadUrlResponse = zod.object({
   "upload_url": zod.string(),
-  "object_path": zod.string()
+  "object_path": zod.string(),
+  "upload_token": zod.string()
 })
 
 
@@ -24391,13 +24400,17 @@ export const RequestSnagstreamUploadUrlResponse = zod.object({
  * @summary Snagstream-archief ophalen
  */
 export const ListSnagstreamRapportenQueryParams = zod.object({
-  "gebouw_id": zod.coerce.number().optional()
+  "gebouw_id": zod.coerce.number().optional(),
+  "zoek": zod.coerce.string().optional(),
+  "jaar": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
 })
 
 export const ListSnagstreamRapportenResponseItem = zod.object({
   "id": zod.number(),
   "bestandsnaam": zod.string(),
   "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
   "rapportdatum": zod.string().nullish(),
   "opdrachtgever": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
@@ -24406,7 +24419,17 @@ export const ListSnagstreamRapportenResponseItem = zod.object({
   "gebouw_naam": zod.string().nullish(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
   "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
   "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -24416,16 +24439,176 @@ export const ListSnagstreamRapportenResponse = zod.array(ListSnagstreamRapporten
 /**
  * @summary Snagstream PDF-rapport toevoegen aan archief
  */
+export const createSnagstreamRapportBodyVingerafdrukRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 export const CreateSnagstreamRapportBody = zod.object({
   "bestandsnaam": zod.string(),
-  "pdf_url": zod.string(),
+  "upload_token": zod.string(),
+  "vingerafdruk": zod.string().regex(createSnagstreamRapportBodyVingerafdrukRegExp),
+  "naamconflict_bevestigd": zod.boolean().optional(),
   "rapportdatum": zod.string().nullish(),
   "opdrachtgever": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish()
 })
 
-export const CreateSnagstreamRapportResponse = zod.void()
+export const CreateSnagstreamRapportResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
+  "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Controleer inhoudsduplicaat en bestandsnaamconflict vóór upload
+ */
+
+export const controleerSnagstreamUploadBodyVingerafdrukRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const ControleerSnagstreamUploadBody = zod.object({
+  "bestandsnaam": zod.string().min(1),
+  "vingerafdruk": zod.string().regex(controleerSnagstreamUploadBodyVingerafdrukRegExp)
+})
+
+export const ControleerSnagstreamUploadResponse = zod.object({
+  "uitkomst": zod.enum(['nieuw', 'exact_dubbel', 'naamconflict']),
+  "bestaand_rapport": zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
+  "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).nullish(),
+  "naamconflicten": zod.array(zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
+  "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Bestaande inhoudsdubbelen tonen als opruimlijst
+ */
+export const ListDubbeleSnagstreamRapportenResponseItem = zod.object({
+  "vingerafdruk": zod.string(),
+  "rapporten": zod.array(zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
+  "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+})
+export const ListDubbeleSnagstreamRapportenResponse = zod.array(ListDubbeleSnagstreamRapportenResponseItem)
+
+
+/**
+ * @summary Ontbrekende vingerafdrukken van bestaande rapporten idempotent aanvullen
+ */
+export const VulSnagstreamVingerafdrukkenAanResponse = zod.object({
+  "aangevuld": zod.number(),
+  "mislukt": zod.number()
+})
+
+
+/**
+ * @summary Gebouwen in het Snagstream-archief met rapport- en snagaantallen
+ */
+export const GetSnagstreamGebouwenOverzichtResponseItem = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string(),
+  "rapport_count": zod.number(),
+  "snag_count": zod.number(),
+  "recentste_rapportdatum": zod.string().nullish()
+})
+export const GetSnagstreamGebouwenOverzichtResponse = zod.array(GetSnagstreamGebouwenOverzichtResponseItem)
 
 
 /**
@@ -24439,6 +24622,7 @@ export const GetSnagstreamRapportResponse = zod.object({
   "id": zod.number(),
   "bestandsnaam": zod.string(),
   "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
   "rapportdatum": zod.string().nullish(),
   "opdrachtgever": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
@@ -24447,7 +24631,17 @@ export const GetSnagstreamRapportResponse = zod.object({
   "gebouw_naam": zod.string().nullish(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
   "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
   "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -24472,6 +24666,7 @@ export const UpdateSnagstreamRapportResponse = zod.object({
   "id": zod.number(),
   "bestandsnaam": zod.string(),
   "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
   "rapportdatum": zod.string().nullish(),
   "opdrachtgever": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
@@ -24480,7 +24675,17 @@ export const UpdateSnagstreamRapportResponse = zod.object({
   "gebouw_naam": zod.string().nullish(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
   "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
   "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -24507,6 +24712,7 @@ export const AiUitlezenSnagstreamRapportResponse = zod.object({
   "id": zod.number(),
   "bestandsnaam": zod.string(),
   "pdf_url": zod.string(),
+  "vingerafdruk": zod.string().nullish(),
   "rapportdatum": zod.string().nullish(),
   "opdrachtgever": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
@@ -24515,7 +24721,17 @@ export const AiUitlezenSnagstreamRapportResponse = zod.object({
   "gebouw_naam": zod.string().nullish(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
   "uploader_naam": zod.string().nullish(),
+  "uploader_id": zod.number().nullish(),
   "snag_count": zod.number().optional(),
+  "upload_dubbel": zod.boolean().optional(),
+  "zoek_treffers": zod.array(zod.object({
+  "snag_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

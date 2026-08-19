@@ -404,7 +404,12 @@ INDEX|session|IDX_session_expire
 INDEX|session|session_pkey
 INDEX|slim_upload_log|slim_upload_log_pkey
 INDEX|snagstream_rapporten|snagstream_rapporten_pkey
+INDEX|snagstream_rapporten|snagstream_rapporten_vingerafdruk_idx
 INDEX|snagstream_snags|snagstream_snags_pkey
+INDEX|snagstream_uploads|snagstream_uploads_object_path_unique_idx
+INDEX|snagstream_uploads|snagstream_uploads_pkey
+INDEX|snagstream_uploads|snagstream_uploads_token_key
+INDEX|snagstream_uploads|snagstream_uploads_verloopt_op_idx
 INDEX|social_bericht_kanalen|social_bericht_kanalen_pkey
 INDEX|social_bericht_kanalen|social_bericht_kanalen_status_idx
 INDEX|social_bericht_kanalen|social_bericht_kanalen_uq
@@ -4245,11 +4250,13 @@ KOLOM|snagstream_rapporten|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|snagstream_rapporten|gebouw_id|integer|YES|
 KOLOM|snagstream_rapporten|id|integer|NO|nextval('snagstream_rapporten_id_seq'::regclass)
 KOLOM|snagstream_rapporten|opdrachtgever|text|YES|
+KOLOM|snagstream_rapporten|opslag_beheerd|boolean|NO|false
 KOLOM|snagstream_rapporten|pdf_url|text|NO|
 KOLOM|snagstream_rapporten|project_naam|text|YES|
 KOLOM|snagstream_rapporten|rapportdatum|text|YES|
 KOLOM|snagstream_rapporten|status|text|NO|'nieuw'::text
 KOLOM|snagstream_rapporten|uploader_id|integer|YES|
+KOLOM|snagstream_rapporten|vingerafdruk|text|YES|
 KOLOM|snagstream_snags|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|snagstream_snags|applicatie_naam|text|YES|
 KOLOM|snagstream_snags|classificatie|text|YES|
@@ -4271,6 +4278,18 @@ KOLOM|snagstream_snags|status_origineel|text|YES|
 KOLOM|snagstream_snags|toepassing_naam|text|YES|
 KOLOM|snagstream_snags|type_naam|text|YES|
 KOLOM|snagstream_snags|verdieping|text|YES|
+KOLOM|snagstream_uploads|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|snagstream_uploads|bestandsgrootte|integer|NO|
+KOLOM|snagstream_uploads|bestandsnaam|text|NO|
+KOLOM|snagstream_uploads|gebruiker_id|integer|NO|
+KOLOM|snagstream_uploads|id|integer|NO|nextval('snagstream_uploads_id_seq'::regclass)
+KOLOM|snagstream_uploads|object_path|text|NO|
+KOLOM|snagstream_uploads|opruim_fout|text|YES|
+KOLOM|snagstream_uploads|opruim_laatst_geprobeerd_op|timestamp without time zone|YES|
+KOLOM|snagstream_uploads|opruim_pogingen|integer|NO|0
+KOLOM|snagstream_uploads|token|text|NO|
+KOLOM|snagstream_uploads|verloopt_op|timestamp without time zone|NO|
+KOLOM|snagstream_uploads|vingerafdruk|text|NO|
 KOLOM|social_bericht_kanalen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|social_bericht_kanalen|bericht_id|integer|NO|
 KOLOM|social_bericht_kanalen|bijgewerkt_op|timestamp without time zone|NO|now()

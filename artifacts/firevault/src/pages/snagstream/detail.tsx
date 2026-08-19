@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRoute, Link } from "wouter";
 import {
   useGetSnagstreamRapport,
@@ -147,6 +147,16 @@ export default function SnagstreamDetailPagina() {
     }
   }
 
+  const snagLijst = snags as SnagstreamSnag[];
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash || snagLijst.length === 0) return;
+    requestAnimationFrame(() => {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [snagLijst.length]);
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center gap-2 text-muted-foreground">
@@ -158,7 +168,6 @@ export default function SnagstreamDetailPagina() {
   const r = rapport as SnagstreamRapport | undefined;
   if (!r) return <div className="p-6 text-muted-foreground">Rapport niet gevonden.</div>;
 
-  const snagLijst = snags as SnagstreamSnag[];
   const gebouwLijst = gebouwen as Array<{ id: number; naam: string }>;
   const verdiepingLijst = verdiepingen as Array<{ id: number; naam: string }>;
   const status = r.status;
@@ -203,6 +212,11 @@ export default function SnagstreamDetailPagina() {
                     </span>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Geüpload op {new Date(r.aangemaakt_op).toLocaleString("nl-NL")}
+                  {" door "}
+                  {r.uploader_naam ?? "onbekend"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -303,6 +317,7 @@ export default function SnagstreamDetailPagina() {
                   return (
                     <tr
                       key={s.id}
+                      id={`snag-${s.id}`}
                       className={s.overgenomen ? "bg-green-50/40" : "hover:bg-slate-50/50"}
                     >
                       <td className="px-3 py-3 text-muted-foreground font-mono text-xs">

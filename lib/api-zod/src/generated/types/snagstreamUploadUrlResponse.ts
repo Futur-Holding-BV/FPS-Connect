@@ -9,4 +9,5 @@
 export interface SnagstreamUploadUrlResponse {
   upload_url: string;
   object_path: string;
+  upload_token: string;
 }

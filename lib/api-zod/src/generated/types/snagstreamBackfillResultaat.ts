@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListSnagstreamRapportenParams = {
-gebouw_id?: number;
-zoek?: string;
-jaar?: number;
-status?: string;
-};
+export interface SnagstreamBackfillResultaat {
+  aangevuld: number;
+  mislukt: number;
+}

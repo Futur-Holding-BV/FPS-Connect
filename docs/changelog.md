@@ -720,3 +720,12 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Maandelijkse Azure-controle**: GitHub Actions leest op de eerste dag van iedere maand via Microsoft Graph alle `passwordCredentials` van de mail-appregistratie uit en vergelijkt iedere vervaldatum met de 30-dagengrens.
 - **Betrouwbare waarschuwing**: bij een bijna verlopen of al verlopen secret ontvangt René eerst een Graph-mail; lukt dat niet, dan verschijnt een zichtbare Actions-waarschuwing en wordt een bestaand GitHub-issue bijgewerkt of aangemaakt.
 - **Controle faalt niet stil**: ontbrekende secrets, een ongeldig token, onleesbare vervaldatum of onvoldoende `Application.Read.All`-rechten maken de geplande controle rood met een concrete herstelmelding, in plaats van een geruststellende maar onvolledige uitslag.
+
+
+## 2026-08-19 — Snagstream-archief voorkomt dubbelen en vindt snags terug
+
+- **Geen dubbele PDF-opslag**: Connect vergelijkt vóór upload de SHA-256 van de inhoud. Een exact bestaand rapport opent direct; dezelfde naam met andere inhoud vraagt om een bewuste keuze.
+- **Beveiligde uploadvoltooiing**: een kortlevend, gebruikergebonden token en servercontrole van PDF-signatuur, MIME, grootte en hash voorkomen dat een willekeurig opslagpad als rapport kan worden aangeboden. Alleen de exclusieve Snagstream-opslagprefix mag door de module worden verwijderd; een buiten-scope hashdubbel geeft geen rapportmetadata prijs.
+- **Zoeken tot op snag en pagina**: één zoekveld doorzoekt rapportmetadata, gebouw en snagvelden, met filters op gebouw, jaar en status en een directe link naar de treffer.
+- **Gebouwenoverzicht en ongekoppeld werk**: per gebouw zijn rapporten, recentste datum en snags zichtbaar; ongekoppelde rapporten staan bovenaan en zijn daar direct te koppelen.
+- **Opruimen is herhaalbaar**: verwijderde rapporten ruimen hun PDF op; tijdelijke opslagfouten blijven geregistreerd en worden bij start en iedere vijftien minuten opnieuw geprobeerd.

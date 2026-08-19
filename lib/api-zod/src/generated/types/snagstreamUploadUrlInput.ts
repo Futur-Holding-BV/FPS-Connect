@@ -9,4 +9,6 @@
 export interface SnagstreamUploadUrlInput {
   bestandsnaam: string;
   bestandsgrootte: number;
+  /** @pattern ^[a-f0-9]{64}$ */
+  vingerafdruk: string;
 }

@@ -20041,6 +20041,18 @@ paths:
           name: gebouw_id
           schema:
             type: integer
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -20061,12 +20073,80 @@ paths:
             schema:
               $ref: '#/components/schemas/SnagstreamRapportInput'
       responses:
+        '200':
+          description: Bestaand rapport — inhoud was al aanwezig
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamRapport'
         '201':
           description: Created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SnagstreamRapport'
+
+  /snagstream/controleer-upload:
+    post:
+      operationId: controleerSnagstreamUpload
+      summary: Controleer inhoudsduplicaat en bestandsnaamconflict vóór upload
+      tags: [snagstream]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnagstreamUploadControleInput'
+      responses:
+        '200':
+          description: Uitkomst van de uploadcontrole
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamUploadControle'
+
+  /snagstream/dubbele-rapporten:
+    get:
+      operationId: listDubbeleSnagstreamRapporten
+      summary: Bestaande inhoudsdubbelen tonen als opruimlijst
+      tags: [snagstream]
+      responses:
+        '200':
+          description: Groepen met dezelfde inhoud
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SnagstreamDubbelgroep'
+
+  /snagstream/vingerafdrukken-aanvullen:
+    post:
+      operationId: vulSnagstreamVingerafdrukkenAan
+      summary: Ontbrekende vingerafdrukken van bestaande rapporten idempotent aanvullen
+      tags: [snagstream]
+      responses:
+        '200':
+          description: Resultaat van de aanvulling
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamBackfillResultaat'
+
+  /snagstream/gebouwen-overzicht:
+    get:
+      operationId: getSnagstreamGebouwenOverzicht
+      summary: Gebouwen in het Snagstream-archief met rapport- en snagaantallen
+      tags: [snagstream]
+      responses:
+        '200':
+          description: Gebouwenoverzicht, ongekoppeld eerst
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SnagstreamGebouwSamenvatting'
 
   /snagstream/rapporten/{id}:
     get:
@@ -46487,6 +46567,9 @@ components:
           type: string
         pdf_url:
           type: string
+        vingerafdruk:
+          type: string
+          nullable: true
         rapportdatum:
           type: string
           nullable: true
@@ -46511,8 +46594,17 @@ components:
         uploader_naam:
           type: string
           nullable: true
+        uploader_id:
+          type: integer
+          nullable: true
         snag_count:
           type: integer
+        upload_dubbel:
+          type: boolean
+        zoek_treffers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnagstreamZoekTreffer'
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -46520,12 +46612,17 @@ components:
 
     SnagstreamRapportInput:
       type: object
-      required: [bestandsnaam, pdf_url]
+      required: [bestandsnaam, upload_token, vingerafdruk]
       properties:
         bestandsnaam:
           type: string
-        pdf_url:
+        upload_token:
           type: string
+        vingerafdruk:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        naamconflict_bevestigd:
+          type: boolean
         rapportdatum:
           type: string
           nullable: true
@@ -46652,21 +46749,112 @@ components:
 
     SnagstreamUploadUrlInput:
       type: object
-      required: [bestandsnaam, bestandsgrootte]
+      required: [bestandsnaam, bestandsgrootte, vingerafdruk]
       properties:
         bestandsnaam:
           type: string
         bestandsgrootte:
           type: integer
+        vingerafdruk:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
 
     SnagstreamUploadUrlResponse:
       type: object
-      required: [upload_url, object_path]
+      required: [upload_url, object_path, upload_token]
       properties:
         upload_url:
           type: string
         object_path:
           type: string
+        upload_token:
+          type: string
+
+    SnagstreamZoekTreffer:
+      type: object
+      required: [snag_id]
+      properties:
+        snag_id:
+          type: integer
+        snagnummer:
+          type: string
+          nullable: true
+        ruimte:
+          type: string
+          nullable: true
+        verdieping:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        pdf_pagina:
+          type: integer
+          nullable: true
+
+    SnagstreamUploadControleInput:
+      type: object
+      required: [bestandsnaam, vingerafdruk]
+      properties:
+        bestandsnaam:
+          type: string
+          minLength: 1
+        vingerafdruk:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+
+    SnagstreamUploadControle:
+      type: object
+      required: [uitkomst, naamconflicten]
+      properties:
+        uitkomst:
+          type: string
+          enum: [nieuw, exact_dubbel, naamconflict]
+        bestaand_rapport:
+          allOf:
+            - $ref: '#/components/schemas/SnagstreamRapport'
+          nullable: true
+        naamconflicten:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnagstreamRapport'
+
+    SnagstreamDubbelgroep:
+      type: object
+      required: [vingerafdruk, rapporten]
+      properties:
+        vingerafdruk:
+          type: string
+        rapporten:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnagstreamRapport'
+
+    SnagstreamBackfillResultaat:
+      type: object
+      required: [aangevuld, mislukt]
+      properties:
+        aangevuld:
+          type: integer
+        mislukt:
+          type: integer
+
+    SnagstreamGebouwSamenvatting:
+      type: object
+      required: [gebouw_naam, rapport_count, snag_count]
+      properties:
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+        rapport_count:
+          type: integer
+        snag_count:
+          type: integer
+        recentste_rapportdatum:
+          type: string
+          nullable: true
 
     Grootboekrekening:
       type: object
