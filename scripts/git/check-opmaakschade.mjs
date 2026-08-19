@@ -21,9 +21,12 @@
 // definitieve detector voor kapotte bestanden.
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const MAX_REGELVERSCHIL = 300;
 const MARKER = "[grote-wijziging]";
+const GOEDKEURINGEN_PAD = new URL("./opmaakschade-goedgekeurd.json", import.meta.url);
+const { goedgekeurdeWijzigingen = [] } = JSON.parse(readFileSync(GOEDKEURINGEN_PAD, "utf8"));
 
 // Paden waar grote regelverschillen normaal zijn (gegenereerd/geïmporteerd).
 const UITGEZONDERD = [
@@ -37,6 +40,19 @@ const UITGEZONDERD = [
 
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+function isExactGoedgekeurd({ sha, pad, toegevoegd, verwijderd }) {
+  const volledigSha = git("rev-parse", sha).trim();
+  const blob = git("rev-parse", `${sha}:${pad}`).trim();
+  return goedgekeurdeWijzigingen.some(
+    (goedkeuring) =>
+      goedkeuring.commit === volledigSha &&
+      goedkeuring.pad === pad &&
+      goedkeuring.toegevoegd === Number(toegevoegd) &&
+      goedkeuring.verwijderd === Number(verwijderd) &&
+      goedkeuring.blob === blob,
+  );
 }
 
 const argumenten = process.argv.slice(2);
@@ -101,6 +117,13 @@ for (const sha of commits) {
     if (UITGEZONDERD.some((re) => re.test(pad))) continue;
     const verschil = Number(toegevoegd) - Number(verwijderd);
     if (Math.abs(verschil) > MAX_REGELVERSCHIL) {
+      if (isExactGoedgekeurd({ sha, pad, toegevoegd, verwijderd })) {
+        console.log(
+          `[opmaakschade] GOEDGEKEURD: ${pad} ${verschil > 0 ? "groeit" : "krimpt"} met ` +
+          `${Math.abs(verschil)} regels in commit ${sha.slice(0, 8)}; commit, numstat en blob komen exact overeen.`,
+        );
+        continue;
+      }
       fouten++;
       console.error(
         `[opmaakschade] FOUT: ${pad} ${verschil > 0 ? "groeit" : "krimpt"} met ` +

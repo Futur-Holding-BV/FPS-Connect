@@ -11,7 +11,7 @@
 - [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: élke pipe naar head/grep onder set -e/pipefail altijd || true (ook ls|head, exit 141/SIGPIPE).
 - [Playwright/e2e-valkuilen](e2e-playwright-valkuilen.md) — verzamelindex van 16 e2e-topicfiles (selectors, TOTP-timing, testaccounts, races, NixOS-chromium, mutex, runTest-diagnose).
 - [OpenAPI/Orval-valkuilen](openapi-orval-valkuilen.md) — verzamelindex van 5 codegen-valkuilen (index-fix, queryKey, $ref-bodies, padprefix).
-- [auth.ts terugkerende mangeling](auth-ts-mangling.md) — merges mangelen routes (auth.ts, 2x opname.ts): bodies onder verkeerde koppen; tsc=enige detector; herstel via checkout uit laatst geverifieerde commit; CI check-dubbele-routes vangt duplicaten.
+- [Route-mangeling bij taakmerges](auth-ts-mangling.md) — ook de taakbranch kan al kapot zijn; herstel vanaf laatste groene hoofdbranch en pas alleen de bedoelde hunk opnieuw toe; tsc blijft beslissend.
 - [NUMMER_01 kenmerkketen](kenmerkketen.md) — nummers uit DB-sequences, kenmerk altijd berekend, bevriezen alleen bij versturen/definitief; offertes kopiëren=nieuw nummer, inkoop=letterherziening+snapshot.
 - [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
 - [Caddyfile statische routes](caddyfile-mjs.md) — mjs verplicht; matchers zijn AND; kapsel een geneste app in een specifieke handle vóór de algemene static-handle.
@@ -147,7 +147,7 @@
 - [Betaalbatch SEPA](betaalbatch.md) — betaalbatch_actief-akkoordpoort gate't ÁLLE endpoints (423), alleen hoofdbeheerder zet 'm om; batchselectie herbeoordelen in tx met FOR UPDATE; drie-weg meldt ontvangst eerlijk als ontbrekend.
 - [Rekeningschema grootboek](grootboek-rekeningschema.md) — schema per BV; keuzelijst overal; boekingspoort ná claim (leeg schema = doorlaten, bewust); AccountView-ophalen = fail-soft meting; module-id is "financieel" niet "facturen".
 - [Financiële keten](financieel-keten.md) — 4 werkbak-voeders financieel; OHW-voeder alleen afgesloten statussen; async time-out terminaal (worker alleen vanuit 'bezig'); delete-audit via RETURNING; open voorleg-punten René.
-- [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — push blokkeert bij >300 regels diff per bestand; bewuste herschrijving = [grote-wijziging] in commit-boodschap.
+- [Pre-push opmaakschade-poort](pre-push-opmaakschade.md) — >300 regels blokkeert; vooraf marker, of achteraf alleen een inhoudelijk beoordeelde commit+pad+numstat+blob-vingerafdruk.
 - [Factuur-vergrendeling bij export](factuur-vergrendeling.md) — factuur onwijzigbaar bij verwerkt/verzonden/success/verzenden-claim; check+mutatie altijd in één tx met FOR UPDATE; bulk-correcties BV-bewust.
 - [GELDSTROOM_01 verkoopfacturatie](geldstroom-verkoopfacturatie.md) — regel-mutatie herberekent verkoop-koptotalen in centen (zelfde tx); fiscaal nummer=onwijzigbaar (409); goedkeuren-stroom fail-closed op beleid; batchvrijgave=hoofdbeheerder-rol.
 - [Acceptatieregister](acceptatieregister.md) — oplevering loopt door acceptatie_register (4 standen, fail-closed); oplever-check + kwaliteitscheck eisen bijgewerkte regels; statusrapport wordt gegenereerd, nooit handgeschreven.

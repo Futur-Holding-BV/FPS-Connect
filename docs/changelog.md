@@ -16,6 +16,7 @@
 - **Snelle route naar besluitvorming**: bij een actief contract voor bepaalde tijd of een oproepcontract toont elke relevante eind- en aanzegregel in de kaart **Kritieke datums** nu de link **Besluit vastleggen →**.
 - **Juiste medewerker en besluit**: de link opent de bestaande contracttab van dezelfde medewerker, vouwt het actieve contract open en kiest direct **Besluitvorming**, zodat de opdrachtgever zonder extra navigatiestappen verlengen, wijzigen of beëindigen kan vastleggen.
 - **Rechten bewaakt in de interface**: de link blijft onzichtbaar voor gebruikers onder personeelsniveau 2, in lijn met de bestaande schrijfbevoegdheid op contractbesluiten.
+- **Mergeherstel bewezen**: een gemangelde taakbranch is teruggebracht tot uitsluitend de vier bedoelde `contract_id`-toevoegingen. De volledige typecheck, 47 contractdatumtests en een echte browserproef op zowel eind- als aanzegdatum zijn groen.
 
 ## 2026-08-19 — HRM_ONBOARDING_HERSTART_01: vastgelopen onboarding hervatten of opnieuw beginnen
 

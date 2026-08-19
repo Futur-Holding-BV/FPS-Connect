@@ -1,6 +1,6 @@
 ---
-name: auth.ts terugkerende mangeling
-description: routes/auth.ts raakt herhaaldelijk gemangeld door reverts/merges; hoe herkennen en herstellen
+name: Route-mangeling bij taakmerges
+description: Routebestanden raken door taakmerges gemangeld; ook de taakbranch zelf kan al defect zijn.
 ---
 
 `artifacts/api-server/src/routes/auth.ts` is nu twee keer door revert/merge-verkeer
@@ -28,3 +28,5 @@ mix van twee versies).
 **Incident 3 (15 aug 2026, uitvoering/detail.tsx):** taakmerge liet een compleet import-hunk vallen (regie-tab-exports + lucide-icoon) terwijl de gebruikende JSX wel meekwam → TS2304 bij post-merge stap 6c. Herstel: ontbrekende imports terugzetten (niet hele bestand checkouten als alleen imports missen). Let op: taakagent-branches kunnen ook een eerder gedropte workflow-bestandswijziging opnieuw binnenbrengen; verwijderen uit de historie met `git filter-branch --index-filter "git update-index --cacheinfo 100644,$(git rev-parse origin/main:PAD),PAD" -- origin/main..HEAD` (PAT heeft bewust geen workflow-scope).
 
 **Variant (18 aug 2026, merge #1079):** merge mangelde het *gegenereerde* `lib/api-client-react/src/generated/api.ts` (syntaxfouten, 162k-regeldiff). Herstel = `pnpm --filter @workspace/api-spec run codegen`, nooit handmatig repareren. Post-merge stap 6b blokkeert daarnaast legitieme grote feature-diffs (>300 regels) — oplossing: commit-boodschap amenden met `[grote-wijziging]` en `runPostMergeSetup` opnieuw draaien (die pusht zelf naar GitHub).
+
+**Variant (19 aug 2026, contractbewaking):** de taakbranch en de gemergde commit hadden exact dezelfde kapotte blob: losse bedoelde velden waren ingevoegd terwijl elf bestaande routebodies naar verkeerde handlers waren verschoven. De taakbranch is dus geen betrouwbare herstelbron. Neem de laatste groen getypecheckte hoofdbranchversie als basis, leid de minimaal bedoelde wijziging af uit de consumerende UI en pas uitsluitend die hunk opnieuw toe. Bevestig daarna met volledige typecheck én het concrete browserpad.
