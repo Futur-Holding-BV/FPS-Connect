@@ -453,6 +453,7 @@ export async function probeerAutomatischeBoeking(factuurId: number, aanleiding: 
 
     const uitkomst = await exporteerFactuurNaarAccountView(factuurId, null);
     if (uitkomst.ok && uitkomst.geslaagd) {
+      await sluitOntbrekendeBoekgegevensSignaal(factuurId);
       logger.info({ factuurId, aanleiding, boekingId: uitkomst.boekingId, testmodus: uitkomst.testmodus },
         "AccountView auto-boeking geslaagd");
       return;
@@ -509,6 +510,37 @@ export async function probeerAutomatischeBoeking(factuurId: number, aanleiding: 
       logger.error({ err: mailErr, factuurId }, "AccountView auto-boeking: faalmail versturen mislukt");
     }
   }
+}
+
+/**
+ * Sluit het signaal dat de automatische boeking eerder door ontbrekende
+ * boekvelden uitstelde. De statuswijziging en de tijdlijnregel gebeuren in
+ * één transactie; bij een gelijktijdige tweede trigger sluit alleen de eerste
+ * het open signaal en schrijft dus ook alleen die ene de tijdlijnregel.
+ */
+export async function sluitOntbrekendeBoekgegevensSignaal(factuurId: number): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [afgesloten] = await tx
+      .update(factuurSignalenTable)
+      .set({
+        status: "afgehandeld",
+        afgehandeldOp: new Date(),
+      })
+      .where(and(
+        eq(factuurSignalenTable.factuurId, factuurId),
+        eq(factuurSignalenTable.type, "ontbrekende_boekgegevens"),
+        eq(factuurSignalenTable.status, "open"),
+      ))
+      .returning({ id: factuurSignalenTable.id });
+
+    if (!afgesloten) return;
+
+    await tx.insert(factuurTijdlijnTable).values({
+      factuurId,
+      tekst: "Boekvelden waren eerder onvolledig — alsnog automatisch geboekt na aanvulling.",
+      gebruikerNaam: null,
+    });
+  });
 }
 
 async function stuurFaalmailNaarHoofdbeheerders(factuur: Factuur, reden: string, aanleiding: string): Promise<void> {

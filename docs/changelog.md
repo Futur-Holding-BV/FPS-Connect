@@ -677,6 +677,13 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 
 - De dagelijkse bewakingsloop zet bij een uiterste aanzegdatum binnen zeven dagen een eenmalige waarschuwing per contract in de mail-wachtrij voor actieve HRM-beheerders. De waarschuwing gebruikt de daadwerkelijke aanzegdatum (één maand vóór contracteinde), respecteert de reguliere testdomein-/postbuscontrole en blijft uit zodra er al een contractbesluit is.
 
+
+## 2026-08-19 — INKOOP_BOEKING_01: boekvelden-signaal sluit automatisch na aanvulling
+
+- **Geen achterblijvend dashboardsignaal**: zodra een factuur na het aanvullen en opnieuw accorderen automatisch met succes in AccountView wordt geboekt, wordt het openstaande signaal over ontbrekende boekgegevens automatisch afgehandeld.
+- **Leesbaar herstelspoor**: de factuurtijdlijn legt vast: “Boekvelden waren eerder onvolledig — alsnog automatisch geboekt na aanvulling.”
+- **Veilig bij dubbele triggers**: afsluiten en tijdlijnregistratie gebeuren transactioneel; zonder open signaal gebeurt niets en een tweede trigger maakt geen dubbele tijdlijnregel.
+- **Regressiebewijs**: de verificatie maakt een geïsoleerd open signaal, controleert de status, afhandeldatum en tijdlijntekst en bewijst daarna de idempotente tweede aanroep. Alle testgegevens worden verwijderd.
 ## 2026-08-19 — Opgelost: lege keuzes in de monteur-app blijven betrouwbaar
 
 - De keuzelijsten voor **Alle fabrikanten** en **Niet opgegeven** gebruiken nu een veilige interne keuze in plaats van een lege waarde. De app vertaalt die keuze direct terug naar de bestaande betekenis, zodat filters en opgeslagen gegevens hetzelfde blijven werken en monteurs niet vastlopen.
