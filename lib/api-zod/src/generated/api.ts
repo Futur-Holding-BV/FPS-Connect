@@ -24589,6 +24589,41 @@ export const GetGrootboekGebruikResponse = zod.object({
 
 
 /**
+ * @summary Boekingspoort-status per werkmaatschappij (leeg schema = poort open)
+ */
+export const GetGrootboekPoortstatusResponseItem = zod.object({
+  "werkgever_id": zod.number(),
+  "naam": zod.string(),
+  "aantal_actief": zod.number(),
+  "poort_actief": zod.boolean(),
+  "gekoppeld_aan_boekhouding": zod.boolean()
+})
+export const GetGrootboekPoortstatusResponse = zod.array(GetGrootboekPoortstatusResponseItem)
+
+
+/**
+ * @summary Een gebruikt rekeningnummer (typefout) in één keer omzetten naar een schema-rekening
+ */
+export const OmzettenGrootboekrekeningBody = zod.object({
+  "van": zod.string(),
+  "naar": zod.string()
+})
+
+export const OmzettenGrootboekrekeningResponse = zod.object({
+  "van": zod.string(),
+  "naar": zod.string(),
+  "totaal": zod.number(),
+  "facturen": zod.number().optional(),
+  "factuurregels": zod.number().optional(),
+  "leveranciers": zod.number().optional(),
+  "leverancier_categorisatie": zod.number().optional(),
+  "instellingen": zod.number().optional(),
+  "overgeslagen_geboekt": zod.number().optional(),
+  "overgeslagen_andere_bv": zod.number().optional()
+})
+
+
+/**
  * @summary Btw-codes (schema per administratie) ophalen
  */
 export const ListBtwCodesQueryParams = zod.object({

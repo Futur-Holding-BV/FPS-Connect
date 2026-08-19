@@ -59,6 +59,9 @@ import {
   calculatiesTable,
   uitrolRapportenTable,
   ciRapportenTable,
+  werkgeversTable,
+  grootboekrekeningenTable,
+  accountviewInstellingenTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
@@ -653,6 +656,56 @@ async function voedCiRoodIntern(): Promise<{ nieuw: number; afgehandeld: number 
     });
   }
   return syncBron("ci_rood", items);
+}
+
+// ADMINISTRATIE_01 — de boekingspoort (controleerGrootboekSchema) laat bewust
+// alles door zolang het rekeningschema van een BV leeg is (KADER: geen
+// productieremmen vóór het schema ooit is ingelezen). Dat gat mag niet
+// onzichtbaar zijn: per werkmaatschappij zonder actief schema staat er één
+// actiepunt bij de hoofdbeheerder. Zodra het schema gevuld is, levert deze
+// voeder die BV niet meer en reconcilieert syncBron het item automatisch dicht.
+export function voedRekeningschemaOpen(): Promise<{ nieuw: number; afgehandeld: number }> {
+  return serialiseer("rekeningschema_open", voedRekeningschemaOpenIntern);
+}
+
+async function voedRekeningschemaOpenIntern(): Promise<{ nieuw: number; afgehandeld: number }> {
+  // Alleen de aan de boekhouding gekoppelde BV (architect-review): de
+  // boekingspoort geldt uitsluitend voor de AccountView-administratie —
+  // export naar een afwijkende BV wordt daar al geweigerd. Actiepunten voor
+  // niet-boekende BV's zouden permanent en misleidend zijn.
+  const [inst] = await db.select({ werkgeverId: accountviewInstellingenTable.werkgeverId })
+    .from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  const gekoppeldeBv = inst?.werkgeverId ?? null;
+  if (gekoppeldeBv == null) return syncBron("rekeningschema_open", []);
+  const rijen = await db
+    .select({
+      id: werkgeversTable.id,
+      naam: werkgeversTable.naam,
+      aantal: sql<number>`count(${grootboekrekeningenTable.id}) filter (where ${grootboekrekeningenTable.actief})::int`,
+    })
+    .from(werkgeversTable)
+    .leftJoin(grootboekrekeningenTable, eq(grootboekrekeningenTable.werkgeverId, werkgeversTable.id))
+    .where(eq(werkgeversTable.id, gekoppeldeBv))
+    .groupBy(werkgeversTable.id, werkgeversTable.naam);
+  const items: WerkbakInvoer[] = rijen
+    .filter((r) => r.aantal === 0)
+    .map((r) => ({
+      soort: "doen",
+      bron: "rekeningschema_open",
+      titel: `Rekeningschema ontbreekt voor ${r.naam} — boekingen gaan ongecontroleerd door`,
+      omschrijving: [
+        `De werkmaatschappij ${r.naam} heeft nog geen rekeningschema in Connect.`,
+        "Zolang het schema leeg is, staat de boekingspoort open: facturen kunnen op elk willekeurig rekeningnummer worden geboekt zonder controle.",
+        "Vul het schema via Beheer → Boekhouding, tab Rekeningschema (ophalen uit AccountView of een lijst inlezen).",
+      ].join("\n"),
+      alleenHoofdbeheerder: true,
+      gewicht: 80,
+      actiePad: "/beheer/boekhouding",
+      herkomstType: "werkgever",
+      herkomstId: r.id,
+      dedupSleutel: `rekeningschema-open:${r.id}`,
+    }));
+  return syncBron("rekeningschema_open", items);
 }
 
 async function voedFactuursignalen(): Promise<{ nieuw: number; afgehandeld: number }> {
@@ -2133,6 +2186,8 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["uitrol_achterloop", voedUitrolAchterloop],
     // CI_SIGNAAL_01 — bouwcontrole op main is rood.
     ["ci_rood", voedCiRood],
+    // ADMINISTRATIE_01 — BV zonder rekeningschema: boekingspoort staat open.
+    ["rekeningschema_open", voedRekeningschemaOpen],
   ];
   let fouten = 0;
   for (const [naam, voeder] of voeders) {

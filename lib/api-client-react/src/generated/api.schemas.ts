@@ -12411,6 +12411,32 @@ export interface GrootboekGebruik {
   items: GrootboekGebruikItemsItem[];
 }
 
+export interface GrootboekPoortstatus {
+  werkgever_id: number;
+  naam: string;
+  aantal_actief: number;
+  poort_actief: boolean;
+  gekoppeld_aan_boekhouding: boolean;
+}
+
+export interface GrootboekOmzettenInput {
+  van: string;
+  naar: string;
+}
+
+export interface GrootboekOmzettenResultaat {
+  van: string;
+  naar: string;
+  totaal: number;
+  facturen?: number;
+  factuurregels?: number;
+  leveranciers?: number;
+  leverancier_categorisatie?: number;
+  instellingen?: number;
+  overgeslagen_geboekt?: number;
+  overgeslagen_andere_bv?: number;
+}
+
 export type AccountviewInstellingenBtwCodes = { [key: string]: unknown } | null;
 
 export type AccountviewInstellingenKostenplaatsen = { [key: string]: unknown } | null;

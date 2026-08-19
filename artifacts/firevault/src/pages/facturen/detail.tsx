@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useListFactuurRegels } from "@workspace/api-client-react";
+import { useListFactuurRegels, useUpdateFactuurRegel } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -845,7 +845,7 @@ export default function FactuurDetailPagina() {
       })()}
 
       {/* Factuurregels (AI-extractie) */}
-      <FactuurRegelsKaart factuurId={id} />
+      <FactuurRegelsKaart factuurId={id} vergrendeld={f.status === "verwerkt" || f.status === "verzonden_naar_accountview" || f.accountview_status === "success" || f.accountview_status === "verzenden"} />
 
       {/* AI metadata */}
       {f.ai_metadata && Object.keys(f.ai_metadata).length > 0 && (
@@ -1662,9 +1662,20 @@ export default function FactuurDetailPagina() {
   );
 }
 
-function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
+function FactuurRegelsKaart({ factuurId, vergrendeld }: { factuurId: number; vergrendeld: boolean }) {
+  const queryClient = useQueryClient();
   const { data: regels, isLoading } = useListFactuurRegels(factuurId, {
     query: { queryKey: ["factuur-regels", factuurId] },
+  });
+  // ADMINISTRATIE_01 vervolg: de grootboekrekening is per regel aanpasbaar —
+  // keuze uit het schema (GrootboekSelect), direct opgeslagen via PATCH.
+  const regelMut = useUpdateFactuurRegel({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["factuur-regels", factuurId] });
+        queryClient.invalidateQueries({ queryKey: ["grootboek-gebruik"] });
+      },
+    },
   });
   // PRIJS_01 §6 — stille prijscontrole tegen de jaarprijzen. Toont per regel
   // rustig een afwijking; niets bij 'klopt'/'geen afspraak'. Blokkeert niets.
@@ -1731,7 +1742,18 @@ function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
                       ? <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">{r.btw_code}</span>
                       : <span className="text-muted-foreground text-xs">—</span>}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.grootboekrekening ?? "—"}</td>
+                  <td className="px-3 py-2 min-w-48">
+                    {vergrendeld ? (
+                      // Verwerkt/geboekt in AccountView = dossier; de server weigert
+                      // regelmutaties dan met 409 — de UI toont alleen-lezen.
+                      <span className="font-mono text-xs text-muted-foreground">{r.grootboekrekening ?? "—"}</span>
+                    ) : (
+                      <GrootboekSelect
+                        value={r.grootboekrekening}
+                        onChange={(v) => regelMut.mutate({ id: factuurId, rid: r.id, data: { omschrijving: r.omschrijving ?? "", grootboekrekening: v } })}
+                      />
+                    )}
+                  </td>
                 </tr>
                 );
               })}

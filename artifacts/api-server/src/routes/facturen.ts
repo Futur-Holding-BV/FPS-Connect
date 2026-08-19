@@ -2737,12 +2737,29 @@ router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (r
 });
 
 // POST /facturen/:id/regels
+// Onveranderbaarheidsregel (ADMINISTRATIE_01 vervolg, architect-review): een
+// factuur die verwerkt is of succesvol naar AccountView geboekt, is dossier —
+// regels wijzigen zou Connect en AccountView stil uit elkaar laten lopen.
+// Correcties op geboekte facturen horen via een creditering/herexport, niet
+// via een stille regel-edit. Server-side afgedwongen (de UI verbergt alleen).
+// Atomair (TOCTOU, architect-review): de check draait ín de mutatietransactie
+// met FOR UPDATE op de factuurrij, zodat een gelijktijdige export niet tussen
+// controle en mutatie door kan glippen; 'verzonden_naar_accountview' telt ook
+// als vergrendeld omdat de externe payload dan al onderweg kan zijn.
+type RegelTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+async function regelMutatieGeblokkeerd(tx: RegelTx, factuurId: number, res: Response): Promise<boolean> {
+  const [f] = await tx.select({ status: facturenTable.status, avStatus: facturenTable.accountviewStatus })
+    .from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1).for("update");
+  if (!f) { res.status(404).json({ error: "Factuur niet gevonden" }); return true; }
+  if (f.status === "verwerkt" || f.status === "verzonden_naar_accountview" || f.avStatus === "success" || f.avStatus === "verzenden") {
+    res.status(409).json({ error: "Deze factuur is verwerkt/geboekt in AccountView — regels zijn niet meer te wijzigen. Corrigeer via een creditering of herexport." });
+    return true;
+  }
+  return false;
+}
+
 router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
-  const [factuur] = await db.select({ id: facturenTable.id }).from(facturenTable)
-    .where(eq(facturenTable.id, factuurId)).limit(1);
-  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
-
   const body = req.body as {
     omschrijving?: string; regelnummer?: number; hoeveelheid?: number; eenheid?: string;
     stukprijs?: string; bedrag_excl_btw?: string; btw_code?: string; btw_percentage?: number;
@@ -2753,28 +2770,33 @@ router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (
     res.status(400).json({ error: "omschrijving is verplicht" }); return;
   }
 
-  // Volgende regelnummer bepalen
-  const [maxRegel] = await db.select({ max: sql<number>`MAX(regelnummer)` })
-    .from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, factuurId));
-  const volgendNummer = (maxRegel?.max ?? 0) + 1;
+  const rij = await db.transaction(async (tx) => {
+    if (await regelMutatieGeblokkeerd(tx, factuurId, res)) return null;
+    // Volgende regelnummer bepalen
+    const [maxRegel] = await tx.select({ max: sql<number>`MAX(regelnummer)` })
+      .from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, factuurId));
+    const volgendNummer = (maxRegel?.max ?? 0) + 1;
 
-  const [rij] = await db.insert(factuurRegelsTable).values({
-    factuurId,
-    regelnummer: body.regelnummer ?? volgendNummer,
-    omschrijving: body.omschrijving.trim(),
-    hoeveelheid: body.hoeveelheid ?? null,
-    eenheid: body.eenheid ?? null,
-    stukprijs: body.stukprijs ?? null,
-    bedragExclBtw: body.bedrag_excl_btw ?? null,
-    btwCode: body.btw_code ?? null,
-    btwPercentage: body.btw_percentage ?? null,
-    btwBedrag: body.btw_bedrag ?? null,
-    grootboekrekening: body.grootboekrekening ?? null,
-    kostenplaats: body.kostenplaats ?? null,
-    categorie: body.categorie ?? null,
-    inkoopbonRegelId: body.inkoopbon_regel_id ?? null,
-    bron: body.bron ?? "handmatig",
-  }).returning();
+    const [r] = await tx.insert(factuurRegelsTable).values({
+      factuurId,
+      regelnummer: body.regelnummer ?? volgendNummer,
+      omschrijving: body.omschrijving!.trim(),
+      hoeveelheid: body.hoeveelheid ?? null,
+      eenheid: body.eenheid ?? null,
+      stukprijs: body.stukprijs ?? null,
+      bedragExclBtw: body.bedrag_excl_btw ?? null,
+      btwCode: body.btw_code ?? null,
+      btwPercentage: body.btw_percentage ?? null,
+      btwBedrag: body.btw_bedrag ?? null,
+      grootboekrekening: body.grootboekrekening ?? null,
+      kostenplaats: body.kostenplaats ?? null,
+      categorie: body.categorie ?? null,
+      inkoopbonRegelId: body.inkoopbon_regel_id ?? null,
+      bron: body.bron ?? "handmatig",
+    }).returning();
+    return r!;
+  });
+  if (!rij) return;
   res.status(201).json({ id: rij.id, factuur_id: rij.factuurId, regelnummer: rij.regelnummer });
 });
 
@@ -2782,10 +2804,6 @@ router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (
 router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const rid = paramInt(req.params["rid"]);
-  const [rij] = await db.select().from(factuurRegelsTable)
-    .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
-  if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return; }
-
   const body = req.body as Record<string, unknown>;
   const update: Partial<typeof factuurRegelsTable.$inferInsert> = { bijgewerktOp: new Date() };
   if ("omschrijving" in body) update.omschrijving = body["omschrijving"] as string;
@@ -2802,8 +2820,16 @@ router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), a
   if ("categorie" in body) update.categorie = body["categorie"] as string | null;
   if ("inkoopbon_regel_id" in body) update.inkoopbonRegelId = body["inkoopbon_regel_id"] as number | null;
 
-  const [updated] = await db.update(factuurRegelsTable).set(update)
-    .where(eq(factuurRegelsTable.id, rid)).returning();
+  const updated = await db.transaction(async (tx) => {
+    if (await regelMutatieGeblokkeerd(tx, factuurId, res)) return null;
+    const [rij] = await tx.select({ id: factuurRegelsTable.id }).from(factuurRegelsTable)
+      .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
+    if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return null; }
+    const [u] = await tx.update(factuurRegelsTable).set(update)
+      .where(eq(factuurRegelsTable.id, rid)).returning();
+    return u!;
+  });
+  if (!updated) return;
   res.json({ id: updated.id, bijgewerkt_op: updated.bijgewerktOp.toISOString() });
 });
 
@@ -2811,10 +2837,15 @@ router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), a
 router.delete("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const rid = paramInt(req.params["rid"]);
-  const [rij] = await db.select({ id: factuurRegelsTable.id }).from(factuurRegelsTable)
-    .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
-  if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return; }
-  await db.delete(factuurRegelsTable).where(eq(factuurRegelsTable.id, rid));
+  const verwijderd = await db.transaction(async (tx) => {
+    if (await regelMutatieGeblokkeerd(tx, factuurId, res)) return false;
+    const [rij] = await tx.select({ id: factuurRegelsTable.id }).from(factuurRegelsTable)
+      .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
+    if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return false; }
+    await tx.delete(factuurRegelsTable).where(eq(factuurRegelsTable.id, rid));
+    return true;
+  });
+  if (!verwijderd) return;
   res.status(204).end();
 });
 

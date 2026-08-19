@@ -15,6 +15,8 @@ import {
   useSyncGrootboekAccountview,
   useImportGrootboekrekeningen,
   useGetGrootboekGebruik,
+  useGetGrootboekPoortstatus,
+  useOmzettenGrootboekrekening,
   useListBtwCodes,
   useSyncBtwCodesAccountview,
   useImportBtwCodes,
@@ -437,7 +439,9 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
   const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: ["grootboekrekeningen"] });
     queryClient.invalidateQueries({ queryKey: ["grootboek-gebruik"] });
+    queryClient.invalidateQueries({ queryKey: ["grootboek-poortstatus"] });
   };
+  const { data: poortstatus } = useGetGrootboekPoortstatus({ query: { queryKey: ["grootboek-poortstatus"] } });
   const { data: rekeningen } = useListGrootboekrekeningen(
     werkgeverId != null ? { werkgever_id: werkgeverId } : undefined,
     { query: { queryKey: ["grootboekrekeningen", werkgeverId ?? "alle"] } },
@@ -445,8 +449,32 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
   const { data: gebruik } = useGetGrootboekGebruik({ query: { queryKey: ["grootboek-gebruik"] } });
   const syncMut = useSyncGrootboekAccountview({ mutation: { onSuccess: invalideer } });
   const importMut = useImportGrootboekrekeningen({ mutation: { onSuccess: invalideer } });
+  const omzetMut = useOmzettenGrootboekrekening({ mutation: { onSuccess: invalideer } });
   const [importTekst, setImportTekst] = useState("");
   const [importFout, setImportFout] = useState<string | null>(null);
+  // Typefout in één keer omzetten: dialoog met bron-nummer + doel uit het schema.
+  const [omzetVan, setOmzetVan] = useState<string | null>(null);
+  const [omzetNaar, setOmzetNaar] = useState<string | null>(null);
+  const [omzetFout, setOmzetFout] = useState<string | null>(null);
+  const [omzetResultaat, setOmzetResultaat] = useState<string | null>(null);
+
+  async function omzetten() {
+    if (!omzetVan || !omzetNaar) return;
+    setOmzetFout(null);
+    try {
+      const r = await omzetMut.mutateAsync({ data: { van: omzetVan, naar: omzetNaar } });
+      const detail = Object.entries({
+        facturen: r.facturen, factuurregels: r.factuurregels, leveranciers: r.leveranciers,
+        "aangeleerde categorisaties": r.leverancier_categorisatie, instellingen: r.instellingen,
+      }).filter(([, n]) => (n ?? 0) > 0).map(([b, n]) => `${b} (${n})`).join(", ");
+      setOmzetResultaat(`${r.van} → ${r.naar}: ${r.totaal} plaats${r.totaal !== 1 ? "en" : ""} omgezet${detail ? ` — ${detail}` : ""}.`);
+      setOmzetVan(null);
+      setOmzetNaar(null);
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } };
+      setOmzetFout(e.response?.data?.error ?? String(err));
+    }
+  }
   const syncResultaat = syncMut.data as { beschikbaar?: boolean; reden?: string | null; http_status?: number | null; aantal?: number } | undefined;
 
   async function lijstInlezen() {
@@ -469,6 +497,48 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
 
   return (
     <div className="space-y-6">
+      {/* Boekingspoort-status per werkmaatschappij: een leeg schema betekent
+          dat de exportcontrole niets kan toetsen — dat mag niet onzichtbaar
+          zijn (hetzelfde signaal staat als actiepunt bij de hoofdbeheerder). */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Boekingspoort per werkmaatschappij</CardTitle>
+          <CardDescription>
+            De poort controleert bij het boeken of elke rekening in het schema van de BV staat.
+            Zolang het schema van een BV leeg is, staat de poort daar open en gaan boekingen ongecontroleerd door.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {(poortstatus ?? []).map((p) => (
+            <div key={p.werkgever_id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{p.naam}</span>
+                {p.gekoppeld_aan_boekhouding && (
+                  <span className="text-xs text-muted-foreground">(gekoppeld aan de boekhouding)</span>
+                )}
+              </div>
+              {!p.gekoppeld_aan_boekhouding ? (
+                <span className="text-sm text-muted-foreground">
+                  Niet gekoppeld aan de boekhouding — er wordt vanuit Connect niet voor deze BV geboekt
+                </span>
+              ) : p.poort_actief ? (
+                <span className="flex items-center gap-1.5 text-sm text-green-700">
+                  <CheckCircle2 className="h-4 w-4" /> Poort actief — {p.aantal_actief} rekeningen in het schema
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-red-700">
+                  <AlertTriangle className="h-4 w-4" /> Poort staat open — boekingen gaan ongecontroleerd door
+                </span>
+              )}
+            </div>
+          ))}
+          {(poortstatus ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Geen werkmaatschappijen gevonden.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Rekeningschema vullen</CardTitle>
@@ -583,6 +653,11 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
                   <span>{typefouten.length} nummer{typefouten.length !== 1 ? "s" : ""} in gebruik dat niet in het schema staat: <span className="font-mono">{typefouten.map((t) => t.nummer).join(", ")}</span></span>
                 </div>
               )}
+              {omzetResultaat && (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> {omzetResultaat}
+                </div>
+              )}
               <div className="max-h-72 overflow-y-auto border rounded-md">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-slate-50">
@@ -591,6 +666,7 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
                       <th className="px-3 py-2 text-right font-medium">Aantal</th>
                       <th className="px-3 py-2 text-left font-medium">Waar</th>
                       <th className="px-3 py-2 text-left font-medium">In schema</th>
+                      <th className="px-3 py-2 text-left font-medium"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -608,6 +684,13 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
                               ? <CheckCircle2 className="h-4 w-4 text-green-600" />
                               : <span className="flex items-center gap-1 text-xs text-red-700"><AlertTriangle className="h-3.5 w-3.5" /> nee</span>}
                         </td>
+                        <td className="px-3 py-1.5 text-right">
+                          {i.in_schema === false && (
+                            <Button size="sm" variant="outline" onClick={() => { setOmzetVan(i.nummer); setOmzetNaar(null); setOmzetFout(null); setOmzetResultaat(null); }}>
+                              Omzetten
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -617,6 +700,39 @@ function RekeningschemaTab({ werkgeverId }: { werkgeverId: number | null }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialoog: typefout in één keer omzetten naar een schema-rekening. */}
+      <Dialog open={omzetVan != null} onOpenChange={(o) => { if (!o) setOmzetVan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rekening {omzetVan} omzetten</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Zet <span className="font-mono">{omzetVan}</span> overal waar het in gebruik is (factuurkoppen, factuurregels,
+              leveranciers, aangeleerde categorisaties en instellingen) in één keer om naar een rekening uit het schema.
+            </p>
+            <div>
+              <Label>Omzetten naar</Label>
+              <GrootboekSelect
+                className="mt-1"
+                value={omzetNaar}
+                onChange={setOmzetNaar}
+                werkgeverId={werkgeverId}
+                placeholder="Kies de juiste rekening uit het schema"
+              />
+            </div>
+            {omzetFout && <p className="text-sm text-red-600">{omzetFout}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOmzetVan(null)}>Annuleren</Button>
+            <Button onClick={omzetten} disabled={!omzetNaar || omzetNaar === omzetVan || omzetMut.isPending}>
+              {omzetMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Omzetten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BtwSchemaSectie werkgeverId={werkgeverId} />
     </div>

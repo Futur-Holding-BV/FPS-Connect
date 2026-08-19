@@ -477,6 +477,9 @@ import type {
   GrootboekGebruik,
   GrootboekImportInput,
   GrootboekImportResultaat,
+  GrootboekOmzettenInput,
+  GrootboekOmzettenResultaat,
+  GrootboekPoortstatus,
   GrootboekSyncResultaat,
   Grootboekrekening,
   HallOfFameEntry,
@@ -69462,6 +69465,153 @@ export function useGetGrootboekGebruik<TData = Awaited<ReturnType<typeof getGroo
 
 
 
+
+export const getGetGrootboekPoortstatusUrl = () => {
+
+
+
+
+  return `/api/grootboekrekeningen/poortstatus`
+}
+
+/**
+ * @summary Boekingspoort-status per werkmaatschappij (leeg schema = poort open)
+ */
+export const getGrootboekPoortstatus = async ( options?: RequestInit): Promise<GrootboekPoortstatus[]> => {
+
+  return customFetch<GrootboekPoortstatus[]>(getGetGrootboekPoortstatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGrootboekPoortstatusQueryKey = () => {
+    return [
+    `/api/grootboekrekeningen/poortstatus`
+    ] as const;
+    }
+
+
+export const getGetGrootboekPoortstatusQueryOptions = <TData = Awaited<ReturnType<typeof getGrootboekPoortstatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGrootboekPoortstatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGrootboekPoortstatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGrootboekPoortstatus>>> = ({ signal }) => getGrootboekPoortstatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGrootboekPoortstatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGrootboekPoortstatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGrootboekPoortstatus>>>
+export type GetGrootboekPoortstatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Boekingspoort-status per werkmaatschappij (leeg schema = poort open)
+ */
+
+export function useGetGrootboekPoortstatus<TData = Awaited<ReturnType<typeof getGrootboekPoortstatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGrootboekPoortstatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGrootboekPoortstatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getOmzettenGrootboekrekeningUrl = () => {
+
+
+
+
+  return `/api/grootboekrekeningen/omzetten`
+}
+
+/**
+ * @summary Een gebruikt rekeningnummer (typefout) in één keer omzetten naar een schema-rekening
+ */
+export const omzettenGrootboekrekening = async (grootboekOmzettenInput: GrootboekOmzettenInput, options?: RequestInit): Promise<GrootboekOmzettenResultaat> => {
+
+  return customFetch<GrootboekOmzettenResultaat>(getOmzettenGrootboekrekeningUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(grootboekOmzettenInput)
+  }
+);}
+
+
+
+
+export const getOmzettenGrootboekrekeningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof omzettenGrootboekrekening>>, TError,{data: BodyType<GrootboekOmzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof omzettenGrootboekrekening>>, TError,{data: BodyType<GrootboekOmzettenInput>}, TContext> => {
+
+const mutationKey = ['omzettenGrootboekrekening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof omzettenGrootboekrekening>>, {data: BodyType<GrootboekOmzettenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  omzettenGrootboekrekening(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OmzettenGrootboekrekeningMutationResult = NonNullable<Awaited<ReturnType<typeof omzettenGrootboekrekening>>>
+    export type OmzettenGrootboekrekeningMutationBody = BodyType<GrootboekOmzettenInput>
+    export type OmzettenGrootboekrekeningMutationError = ErrorType<void>
+
+    /**
+ * @summary Een gebruikt rekeningnummer (typefout) in één keer omzetten naar een schema-rekening
+ */
+export const useOmzettenGrootboekrekening = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof omzettenGrootboekrekening>>, TError,{data: BodyType<GrootboekOmzettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof omzettenGrootboekrekening>>,
+        TError,
+        {data: BodyType<GrootboekOmzettenInput>},
+        TContext
+      > => {
+      return useMutation(getOmzettenGrootboekrekeningMutationOptions(options));
+    }
 
 export const getListBtwCodesUrl = (params?: ListBtwCodesParams,) => {
   const normalizedParams = new URLSearchParams();

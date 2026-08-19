@@ -20194,6 +20194,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/GrootboekGebruik"
 
+  /grootboekrekeningen/poortstatus:
+    get:
+      operationId: getGrootboekPoortstatus
+      summary: Boekingspoort-status per werkmaatschappij (leeg schema = poort open)
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Poortstatus per werkmaatschappij
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GrootboekPoortstatus"
+
+  /grootboekrekeningen/omzetten:
+    post:
+      operationId: omzettenGrootboekrekening
+      summary: Een gebruikt rekeningnummer (typefout) in één keer omzetten naar een schema-rekening
+      tags: [Instellingen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrootboekOmzettenInput"
+      responses:
+        "200":
+          description: Omgezet, met tellingen per bron
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrootboekOmzettenResultaat"
+        "422":
+          description: Doelrekening staat niet actief in het schema
+
   /btw-codes:
     get:
       operationId: listBtwCodes
@@ -46498,6 +46534,55 @@ components:
               in_schema:
                 type: boolean
                 nullable: true
+
+    GrootboekPoortstatus:
+      type: object
+      required: [werkgever_id, naam, aantal_actief, poort_actief, gekoppeld_aan_boekhouding]
+      properties:
+        werkgever_id:
+          type: integer
+        naam:
+          type: string
+        aantal_actief:
+          type: integer
+        poort_actief:
+          type: boolean
+        gekoppeld_aan_boekhouding:
+          type: boolean
+
+    GrootboekOmzettenInput:
+      type: object
+      required: [van, naar]
+      properties:
+        van:
+          type: string
+        naar:
+          type: string
+
+    GrootboekOmzettenResultaat:
+      type: object
+      required: [van, naar, totaal]
+      properties:
+        van:
+          type: string
+        naar:
+          type: string
+        totaal:
+          type: integer
+        facturen:
+          type: integer
+        factuurregels:
+          type: integer
+        leveranciers:
+          type: integer
+        leverancier_categorisatie:
+          type: integer
+        instellingen:
+          type: integer
+        overgeslagen_geboekt:
+          type: integer
+        overgeslagen_andere_bv:
+          type: integer
 
     AccountviewInstellingen:
       type: object

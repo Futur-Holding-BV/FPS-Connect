@@ -11,9 +11,11 @@ import {
   leverancierCategorisatieTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakAccountViewClient } from "../services/accountview-client";
+import { voedRekeningschemaOpen } from "../lib/bewakingsloop";
+import { bepaalFactuurWerkmaatschappij } from "../services/factuurWerkmaatschappij";
 
 // ── Rekeningschema per werkmaatschappij (ADMINISTRATIE_01) ────────────────────
 // Nummer + omschrijving + soort, per BV. Gevuld via AccountView-sync (indien de
@@ -124,6 +126,8 @@ router.post("/grootboekrekeningen/sync-accountview", requireBevoegdheid("systeem
     return;
   }
   const telling = await upsertSchema(inst.werkgeverId, resultaat.rekeningen, "accountview");
+  // Schema net gevuld → het "poort staat open"-actiepunt direct laten sluiten.
+  voedRekeningschemaOpen().catch(() => {});
   res.json({ beschikbaar: true, http_status: resultaat.httpStatus ?? null, aantal: resultaat.rekeningen.length, ...telling });
 });
 
@@ -173,7 +177,153 @@ router.post("/grootboekrekeningen/import", requireBevoegdheid("systeem", 2), asy
     return;
   }
   const telling = await upsertSchema(wgId, rekeningen, "import");
+  // Schema net gevuld → het "poort staat open"-actiepunt direct laten sluiten.
+  voedRekeningschemaOpen().catch(() => {});
   res.status(201).json({ aantal: rekeningen.length, ...telling });
+});
+
+// GET /grootboekrekeningen/poortstatus — per werkmaatschappij: staat de
+// boekingspoort open (leeg schema = alles gaat ongecontroleerd door) of is hij
+// actief? Zichtbaar op de tab Rekeningschema; hetzelfde signaal voedt het
+// werkbak-actiepunt bij de hoofdbeheerder.
+router.get("/grootboekrekeningen/poortstatus", requireBevoegdheid("systeem", 1), async (_req: Request, res: Response): Promise<void> => {
+  const [inst] = await db.select({ werkgeverId: accountviewInstellingenTable.werkgeverId })
+    .from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  const rijen = await db
+    .select({
+      id: werkgeversTable.id,
+      naam: werkgeversTable.naam,
+      aantal: sql<number>`count(${grootboekrekeningenTable.id}) filter (where ${grootboekrekeningenTable.actief})::int`,
+    })
+    .from(werkgeversTable)
+    .leftJoin(grootboekrekeningenTable, eq(grootboekrekeningenTable.werkgeverId, werkgeversTable.id))
+    .groupBy(werkgeversTable.id, werkgeversTable.naam)
+    .orderBy(werkgeversTable.naam);
+  res.json(rijen.map((r) => ({
+    werkgever_id: r.id,
+    naam: r.naam,
+    aantal_actief: r.aantal,
+    poort_actief: r.aantal > 0,
+    gekoppeld_aan_boekhouding: inst?.werkgeverId === r.id,
+  })));
+});
+
+// POST /grootboekrekeningen/omzetten — typefouten in één keer omzetten.
+// Body: { van, naar }. Zet overal waar het foute nummer `van` in gebruik is
+// (factuurkoppen, factuurregels, leveranciers, aangeleerde categorisaties en
+// de instellingen-defaults) het schema-nummer `naar` neer, in één transactie.
+// `naar` moet een actieve rekening zijn in het schema van de gekoppelde BV —
+// een typefout omzetten naar een volgende typefout kan dus niet.
+router.post("/grootboekrekeningen/omzetten", requireBevoegdheid("systeem", 2), async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  const van = String(body["van"] ?? "").trim();
+  const naar = String(body["naar"] ?? "").trim();
+  if (!van || !naar) {
+    res.status(400).json({ error: "van en naar zijn beide verplicht" });
+    return;
+  }
+  if (van === naar) {
+    res.status(400).json({ error: "van en naar zijn gelijk — er valt niets om te zetten" });
+    return;
+  }
+  const [inst] = await db.select({ werkgeverId: accountviewInstellingenTable.werkgeverId })
+    .from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+  if (inst?.werkgeverId == null) {
+    res.status(422).json({ error: "De AccountView-koppeling heeft nog geen werkmaatschappij (BV) — stel die eerst in bij Boekhouding." });
+    return;
+  }
+  const [doel] = await db.select({ id: grootboekrekeningenTable.id })
+    .from(grootboekrekeningenTable)
+    .where(and(
+      eq(grootboekrekeningenTable.werkgeverId, inst.werkgeverId),
+      eq(grootboekrekeningenTable.nummer, naar),
+      eq(grootboekrekeningenTable.actief, true),
+    ))
+    .limit(1);
+  if (!doel) {
+    res.status(422).json({ error: `Rekening ${naar} staat niet (actief) in het rekeningschema — omzetten kan alleen naar een schema-rekening.` });
+    return;
+  }
+  // BV- en statusbewust (architect-review): alleen facturen van de gekoppelde
+  // BV, en nooit facturen die verwerkt of al succesvol naar AccountView
+  // geboekt zijn — die zijn dossier; stil omzetten zou Connect en AccountView
+  // uit elkaar laten lopen. Overgeslagen facturen worden geteld en teruggemeld.
+  const kandidaten = await db
+    .selectDistinct({
+      id: facturenTable.id,
+      status: facturenTable.status,
+      avStatus: facturenTable.accountviewStatus,
+      offerteId: facturenTable.offerteId,
+      opdrachtId: facturenTable.opdrachtId,
+      gebouwId: facturenTable.gebouwId,
+    })
+    .from(facturenTable)
+    .leftJoin(factuurRegelsTable, eq(factuurRegelsTable.factuurId, facturenTable.id))
+    .where(sql`${facturenTable.grootboekrekening} = ${van} OR ${factuurRegelsTable.grootboekrekening} = ${van}`);
+  const kandidaatIds: number[] = [];
+  let overgeslagenGeboekt = 0;
+  let overgeslagenAndereBv = 0;
+  for (const k of kandidaten) {
+    if (k.status === "verwerkt" || k.status === "verzonden_naar_accountview" || k.avStatus === "success" || k.avStatus === "verzenden") { overgeslagenGeboekt++; continue; }
+    const bv = await bepaalFactuurWerkmaatschappij(k);
+    if (bv?.id !== inst.werkgeverId) { overgeslagenAndereBv++; continue; }
+    kandidaatIds.push(k.id);
+  }
+  const omgezet = await db.transaction(async (tx) => {
+    // Herbeoordeel de status ín de transactie met rijvergrendeling (TOCTOU,
+    // architect-review): een gelijktijdige export kan een kandidaat tussen de
+    // voorselectie en deze update alsnog boeken. FOR UPDATE laat ons wachten
+    // op zo'n export en de verse status zien; net-geboekte facturen vallen af.
+    const vers = kandidaatIds.length === 0 ? [] : await tx
+      .select({ id: facturenTable.id })
+      .from(facturenTable)
+      .where(and(
+        inArray(facturenTable.id, kandidaatIds),
+        sql`${facturenTable.status} NOT IN ('verwerkt', 'verzonden_naar_accountview')`,
+        // 'verzenden' = lopende exportclaim (claimAccountviewVerzending): de
+        // externe boeking is dan mogelijk al onderweg met de oude payload.
+        sql`(${facturenTable.accountviewStatus} IS NULL OR ${facturenTable.accountviewStatus} NOT IN ('success', 'verzenden'))`,
+      ))
+      .for("update");
+    const toegestaneIds = vers.map((v) => v.id);
+    overgeslagenGeboekt += kandidaatIds.length - toegestaneIds.length;
+    const fk = toegestaneIds.length === 0 ? [] : await tx.update(facturenTable)
+      .set({ grootboekrekening: naar })
+      .where(and(eq(facturenTable.grootboekrekening, van), inArray(facturenTable.id, toegestaneIds)))
+      .returning({ id: facturenTable.id });
+    const fr = toegestaneIds.length === 0 ? [] : await tx.update(factuurRegelsTable)
+      .set({ grootboekrekening: naar })
+      .where(and(eq(factuurRegelsTable.grootboekrekening, van), inArray(factuurRegelsTable.factuurId, toegestaneIds)))
+      .returning({ id: factuurRegelsTable.id });
+    const lev = await tx.update(leveranciersTable)
+      .set({ grootboekrekening: naar })
+      .where(eq(leveranciersTable.grootboekrekening, van))
+      .returning({ id: leveranciersTable.id });
+    const cat = await tx.update(leverancierCategorisatieTable)
+      .set({ grootboekrekening: naar })
+      .where(eq(leverancierCategorisatieTable.grootboekrekening, van))
+      .returning({ id: leverancierCategorisatieTable.id });
+    const instUpd: Record<string, number> = {};
+    const [huidig] = await tx.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1)).limit(1);
+    if (huidig) {
+      const set: Partial<typeof accountviewInstellingenTable.$inferInsert> = {};
+      if ((huidig.grootboekStandaard ?? "").trim() === van) { set.grootboekStandaard = naar; instUpd["grootboek_standaard"] = 1; }
+      if ((huidig.grootboekVoorraad ?? "").trim() === van) { set.grootboekVoorraad = naar; instUpd["grootboek_voorraad"] = 1; }
+      if ((huidig.grootboekInkoopKosten ?? "").trim() === van) { set.grootboekInkoopKosten = naar; instUpd["grootboek_inkoop_kosten"] = 1; }
+      if (Object.keys(set).length > 0) {
+        await tx.update(accountviewInstellingenTable).set(set).where(eq(accountviewInstellingenTable.id, 1));
+      }
+    }
+    return {
+      facturen: fk.length,
+      factuurregels: fr.length,
+      leveranciers: lev.length,
+      leverancier_categorisatie: cat.length,
+      instellingen: Object.keys(instUpd).length,
+    };
+  });
+  const totaal = Object.values(omgezet).reduce((a, b) => a + b, 0);
+  res.json({ van, naar, totaal, ...omgezet, overgeslagen_geboekt: overgeslagenGeboekt, overgeslagen_andere_bv: overgeslagenAndereBv });
 });
 
 // GET /grootboekrekeningen/gebruik — meting (ADMINISTRATIE_01 punt 4): welke

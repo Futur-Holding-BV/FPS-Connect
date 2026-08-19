@@ -47,6 +47,8 @@ export const WERKBAK_BRONNEN = [
   "factuursignaal",
   "contract_verlenging",
   "bewakingsloop",
+  // ADMINISTRATIE_01: BV zonder rekeningschema = boekingspoort staat open.
+  "rekeningschema_open",
   // WAGENPARK_01 §6.1: garagemail die niet verstuurd kon worden mag nooit stil blijven.
   "wagenpark_garagemail",
   // LEVERANCIER_01 §3.3: inkoopfactuur zonder koppeling aan het leveranciersregister.
