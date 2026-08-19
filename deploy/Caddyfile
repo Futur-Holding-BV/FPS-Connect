@@ -46,25 +46,26 @@ connect.fps-one.nl {
     @appvers path /app/ /app/index.html /app/sw.js /app/manifest.webmanifest /app/versie.json /app/asset-lijst.json
     header @appvers Cache-Control "no-cache"
 
-    # Statische /app/-bestanden krijgen bewust géén SPA-fallback. Anders zou
-    # een ontbrekend icoon of manifest als index.html met HTTP 200 terugkomen
-    # en de PWA-productiepoort ten onrechte groen worden.
-    route {
-        @appstatic path_regexp appstatic ^/app/.*\.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml|wav|mp3|m4a|pdf)$
-        handle @appstatic {
+    # De hele /app/-tak zit in één specifieke top-level handle. Dat voorkomt
+    # dat Caddy's algemene @static-handle een /app/*.png vóór deze route uit
+    # /srv/public probeert te serveren. Binnen de tak krijgen statische
+    # bestanden bewust géén SPA-fallback.
+    handle /app/* {
+        route {
             root * /srv/app
             uri strip_prefix /app
-            file_server {
-                precompressed gzip br
+
+            @appstatic path_regexp appstatic \.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml|wav|mp3|m4a|pdf)$
+            handle @appstatic {
+                file_server {
+                    precompressed gzip br
+                }
             }
-        }
 
-        handle /app/* {
-            root * /srv/app
-            uri strip_prefix /app
-
-            try_files {path} /index.html
-            file_server
+            handle {
+                try_files {path} /index.html
+                file_server
+            }
         }
     }
 
