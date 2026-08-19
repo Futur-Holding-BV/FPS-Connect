@@ -35,7 +35,7 @@ import {
   slaOpnameItemOp,
 } from "@/lib/offlineCache";
 import { MAX_POGINGEN, WachtrijItem, laadWachtrij, voegToeAanWachtrij } from "@/lib/syncQueue";
-import { bewaarBestandUitUri, documentMap, lijstMap, maakMap } from "@/lib/bestanden";
+import { bewaarBestandUitUri, documentMap, lijstMap, maakMap, resolveDisplayUri } from "@/lib/bestanden";
 
 const SPOT_TYPEN = [
   { waarde: "branddeur", label: "Branddeur", kleur: "#ef4444" },
@@ -97,6 +97,7 @@ export default function OpnameItemDetail() {
   const [isUploading, setIsUploading] = useState(false);
   const [heeftWijzigingen, setHeeftWijzigingen] = useState(false);
   const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
+  const [displayUris, setDisplayUris] = useState<Record<string, string>>({});
   const [gecachedItem, setGecachedItem] = useState<Record<string, unknown> | null>(null);
   const [uploadFout, setUploadFout] = useState<{ type: "netwerk" | "bestandstype" | "overig"; bericht: string } | null>(null);
   const [wachtrijFotos, setWachtrijFotos] = useState<WachtrijItem[]>([]);
@@ -163,6 +164,21 @@ export default function OpnameItemDetail() {
       if (paden.length > 0) setLokaleFotos(paden);
     });
   }, [fotoDir]);
+
+  // Zet idb://-paden om naar blob-URLs voor weergave in <Image>
+  useEffect(() => {
+    let actief = true;
+    void Promise.all(
+      lokaleFotos.map(async (pad) => {
+        const uri = await resolveDisplayUri(pad);
+        return [pad, uri] as const;
+      }),
+    ).then((paren) => {
+      if (!actief) return;
+      setDisplayUris(Object.fromEntries(paren));
+    });
+    return () => { actief = false; };
+  }, [lokaleFotos]);
 
   function markeerGewijzigd() { setHeeftWijzigingen(true); }
 
@@ -863,7 +879,7 @@ export default function OpnameItemDetail() {
                 {lokaleFotos.map((pad) => (
                   <View key={pad} style={{ position: "relative" }}>
                     <Image
-                      source={{ uri: pad }}
+                      source={{ uri: displayUris[pad] ?? pad }}
                       style={{ width: sp.xxl * 3 + 4, height: sp.xxl * 3 + 4, borderRadius: sp.s + 2, backgroundColor: c.muted, opacity: 0.85 }}
                       resizeMode="cover"
                     />

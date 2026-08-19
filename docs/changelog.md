@@ -617,3 +617,13 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Nakijkflow (fail-closed)**: nakijklijst met laagste zekerheid bovenaan; elk voorstel wordt bevestigd, gecorrigeerd (ander artikel/aantal) of verworpen vóór het meetelt — er wordt nooit automatisch geboekt. Bevestigen maakt/verhoogt de gewone tellingregel (artikel × locatie) in dezelfde transactie-lock als alle telling-mutaties; een voorstel is precies één keer beslisbaar (tweede keer = 409).
 - **Bewijs op de bevroren telling**: de bevestigde regel draagt een bevroren snapshot `bron_vakken` (foto_pad + vakcoördinaten) op de regel zelf, dus ook na vaststellen — en na verwijderen van het vak — blijft de foto met het getekende kader per regel terug te zien (camera-icoon in de regeltabel).
 - **Bewijs**: `scripts/src/verificatie-voorraadtelling-camera.ts` — volledig scenario met echte AI: foto met twee vakken → voorstellen (beide artikelen correct herkend) → één gecorrigeerd bevestigd, één verworpen → vaststellen → foto+kader leesbaar op de bevroren regel; alle checks groen, incl. blokkade op vaststellen met open voorstellen en 409 op mutaties ná vaststellen.
+
+
+## 2026-08-19 — OFFLINE_FOTO_IDB_01: IndexedDB offline-fotobuffer op de monteur-webapp (was: localStorage ±5 MB)
+
+- **`artifacts/monteur-app/lib/bestanden.ts`** volledig herschreven web-branch: foto-blobs worden nu in **IndexedDB** (`fps_offline_files_v1`, object store `bestanden`) bewaard i.p.v. als data-URL's in localStorage. Capaciteit: honderden MB's (apparaatafhankelijk) in plaats van de eerdere ~5 MB-grens.
+- **Stabbiele `idb://<uuid>`-paden**: elke opgeslagen blob krijgt een UUID-sleutel; het pad begint met `idb://` en is stabiel over pagina-herladen heen. De logische-map-index (welke sleutels in welke map) blijft een kleine stringlijst in AsyncStorage (localStorage).
+- **Achterwaartse compatibiliteit**: bestaande wachtrij-items met een `data:`-URL werken ongewijzigd (passthrough in `bestandBestaat`, `bestandGrootte`, `leesTekstBestand`, `uploadBestandNaarUrl`). `isWebPad()` herkent beide prefixen.
+- **Weergave via blob-URL**: `resolveDisplayUri(pad)` zet `idb://`-paden om naar een `URL.createObjectURL()`-URL (gecached per paginalevensduur). `opname/item/[itemId].tsx` en `werkdag/[id].tsx` lossen paden op via een `displayUris`-state + `useEffect` vóór weergave in `<Image>`.
+- **Native pad ongewijzigd**: alle `expo-file-system`-branches blijven exact zoals ze waren.
+- **Bewijs**: ≥20 foto's kunnen nu offline worden vastgelegd en volledig gesynchroniseerd na herstel van de verbinding.

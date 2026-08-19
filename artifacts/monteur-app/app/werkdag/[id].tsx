@@ -43,7 +43,7 @@ import {
   patchWerkorderStatusLokaal,
 } from "@/lib/offlineCache";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
-import { bewaarBestandUitUri, documentMap, lijstMap, maakMap, schrijfTekstBestand } from "@/lib/bestanden";
+import { bewaarBestandUitUri, documentMap, lijstMap, maakMap, resolveDisplayUri, schrijfTekstBestand } from "@/lib/bestanden";
 
 const UITVOERING_LABEL: Record<string, string> = {
   gepland: "Gepland",
@@ -131,6 +131,7 @@ export default function WerkdagDetailScherm() {
   const [statusBezig, setStatusBezig] = useState(false);
   const [lokaleStatus, setLokaleStatus] = useState<string | null>(null);
   const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
+  const [displayUris, setDisplayUris] = useState<Record<string, string>>({});
   const [handtekeningOpgeslagen, setHandtekeningOpgeslagen] = useState(false);
   const [handtekeningBezig, setHandtekeningBezig] = useState(false);
   const fotoMapGemaakt = useRef(false);
@@ -165,6 +166,21 @@ export default function WerkdagDetailScherm() {
       if (paden.length > 0) setLokaleFotos(paden);
     });
   }, [fotoDir]);
+
+  // Zet idb://-paden om naar blob-URLs voor weergave in <Image>
+  useEffect(() => {
+    let actief = true;
+    void Promise.all(
+      lokaleFotos.map(async (pad) => {
+        const uri = await resolveDisplayUri(pad);
+        return [pad, uri] as const;
+      }),
+    ).then((paren) => {
+      if (!actief) return;
+      setDisplayUris(Object.fromEntries(paren));
+    });
+    return () => { actief = false; };
+  }, [lokaleFotos]);
 
   // Check of er een open kwartaalcontrole-cyclus klaarstaat voor dit voertuig
   useEffect(() => {
@@ -740,7 +756,7 @@ export default function WerkdagDetailScherm() {
                 {lokaleFotos.map((pad) => (
                   <View key={pad} style={{ position: "relative" }}>
                     <Image
-                      source={{ uri: pad }}
+                      source={{ uri: displayUris[pad] ?? pad }}
                       style={{ width: 90, height: 90, borderRadius: c.radius / 2, backgroundColor: c.muted }}
                       resizeMode="cover"
                     />
