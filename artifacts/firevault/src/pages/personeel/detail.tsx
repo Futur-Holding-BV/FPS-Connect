@@ -120,6 +120,15 @@ type KritiekeDatumsData = {
   aanzeg_datum: { contract_id: number; datum: string; dagen_tot: number; reden: string; ernst: string } | null;
   proeftijd_einde: { datum: string; dagen_tot: number } | null;
   ketenregel: string | null;
+  ketenregel_detail: {
+    tijdelijke_contracten: number;
+    totale_looptijd_maanden: number;
+    contracten_grens: number;
+    maanden_grens: number;
+    contracten_tot_grens: number;
+    maanden_tot_grens: number;
+    grens_bereikt: "contracten" | "looptijd" | "beide" | null;
+  } | null;
   zzp: {
     datum: string; dagen_tot: number; dba_risico: boolean;
     verband_maanden: number; label: string; reden: string; ernst: string;
@@ -257,6 +266,36 @@ function KritiekeDatumsBlok({
                 <div>
                   <div className="font-medium">Ketenregeling</div>
                   <div className="text-[11px] opacity-90 mt-0.5">{data.ketenregel}</div>
+                  {data.ketenregel_detail && (
+                    <div className="mt-2 rounded border border-amber-300/70 bg-amber-100/60 p-2 text-[11px]">
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
+                        <div>
+                          <div className="opacity-75">Tijdelijke contracten</div>
+                          <div className="font-semibold">
+                            {data.ketenregel_detail.tijdelijke_contracten} / {data.ketenregel_detail.contracten_grens}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="opacity-75">Totale looptijd</div>
+                          <div className="font-semibold">
+                            {data.ketenregel_detail.totale_looptijd_maanden} / {data.ketenregel_detail.maanden_grens} maanden
+                          </div>
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <div className="opacity-75">Ruimte tot grens</div>
+                          <div className="font-semibold">
+                            {data.ketenregel_detail.grens_bereikt === "beide"
+                              ? "Beide grenzen bereikt"
+                              : data.ketenregel_detail.grens_bereikt === "contracten"
+                                ? "Contractgrens bereikt"
+                                : data.ketenregel_detail.grens_bereikt === "looptijd"
+                                  ? "Looptijdgrens bereikt"
+                                  : `${data.ketenregel_detail.contracten_tot_grens} contract${data.ketenregel_detail.contracten_tot_grens === 1 ? "" : "en"} en ${data.ketenregel_detail.maanden_tot_grens} maanden`}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

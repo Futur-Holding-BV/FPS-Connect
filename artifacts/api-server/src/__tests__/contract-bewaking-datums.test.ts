@@ -8,6 +8,7 @@ import {
   maandenVooruit,
   dagVoor,
   berekenZzpCrucialeDatum,
+  berekenKetenregelingDetail,
   ketenregelingCheck,
   URGENT_DAGEN,
   DBA_MAANDEN_GRENS,
@@ -519,5 +520,37 @@ describe("ketenregelingCheck — ketenregeling Wet Flexibele Arbeid", () => {
 
   it("lege lijst → geen melding", () => {
     expect(ketenregelingCheck([])).toBeNull();
+  });
+
+  it("geeft de contracthistorie en resterende ruimte tot beide grenzen", () => {
+    const contracten = [
+      bepaaldeTijdContract(2024, 2025),
+      bepaaldeTijdContract(2025, 2026),
+    ];
+
+    expect(berekenKetenregelingDetail(contracten, NU)).toMatchObject({
+      tijdelijke_contracten: 2,
+      totale_looptijd_maanden: 24,
+      contracten_grens: 3,
+      maanden_grens: 36,
+      contracten_tot_grens: 1,
+      maanden_tot_grens: 12,
+      grens_bereikt: null,
+    });
+  });
+
+  it("markeert beide grenzen wanneer drie contracten drie jaar beslaan", () => {
+    const contracten = [
+      bepaaldeTijdContract(2023, 2024),
+      bepaaldeTijdContract(2024, 2025),
+      bepaaldeTijdContract(2025, 2026),
+    ];
+
+    expect(berekenKetenregelingDetail(contracten, NU)).toMatchObject({
+      tijdelijke_contracten: 3,
+      contracten_tot_grens: 0,
+      maanden_tot_grens: 0,
+      grens_bereikt: "beide",
+    });
   });
 });

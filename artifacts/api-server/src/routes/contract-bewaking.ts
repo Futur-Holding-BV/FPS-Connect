@@ -34,17 +34,18 @@ export function dagenTot(eindDatum: string, nu: Date = new Date()): number {
   return Math.round((eind.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+export const KETEN_CONTRACTEN_GRENS = 3;
 export function ketenregelingCheck(contracten: Array<{ contracttype: string; startDatum: string; eindDatum: string | null }>): string | null {
   // Wet Flexibele Arbeid: max 3 tijdelijke contracten in 3 jaar
   const tijdelijk = contracten.filter((c) => c.contracttype === "bepaalde_tijd" || c.contracttype === "oproep");
-  if (tijdelijk.length >= 3) {
+  if (tijdelijk.length >= KETEN_CONTRACTEN_GRENS) {
     return `Ketenregeling: ${tijdelijk.length} tijdelijke contracten. Volgend contract moet onbepaalde tijd zijn (max. 3 in 3 jaar).`;
   }
   // Totale duur tijdelijke contracten > 3 jaar
   const start = tijdelijk.map((c) => new Date(c.startDatum).getTime()).reduce((a, b) => Math.min(a, b), Infinity);
   const eind = tijdelijk.map((c) => (c.eindDatum ? new Date(c.eindDatum).getTime() : Date.now())).reduce((a, b) => Math.max(a, b), 0);
   const maanden = (eind - start) / (1000 * 60 * 60 * 24 * 30);
-  if (maanden > 36) {
+  if (maanden > KETEN_MAANDEN_GRENS) {
     return `Ketenregeling: aaneengesloten tijdelijk dienstverband duurt langer dan 3 jaar (${Math.round(maanden)} maanden). Omzetting naar onbepaalde tijd kan wettelijk verplicht zijn.`;
   }
   return null;
@@ -767,7 +768,11 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId/kritieke-datums", lezen
     contracten.map((c) => ({ contracttype: c.contracttype, startDatum: c.startDatum, eindDatum: c.eindDatum })),
   );
 
-  // Einddatum huidig contract
+  const ketenregelDetail = ketenregel
+    ? berekenKetenregelingDetail(
+        contracten.map((c) => ({ contracttype: c.contracttype, startDatum: c.startDatum, eindDatum: c.eindDatum })),
+      )
+    : null;
   let contract_eind: { contract_id: number; datum: string; dagen_tot: number; contracttype: string; ernst: string } | null = null;
   let aanzeg_datum: { contract_id: number; datum: string; dagen_tot: number; reden: string; ernst: string } | null = null;
 
@@ -817,6 +822,7 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId/kritieke-datums", lezen
     aanzeg_datum,
     proeftijd_einde,
     ketenregel,
+    ketenregel_detail: ketenregelDetail,
     zzp: zzpRes
       ? {
           datum: zzpRes.datum,
@@ -1351,3 +1357,60 @@ router.post("/contract-bewaking/zonder-contract/:medewerkerId/aanvullen", schrij
 });
 
 export default router;
+
+export type KetenregelingDetail = {
+  tijdelijke_contracten: number;
+  totale_looptijd_maanden: number;
+  contracten_grens: number;
+  maanden_grens: number;
+  contracten_tot_grens: number;
+  maanden_tot_grens: number;
+  grens_bereikt: "contracten" | "looptijd" | "beide" | null;
+};
+
+export const KETEN_MAANDEN_GRENS = 36;
+
+/**
+ * Berekent de context achter een ketenregelwaarschuwing over de volledige
+ * contracthistorie. De looptijd is dezelfde periode als in de waarschuwing:
+ * van de vroegste start tot de laatste einddatum (of vandaag bij een lopend
+ * tijdelijk contract).
+ */
+export function berekenKetenregelingDetail(
+  contracten: Array<{ contracttype: string; startDatum: string; eindDatum: string | null }>,
+  nu: Date = new Date(),
+): KetenregelingDetail | null {
+  const tijdelijk = contracten.filter((c) => c.contracttype === "bepaalde_tijd" || c.contracttype === "oproep");
+  if (tijdelijk.length === 0) return null;
+
+  const start = tijdelijk.reduce(
+    (vroegste, c) => Math.min(vroegste, new Date(c.startDatum).getTime()),
+    Infinity,
+  );
+  const eind = tijdelijk.reduce(
+    (laatste, c) => Math.max(laatste, c.eindDatum ? new Date(c.eindDatum).getTime() : nu.getTime()),
+    0,
+  );
+  const totaleLooptijdMaanden = Math.max(
+    0,
+    Math.round((eind - start) / (1000 * 60 * 60 * 24 * 30)),
+  );
+  const contractenGrensBereikt = tijdelijk.length >= KETEN_CONTRACTEN_GRENS;
+  const looptijdGrensBereikt = totaleLooptijdMaanden >= KETEN_MAANDEN_GRENS;
+
+  return {
+    tijdelijke_contracten: tijdelijk.length,
+    totale_looptijd_maanden: totaleLooptijdMaanden,
+    contracten_grens: KETEN_CONTRACTEN_GRENS,
+    maanden_grens: KETEN_MAANDEN_GRENS,
+    contracten_tot_grens: Math.max(0, KETEN_CONTRACTEN_GRENS - tijdelijk.length),
+    maanden_tot_grens: Math.max(0, KETEN_MAANDEN_GRENS - totaleLooptijdMaanden),
+    grens_bereikt: contractenGrensBereikt && looptijdGrensBereikt
+      ? "beide"
+      : contractenGrensBereikt
+        ? "contracten"
+        : looptijdGrensBereikt
+          ? "looptijd"
+          : null,
+  };
+}

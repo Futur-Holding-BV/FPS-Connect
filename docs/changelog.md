@@ -656,6 +656,11 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Bewijs**: ≥20 foto's kunnen nu offline worden vastgelegd en volledig gesynchroniseerd na herstel van de verbinding.
 
 
+## 2026-08-19 — KETENREGEL_HISTORIE_01: contracthistorie op kritieke-datumskaart
+
+- **Ketenregel-detail in de API**: `GET /api/contract-bewaking/medewerkers/:id/kritieke-datums` geeft bij een actieve ketenregelwaarschuwing `ketenregel_detail` terug met het aantal tijdelijke contracten, de totale looptijd in maanden en de resterende ruimte tot de grens van 3 contracten/36 maanden.
+- **HR-kaart uitgebreid**: de kaart **Kritieke datums** toont deze compacte historie direct onder de ketenregelwaarschuwing, inclusief welke grens al bereikt is of hoeveel ruimte resteert.
+- **Bewijs**: de detailberekening heeft deterministische unit-tests voor de resterende ruimte en het bereiken van beide grenzen.
 ## 2026-08-19 — ADMINISTRATIE_01: magazijnboekingen per BV afgeschermd
 
 - **Harde magazijn-BV-poort**: iedere voorraadmutatie naar AccountView toetst nu de gekoppelde administratie tegen het magazijngebouw en, waar aanwezig, de opdracht-, inkooporder-, picklijst- of reserveringsrelatie. Ontbrekende, onvolledige, onbekende en tegenstrijdige herleiding wordt zichtbaar met 422 geweigerd; een boeking kan niet stil in de administratie van een andere BV landen.
