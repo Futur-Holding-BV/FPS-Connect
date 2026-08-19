@@ -1,5 +1,12 @@
 - **Externe adviseurs**: nieuw beheerscherm onder Personeel met bedrijf, contactpersoon, inzet, toegangsdatum en accountstatus. Beheerders kunnen gegevens en toegang verlengen via het bestaande adviseur-account. De dagelijkse bewakingsloop zet vanaf 14 dagen vóór de einddatum (en bij verlopen toegang) een actiepunt in de werkbak voor personeel:2, dat zichzelf sluit wanneer de toegang is verlengd of het account is uitgezet.
 
+
+## 2026-08-19 — Inkoopfactuur-goedkeuringsbeleid dekkend maken
+
+- **Inkoopfactuur-goedkeuringsbeleid**: Beheer → Goedkeuringsbeleid waarschuwt nu wanneer actieve, algemene inkoopfactuurregels niet alle bedragen vanaf € 0 afdekken. Ook gaten tussen ingestelde banden worden afzonderlijk getoond.
+- **Ontbrekende band klaarzetten**: vanuit de waarschuwing opent direct een nieuwe algemene inkoopfactuurregel met de ontbrekende grenzen en het vier-ogen-principe ingevuld; de beheerder kiest zelf de bevoegde goedkeurder voordat de regel actief wordt.
+- **Regressiebewijs**: een gerichte beleidstest dekt volledige dekking, gaten, overlap, uitgeschakelde regels, werkmaatschappij-specifieke regels en ongeldige omgekeerde grenzen.
+
 ## 2026-08-19 — SNAGSTREAM_MULTI_01: meerdere rapporten tegelijk uploaden
 
 - **Meervoudige selectie**: het SnagStream-archief accepteert meerdere PDF’s in één bestandskeuze en past één optionele gebouwkoppeling op de hele selectie toe.

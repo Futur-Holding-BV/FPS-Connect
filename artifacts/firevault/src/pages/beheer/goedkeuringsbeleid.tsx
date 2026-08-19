@@ -38,19 +38,24 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ShieldCheck, Plus, Pencil, Trash2, CheckCircle2, XCircle,
+  ShieldCheck, Plus, Pencil, Trash2, CheckCircle2, XCircle, AlertTriangle,
 } from "lucide-react";
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { MODULES } from "@workspace/permissies";
+import {
+  vindInkoopfactuurDekkingsgaten,
+  type GoedkeuringsbeleidDekkingsgat,
+} from "@/lib/goedkeuringsbeleid-dekking";
 
 // Documenttypes die exact overeenkomen met de objectType-sleutels in de goedkeuringsmotor.
 // "inkoopbon" is de canonieke sleutel voor inkooporders/bestellingen; de UI toont "Inkoopbon / Inkooporder"
@@ -107,6 +112,13 @@ function euro(bedrag?: number | null) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag);
 }
 
+function dekkingsgatLabel(gat: GoedkeuringsbeleidDekkingsgat): string {
+  if (gat.bovengrens == null) {
+    return gat.ondergrens === 0 ? "alle bedragen vanaf € 0" : `bedragen vanaf ${euro(gat.ondergrens)}`;
+  }
+  return `${euro(gat.ondergrens)} tot ${euro(gat.bovengrens)}`;
+}
+
 function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -117,6 +129,10 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
   const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [form, setForm] = useState<GoedkeuringBeleidsregelInput>(LEEG_REGEL);
   const [verwijderId, setVerwijderId] = useState<number | null>(null);
+  const inkoopfactuurDekkingsgaten = useMemo(
+    () => vindInkoopfactuurDekkingsgaten(regels ?? []),
+    [regels],
+  );
 
   function verversen() {
     qc.invalidateQueries({ queryKey: getListGoedkeuringBeleidsregelsQueryKey() });
@@ -144,6 +160,23 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
   function openNieuw() {
     setBewerkId(null);
     setForm(LEEG_REGEL);
+    setDialogOpen(true);
+  }
+
+  function openOntbrekendeInkoopfactuurBand(gat: GoedkeuringsbeleidDekkingsgat) {
+    setBewerkId(null);
+    setForm({
+      ...LEEG_REGEL,
+      naam:
+        gat.bovengrens == null
+          ? `Inkoopfacturen vanaf ${euro(gat.ondergrens)}`
+          : `Inkoopfacturen ${euro(gat.ondergrens)} – ${euro(gat.bovengrens)}`,
+      document_type: "inkoop_factuur",
+      werkmaatschappij_id: null,
+      ondergrens: gat.ondergrens,
+      bovengrens: gat.bovengrens,
+      vier_ogen_verplicht: true,
+    });
     setDialogOpen(true);
   }
 
@@ -192,6 +225,44 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {inkoopfactuurDekkingsgaten.length > 0 && (
+        <Alert className="border-amber-500/60 bg-amber-50 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertTitle>Inkoopfacturen kunnen stilvallen bij goedkeuren</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              Er is geen actieve regel voor alle werkmaatschappijen die de volledige
+              bedragenreeks dekt. Goedkeuren wordt geweigerd zodra een factuur in een
+              ontbrekende band valt.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              {inkoopfactuurDekkingsgaten.map((gat) => (
+                <li key={`${gat.ondergrens}-${gat.bovengrens ?? "onbegrensd"}`}>
+                  Niet gedekt: {dekkingsgatLabel(gat)}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              {inkoopfactuurDekkingsgaten.map((gat) => (
+                <Button
+                  key={`${gat.ondergrens}-${gat.bovengrens ?? "onbegrensd"}-actie`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openOntbrekendeInkoopfactuurBand(gat)}
+                >
+                  Regel klaarzetten voor {dekkingsgatLabel(gat)}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs">
+              Kies daarna een goedkeurder en sla de actieve regel op. Regels voor één
+              werkmaatschappij alleen dekken deze algemene factuurstroom niet.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {magBeheren && (
         <div className="flex justify-end">
           <Button size="sm" onClick={openNieuw}>
@@ -274,6 +345,9 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{bewerkId ? "Beleidsregel bewerken" : "Nieuwe beleidsregel"}</DialogTitle>
+            <DialogDescription>
+              Leg vast voor welke documenten en bedragen goedkeuring nodig is en wie deze mag geven.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1.5">
