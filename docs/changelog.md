@@ -648,6 +648,11 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Bewijs**: ≥20 foto's kunnen nu offline worden vastgelegd en volledig gesynchroniseerd na herstel van de verbinding.
 
 
+## 2026-08-19 — ADMINISTRATIE_01: magazijnboekingen per BV afgeschermd
+
+- **Harde magazijn-BV-poort**: iedere voorraadmutatie naar AccountView toetst nu de gekoppelde administratie tegen het magazijngebouw en, waar aanwezig, de opdracht-, inkooporder-, picklijst- of reserveringsrelatie. Ontbrekende, onvolledige, onbekende en tegenstrijdige herleiding wordt zichtbaar met 422 geweigerd; een boeking kan niet stil in de administratie van een andere BV landen.
+- **Racevrij verzenden**: de AccountView-instelling, mutatie en alle BV-bronnen worden transactioneel vergrendeld en opnieuw getoetst tot na de externe boeking en exportmarkering. Een gelijktijdige instelling- of relatieaanpassing kan daardoor niet tussen controle en verzending wisselen.
+- **Bewijs**: `scripts/src/verificatie-administratie01-fase3.ts` is uitgebreid naar 26/26 groene checks, inclusief ontbrekende koppeling, mismatch, onbekende bron, ongeldige referentie, conflict tussen magazijn- en opdracht-BV en tien gelijktijdige testmodus-exports zonder pool-deadlock.
 ## 2026-08-19 — Contractbewaking: aanzegdeadline per mail
 
 - De dagelijkse bewakingsloop zet bij een uiterste aanzegdatum binnen zeven dagen een eenmalige waarschuwing per contract in de mail-wachtrij voor actieve HRM-beheerders. De waarschuwing gebruikt de daadwerkelijke aanzegdatum (één maand vóór contracteinde), respecteert de reguliere testdomein-/postbuscontrole en blijft uit zodra er al een contractbesluit is.

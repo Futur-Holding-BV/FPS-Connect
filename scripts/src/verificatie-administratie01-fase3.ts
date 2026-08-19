@@ -27,6 +27,9 @@ import {
   medewerkersTable,
   urenRegistratiesTable,
   accountviewInstellingenTable,
+  artikelenTable,
+  magazijnInstellingenTable,
+  voorraadMutatiesTable,
 } from "@workspace/db";
 
 const BASE = process.env.BEWIJS_API_BASIS
@@ -73,6 +76,9 @@ async function main(): Promise<void> {
 
   // AccountView-instellingen: originele rij bewaren om te herstellen
   const [instOrigineel] = await db.select().from(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1));
+  const [magazijnInstOrigineel] = await db.select().from(magazijnInstellingenTable).where(eq(magazijnInstellingenTable.id, 1));
+  let magazijnArtikelId: number | null = null;
+  const opruimMagazijnMutaties: number[] = [];
 
   try {
     const mobileRes = await fetch(`${BASE}/api/auth/mobile/login`, {
@@ -145,20 +151,102 @@ async function main(): Promise<void> {
     check("6c. medewerker zonder BV = onbekend (null, niet stil goed)", regelX?.afwijkend === null && regelX.uren === 3, regelX);
     check("6d. totalen: afwijkende_uren=4, onbekende_uren=3", bvc?.afwijkende_uren === 4 && bvc?.onbekende_uren === 3, { a: bvc?.afwijkende_uren, o: bvc?.onbekende_uren });
 
+    // Magazijnmutatie: het magazijngebouw is BV A. De drie weigeringen
+    // gebeuren vóór een externe AccountView-call, dus blijven deterministisch.
+    const [magazijnArtikel] = await db.insert(artikelenTable)
+      .values({ naam: "Bewijs artikel ADM3", inkoopprijs: 12.5 })
+      .returning();
+    if (!magazijnArtikel) throw new Error("Bewijsartikel niet aangemaakt");
+    magazijnArtikelId = magazijnArtikel.id;
+    const [magazijnMutatie] = await db.insert(voorraadMutatiesTable)
+      .values({ artikelId: magazijnArtikel.id, type: "correctie", hoeveelheid: 1, delta: 1, omschrijving: "ADM3 BV-bewijs" })
+      .returning();
+    if (!magazijnMutatie) throw new Error("Bewijsmutatie niet aangemaakt");
+    opruimMagazijnMutaties.push(magazijnMutatie.id);
+    await db.insert(magazijnInstellingenTable)
+      .values({ id: 1, magazijnGebouwId: gebouw.id })
+      .onConflictDoUpdate({ target: magazijnInstellingenTable.id, set: { magazijnGebouwId: gebouw.id } });
+
     // 7. AccountView weigert fail-closed (via forceer-herexport, geen achterdeur)
     await db.insert(accountviewInstellingenTable)
-      .values({ id: 1, apiGebruiker: "bewijs", werkgeverId: null })
-      .onConflictDoUpdate({ target: accountviewInstellingenTable.id, set: { apiGebruiker: "bewijs", werkgeverId: null } });
+      .values({ id: 1, apiGebruiker: "bewijs", werkgeverId: null, testmodus: true })
+      .onConflictDoUpdate({ target: accountviewInstellingenTable.id, set: { apiGebruiker: "bewijs", werkgeverId: null, testmodus: true } });
     const r7a = await fetch(`${BASE}/api/facturen/${fOfferte.id}/forceer-herexport`, { method: "POST", headers: H, body: JSON.stringify({ reden: "bewijs" }) });
     const j7a = (await r7a.json()) as Record<string, unknown>;
     check("7. koppeling zonder BV → 422 geweigerd", r7a.status === 422 && String(j7a["error"]).includes("werkmaatschappij"), { status: r7a.status, error: j7a["error"] });
+    const r7m = await fetch(`${BASE}/api/magazijn/mutaties/${magazijnMutatie.id}/exporteer-accountview`, { method: "POST", headers: H });
+    const j7m = (await r7m.json()) as Record<string, unknown>;
+    check("7m. magazijn: koppeling zonder BV → 422 geweigerd", r7m.status === 422 && String(j7m["error"]).includes("werkmaatschappij"), { status: r7m.status, error: j7m["error"] });
     await db.update(accountviewInstellingenTable).set({ werkgeverId: bvA.id }).where(eq(accountviewInstellingenTable.id, 1));
     const r7b = await fetch(`${BASE}/api/facturen/${fOfferte.id}/forceer-herexport`, { method: "POST", headers: H, body: JSON.stringify({ reden: "bewijs" }) });
     const j7b = (await r7b.json()) as Record<string, unknown>;
     check("7b. factuur-BV ≠ administratie-BV → 422 geweigerd", r7b.status === 422 && String(j7b["error"]).includes("andere werkmaatschappij"), { status: r7b.status, error: j7b["error"] });
+    await db.update(accountviewInstellingenTable).set({ werkgeverId: bvB.id }).where(eq(accountviewInstellingenTable.id, 1));
+    const r7mb = await fetch(`${BASE}/api/magazijn/mutaties/${magazijnMutatie.id}/exporteer-accountview`, { method: "POST", headers: H });
+    const j7mb = (await r7mb.json()) as Record<string, unknown>;
+    check("7mb. magazijn-BV ≠ administratie-BV → 422 geweigerd", r7mb.status === 422 && String(j7mb["error"]).includes("andere werkmaatschappij"), { status: r7mb.status, error: j7mb["error"] });
+    await db.update(accountviewInstellingenTable).set({ werkgeverId: bvA.id }).where(eq(accountviewInstellingenTable.id, 1));
     const r7c = await fetch(`${BASE}/api/facturen/${fLos.id}/forceer-herexport`, { method: "POST", headers: H, body: JSON.stringify({ reden: "bewijs" }) });
     const j7c = (await r7c.json()) as Record<string, unknown>;
     check("7c. factuur zonder herleidbare BV → 422 geweigerd", r7c.status === 422 && String(j7c["error"]).includes("onbekend"), { status: r7c.status, error: j7c["error"] });
+    await db.update(magazijnInstellingenTable).set({ magazijnGebouwId: null }).where(eq(magazijnInstellingenTable.id, 1));
+    const r7mc = await fetch(`${BASE}/api/magazijn/mutaties/${magazijnMutatie.id}/exporteer-accountview`, { method: "POST", headers: H });
+    const j7mc = (await r7mc.json()) as Record<string, unknown>;
+    check("7mc. magazijn zonder herleidbare BV → 422 geweigerd", r7mc.status === 422 && String(j7mc["error"]).includes("onbekend"), { status: r7mc.status, error: j7mc["error"] });
+    await db.update(magazijnInstellingenTable).set({ magazijnGebouwId: gebouw.id }).where(eq(magazijnInstellingenTable.id, 1));
+    // Pool-/lock-regressie: tien gelijktijdige testmodus-exports moeten
+    // seriëel door de AccountView-BV-poort kunnen zonder pool-deadlock.
+    await db.update(accountviewInstellingenTable)
+      .set({
+        werkgeverId: bvA.id,
+        testmodus: true,
+        administratiecode: "BEWIJS",
+        grootboekVoorraad: "1000",
+        grootboekInkoopKosten: "2000",
+      })
+      .where(eq(accountviewInstellingenTable.id, 1));
+    const parallelMutaties = await db.insert(voorraadMutatiesTable)
+      .values(Array.from({ length: 10 }, (_, index) => ({
+        artikelId: magazijnArtikel.id,
+        type: "correctie" as const,
+        hoeveelheid: 1,
+        delta: 1,
+        omschrijving: `ADM3 poolbewijs ${index + 1}`,
+      })))
+      .returning({ id: voorraadMutatiesTable.id });
+    opruimMagazijnMutaties.push(...parallelMutaties.map((rij) => rij.id));
+    const parallelResultaten = await Promise.race([
+      Promise.all(parallelMutaties.map(async (rij) => {
+        const response = await fetch(`${BASE}/api/magazijn/mutaties/${rij.id}/exporteer-accountview`, { method: "POST", headers: H });
+        return response.status;
+      })),
+      new Promise<number[]>((resolve) => setTimeout(() => resolve([]), 15_000)),
+    ]);
+    const parallelStatussen = await db.select({
+      id: voorraadMutatiesTable.id,
+      accountviewExportOp: voorraadMutatiesTable.accountviewExportOp,
+    }).from(voorraadMutatiesTable).where(inArray(voorraadMutatiesTable.id, parallelMutaties.map((rij) => rij.id)));
+    check(
+      "7md. tien gelijktijdige magazijnexports ronden zonder pool-deadlock af",
+      parallelResultaten.length === 10
+        && parallelResultaten.every((status) => status === 200)
+        && parallelStatussen.length === 10
+        && parallelStatussen.every((rij) => rij.accountviewExportOp != null),
+      { statussen: parallelResultaten, gemarkeerd: parallelStatussen.filter((rij) => rij.accountviewExportOp != null).length },
+    );
+    await db.update(voorraadMutatiesTable)
+      .set({ referentieType: "onbekend", referentieId: 999999 })
+      .where(eq(voorraadMutatiesTable.id, magazijnMutatie.id));
+    const r7md = await fetch(`${BASE}/api/magazijn/mutaties/${magazijnMutatie.id}/exporteer-accountview`, { method: "POST", headers: H });
+    const j7md = (await r7md.json()) as Record<string, unknown>;
+    check("7me. magazijn met onbekende referentie → 422 geweigerd", r7md.status === 422 && String(j7md["error"]).includes("niet betrouwbaar"), { status: r7md.status, error: j7md["error"] });
+    await db.update(opdrachtenTable).set({ werkmaatschappijId: bvB.id }).where(eq(opdrachtenTable.id, op4["id"] as number));
+    await db.update(voorraadMutatiesTable)
+      .set({ referentieType: "opdracht", referentieId: op4["id"] as number, opdrachtId: op4["id"] as number })
+      .where(eq(voorraadMutatiesTable.id, magazijnMutatie.id));
+    const r7me = await fetch(`${BASE}/api/magazijn/mutaties/${magazijnMutatie.id}/exporteer-accountview`, { method: "POST", headers: H });
+    const j7me = (await r7me.json()) as Record<string, unknown>;
+    check("7mf. magazijn-BV en opdracht-BV in conflict → 422 geweigerd", r7me.status === 422 && String(j7me["error"]).includes("tegenstrijdige"), { status: r7me.status, error: j7me["error"] });
 
     // 7d/7e. Ook batch-export weigert fail-closed per factuur (geen achterdeur).
     // fOfferte hangt aan BV B, koppeling boekt voor BV A; fLos heeft geen BV.
@@ -173,6 +261,8 @@ async function main(): Promise<void> {
       j7d.geslaagd === 0 && b2?.status === "mislukt" && (b2?.foutmelding ?? "").includes("onbekend"), b2);
   } finally {
     // Opruimen (volgorde: afhankelijkheden eerst)
+    if (opruimMagazijnMutaties.length) await db.delete(voorraadMutatiesTable).where(inArray(voorraadMutatiesTable.id, opruimMagazijnMutaties));
+    if (magazijnArtikelId != null) await db.delete(artikelenTable).where(eq(artikelenTable.id, magazijnArtikelId));
     if (opruimUren.length) await db.delete(urenRegistratiesTable).where(inArray(urenRegistratiesTable.id, opruimUren));
     if (opruimMedewerkers.length) await db.delete(medewerkersTable).where(inArray(medewerkersTable.id, opruimMedewerkers));
     if (opruimFacturen.length) await db.delete(facturenTable).where(inArray(facturenTable.id, opruimFacturen));
@@ -184,10 +274,24 @@ async function main(): Promise<void> {
     // AccountView-instellingen herstellen
     if (instOrigineel) {
       await db.update(accountviewInstellingenTable)
-        .set({ apiGebruiker: instOrigineel.apiGebruiker, werkgeverId: instOrigineel.werkgeverId })
+        .set({
+          apiGebruiker: instOrigineel.apiGebruiker,
+          werkgeverId: instOrigineel.werkgeverId,
+          testmodus: instOrigineel.testmodus,
+          administratiecode: instOrigineel.administratiecode,
+          grootboekVoorraad: instOrigineel.grootboekVoorraad,
+          grootboekInkoopKosten: instOrigineel.grootboekInkoopKosten,
+        })
         .where(eq(accountviewInstellingenTable.id, 1));
     } else {
       await db.delete(accountviewInstellingenTable).where(eq(accountviewInstellingenTable.id, 1));
+    }
+    if (magazijnInstOrigineel) {
+      await db.update(magazijnInstellingenTable)
+        .set({ magazijnGebouwId: magazijnInstOrigineel.magazijnGebouwId })
+        .where(eq(magazijnInstellingenTable.id, 1));
+    } else {
+      await db.delete(magazijnInstellingenTable).where(eq(magazijnInstellingenTable.id, 1));
     }
   }
 

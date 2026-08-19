@@ -1024,7 +1024,10 @@ router.post("/magazijn/mutaties/:id/exporteer-accountview", beheer, async (req, 
     logger.error({ err }, "magazijn exporteer-accountview fout");
     const msg = veiligeFoutmelding(err, "Serverfout");
     const code = (err as { code?: string }).code;
-    const status = code === "AL_GEEXPORTEERD" ? 409 : code === "AV_GEWEIGERD" ? 422 : msg.includes("niet gevonden") ? 404 : 400;
+    const status = code === "AL_GEEXPORTEERD" ? 409
+      : code === "AV_GEWEIGERD" || code === "BV_CONTROLE_GEWEIGERD" ? 422
+      : msg.includes("niet gevonden") ? 404
+      : 400;
     res.status(status).json({ error: msg.replace(/^AL_GEEXPORTEERD: /, "") });
   }
 });
