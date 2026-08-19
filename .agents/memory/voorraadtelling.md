@@ -14,3 +14,5 @@ description: Duurzame invarianten van de magazijn-voorraadtelling
 
 **Why:** de boekhouder eist een navertelbare, onveranderlijke onderbouwing; elk gat in de serialisatie maakt bevroren stand, correctieboeking en werkelijke voorraad onderling inconsistent.
 - Telling-geldrekenwerk nooit met IEEE-754 floats + Math.round: alle prijs×aantal/verschil/totaal via de calculatie-rekenkern in centen (half-weg-van-nul), anders halve-centfouten bevroren in de audituitvoer (vijfde review-les).
+
+**Camera-telling:** bewijs (foto+vak) hoort als bevroren snapshot op de regel, nooit via FK naar het (verwijderbare) vak; AI-voorstellen zijn precies één keer beslisbaar en blokkeren vaststellen zolang er één open staat. Server-side objectpaden alleen accepteren via een eigen, éénmalige upload-claim gebonden aan entiteit+aanvrager — nooit een client-aangeleverd pad downloaden (review-afwijzing).

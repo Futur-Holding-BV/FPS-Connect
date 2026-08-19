@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { VoorraadTellingBronVak } from './voorraadTellingBronVak';
 
 export interface VoorraadTellingRegel {
   id: number;
@@ -37,4 +38,6 @@ export interface VoorraadTellingRegel {
   geteld_door_naam?: string | null;
   /** @nullable */
   geteld_op?: string | null;
+  /** @nullable */
+  bron_vakken?: VoorraadTellingBronVak[] | null;
 }

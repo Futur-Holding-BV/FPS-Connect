@@ -106,6 +106,7 @@ import type {
   Bekwaamheid,
   BekwaamheidInput,
   BeoordelenInput,
+  BeslisVoorraadTellingVoorstel200,
   Betaalbatch,
   BevestigBetaalbatch200,
   BevindingFotoInput,
@@ -456,6 +457,7 @@ import type {
   GetVerlofVervalsignalenParams,
   GetVervaldagenParams,
   GetVisualsGuidanceParams,
+  GetVoorraadTellingFotoUploadUrl200,
   GetWagenparkBuitenWerktijdRapportParams,
   GetZiekmeldingenStatistiekenParams,
   GoLiveAdvies,
@@ -1135,8 +1137,11 @@ import type {
   VoorraadTellingDetail,
   VoorraadTellingRegel,
   VoorraadTellingRegelInvoer,
+  VoorraadTellingVak,
+  VoorraadTellingVakkenInvoer,
   VoorraadTellingVastgesteld,
   VoorraadTellingVerschillen,
+  VoorraadTellingVoorstelBeslissing,
   VoorraadTotaal,
   VoorwaardenSet,
   VoorwaardenSetInput,
@@ -89164,6 +89169,371 @@ export const useStelVoorraadTellingVast = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getStelVoorraadTellingVastMutationOptions(options));
+    }
+
+export const getGetVoorraadTellingFotoUploadUrlUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/tellingen/${id}/fotos/upload-url`
+}
+
+/**
+ * @summary Upload-URL voor een tellingfoto (camera-telling)
+ */
+export const getVoorraadTellingFotoUploadUrl = async (id: number, options?: RequestInit): Promise<GetVoorraadTellingFotoUploadUrl200> => {
+
+  return customFetch<GetVoorraadTellingFotoUploadUrl200>(getGetVoorraadTellingFotoUploadUrlUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetVoorraadTellingFotoUploadUrlMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['getVoorraadTellingFotoUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  getVoorraadTellingFotoUploadUrl(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetVoorraadTellingFotoUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>>
+
+    export type GetVoorraadTellingFotoUploadUrlMutationError = ErrorType<void>
+
+    /**
+ * @summary Upload-URL voor een tellingfoto (camera-telling)
+ */
+export const useGetVoorraadTellingFotoUploadUrl = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getVoorraadTellingFotoUploadUrl>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGetVoorraadTellingFotoUploadUrlMutationOptions(options));
+    }
+
+export const getListVoorraadTellingVakkenUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/tellingen/${id}/vakken`
+}
+
+/**
+ * @summary Vakken (met AI-telvoorstellen) van een telling ophalen
+ */
+export const listVoorraadTellingVakken = async (id: number, options?: RequestInit): Promise<VoorraadTellingVak[]> => {
+
+  return customFetch<VoorraadTellingVak[]>(getListVoorraadTellingVakkenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoorraadTellingVakkenQueryKey = (id: number,) => {
+    return [
+    `/api/magazijn/tellingen/${id}/vakken`
+    ] as const;
+    }
+
+
+export const getListVoorraadTellingVakkenQueryOptions = <TData = Awaited<ReturnType<typeof listVoorraadTellingVakken>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorraadTellingVakken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoorraadTellingVakkenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoorraadTellingVakken>>> = ({ signal }) => listVoorraadTellingVakken(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoorraadTellingVakken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoorraadTellingVakkenQueryResult = NonNullable<Awaited<ReturnType<typeof listVoorraadTellingVakken>>>
+export type ListVoorraadTellingVakkenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Vakken (met AI-telvoorstellen) van een telling ophalen
+ */
+
+export function useListVoorraadTellingVakken<TData = Awaited<ReturnType<typeof listVoorraadTellingVakken>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorraadTellingVakken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoorraadTellingVakkenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVoorraadTellingVakkenUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/tellingen/${id}/vakken`
+}
+
+/**
+ * @summary Vakken tekenen op een tellingfoto en per vak de AI laten tellen (voorstellen)
+ */
+export const createVoorraadTellingVakken = async (id: number,
+    voorraadTellingVakkenInvoer: VoorraadTellingVakkenInvoer, options?: RequestInit): Promise<VoorraadTellingVak[]> => {
+
+  return customFetch<VoorraadTellingVak[]>(getCreateVoorraadTellingVakkenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorraadTellingVakkenInvoer)
+  }
+);}
+
+
+
+
+export const getCreateVoorraadTellingVakkenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorraadTellingVakken>>, TError,{id: number;data: BodyType<VoorraadTellingVakkenInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoorraadTellingVakken>>, TError,{id: number;data: BodyType<VoorraadTellingVakkenInvoer>}, TContext> => {
+
+const mutationKey = ['createVoorraadTellingVakken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoorraadTellingVakken>>, {id: number;data: BodyType<VoorraadTellingVakkenInvoer>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createVoorraadTellingVakken(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoorraadTellingVakkenMutationResult = NonNullable<Awaited<ReturnType<typeof createVoorraadTellingVakken>>>
+    export type CreateVoorraadTellingVakkenMutationBody = BodyType<VoorraadTellingVakkenInvoer>
+    export type CreateVoorraadTellingVakkenMutationError = ErrorType<void>
+
+    /**
+ * @summary Vakken tekenen op een tellingfoto en per vak de AI laten tellen (voorstellen)
+ */
+export const useCreateVoorraadTellingVakken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorraadTellingVakken>>, TError,{id: number;data: BodyType<VoorraadTellingVakkenInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoorraadTellingVakken>>,
+        TError,
+        {id: number;data: BodyType<VoorraadTellingVakkenInvoer>},
+        TContext
+      > => {
+      return useMutation(getCreateVoorraadTellingVakkenMutationOptions(options));
+    }
+
+export const getDeleteVoorraadTellingVakUrl = (id: number,
+    vakId: number,) => {
+
+
+
+
+  return `/api/magazijn/tellingen/${id}/vakken/${vakId}`
+}
+
+/**
+ * @summary Vak verwijderen (alleen open telling)
+ */
+export const deleteVoorraadTellingVak = async (id: number,
+    vakId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVoorraadTellingVakUrl(id,vakId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVoorraadTellingVakMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoorraadTellingVak>>, TError,{id: number;vakId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVoorraadTellingVak>>, TError,{id: number;vakId: number}, TContext> => {
+
+const mutationKey = ['deleteVoorraadTellingVak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVoorraadTellingVak>>, {id: number;vakId: number}> = (props) => {
+          const {id,vakId} = props ?? {};
+
+          return  deleteVoorraadTellingVak(id,vakId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVoorraadTellingVakMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVoorraadTellingVak>>>
+
+    export type DeleteVoorraadTellingVakMutationError = ErrorType<void>
+
+    /**
+ * @summary Vak verwijderen (alleen open telling)
+ */
+export const useDeleteVoorraadTellingVak = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoorraadTellingVak>>, TError,{id: number;vakId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVoorraadTellingVak>>,
+        TError,
+        {id: number;vakId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVoorraadTellingVakMutationOptions(options));
+    }
+
+export const getBeslisVoorraadTellingVoorstelUrl = (id: number,
+    vakId: number,
+    voorstelId: string,) => {
+
+
+
+
+  return `/api/magazijn/tellingen/${id}/vakken/${vakId}/voorstellen/${voorstelId}/beslissen`
+}
+
+/**
+ * @summary AI-telvoorstel bevestigen (evt. gecorrigeerd) of verwerpen — pas dan telt het mee
+ */
+export const beslisVoorraadTellingVoorstel = async (id: number,
+    vakId: number,
+    voorstelId: string,
+    voorraadTellingVoorstelBeslissing: VoorraadTellingVoorstelBeslissing, options?: RequestInit): Promise<BeslisVoorraadTellingVoorstel200> => {
+
+  return customFetch<BeslisVoorraadTellingVoorstel200>(getBeslisVoorraadTellingVoorstelUrl(id,vakId,voorstelId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorraadTellingVoorstelBeslissing)
+  }
+);}
+
+
+
+
+export const getBeslisVoorraadTellingVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>, TError,{id: number;vakId: number;voorstelId: string;data: BodyType<VoorraadTellingVoorstelBeslissing>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>, TError,{id: number;vakId: number;voorstelId: string;data: BodyType<VoorraadTellingVoorstelBeslissing>}, TContext> => {
+
+const mutationKey = ['beslisVoorraadTellingVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>, {id: number;vakId: number;voorstelId: string;data: BodyType<VoorraadTellingVoorstelBeslissing>}> = (props) => {
+          const {id,vakId,voorstelId,data} = props ?? {};
+
+          return  beslisVoorraadTellingVoorstel(id,vakId,voorstelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeslisVoorraadTellingVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>>
+    export type BeslisVoorraadTellingVoorstelMutationBody = BodyType<VoorraadTellingVoorstelBeslissing>
+    export type BeslisVoorraadTellingVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-telvoorstel bevestigen (evt. gecorrigeerd) of verwerpen — pas dan telt het mee
+ */
+export const useBeslisVoorraadTellingVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>, TError,{id: number;vakId: number;voorstelId: string;data: BodyType<VoorraadTellingVoorstelBeslissing>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beslisVoorraadTellingVoorstel>>,
+        TError,
+        {id: number;vakId: number;voorstelId: string;data: BodyType<VoorraadTellingVoorstelBeslissing>},
+        TContext
+      > => {
+      return useMutation(getBeslisVoorraadTellingVoorstelMutationOptions(options));
     }
 
 export const getListVoorraadMutatiesUrl = (params?: ListVoorraadMutatiesParams,) => {

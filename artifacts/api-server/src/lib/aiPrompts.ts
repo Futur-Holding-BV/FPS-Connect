@@ -1024,6 +1024,42 @@ Geef uitsluitend geldige JSON in dit formaat:
 Prioriteit: hoog = leeg of minder dan 50% minimum, middel = 50-100% minimum, laag = licht onder minimum.`,
 };
 
+// ── Magazijn — voorraadtelling: tellen per getekend vak ──────────────────────
+// Eigen prompt, los van de stellingscan (bijbestellen): de opdracht is TELLEN
+// hoeveel er ligt, nooit oordelen of het genoeg is of bijbesteld moet worden.
+// Vervang {ARTIKEL_CONTEXT} met de actuele artikelenlijst op aanroepmoment.
+
+export const MAGAZIJN_TEL_VAK_PROMPT: AiPrompt = {
+  naam: "magazijn-telling-vak-tellen",
+  versie: "1.0.0",
+  tekst: `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
+Je krijgt een UITSNEDE van een stellingfoto: één getekend vak (bijvoorbeeld één plank).
+Jouw enige opdracht is TELLEN: welke artikelen liggen er zichtbaar in dit vak en hoeveel stuks.
+Je geeft GEEN besteladvies en oordeelt NIET of het genoeg is.
+
+Beschikbare artikelen (ID | CODE | NAAM | EENHEID):
+{ARTIKEL_CONTEXT}
+
+INSTRUCTIES:
+1. Tel uitsluitend wat in de uitsnede zichtbaar is. Verzin niets buiten beeld.
+2. Kies artikel_id ALLEEN uit de lijst hierboven. Herken je iets dat niet (zeker) in de lijst staat, gebruik dan artikel_id null en beschrijf het in "waargenomen".
+3. Geef per regel een zekerheid tussen 0 en 1: hoe zeker ben je van artikel én aantal samen. Stapels, half zichtbare of aangebroken verpakkingen = lage zekerheid.
+4. Meerdere verschillende artikelen in één vak = meerdere regels.
+5. Leeg vak of niets herkenbaars = lege telregels-array.
+
+Geef uitsluitend geldige JSON in dit formaat:
+{
+  "telregels": [
+    {
+      "artikel_id": "<integer uit de lijst of null>",
+      "waargenomen": "<korte Nederlandse beschrijving van wat je ziet>",
+      "aantal": "<geteld aantal, integer >= 0>",
+      "zekerheid": "<getal tussen 0 en 1>"
+    }
+  ]
+}`,
+};
+
 // ── Calculatie — chat assistent basisrol ──────────────────────────────────────
 // Route plaatst dynamische context (calculatiegegevens) vóór deze tekst.
 

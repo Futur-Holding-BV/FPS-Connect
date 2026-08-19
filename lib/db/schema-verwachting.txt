@@ -449,8 +449,13 @@ INDEX|vge_effectiviteitslog|idx_vge_log_visual_spot_stap
 INDEX|vge_effectiviteitslog|vge_effectiviteitslog_pkey
 INDEX|voertuigen|voertuigen_pkey
 INDEX|voorraad_mutaties|voorraad_mutaties_pkey
+INDEX|voorraad_telling_foto_claims|voorraad_telling_foto_claims_object_path_key
+INDEX|voorraad_telling_foto_claims|voorraad_telling_foto_claims_pkey
+INDEX|voorraad_telling_foto_claims|voorraad_telling_foto_claims_telling_idx
 INDEX|voorraad_telling_regels|telling_regel_artikel_locatie
 INDEX|voorraad_telling_regels|voorraad_telling_regels_pkey
+INDEX|voorraad_telling_vakken|voorraad_telling_vakken_pkey
+INDEX|voorraad_telling_vakken|voorraad_telling_vakken_telling_idx
 INDEX|voorraad_tellingen|voorraad_tellingen_pkey
 INDEX|voorraad|voorraad_artikel_locatie
 INDEX|voorraad|voorraad_pkey
@@ -4761,12 +4766,19 @@ KOLOM|voorraad_mutaties|opdracht_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_id|integer|YES|
 KOLOM|voorraad_mutaties|referentie_type|text|YES|
 KOLOM|voorraad_mutaties|type|text|NO|
+KOLOM|voorraad_telling_foto_claims|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|voorraad_telling_foto_claims|aangevraagd_door_id|integer|YES|
+KOLOM|voorraad_telling_foto_claims|gebruikt|boolean|NO|false
+KOLOM|voorraad_telling_foto_claims|id|integer|NO|nextval('voorraad_telling_foto_claims_id_seq'::regclass)
+KOLOM|voorraad_telling_foto_claims|object_path|text|NO|
+KOLOM|voorraad_telling_foto_claims|telling_id|integer|NO|
 KOLOM|voorraad_telling_regels|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voorraad_telling_regels|administratieve_voorraad|numeric|YES|
 KOLOM|voorraad_telling_regels|artikel_code|text|YES|
 KOLOM|voorraad_telling_regels|artikel_id|integer|YES|
 KOLOM|voorraad_telling_regels|artikel_naam|text|NO|
 KOLOM|voorraad_telling_regels|bevestigd|boolean|NO|false
+KOLOM|voorraad_telling_regels|bron_vakken|jsonb|YES|
 KOLOM|voorraad_telling_regels|eenheid|text|NO|'st'::text
 KOLOM|voorraad_telling_regels|geteld_aantal|numeric|NO|0
 KOLOM|voorraad_telling_regels|geteld_door_id|integer|YES|
@@ -4778,6 +4790,19 @@ KOLOM|voorraad_telling_regels|locatie_naam|text|YES|
 KOLOM|voorraad_telling_regels|prijs|numeric|YES|
 KOLOM|voorraad_telling_regels|telling_id|integer|NO|
 KOLOM|voorraad_telling_regels|waarde|numeric|YES|
+KOLOM|voorraad_telling_vakken|aanduiding|text|NO|
+KOLOM|voorraad_telling_vakken|aangemaakt_door_id|integer|YES|
+KOLOM|voorraad_telling_vakken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|voorraad_telling_vakken|ai_voorstellen|jsonb|YES|
+KOLOM|voorraad_telling_vakken|breedte|numeric|NO|
+KOLOM|voorraad_telling_vakken|foto_pad|text|NO|
+KOLOM|voorraad_telling_vakken|hoogte|numeric|NO|
+KOLOM|voorraad_telling_vakken|id|integer|NO|nextval('voorraad_telling_vakken_id_seq'::regclass)
+KOLOM|voorraad_telling_vakken|locatie_id|integer|YES|
+KOLOM|voorraad_telling_vakken|status|text|NO|'analyseren'::text
+KOLOM|voorraad_telling_vakken|telling_id|integer|NO|
+KOLOM|voorraad_telling_vakken|x|numeric|NO|
+KOLOM|voorraad_telling_vakken|y|numeric|NO|
 KOLOM|voorraad_tellingen|aangemaakt_door_id|integer|YES|
 KOLOM|voorraad_tellingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|voorraad_tellingen|grondslag|text|NO|

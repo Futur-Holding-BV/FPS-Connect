@@ -15249,6 +15249,16 @@ export interface VoorraadTellingRegelInvoer {
   bevestigd?: boolean;
 }
 
+export interface VoorraadTellingBronVak {
+  vak_id: number;
+  foto_pad: string;
+  aanduiding: string;
+  x: number;
+  y: number;
+  breedte: number;
+  hoogte: number;
+}
+
 export interface VoorraadTellingRegel {
   id: number;
   telling_id: number;
@@ -15280,6 +15290,8 @@ export interface VoorraadTellingRegel {
   geteld_door_naam?: string | null;
   /** @nullable */
   geteld_op?: string | null;
+  /** @nullable */
+  bron_vakken?: VoorraadTellingBronVak[] | null;
 }
 
 export type VoorraadTellingDetail = VoorraadTelling & {
@@ -15319,6 +15331,96 @@ export interface VoorraadTellingVerschillen {
   totaal_geteld_waarde: number;
   totaal_verschil_waarde: number;
   regels_zonder_prijs: number;
+}
+
+export type VoorraadTellingVakVoorstelStatus = typeof VoorraadTellingVakVoorstelStatus[keyof typeof VoorraadTellingVakVoorstelStatus];
+
+
+export const VoorraadTellingVakVoorstelStatus = {
+  voorstel: 'voorstel',
+  bevestigd: 'bevestigd',
+  verworpen: 'verworpen',
+} as const;
+
+export interface VoorraadTellingVakVoorstel {
+  id: string;
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  artikel_naam?: string | null;
+  /** @nullable */
+  artikel_code?: string | null;
+  /** @nullable */
+  eenheid?: string | null;
+  waargenomen: string;
+  aantal: number;
+  zekerheid: number;
+  status: VoorraadTellingVakVoorstelStatus;
+  /** @nullable */
+  regel_id?: number | null;
+}
+
+export type VoorraadTellingVakStatus = typeof VoorraadTellingVakStatus[keyof typeof VoorraadTellingVakStatus];
+
+
+export const VoorraadTellingVakStatus = {
+  analyseren: 'analyseren',
+  gereed: 'gereed',
+  analysefout: 'analysefout',
+} as const;
+
+export interface VoorraadTellingVak {
+  id: number;
+  telling_id: number;
+  foto_pad: string;
+  aanduiding: string;
+  /** @nullable */
+  locatie_id?: number | null;
+  x: number;
+  y: number;
+  breedte: number;
+  hoogte: number;
+  status: VoorraadTellingVakStatus;
+  voorstellen: VoorraadTellingVakVoorstel[];
+  aangemaakt_op: string;
+}
+
+export type VoorraadTellingVakkenInvoerVakkenItem = {
+  aanduiding: string;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** Fractie 0..1 van de fotobreedte */
+  x: number;
+  y: number;
+  breedte: number;
+  hoogte: number;
+};
+
+export interface VoorraadTellingVakkenInvoer {
+  foto_pad: string;
+  vakken: VoorraadTellingVakkenInvoerVakkenItem[];
+}
+
+export type VoorraadTellingVoorstelBeslissingActie = typeof VoorraadTellingVoorstelBeslissingActie[keyof typeof VoorraadTellingVoorstelBeslissingActie];
+
+
+export const VoorraadTellingVoorstelBeslissingActie = {
+  bevestig: 'bevestig',
+  verwerp: 'verwerp',
+} as const;
+
+export interface VoorraadTellingVoorstelBeslissing {
+  actie: VoorraadTellingVoorstelBeslissingActie;
+  /**
+     * Correctie: ander artikel dan het voorstel
+     * @nullable
+     */
+  artikel_id?: number | null;
+  /**
+     * Correctie: ander aantal dan het voorstel
+     * @nullable
+     */
+  aantal?: number | null;
 }
 
 export type VoorraadTellingVastgesteld = VoorraadTelling & {
@@ -19352,6 +19454,16 @@ tot?: string;
 export type ListVoorraadParams = {
 artikel_id?: number;
 locatie_id?: number;
+};
+
+export type GetVoorraadTellingFotoUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
+};
+
+export type BeslisVoorraadTellingVoorstel200 = {
+  vak: VoorraadTellingVak;
+  regel?: VoorraadTellingRegel | null;
 };
 
 export type ListVoorraadMutatiesParams = {

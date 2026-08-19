@@ -25789,6 +25789,158 @@ paths:
         "422":
           description: Geen regels of nog onbevestigde regels
 
+  /magazijn/tellingen/{id}/fotos/upload-url:
+    post:
+      operationId: getVoorraadTellingFotoUploadUrl
+      tags: [magazijn]
+      summary: Upload-URL voor een tellingfoto (camera-telling)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url: {type: string}
+                  object_path: {type: string}
+        "404":
+          description: Telling niet gevonden
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+
+  /magazijn/tellingen/{id}/vakken:
+    get:
+      operationId: listVoorraadTellingVakken
+      tags: [magazijn]
+      summary: Vakken (met AI-telvoorstellen) van een telling ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadTellingVak"
+        "404":
+          description: Niet gevonden
+    post:
+      operationId: createVoorraadTellingVakken
+      tags: [magazijn]
+      summary: Vakken tekenen op een tellingfoto en per vak de AI laten tellen (voorstellen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorraadTellingVakkenInvoer"
+      responses:
+        "201":
+          description: Aangemaakt en geanalyseerd
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadTellingVak"
+        "403":
+          description: foto_pad is geen eigen, ongebruikte upload-claim van deze telling
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+        "422":
+          description: Ongeldige invoer
+
+  /magazijn/tellingen/{id}/vakken/{vakId}:
+    delete:
+      operationId: deleteVoorraadTellingVak
+      tags: [magazijn]
+      summary: Vak verwijderen (alleen open telling)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: vakId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verwijderd
+        "409":
+          description: Telling is vastgesteld en onwijzigbaar
+
+  /magazijn/tellingen/{id}/vakken/{vakId}/voorstellen/{voorstelId}/beslissen:
+    post:
+      operationId: beslisVoorraadTellingVoorstel
+      tags: [magazijn]
+      summary: AI-telvoorstel bevestigen (evt. gecorrigeerd) of verwerpen — pas dan telt het mee
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: vakId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: voorstelId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorraadTellingVoorstelBeslissing"
+      responses:
+        "200":
+          description: Beslist
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [vak]
+                properties:
+                  vak:
+                    $ref: "#/components/schemas/VoorraadTellingVak"
+                  regel:
+                    oneOf:
+                      - $ref: "#/components/schemas/VoorraadTellingRegel"
+                      - type: "null"
+        "404":
+          description: Telling, vak of voorstel niet gevonden
+        "409":
+          description: Telling vastgesteld of voorstel al beoordeeld
+        "422":
+          description: Ongeldige invoer (bijv. geen artikel gekozen)
+
   /magazijn/mutaties:
     get:
       operationId: listVoorraadMutaties
@@ -50662,6 +50814,10 @@ components:
         geteld_door_id: {type: ["integer", "null"]}
         geteld_door_naam: {type: ["string", "null"]}
         geteld_op: {type: ["string", "null"]}
+        bron_vakken:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/VoorraadTellingBronVak"
     VoorraadTellingDetail:
       allOf:
         - $ref: "#/components/schemas/VoorraadTelling"
@@ -50705,6 +50861,74 @@ components:
         totaal_geteld_waarde: {type: number}
         totaal_verschil_waarde: {type: number}
         regels_zonder_prijs: {type: integer}
+    VoorraadTellingBronVak:
+      type: object
+      required: [vak_id, foto_pad, aanduiding, x, y, breedte, hoogte]
+      properties:
+        vak_id: {type: integer}
+        foto_pad: {type: string}
+        aanduiding: {type: string}
+        x: {type: number}
+        y: {type: number}
+        breedte: {type: number}
+        hoogte: {type: number}
+    VoorraadTellingVakVoorstel:
+      type: object
+      required: [id, waargenomen, aantal, zekerheid, status]
+      properties:
+        id: {type: string}
+        artikel_id: {type: ["integer", "null"]}
+        artikel_naam: {type: ["string", "null"]}
+        artikel_code: {type: ["string", "null"]}
+        eenheid: {type: ["string", "null"]}
+        waargenomen: {type: string}
+        aantal: {type: number}
+        zekerheid: {type: number}
+        status: {type: string, enum: [voorstel, bevestigd, verworpen]}
+        regel_id: {type: ["integer", "null"]}
+    VoorraadTellingVak:
+      type: object
+      required: [id, telling_id, foto_pad, aanduiding, x, y, breedte, hoogte, status, voorstellen, aangemaakt_op]
+      properties:
+        id: {type: integer}
+        telling_id: {type: integer}
+        foto_pad: {type: string}
+        aanduiding: {type: string}
+        locatie_id: {type: ["integer", "null"]}
+        x: {type: number}
+        y: {type: number}
+        breedte: {type: number}
+        hoogte: {type: number}
+        status: {type: string, enum: [analyseren, gereed, analysefout]}
+        voorstellen:
+          type: array
+          items:
+            $ref: "#/components/schemas/VoorraadTellingVakVoorstel"
+        aangemaakt_op: {type: string}
+    VoorraadTellingVakkenInvoer:
+      type: object
+      required: [foto_pad, vakken]
+      properties:
+        foto_pad: {type: string}
+        vakken:
+          type: array
+          items:
+            type: object
+            required: [aanduiding, x, y, breedte, hoogte]
+            properties:
+              aanduiding: {type: string}
+              locatie_id: {type: ["integer", "null"]}
+              x: {type: number, description: "Fractie 0..1 van de fotobreedte"}
+              y: {type: number}
+              breedte: {type: number}
+              hoogte: {type: number}
+    VoorraadTellingVoorstelBeslissing:
+      type: object
+      required: [actie]
+      properties:
+        actie: {type: string, enum: [bevestig, verwerp]}
+        artikel_id: {type: ["integer", "null"], description: "Correctie: ander artikel dan het voorstel"}
+        aantal: {type: ["number", "null"], description: "Correctie: ander aantal dan het voorstel"}
     VoorraadTellingVastgesteld:
       allOf:
         - $ref: "#/components/schemas/VoorraadTelling"

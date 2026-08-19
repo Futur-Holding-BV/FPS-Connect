@@ -25,8 +25,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Lock, Loader2, Trash2, CheckCircle2, Printer, AlertCircle } from "lucide-react";
+import { Lock, Loader2, Trash2, CheckCircle2, Printer, AlertCircle, Camera } from "lucide-react";
 import { GRONDSLAG_LABELS } from "./tellingen";
+import { TellingCamera, RegelBronVakken } from "./telling-camera";
 
 function formatBedrag(n: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
@@ -78,11 +79,37 @@ function RegelRij({ regel, vastgesteld, kanInvullen, tellingId }: {
   };
 
   const beweging = bewegingLabel(regel.laatste_beweging_op);
+  const [fotoDialoog, setFotoDialoog] = useState(false);
+  const bronVakken = regel.bron_vakken ?? [];
   return (
     <tr className="border-t hover:bg-muted/20 transition-colors">
       <td className="py-2 px-4 font-medium">
         {regel.artikel_naam}
         {regel.artikel_code && <span className="text-xs text-muted-foreground ml-2">{regel.artikel_code}</span>}
+        {bronVakken.length > 0 && (
+          <>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 ml-1.5 text-muted-foreground align-middle"
+              title="Foto met getekend vak bekijken"
+              onClick={() => setFotoDialoog(true)}
+            >
+              <Camera className="h-3.5 w-3.5" />
+            </Button>
+            <Dialog open={fotoDialoog} onOpenChange={setFotoDialoog}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Bewijsfoto — {regel.artikel_naam}</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground -mt-2">
+                  Geteld via camera-telling: {bronVakken.map((v) => v.aanduiding).join(", ")}
+                </p>
+                <RegelBronVakken bronVakken={bronVakken} />
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
       </td>
       <td className="py-2 px-4 text-muted-foreground">{regel.locatie_naam ?? "—"}</td>
       <td className="py-2 px-4 text-right tabular-nums text-muted-foreground">
@@ -241,6 +268,9 @@ export default function MagazijnTellingDetailPagina() {
         </TabsList>
 
         <TabsContent value="regels" className="space-y-4">
+          {!vastgesteld && kanInvullen && (
+            <TellingCamera tellingId={tellingId} artikelen={artikelen} locaties={locaties} />
+          )}
           {!vastgesteld && kanInvullen && (
             <Card>
               <CardContent className="pt-4">

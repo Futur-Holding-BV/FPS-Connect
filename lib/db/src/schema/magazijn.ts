@@ -112,9 +112,46 @@ export const voorraadTellingRegelsTable = pgTable(
     geteldDoorId: integer("geteld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
     geteldOp:     timestamp("geteld_op"),
     aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+    // Camera-telling: BEVROREN snapshot van foto + vakcoördinaten waaruit deze regel
+    // (mede) is bevestigd — [{vak_id, foto_pad, aanduiding, x, y, breedte, hoogte}].
+    // Snapshot op de regel zelf, zodat een vastgestelde telling nooit uit een
+    // (verwijderbaar) vak hoeft te lezen.
+    bronVakken:   jsonb("bron_vakken"),
   },
   (t) => [unique("telling_regel_artikel_locatie").on(t.tellingId, t.artikelId, t.locatieId)],
 );
+
+// Camera-telling: uitgegeven upload-paden gebonden aan telling + aanvrager.
+// Alleen een eigen, ongebruikte claim mag als foto_pad worden ingediend
+// (voorkomt dat een willekeurig objectpad server-side wordt gedownload).
+export const voorraadTellingFotoClaimsTable = pgTable("voorraad_telling_foto_claims", {
+  id:                serial("id").primaryKey(),
+  tellingId:         integer("telling_id").notNull().references(() => voorraadTellingenTable.id, { onDelete: "cascade" }),
+  objectPath:        text("object_path").notNull().unique(),
+  aangevraagdDoorId: integer("aangevraagd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  gebruikt:          boolean("gebruikt").notNull().default(false),
+  aangemaaktOp:      timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// Camera-telling (VOORRAADTELLING fase 2): getekende vakken op een stellingfoto.
+// Elk vak = één AI-telopdracht; ai_voorstellen bevat de telregel-voorstellen
+// (artikel-kandidaat, aantal, zekerheid, status voorstel|bevestigd|verworpen).
+export const voorraadTellingVakkenTable = pgTable("voorraad_telling_vakken", {
+  id:               serial("id").primaryKey(),
+  tellingId:        integer("telling_id").notNull().references(() => voorraadTellingenTable.id, { onDelete: "cascade" }),
+  fotoPad:          text("foto_pad").notNull(),
+  aanduiding:       text("aanduiding").notNull(),        // plank 1, locatiecode, ...
+  locatieId:        integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
+  // Vakcoördinaten als fractie van de foto (0..1)
+  x:                numeric("x", { precision: 7, scale: 4, mode: "number" }).notNull(),
+  y:                numeric("y", { precision: 7, scale: 4, mode: "number" }).notNull(),
+  breedte:          numeric("breedte", { precision: 7, scale: 4, mode: "number" }).notNull(),
+  hoogte:           numeric("hoogte", { precision: 7, scale: 4, mode: "number" }).notNull(),
+  status:           text("status").notNull().default("analyseren"), // analyseren | gereed | analysefout
+  aiVoorstellen:    jsonb("ai_voorstellen"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp:     timestamp("aangemaakt_op").notNull().defaultNow(),
+});
 
 // ═══════════════════════════════════════════════════════════
 // Reserveringen

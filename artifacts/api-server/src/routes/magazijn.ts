@@ -23,6 +23,8 @@ import {
   magazijnPicklijstRegelsTable,
   voorraadTellingenTable,
   voorraadTellingRegelsTable,
+  voorraadTellingVakkenTable,
+  voorraadTellingFotoClaimsTable,
   medewerkersTable,
   planningItemsTable,
   werkgeversTable,
@@ -37,7 +39,7 @@ import { haalOntvangstIban } from "../lib/werkgeverIban";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT, MAGAZIJN_BESTELSUGGESTIE_PROMPT } from "../lib/aiPrompts";
+import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT, MAGAZIJN_BESTELSUGGESTIE_PROMPT, MAGAZIJN_TEL_VAK_PROMPT } from "../lib/aiPrompts";
 import { herplanMagazijnSignalering } from "../lib/magazijnSignalering";
 import { formatNummer, herzieningsLetter, kenmerkVoorVoorraadinkoop } from "../lib/kenmerk";
 
@@ -3259,6 +3261,8 @@ function mapTellingRegel(
     prijs: r.prijs ?? null,
     waarde: r.waarde ?? null,
     laatste_beweging_op: iso(beweging),
+    // Camera-telling: bevroren snapshot van foto + vakcoördinaten (leesbaar ná vaststellen)
+    bron_vakken: (r.bronVakken as unknown[] | null) ?? null,
     bevestigd: r.bevestigd,
     geteld_door_id: r.geteldDoorId ?? null,
     geteld_door_naam: extra?.geteld_door_naam ?? null,
@@ -3569,6 +3573,19 @@ router.post("/magazijn/tellingen/:id/vaststellen", beheer, async (req, res): Pro
       const onbevestigd = regels.filter(r => !r.bevestigd).length;
       if (onbevestigd > 0) return { fout: 422 as const, melding: `${onbevestigd} regel(s) nog niet bevestigd` };
 
+      // Camera-telling fail-closed: vaststellen kan pas als élk AI-voorstel is
+      // beoordeeld (bevestigd of verworpen) en geen vak nog in analyse is.
+      // Beleid: status 'analysefout' blokkeert NIET (het vak leverde niets op en
+      // is expliciet zo gemarkeerd; de gebruiker telt dan handmatig of verwijdert
+      // het vak), maar 'analyseren' en open voorstellen blokkeren altijd.
+      const vakken = await tx.select().from(voorraadTellingVakkenTable)
+        .where(eq(voorraadTellingVakkenTable.tellingId, id)).for("update");
+      const inAnalyse = vakken.filter(v => v.status === "analyseren").length;
+      if (inAnalyse > 0) return { fout: 422 as const, melding: `${inAnalyse} camera-vak(ken) nog in analyse` };
+      const openVoorstellen = vakken.reduce((n, v) =>
+        n + (((v.aiVoorstellen as VakVoorstel[] | null) ?? []).filter(p => p.status === "voorstel").length), 0);
+      if (openVoorstellen > 0) return { fout: 422 as const, melding: `${openVoorstellen} camera-voorstel(len) nog niet beoordeeld (bevestig of verwerp ze eerst)` };
+
       let correcties = 0;
       for (const r of regels) {
         if (r.artikelId == null) continue;
@@ -3657,6 +3674,452 @@ router.delete("/magazijn/tellingen/:id", beheer, async (req, res): Promise<void>
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "telling verwijderen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Camera-telling (VOORRAADTELLING fase 2) — vakken tekenen op een stellingfoto.
+// Foto → vakken (rechthoeken, fractiecoördinaten) → AI telt per vak → nakijk-
+// flow: elk voorstel wordt bevestigd/gecorrigeerd of verworpen door een mens
+// vóór het als tellingregel meetelt (fail-closed, nooit automatisch boeken).
+// De opdracht aan de AI is TELLEN (eigen prompt), niet bijbestellen.
+// ═══════════════════════════════════════════════════════════════════════════
+
+type VakVoorstel = {
+  id: string;
+  artikel_id: number | null;
+  artikel_naam: string | null;
+  artikel_code: string | null;
+  eenheid: string | null;
+  waargenomen: string;
+  aantal: number;
+  zekerheid: number;
+  status: "voorstel" | "bevestigd" | "verworpen";
+  regel_id: number | null;
+};
+
+type BronVak = {
+  vak_id: number;
+  foto_pad: string;
+  aanduiding: string;
+  x: number;
+  y: number;
+  breedte: number;
+  hoogte: number;
+};
+
+function mapTellingVak(r: typeof voorraadTellingVakkenTable.$inferSelect) {
+  return {
+    id: r.id,
+    telling_id: r.tellingId,
+    foto_pad: r.fotoPad,
+    aanduiding: r.aanduiding,
+    locatie_id: r.locatieId ?? null,
+    x: r.x,
+    y: r.y,
+    breedte: r.breedte,
+    hoogte: r.hoogte,
+    status: r.status,
+    voorstellen: (r.aiVoorstellen as VakVoorstel[] | null) ?? [],
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+  };
+}
+
+// Fractiecoördinaat valideren: 0..1, vak moet oppervlak hebben en binnen de foto blijven
+function geldigeFractie(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1;
+}
+
+// POST: upload-URL voor een tellingfoto
+router.post("/magazijn/tellingen/:id/fotos/upload-url", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const [telling] = await db.select().from(voorraadTellingenTable).where(eq(voorraadTellingenTable.id, id)).limit(1);
+    if (!telling) { res.status(404).json({ error: "Telling niet gevonden" }); return; }
+    if (telling.status === "vastgesteld") { res.status(409).json({ error: "Telling is vastgesteld en onwijzigbaar" }); return; }
+    const storage = new ObjectStorageService();
+    const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, "algemeen");
+    // Server-side binding: alleen dit uitgegeven pad mag (éénmalig, door deze
+    // aanvrager, voor deze telling) als foto_pad worden ingediend bij vakken.
+    await db.insert(voorraadTellingFotoClaimsTable).values({
+      tellingId: id,
+      objectPath,
+      aangevraagdDoorId: (req.session?.userId as number | undefined) ?? null,
+    });
+    res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    logger.error({ err }, "telling foto upload-url fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// GET: alle vakken (met voorstellen) van een telling — nakijklijst-bron
+router.get("/magazijn/tellingen/:id/vakken", lezen, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const [telling] = await db.select().from(voorraadTellingenTable).where(eq(voorraadTellingenTable.id, id)).limit(1);
+    if (!telling) { res.status(404).json({ error: "Telling niet gevonden" }); return; }
+    const vakken = await db.select().from(voorraadTellingVakkenTable)
+      .where(eq(voorraadTellingVakkenTable.tellingId, id))
+      .orderBy(asc(voorraadTellingVakkenTable.id));
+    res.json(vakken.map(mapTellingVak));
+  } catch (err) {
+    logger.error({ err }, "telling vakken ophalen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: vakken aanmaken op een foto + per vak de AI laten tellen.
+// Alles is een VOORSTEL: er wordt hier nooit een tellingregel geschreven.
+router.post("/magazijn/tellingen/:id/vakken", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const body = req.body as Record<string, unknown>;
+    const fotoPad = str(body.foto_pad);
+    const vakkenInvoer = Array.isArray(body.vakken) ? body.vakken as Array<Record<string, unknown>> : [];
+    if (!fotoPad) { res.status(422).json({ error: "foto_pad is verplicht" }); return; }
+    if (vakkenInvoer.length === 0) { res.status(422).json({ error: "Teken minstens één vak op de foto" }); return; }
+
+    for (const v of vakkenInvoer) {
+      const aanduiding = str(v.aanduiding);
+      if (!aanduiding) { res.status(422).json({ error: "Elk vak heeft een aanduiding nodig (bijv. plank 1)" }); return; }
+      if (!geldigeFractie(v.x) || !geldigeFractie(v.y) || !geldigeFractie(v.breedte) || !geldigeFractie(v.hoogte)
+        || (v.breedte as number) <= 0.01 || (v.hoogte as number) <= 0.01
+        || (v.x as number) + (v.breedte as number) > 1.0001 || (v.y as number) + (v.hoogte as number) > 1.0001) {
+        res.status(422).json({ error: "Vakcoördinaten moeten fracties (0..1) binnen de foto zijn" }); return;
+      }
+      if (v.locatie_id != null) {
+        const locId = Number(v.locatie_id);
+        const [loc] = await db.select({ id: magazijnLocatiesTable.id }).from(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, locId)).limit(1);
+        if (!loc) { res.status(422).json({ error: "Locatie niet gevonden" }); return; }
+      }
+    }
+
+    const userId = req.session?.userId as number | undefined;
+
+    // Aanmaken binnen telling-lock: nooit vakken toevoegen aan een (net) vastgestelde telling
+    const uitkomst = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Telling is vastgesteld en onwijzigbaar" };
+      // Nooit een client-aangeleverd objectpad vertrouwen: foto_pad moet een
+      // eigen, ongebruikte claim van déze telling en déze gebruiker zijn
+      // (uitgegeven via /fotos/upload-url). Eénmalig bruikbaar (FOR UPDATE).
+      const [claim] = await tx.select().from(voorraadTellingFotoClaimsTable)
+        .where(and(
+          eq(voorraadTellingFotoClaimsTable.objectPath, fotoPad!),
+          eq(voorraadTellingFotoClaimsTable.tellingId, id),
+        )).for("update").limit(1);
+      if (!claim || claim.gebruikt || (claim.aangevraagdDoorId != null && claim.aangevraagdDoorId !== (userId ?? null))) {
+        return { fout: 403 as const, melding: "foto_pad is niet voor deze telling uitgegeven (vraag eerst een upload-URL aan)" };
+      }
+      await tx.update(voorraadTellingFotoClaimsTable)
+        .set({ gebruikt: true })
+        .where(eq(voorraadTellingFotoClaimsTable.id, claim.id));
+      const rijen = [];
+      for (const v of vakkenInvoer) {
+        const [rij] = await tx.insert(voorraadTellingVakkenTable).values({
+          tellingId: id,
+          fotoPad,
+          aanduiding: str(v.aanduiding)!,
+          locatieId: v.locatie_id != null ? Number(v.locatie_id) : null,
+          x: v.x as number,
+          y: v.y as number,
+          breedte: v.breedte as number,
+          hoogte: v.hoogte as number,
+          status: "analyseren",
+          aangemaaktDoorId: userId ?? null,
+        }).returning();
+        rijen.push(rij);
+      }
+      return { rijen };
+    });
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    const vakRijen = uitkomst.rijen!;
+
+    // AI-telling per vak (buiten de lock; resultaat is puur een voorstel).
+    // Fail-closed: zonder gateway of bij fouten → status analysefout, geen voorstellen.
+    let artikelen: Array<{ id: number; code: string | null; naam: string; eenheid: string | null }> = [];
+    let fotoBuffer: Buffer | null = null;
+    if (heeftGateway()) {
+      try {
+        artikelen = await db.select({
+          id: artikelenTable.id,
+          code: artikelenTable.code,
+          naam: artikelenTable.naam,
+          eenheid: artikelenTable.eenheid,
+        }).from(artikelenTable).orderBy(asc(artikelenTable.naam));
+        const storage = new ObjectStorageService();
+        const storageFile = await storage.getObjectEntityFile(fotoPad);
+        const resp = await storage.downloadObject(storageFile);
+        fotoBuffer = Buffer.from(await resp.arrayBuffer());
+      } catch (err) {
+        logger.warn({ err }, "telling camera: foto/artikelen laden mislukt");
+        fotoBuffer = null;
+      }
+    }
+
+    const artikelMap = new Map(artikelen.map((a) => [a.id, a]));
+    const artikelContext = artikelen.slice(0, 300)
+      .map((a) => `${a.id} | ${a.code ?? "-"} | ${a.naam} | ${a.eenheid ?? "st"}`)
+      .join("\n");
+
+    const klaar = [];
+    for (const vak of vakRijen) {
+      let status = "analysefout";
+      let voorstellen: VakVoorstel[] = [];
+      if (fotoBuffer) {
+        try {
+          const sharp = (await import("sharp")).default;
+          const basis = sharp(fotoBuffer).rotate();
+          const meta = await basis.metadata();
+          const bw = meta.width ?? 0;
+          const bh = meta.height ?? 0;
+          if (bw < 10 || bh < 10) throw new Error("foto zonder bruikbare afmetingen");
+          const left = Math.max(0, Math.min(bw - 2, Math.round(vak.x * bw)));
+          const top = Math.max(0, Math.min(bh - 2, Math.round(vak.y * bh)));
+          const width = Math.max(2, Math.min(bw - left, Math.round(vak.breedte * bw)));
+          const height = Math.max(2, Math.min(bh - top, Math.round(vak.hoogte * bh)));
+          const uitsnede = (
+            await basis.extract({ left, top, width, height })
+              .resize({ width: 1024, withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toBuffer()
+          ).toString("base64");
+
+          const systemPrompt = MAGAZIJN_TEL_VAK_PROMPT.tekst.replace("{ARTIKEL_CONTEXT}", artikelContext);
+          const resultaat = await aiGateway.chat("default", {
+            max_tokens: 2000,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: systemPrompt },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: `Tel de artikelen in dit vak ("${vak.aanduiding}"). Geef per artikel het getelde aantal en je zekerheid.` },
+                  { type: "image_url", image_url: { url: `data:image/jpeg;base64,${uitsnede}`, detail: "high" } },
+                ],
+              },
+            ],
+          }, undefined, {
+            module: "magazijn",
+            functie: "tellingVakTellen",
+            gebruikerId: userId ?? null,
+            promptNaam: MAGAZIJN_TEL_VAK_PROMPT.naam,
+            promptVersie: MAGAZIJN_TEL_VAK_PROMPT.versie,
+          });
+
+          if (resultaat.ok) {
+            const parsed = JSON.parse(resultaat.inhoud) as { telregels?: unknown };
+            const ruw = Array.isArray(parsed.telregels) ? parsed.telregels : [];
+            // Harden: artikel_id alleen uit eigen artikelbestand (fail-closed → null),
+            // aantal >= 0, zekerheid geklemd op 0..1.
+            voorstellen = ruw.slice(0, 25).map((r, idx) => {
+              const rij = r as Record<string, unknown>;
+              const kandidaatId = Number(rij.artikel_id);
+              const artikel = Number.isInteger(kandidaatId) ? artikelMap.get(kandidaatId) : undefined;
+              const aantalRuw = Number(rij.aantal);
+              const zekerheidRuw = Number(rij.zekerheid);
+              return {
+                id: `${vak.id}-${idx + 1}`,
+                artikel_id: artikel?.id ?? null,
+                artikel_naam: artikel?.naam ?? null,
+                artikel_code: artikel?.code ?? null,
+                eenheid: artikel?.eenheid ?? null,
+                waargenomen: typeof rij.waargenomen === "string" ? rij.waargenomen : "",
+                aantal: Number.isFinite(aantalRuw) && aantalRuw >= 0 ? r2(aantalRuw) : 0,
+                zekerheid: Number.isFinite(zekerheidRuw) ? Math.min(1, Math.max(0, zekerheidRuw)) : 0,
+                status: "voorstel" as const,
+                regel_id: null,
+              };
+            });
+            status = "gereed";
+          }
+        } catch (err) {
+          logger.warn({ err, vakId: vak.id }, "telling camera: AI-telling vak mislukt");
+        }
+      }
+      // Status-safe wegschrijven: onder de telling-lock met status-hercheck, zodat
+      // een AI-resultaat nooit gegevens van een (net) vastgestelde telling wijzigt.
+      // (Vaststellen blokkeert op status 'analyseren', dus normaal kan dit niet —
+      // dit vangt de race én een handmatig gemuteerde tussenstand af.)
+      const bijgewerkt = await db.transaction(async (tx) => {
+        const [telling] = await tx.select().from(voorraadTellingenTable)
+          .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+        if (!telling || telling.status === "vastgesteld") return null;
+        const [rij] = await tx.update(voorraadTellingVakkenTable)
+          .set({ status, aiVoorstellen: voorstellen })
+          .where(eq(voorraadTellingVakkenTable.id, vak.id))
+          .returning();
+        return rij ?? null;
+      });
+      klaar.push(bijgewerkt ?? vak);
+    }
+
+    res.status(201).json(klaar.map(mapTellingVak));
+  } catch (err) {
+    logger.error({ err }, "telling vakken aanmaken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: over één AI-voorstel beslissen — bevestigen (evt. gecorrigeerd) of verwerpen.
+// Bevestigen maakt/verhoogt de tellingregel (artikel × locatie) mét bevroren
+// bron-snapshot (foto + vakcoördinaten) op de regel.
+router.post("/magazijn/tellingen/:id/vakken/:vakId/voorstellen/:voorstelId/beslissen", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const vakId = Number(req.params.vakId);
+    const voorstelId = String(req.params.voorstelId);
+    const body = req.body as Record<string, unknown>;
+    const actie = str(body.actie);
+    if (actie !== "bevestig" && actie !== "verwerp") {
+      res.status(422).json({ error: "actie moet bevestig of verwerp zijn" }); return;
+    }
+    const userId = req.session?.userId as number | undefined;
+
+    const uitkomst = await db.transaction(async (tx) => {
+      // Zelfde vergrendeling als alle telling-mutaties: telling FOR UPDATE + status-hercheck
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Telling is vastgesteld en onwijzigbaar" };
+
+      const [vak] = await tx.select().from(voorraadTellingVakkenTable)
+        .where(and(eq(voorraadTellingVakkenTable.id, vakId), eq(voorraadTellingVakkenTable.tellingId, id)))
+        .for("update").limit(1);
+      if (!vak) return { fout: 404 as const, melding: "Vak niet gevonden" };
+
+      const voorstellen = ((vak.aiVoorstellen as VakVoorstel[] | null) ?? []).slice();
+      const idx = voorstellen.findIndex((v) => v.id === voorstelId);
+      if (idx === -1) return { fout: 404 as const, melding: "Voorstel niet gevonden" };
+      if (voorstellen[idx].status !== "voorstel") {
+        return { fout: 409 as const, melding: "Voorstel is al beoordeeld" };
+      }
+
+      if (actie === "verwerp") {
+        voorstellen[idx] = { ...voorstellen[idx], status: "verworpen" };
+        const [bijgewerkt] = await tx.update(voorraadTellingVakkenTable)
+          .set({ aiVoorstellen: voorstellen })
+          .where(eq(voorraadTellingVakkenTable.id, vakId)).returning();
+        return { vak: bijgewerkt };
+      }
+
+      // Bevestigen: correctie via body-override toegestaan; artikel MOET bestaan (fail-closed)
+      const artikelId = body.artikel_id != null ? Number(body.artikel_id) : voorstellen[idx].artikel_id;
+      if (!artikelId || !Number.isInteger(artikelId)) {
+        return { fout: 422 as const, melding: "Kies eerst een artikel uit het artikelbestand voordat je bevestigt" };
+      }
+      const [artikel] = await tx.select().from(artikelenTable).where(eq(artikelenTable.id, artikelId)).limit(1);
+      if (!artikel) return { fout: 422 as const, melding: "Artikel niet gevonden" };
+      const aantal = body.aantal != null ? num(body.aantal) : voorstellen[idx].aantal;
+      if (aantal == null || aantal < 0) return { fout: 422 as const, melding: "aantal moet >= 0 zijn" };
+
+      const locatieId = vak.locatieId ?? null;
+      const locatie = locatieId != null
+        ? (await tx.select().from(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, locatieId)).limit(1))[0] ?? null
+        : null;
+
+      const bronVak: BronVak = {
+        vak_id: vak.id,
+        foto_pad: vak.fotoPad,
+        aanduiding: vak.aanduiding,
+        x: vak.x,
+        y: vak.y,
+        breedte: vak.breedte,
+        hoogte: vak.hoogte,
+      };
+
+      // Upsert op artikel × locatie: bestaat de regel al, dan telt dit vak erbij op
+      // (een tweede vak met hetzelfde artikel is een extra plek, geen vervanging).
+      const whereRegel = and(
+        eq(voorraadTellingRegelsTable.tellingId, id),
+        eq(voorraadTellingRegelsTable.artikelId, artikelId),
+        locatieId != null ? eq(voorraadTellingRegelsTable.locatieId, locatieId) : sql`${voorraadTellingRegelsTable.locatieId} IS NULL`,
+      );
+      const [bestaand] = await tx.select().from(voorraadTellingRegelsTable).where(whereRegel).limit(1);
+
+      let regel;
+      if (bestaand) {
+        const bronVakken = [...(((bestaand.bronVakken as BronVak[] | null) ?? [])), bronVak];
+        [regel] = await tx.update(voorraadTellingRegelsTable).set({
+          geteldAantal: optel2(bestaand.geteldAantal, r2(aantal)),
+          bevestigd: true,
+          geteldDoorId: userId ?? null,
+          geteldOp: new Date(),
+          bronVakken,
+        }).where(eq(voorraadTellingRegelsTable.id, bestaand.id)).returning();
+      } else {
+        [regel] = await tx.insert(voorraadTellingRegelsTable).values({
+          tellingId: id,
+          artikelId,
+          artikelNaam: artikel.naam,
+          artikelCode: artikel.code ?? null,
+          eenheid: artikel.eenheid,
+          locatieId,
+          locatieNaam: locatie?.naam ?? null,
+          geteldAantal: r2(aantal),
+          bevestigd: true,
+          geteldDoorId: userId ?? null,
+          geteldOp: new Date(),
+          bronVakken: [bronVak],
+        }).returning();
+      }
+
+      const gecorrigeerd = (body.artikel_id != null && Number(body.artikel_id) !== voorstellen[idx].artikel_id)
+        || (body.aantal != null && num(body.aantal) !== voorstellen[idx].aantal);
+      voorstellen[idx] = {
+        ...voorstellen[idx],
+        status: "bevestigd",
+        regel_id: regel.id,
+        ...(gecorrigeerd ? {
+          artikel_id: artikelId,
+          artikel_naam: artikel.naam,
+          artikel_code: artikel.code ?? null,
+          eenheid: artikel.eenheid,
+          aantal: r2(aantal),
+        } : {}),
+      };
+      const [bijgewerkt] = await tx.update(voorraadTellingVakkenTable)
+        .set({ aiVoorstellen: voorstellen })
+        .where(eq(voorraadTellingVakkenTable.id, vakId)).returning();
+      return { vak: bijgewerkt, regel };
+    });
+
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    res.json({
+      vak: mapTellingVak(uitkomst.vak!),
+      regel: uitkomst.regel ? mapTellingRegel(uitkomst.regel, {}, false) : null,
+    });
+  } catch (err) {
+    logger.error({ err }, "telling voorstel beslissen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// DELETE: vak verwijderen (alleen open telling). Al-bevestigde regels behouden
+// hun bevroren bron-snapshot; er verdwijnt dus nooit bewijs van een regel.
+router.delete("/magazijn/tellingen/:id/vakken/:vakId", aanmaken, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const vakId = Number(req.params.vakId);
+    const uitkomst = await db.transaction(async (tx) => {
+      const [telling] = await tx.select().from(voorraadTellingenTable)
+        .where(eq(voorraadTellingenTable.id, id)).for("update").limit(1);
+      if (!telling) return { fout: 404 as const, melding: "Telling niet gevonden" };
+      if (telling.status === "vastgesteld") return { fout: 409 as const, melding: "Telling is vastgesteld en onwijzigbaar" };
+      const verwijderd = await tx.delete(voorraadTellingVakkenTable)
+        .where(and(eq(voorraadTellingVakkenTable.id, vakId), eq(voorraadTellingVakkenTable.tellingId, id)))
+        .returning({ id: voorraadTellingVakkenTable.id });
+      if (verwijderd.length === 0) return { fout: 404 as const, melding: "Vak niet gevonden" };
+      return { ok: true as const };
+    });
+    if ("fout" in uitkomst && uitkomst.fout != null) { res.status(uitkomst.fout).json({ error: uitkomst.melding }); return; }
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "telling vak verwijderen fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

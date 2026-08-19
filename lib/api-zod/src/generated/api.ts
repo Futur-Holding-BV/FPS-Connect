@@ -31326,7 +31326,16 @@ export const GetVoorraadTellingResponse = zod.object({
   "bevestigd": zod.boolean(),
   "geteld_door_id": zod.number().nullish(),
   "geteld_door_naam": zod.string().nullish(),
-  "geteld_op": zod.string().nullish()
+  "geteld_op": zod.string().nullish(),
+  "bron_vakken": zod.array(zod.object({
+  "vak_id": zod.number(),
+  "foto_pad": zod.string(),
+  "aanduiding": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number()
+})).nullish()
 }))
 }))
 
@@ -31373,7 +31382,16 @@ export const UpsertVoorraadTellingRegelResponse = zod.object({
   "bevestigd": zod.boolean(),
   "geteld_door_id": zod.number().nullish(),
   "geteld_door_naam": zod.string().nullish(),
-  "geteld_op": zod.string().nullish()
+  "geteld_op": zod.string().nullish(),
+  "bron_vakken": zod.array(zod.object({
+  "vak_id": zod.number(),
+  "foto_pad": zod.string(),
+  "aanduiding": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number()
+})).nullish()
 })
 
 
@@ -31445,6 +31463,160 @@ export const StelVoorraadTellingVastResponse = zod.object({
 }).and(zod.object({
   "correcties_geboekt": zod.number()
 }))
+
+
+/**
+ * @summary Upload-URL voor een tellingfoto (camera-telling)
+ */
+export const GetVoorraadTellingFotoUploadUrlParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVoorraadTellingFotoUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Vakken (met AI-telvoorstellen) van een telling ophalen
+ */
+export const ListVoorraadTellingVakkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVoorraadTellingVakkenResponseItem = zod.object({
+  "id": zod.number(),
+  "telling_id": zod.number(),
+  "foto_pad": zod.string(),
+  "aanduiding": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number(),
+  "status": zod.enum(['analyseren', 'gereed', 'analysefout']),
+  "voorstellen": zod.array(zod.object({
+  "id": zod.string(),
+  "artikel_id": zod.number().nullish(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string().nullish(),
+  "waargenomen": zod.string(),
+  "aantal": zod.number(),
+  "zekerheid": zod.number(),
+  "status": zod.enum(['voorstel', 'bevestigd', 'verworpen']),
+  "regel_id": zod.number().nullish()
+})),
+  "aangemaakt_op": zod.string()
+})
+export const ListVoorraadTellingVakkenResponse = zod.array(ListVoorraadTellingVakkenResponseItem)
+
+
+/**
+ * @summary Vakken tekenen op een tellingfoto en per vak de AI laten tellen (voorstellen)
+ */
+export const CreateVoorraadTellingVakkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateVoorraadTellingVakkenBody = zod.object({
+  "foto_pad": zod.string(),
+  "vakken": zod.array(zod.object({
+  "aanduiding": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "x": zod.number().describe('Fractie 0..1 van de fotobreedte'),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number()
+}))
+})
+
+export const CreateVoorraadTellingVakkenResponse = zod.void()
+
+
+/**
+ * @summary Vak verwijderen (alleen open telling)
+ */
+export const DeleteVoorraadTellingVakParams = zod.object({
+  "id": zod.coerce.number(),
+  "vakId": zod.coerce.number()
+})
+
+export const DeleteVoorraadTellingVakResponse = zod.unknown()
+
+
+/**
+ * @summary AI-telvoorstel bevestigen (evt. gecorrigeerd) of verwerpen — pas dan telt het mee
+ */
+export const BeslisVoorraadTellingVoorstelParams = zod.object({
+  "id": zod.coerce.number(),
+  "vakId": zod.coerce.number(),
+  "voorstelId": zod.coerce.string()
+})
+
+export const BeslisVoorraadTellingVoorstelBody = zod.object({
+  "actie": zod.enum(['bevestig', 'verwerp']),
+  "artikel_id": zod.number().nullish().describe('Correctie: ander artikel dan het voorstel'),
+  "aantal": zod.number().nullish().describe('Correctie: ander aantal dan het voorstel')
+})
+
+export const BeslisVoorraadTellingVoorstelResponse = zod.object({
+  "vak": zod.object({
+  "id": zod.number(),
+  "telling_id": zod.number(),
+  "foto_pad": zod.string(),
+  "aanduiding": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number(),
+  "status": zod.enum(['analyseren', 'gereed', 'analysefout']),
+  "voorstellen": zod.array(zod.object({
+  "id": zod.string(),
+  "artikel_id": zod.number().nullish(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string().nullish(),
+  "waargenomen": zod.string(),
+  "aantal": zod.number(),
+  "zekerheid": zod.number(),
+  "status": zod.enum(['voorstel', 'bevestigd', 'verworpen']),
+  "regel_id": zod.number().nullish()
+})),
+  "aangemaakt_op": zod.string()
+}),
+  "regel": zod.union([zod.object({
+  "id": zod.number(),
+  "telling_id": zod.number(),
+  "artikel_id": zod.number().nullish(),
+  "artikel_naam": zod.string(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "locatie_naam": zod.string().nullish(),
+  "geteld_aantal": zod.number(),
+  "administratieve_voorraad": zod.number().nullish(),
+  "verschil_aantal": zod.number().nullish(),
+  "prijs": zod.number().nullish(),
+  "waarde": zod.number().nullish(),
+  "laatste_beweging_op": zod.string().nullish(),
+  "bevestigd": zod.boolean(),
+  "geteld_door_id": zod.number().nullish(),
+  "geteld_door_naam": zod.string().nullish(),
+  "geteld_op": zod.string().nullish(),
+  "bron_vakken": zod.array(zod.object({
+  "vak_id": zod.number(),
+  "foto_pad": zod.string(),
+  "aanduiding": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "breedte": zod.number(),
+  "hoogte": zod.number()
+})).nullish()
+}),zod.null()]).optional()
+})
 
 
 /**
