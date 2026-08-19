@@ -9,4 +9,4 @@ Definitieve profielvelden, de actieve medewerkerstatus en de opgehoogde wizardve
 
 **Why:** zonder één blijvende versiepoort kan een stale browser eerst oude profielvelden opslaan en pas daarna 409 krijgen op de statusovergang. De gebruiker ziet dan een conflict terwijl de verouderde data al is opgeslagen.
 
-**How to apply:** gebruik deze poort voor elke onboardingstroom die een bestaand profiel hervat. Een reset of parallelle opslag mag lineair winnen of 409 krijgen; een verliezende stale afronding mag geen enkel profielveld wijzigen.
+**How to apply:** gebruik deze poort voor elke onboardingstroom die een bestaand profiel hervat. Zet de verwachte versie ook in de atomaire UPDATE-WHERE; een reset of parallelle opslag mag lineair winnen of 409 krijgen, maar een verliezende stale afronding mag geen enkel profielveld wijzigen.

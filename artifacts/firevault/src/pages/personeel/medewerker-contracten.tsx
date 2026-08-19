@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -544,18 +544,28 @@ function SignaleringenPaneel({ contractId }: { contractId: number }) {
 function ContractKaart({
   contract,
   onBijgewerkt,
+  openBesluitvorming,
 }: {
   contract: Contract;
   onBijgewerkt: () => void;
+  openBesluitvorming: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"info" | "signaleringen" | "besluit">("info");
+  const kaartRef = useRef<HTMLDivElement>(null);
 
   const isActief = contract.status === "actief";
   const isTijdelijk = contract.contracttype === "bepaalde_tijd" || contract.contracttype === "oproep" || contract.contracttype === "stage" || contract.contracttype === "leer_werk";
 
+  useEffect(() => {
+    if (!openBesluitvorming) return;
+    setOpen(true);
+    setTab("besluit");
+    requestAnimationFrame(() => kaartRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
+  }, [openBesluitvorming]);
+
   return (
-    <Card className="overflow-hidden">
+    <Card ref={kaartRef} className="overflow-hidden" data-testid={`contract-besluit-${contract.id}`}>
       <CardHeader className="p-4 pb-3">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
@@ -855,7 +865,15 @@ function ContractUitlezenDialog({
 
 // ── Hoofd-export ─────────────────────────────────────────────────────────────
 
-export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number }) {
+export function MedewerkerContractenTab({
+  medewerkerId,
+  openContractId,
+  openBesluitvorming = false,
+}: {
+  medewerkerId: number;
+  openContractId?: number;
+  openBesluitvorming?: boolean;
+}) {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven = heeftNiveau("personeel", 2);
 
@@ -912,7 +930,12 @@ export function MedewerkerContractenTab({ medewerkerId }: { medewerkerId: number
       )}
 
       {!laden && contracten.map((c) => (
-        <ContractKaart key={c.id} contract={c} onBijgewerkt={laadContracten} />
+        <ContractKaart
+          key={c.id}
+          contract={c}
+          onBijgewerkt={laadContracten}
+          openBesluitvorming={openBesluitvorming && openContractId === c.id}
+        />
       ))}
 
       <ContractUitlezenDialog

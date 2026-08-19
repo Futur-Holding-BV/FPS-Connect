@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useLocation, useParams, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMedewerker,
@@ -116,8 +116,8 @@ import {
 // geen nieuwe client-side berekeningen.
 
 type KritiekeDatumsData = {
-  contract_eind: { datum: string; dagen_tot: number; contracttype: string; ernst: string } | null;
-  aanzeg_datum: { datum: string; dagen_tot: number; reden: string; ernst: string } | null;
+  contract_eind: { contract_id: number; datum: string; dagen_tot: number; contracttype: string; ernst: string } | null;
+  aanzeg_datum: { contract_id: number; datum: string; dagen_tot: number; reden: string; ernst: string } | null;
   proeftijd_einde: { datum: string; dagen_tot: number } | null;
   ketenregel: string | null;
   zzp: {
@@ -127,7 +127,15 @@ type KritiekeDatumsData = {
   inleen: { datum: string; dagen_tot: number; dienstverband: string | null } | null;
 };
 
-function KritiekeDatumsBlok({ medewerkerId, tonen }: { medewerkerId: number; tonen: boolean }) {
+function KritiekeDatumsBlok({
+  medewerkerId,
+  tonen,
+  magBesluitVastleggen,
+}: {
+  medewerkerId: number;
+  tonen: boolean;
+  magBesluitVastleggen: boolean;
+}) {
   const [data, setData] = useState<KritiekeDatumsData | null>(null);
 
   useEffect(() => {
@@ -181,6 +189,13 @@ function KritiekeDatumsBlok({ medewerkerId, tonen }: { medewerkerId: number; ton
     return d < 0 ? "kritiek" : d <= 30 ? "kritiek" : d <= 60 ? "waarschuwing" : "info";
   }
 
+  const contractIsTijdelijk =
+    data.contract_eind &&
+    (data.contract_eind.contracttype === "bepaalde_tijd" || data.contract_eind.contracttype === "oproep");
+  function besluitLink(contractId: number) {
+    return `/personeel/${medewerkerId}?tab=contracten&contract_id=${contractId}&sectie=besluitvorming`;
+  }
+
   return (
     <Card>
       <CardContent className="p-5">
@@ -197,6 +212,11 @@ function KritiekeDatumsBlok({ medewerkerId, tonen }: { medewerkerId: number; ton
                   <div className="font-medium">{CT_LABELS[data.contract_eind.contracttype] ?? data.contract_eind.contracttype} eindigt</div>
                   <div>{fmtD(data.contract_eind.datum)}</div>
                   <div className="text-[11px] opacity-75">{dagLabel(data.contract_eind.dagen_tot)}</div>
+                  {magBesluitVastleggen && contractIsTijdelijk && (
+                    <Link href={besluitLink(data.contract_eind.contract_id)} className="mt-1 inline-block font-medium text-current underline underline-offset-2 hover:no-underline">
+                      Besluit vastleggen →
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -209,6 +229,11 @@ function KritiekeDatumsBlok({ medewerkerId, tonen }: { medewerkerId: number; ton
                   <div className="font-medium">Uiterste aanzegdatum</div>
                   <div>{fmtD(data.aanzeg_datum.datum)}</div>
                   <div className="text-[11px] opacity-75">{dagLabel(data.aanzeg_datum.dagen_tot)}</div>
+                  {magBesluitVastleggen && (
+                    <Link href={besluitLink(data.aanzeg_datum.contract_id)} className="mt-1 inline-block font-medium text-current underline underline-offset-2 hover:no-underline">
+                      Besluit vastleggen →
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -952,6 +977,14 @@ export default function MedewerkerDetailPagina() {
   const { caoVoor: caoVoorWerkmaatschappij, opties: werkmaatschappijOpties } = useWerkmaatschappijen();
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
+  const [, navigate] = useLocation();
+  const search = useSearch();
+  const zoekParams = new URLSearchParams(search);
+  const contractIdUitZoekstring = Number(zoekParams.get("contract_id"));
+  const openContractId = Number.isSafeInteger(contractIdUitZoekstring) && contractIdUitZoekstring > 0
+    ? contractIdUitZoekstring
+    : undefined;
+  const openBesluitvorming = zoekParams.get("sectie") === "besluitvorming";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { echteRol, bevoegdheden } = useRol();
@@ -2020,9 +2053,16 @@ export default function MedewerkerDetailPagina() {
         </DialogContent>
       </Dialog>
 
-      <KritiekeDatumsBlok medewerkerId={Number(id)} tonen={(bevoegdheden.personeel ?? 0) >= 1} />
+      <KritiekeDatumsBlok
+        medewerkerId={Number(id)}
+        tonen={(bevoegdheden.personeel ?? 0) >= 1}
+        magBesluitVastleggen={(bevoegdheden.personeel ?? 0) >= 2}
+      />
 
-      <Tabs defaultValue="contracten">
+      <Tabs
+        value={zoekParams.get("tab") ?? "contracten"}
+        onValueChange={(tab) => navigate(tab === "contracten" ? `/personeel/${id}` : `/personeel/${id}?tab=${tab}`)}
+      >
         <TabsList>
           <TabsTrigger value="contracten">Contracten</TabsTrigger>
           <TabsTrigger value="opleidingen">Opleidingen & certificaten</TabsTrigger>
@@ -2374,7 +2414,11 @@ export default function MedewerkerDetailPagina() {
 
         {/* Contracten */}
         <TabsContent value="contracten">
-          <MedewerkerContractenTab medewerkerId={Number(id)} />
+          <MedewerkerContractenTab
+            medewerkerId={Number(id)}
+            openContractId={openContractId}
+            openBesluitvorming={openBesluitvorming}
+          />
         </TabsContent>
 
         {/* Salarisdocumenten */}
