@@ -24867,7 +24867,8 @@ export const DownloadHistorischeFacturenExcelResponse = zod.unknown()
 export const ListFacturenQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "type": zod.coerce.string().optional(),
-  "klaar_voor_export": zod.coerce.boolean().optional()
+  "klaar_voor_export": zod.coerce.boolean().optional(),
+  "opdracht_id": zod.coerce.number().optional()
 })
 
 export const ListFacturenResponseItem = zod.object({
@@ -25558,6 +25559,40 @@ export const DefinitiefMakenFactuurResponse = zod.object({
   "iban_afwijking": zod.boolean().optional(),
   "incasso_datum": zod.string().nullish(),
   "incasso_referentie": zod.string().nullish()
+})
+
+
+/**
+ * Maakt een concept-verkoopfactuur mét regels uit de gekozen bron. Regels zijn daarna aanpasbaar via de regel-CRUD; het fiscale nummer wordt pas bij definitief maken uitgegeven.
+ * @summary Concept-verkoopfactuur samenstellen uit offerte of werkbegroting (GELDSTROOM_01)
+ */
+export const SamenstellenVerkoopfactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SamenstellenVerkoopfactuurBody = zod.object({
+  "bron": zod.enum(['offerte', 'werkbegroting'])
+})
+
+export const SamenstellenVerkoopfactuurResponse = zod.void()
+
+
+/**
+ * @summary Definitieve verkoopfactuur per e-mail naar de klant versturen (GELDSTROOM_01)
+ */
+export const VerzendenFactuurNaarKlantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerzendenFactuurNaarKlantBody = zod.object({
+  "email": zod.string().optional(),
+  "onderwerp": zod.string().optional(),
+  "bericht": zod.string().optional()
+})
+
+export const VerzendenFactuurNaarKlantResponse = zod.object({
+  "ok": zod.boolean(),
+  "naar": zod.string()
 })
 
 

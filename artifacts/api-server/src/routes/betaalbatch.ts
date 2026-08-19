@@ -25,7 +25,7 @@ import {
   werkgeverBankrekeningenTable,
 } from "@workspace/db";
 import { eq, and, desc, isNull, ne, or, inArray } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { bepaalFactuurWerkmaatschappij } from "../services/factuurWerkmaatschappij";
 import { genereerPain001, valideerIban } from "../lib/sepaBetaalbestand";
 import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
@@ -245,7 +245,10 @@ router.get("/betaalbatches/:id/pain001", requireBevoegdheid("financieel", 3), as
 
 // Bevestigen in één handeling: batch definitief + facturen op betaald.
 // Er is geen bankafschrift-import om dit automatisch te doen — gemeld.
-router.post("/betaalbatches/:id/bevestigen", requireBevoegdheid("financieel", 3), async (req: Request, res: Response): Promise<void> => {
+// FACTUUR_03: de vrijgave van een betaalbatch is één vaste directiepoort —
+// alleen de hoofdbeheerder (directie), zonder bedragsgrens en zonder
+// delegatie. Aanmaken/downloaden blijft financieel niveau 3; vrijgeven niet.
+router.post("/betaalbatches/:id/bevestigen", requireRol("hoofdbeheerder"), async (req: Request, res: Response): Promise<void> => {
   if (!(await eisBatchActief(res))) return;
   const id = Number.parseInt(String(req.params.id ?? ""), 10);
   const userId = req.session?.userId ?? null;

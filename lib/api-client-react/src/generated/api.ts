@@ -969,6 +969,7 @@ import type {
   SalarisbestandRegel,
   SalarisdocumentAuditRegel,
   SaldoCorrectieInput,
+  SamenstellenVerkoopfactuurBody,
   ScabMail,
   ScabMailBijlage,
   ScabMailBijlageInput,
@@ -1111,6 +1112,8 @@ import type {
   Vervaldag,
   Vervalsignaal,
   VerzendOfferte200,
+  VerzendenFactuurNaarKlant200,
+  VerzendenFactuurNaarKlantBody,
   Visual,
   VisualGuidanceResult,
   VisualPatch,
@@ -71565,6 +71568,149 @@ export const useDefinitiefMakenFactuur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDefinitiefMakenFactuurMutationOptions(options));
+    }
+
+export const getSamenstellenVerkoopfactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/verkoopfactuur`
+}
+
+/**
+ * Maakt een concept-verkoopfactuur mét regels uit de gekozen bron. Regels zijn daarna aanpasbaar via de regel-CRUD; het fiscale nummer wordt pas bij definitief maken uitgegeven.
+ * @summary Concept-verkoopfactuur samenstellen uit offerte of werkbegroting (GELDSTROOM_01)
+ */
+export const samenstellenVerkoopfactuur = async (id: number,
+    samenstellenVerkoopfactuurBody: SamenstellenVerkoopfactuurBody, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getSamenstellenVerkoopfactuurUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(samenstellenVerkoopfactuurBody)
+  }
+);}
+
+
+
+
+export const getSamenstellenVerkoopfactuurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>, TError,{id: number;data: BodyType<SamenstellenVerkoopfactuurBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>, TError,{id: number;data: BodyType<SamenstellenVerkoopfactuurBody>}, TContext> => {
+
+const mutationKey = ['samenstellenVerkoopfactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>, {id: number;data: BodyType<SamenstellenVerkoopfactuurBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  samenstellenVerkoopfactuur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SamenstellenVerkoopfactuurMutationResult = NonNullable<Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>>
+    export type SamenstellenVerkoopfactuurMutationBody = BodyType<SamenstellenVerkoopfactuurBody>
+    export type SamenstellenVerkoopfactuurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Concept-verkoopfactuur samenstellen uit offerte of werkbegroting (GELDSTROOM_01)
+ */
+export const useSamenstellenVerkoopfactuur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>, TError,{id: number;data: BodyType<SamenstellenVerkoopfactuurBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof samenstellenVerkoopfactuur>>,
+        TError,
+        {id: number;data: BodyType<SamenstellenVerkoopfactuurBody>},
+        TContext
+      > => {
+      return useMutation(getSamenstellenVerkoopfactuurMutationOptions(options));
+    }
+
+export const getVerzendenFactuurNaarKlantUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/verzenden-klant`
+}
+
+/**
+ * @summary Definitieve verkoopfactuur per e-mail naar de klant versturen (GELDSTROOM_01)
+ */
+export const verzendenFactuurNaarKlant = async (id: number,
+    verzendenFactuurNaarKlantBody?: VerzendenFactuurNaarKlantBody, options?: RequestInit): Promise<VerzendenFactuurNaarKlant200> => {
+
+  return customFetch<VerzendenFactuurNaarKlant200>(getVerzendenFactuurNaarKlantUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(verzendenFactuurNaarKlantBody)
+  }
+);}
+
+
+
+
+export const getVerzendenFactuurNaarKlantMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>, TError,{id: number;data?: BodyType<VerzendenFactuurNaarKlantBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>, TError,{id: number;data?: BodyType<VerzendenFactuurNaarKlantBody>}, TContext> => {
+
+const mutationKey = ['verzendenFactuurNaarKlant'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>, {id: number;data?: BodyType<VerzendenFactuurNaarKlantBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verzendenFactuurNaarKlant(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerzendenFactuurNaarKlantMutationResult = NonNullable<Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>>
+    export type VerzendenFactuurNaarKlantMutationBody = BodyType<VerzendenFactuurNaarKlantBody> | undefined
+    export type VerzendenFactuurNaarKlantMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Definitieve verkoopfactuur per e-mail naar de klant versturen (GELDSTROOM_01)
+ */
+export const useVerzendenFactuurNaarKlant = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>, TError,{id: number;data?: BodyType<VerzendenFactuurNaarKlantBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verzendenFactuurNaarKlant>>,
+        TError,
+        {id: number;data?: BodyType<VerzendenFactuurNaarKlantBody>},
+        TContext
+      > => {
+      return useMutation(getVerzendenFactuurNaarKlantMutationOptions(options));
     }
 
 export const getListFactuurSignalenUrl = (params?: ListFactuurSignalenParams,) => {

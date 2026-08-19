@@ -26,6 +26,10 @@ import {
   factuurImportLogTable,
   onderhoudscontractenTable,
   offertesTable,
+  offerteRegelsTable,
+  projectBegrotingenTable,
+  werkbegrotingRegelsTable,
+  crmKlantenTable,
   factuurnummerTellersTable,
   werkgeversTable,
   factuurSignalenTable,
@@ -235,11 +239,13 @@ router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 4), a
 router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const statusFilter = req.query["status"] ? String(req.query["status"]) : null;
   const typeFilter = req.query["type"] ? String(req.query["type"]) : null;
+  const opdrachtFilter = req.query["opdracht_id"] ? Number.parseInt(String(req.query["opdracht_id"]), 10) : null;
   const klaarFilter = req.query["klaar_voor_export"] === "true";
   const conditions = [];
   if (statusFilter) conditions.push(eq(facturenTable.status, statusFilter));
   if (typeFilter) conditions.push(eq(facturenTable.type, typeFilter));
   if (klaarFilter) conditions.push(eq(facturenTable.status, "klaar_voor_accountview"));
+  if (opdrachtFilter != null && Number.isFinite(opdrachtFilter)) conditions.push(eq(facturenTable.opdrachtId, opdrachtFilter));
 
   const rijen = await db.select().from(facturenTable)
     .where(conditions.length ? and(...conditions) : undefined)
@@ -484,6 +490,238 @@ router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), asy
     mandagstaat_waarschuwing: waarschuwing,
     mandagstaat_paden: paden,
   });
+});
+
+// ── GELDSTROOM_01: verkoopfactuur samenstellen uit offerte of werkbegroting ──
+// KETEN_01 B2: op de opdracht was een verkoopfactuur alleen te uploaden, niet
+// samen te stellen. Dit endpoint maakt een CONCEPT-verkoopfactuur mét regels
+// uit de gekozen bron. Regels blijven daarna aanpasbaar via de bestaande
+// regel-CRUD; het fiscale nummer komt pas bij /facturen/:id/definitief.
+router.post("/opdrachten/:id/verkoopfactuur", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const opdrachtId = paramInt(req.params["id"]);
+  const bron = String((req.body as { bron?: string }).bron ?? "");
+  if (bron !== "offerte" && bron !== "werkbegroting") {
+    res.status(400).json({ error: "bron moet 'offerte' of 'werkbegroting' zijn" });
+    return;
+  }
+  const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
+  if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+  type ConceptRegel = { omschrijving: string; hoeveelheid: number | null; eenheid: string | null; stukprijs: string | null; bedragExclBtw: string };
+  const conceptRegels: ConceptRegel[] = [];
+
+  if (bron === "offerte") {
+    if (!opdracht.offerteId) {
+      res.status(422).json({ error: "Deze opdracht heeft geen gekoppelde offerte; kies de werkbegroting als bron." });
+      return;
+    }
+    const bronRegels = await db.select().from(offerteRegelsTable)
+      .where(eq(offerteRegelsTable.offerteId, opdracht.offerteId))
+      .orderBy(offerteRegelsTable.volgorde, offerteRegelsTable.id);
+    // ADVIES_01-lijn: optionele regels tellen alleen mee als de klant ze koos.
+    for (const r of bronRegels) {
+      if (r.isOptioneel && !r.optioneelGeselecteerd) continue;
+      conceptRegels.push({
+        omschrijving: r.ruimte ? `${r.maatregel} — ${r.ruimte}` : r.maatregel,
+        hoeveelheid: r.aantal,
+        eenheid: r.eenheid,
+        stukprijs: r.prijsPerEenheid.toFixed(2),
+        bedragExclBtw: r.kosten.toFixed(2),
+      });
+    }
+  } else {
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, opdrachtId)).limit(1);
+    if (!begroting) { res.status(422).json({ error: "Deze opdracht heeft geen werkbegroting; kies de offerte als bron." }); return; }
+    const bronRegels = await db.select().from(werkbegrotingRegelsTable)
+      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+      .orderBy(werkbegrotingRegelsTable.id);
+    for (const r of bronRegels) {
+      conceptRegels.push({
+        omschrijving: r.omschrijving,
+        hoeveelheid: r.hoeveelheid,
+        eenheid: r.eenheid,
+        stukprijs: r.tarief.toFixed(2),
+        bedragExclBtw: r.totaal.toFixed(2),
+      });
+    }
+  }
+  if (conceptRegels.length === 0) {
+    res.status(422).json({ error: `De ${bron} bevat geen (meetellende) regels om een factuur uit samen te stellen.` });
+    return;
+  }
+
+  // BTW per regel: standaard hoog tarief; per regel aanpasbaar via de regel-CRUD.
+  // Rekenwerk in centen (architect-review): nooit binaire floats voor totalen.
+  const BTW_PCT = 21;
+  const regelCenten = conceptRegels.map((r) => {
+    const e = naarCenten(r.bedragExclBtw) ?? 0;
+    const excl = Number.isNaN(e) ? 0 : e;
+    return { excl, btw: Math.round((excl * BTW_PCT) / 100) };
+  });
+  const totaalExclC = regelCenten.reduce((s, r) => s + r.excl, 0);
+  const totaalBtwC = regelCenten.reduce((s, r) => s + r.btw, 0);
+
+  // Relatiegegevens uit de offerteklant (CRM) — anders de opdrachtgever-tekst.
+  let relatienaam = opdracht.opdrachtgever ?? null;
+  let offerte: typeof offertesTable.$inferSelect | null = null;
+  if (opdracht.offerteId) {
+    const [o] = await db.select().from(offertesTable).where(eq(offertesTable.id, opdracht.offerteId)).limit(1);
+    offerte = o ?? null;
+    if (offerte?.klantId) {
+      const [k] = await db.select({ naam: crmKlantenTable.naam }).from(crmKlantenTable).where(eq(crmKlantenTable.id, offerte.klantId)).limit(1);
+      if (k?.naam) relatienaam = k.naam;
+    } else if (offerte?.opdrachtgever) {
+      relatienaam = offerte.opdrachtgever;
+    }
+  }
+
+  const vandaag = new Date();
+  const termijnDagen = offerte?.betalingstermijnDagen ?? 30;
+  const verval = new Date(vandaag.getTime() + termijnDagen * 86400000);
+  const isoDatum = (d: Date) => d.toISOString().slice(0, 10);
+
+  const factuur = await db.transaction(async (tx) => {
+    // NUMMER_01 §4.6: F-volgnummer per offerte onder advisory lock — identiek
+    // aan POST /facturen zodat concurrent samenstellen nooit twee keer F001 geeft.
+    let fNummer: number | null = null;
+    if (opdracht.offerteId) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(864201, ${opdracht.offerteId})`);
+      const [m] = await tx
+        .select({ max: sql<number>`COALESCE(MAX(${facturenTable.nummer}), 0)` })
+        .from(facturenTable)
+        .where(eq(facturenTable.offerteId, opdracht.offerteId));
+      fNummer = Number(m?.max ?? 0) + 1;
+    }
+    const [rij] = await tx.insert(facturenTable).values({
+      type: "verkoop",
+      offerteId: opdracht.offerteId ?? null,
+      opdrachtId,
+      gebouwId: opdracht.gebouwId ?? null,
+      nummer: fNummer,
+      factuurnummer: null, // fiscaal nummer uitsluitend via /definitief
+      factuurdatum: isoDatum(vandaag),
+      vervaldatum: isoDatum(verval),
+      omschrijving: `Verkoopfactuur bij opdracht ${opdracht.werknummer ?? opdrachtId} — samengesteld uit ${bron}`,
+      relatienaam,
+      bedragExclBtw: centenNaarBedrag(totaalExclC),
+      btwBedrag: centenNaarBedrag(totaalBtwC),
+      bedragInclBtw: centenNaarBedrag(totaalExclC + totaalBtwC),
+      btwCode: "H",
+      projectCode: opdracht.werknummer ?? null,
+      uploaderId: sessionUserId(req),
+      status: "ontvangen",
+    }).returning();
+    let regelnummer = 1;
+    for (const [i, r] of conceptRegels.entries()) {
+      await tx.insert(factuurRegelsTable).values({
+        factuurId: rij!.id,
+        regelnummer: regelnummer++,
+        omschrijving: r.omschrijving,
+        hoeveelheid: r.hoeveelheid,
+        eenheid: r.eenheid,
+        stukprijs: r.stukprijs,
+        bedragExclBtw: r.bedragExclBtw,
+        btwCode: "H",
+        btwPercentage: BTW_PCT,
+        btwBedrag: centenNaarBedrag(regelCenten[i]!.btw),
+        bron,
+      });
+    }
+    return rij!;
+  });
+
+  const userId = sessionUserId(req);
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  await schrijfTijdlijn(factuur.id, `${wie?.naam ?? "Een medewerker"} heeft deze concept-verkoopfactuur samengesteld uit de ${bron} van opdracht ${opdracht.werknummer ?? opdrachtId} (${conceptRegels.length} regels).`, wie?.naam ?? null);
+  res.status(201).json({ ...(await mapFactuur(factuur)), aantal_regels: conceptRegels.length });
+});
+
+// ── GELDSTROOM_01: definitieve verkoopfactuur naar de klant versturen ─────────
+// Pas ná definitief (fiscaal nummer) te versturen. De verzending zelf is de
+// expliciete menselijke handeling (verstuur-knop) — direct, niet via wachtrij.
+router.post("/facturen/:id/verzenden-klant", requireBevoegdheid("financieel", 3), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const body = req.body as { email?: string; onderwerp?: string; bericht?: string };
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.type !== "verkoop") { res.status(422).json({ error: "Alleen verkoopfacturen kunnen naar de klant worden verstuurd" }); return; }
+  if (!factuur.factuurnummer) {
+    res.status(409).json({ error: "Maak de factuur eerst definitief — versturen kan alleen met een fiscaal factuurnummer (NUMMER_01 §4.6)." });
+    return;
+  }
+  if (!mailIsGeconfigureerd()) { res.status(503).json({ error: "E-mail is niet geconfigureerd" }); return; }
+
+  // Klant-e-mail: expliciet meegegeven, anders uit de CRM-klant van de offerte.
+  let naarEmail = body.email?.trim() || null;
+  let naarNaam = factuur.relatienaam ?? null;
+  if (!naarEmail && factuur.offerteId) {
+    const [o] = await db.select({ klantId: offertesTable.klantId }).from(offertesTable).where(eq(offertesTable.id, factuur.offerteId)).limit(1);
+    if (o?.klantId) {
+      const [k] = await db.select({ email: crmKlantenTable.email, naam: crmKlantenTable.naam }).from(crmKlantenTable).where(eq(crmKlantenTable.id, o.klantId)).limit(1);
+      if (k?.email) { naarEmail = k.email; naarNaam = naarNaam ?? k.naam; }
+    }
+  }
+  if (!naarEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(naarEmail)) {
+    res.status(422).json({ error: "Geen geldig klant-e-mailadres bekend. Geef een e-mailadres op." });
+    return;
+  }
+
+  const regels = await db.select().from(factuurRegelsTable)
+    .where(eq(factuurRegelsTable.factuurId, id)).orderBy(factuurRegelsTable.regelnummer);
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const euroF = (v: string | null) => v == null ? "" : `€ ${Number.parseFloat(v).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const regelsHtml = regels.map((r) => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;">${esc(r.omschrijving)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${r.hoeveelheid ?? ""} ${esc(r.eenheid ?? "")}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${euroF(r.stukprijs)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${euroF(r.bedragExclBtw)}</td>
+    </tr>`).join("");
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#212631;">
+      <div style="background:#F23B0D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
+        <h2 style="margin:0;">Factuur ${esc(factuur.factuurnummer)}</h2>
+        ${factuur.kenmerk ? `<div style="opacity:.9;font-size:13px;">Kenmerk: ${esc(factuur.kenmerk)}</div>` : ""}
+      </div>
+      <div style="border:1px solid #eee;border-top:0;padding:20px;border-radius:0 0 8px 8px;">
+        <p>Geachte ${esc(naarNaam ?? "relatie")},</p>
+        <p>${body.bericht ? esc(body.bericht) : "Hierbij ontvangt u onze factuur. Wij verzoeken u vriendelijk het bedrag binnen de betalingstermijn te voldoen."}</p>
+        <table style="margin:12px 0;font-size:14px;">
+          <tr><td style="padding:2px 12px 2px 0;color:#666;">Factuurdatum</td><td>${esc(factuur.factuurdatum ?? "")}</td></tr>
+          <tr><td style="padding:2px 12px 2px 0;color:#666;">Vervaldatum</td><td>${esc(factuur.vervaldatum ?? "")}</td></tr>
+        </table>
+        ${regels.length > 0 ? `
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #212631;">Omschrijving</th>
+            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Aantal</th>
+            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Stukprijs</th>
+            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Bedrag excl.</th>
+          </tr></thead>
+          <tbody>${regelsHtml}</tbody>
+        </table>` : ""}
+        <table style="margin:12px 0 0 auto;font-size:14px;">
+          <tr><td style="padding:2px 12px 2px 0;color:#666;">Totaal excl. btw</td><td style="text-align:right;">${euroF(factuur.bedragExclBtw)}</td></tr>
+          <tr><td style="padding:2px 12px 2px 0;color:#666;">Btw</td><td style="text-align:right;">${euroF(factuur.btwBedrag)}</td></tr>
+          <tr><td style="padding:2px 12px 2px 0;font-weight:bold;">Totaal incl. btw</td><td style="text-align:right;font-weight:bold;">${euroF(factuur.bedragInclBtw)}</td></tr>
+        </table>
+      </div>
+    </div>`;
+
+  const userId = sessionUserId(req);
+  await verstuurMail({
+    naarEmail,
+    naarNaam,
+    onderwerp: body.onderwerp?.trim() || `Factuur ${factuur.factuurnummer}${factuur.kenmerk ? ` — ${factuur.kenmerk}` : ""}`,
+    html,
+    soort: "verkoopfactuur",
+    verstuurdDoorId: userId,
+    direct: true,
+  });
+  const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
+  await schrijfTijdlijn(id, `${wie?.naam ?? "Een medewerker"} heeft de factuur per e-mail naar de klant verstuurd (${naarEmail}).`, wie?.naam ?? null);
+  res.json({ ok: true, naar: naarEmail });
 });
 
 // ── GET /facturen/historisch-archief/excel ─────────────────────────────────────
@@ -934,13 +1172,22 @@ router.post("/facturen/:id/goedkeuren-stroom", requireBevoegdheid("financieel", 
   // Zelfde vier-ogen-gate als accorderen: een geldende beleidsregel is niet te omzeilen.
   const documentType = bepaalFactuurDocumentType(factuur);
   const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+  // FACTUUR_03: nooit automatische goedkeuring. De rol- en bedragsgrenzen staan
+  // uitsluitend in het goedkeuringsbeleid (Beheer → Goedkeuringsbeleid), niet in
+  // code. Zonder passende beleidsregel wordt fail-closed geweigerd — ook bij een
+  // onbekend factuurbedrag (onbekend bedrag telt niet als "onder de grens").
   const { vereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
-  if (vereist) {
-    const goedgekeurd = await haalGoedgekeurdeAanvraag(db, documentType, id);
-    if (!goedgekeurd) {
-      res.status(422).json({ error: "Goedkeuring via de goedkeuringsmodule vereist.", viaGoedkeuring: true });
-      return;
-    }
+  if (!vereist) {
+    res.status(422).json({
+      error: "Geen goedkeuringsbeleid van toepassing op deze factuur",
+      detail: "FACTUUR_03: inkoopfacturen worden nooit zonder goedkeuringsregel goedgekeurd. Stel bij Beheer → Goedkeuringsbeleid een regel in (rol + bedragsgrens; boven de grens de directie).",
+    });
+    return;
+  }
+  const goedgekeurd = await haalGoedgekeurdeAanvraag(db, documentType, id);
+  if (!goedgekeurd) {
+    res.status(422).json({ error: "Goedkeuring via de goedkeuringsmodule vereist.", viaGoedkeuring: true });
+    return;
   }
   const userId = sessionUserId(req);
   const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
@@ -2748,14 +2995,68 @@ router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (r
 // als vergrendeld omdat de externe payload dan al onderweg kan zijn.
 type RegelTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function regelMutatieGeblokkeerd(tx: RegelTx, factuurId: number, res: Response): Promise<boolean> {
-  const [f] = await tx.select({ status: facturenTable.status, avStatus: facturenTable.accountviewStatus })
+  const [f] = await tx.select({ status: facturenTable.status, avStatus: facturenTable.accountviewStatus, type: facturenTable.type, factuurnummer: facturenTable.factuurnummer })
     .from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1).for("update");
   if (!f) { res.status(404).json({ error: "Factuur niet gevonden" }); return true; }
   if (f.status === "verwerkt" || f.status === "verzonden_naar_accountview" || f.avStatus === "success" || f.avStatus === "verzenden") {
     res.status(409).json({ error: "Deze factuur is verwerkt/geboekt in AccountView — regels zijn niet meer te wijzigen. Corrigeer via een creditering of herexport." });
     return true;
   }
+  // GELDSTROOM_01 (architect-review): een verkoopfactuur met fiscaal nummer is
+  // dossier — na /definitief zijn regels onwijzigbaar; corrigeer via creditering.
+  if (f.type === "verkoop" && f.factuurnummer) {
+    res.status(409).json({ error: "Deze verkoopfactuur is definitief (fiscaal nummer toegekend) — regels zijn niet meer te wijzigen. Corrigeer via een creditering." });
+    return true;
+  }
   return false;
+}
+
+// GELDSTROOM_01 (architect-review): geldbedragen als decimale strings in
+// centen-rekenwerk — nooit binaire floats voor factuurtotalen.
+function naarCenten(s: string | null | undefined): number | null {
+  if (s == null || s === "") return null;
+  const t = String(s).trim();
+  if (!/^-?\d+(\.\d{1,2})?$/.test(t)) return Number.NaN;
+  const neg = t.startsWith("-");
+  const [heel = "0", dec = ""] = (neg ? t.slice(1) : t).split(".");
+  const c = Number(heel) * 100 + Number(`${dec}00`.slice(0, 2));
+  return neg ? -c : c;
+}
+function centenNaarBedrag(c: number): string {
+  const neg = c < 0; const a = Math.abs(c);
+  return `${neg ? "-" : ""}${Math.floor(a / 100)}.${String(a % 100).padStart(2, "0")}`;
+}
+/** 400 bij een niet-decimale bedrag-string; null/undefined is toegestaan. */
+function ongeldigBedrag(res: Response, veld: string, waarde: string | null | undefined): boolean {
+  const c = naarCenten(waarde ?? null);
+  if (c !== null && Number.isNaN(c)) {
+    res.status(400).json({ error: `${veld} moet een decimaal bedrag zijn (bv. "123.45")` });
+    return true;
+  }
+  return false;
+}
+// Herberekent de koptotalen van een SAMENGESTELDE verkoopfactuur uit de
+// bewaarde regels (centen-rekenwerk). Inkoopfacturen blijven ongemoeid: daar
+// is het brondocument leidend en zijn regels een uitsplitsing, geen bron.
+async function herberekenVerkoopfactuurTotalen(tx: RegelTx, factuurId: number): Promise<void> {
+  const [f] = await tx.select({ type: facturenTable.type }).from(facturenTable).where(eq(facturenTable.id, factuurId)).limit(1);
+  if (!f || f.type !== "verkoop") return;
+  const regels = await tx.select({ excl: factuurRegelsTable.bedragExclBtw, btw: factuurRegelsTable.btwBedrag, pct: factuurRegelsTable.btwPercentage })
+    .from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, factuurId));
+  let exclC = 0; let btwC = 0;
+  for (const r of regels) {
+    const e = naarCenten(r.excl);
+    if (e !== null && !Number.isNaN(e)) exclC += e;
+    const b = naarCenten(r.btw);
+    if (b !== null && !Number.isNaN(b)) btwC += b;
+    else if (r.pct != null && e !== null && !Number.isNaN(e)) btwC += Math.round((e * r.pct) / 100);
+  }
+  await tx.update(facturenTable).set({
+    bedragExclBtw: centenNaarBedrag(exclC),
+    btwBedrag: centenNaarBedrag(btwC),
+    bedragInclBtw: centenNaarBedrag(exclC + btwC),
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, factuurId));
 }
 
 router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
@@ -2769,6 +3070,7 @@ router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (
   if (!body.omschrijving?.trim()) {
     res.status(400).json({ error: "omschrijving is verplicht" }); return;
   }
+  if (ongeldigBedrag(res, "stukprijs", body.stukprijs) || ongeldigBedrag(res, "bedrag_excl_btw", body.bedrag_excl_btw) || ongeldigBedrag(res, "btw_bedrag", body.btw_bedrag)) return;
 
   const rij = await db.transaction(async (tx) => {
     if (await regelMutatieGeblokkeerd(tx, factuurId, res)) return null;
@@ -2794,6 +3096,7 @@ router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (
       inkoopbonRegelId: body.inkoopbon_regel_id ?? null,
       bron: body.bron ?? "handmatig",
     }).returning();
+    await herberekenVerkoopfactuurTotalen(tx, factuurId);
     return r!;
   });
   if (!rij) return;
@@ -2819,14 +3122,26 @@ router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), a
   if ("kostenplaats" in body) update.kostenplaats = body["kostenplaats"] as string | null;
   if ("categorie" in body) update.categorie = body["categorie"] as string | null;
   if ("inkoopbon_regel_id" in body) update.inkoopbonRegelId = body["inkoopbon_regel_id"] as number | null;
+  if (ongeldigBedrag(res, "stukprijs", update.stukprijs as string | null | undefined)
+    || ongeldigBedrag(res, "bedrag_excl_btw", update.bedragExclBtw as string | null | undefined)
+    || ongeldigBedrag(res, "btw_bedrag", update.btwBedrag as string | null | undefined)) return;
 
   const updated = await db.transaction(async (tx) => {
     if (await regelMutatieGeblokkeerd(tx, factuurId, res)) return null;
-    const [rij] = await tx.select({ id: factuurRegelsTable.id }).from(factuurRegelsTable)
+    const [rij] = await tx.select({ id: factuurRegelsTable.id, pct: factuurRegelsTable.btwPercentage }).from(factuurRegelsTable)
       .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
     if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return null; }
+    // Wijzigt het excl.-bedrag zonder expliciet btw-bedrag, dan volgt de
+    // regel-btw uit het (nieuwe of bestaande) percentage — anders raakt de
+    // regelweergave uit de pas met de herberekende koptotalen.
+    if ("bedrag_excl_btw" in body && !("btw_bedrag" in body)) {
+      const pct = ("btw_percentage" in body ? (body["btw_percentage"] as number | null) : rij.pct);
+      const e = naarCenten(update.bedragExclBtw as string | null | undefined);
+      if (pct != null && e !== null && !Number.isNaN(e)) update.btwBedrag = centenNaarBedrag(Math.round((e * pct) / 100));
+    }
     const [u] = await tx.update(factuurRegelsTable).set(update)
       .where(eq(factuurRegelsTable.id, rid)).returning();
+    await herberekenVerkoopfactuurTotalen(tx, factuurId);
     return u!;
   });
   if (!updated) return;
@@ -2843,6 +3158,7 @@ router.delete("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), 
       .where(and(eq(factuurRegelsTable.id, rid), eq(factuurRegelsTable.factuurId, factuurId))).limit(1);
     if (!rij) { res.status(404).json({ error: "Regel niet gevonden" }); return false; }
     await tx.delete(factuurRegelsTable).where(eq(factuurRegelsTable.id, rid));
+    await herberekenVerkoopfactuurTotalen(tx, factuurId);
     return true;
   });
   if (!verwijderd) return;

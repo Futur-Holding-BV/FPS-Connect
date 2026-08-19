@@ -7,7 +7,9 @@ import { Link } from "wouter";
 import {
   useListBetaalbatches, useCreateBetaalbatch, useListBetaalbareFacturen,
   useBevestigBetaalbatch, useAnnuleerBetaalbatch, useListWerkgevers,
+  useUpdateInfoInstellingen,
 } from "@workspace/api-client-react";
+import { useAuth } from "@/context/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,8 @@ const STATUS_LABEL: Record<string, { label: string; klasse: string }> = {
 export default function BetaalbatchPagina() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { gebruiker } = useAuth();
+  const isHoofdbeheerder = gebruiker?.rol === "hoofdbeheerder";
   const [werkgeverId, setWerkgeverId] = useState<string>("");
   const [uitvoerdatum, setUitvoerdatum] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [geselecteerd, setGeselecteerd] = useState<Set<number>>(new Set());
@@ -54,6 +58,18 @@ export default function BetaalbatchPagina() {
   const uitgeschakeld =
     (batchesQ.error as { status?: number } | null)?.status === 423 ||
     (betaalbaarQ.error as { status?: number } | null)?.status === 423;
+
+  // FACTUUR_03: de akkoord-schakelaar — alleen de hoofdbeheerder (directie)
+  // kan hem omzetten; de server dwingt dit ook af (403).
+  const instellingMut = useUpdateInfoInstellingen({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Betaalbatch ingeschakeld", description: "Het directie-akkoord is vastgelegd." });
+        invalideer();
+      },
+      onError: (e) => toast({ title: "Inschakelen mislukt", description: (e as { message?: string })?.message ?? "Onbekende fout", variant: "destructive" }),
+    },
+  });
 
   const createMut = useCreateBetaalbatch({
     mutation: {
@@ -104,6 +120,17 @@ export default function BetaalbatchPagina() {
             <div>
               <p className="font-medium">De betaalfunctie staat uit.</p>
               <p>Deze gaat pas werken na uitdrukkelijk akkoord van de directie (instelling "betaalbatch actief" in Beheer → Instellingen).</p>
+              {isHoofdbeheerder && (
+                <Button
+                  size="sm"
+                  className="mt-2"
+                  disabled={instellingMut.isPending}
+                  onClick={() => instellingMut.mutate({ data: { betaalbatch_actief: true } })}
+                  data-testid="button-betaalbatch-inschakelen"
+                >
+                  Betaalbatch inschakelen (directie-akkoord)
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

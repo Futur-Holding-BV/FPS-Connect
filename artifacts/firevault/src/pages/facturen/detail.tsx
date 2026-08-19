@@ -27,6 +27,8 @@ import {
   useKeurFactuurGoedStroom,
   useKoppelFactuurLeverancier,
   useListLeveranciers,
+  useDefinitiefMakenFactuur,
+  useVerzendenFactuurNaarKlant,
   useGetFactuurPrijscontrole,
   useGetDriewegControle,
   useGetInkooporderSuggestie,
@@ -136,6 +138,9 @@ export default function FactuurDetailPagina() {
   const [herexportBezig, setHerexportBezig] = useState(false);
   const [exportResultaat, setExportResultaat] = useState<{ geslaagd: boolean; boekingId?: string | null; fout?: string | null; testmodus?: boolean } | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
+  const [verzendKlantOpen, setVerzendKlantOpen] = useState(false);
+  const [verzendEmail, setVerzendEmail] = useState("");
+  const [verzendBericht, setVerzendBericht] = useState("");
   const [exportBezig, setExportBezig] = useState(false);
 
   // Doorsturen naar medewerker
@@ -235,6 +240,20 @@ export default function FactuurDetailPagina() {
     },
   });
   const accorderenMut = useAccorderenFactuur({ mutation: { onSuccess: invalideer } });
+  // GELDSTROOM_01 — verkoopfactuur: definitief maken (fiscaal nummer) en
+  // daarna per e-mail naar de klant versturen.
+  const definitiefMut = useDefinitiefMakenFactuur({
+    mutation: {
+      onSuccess: () => { toast({ title: "Factuur definitief", description: "Het fiscale factuurnummer is toegekend." }); invalideer(); },
+      onError: (e) => toast({ title: "Definitief maken mislukt", description: (e as { message?: string })?.message ?? "Onbekende fout", variant: "destructive" }),
+    },
+  });
+  const verzendenKlantMut = useVerzendenFactuurNaarKlant({
+    mutation: {
+      onSuccess: (r) => { toast({ title: "Factuur verstuurd", description: `Per e-mail verzonden naar ${(r as { naar?: string })?.naar ?? "de klant"}.` }); setVerzendKlantOpen(false); invalideer(); },
+      onError: (e) => toast({ title: "Versturen mislukt", description: (e as { message?: string })?.message ?? "Onbekende fout", variant: "destructive" }),
+    },
+  });
   const doorstuurMut = useDoorstuurenFactuurMedewerker({
     mutation: {
       onSuccess: () => {
@@ -386,6 +405,10 @@ export default function FactuurDetailPagina() {
   const isAfgekeurd = f.status === "afgekeurd";
   const kanDoorsturen = f.status === "te_beoordelen_pl" || f.status === "klaar_voor_boeking" || f.status === "ai_gelezen" || f.status === "controle_nodig";
   const isTerBeoordelingMedewerker = f.status === "ter_beoordeling_medewerker";
+  // GELDSTROOM_01 — verkoopfactuur-acties
+  const isVerkoop = f.type === "verkoop";
+  const kanDefinitief = isVerkoop && !f.factuurnummer && !f.geblokkeerd;
+  const kanVerzendenKlant = isVerkoop && !!f.factuurnummer;
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -451,6 +474,17 @@ export default function FactuurDetailPagina() {
               </Button>
               {magMuteren && (
                 <Button size="sm" variant="outline" onClick={() => openBewerk(f)}>Bewerken</Button>
+              )}
+              {magMuteren && kanDefinitief && (
+                <Button size="sm" disabled={definitiefMut.isPending} onClick={() => definitiefMut.mutate({ id })} data-testid="button-definitief-maken">
+                  {definitiefMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                  Definitief maken
+                </Button>
+              )}
+              {magMuteren && kanVerzendenKlant && (
+                <Button size="sm" variant="outline" onClick={() => setVerzendKlantOpen(true)} data-testid="button-verzenden-klant">
+                  <ArrowUpRight className="h-3.5 w-3.5 mr-1.5" />Versturen naar klant
+                </Button>
               )}
               {magMuteren && kanAccorderen && (
                 <Button size="sm" disabled={accorderenMut.isPending} onClick={() => accorderenMut.mutate({ id })}>
@@ -1033,6 +1067,53 @@ export default function FactuurDetailPagina() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialoog: Verkoopfactuur naar klant versturen (GELDSTROOM_01) */}
+      {verzendKlantOpen && (
+        <Dialog open onOpenChange={setVerzendKlantOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Factuur naar de klant versturen</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="verzend-email">E-mailadres klant</Label>
+                <Input
+                  id="verzend-email"
+                  type="email"
+                  value={verzendEmail}
+                  onChange={(e) => setVerzendEmail(e.target.value)}
+                  placeholder="Leeg laten = e-mailadres van de CRM-klant"
+                  data-testid="input-verzend-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="verzend-bericht">Begeleidend bericht (optioneel)</Label>
+                <Textarea
+                  id="verzend-bericht"
+                  value={verzendBericht}
+                  onChange={(e) => setVerzendBericht(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                De factuur ({f.factuurnummer}) wordt met alle regels en totalen per e-mail verstuurd.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setVerzendKlantOpen(false)}>Annuleren</Button>
+              <Button
+                disabled={verzendenKlantMut.isPending}
+                onClick={() => verzendenKlantMut.mutate({ id, data: { ...(verzendEmail.trim() ? { email: verzendEmail.trim() } : {}), ...(verzendBericht.trim() ? { bericht: verzendBericht.trim() } : {}) } })}
+                data-testid="button-verzend-bevestigen"
+              >
+                {verzendenKlantMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                Versturen
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Dialoog: Herinnering registreren */}
       {herinneringOpen && (

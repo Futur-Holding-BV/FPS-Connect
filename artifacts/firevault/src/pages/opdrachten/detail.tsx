@@ -22,6 +22,8 @@ import {
   useListWbAdviezen,
   useUpdateWbAdvies,
   getListWbAdviezenQueryKey,
+  useListFacturen,
+  useSamenstellenVerkoopfactuur,
   useGetPim,
   useAnalyseerPim,
   useGenereerPimWerkvoorbereiding,
@@ -55,6 +57,7 @@ import {
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
   ChevronDown, ChevronUp, CalendarDays, FileDown, MoreHorizontal, ChevronRight, X,
 } from "lucide-react";
+import { Banknote as BanknoteIcoon } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -1074,6 +1077,12 @@ export default function OpdrachtDetailPagina() {
             <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
             Oplevering & nacalculatie
           </TabsTrigger>
+          {heeftNiveau("financieel", 1) && (
+            <TabsTrigger value="facturatie" data-testid="tab-facturatie">
+              <BanknoteIcoon className="h-3.5 w-3.5 mr-1.5" />
+              Facturatie
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── Fase 1: Voorbereiding (werkbegroting / regievoorwaarden + AI-regisseur) ── */}
@@ -2446,6 +2455,12 @@ export default function OpdrachtDetailPagina() {
           <PimUitvoeringTab opdrachtId={opdrachtId} />
           <MateriaaltabTab opdrachtId={opdrachtId} />
         </TabsContent>
+        {/* ── GELDSTROOM_01: Facturatie — verkoopfactuur samenstellen & volgen ── */}
+        {heeftNiveau("financieel", 1) && (
+          <TabsContent value="facturatie" className="mt-4 space-y-4">
+            <FacturatieTab opdrachtId={opdrachtId} kanSamenstellen={heeftNiveau("financieel", 2)} />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Vaststellen bevestigingsdialoog */}
@@ -2469,6 +2484,95 @@ export default function OpdrachtDetailPagina() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ── GELDSTROOM_01: Facturatie-tab — verkoopfactuur samenstellen & volgen ──────
+// KETEN_01 B2: vanaf de opdracht een verkoopfactuur SAMENSTELLEN uit de
+// offerte of de werkbegroting (concept met regels), daarna verder op de
+// factuurdetailpagina: regels aanpassen → definitief (fiscaal nummer) →
+// versturen naar de klant → boeken via AccountView.
+function FacturatieTab({ opdrachtId, kanSamenstellen }: { opdrachtId: number; kanSamenstellen: boolean }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: facturen = [], isLoading } = useListFacturen(
+    { opdracht_id: opdrachtId },
+    { query: { queryKey: ["facturen-opdracht", opdrachtId] } },
+  );
+  const samenstellenMut = useSamenstellenVerkoopfactuur({
+    mutation: {
+      onSuccess: (f) => {
+        toast({ title: "Concept-verkoopfactuur samengesteld", description: "De regels staan klaar en zijn nog aanpasbaar. Het fiscale nummer volgt pas bij definitief maken." });
+        qc.invalidateQueries({ queryKey: ["facturen-opdracht", opdrachtId] });
+        const idNieuw = (f as { id?: number })?.id;
+        if (idNieuw) window.location.assign(`${import.meta.env.BASE_URL}facturen/${idNieuw}`);
+      },
+      onError: (e) => toast({ title: "Samenstellen mislukt", description: (e as { message?: string })?.message ?? "Onbekende fout", variant: "destructive" }),
+    },
+  });
+  const verkoop = (facturen as { id: number; type?: string; factuurnummer?: string | null; kenmerk?: string | null; status?: string; bedrag_incl_btw?: string | null; factuurdatum?: string | null }[]).filter((f) => f.type === "verkoop");
+
+  return (
+    <div className="space-y-4">
+      {kanSamenstellen && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Verkoopfactuur samenstellen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              disabled={samenstellenMut.isPending}
+              onClick={() => samenstellenMut.mutate({ id: opdrachtId, data: { bron: "offerte" } })}
+              data-testid="button-samenstellen-offerte"
+            >
+              Uit offerte
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={samenstellenMut.isPending}
+              onClick={() => samenstellenMut.mutate({ id: opdrachtId, data: { bron: "werkbegroting" } })}
+              data-testid="button-samenstellen-werkbegroting"
+            >
+              Uit werkbegroting
+            </Button>
+            <p className="text-xs text-muted-foreground basis-full">
+              Er wordt een concept gemaakt met aanpasbare regels en btw; het fiscale factuurnummer wordt pas bij definitief maken uitgegeven.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Verkoopfacturen bij deze opdracht</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Laden…</p>
+          ) : verkoop.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nog geen verkoopfacturen bij deze opdracht.</p>
+          ) : (
+            <div className="divide-y">
+              {verkoop.map((f) => (
+                <Link key={f.id} href={`/facturen/${f.id}`} className="flex items-center justify-between gap-3 py-2 hover:bg-muted/50 px-2 -mx-2 rounded" data-testid={`link-verkoopfactuur-${f.id}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {f.factuurnummer ? `Factuur ${f.factuurnummer}` : "Concept (nog geen fiscaal nummer)"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{f.kenmerk ?? f.factuurdatum ?? ""}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {f.bedrag_incl_btw && <span className="text-sm tabular-nums">€ {Number.parseFloat(f.bedrag_incl_btw).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>}
+                    <Badge variant="secondary">{f.status ?? ""}</Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

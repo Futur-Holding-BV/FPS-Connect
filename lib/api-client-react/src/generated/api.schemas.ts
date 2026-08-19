@@ -18994,6 +18994,7 @@ export type ListFacturenParams = {
 status?: string;
 type?: string;
 klaar_voor_export?: boolean;
+opdracht_id?: number;
 };
 
 export type GetFactuurUploadUrl200 = {
@@ -19013,6 +19014,29 @@ export type GetFactuurPrijscontroleParams = {
  * Indien true wordt opnieuw getoetst i.p.v. de cache getoond.
  */
 verse?: boolean;
+};
+
+export type SamenstellenVerkoopfactuurBodyBron = typeof SamenstellenVerkoopfactuurBodyBron[keyof typeof SamenstellenVerkoopfactuurBodyBron];
+
+
+export const SamenstellenVerkoopfactuurBodyBron = {
+  offerte: 'offerte',
+  werkbegroting: 'werkbegroting',
+} as const;
+
+export type SamenstellenVerkoopfactuurBody = {
+  bron: SamenstellenVerkoopfactuurBodyBron;
+};
+
+export type VerzendenFactuurNaarKlantBody = {
+  email?: string;
+  onderwerp?: string;
+  bericht?: string;
+};
+
+export type VerzendenFactuurNaarKlant200 = {
+  ok: boolean;
+  naar: string;
 };
 
 export type ListFactuurSignalenParams = {

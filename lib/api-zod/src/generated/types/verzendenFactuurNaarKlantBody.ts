@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListFacturenParams = {
-status?: string;
-type?: string;
-klaar_voor_export?: boolean;
-opdracht_id?: number;
+export type VerzendenFactuurNaarKlantBody = {
+  email?: string;
+  onderwerp?: string;
+  bericht?: string;
 };

@@ -20564,6 +20564,10 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: opdracht_id
+          in: query
+          schema:
+            type: integer
       responses:
         "200":
           description: Lijst van facturen
@@ -20793,6 +20797,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Factuur"
+
+  /opdrachten/{id}/verkoopfactuur:
+    post:
+      operationId: samenstellenVerkoopfactuur
+      summary: Concept-verkoopfactuur samenstellen uit offerte of werkbegroting (GELDSTROOM_01)
+      description: >
+        Maakt een concept-verkoopfactuur mét regels uit de gekozen bron. Regels
+        zijn daarna aanpasbaar via de regel-CRUD; het fiscale nummer wordt pas
+        bij definitief maken uitgegeven.
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bron]
+              properties:
+                bron:
+                  type: string
+                  enum: [offerte, werkbegroting]
+      responses:
+        "201":
+          description: Aangemaakte concept-verkoopfactuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/verzenden-klant:
+    post:
+      operationId: verzendenFactuurNaarKlant
+      summary: Definitieve verkoopfactuur per e-mail naar de klant versturen (GELDSTROOM_01)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                onderwerp:
+                  type: string
+                bericht:
+                  type: string
+      responses:
+        "200":
+          description: Verstuurd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, naar]
+                properties:
+                  ok:
+                    type: boolean
+                  naar:
+                    type: string
 
   /facturen/signalen:
     get:
