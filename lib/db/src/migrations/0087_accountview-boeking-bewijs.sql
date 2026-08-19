@@ -1,0 +1,16 @@
+-- INKOOP_BOEKING_01: bewijs dat dubbele AccountView-boekingen worden voorkomen.
+--
+-- Eerdere opzet (unieke partiële index op accountview_export_logs WHERE status='geslaagd')
+-- was onjuist: de herexport-route maakt bewust meerdere geslaagde log-rijen per factuur
+-- aan (één per herexport met gewijzigde payload). De bescherming zit volledig in de
+-- applicatielaag:
+--
+--   1. claimAccountviewVerzending() — atomaire UPDATE-WHERE-RETURNING die gelijktijdige
+--      export-pogingen op dezelfde factuur blokkeert (normale export én herexport).
+--   2. verwerkDirectBetaaldeBonFactuur() — SELECT FOR UPDATE + WHERE factuurId IS NULL
+--      garandeert dat twee parallelle PDF-uploads slechts één factuurkoppeling creëren.
+--   3. Goedkeuringspoort in verwerkDirectBetaaldeBonFactuur() — inkoop met status
+--      "ter_goedkeuring" of een open goedkeuringsaanvraag (type "algemene_inkoop") wordt
+--      nooit automatisch afgerond (magAfronden = false).
+--
+-- Geen schema-wijziging nodig; deze migratie is documentatie voor de keuze.

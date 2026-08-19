@@ -2873,6 +2873,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
     }
     const client = maakAccountViewClient(versInst);
 
+
     const batchBoekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
     const boeking: AccountviewBoeking = {
       dagboek: batchBoekType === "verkoop" ? (versInst.dagboekVerkoop ?? "VRK") : (versInst.dagboekInkoop ?? "INK"),

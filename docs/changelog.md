@@ -543,6 +543,18 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Uitrol**: `deploy/Dockerfile.caddy` bouwt de webexport mee (harde verificaties + PWA-injectie + versiestempel), `deploy/Caddyfile` serveert /app vóór de statische handle met no-cache op index/sw/manifest, en `scripts/deploy-production.sh` keurt een deploy pas goed als óók `/app/versie.json` de nieuwe commit meldt (anders automatische rollback). Antwoord: `docs/antwoorden/MONTEUR_NU_01.md`; meting: `docs/metingen/MONTEUR_NU_01-meting-vooraf.md`. Nameting op een echte telefoon volgt na de eerstvolgende productie-uitrol. Review-naloop: het bewijsscript bewijs-calc-kern-offerte (uit CALC_KERN_01) schrijft testdata en weigert productie nu onvoorwaardelijk (`weigerProductieVoorSchrijvendScript`, geen PROD_LEZEN_TOEGESTAAN-vrijstelling) en gebruikt per run willekeurig gegenereerde wegwerp-inloggegevens i.p.v. vaste credentials in de repo.
 
 
+## 2026-08-18 — INKOOP_BOEKING_01: concurrentiebewijs + productiefix dubbele AccountView-boeking
+
+- Verificatiescript `artifacts/api-server/src/scripts/verificatie-concurrente-accountview-boeking.ts` bewijst op de dev-DB de drie door de architect gevraagde invarianten (12/12 groen):
+  1. **Parallelle exportclaims** — twee gelijktijdige `claimAccountviewVerzending` op dezelfde factuur: exact één slaagt; derde en vierde poging (actieve claim / al geboekt) falen beide.
+  2. **Parallelle PDF-verwerkingen** — twee gelijktijdige aanroepen van `verwerkDirectBetaaldeBonFactuur` op dezelfde inkoop (echte productiefunctie via `_analyseOverride`-seam): exact één factuurkoppeling; de verliezende transactie gooit een fout uit de SELECT FOR UPDATE-vergrendeling.
+  3. **Goedkeuringspoort** — inkoop met status `ter_goedkeuring` of met open goedkeuringsaanvraag (type `"algemene_inkoop"`) blokkeert automatische afronding: factuur aangemaakt als bewijsstuk maar `status ≠ "klaar_voor_accountview"` en `geaccordeerd = false`.
+- Seam `_analyseOverride` toegevoegd aan `verwerkDirectBetaaldeBonFactuur` voor deterministisch testen zonder AI-gateway.
+- **Productiefix (goedkeuringspoort)**: `haalOpenAanvraag` herplaatst naar binnen de databasetransactie (ná `SELECT … FOR UPDATE`) zodat een goedkeuringsaanvraag die ná de AI-analyse maar vóór de commit is ingediend alsnog automatische afronding blokkeert.
+- Dode code verwijderd: `herstelNaStaleClaimAls` en `ReconciliatieResultaat` (waren niet aangeroepen vanuit productiecode).
+- Migratie `0085_accountview-boeking-bewijs.sql` bijgewerkt naar correcte architectuurbeschrijving.
+- Verificatiescript vereist nu `VERIFICATIE_TOEGESTAAN=1` (verplichte opt-in) en blokkeert bij `NODE_ENV=production`.
+- **Bekende beperking**: `claimAccountviewVerzending` laat een claim na 10 minuten verlopen; als een externe AccountView-aanroep langer duurt dan die TTL kan een tweede trigger de stale claim overnemen. End-to-end idempotentie vereist een externe idempotency-key van AccountView en valt buiten de huidige taakomvang.
 ## 2026-08-18 — GEBRUIKERS_01 gap: bestaande medewerkers zonder contract in contractbewaking
 
 - **Inventarisatie**: nieuw endpoint `GET /api/contract-bewaking/zonder-contract` geeft alle actieve medewerkers terug met een bewakingsplichtig dienstverband (vast/tijdelijk/oproep/stage) maar zonder rij in `arbeidsovereenkomsten`.

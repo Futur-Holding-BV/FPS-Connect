@@ -13,7 +13,7 @@
 // - mislukt de boeking, dan gaat er een faalmail met de reden naar de
 //   hoofdbeheerder(s) en blijft de handmatige exportknop gewoon werken.
 
-import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { controleerFactuurAdministratieBv } from "./factuurWerkmaatschappij";
 import {
   db,
@@ -140,17 +140,23 @@ export interface ExportUitkomst {
 /**
  * Atomaire verzend-claim tegen dubbele boekingen. Zet accountviewStatus op
  * "verzenden" — maar alleen als er niet al een verzending loopt en (behalve
- * bij herexport) de factuur niet al succesvol geboekt is. Een claim die door
- * een crash blijft hangen, vervalt na 10 minuten. Alle verzendpaden (auto,
- * handmatig, batch, herexport) moeten deze claim nemen vóór de externe call.
+ * bij herexport) de factuur niet al succesvol geboekt is. Alle verzendpaden
+ * (auto, handmatig, batch, herexport) moeten deze claim nemen vóór de externe
+ * call.
+ *
+ * Stale-reclaim op basis van leeftijd is bewust NIET geïmplementeerd: een
+ * externe AccountView-aanroep die langer dan verwacht duurt kan niet veilig
+ * worden overgenomen — het log-entry staat dan nog op "bezig" en een tweede
+ * aanroep zou alsnog dubbel kunnen boeken. Herstel van een echte crash vereist
+ * handmatige interventie of een toekomstige idempotency-token via AccountView.
  */
 export async function claimAccountviewVerzending(
   factuurId: number,
   opties?: { herexport?: boolean },
 ): Promise<boolean> {
-  const staleGrens = new Date(Date.now() - 10 * 60 * 1000);
   const vanuitStatussen = opties?.herexport ? ["error", "success"] : ["error"];
-  const geclaimd = await db.update(facturenTable)
+  const geclaimd = await db
+    .update(facturenTable)
     .set({ accountviewStatus: "verzenden", bijgewerktOp: new Date() })
     .where(and(
       eq(facturenTable.id, factuurId),
@@ -158,14 +164,11 @@ export async function claimAccountviewVerzending(
       or(
         isNull(facturenTable.accountviewStatus),
         inArray(facturenTable.accountviewStatus, vanuitStatussen),
-        // hangende claim ouder dan 10 minuten mag overgenomen worden
-        and(eq(facturenTable.accountviewStatus, "verzenden"), lt(facturenTable.bijgewerktOp, staleGrens)),
       ),
     ))
     .returning({ id: facturenTable.id });
   return geclaimd.length === 1;
 }
-
 /**
  * ADMINISTRATIE_01 fase 3 — hercontrole ná de verzend-claim (TOCTOU).
  *
@@ -277,6 +280,44 @@ export async function exporteerFactuurNaarAccountView(
       ok: false, httpStatus: 409, fout: "Verzending loopt al of factuur is al geboekt",
       detail: "Er loopt al een verzending naar AccountView voor deze factuur, of hij is intussen al succesvol geboekt.",
     };
+  }
+
+  // Crash-herstel: als een vorige poging extern slaagde maar de factuur-status-
+  // update daarna crashte, staat de factuur op "error" en komt de claim hier via
+  // de error-state terecht. Het geslaagde log-entry is dan al aanwezig. Herstel
+  // de staat zonder opnieuw naar AccountView te bellen. Dit pad is uitsluitend
+  // bereikbaar via error- of null-claim (nooit via verzenden-overname), zodat
+  // geen gelijktijdige externe verzending mogelijk is.
+  {
+    const [bestaandGeslaagd] = await db
+      .select()
+      .from(accountviewExportLogsTable)
+      .where(and(
+        eq(accountviewExportLogsTable.factuurId, factuurId),
+        eq(accountviewExportLogsTable.status, "geslaagd"),
+      ))
+      .orderBy(desc(accountviewExportLogsTable.exportOp))
+      .limit(1);
+    if (bestaandGeslaagd) {
+      // Eerdere poging slaagde extern maar crashte vóór factuur-update. Herstel.
+      await db.update(facturenTable).set({
+        accountviewBoekingId: bestaandGeslaagd.accountviewBoekingId,
+        accountviewExportOp: bestaandGeslaagd.exportOp,
+        accountviewStatus: "success",
+        accountviewFout: null,
+        status: "verwerkt",
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, factuurId));
+      logger.info({ factuurId, logId: bestaandGeslaagd.id },
+        "stale-claim reconciliatie: geslaagd log gevonden, factuur-status hersteld zonder nieuwe AccountView-aanroep");
+      return {
+        ok: true, httpStatus: 200, geslaagd: true,
+        boekingId: bestaandGeslaagd.accountviewBoekingId,
+        foutmelding: null,
+        testmodus: inst.testmodus,
+        fouten: [],
+      };
+    }
   }
 
   // Hercontrole ná de claim (TOCTOU): zie hercontroleerBvNaClaim. Client en

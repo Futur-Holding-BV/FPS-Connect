@@ -958,6 +958,18 @@ export async function verwerkDirectBetaaldeBonFactuur(opties: {
   bestandsnaam: string;
   subPath: string;          // opslagpad van de zojuist geüploade bon
   gebruikerNaam: string | null;
+  /**
+   * Test-only seam: vervang AI-analyse door een deterministisch resultaat.
+   * Accepteert ook een async factory (Promise of () => Promise) zodat
+   * verificatiescripts een barrier kunnen inzetten om een concurrent scenario
+   * te simuleren: de factory wordt geawait vóór de transactie start, waardoor
+   * tussenliggende DB-operaties (bijv. goedkeuringsaanvraag indienen) hun commit
+   * zeker vóór de haalOpenAanvraag-herlees in de tx kunnen laten plaatsvinden.
+   */
+  _analyseOverride?:
+    | import("../lib/documentIntelligence").FactuurStroomAnalyse
+    | Promise<import("../lib/documentIntelligence").FactuurStroomAnalyse>
+    | (() => Promise<import("../lib/documentIntelligence").FactuurStroomAnalyse>);
 }): Promise<DirectBetaaldFactuurUitkomst> {
   const { inkoopId, buffer, bestandsnaam, subPath, gebruikerNaam } = opties;
 
@@ -973,7 +985,11 @@ export async function verwerkDirectBetaaldeBonFactuur(opties: {
     };
   }
 
-  const analyse = await analyseerFactuurVoorStroom({ buffer, bestandsnaam, mime: "application/pdf" });
+  const analyse = opties._analyseOverride
+    ? (typeof opties._analyseOverride === "function"
+        ? await opties._analyseOverride()
+        : await Promise.resolve(opties._analyseOverride))
+    : await analyseerFactuurVoorStroom({ buffer, bestandsnaam, mime: "application/pdf" });
   if (!analyse.ok || !analyse.velden) {
     return {
       factuurAangemaakt: false, uitkomst: "niet_leesbaar",
@@ -1032,15 +1048,11 @@ export async function verwerkDirectBetaaldeBonFactuur(opties: {
     }
   }
 
-  // Goedkeuringsgate — nooit omzeilen: pas geaccordeerd + klaar_voor_accountview
-  // als er volgens het beleid géén goedkeuring vereist is. Dat geldt voor de
-  // factuur (beleid inkoop_factuur) ÉN voor de inkoopregel zelf: een inkoop die
-  // ter_goedkeuring staat of een open aanvraag heeft, mag hier nooit via een
-  // PDF-upload alsnog afgehandeld worden (fail-closed).
+  // Goedkeuringsbeleid — alleen de factuurzijde hoeft buiten de transactie
+  // bepaald te worden (beleidsregel is stabiel; bedrag staat vast na de AI-analyse).
   const { checkVereistGoedkeuring, haalOpenAanvraag } = await import("./goedkeuring-engine");
   const { vereist: goedkeuringVereist } = await checkVereistGoedkeuring(
     db, "inkoop_factuur", v.bedrag_incl_btw, null);
-  const openInkoopAanvraag = await haalOpenAanvraag(db, "algemene_inkoop", inkoopId);
 
   const klopt = afwijkingen.length === 0;
 
@@ -1058,15 +1070,28 @@ export async function verwerkDirectBetaaldeBonFactuur(opties: {
     geleerd = rij ?? null;
   }
 
+  /** Seinvlag: geeft aan dat de inkoop al aan een factuur is gekoppeld (race-verlies). */
+  class AlGeKoppeldError extends Error {
+    constructor() { super("inkoop is intussen al aan een factuur gekoppeld"); this.name = "AlGeKoppeldError"; }
+  }
+
   let factuurId = 0;
   let magAfronden = false;
-  await db.transaction(async (tx) => {
+  try { await db.transaction(async (tx) => {
     // Herlees en vergrendel de inkoop binnen de transactie: alleen een nog
     // vrijgegeven inkoop (status "open", geen open goedkeuringsaanvraag) mag
     // automatisch worden afgerond.
     const [vers] = await tx.select().from(algemeneInkopenTable)
       .where(eq(algemeneInkopenTable.id, inkoopId)).for("update");
-    if (!vers || vers.factuurId != null) throw new Error("inkoop is intussen al aan een factuur gekoppeld");
+    if (!vers || vers.factuurId != null) throw new AlGeKoppeldError();
+
+    // Goedkeuringspoort: herlezen BINNEN de transactie (ná de FOR UPDATE-lock)
+    // zodat een goedkeuringsaanvraag die ná de AI-analyse maar vóór de commit
+    // is ingediend, alsnog zichtbaar is en automatische afronding blokkeert.
+    // haalOpenAanvraag verwacht typeof db; tx is compatible qua queryAPI maar
+    // verschilt op $client-niveau (PgTransaction vs NodePgDatabase). De cast via
+    // unknown is veilig: de functie roept alleen .select()…from()…where() aan.
+    const openInkoopAanvraag = await haalOpenAanvraag(tx as unknown as typeof db, "algemene_inkoop", inkoopId);
     magAfronden = klopt && !goedkeuringVereist && vers.status === "open" && !openInkoopAanvraag;
 
     const [factuur] = await tx.insert(facturenTable).values({
@@ -1149,7 +1174,17 @@ export async function verwerkDirectBetaaldeBonFactuur(opties: {
       await schrijfTijdlijn(factuurId,
         `De factuur komt overeen met inkoop ${nummerWeergave} (leverancier en bedrag binnen de tolerantie). De factuur staat klaar voor boeking en de inkoop is afgerond.`, null, tx);
     }
-  });
+  }); } catch (err) {
+    if (err instanceof AlGeKoppeldError) {
+      // De inkoop was al aan een factuur gekoppeld (race-verlies): stabiele uitkomst,
+      // geen 500. De verliezende PDF-upload is bewaard; de winnende verwerking al klaar.
+      return {
+        factuurAangemaakt: false, uitkomst: "al_gekoppeld",
+        melding: "Aan deze inkoop is al een factuur gekoppeld. De nieuwe upload is als bon bewaard maar niet opnieuw als factuur verwerkt.",
+      };
+    }
+    throw err;
+  }
 
   if (magAfronden) {
     // Automatische boeking (fire-and-forget, ná de commit) — faalt hij, dan

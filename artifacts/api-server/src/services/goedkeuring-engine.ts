@@ -22,6 +22,7 @@ import {
   projectenTable,
   dossiersTable,
   medewerkerOpleidingenTable,
+  algemeneInkopenTable,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
 } from "@workspace/db";
@@ -676,6 +677,50 @@ export async function dienIn(
     );
   }
 
+  // Voor inkopen: serialiseer aanvraag-indiening met de PDF-verwerkingstransactie
+  // via een FOR UPDATE lock op de inkoop-rij. Zo kan een goedkeuringsaanvraag die
+  // gelijktijdig met verwerkDirectBetaaldeBonFactuur wordt ingediend, nooit stiekem
+  // na de in-tx haalOpenAanvraag-herlees binnensluipen.
+  // De lock wordt vrijgegeven zodra de insert + tijdlijn-write zijn gecommit.
+  if (params.objectType === "algemene_inkoop") {
+    return await db.transaction(async (tx) => {
+      const [inkoop] = await tx
+        .select({ id: algemeneInkopenTable.id, status: algemeneInkopenTable.status, factuurId: algemeneInkopenTable.factuurId })
+        .from(algemeneInkopenTable)
+        .where(eq(algemeneInkopenTable.id, params.objectId))
+        .for("update")
+        .limit(1);
+      if (!inkoop) {
+        return fout("NIET_GEVONDEN", "Inkoop niet gevonden.", 404);
+      }
+      if (inkoop.status === "afgehandeld" || inkoop.factuurId != null) {
+        return fout(
+          "AL_AFGEHANDELD",
+          "Deze inkoop is al automatisch afgerond; er is geen goedkeuring meer nodig.",
+          409,
+        );
+      }
+      return await _dienInInner(tx as unknown as Db, params);
+    });
+  }
+
+  return await _dienInInner(db, params);
+}
+
+// Interne implementatie voor dienIn() — accepteert db of tx zodat de
+// algemene_inkoop-tak de hele flow in één transactie kan uitvoeren.
+async function _dienInInner(
+  db: Db,
+  params: {
+    objectType: string;
+    objectId: number;
+    documentType: string;
+    omschrijving?: string | null;
+    bedrag: number | null;
+    werkmaatschappijId: number | null;
+    actor: GoedkeuringActor;
+  },
+): Promise<GoedkeuringResultaat> {
   const bestaand = await haalOpenAanvraag(db, params.objectType, params.objectId);
   if (bestaand) return { ok: true, aanvraag: bestaand };
 
