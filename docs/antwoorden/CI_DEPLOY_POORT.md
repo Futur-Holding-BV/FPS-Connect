@@ -79,30 +79,59 @@ Elk gebruik van de noodfix wordt op **drie plekken** zichtbaar:
 
 ## Bewijs van beproeving
 
-### Status: beproeving nog uit te voeren
+### Status: live beproeving geslaagd
 
-> ⚠️ **De noodfix-route is nog niet live beproefd.** De workflow-code is gereed en gemerged, maar de beproeving moet plaatsvinden nadat de code actief is op de `main`-branch van de repository (zie follow-up taak #1106). Vul de onderstaande velden in zodra de beproeving is uitgevoerd.
+Op **19 augustus 2026** is de poort live beproefd met een echte push naar
+`main`. De test was een tijdelijke, bewust fout gemaakte unit-testverwachting;
+deze is in de daaropvolgende herstelcommit teruggezet.
 
-### In te vullen na beproeving
+#### Rode commit — deploy geblokkeerd
 
 ```
-Actions-run URL  : https://github.com/<org>/<repo>/actions/runs/<run-id>
-Commit-SHA       : <sha>
-Tijdstip (UTC)   : <datum tijd>
-GitHub-actor     : <gebruikersnaam>
-Opgegeven reden  : <tekst die als noodfix_reden is ingevuld>
-
-E-mail ontvangen : ja / nee
-E-mail onderwerp : FPS Connect: NOODFIX — CI-poort omzeild door <naam>
-E-mail inhoud    : (plak hier de eerste regels van de ontvangen e-mail)
+Commit-SHA       : c5afe0728710860ba118fcc79c291239fd1815c7
+CI-run           : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32218399407
+Deploy-run       : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32218399401
+CI afgerond      : 2026-08-19 05:13:04 UTC (failure)
+Deploy afgerond  : 2026-08-19 05:13:14 UTC (failure)
 ```
 
-### Prod-gezondheid na beproeving
+De CI-job faalde in **Contract-bewaking unit-tests** op de bewuste
+verwachting `2026-04-31`; de werkelijke uitkomst was `2026-04-30`.
+De deploy-job stopte vervolgens met:
 
-Na de testrun controleren:
+```
+CI-POORT GEBLOKKEERD: de CI-run op commit c5afe0728710860ba118fcc79c291239fd1815c7 is rood.
+Gefaalde CI-jobs: Typecheck & build (failure)
+```
 
-- `/api/healthz` → moet `{"status":"ok"}` tonen
-- `/api/versie`  → moet de commit-SHA van de beproefde commit tonen
+De stappen **SSH-sleutel en hostkey instellen**, **Deployscript naar de server
+kopiëren**, **Deploy uitvoeren op de VPS** en **Smoketest uitvoeren** zijn in
+deze run allemaal overgeslagen. Daarmee is bewezen dat de rode CI-run de
+productieserver niet bereikt.
+
+#### Groene herstelcommit — deploy gaat door
+
+```
+Commit-SHA       : d0e94072ec653af1385b4d2070689eec3c70bdb6
+CI-run           : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32218681980
+Deploy-run       : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32218681878
+CI afgerond      : 2026-08-19 05:17:30 UTC (success)
+Deploy afgerond  : 2026-08-19 05:25:40 UTC (success)
+```
+
+In de groene deploy-run waren **CI-poort — controleer CI-status op deze
+commit**, **Deploy uitvoeren op de VPS** en **Smoketest uitvoeren** alle drie
+succesvol.
+
+#### Prod-gezondheid na de groene deploy
+
+Na de groene run is productie extern gecontroleerd:
+
+- `GET https://connect.fps-one.nl/api/healthz` → `{"status":"ok"}` (HTTP 200)
+- `GET https://connect.fps-one.nl/api/versie` → `{"commit":"d0e94072"}`,
+  `achterloop:false` (HTTP 200)
+- `GET https://connect.fps-one.nl/api/versie/status` → `db=ok`,
+  `opslag=ok`, `mail=ok`, `ai=ok` (HTTP 200)
 
 ---
 
@@ -121,4 +150,7 @@ Je kunt de run annuleren via de "Cancel workflow"-knop in GitHub Actions voordat
 Ja. Handmatige dispatch op een tak (terugvaltest-pad, b.v. om een feature-branch te testen) slaat de CI-poort automatisch over zonder dat je een noodfix_reden hoeft op te geven. Er wordt dan ook geen noodfix-melding gestuurd.
 
 **Wat als de CI nog bezig is op het moment van de push?**
-De CI-poort wacht maximaal 3 minuten. Als de CI daarna nog niet klaar is, stopt de deploy met een duidelijke melding. De CI haalt normaliter 1–3 minuten, dus dit is zelden een probleem.
+De CI-poort wacht maximaal 20 minuten. Als de CI daarna nog niet klaar is, stopt
+de deploy met een duidelijke melding. Dit voorkomt dat een normale CI-run door
+de gelijktijdige start van CI en deploy onterecht als ontbrekend of bezig wordt
+geblokkeerd.
