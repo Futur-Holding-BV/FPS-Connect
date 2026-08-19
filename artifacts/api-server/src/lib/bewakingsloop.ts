@@ -1850,9 +1850,10 @@ async function voedAiWerkvoorbereidingSignaal(): Promise<{ nieuw: number; afgeha
 
 let _loopBezig = false;
 
-// UREN_01 §6: wekelijkse volledigheidscontrole — alleen op maandag over de
-// week ervoor. syncBron sluit items vanzelf zodra de medewerker de week
-// alsnog compleet maakt (volgende maandag, of dezelfde dag bij een herdraai).
+// UREN_01 §6: wekelijkse volledigheidscontrole voor buitendienstmedewerkers —
+// alleen op maandag over de week ervoor. syncBron sluit items vanzelf zodra
+// de medewerker de week alsnog compleet maakt of niet meer als uitvoerend
+// staat aangemerkt (volgende maandag, of dezelfde dag bij een herdraai).
 async function voedWeekstaatControle(): Promise<{ nieuw: number; afgehandeld: number }> {
   if (new Date().getDay() !== 1 && process.env.UREN01_WEEKCONTROLE_FORCE !== "1") {
     return { nieuw: 0, afgehandeld: 0 };

@@ -1,3 +1,9 @@
+## 2026-08-19 — UREN_BUITENDIENST_01: geen volledige-weekbewaking voor kantoorpersoneel
+
+- **Alleen buitendienst**: de wekelijkse urenverantwoording beoordeelt uitsluitend medewerkers van wie de gekoppelde functie in het functiehuis expliciet als **uitvoerend** is gemarkeerd.
+- **Kantoor fail-closed uitgezonderd**: kantoorfuncties, medewerkers zonder gekoppelde functie en functies zonder uitvoerende classificatie krijgen geen melding over een onvolledige week. Bestaande open meldingen worden bij de volgende bewakingsronde automatisch gesloten.
+- **Regressiebewijs**: een gerichte beleidstest controleert dat alleen `uitvoerend=true` wordt geselecteerd en dat kantoor, `null` en ontbrekende classificaties buiten de bewaking blijven. De UREN-ketenproef bevat daarnaast een onvolledige buiten- én kantoormedewerker en eist alleen voor de buitendienst een werkbaksignaal.
+
 ## 2026-08-19 — BEKIJKEN_ALS_HERSTEL_01: hoofdbeheerder kan niet meer vastlopen in een lege weergave
 
 - **Directe uitweg uit Geen toegang**: wanneer een hoofdbeheerder via **Bekijken als** een teamlid zonder portaalrechten opent, toont het blokkeerscherm nu **Terug naar mijn eigen weergave**. De echte autorisatie blijft fail-closed; alleen de nabootsing wordt beëindigd.

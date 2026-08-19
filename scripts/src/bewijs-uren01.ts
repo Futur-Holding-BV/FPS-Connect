@@ -8,6 +8,8 @@
 //   5. Urenplafond: slot sluit vanzelf zodra het vol zit.
 //   6. Toestemming vragen plaatst werkbak-items bij projectleider en René.
 //   7. Weekcontrole: vakantieweek (verlof telt mee) geeft GEEN onvolledig-alarm.
+//   8. Volledige-weekbewaking geldt alleen voor een expliciet uitvoerende
+//      functie: een onvolledige buitendienstweek meldt wel, kantoor niet.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/bewijs-uren01.ts
 import "./lib/prodGuard";
 import bcrypt from "bcryptjs";
@@ -19,7 +21,7 @@ import {
 import {
   urenRegistratiesTable, weekStatenTable, projectenTable,
   overwerkSlotenTable, verlofsoortenTable, verlofAanvragenTable,
-  medewerkerAanstellingenTable,
+  medewerkerAanstellingenTable, functiesTable,
 } from "@workspace/db/schema";
 
 const BASIS = `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
@@ -35,7 +37,13 @@ function check(naam: string, conditie: boolean, detail?: unknown): void {
   console.log(`✓ ${naam}`);
 }
 
-const aangemaakt = { gebruikers: [] as number[], medewerkers: [] as number[], projecten: [] as number[], verlofsoorten: [] as number[] };
+const aangemaakt = {
+  gebruikers: [] as number[],
+  medewerkers: [] as number[],
+  projecten: [] as number[],
+  verlofsoorten: [] as number[],
+  functies: [] as number[],
+};
 
 async function maakGebruiker(email: string, naam: string, rol: string, extra: Record<string, unknown> = {}): Promise<number> {
   const [oud] = await db.select({ id: gebruikersTable.id }).from(gebruikersTable).where(eq(gebruikersTable.email, email));
@@ -92,13 +100,48 @@ async function wisUren(mid: number): Promise<void> {
 
 async function main(): Promise<void> {
   // ── Opzet ──────────────────────────────────────────────────────────────────
-  const monteurGid = await maakGebruiker("bewijs-uren01-monteur@fps.local", "Bewijs Uren01 Monteur", "gebruiker", { bevoegdheden: { gebouwen: 1, projecten: 1 } });
+  const [buitendienstFunctie] = await db.insert(functiesTable).values({
+    naam: "Bewijs UREN_01 buitendienst",
+    uitvoerend: true,
+  } as typeof functiesTable.$inferInsert).returning({ id: functiesTable.id });
+  const [kantoorFunctie] = await db.insert(functiesTable).values({
+    naam: "Bewijs UREN_01 kantoor",
+    uitvoerend: false,
+  } as typeof functiesTable.$inferInsert).returning({ id: functiesTable.id });
+  aangemaakt.functies.push(buitendienstFunctie.id, kantoorFunctie.id);
+
+  const monteurGid = await maakGebruiker("bewijs-uren01-monteur@fps.local", "Bewijs Uren01 Monteur", "gebruiker", {
+    bevoegdheden: { gebouwen: 1, projecten: 1 },
+    functietitels: ["Monteur"],
+  });
   const plGid = await maakGebruiker("bewijs-uren01-pl@fps.local", "Bewijs Uren01 PL", "gebruiker", { bevoegdheden: { projecten: 3, personeel: 2 }, functietitels: ["Projectleider"] });
+  const kantoorGid = await maakGebruiker("bewijs-uren01-kantoor@fps.local", "Bewijs Uren01 Kantoor", "gebruiker");
+  const onvolledigBuitenGid = await maakGebruiker("bewijs-uren01-onvolledig@fps.local", "Bewijs Uren01 Onvolledig Buiten", "gebruiker", {
+    functietitels: ["Monteur"],
+  });
   const [m] = await db.insert(medewerkersTable).values({
     gebruikerId: monteurGid, naam: "Bewijs Uren01 Monteur",
     cao: "Metaal & Techniek", dienstverband: "vast", contracturenPerWeek: 38,
+    functieId: buitendienstFunctie.id,
   } as typeof medewerkersTable.$inferInsert).returning({ id: medewerkersTable.id });
   const mid = m.id; aangemaakt.medewerkers.push(mid);
+  const overigeMedewerkers = await db.insert(medewerkersTable).values([
+    {
+      gebruikerId: kantoorGid,
+      naam: "Bewijs Uren01 Kantoor",
+      dienstverband: "vast",
+      contracturenPerWeek: 38,
+      functieId: kantoorFunctie.id,
+    },
+    {
+      gebruikerId: onvolledigBuitenGid,
+      naam: "Bewijs Uren01 Onvolledig Buiten",
+      dienstverband: "vast",
+      contracturenPerWeek: 38,
+      functieId: buitendienstFunctie.id,
+    },
+  ] as Array<typeof medewerkersTable.$inferInsert>).returning({ id: medewerkersTable.id });
+  aangemaakt.medewerkers.push(...overigeMedewerkers.map((medewerker) => medewerker.id));
   const [proj] = await db.insert(projectenTable).values({ naam: "Bewijs UREN_01 project", status: "actief" } as typeof projectenTable.$inferInsert).returning({ id: projectenTable.id });
   aangemaakt.projecten.push(proj.id);
   const [proj2] = await db.insert(projectenTable).values({ naam: "Bewijs UREN_01 project 2", status: "actief" } as typeof projectenTable.$inferInsert).returning({ id: projectenTable.id });
@@ -205,6 +248,12 @@ async function main(): Promise<void> {
   const alarmen = await db.execute(sql`SELECT id, titel FROM werkbak_items WHERE bron = 'weekstaat_onvolledig' AND gebruiker_id = ${monteurGid}`);
   check("vakantieweek geeft GEEN onvolledig-alarm voor de monteur", (alarmen as unknown as { rows?: unknown[] }).rows?.length === 0 || (Array.isArray(alarmen) && alarmen.length === 0), alarmen);
 
+  // ── 9. Alleen buitendienst krijgt volledige-weekbewaking ───────────────────
+  const kantoorAlarmen = await db.execute(sql`SELECT id, titel FROM werkbak_items WHERE bron = 'weekstaat_onvolledig' AND gebruiker_id = ${kantoorGid}`);
+  check("onvolledige kantoorweek geeft GEEN volledig-weekalarm", (kantoorAlarmen as unknown as { rows?: unknown[] }).rows?.length === 0 || (Array.isArray(kantoorAlarmen) && kantoorAlarmen.length === 0), kantoorAlarmen);
+  const buitenAlarmen = await db.execute(sql`SELECT id, titel FROM werkbak_items WHERE bron = 'weekstaat_onvolledig' AND gebruiker_id = ${onvolledigBuitenGid}`);
+  check("onvolledige buitendienstweek geeft WEL een volledig-weekalarm", ((buitenAlarmen as unknown as { rows?: unknown[] }).rows?.length ?? (Array.isArray(buitenAlarmen) ? buitenAlarmen.length : 0)) >= 1, buitenAlarmen);
+
   console.log("\nAlle UREN_01-bewijzen geslaagd.");
 }
 
@@ -215,6 +264,7 @@ async function opruimen(): Promise<void> {
     await db.delete(projectenTable).where(inArray(projectenTable.id, aangemaakt.projecten));
   }
   for (const sid of aangemaakt.verlofsoorten) await db.delete(verlofsoortenTable).where(eq(verlofsoortenTable.id, sid));
+  if (aangemaakt.functies.length) await db.delete(functiesTable).where(inArray(functiesTable.id, aangemaakt.functies));
   if (aangemaakt.gebruikers.length) {
     await db.execute(sql`DELETE FROM werkbak_items WHERE bron IN ('overwerk_toestemming','weekstaat_onvolledig','weekstaat_overwerk_overtreding','tvt_opname_herinnering')`);
     await db.delete(gebruikersTable).where(inArray(gebruikersTable.id, aangemaakt.gebruikers));

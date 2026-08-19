@@ -15,6 +15,7 @@
 import { db } from "@workspace/db";
 import {
   medewerkersTable,
+  functiesTable,
   medewerkerAanstellingenTable,
   urenRegistratiesTable,
   weekStatenTable,
@@ -27,6 +28,7 @@ import {
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import type { WerkbakInvoer } from "./werkbakService";
 import { overwerkGrens } from "./caoInstellingen";
+import { selecteerBuitendienstVoorWeekcontrole } from "./weekControleBeleid";
 
 function isoWeek(datum: Date): { jaar: number; week: number } {
   const d = new Date(Date.UTC(datum.getUTCFullYear(), datum.getUTCMonth(), datum.getUTCDate()));
@@ -196,14 +198,14 @@ async function beoordeelWeek(
   };
 }
 
-/** Beoordeel de vorige (afgesloten) week voor alle actieve medewerkers met contracturen. */
+/** Beoordeel de vorige (afgesloten) week voor buitendienstmedewerkers met contracturen. */
 export async function beoordeelVorigeWeek(referentie = new Date()): Promise<WeekControleResultaat[]> {
   const vorigeWeekDag = new Date(referentie.getTime() - 7 * 86400000);
   const { jaar, week } = isoWeek(vorigeWeekDag);
   const weekDaarvoorDag = new Date(referentie.getTime() - 14 * 86400000);
   const vorigVorig = isoWeek(weekDaarvoorDag);
 
-  const medewerkers = await db
+  const kandidaten = await db
     .select({
       id: medewerkersTable.id,
       naam: medewerkersTable.naam,
@@ -211,10 +213,13 @@ export async function beoordeelVorigeWeek(referentie = new Date()): Promise<Week
       contracturenPerWeek: medewerkersTable.contracturenPerWeek,
       cao: medewerkersTable.cao,
       uitDienst: medewerkersTable.uitDienstPer,
+      functieUitvoerend: functiesTable.uitvoerend,
     })
     .from(medewerkersTable)
+    .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
     .where(sql`${medewerkersTable.uitDienstPer} IS NULL OR ${medewerkersTable.uitDienstPer} >= (now() - interval '30 days')::date::text`);
 
+  const medewerkers = selecteerBuitendienstVoorWeekcontrole(kandidaten);
   const resultaten: WeekControleResultaat[] = [];
   for (const m of medewerkers) {
     // Norm uit de hoofdaanstelling; fallback het medewerkersveld. Geen norm → overslaan.
