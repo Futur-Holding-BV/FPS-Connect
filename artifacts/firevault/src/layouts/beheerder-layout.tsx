@@ -233,14 +233,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
-  function InUitvoering() {
+  // RECHTEN_MENU_01: "In uitvoering" was misleidend — de modules achter de
+  // feature-flags zijn gebouwd, alleen per omgeving uitgeschakeld. Ontbrekende
+  // rechten tonen we bewust nooit grijs: die items staan niet in het menu
+  // (APP_01 acceptatie 3).
+  function Uitgeschakeld() {
     return (
       <Badge
         variant="outline"
+        title={t("nav.uitgeschakeldTooltip")}
         className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
       >
         <Clock className="h-2.5 w-2.5 mr-0.5" />
-        {t("nav.inUitvoering")}
+        {t("nav.uitgeschakeld")}
       </Badge>
     );
   }
@@ -607,7 +612,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuButton disabled>
                           <Calculator />
                           <span>Calculaties</span>
-                          <InUitvoering />
+                          <Uitgeschakeld />
                         </SidebarMenuButton>
                       )}
                     </SidebarMenuItem>
@@ -678,7 +683,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuButton disabled>
                           <CalendarDays />
                           <span>Planning</span>
-                          <InUitvoering />
+                          <Uitgeschakeld />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
@@ -709,7 +714,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <Link href="/rapporten" onClick={() => { try { sessionStorage.removeItem("fps_rapporten_filters"); } catch { } }}>
                           <PackageCheck />
                           <span>Opleverrapportage</span>
-                          <InUitvoering />
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -735,7 +739,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <Link href="/dossiers">
                             <FolderOpen />
                             <span>{t("nav.dossiers")}</span>
-                            <InUitvoering />
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

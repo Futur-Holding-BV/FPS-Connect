@@ -1,3 +1,9 @@
+## 2026-08-19 — RECHTEN_MENU_01: misleidend "In uitvoering"-label in het hoofdmenu opgeruimd
+
+- **Meting vooraf**: het label "In uitvoering" bleek nergens rechten-gestuurd. Ontbrekende rechten verbergen een menu-item volledig (bewuste regel, APP_01 acceptatie 3: niet grijs, gewoon weg) — er bestond dus geen "grijs door ontbrekend recht"-situatie, en de hoofdbeheerder mist geen enkel recht (`heeftNiveau` geeft voor hoofdbeheerder altijd true).
+- **Wat het label wél deed**: (a) Calculaties en Planning tonen bij een uitgezette feature-flag een grijs "In uitvoering" — misleidend, want die modules zijn gebouwd en in dev én productie gewoon actief; label vervangen door "Uitgeschakeld" met tooltip dat het een beheerkeuze per omgeving is, geen ontbrekend recht of onaf werk; (b) Opleverrapportage en Dossiers droegen een verouderde "In uitvoering"-badge terwijl beide modules volwaardig werken — badges verwijderd.
+- Er blijven geen onderdelen over die "In uitvoering" tonen; het label verdwijnt pas echt uit beeld zodra een toekomstig onaf onderdeel het bewust terugzet.
+
 ## 2026-08-19 — ADMINISTRATIE_01 vervolg: de open boekingspoort zichtbaar gemaakt en gedicht
 
 - **Actiepunt per BV zonder rekeningschema**: zolang een werkmaatschappij geen (actief) rekeningschema heeft, staat er automatisch één actiepunt bij de hoofdbeheerder — "Rekeningschema ontbreekt voor <BV> — boekingen gaan ongecontroleerd door", met uitleg en verwijzing naar Beheer → Boekhouding. Nieuwe werkbak-bron `rekeningschema_open`; het actiepunt sluit zichzelf zodra het schema van die BV gevuld is (import/sync triggert de controle direct, de bewakingsloop vangt de rest).
