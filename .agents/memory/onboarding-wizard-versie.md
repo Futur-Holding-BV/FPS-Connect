@@ -7,6 +7,6 @@ Elke mutatie van een hervatbare onboarding moet de laatst gelezen, monotoon oplo
 
 Definitieve profielvelden, de actieve medewerkerstatus en de opgehoogde wizardversie moeten bij afronding in één database-transactie onder dezelfde rijvergrendeling worden geschreven. Splits dit nooit over een gewone profiel-PATCH en een latere wizard-PATCH.
 
-**Why:** bij twee losse verzoeken kon een stale browser eerst oude profielvelden opslaan en pas daarna 409 krijgen op de statusovergang. De gebruiker zag een conflict, maar de verouderde data was dan al gelekt. Een latere merge verving het versiecontract door alleen een tijdstempel en brak daarmee clienttypen, herstarten en atomair afronden.
+**Why:** zonder één blijvende versiepoort kan een stale browser eerst oude profielvelden opslaan en pas daarna 409 krijgen op de statusovergang. De gebruiker ziet dan een conflict terwijl de verouderde data al is opgeslagen.
 
 **How to apply:** gebruik deze poort voor elke onboardingstroom die een bestaand profiel hervat. Een reset of parallelle opslag mag lineair winnen of 409 krijgen; een verliezende stale afronding mag geen enkel profielveld wijzigen.

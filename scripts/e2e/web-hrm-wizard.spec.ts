@@ -14,6 +14,7 @@
 //  10. UI: zonder userId → redirect naar /personeel?tab=medewerkers
 //  11. UI: onbekend userId (404) → "Gebruiker niet gevonden"-scherm
 //  12. UI: al gekoppeld userId (409) → "Al gekoppeld"-scherm
+//  13. UI: lopende inhuur-onboarding hervat opgeslagen velden en rondt hetzelfde concept af
 //
 // Draaien: pnpm --filter @workspace/scripts run e2e-web
 // Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
@@ -659,10 +660,12 @@ test("UI: wizard via ?userId — 13 stappen, identiteit disabled, gebruiker_id i
   // ── STAP 5: Hervatten — terug naar wizard-start met dezelfde userId ───────
   await page.goto(`/personeel/onboarden?userId=${TEST_USER_ID}`);
 
-  // FAALCRITERIUM G: login-redirect na terug-navigatie (sessie verloren)
+  // FAALCRITERIUM G: context verdwijnt na terug-navigatie (sessie verloren).
+  // Bij een lopend concept blijft de typekiezer bewust verborgen; de kop
+  // "Onboarden" hoort bij die kiezer en is daarom hier geen geldig criterium.
   await expect(
-    page.getByRole("heading", { name: "Onboarden" }),
-    "Wizard-heading weg na terug-navigatie — sessie verloren",
+    page.getByText("Onboarding voor"),
+    "Onboarding-context weg na terug-navigatie — sessie verloren",
   ).toBeVisible({ timeout: 15_000 });
 
   // De context bevat nu concept_medewerker_id → "Lopende onboarding"-banner
@@ -682,6 +685,128 @@ test("UI: wizard via ?userId — 13 stappen, identiteit disabled, gebruiker_id i
     page.getByText(/Stap \d+ van 13/),
     "Wizard-stap niet zichtbaar na hervatten — hervatten werkt niet",
   ).toBeVisible({ timeout: 15_000 });
+});
+
+test("UI: hervat een lopende inhuur-onboarding met opgeslagen gegevens en rondt hetzelfde concept af", async ({ page }) => {
+  await apiLogin(page);
+  const meRes = await page.request.get("/api/auth/me");
+  expect(meRes.status()).toBe(200);
+  const meData = await meRes.json();
+  const gebruikerId = 424_243;
+  const medewerkerId = 99_998;
+  const opgeslagenBureau = "Bureau Hervat BV";
+  let createAantal = 0;
+  let afrondPatch: Record<string, unknown> | null = null;
+  let afrondPatchUrl = "";
+
+  await page.addInitScript(() => {
+    localStorage.setItem("fps.welkom.afgerond", "true");
+    localStorage.setItem("fps_onboarding_voltooid", "true");
+  });
+
+  await page.route(/\/api\/.*/, async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+
+    if (url.includes("/auth/me")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(meData) });
+      return;
+    }
+    if (url.includes(`/medewerkers/onboarding-context/${gebruikerId}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          gebruiker_id: gebruikerId,
+          naam: "E2E Inhuur Hervatten",
+          email: `inhuur-hervatten@${TEST_EMAIL_DOMAIN}`,
+          telefoon: "0611122233",
+          concept_medewerker_id: medewerkerId,
+          onboarding_status: "in_voorbereiding",
+          onboarding_stroom: "inhuur",
+          onboarding_versie: 4,
+        }),
+      });
+      return;
+    }
+    if (method === "GET" && url.endsWith(`/medewerkers/${medewerkerId}/wizard-status`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          medewerker_id: medewerkerId,
+          medewerker_status: "in_voorbereiding",
+          huidig_stap: 1,
+          wizard_voortgang: {},
+          versie: 4,
+          bijgewerkt_op: "2026-08-19T09:00:00.000Z",
+        }),
+      });
+      return;
+    }
+    if (method === "GET" && url.endsWith(`/medewerkers/${medewerkerId}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: medewerkerId,
+          naam: "E2E Inhuur Hervatten",
+          gebruiker_id: gebruikerId,
+          medewerker_status: "in_voorbereiding",
+          dienstverband: "inhuur",
+          bedrijf_uitzendbureau: opgeslagenBureau,
+          uitzendbureau_id: null,
+          uitzendbureau_naam: null,
+          functie_id: null,
+          werkmaatschappij: "FPS Brandpreventie",
+          in_dienst_sinds: "2026-08-01",
+          uit_dienst_per: "2026-12-31",
+          opmerkingen: "Opgeslagen contactpersoon",
+        }),
+      });
+      return;
+    }
+    if (method === "POST" && url.match(/\/api\/medewerkers$/)) {
+      createAantal += 1;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Onverwachte create" }) });
+      return;
+    }
+    if (method === "PATCH" && url.endsWith(`/medewerkers/${medewerkerId}`)) {
+      afrondPatchUrl = url;
+      afrondPatch = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ id: medewerkerId, medewerker_status: "actief" }),
+      });
+      return;
+    }
+    if (url.match(/\/api\/(functies|verlofsoorten|cao-opties|profielen)($|\?)/)) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: method === "GET" ? "[]" : "{}",
+    });
+  });
+
+  await page.goto(`/personeel/onboarden?userId=${gebruikerId}`);
+  await expect(page.getByText("Lopende onboarding").first()).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Hervatten" }).click();
+
+  await expect(page.getByRole("heading", { name: "Uitzendkracht / Inhuur" })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Onderaannemer / bedrijf *")).toBeVisible();
+  await expect(page.locator("#onb-uitzendbureau-tekst")).toHaveValue(opgeslagenBureau);
+  await expect(page.locator('input[placeholder*="Onderdeel van project"]')).toHaveValue("Opgeslagen contactpersoon");
+
+  await page.getByRole("button", { name: "Inhuurkracht registreren" }).click();
+  await expect.poll(() => afrondPatchUrl, { timeout: 10_000 }).toContain(`/medewerkers/${medewerkerId}`);
+  expect(createAantal, "Hervatten mag geen tweede medewerker aanmaken").toBe(0);
+  expect(afrondPatch?.onboarding_afronden).toBe(true);
+  expect(afrondPatch?.onboarding_versie).toBe(4);
+  expect(afrondPatch?.onboarding_stroom).toBe("inhuur");
 });
 
 // ── Toegangscontract-tests: zonder/ongeldig/gekoppeld userId ─────────────────
