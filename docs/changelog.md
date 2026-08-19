@@ -1,3 +1,9 @@
+## 2026-08-19 — ZOOM_01: paginazoomen weer toegestaan in Connect
+
+- **Knijpzoomen hersteld**: de globale viewport beperkt de maximale schaal niet langer; telefoon- en tabletgebruikers kunnen de volledige Connect-pagina weer vergroten.
+- **Frontend-audit**: geen overige `maximum-scale`, `minimum-scale` of `user-scalable`-blokkades gevonden. `touch-none` blijft alleen staan op lokale teken-, handtekening-, slider- en scrollbarinteracties; gewone pagina- en scrollcontainers blijven schaalbaar.
+- **Bewijs**: Firevault-typecheck groen, mobiele preview correct en de werkelijk geleverde HTML bevat alleen `width=device-width, initial-scale=1.0, viewport-fit=cover`.
+
 ## 2026-08-19 — HRM_ONBOARDING_HERSTART_01: vastgelopen onboarding hervatten of opnieuw beginnen
 
 - **Wachtrijstatussen hervatbaar**: niet alleen `concept`, maar ook de overige onafgeronde onboardingstatussen worden als lopende onboarding herkend; een bestaand account blokkeert daardoor niet langer met “bestaat al”.
