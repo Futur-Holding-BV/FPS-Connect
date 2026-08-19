@@ -666,6 +666,13 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Harde magazijn-BV-poort**: iedere voorraadmutatie naar AccountView toetst nu de gekoppelde administratie tegen het magazijngebouw en, waar aanwezig, de opdracht-, inkooporder-, picklijst- of reserveringsrelatie. Ontbrekende, onvolledige, onbekende en tegenstrijdige herleiding wordt zichtbaar met 422 geweigerd; een boeking kan niet stil in de administratie van een andere BV landen.
 - **Racevrij verzenden**: de AccountView-instelling, mutatie en alle BV-bronnen worden transactioneel vergrendeld en opnieuw getoetst tot na de externe boeking en exportmarkering. Een gelijktijdige instelling- of relatieaanpassing kan daardoor niet tussen controle en verzending wisselen.
 - **Bewijs**: `scripts/src/verificatie-administratie01-fase3.ts` is uitgebreid naar 26/26 groene checks, inclusief ontbrekende koppeling, mismatch, onbekende bron, ongeldige referentie, conflict tussen magazijn- en opdracht-BV en tien gelijktijdige testmodus-exports zonder pool-deadlock.
+
+
+## 2026-08-19 — Handmatig factuur accorderen: BTW-code vooraf verplicht bij AccountView-export
+
+- **Voorkomt mislukte automatische boekingen**: bij een actieve AccountView-exportkoppeling weigert handmatig accorderen nu met een heldere 422-melding wanneer de BTW-code ontbreekt. De factuur blijft daarbij ongewijzigd, zodat er geen automatische boekingspoging of faalmailreeks start. Met een uitgeschakelde exportkoppeling blijft accorderen ongewijzigd mogelijk.
+- **Bewijs**: de draaiende API is getest met een tijdelijke factuur en geautoriseerde gebruiker: actieve koppeling gaf 422 zonder statuswijziging of exportlog; uitgeschakelde koppeling gaf een normale 200-accoordactie, zonder externe export.
+
 ## 2026-08-19 — Contractbewaking: aanzegdeadline per mail
 
 - De dagelijkse bewakingsloop zet bij een uiterste aanzegdatum binnen zeven dagen een eenmalige waarschuwing per contract in de mail-wachtrij voor actieve HRM-beheerders. De waarschuwing gebruikt de daadwerkelijke aanzegdatum (één maand vóór contracteinde), respecteert de reguliere testdomein-/postbuscontrole en blijft uit zodra er al een contractbesluit is.

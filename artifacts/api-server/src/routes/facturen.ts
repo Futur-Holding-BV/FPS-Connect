@@ -1523,6 +1523,20 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), asy
     }
   }
 
+  // Voorkom dat handmatig accorderen zonder btw-code meteen een automatische
+  // AccountView-boeking start die alleen kan eindigen in een faalmail.
+  const [accountviewInstellingen] = await db
+    .select({ exportActief: accountviewInstellingenTable.exportActief })
+    .from(accountviewInstellingenTable)
+    .where(eq(accountviewInstellingenTable.id, 1))
+    .limit(1);
+  if (accountviewInstellingen?.exportActief && !factuur.btwCode?.trim()) {
+    res.status(422).json({
+      error: "Vul eerst de BTW-code in voordat u deze factuur accordeert.",
+    });
+    return;
+  }
+
   const userId = sessionUserId(req);
   const [updated] = await db.update(facturenTable).set({
     geaccordeerd: true,
