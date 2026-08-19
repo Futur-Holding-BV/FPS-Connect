@@ -35,6 +35,7 @@ import type {
   Abonnement,
   AbonnementInput,
   AbonnementUpdate,
+  AcceptatiePunt,
   AccountviewExportLog,
   AccountviewExportResultaat,
   AccountviewInstellingen,
@@ -1063,6 +1064,7 @@ import type {
   UitzendbureauKoppelInput,
   UitzendbureauKoppelOverzicht,
   UitzendbureauKoppelResultaat,
+  UpdateAcceptatiePuntBody,
   UpdateActiepuntBody,
   UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
@@ -59666,6 +59668,154 @@ export const useDeleteActiepunt = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteActiepuntMutationOptions(options));
+    }
+
+export const getListAcceptatieregisterUrl = () => {
+
+
+
+
+  return `/api/acceptatieregister`
+}
+
+/**
+ * @summary Acceptatieregister — één regel per acceptatiepunt per opdracht (REGISTER_01, hoofdbeheerder)
+ */
+export const listAcceptatieregister = async ( options?: RequestInit): Promise<AcceptatiePunt[]> => {
+
+  return customFetch<AcceptatiePunt[]>(getListAcceptatieregisterUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAcceptatieregisterQueryKey = () => {
+    return [
+    `/api/acceptatieregister`
+    ] as const;
+    }
+
+
+export const getListAcceptatieregisterQueryOptions = <TData = Awaited<ReturnType<typeof listAcceptatieregister>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAcceptatieregister>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAcceptatieregisterQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAcceptatieregister>>> = ({ signal }) => listAcceptatieregister({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAcceptatieregister>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAcceptatieregisterQueryResult = NonNullable<Awaited<ReturnType<typeof listAcceptatieregister>>>
+export type ListAcceptatieregisterQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Acceptatieregister — één regel per acceptatiepunt per opdracht (REGISTER_01, hoofdbeheerder)
+ */
+
+export function useListAcceptatieregister<TData = Awaited<ReturnType<typeof listAcceptatieregister>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAcceptatieregister>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAcceptatieregisterQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateAcceptatiePuntUrl = (id: number,) => {
+
+
+
+
+  return `/api/acceptatieregister/${id}`
+}
+
+/**
+ * @summary Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
+ */
+export const updateAcceptatiePunt = async (id: number,
+    updateAcceptatiePuntBody: UpdateAcceptatiePuntBody, options?: RequestInit): Promise<AcceptatiePunt> => {
+
+  return customFetch<AcceptatiePunt>(getUpdateAcceptatiePuntUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateAcceptatiePuntBody)
+  }
+);}
+
+
+
+
+export const getUpdateAcceptatiePuntMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext> => {
+
+const mutationKey = ['updateAcceptatiePunt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAcceptatiePunt>>, {id: number;data: BodyType<UpdateAcceptatiePuntBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAcceptatiePunt(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAcceptatiePuntMutationResult = NonNullable<Awaited<ReturnType<typeof updateAcceptatiePunt>>>
+    export type UpdateAcceptatiePuntMutationBody = BodyType<UpdateAcceptatiePuntBody>
+    export type UpdateAcceptatiePuntMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
+ */
+export const useUpdateAcceptatiePunt = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAcceptatiePunt>>,
+        TError,
+        {id: number;data: BodyType<UpdateAcceptatiePuntBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateAcceptatiePuntMutationOptions(options));
     }
 
 export const getMeldDitWerktNietUrl = () => {

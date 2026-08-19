@@ -17508,6 +17508,42 @@ paths:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         '204': { description: Verwijderd }
+  /acceptatieregister:
+    get:
+      operationId: listAcceptatieregister
+      summary: Acceptatieregister — één regel per acceptatiepunt per opdracht (REGISTER_01, hoofdbeheerder)
+      tags: [Acceptatieregister]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AcceptatiePunt' }
+  /acceptatieregister/{id}:
+    patch:
+      operationId: updateAcceptatiePunt
+      summary: Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
+      tags: [Acceptatieregister]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stand: { type: string, enum: [gehaald, niet_gebouwd, onbewezen, wacht_op_rene] }
+                bewijs_vindplaats: { type: string, nullable: true }
+                toelichting: { type: string, nullable: true }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcceptatiePunt' }
   /dit-werkt-niet:
     post:
       operationId: meldDitWerktNiet
@@ -43614,6 +43650,19 @@ components:
         eind_datum: { type: string, nullable: true }
         aantal_herhalingen: { type: integer, nullable: true }
         werkgever_id: { type: integer, nullable: true }
+    AcceptatiePunt:
+      type: object
+      required: [id, opdracht_code, punt_nummer, omschrijving, stand, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        opdracht_code: { type: string }
+        punt_nummer: { type: integer }
+        omschrijving: { type: string }
+        stand: { type: string, enum: [gehaald, niet_gebouwd, onbewezen, wacht_op_rene] }
+        bewijs_vindplaats: { type: string, nullable: true }
+        bron_bestand: { type: string, nullable: true }
+        toelichting: { type: string, nullable: true }
+        bijgewerkt_op: { type: string, format: date-time }
     Actiepunt:
       type: object
       required: [id, titel, categorie, status, volgorde, aangemaakt_op]

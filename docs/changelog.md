@@ -1,3 +1,13 @@
+## 2026-08-19 — REGISTER_01: acceptatieregister per acceptatiepunt (vervangt VOLLEDIGHEID_01)
+
+- **Register in de database** (migratie 0093, tabel `acceptatie_register`): één regel per acceptatiepunt per opdracht, met vier standen — **gehaald**, **niet_gebouwd**, **onbewezen** (code bestaat maar geëist bewijs ontbreekt) en **wacht_op_rene** — plus bewijs-vindplaats, bronbestand en toelichting.
+- **Fase 0 — vulling**: `scripts/src/vul-acceptatieregister.ts` parseert de Acceptatie-paragrafen uit alle opdrachtbestanden in attached_assets: 53 opdrachten, 438 punten. Alle punten fail-closed beoordeeld tegen de werkelijke codebase: 209 gehaald, 190 onbewezen, 23 niet gebouwd, 16 wachten op René.
+- **Fase 1 — zichtbaar in Connect**: nieuwe pagina `/beheer/acceptatieregister` (hoofdbeheerder-only, via Instellingen), gegroepeerd per opdracht met de teller niet-gehaald bovenaan, inline stand-wissel en bewijs-bewerking. API: `GET/PATCH /api/acceptatieregister` met stand-validatie.
+- **Fase 2 — bouwcontrole**: `scripts/src/oplever-check.ts <CODE>` faalt bij onbewezen/niet-gebouwde punten (opdracht is dan hoogstens "deels opgeleverd") en bij registerregels die op de opleverdag niet zijn bijgewerkt. De kwaliteitscheck controleert voortaan dat opdrachtcodes in de nieuwste changelog-sectie diezelfde dag bijgewerkte registerregels hebben.
+- **Fase 3 — statusrapport uit het register**: `scripts/src/genereer-statusrapport.ts` genereert `docs/status/STATUS_<datum>.md` (totaalbeeld, per-opdracht-tabel met oordeel, openstaande punten, punten die op René wachten) — niet meer handgeschreven; alle standen zijn GEMETEN.
+- **VOLLEDIGHEID_01 vervallen**: het vinkje per opdracht was te grof; dit register vervangt het.
+- **Bewijs**: `scripts/src/verificatie-register01.ts` — vulling/standen geldig, hoofdbeheerder-only (401/403), lijst incl. eigen punten, PATCH-validatie + persistentie, oplever-check faalt/slaagt correct, statusrapport gegenereerd (alles groen, dev).
+
 ## 2026-08-19 — SENTRY_AAN_01: foutmonitoring aan + browserkant + "Dit werkt niet"-knop
 
 - **Monitoring-config voor de browser** (`GET /api/monitoring-config`, publiek): geeft de publieke browser-DSN (`SENTRY_DSN_WEB`), omgeving en commit terug, zodat een DSN-wijziging géén rebuild vergt. Zonder DSN blijft de browserkant uit — identiek aan de serverkant.

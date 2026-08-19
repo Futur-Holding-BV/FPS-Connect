@@ -306,6 +306,13 @@ export default function InstellingenPagina() {
           zichtbaar: toonSysteem,
         },
         {
+          label: "Acceptatieregister",
+          pad: "/beheer/acceptatieregister",
+          icoon: ListChecks,
+          beschrijving: "Per opdracht elk acceptatiepunt met de werkelijke stand",
+          zichtbaar: isHoofdbeheerder,
+        },
+        {
           label: "Projectstatus",
           pad: "/beheer/projectstatus",
           icoon: BarChart3,

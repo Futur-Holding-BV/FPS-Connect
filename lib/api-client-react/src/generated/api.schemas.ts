@@ -10924,6 +10924,28 @@ export interface KalenderAfspraak {
   werkgever_id?: number | null;
 }
 
+export type AcceptatiePuntStand = typeof AcceptatiePuntStand[keyof typeof AcceptatiePuntStand];
+
+
+export const AcceptatiePuntStand = {
+  gehaald: 'gehaald',
+  niet_gebouwd: 'niet_gebouwd',
+  onbewezen: 'onbewezen',
+  wacht_op_rene: 'wacht_op_rene',
+} as const;
+
+export interface AcceptatiePunt {
+  id: number;
+  opdracht_code: string;
+  punt_nummer: number;
+  omschrijving: string;
+  stand: AcceptatiePuntStand;
+  bewijs_vindplaats?: string | null;
+  bron_bestand?: string | null;
+  toelichting?: string | null;
+  bijgewerkt_op: string;
+}
+
 export interface Actiepunt {
   id: number;
   titel: string;
@@ -18740,6 +18762,22 @@ export type UpdateActiepuntBody = {
   omschrijving?: string | null;
   categorie?: string;
   status?: UpdateActiepuntBodyStatus;
+};
+
+export type UpdateAcceptatiePuntBodyStand = typeof UpdateAcceptatiePuntBodyStand[keyof typeof UpdateAcceptatiePuntBodyStand];
+
+
+export const UpdateAcceptatiePuntBodyStand = {
+  gehaald: 'gehaald',
+  niet_gebouwd: 'niet_gebouwd',
+  onbewezen: 'onbewezen',
+  wacht_op_rene: 'wacht_op_rene',
+} as const;
+
+export type UpdateAcceptatiePuntBody = {
+  stand?: UpdateAcceptatiePuntBodyStand;
+  bewijs_vindplaats?: string | null;
+  toelichting?: string | null;
 };
 
 export type MeldDitWerktNietBody = {

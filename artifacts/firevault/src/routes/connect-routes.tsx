@@ -52,6 +52,7 @@ import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import VisualsLegacyBeheer from "@/pages/beheer/visuals";
 import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
+import Acceptatieregister from "@/pages/beheer/acceptatieregister";
 import DocumentopmaakBeheer from "@/pages/organisatie/documentopmaak";
 import WerkmaatschappijPagina from "@/pages/organisatie/werkmaatschappijen";
 import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
@@ -598,6 +599,7 @@ export function ConnectRoutes() {
         <Route path="/declaraties" component={DeclaratiesPagina} />
         <Route path="/beheer/object-rechten" component={ObjectRechtenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
+        <Route path="/beheer/acceptatieregister" component={Acceptatieregister} />
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/organisatie/werkmaatschappijen" component={WerkmaatschappijPagina} />
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />

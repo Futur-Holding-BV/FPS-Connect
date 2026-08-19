@@ -20901,6 +20901,49 @@ export const DeleteActiepuntResponse = zod.void()
 
 
 /**
+ * @summary Acceptatieregister — één regel per acceptatiepunt per opdracht (REGISTER_01, hoofdbeheerder)
+ */
+export const ListAcceptatieregisterResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_code": zod.string(),
+  "punt_nummer": zod.number(),
+  "omschrijving": zod.string(),
+  "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']),
+  "bewijs_vindplaats": zod.string().nullish(),
+  "bron_bestand": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListAcceptatieregisterResponse = zod.array(ListAcceptatieregisterResponseItem)
+
+
+/**
+ * @summary Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
+ */
+export const UpdateAcceptatiePuntParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAcceptatiePuntBody = zod.object({
+  "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']).optional(),
+  "bewijs_vindplaats": zod.string().nullish(),
+  "toelichting": zod.string().nullish()
+})
+
+export const UpdateAcceptatiePuntResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_code": zod.string(),
+  "punt_nummer": zod.number(),
+  "omschrijving": zod.string(),
+  "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']),
+  "bewijs_vindplaats": zod.string().nullish(),
+  "bron_bestand": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
  * @summary "Dit werkt niet"-melding van een ingelogde gebruiker (landt als actiepunt bij de hoofdbeheerder)
  */
 export const MeldDitWerktNietBody = zod.object({

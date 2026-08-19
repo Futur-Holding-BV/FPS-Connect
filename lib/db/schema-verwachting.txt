@@ -3,6 +3,9 @@ INDEX|aanvraag_planningen|aanvraag_planningen_pkey
 INDEX|aanvraag_voorstellen|aanvraag_voorstellen_mail_uq
 INDEX|aanvraag_voorstellen|aanvraag_voorstellen_pkey
 INDEX|abonnementen|abonnementen_pkey
+INDEX|acceptatie_register|acceptatie_register_pkey
+INDEX|acceptatie_register|acceptatie_register_stand_idx
+INDEX|acceptatie_register|acceptatie_register_uniek
 INDEX|accountview_export_logs|accountview_export_logs_pkey
 INDEX|accountview_instellingen|accountview_instellingen_pkey
 INDEX|accountview_project_mapping|accountview_project_mapping_pkey
@@ -580,6 +583,16 @@ KOLOM|abonnementen|naam|text|NO|
 KOLOM|abonnementen|niveau|text|NO|'basis'::text
 KOLOM|abonnementen|prijs_per_maand|real|NO|0
 KOLOM|abonnementen|start_datum|text|YES|
+KOLOM|acceptatie_register|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|acceptatie_register|bewijs_vindplaats|text|YES|
+KOLOM|acceptatie_register|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|acceptatie_register|bron_bestand|text|YES|
+KOLOM|acceptatie_register|id|integer|NO|nextval('acceptatie_register_id_seq'::regclass)
+KOLOM|acceptatie_register|omschrijving|text|NO|
+KOLOM|acceptatie_register|opdracht_code|text|NO|
+KOLOM|acceptatie_register|punt_nummer|integer|NO|
+KOLOM|acceptatie_register|stand|text|NO|'onbewezen'::text
+KOLOM|acceptatie_register|toelichting|text|YES|
 KOLOM|accountview_export_logs|aangemeld_door_gebruiker|text|YES|
 KOLOM|accountview_export_logs|accountview_boeking_id|text|YES|
 KOLOM|accountview_export_logs|accountview_response|jsonb|YES|

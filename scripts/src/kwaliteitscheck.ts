@@ -429,9 +429,52 @@ async function main() {
   // (KLANTLOOS_01: de klant-poort-allowlist-controle is vervallen — Connect
   // kent geen externe gebruikers meer; zie de klantloos-buildcontrole.)
 
-  // ─── 9. Git changelog ─────────────────────────────────────────────────────
+  // ─── 9. Acceptatieregister (REGISTER_01) ──────────────────────────────────
+  // Oplevering zonder bijgewerkte registerregels telt niet: de opdrachtcodes
+  // in de nieuwste changelog-sectie moeten diezelfde dag bijgewerkte regels in
+  // acceptatie_register hebben. Draait alleen lokaal (met DB); CI heeft geen DB.
 
-  sectie("13. Recente wijzigingen (changelog)");
+  sectie("13. Acceptatieregister-koppeling (REGISTER_01)");
+  try {
+    const changelog = fs.readFileSync(path.join(repoRoot, "docs", "changelog.md"), "utf8");
+    const kop = changelog.match(/^## (\d{4}-\d{2}-\d{2}) — (.+)$/m);
+    if (!kop) {
+      waarschuwing("Geen changelog-sectiekop gevonden");
+    } else {
+      const [, datum, titel] = kop;
+      const codes = [...new Set(titel!.match(/[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_\d{2}(?!\d)/g) ?? [])];
+      if (codes.length === 0) {
+        info(`Nieuwste changelog-sectie (${datum}) bevat geen opdrachtcode — geen registercontrole nodig`);
+      } else {
+        const { db, acceptatieRegisterTable } = await import("@workspace/db");
+        const { eq } = await import("drizzle-orm");
+        for (const code of codes) {
+          const rijen = await db
+            .select({ bijgewerktOp: acceptatieRegisterTable.bijgewerktOp })
+            .from(acceptatieRegisterTable)
+            .where(eq(acceptatieRegisterTable.opdrachtCode, code));
+          if (rijen.length === 0) {
+            fout(`${code}: geen regels in het acceptatieregister — vul het register bij oplevering`);
+            registreer("acceptatieregister", "hoog", `${code} ontbreekt in het acceptatieregister`);
+          } else {
+            const oud = rijen.filter((r) => r.bijgewerktOp.toISOString().slice(0, 10) < datum).length;
+            if (oud > 0) {
+              fout(`${code}: ${oud}/${rijen.length} registerregels niet bijgewerkt op of na ${datum} — herbeoordeel élk punt (oplever-check.ts)`);
+              registreer("acceptatieregister", "hoog", `${code}: ${oud} registerregels ouder dan de changelog-datum`);
+            } else {
+              ok(`${code}: alle ${rijen.length} registerregels bijgewerkt op of na ${datum}`);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    waarschuwing(`Registercontrole niet uitvoerbaar: ${(e as Error).message.split("\n")[0]}`);
+  }
+
+  // ─── 10. Git changelog ────────────────────────────────────────────────────
+
+  sectie("14. Recente wijzigingen (changelog)");
   const gitLog = run("git --no-optional-locks log --oneline -10 --no-decorate");
   if (gitLog.ok && gitLog.output) {
     gitLog.output.split("\n").forEach((l) => info(l));
