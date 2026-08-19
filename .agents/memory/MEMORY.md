@@ -6,6 +6,7 @@
 - [KLEURACCENT_01 hoofdstukaccenten](kleuraccent-hoofdstuk.md) — accenten via [data-hoofdstuk]-CSS; rand/svg-regels in @layer base (anders verslaan ze semantische utilities); donker-screenshot via localStorage fps.weergave.
 - [Twee-traps sidebar & hoofdstukkleuren](nav-twee-traps.md) — TweeTrapsHoofdstuk = drop-in om InklapbaarHoofdstuk; kleuren via --hoofdstuk-*-tokens; GoedkeuringLabel: object_type=opdracht_akkoord + retry:false (403 zonder goedkeuring:1).
 - [PANEEL_01 banen & voorkeuren](paneel-banen.md) — gebruiker_voorkeuren = hét ene voorkeurenmechanisme (MENU_01 §4.3); banen-remount via generatie-key; routes in connect-routes.tsx (nooit terug naar App.tsx).
+- [Sentry browserkant + Dit werkt niet](sentry-foutmonitoring-web.md) — web-DSN runtime via publiek config-endpoint; init-race bufferen; alleen gebruikers-id (geen PII); testfout-route nooit op de publieke health-router.
 - [Sentry-foutmonitoring](sentry-foutmonitoring.md) — allowlist-scrub verplicht; otel-peer-split breekt drizzle-types; deploy-stap 5b: élke pipe naar head/grep onder set -e/pipefail altijd || true (ook ls|head, exit 141/SIGPIPE).
 - [Playwright/e2e-valkuilen](e2e-playwright-valkuilen.md) — verzamelindex van 16 e2e-topicfiles (selectors, TOTP-timing, testaccounts, races, NixOS-chromium, mutex, runTest-diagnose).
 - [OpenAPI/Orval-valkuilen](openapi-orval-valkuilen.md) — verzamelindex van 5 codegen-valkuilen (index-fix, queryKey, $ref-bodies, padprefix).
