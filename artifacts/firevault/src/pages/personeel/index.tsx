@@ -1,16 +1,14 @@
 import { useState, lazy, Suspense } from "react";
 import { featureFlags } from "@/lib/feature-flags";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 const HrmWidgets = lazy(() => import("./hrm-widgets"));
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   useGetHrmStats,
   useListMedewerkers,
-  useListFuncties,
-  useCreateFunctie,
-  useUpdateFunctie,
-  useDeleteFunctie,
-  useListProfielen,
+  useListFunctiesV2,
+  useCreateFunctieV2,
+  useUpdateFunctieV2,
   useListOpleidingen,
   useCreateOpleiding,
   useUpdateOpleiding,
@@ -31,15 +29,15 @@ import {
   useDeleteZiekmelding,
   getGetHrmStatsQueryKey,
   getListMedewerkersQueryKey,
-  getListFunctiesQueryKey,
+  getListFunctiesV2QueryKey,
   getListOpleidingenQueryKey,
   getListAlleVerlofAanvragenQueryKey,
   getListWerkgeversQueryKey,
   getListZiekmeldingenQueryKey,
 } from "@workspace/api-client-react";
 import type {
-  FunctieInput,
-  Functie,
+  FunctieV2Input,
+  FunctieMetRechten,
   OpleidingInput,
   Opleiding,
   OpleidingVoorstel,
@@ -49,6 +47,7 @@ import type {
   ZiekmeldingenInput,
   ProfielAiVoorstelFunctieResultaat,
 } from "@workspace/api-client-react";
+import { MODULES, NIVEAUS } from "@workspace/permissies";
 import { PoortwachterSheet } from "@/components/hrm/poortwachter-sheet";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,7 +71,7 @@ import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle, Search,
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
-  LogOut, Shield, Sparkles, Loader2, CheckCircle2,
+  LogOut, Sparkles, Loader2, CheckCircle2,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, useWerkmaatschappijen } from "@/lib/werkmaatschappijen";
 import { OffboardDialog } from "./offboard-dialog";
@@ -119,6 +118,12 @@ function fmtDatum(datum?: string | null) {
 export default function PersoneelPagina() {
   // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
   const { namen: WERKMAATSCHAPPIJEN } = useWerkmaatschappijen();
+  // GEBRUIKERS_01: ondersteuning voor ?tab=functies URL-parameter vanuit redirects
+  const search = useSearch();
+  const tabUitUrl = new URLSearchParams(search).get("tab");
+  const beginTab = (["statistieken","medewerkers","werkgevers","functies","opleidingen","bekwaamheden","verlof","ziekmeldingen"].includes(tabUitUrl ?? ""))
+    ? (tabUitUrl ?? "medewerkers")
+    : "medewerkers";
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -128,7 +133,8 @@ export default function PersoneelPagina() {
 
   const { data: stats } = useGetHrmStats();
   const { data: medewerkers, isLoading: medewerkersLaden } = useListMedewerkers();
-  const { data: functies } = useListFuncties();
+  // GEBRUIKERS_01 v2: functies-v2 bevat directe bevoegdheden per functie
+  const { data: functies } = useListFunctiesV2();
   const { data: opleidingen } = useListOpleidingen();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: gebruikers } = useListToewijsbareGebruikers();
@@ -137,10 +143,9 @@ export default function PersoneelPagina() {
   const { data: werkgevers } = useListWerkgevers();
   const { data: ziekmeldingen } = useListZiekmeldingen();
 
-  const maakFunctie = useCreateFunctie();
-  const wijzigFunctie = useUpdateFunctie();
-  const { data: profielen } = useListProfielen();
-  const verwijderFunctieMut = useDeleteFunctie();
+  // GEBRUIKERS_01 v2: directe bevoegdheden op functie, geen profielen
+  const maakFunctie = useCreateFunctieV2();
+  const wijzigFunctie = useUpdateFunctieV2();
   const maakOpleiding = useCreateOpleiding();
   const wijzigOpleiding = useUpdateOpleiding();
   const verwijderOpleidingMut = useDeleteOpleiding();
@@ -342,7 +347,6 @@ export default function PersoneelPagina() {
   const [werkgeverEditId, setWerkgeverEditId] = useState<number | null>(null);
   const [functieBewerkenId, setFunctieBewerkenId] = useState<number | null>(null);
   const [opleidingBewerkenId, setOpleidingBewerkenId] = useState<number | null>(null);
-  const [verwijderFunctieId, setVerwijderFunctieId] = useState<number | null>(null);
   const [verwijderOpleidingId, setVerwijderOpleidingId] = useState<number | null>(null);
   const [ziekOpen, setZiekOpen] = useState(false);
   const [ziekForm, setZiekForm] = useState<ZiekmeldingenInput>({
@@ -370,10 +374,11 @@ export default function PersoneelPagina() {
     actief: true,
   });
 
-  const [functieForm, setFunctieForm] = useState<FunctieInput>({
+  // GEBRUIKERS_01 v2: FunctieV2Input bevat directe bevoegdheden, geen werkmaatschappij/profiel_id
+  const [functieForm, setFunctieForm] = useState<FunctieV2Input>({
     naam: "",
-    werkmaatschappij: WERKMAATSCHAPPIJ_STD,
     uitvoerend: false,
+    bevoegdheden: {},
   });
   const [opleidingForm, setOpleidingForm] = useState<OpleidingInput>({
     naam: "",
@@ -408,9 +413,9 @@ export default function PersoneelPagina() {
         await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
         toast({ title: "Functie toegevoegd" });
       }
-      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getListFunctiesV2QueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-      setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false });
+      setFunctieForm({ naam: "", uitvoerend: false, bevoegdheden: {} });
       setFunctieBewerkenId(null);
       setFunctieOpen(false);
     } catch {
@@ -442,19 +447,19 @@ export default function PersoneelPagina() {
 
   function startFunctieNieuw() {
     setFunctieBewerkenId(null);
-    setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false, minimale_bezetting: undefined });
+    setFunctieForm({ naam: "", uitvoerend: false, bevoegdheden: {} });
     setFunctieOpen(true);
   }
 
-  function startFunctieBewerken(f: Functie) {
+  function startFunctieBewerken(f: FunctieMetRechten) {
     setFunctieBewerkenId(f.id);
     setFunctieForm({
       naam: f.naam,
-      werkmaatschappij: f.werkmaatschappij,
       omschrijving: f.omschrijving ?? undefined,
       uitvoerend: f.uitvoerend ?? false,
       minimale_bezetting: f.minimale_bezetting ?? undefined,
-      profiel_id: f.profiel_id ?? undefined,
+      // V2: bevoegdheden staan direct op de functie
+      bevoegdheden: { ...(f.bevoegdheden ?? {}) },
     });
     setFunctieOpen(true);
   }
@@ -485,18 +490,6 @@ export default function PersoneelPagina() {
       functie_ids: o.functie_ids ?? [],
     });
     setOpleidingOpen(true);
-  }
-
-  async function verwijderFunctie(id: number) {
-    try {
-      await verwijderFunctieMut.mutateAsync({ id });
-      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-      toast({ title: "Functie verwijderd" });
-      setVerwijderFunctieId(null);
-    } catch {
-      toast({ title: "Verwijderen mislukt", variant: "destructive" });
-    }
   }
 
   async function verwijderOpleiding(id: number) {
@@ -687,7 +680,7 @@ export default function PersoneelPagina() {
         ))}
       </div>
 
-      <Tabs defaultValue="medewerkers">
+      <Tabs defaultValue={beginTab}>
         <TabsList>
           <TabsTrigger value="statistieken">Statistieken</TabsTrigger>
           <TabsTrigger value="medewerkers">Medewerkers</TabsTrigger>
@@ -858,80 +851,101 @@ export default function PersoneelPagina() {
         </TabsContent>
 
         <TabsContent value="functies" className="space-y-4">
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Het functiehuis is de enige plek waar functies en bijbehorende bevoegdheden worden beheerd.
+              Elke functie draagt rechten direct als bevoegdhedenmatrix; geen aparte profielen.
+            </p>
             {magSchrijven && (
-              <Button onClick={startFunctieNieuw}><Plus className="h-4 w-4" /> Nieuwe functie</Button>
+              <Button onClick={startFunctieNieuw} className="shrink-0"><Plus className="h-4 w-4" /> Nieuwe functie</Button>
             )}
           </div>
           {(functies ?? []).length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">
               <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p>Nog geen functies.</p>
+              <p>Nog geen functies. Maak de eerste functie aan om rechten te koppelen.</p>
             </CardContent></Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(functies ?? []).map((f) => (
-                <Card key={f.id}>
-                  <CardContent className="p-4 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold">{f.naam}</div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {f.uitvoerend && (
-                          <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5">
-                            Uitvoerend
-                          </Badge>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-amber-600 hover:text-amber-700"
-                          title="AI-bevoegdheden voorstel"
-                          onClick={async () => {
-                            setAiBevoegdhedenFunctieNaam(f.naam);
-                            setAiBevoegdhedenFunctieId(f.id);
-                            setAiBevoegdhedenResultaat(null);
-                            setAiBevoegdhedenOpen(true);
-                            try {
-                              const res = await aiVoorstelFunctieMut.mutateAsync({ data: { functie_id: f.id } });
-                              setAiBevoegdhedenResultaat(res);
-                            } catch {
-                              toast({ title: "AI-voorstel mislukt", variant: "destructive" });
-                              setAiBevoegdhedenOpen(false);
-                            }
-                          }}
-                          disabled={aiVoorstelFunctieMut.isPending}
-                        >
-                          <Sparkles className="h-3.5 w-3.5" />
-                        </Button>
-                        {magSchrijven && (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => startFunctieBewerken(f)}
-                              title="Bewerken"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                              onClick={() => setVerwijderFunctieId(f.id)}
-                              title="Verwijderen"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        )}
+            <div className="space-y-3">
+              {(functies ?? []).map((f) => {
+                // V2: bevoegdheden staan direct op de functie
+                const actieveMods = MODULES.filter((m) => (f.bevoegdheden[m.id] ?? 0) > 0);
+                return (
+                  <Card key={f.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="font-semibold">{f.naam}</div>
+                            {f.uitvoerend && (
+                              <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5">
+                                Uitvoerend
+                              </Badge>
+                            )}
+                          </div>
+                          {f.omschrijving && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{f.omschrijving}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-amber-600 hover:text-amber-700"
+                            title="AI-bevoegdheden voorstel"
+                            onClick={async () => {
+                              setAiBevoegdhedenFunctieNaam(f.naam);
+                              setAiBevoegdhedenFunctieId(f.id);
+                              setAiBevoegdhedenResultaat(null);
+                              setAiBevoegdhedenOpen(true);
+                              try {
+                                const res = await aiVoorstelFunctieMut.mutateAsync({ data: { functie_id: f.id } });
+                                setAiBevoegdhedenResultaat(res);
+                              } catch {
+                                toast({ title: "AI-voorstel mislukt", variant: "destructive" });
+                                setAiBevoegdhedenOpen(false);
+                              }
+                            }}
+                            disabled={aiVoorstelFunctieMut.isPending}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </Button>
+                          {magSchrijven && (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => startFunctieBewerken(f)}
+                                title="Bewerken"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{f.werkmaatschappij}</div>
-                    {f.omschrijving && <p className="text-xs text-muted-foreground line-clamp-2">{f.omschrijving}</p>}
-                  </CardContent>
-                </Card>
-              ))}
+                      {/* Rechtenmatrix — direct van de v2-functie */}
+                      {actieveMods.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 mt-2 pt-2 border-t">
+                          {actieveMods.map((m) => {
+                            const niveau = f.bevoegdheden[m.id] ?? 0;
+                            const niveauTekst = NIVEAUS.find((n) => n.waarde === niveau)?.kort ?? String(niveau);
+                            return (
+                              <div key={m.id} className="flex items-center justify-between text-xs py-0.5">
+                                <span className="text-muted-foreground truncate">{m.label}</span>
+                                <span className="font-medium ml-1 shrink-0">{niveauTekst}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground mt-1 pt-2 border-t">
+                          Geen moduletoegang ingesteld — klik op Bewerken om rechten toe te wijzen.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -1356,89 +1370,83 @@ export default function PersoneelPagina() {
         </TabsContent>
       </Tabs>
 
-      {/* Functie aanmaken / bewerken */}
+      {/* Functie aanmaken / bewerken — GEBRUIKERS_01 v2: directe bevoegdhedenmatrix, geen profiel-keuze */}
       <Dialog open={functieOpen} onOpenChange={(open) => { if (!open) setFunctieBewerkenId(null); setFunctieOpen(open); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{functieBewerkenId !== null ? "Functie bewerken" : "Nieuwe functie"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Naam *</Label>
-              <Input value={functieForm.naam} onChange={(e) => setFunctieForm({ ...functieForm, naam: e.target.value })} />
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{functieBewerkenId !== null ? "Functie bewerken" : "Nieuwe functie"}</DialogTitle>
+            <DialogDescription>
+              Functies zijn globaal (geldig voor de hele organisatie). Stel per module direct het toegangsniveau in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Naam *</Label>
+                <Input value={functieForm.naam} onChange={(e) => setFunctieForm({ ...functieForm, naam: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Omschrijving</Label>
+                <Textarea value={functieForm.omschrijving ?? ""} onChange={(e) => setFunctieForm({ ...functieForm, omschrijving: e.target.value })} rows={2} />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Werkmaatschappij</Label>
-              <Select
-                value={functieForm.werkmaatschappij || undefined}
-                onValueChange={(v) => setFunctieForm({ ...functieForm, werkmaatschappij: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
-                <SelectContent>
-                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Omschrijving</Label>
-              <Textarea value={functieForm.omschrijving ?? ""} onChange={(e) => setFunctieForm({ ...functieForm, omschrijving: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Toegangsprofiel</Label>
-              <Select
-                value={functieForm.profiel_id != null ? String(functieForm.profiel_id) : "geen"}
-                onValueChange={(v) => setFunctieForm({ ...functieForm, profiel_id: v === "geen" ? null : Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Geen toegangsprofiel" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="geen">Geen toegangsprofiel</SelectItem>
-                  {(profielen ?? []).map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            {/* Uitvoerend karakter */}
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="functie-uitvoerend"
+                  checked={functieForm.uitvoerend ?? false}
+                  onCheckedChange={(v) => setFunctieForm({ ...functieForm, uitvoerend: Boolean(v) })}
+                />
+                <Label htmlFor="functie-uitvoerend" className="cursor-pointer">
+                  Uitvoerende functie (monteur / timmerman / voorman / leerling)
+                </Label>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Standaard rechten die een medewerker met deze functie krijgt. Bij meerdere functies gelden de rechten samen (hoogste niveau per module). Handmatige extra rechten blijven mogelijk.
+                Uitvoerende medewerkers worden gestuurd via de monteur-app. De server leidt <code>is_uitvoerend_veld</code> af uit dit vinkje — geen hardcoded titellijsten.
               </p>
-              {functieBewerkenId !== null && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-1 gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
-                  disabled={aiVoorstelFunctieMut.isPending}
-                  onClick={async () => {
-                    setAiBevoegdhedenFunctieNaam(functieForm.naam);
-                    setAiBevoegdhedenFunctieId(functieBewerkenId);
-                    setAiBevoegdhedenResultaat(null);
-                    setAiBevoegdhedenOpen(true);
-                    try {
-                      const res = await aiVoorstelFunctieMut.mutateAsync({ data: { functie_id: functieBewerkenId } });
-                      setAiBevoegdhedenResultaat(res);
-                    } catch {
-                      toast({ title: "AI-voorstel mislukt", variant: "destructive" });
-                      setAiBevoegdhedenOpen(false);
-                    }
-                  }}
-                >
-                  {aiVoorstelFunctieMut.isPending
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> AI analyseert…</>
-                    : <><Sparkles className="h-3.5 w-3.5" /> AI bepaalt passend toegangsprofiel</>
-                  }
-                </Button>
-              )}
             </div>
-            <div className="flex items-center gap-2 pt-1">
-              <Checkbox
-                id="functie-uitvoerend"
-                checked={functieForm.uitvoerend ?? false}
-                onCheckedChange={(v) => setFunctieForm({ ...functieForm, uitvoerend: Boolean(v) })}
-              />
-              <Label htmlFor="functie-uitvoerend" className="cursor-pointer font-normal">
-                Uitvoerende functie (monteur, timmerman, voorman, leerling)
-              </Label>
+
+            {/* Directe rechtenmatrix — V2: geen profiel-kiezer */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Bevoegdhedenmatrix</Label>
+                <span className="text-xs text-muted-foreground">Per module het toegangsniveau</span>
+              </div>
+              <div className="rounded-md border divide-y text-sm max-h-72 overflow-y-auto">
+                {MODULES.map((mod) => {
+                  const huidig = functieForm.bevoegdheden?.[mod.id] ?? 0;
+                  return (
+                    <div key={mod.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="flex-1 truncate text-xs">{mod.label}</span>
+                      <Select
+                        value={String(huidig)}
+                        onValueChange={(v) => setFunctieForm((f) => ({
+                          ...f,
+                          bevoegdheden: { ...f.bevoegdheden, [mod.id]: Number(v) },
+                        }))}
+                      >
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {NIVEAUS.map((n) => (
+                            <SelectItem key={n.waarde} value={String(n.waarde)} className="text-xs">
+                              {n.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bij medewerkers met meerdere functies geldt per module het hoogste niveau.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground -mt-1">
-              Medewerkers met een uitvoerende functie verschijnen automatisch in de planning.
-            </p>
+
             <div className="space-y-1.5">
               <Label>Minimale bezetting</Label>
               <Input
@@ -1449,7 +1457,7 @@ export default function PersoneelPagina() {
                 placeholder="Geen minimum"
               />
               <p className="text-xs text-muted-foreground">
-                Minimaal aantal medewerkers met deze functie dat gelijktijdig aanwezig moet blijven. Verlof dat hieronder komt, wordt bij goedkeuring geblokkeerd (tenzij expliciet overschreven).
+                Minimaal aantal medewerkers met deze functie gelijktijdig aanwezig. Verlof hieronder wordt geblokkeerd tenzij expliciet overschreven.
               </p>
             </div>
           </div>
@@ -1738,26 +1746,6 @@ export default function PersoneelPagina() {
         </DialogContent>
       </Dialog>
 
-      {/* Functie verwijderen */}
-      <Dialog open={verwijderFunctieId !== null} onOpenChange={(open) => { if (!open) setVerwijderFunctieId(null); }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Functie verwijderen</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Weet je zeker dat je deze functie wilt verwijderen? Medewerkers die aan deze functie zijn gekoppeld behouden hun koppeling, maar de functie verdwijnt uit het functiehuis.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVerwijderFunctieId(null)}>Annuleren</Button>
-            <Button
-              variant="destructive"
-              disabled={verwijderFunctieMut.isPending}
-              onClick={() => verwijderFunctieId !== null && verwijderFunctie(verwijderFunctieId)}
-            >
-              {verwijderFunctieMut.isPending ? "Bezig…" : "Verwijderen"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Opleiding verwijderen */}
       <Dialog open={verwijderOpleidingId !== null} onOpenChange={(open) => { if (!open) setVerwijderOpleidingId(null); }}>
         <DialogContent className="max-w-sm">
@@ -1934,7 +1922,7 @@ export default function PersoneelPagina() {
                   ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Dit is een voorstel van de AI — u kunt het zelf aanpassen via Instellingen &rsaquo; Rollen &amp; Rechten.
+                Dit is een AI-voorstel — klik op "Overnemen in formulier" of "Rechten direct opslaan" en pas de matrix daarna nog aan indien nodig.
               </p>
             </div>
           )}
@@ -1943,23 +1931,15 @@ export default function PersoneelPagina() {
             {aiBevoegdhedenResultaat && (
               <Button
                 onClick={async () => {
-                  const profiel = (profielen ?? []).find(
-                    (p) => p.naam === aiBevoegdhedenResultaat.profiel_naam,
-                  );
-                  if (!profiel) {
-                    toast({
-                      title: "Profiel niet gevonden",
-                      description: `Maak eerst een profiel aan met de naam "${aiBevoegdhedenResultaat.profiel_naam}" via Instellingen › Rollen & Rechten.`,
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  if (functieOpen && functieBewerkenId !== null) {
-                    setFunctieForm((prev) => ({ ...prev, profiel_id: profiel.id }));
+                  // V2: AI-bevoegdheden direct overnemen in matrix, geen profiel-koppeling
+                  const aiBevoegdheden = aiBevoegdhedenResultaat.bevoegdheden as Record<string, number>;
+                  if (functieOpen) {
+                    // Dialoog is open: voeg toe in formulier
+                    setFunctieForm((prev) => ({ ...prev, bevoegdheden: { ...(prev.bevoegdheden ?? {}), ...aiBevoegdheden } }));
                     setAiBevoegdhedenOpen(false);
                     toast({
-                      title: "Profiel ingesteld",
-                      description: `${aiBevoegdhedenFunctieNaam} → ${profiel.naam}. Klik op Opslaan om te bevestigen.`,
+                      title: "AI-rechten overgenomen",
+                      description: "Controleer de matrix en klik op Opslaan om te bevestigen.",
                     });
                   } else if (aiBevoegdhedenFunctieId !== null) {
                     const functie = (functies ?? []).find((f) => f.id === aiBevoegdhedenFunctieId);
@@ -1969,18 +1949,14 @@ export default function PersoneelPagina() {
                         id: aiBevoegdhedenFunctieId,
                         data: {
                           naam: functie.naam,
-                          werkmaatschappij: functie.werkmaatschappij,
                           omschrijving: functie.omschrijving ?? undefined,
                           uitvoerend: functie.uitvoerend ?? false,
-                          profiel_id: profiel.id,
+                          bevoegdheden: { ...(functie.bevoegdheden ?? {}), ...aiBevoegdheden },
                         },
                       });
-                      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
+                      await queryClient.invalidateQueries({ queryKey: getListFunctiesV2QueryKey() });
                       setAiBevoegdhedenOpen(false);
-                      toast({
-                        title: "Toegangsprofiel opgeslagen",
-                        description: `${aiBevoegdhedenFunctieNaam} → ${profiel.naam}`,
-                      });
+                      toast({ title: "AI-bevoegdheden opgeslagen", description: aiBevoegdhedenFunctieNaam });
                     } catch {
                       toast({ title: "Opslaan mislukt", variant: "destructive" });
                     }
@@ -1990,7 +1966,7 @@ export default function PersoneelPagina() {
                 className="gap-1.5"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {functieOpen ? "Overnemen in formulier" : "Profiel instellen"}
+                {functieOpen ? "Overnemen in formulier" : "Rechten direct opslaan"}
               </Button>
             )}
           </DialogFooter>

@@ -13,6 +13,7 @@ import { heeftGateway } from "../lib/aiGateway";
 import { stelRollenVoor, stelBevoegdhedenVoorPerFunctie } from "../services/profiel-ai";
 
 const router = Router();
+const profielbeheerIsVervallen = () => true;
 
 const GELDIGE_MODULES = new Set<string>(MODULE_IDS);
 
@@ -144,6 +145,11 @@ router.get("/profielen", requireEnigeBevoegdheid([["gebruikers", 1], ["personeel
 });
 
 router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Losse rechtenprofielen zijn vervallen. Maak een functie met rechten via Personeel > Functiehuis.",
+    });
+  }
   try {
     const naam = String(req.body?.naam ?? "").trim();
     if (!naam) {
@@ -186,6 +192,11 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res): Promis
 // en werkt bestaande systeem-presets bij als hun bevoegdheden afwijken van de definitie.
 // Moet vóór /profielen/:id staan zodat "synchroniseer-standaard" niet als id wordt geïnterpreteerd.
 router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Rechten worden uitsluitend via functies beheerd. Standaardmatrices worden alleen door migraties onderhouden.",
+    });
+  }
   try {
     const bestaand = await db.select().from(profielenTable).where(eq(profielenTable.systeem, true));
     const bestaandMap = new Map(bestaand.map((p) => [p.naam, p]));
@@ -226,6 +237,11 @@ router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), 
 });
 
 router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Rechten worden uitsluitend via functies beheerd. Gebruik Personeel > Functiehuis.",
+    });
+  }
   try {
     const profielen = await db.select().from(profielenTable);
     let profielenAangevuld = 0;
@@ -293,6 +309,11 @@ router.post("/profielen/ai-voorstel-functie", requireRol("hoofdbeheerder"), asyn
 });
 
 router.post("/profielen/ai-voorstel", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Losse rollenvoorstellen zijn vervallen. Vraag een rechtenvoorstel aan vanuit een functie in het Functiehuis.",
+    });
+  }
   try {
     if (!heeftGateway()) {
       res.status(503).json({
@@ -325,6 +346,11 @@ router.post("/profielen/ai-voorstel", requireRol("hoofdbeheerder"), async (req, 
 });
 
 router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Direct profiel bewerken is vervallen. Bewerk de gekoppelde functie in Personeel > Functiehuis.",
+    });
+  }
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -373,6 +399,11 @@ router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): P
 });
 
 router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Rechtenprofielen zijn technische functiegegevens en kunnen niet los worden verwijderd.",
+    });
+  }
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -403,6 +434,11 @@ router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): 
 // gebruikers (herkomstProfielId = id). Overschrijft hun bevoegdheden met de
 // huidige preset-waarden.
 router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  if (profielbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error: "Profiel toepassen is vervallen. Functierechten werken direct door; persoonlijke afwijkingen blijven bewust behouden.",
+    });
+  }
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {

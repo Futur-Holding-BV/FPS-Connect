@@ -8,7 +8,7 @@ import {
   useListFuncties,
   useListVerlofsoorten,
   useListCaoOpties,
-  useListProfielen,
+  useListFunctiesV2,
   useListMedewerkers,
   getListMedewerkersQueryKey,
   getGetHrmStatsQueryKey,
@@ -1134,11 +1134,11 @@ function VastFormulier({
     return extra;
   });
   const { data: functies } = useListFuncties();
+  const { data: functiesMetRechten } = useListFunctiesV2();
   // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
   const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
-  const { data: profielen } = useListProfielen();
   const { data: bestaandeMedewerkers } = useListMedewerkers();
   const maak = useCreateMedewerker();
   const bijwerk = useUpdateMedewerker();
@@ -1511,27 +1511,24 @@ function VastFormulier({
     }
   }
 
-  // Toegangsrechten-preview: de gekozen functie kan een standaard toegangsprofiel
-  // dragen (functies.profiel_id). We tonen wat dat profiel inhoudt zodat de
-  // invoerder in één oogopslag ziet welke rechten bij deze functie horen.
+  // Rechten-preview komt rechtstreeks uit de functiebron.
   const gekozenFunctie = useMemo(
     () => (functies ?? []).find((f) => f.id === form.functie_id),
     [functies, form.functie_id],
   );
-  const functieProfiel = useMemo(() => {
-    const pid = gekozenFunctie?.profiel_id;
-    if (pid == null) return null;
-    return (profielen ?? []).find((p) => p.id === pid) ?? null;
-  }, [gekozenFunctie, profielen]);
+  const gekozenFunctieMetRechten = useMemo(
+    () => (functiesMetRechten ?? []).find((f) => f.id === gekozenFunctie?.id) ?? null,
+    [functiesMetRechten, gekozenFunctie],
+  );
   const rechtenLijst = useMemo(() => {
-    const bev = functieProfiel?.bevoegdheden as Record<string, number> | null | undefined;
+    const bev = gekozenFunctieMetRechten?.bevoegdheden as Record<string, number> | null | undefined;
     if (!bev) return [];
     return MODULES.filter((m) => (bev[m.id] ?? 0) > 0).map((m) => ({
       id: m.id,
       label: m.label,
       niveau: bev[m.id],
     }));
-  }, [functieProfiel]);
+  }, [gekozenFunctieMetRechten]);
 
   // Duplicaatwaarschuwing: zelfde naam of e-mailadres als bestaande medewerker
   const duplicaatNaam = useMemo(() => {
@@ -2020,12 +2017,8 @@ function VastFormulier({
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">Toegangsrechten bij deze functie</span>
               </div>
-              {functieProfiel ? (
+              {gekozenFunctieMetRechten ? (
                 <>
-                  <p className="text-xs text-muted-foreground">
-                    Standaard toegangsprofiel:{" "}
-                    <span className="font-medium text-foreground">{functieProfiel.naam}</span>
-                  </p>
                   {rechtenLijst.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {rechtenLijst.map((r) => (
@@ -2036,37 +2029,11 @@ function VastFormulier({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
+                    <p className="text-xs text-muted-foreground">Deze functie bevat nog geen actieve modulerechten.</p>
                   )}
-                  {context.account_profiel_naam ? (
-                    context.account_profiel_naam.trim().toLowerCase() !==
-                    functieProfiel.naam.trim().toLowerCase() ? (
-                      <div
-                        className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 space-y-1"
-                        data-testid="waarschuwing-profiel-afwijking"
-                      >
-                        <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                          Controle toegangsrechten: het gekozen rechtenprofiel{" "}
-                          <span className="font-semibold">{context.account_profiel_naam}</span> wijkt af
-                          van het standaardprofiel <span className="font-semibold">{functieProfiel.naam}</span>{" "}
-                          dat bij deze functie hoort.
-                        </p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          De rechten komen additief bovenop elkaar — per module geldt het hoogste niveau.
-                          Zo kan de medewerker méér zien dan bij de functie past. Kies alleen bewust een
-                          afwijkend profiel; anders laat u het rechtenprofiel bij het account leeg zodat de
-                          rechten uit de functie volgen.
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Het rechtenprofiel van het account (
-                        <span className="font-medium">{context.account_profiel_naam}</span>) komt overeen
-                        met het standaardprofiel van deze functie.
-                      </p>
-                    )
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).</p>
+                  <p className="text-xs text-muted-foreground">
+                    Deze functierechten werken direct door. Alleen een bewust vastgelegde persoonlijke afwijking wijkt hiervan af.
+                  </p>
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">
@@ -3187,11 +3154,9 @@ function AccountStap({
 }) {
   const { toast } = useToast();
   const maakAccount = useCreateOnboardingAccount();
-  const { data: profielen } = useListProfielen();
   const [naam, setNaam] = useState("");
   const [email, setEmail] = useState("");
   const [telefoon, setTelefoon] = useState("");
-  const [profielId, setProfielId] = useState<string>("geen");
   const [uitnodigen, setUitnodigen] = useState(true);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
@@ -3203,22 +3168,6 @@ function AccountStap({
     heeftMedewerkerprofiel: boolean;
   } | null>(null);
 
-  // Rechten-preview bij het gekozen profiel (zelfde stijl als de preview bij de
-  // functiekeuze verderop in de wizard), zodat de invoerder direct ziet welke
-  // module-rechten dit profiel geeft.
-  const gekozenProfiel = useMemo(() => {
-    if (profielId === "geen") return null;
-    return (profielen ?? []).find((p) => p.id === Number(profielId)) ?? null;
-  }, [profielId, profielen]);
-  const profielRechten = useMemo(() => {
-    const bev = gekozenProfiel?.bevoegdheden as Record<string, number> | null | undefined;
-    if (!bev) return [];
-    return MODULES.filter((m) => (bev[m.id] ?? 0) > 0).map((m) => ({
-      id: m.id,
-      label: m.label,
-      niveau: bev[m.id],
-    }));
-  }, [gekozenProfiel]);
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
@@ -3236,7 +3185,6 @@ function AccountStap({
           email: email.trim(),
           telefoon: telefoon.trim() || undefined,
           uitnodigen,
-          profiel_id: profielId === "geen" ? undefined : Number(profielId),
         },
       });
       if (nieuw.uitnodiging_verstuurd) {
@@ -3298,47 +3246,6 @@ function AccountStap({
             <div className="space-y-1.5">
               <Label htmlFor="acc-telefoon">Telefoon</Label>
               <Input id="acc-telefoon" value={telefoon} onChange={(e) => setTelefoon(e.target.value)} placeholder="Optioneel" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="acc-profiel">Rechtenprofiel (optioneel)</Label>
-              <Select value={profielId} onValueChange={setProfielId}>
-                <SelectTrigger id="acc-profiel">
-                  <SelectValue placeholder="Geen — rechten volgen uit de functie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="geen">Geen — rechten volgen uit de functie</SelectItem>
-                  {(profielen ?? []).map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.naam}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {gekozenProfiel ? (
-                <div className="rounded-md border bg-muted/30 px-4 py-3 space-y-2" data-testid="blok-profiel-rechten">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Rechten bij dit profiel</span>
-                  </div>
-                  {profielRechten.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {profielRechten.map((r) => (
-                        <Badge key={r.id} variant="secondary" className="text-xs font-normal">
-                          {r.label}
-                          <span className="ml-1 text-muted-foreground">{niveauKort(r.niveau)}</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Koppel direct een rechtenprofiel zodat de medewerker meteen bij de juiste modules kan.
-                  Zonder keuze volgen de rechten later uit het standaardprofiel van de gekozen functie.
-                </p>
-              )}
             </div>
             <label className="flex items-start gap-2 cursor-pointer">
               <Checkbox checked={uitnodigen} onCheckedChange={(v) => setUitnodigen(v === true)} className="mt-0.5" />

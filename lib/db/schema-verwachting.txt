@@ -46,6 +46,9 @@ INDEX|bekwaamheden|bekwaamheden_pkey
 INDEX|betaalbatch_regels|betaalbatch_regels_factuur_uniek
 INDEX|betaalbatch_regels|betaalbatch_regels_pkey
 INDEX|betaalbatches|betaalbatches_pkey
+INDEX|bevoegdheid_audit_log|bal_gebruiker_idx
+INDEX|bevoegdheid_audit_log|bal_tijdstip_idx
+INDEX|bevoegdheid_audit_log|bevoegdheid_audit_log_pkey
 INDEX|bewaking_draaien|bewaking_draaien_pkey
 INDEX|boekhouder_uploads|boekhouder_uploads_pkey
 INDEX|brandstof_importen|brandstof_importen_pkey
@@ -185,12 +188,19 @@ INDEX|gebouw_toewijzingen|gebouw_toewijzingen_pkey
 INDEX|gebouwen|gebouwen_pkey
 INDEX|gebouwen|gebouwen_projectnummer_unique
 INDEX|gebouwen|gebouwen_werknummer_unique
+INDEX|gebruiker_bevoegdheid_afwijkingen|gba_gebruiker_idx
+INDEX|gebruiker_bevoegdheid_afwijkingen|gba_module_idx
+INDEX|gebruiker_bevoegdheid_afwijkingen|gebruiker_bevoegdheid_afwijkingen_gebruiker_id_module_id_key
+INDEX|gebruiker_bevoegdheid_afwijkingen|gebruiker_bevoegdheid_afwijkingen_pkey
 INDEX|gebruiker_profielen|gebruiker_profielen_gebruiker_id_profiel_id_unique
 INDEX|gebruiker_profielen|gebruiker_profielen_pkey
 INDEX|gebruiker_profielen|gp_gebruiker_idx
 INDEX|gebruiker_profielen|gp_profiel_idx
 INDEX|gebruiker_voorkeuren|gebruiker_voorkeuren_gebruiker_id_sleutel_unique
 INDEX|gebruiker_voorkeuren|gebruiker_voorkeuren_pkey
+INDEX|gebruikers01_v2_snapshot|g01v2snap_type_idx
+INDEX|gebruikers01_v2_snapshot|gebruikers01_v2_snapshot_object_type_object_id_key
+INDEX|gebruikers01_v2_snapshot|gebruikers01_v2_snapshot_pkey
 INDEX|gebruikers_meldingen|gebruikers_meldingen_pkey
 INDEX|gebruikers|gebruikers_email_unique
 INDEX|gebruikers|gebruikers_pkey
@@ -976,6 +986,16 @@ KOLOM|betaalbatches|status|text|NO|'concept'::text
 KOLOM|betaalbatches|totaal_bedrag|numeric|NO|0
 KOLOM|betaalbatches|uitvoerdatum|text|NO|
 KOLOM|betaalbatches|werkgever_id|integer|NO|
+KOLOM|bevoegdheid_audit_log|actie|text|NO|
+KOLOM|bevoegdheid_audit_log|actor_id|integer|YES|
+KOLOM|bevoegdheid_audit_log|actor_naam|text|YES|
+KOLOM|bevoegdheid_audit_log|gebruiker_id|integer|NO|
+KOLOM|bevoegdheid_audit_log|id|integer|NO|nextval('bevoegdheid_audit_log_id_seq'::regclass)
+KOLOM|bevoegdheid_audit_log|module_id|text|YES|
+KOLOM|bevoegdheid_audit_log|nieuw_niveau|integer|YES|
+KOLOM|bevoegdheid_audit_log|oud_niveau|integer|YES|
+KOLOM|bevoegdheid_audit_log|reden|text|YES|
+KOLOM|bevoegdheid_audit_log|tijdstip|timestamp without time zone|NO|now()
 KOLOM|bewaking_draaien|fout|text|YES|
 KOLOM|bewaking_draaien|gestart_op|timestamp without time zone|NO|now()
 KOLOM|bewaking_draaien|id|integer|NO|nextval('bewaking_draaien_id_seq'::regclass)
@@ -2139,6 +2159,14 @@ KOLOM|gebouwen|projectnummer|text|YES|
 KOLOM|gebouwen|stad|text|YES|
 KOLOM|gebouwen|werkgever_id|integer|YES|
 KOLOM|gebouwen|werknummer|text|YES|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|gebruiker_bevoegdheid_afwijkingen|actor_id|integer|YES|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|actor_naam|text|YES|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|gebruiker_id|integer|NO|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|id|integer|NO|nextval('gebruiker_bevoegdheid_afwijkingen_id_seq'::regclass)
+KOLOM|gebruiker_bevoegdheid_afwijkingen|module_id|text|NO|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|niveau|integer|NO|
+KOLOM|gebruiker_bevoegdheid_afwijkingen|reden|text|NO|
 KOLOM|gebruiker_profielen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruiker_profielen|gebruiker_id|integer|NO|
 KOLOM|gebruiker_profielen|id|integer|NO|nextval('gebruiker_profielen_id_seq'::regclass)
@@ -2148,6 +2176,11 @@ KOLOM|gebruiker_voorkeuren|gebruiker_id|integer|NO|
 KOLOM|gebruiker_voorkeuren|id|integer|NO|nextval('gebruiker_voorkeuren_id_seq'::regclass)
 KOLOM|gebruiker_voorkeuren|sleutel|text|NO|
 KOLOM|gebruiker_voorkeuren|waarde|jsonb|NO|
+KOLOM|gebruikers01_v2_snapshot|id|integer|NO|nextval('gebruikers01_v2_snapshot_id_seq'::regclass)
+KOLOM|gebruikers01_v2_snapshot|object_id|integer|NO|
+KOLOM|gebruikers01_v2_snapshot|object_type|text|NO|
+KOLOM|gebruikers01_v2_snapshot|snapshot|jsonb|NO|
+KOLOM|gebruikers01_v2_snapshot|vastgelegd_op|timestamp without time zone|NO|now()
 KOLOM|gebruikers_meldingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebruikers_meldingen|ai_classificatie|text|YES|
 KOLOM|gebruikers_meldingen|ai_reactie|text|YES|

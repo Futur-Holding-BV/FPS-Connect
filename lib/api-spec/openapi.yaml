@@ -5502,82 +5502,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebruiker"
 
-  /gebruikers/{id}/herkomst-toepassen:
-    post:
-      operationId: gebruikerHerkomstToepassen
-      tags: [gebruikers]
-      summary: >-
-        Herkomst-profiel opnieuw toepassen op deze ene gebruiker (hoofdbeheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gebruiker"
-        "400":
-          description: Gebruiker heeft geen herkomst-profiel
-        "404":
-          description: Niet gevonden
-
-  /gebruikers/{id}/herkomst-bevestigen:
-    post:
-      operationId: gebruikerHerkomstBevestigen
-      tags: [gebruikers]
-      summary: >-
-        Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gebruiker"
-        "400":
-          description: Gebruiker heeft geen herkomst-profiel
-        "404":
-          description: Niet gevonden
-
-  /gebruikers/herkomst-bevestigen-bulk:
-    post:
-      operationId: gebruikerHerkomstBevestigenBulk
-      tags: [gebruikers]
-      summary: >-
-        Automatisch afgeleide herkomst-koppelingen in bulk bevestigen
-        (hoofdbeheerder)
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/HerkomstBevestigenBulkInput"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [bevestigd]
-                properties:
-                  bevestigd:
-                    type: integer
-                    description: Aantal bevestigde koppelingen
-        "400":
-          description: Ongeldige invoer
-
   /gebruikers/aanvullen:
     post:
       operationId: gebruikersAanvullen
@@ -5599,28 +5523,6 @@ paths:
                   sleutels_toegevoegd:
                     type: integer
 
-  /gebruikers/{id}/herkomst-verwijderen:
-    post:
-      operationId: gebruikerHerkomstVerwijderen
-      tags: [gebruikers]
-      summary: >-
-        Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gebruiker"
-        "404":
-          description: Niet gevonden
-
   /profielen:
     get:
       operationId: listProfielen
@@ -5635,66 +5537,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Profiel"
-    post:
-      operationId: createProfiel
-      tags: [gebruikers]
-      summary: Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProfielInput"
-      responses:
-        "201":
-          description: Aangemaakt
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Profiel"
-
-  /profielen/aanvullen:
-    post:
-      operationId: profielenAanvullen
-      tags: [gebruikers]
-      summary: >-
-        Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0
-        (Geen toegang) (hoofdbeheerder)
-      responses:
-        "200":
-          description: Aangevuld
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [profielen_aangevuld, sleutels_toegevoegd]
-                properties:
-                  profielen_aangevuld:
-                    type: integer
-                  sleutels_toegevoegd:
-                    type: integer
-
-  /profielen/synchroniseer-standaard:
-    post:
-      operationId: synchroniseerStandaardProfielen
-      tags: [gebruikers]
-      summary: >-
-        Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande
-        systeem-presets bijwerken naar de definitie (hoofdbeheerder)
-      responses:
-        "200":
-          description: Gesynchroniseerd
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [aangemaakt, bijgewerkt]
-                properties:
-                  aangemaakt:
-                    type: integer
-                  bijgewerkt:
-                    type: integer
-
   /profielen/ai-voorstel-functie:
     post:
       operationId: aiVoorstelVoorFunctie
@@ -5719,92 +5561,6 @@ paths:
           description: Functie niet gevonden
         "503":
           description: AI niet beschikbaar
-
-  /profielen/ai-voorstel:
-    post:
-      operationId: aiRollenVoorstel
-      tags: [gebruikers]
-      summary: >-
-        AI stelt een set rollen met bijbehorende rechten voor op basis van de
-        modules en het functiehuis (hoofdbeheerder). Slaat niets op; de
-        beheerder beoordeelt, past aan en bevestigt zelf.
-      responses:
-        "200":
-          description: Voorstel gegenereerd
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AiRollenVoorstelResultaat"
-        "503":
-          description: AI niet beschikbaar
-
-  /profielen/{id}:
-    patch:
-      operationId: updateProfiel
-      tags: [gebruikers]
-      summary: Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProfielInput"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Profiel"
-        "404":
-          description: Niet gevonden
-    delete:
-      operationId: deleteProfiel
-      tags: [gebruikers]
-      summary: Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Verwijderd
-        "404":
-          description: Niet gevonden
-
-  /profielen/{id}/toepassen:
-    post:
-      operationId: profielToepassen
-      tags: [gebruikers]
-      summary: >-
-        Preset opnieuw toepassen op alle gekoppelde gebruikers (hoofdbeheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Toegepast
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [bijgewerkt]
-                properties:
-                  bijgewerkt:
-                    type: integer
-        "404":
-          description: Niet gevonden
 
   /goedkeuring/beleidsregels:
     get:
@@ -8991,23 +8747,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Functie"
-    post:
-      operationId: createFunctie
-      tags: [personeel]
-      summary: Functie aanmaken
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FunctieInput"
-      responses:
-        "201":
-          description: Aangemaakt
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Functie"
 
   /functies/{id}:
     get:
@@ -9029,42 +8768,6 @@ paths:
                 $ref: "#/components/schemas/Functie"
         "404":
           description: Niet gevonden
-    patch:
-      operationId: updateFunctie
-      tags: [personeel]
-      summary: Functie bijwerken
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FunctieInput"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Functie"
-    delete:
-      operationId: deleteFunctie
-      tags: [personeel]
-      summary: Functie verwijderen
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Verwijderd
 
   /functies/{id}/opleidingen-voorstel:
     post:
@@ -9110,6 +8813,214 @@ paths:
           description: Gekoppeld
         "404":
           description: Functie of opleiding niet gevonden
+
+  # ── GEBRUIKERS_01 v2: Functies globaal + bevoegdheidsafwijkingen ─────────────
+
+  /functies-v2:
+    get:
+      operationId: listFunctiesV2
+      tags: [personeel]
+      summary: Functies inclusief rechten ophalen (globaal, niet BV-gebonden)
+      description: Vereist personeel niveau 1.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: inclusief_inactief
+          schema:
+            type: boolean
+          description: Inclusief inactieve functies meenemen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FunctieMetRechten"
+    post:
+      operationId: createFunctieV2
+      tags: [personeel]
+      summary: Functie aanmaken met rechten in één transactie
+      description: Vereist personeel niveau 2.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctieV2Input"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FunctieMetRechten"
+        "400":
+          description: Ongeldige invoer
+
+  /functies-v2/{id}:
+    get:
+      operationId: getFunctieV2
+      tags: [personeel]
+      summary: Functie ophalen inclusief rechten
+      description: Vereist personeel niveau 1.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FunctieMetRechten"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateFunctieV2
+      tags: [personeel]
+      summary: Functie + rechten bijwerken in één transactie
+      description: Vereist personeel niveau 2. Activeren/deactiveren is hier bewust niet toegestaan.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctieV2Update"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FunctieMetRechten"
+        "404":
+          description: Niet gevonden
+
+  /gebruikers-v2/{id}/bevoegdheden:
+    get:
+      operationId: getGebruikerBevoegdhedenV2
+      tags: [gebruikers]
+      summary: Gebruiker met functierechten en afwijkingen ophalen
+      description: Vereist gebruikers niveau 4.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebruikerBevoegdhedenV2"
+        "404":
+          description: Niet gevonden
+
+  /gebruikers-v2/{id}/afwijkingen:
+    put:
+      operationId: vervangGebruikerAfwijkingen
+      tags: [gebruikers]
+      summary: Bevoegdheidsafwijkingen vervangen (verplichte reden + actor)
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      description: >
+        Vervangt de volledige set afwijkingen voor een gebruiker. Bewuste afwijkingen
+        worden beschermd: alleen dit endpoint kan ze overschrijven, nooit een stil
+        profiel-toepassen. Reden en actor zijn verplicht voor de audit-trail.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AfwijkingenVervangInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AfwijkingenResultaat"
+        "400":
+          description: Ongeldige invoer
+        "404":
+          description: Niet gevonden
+
+  /gebruikers-v2/{id}/functie-rechten-toepassen:
+    post:
+      operationId: pasFunctieRechtenToe
+      tags: [gebruikers]
+      summary: Functie-baseline opnieuw toepassen / afwijkingen resetten
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      description: >
+        Past de functie-baseline opnieuw toe. Bewuste afwijkingen worden NIET
+        stil gewist, tenzij bewuste_afwijkingen_wissen=true expliciet wordt meegegeven.
+        Reden is verplicht voor de audit-trail.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctieRechtenToepassenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AfwijkingenResultaat"
+        "400":
+          description: Ongeldige invoer
+
+  /gebruikers-v2/{id}/bevoegdheid-log:
+    get:
+      operationId: getGebruikerBevoegdheidLog
+      tags: [gebruikers]
+      summary: Audit-log voor bevoegdheidswijzigingen van een gebruiker
+      description: Vereist gebruikers niveau 4.
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BevoegdheidAuditLogRegel"
 
   # ── WERVING_01: wervingsmodule — kandidaten, cv-toetsing, vragenlijst ────────
   # De AI oordeelt nooit (geen score/cijfer/rangschikking/geschiktheid); zij
@@ -9558,9 +9469,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/OnboardingAccountResultaat"
         "400":
-          description: naam en email zijn verplicht, of ongeldig/onbestaand profiel_id
-        "403":
-          description: Zelf-escalatie geweigerd - het gekozen profiel bevat hogere moduleniveaus dan de eigen rechten
+          description: naam en email zijn verplicht
+        "410":
+          description: Een meegestuurd legacy profiel_id wordt geweigerd; rechten volgen uit de functie
         "409":
           description: E-mailadres al in gebruik; bevat doorstart-informatie over het bestaande account
           content:
@@ -17992,8 +17903,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [sloten]
+                required: [mag_beheren, sloten]
                 properties:
+                  mag_beheren:
+                    type: boolean
+                    description: Server-authoritative beheerrecht (hoofdbeheerder of actieve functie Projectleider).
                   open_slot:
                     nullable: true
                     allOf: [{ $ref: '#/components/schemas/OverwerkSlot' }]
@@ -34685,6 +34599,12 @@ components:
           type: object
           additionalProperties:
             type: integer
+        is_uitvoerend_veld:
+          type: boolean
+          description: >
+            GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van
+            functies.uitvoerend (fail-closed). Voedt de "bekijken als"-selector
+            zodat impersonatie de juiste vlag toont zonder client-side heuristiek.
         herkomst_profiel_id:
           type: ["integer", "null"]
         herkomst_automatisch:
@@ -35291,10 +35211,6 @@ components:
           type: string
         rol:
           type: string
-        functietitels:
-          type: array
-          items:
-            type: string
         telefoon:
           type: string
         bedrijf:
@@ -35311,16 +35227,6 @@ components:
           type: string
         taal:
           type: string
-        bevoegdheden:
-          type: object
-          additionalProperties:
-            type: integer
-        herkomst_profiel_id:
-          type: ["integer", "null"]
-        profiel_ids:
-          type: array
-          items:
-            type: integer
         dienstverband:
           type: string
         bedrijf_uitzendbureau:
@@ -35338,10 +35244,6 @@ components:
           type: string
         rol:
           type: string
-        functietitels:
-          type: array
-          items:
-            type: string
         telefoon:
           type: string
         bedrijf:
@@ -35360,16 +35262,6 @@ components:
           type: string
         taal:
           type: string
-        bevoegdheden:
-          type: object
-          additionalProperties:
-            type: integer
-        herkomst_profiel_id:
-          type: ["integer", "null"]
-        profiel_ids:
-          type: array
-          items:
-            type: integer
         dienstverband:
           type: string
         bedrijf_uitzendbureau:
@@ -36992,8 +36884,6 @@ components:
           type: ["integer", "null"]
         uitvoerend:
           type: boolean
-        actief:
-          type: boolean
         minimale_bezetting:
           type: ["integer", "null"]
 
@@ -37513,7 +37403,7 @@ components:
     OnboardingAccountInput:
       type: object
       required: [naam, email]
-      description: Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol "gebruiker". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).
+      description: Invoer voor de accountstap van de één-flow onboarding; het account wordt least-privilege aangemaakt met rol "gebruiker". Rechten volgen pas uit de gekozen functie.
       properties:
         naam:
           type: string
@@ -37524,9 +37414,6 @@ components:
         uitnodigen:
           type: boolean
           description: Verstuur direct een activatie-uitnodiging per e-mail.
-        profiel_id:
-          type: ["integer", "null"]
-          description: Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.
 
     OnboardingAccountResultaat:
       type: object
@@ -37653,12 +37540,6 @@ components:
         onboarding_versie:
           type: ["integer", "null"]
           description: Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.
-        account_profiel_id:
-          type: ["integer", "null"]
-          description: Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
-        account_profiel_naam:
-          type: ["string", "null"]
-          description: Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.
 
     MedewerkerAanstelling:
       type: object
@@ -37789,7 +37670,9 @@ components:
           description: Moet een bekende CAO zijn (zie /hrm/cao-opties).
         contracturen_per_week:
           type: number
-          description: Groter dan 0 en niet meer dan 40.
+          minimum: 0
+          maximum: 48
+          description: Van 0 tot en met 48 uur; 0 is geldig voor oproep- en nulurencontracten.
         in_dienst_sinds:
           type: string
           description: Geldige datum (YYYY-MM-DD), niet in de toekomst.
@@ -53939,3 +53822,199 @@ components:
           type: string
         correctie_tekst:
           type: ["string", "null"]
+    FunctieMetRechten:
+      type: object
+      required: [id, naam, uitvoerend, actief, bevoegdheden, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        naam: { type: string }
+        omschrijving: { type: ["string", "null"] }
+        taken: { type: ["string", "null"] }
+        verantwoordelijkheden: { type: ["string", "null"] }
+        competenties: { type: ["string", "null"] }
+        opleidingsvereisten: { type: ["string", "null"] }
+        doorgroeipad: { type: ["string", "null"] }
+        uitvoerend: { type: boolean }
+        actief: { type: boolean }
+        minimale_bezetting: { type: ["integer", "null"] }
+        profiel_id: { type: ["integer", "null"] }
+        bevoegdheden:
+          type: object
+          additionalProperties: { type: integer }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FunctieV2Input:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+          minLength: 1
+        omschrijving:
+          type: string
+        taken:
+          type: string
+        verantwoordelijkheden:
+          type: string
+        competenties:
+          type: string
+        opleidingsvereisten:
+          type: string
+        doorgroeipad:
+          type: string
+        uitvoerend:
+          type: boolean
+        actief:
+          type: boolean
+        minimale_bezetting:
+          type: integer
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    FunctieV2Update:
+      type: object
+      properties:
+        naam:
+          type: string
+          minLength: 1
+        omschrijving:
+          type: ["string", "null"]
+        taken:
+          type: ["string", "null"]
+        verantwoordelijkheden:
+          type: ["string", "null"]
+        competenties:
+          type: ["string", "null"]
+        opleidingsvereisten:
+          type: ["string", "null"]
+        doorgroeipad:
+          type: ["string", "null"]
+        uitvoerend:
+          type: boolean
+        actief:
+          type: boolean
+        minimale_bezetting:
+          type: ["integer", "null"]
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    BevoegdheidAfwijking:
+      type: object
+      required: [module_id, niveau, reden, aangemaakt_op]
+      properties:
+        module_id:
+          type: string
+        niveau:
+          type: integer
+        reden:
+          type: string
+        actor_id:
+          type: ["integer", "null"]
+        actor_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    GebruikerBevoegdhedenV2:
+      type: object
+      required: [gebruiker_id, naam, functie_baseline, afwijkingen, effectieve_bevoegdheden]
+      properties:
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        functie_baseline:
+          type: object
+          additionalProperties:
+            type: integer
+        afwijkingen:
+          type: array
+          items:
+            $ref: "#/components/schemas/BevoegdheidAfwijking"
+        effectieve_bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AfwijkingenVervangInput:
+      type: object
+      required: [afwijkingen, reden]
+      properties:
+        afwijkingen:
+          type: array
+          items:
+            type: object
+            required: [module_id, niveau]
+            properties:
+              module_id:
+                type: string
+              niveau:
+                type: integer
+        reden:
+          type: string
+          minLength: 1
+        actor_id:
+          type: integer
+
+    AfwijkingenResultaat:
+      type: object
+      required: [gebruiker_id, afwijkingen, effectieve_bevoegdheden]
+      properties:
+        gebruiker_id:
+          type: integer
+        functie_baseline:
+          type: object
+          additionalProperties:
+            type: integer
+        bewuste_afwijkingen_gewist:
+          type: boolean
+        afwijkingen:
+          type: array
+          items:
+            $ref: "#/components/schemas/BevoegdheidAfwijking"
+        effectieve_bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    FunctieRechtenToepassenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+          minLength: 1
+        actor_id:
+          type: integer
+        bewuste_afwijkingen_wissen:
+          type: boolean
+
+    BevoegdheidAuditLogRegel:
+      type: object
+      required: [id, gebruiker_id, actie, tijdstip]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        module_id:
+          type: ["string", "null"]
+        oud_niveau:
+          type: ["integer", "null"]
+        nieuw_niveau:
+          type: ["integer", "null"]
+        actie:
+          type: string
+        reden:
+          type: ["string", "null"]
+        actor_id:
+          type: ["integer", "null"]
+        actor_naam:
+          type: ["string", "null"]
+        tijdstip:
+          type: string

@@ -46,6 +46,8 @@ export interface Gebruiker {
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
   bevoegdheden: GebruikerBevoegdheden;
+  /** GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de "bekijken als"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek. */
+  is_uitvoerend_veld?: boolean;
   /** @nullable */
   herkomst_profiel_id?: number | null;
   herkomst_automatisch?: boolean;

@@ -18,7 +18,6 @@ export interface FunctieInput {
   /** @nullable */
   profiel_id?: number | null;
   uitvoerend?: boolean;
-  actief?: boolean;
   /** @nullable */
   minimale_bezetting?: number | null;
 }

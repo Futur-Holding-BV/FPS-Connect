@@ -16,6 +16,7 @@ import {
   stuurDeclaratieAfgewezenMail,
   stuurDeclaratieDoorgezetMail,
 } from "../services/email";
+import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdheden";
 
 const router = Router();
 
@@ -48,18 +49,6 @@ async function gebruikerNaam(id: number): Promise<string> {
     .where(eq(gebruikersTable.id, id))
     .limit(1);
   return g?.naam ?? "Onbekend";
-}
-
-// ── Helper: bevoegdheden opzoeken ─────────────────────────────────────────────
-async function gebruikerBevoegdheden(id: number): Promise<Record<string, number>> {
-  const [g] = await db
-    .select({ bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, id))
-    .limit(1);
-  if (!g) return {};
-  if (g.rol === "hoofdbeheerder") return Object.fromEntries(Object.keys({} as Record<string,number>).map(k => [k, 4]));
-  return (g.bevoegdheden as Record<string, number> | null) ?? {};
 }
 
 // ── Helper: declaratie met namen ophalen ──────────────────────────────────────
@@ -112,9 +101,9 @@ async function enrichDeclaratie(rij: typeof declaratiesTable.$inferSelect) {
 // ── GET /declaraties ──────────────────────────────────────────────────────────
 router.get("/declaraties", lezen, async (req, res) => {
   const userId = req.session.userId!;
-  const bev    = await gebruikerBevoegdheden(userId);
-  const [g]    = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1);
-  const kanAlles = g?.rol === "hoofdbeheerder" || heeftNiveau(bev, "declaraties", 3);
+  const kanAlles =
+    req.permissies!.isHoofdbeheerder ||
+    req.permissies!.heeftModuleRecht("declaraties", 3);
 
   let rijen: (typeof declaratiesTable.$inferSelect)[];
 
@@ -187,13 +176,29 @@ router.post("/declaraties", ...eigenGegevens, async (req, res) => {
 router.get("/declaraties/beoordelaars", beoordelen, async (req, res) => {
   const userId = req.session.userId!;
   const alleGebruikers = await db
-    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      storedBevoegdheden: gebruikersTable.bevoegdheden,
+      rol: gebruikersTable.rol,
+    })
     .from(gebruikersTable)
     .where(eq(gebruikersTable.actief, true));
+  const effectieveBevoegdheden = await berekenEffectieveBevoegdhedenBatch(
+    alleGebruikers.map((g) => ({
+      id: g.id,
+      rol: g.rol,
+      storedBevoegdheden: g.storedBevoegdheden,
+    })),
+  );
 
   const beoordelaars = alleGebruikers
     .filter((g) => g.id !== userId)
-    .filter((g) => g.rol === "hoofdbeheerder" || heeftNiveau((g.bevoegdheden as Record<string, number> | null) ?? {}, "declaraties", 3))
+    .filter(
+      (g) =>
+        g.rol === "hoofdbeheerder" ||
+        heeftNiveau(effectieveBevoegdheden.get(g.id) ?? {}, "declaraties", 3),
+    )
     .map((g) => ({ id: g.id, naam: g.naam }))
     .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
 
@@ -227,11 +232,31 @@ router.post("/declaraties/:id/doorzetten", beoordelen, async (req, res) => {
 
   // Doel moet een actieve beoordelaar zijn (fail-closed)
   const [doel] = await db
-    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol, actief: gebruikersTable.actief })
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      email: gebruikersTable.email,
+      storedBevoegdheden: gebruikersTable.bevoegdheden,
+      rol: gebruikersTable.rol,
+      actief: gebruikersTable.actief,
+    })
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, naarId))
     .limit(1);
-  const doelMagBeoordelen = doel?.actief && (doel.rol === "hoofdbeheerder" || heeftNiveau((doel.bevoegdheden as Record<string, number> | null) ?? {}, "declaraties", 3));
+  const doelEffectief = doel
+    ? (
+        await berekenEffectieveBevoegdhedenBatch([
+          {
+            id: doel.id,
+            rol: doel.rol,
+            storedBevoegdheden: doel.storedBevoegdheden,
+          },
+        ])
+      ).get(doel.id) ?? {}
+    : {};
+  const doelMagBeoordelen =
+    doel?.actief &&
+    (doel.rol === "hoofdbeheerder" || heeftNiveau(doelEffectief, "declaraties", 3));
   if (!doel || !doelMagBeoordelen) { res.status(422).json({ bericht: "Gekozen gebruiker kan geen declaraties beoordelen" }); return; }
 
   const [bijgewerkt] = await db
@@ -277,9 +302,9 @@ router.post("/declaraties/:id/doorzetten", beoordelen, async (req, res) => {
 router.get("/declaraties/:id", ...eigenGegevens, async (req, res) => {
   const id     = Number(req.params["id"]);
   const userId = req.session.userId!;
-  const bev    = await gebruikerBevoegdheden(userId);
-  const [g]    = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1);
-  const kanAlles = g?.rol === "hoofdbeheerder" || heeftNiveau(bev, "declaraties", 3);
+  const kanAlles =
+    req.permissies!.isHoofdbeheerder ||
+    req.permissies!.heeftModuleRecht("declaraties", 3);
 
   const [rij] = await db
     .select()
@@ -386,14 +411,28 @@ router.post("/declaraties/:id/indienen", ...eigenGegevens, async (req, res) => {
     const appUrl = basis ? `${basis}/declaraties/${id}` : null;
 
     const alleGebruikers = await db
-      .select({ id: gebruikersTable.id, email: gebruikersTable.email, naam: gebruikersTable.naam, bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
+      .select({
+        id: gebruikersTable.id,
+        email: gebruikersTable.email,
+        naam: gebruikersTable.naam,
+        storedBevoegdheden: gebruikersTable.bevoegdheden,
+        rol: gebruikersTable.rol,
+      })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.actief, true));
+    const effectieveBevoegdheden = await berekenEffectieveBevoegdhedenBatch(
+      alleGebruikers.map((g) => ({
+        id: g.id,
+        rol: g.rol,
+        storedBevoegdheden: g.storedBevoegdheden,
+      })),
+    );
 
     for (const b of alleGebruikers) {
       if (b.id === userId) continue;
-      const bev = (b.bevoegdheden as Record<string, number> | null) ?? {};
-      const magBeoordelen = b.rol === "hoofdbeheerder" || heeftNiveau(bev, "declaraties", 3);
+      const magBeoordelen =
+        b.rol === "hoofdbeheerder" ||
+        heeftNiveau(effectieveBevoegdheden.get(b.id) ?? {}, "declaraties", 3);
       if (!magBeoordelen) continue;
       await stuurDeclaratieIngediendMail({
         naarEmail:      b.email,

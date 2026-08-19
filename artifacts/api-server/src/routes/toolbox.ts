@@ -69,18 +69,6 @@ function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestig
   return base;
 }
 
-// Helper: heeft de ingelogde gebruiker HRM-leestoegang of is hoofdbeheerder?
-async function heeftBeperktArchiefToegang(userId: number): Promise<boolean> {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  if (!g) return false;
-  if (g.rol === "hoofdbeheerder") return true;
-  const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-  return (bev["personeel"] ?? 0) >= 1;
-}
-
 // ── GET /toolbox-berichten ────────────────────────────────────────────────────
 toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
@@ -149,7 +137,9 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res): Promise<v
   // Archief: filter niet-belangrijke berichten voor gebruikers zonder HRM-toegang
   let gefilterd = rows;
   if (filterGearchiveerd === true) {
-    const heeftToegang = await heeftBeperktArchiefToegang(userId);
+    const heeftToegang =
+      req.permissies!.isHoofdbeheerder ||
+      req.permissies!.heeftModuleRecht("personeel", 1);
     if (!heeftToegang) {
       gefilterd = rows.filter((r) => r.isBelangrijk === true);
     }

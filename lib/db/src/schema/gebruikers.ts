@@ -2,6 +2,11 @@ import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index, uniqu
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+// GEBRUIKERS_01 v2 — afwijkingstabel per gebruiker/module.
+// Baseline komt van functie→profiel; afwijkingen overrulen de baseline
+// per module. Bewuste afwijkingen worden beschermd tegen stil profiel-toepassen.
+// Append-only semantiek via de API: DELETE niet toegestaan zonder reden+actor.
+
 export const gebruikersTable = pgTable("gebruikers", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
@@ -164,6 +169,76 @@ export const externeAdviseursTable = pgTable("externe_adviseurs", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 export type ExterneAdviseur = typeof externeAdviseursTable.$inferSelect;
+
+// ── GEBRUIKERS_01 v2: Per-gebruiker/per-module afwijkingstabel ────────────────
+// Overrulet de functie-profiel baseline per module. Append-only log staat apart.
+export const gebruikerBevoegdheidAfwijkingenTable = pgTable(
+  "gebruiker_bevoegdheid_afwijkingen",
+  {
+    id: serial("id").primaryKey(),
+    gebruikerId: integer("gebruiker_id")
+      .notNull()
+      .references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    moduleId: text("module_id").notNull(),
+    niveau: integer("niveau").notNull(),
+    reden: text("reden").notNull(),
+    actorId: integer("actor_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+    actorNaam: text("actor_naam"),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("gba_gebruiker_module_unique").on(t.gebruikerId, t.moduleId),
+    index("gba_gebruiker_idx").on(t.gebruikerId),
+    index("gba_module_idx").on(t.moduleId),
+  ],
+);
+
+// ── GEBRUIKERS_01 v2: Append-only audit-log bevoegdheidswijzigingen ───────────
+// Elke afwijking, functie-toepassing of reset wordt hier vastgelegd.
+// Nooit updaten of verwijderen — append-only.
+export const bevoegdheidAuditLogTable = pgTable(
+  "bevoegdheid_audit_log",
+  {
+    id: serial("id").primaryKey(),
+    gebruikerId: integer("gebruiker_id")
+      .notNull()
+      .references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    moduleId: text("module_id"),
+    oudNiveau: integer("oud_niveau"),
+    nieuwNiveau: integer("nieuw_niveau"),
+    /** actie: afwijking_gezet | afwijking_verwijderd | functie_toegepast | reset */
+    actie: text("actie").notNull(),
+    reden: text("reden"),
+    actorId: integer("actor_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+    actorNaam: text("actor_naam"),
+    tijdstip: timestamp("tijdstip").notNull().defaultNow(),
+  },
+  (t) => [
+    index("bal_gebruiker_idx").on(t.gebruikerId),
+    index("bal_tijdstip_idx").on(t.tijdstip),
+  ],
+);
+
+export type GebruikerBevoegdheidAfwijking = typeof gebruikerBevoegdheidAfwijkingenTable.$inferSelect;
+export type BevoegdheidAuditLog = typeof bevoegdheidAuditLogTable.$inferSelect;
+
+// ── GEBRUIKERS_01 v2: Pre-migratie snapshot (additief, rollback-analyse) ──────
+// Volledige JSON-snapshot van functies + medewerker/aanstellingverwijzingen
+// vóór alle mutaties in migratie 0101. Nooit updaten of verwijderen.
+export const gebruikers01V2SnapshotTable = pgTable(
+  "gebruikers01_v2_snapshot",
+  {
+    id: serial("id").primaryKey(),
+    objectType: text("object_type").notNull(),
+    objectId: integer("object_id").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    vastgelegdOp: timestamp("vastgelegd_op").notNull().defaultNow(),
+  },
+  (t) => [
+    index("g01v2snap_type_idx").on(t.objectType),
+  ],
+);
+export type Gebruikers01V2Snapshot = typeof gebruikers01V2SnapshotTable.$inferSelect;
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({
   id: true,

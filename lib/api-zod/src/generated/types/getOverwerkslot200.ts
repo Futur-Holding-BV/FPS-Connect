@@ -8,6 +8,8 @@
 import type { OverwerkSlot } from './overwerkSlot';
 
 export type GetOverwerkslot200 = {
+  /** Server-authoritative beheerrecht (hoofdbeheerder of actieve functie Projectleider). */
+  mag_beheren: boolean;
   open_slot?: OverwerkSlot | null;
   sloten: OverwerkSlot[];
 };

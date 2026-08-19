@@ -24,6 +24,7 @@ import {
   opdrachtenTable,
 } from "@workspace/db/schema";
 import { vindGebruikersMetFunctietitel, meldAanWerkvoorbereiderMetCcProjectleider } from "../lib/bouwMeldingen";
+import { heeftFunctieNaam } from "../lib/functieNamen";
 
 import { berekenAdvVoorMedewerker, overwerkGrens } from "../lib/caoInstellingen";
 import { meldWerkbakItem } from "../lib/werkbakService";
@@ -1674,11 +1675,10 @@ router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res): Promi
 async function isProjectleiderOfHoofdbeheerder(req: import("express").Request): Promise<boolean> {
   if (req.permissies?.isHoofdbeheerder) return true;
   const userId = req.session.userId!;
-  const [rij] = await db
-    .select({ id: gebruikersTable.id })
-    .from(gebruikersTable)
-    .where(sql`${gebruikersTable.id} = ${userId} AND ${sql.raw("functietitels")} @> ARRAY['Projectleider']::text[]`);
-  return !!rij;
+  // GEBRUIKERS_01 v2: de projectleider-rol volgt uit de functie-inrichting
+  // (gekoppelde medewerker → hoofdfunctie + aanstellingen, alleen actieve
+  // functies, actief op vandaag), niet uit gebruikers.functietitels.
+  return heeftFunctieNaam(userId, ["Projectleider"]);
 }
 
 function mapSlot(s: typeof overwerkSlotenTable.$inferSelect, extra?: { geopendDoorNaam?: string | null }) {
@@ -1704,17 +1704,21 @@ function mapSlot(s: typeof overwerkSlotenTable.$inferSelect, extra?: { geopendDo
 // urenschrijver zodat de app kan tonen of het slot openstaat.
 router.get("/projecten/:id/overwerkslot", requireAuth, async (req, res): Promise<void> => {
   const projectId = Number(req.params.id);
-  const rows = await db
-    .select({ slot: overwerkSlotenTable, geopendDoorNaam: gebruikersTable.naam })
-    .from(overwerkSlotenTable)
-    .leftJoin(gebruikersTable, eq(overwerkSlotenTable.geopendDoorId, gebruikersTable.id))
-    .where(eq(overwerkSlotenTable.projectId, projectId))
-    .orderBy(desc(overwerkSlotenTable.id));
+  const [rows, magBeheren] = await Promise.all([
+    db
+      .select({ slot: overwerkSlotenTable, geopendDoorNaam: gebruikersTable.naam })
+      .from(overwerkSlotenTable)
+      .leftJoin(gebruikersTable, eq(overwerkSlotenTable.geopendDoorId, gebruikersTable.id))
+      .where(eq(overwerkSlotenTable.projectId, projectId))
+      .orderBy(desc(overwerkSlotenTable.id)),
+    isProjectleiderOfHoofdbeheerder(req),
+  ]);
   const vandaag = new Date().toISOString().slice(0, 10);
   const open = rows.find((r) =>
     r.slot.status === "open" && r.slot.geldigVan != null && r.slot.geldigTot != null &&
     vandaag >= r.slot.geldigVan && vandaag <= r.slot.geldigTot);
   res.json({
+    mag_beheren: magBeheren,
     open_slot: open ? mapSlot(open.slot, { geopendDoorNaam: open.geopendDoorNaam }) : null,
     sloten: rows.slice(0, 20).map((r) => mapSlot(r.slot, { geopendDoorNaam: r.geopendDoorNaam })),
   });

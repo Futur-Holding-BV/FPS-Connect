@@ -1,8 +1,8 @@
 // Bewijsscript GEBRUIKERS_01: toetst het echte geval — dienstverband oproep,
 // nul contracturen, bepaalde tijd van zes maanden — end-to-end via de API,
-// plus de profielenbron (§1) en het bewerken van profielen (§2, backend).
+// plus het Functiehuis als enige beheerbron en gesloten legacy profielmutaties.
 // Draaien: pnpm --filter @workspace/scripts exec tsx src/verificatie-gebruikers01.ts
-// Ruimt alle testdata (gebruiker, medewerker, contract, profiel) zelf op.
+// Ruimt alle testdata (gebruiker, medewerker, contract) zelf op.
 import "./lib/prodGuard";
 import {
   setupE2eWebAdminAccount,
@@ -84,35 +84,78 @@ async function main(): Promise<void> {
   eis(r2.status === 200, "2fa", `${r2.status}`);
   console.log("STAP 1 PASS — ingelogd");
 
-  // §1: één profielenbron — presets + zelfgemaakte, alle namen uit de opdracht aanwezig.
-  const pr = await s.get("/profielen");
-  const profielen = await json<any[]>(pr);
-  eis(pr.status === 200 && Array.isArray(profielen), "profielen ophalen", `${pr.status}`);
-  const namen = new Set(profielen.map((p) => p.naam));
-  const vereist = ["Onderhoudsmonteur", "Externe inhuur", "Planner", "Calculatie", "Directie", "Administratie", "Wagenparkbeheerder", "Magazijnbeheerder"];
+  // §1: één zichtbare beheerbron — functies met hun technische rechtenmatrix.
+  const pr = await s.get("/functies-v2");
+  const functiesV2 = await json<any[]>(pr);
+  eis(pr.status === 200 && Array.isArray(functiesV2), "Functiehuis ophalen", `${pr.status}`);
+  const namen = new Set(functiesV2.map((p) => p.naam));
+  const vereist = ["Onderhoudsmonteur", "Externe inhuur", "Planner", "Calculatie", "Directie", "Wagenparkbeheerder", "Magazijnbeheerder"];
   const ontbreekt = vereist.filter((n) => !namen.has(n));
-  eis(ontbreekt.length === 0, "presets aanwezig", `ontbreken in GET /profielen: ${ontbreekt.join(", ")}`);
-  const systeemAantal = profielen.filter((p) => p.systeem).length;
-  const eigenAantal = profielen.length - systeemAantal;
-  console.log(`STAP 2 PASS — GET /profielen: ${profielen.length} profielen (${systeemAantal} systeem, ${eigenAantal} zelfgemaakt); alle 8 eerder ontbrekende presets aanwezig`);
+  eis(ontbreekt.length === 0, "functies aanwezig", `ontbreken in GET /functies-v2: ${ontbreekt.join(", ")}`);
+  eis(functiesV2.every((f) => f.profiel_id != null), "expliciete rechtenkoppeling", "functie zonder profiel_id gevonden");
+  console.log(`STAP 2 PASS — GET /functies-v2: ${functiesV2.length} functies; alle geconsolideerde namen hebben een expliciete rechtenkoppeling`);
 
-  // §2 (backend): bewerken werkt op systeem- én zelfgemaakt profiel.
-  const sys = profielen.find((p) => p.systeem);
-  eis(!!sys, "systeemprofiel aanwezig", "geen systeemprofiel gevonden");
-  const rSys = await s.patch(`/profielen/${sys.id}`, { naam: sys.naam, groep: sys.groep ?? null, bevoegdheden: sys.bevoegdheden });
-  eis(rSys.status === 200, "systeemprofiel bewerken", `${rSys.status} ${JSON.stringify(await json(rSys))}`);
-  let eigenId: number | null = null;
-  try {
-    const rMaak = await s.post("/profielen", { naam: `GEBRUIKERS01-toets-${Date.now()}`, groep: null, bevoegdheden: { projecten: 1 } });
-    const eigen = await json<any>(rMaak);
-    eis(rMaak.status === 201 || rMaak.status === 200, "eigen profiel aanmaken", `${rMaak.status}`);
-    eigenId = eigen.id;
-    const rBewerk = await s.patch(`/profielen/${eigen.id}`, { naam: eigen.naam, groep: "Kantoor", bevoegdheden: { projecten: 2 } });
-    eis(rBewerk.status === 200, "eigen profiel bewerken", `${rBewerk.status}`);
-    console.log("STAP 3 PASS — bewerken werkt op systeemprofiel én zelfgemaakt profiel (PATCH 200)");
-  } finally {
-    if (eigenId != null) await s.del(`/profielen/${eigenId}`);
-  }
+  // §2: alleen Functiehuis mag muteren; losse profielmutaties zijn gesloten.
+  const voorbeeld = functiesV2[0];
+  eis(!!voorbeeld, "functie aanwezig", "geen functie gevonden");
+  const rFunctie = await s.patch(`/functies-v2/${voorbeeld.id}`, {
+    naam: voorbeeld.naam,
+    bevoegdheden: voorbeeld.bevoegdheden,
+  });
+  eis(rFunctie.status === 200, "functie bewerken", `${rFunctie.status} ${JSON.stringify(await json(rFunctie))}`);
+  const rProfielMaak = await s.post("/profielen", { naam: "vervallen", bevoegdheden: {} });
+  const rProfielBewerk = await s.patch(`/profielen/${voorbeeld.profiel_id}`, { naam: "vervallen", bevoegdheden: {} });
+  const rProfielVerwijder = await s.del(`/profielen/${voorbeeld.profiel_id}`);
+  const rProfielToepassen = await s.post(`/profielen/${voorbeeld.profiel_id}/toepassen`, {});
+  const rProfielenAanvullen = await s.post("/profielen/aanvullen", {});
+  const rProfielenSynchroniseren = await s.post("/profielen/synchroniseer-standaard", {});
+  const rProfielenAi = await s.post("/profielen/ai-voorstel", {});
+  const profielStatussen = [
+    rProfielMaak.status,
+    rProfielBewerk.status,
+    rProfielVerwijder.status,
+    rProfielToepassen.status,
+    rProfielenAanvullen.status,
+    rProfielenSynchroniseren.status,
+    rProfielenAi.status,
+  ];
+  eis(
+    profielStatussen.every((status) => status === 410),
+    "legacy profielmutaties gesloten",
+    profielStatussen.join("/"),
+  );
+  const rLegacyFunctieMaak = await s.post("/functies", { naam: "mag-niet-worden-aangemaakt" });
+  const rLegacyFunctieBewerk = await s.patch(`/functies/${voorbeeld.id}`, { actief: false });
+  eis(
+    rLegacyFunctieMaak.status === 410 && rLegacyFunctieBewerk.status === 410,
+    "legacy functiemutaties gesloten",
+    `${rLegacyFunctieMaak.status}/${rLegacyFunctieBewerk.status}`,
+  );
+  const rLegacyAccount = await s.post("/gebruikers", {
+    naam: "mag-niet-worden-aangemaakt",
+    email: `gebruikers01-legacy-${Date.now()}@fps.local`,
+    rol: "gebruiker",
+    bevoegdheden: { projecten: 4 },
+  });
+  const rLegacyOnboarding = await s.post("/medewerkers/onboarding-account", {
+    naam: "mag-niet-worden-aangemaakt",
+    email: `gebruikers01-profiel-${Date.now()}@fps.local`,
+    profiel_id: voorbeeld.profiel_id,
+  });
+  const herkomstStatussen = await Promise.all([
+    s.post("/gebruikers/1/herkomst-toepassen", {}).then((r) => r.status),
+    s.post("/gebruikers/1/herkomst-bevestigen", {}).then((r) => r.status),
+    s.post("/gebruikers/1/herkomst-verwijderen", {}).then((r) => r.status),
+    s.post("/gebruikers/herkomst-bevestigen-bulk", {}).then((r) => r.status),
+  ]);
+  eis(
+    rLegacyAccount.status === 410 &&
+      rLegacyOnboarding.status === 410 &&
+      herkomstStatussen.every((status) => status === 410),
+    "legacy accountrechten gesloten",
+    `${rLegacyAccount.status}/${rLegacyOnboarding.status}/${herkomstStatussen.join("/")}`,
+  );
+  console.log("STAP 3 PASS — functie bewerken werkt; alle legacy functie/profiel/accountrechtenmutaties geven 410");
 
   // §3: echte geval — oproep, 0 contracturen, bepaalde tijd van 6 maanden.
   const wegwerp = await maakWegwerpOnboardingGebruiker("GEBRUIKERS01 Toets");
@@ -120,7 +163,7 @@ async function main(): Promise<void> {
   const eind = plusMaanden(vandaag, 6);
   let medId: number | null = null;
   try {
-    const fRes = await s.get("/functies");
+    const fRes = await s.get("/functies-v2");
     const functies = await json<any[]>(fRes);
     eis(fRes.status === 200 && functies.length > 0, "functies", `${fRes.status}`);
 

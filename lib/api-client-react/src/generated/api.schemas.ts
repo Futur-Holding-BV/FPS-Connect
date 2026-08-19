@@ -4073,6 +4073,8 @@ export interface Gebruiker {
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
   bevoegdheden: GebruikerBevoegdheden;
+  /** GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de "bekijken als"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek. */
+  is_uitvoerend_veld?: boolean;
   /** @nullable */
   herkomst_profiel_id?: number | null;
   herkomst_automatisch?: boolean;
@@ -4521,14 +4523,11 @@ export interface MuisGebeurtenis {
 export interface MuisGebeurtenisBatch {
   gebeurtenissen: MuisGebeurtenis[];
 }
-
-export type GebruikerInputBevoegdheden = {[key: string]: number};
-
+export type FunctieMetRechtenBevoegdheden = {[key: string]: number};
 export interface GebruikerInput {
   naam: string;
   email: string;
   rol: string;
-  functietitels?: string[];
   telefoon?: string;
   bedrijf?: string;
   wachtwoord?: string;
@@ -4537,10 +4536,6 @@ export interface GebruikerInput {
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
   taal?: string;
-  bevoegdheden?: GebruikerInputBevoegdheden;
-  /** @nullable */
-  herkomst_profiel_id?: number | null;
-  profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
   /**
@@ -4549,14 +4544,11 @@ export interface GebruikerInput {
      */
   uitzendbureau_id?: number | null;
 }
-
-export type GebruikerUpdateBevoegdheden = {[key: string]: number};
-
+export type FunctieV2InputBevoegdheden = {[key: string]: number};
 export interface GebruikerUpdate {
   naam?: string;
   email?: string;
   rol?: string;
-  functietitels?: string[];
   telefoon?: string;
   bedrijf?: string;
   actief?: boolean;
@@ -4566,10 +4558,6 @@ export interface GebruikerUpdate {
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
   taal?: string;
-  bevoegdheden?: GebruikerUpdateBevoegdheden;
-  /** @nullable */
-  herkomst_profiel_id?: number | null;
-  profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
   /**
@@ -5826,7 +5814,6 @@ export interface FunctieInput {
   /** @nullable */
   profiel_id?: number | null;
   uitvoerend?: boolean;
-  actief?: boolean;
   /** @nullable */
   minimale_bezetting?: number | null;
 }
@@ -6311,7 +6298,7 @@ export interface MedewerkerInput {
 }
 
 /**
- * Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol "gebruiker". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).
+ * Invoer voor de accountstap van de één-flow onboarding; het account wordt least-privilege aangemaakt met rol "gebruiker". Rechten volgen pas uit de gekozen functie.
  */
 export interface OnboardingAccountInput {
   naam: string;
@@ -6320,11 +6307,6 @@ export interface OnboardingAccountInput {
   telefoon?: string | null;
   /** Verstuur direct een activatie-uitnodiging per e-mail. */
   uitnodigen?: boolean;
-  /**
-     * Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.
-     * @nullable
-     */
-  profiel_id?: number | null;
 }
 
 export interface OnboardingAccountResultaat {
@@ -6445,16 +6427,6 @@ export interface OnboardingContext {
      * @nullable
      */
   onboarding_versie?: number | null;
-  /**
-     * Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.
-     * @nullable
-     */
-  account_profiel_id?: number | null;
-  /**
-     * Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.
-     * @nullable
-     */
-  account_profiel_naam?: string | null;
 }
 
 export interface MedewerkerAanstelling {
@@ -6548,7 +6520,11 @@ export interface MedewerkerOnboardingInput {
   werkmaatschappij: string;
   /** Moet een bekende CAO zijn (zie /hrm/cao-opties). */
   cao: string;
-  /** Groter dan 0 en niet meer dan 40. */
+  /**
+     * Van 0 tot en met 48 uur; 0 is geldig voor oproep- en nulurencontracten.
+     * @minimum 0
+     * @maximum 48
+     */
   contracturen_per_week: number;
   /** Geldige datum (YYYY-MM-DD), niet in de toekomst. */
   in_dienst_sinds: string;
@@ -18226,6 +18202,7 @@ export interface HrmAiVoorstelBeoordelingInput {
   correctie_tekst?: string | null;
 }
 
+export type FunctieMetRechtenBevoegdheden = {[key: string]: number};
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -18467,31 +18444,10 @@ monteur_id?: number;
 start_datum?: string;
 eind_datum?: string;
 };
-
-export type GebruikerHerkomstBevestigenBulk200 = {
-  /** Aantal bevestigde koppelingen */
-  bevestigd: number;
-};
-
 export type GebruikersAanvullen200 = {
   gebruikers_aangevuld: number;
   sleutels_toegevoegd: number;
 };
-
-export type ProfielenAanvullen200 = {
-  profielen_aangevuld: number;
-  sleutels_toegevoegd: number;
-};
-
-export type SynchroniseerStandaardProfielen200 = {
-  aangemaakt: number;
-  bijgewerkt: number;
-};
-
-export type ProfielToepassen200 = {
-  bijgewerkt: number;
-};
-
 export type ListGoedkeuringBeleidsregelsParams = {
 document_type?: string;
 };
@@ -18705,6 +18661,12 @@ bestemming?: string;
 gebouw_id?: number;
 };
 
+export type ListFunctiesV2Params = {
+/**
+ * Inclusief inactieve functies meenemen
+ */
+inclusief_inactief?: boolean;
+};
 export type CreateWervingVraagBody = {
   vraag: string;
 };
@@ -19149,6 +19111,8 @@ week?: number;
 };
 
 export type GetOverwerkslot200 = {
+  /** Server-authoritative beheerrecht (hoofdbeheerder of actieve functie Projectleider). */
+  mag_beheren: boolean;
   open_slot?: OverwerkSlot | null;
   sloten: OverwerkSlot[];
 };
@@ -19882,3 +19846,143 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+
+export type AfwijkingenResultaatEffectieveBevoegdheden = {[key: string]: number};
+
+export type AfwijkingenVervangInputAfwijkingenItem = {
+  module_id: string;
+  niveau: number;
+};
+
+export type FunctieV2UpdateBevoegdheden = {[key: string]: number};
+
+export interface FunctieRechtenToepassenInput {
+  /** @minLength 1 */
+  reden: string;
+  actor_id?: number;
+  bewuste_afwijkingen_wissen?: boolean;
+}
+
+export interface FunctieMetRechten {
+  id: number;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  taken?: string | null;
+  /** @nullable */
+  verantwoordelijkheden?: string | null;
+  /** @nullable */
+  competenties?: string | null;
+  /** @nullable */
+  opleidingsvereisten?: string | null;
+  /** @nullable */
+  doorgroeipad?: string | null;
+  uitvoerend: boolean;
+  actief: boolean;
+  /** @nullable */
+  minimale_bezetting?: number | null;
+  /** @nullable */
+  profiel_id?: number | null;
+  bevoegdheden: FunctieMetRechtenBevoegdheden;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type GebruikerBevoegdhedenV2FunctieBaseline = {[key: string]: number};
+
+export interface AfwijkingenVervangInput {
+  afwijkingen: AfwijkingenVervangInputAfwijkingenItem[];
+  /** @minLength 1 */
+  reden: string;
+  actor_id?: number;
+}
+
+export interface FunctieV2Update {
+  /** @minLength 1 */
+  naam?: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  taken?: string | null;
+  /** @nullable */
+  verantwoordelijkheden?: string | null;
+  /** @nullable */
+  competenties?: string | null;
+  /** @nullable */
+  opleidingsvereisten?: string | null;
+  /** @nullable */
+  doorgroeipad?: string | null;
+  uitvoerend?: boolean;
+  actief?: boolean;
+  /** @nullable */
+  minimale_bezetting?: number | null;
+  bevoegdheden?: FunctieV2UpdateBevoegdheden;
+}
+
+export type AfwijkingenResultaatFunctieBaseline = {[key: string]: number};
+
+export interface GebruikerBevoegdhedenV2 {
+  gebruiker_id: number;
+  naam: string;
+  functie_baseline: GebruikerBevoegdhedenV2FunctieBaseline;
+  afwijkingen: BevoegdheidAfwijking[];
+  effectieve_bevoegdheden: GebruikerBevoegdhedenV2EffectieveBevoegdheden;
+}
+
+export interface BevoegdheidAfwijking {
+  module_id: string;
+  niveau: number;
+  reden: string;
+  /** @nullable */
+  actor_id?: number | null;
+  /** @nullable */
+  actor_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export type FunctieV2InputBevoegdheden = {[key: string]: number};
+
+export type GebruikerBevoegdhedenV2EffectieveBevoegdheden = {[key: string]: number};
+
+export interface AfwijkingenResultaat {
+  gebruiker_id: number;
+  functie_baseline?: AfwijkingenResultaatFunctieBaseline;
+  bewuste_afwijkingen_gewist?: boolean;
+  afwijkingen: BevoegdheidAfwijking[];
+  effectieve_bevoegdheden: AfwijkingenResultaatEffectieveBevoegdheden;
+}
+
+export interface BevoegdheidAuditLogRegel {
+  id: number;
+  gebruiker_id: number;
+  /** @nullable */
+  module_id?: string | null;
+  /** @nullable */
+  oud_niveau?: number | null;
+  /** @nullable */
+  nieuw_niveau?: number | null;
+  actie: string;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  actor_id?: number | null;
+  /** @nullable */
+  actor_naam?: string | null;
+  tijdstip: string;
+}
+
+export interface FunctieV2Input {
+  /** @minLength 1 */
+  naam: string;
+  omschrijving?: string;
+  taken?: string;
+  verantwoordelijkheden?: string;
+  competenties?: string;
+  opleidingsvereisten?: string;
+  doorgroeipad?: string;
+  uitvoerend?: boolean;
+  actief?: boolean;
+  minimale_bezetting?: number;
+  bevoegdheden?: FunctieV2InputBevoegdheden;
+}

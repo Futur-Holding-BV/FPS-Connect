@@ -25,11 +25,17 @@ import {
 } from "../lib/herkomst";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
 import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
+import { berekenIsUitvoerendVeldBatch } from "../lib/is-uitvoerend-veld";
+import {
+  haalActieveFunctieNamen,
+  haalActieveFunctieNamenBatch,
+} from "../lib/functieNamen";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { genereerTijdelijkWachtwoord } from "../lib/wachtwoord";
 import { logAudit } from "../lib/audit";
 
 const router = Router();
+const legacyRechtenbeheerIsVervallen = () => true;
 
 const alleenBeheerder = requireBevoegdheid("gebruikers", 4);
 const lezenGebruikers = requireBevoegdheid("gebruikers", 1);
@@ -47,63 +53,44 @@ const lezenToewijsbaar = requireEnigeBevoegdheid([
   ["personeel", 1],
 ]);
 
-// De enige toegestane projectfuncties (profiel) voor een beheerder.
-const FUNCTIETITELS_TOEGESTAAN = [
-  "Projectleider",
-  "Werkvoorbereider",
-  "Project-admin",
-  "Calculator",
-  "Commercie",
-  "Financieel",
-];
-
-// Veld-functies voor medewerkers met rol "gebruiker" (buitendienst en staf).
-// Maximaal één per gebruiker; komt overeen met de FUNCTIE_GROEPEN in de frontend.
-const VELD_FUNCTIETITELS_TOEGESTAAN = [
-  "Projectleider",
-  "Werkvoorbereider",
-  "Project-admin",
-  "Uitvoerder",
-  "Monteur",
-  "Timmerman",
-  "Controleur",
-  "Commercieel",
-  "Financieel",
-  "Externe boekhouder",
-  "HRM-adviseur",
-];
-
 const isBeheerderRol = (rol: unknown) => rol === "hoofdbeheerder";
 
-// Normaliseer en valideer projectfuncties: alleen toegestane waarden, ontdubbeld.
-const schoonFunctietitels = (waarde: unknown): string[] => {
-  if (!Array.isArray(waarde)) return [];
-  const uniek = new Set(
-    waarde
-      .filter((f): f is string => typeof f === "string")
-      .map((f) => f.trim())
-      .filter((f) => FUNCTIETITELS_TOEGESTAAN.includes(f)),
+// Accountmutaties mogen functies/rechten niet meer als vrij veld schrijven.
+// Deze lege compatibiliteitsnormalisatie wordt alleen nog gebruikt wanneer een
+// accountrol wisselt en wist dan oude presentatiedata.
+const schoonFunctietitels = (_waarde?: unknown): string[] => [];
+const schoonVeldFunctietitels = (_waarde?: unknown): string[] => [];
+
+const VERVALLEN_ACCOUNT_RECHTENVELDEN = [
+  "functietitels",
+  "bevoegdheden",
+  "herkomst_profiel_id",
+  "profiel_ids",
+] as const;
+
+function bevatVervallenRechtenvelden(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  return VERVALLEN_ACCOUNT_RECHTENVELDEN.some((veld) =>
+    Object.prototype.hasOwnProperty.call(body, veld),
   );
-  return [...uniek];
-};
+}
 
-// Normaliseer en valideer veld-functietitels: maximaal één toegestane waarde.
-const schoonVeldFunctietitels = (waarde: unknown): string[] => {
-  if (!Array.isArray(waarde)) return [];
-  const geldig = waarde
-    .filter((f): f is string => typeof f === "string")
-    .map((f) => f.trim())
-    .filter((f) => VELD_FUNCTIETITELS_TOEGESTAAN.includes(f));
-  return geldig.slice(0, 1);
-};
-
-const mapGebruiker = (g: typeof gebruikersTable.$inferSelect, profielIds?: number[]) => ({
+const mapGebruiker = (
+  g: typeof gebruikersTable.$inferSelect,
+  profielIds?: number[],
+  isUitvoerendVeld?: boolean,
+  actueleFunctienamen?: string[],
+) => ({
   profiel_ids: profielIds,
   id: g.id,
   naam: g.naam,
   email: g.email,
   rol: g.rol,
-  functietitels: g.functietitels ?? [],
+  // Tijdelijke responsnaam voor clientcompatibiliteit; inhoud komt uit actieve
+  // HRM-functies en aanstellingen, nooit meer uit gebruikers.functietitels.
+  functietitels: actueleFunctienamen ?? [],
+  // GEBRUIKERS_01 v2: server-berekende buitendienst-vlag; voedt "bekijken als".
+  is_uitvoerend_veld: isUitvoerendVeld ?? false,
   telefoon: g.telefoon,
   bedrijf: g.bedrijf,
   actief: g.actief,
@@ -144,12 +131,15 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect, profielIds?: numbe
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
 // (nodig voor toewijzings- en naamweergave), maar e-mail, telefoon, bedrijf en
 // uitnodigingsgegevens worden weggelaten.
-const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
+const mapGebruikerPubliek = (
+  g: typeof gebruikersTable.$inferSelect,
+  actueleFunctienamen: string[] = [],
+) => ({
   id: g.id,
   naam: g.naam,
   email: "",
   rol: g.rol,
-  functietitels: g.functietitels ?? [],
+  functietitels: actueleFunctienamen,
   telefoon: null,
   bedrijf: null,
   actief: g.actief,
@@ -269,12 +259,33 @@ function domein(): string {
 router.get("/gebruikers", lezenGebruikers, async (req, res): Promise<void> => {
   try {
     const gebruikers = await db.select().from(gebruikersTable);
+    const functieKaart = await haalActieveFunctieNamenBatch(
+      gebruikers.map((g) => g.id),
+    );
     const volledig = await isBeheerder(req.session.userId);
     if (!volledig) {
-      return void res.json(gebruikers.map((g) => mapGebruikerPubliek(g)));
+      return void res.json(
+        gebruikers.map((g) =>
+          mapGebruikerPubliek(g, [...(functieKaart.get(g.id) ?? [])]),
+        ),
+      );
     }
     const koppel = await profielIdsPerGebruiker(gebruikers.map((g) => g.id));
-    res.json(gebruikers.map((g) => mapGebruiker(g, koppel.get(g.id) ?? [])));
+    // GEBRUIKERS_01 v2: batch-berekening van is_uitvoerend_veld (geen N+1) zodat
+    // "bekijken als" de juiste buitendienst-vlag per teamlid meekrijgt.
+    const uitvoerendKaart = await berekenIsUitvoerendVeldBatch(
+      gebruikers.map((g) => ({ id: g.id, rol: g.rol })),
+    );
+    res.json(
+      gebruikers.map((g) =>
+        mapGebruiker(
+          g,
+          koppel.get(g.id) ?? [],
+          uitvoerendKaart.get(g.id) ?? false,
+          [...(functieKaart.get(g.id) ?? [])],
+        ),
+      ),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -298,6 +309,9 @@ router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res): Promis
       })
       .from(gebruikersTable)
       .orderBy(gebruikersTable.naam);
+    const functieKaart = await haalActieveFunctieNamenBatch(
+      rijen.filter((g) => g.actief).map((g) => g.id),
+    );
     res.json(
       rijen
         .filter((g) => g.actief)
@@ -305,7 +319,7 @@ router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res): Promis
           id: g.id,
           naam: g.naam,
           rol: g.rol,
-          functietitels: g.functietitels ?? [],
+          functietitels: [...(functieKaart.get(g.id) ?? [])],
         })),
     );
   } catch (err) {
@@ -317,6 +331,12 @@ router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res): Promis
 // POST /gebruikers
 router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
   try {
+    if (bevatVervallenRechtenvelden(req.body)) {
+      return void res.status(410).json({
+        error:
+          "Functie en rechten worden via HRM-aanstellingen en Personeel > Functiehuis beheerd, niet op het gebruikersaccount.",
+      });
+    }
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
@@ -440,13 +460,20 @@ router.get("/gebruikers/:id", async (req, res): Promise<void> => {
     if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     // Beheerders en het eigen account zien volledige gegevens; anderen alleen veilig.
     const volledig = id === req.session.userId || (await isBeheerder(req.session.userId));
-    if (!volledig) return void res.json(mapGebruikerPubliek(g));
-    const [koppel, effectieveBev] = await Promise.all([
+    const functieNamen = [...(await haalActieveFunctieNamen(id))];
+    if (!volledig) return void res.json(mapGebruikerPubliek(g, functieNamen));
+    const [koppel, effectieveBev, uitvoerendKaart] = await Promise.all([
       profielIdsPerGebruiker([id]),
       berekenEffectieveBevoegdheden(id),
+      berekenIsUitvoerendVeldBatch([{ id: g.id, rol: g.rol }]),
     ]);
     res.json({
-      ...mapGebruiker(g, koppel.get(id) ?? []),
+      ...mapGebruiker(
+        g,
+        koppel.get(id) ?? [],
+        uitvoerendKaart.get(id) ?? false,
+        functieNamen,
+      ),
       effectieve_bevoegdheden: effectieveBev,
     });
   } catch (err) {
@@ -458,6 +485,12 @@ router.get("/gebruikers/:id", async (req, res): Promise<void> => {
 // PATCH /gebruikers/:id
 router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void> => {
   try {
+    if (bevatVervallenRechtenvelden(req.body)) {
+      return void res.status(410).json({
+        error:
+          "Functie en rechten worden via HRM-aanstellingen en auditeerbare afwijkingen beheerd, niet op het gebruikersaccount.",
+      });
+    }
     const id = parseInt(String(req.params.id), 10);
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
@@ -996,6 +1029,12 @@ router.post(
   "/gebruikers/:id/herkomst-toepassen",
   requireRol("hoofdbeheerder"),
   async (req, res): Promise<void> => {
+    if (legacyRechtenbeheerIsVervallen()) {
+      return void res.status(410).json({
+        error:
+          "Herkomstprofielen zijn vervallen. Gebruik de auditeerbare functie-rechtenflow.",
+      });
+    }
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
@@ -1043,6 +1082,12 @@ router.post(
   "/gebruikers/:id/herkomst-bevestigen",
   requireRol("hoofdbeheerder"),
   async (req, res): Promise<void> => {
+    if (legacyRechtenbeheerIsVervallen()) {
+      return void res.status(410).json({
+        error:
+          "Herkomstprofielen zijn vervallen. Rechten volgen uit functies en bewuste persoonlijke afwijkingen.",
+      });
+    }
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
@@ -1080,6 +1125,12 @@ router.post(
   "/gebruikers/:id/herkomst-verwijderen",
   requireRol("hoofdbeheerder"),
   async (req, res): Promise<void> => {
+    if (legacyRechtenbeheerIsVervallen()) {
+      return void res.status(410).json({
+        error:
+          "Herkomstprofielen zijn vervallen. Rechten volgen uit functies en bewuste persoonlijke afwijkingen.",
+      });
+    }
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
@@ -1114,6 +1165,12 @@ router.post(
   "/gebruikers/herkomst-bevestigen-bulk",
   requireRol("hoofdbeheerder"),
   async (req, res): Promise<void> => {
+    if (legacyRechtenbeheerIsVervallen()) {
+      return void res.status(410).json({
+        error:
+          "Herkomstprofielen zijn vervallen. Rechten volgen uit functies en bewuste persoonlijke afwijkingen.",
+      });
+    }
     try {
       const ruweIds = (req.body as { ids?: unknown })?.ids;
       let ids: number[] | null = null;

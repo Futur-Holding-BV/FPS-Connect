@@ -18,6 +18,8 @@ import {
 } from "../lib/lockout";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
+import { berekenIsUitvoerendVeld as berekenIsUitvoerendVeldViaDb } from "../lib/is-uitvoerend-veld";
+import { haalActieveFunctieNamen } from "../lib/functieNamen";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -161,36 +163,15 @@ authenticator.options = { window: 1 };
 
 const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
 
-/**
- * Enige bron van waarheid voor de buitendienst-functietitels.
- * Web-app (via rol-context) en monteur-app (via is_uitvoerend_veld in de
- * auth-payload) lezen allebei uit deze serversijde definitie — nooit meer
- * lokale kopiëen bijhouden.
- */
-const UITVOERENDE_FUNCTIES_AUTH = [
-  "Monteur",
-  "Timmerman",
-  "Uitvoerder",
-  "Onderhoudsmonteur",
-] as const;
-
-function berekenIsUitvoerendVeld(g: {
-  rol?: string | null;
-  functietitels?: string[] | null;
-}): boolean {
-  if (g.rol === "hoofdbeheerder") return false;
-  const titels = g.functietitels ?? [];
-  return (
-    titels.length > 0 &&
-    titels.every((f) =>
-      (UITVOERENDE_FUNCTIES_AUTH as readonly string[]).includes(f),
-    )
-  );
-}
+// GEBRUIKERS_01 v2: is_uitvoerend_veld wordt centraal berekend in
+// ../lib/is-uitvoerend-veld (berekenIsUitvoerendVeldViaDb = single-variant).
+// Zo delen auth-routes en GET /gebruikers exact dezelfde fail-closed-logica.
 
 const mapAuthGebruiker = (
   g: typeof gebruikersTable.$inferSelect,
   effectieveBev?: Record<string, number>,
+  isUitvoerendVeld?: boolean,
+  actueleFunctienamen: string[] = [],
 ) => ({
   id: g.id,
   naam: g.naam,
@@ -200,15 +181,12 @@ const mapAuthGebruiker = (
   avatar_url: g.avatarUrl ?? null,
   bedrijfskleuren: g.bedrijfskleuren ?? null,
   taal: g.taal ?? "nl",
-  functietitels: g.functietitels ?? [],
+  functietitels: actueleFunctienamen,
   bevoegdheden: effectieveBev ?? (g.bevoegdheden as Record<string, number>) ?? {},
   is_hoofdtester: g.isHoofdtester ?? false,
   moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
-  /** Server-berekende vlag: gebruiker is puur uitvoerend veld (monteur/timmerman/…). */
-  is_uitvoerend_veld: berekenIsUitvoerendVeld({
-    rol: g.rol,
-    functietitels: g.functietitels,
-  }),
+  /** Server-berekende vlag via functies.uitvoerend op actuele aanstellingen (GEBRUIKERS_01 v2). */
+  is_uitvoerend_veld: isUitvoerendVeld ?? false,
 });
 
 function vergrendeldRespons(vergrendeldTot: Date) {
@@ -469,8 +447,11 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
       userAgent: verzoekUserAgent(req),
       gelukt: true,
     });
-    const bev = await berekenEffectieveBevoegdheden(g!.id);
-    res.json({ ...mapAuthGebruiker(g, bev), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    const [bev, uitvoerend] = await Promise.all([
+      berekenEffectieveBevoegdheden(g!.id),
+      berekenIsUitvoerendVeldViaDb(g!.id, g!.rol),
+    ]);
+    res.json({ ...mapAuthGebruiker(g, bev, uitvoerend, [...(await haalActieveFunctieNamen(g.id))]), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -542,8 +523,11 @@ router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<voi
     });
     // Auth-routes worden bewust NIET geauditlogd — wachtwoorden, tokens en
     // TOTP-secrets mogen nooit in audit_log terechtkomen.
-    const bev2fa = await berekenEffectieveBevoegdheden(g.id);
-    res.json({ ...mapAuthGebruiker(g, bev2fa), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    const [bev2fa, uitvoerend2fa] = await Promise.all([
+      berekenEffectieveBevoegdheden(g.id),
+      berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+    ]);
+    res.json({ ...mapAuthGebruiker(g, bev2fa, uitvoerend2fa, [...(await haalActieveFunctieNamen(g.id))]), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -608,10 +592,13 @@ router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
     const token = maakToken(g.id, g.tokenVersie);
-    const bevMobiel = await berekenEffectieveBevoegdheden(g.id);
+    const [bevMobiel, uitvoerendMobiel] = await Promise.all([
+      berekenEffectieveBevoegdheden(g.id),
+      berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+    ]);
     return void res.json({
       token,
-      gebruiker: mapAuthGebruiker(g, bevMobiel),
+      gebruiker: mapAuthGebruiker(g, bevMobiel, uitvoerendMobiel, [...(await haalActieveFunctieNamen(g.id))]),
     });
   } catch (err) {
     req.log.error(err);
@@ -788,8 +775,11 @@ router.post("/auth/taal", async (req, res): Promise<void> => {
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
-    const bevTaal = await berekenEffectieveBevoegdheden(g.id);
-    res.json(mapAuthGebruiker(g, bevTaal));
+    const [bevTaal, uitvoerendTaal] = await Promise.all([
+      berekenEffectieveBevoegdheden(g.id),
+      berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+    ]);
+    res.json(mapAuthGebruiker(g, bevTaal, uitvoerendTaal, [...(await haalActieveFunctieNamen(g.id))]));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -939,8 +929,11 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       req.session.destroy(() => {});
       return void res.status(401).json({ error: "Niet ingelogd" });
     }
-    const bevMe = await berekenEffectieveBevoegdheden(g.id);
-    res.json(mapAuthGebruiker(g, bevMe));
+    const [bevMe, uitvoerendMe] = await Promise.all([
+      berekenEffectieveBevoegdheden(g.id),
+      berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+    ]);
+    res.json(mapAuthGebruiker(g, bevMe, uitvoerendMe, [...(await haalActieveFunctieNamen(g.id))]));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

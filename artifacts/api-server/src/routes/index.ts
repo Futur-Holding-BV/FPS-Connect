@@ -139,6 +139,7 @@ import marketingRouter, { marketingPubliekRouter } from "./marketing";
 import socialRouter from "./social";
 import merkenkastRouter from "./merkenkast";
 import beeldbankRouter from "./beeldbank";
+import functiesV2Router from "./functies-v2";
 
 const router: IRouter = Router();
 
@@ -198,6 +199,7 @@ router.use(inboxRouter);
 router.use(emailsRouter);
 router.use(profielenRouter);
 router.use(hrmRouter);
+router.use(functiesV2Router);
 router.use(externeAdviseursRouter);
 router.use(uitzendbureauKoppelingenRouter);
 router.use(hrmWizardRouter);

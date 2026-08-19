@@ -3,6 +3,7 @@ import { DATUMVELDEN_MEDEWERKER, isRedelijkeDatum } from "../lib/datumSaniteit";
 import {
   db,
   medewerkersTable,
+  medewerkerAanstellingenTable,
   medewerkerDocumentenTable,
   gebruikersTable,
   hrmMiddelenTable,
@@ -19,6 +20,7 @@ import {
   HERVATBARE_ONBOARDING_STATUSSEN,
   isHervatbareOnboardingStatus,
 } from "../lib/hrmOnboardingStatus";
+import { controleerFunctiesVoorActor } from "../lib/functie-rechten-autorisatie";
 
 const router = Router();
 
@@ -429,42 +431,83 @@ router.patch("/medewerkers/ai-voorstellen/:voorstelId", schrijven, async (req, r
 
   const gebruikerId: number | null = req.session.userId ?? null;
 
+  const [huidig] = await db
+    .select()
+    .from(hrmAiVoorstellenTable)
+    .where(eq(hrmAiVoorstellenTable.id, voorstelId));
+  if (!huidig) return void res.status(404).json({ error: "Voorstel niet gevonden" });
+
   // Fail-closed: goedkeuren zonder over te nemen waarde is betekenisloos.
   if (status === "goedgekeurd") {
-    const [huidig] = await db
-      .select({ voorgesteldeWaarde: hrmAiVoorstellenTable.voorgesteldeWaarde })
-      .from(hrmAiVoorstellenTable)
-      .where(eq(hrmAiVoorstellenTable.id, voorstelId));
-    if (!huidig) return void res.status(404).json({ error: "Voorstel niet gevonden" });
     if (!huidig.voorgesteldeWaarde?.trim() && !correctie_tekst?.trim()) {
       return void res.status(422).json({
         error: "Dit voorstel heeft geen waarde om over te nemen. Vul een waarde in via 'Waarde invullen en overnemen', of wijs het af.",
       });
     }
-  }
-
-  const [bijgewerkt] = await db
-    .update(hrmAiVoorstellenTable)
-    .set({
-      status,
-      correctieTekst: correctie_tekst ?? null,
-      beoordeeldDoorId: gebruikerId,
-      beoordeeldOp: new Date(),
-      bijgewerktOp: new Date(),
-    })
-    .where(eq(hrmAiVoorstellenTable.id, voorstelId))
-    .returning();
-
-  if (!bijgewerkt) return void res.status(404).json({ error: "Voorstel niet gevonden" });
-
-  // Bij goedkeuren: voorstel doorvoeren naar medewerker-veld
-  if (status === "goedgekeurd" && (bijgewerkt.voorgesteldeWaarde?.trim() || bijgewerkt.correctieTekst?.trim())) {
-    try {
-      await voerVoorstelDoor(bijgewerkt.medewerkerId, bijgewerkt.veld, bijgewerkt.voorgesteldeWaarde ?? "", bijgewerkt.correctieTekst);
-    } catch (err) {
-      logger.warn({ err, voorstelId }, "Voorstel goedgekeurd maar doorvoer mislukt");
+    const werkelijkeWaarde = correctie_tekst?.trim() || huidig.voorgesteldeWaarde?.trim() || "";
+    if (
+      (DATUMVELDEN_MEDEWERKER as readonly string[]).includes(huidig.veld) &&
+      !isRedelijkeDatum(werkelijkeWaarde)
+    ) {
+      return void res.status(422).json({
+        error: `Voorstel voor '${huidig.veld}' is geen geldige datum (JJJJ-MM-DD, jaartal 1900\u20132100).`,
+      });
+    }
+    if (huidig.veld === "in_dienst_sinds") {
+      const [medewerker] = await db
+        .select({
+          id: medewerkersTable.id,
+          functieId: medewerkersTable.functieId,
+          inDienstSinds: medewerkersTable.inDienstSinds,
+        })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.id, huidig.medewerkerId));
+      if (!medewerker) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+      if (medewerker.inDienstSinds !== werkelijkeWaarde) {
+        const aanstellingen = await db
+          .select({ functieId: medewerkerAanstellingenTable.functieId })
+          .from(medewerkerAanstellingenTable)
+          .where(eq(medewerkerAanstellingenTable.medewerkerId, medewerker.id));
+        const controle = await controleerFunctiesVoorActor(req.permissies, [
+          medewerker.functieId,
+          ...aanstellingen.map((aanstelling) => aanstelling.functieId),
+        ]);
+        if (!controle.ok) {
+          return void res.status(controle.status).json(controle.body);
+        }
+      }
     }
   }
+
+  const bijgewerkt = await db.transaction(async (tx) => {
+    const [voorstel] = await tx
+      .update(hrmAiVoorstellenTable)
+      .set({
+        status,
+        correctieTekst: correctie_tekst ?? null,
+        beoordeeldDoorId: gebruikerId,
+        beoordeeldOp: new Date(),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(hrmAiVoorstellenTable.id, voorstelId))
+      .returning();
+    if (!voorstel) return null;
+
+    if (
+      status === "goedgekeurd" &&
+      (voorstel.voorgesteldeWaarde?.trim() || voorstel.correctieTekst?.trim())
+    ) {
+      await voerVoorstelDoor(
+        voorstel.medewerkerId,
+        voorstel.veld,
+        voorstel.voorgesteldeWaarde ?? "",
+        voorstel.correctieTekst,
+        tx,
+      );
+    }
+    return voorstel;
+  });
+  if (!bijgewerkt) return void res.status(404).json({ error: "Voorstel niet gevonden" });
 
   // Audit trail
   try {
@@ -480,7 +523,15 @@ router.patch("/medewerkers/ai-voorstellen/:voorstelId", schrijven, async (req, r
   return void res.json(mapAiVoorstel(bijgewerkt));
 });
 
-async function voerVoorstelDoor(medewerkerId: number, veld: string, waarde: string, correctieTekst?: string | null): Promise<void> {
+type HrmWizardDb = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function voerVoorstelDoor(
+  medewerkerId: number,
+  veld: string,
+  waarde: string,
+  correctieTekst?: string | null,
+  uitvoerder: HrmWizardDb = db,
+): Promise<void> {
   const werkelijkeWaarde = correctieTekst?.trim() || waarde;
 
   const kolomMap: Record<string, keyof typeof medewerkersTable.$inferInsert> = {
@@ -513,7 +564,7 @@ async function voerVoorstelDoor(medewerkerId: number, veld: string, waarde: stri
     throw new Error(`Voorstel voor '${veld}' is geen geldige datum (JJJJ-MM-DD, jaartal 1900\u20132100): ${werkelijkeWaarde}`);
   }
 
-  await db
+  await uitvoerder
     .update(medewerkersTable)
     .set({ [kolom]: werkelijkeWaarde, bijgewerktOp: new Date() } as Partial<typeof medewerkersTable.$inferInsert>)
     .where(eq(medewerkersTable.id, medewerkerId));

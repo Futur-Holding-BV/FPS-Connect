@@ -23,8 +23,10 @@ import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { TOOLBOX_ANALYSE_PROMPT, TOOLBOX_KOPPELING_PROMPT, TOOLBOX_GENEREER_PROMPT, LMRA_VOORSTEL_PROMPT, INCIDENT_REGISTRATIE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit.js";
+import { heeftFunctieNaam } from "../lib/functieNamen.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { logger } from "../lib/logger.js";
+import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdheden";
 
 const objectStorage = new ObjectStorageService();
 
@@ -1910,13 +1912,10 @@ const BOUW_FUNCTIES = [
 ];
 
 async function isBouwGebruiker(userId: number): Promise<boolean> {
-  const [g] = await db
-    .select({ functietitels: gebruikersTable.functietitels })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId))
-    .limit(1);
-  const titels = g?.functietitels ?? [];
-  return titels.some((t) => BOUW_FUNCTIES.includes(t));
+  // GEBRUIKERS_01 v2: bouw-functie volgt uit de functie-inrichting van de
+  // gekoppelde medewerker (hoofdfunctie + aanstellingen, alleen actieve
+  // functies, actief op vandaag), niet uit gebruikers.functietitels.
+  return heeftFunctieNaam(userId, BOUW_FUNCTIES);
 }
 
 veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res): Promise<void> => {
@@ -2135,14 +2134,23 @@ veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res
     // Notificeer projectleiders (offertes:2+) — fire-and-forget
     if (isMailGeconfigureerd()) {
       const allGebruikers = await db.select({
+        id: gebruikersTable.id,
         email: gebruikersTable.email,
         naam: gebruikersTable.naam,
-        bevoegdheden: gebruikersTable.bevoegdheden,
+        rol: gebruikersTable.rol,
+        storedBevoegdheden: gebruikersTable.bevoegdheden,
       }).from(gebruikersTable).where(isNotNull(gebruikersTable.email));
+      const effectieveBevoegdheden = await berekenEffectieveBevoegdhedenBatch(
+        allGebruikers.map((g) => ({
+          id: g.id,
+          rol: g.rol,
+          storedBevoegdheden: g.storedBevoegdheden,
+        })),
+      );
 
       const plOntvangers = allGebruikers.filter(g => {
-        const bev = g.bevoegdheden as Record<string, number> | null;
-        return (bev?.["offertes"] ?? 0) >= 2 && g.email;
+        const bev = effectieveBevoegdheden.get(g.id) ?? {};
+        return (g.rol === "hoofdbeheerder" || (bev["offertes"] ?? 0) >= 2) && g.email;
       });
 
       const typeLabel = type === "bijna_ongeval" ? "Bijna-Ongeval" : "Ongeval";

@@ -9,25 +9,25 @@ import {
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
   useActivatielinkGenereren,
-  useGebruikerHerkomstToepassen,
-  useGebruikerHerkomstBevestigen,
-  useGebruikerHerkomstBevestigenBulk,
-  useGebruikerHerkomstVerwijderen,
   useGebruikersAanvullen,
   useGebruikerWachtwoordResetten,
   useGebruikerSessiesBeeindigen,
   useGebruikerOntgrendelen,
-  useListProfielen,
+  // GEBRUIKERS_01 v2: bevoegdheden per gebruiker (baseline + afwijkingen + effectief)
+  useGetGebruikerBevoegdhedenV2,
+  usePasFunctieRechtenToe,
+  useVervangGebruikerAfwijkingen,
   useGetMailStatus,
   getGetMailStatusQueryKey,
   getListGebruikersQueryKey,
+  getGetGebruikerBevoegdhedenV2QueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -41,19 +41,19 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, Archive,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
-  Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
+  Search, RotateCcw, Briefcase,
   ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
   QrCode, Download, Link2,
 } from "lucide-react";
-import { MODULES, NIVEAUS, combineerBevoegdheden } from "@workspace/permissies";
+import { MODULES, NIVEAUS } from "@workspace/permissies";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useRol } from "@/context/rol-context";
@@ -64,40 +64,6 @@ import { Link } from "wouter";
 const ROLLEN = ["hoofdbeheerder", "gebruiker"] as const;
 type Rol = typeof ROLLEN[number];
 
-const FUNCTIETITELS = [
-  "Projectleider",
-  "Werkvoorbereider",
-  "Project-admin",
-  "Commercieel",
-  "Financieel",
-  "HRM-adviseur",
-] as const;
-
-type FunctieGroep = {
-  naam: string;
-  beschrijving: string;
-  rol: string;
-  presetNaam: string | null;
-  icon: React.ElementType;
-  kleur: string;
-};
-
-const FUNCTIE_GROEPEN: FunctieGroep[] = [
-  { naam: "Hoofdbeheerder", beschrijving: "Volledig beheer",          rol: "hoofdbeheerder", presetNaam: null,               icon: Crown,       kleur: "text-amber-600"   },
-  { naam: "Projectleider",  beschrijving: "Projectleiding",           rol: "gebruiker",      presetNaam: "Projectleider",    icon: Briefcase,   kleur: "text-blue-600"    },
-  { naam: "Werkvoorbereider", beschrijving: "Werkvoorbereiding",      rol: "gebruiker",      presetNaam: "Werkvoorbereider", icon: Briefcase,   kleur: "text-indigo-600"  },
-  { naam: "Project-admin",  beschrijving: "Project-administratie",    rol: "gebruiker",      presetNaam: "Project-admin",    icon: Layers,      kleur: "text-violet-600"  },
-  { naam: "Uitvoerder",     beschrijving: "Uitvoering op locatie",    rol: "gebruiker",      presetNaam: "Uitvoerder",       icon: Wrench,      kleur: "text-orange-600"  },
-  { naam: "Monteur",        beschrijving: "Montage en inspecties",    rol: "gebruiker",      presetNaam: "Monteur",          icon: Hammer,      kleur: "text-orange-700"  },
-  { naam: "Timmerman",      beschrijving: "Timmerwerk",               rol: "gebruiker",      presetNaam: "Timmerman",        icon: Hammer,      kleur: "text-amber-700"   },
-  { naam: "Controleur",     beschrijving: "Controle-inspecties",      rol: "gebruiker",      presetNaam: "Controleur",       icon: ShieldCheck, kleur: "text-teal-600"    },
-  { naam: "Commercieel",    beschrijving: "Commercieel",              rol: "gebruiker",      presetNaam: "Commercieel",      icon: TrendingUp,  kleur: "text-green-600"   },
-  { naam: "Financieel",          beschrijving: "Financieel beheer",        rol: "gebruiker",      presetNaam: null,                   icon: TrendingUp,  kleur: "text-emerald-600" },
-  { naam: "Externe boekhouder",  beschrijving: "Externe boekhouder",       rol: "gebruiker",      presetNaam: "Externe boekhouder",   icon: TrendingUp,  kleur: "text-emerald-700" },
-  { naam: "HRM-adviseur",        beschrijving: "HRM en personeel",         rol: "gebruiker",      presetNaam: "HRM-adviseur",         icon: Briefcase,   kleur: "text-pink-600"    },
-];
-
-const GROEP_NAMEN = new Set(FUNCTIE_GROEPEN.map((g) => g.naam));
 function niveauLabel(n: number): string {
   return NIVEAUS.find((x) => x.waarde === n)?.kort ?? "";
 }
@@ -149,33 +115,11 @@ const UITNODIGING_STATUS_CONFIG = {
 function groepVanGebruiker(g: Gebruiker): string {
   if (g.rol === "hoofdbeheerder") return "Hoofdbeheerder";
   const ft = g.functietitels ?? [];
-  const bekend = ft.find((f) => GROEP_NAMEN.has(f));
-  if (bekend) return bekend;
   if (ft.length > 0) return ft[0];
   return "Overig";
 }
 
-function bevoegdhedenGelijk(
-  a: Record<string, number> | null | undefined,
-  b: Record<string, number> | null | undefined,
-): boolean {
-  const aa = a ?? {};
-  const bb = b ?? {};
-  const sleutels = new Set([...Object.keys(aa), ...Object.keys(bb)]);
-  for (const s of sleutels) {
-    if ((aa[s] ?? 0) !== (bb[s] ?? 0)) return false;
-  }
-  return true;
-}
 
-function actieveBevoegdheden(
-  bevoegdheden: Record<string, number> | null | undefined,
-): { id: string; label: string; niveau: number }[] {
-  if (!bevoegdheden) return [];
-  return MODULES
-    .filter((m) => (bevoegdheden[m.id] ?? 0) > 0)
-    .map((m) => ({ id: m.id, label: m.label, niveau: bevoegdheden[m.id] }));
-}
 
 function initialen(naam: string) {
   return naam.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join("");
@@ -205,14 +149,12 @@ function onlinKleur(iso: string | null | undefined): string {
   return "text-muted-foreground";
 }
 
+// GEBRUIKERS_01 v2: het account-formulier beheert geen functietitels, bevoegdheden
+// of profielkoppelingen meer — die komen via een HRM-aanstelling in Personeel.
 const leegForm = {
-  naam: "", email: "", rol: "gebruiker", functietitels: [] as string[],
+  naam: "", email: "", rol: "gebruiker",
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
-  bevoegdheden: {} as Record<string, number>,
-  herkomst_profiel_id: null as number | null,
-  herkomst_automatisch: false,
-  profiel_ids: [] as number[],
   dienstverband: "intern",
   bedrijf_uitzendbureau: "",
   uitzendbureau_id: null as number | null,
@@ -269,13 +211,11 @@ export default function Gebruikers() {
 
   const { toast } = useToast();
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
-  const { data: profielen } = useListProfielen();
   // Alleen hoofdbeheerders mogen mailconfiguratie inzien (systeem-bevoegdheid);
   // proactieve waarschuwing zodat een uitnodiging niet voor een verrassing zorgt.
   const { data: mailStatus } = useGetMailStatus({
     query: { enabled: isHoofd, queryKey: getGetMailStatusQueryKey() },
   });
-  const profielMap = new Map((profielen ?? []).map((p) => [p.id, p]));
   const maakGebruiker       = useCreateGebruiker();
   const werkBijGebruiker    = useUpdateGebruiker();
   const verwijderGebruiker  = useDeleteGebruiker();
@@ -283,10 +223,9 @@ export default function Gebruikers() {
   const uitnodigingVersturen = useUitnodigingVersturen();
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
   const activatielinkMutatie = useActivatielinkGenereren();
-  const herkomstToepassen   = useGebruikerHerkomstToepassen();
-  const herkomstBevestigen  = useGebruikerHerkomstBevestigen();
-  const herkomstBevestigenBulk = useGebruikerHerkomstBevestigenBulk();
-  const herkomstVerwijderen = useGebruikerHerkomstVerwijderen();
+  // GEBRUIKERS_01 v2: functierechten toepassen (reset afwijkingen) en afwijkingen vervangen
+  const pasFunctieRechtenToeMut = usePasFunctieRechtenToe();
+  const vervangAfwijkingenMut   = useVervangGebruikerAfwijkingen();
   const vulModulesAan        = useGebruikersAanvullen();
   const wachtwoordResetten   = useGebruikerWachtwoordResetten();
   const sessiesBeeindigen    = useGebruikerSessiesBeeindigen();
@@ -303,6 +242,14 @@ export default function Gebruikers() {
 
   const [verwijderTarget, setVerwijderTarget] = useState<Gebruiker | null>(null);
   const [bekijkGebruiker, setBekijkGebruiker] = useState<Gebruiker | null>(null);
+  // GEBRUIKERS_01 v2: bevoegdheden V2 voor bekijk/bewerk dialoog
+  const [afwijkingenBewerkenOpen, setAfwijkingenBewerkenOpen] = useState(false);
+  const [afwijkingenEditMap, setAfwijkingenEditMap] = useState<Record<string, number>>({});
+  const [afwijkingenEditReden, setAfwijkingenEditReden] = useState("");
+  const { data: bekijkBevoegdhedenV2 } = useGetGebruikerBevoegdhedenV2(
+    bekijkGebruiker?.id ?? 0,
+    { query: { enabled: !!bekijkGebruiker, queryKey: getGetGebruikerBevoegdhedenV2QueryKey(bekijkGebruiker?.id ?? 0) } },
+  );
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
   const [herkomstBezig, setHerkomstBezig]       = useState<number | null>(null);
@@ -317,12 +264,10 @@ export default function Gebruikers() {
 
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
-  const [actieveTab, setActieveTab]   = useState<"gebruikers" | "profielen">("gebruikers");
-  const [alleenAuto, setAlleenAuto]         = useState<boolean>(false);
   const [toonGearchiveerd, setToonGearchiveerd] = useState<boolean>(false);
-  const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
-  const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
   const [herkomstToepassenTarget, setHerkomstToepassenTarget] = useState<Gebruiker | null>(null);
+  // GEBRUIKERS_01 eis 4: reden verplicht bij apply/reset van profiel
+  const [herkomstToepassenReden, setHerkomstToepassenReden] = useState("");
   const [appQrGebruiker, setAppQrGebruiker] = useState<Gebruiker | null>(null);
   // QR-afbeelding kan ontbreken (app nog niet gepubliceerd → 404); dan tonen we
   // een duidelijke uitleg in plaats van een kapot plaatje.
@@ -348,58 +293,21 @@ export default function Gebruikers() {
     if (filterGroep === "Klant") setFilterGroep(null);
   }, [filterGroep, setFilterGroep]);
 
-  async function pasHerkomstToe(g: Gebruiker) {
-    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
-    setHerkomstBezig(g.id);
-    try {
-      const bijgewerkt = await herkomstToepassen.mutateAsync({ id: g.id });
-      invalideer();
-      setBekijkGebruiker((huidig) => huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig);
-      toast({ title: "Profiel opnieuw toegepast", description: `De bevoegdheden van ${g.naam ?? "de gebruiker"} zijn teruggezet naar het gekoppelde profiel.` });
-    } catch {
-      toast({ title: "Profiel opnieuw toepassen mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
-    } finally { setHerkomstBezig(null); }
-  }
-
-  async function bevestigHerkomst(g: Gebruiker) {
-    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
-    setHerkomstBezig(g.id);
-    try {
-      const bijgewerkt = await herkomstBevestigen.mutateAsync({ id: g.id });
-      invalideer();
-      setBekijkGebruiker((huidig) => huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig);
-    } catch {
-    } finally { setHerkomstBezig(null); }
-  }
-
-  async function verwijderHerkomst(g: Gebruiker) {
-    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
-    setHerkomstBezig(g.id);
-    try {
-      const bijgewerkt = await herkomstVerwijderen.mutateAsync({ id: g.id });
-      invalideer();
-      setBekijkGebruiker((huidig) => huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig);
-    } catch {
-    } finally { setHerkomstBezig(null); }
-  }
-
-  async function bevestigHerkomstBulk(ids: number[]) {
-    if (ids.length === 0 || herkomstBevestigenBulk.isPending) return;
-    setBulkResultaat(null);
-    try {
-      const res: any = await herkomstBevestigenBulk.mutateAsync({ data: { ids } });
-      await invalideer();
-      const aantal = typeof res?.bevestigd === "number" ? res.bevestigd : ids.length;
-      setBulkResultaat(
-        aantal === 0
-          ? "Geen koppelingen bevestigd."
-          : `${aantal} ${aantal === 1 ? "koppeling" : "koppelingen"} bevestigd.`,
-      );
-    } catch {
-      setBulkResultaat("Bevestigen mislukt. Probeer het opnieuw.");
-    } finally {
-      setBulkBevestigOpen(false);
+  // GEBRUIKERS_01 v2: reset afwijkingen via pasFunctieRechtenToe
+  async function resetNaarFunctieRechten(g: Gebruiker, reden: string) {
+    if (!reden.trim()) {
+      toast({ title: "Reden is verplicht", variant: "destructive" });
+      return;
     }
+    setHerkomstBezig(g.id);
+    try {
+      await pasFunctieRechtenToeMut.mutateAsync({ id: g.id, data: { reden, bewuste_afwijkingen_wissen: true } });
+      invalideer();
+      await queryClient.invalidateQueries({ queryKey: getGetGebruikerBevoegdhedenV2QueryKey(g.id) });
+      toast({ title: "Functierechten hersteld", description: `De bevoegdheden van ${g.naam ?? "de gebruiker"} zijn teruggezet naar de functie-baseline.` });
+    } catch {
+      toast({ title: "Herstellen mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
+    } finally { setHerkomstBezig(null); }
   }
 
   async function verstuurToevoegen(e: React.FormEvent) {
@@ -415,16 +323,12 @@ export default function Gebruikers() {
           naam:             toevoegenForm.naam.trim(),
           email:            toevoegenForm.email.trim(),
           rol:              toevoegenForm.rol as any,
-          functietitels:    toevoegenForm.functietitels,
           telefoon:         toevoegenForm.telefoon.trim()    || undefined,
           bedrijf:          toevoegenForm.bedrijf.trim()     || undefined,
           wachtwoord:       toevoegenForm.wachtwoord.trim()  || undefined,
           avatar_url:       toevoegenForm.avatar_url         || undefined,
           bedrijfslogo_url: toevoegenForm.bedrijfslogo_url   || undefined,
           bedrijfskleuren:  toevoegenForm.bedrijfskleuren    || undefined,
-          bevoegdheden:     toevoegenForm.bevoegdheden,
-          herkomst_profiel_id: toevoegenForm.herkomst_profiel_id,
-          profiel_ids:      toevoegenForm.profiel_ids,
           dienstverband:    toevoegenForm.dienstverband || undefined,
           bedrijf_uitzendbureau: toevoegenForm.bedrijf_uitzendbureau.trim() || undefined,
           uitzendbureau_id: toevoegenForm.uitzendbureau_id,
@@ -441,29 +345,10 @@ export default function Gebruikers() {
 
   function openBewerken(g: Gebruiker) {
     setBewerkGebruiker(g);
-    const rolIds =
-      g.profiel_ids && g.profiel_ids.length > 0
-        ? [...g.profiel_ids]
-        : g.herkomst_profiel_id != null
-          ? [g.herkomst_profiel_id]
-          : [];
-    // Rolgestuurde gebruiker: toon in het read-only grid de uit de rollen
-    // afgeleide matrix (= wat er na opslaan geldt), zodat een eventuele
-    // handmatige afwijking niet stilzwijgend verdwijnt zonder dat de
-    // beheerder het ziet. Lukt het afleiden niet (profielen nog niet
-    // geladen), dan valt het terug op de opgeslagen matrix.
-    const rolMatrices = rolIds
-      .map((pid) => profielMap.get(pid)?.bevoegdheden)
-      .filter((m): m is Record<string, number> => m != null);
-    const afgeleid =
-      rolIds.length > 0 && rolMatrices.length === rolIds.length
-        ? combineerBevoegdheden(rolMatrices)
-        : null;
     setBewerkForm({
       naam:             g.naam            ?? "",
       email:            g.email           ?? "",
       rol:              g.rol             ?? "gebruiker",
-      functietitels:    g.functietitels   ?? [],
       telefoon:         g.telefoon        ?? "",
       bedrijf:          g.bedrijf         ?? "",
       wachtwoord:       "",
@@ -471,10 +356,6 @@ export default function Gebruikers() {
       avatar_url:       g.avatar_url      ?? "",
       bedrijfslogo_url: g.bedrijfslogo_url ?? "",
       bedrijfskleuren:  g.bedrijfskleuren  ?? "",
-      bevoegdheden:     afgeleid ?? g.bevoegdheden ?? {},
-      herkomst_profiel_id: g.herkomst_profiel_id ?? null,
-      herkomst_automatisch: (g as any).herkomst_automatisch === true,
-      profiel_ids:      rolIds,
       dienstverband: g.dienstverband ?? "intern",
       bedrijf_uitzendbureau: g.bedrijf_uitzendbureau ?? "",
       uitzendbureau_id: g.uitzendbureau_id ?? null,
@@ -497,7 +378,6 @@ export default function Gebruikers() {
           naam:             bewerkForm.naam.trim(),
           email:            bewerkForm.email.trim(),
           rol:              bewerkForm.rol as any,
-          functietitels:    bewerkForm.functietitels,
           telefoon:         bewerkForm.telefoon.trim()    || undefined,
           bedrijf:          bewerkForm.bedrijf.trim()     || undefined,
           wachtwoord:       bewerkForm.wachtwoord.trim()  || undefined,
@@ -505,19 +385,8 @@ export default function Gebruikers() {
           avatar_url:       bewerkForm.avatar_url         || undefined,
           bedrijfslogo_url: bewerkForm.bedrijfslogo_url   || undefined,
           bedrijfskleuren:  bewerkForm.bedrijfskleuren    || undefined,
-          bevoegdheden:     bewerkForm.bevoegdheden,
-          herkomst_profiel_id: bewerkForm.herkomst_profiel_id,
-          // profiel_ids alleen meesturen als de gebruiker rolgestuurd is
-          // (had al rollen of er zijn nu rollen gekozen). Een legacy-gebruiker
-          // met handmatige matrix en zonder rollen behoudt zo zijn rechten
-          // bij het bewerken van niet-gerelateerde velden; [] meesturen zou
-          // die server-side naar "geen toegang" afleiden.
-          profiel_ids:
-            bewerkForm.profiel_ids.length > 0 ||
-            (bewerkGebruiker.profiel_ids?.length ?? 0) > 0 ||
-            bewerkGebruiker.herkomst_profiel_id != null
-              ? bewerkForm.profiel_ids
-              : undefined,
+          // GEBRUIKERS_01 v2: geen functietitels/bevoegdheden/profiel_ids meer vanuit
+          // het account-formulier; die worden beheerd via HRM-aanstelling en afwijkingen.
           dienstverband:    bewerkForm.dienstverband || undefined,
           bedrijf_uitzendbureau: bewerkForm.bedrijf_uitzendbureau.trim() || undefined,
           uitzendbureau_id: bewerkForm.uitzendbureau_id,
@@ -676,11 +545,22 @@ export default function Gebruikers() {
     }
     return counts;
   }, [internBron]);
+  const functieGroepen = useMemo(
+    () =>
+      Object.keys(groepCounts)
+        .filter((naam) => isHoofd || naam !== "Hoofdbeheerder")
+        .sort((a, b) => a.localeCompare(b, "nl"))
+        .map((naam) => ({
+          naam,
+          icon: naam === "Hoofdbeheerder" ? Crown : User,
+          kleur: naam === "Hoofdbeheerder" ? "text-amber-600" : "text-primary",
+        })),
+    [groepCounts, isHoofd],
+  );
 
   const groepGefilterd = useMemo(() => {
     return internBron.filter((g: any) => {
       if (filterGroep && groepVanGebruiker(g as Gebruiker) !== filterGroep) return false;
-      if (alleenAuto && !(g.herkomst_profiel_id != null && g.herkomst_automatisch === true)) return false;
       const term = zoek.trim().toLowerCase();
       if (!term) return true;
       return (
@@ -689,26 +569,9 @@ export default function Gebruikers() {
         (g.functietitels ?? []).some((f: string) => f.toLowerCase().includes(term))
       );
     }) as Gebruiker[];
-  }, [internBron, filterGroep, zoek, alleenAuto]);
+  }, [internBron, filterGroep, zoek]);
 
   const totaalGevonden = groepGefilterd.length;
-
-  // Gebruikers binnen de huidige filter met een onbevestigde automatische
-  // herkomst-koppeling. De bulkactie bevestigt precies deze set.
-  const autoOnbevestigd = useMemo(
-    () =>
-      groepGefilterd.filter(
-        (g: any) => g.herkomst_profiel_id != null && g.herkomst_automatisch === true,
-      ) as Gebruiker[],
-    [groepGefilterd],
-  );
-  const autoOnbevestigdTotaal = useMemo(
-    () =>
-      ((gebruikers ?? []) as any[]).filter(
-        (g) => g.herkomst_profiel_id != null && g.herkomst_automatisch === true,
-      ).length,
-    [gebruikers],
-  );
 
   // Gebruikers waarbij een of meer module-sleutels in de bevoegdheden-matrix
   // ontbreken. De aanvulactie zet die ontbrekende sleutels op niveau 0; de
@@ -738,11 +601,8 @@ export default function Gebruikers() {
     const status = (g.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
     const statusCfg = UITNODIGING_STATUS_CONFIG[status] ?? UITNODIGING_STATUS_CONFIG.niet_uitgenodigd;
     const groep = groepVanGebruiker(g);
-    const groepCfg = FUNCTIE_GROEPEN.find((gr) => gr.naam === groep);
+    const groepCfg = functieGroepen.find((gr) => gr.naam === groep);
     const GroepIcon = groepCfg?.icon ?? User;
-    const profiel = g.herkomst_profiel_id != null ? profielMap.get(g.herkomst_profiel_id) : undefined;
-    const afwijkend = profiel ? !bevoegdhedenGelijk(g.bevoegdheden, profiel.bevoegdheden) : false;
-    const automatisch = (g as any).herkomst_automatisch === true;
     const vergrendeld = !!g.vergrendeld_tot && new Date(g.vergrendeld_tot).getTime() > Date.now();
 
     return (
@@ -833,23 +693,8 @@ export default function Gebruikers() {
                 </div>
               </div>
 
-              {profiel && (
-                <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                  <Layers className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{profiel.naam}</span>
-                  {afwijkend && (
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
-                      Aangepast
-                    </Badge>
-                  )}
-                  {automatisch && !afwijkend && (
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
-                      Auto
-                    </Badge>
-                  )}
-                </div>
-              )}
-
+              {/* GEBRUIKERS_01 v2: geen legacy auto-profielkoppeling-badge meer;
+                  functietitel staat al in de groepsindeling. */}
               <div className="flex flex-wrap items-center gap-1 mt-1.5">
                 {g.gearchiveerd ? (
                   <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 h-5 px-1.5">Gearchiveerd</Badge>
@@ -962,7 +807,7 @@ export default function Gebruikers() {
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} title="Vernieuwen">
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          {actieveTab === "gebruikers" && isHoofd && gebruikersMetOntbrekend > 0 && (
+          {isHoofd && gebruikersMetOntbrekend > 0 && (
             <Button
               variant="outline"
               onClick={vulModulesBijGebruikersAan}
@@ -977,23 +822,16 @@ export default function Gebruikers() {
               Modules aanvullen
             </Button>
           )}
-          {actieveTab === "gebruikers" && (
-            <Button onClick={() => { setToevoegenStap(1); setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
-              <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
-            </Button>
-          )}
+          <Button onClick={() => { setToevoegenStap(1); setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
+            <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
+          </Button>
         </div>
       </div>
 
-      <Tabs value={actieveTab} onValueChange={(v) => setActieveTab(v as typeof actieveTab)}>
-        <TabsList className="min-h-9">
-          <TabsTrigger value="gebruikers" className="text-sm">Gebruikers</TabsTrigger>
-          <TabsTrigger value="profielen" className="text-sm">Profielen</TabsTrigger>
-        </TabsList>
-
-        {/* Tab: Gebruikers */}
-        <TabsContent value="gebruikers" className="space-y-4 mt-4">
-          {/* Zoekbalk */}
+      {/* GEBRUIKERS_01 v2: geen Functies-tab meer op de gebruikerspagina.
+          Functiebeheer gebeurt uitsluitend in het Functiehuis (Personeel › Functies). */}
+      <div className="space-y-4 mt-4">
+        {/* Zoekbalk */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -1035,53 +873,10 @@ export default function Gebruikers() {
             )}
           </div>
 
-          {/* Automatische profielkoppelingen — overzicht en bulkbevestiging */}
-          {isHoofd && (autoOnbevestigdTotaal > 0 || alleenAuto || bulkResultaat) && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2">
-              <Badge variant="outline" className="h-5 px-1.5 text-xs bg-amber-100 text-amber-800 border-amber-200 gap-1">
-                <Layers className="h-3 w-3" />
-                Auto
-              </Badge>
-              <span className="text-xs text-amber-900">
-                {autoOnbevestigdTotaal === 0
-                  ? "Geen onbevestigde automatische koppelingen"
-                  : `${autoOnbevestigdTotaal} ${autoOnbevestigdTotaal === 1 ? "gebruiker heeft" : "gebruikers hebben"} een onbevestigde automatische profielkoppeling`}
-              </span>
-              {bulkResultaat && (
-                <span className="text-xs font-medium text-green-700 flex items-center gap-1">
-                  <Check className="h-3 w-3" />
-                  {bulkResultaat}
-                </span>
-              )}
-              <div className="flex items-center gap-2 ml-auto">
-                <Button
-                  variant={alleenAuto ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setAlleenAuto((v) => !v)}
-                  disabled={autoOnbevestigdTotaal === 0 && !alleenAuto}
-                >
-                  {alleenAuto ? "Toon alle gebruikers" : "Alleen automatische"}
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  disabled={autoOnbevestigd.length === 0 || herkomstBevestigenBulk.isPending}
-                  onClick={() => { setBulkResultaat(null); setBulkBevestigOpen(true); }}
-                >
-                  <CheckCheck className="h-3.5 w-3.5" />
-                  {herkomstBevestigenBulk.isPending
-                    ? "Bezig..."
-                    : `Bevestig ${autoOnbevestigd.length} ${autoOnbevestigd.length === 1 ? "koppeling" : "koppelingen"}`}
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Functiegroep-tegels */}
           {!isLoading && (
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-              {FUNCTIE_GROEPEN.filter((gr) => (isHoofd || gr.naam !== "Hoofdbeheerder") && gr.naam !== "Klant").map((gr) => {
+              {functieGroepen.map((gr) => {
                 const Icon = gr.icon;
                 const aantal = groepCounts[gr.naam] ?? 0;
                 const actief = filterGroep === gr.naam;
@@ -1138,58 +933,7 @@ export default function Gebruikers() {
               {groepGefilterd.map((g) => gebruikerKaart(g))}
             </div>
           )}
-        </TabsContent>
-
-        {/* Tab: Profielen */}
-        <TabsContent value="profielen" className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Bevoegdheidsprofielen</h2>
-              <p className="text-sm text-muted-foreground">
-                Sjablonen die als startpunt dienen bij het aanmaken van gebruikers.
-              </p>
-            </div>
-            <Link href="/beheer/profielen">
-              <Button variant="outline" size="sm">
-                Volledig beheren
-              </Button>
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(profielen ?? []).map((p) => {
-              const actief = actieveBevoegdheden(p.bevoegdheden as Record<string, number> | null);
-              const gebruikersAantal = (gebruikers ?? []).filter((g: any) => g.herkomst_profiel_id === p.id).length;
-              return (
-                <div key={p.id} className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm">{p.naam}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {gebruikersAantal} {gebruikersAantal === 1 ? "gebruiker" : "gebruikers"}
-                    </Badge>
-                  </div>
-                  {actief.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {actief.slice(0, 4).map((b) => (
-                        <Badge key={b.id} variant="outline" className="text-xs h-5 px-1.5 font-normal text-muted-foreground">
-                          {b.label}: {niveauLabel(b.niveau).toLowerCase()}
-                        </Badge>
-                      ))}
-                      {actief.length > 4 && (
-                        <Badge variant="outline" className="text-xs h-5 px-1.5">+{actief.length - 4}</Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {(!profielen || profielen.length === 0) && (
-              <div className="col-span-full rounded-lg border border-dashed p-8 text-center text-muted-foreground text-sm">
-                Geen profielen gevonden. Klik op "Volledig beheren" om profielen aan te maken.
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Dialoog: toevoegen */}
       <Dialog open={toevoegenOpen} onOpenChange={(o) => { if (!o) { setToevoegenOpen(false); setToevoegenFout(null); setToevoegenStap(1); } }}>
@@ -1204,26 +948,36 @@ export default function Gebruikers() {
           {toevoegenStap === 1 ? (
             <>
               <p id="toevoegen-beschr" className="text-sm text-muted-foreground -mt-1">
-                Kies de functie van de nieuwe gebruiker. De standaardbevoegdheden worden automatisch vooringevuld.
+                Kies het accounttype voor de nieuwe gebruiker. De functie en bijbehorende bevoegdheden worden
+                daarna via een HRM-aanstelling in Personeel gekoppeld.
               </p>
-              {/* Eén bron: alle profielen uit GET /profielen (vaste presets én
-                  zelfgemaakte). Een nieuw profiel verschijnt hier vanzelf.
-                  Hoofdbeheerder is een systeemrol (geen profiel) en staat er
-                  apart bij, alleen voor hoofdbeheerders. */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* GEBRUIKERS_01 v2: create-account maakt geen HRM-aanstelling.
+                  Toon daarom enkel accounttype (Gebruiker + optioneel Hoofdbeheerder);
+                  functie/rechten volgen via Personeel › Aanstelling. */}
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                <button
+                  key="__gebruiker__"
+                  type="button"
+                  onClick={() => {
+                    setToevoegenForm((f) => ({ ...f, rol: "gebruiker" }));
+                    setToevoegenStap(2);
+                  }}
+                  className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
+                >
+                  <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+                  <div>
+                    <div className="text-sm font-medium leading-tight">Gebruiker</div>
+                    <div className="text-xs text-muted-foreground leading-tight">
+                      Toegang via bevoegdheden — functie wordt via aanstelling gekoppeld
+                    </div>
+                  </div>
+                </button>
                 {isHoofd && (
                   <button
                     key="__hoofdbeheerder__"
                     type="button"
                     onClick={() => {
-                      setToevoegenForm((f) => ({
-                        ...f,
-                        rol: "hoofdbeheerder",
-                        functietitels: [],
-                        bevoegdheden: {},
-                        herkomst_profiel_id: null,
-                        profiel_ids: [],
-                      }));
+                      setToevoegenForm((f) => ({ ...f, rol: "hoofdbeheerder" }));
                       setToevoegenStap(2);
                     }}
                     className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
@@ -1231,42 +985,15 @@ export default function Gebruikers() {
                     <Crown className="h-4 w-4 flex-shrink-0 text-amber-600" />
                     <div>
                       <div className="text-sm font-medium leading-tight">Hoofdbeheerder</div>
-                      <div className="text-xs text-muted-foreground leading-tight">Volledig beheer</div>
+                      <div className="text-xs text-muted-foreground leading-tight">Volledig beheer — alle rechten</div>
                     </div>
                   </button>
                 )}
-                {(profielen ?? []).map((profiel: any) => {
-                  const bekend = FUNCTIE_GROEPEN.find((g) => g.naam === profiel.naam);
-                  const Icon = bekend?.icon ?? ShieldCheck;
-                  const kleur = bekend?.kleur ?? "text-slate-600";
-                  return (
-                    <button
-                      key={profiel.id}
-                      type="button"
-                      onClick={() => {
-                        setToevoegenForm((f) => ({
-                          ...f,
-                          rol: "gebruiker",
-                          functietitels: [profiel.naam],
-                          bevoegdheden: { ...(profiel.bevoegdheden ?? {}) } as Record<string, number>,
-                          herkomst_profiel_id: profiel.id,
-                          profiel_ids: [profiel.id],
-                        }));
-                        setToevoegenStap(2);
-                      }}
-                      className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
-                    >
-                      <Icon className={`h-4 w-4 flex-shrink-0 ${kleur}`} />
-                      <div>
-                        <div className="text-sm font-medium leading-tight">{profiel.naam}</div>
-                        <div className="text-xs text-muted-foreground leading-tight">
-                          {profiel.groep ?? (profiel.systeem ? "Systeemprofiel" : "Eigen profiel")}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
               </div>
+              <p className="text-xs text-muted-foreground pt-1 border-t">
+                De functie en bevoegdheden worden toegekend via een HRM-aanstelling in Personeel.
+                Koppel de medewerker na aanmaken aan de juiste functie via het aanstellingscherm.
+              </p>
               <DialogFooter className="pt-1">
                 <Button type="button" variant="outline" onClick={() => setToevoegenOpen(false)}>Annuleren</Button>
               </DialogFooter>
@@ -1302,22 +1029,7 @@ export default function Gebruikers() {
           <p id="bewerk-beschr" className="text-sm text-muted-foreground -mt-1">
             Pas de gegevens van <strong>{bewerkGebruiker?.naam}</strong> aan.
           </p>
-          {(() => {
-            const bewerkProfiel = bewerkForm.herkomst_profiel_id != null ? profielMap.get(bewerkForm.herkomst_profiel_id) : undefined;
-            if (!bewerkProfiel) return null;
-            // Alleen markeren als de gebruiker een herkomst_profiel_id heeft (single-preset koppeling)
-            // of als hij meerdere profielen heeft (dan is de matrix afgeleid en kan hij ook afwijken)
-            const bewerkAfwijkend = !bevoegdhedenGelijk(bewerkForm.bevoegdheden, bewerkProfiel.bevoegdheden);
-            if (!bewerkAfwijkend) return null;
-            return (
-              <div className="flex items-center gap-1.5 text-xs -mt-2 bg-amber-50 border border-amber-100 p-2 rounded-md">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                <span className="text-amber-800">
-                  De bevoegdheden wijken af van het gekoppelde profiel “{bewerkProfiel.naam}”. Bij opslaan blijven deze handmatige wijzigingen behouden.
-                </span>
-              </div>
-            );
-          })()}
+          {/* GEBRUIKERS_01 v2: bewerk-dialoog — basisgegevens, geen profielkoppeling hier */}
           <form onSubmit={verstuurBewerken} className="space-y-4 pt-1">
             <GebruikerVelden form={bewerkForm} setForm={setBewerkForm} toonActief toonHoofd={isHoofd} />
             {bewerkFout && <Foutmelding tekst={bewerkFout} />}
@@ -1353,33 +1065,6 @@ export default function Gebruikers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog: automatische koppelingen in bulk bevestigen */}
-      <AlertDialog open={bulkBevestigOpen} onOpenChange={(o) => { if (!o) setBulkBevestigOpen(false); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Automatische koppelingen bevestigen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              U staat op het punt {autoOnbevestigd.length} automatisch afgeleide
-              profielkoppeling{autoOnbevestigd.length === 1 ? "" : "en"} te bevestigen
-              {(filterGroep || alleenAuto || !!zoek.trim())
-                ? " (binnen de huidige selectie)"
-                : ""}.
-              De koppelingen blijven behouden en worden voortaan als handmatig
-              bevestigd behandeld. De bevoegdheden van de gebruikers wijzigen niet.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); bevestigHerkomstBulk(autoOnbevestigd.map((g) => g.id)); }}
-              disabled={herkomstBevestigenBulk.isPending}
-            >
-              {herkomstBevestigenBulk.isPending ? "Bevestigen..." : "Bevestigen"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* AlertDialog: sessies beëindigen */}
       <AlertDialog open={!!sessiesTarget} onOpenChange={(o) => { if (!o) setSessiesTarget(null); }}>
         <AlertDialogContent>
@@ -1399,32 +1084,138 @@ export default function Gebruikers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog: profiel opnieuw toepassen */}
-      <AlertDialog open={!!herkomstToepassenTarget} onOpenChange={(o) => { if (!o) setHerkomstToepassenTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Profiel opnieuw toepassen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              De bevoegdheden van <strong>{herkomstToepassenTarget?.naam}</strong> zijn sinds de koppeling
-              handmatig aangepast. Opnieuw toepassen zet de bevoegdheden terug naar exact het gekoppelde
-              profiel; de eigen aanpassingen gaan hiermee verloren.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                if (herkomstToepassenTarget) pasHerkomstToe(herkomstToepassenTarget);
-                setHerkomstToepassenTarget(null);
-              }}
-              disabled={herkomstBezig === herkomstToepassenTarget?.id}
+      {/* GEBRUIKERS_01 v2: Afwijkingen wissen — terugzetten naar functie-baseline (reden verplicht) */}
+      <Dialog
+        open={!!herkomstToepassenTarget}
+        onOpenChange={(o) => { if (!o) { setHerkomstToepassenTarget(null); setHerkomstToepassenReden(""); } }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> Afwijkingen wissen?
+            </DialogTitle>
+            <DialogDescription>
+              De persoonlijke bevoegdheidafwijkingen van <strong>{herkomstToepassenTarget?.naam}</strong> worden gewist
+              en de rechten vallen terug op de functie-baseline. Geef een reden op — dit wordt gelogd.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <Label htmlFor="herkomst-toepassen-reden">Reden voor terugzetten *</Label>
+            <Textarea
+              id="herkomst-toepassen-reden"
+              value={herkomstToepassenReden}
+              onChange={(e) => setHerkomstToepassenReden(e.target.value)}
+              placeholder="bijv. functieprofiel is gewijzigd, persoonlijke rechten niet meer van toepassing"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setHerkomstToepassenTarget(null); setHerkomstToepassenReden(""); }}
             >
-              {herkomstBezig === herkomstToepassenTarget?.id ? "Bezig..." : "Opnieuw toepassen"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!herkomstToepassenReden.trim() || herkomstBezig === herkomstToepassenTarget?.id}
+              onClick={() => {
+                if (herkomstToepassenTarget) resetNaarFunctieRechten(herkomstToepassenTarget, herkomstToepassenReden);
+                setHerkomstToepassenTarget(null);
+                setHerkomstToepassenReden("");
+              }}
+            >
+              {herkomstBezig === herkomstToepassenTarget?.id ? "Bezig..." : "Afwijkingen wissen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* GEBRUIKERS_01 v2: Afwijkingen bewerken dialoog */}
+      <Dialog
+        open={afwijkingenBewerkenOpen && !!bekijkGebruiker}
+        onOpenChange={(o) => { if (!o) setAfwijkingenBewerkenOpen(false); }}
+      >
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Afwijkingen bewerken — {bekijkGebruiker?.naam}</DialogTitle>
+            <DialogDescription>
+              Stel per module een afwijkend niveau in ten opzichte van de functie-baseline.
+              Modules die op het baseline-niveau staan krijgen geen afwijking.
+              Reden is verplicht en wordt gelogd.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="rounded-md border divide-y text-sm max-h-72 overflow-y-auto">
+              {MODULES.map((mod) => {
+                const basisN = bekijkBevoegdhedenV2?.functie_baseline?.[mod.id] ?? 0;
+                const huidig = afwijkingenEditMap[mod.id] ?? basisN;
+                const isAfwijkend = huidig !== basisN;
+                return (
+                  <div key={mod.id} className={`flex items-center gap-2 px-3 py-1.5 ${isAfwijkend ? "bg-amber-50/50" : ""}`}>
+                    <span className="flex-1 truncate text-xs">
+                      {mod.label}
+                      {isAfwijkend && <span className="ml-1 text-amber-600 text-xs">(⚡ afwijkt van baseline: {niveauLabel(basisN)})</span>}
+                    </span>
+                    <Select
+                      value={String(huidig)}
+                      onValueChange={(v) => setAfwijkingenEditMap((prev) => ({ ...prev, [mod.id]: Number(v) }))}
+                    >
+                      <SelectTrigger className="w-32 h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NIVEAUS.map((n) => (
+                          <SelectItem key={n.waarde} value={String(n.waarde)} className="text-xs">
+                            {n.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="afwijkingen-reden">Reden *</Label>
+              <Textarea
+                id="afwijkingen-reden"
+                value={afwijkingenEditReden}
+                onChange={(e) => setAfwijkingenEditReden(e.target.value)}
+                placeholder="Waarom wijken deze rechten af? Dit wordt gelogd in de audittrail."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAfwijkingenBewerkenOpen(false)}>Annuleren</Button>
+            <Button
+              disabled={!afwijkingenEditReden.trim() || vervangAfwijkingenMut.isPending}
+              onClick={async () => {
+                if (!bekijkGebruiker) return;
+                const baseline = bekijkBevoegdhedenV2?.functie_baseline ?? {};
+                // Alleen afwijkende modules meesturen
+                const afwijkingen = MODULES
+                  .filter((m) => (afwijkingenEditMap[m.id] ?? baseline[m.id] ?? 0) !== (baseline[m.id] ?? 0))
+                  .map((m) => ({ module_id: m.id, niveau: afwijkingenEditMap[m.id] ?? (baseline[m.id] ?? 0) }));
+                try {
+                  await vervangAfwijkingenMut.mutateAsync({
+                    id: bekijkGebruiker.id,
+                    data: { afwijkingen, reden: afwijkingenEditReden.trim() },
+                  });
+                  await queryClient.invalidateQueries({ queryKey: getGetGebruikerBevoegdhedenV2QueryKey(bekijkGebruiker.id) });
+                  setAfwijkingenBewerkenOpen(false);
+                  toast({ title: "Afwijkingen opgeslagen" });
+                } catch {
+                  toast({ title: "Opslaan mislukt", variant: "destructive" });
+                }
+              }}
+            >
+              {vervangAfwijkingenMut.isPending ? "Bezig…" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialoog: wachtwoord resetten */}
       <Dialog open={!!wwResetTarget} onOpenChange={(o) => { if (!o) setWwResetTarget(null); }}>
@@ -1690,7 +1481,7 @@ export default function Gebruikers() {
             const status = (bekijkGebruiker.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
             const statusCfg = UITNODIGING_STATUS_CONFIG[status];
             const groep = groepVanGebruiker(bekijkGebruiker);
-            const groepCfg = FUNCTIE_GROEPEN.find((gr) => gr.naam === groep);
+            const groepCfg = functieGroepen.find((gr) => gr.naam === groep);
             return (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -1774,124 +1565,98 @@ export default function Gebruikers() {
                   )}
                 </div>
 
+                {/* GEBRUIKERS_01 v2: baseline / afwijkingen / effectief per module */}
                 {(() => {
-                  const actief = actieveBevoegdheden(bekijkGebruiker.bevoegdheden);
-                  const rolIds =
-                    bekijkGebruiker.profiel_ids && bekijkGebruiker.profiel_ids.length > 0
-                      ? bekijkGebruiker.profiel_ids
-                      : bekijkGebruiker.herkomst_profiel_id != null
-                        ? [bekijkGebruiker.herkomst_profiel_id]
-                        : [];
-                  const meerdere = rolIds.length > 1;
-                  const profiel =
-                    !meerdere && bekijkGebruiker.herkomst_profiel_id != null
-                      ? profielMap.get(bekijkGebruiker.herkomst_profiel_id)
-                      : undefined;
-                  const afwijkend = profiel
-                    ? !bevoegdhedenGelijk(bekijkGebruiker.bevoegdheden, profiel.bevoegdheden)
-                    : false;
+                  const bev = bekijkBevoegdhedenV2;
+                  const baseline = bev?.functie_baseline ?? {};
+                  const effectief = bev?.effectieve_bevoegdheden ?? {};
+                  const afwijkingen = bev?.afwijkingen ?? [];
+                  const afwijkMap = new Map(afwijkingen.map((a) => [a.module_id, a]));
+                  const actieveMods = MODULES.filter((m) => (effectief[m.id] ?? 0) > 0 || (baseline[m.id] ?? 0) > 0);
+                  const heeftAfwijkingen = afwijkingen.length > 0;
                   return (
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <div className="text-sm font-medium">Bevoegdheden</div>
-                      </div>
-                      {meerdere && (
-                        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
-                          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="text-muted-foreground">Gekoppelde rollen</span>
-                          {rolIds.map((pid) => {
-                            const p = profielMap.get(pid);
-                            return p ? (
-                              <Badge key={pid} variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
-                                {p.naam}
-                              </Badge>
-                            ) : null;
-                          })}
-                          <span className="w-full text-muted-foreground">
-                            Per module geldt het hoogste niveau van deze rollen.
-                          </span>
+                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="text-sm font-medium">Bevoegdheden</div>
                         </div>
-                      )}
-                      {profiel && (() => {
-                        const automatisch = (bekijkGebruiker as any).herkomst_automatisch === true;
-                        return (
-                          <div className="mb-3 space-y-2">
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                              <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                              <span className="text-muted-foreground">
-                                {automatisch ? "Automatisch gekoppeld aan profiel" : "Gekoppeld aan profiel"}
-                              </span>
-                              <span className="font-medium">{profiel.naam}</span>
-                              {automatisch ? (
-                                <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-                                  Automatisch
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
-                                  Handmatig
-                                </Badge>
-                              )}
-                              {afwijkend && (
-                                <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-                                  Sindsdien aangepast
-                                </Badge>
-                              )}
-                            </div>
-                            {automatisch && (
-                              <p className="text-xs text-muted-foreground">
-                                De bevoegdheden van deze gebruiker kwamen exact en als enige overeen
-                                met dit profiel; de koppeling is daarom automatisch gelegd.
-                              </p>
-                            )}
-                            {isHoofd && (automatisch || afwijkend) && (
-                              <div className="flex flex-wrap items-center gap-2">
-                                {automatisch && (
-                                  <>
-                                    <Button
-                                      variant="outline" size="sm" className="h-6 px-2 text-xs"
-                                      disabled={herkomstBezig === bekijkGebruiker.id}
-                                      onClick={() => bevestigHerkomst(bekijkGebruiker)}
-                                    >
-                                      <Check className="h-3 w-3 mr-1" /> Koppeling bevestigen
-                                    </Button>
-                                    <Button
-                                      variant="outline" size="sm" className="h-6 px-2 text-xs"
-                                      disabled={herkomstBezig === bekijkGebruiker.id}
-                                      onClick={() => verwijderHerkomst(bekijkGebruiker)}
-                                    >
-                                      <X className="h-3 w-3 mr-1" /> Koppeling verwijderen
-                                    </Button>
-                                  </>
-                                )}
-                                {afwijkend && (
-                                  <Button
-                                    variant="outline" size="sm" className="h-6 px-2 text-xs ml-auto"
-                                    disabled={herkomstBezig === bekijkGebruiker.id}
-                                    onClick={() => setHerkomstToepassenTarget(bekijkGebruiker)}
-                                  >
-                                    <RotateCcw className={`h-3 w-3 mr-1 ${herkomstBezig === bekijkGebruiker.id ? "animate-spin" : ""}`} />
-                                    Profiel opnieuw toepassen
-                                  </Button>
-                                )}
-                              </div>
+                        {isHoofd && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline" size="sm" className="h-6 px-2 text-xs gap-1"
+                              onClick={() => {
+                                setAfwijkingenEditMap({ ...effectief });
+                                setAfwijkingenEditReden("");
+                                setAfwijkingenBewerkenOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" /> Afwijkingen bewerken
+                            </Button>
+                            {heeftAfwijkingen && (
+                              <Button
+                                variant="outline" size="sm" className="h-6 px-2 text-xs gap-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+                                disabled={herkomstBezig === bekijkGebruiker.id}
+                                onClick={() => setHerkomstToepassenTarget(bekijkGebruiker)}
+                              >
+                                <RotateCcw className="h-3 w-3" /> Terug naar baseline
+                              </Button>
                             )}
                           </div>
-                        );
-                      })()}
-                      {actief.length === 0 ? (
+                        )}
+                      </div>
+                      {!bev ? (
+                        <p className="text-xs text-muted-foreground">Bevoegdheden laden…</p>
+                      ) : actieveMods.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Geen bevoegdheden ingesteld.</p>
                       ) : (
-                        <div className="divide-y divide-border/50">
-                          {actief.map((b) => (
-                            <div key={b.id} className="flex items-center justify-between py-1.5">
-                              <span className="text-sm">{b.label}</span>
-                              <Badge variant="secondary" className="text-xs font-normal text-muted-foreground">
-                                {niveauLabel(b.niveau)}
-                              </Badge>
+                        <>
+                          <div className="grid grid-cols-[1fr_4.5rem_4.5rem_4.5rem] gap-1 text-xs text-muted-foreground border-b pb-1 px-1">
+                            <span>Module</span>
+                            <span className="text-center">Baseline</span>
+                            <span className="text-center">Afwijking</span>
+                            <span className="text-center font-medium text-foreground">Effectief</span>
+                          </div>
+                          <div className="divide-y divide-border/40">
+                            {actieveMods.map((m) => {
+                              const basisN = baseline[m.id] ?? 0;
+                              const effN = effectief[m.id] ?? 0;
+                              const afw = afwijkMap.get(m.id);
+                              const heeftAfw = afw != null;
+                              return (
+                                <div key={m.id} className={`grid grid-cols-[1fr_4.5rem_4.5rem_4.5rem] gap-1 items-center py-1 px-1 text-xs ${heeftAfw ? "bg-amber-50/50 -mx-1 px-2" : ""}`}>
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    {heeftAfw && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
+                                    <span className="truncate">{m.label}</span>
+                                  </div>
+                                  <span className="text-center text-muted-foreground">{niveauLabel(basisN)}</span>
+                                  <span className="text-center">
+                                    {heeftAfw ? (
+                                      <span className="font-medium text-amber-700">{niveauLabel(afw.niveau)}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )}
+                                  </span>
+                                  <span className={`text-center font-semibold ${effN > basisN ? "text-green-700" : effN < basisN ? "text-red-600" : ""}`}>
+                                    {niveauLabel(effN)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {heeftAfwijkingen && (
+                            <div className="space-y-1 pt-1 border-t">
+                              <p className="text-xs font-medium text-amber-700">Actieve afwijkingen:</p>
+                              {afwijkingen.map((a) => (
+                                <div key={a.module_id} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                  <span className="font-medium text-foreground">{MODULES.find((m) => m.id === a.module_id)?.label ?? a.module_id}:</span>
+                                  <span>{a.reden}</span>
+                                  <span className="shrink-0 text-muted-foreground/60">— {a.actor_naam}</span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          )}
+                        </>
                       )}
                     </div>
                   );
@@ -1943,118 +1708,6 @@ function VeldRij({ icon: Icon, label, waarde }: { icon: React.ElementType; label
       <div className="min-w-0">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="text-sm">{waarde || "—"}</div>
-      </div>
-    </div>
-  );
-}
-
-function BevoegdhedenEditor({
-  bevoegdheden,
-  onProfielenGewijzigd,
-  profielIds,
-  herkomstAutomatisch,
-}: {
-  bevoegdheden: Record<string, number>;
-  onProfielenGewijzigd?: (ids: number[], matrix: Record<string, number>) => void;
-  profielIds?: number[];
-  herkomstAutomatisch?: boolean;
-}) {
-  const { data: profielen } = useListProfielen();
-  const geselecteerd = profielIds ?? [];
-  const gekozenProfielen = (profielen ?? []).filter((p) => geselecteerd.includes(p.id));
-
-  function toggleProfiel(profielId: number) {
-    if (!profielen) return;
-    const nieuw = geselecteerd.includes(profielId)
-      ? geselecteerd.filter((id) => id !== profielId)
-      : [...geselecteerd, profielId];
-    // Gecombineerde matrix: per module het hoogste niveau over alle gekozen
-    // rollen. Lege selectie = lege matrix (geen toegang), zichtbaar in het grid.
-    const matrices = nieuw.map(
-      (id) =>
-        (profielen.find((p) => p.id === id)?.bevoegdheden as Record<string, number>) ?? {},
-    );
-    onProfielenGewijzigd?.(nieuw, combineerBevoegdheden(matrices));
-  }
-
-  return (
-    <div className="rounded-lg border p-3 space-y-3">
-      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-        <ShieldCheck className="h-3.5 w-3.5" /> Bevoegdheden
-      </div>
-
-      {gekozenProfielen.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          <span className="text-muted-foreground">
-            {gekozenProfielen.length === 1
-              ? herkomstAutomatisch
-                ? "Automatisch gekoppeld aan rol"
-                : "Gekoppeld aan rol"
-              : "Gekoppelde rollen"}
-          </span>
-          {gekozenProfielen.map((p) => (
-            <Badge key={p.id} variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
-              {p.naam}
-            </Badge>
-          ))}
-          {gekozenProfielen.length === 1 && herkomstAutomatisch && (
-            <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-              Automatisch
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {profielen && profielen.length > 0 && (
-        <div className="space-y-1.5">
-          <Label>Rollen (presets)</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {profielen.map((p) => {
-              const actief = geselecteerd.includes(p.id);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => toggleProfiel(p.id)}
-                  aria-pressed={actief}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                    actief
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-background text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  {actief && <Check className="h-3 w-3" />}
-                  {p.naam}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Meerdere rollen mogelijk: per module geldt het hoogste niveau van de gekozen rollen.
-            Andere rechten nodig? Maak een eigen rol aan onder Beheer › Rollen &amp; rechten.
-          </p>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">Effectieve rechten (afgeleid uit de rollen)</Label>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {MODULES.map((mod) => {
-            const niveau = bevoegdheden[mod.id] ?? 0;
-            return (
-              <div key={mod.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
-                <span className={niveau > 0 ? "" : "text-muted-foreground"}>{mod.label}</span>
-                <Badge
-                  variant={niveau > 0 ? "secondary" : "outline"}
-                  className={`text-xs h-5 px-1.5 font-normal ${niveau > 0 ? "" : "text-muted-foreground"}`}
-                >
-                  {niveauLabel(niveau)}
-                </Badge>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
@@ -2116,53 +1769,26 @@ function GebruikerVelden({
           <Label htmlFor="g-rol">Rol <span className="text-destructive">*</span></Label>
           <Select
             value={form.rol}
-            onValueChange={(v) =>
-              setForm((f) => ({
-                ...f,
-                rol: v,
-                functietitels:
-                  v === "hoofdbeheerder"
-                    ? f.functietitels.filter((o) => (FUNCTIETITELS as readonly string[]).includes(o))
-                    : [],
-              }))
-            }
+            onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}
           >
             <SelectTrigger id="g-rol"><SelectValue /></SelectTrigger>
             <SelectContent>
               {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
-              <SelectItem value="gebruiker">Gebruiker (matrix)</SelectItem>
+              <SelectItem value="gebruiker">Gebruiker</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {form.rol === "hoofdbeheerder" && (
-        <div className="space-y-1.5">
-          <Label>Projectfunctie</Label>
-          <p className="text-xs text-muted-foreground">Een hoofdbeheerder kan één of meer projectfuncties hebben.</p>
-          <div className="grid grid-cols-2 gap-2 rounded-md border p-3">
-            {FUNCTIETITELS.map((ft) => {
-              const aan = form.functietitels.includes(ft);
-              return (
-                <label key={ft} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <Checkbox
-                    checked={aan}
-                    onCheckedChange={(c) =>
-                      setForm((f) => ({
-                        ...f,
-                        functietitels: c
-                          ? [...f.functietitels, ft]
-                          : f.functietitels.filter((x) => x !== ft),
-                      }))
-                    }
-                  />
-                  {ft}
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* GEBRUIKERS_01 v2: geen hardcoded projectfunctie-keuze meer.
+          Functie(s) worden via een HRM-aanstelling in Personeel toegekend. */}
+      <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
+        <Briefcase className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+        <span>
+          De functie en bevoegdheden worden toegekend via een HRM-aanstelling in{" "}
+          <a href="/personeel" className="underline">Personeel</a> — niet hier in het account.
+        </span>
+      </div>
 
       {form.rol === "gebruiker" && (
         <div className="grid grid-cols-2 gap-3">
@@ -2197,23 +1823,6 @@ function GebruikerVelden({
             />
           )}
         </div>
-      )}
-
-      {form.rol !== "hoofdbeheerder" && (
-        <BevoegdhedenEditor
-          bevoegdheden={form.bevoegdheden}
-          profielIds={form.profiel_ids}
-          herkomstAutomatisch={form.herkomst_automatisch}
-          onProfielenGewijzigd={(ids, matrix) =>
-            setForm((f) => ({
-              ...f,
-              profiel_ids: ids,
-              bevoegdheden: matrix,
-              herkomst_profiel_id: ids.length === 1 ? ids[0] : null,
-              herkomst_automatisch: false,
-            }))
-          }
-        />
       )}
 
       <div className="grid grid-cols-2 gap-3">

@@ -6,4 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GebruikerInputBevoegdheden = {[key: string]: number};
+export type AfwijkingenResultaatEffectieveBevoegdheden = {[key: string]: number};

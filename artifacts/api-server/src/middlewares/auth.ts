@@ -2,10 +2,7 @@ import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { db, gebruikersTable, externeAdviseursTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
-import {
-  heeftNiveau,
-  type ModuleId,
-} from "@workspace/permissies";
+import { type ModuleId } from "@workspace/permissies";
 import { PermissieService } from "../lib/permissie-service";
 import { effectieveContext } from "../utils/rol";
 
@@ -187,22 +184,13 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
       return;
     }
     try {
-      const [g] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, id));
-      if (!g) {
-        res.status(403).json({ error: "Geen toegang" });
-        return;
-      }
-      // Hoofdbeheerder bypasses de matrix volledig.
-      if (g.rol === "hoofdbeheerder") {
-        next();
-        return;
-      }
-      // Toegang komt puur uit de bevoegdheden-matrix.
-      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-      if (!heeftNiveau(bev, module, minNiveau)) {
+      const permissies = new PermissieService(id);
+      await permissies.laad();
+      req.permissies = permissies;
+      if (
+        !permissies.isHoofdbeheerder &&
+        !permissies.heeftModuleRecht(module, minNiveau)
+      ) {
         res.status(403).json(bevoegdheidGeweigerd(module, minNiveau));
         return;
       }
@@ -306,20 +294,15 @@ export function requireEnigeBevoegdheid(
       return;
     }
     try {
-      const [g] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, id));
-      if (!g) {
-        res.status(403).json({ error: "Geen toegang" });
-        return;
-      }
-      if (g.rol === "hoofdbeheerder") {
-        next();
-        return;
-      }
-      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-      if (eisen.some(([module, minNiveau]) => heeftNiveau(bev, module, minNiveau))) {
+      const permissies = new PermissieService(id);
+      await permissies.laad();
+      req.permissies = permissies;
+      if (
+        permissies.isHoofdbeheerder ||
+        eisen.some(([module, minNiveau]) =>
+          permissies.heeftModuleRecht(module, minNiveau),
+        )
+      ) {
         next();
         return;
       }

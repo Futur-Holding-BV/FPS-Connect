@@ -133,36 +133,14 @@ async function verrijkMetPersoneelVoorstellen(
   return { ...s, medewerker_voorstel: medewerkerVoorstel, document_type_voorstel: documentTypeVoorstel };
 }
 
-// ── Permissiecheck helper ─────────────────────────────────────────────────────
-
-async function haalGebruikerBevoegdheden(userId: number): Promise<{
-  bevoegdheden: Record<string, number>;
-  rol: string;
-}> {
-  try {
-    const [g] = await db
-      .select({ bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
-      .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, userId));
-    if (!g) return { bevoegdheden: {}, rol: "gebruiker" };
-    return {
-      bevoegdheden: (g.bevoegdheden as Record<string, number> | null) ?? {},
-      rol: g.rol ?? "gebruiker",
-    };
-  } catch {
-    return { bevoegdheden: {}, rol: "gebruiker" };
-  }
-}
-
 function verrijkMetBevoegdheden(
   suggestie: SlimUploadSuggestie,
-  bevoegdheden: Record<string, number>,
-  isHoofdBeheerder: boolean,
+  permissies: NonNullable<Express.Request["permissies"]>,
 ): SlimUploadSuggestie {
   const beperkingen: string[] = [];
 
   const heeftniveau = (mod: string, min: number) =>
-    isHoofdBeheerder || (bevoegdheden[mod] ?? 0) >= min;
+    permissies.isHoofdbeheerder || permissies.heeftModuleRecht(mod, min);
 
   if (suggestie.categorie === "personeelsdocument") {
     if (!heeftniveau("personeel", 1)) {
@@ -180,7 +158,7 @@ function verrijkMetBevoegdheden(
     const bevatSalaris =
       Object.keys(gev).some((k) => salarisSloetels.some((s) => k.toLowerCase().includes(s))) ||
       Object.values(gev).some((v) => /\b(salaris|bruto|netto|loon)\b/i.test(v));
-    if (bevatSalaris && !isHoofdBeheerder) {
+    if (bevatSalaris && !permissies.isHoofdbeheerder) {
       const verrijkt: SlimUploadSuggestie = {
         ...suggestie,
         impact_niveau: "hoog",
@@ -235,19 +213,18 @@ router.post(
       const resultaten = await Promise.all(bestanden.map((b) => classificeerBestand(b, toelichting)));
 
       // Permissiecheck op basis van sessie
-      const userId = req.session.userId;
-      let bevoegdheden: Record<string, number> = {};
-      let isHoofdBeheerder = false;
-      if (userId) {
-        const info = await haalGebruikerBevoegdheden(userId);
-        bevoegdheden = info.bevoegdheden;
-        isHoofdBeheerder = info.rol === "hoofdbeheerder";
-      }
+      const permissies = req.permissies!;
 
       const verrijkteResultaten = await Promise.all(
         resultaten
-          .map((s) => verrijkMetBevoegdheden(s, bevoegdheden, isHoofdBeheerder))
-          .map((s) => verrijkMetPersoneelVoorstellen(s, isHoofdBeheerder || (bevoegdheden.personeel ?? 0) >= 1)),
+          .map((s) => verrijkMetBevoegdheden(s, permissies))
+          .map((s) =>
+            verrijkMetPersoneelVoorstellen(
+              s,
+              permissies.isHoofdbeheerder ||
+                permissies.heeftModuleRecht("personeel", 1),
+            ),
+          ),
       );
 
       for (const [i, s] of verrijkteResultaten.entries()) {
@@ -321,8 +298,7 @@ router.get(
       return;
     }
 
-    const info = await haalGebruikerBevoegdheden(userId);
-    if (info.rol !== "hoofdbeheerder") {
+    if (!req.permissies!.isHoofdbeheerder) {
       res.status(403).json({ error: "Alleen de hoofdbeheerder kan het upload-log inzien." });
       return;
     }

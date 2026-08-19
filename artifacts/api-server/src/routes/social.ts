@@ -15,7 +15,6 @@ import {
   socialBerichtKanalenTable,
   socialKoppelingenTable,
   werkgeversTable,
-  gebruikersTable,
   marketingCampagnesTable,
   SOCIAL_KANALEN,
   KOPPELING_MODI,
@@ -26,7 +25,6 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, gte, lte, isNotNull, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { heeftNiveau } from "@workspace/permissies";
 import { KANAAL_EISEN, valideerTegenKanaal } from "../lib/socialKanalen";
 import { telBerichtenOpDag } from "../services/socialService";
 
@@ -65,18 +63,9 @@ async function controleerMarketingBevoegdheid(
 ): Promise<{ status: number; error: string } | null> {
   const userId = req.session.userId;
   if (!userId) return { status: 401, error: "Niet ingelogd" };
-  let mag = false;
-  if (req.permissies) {
-    mag = req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("marketing", 3);
-  } else {
-    const [g] = await db
-      .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-      .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, userId));
-    if (!g) return { status: 403, error: "Geen toegang" };
-    mag = g.rol === "hoofdbeheerder"
-      || heeftNiveau((g.bevoegdheden as Record<string, number> | null) ?? {}, "marketing", 3);
-  }
+  const mag =
+    req.permissies?.isHoofdbeheerder === true ||
+    req.permissies?.heeftModuleRecht("marketing", 3) === true;
   if (!mag) {
     return { status: 403, error: "Campagne koppelen vereist marketing-bevoegdheid (niveau 3)" };
   }

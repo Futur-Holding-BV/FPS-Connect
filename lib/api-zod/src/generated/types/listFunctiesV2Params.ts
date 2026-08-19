@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GebruikerUpdateBevoegdheden = {[key: string]: number};
+export type ListFunctiesV2Params = {
+/**
+ * Inclusief inactieve functies meenemen
+ */
+inclusief_inactief?: boolean;
+};

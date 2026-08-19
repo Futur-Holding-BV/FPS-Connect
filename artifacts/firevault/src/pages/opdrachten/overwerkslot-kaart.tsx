@@ -23,8 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Clock, Lock, Unlock, CheckCircle2, ShieldQuestion } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/auth-context";
-import { useRol } from "@/context/rol-context";
 
 // Zondag van de lopende week (ISO: maandag is de eerste dag).
 function zondagVanLopendeWeek(): string {
@@ -155,21 +153,15 @@ function OpenzettenDialog({
 export function OverwerkslotKaart({ projectId }: { projectId: number }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { rol } = useRol();
-  const { gebruiker } = useAuth();
-
-  // Beheerknoppen: hoofdbeheerder of functietitel Projectleider. De server
-  // dwingt dit sowieso af (403); dit voorkomt alleen nodeloze pogingen.
-  const isProjectleider = (gebruiker?.functietitels ?? []).some(
-    (t) => t.toLowerCase() === "projectleider",
-  );
-  const magBeheren = rol === "hoofdbeheerder" || isProjectleider;
 
   const [openzettenOpen, setOpenzettenOpen] = useState(false);
   const [gekozenAanvraag, setGekozenAanvraag] = useState<OverwerkSlot | null>(null);
 
   const { data, isLoading } = useGetOverwerkslot(projectId);
   const sluiten = useSluitOverwerkslot();
+  // Dezelfde serverbeslissing als de open/sluit-routes: hoofdbeheerder of een
+  // actuele actieve functie Projectleider. Geen client-side titelheuristiek.
+  const magBeheren = data?.mag_beheren === true;
 
   const ververs = () =>
     queryClient.invalidateQueries({ queryKey: getGetOverwerkslotQueryKey(projectId) });

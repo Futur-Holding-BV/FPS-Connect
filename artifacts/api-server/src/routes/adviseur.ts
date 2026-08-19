@@ -18,6 +18,7 @@ import { aiGateway, heeftGateway, AI_LIMIET_MELDING_DAGPLAFOND, AI_LIMIET_MELDIN
 import type { AiContextBron } from "../lib/aiGateway";
 import { bouwContextBundel } from "../lib/aiContext";
 import type { ContextEntiteitType } from "../lib/aiContext";
+import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
 
 // ASSISTENT_01 fase 2 — objecttypen waarvoor de contextmotor gegevens mag
 // ophalen. De autorisatie zit in de gegevensvraag zelf (magKnoopZien via
@@ -284,14 +285,16 @@ router.post("/adviseur/vraag", requireAuth, async (req, res): Promise<void> => {
       return void res.status(400).json({ error: "Vraag is te lang (max 2000 tekens)" });
     }
 
+    const permissies = req.permissies;
+    if (!permissies) return void res.status(403).json({ error: "Geen toegang" });
     const [gebruiker] = await db
-      .select({ naam: gebruikersTable.naam, rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+      .select({ naam: gebruikersTable.naam, rol: gebruikersTable.rol })
       .from(gebruikersTable)
-      .where(eq(gebruikersTable.id, userId));
+      .where(eq(gebruikersTable.id, permissies.userId));
 
     if (!gebruiker) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
 
-    const bevoegdheden = (gebruiker.bevoegdheden as Record<string, number> | null) ?? {};
+    const bevoegdheden = await berekenEffectieveBevoegdheden(permissies.userId);
     const systeemPrompt = bouwSysteemPrompt(gebruiker.naam, gebruiker.rol, bevoegdheden);
 
     // ── ASSISTENT_01 fase 2: paginacontext via de geautoriseerde contextmotor ─
@@ -304,13 +307,13 @@ router.post("/adviseur/vraag", requireAuth, async (req, res): Promise<void> => {
     if (
       objectType && CONTEXT_TYPES.includes(objectType) &&
       typeof objectId === "number" && Number.isInteger(objectId) && objectId > 0 &&
-      req.permissies
+      permissies
     ) {
       try {
         const bundel = await bouwContextBundel({
           entiteitstype: objectType,
           entiteitId: objectId,
-          scope: req.permissies,
+          scope: permissies,
           modelSlot: "default",
           maxDiepte: 1,
         });
@@ -343,12 +346,7 @@ Onderstaande systeemgegevens over dit object zijn opgehaald binnen de rechten va
 
     // ── ASSISTENT_01 §5.2: tool-lus (max 3 rondes) — alleen-lezen tools,
     // rechten afgedwongen in de uitvoerder zelf, nooit in de prompt.
-    const toolScope: ToolScope = req.permissies ?? {
-      heeftModuleRecht: (m: string, n: number) => (bevoegdheden[m] ?? 0) >= n,
-      magBijGebouw: () => gebruiker.rol === "hoofdbeheerder",
-      isHoofdbeheerder: gebruiker.rol === "hoofdbeheerder",
-      userId,
-    };
+    const toolScope: ToolScope = permissies;
     const gesprek: Parameters<typeof aiGateway.chat>[1]["messages"] = [...berichtenVoorAi];
     let resultaat = await aiGateway.chat("default", {
       max_tokens: 1200,

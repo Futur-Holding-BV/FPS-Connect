@@ -156,7 +156,6 @@ async function main(): Promise<void> {
       email: u1Email,
       rol: "gebruiker",
       wachtwoord: W1,
-      bevoegdheden: {},
     });
     const b = await json(r);
     eis(r.status === 201 && typeof b.id === "number", "stap 1", `POST /gebruikers gaf ${r.status} ${JSON.stringify(b)}`);
@@ -249,7 +248,6 @@ async function main(): Promise<void> {
       naam: "PrePub Uitnodiging Gebruiker",
       email: u2Email,
       rol: "gebruiker",
-      bevoegdheden: {},
     });
     const bc = await json(rc);
     eis(rc.status === 201 && typeof bc.id === "number", "stap 5", `aanmaken uitnodigingsgebruiker gaf ${rc.status} ${JSON.stringify(bc)}`);

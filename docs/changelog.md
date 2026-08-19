@@ -729,6 +729,18 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Controle faalt niet stil**: ontbrekende secrets, een ongeldig token, onleesbare vervaldatum of onvoldoende `Application.Read.All`-rechten maken de geplande controle rood met een concrete herstelmelding, in plaats van een geruststellende maar onvolledige uitslag.
 
 
+## 2026-08-19 — GEBRUIKERS_01 v2: functiehuis volledig — consolidatie, audit en contracthertoets
+
+- **Niet-destructieve consolidatie goedgekeurd en uitgevoerd** (migratie 0101): IDs 8/9 inactief, IDs 10/11 behouden, zestien functies aangemaakt en via `functies.profiel_id` aan bestaande profielmatrices gebonden; geen speculatieve namen aangemaakt. Dev-migratie 51/51, rollback dry-run 8/8 (altijd ROLLBACK), drift 0, typecheck groen, unit-tests 6/6.
+- **Profielen zijn voortaan technische rechtenmatrices** achter functies — geen zichtbaar tweede gebruikersconcept. Enige beheerplek: Personeel → Functiehuis. Oude profiel-/rollen-/objectrechtenpagina's verwijderd; routes sturen door. Functie aanmaken/bewerken omvat de volledige rechtenmatrix; inline aanmaken vanuit Aanstelling toevoegen is mogelijk.
+- **Effectieve rechten en audit**: optelling actieve functiebasisrechten hoofd + nevenafspraken; per-module afwijkingen als override; reden/actor/tijdstip in append-only auditlog; `apply` overschrijft nooit stilzwijgend afwijkingen; reset vereist reden.
+- **Functietitels**: hardcoded auth/titellijsten verwijderd; auth, gebruikerslijsten, `is_uitvoerend_veld` en runtime planning-/toegang-/notificatiequery's draaien op actuele functies/aanstellingen. Het compatibele API-veld `functietitels` wordt live uit HRM gevuld; de legacy databasekolom is geen runtimebron.
+- **Legacy rechtenomwegen gesloten**: oude functie- en profielmutaties, accountrechtenvelden, onboarding-`profiel_id` en herkomstprofielacties geven HTTP 410. Onboarding toont rechten rechtstreeks uit de gekozen functie; fysieke functieverwijdering en stil deactiveren zijn niet beschikbaar.
+- **Alle beheerverwijzingen geconsolideerd**: ook Ontwikkelstatus en de persoonlijke go-live-actielijst verwijzen uitsluitend naar Personeel → Functiehuis; oude profiel- en rollenbestemmingen zijn nergens meer als actie zichtbaar.
+- **Contracthertoets 19-08-2026 — alle 9 stappen PASS**: oproep + 0 uur + einddatum 2027-02-19, kaart correct, bewaking ziet type=einddatum, negatief geweigerd (400), concept zonder contract, afronding exact één contract. OpenAPI beschrijft hetzelfde bereik 0..48.
+- **Browserproef groen**: Functiehuis aanmaken/bewerken, inline functie vanuit Aanstelling toevoegen, zichtbare rechten, redirects en één Instellingen-ingang; geen delete/trashactie.
+- **Leeftijdsregel gecorrigeerd**: eerdere "geen jeugdregel"-conclusie was achterhaald door parallelle werkzaamheden. `jongeWerknemerRegel.ts` codeert ATW-jeugdbeperkingen; `planning-module.ts` controleert onder-18-planning; `compliance-monitoring.ts` signaleert actieve onder-18-medewerkers. Niets extra gebouwd in GEBRUIKERS_01; René beslist over beleid en vervolg.
+- **Bewijs**: `docs/metingen/GEBRUIKERS_01-v2-bewijs.md`, `docs/metingen/GEBRUIKERS_01-toets.md`.
 ## 2026-08-19 — Snagstream-archief voorkomt dubbelen en vindt snags terug
 
 - **Geen dubbele PDF-opslag**: Connect vergelijkt vóór upload de SHA-256 van de inhoud. Een exact bestaand rapport opent direct; dezelfde naam met andere inhoud vraagt om een bewuste keuze.
@@ -736,3 +748,11 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Zoeken tot op snag en pagina**: één zoekveld doorzoekt rapportmetadata, gebouw en snagvelden, met filters op gebouw, jaar en status en een directe link naar de treffer.
 - **Gebouwenoverzicht en ongekoppeld werk**: per gebouw zijn rapporten, recentste datum en snags zichtbaar; ongekoppelde rapporten staan bovenaan en zijn daar direct te koppelen.
 - **Opruimen is herhaalbaar**: verwijderde rapporten ruimen hun PDF op; tijdelijke opslagfouten blijven geregistreerd en worden bij start en iedere vijftien minuten opnieuw geprobeerd.
+
+## 2026-08-19 — GEBRUIKERS_01 v2: functierechten zonder escalatieroute
+
+- **Functie blijft de rechtenbron**: functies en hoofd-/nevenaanstellingen leveren de effectieve modulematrix; persoonsafwijkingen blijven expliciet, gemotiveerd en auditeerbaar.
+- **Privilege-escalatie gesloten**: een HRM-schrijver met alleen `personeel:2` kan niet langer een functie met hogere rechten maken, wijzigen, verplaatsen, activeren of intrekken via accountkoppeling, dienstdata/status, offboarding, verwijderen, hoofd-/nevenaanstellingen of een goedgekeurd AI-voorstel. Volledig gebruikersbeheer mag alles; andere actoren mogen per module nooit boven hun eigen effectieve niveau uitkomen.
+- **AI-beoordeling atomair**: een AI-voorstel voor de indienstdatum wordt vóór statuswijziging tegen alle functieprofielen getoetst; voorstel en medewerker worden daarna in één transactie geschreven, zodat een 403 het voorstel open en de medewerker ongewijzigd laat.
+- **Effectieve rechten overal beslissend**: algemene routepoorten en de resterende autorisatie-/doelgroepbeslissingen in declaraties, toolbox, Slim Upload, veiligheid, import, social, Go Live en de AI-adviseur gebruiken de functie-afgeleide matrix in plaats van het legacy accountveld.
+- **Bewijs**: API- en scripts-typechecks en API-build groen; projecttests 39/39 bestanden en 593 tests groen (2 overgeslagen); de volledige GEBRUIKERS_01-ketenproef 9/9 groen; de live autorisatieproef 3/3 groen inclusief alle vervang-/intrek-/verplaats-/AI-omwegen, zonder gedeeltelijke mutatie.

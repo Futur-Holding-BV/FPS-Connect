@@ -15,7 +15,6 @@ import {
   gebouwenTable,
   eenheidsprijzenTable,
   facturenTable,
-  gebruikersTable,
   prijsafsprakenTable,
   modCalcArtekelenTable,
 } from "@workspace/db";
@@ -24,7 +23,7 @@ import { vergelijkMetVorige } from "../services/prijsAfspraken";
 import { stelPrijslijstVoorstel } from "../lib/documentIntelligence";
 import { logger } from "../lib/logger";
 import { requireEnigeBevoegdheid } from "../middlewares/auth";
-import { heeftNiveau, type ModuleId } from "@workspace/permissies";
+import { type ModuleId } from "@workspace/permissies";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { randomUUID } from "crypto";
 
@@ -68,20 +67,11 @@ async function importRechtFout(req: Request, type: string): Promise<{ status: nu
   if (!module) return { status: 400, error: "Ongeldig importtype" };
   const id = req.session?.userId;
   if (!id) return { status: 401, error: "Niet ingelogd" };
-  if (req.permissies) {
-    if (req.permissies.isHoofdbeheerder) return null;
-    return req.permissies.heeftModuleRecht(module, HOOGSTE_NIVEAU)
-      ? null
-      : { status: 403, error: "Geen toegang" };
-  }
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, id));
-  if (!g) return { status: 403, error: "Geen toegang" };
-  if (g.rol === "hoofdbeheerder") return null;
-  const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-  return heeftNiveau(bev, module, HOOGSTE_NIVEAU) ? null : { status: 403, error: "Geen toegang" };
+  if (!req.permissies) return { status: 403, error: "Geen toegang" };
+  if (req.permissies.isHoofdbeheerder) return null;
+  return req.permissies.heeftModuleRecht(module, HOOGSTE_NIVEAU)
+    ? null
+    : { status: 403, error: "Geen toegang" };
 }
 
 // ── In-memory cache voor geüploade bestanden ──────────────────────────────────

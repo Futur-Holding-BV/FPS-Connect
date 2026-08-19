@@ -9,6 +9,7 @@ import {
 import { eq, count, desc, gte, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
 
 const router = Router();
 
@@ -344,7 +345,7 @@ function mijnActiesVoorRol(rol: string, bevoegdheden: Record<string, number>) {
   if (rol === "hoofdbeheerder") {
     acties.push(
       { id: "sys_mail", titel: "Mailinstellingen controleren", categorie: "Systeem", beschrijving: "Stel MAIL_FROM in via Beheer › Mailinstellingen", voltooid: false, link: "/beheer/mail" },
-      { id: "sys_profielen", titel: "Bevoegdheidsprofielen controleren", categorie: "Systeem", beschrijving: "Controleer de rollenmatrix en pas aan waar nodig", voltooid: false, link: "/beheer/rollen-rechten" },
+      { id: "sys_profielen", titel: "Functierechten controleren", categorie: "Systeem", beschrijving: "Controleer in het Functiehuis of iedere functie de juiste rechtenmatrix heeft", voltooid: false, link: "/personeel?tab=functies" },
       { id: "sys_backup", titel: "Back-up instellen", categorie: "Systeem", beschrijving: "Controleer of de dagelijkse back-up actief is", voltooid: false, link: "/beheer/backup" },
       { id: "sys_accountview", titel: "AccountView-koppeling configureren", categorie: "Financieel", beschrijving: "Stel de API-verbinding in via Beheer › AccountView", voltooid: false, link: "/beheer/boekhouding" },
     );
@@ -568,15 +569,15 @@ router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res): Prom
 });
 
 router.get("/beheer/go-live/mijn-acties", requireAuth, async (req, res): Promise<void> => {
-  const userId = req.session.userId;
-  if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
-  const [gebruiker] = await db
-    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  if (!gebruiker) { res.status(404).json({ error: "Gebruiker niet gevonden" }); return; }
-  const bevoegdheden = (gebruiker.bevoegdheden ?? {}) as Record<string, number>;
-  res.json(mijnActiesVoorRol(gebruiker.rol, bevoegdheden));
+  const permissies = req.permissies;
+  if (!permissies) { res.status(403).json({ error: "Geen toegang" }); return; }
+  const bevoegdheden = await berekenEffectieveBevoegdheden(permissies.userId);
+  res.json(
+    mijnActiesVoorRol(
+      permissies.isHoofdbeheerder ? "hoofdbeheerder" : "gebruiker",
+      bevoegdheden,
+    ),
+  );
 });
 
 router.get("/beheer/go-live/testdata", requireAuth, async (req, res): Promise<void> => {

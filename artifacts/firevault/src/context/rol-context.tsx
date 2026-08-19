@@ -6,20 +6,9 @@ import { setGebruikerOverrideGetter } from "@workspace/api-client-react";
 
 export type { Rol };
 
-/**
- * Enige definitie van uitvoerende functietitels voor de web-app.
- * De server berekent `is_uitvoerend_veld` op basis van dezelfde lijst en
- * stuurt die mee in de auth-payload — consumenten hoeven nooit zelf te
- * matchen. Deze constante blijft hier uitsluitend voor de impersonatie-case
- * (hoofdbeheerder die "bekijkt als" een teamlid: het teamlid-object heeft
- * geen server-berekende vlag).
- */
-export const UITVOERENDE_FUNCTIES = [
-  "Monteur",
-  "Timmerman",
-  "Uitvoerder",
-  "Onderhoudsmonteur",
-] as const;
+// GEBRUIKERS_01 v2: UITVOERENDE_FUNCTIES hardcoded lijst verwijderd.
+// De server bepaalt `is_uitvoerend_veld` op basis van de uitvoerend-vlag van de functie.
+// Bij impersonatie: als het teamlid-object de vlag heeft, gebruik die; anders false.
 
 export type GeimiteerdePersoon = {
   id: number;
@@ -27,6 +16,8 @@ export type GeimiteerdePersoon = {
   rol: Rol;
   functietitels: string[];
   bevoegdheden: Record<string, number>;
+  // GEBRUIKERS_01 v2: server-vlag indien beschikbaar, anders false
+  is_uitvoerend_veld?: boolean;
 };
 
 type RolContextType = {
@@ -39,10 +30,11 @@ type RolContextType = {
   zetPersoon: (persoon: GeimiteerdePersoon | null) => void;
   /**
    * Eén bron van waarheid voor de buitendienst-check.
+   * De server bepaalt deze vlag op basis van de uitvoerend-vlag van de functie
+   * (niet meer op basis van een hardcoded titellijst).
    * - Zonder impersonatie: server-berekende vlag uit de auth-payload.
-   * - Bij impersonatie (hoofdbeheerder bekijkt als teamlid): lokaal berekend
-   *   uit de functietitels van het teamlid (teamlid-object heeft geen
-   *   server-vlag).
+   * - Bij impersonatie (hoofdbeheerder bekijkt als teamlid): de server-vlag op
+   *   het teamlid-object indien aanwezig, anders false.
    */
   is_uitvoerend_veld: boolean;
 };
@@ -126,14 +118,9 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
     return () => setGebruikerOverrideGetter(null);
   }, [kanWisselen, actievePersoon]);
 
-  // is_uitvoerend_veld: gebruik de server-vlag voor de ingelogde gebruiker;
-  // bij impersonatie lokaal berekenen uit de titels van het teamlid.
+  // GEBRUIKERS_01 v2: server-vlag is leidend; bij impersonatie use is_uitvoerend_veld ?? false
   const is_uitvoerend_veld: boolean = kanWisselen && actievePersoon
-    ? (actievePersoon.rol !== "hoofdbeheerder" &&
-       actievePersoon.functietitels.length > 0 &&
-       actievePersoon.functietitels.every((f) =>
-         (UITVOERENDE_FUNCTIES as readonly string[]).includes(f),
-       ))
+    ? (actievePersoon.is_uitvoerend_veld ?? false)
     : (gebruiker?.is_uitvoerend_veld ?? false);
 
   return (

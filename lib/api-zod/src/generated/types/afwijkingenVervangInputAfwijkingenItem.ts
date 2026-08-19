@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GebruikerHerkomstBevestigenBulk200 = {
-  /** Aantal bevestigde koppelingen */
-  bevestigd: number;
+export type AfwijkingenVervangInputAfwijkingenItem = {
+  module_id: string;
+  niveau: number;
 };

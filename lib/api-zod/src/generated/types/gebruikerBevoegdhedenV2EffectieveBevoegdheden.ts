@@ -6,6 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ProfielToepassen200 = {
-  bijgewerkt: number;
-};
+export type GebruikerBevoegdhedenV2EffectieveBevoegdheden = {[key: string]: number};

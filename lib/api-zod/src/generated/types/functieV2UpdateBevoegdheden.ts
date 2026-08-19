@@ -6,7 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SynchroniseerStandaardProfielen200 = {
-  aangemaakt: number;
-  bijgewerkt: number;
-};
+export type FunctieV2UpdateBevoegdheden = {[key: string]: number};

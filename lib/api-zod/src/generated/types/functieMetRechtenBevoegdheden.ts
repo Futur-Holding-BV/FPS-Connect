@@ -6,7 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ProfielenAanvullen200 = {
-  profielen_aangevuld: number;
-  sleutels_toegevoegd: number;
-};
+export type FunctieMetRechtenBevoegdheden = {[key: string]: number};

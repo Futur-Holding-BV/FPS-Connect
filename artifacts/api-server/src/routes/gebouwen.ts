@@ -22,6 +22,7 @@ import { prefixVoorGebouw, volgendeGWerknummer } from "../lib/kenmerk";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
+import { haalActieveFunctieNamen } from "../lib/functieNamen";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -1125,7 +1126,7 @@ router.post(
 
       // Controleer of gebruiker bestaat
       const [gebruiker] = await db
-        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, rol: gebruikersTable.rol, functietitels: gebruikersTable.functietitels })
+        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, rol: gebruikersTable.rol })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, Number(gebruiker_id)));
       if (!gebruiker) {
@@ -1143,7 +1144,11 @@ router.post(
             .status(400)
             .json({ error: "Een beheerder vereist een projectfunctie" });
         }
-        if (!(gebruiker.functietitels ?? []).includes(gekozen)) {
+        // GEBRUIKERS_01 v2: de toegestane projectfuncties volgen uit de aan de
+        // beheerder gekoppelde medewerker (hoofdfunctie + aanstellingen, alleen
+        // actieve functies), niet uit gebruikers.functietitels.
+        const functieNamen = await haalActieveFunctieNamen(gebruiker.id);
+        if (!functieNamen.has(gekozen)) {
           return void res.status(400).json({
             error: "Projectfunctie hoort niet bij het profiel van deze beheerder",
           });

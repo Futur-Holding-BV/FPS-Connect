@@ -5,7 +5,9 @@ import {
   useGetMedewerker,
   useUpdateMedewerker,
   useDeleteMedewerker,
-  useListFuncties,
+  // GEBRUIKERS_01 v2: functies-v2 met directe bevoegdheden
+  useListFunctiesV2,
+  useCreateFunctieV2,
   useListCaoOpties,
   useListMedewerkers,
   useListToewijsbareGebruikers,
@@ -42,6 +44,7 @@ import {
   useDeleteMedewerkerAanstelling,
   useSetHoofdAanstelling,
   getListMedewerkerAanstellingenQueryKey,
+  getListFunctiesV2QueryKey,
   getGetGoedkeuringVoorObjectQueryKey,
   useListCaoKeuzes,
   useCreateCaoKeuze,
@@ -77,7 +80,9 @@ import type {
   MedewerkerAanstellingInput,
   MedewerkerCaoKeuze,
   MedewerkerCaoKeuzeInput,
+  FunctieV2Input,
 } from "@workspace/api-client-react";
+import { MODULES, NIVEAUS as RECHTEN_NIVEAUS } from "@workspace/permissies";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1031,7 +1036,8 @@ export default function MedewerkerDetailPagina() {
     echteRol === "hoofdbeheerder" || (bevoegdheden.personeel ?? 0) >= 2;
 
   const { data: medewerker, isLoading, isError } = useGetMedewerker(id);
-  const { data: functies } = useListFuncties();
+  // GEBRUIKERS_01 v2: functies met directe bevoegdheden
+  const { data: functies } = useListFunctiesV2();
   const { data: caoOpties } = useListCaoOpties();
   const { data: alleMedewerkers } = useListMedewerkers();
   const { data: gebruikers } = useListToewijsbareGebruikers();
@@ -1062,6 +1068,8 @@ export default function MedewerkerDetailPagina() {
   const updAanstelling = useUpdateMedewerkerAanstelling();
   const delAanstelling = useDeleteMedewerkerAanstelling();
   const stelHoofdIn = useSetHoofdAanstelling();
+  // GEBRUIKERS_01 v2: inline functie aanmaken met directe bevoegdheden
+  const maakFunctieMut = useCreateFunctieV2();
 
   const [aanstellingOpen, setAanstellingOpen] = useState(false);
   const [aanstellingBewerkId, setAanstellingBewerkId] = useState<number | null>(null);
@@ -1072,6 +1080,9 @@ export default function MedewerkerDetailPagina() {
   const [aanstellingAiVoorstel, setAanstellingAiVoorstel] = useState(false);
   const [aanstellingAiToelichting, setAanstellingAiToelichting] = useState<string | null>(null);
   const [aanstellingAiVelden, setAanstellingAiVelden] = useState<Record<string, ContractAiVeld> | null>(null);
+  // Inline functie-aanmaken (V2: directe bevoegdheden)
+  const [inlineFunctieOpen, setInlineFunctieOpen] = useState(false);
+  const [inlineFunctieForm, setInlineFunctieForm] = useState<FunctieV2Input>({ naam: "", uitvoerend: false, bevoegdheden: {} });
   // Snel toevoegen van een extra functie vanuit het Profiel-bewerken-dialoog.
   const [snelFunctieId, setSnelFunctieId] = useState<string>("");
 
@@ -1368,6 +1379,27 @@ export default function MedewerkerDetailPagina() {
     setAanstellingAiVoorstel(false);
     setAanstellingAiToelichting(null);
     setAanstellingOpen(true);
+  }
+
+  // GEBRUIKERS_01: maak inline een nieuwe functie aan zonder het scherm te verlaten
+  async function maakInlineFunctie() {
+    if (!inlineFunctieForm.naam.trim()) {
+      toast({ title: "Geef de functie een naam", variant: "destructive" });
+      return;
+    }
+    try {
+      const nieuweFunctie = await maakFunctieMut.mutateAsync({
+        data: { ...inlineFunctieForm, naam: inlineFunctieForm.naam.trim() },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListFunctiesV2QueryKey() });
+      // Selecteer de nieuwe functie direct in het aanstellingformulier
+      setAanstellingForm((f) => ({ ...f, functie_id: nieuweFunctie.id }));
+      setInlineFunctieOpen(false);
+      setInlineFunctieForm({ naam: "", uitvoerend: false, bevoegdheden: {} });
+      toast({ title: `Functie "${nieuweFunctie.naam}" aangemaakt en geselecteerd` });
+    } catch {
+      toast({ title: "Functie aanmaken mislukt", variant: "destructive" });
+    }
   }
 
   async function vulAanstellingInViaAI() {
@@ -2040,7 +2072,17 @@ export default function MedewerkerDetailPagina() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Functie</Label>
+              <div className="flex items-center justify-between">
+                <Label>Functie</Label>
+                {/* GEBRUIKERS_01: inline nieuwe functie aanmaken zonder het scherm te verlaten */}
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                  onClick={() => setInlineFunctieOpen(true)}
+                >
+                  <Plus className="h-3 w-3" /> Nieuwe functie aanmaken
+                </button>
+              </div>
               <Select
                 value={aanstellingForm.functie_id != null ? String(aanstellingForm.functie_id) : "geen"}
                 onValueChange={(v) => setAanstellingForm((f) => ({ ...f, functie_id: v === "geen" ? null : Number(v) }))}
@@ -2048,11 +2090,50 @@ export default function MedewerkerDetailPagina() {
                 <SelectTrigger><SelectValue placeholder="Geen functie" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="geen">Geen functie</SelectItem>
-                  {(functies ?? []).map((f) => (
-                    <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                  ))}
+                  {(functies ?? []).filter((f) => f.uitvoerend).length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Uitvoerend</SelectLabel>
+                      {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {(functies ?? []).filter((f) => !f.uitvoerend).length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Overig</SelectLabel>
+                      {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
                 </SelectContent>
               </Select>
+              {/* GEBRUIKERS_01 v2: toon rechten van de gekozen functie (direct van functie-v2) */}
+              {aanstellingForm.functie_id != null && (() => {
+                const gekozenFunctie = (functies ?? []).find((f) => f.id === aanstellingForm.functie_id);
+                if (!gekozenFunctie) return null;
+                const actief = MODULES.filter((m) => (gekozenFunctie.bevoegdheden[m.id] ?? 0) > 0);
+                if (actief.length === 0) return (
+                  <p className="text-xs text-muted-foreground">Deze functie heeft nog geen bevoegdheden ingesteld.</p>
+                );
+                return (
+                  <div className="rounded-md border bg-muted/30 p-2.5 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Rechten via functie: {gekozenFunctie.naam}</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                      {actief.map((m) => {
+                        const niveau = gekozenFunctie.bevoegdheden[m.id] ?? 0;
+                        const niveauTekst = RECHTEN_NIVEAUS.find((n) => n.waarde === niveau)?.kort ?? String(niveau);
+                        return (
+                          <div key={m.id} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground truncate">{m.label}</span>
+                            <span className="font-medium ml-1">{niveauTekst}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-1.5">
               <Label>CAO</Label>
@@ -2088,6 +2169,78 @@ export default function MedewerkerDetailPagina() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAanstellingOpen(false)}>Annuleren</Button>
             <Button onClick={opslaanAanstelling}>Opslaan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* GEBRUIKERS_01: Inline nieuwe functie aanmaken vanuit aanstelling-dialoog */}
+      {/* GEBRUIKERS_01 v2: Inline nieuwe functie aanmaken met directe bevoegdhedenmatrix */}
+      <Dialog open={inlineFunctieOpen} onOpenChange={setInlineFunctieOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nieuwe functie aanmaken</DialogTitle>
+            <DialogDescription>
+              Maak direct een nieuwe functie aan met naam, uitvoerend-vlag en bevoegdhedenmatrix. Na opslaan wordt deze automatisch geselecteerd in de aanstelling.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Naam *</Label>
+              <Input
+                value={inlineFunctieForm.naam}
+                onChange={(e) => setInlineFunctieForm((f) => ({ ...f, naam: e.target.value }))}
+                placeholder="bijv. Monteur, Projectleider"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="inline-functie-uitvoerend"
+                checked={inlineFunctieForm.uitvoerend ?? false}
+                onCheckedChange={(v) => setInlineFunctieForm((f) => ({ ...f, uitvoerend: Boolean(v) }))}
+              />
+              <Label htmlFor="inline-functie-uitvoerend" className="cursor-pointer font-normal text-sm">
+                Uitvoerende functie (veldmedewerker / monteur)
+              </Label>
+            </div>
+            {/* Directe bevoegdhedenmatrix — V2 */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Bevoegdheden (optioneel — later nog aan te passen in het Functiehuis)</Label>
+              <div className="rounded-md border divide-y text-xs max-h-48 overflow-y-auto">
+                {MODULES.map((mod) => {
+                  const huidig = inlineFunctieForm.bevoegdheden?.[mod.id] ?? 0;
+                  return (
+                    <div key={mod.id} className="flex items-center gap-2 px-2 py-1">
+                      <span className="flex-1 truncate">{mod.label}</span>
+                      <Select
+                        value={String(huidig)}
+                        onValueChange={(v) => setInlineFunctieForm((f) => ({
+                          ...f,
+                          bevoegdheden: { ...(f.bevoegdheden ?? {}), [mod.id]: Number(v) },
+                        }))}
+                      >
+                        <SelectTrigger className="w-28 h-6 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RECHTEN_NIVEAUS.map((n) => (
+                            <SelectItem key={n.waarde} value={String(n.waarde)} className="text-xs">
+                              {n.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInlineFunctieOpen(false)}>Annuleren</Button>
+            <Button onClick={maakInlineFunctie} disabled={maakFunctieMut.isPending}>
+              {maakFunctieMut.isPending ? "Bezig…" : "Aanmaken & selecteren"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

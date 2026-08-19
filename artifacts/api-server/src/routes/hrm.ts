@@ -7,7 +7,7 @@
 // salarisadministratie. Uitzondering (op expliciet verzoek vooruit gebouwd): AI
 // stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../lib/hrm-ai-analyse";
 import { extraheerArbeidsovereenkomst, proeftijdNaarDagen } from "../services/contractExtractie";
@@ -73,11 +73,16 @@ import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken
 import { stuurUitnodigingsmail, MailFout, MAIL_FOUT_OMSCHRIJVING } from "../services/email";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
 import { isHervatbareOnboardingStatus } from "../lib/hrmOnboardingStatus";
+import {
+  controleerFunctiesVoorActor,
+  controleerFunctieWisselVoorActor,
+} from "../lib/functie-rechten-autorisatie";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const hrmStorage = new ObjectStorageService();
 
 const router = Router();
+const legacyRechtenbeheerIsVervallen = () => true;
 
 // Unique-violation (Postgres 23505) op de gebruiker_id-koppeling herkennen,
 // zodat een race tussen twee gelijktijdige onboardings netjes 409 oplevert.
@@ -97,6 +102,50 @@ const isoOf = (d: Date | null) => (d ? d.toISOString() : null);
 
 function parseId(v: unknown): number {
   return parseInt(String(v), 10);
+}
+
+async function staFunctieWisselToe(
+  req: Request,
+  res: Response,
+  oudeFunctieId: number | null,
+  nieuweFunctieId: number | null,
+): Promise<boolean> {
+  const controle = await controleerFunctieWisselVoorActor(
+    req.permissies,
+    oudeFunctieId,
+    nieuweFunctieId,
+  );
+  if (controle.ok) return true;
+  res.status(controle.status).json(controle.body);
+  return false;
+}
+
+async function staFunctiesToe(
+  req: Request,
+  res: Response,
+  functieIds: Array<number | null>,
+): Promise<boolean> {
+  const controle = await controleerFunctiesVoorActor(req.permissies, functieIds);
+  if (controle.ok) return true;
+  res.status(controle.status).json(controle.body);
+  return false;
+}
+
+async function haalMedewerkerFunctieIds(
+  medewerkerId: number,
+  hoofdFunctieId: number | null,
+): Promise<number[]> {
+  const aanstellingen = await db
+    .select({ functieId: medewerkerAanstellingenTable.functieId })
+    .from(medewerkerAanstellingenTable)
+    .where(eq(medewerkerAanstellingenTable.medewerkerId, medewerkerId));
+  return [
+    ...new Set(
+      [hoofdFunctieId, ...aanstellingen.map((a) => a.functieId)].filter(
+        (id): id is number => id != null,
+      ),
+    ),
+  ];
 }
 
 // UREN_01 §3: CAO-instellingen (incl. ADV-drempel/max) staan centraal in lib/caoInstellingen.ts.
@@ -577,6 +626,12 @@ router.get("/functies", lezen, async (req, res): Promise<void> => {
 });
 
 router.post("/functies", schrijven, async (req, res): Promise<void> => {
+  if (legacyRechtenbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error:
+        "Deze functiemutatie is vervallen. Maak functies met rechten via Personeel > Functiehuis.",
+    });
+  }
   try {
     const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting, profiel_id } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
@@ -618,6 +673,12 @@ router.get("/functies/:id", lezen, async (req, res): Promise<void> => {
 });
 
 router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
+  if (legacyRechtenbeheerIsVervallen()) {
+    return void res.status(410).json({
+      error:
+        "Deze functiemutatie is vervallen. Bewerk functie en rechten via Personeel > Functiehuis.",
+    });
+  }
   try {
     const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting, profiel_id } = req.body;
     const functieId = parseId(req.params.id);
@@ -733,13 +794,10 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
 });
 
 router.delete("/functies/:id", schrijven, async (req, res): Promise<void> => {
-  try {
-    await db.delete(functiesTable).where(eq(functiesTable.id, parseId(req.params.id)));
-    res.status(204).send();
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
-  }
+  res.status(410).json({
+    error:
+      "Functies kunnen niet fysiek worden verwijderd. Beheer functie en rechten via Personeel > Functiehuis.",
+  });
 });
 
 // ── Opleidingen-catalogus ───────────────────────────────────────────────────
@@ -1300,6 +1358,9 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       });
     }
 
+    const nieuweFunctieId = functie_id == null ? null : parseId(functie_id);
+    if (!(await staFunctieWisselToe(req, res, null, nieuweFunctieId))) return;
+
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const werkgeverIdNieuw = await werkgeverIdVoor(wm);
     // Medewerker + arbeidsovereenkomst atomair: nooit een definitieve
@@ -1315,7 +1376,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         mobiel,
         werkmaatschappij: wm,
         werkgeverId: werkgeverIdNieuw,
-        functieId: functie_id ?? null,
+        functieId: nieuweFunctieId,
         leidinggevendeId: leidinggevende_id ?? null,
         cao,
         dienstverband: dienstverband || "vast",
@@ -1432,7 +1493,6 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
         telefoon: gebruikersTable.telefoon,
         rol: gebruikersTable.rol,
         actief: gebruikersTable.actief,
-        herkomstProfielId: gebruikersTable.herkomstProfielId,
       })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, gebruikerId));
@@ -1455,18 +1515,6 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
         medewerker_id: gekoppeld.id,
       });
     }
-    // Rechtenprofiel dat al aan het account is gekoppeld (bv. gekozen in de
-    // accountstap). De wizard toont hiermee in de functiestap dat functie-
-    // rechten additief bovenop dit profiel komen — puur informatief, de
-    // rechtenberekening zelf verandert niet.
-    let accountProfielNaam: string | null = null;
-    if (g.herkomstProfielId != null) {
-      const [profiel] = await db
-        .select({ naam: profielenTable.naam })
-        .from(profielenTable)
-        .where(eq(profielenTable.id, g.herkomstProfielId));
-      accountProfielNaam = profiel?.naam ?? null;
-    }
     const wizardVoortgang =
       (gekoppeld?.wizardVoortgang as Record<string, unknown> | null) ?? {};
     const opgeslagenStroom =
@@ -1488,8 +1536,6 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
       onboarding_status: gekoppeld?.medewerkerStatus ?? null,
       onboarding_stroom: onboardingStroom,
       onboarding_versie: gekoppeld ? onboardingVersie : null,
-      account_profiel_id: g.herkomstProfielId ?? null,
-      account_profiel_naam: accountProfielNaam,
     });
   } catch (err) {
     req.log.error(err);
@@ -1500,45 +1546,23 @@ router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req
 // Eén-flow onboarding, stap 0: gebruikersaccount aanmaken vanuit de wizard.
 // Bewust gegate op personeel:2 (dezelfde bevoegdheid als de rest van de
 // onboarding) en LEAST-PRIVILEGE: het account krijgt altijd rol "gebruiker".
-// Zonder profiel_id blijft de bevoegdhedenmatrix leeg (rechten volgen later
-// uit functie→profiel); mét profiel_id wordt het profiel gekoppeld onder de
-// zelfde zelf-escalatiebeveiliging als het reguliere gebruikersbeheer.
+// Het account start least-privilege; rechten volgen uitsluitend uit de functie
+// die later in dezelfde onboardingstroom wordt gekozen.
 router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, email, telefoon, uitnodigen, profiel_id } = req.body ?? {};
+    if (
+      req.body &&
+      typeof req.body === "object" &&
+      Object.prototype.hasOwnProperty.call(req.body, "profiel_id")
+    ) {
+      return void res.status(410).json({
+        error:
+          "Een rechtenprofiel kan niet aan een account worden gekoppeld. Rechten volgen uit de gekozen functie.",
+      });
+    }
+    const { naam, email, telefoon, uitnodigen } = req.body ?? {};
     if (typeof naam !== "string" || !naam.trim() || typeof email !== "string" || !email.trim()) {
       return void res.status(400).json({ error: "naam en email zijn verplicht" });
-    }
-    // Optioneel rechtenprofiel: zonder profiel blijft het account least-privilege
-    // (lege matrix); rechten volgen dan later uit de functie→profiel-koppeling.
-    // Mét profiel geldt DEZELFDE zelf-escalatiebeveiliging als in het reguliere
-    // gebruikersbeheer: niemand mag hogere moduleniveaus toekennen dan de eigen
-    // matrix, tenzij hoofdbeheerder of volledig gebruikersbeheer (gebruikers:4).
-    let profielBevoegdheden: Record<string, number> = {};
-    let profielId: number | null = null;
-    if (profiel_id !== undefined && profiel_id !== null) {
-      if (typeof profiel_id !== "number" || !Number.isInteger(profiel_id)) {
-        return void res.status(400).json({ error: "profiel_id moet een geheel profiel-id zijn" });
-      }
-      const [profiel] = await db
-        .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
-        .from(profielenTable)
-        .where(eq(profielenTable.id, profiel_id));
-      if (!profiel) {
-        return void res.status(400).json({ error: "Het gekozen profiel bestaat niet" });
-      }
-      profielBevoegdheden = (profiel.bevoegdheden as Record<string, number> | null) ?? {};
-      profielId = profiel.id;
-      const heeftVolledigGebruikersbeheer = req.permissies!.heeftModuleRecht("gebruikers", 4);
-      if (!req.permissies!.isHoofdbeheerder && !heeftVolledigGebruikersbeheer) {
-        for (const [mod, lvl] of Object.entries(profielBevoegdheden)) {
-          if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
-            return void res.status(403).json({
-              error: `Geen toegang: u kunt niveau ${lvl} voor module '${mod}' niet toewijzen omdat uw eigen toegangsniveau lager is. Vraag een beheerder met volledige gebruikersbeheer-rechten om dit profiel te koppelen.`,
-            });
-          }
-        }
-      }
     }
     let gebruiker;
     try {
@@ -1548,12 +1572,9 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
           email: email.trim(),
           rol: "gebruiker",
           telefoon: typeof telefoon === "string" && telefoon.trim() ? telefoon.trim() : null,
-          bevoegdheden: profielBevoegdheden,
-          herkomstProfielId: profielId,
+          bevoegdheden: {},
+          herkomstProfielId: null,
         });
-        if (profielId != null) {
-          await tx.insert(gebruikerProfielenTable).values({ gebruikerId: nieuw.id, profielId });
-        }
         return nieuw;
       });
     } catch (err) {
@@ -1641,7 +1662,11 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
       entiteit: "gebruiker",
       entiteitId: gebruiker.id,
       oudeWaarde: null,
-      nieuweWaarde: { naam: gebruiker.naam, uitnodiging_verstuurd: uitnodigingVerstuurd, profiel_id: profielId },
+      nieuweWaarde: {
+        naam: gebruiker.naam,
+        uitnodiging_verstuurd: uitnodigingVerstuurd,
+        rechtenbron: "functie",
+      },
     });
     res.status(201).json({
       id: gebruiker.id,
@@ -1777,6 +1802,7 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
     if (velden.length > 0) {
       return void res.status(400).json({ error: "De ingevoerde gegevens zijn onvolledig of onjuist.", velden });
     }
+    if (!(await staFunctieWisselToe(req, res, null, parseId(functie_id)))) return;
 
     // Medewerker aanmaken. naam valt terug op de gebruikersnaam.
     const [m] = await db
@@ -1883,6 +1909,7 @@ router.get("/medewerkers/:id", lezen, async (req, res): Promise<void> => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
+    const medewerkerId = parseId(req.params.id);
     const fouteDatumsPatch = ongeldigeDatumvelden(req.body as Record<string, unknown>);
     if (fouteDatumsPatch.length > 0) {
       return void res.status(422).json({
@@ -1891,6 +1918,20 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       });
     }
     const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, uitzendbureau_id, zzp_bedrijfsnaam, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen, onboarding_afronden, onboarding_versie, onboarding_stroom } = req.body;
+    const [huidigeMedewerker] = await db
+      .select({
+        id: medewerkersTable.id,
+        gebruikerId: medewerkersTable.gebruikerId,
+        functieId: medewerkersTable.functieId,
+        actief: medewerkersTable.actief,
+        inDienstSinds: medewerkersTable.inDienstSinds,
+        uitDienstPer: medewerkersTable.uitDienstPer,
+      })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, medewerkerId));
+    if (!huidigeMedewerker) {
+      return void res.status(404).json({ error: "Medewerker niet gevonden" });
+    }
     if (
       onboarding_afronden === true &&
       (!Number.isInteger(onboarding_versie) || onboarding_versie < 0)
@@ -1906,7 +1947,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       const [bestaand] = await db
         .select({ id: medewerkersTable.id })
         .from(medewerkersTable)
-        .where(and(eq(medewerkersTable.gebruikerId, parseId(gebruiker_id)), ne(medewerkersTable.id, parseId(req.params.id))));
+        .where(and(eq(medewerkersTable.gebruikerId, parseId(gebruiker_id)), ne(medewerkersTable.id, medewerkerId)));
       if (bestaand) {
         return void res.status(409).json({
           error: "Deze gebruiker heeft al een medewerkerprofiel.",
@@ -1915,6 +1956,40 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
           velden: ["gebruiker_id"],
         });
       }
+    }
+    const nieuweFunctieId =
+      functie_id !== undefined
+        ? (functie_id == null ? null : parseId(functie_id))
+        : huidigeMedewerker.functieId;
+    const nieuweGebruikerId =
+      gebruiker_id !== undefined
+        ? (gebruiker_id == null ? null : parseId(gebruiker_id))
+        : huidigeMedewerker.gebruikerId;
+    const nieuweActief =
+      onboarding_afronden === true
+        ? true
+        : (actief !== undefined ? actief !== false : huidigeMedewerker.actief !== false);
+    const nieuweInDienstSinds =
+      in_dienst_sinds !== undefined
+        ? (in_dienst_sinds || null)
+        : huidigeMedewerker.inDienstSinds;
+    const nieuweUitDienstPer =
+      uit_dienst_per !== undefined
+        ? (uit_dienst_per || null)
+        : huidigeMedewerker.uitDienstPer;
+    const rechtenkoppelingWijzigt =
+      nieuweFunctieId !== huidigeMedewerker.functieId ||
+      nieuweGebruikerId !== huidigeMedewerker.gebruikerId ||
+      nieuweActief !== (huidigeMedewerker.actief !== false) ||
+      nieuweInDienstSinds !== huidigeMedewerker.inDienstSinds ||
+      nieuweUitDienstPer !== huidigeMedewerker.uitDienstPer;
+    if (rechtenkoppelingWijzigt) {
+      const functieIds = await haalMedewerkerFunctieIds(
+        medewerkerId,
+        huidigeMedewerker.functieId ?? null,
+      );
+      if (nieuweFunctieId != null) functieIds.push(nieuweFunctieId);
+      if (!(await staFunctiesToe(req, res, functieIds))) return;
     }
     // contract_einddatum (optioneel, afrondpad van de onboarding-wizard).
     const contractEinddatumPatch = typeof (req.body as Record<string, unknown>).contract_einddatum === "string" && String((req.body as Record<string, unknown>).contract_einddatum).trim()
@@ -1963,13 +2038,13 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       .update(medewerkersTable)
       .set({
         naam,
-        gebruikerId: gebruiker_id !== undefined ? gebruiker_id : undefined,
+        gebruikerId: gebruiker_id !== undefined ? nieuweGebruikerId : undefined,
         email,
         telefoon,
         mobiel,
         werkmaatschappij,
         werkgeverId,
-        functieId: functie_id !== undefined ? functie_id : undefined,
+        functieId: functie_id !== undefined ? nieuweFunctieId : undefined,
         leidinggevendeId: leidinggevende_id !== undefined ? leidinggevende_id : undefined,
         cao,
         dienstverband,
@@ -2004,7 +2079,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         opmerkingen,
         bijgewerktOp: new Date(),
       })
-      .where(eq(medewerkersTable.id, parseId(req.params.id)))
+      .where(eq(medewerkersTable.id, medewerkerId))
       .returning();
     // Wizard-afronding: zodra de startdatum bekend is en er nog geen
     // arbeidsovereenkomst bestaat (duplicate-guard in de helper), leg die vast
@@ -2064,6 +2139,13 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
 router.delete("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
+    const [bestaand] = await db
+      .select({ functieId: medewerkersTable.functieId })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, id));
+    if (!bestaand) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+    const functieIds = await haalMedewerkerFunctieIds(id, bestaand.functieId ?? null);
+    if (!(await staFunctiesToe(req, res, functieIds))) return;
     await db.delete(medewerkersTable).where(eq(medewerkersTable.id, id));
     invalideerContext("medewerker", id);
     res.status(204).send();
@@ -4962,6 +5044,8 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res): Promise<vo
     if (m.uitDienstPer) {
       return void res.status(409).json({ error: `Medewerker is al uit dienst per ${m.uitDienstPer}.` });
     }
+    const functieIds = await haalMedewerkerFunctieIds(id, m.functieId ?? null);
+    if (!(await staFunctiesToe(req, res, functieIds))) return;
 
     const [bijgewerkt] = await db
       .update(medewerkersTable)
@@ -5127,6 +5211,8 @@ router.post("/medewerkers/:id/aanstellingen", schrijven, async (req, res): Promi
     if (!werkmaatschappij?.trim()) {
       return void res.status(400).json({ error: "werkmaatschappij is verplicht" });
     }
+    const nieuweFunctieId = functie_id == null ? null : parseId(functie_id);
+    if (!(await staFunctieWisselToe(req, res, null, nieuweFunctieId))) return;
     const werkgeverId = await werkgeverIdVoor(werkmaatschappij.trim());
     const [nieuw] = await db
       .insert(medewerkerAanstellingenTable)
@@ -5134,7 +5220,7 @@ router.post("/medewerkers/:id/aanstellingen", schrijven, async (req, res): Promi
         medewerkerId: medId,
         werkmaatschappij: werkmaatschappij.trim(),
         werkgeverId: werkgeverId ?? null,
-        functieId: functie_id ?? null,
+        functieId: nieuweFunctieId,
         cao: cao?.trim() || null,
         contracturenPerWeek: contracturen_per_week ?? null,
         isHoofd: false,
@@ -5167,6 +5253,18 @@ router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (
       .from(medewerkerAanstellingenTable)
       .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
     if (!huidig.length) return void res.status(404).json({ error: "Niet gevonden" });
+    const nieuweFunctieId =
+      functie_id !== undefined ? (functie_id == null ? null : parseId(functie_id)) : huidig[0].functieId;
+    if (
+      !(await staFunctieWisselToe(
+        req,
+        res,
+        huidig[0].functieId ?? null,
+        nieuweFunctieId ?? null,
+      ))
+    ) {
+      return;
+    }
 
     const nieuweWm = werkmaatschappij?.trim() ?? huidig[0].werkmaatschappij;
     const werkgeverId = await werkgeverIdVoor(nieuweWm);
@@ -5175,7 +5273,7 @@ router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (
       .set({
         werkmaatschappij: nieuweWm,
         werkgeverId: werkgeverId ?? huidig[0].werkgeverId,
-        functieId: functie_id !== undefined ? (functie_id ?? null) : huidig[0].functieId,
+        functieId: nieuweFunctieId,
         cao: cao !== undefined ? (cao?.trim() || null) : huidig[0].cao,
         contracturenPerWeek: contracturen_per_week !== undefined ? (contracturen_per_week ?? null) : huidig[0].contracturenPerWeek,
         bijgewerktOp: new Date(),
@@ -5211,6 +5309,7 @@ router.delete("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async 
       .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
     if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
     if (bestaand.isHoofd) return void res.status(409).json({ error: "Kan de hoofdaanstelling niet verwijderen. Stel eerst een andere aanstelling als hoofd in." });
+    if (!(await staFunctieWisselToe(req, res, bestaand.functieId ?? null, null))) return;
     await db.delete(medewerkerAanstellingenTable).where(eq(medewerkerAanstellingenTable.id, aanstellingId));
     res.status(204).send();
   } catch (err) {
@@ -5228,6 +5327,21 @@ router.post("/medewerkers/:id/aanstellingen/:aanstellingId/hoofd", schrijven, as
       .from(medewerkerAanstellingenTable)
       .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
     if (!doelwit) return void res.status(404).json({ error: "Niet gevonden" });
+    const [medewerker] = await db
+      .select({ functieId: medewerkersTable.functieId })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, medId));
+    if (!medewerker) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+    if (
+      !(await staFunctieWisselToe(
+        req,
+        res,
+        medewerker.functieId ?? null,
+        doelwit.functieId ?? null,
+      ))
+    ) {
+      return;
+    }
 
     await db.transaction(async (tx) => {
       await tx.update(medewerkerAanstellingenTable).set({ isHoofd: false, bijgewerktOp: new Date() }).where(eq(medewerkerAanstellingenTable.medewerkerId, medId));

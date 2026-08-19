@@ -7,7 +7,7 @@
  */
 
 /**
- * Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol "gebruiker". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).
+ * Invoer voor de accountstap van de één-flow onboarding; het account wordt least-privilege aangemaakt met rol "gebruiker". Rechten volgen pas uit de gekozen functie.
  */
 export interface OnboardingAccountInput {
   naam: string;
@@ -16,9 +16,4 @@ export interface OnboardingAccountInput {
   telefoon?: string | null;
   /** Verstuur direct een activatie-uitnodiging per e-mail. */
   uitnodigen?: boolean;
-  /**
-     * Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.
-     * @nullable
-     */
-  profiel_id?: number | null;
 }

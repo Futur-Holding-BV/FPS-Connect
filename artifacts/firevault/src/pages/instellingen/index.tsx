@@ -5,7 +5,7 @@ import {
   Bot, Activity, ScrollText, HardDrive, Upload, HardDriveUpload,
   Mail, MessageSquarePlus, LifeBuoy, Smartphone, Info, ListChecks,
   BarChart3, FileArchive, Target, Package, Award, ImageIcon, BookOpen,
-  Truck,
+  Truck, Briefcase,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -72,24 +72,12 @@ export default function InstellingenPagina() {
           zichtbaar: toonGebruikers,
         },
         {
-          label: "Profielen",
-          pad: "/beheer/profielen",
-          icoon: ShieldCheck,
-          beschrijving: "Toegangsprofielen en standaard-presets beheren",
-          zichtbaar: isHoofdbeheerder,
-        },
-        {
-          label: "Rollen & Rechten",
-          pad: "/beheer/rollen-rechten",
-          icoon: KeyRound,
-          beschrijving: "Rollen configureren en module-bevoegdheden toewijzen",
-          zichtbaar: isHoofdbeheerder,
-        },
-        {
-          label: "Object-rechten",
-          pad: "/beheer/object-rechten",
-          icoon: ShieldCheck,
-          beschrijving: "Gebouw- en objectspecifieke toegangsrechten instellen",
+          // GEBRUIKERS_01: Functiehuis is de enige plek voor functies + rechten.
+          // Profielen, Rollen & Rechten en Object-rechten zijn niet meer apart beschikbaar.
+          label: "Functiehuis",
+          pad: "/personeel?tab=functies",
+          icoon: Briefcase,
+          beschrijving: "Functies, bevoegdhedenmatrix en uitvoerende rollen beheren",
           zichtbaar: isHoofdbeheerder,
         },
         {

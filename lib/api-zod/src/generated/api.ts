@@ -1109,8 +1109,6 @@ export const UpdateGebouwNotitieParams = zod.object({
 })
 
 
-
-
 export const UpdateGebouwNotitieBody = zod.object({
   "tekst": zod.string().min(1),
   "beller_naam": zod.string().nullish()
@@ -1491,7 +1489,6 @@ export const MaakRapportDefinitiefParams = zod.object({
 export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
 
 
-
 export const MaakRapportDefinitiefBody = zod.object({
   "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
 })
@@ -1741,7 +1738,6 @@ export const ListVoorzieningenResponse = zod.object({
 export const createVoorzieningBodyApplicatiesMax = 5;
 
 
-
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1903,7 +1899,6 @@ export const UpdateVoorzieningParams = zod.object({
 })
 
 export const updateVoorzieningBodyApplicatiesMax = 5;
-
 
 
 export const UpdateVoorzieningBody = zod.object({
@@ -2960,7 +2955,6 @@ export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrecti
  * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
  */
 export const listOnlineGebruikersResponseInitialenMax = 3;
-
 
 
 export const ListOnlineGebruikersResponseItem = zod.object({
@@ -5031,9 +5025,6 @@ export const DeleteModuleBeoordelingResponse = zod.void()
  */
 
 
-
-
-
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
@@ -5041,10 +5032,6 @@ export const RequestUploadUrlBody = zod.object({
   "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
   "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
-
-
-
-
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -6237,6 +6224,7 @@ export const ListGebruikersResponseItem = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6257,7 +6245,6 @@ export const CreateGebruikerBody = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.string(),
-  "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().optional(),
   "bedrijf": zod.string().optional(),
   "wachtwoord": zod.string().optional(),
@@ -6266,9 +6253,6 @@ export const CreateGebruikerBody = zod.object({
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
-  "herkomst_profiel_id": zod.number().nullish(),
-  "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.')
@@ -6308,6 +6292,7 @@ export const GetGebruikerResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6331,7 +6316,6 @@ export const UpdateGebruikerBody = zod.object({
   "naam": zod.string().optional(),
   "email": zod.string().optional(),
   "rol": zod.string().optional(),
-  "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().optional(),
   "bedrijf": zod.string().optional(),
   "actief": zod.boolean().optional(),
@@ -6341,9 +6325,6 @@ export const UpdateGebruikerBody = zod.object({
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
-  "herkomst_profiel_id": zod.number().nullish(),
-  "profiel_ids": zod.array(zod.number()).optional(),
   "dienstverband": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.')
@@ -6373,6 +6354,7 @@ export const UpdateGebruikerResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6426,6 +6408,7 @@ export const HerstellenGebruikerResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6499,6 +6482,7 @@ export const GebruikerOntgrendelenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6542,6 +6526,7 @@ export const UitnodigingVersturenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6598,6 +6583,7 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_uitvoerend_veld": zod.boolean().optional().describe('GEBRUIKERS_01 v2: server-berekende buitendienst-vlag op basis van functies.uitvoerend (fail-closed). Voedt de \"bekijken als\"-selector zodat impersonatie de juiste vlag toont zonder client-side heuristiek.\n'),
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "profiel_ids": zod.array(zod.number()).optional(),
@@ -6607,104 +6593,6 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "moet_wachtwoord_wijzigen": zod.boolean().optional(),
   "mislukte_pogingen": zod.number().optional(),
   "vergrendeld_tot": zod.string().nullish()
-})
-
-
-/**
- * @summary Herkomst-profiel opnieuw toepassen op deze ene gebruiker (hoofdbeheerder)
- */
-export const GebruikerHerkomstToepassenParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GebruikerHerkomstToepassenResponse = zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "initialen": zod.string().nullish(),
-  "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'gebruiker']),
-  "functietitels": zod.array(zod.string()).optional(),
-  "telefoon": zod.string().nullish(),
-  "bedrijf": zod.string().nullish(),
-  "actief": zod.boolean(),
-  "gearchiveerd": zod.boolean(),
-  "aangemaakt_op": zod.string(),
-  "laatste_online": zod.string().nullish(),
-  "avatar_url": zod.string().nullish(),
-  "bedrijfslogo_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish(),
-  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_verloopt_op": zod.string().nullish(),
-  "uitnodiging_geopend_op": zod.string().nullish(),
-  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional(),
-  "profiel_ids": zod.array(zod.number()).optional(),
-  "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish(),
-  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
-  "mislukte_pogingen": zod.number().optional(),
-  "vergrendeld_tot": zod.string().nullish()
-})
-
-
-/**
- * @summary Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
- */
-export const GebruikerHerkomstBevestigenParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GebruikerHerkomstBevestigenResponse = zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "initialen": zod.string().nullish(),
-  "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'gebruiker']),
-  "functietitels": zod.array(zod.string()).optional(),
-  "telefoon": zod.string().nullish(),
-  "bedrijf": zod.string().nullish(),
-  "actief": zod.boolean(),
-  "gearchiveerd": zod.boolean(),
-  "aangemaakt_op": zod.string(),
-  "laatste_online": zod.string().nullish(),
-  "avatar_url": zod.string().nullish(),
-  "bedrijfslogo_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish(),
-  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_verloopt_op": zod.string().nullish(),
-  "uitnodiging_geopend_op": zod.string().nullish(),
-  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional(),
-  "profiel_ids": zod.array(zod.number()).optional(),
-  "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish(),
-  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
-  "mislukte_pogingen": zod.number().optional(),
-  "vergrendeld_tot": zod.string().nullish()
-})
-
-
-/**
- * @summary Automatisch afgeleide herkomst-koppelingen in bulk bevestigen (hoofdbeheerder)
- */
-export const GebruikerHerkomstBevestigenBulkBody = zod.object({
-  "ids": zod.array(zod.number()).optional().describe('Optioneel: beperk de bevestiging tot deze gebruikers-id\'s. Zonder ids worden alle onbevestigde automatische koppelingen bevestigd.')
-})
-
-export const GebruikerHerkomstBevestigenBulkResponse = zod.object({
-  "bevestigd": zod.number().describe('Aantal bevestigde koppelingen')
 })
 
 
@@ -6714,49 +6602,6 @@ export const GebruikerHerkomstBevestigenBulkResponse = zod.object({
 export const GebruikersAanvullenResponse = zod.object({
   "gebruikers_aangevuld": zod.number(),
   "sleutels_toegevoegd": zod.number()
-})
-
-
-/**
- * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
- */
-export const GebruikerHerkomstVerwijderenParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GebruikerHerkomstVerwijderenResponse = zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "initialen": zod.string().nullish(),
-  "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'gebruiker']),
-  "functietitels": zod.array(zod.string()).optional(),
-  "telefoon": zod.string().nullish(),
-  "bedrijf": zod.string().nullish(),
-  "actief": zod.boolean(),
-  "gearchiveerd": zod.boolean(),
-  "aangemaakt_op": zod.string(),
-  "laatste_online": zod.string().nullish(),
-  "avatar_url": zod.string().nullish(),
-  "bedrijfslogo_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish(),
-  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_verloopt_op": zod.string().nullish(),
-  "uitnodiging_geopend_op": zod.string().nullish(),
-  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
-  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional(),
-  "profiel_ids": zod.array(zod.number()).optional(),
-  "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish(),
-  "uitzendbureau_id": zod.number().nullish().describe('Verwijzing naar de organisatie (crm_klanten) van het uitzendbureau of de inlener.'),
-  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
-  "mislukte_pogingen": zod.number().optional(),
-  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -6782,39 +6627,6 @@ export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
 
 
 /**
- * @summary Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
- */
-
-
-
-export const CreateProfielBody = zod.object({
-  "naam": zod.string().min(1),
-  "groep": zod.string().nullish(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
-})
-
-export const CreateProfielResponse = zod.void()
-
-
-/**
- * @summary Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
- */
-export const ProfielenAanvullenResponse = zod.object({
-  "profielen_aangevuld": zod.number(),
-  "sleutels_toegevoegd": zod.number()
-})
-
-
-/**
- * @summary Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande systeem-presets bijwerken naar de definitie (hoofdbeheerder)
- */
-export const SynchroniseerStandaardProfielenResponse = zod.object({
-  "aangemaakt": zod.number(),
-  "bijgewerkt": zod.number()
-})
-
-
-/**
  * @summary AI stelt bevoegdheden voor voor één specifieke functie op basis van naam, omschrijving en taken. Slaat niets op; de beheerder beoordeelt en bevestigt.
  */
 export const AiVoorstelVoorFunctieBody = zod.object({
@@ -6825,74 +6637,6 @@ export const AiVoorstelVoorFunctieResponse = zod.object({
   "profiel_naam": zod.string(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "toelichting": zod.string().nullable()
-})
-
-
-/**
- * @summary AI stelt een set rollen met bijbehorende rechten voor op basis van de modules en het functiehuis (hoofdbeheerder). Slaat niets op; de beheerder beoordeelt, past aan en bevestigt zelf.
- */
-export const AiRollenVoorstelResponse = zod.object({
-  "voorstellen": zod.array(zod.object({
-  "naam": zod.string(),
-  "omschrijving": zod.string().nullable(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
-})),
-  "toelichting": zod.string().nullable()
-})
-
-
-/**
- * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
- */
-export const UpdateProfielParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-
-
-export const UpdateProfielBody = zod.object({
-  "naam": zod.string().min(1),
-  "groep": zod.string().nullish(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
-})
-
-export const UpdateProfielResponse = zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "groep": zod.string().nullish(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "systeem": zod.boolean(),
-  "aangemaakt_op": zod.string(),
-  "gebruiker_aantal": zod.number().optional(),
-  "gebruikers": zod.array(zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "rol": zod.string().nullish(),
-  "gelijk": zod.boolean().describe('Of de huidige bevoegdheden van de gebruiker nog exact gelijk zijn aan de preset (false = sindsdien handmatig aangepast).')
-})).optional()
-})
-
-
-/**
- * @summary Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
- */
-export const DeleteProfielParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteProfielResponse = zod.void()
-
-
-/**
- * @summary Preset opnieuw toepassen op alle gekoppelde gebruikers (hoofdbeheerder)
- */
-export const ProfielToepassenParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ProfielToepassenResponse = zod.object({
-  "bijgewerkt": zod.number()
 })
 
 
@@ -6936,9 +6680,6 @@ export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBel
  */
 
 
-
-
-
 export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "naam": zod.string().min(1),
   "document_type": zod.string().min(1),
@@ -6970,10 +6711,6 @@ export const CreateGoedkeuringBeleidsregelResponse = zod.void()
 export const UpdateGoedkeuringBeleidsregelParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const UpdateGoedkeuringBeleidsregelBody = zod.object({
@@ -7189,8 +6926,6 @@ export const GoedkeuringAanvraagAfwijzenParams = zod.object({
 })
 
 
-
-
 export const GoedkeuringAanvraagAfwijzenBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -7276,7 +7011,6 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 export const listGoedkeuringDashboardQueryVensterMin = 0;
 
 
-
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
@@ -7323,7 +7057,6 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
  * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
  */
 export const exportGoedkeuringDashboardQueryVensterMin = 0;
-
 
 
 export const ExportGoedkeuringDashboardQueryParams = zod.object({
@@ -7698,7 +7431,6 @@ export const GetHuidigeGebruikerResponse = zod.object({
  * @summary Eigen initialen instellen (getoond bij aantekeningen)
  */
 export const updateMijnInitialenBodyInitialenMax = 6;
-
 
 
 export const UpdateMijnInitialenBody = zod.object({
@@ -9643,7 +9375,6 @@ export const ListMarketingWerkgeverOptiesResponse = zod.array(ListMarketingWerkg
 export const getMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
 
 
-
 export const GetMarketingVerzendtempoResponse = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(getMarketingVerzendtempoResponseTempoPerMinuutMax)
 })
@@ -9655,13 +9386,11 @@ export const GetMarketingVerzendtempoResponse = zod.object({
 export const updateMarketingVerzendtempoBodyTempoPerMinuutMax = 60;
 
 
-
 export const UpdateMarketingVerzendtempoBody = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(updateMarketingVerzendtempoBodyTempoPerMinuutMax)
 })
 
 export const updateMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
-
 
 
 export const UpdateMarketingVerzendtempoResponse = zod.object({
@@ -10924,8 +10653,6 @@ export const CreateWerkgeverBankrekeningParams = zod.object({
 })
 
 
-
-
 export const CreateWerkgeverBankrekeningBody = zod.object({
   "iban": zod.string(),
   "tenaamstelling": zod.string(),
@@ -10942,8 +10669,6 @@ export const UpdateWerkgeverBankrekeningParams = zod.object({
   "id": zod.coerce.number(),
   "rekeningId": zod.coerce.number()
 })
-
-
 
 
 export const UpdateWerkgeverBankrekeningBody = zod.object({
@@ -10998,27 +10723,6 @@ export const ListFunctiesResponse = zod.array(ListFunctiesResponseItem)
 
 
 /**
- * @summary Functie aanmaken
- */
-export const CreateFunctieBody = zod.object({
-  "naam": zod.string(),
-  "werkmaatschappij": zod.string().optional(),
-  "omschrijving": zod.string().optional(),
-  "taken": zod.string().optional(),
-  "verantwoordelijkheden": zod.string().optional(),
-  "competenties": zod.string().optional(),
-  "opleidingsvereisten": zod.string().optional(),
-  "doorgroeipad": zod.string().optional(),
-  "profiel_id": zod.number().nullish(),
-  "uitvoerend": zod.boolean().optional(),
-  "actief": zod.boolean().optional(),
-  "minimale_bezetting": zod.number().nullish()
-})
-
-export const CreateFunctieResponse = zod.void()
-
-
-/**
  * @summary Functie ophalen
  */
 export const GetFunctieParams = zod.object({
@@ -11042,57 +10746,6 @@ export const GetFunctieResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
-
-
-/**
- * @summary Functie bijwerken
- */
-export const UpdateFunctieParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateFunctieBody = zod.object({
-  "naam": zod.string(),
-  "werkmaatschappij": zod.string().optional(),
-  "omschrijving": zod.string().optional(),
-  "taken": zod.string().optional(),
-  "verantwoordelijkheden": zod.string().optional(),
-  "competenties": zod.string().optional(),
-  "opleidingsvereisten": zod.string().optional(),
-  "doorgroeipad": zod.string().optional(),
-  "profiel_id": zod.number().nullish(),
-  "uitvoerend": zod.boolean().optional(),
-  "actief": zod.boolean().optional(),
-  "minimale_bezetting": zod.number().nullish()
-})
-
-export const UpdateFunctieResponse = zod.object({
-  "id": zod.number(),
-  "werkmaatschappij": zod.string(),
-  "naam": zod.string(),
-  "omschrijving": zod.string().nullish(),
-  "taken": zod.string().nullish(),
-  "verantwoordelijkheden": zod.string().nullish(),
-  "competenties": zod.string().nullish(),
-  "opleidingsvereisten": zod.string().nullish(),
-  "doorgroeipad": zod.string().nullish(),
-  "profiel_id": zod.number().nullish().describe('Standaard toegangsprofiel voor deze functie (FK naar profielen).'),
-  "actief": zod.boolean(),
-  "uitvoerend": zod.boolean().optional(),
-  "minimale_bezetting": zod.number().nullish().describe('Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.'),
-  "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string()
-})
-
-
-/**
- * @summary Functie verwijderen
- */
-export const DeleteFunctieParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteFunctieResponse = zod.void()
 
 
 /**
@@ -11135,6 +10788,238 @@ export const KoppelOpleidingAanFunctieParams = zod.object({
 })
 
 export const KoppelOpleidingAanFunctieResponse = zod.void()
+
+
+/**
+ * Vereist personeel niveau 1.
+ * @summary Functies inclusief rechten ophalen (globaal, niet BV-gebonden)
+ */
+export const ListFunctiesV2QueryParams = zod.object({
+  "inclusief_inactief": zod.coerce.boolean().optional().describe('Inclusief inactieve functies meenemen')
+})
+
+export const ListFunctiesV2ResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "uitvoerend": zod.boolean(),
+  "actief": zod.boolean(),
+  "minimale_bezetting": zod.number().nullish(),
+  "profiel_id": zod.number().nullish(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFunctiesV2Response = zod.array(ListFunctiesV2ResponseItem)
+
+
+/**
+ * Vereist personeel niveau 2.
+ * @summary Functie aanmaken met rechten in één transactie
+ */
+
+
+export const CreateFunctieV2Body = zod.object({
+  "naam": zod.string().min(1),
+  "omschrijving": zod.string().optional(),
+  "taken": zod.string().optional(),
+  "verantwoordelijkheden": zod.string().optional(),
+  "competenties": zod.string().optional(),
+  "opleidingsvereisten": zod.string().optional(),
+  "doorgroeipad": zod.string().optional(),
+  "uitvoerend": zod.boolean().optional(),
+  "actief": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
+})
+
+export const CreateFunctieV2Response = zod.void()
+
+
+/**
+ * Vereist personeel niveau 1.
+ * @summary Functie ophalen inclusief rechten
+ */
+export const GetFunctieV2Params = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFunctieV2Response = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "uitvoerend": zod.boolean(),
+  "actief": zod.boolean(),
+  "minimale_bezetting": zod.number().nullish(),
+  "profiel_id": zod.number().nullish(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * Vereist personeel niveau 2. Activeren/deactiveren is hier bewust niet toegestaan.
+ * @summary Functie + rechten bijwerken in één transactie
+ */
+export const UpdateFunctieV2Params = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const UpdateFunctieV2Body = zod.object({
+  "naam": zod.string().min(1).optional(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "uitvoerend": zod.boolean().optional(),
+  "actief": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
+})
+
+export const UpdateFunctieV2Response = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "uitvoerend": zod.boolean(),
+  "actief": zod.boolean(),
+  "minimale_bezetting": zod.number().nullish(),
+  "profiel_id": zod.number().nullish(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * Vereist gebruikers niveau 4.
+ * @summary Gebruiker met functierechten en afwijkingen ophalen
+ */
+export const GetGebruikerBevoegdhedenV2Params = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebruikerBevoegdhedenV2Response = zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "functie_baseline": zod.record(zod.string(), zod.number()),
+  "afwijkingen": zod.array(zod.object({
+  "module_id": zod.string(),
+  "niveau": zod.number(),
+  "reden": zod.string(),
+  "actor_id": zod.number().nullish(),
+  "actor_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})),
+  "effectieve_bevoegdheden": zod.record(zod.string(), zod.number())
+})
+
+
+/**
+ * Vervangt de volledige set afwijkingen voor een gebruiker. Bewuste afwijkingen worden beschermd: alleen dit endpoint kan ze overschrijven, nooit een stil profiel-toepassen. Reden en actor zijn verplicht voor de audit-trail.
+ * @summary Bevoegdheidsafwijkingen vervangen (verplichte reden + actor)
+ */
+export const VervangGebruikerAfwijkingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const VervangGebruikerAfwijkingenBody = zod.object({
+  "afwijkingen": zod.array(zod.object({
+  "module_id": zod.string(),
+  "niveau": zod.number()
+})),
+  "reden": zod.string().min(1),
+  "actor_id": zod.number().optional()
+})
+
+export const VervangGebruikerAfwijkingenResponse = zod.object({
+  "gebruiker_id": zod.number(),
+  "functie_baseline": zod.record(zod.string(), zod.number()).optional(),
+  "bewuste_afwijkingen_gewist": zod.boolean().optional(),
+  "afwijkingen": zod.array(zod.object({
+  "module_id": zod.string(),
+  "niveau": zod.number(),
+  "reden": zod.string(),
+  "actor_id": zod.number().nullish(),
+  "actor_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})),
+  "effectieve_bevoegdheden": zod.record(zod.string(), zod.number())
+})
+
+
+/**
+ * Past de functie-baseline opnieuw toe. Bewuste afwijkingen worden NIET stil gewist, tenzij bewuste_afwijkingen_wissen=true expliciet wordt meegegeven. Reden is verplicht voor de audit-trail.
+ * @summary Functie-baseline opnieuw toepassen / afwijkingen resetten
+ */
+export const PasFunctieRechtenToeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const PasFunctieRechtenToeBody = zod.object({
+  "reden": zod.string().min(1),
+  "actor_id": zod.number().optional(),
+  "bewuste_afwijkingen_wissen": zod.boolean().optional()
+})
+
+export const PasFunctieRechtenToeResponse = zod.object({
+  "gebruiker_id": zod.number(),
+  "functie_baseline": zod.record(zod.string(), zod.number()).optional(),
+  "bewuste_afwijkingen_gewist": zod.boolean().optional(),
+  "afwijkingen": zod.array(zod.object({
+  "module_id": zod.string(),
+  "niveau": zod.number(),
+  "reden": zod.string(),
+  "actor_id": zod.number().nullish(),
+  "actor_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})),
+  "effectieve_bevoegdheden": zod.record(zod.string(), zod.number())
+})
+
+
+/**
+ * Vereist gebruikers niveau 4.
+ * @summary Audit-log voor bevoegdheidswijzigingen van een gebruiker
+ */
+export const GetGebruikerBevoegdheidLogParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebruikerBevoegdheidLogResponseItem = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "module_id": zod.string().nullish(),
+  "oud_niveau": zod.number().nullish(),
+  "nieuw_niveau": zod.number().nullish(),
+  "actie": zod.string(),
+  "reden": zod.string().nullish(),
+  "actor_id": zod.number().nullish(),
+  "actor_naam": zod.string().nullish(),
+  "tijdstip": zod.string()
+})
+export const GetGebruikerBevoegdheidLogResponse = zod.array(GetGebruikerBevoegdheidLogResponseItem)
 
 
 /**
@@ -11598,7 +11483,6 @@ export const ListMedewerkersResponse = zod.array(ListMedewerkersResponseItem)
 export const createMedewerkerBodyOnboardingVersieMin = 0;
 
 
-
 export const CreateMedewerkerBody = zod.object({
   "naam": zod.string(),
   "gebruiker_id": zod.number().nullish(),
@@ -11659,9 +11543,7 @@ export const GetOnboardingContextResponse = zod.object({
   "concept_medewerker_id": zod.number().nullish().describe('Id van een bestaand hervatbaar onboardingprofiel voor deze gebruiker; de historische veldnaam blijft behouden voor compatibiliteit.'),
   "onboarding_status": zod.string().nullish().describe('Huidige status van de onafgeronde onboarding.'),
   "onboarding_stroom": zod.string().nullish().describe('Wizardtype van de onafgeronde onboarding, bijvoorbeeld vast, stagiair, oproep, payroll, detachering of directie.'),
-  "onboarding_versie": zod.number().nullish().describe('Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.'),
-  "account_profiel_id": zod.number().nullish().describe('Rechtenprofiel dat al aan het gebruikersaccount is gekoppeld (herkomst_profiel_id); informatief, zodat de functiestap kan waarschuwen dat functie-rechten additief bovenop dit profiel komen.'),
-  "account_profiel_naam": zod.string().nullish().describe('Naam van het al gekoppelde rechtenprofiel, of null als er geen profiel gekoppeld is.')
+  "onboarding_versie": zod.number().nullish().describe('Versietoken voor atomair hervatten of opnieuw starten van deze onboarding.')
 }).describe('Identiteit van een te onboarden gebruikersaccount; naam\/email\/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.')
 
 
@@ -11672,9 +11554,8 @@ export const CreateOnboardingAccountBody = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "telefoon": zod.string().nullish(),
-  "uitnodigen": zod.boolean().optional().describe('Verstuur direct een activatie-uitnodiging per e-mail.'),
-  "profiel_id": zod.number().nullish().describe('Optioneel rechtenprofiel dat direct aan het nieuwe account wordt gekoppeld.')
-}).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt aangemaakt met rol \"gebruiker\". Zonder profiel_id blijft de bevoegdhedenmatrix leeg; met profiel_id wordt dat rechtenprofiel direct gekoppeld (server-side zelf-escalatiebeveiliging).')
+  "uitnodigen": zod.boolean().optional().describe('Verstuur direct een activatie-uitnodiging per e-mail.')
+}).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt least-privilege aangemaakt met rol \"gebruiker\". Rechten volgen pas uit de gekozen functie.')
 
 export const CreateOnboardingAccountResponse = zod.void()
 
@@ -11777,12 +11658,16 @@ export const KoppelUitzendbureauResponse = zod.object({
 /**
  * @summary Onboarding - medewerker koppelen aan gebruiker met CAO/verlofcontrole
  */
+export const onboardMedewerkerBodyContracturenPerWeekMin = 0;
+export const onboardMedewerkerBodyContracturenPerWeekMax = 48;
+
+
 export const OnboardMedewerkerBody = zod.object({
   "gebruiker_id": zod.number().describe('De gebruiker die als medewerker wordt aangemaakt.'),
   "functie_id": zod.number(),
   "werkmaatschappij": zod.string(),
   "cao": zod.string().describe('Moet een bekende CAO zijn (zie \/hrm\/cao-opties).'),
-  "contracturen_per_week": zod.number().describe('Groter dan 0 en niet meer dan 40.'),
+  "contracturen_per_week": zod.number().min(onboardMedewerkerBodyContracturenPerWeekMin).max(onboardMedewerkerBodyContracturenPerWeekMax).describe('Van 0 tot en met 48 uur; 0 is geldig voor oproep- en nulurencontracten.'),
   "in_dienst_sinds": zod.string().describe('Geldige datum (YYYY-MM-DD), niet in de toekomst.'),
   "naam": zod.string().optional(),
   "email": zod.string().optional(),
@@ -11892,7 +11777,6 @@ export const UpdateMedewerkerParams = zod.object({
 })
 
 export const updateMedewerkerBodyOnboardingVersieMin = 0;
-
 
 
 export const UpdateMedewerkerBody = zod.object({
@@ -12480,7 +12364,6 @@ export const CreateSaldoCorrectieParams = zod.object({
 export const createSaldoCorrectieBodyRedenMin = 3;
 
 
-
 export const CreateSaldoCorrectieBody = zod.object({
   "verlofsoort_id": zod.number(),
   "jaar": zod.number(),
@@ -12903,7 +12786,6 @@ export const GetWizardStatusParams = zod.object({
 export const getWizardStatusResponseVersieMin = 0;
 
 
-
 export const GetWizardStatusResponse = zod.object({
   "id": zod.number(),
   "medewerker_status": zod.string().nullable(),
@@ -12924,7 +12806,6 @@ export const PatchWizardVoortgangParams = zod.object({
 export const patchWizardVoortgangBodyVersieMin = 0;
 
 
-
 export const PatchWizardVoortgangBody = zod.object({
   "stap": zod.number(),
   "versie": zod.number().min(patchWizardVoortgangBodyVersieMin).describe('Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.'),
@@ -12936,7 +12817,6 @@ export const PatchWizardVoortgangBody = zod.object({
 })
 
 export const patchWizardVoortgangResponseVersieMin = 0;
-
 
 
 export const PatchWizardVoortgangResponse = zod.object({
@@ -14059,7 +13939,6 @@ export const DoorzettenNaarGarageResponse = zod.object({
 export const vraagAdviseurBodyVraagMax = 2000;
 
 export const vraagAdviseurBodyContextSchermMax = 300;
-
 
 
 export const VraagAdviseurBody = zod.object({
@@ -16272,8 +16151,6 @@ export const MeldMeerwerkParams = zod.object({
 })
 
 
-
-
 export const MeldMeerwerkBody = zod.object({
   "type": zod.enum(['meerwerk', 'minderwerk']),
   "fotos": zod.array(zod.string()).min(1),
@@ -17325,7 +17202,6 @@ export const AfwijzenPimAdviesParams = zod.object({
 })
 
 export const afwijzenPimAdviesBodyRedenMax = 1000;
-
 
 
 export const AfwijzenPimAdviesBody = zod.object({
@@ -21549,6 +21425,7 @@ export const GetOverwerkslotParams = zod.object({
 })
 
 export const GetOverwerkslotResponse = zod.object({
+  "mag_beheren": zod.boolean().describe('Server-authoritative beheerrecht (hoofdbeheerder of actieve functie Projectleider).'),
   "open_slot": zod.object({
   "id": zod.number(),
   "project_id": zod.number(),
@@ -31113,7 +30990,6 @@ export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
 
 
-
 export const GetMagazijnInstellingenResponse = zod.object({
   "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
   "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
@@ -31134,7 +31010,6 @@ export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
 export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
 
 
-
 export const UpdateMagazijnInstellingenBody = zod.object({
   "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
   "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
@@ -31148,7 +31023,6 @@ export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
 export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 
 export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
-
 
 
 export const UpdateMagazijnInstellingenResponse = zod.object({
@@ -31429,7 +31303,6 @@ export const SnoozeMagazijnArtikelParams = zod.object({
 })
 
 export const snoozeMagazijnArtikelBodyDagenMax = 90;
-
 
 
 export const SnoozeMagazijnArtikelBody = zod.object({
@@ -33934,7 +33807,6 @@ export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
 export const updateFieLeermomentBodyCorrectieFactorMax = 3;
 
 
-
 export const UpdateFieLeermomentBody = zod.object({
   "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
@@ -34064,7 +33936,6 @@ export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
 export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
 
 export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
-
 
 
 export const CreateLeverancierPrestatieBody = zod.object({
@@ -35763,7 +35634,6 @@ export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponse
 export const listBiaeEventsQueryLimietMax = 500;
 
 
-
 export const ListBiaeEventsQueryParams = zod.object({
   "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
 })
@@ -35903,8 +35773,6 @@ export const HandelWerkbakItemAfResponse = zod.object({
 export const ZetWerkbakItemWegParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const ZetWerkbakItemWegBody = zod.object({
@@ -36190,7 +36058,6 @@ export const zetWorkflowSterBodySterrenMin = 0;
 export const zetWorkflowSterBodySterrenMax = 3;
 
 
-
 export const ZetWorkflowSterBody = zod.object({
   "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
   "doel_sleutel": zod.string(),
@@ -36199,7 +36066,6 @@ export const ZetWorkflowSterBody = zod.object({
 
 export const zetWorkflowSterResponseSterrenMin = 0;
 export const zetWorkflowSterResponseSterrenMax = 3;
-
 
 
 export const ZetWorkflowSterResponse = zod.object({
@@ -36931,5 +36797,4 @@ export const DeleteSocialKoppelingParams = zod.object({
 export const DeleteSocialKoppelingResponse = zod.object({
   "ok": zod.boolean()
 })
-
 

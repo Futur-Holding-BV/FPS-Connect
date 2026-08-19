@@ -13,7 +13,11 @@ export interface MedewerkerOnboardingInput {
   werkmaatschappij: string;
   /** Moet een bekende CAO zijn (zie /hrm/cao-opties). */
   cao: string;
-  /** Groter dan 0 en niet meer dan 40. */
+  /**
+     * Van 0 tot en met 48 uur; 0 is geldig voor oproep- en nulurencontracten.
+     * @minimum 0
+     * @maximum 48
+     */
   contracturen_per_week: number;
   /** Geldige datum (YYYY-MM-DD), niet in de toekomst. */
   in_dienst_sinds: string;

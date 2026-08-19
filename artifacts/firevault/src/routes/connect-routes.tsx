@@ -47,7 +47,6 @@ import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
 import VisualLibraryBeheer from "@/pages/beheer/visual-library";
-import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import VisualsLegacyBeheer from "@/pages/beheer/visuals";
@@ -72,13 +71,11 @@ import PwaTest from "@/pages/beheer/pwa-test";
 import PrivacyCentrum from "@/pages/mijn/privacy";
 import BeheerPrivacy from "@/pages/beheer/privacy";
 import AvgBeheer from "@/pages/beheer/avg";
-import RollenRechtenBeheer from "@/pages/beheer/rollen-rechten";
 import GoedkeuringsbeleidBeheer from "@/pages/beheer/goedkeuringsbeleid";
 import BiaeBeheer from "@/pages/beheer/biae";
 import GoedkeuringenDashboard from "@/pages/beheer/goedkeuringen-dashboard";
 import DeclaratiesPagina from "@/pages/declaraties/index";
 import DeclaratieDetailPagina from "@/pages/declaraties/detail";
-import ObjectRechtenBeheer from "@/pages/beheer/object-rechten";
 import OpnamePagina from "@/pages/opname/index";
 import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
@@ -582,14 +579,24 @@ export function ConnectRoutes() {
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
         <Route path="/beheer/visual-library" component={VisualLibraryBeheer} />
-        <Route path="/beheer/profielen" component={ProfielenBeheer} />
-        <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
+        {/* GEBRUIKERS_01: Profielen en Rollen & Rechten zijn vervangen door het
+            Functiehuis. De oude pagina's zijn verwijderd; deze legacy-routes
+            verwijzen veilig door naar het Functiehuis zodat geen 404's ontstaan. */}
+        <Route path="/beheer/profielen">
+          <Redirect to="/personeel?tab=functies" />
+        </Route>
+        <Route path="/beheer/rollen-rechten">
+          <Redirect to="/personeel?tab=functies" />
+        </Route>
         <Route path="/beheer/goedkeuringen-dashboard" component={GoedkeuringenDashboard} />
         <Route path="/beheer/goedkeuringsbeleid" component={GoedkeuringsbeleidBeheer} />
         <Route path="/beheer/biae" component={BiaeBeheer} />
         <Route path="/declaraties/:id" component={DeclaratieDetailPagina} />
         <Route path="/declaraties" component={DeclaratiesPagina} />
-        <Route path="/beheer/object-rechten" component={ObjectRechtenBeheer} />
+        {/* GEBRUIKERS_01: Object-rechten verwijst door naar functiehuis */}
+        <Route path="/beheer/object-rechten">
+          <Redirect to="/personeel?tab=functies" />
+        </Route>
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
         <Route path="/beheer/acceptatieregister" component={Acceptatieregister} />
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />
