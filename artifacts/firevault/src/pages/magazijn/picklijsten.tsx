@@ -63,6 +63,9 @@ function formatDatum(iso: string | null | undefined) {
 
 type Artikel = { id: number; naam: string; eenheid?: string | null; code?: string | null };
 
+const ALLE_STATUSSEN = "__alle_statussen__";
+const GEEN_OPDRACHT = "__geen_opdracht__";
+
 function RegelRij({
   index,
   artikelen,
@@ -199,12 +202,15 @@ export default function MagazijnPicklijstenPagina() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select
+          value={filterStatus || ALLE_STATUSSEN}
+          onValueChange={(value) => setFilterStatus(value === ALLE_STATUSSEN ? "" : value)}
+        >
           <SelectTrigger className="w-52">
             <SelectValue placeholder="Alle statussen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle statussen</SelectItem>
+            <SelectItem value={ALLE_STATUSSEN}>Alle statussen</SelectItem>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <SelectItem key={k} value={k}>{v}</SelectItem>
             ))}
@@ -298,12 +304,15 @@ export default function MagazijnPicklijstenPagina() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Project (optioneel)</Label>
-                <Select value={nOpdrachtId} onValueChange={setNOpdrachtId}>
+                <Select
+                  value={nOpdrachtId || GEEN_OPDRACHT}
+                  onValueChange={(value) => setNOpdrachtId(value === GEEN_OPDRACHT ? "" : value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Geen project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen project</SelectItem>
+                    <SelectItem value={GEEN_OPDRACHT}>Geen project</SelectItem>
                     {opdrachten.map((o) => (
                       <SelectItem key={o.id} value={String(o.id)}>{o.naam}</SelectItem>
                     ))}

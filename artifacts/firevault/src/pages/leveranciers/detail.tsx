@@ -29,6 +29,8 @@ import { GrootboekSelect } from "@/components/grootboek-select";
 import { BtwSelect } from "@/components/btw-select";
 import { Link } from "wouter";
 
+const GEEN_FACTUURCATEGORIE = "__geen_factuurcategorie__";
+
 export default function LeverancierDetailPagina() {
   const [, params] = useRoute("/leveranciers/:id");
   const [, navigate] = useLocation();
@@ -664,14 +666,17 @@ function BewerkModal({
             <div className="space-y-1 col-span-2">
               <Label>Factuurcategorie (auto-toewijzing)</Label>
               <Select
-                value={form["factuur_categorie"] ?? ""}
-                onValueChange={(v) => setForm((p) => ({ ...p, factuur_categorie: v }))}
+                value={form["factuur_categorie"] || GEEN_FACTUURCATEGORIE}
+                onValueChange={(v) => setForm((p) => ({
+                  ...p,
+                  factuur_categorie: v === GEEN_FACTUURCATEGORIE ? "" : v,
+                }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Niet ingesteld" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Niet ingesteld</SelectItem>
+                  <SelectItem value={GEEN_FACTUURCATEGORIE}>Niet ingesteld</SelectItem>
                   <SelectItem value="projectmateriaal">Projectmateriaal</SelectItem>
                   <SelectItem value="onderaanneming">Onderaanneming</SelectItem>
                   <SelectItem value="algemene_kosten">Algemene kosten</SelectItem>

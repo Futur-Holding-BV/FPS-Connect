@@ -17,6 +17,7 @@
     "e2e-monteur-ci": "tsx ./src/e2e-monteur-run.ts",
     "e2e-web": "playwright test --config=playwright.web.config.ts",
     "e2e-web-ci": "tsx ./src/e2e-web-run.ts",
+    "lint-select-items": "tsx ./src/lint-select-items.ts",
     "clean-stale-dist": "tsx ./src/clean-stale-dist.ts",
     "check-codegen-stale": "tsx ./src/check-codegen-stale.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",

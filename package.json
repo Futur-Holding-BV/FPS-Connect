@@ -9,7 +9,7 @@
     "pretypecheck:libs": "pnpm --filter @workspace/scripts run clean-stale-dist",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "test": "vitest run"
+    "test": "pnpm --filter @workspace/scripts run lint-select-items && vitest run"
   },
   "private": true,
   "devDependencies": {

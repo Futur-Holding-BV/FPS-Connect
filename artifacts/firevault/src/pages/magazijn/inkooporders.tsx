@@ -55,6 +55,9 @@ const STATUS_KLEUR: Record<string, string> = {
   geannuleerd: "bg-red-100 text-red-700",
 };
 
+const ALLE_STATUSSEN = "__alle_statussen__";
+const GEEN_LEVERANCIER = "__geen_leverancier__";
+
 function formatDatum(iso: string | null | undefined) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -226,12 +229,15 @@ export default function MagazijnInkoopordersPagina() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select
+          value={filterStatus || ALLE_STATUSSEN}
+          onValueChange={(value) => setFilterStatus(value === ALLE_STATUSSEN ? "" : value)}
+        >
           <SelectTrigger className="w-52">
             <SelectValue placeholder="Alle statussen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle statussen</SelectItem>
+            <SelectItem value={ALLE_STATUSSEN}>Alle statussen</SelectItem>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <SelectItem key={k} value={k}>{v}</SelectItem>
             ))}
@@ -324,12 +330,15 @@ export default function MagazijnInkoopordersPagina() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Leverancier</Label>
-                <Select value={nLeverancierId} onValueChange={setNLeverancierId}>
+                <Select
+                  value={nLeverancierId || GEEN_LEVERANCIER}
+                  onValueChange={(value) => setNLeverancierId(value === GEEN_LEVERANCIER ? "" : value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Kies leverancier (optioneel)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen</SelectItem>
+                    <SelectItem value={GEEN_LEVERANCIER}>Geen</SelectItem>
                     {leveranciers.map((l: { id: number; naam: string }) => (
                       <SelectItem key={l.id} value={String(l.id)}>{l.naam}</SelectItem>
                     ))}

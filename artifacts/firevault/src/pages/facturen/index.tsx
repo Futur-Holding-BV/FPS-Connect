@@ -59,6 +59,8 @@ const STATUS_ICOON: Record<string, React.ReactNode> = {
   verwerkt: <CheckCircle2 className="h-3 w-3" />,
 };
 
+const GEEN_GEBOUW = "__geen_gebouw__";
+
 function euro(v?: string | null) {
   if (!v) return "—";
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(parseFloat(v));
@@ -361,12 +363,15 @@ export default function FacturenPagina() {
             </div>
             <div>
               <Label>Koppelen aan gebouw (optioneel)</Label>
-              <Select value={gebouwId} onValueChange={setGebouwId}>
+              <Select
+                value={gebouwId || GEEN_GEBOUW}
+                onValueChange={(value) => setGebouwId(value === GEEN_GEBOUW ? "" : value)}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Kies een gebouw..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Niet koppelen</SelectItem>
+                  <SelectItem value={GEEN_GEBOUW}>Niet koppelen</SelectItem>
                   {(gebouwen as Array<{ id: number; naam: string }>).map((g) => (
                     <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
                   ))}

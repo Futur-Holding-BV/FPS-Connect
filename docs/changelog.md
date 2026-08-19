@@ -687,3 +687,9 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 ## 2026-08-19 — Opgelost: lege keuzes in de monteur-app blijven betrouwbaar
 
 - De keuzelijsten voor **Alle fabrikanten** en **Niet opgegeven** gebruiken nu een veilige interne keuze in plaats van een lege waarde. De app vertaalt die keuze direct terug naar de bestaande betekenis, zodat filters en opgeslagen gegevens hetzelfde blijven werken en monteurs niet vastlopen.
+
+## 2026-08-19 — SELECTITEM_01: lege keuzewaarden kunnen niet meer stil een dialoog laten crashen
+
+- **Automatische broncontrole**: de nieuwe `lint-select-items`-stap controleert alle Firevault-TSX-bestanden en blokkeert een `SelectItem` met `value=""` of `value={""}` voordat die via de standaardteststraat kan landen.
+- **Gerepareerde dialogen als regressiepad**: inspecties, beheermeldingen, LMRA, inkoopplanning en SnagStream worden expliciet door de controle meegenomen naast de volledige broncode.
+- **Bestaande restgevallen veilig gemaakt**: optionele filters en koppelingen in magazijn, leveranciers en facturen gebruiken nu een niet-lege sentinel en vertalen die terug naar de bestaande lege domeinwaarde, zonder het API-contract te wijzigen.
