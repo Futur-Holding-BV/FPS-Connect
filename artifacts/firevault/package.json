@@ -87,13 +87,14 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@sentry/react": "^10.70.0",
+    "@workspace/calculatie": "workspace:*",
     "canvas-confetti": "^1.9.4",
     "i18next": "^26.3.1",
     "jsbarcode": "^3.12.3",
     "pdfjs-dist": "^6.0.227",
     "qrcode.react": "^4.2.0",
     "react-i18next": "^17.0.8",
-    "xlsx": "^0.18.5",
-    "@workspace/calculatie": "workspace:*"
+    "xlsx": "^0.18.5"
   }
 }

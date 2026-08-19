@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { zetMonitoringPagina, rapporteerFout } from "@/lib/foutmonitoring";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2, Lock, AlertTriangle } from "lucide-react";
@@ -248,6 +249,10 @@ class AppErrorBoundary extends React.Component<
   static getDerivedStateFromError(fout: Error) {
     return { fout };
   }
+  componentDidCatch(fout: Error) {
+    // SENTRY_AAN_01: door React opgevangen renderfouten ook naar de monitoring.
+    rapporteerFout(fout);
+  }
   render() {
     if (this.state.fout) {
       return (
@@ -329,6 +334,8 @@ function GeenToegang() {
 function Portalen() {
   const [locatie] = useLocation();
   const { rol, bevoegdheden } = useRol();
+  // SENTRY_AAN_01: elke browserfout draagt de actuele pagina als tag mee.
+  useEffect(() => { zetMonitoringPagina(locatie); }, [locatie]);
   // Cast naar string zodat legacy-rollen (beheerder/monteur/controleur) die nog
   // in de database kunnen staan ook matchen — T016 converteert ze naar "gebruiker".
   const rolStr = rol as string;

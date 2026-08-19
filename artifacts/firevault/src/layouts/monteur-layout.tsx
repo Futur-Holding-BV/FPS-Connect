@@ -15,6 +15,7 @@ import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 import { MeldingKnop } from "@/components/melding-knop";
+import { DitWerktNietKnop } from "@/components/dit-werkt-niet-knop";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
@@ -95,11 +96,13 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
           <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />
           <div className="ml-auto flex items-center gap-1">
             <ZijrandKnoppen zonderPaneel />
+            <DitWerktNietKnop />
             <MeldingKnop />
           </div>
         </div>
         <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-border">
           <ZijrandKnoppen />
+          <DitWerktNietKnop />
           <MeldingKnop />
         </div>
         <div className="p-3 md:p-4 xl:p-6">

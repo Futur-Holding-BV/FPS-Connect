@@ -20901,6 +20901,18 @@ export const DeleteActiepuntResponse = zod.void()
 
 
 /**
+ * @summary "Dit werkt niet"-melding van een ingelogde gebruiker (landt als actiepunt bij de hoofdbeheerder)
+ */
+export const MeldDitWerktNietBody = zod.object({
+  "tekst": zod.string().describe('Vrije omschrijving van wat er niet werkt'),
+  "pagina": zod.string().describe('Route\/pagina waarop de melding is gedaan'),
+  "laatste_handeling": zod.string().nullish().describe('Laatst geregistreerde handeling in het scherm')
+})
+
+export const MeldDitWerktNietResponse = zod.void()
+
+
+/**
  * @summary Jaarkalender-inhoud, server-side gescoopt op rechten (KALENDER_01)
  */
 export const GetKalenderQueryParams = zod.object({

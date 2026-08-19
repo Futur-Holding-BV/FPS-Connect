@@ -1044,6 +1044,8 @@ export * from './medewerkerOpleidingInput';
 export * from './meerwerkMeldingInput';
 export * from './meerwerkMeldingInputType';
 export * from './meerwerkMeldingResultaat';
+export * from './meldDitWerktNiet201';
+export * from './meldDitWerktNietBody';
 export * from './meldingDetail';
 export * from './meldingInput';
 export * from './meldingInputType';

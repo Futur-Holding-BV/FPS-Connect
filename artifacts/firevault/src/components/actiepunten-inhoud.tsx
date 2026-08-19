@@ -14,12 +14,13 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CATEGORIE_LABELS: Record<string, string> = {
+  meldingen: "Meldingen uit de app",
   platform: "Platform & infrastructuur",
   testen: "Testen",
   "app-stores": "App-stores",
   overig: "Overig",
 };
-const CATEGORIE_VOLGORDE = ["platform", "testen", "app-stores", "overig"];
+const CATEGORIE_VOLGORDE = ["meldingen", "platform", "testen", "app-stores", "overig"];
 
 export function ActiepuntenInhoud() {
   const queryClient = useQueryClient();

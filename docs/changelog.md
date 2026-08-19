@@ -1,3 +1,13 @@
+## 2026-08-19 — SENTRY_AAN_01: foutmonitoring aan + browserkant + "Dit werkt niet"-knop
+
+- **Monitoring-config voor de browser** (`GET /api/monitoring-config`, publiek): geeft de publieke browser-DSN (`SENTRY_DSN_WEB`), omgeving en commit terug, zodat een DSN-wijziging géén rebuild vergt. Zonder DSN blijft de browserkant uit — identiek aan de serverkant.
+- **Browserkant aangesloten** (`@sentry/react` in de webapp, `lib/foutmonitoring.ts`): elke schermfout draagt pagina (tag), gebruiker (alleen het id, ná login) en versie (release = commit) mee. Allowlist-scrub als spiegel van de serverkant: geen breadcrumbs, geen extra, geen request-data, geen naam/e-mail/IP. Ook door React opgevangen renderfouten (ErrorBoundary) worden gerapporteerd; de meldroute heeft een spam-throttle (max 5 per 10 min per gebruiker).
+- **Bewuste testfout** (`POST /api/monitoring-testfout`, hoofdbeheerder-only): loopt door de centrale foutafhandelaar (500 + verwijzingscode) — hét bewijskanaal dat meldingen in Sentry aankomen zodra de DSN op productie staat.
+- **"Dit werkt niet"-knop**: op elke pagina in de topbalk, voor élke ingelogde gebruiker (bewust zonder module-eis, naast de bestaande bugmeldknop voor systeem:1). Legt pagina, tijdstip, gebruiker (server-side uit de sessie), laatste handeling (laatst aangeklikte knop/link) en een vrij tekstveld vast via `POST /api/dit-werkt-niet` en landt als actiepunt (nieuwe categorie "Meldingen uit de app") in de actiepuntenlijst van de hoofdbeheerder.
+- **FOUTREGISTRATIE_01 vervallen**: die opdracht ging uit van een defect dat er niet is; er bestond geen taak of plan onder die naam — niets te bouwen, formeel ingetrokken.
+- **Nog nodig op de VPS (beheerder)**: `SENTRY_DSN` (API-project) en `SENTRY_DSN_WEB` (browser-project) in `deploy/.env.production`; daarna testfout afvuren en het event in Sentry aanwijzen.
+- **Bewijs**: `scripts/src/verificatie-sentry-aan01.ts` — config publiek, testfout 403/500+verwijzingscode, melding landt als actiepunt met alle vijf velden, validatie 400/401 (alles groen, dev).
+
 ## 2026-08-19 — GELDSTROOM_01: de twee geld-uiteinden als één keten (verkoopfacturatie + inkoop-goedkeuringspoorten)
 
 - **Verkoopfactuur samenstellen op de opdracht** (`POST /opdrachten/:id/verkoopfactuur`, financieel:2): concept-verkoopfactuur mét regels uit de gekozen bron — de offerte (optionele niet-gekozen regels tellen niet mee; omschrijving = maatregel + ruimte) of de werkbegroting. Btw standaard 21%/"H" per regel, relatienaam uit de CRM-klant, vervaldatum uit de betalingstermijn, F-nummer per offerte onder advisory lock. Regels blijven daarna gewoon aanpasbaar; het fiscale nummer wordt pas bij "Definitief maken" uitgegeven (NUMMER_01 §4.6, per BV).

@@ -86,6 +86,18 @@ router.get("/versie", async (_req, res): Promise<void> => {
   });
 });
 
+// SENTRY_AAN_01: publieke monitoring-config voor de browserkant. De DSN van
+// een Sentry-browserproject is per definitie publiek (staat in elke bundle);
+// zonder SENTRY_DSN_WEB blijft de browserkant gewoon uit.
+router.get("/monitoring-config", (_req, res): void => {
+  res.json({
+    sentry_dsn_web: process.env["SENTRY_DSN_WEB"]?.trim() || null,
+    omgeving: process.env["SENTRY_ENVIRONMENT"]?.trim() || process.env["NODE_ENV"] || null,
+    commit: COMMIT,
+    versie: VERSIE,
+  });
+});
+
 // GET /api/status — productie-statusoverzicht (FASE 4)
 // Toont actieve commit, build-tijdstip, deploy-nummer, DB-verbinding en API-status.
 // Geen secrets of gevoelige infrastructuurinformatie; veilig publiek bereikbaar.

@@ -742,6 +742,8 @@ import type {
   MedewerkerOpleidingInput,
   MeerwerkMeldingInput,
   MeerwerkMeldingResultaat,
+  MeldDitWerktNiet201,
+  MeldDitWerktNietBody,
   MeldingDetail,
   MeldingInput,
   MeldingOntvangst,
@@ -59664,6 +59666,76 @@ export const useDeleteActiepunt = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteActiepuntMutationOptions(options));
+    }
+
+export const getMeldDitWerktNietUrl = () => {
+
+
+
+
+  return `/api/dit-werkt-niet`
+}
+
+/**
+ * @summary "Dit werkt niet"-melding van een ingelogde gebruiker (landt als actiepunt bij de hoofdbeheerder)
+ */
+export const meldDitWerktNiet = async (meldDitWerktNietBody: MeldDitWerktNietBody, options?: RequestInit): Promise<MeldDitWerktNiet201> => {
+
+  return customFetch<MeldDitWerktNiet201>(getMeldDitWerktNietUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(meldDitWerktNietBody)
+  }
+);}
+
+
+
+
+export const getMeldDitWerktNietMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldDitWerktNiet>>, TError,{data: BodyType<MeldDitWerktNietBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof meldDitWerktNiet>>, TError,{data: BodyType<MeldDitWerktNietBody>}, TContext> => {
+
+const mutationKey = ['meldDitWerktNiet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof meldDitWerktNiet>>, {data: BodyType<MeldDitWerktNietBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  meldDitWerktNiet(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MeldDitWerktNietMutationResult = NonNullable<Awaited<ReturnType<typeof meldDitWerktNiet>>>
+    export type MeldDitWerktNietMutationBody = BodyType<MeldDitWerktNietBody>
+    export type MeldDitWerktNietMutationError = ErrorType<unknown>
+
+    /**
+ * @summary "Dit werkt niet"-melding van een ingelogde gebruiker (landt als actiepunt bij de hoofdbeheerder)
+ */
+export const useMeldDitWerktNiet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldDitWerktNiet>>, TError,{data: BodyType<MeldDitWerktNietBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof meldDitWerktNiet>>,
+        TError,
+        {data: BodyType<MeldDitWerktNietBody>},
+        TContext
+      > => {
+      return useMutation(getMeldDitWerktNietMutationOptions(options));
     }
 
 export const getGetKalenderUrl = (params?: GetKalenderParams,) => {

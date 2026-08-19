@@ -17508,6 +17508,32 @@ paths:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         '204': { description: Verwijderd }
+  /dit-werkt-niet:
+    post:
+      operationId: meldDitWerktNiet
+      summary: '"Dit werkt niet"-melding van een ingelogde gebruiker (landt als actiepunt bij de hoofdbeheerder)'
+      tags: [Actiepunten]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tekst, pagina]
+              properties:
+                tekst: { type: string, description: Vrije omschrijving van wat er niet werkt }
+                pagina: { type: string, description: Route/pagina waarop de melding is gedaan }
+                laatste_handeling: { type: string, nullable: true, description: Laatst geregistreerde handeling in het scherm }
+      responses:
+        '201':
+          description: Vastgelegd als actiepunt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: integer }
   /kalender:
     get:
       operationId: getKalender

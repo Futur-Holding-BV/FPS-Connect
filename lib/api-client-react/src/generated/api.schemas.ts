@@ -18742,6 +18742,19 @@ export type UpdateActiepuntBody = {
   status?: UpdateActiepuntBodyStatus;
 };
 
+export type MeldDitWerktNietBody = {
+  /** Vrije omschrijving van wat er niet werkt */
+  tekst: string;
+  /** Route/pagina waarop de melding is gedaan */
+  pagina: string;
+  /** Laatst geregistreerde handeling in het scherm */
+  laatste_handeling?: string | null;
+};
+
+export type MeldDitWerktNiet201 = {
+  id: number;
+};
+
 export type GetKalenderParams = {
 jaar?: number;
 werkgever_id?: number;

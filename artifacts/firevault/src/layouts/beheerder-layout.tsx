@@ -16,6 +16,7 @@ import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast"
 import { NieuwsTicker } from "@/components/nieuws-ticker";
 import { VersieBadge } from "@/components/versie-badge";
 import { MeldingKnop } from "@/components/melding-knop";
+import { DitWerktNietKnop } from "@/components/dit-werkt-niet-knop";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupContent,
@@ -2039,6 +2040,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             {paneelBeschikbaar && <BanenMenu />}
             <ZijrandKnoppen metWerkbak />
+            <DitWerktNietKnop />
             <MeldingKnop />
             <VersieBadge />
             <OnlineGebruikersTaakbalk />

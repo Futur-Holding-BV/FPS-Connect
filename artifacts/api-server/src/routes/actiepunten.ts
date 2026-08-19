@@ -2,9 +2,9 @@
 // Houdt bij waar het platform op een mens wacht (Azure, mailing, VPS,
 // app-store-accounts). Alleen de hoofdbeheerder ziet en beheert deze lijst.
 import { Router } from "express";
-import { db, actiepuntenTable } from "@workspace/db";
+import { db, actiepuntenTable, gebruikersTable } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireAuth, requireRol } from "../middlewares/auth";
 
 const router = Router();
 
@@ -56,6 +56,56 @@ router.patch("/actiepunten/:id", requireRol("hoofdbeheerder"), async (req, res):
     bijgewerktOp: new Date(),
   }).where(eq(actiepuntenTable.id, id)).returning();
   res.json(mapPunt(rij));
+});
+
+// SENTRY_AAN_01: "Dit werkt niet"-melding — voor élke ingelogde gebruiker.
+// Legt pagina, tijdstip, gebruiker, laatste handeling en vrije tekst vast en
+// landt als actiepunt (categorie "meldingen") in de lijst van de hoofdbeheerder.
+// Eenvoudige per-gebruiker throttle tegen actiepunten-spam: max 5 meldingen
+// per 10 minuten. In-memory is hier voldoende (één api-server-proces).
+const meldMomenten = new Map<number, number[]>();
+const MELD_VENSTER_MS = 10 * 60 * 1000;
+const MELD_MAX = 5;
+
+router.post("/dit-werkt-niet", requireAuth, async (req, res): Promise<void> => {
+  const { tekst, pagina, laatste_handeling } = req.body as { tekst?: string; pagina?: string; laatste_handeling?: string | null };
+  if (!tekst || !String(tekst).trim()) return void res.status(400).json({ error: "tekst is verplicht — beschrijf kort wat er niet werkt" });
+  if (!pagina || !String(pagina).trim()) return void res.status(400).json({ error: "pagina is verplicht" });
+  const userId = req.session.userId!;
+  const nuMs = Date.now();
+  const recent = (meldMomenten.get(userId) ?? []).filter((t) => nuMs - t < MELD_VENSTER_MS);
+  if (recent.length >= MELD_MAX) {
+    return void res.status(429).json({ error: "Te veel meldingen kort na elkaar — probeer het over een paar minuten opnieuw" });
+  }
+  recent.push(nuMs);
+  meldMomenten.set(userId, recent);
+  const [wie] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1);
+  const nu = new Date();
+  const tijdstip = nu.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" });
+  const paginaKort = String(pagina).trim().split("?")[0]!.slice(0, 120);
+  const regels = [
+    `Gebruiker: ${wie?.naam ?? `#${userId}`}`,
+    `Pagina: ${paginaKort}`,
+    `Tijdstip: ${tijdstip}`,
+    `Laatste handeling: ${laatste_handeling ? String(laatste_handeling).slice(0, 200) : "onbekend"}`,
+    "",
+    String(tekst).trim().slice(0, 2000),
+  ];
+  const [rij] = await db.insert(actiepuntenTable).values({
+    titel: `Dit werkt niet — ${paginaKort} (${wie?.naam ?? `#${userId}`})`.slice(0, 200),
+    omschrijving: regels.join("\n"),
+    categorie: "meldingen",
+    volgorde: ((await db.select({ v: actiepuntenTable.volgorde }).from(actiepuntenTable).orderBy(asc(actiepuntenTable.volgorde))).at(-1)?.v ?? 0) + 10,
+    bijgewerktOp: nu,
+  }).returning({ id: actiepuntenTable.id });
+  res.status(201).json({ id: rij!.id });
+});
+
+// SENTRY_AAN_01: bewuste testfout om de Sentry-keten aantoonbaar te maken.
+// Alleen de hoofdbeheerder; de fout loopt door de centrale foutafhandelaar
+// (500 + verwijzingscode) en wordt — mét DSN — naar Sentry gestuurd.
+router.post("/monitoring-testfout", requireRol("hoofdbeheerder"), async (): Promise<void> => {
+  throw new Error("SENTRY_AAN_01: bewuste testfout voor het bewijs dat foutmonitoring meldingen aflevert");
 });
 
 router.delete("/actiepunten/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {

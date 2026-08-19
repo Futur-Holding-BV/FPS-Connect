@@ -8,6 +8,7 @@ import {
   ApiError,
 } from "@workspace/api-client-react";
 import { useTaal } from "@/context/taal-context";
+import { zetMonitoringGebruiker } from "@/lib/foutmonitoring";
 import { isGeldigeTaal } from "@/i18n/talen";
 
 type AuthContextType = {
@@ -67,6 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isEchte401 = isError && error instanceof ApiError && error.status === 401;
   const gebruiker = isEchte401 ? null : (data ?? null);
+
+  // SENTRY_AAN_01: browserfouten dragen het ingelogde gebruikers-id mee
+  // (bewust alleen het id — geen naam/e-mail naar de externe dienst).
+  useEffect(() => {
+    zetMonitoringGebruiker(gebruiker ? { id: gebruiker.id } : null);
+  }, [gebruiker?.id]);
 
   useEffect(() => {
     if (gebruiker?.taal && isGeldigeTaal(gebruiker.taal)) {
