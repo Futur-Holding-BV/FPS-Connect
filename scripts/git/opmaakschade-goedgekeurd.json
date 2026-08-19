@@ -7,6 +7,22 @@
       "verwijderd": 46,
       "blob": "542b98e139bbac271dc80db054d3d248c93cae92",
       "reden": "Inhoudelijk beoordeelde, samenhangende fail-closed BV- en TOCTOU-hardening voor magazijnboekingen."
+    },
+    {
+      "commit": "19742da88b65baffca666af28c404dc861db1db3",
+      "pad": "artifacts/api-server/src/routes/snagstream.ts",
+      "toegevoegd": 584,
+      "verwijderd": 35,
+      "blob": "adda976f76b65864d62f3c6d96849ecd87b48dd1",
+      "reden": "Inhoudelijk beoordeelde, samenhangende SnagStream-uitbreiding voor scoped deduplicatie, pending uploadtokens, PDF-validatie en fail-closed opslagcleanup."
+    },
+    {
+      "commit": "19742da88b65baffca666af28c404dc861db1db3",
+      "pad": "artifacts/firevault/src/pages/snagstream/index.tsx",
+      "toegevoegd": 496,
+      "verwijderd": 92,
+      "blob": "7ad972d8fb158c7626830f6feacbbcca27c1b161",
+      "reden": "Inhoudelijk beoordeelde, samenhangende SnagStream-archiefinterface voor uploadcontrole, duplicaatbesluitvorming, zoeken, filters en gebouwenoverzicht."
     }
   ]
 }
