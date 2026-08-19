@@ -6,7 +6,7 @@
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
 import { execSync } from "child_process";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
-import { storageObjectsUrl } from "../lib/storageObjectsUrl";
+import { storageObjectsUrl, normaliseerStorageUrl } from "../lib/storageObjectsUrl";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -883,6 +883,144 @@ router.delete("/offertes/:id", schrijven, async (req, res): Promise<void> => {
   }
 });
 
+// ── Branding-context voor print (offertes:1) ─────────────────────────────────
+// Geeft werkgeversgegevens + gevalideerd studio-model terug voor de printpagina.
+// Vereist alleen offertes:1 zodat ook rollen zonder personeel/organisatie-rechten
+// een correcte offerte-PDF kunnen genereren.  De serverside valideert:
+//   • werkmaatschappij_id aanwezig  → anders fout "geen_werkmaatschappij"
+//   • werkgever bestaat in DB       → anders fout "werkmaatschappij_niet_gevonden"
+//   • vastgepind model: werkgever_id matcht + documentType === "offerte"
+//   • actief model: meest recente goedgekeurde offerte-model voor deze werkgever
+//   • geen geldig model gevonden    → fout "model_niet_beschikbaar" (werkgever wél teruggegeven)
+router.get("/offertes/:id/branding-context", lezen, async (req, res): Promise<void> => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [offerte] = await db
+      .select({
+        id: offertesTable.id,
+        werkmaatschappijId: offertesTable.werkmaatschappijId,
+        studioModelId: offertesTable.studioModelId,
+      })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, offerteId));
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const werkgeverId = offerte.werkmaatschappijId ?? null;
+    if (!werkgeverId) {
+      return void res.json({ fout: "geen_werkmaatschappij", werkgever: null, model: null });
+    }
+
+    const [wg] = await db
+      .select({
+        id: werkgeversTable.id,
+        naam: werkgeversTable.naam,
+        logoUrl: werkgeversTable.logoUrl,
+        primaireKleur: werkgeversTable.primaireKleur,
+        adres: werkgeversTable.adres,
+        postcode: werkgeversTable.postcode,
+        plaats: werkgeversTable.plaats,
+        website: werkgeversTable.website,
+        email: werkgeversTable.email,
+        telefoon: werkgeversTable.telefoon,
+        kvk: werkgeversTable.kvk,
+        btw: werkgeversTable.btw,
+      })
+      .from(werkgeversTable)
+      .where(eq(werkgeversTable.id, werkgeverId));
+    if (!wg) {
+      return void res.json({ fout: "werkmaatschappij_niet_gevonden", werkgever: null, model: null });
+    }
+
+    const werkgeverOut = {
+      id: wg.id,
+      naam: wg.naam,
+      // Logo normaliseren naar canonieke /api/storage/objects/-URL zodat de client
+      // nooit een dubbel prefix krijgt (bv. /api/storage/api/storage/objects/...).
+      logo_url: wg.logoUrl ? normaliseerStorageUrl(wg.logoUrl) : null,
+      // Kleur NIET vervangen met FPS-oranje (#F23B0D): dat is de FPS-huisstijl, niet die van
+      // een andere BV. Null teruggeven; de client laat de kleur dan weg of gebruikt undefined.
+      primaire_kleur: wg.primaireKleur ?? null,
+      adres: wg.adres ?? null,
+      postcode: wg.postcode ?? null,
+      plaats: wg.plaats ?? null,
+      website: wg.website ?? null,
+      email: wg.email ?? null,
+      telefoon: wg.telefoon ?? null,
+      kvk: wg.kvk ?? null,
+      btw: wg.btw ?? null,
+    };
+
+    // Zoek het te gebruiken model op: vastgepind (studio_model_id) vóór actief.
+    // Vastgepind model MOET bij deze werkgever horen en type "offerte" zijn — anders
+    // afwijzen (cross-BV-misbranding, fout in pin).
+    const pinnedModelId = offerte.studioModelId ?? null;
+    let model: { id: number; document_type: string; werkgever_id: number; versie: number | null; werkgever_naam: string | null; connect_template_json: string | null } | null = null;
+
+    if (pinnedModelId) {
+      const [rij] = await db
+        .select({ m: documentStudioModellenTable, wgNaam: werkgeversTable.naam })
+        .from(documentStudioModellenTable)
+        .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+        .where(eq(documentStudioModellenTable.id, pinnedModelId));
+      if (rij && rij.m.werkgeverId === werkgeverId && rij.m.documentType === "offerte") {
+        model = {
+          id: rij.m.id,
+          document_type: rij.m.documentType,
+          werkgever_id: rij.m.werkgeverId ?? werkgeverId,
+          versie: rij.m.versie ?? null,
+          werkgever_naam: rij.wgNaam ?? null,
+          connect_template_json: rij.m.connectTemplateJson ?? null,
+        };
+      }
+    } else {
+      const [rij] = await db
+        .select({ m: documentStudioModellenTable, wgNaam: werkgeversTable.naam })
+        .from(documentStudioModellenTable)
+        .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+        .where(
+          and(
+            eq(documentStudioModellenTable.werkgeverId, werkgeverId),
+            eq(documentStudioModellenTable.documentType, "offerte"),
+            eq(documentStudioModellenTable.status, "goedgekeurd"),
+          ),
+        )
+        .orderBy(desc(documentStudioModellenTable.id))
+        .limit(1);
+      if (rij) {
+        model = {
+          id: rij.m.id,
+          document_type: rij.m.documentType,
+          werkgever_id: rij.m.werkgeverId ?? werkgeverId,
+          versie: rij.m.versie ?? null,
+          werkgever_naam: rij.wgNaam ?? null,
+          connect_template_json: rij.m.connectTemplateJson ?? null,
+        };
+      }
+    }
+
+    if (!model) {
+      return void res.json({ fout: "model_niet_beschikbaar", werkgever: werkgeverOut, model: null });
+    }
+
+    // connect_template_json mag NIET null/leeg zijn en MOET geldig JSON zijn.
+    // Een model zonder of met kapot template-JSON is onbruikbaar voor print —
+    // terugvallen op default layout-waarden zou de fail-closed eis breken.
+    if (!model.connect_template_json) {
+      return void res.json({ fout: "model_niet_beschikbaar", werkgever: werkgeverOut, model: null });
+    }
+    try {
+      JSON.parse(model.connect_template_json);
+    } catch {
+      return void res.json({ fout: "model_niet_beschikbaar", werkgever: werkgeverOut, model: null });
+    }
+
+    res.json({ fout: null, werkgever: werkgeverOut, model });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── PDF-download ─────────────────────────────────────────────────────────────
 // Rendert de bestaande DDS-printpagina (/offertes/:id/print) via een headless
 // browser en retourneert de uitvoer als binary PDF. Hierdoor worden de actieve
@@ -959,11 +1097,24 @@ router.get("/offertes/:id/pdf", lezen, async (req, res): Promise<void> => {
 
       // Wacht tot de printpagina het gereed-signaal heeft gezet
       // (data-fps-print-ready="1" wordt in print.tsx gezet wanneer alle
-      // React Query-data is geladen en de inhoud gerenderd is).
-      await page.waitForFunction(
+      // React Query-data is geladen én de BV+model-keten volledig beschikbaar is).
+      // Timeout of ontbrekend signaal = de pagina heeft een blokkeerscherm getoond
+      // (bijv. werkmaatschappij onbekend / BV-gegevens niet opvraagbaar / model
+      // niet beschikbaar). In dat geval NOOIT page.pdf() aanroepen; de gebruiker
+      // krijgt een duidelijke 422-fout zodat er geen blokkeerscherm-PDF opgeslagen
+      // en teruggestuurd wordt als geldige offerte-bijlage.
+      const gereedSignaalOntvangen = await page.waitForFunction(
         'document.documentElement.getAttribute("data-fps-print-ready") === "1"',
         { timeout: 15000 },
-      ).catch(() => { /* timeout — genereer PDF van huidige staat */ });
+      ).then(() => true).catch(() => false);
+
+      if (!gereedSignaalOntvangen) {
+        res.status(422).json({
+          error: "PDF-generatie geannuleerd: de printpagina is niet gereed.",
+          detail: "Controleer of de werkmaatschappij en het documentopmaakmodel beschikbaar zijn voor deze offerte.",
+        });
+        return;
+      }
 
       const pdfBuffer = await page.pdf({
         format: "A4",

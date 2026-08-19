@@ -5,16 +5,13 @@ import {
   useListOfferteSecties,
   useListOfferteRegels,
   useListOfferteBijlagen,
-  useListWerkgevers,
-  useListStudioWerkgevers,
-  useGetDocumentStudioModel,
+  useGetOfferteBrandingContext,
   getGetOfferteQueryKey,
   getListOfferteSectiesQueryKey,
   getListOfferteRegelsQueryKey,
   getListOfferteBijlagenQueryKey,
-  getGetDocumentStudioModelQueryKey,
+  getGetOfferteBrandingContextQueryKey,
 } from "@workspace/api-client-react";
-import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/DocumentFrame";
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
@@ -34,64 +31,159 @@ export default function OffertePrintPagina() {
   const { id } = useParams<{ id: string }>();
   const offerteId = parseInt(id ?? "0", 10);
 
-  const { data: offerte, isLoading: offerteLoading } = useGetOfferte(offerteId, {
+  const {
+    data: offerte,
+    isLoading: offerteLoading,
+    isError: offerteFout,
+  } = useGetOfferte(offerteId, {
     query: { queryKey: getGetOfferteQueryKey(offerteId), enabled: !!offerteId },
   });
-  const { data: secties, isLoading: sectiesLoading } = useListOfferteSecties(offerteId, {
+  const {
+    data: secties,
+    isLoading: sectiesLoading,
+    isError: sectionsFout,
+  } = useListOfferteSecties(offerteId, {
     query: { queryKey: getListOfferteSectiesQueryKey(offerteId), enabled: !!offerteId },
   });
-  const { data: regels, isLoading: regelsLoading } = useListOfferteRegels(offerteId, {
+  const {
+    data: regels,
+    isLoading: regelsLoading,
+    isError: regelsFout,
+  } = useListOfferteRegels(offerteId, {
     query: { queryKey: getListOfferteRegelsQueryKey(offerteId), enabled: !!offerteId },
   });
   const { data: bijlagen } = useListOfferteBijlagen(offerteId, {
     query: { queryKey: getListOfferteBijlagenQueryKey(offerteId), enabled: !!offerteId },
   });
-  const { data: werkgevers } = useListWerkgevers();
-  const { data: studioWerkgevers } = useListStudioWerkgevers();
-  // Lees de actieve werkgever uit localStorage (print-pagina valt buiten WerkmaatschappijProvider)
-  const _actieveWerkgeverId = (() => {
-    try { const v = localStorage.getItem("fps.actieve_werkgever"); return v ? Number(v) : null; } catch { return null; }
-  })();
-  const _actieveWerkgeverNaam = _actieveWerkgeverId
-    ? ((werkgevers ?? []).find(w => w.id === _actieveWerkgeverId)?.naam ?? null)
-    : null;
-  const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find(w => _actieveWerkgeverNaam && w.naam === _actieveWerkgeverNaam)?.id
-    ?? (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
-    ?? (studioWerkgevers ?? [])[0]?.id
-    ?? null
-  );
-  const { model: actiefModel, isError: modelFout, isLoading: modelLaden } = useActiefStudioModel(studioWerkgeverId, "offerte");
 
-  // Verzonden offertes hebben het model vastgepind op moment van verzenden
-  // (studio_model_id) — die blijft leidend, ook als het huisstijlmodel daarna
-  // wijzigt of een nieuwe versie krijgt. Nog niet verzonden offertes tonen het
-  // live actieve model.
-  const pinnedModelId = offerte?.studio_model_id ?? null;
+  // BV_01 (offerte-print): branding-data (werkgever + model) server-side opgehaald
+  // via het branding-context endpoint dat alleen offertes:1 vereist.
+  // De server valideert: werkmaatschappij_id aanwezig → werkgever bestaat →
+  // model bij juiste BV + type "offerte" (gepind of actief). Nooit terugval op
+  // de actieve UI-context, de eerste BV of FPS-standaard-branding.
   const {
-    data: pinnedModel,
-    isLoading: pinnedModelLaden,
-    isError: pinnedModelFout,
-  } = useGetDocumentStudioModel(pinnedModelId ?? 0, {
-    query: { queryKey: getGetDocumentStudioModelQueryKey(pinnedModelId ?? 0), enabled: !!pinnedModelId, retry: false },
+    data: brandingData,
+    isLoading: brandingLaden,
+    isError: brandingFout,
+  } = useGetOfferteBrandingContext(offerteId, {
+    query: { queryKey: getGetOfferteBrandingContextQueryKey(offerteId), enabled: !!offerteId, retry: false },
   });
-  const gebruiktModel = pinnedModelId ? (pinnedModel ?? null) : actiefModel;
-  const gebruiktModelLaden = pinnedModelId ? pinnedModelLaden : modelLaden;
-  const gebruiktModelFout = pinnedModelId ? pinnedModelFout : modelFout;
 
-  const klaar = !offerteLoading && !sectiesLoading && !regelsLoading;
+  const kernDataLoading = offerteLoading || sectiesLoading || regelsLoading;
+  const kernDataFout = !kernDataLoading && (offerteFout || sectionsFout || regelsFout);
+  const offerteKlaar = !kernDataLoading && !kernDataFout && !!offerte;
+  const klaar = offerteKlaar && !brandingLaden;
+  const heeftWerkmaatschappij = !!(offerte?.werkmaatschappij_id);
+
+  const werkgever = brandingData?.werkgever ?? null;
+  const gebruiktModel = brandingData?.model ?? null;
+  const gebruiktModelFout = brandingFout || (klaar && brandingData?.fout === "model_niet_beschikbaar");
+
+  // BV-gegevens niet beschikbaar: netwerk-/autorisatiefout of server meldt werkgever onbekend.
+  const bvGegevensFout =
+    klaar && heeftWerkmaatschappij &&
+    (brandingFout ||
+      brandingData?.fout === "werkmaatschappij_niet_gevonden" ||
+      (brandingData?.fout !== "model_niet_beschikbaar" && werkgever === null));
+
+  // Template-JSON geldigheid: onafhankelijke client-side check zodat ook als de
+  // server-validatie ooit regresseert, de print NOOIT doorgaat met een default-layout.
+  // Null of onparseerbare JSON = model onbruikbaar (zelfde blokker als model_niet_beschikbaar).
+  const templateJsonGeldig = !!gebruiktModel?.connect_template_json && (() => {
+    try { JSON.parse(gebruiktModel!.connect_template_json!); return true; }
+    catch { return false; }
+  })();
+
+  // Opmaakmodel niet beschikbaar: server meldt fout, model null, of template-JSON invalid.
+  const modelNietBeschikbaar =
+    klaar && !bvGegevensFout && heeftWerkmaatschappij &&
+    (gebruiktModelFout || !gebruiktModel || !templateJsonGeldig);
+
+  const pinnedModelId = offerte?.studio_model_id ?? null;
 
   useEffect(() => {
-    if (klaar && offerte) {
+    if (klaar && heeftWerkmaatschappij && !bvGegevensFout && !modelNietBeschikbaar && !!gebruiktModel && templateJsonGeldig) {
       // Signaal voor server-side PDF-rendering (puppeteer wacht hierop)
       document.documentElement.setAttribute("data-fps-print-ready", "1");
       const timer = setTimeout(() => window.print(), 800);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        document.documentElement.removeAttribute("data-fps-print-ready");
+      };
     }
+    // Laden of geblokkeerd: marker mag nooit hangen van een eerder bezochte offerte.
+    document.documentElement.removeAttribute("data-fps-print-ready");
     return undefined;
-  }, [klaar, offerte?.id]);
+  }, [klaar, heeftWerkmaatschappij, bvGegevensFout, modelNietBeschikbaar, offerte?.id]);
 
-  if (!klaar || !offerte) {
+  // 4e blokkeerscherm: offerte/secties/regels konden niet geladen worden.
+  if (kernDataFout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-data-fout">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Offerte-gegevens niet beschikbaar</p>
+          <p className="text-sm">
+            De offerte, secties of regelgegevens konden niet worden geladen. Controleer uw verbinding en herlaad de pagina.
+            Er wordt bewust niet afgedrukt met onvolledige gegevens.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (bvGegevensFout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-bv-gegevens-fout">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Werkmaatschappij-gegevens niet beschikbaar</p>
+          <p className="text-sm">
+            De huisstijlgegevens van de gekoppelde werkmaatschappij konden niet worden opgehaald.
+            Controleer uw rechten (Personeel of Organisatie) of neem contact op met de beheerder.
+            Er wordt bewust nooit teruggevallen op de gegevens van een andere BV.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (modelNietBeschikbaar) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-model-fout">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Documentopmaak niet beschikbaar</p>
+          <p className="text-sm">
+            Het opmaakmodel voor deze werkmaatschappij kon niet worden geladen. Controleer de
+            verbinding of stel een goedgekeurd model in via{" "}
+            <a href="/beheer/documentopmaak" className="underline font-medium">
+              Beheer › Documentopmaak
+            </a>
+            . Er wordt bewust niet afgedrukt met een standaard- of FPS-opmaak.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (klaar && !heeftWerkmaatschappij) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md text-center space-y-3" data-testid="print-geblokkeerd-geen-werkmaatschappij">
+          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+          <p className="font-semibold text-foreground">Werkmaatschappij onbekend</p>
+          <p className="text-sm">
+            Deze offerte is niet herleidbaar tot een werkmaatschappij: er staat geen BV op de offerte
+            en er is geen gebouw-default. Stel de werkmaatschappij in op de offerte; er wordt bewust
+            nooit teruggevallen op de actieve BV of een andere BV.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!klaar) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         <div className="text-center space-y-2">
@@ -167,11 +259,11 @@ export default function OffertePrintPagina() {
   const vervolgTekst: string = (offerte as any).vervolg_tekst ?? "";
   const heeftVervolg = vervolgOpties.length > 0 || !!vervolgTekst;
 
-  const werkgever = _actieveWerkgeverNaam
-    ? ((werkgevers ?? []).find(w => w.naam === _actieveWerkgeverNaam) ?? (werkgevers ?? [])[0])
-    : ((werkgevers ?? [])[0] ?? null);
-
-  const studioLogoUrl = (studioWerkgevers ?? []).find(w => w.id === studioWerkgeverId)?.logo_url ?? "/logo-fps.png";
+  // Logo: branding-context endpoint retourneert al een canonieke /api/storage/objects/-URL
+  // (via normaliseerStorageUrl server-side). Geen extra prefixing hier: dat zou een
+  // al-genormaliseerde URL verdubbelen (/api/storage/api/storage/objects/...).
+  // Wanneer de werkgever geen logo heeft ingesteld, geven we null terug — nooit het FPS-logo.
+  const studioLogoUrl = werkgever?.logo_url ?? null;
 
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
 
@@ -180,7 +272,9 @@ export default function OffertePrintPagina() {
     try { return JSON.parse(gebruiktModel.connect_template_json) as { koptekst?: { logo_positie?: string }; kleurschema?: { primair?: string }; voettekst?: string | null }; }
     catch { return null; }
   })();
-  const accentKleur      = templateJson?.kleurschema?.primair ?? "#F23B0D";
+  // Kleurprioriteit: model kleurschema → werkgever.primaire_kleur.
+  // Nooit hardcoded FPS-oranje (#F23B0D) als terugval: dat is de FPS-huisstijl, niet die van een andere BV.
+  const accentKleur      = templateJson?.kleurschema?.primair ?? werkgever?.primaire_kleur ?? undefined;
   const logoPositie      = templateJson?.koptekst?.logo_positie ?? "rechts";
   const offerteVoettekst = templateJson?.voettekst ?? null;
   const sektieHeaderKlasse = cn(
@@ -191,7 +285,7 @@ export default function OffertePrintPagina() {
 
   const mij = {
     naam: werkgever?.naam ?? "FPS Brandpreventie",
-    logoUrl: studioLogoUrl,
+    logoUrl: studioLogoUrl ?? undefined,
     primaireKleur: accentKleur,
     adres: [werkgever?.adres].filter(Boolean).join("") || "",
     postcodeWoonplaats: [werkgever?.postcode, werkgever?.plaats].filter(Boolean).join("  ") || "",
@@ -222,7 +316,12 @@ export default function OffertePrintPagina() {
   return (
     <div
       className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0 overflow-x-hidden"
-      style={accentKleur ? { "--color-primary": accentKleur } as React.CSSProperties : undefined}
+      // --color-primary wordt altijd overschreven zodat bg-primary nooit via de
+      // globale Firevault-stylesheet FPS-oranje (#F23B0D) erft — ook wanneer
+      // noch het model noch de werkgever een kleur heeft ingesteld.
+      // Neutraal slate-700 is het bewuste vangnet: géén FPS-huisstijl, geen
+      // terugval naar een andere BV.
+      style={{ "--color-primary": accentKleur ?? "#334155" } as React.CSSProperties}
     >
       {gebruiktModel && (
         <div className="w-full max-w-[210mm] mx-auto mb-2 px-4 print:hidden overflow-hidden">
@@ -234,7 +333,7 @@ export default function OffertePrintPagina() {
           </span>
         </div>
       )}
-      {!gebruiktModelLaden && !gebruiktModel && (
+      {!brandingLaden && !gebruiktModel && (
         <div className="w-full max-w-[210mm] mx-auto mb-2 px-4 print:hidden overflow-hidden">
           <div className="flex items-start gap-2 text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-2">
             <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -260,7 +359,7 @@ export default function OffertePrintPagina() {
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <img
-                src={mij.logoUrl}
+                src={mij.logoUrl ?? ""}
                 alt={mij.naam}
                 className="h-7 object-contain brightness-0 invert"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -306,7 +405,7 @@ export default function OffertePrintPagina() {
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <img
-                src={mij.logoUrl}
+                src={mij.logoUrl ?? ""}
                 alt={mij.naam}
                 className="h-7 object-contain brightness-0 invert"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -533,7 +632,7 @@ export default function OffertePrintPagina() {
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <img
-                src={mij.logoUrl}
+                src={mij.logoUrl ?? ""}
                 alt={mij.naam}
                 className="h-7 object-contain brightness-0 invert"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -564,7 +663,7 @@ export default function OffertePrintPagina() {
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <img
-                src={mij.logoUrl}
+                src={mij.logoUrl ?? ""}
                 alt={mij.naam}
                 className="h-7 object-contain brightness-0 invert"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -611,7 +710,7 @@ export default function OffertePrintPagina() {
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <img
-                src={mij.logoUrl}
+                src={mij.logoUrl ?? ""}
                 alt={mij.naam}
                 className="h-7 object-contain brightness-0 invert"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

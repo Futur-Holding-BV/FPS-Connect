@@ -12967,6 +12967,34 @@ paths:
                   ok:
                     type: boolean
 
+  /offertes/{id}/branding-context:
+    get:
+      operationId: getOfferteBrandingContext
+      tags: [offertes]
+      summary: Documenteigen branding-context voor offerte-print (offertes:1)
+      description: >
+        Geeft de werkgever en het gevalideerde studio-model terug voor de
+        offerte-printpagina. Vereist alleen offertes:1 zodat ook rollen zonder
+        personeel/organisatie-rechten een correcte PDF kunnen genereren.
+        De server valideert dat model.werkgever_id overeenkomt met de offerte-BV
+        en dat document_type === "offerte". Bij ontbrekende keten wordt een
+        structureel foutcode teruggegeven; nooit een terugval op een andere BV.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Branding-context voor de gegeven offerte
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteBrandingContext"
+        "404":
+          description: Offerte niet gevonden
+
   /offertes/{id}/kopieer:
     post:
       operationId: kopieerOfferte
@@ -39691,6 +39719,81 @@ components:
                 type: number
               portaal_status:
                 type: string
+
+    OfferteBrandingContext:
+      type: object
+      properties:
+        fout:
+          type: string
+          nullable: true
+          enum: [geen_werkmaatschappij, werkmaatschappij_niet_gevonden, model_niet_beschikbaar]
+        werkgever:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/OfferteBrandingWerkgever"
+        model:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/OfferteBrandingModel"
+
+    OfferteBrandingWerkgever:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        primaire_kleur:
+          type: string
+          nullable: true
+        adres:
+          type: string
+          nullable: true
+        postcode:
+          type: string
+          nullable: true
+        plaats:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        telefoon:
+          type: string
+          nullable: true
+        kvk:
+          type: string
+          nullable: true
+        btw:
+          type: string
+          nullable: true
+
+    OfferteBrandingModel:
+      type: object
+      required: [id, document_type, werkgever_id]
+      properties:
+        id:
+          type: integer
+        document_type:
+          type: string
+        werkgever_id:
+          type: integer
+        versie:
+          type: integer
+          nullable: true
+        werkgever_naam:
+          type: string
+          nullable: true
+        connect_template_json:
+          type: string
+          nullable: true
 
     OffertePortaalToken:
       type: object

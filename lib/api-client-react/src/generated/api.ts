@@ -791,6 +791,7 @@ import type {
   OfferteAnalytics,
   OfferteBijlage,
   OfferteBijlageInput,
+  OfferteBrandingContext,
   OfferteContractAdvies,
   OfferteEmailVoorstel,
   OfferteHoofdstuk,
@@ -45260,6 +45261,84 @@ export const useIntrekkenOfferte = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getIntrekkenOfferteMutationOptions(options));
     }
+
+export const getGetOfferteBrandingContextUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/branding-context`
+}
+
+/**
+ * Geeft de werkgever en het gevalideerde studio-model terug voor de offerte-printpagina. Vereist alleen offertes:1 zodat ook rollen zonder personeel/organisatie-rechten een correcte PDF kunnen genereren. De server valideert dat model.werkgever_id overeenkomt met de offerte-BV en dat document_type === "offerte". Bij ontbrekende keten wordt een structureel foutcode teruggegeven; nooit een terugval op een andere BV.
+ * @summary Documenteigen branding-context voor offerte-print (offertes:1)
+ */
+export const getOfferteBrandingContext = async (id: number, options?: RequestInit): Promise<OfferteBrandingContext> => {
+
+  return customFetch<OfferteBrandingContext>(getGetOfferteBrandingContextUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOfferteBrandingContextQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/branding-context`
+    ] as const;
+    }
+
+
+export const getGetOfferteBrandingContextQueryOptions = <TData = Awaited<ReturnType<typeof getOfferteBrandingContext>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteBrandingContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOfferteBrandingContextQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOfferteBrandingContext>>> = ({ signal }) => getOfferteBrandingContext(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOfferteBrandingContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOfferteBrandingContextQueryResult = NonNullable<Awaited<ReturnType<typeof getOfferteBrandingContext>>>
+export type GetOfferteBrandingContextQueryError = ErrorType<void>
+
+
+/**
+ * @summary Documenteigen branding-context voor offerte-print (offertes:1)
+ */
+
+export function useGetOfferteBrandingContext<TData = Awaited<ReturnType<typeof getOfferteBrandingContext>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteBrandingContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOfferteBrandingContextQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getKopieerOfferteUrl = (id: number,) => {
 

@@ -8,7 +8,7 @@
     "prebuild": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const [ma,mi,pa]=p.version.split('.');p.version=[ma,mi,Number(pa)+1].join('.');fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\\n');console.log('Versie bijgewerkt naar '+p.version);\"",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc --build ../../lib/api-client-react ../../lib/ontwerp ../../lib/calculatie && tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,7 +1,7 @@
 export interface WerkmaatschappijInfo {
   id?: string;
   naam: string;
-  logoUrl: string;
+  logoUrl?: string;
   primaireKleur?: string;
   adres: string;
   postcodeWoonplaats: string;

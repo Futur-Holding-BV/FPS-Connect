@@ -15675,6 +15675,41 @@ export const IntrekkenOfferteResponse = zod.object({
 
 
 /**
+ * Geeft de werkgever en het gevalideerde studio-model terug voor de offerte-printpagina. Vereist alleen offertes:1 zodat ook rollen zonder personeel/organisatie-rechten een correcte PDF kunnen genereren. De server valideert dat model.werkgever_id overeenkomt met de offerte-BV en dat document_type === "offerte". Bij ontbrekende keten wordt een structureel foutcode teruggegeven; nooit een terugval op een andere BV.
+ * @summary Documenteigen branding-context voor offerte-print (offertes:1)
+ */
+export const GetOfferteBrandingContextParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOfferteBrandingContextResponse = zod.object({
+  "fout": zod.enum(['geen_werkmaatschappij', 'werkmaatschappij_niet_gevonden', 'model_niet_beschikbaar']).nullish(),
+  "werkgever": zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "logo_url": zod.string().nullish(),
+  "primaire_kleur": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "plaats": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish()
+}).nullish(),
+  "model": zod.object({
+  "id": zod.number(),
+  "document_type": zod.string(),
+  "werkgever_id": zod.number(),
+  "versie": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish()
+}).nullish()
+})
+
+
+/**
  * Maakt een volledige kopie (secties, regels, bijlagen) met een nieuw nummer uit de doorlopende O-reeks. De kopie start als concept; het origineel blijft ongewijzigd bewaard.
  * @summary Offerte kopiëren met een nieuw O-nummer (NUMMER_01 §4.10)
  */

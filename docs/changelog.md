@@ -576,6 +576,10 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Uitrol**: `deploy/Dockerfile.caddy` bouwt de webexport mee (harde verificaties + PWA-injectie + versiestempel), `deploy/Caddyfile` serveert /app vóór de statische handle met no-cache op index/sw/manifest, en `scripts/deploy-production.sh` keurt een deploy pas goed als óók `/app/versie.json` de nieuwe commit meldt (anders automatische rollback). Antwoord: `docs/antwoorden/MONTEUR_NU_01.md`; meting: `docs/metingen/MONTEUR_NU_01-meting-vooraf.md`. Nameting op een echte telefoon volgt na de eerstvolgende productie-uitrol. Review-naloop: het bewijsscript bewijs-calc-kern-offerte (uit CALC_KERN_01) schrijft testdata en weigert productie nu onvoorwaardelijk (`weigerProductieVoorSchrijvendScript`, geen PROD_LEZEN_TOEGESTAAN-vrijstelling) en gebruikt per run willekeurig gegenereerde wegwerp-inloggegevens i.p.v. vaste credentials in de repo.
 
 
+## 2026-08-18 — Offerte-print: documenteigen BV-keten (taak 1114)
+
+- **Offerte-print gebruikt documenteigen BV**: de werkmaatschappij voor logo, naam en kleuren op de offerte-print komt nu altijd uit `offerte.werkmaatschappij_id` (server-resolved bij aanmaken). Het localStorage-veld `fps.actieve_werkgever` en de eerste-BV-terugval zijn verwijderd — een medewerker die in BV A werkt drukt nooit meer stilletjes BV B's huisstijl af.
+- **Zichtbaar blokkeerscherm**: ontbreekt de BV-koppeling (offerte zonder werkmaatschappij_id en zonder gebouw-default), dan verschijnt een foutscherm met uitleg — identiek aan het factuur-print-patroon. De `data-fps-print-ready`-marker wordt pas gezet na succesvolle BV-resolutie.
 ## 2026-08-18 — ATW-bewaking jonge werknemers (16/17 jaar)
 
 - **Nieuw: `GET /api/hrm/jonge-werknemers`** — geeft alle actieve medewerkers onder 18 jaar terug met leeftijd en toepasselijke ATW-beperkingen (max. 9u/dag, max. 45u/week, nachtdienstverbod 22:00–07:00, gevaarlijk werk alleen onder toezicht, 12u rusttijd, 30 min. pauze na 4,5u). Toegang: personeel niveau 1.

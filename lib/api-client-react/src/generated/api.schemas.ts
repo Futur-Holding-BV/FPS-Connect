@@ -7981,6 +7981,7 @@ export interface OfferteAnalytics {
   recente_offertes: OfferteAnalyticsRecenteOffertesItem[];
 }
 
+export type OfferteBrandingContextFout = typeof OfferteBrandingContextFout[keyof typeof OfferteBrandingContextFout] | null;
 export interface OffertePortaalToken {
   id: number;
   token: string;
@@ -19782,3 +19783,39 @@ export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
 
+
+export const OfferteBrandingContextFout = {
+  geen_werkmaatschappij: 'geen_werkmaatschappij',
+  werkmaatschappij_niet_gevonden: 'werkmaatschappij_niet_gevonden',
+  model_niet_beschikbaar: 'model_niet_beschikbaar',
+} as const;
+
+export interface OfferteBrandingModel {
+  id: number;
+  document_type: string;
+  werkgever_id: number;
+  versie?: number | null;
+  werkgever_naam?: string | null;
+  connect_template_json?: string | null;
+}
+
+export interface OfferteBrandingWerkgever {
+  id: number;
+  naam: string;
+  logo_url?: string | null;
+  primaire_kleur?: string | null;
+  adres?: string | null;
+  postcode?: string | null;
+  plaats?: string | null;
+  website?: string | null;
+  email?: string | null;
+  telefoon?: string | null;
+  kvk?: string | null;
+  btw?: string | null;
+}
+
+export interface OfferteBrandingContext {
+  fout?: OfferteBrandingContextFout;
+  werkgever?: OfferteBrandingWerkgever | null;
+  model?: OfferteBrandingModel | null;
+}
