@@ -33,18 +33,34 @@ De APK-weg (MONTEURAPP_01) is niet aangeraakt: native gedrag van bestandsopslag,
 
 ## 5. Acceptatie — stand van zaken
 
-Aangetoond in dev:
-- webexport draait en de app rendert op telefoonformaat (loginscherm, screenshot in de taakoplevering);
-- de export geserveerd onder /app: index, sw.js, manifest, bundel en diepe routes geven 200 (nagemeten met een lokale /app-server);
-- typecheck monteur-app én web-app groen.
+**Status: UITSTAAND — wacht op telefoonmetingen na productie-uitrol**
 
-Kan pas ná de eerstvolgende productie-uitrol (agent heeft sinds 8 aug 2026 geen VPS/SSH-toegang; deploy loopt via GitHub Actions na merge):
-- schermafdruk echte telefoon op connect.fps-one.nl/app + inloggen monteursaccount;
-- schermafdruk "toegevoegd aan beginscherm, zonder browserbalk";
-- vliegtuigstand-meting (foto offline → online → wachtrij leeg);
-- niet-buitendienstaccount → gewone Connect.
+### Aangetoond in dev (agent, 18 augustus 2026)
 
-Deze vier zijn als concrete nameting belegd: na de merge draait de deploy automatisch, waarna de metingen op een telefoon uitgevoerd en aan dit dossier toegevoegd moeten worden.
+- Webexport draait en de app rendert op telefoonformaat (loginscherm, screenshot in de taakoplevering).
+- De export geserveerd onder /app: index, sw.js, manifest, bundel en diepe routes geven 200 (nagemeten met een lokale /app-server).
+- Typecheck monteur-app én web-app groen.
+- `deploy/Caddyfile` bevat de `/app/*`-handle met SPA-fallback, no-cache-headers voor index/sw/manifest en de permanente redirect van `/app` naar `/app/`.
+- `scripts/deploy-production.sh` voert `app_versiecheck` uit: de deploy slaagt pas als óók `/app/versie.json` de nieuwe commit meldt.
+
+### Vier metingen — na productie-uitrol door opdrachtgever (René)
+
+De agent heeft geen VPS/SSH-toegang (sinds 8 aug 2026) en geen fysieke telefoon.
+De vier acceptatiemetingen zijn volledig uitgewerkt in:
+
+**`docs/metingen/MONTEUR_NU_01-telefoonbewijs.md`**
+
+| Meting | Omschrijving | Status |
+|--------|-------------|--------|
+| A — Inloggen monteursaccount | connect.fps-one.nl/app op telefoon, werkscherm zichtbaar | 🔲 uitstaand |
+| B — PWA op beginscherm | standalone-modus, geen browserbalk, FPS-icoon | 🔲 uitstaand |
+| C — Offline foto + wachtrij leeg | vliegtuigstand → foto → herstel verbinding → sync leeg | 🔲 uitstaand |
+| D — Niet-buitendienstaccount → Connect | redirect naar connect.fps-one.nl/ | 🔲 uitstaand |
+
+Bewijs-afbeeldingen opslaan in: `docs/metingen/afbeeldingen/MONTEUR_NU_01-*.jpg`
+
+Zodra alle vier ✅ zijn: status bovenaan dit blok wijzigen naar
+**VOLLEDIG GEACCEPTEERD** en de statusregel boven §5 bijwerken.
 
 ## 6. Afwijkingen / meldingen (niets stilzwijgend aangepast)
 
