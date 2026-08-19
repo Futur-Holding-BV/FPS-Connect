@@ -24397,6 +24397,16 @@ export const RequestSnagstreamUploadUrlResponse = zod.object({
 
 
 /**
+ * @summary Tijdelijke Snagstream-upload van de ingelogde gebruiker annuleren
+ */
+export const AnnuleerSnagstreamUploadParams = zod.object({
+  "token": zod.coerce.string().uuid()
+})
+
+export const AnnuleerSnagstreamUploadResponse = zod.void()
+
+
+/**
  * @summary Snagstream-archief ophalen
  */
 export const ListSnagstreamRapportenQueryParams = zod.object({

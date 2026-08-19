@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
+  annuleerSnagstreamUpload,
   useAiUitlezenSnagstreamRapport,
   useControleerSnagstreamUpload,
   useCreateSnagstreamRapport,
@@ -30,6 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   AlertTriangle,
   Building2,
+  CheckCircle2,
+  CircleMinus,
   Eye,
   FileArchive,
   FileText,
@@ -45,6 +48,28 @@ import {
 
 const GEEN_GEBOUW = "__geen_gebouw__";
 const ALLES = "__alles__";
+
+type UploadStatus =
+  | "klaar"
+  | "controleren"
+  | "uploaden"
+  | "annuleren"
+  | "opgeslagen"
+  | "bestaand"
+  | "naamconflict"
+  | "overgeslagen"
+  | "mislukt";
+
+type UploadItem = {
+  sleutel: string;
+  bestand: File;
+  status: UploadStatus;
+  vingerafdruk?: string;
+  uploadToken?: string;
+  rapport?: SnagstreamRapport;
+  naamconflicten: SnagstreamRapport[];
+  fout?: string;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   nieuw: "Nieuw",
@@ -72,6 +97,56 @@ async function sha256(bestand: File): Promise<string> {
   return [...new Uint8Array(digest)].map((deel) => deel.toString(16).padStart(2, "0")).join("");
 }
 
+function uploadFouttekst(fout: unknown): string {
+  if (fout instanceof ApiError) {
+    const data = fout.data as { error?: string } | undefined;
+    if (data?.error) return data.error;
+  }
+  return fout instanceof Error ? fout.message : "Onbekende uploadfout";
+}
+
+function bestandsgrootteLabel(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function uploadStatusLabel(item: UploadItem): string {
+  switch (item.status) {
+    case "klaar": return "Klaar voor controle";
+    case "controleren": return "Inhoud controleren";
+    case "uploaden": return "Uploaden";
+    case "annuleren": return "Tijdelijke upload opruimen";
+    case "opgeslagen": return "Opgeslagen";
+    case "bestaand": return "Al aanwezig";
+    case "naamconflict": return "Keuze nodig";
+    case "overgeslagen": return "Overgeslagen";
+    case "mislukt": return "Mislukt";
+  }
+}
+
+function UploadStatusIcoon({ status }: { status: UploadStatus }) {
+  if (status === "controleren" || status === "uploaden" || status === "annuleren") {
+    return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />;
+  }
+  if (status === "opgeslagen") {
+    return <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />;
+  }
+  if (status === "bestaand") {
+    return <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600" />;
+  }
+  if (status === "naamconflict") {
+    return <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />;
+  }
+  if (status === "overgeslagen") {
+    return <CircleMinus className="h-4 w-4 shrink-0 text-slate-500" />;
+  }
+  if (status === "mislukt") {
+    return <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />;
+  }
+  return <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />;
+}
+
 function datumLabel(waarde?: string | null): string {
   if (!waarde) return "—";
   const datum = new Date(waarde);
@@ -81,17 +156,14 @@ function datumLabel(waarde?: string | null): string {
 export default function SnagstreamArchiefPagina() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [, navigeer] = useLocation();
   const backfillGestart = useRef(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [bestand, setBestand] = useState<File | null>(null);
-  const [bestandHash, setBestandHash] = useState("");
-  const [pendingUploadToken, setPendingUploadToken] = useState("");
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const [gebouwId, setGebouwId] = useState("");
   const [uploadBezig, setUploadBezig] = useState(false);
+  const [batchGestart, setBatchGestart] = useState(false);
   const [aiBezig, setAiBezig] = useState<number | null>(null);
-  const [naamconflicten, setNaamconflicten] = useState<SnagstreamRapport[]>([]);
   const [zoek, setZoek] = useState("");
   const uitgesteldeZoekterm = useDeferredValue(zoek.trim());
   const [filterGebouw, setFilterGebouw] = useState("");
@@ -168,44 +240,91 @@ export default function SnagstreamArchiefPagina() {
     () => Array.from({ length: 12 }, (_, index) => new Date().getFullYear() - index),
     [],
   );
+  const uploadTellingen = useMemo(() => {
+    const tel = (status: UploadStatus) => uploadItems.filter((item) => item.status === status).length;
+    return {
+      opgeslagen: tel("opgeslagen"),
+      bestaand: tel("bestaand"),
+      naamconflict: tel("naamconflict"),
+      overgeslagen: tel("overgeslagen"),
+      mislukt: tel("mislukt"),
+      bezig: tel("controleren") + tel("uploaden") + tel("annuleren"),
+      klaar: tel("klaar"),
+    };
+  }, [uploadItems]);
 
-  function resetUpload() {
+  async function resetUpload() {
+    if (uploadBezig) return;
+    const tokens = Array.from(new Set(
+      uploadItems
+        .map((item) => item.uploadToken)
+        .filter((token): token is string => Boolean(token)),
+    ));
+    if (tokens.length > 0) {
+      setUploadBezig(true);
+      try {
+        const resultaten = await Promise.allSettled(
+          tokens.map((token) => annuleerSnagstreamUpload(token)),
+        );
+        const mislukt = resultaten.filter((resultaat) => resultaat.status === "rejected").length;
+        if (mislukt > 0) {
+          toast({
+            title: "Tijdelijke upload nog niet opgeruimd",
+            description: "Probeer de dialoog opnieuw te sluiten. De rapporten zijn niet aan het archief toegevoegd.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } finally {
+        setUploadBezig(false);
+      }
+    }
     setUploadOpen(false);
-    setBestand(null);
-    setBestandHash("");
-    setPendingUploadToken("");
+    setUploadItems([]);
     setGebouwId("");
-    setNaamconflicten([]);
+    setBatchGestart(false);
   }
 
-  async function uploadNieuwRapport(naamconflictBevestigd: boolean, berekendeHash?: string) {
-    const vingerafdruk = berekendeHash ?? bestandHash;
-    if (!bestand || !vingerafdruk) return;
-    setUploadBezig(true);
+  function wijzigUploadItem(sleutel: string, wijziging: Partial<UploadItem>) {
+    setUploadItems((huidig) => huidig.map((item) => (
+      item.sleutel === sleutel ? { ...item, ...wijziging } : item
+    )));
+  }
+
+  async function uploadRapportBestand(
+    item: UploadItem,
+    vingerafdruk: string,
+    naamconflictBevestigd: boolean,
+  ): Promise<UploadStatus> {
+    wijzigUploadItem(item.sleutel, {
+      status: "uploaden",
+      vingerafdruk,
+      fout: undefined,
+    });
+    let uploadToken = item.uploadToken;
     try {
-      let uploadToken = pendingUploadToken;
       if (!uploadToken) {
         const upload = await requestUploadMut.mutateAsync({
           data: {
-            bestandsnaam: bestand.name,
-            bestandsgrootte: bestand.size,
+            bestandsnaam: item.bestand.name,
+            bestandsgrootte: item.bestand.size,
             vingerafdruk,
           },
         });
+        uploadToken = upload.upload_token;
+        wijzigUploadItem(item.sleutel, { uploadToken });
         const opslagRespons = await fetch(upload.upload_url, {
           method: "PUT",
           headers: { "Content-Type": "application/pdf" },
-          body: bestand,
+          body: item.bestand,
         });
         if (!opslagRespons.ok) throw new Error(`Objectupload mislukt (${opslagRespons.status})`);
-        uploadToken = upload.upload_token;
-        setPendingUploadToken(uploadToken);
       }
       let rapport: SnagstreamRapport;
       try {
         rapport = await createMut.mutateAsync({
           data: {
-            bestandsnaam: bestand.name,
+            bestandsnaam: item.bestand.name,
             upload_token: uploadToken,
             vingerafdruk,
             naamconflict_bevestigd: naamconflictBevestigd,
@@ -216,59 +335,158 @@ export default function SnagstreamArchiefPagina() {
         const data = fout instanceof ApiError ? fout.data as { code?: string } | undefined : undefined;
         if (fout instanceof ApiError && fout.status === 409 && data?.code === "naamconflict") {
           const controle = await controleMut.mutateAsync({
-            data: { bestandsnaam: bestand.name, vingerafdruk },
+            data: { bestandsnaam: item.bestand.name, vingerafdruk },
           });
-          setNaamconflicten(controle.naamconflicten);
-          toast({
-            title: "Bestandsnaam is intussen al gebruikt",
-            description: "Vergelijk de rapporten en bevestig bewust of dit een ander rapport is.",
+          wijzigUploadItem(item.sleutel, {
+            status: "naamconflict",
+            uploadToken,
+            vingerafdruk,
+            naamconflicten: controle.naamconflicten,
           });
-          return;
+          return "naamconflict";
         }
         throw fout;
       }
-      verversArchief();
-      resetUpload();
-      toast({
-        title: rapport.upload_dubbel ? "Rapport bestond al" : "Rapport opgeslagen",
-        description: rapport.upload_dubbel
-          ? `Geüpload door ${rapport.uploader_naam ?? "onbekend"} op ${datumLabel(rapport.aangemaakt_op)}.`
-          : bestand.name,
+      const status = rapport.upload_dubbel ? "bestaand" : "opgeslagen";
+      wijzigUploadItem(item.sleutel, {
+        status,
+        rapport,
+        uploadToken: undefined,
+        naamconflicten: [],
       });
-      navigeer(`/snagstream/${rapport.id}`);
-    } catch {
-      toast({ title: "Upload mislukt", description: "Het rapport is niet aan het archief toegevoegd.", variant: "destructive" });
+      return status;
+    } catch (fout) {
+      wijzigUploadItem(item.sleutel, {
+        status: "mislukt",
+        uploadToken,
+        fout: uploadFouttekst(fout),
+      });
+      return "mislukt";
+    }
+  }
+
+  async function verwerkUploadItem(item: UploadItem): Promise<UploadStatus> {
+    wijzigUploadItem(item.sleutel, {
+      status: "controleren",
+      fout: undefined,
+      naamconflicten: [],
+    });
+    try {
+      const vingerafdruk = await sha256(item.bestand);
+      wijzigUploadItem(item.sleutel, { vingerafdruk });
+      const controle = await controleMut.mutateAsync({
+        data: { bestandsnaam: item.bestand.name, vingerafdruk },
+      });
+      if (controle.uitkomst === "exact_dubbel" && controle.bestaand_rapport) {
+        wijzigUploadItem(item.sleutel, {
+          status: "bestaand",
+          rapport: controle.bestaand_rapport,
+          naamconflicten: [],
+        });
+        return "bestaand";
+      }
+      if (controle.uitkomst === "naamconflict") {
+        wijzigUploadItem(item.sleutel, {
+          status: "naamconflict",
+          vingerafdruk,
+          naamconflicten: controle.naamconflicten,
+        });
+        return "naamconflict";
+      }
+      return uploadRapportBestand(item, vingerafdruk, false);
+    } catch (fout) {
+      wijzigUploadItem(item.sleutel, {
+        status: "mislukt",
+        fout: uploadFouttekst(fout),
+      });
+      return "mislukt";
+    }
+  }
+
+  async function handleUploadBatch() {
+    const teVerwerken = uploadItems.filter((item) => item.status === "klaar");
+    if (teVerwerken.length === 0) return;
+    setBatchGestart(true);
+    setUploadBezig(true);
+    const resultaten: UploadStatus[] = [];
+    try {
+      for (const item of teVerwerken) {
+        resultaten.push(await verwerkUploadItem(item));
+      }
+      if (resultaten.some((status) => status === "opgeslagen")) verversArchief();
+      const opgeslagen = resultaten.filter((status) => status === "opgeslagen").length;
+      const bestaand = resultaten.filter((status) => status === "bestaand").length;
+      const naamconflict = resultaten.filter((status) => status === "naamconflict").length;
+      const mislukt = resultaten.filter((status) => status === "mislukt").length +
+        uploadItems.filter((item) => item.status === "mislukt").length;
+      const samenvatting = [
+        opgeslagen > 0 ? `${opgeslagen} opgeslagen` : "",
+        bestaand > 0 ? `${bestaand} al aanwezig` : "",
+        naamconflict > 0 ? `${naamconflict} wacht op een keuze` : "",
+        mislukt > 0 ? `${mislukt} mislukt` : "",
+      ].filter(Boolean).join(" · ");
+      toast({
+        title: naamconflict > 0 ? "Batch gecontroleerd" : "Batch verwerkt",
+        description: samenvatting || "Geen bestanden verwerkt.",
+        variant: mislukt > 0 && opgeslagen === 0 ? "destructive" : "default",
+      });
     } finally {
       setUploadBezig(false);
     }
   }
 
-  async function handleUpload() {
-    if (!bestand) return;
+  async function bevestigNaamconflict(item: UploadItem) {
+    if (!item.vingerafdruk) return;
     setUploadBezig(true);
     try {
-      const vingerafdruk = await sha256(bestand);
-      setBestandHash(vingerafdruk);
-      const controle = await controleMut.mutateAsync({
-        data: { bestandsnaam: bestand.name, vingerafdruk },
-      });
-      if (controle.uitkomst === "exact_dubbel" && controle.bestaand_rapport) {
-        const bestaand = controle.bestaand_rapport;
-        resetUpload();
+      const status = await uploadRapportBestand(item, item.vingerafdruk, true);
+      if (status === "opgeslagen") {
+        verversArchief();
+        toast({ title: "Rapport opgeslagen", description: item.bestand.name });
+      } else if (status === "bestaand") {
+        toast({ title: "Rapport bestond al", description: item.bestand.name });
+      } else if (status === "mislukt") {
         toast({
-          title: "Dit rapport staat al in het archief",
-          description: `Geüpload door ${bestaand.uploader_naam ?? "onbekend"} op ${datumLabel(bestaand.aangemaakt_op)}.`,
+          title: "Upload mislukt",
+          description: `${item.bestand.name} is niet aan het archief toegevoegd.`,
+          variant: "destructive",
         });
-        navigeer(`/snagstream/${bestaand.id}`);
-        return;
       }
-      if (controle.uitkomst === "naamconflict") {
-        setNaamconflicten(controle.naamconflicten);
-        return;
-      }
-      await uploadNieuwRapport(false, vingerafdruk);
-    } catch {
-      toast({ title: "Uploadcontrole mislukt", description: "Het bestand is niet opgeslagen.", variant: "destructive" });
+    } finally {
+      setUploadBezig(false);
+    }
+  }
+
+  async function slaNaamconflictOver(item: UploadItem) {
+    if (!item.uploadToken) {
+      wijzigUploadItem(item.sleutel, {
+        status: "overgeslagen",
+        naamconflicten: [],
+        fout: undefined,
+      });
+      return;
+    }
+
+    setUploadBezig(true);
+    wijzigUploadItem(item.sleutel, { status: "annuleren", fout: undefined });
+    try {
+      await annuleerSnagstreamUpload(item.uploadToken);
+      wijzigUploadItem(item.sleutel, {
+        status: "overgeslagen",
+        uploadToken: undefined,
+        naamconflicten: [],
+        fout: undefined,
+      });
+    } catch (fout) {
+      wijzigUploadItem(item.sleutel, {
+        status: "naamconflict",
+        fout: uploadFouttekst(fout),
+      });
+      toast({
+        title: "Overslaan nog niet gelukt",
+        description: `${item.bestand.name}: de tijdelijke upload kon niet worden opgeruimd. Probeer het opnieuw.`,
+        variant: "destructive",
+      });
     } finally {
       setUploadBezig(false);
     }
@@ -315,7 +533,7 @@ export default function SnagstreamArchiefPagina() {
         </div>
         <Button size="sm" onClick={() => setUploadOpen(true)}>
           <Upload className="h-3.5 w-3.5 mr-1.5" />
-          PDF uploaden
+          PDF&apos;s uploaden
         </Button>
       </div>
 
@@ -599,36 +817,55 @@ export default function SnagstreamArchiefPagina() {
       )}
 
       <Dialog open={uploadOpen} onOpenChange={(open) => {
-        setUploadOpen(open);
-        if (!open) resetUpload();
+        if (!open && uploadBezig) return;
+        if (open) setUploadOpen(true);
+        else void resetUpload();
       }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Snagstream PDF uploaden</DialogTitle>
+            <DialogTitle>Snagstream PDF&apos;s uploaden</DialogTitle>
             <DialogDescription>
-              Kies een eenmalig rapport. Connect controleert de inhoud voordat het bestand wordt opgeslagen.
+              Kies één of meerdere rapporten. Connect controleert ieder bestand afzonderlijk voordat het wordt opgeslagen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>PDF-bestand</Label>
+              <Label htmlFor="snagstream-pdf-bestanden">PDF-bestanden</Label>
               <Input
+                id="snagstream-pdf-bestanden"
+                data-testid="snagstream-pdf-bestanden"
                 type="file"
                 accept="application/pdf,.pdf"
+                multiple
+                disabled={uploadBezig || batchGestart}
                 className="mt-1"
                 onChange={(event) => {
-                  setBestand(event.target.files?.[0] ?? null);
-                  setBestandHash("");
-                  setNaamconflicten([]);
+                  const bestanden = Array.from(event.target.files ?? []);
+                  setBatchGestart(false);
+                  setUploadItems(bestanden.map((bestand, index) => {
+                    const geldigePdf = bestand.name.toLowerCase().endsWith(".pdf") &&
+                      (!bestand.type || bestand.type === "application/pdf");
+                    return {
+                      sleutel: `${bestand.name}-${bestand.size}-${bestand.lastModified}-${index}`,
+                      bestand,
+                      status: geldigePdf ? "klaar" : "mislukt",
+                      naamconflicten: [],
+                      fout: geldigePdf ? undefined : "Alleen PDF-bestanden zijn toegestaan.",
+                    };
+                  }));
                 }}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                De inhoud wordt vóór upload gecontroleerd. Eenzelfde PDF wordt nooit opnieuw aan het archief toegevoegd.
+                De inhoud wordt per bestand gecontroleerd. Eenzelfde PDF wordt nooit opnieuw aan het archief toegevoegd.
               </p>
             </div>
             <div>
-              <Label>Koppelen aan gebouw (optioneel)</Label>
-              <Select value={gebouwId || GEEN_GEBOUW} onValueChange={(waarde) => setGebouwId(waarde === GEEN_GEBOUW ? "" : waarde)}>
+              <Label>Hele selectie koppelen aan gebouw (optioneel)</Label>
+              <Select
+                value={gebouwId || GEEN_GEBOUW}
+                onValueChange={(waarde) => setGebouwId(waarde === GEEN_GEBOUW ? "" : waarde)}
+                disabled={batchGestart || uploadBezig}
+              >
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Kies een gebouw..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={GEEN_GEBOUW}>Nog niet koppelen</SelectItem>
@@ -638,38 +875,114 @@ export default function SnagstreamArchiefPagina() {
                 </SelectContent>
               </Select>
             </div>
-            {naamconflicten.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
-                <p className="font-medium text-sm text-amber-900">Deze bestandsnaam bestaat al</p>
-                <p className="text-xs text-amber-800">
-                  De inhoud is anders. Vergelijk de bestaande rapporten en kies bewust of dit een ander rapport is.
-                </p>
-                {naamconflicten.map((rapport) => (
-                  <div key={rapport.id} className="rounded border bg-white px-2.5 py-2 text-xs">
-                    <Link href={`/snagstream/${rapport.id}`} className="font-medium hover:underline">{rapport.bestandsnaam}</Link>
-                    <span className="block text-muted-foreground">
-                      {datumLabel(rapport.aangemaakt_op)} · {rapport.uploader_naam ?? "Onbekende uploader"} · {rapport.gebouw_naam ?? "niet gekoppeld"}
-                    </span>
+
+            {uploadItems.length > 0 && (
+              <div className="rounded-lg border divide-y" data-testid="snagstream-upload-lijst">
+                {uploadItems.map((item) => (
+                  <div
+                    key={item.sleutel}
+                    className="p-3 space-y-2"
+                    data-testid="snagstream-upload-item"
+                  >
+                    <div className="flex items-start gap-3">
+                      <UploadStatusIcoon status={item.status} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate" title={item.bestand.name}>
+                          {item.bestand.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {bestandsgrootteLabel(item.bestand.size)} · {uploadStatusLabel(item)}
+                        </p>
+                      </div>
+                      {item.rapport && (
+                        <Link
+                          href={`/snagstream/${item.rapport.id}`}
+                          className="shrink-0 text-xs font-medium text-primary hover:underline"
+                        >
+                          Rapport openen
+                        </Link>
+                      )}
+                    </div>
+
+                    {item.fout && (
+                      <p className="pl-7 text-xs text-destructive">{item.fout}</p>
+                    )}
+
+                    {item.status === "naamconflict" && (
+                      <div className="ml-7 rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
+                        <p className="font-medium text-sm text-amber-900">Deze bestandsnaam bestaat al</p>
+                        <p className="text-xs text-amber-800">
+                          De inhoud is anders. Vergelijk de bestaande rapporten en kies bewust wat er met dit bestand moet gebeuren.
+                        </p>
+                        {item.naamconflicten.map((rapport) => (
+                          <div key={rapport.id} className="rounded border bg-white px-2.5 py-2 text-xs">
+                            <Link href={`/snagstream/${rapport.id}`} className="font-medium hover:underline">
+                              {rapport.bestandsnaam}
+                            </Link>
+                            <span className="block text-muted-foreground">
+                              {datumLabel(rapport.aangemaakt_op)} · {rapport.uploader_naam ?? "Onbekende uploader"} · {rapport.gebouw_naam ?? "niet gekoppeld"}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex flex-wrap justify-end gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadBezig}
+                            onClick={() => void slaNaamconflictOver(item)}
+                          >
+                            Overslaan
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={uploadBezig}
+                            onClick={() => void bevestigNaamconflict(item)}
+                          >
+                            Toch uploaden
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
+
+            {batchGestart && uploadItems.length > 0 && (
+              <div
+                className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-muted px-3 py-2 text-xs"
+                data-testid="snagstream-upload-samenvatting"
+              >
+                <span>{uploadTellingen.opgeslagen} opgeslagen</span>
+                <span>{uploadTellingen.bestaand} al aanwezig</span>
+                <span>{uploadTellingen.naamconflict} wacht op keuze</span>
+                <span>{uploadTellingen.overgeslagen} overgeslagen</span>
+                <span>{uploadTellingen.mislukt} mislukt</span>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
-            {naamconflicten.length > 0 ? (
+            {uploadBezig ? (
+              <Button disabled>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Bestanden verwerken
+              </Button>
+            ) : uploadTellingen.klaar > 0 ? (
               <>
-                <Button variant="outline" onClick={resetUpload}>Dit is een vergissing</Button>
-                <Button disabled={uploadBezig || requestUploadMut.isPending} onClick={() => void uploadNieuwRapport(true)}>
-                  {(uploadBezig || requestUploadMut.isPending) && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Ander rapport uploaden
+                <Button variant="outline" onClick={() => void resetUpload()}>Annuleren</Button>
+                <Button onClick={() => void handleUploadBatch()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Controleren en {uploadTellingen.klaar} uploaden
                 </Button>
               </>
+            ) : batchGestart ? (
+              <Button onClick={() => void resetUpload()}>Sluiten</Button>
             ) : (
               <>
-                <Button variant="outline" onClick={resetUpload}>Annuleren</Button>
-                <Button disabled={!bestand || uploadBezig || requestUploadMut.isPending} onClick={() => void handleUpload()}>
-                  {(uploadBezig || requestUploadMut.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                  Controleren en uploaden
+                <Button variant="outline" onClick={() => void resetUpload()}>Annuleren</Button>
+                <Button disabled>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Selecteer PDF-bestanden
                 </Button>
               </>
             )}

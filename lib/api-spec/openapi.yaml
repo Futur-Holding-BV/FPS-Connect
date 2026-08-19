@@ -20031,6 +20031,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/SnagstreamUploadUrlResponse'
 
+  /snagstream/uploads/{token}/annuleren:
+    post:
+      operationId: annuleerSnagstreamUpload
+      summary: Tijdelijke Snagstream-upload van de ingelogde gebruiker annuleren
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Tijdelijke upload verwijderd of niet meer aanwezig
+
   /snagstream/rapporten:
     get:
       operationId: listSnagstreamRapporten

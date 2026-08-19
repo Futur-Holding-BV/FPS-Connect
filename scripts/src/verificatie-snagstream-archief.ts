@@ -56,8 +56,24 @@ async function main() {
     "exact dubbel en naamconflict zijn twee afzonderlijke uitkomsten",
     routeBron.includes('"exact_dubbel"') &&
       routeBron.includes('"naamconflict"') &&
-      schermBron.includes("Ander rapport uploaden") &&
-      schermBron.includes("Dit is een vergissing"),
+      schermBron.includes("Toch uploaden") &&
+      schermBron.includes("Overslaan"),
+  );
+  check(
+    "batchupload is per bestand geïsoleerd en deelt geen tijdelijk uploadtoken",
+    schermBron.includes("multiple") &&
+      schermBron.includes("for (const item of teVerwerken)") &&
+      schermBron.includes("let uploadToken = item.uploadToken") &&
+      !schermBron.includes("pendingUploadToken"),
+  );
+  check(
+    "overgeslagen of gesloten batches ruimen gebruikergebonden tijdelijke uploads direct op",
+    routeBron.includes('"/snagstream/uploads/:token/annuleren"') &&
+      routeBron.includes("pg_advisory_xact_lock(hashtextextended(${token}, 0))") &&
+      routeBron.includes("pg_advisory_xact_lock(hashtextextended(${upload_token}, 0))") &&
+      schermBron.includes("annuleerSnagstreamUpload(item.uploadToken)") &&
+      schermBron.includes("tokens.map((token) => annuleerSnagstreamUpload(token))") &&
+      schermBron.includes("disabled={uploadBezig || batchGestart}"),
   );
   check(
     "migratie voegt vingerafdruk en zoekindex toe",

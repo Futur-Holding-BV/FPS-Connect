@@ -68742,6 +68742,76 @@ export const useRequestSnagstreamUploadUrl = <TError = ErrorType<unknown>,
       return useMutation(getRequestSnagstreamUploadUrlMutationOptions(options));
     }
 
+export const getAnnuleerSnagstreamUploadUrl = (token: string,) => {
+
+
+
+
+  return `/api/snagstream/uploads/${token}/annuleren`
+}
+
+/**
+ * @summary Tijdelijke Snagstream-upload van de ingelogde gebruiker annuleren
+ */
+export const annuleerSnagstreamUpload = async (token: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAnnuleerSnagstreamUploadUrl(token),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnnuleerSnagstreamUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof annuleerSnagstreamUpload>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof annuleerSnagstreamUpload>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['annuleerSnagstreamUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof annuleerSnagstreamUpload>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  annuleerSnagstreamUpload(token,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnnuleerSnagstreamUploadMutationResult = NonNullable<Awaited<ReturnType<typeof annuleerSnagstreamUpload>>>
+
+    export type AnnuleerSnagstreamUploadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tijdelijke Snagstream-upload van de ingelogde gebruiker annuleren
+ */
+export const useAnnuleerSnagstreamUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof annuleerSnagstreamUpload>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof annuleerSnagstreamUpload>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+      return useMutation(getAnnuleerSnagstreamUploadMutationOptions(options));
+    }
+
 export const getListSnagstreamRapportenUrl = (params?: ListSnagstreamRapportenParams,) => {
   const normalizedParams = new URLSearchParams();
 

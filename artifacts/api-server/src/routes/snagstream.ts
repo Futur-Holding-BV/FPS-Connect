@@ -266,6 +266,55 @@ router.post("/snagstream/upload-url", requireBevoegdheid("gebouwen", 2), async (
   }
 });
 
+// POST /snagstream/uploads/:token/annuleren — eigen tijdelijke upload direct opruimen
+router.post(
+  "/snagstream/uploads/:token/annuleren",
+  requireBevoegdheid("gebouwen", 2),
+  async (req: Request, res: Response): Promise<void> => {
+    const gebruikerId = sessionUserId(req);
+    if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
+    const token = String(req.params.token ?? "").trim();
+    if (!token) return void res.status(400).json({ error: "Uploadtoken is verplicht" });
+
+    try {
+      const pending = await db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${token}, 0))`);
+        const [actieveUpload] = await tx
+          .select()
+          .from(snagstreamUploadsTable)
+          .where(and(
+            eq(snagstreamUploadsTable.token, token),
+            eq(snagstreamUploadsTable.gebruikerId, gebruikerId),
+          ))
+          .limit(1);
+        if (!actieveUpload) return null;
+        await tx
+          .update(snagstreamUploadsTable)
+          .set({ verlooptOp: new Date() })
+          .where(eq(snagstreamUploadsTable.id, actieveUpload.id));
+        return actieveUpload;
+      });
+      if (!pending) return void res.status(204).send();
+
+      await ruimVerlopenUploadsOp(req.log);
+      const [achtergebleven] = await db
+        .select({ id: snagstreamUploadsTable.id })
+        .from(snagstreamUploadsTable)
+        .where(eq(snagstreamUploadsTable.id, pending.id))
+        .limit(1);
+      if (achtergebleven) {
+        return void res.status(502).json({
+          error: "Tijdelijke upload kon niet direct worden opgeruimd; probeer het opnieuw",
+        });
+      }
+      return void res.status(204).send();
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Tijdelijke upload annuleren mislukt" });
+    }
+  },
+);
+
 // GET /snagstream/rapporten — archief ophalen
 router.get("/snagstream/rapporten", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response): Promise<void> => {
   const rawGebouwId = req.query["gebouw_id"];

@@ -1,5 +1,12 @@
 - **Externe adviseurs**: nieuw beheerscherm onder Personeel met bedrijf, contactpersoon, inzet, toegangsdatum en accountstatus. Beheerders kunnen gegevens en toegang verlengen via het bestaande adviseur-account. De dagelijkse bewakingsloop zet vanaf 14 dagen vóór de einddatum (en bij verlopen toegang) een actiepunt in de werkbak voor personeel:2, dat zichzelf sluit wanneer de toegang is verlengd of het account is uitgezet.
 
+## 2026-08-19 — SNAGSTREAM_MULTI_01: meerdere rapporten tegelijk uploaden
+
+- **Meervoudige selectie**: het SnagStream-archief accepteert meerdere PDF’s in één bestandskeuze en past één optionele gebouwkoppeling op de hele selectie toe.
+- **Bestanden blijven onafhankelijk**: iedere PDF krijgt een eigen inhoudscontrole, uploadtoken, voortgang en eindstatus. Een exact dubbel, naamconflict of fout blokkeert de overige rapporten niet; uploadtokens kunnen niet tussen bestanden worden hergebruikt.
+- **Zichtbaar resultaat en bewijs**: de dialoog toont opgeslagen, reeds aanwezige, overgeslagen en mislukte bestanden afzonderlijk. De browsertest verwerkt twee nieuwe PDF’s naast een inhoudsdubbel, een naamconflict en een ongeldig bestand en controleert dat alleen de twee nieuwe rapporten worden toegevoegd.
+- **Directe opruiming bij afbreken**: als een naamconflict pas na de objectupload zichtbaar wordt, verwijdert Overslaan de tijdelijke PDF en het gebruikergebonden uploadtoken meteen. Sluiten of annuleren ruimt alle nog openstaande uploads uit de batch op. Na de start staat de bestandskeuze vast en annuleren en voltooien delen één tokenvergrendeling, zodat gelijktijdig gebruik nooit een rapport met een verdwenen PDF kan opleveren. De regressieproef dekt beide keuzes en de tokenrace.
+
 ## 2026-08-19 — UREN_BUITENDIENST_01: geen volledige-weekbewaking voor kantoorpersoneel
 
 - **Alleen buitendienst**: de wekelijkse urenverantwoording beoordeelt uitsluitend medewerkers van wie de gekoppelde functie in het functiehuis expliciet als **uitvoerend** is gemarkeerd.
