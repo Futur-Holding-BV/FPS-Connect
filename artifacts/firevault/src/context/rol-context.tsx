@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Rol } from "./rol-types";
 import { useAuth } from "./auth-context";
+import { BEKIJKEN_ALS_OPSLAG_SLEUTEL } from "./bekijken-als-opslag";
 import { setGebruikerOverrideGetter } from "@workspace/api-client-react";
 
 export type { Rol };
@@ -27,8 +28,6 @@ export type GeimiteerdePersoon = {
   functietitels: string[];
   bevoegdheden: Record<string, number>;
 };
-
-const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";
 
 type RolContextType = {
   rol: Rol;
@@ -61,7 +60,7 @@ const RolContext = createContext<RolContextType>({
 
 function leesOpgeslagenPersoon(): GeimiteerdePersoon | null {
   if (typeof localStorage === "undefined") return null;
-  const ruw = localStorage.getItem(OPSLAG_SLEUTEL);
+  const ruw = localStorage.getItem(BEKIJKEN_ALS_OPSLAG_SLEUTEL);
   if (!ruw) return null;
   try {
     const p = JSON.parse(ruw) as GeimiteerdePersoon;
@@ -90,8 +89,8 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   const zetPersoon = useCallback((nieuw: GeimiteerdePersoon | null) => {
     setPersoon(nieuw);
     if (typeof localStorage !== "undefined") {
-      if (nieuw) localStorage.setItem(OPSLAG_SLEUTEL, JSON.stringify(nieuw));
-      else localStorage.removeItem(OPSLAG_SLEUTEL);
+      if (nieuw) localStorage.setItem(BEKIJKEN_ALS_OPSLAG_SLEUTEL, JSON.stringify(nieuw));
+      else localStorage.removeItem(BEKIJKEN_ALS_OPSLAG_SLEUTEL);
     }
   }, []);
 

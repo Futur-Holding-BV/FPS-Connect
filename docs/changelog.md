@@ -1,3 +1,9 @@
+## 2026-08-19 — BEKIJKEN_ALS_HERSTEL_01: hoofdbeheerder kan niet meer vastlopen in een lege weergave
+
+- **Directe uitweg uit Geen toegang**: wanneer een hoofdbeheerder via **Bekijken als** een teamlid zonder portaalrechten opent, toont het blokkeerscherm nu **Terug naar mijn eigen weergave**. De echte autorisatie blijft fail-closed; alleen de nabootsing wordt beëindigd.
+- **Opgeslagen nabootsing gewist bij uitloggen**: een volgende login start altijd in het eigen account en herstelt niet langer automatisch de ontoegankelijke teamlidweergave.
+- **Regressiebewijs**: de gebruikersmenu-proef simuleert bewust een teamlid zonder bevoegdheden, keert vanuit het blokkeerscherm terug en controleert daarnaast dat uitloggen de opgeslagen weergave opruimt.
+
 ## 2026-08-19 — ZOOM_01: paginazoomen weer toegestaan in Connect
 
 - **Knijpzoomen hersteld**: de globale viewport beperkt de maximale schaal niet langer; telefoon- en tabletgebruikers kunnen de volledige Connect-pagina weer vergroten.

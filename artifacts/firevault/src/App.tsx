@@ -312,20 +312,44 @@ function MonteurPortal() {
 
 function GeenToegang() {
   const { uitloggen } = useAuth();
+  const { kanWisselen, persoon, zetPersoon } = useRol();
+  const [, setLocation] = useLocation();
+  const bekijktAnder = kanWisselen && persoon !== null;
+
+  function terugNaarEigenWeergave() {
+    zetPersoon(null);
+    setLocation("/");
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="max-w-sm text-center space-y-4">
         <h1 className="text-xl font-semibold text-foreground">Geen toegang</h1>
         <p className="text-sm text-muted-foreground">
-          Je account heeft geen geldige rol om dit portaal te tonen. Neem contact
-          op met een beheerder.
+          {bekijktAnder
+            ? `De weergave van ${persoon.naam} heeft geen toegang tot het portaal. Ga terug naar je eigen weergave om verder te werken.`
+            : "Je account heeft geen geldige rol om dit portaal te tonen. Neem contact op met een beheerder."}
         </p>
-        <button
-          onClick={() => uitloggen()}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Uitloggen
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          {bekijktAnder && (
+            <button
+              type="button"
+              onClick={terugNaarEigenWeergave}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              Terug naar mijn eigen weergave
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => uitloggen()}
+            className={bekijktAnder
+              ? "inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              : "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"}
+          >
+            Uitloggen
+          </button>
+        </div>
       </div>
     </div>
   );

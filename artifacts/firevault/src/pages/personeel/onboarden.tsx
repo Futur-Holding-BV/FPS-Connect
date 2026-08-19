@@ -668,6 +668,7 @@ function GeneriekeWizard({
   const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bijgewerktOpRef = useRef<string | null>(null);
+  const wizardVersieRef = useRef(0);
   // Houdt de promise van een eventuele in-flight debounce-save bij zodat
   // gaVorige/gaVolgende kunnen wachten tot de lock actueel is vóór ze
   // hun eigen PATCH versturen.
@@ -681,6 +682,14 @@ function GeneriekeWizard({
     if (inFlightDebounceRef.current) {
       try { await inFlightDebounceRef.current; } catch { /* ignore */ }
       inFlightDebounceRef.current = null;
+    }
+  }
+
+  function neemWizardLockOver(resultaat: { versie: number; bijgewerkt_op?: string | null }) {
+    wizardVersieRef.current = resultaat.versie;
+    if (resultaat.bijgewerkt_op) {
+      bijgewerktOpRef.current = resultaat.bijgewerkt_op;
+      setDraftBijgewerktOp(resultaat.bijgewerkt_op);
     }
   }
 
@@ -698,9 +707,15 @@ function GeneriekeWizard({
         // bij een directe onderbreking ná de eerste stap-overgang.
         const r = await slaVoortgangOp.mutateAsync({
           id: concept.id,
-          data: { stap: 2, medewerker_status: "concept", voortgang_data: form as unknown as Record<string, unknown> },
+          data: {
+            stap: 2,
+            versie: 0,
+            medewerker_status: "concept",
+            voortgang_data: form as unknown as Record<string, unknown>,
+            onboarding_stroom: soort,
+          },
         });
-        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({
@@ -719,11 +734,12 @@ function GeneriekeWizard({
           id: medewerkerDraftId,
           data: {
             stap: volgende,
+            versie: wizardVersieRef.current,
             voortgang_data: form as unknown as Record<string, unknown>,
             ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
@@ -745,14 +761,12 @@ function GeneriekeWizard({
           id: medewerkerDraftId,
           data: {
             stap: vorige,
+            versie: wizardVersieRef.current,
             voortgang_data: form as unknown as Record<string, unknown>,
             ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        if (r.bijgewerkt_op) {
-          bijgewerktOpRef.current = r.bijgewerkt_op;
-          setDraftBijgewerktOp(r.bijgewerkt_op);
-        }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           // Optimistic-lock conflict: wizard elders bijgewerkt — blokkeer navigatie
@@ -793,12 +807,14 @@ function GeneriekeWizard({
         const freshLock = bijgewerktOpRef.current;
         const r = await slaVoortgangOp.mutateAsync({
           id,
-          data: { stap, voortgang_data: data, ...(freshLock ? { bijgewerkt_op: freshLock } : {}) },
+          data: {
+            stap,
+            versie: wizardVersieRef.current,
+            voortgang_data: data,
+            ...(freshLock ? { bijgewerkt_op: freshLock } : {}),
+          },
         });
-        if (r.bijgewerkt_op) {
-          bijgewerktOpRef.current = r.bijgewerkt_op;
-          setDraftBijgewerktOp(r.bijgewerkt_op);
-        }
+        neemWizardLockOver(r);
       }).catch(() => { /* Niet fataal */ }).finally(() => {
         if (inFlightDebounceRef.current === p) inFlightDebounceRef.current = null;
       });
@@ -837,16 +853,13 @@ function GeneriekeWizard({
         jaar: new Date().getFullYear(),
       };
       if (medewerkerDraftId) {
-        const bijgewerktMw = await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
-        // Refresh lock: PATCH /medewerkers/:id zet een nieuw bijgewerktOp;
-        // gebruik die waarde zodat de volgende wizard-voortgang PATCH de CAS haalt.
-        if (bijgewerktMw?.bijgewerkt_op) bijgewerktOpRef.current = bijgewerktMw.bijgewerkt_op;
-        await slaVoortgangOp.mutateAsync({
+        await bijwerk.mutateAsync({
           id: medewerkerDraftId,
           data: {
-            stap: TOTAAL,
-            medewerker_status: "actief",
-            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
+            ...input,
+            onboarding_afronden: true,
+            onboarding_versie: wizardVersieRef.current,
+            onboarding_stroom: soort,
           },
         });
         onGereed(medewerkerDraftId);
@@ -1094,6 +1107,7 @@ function VastFormulier({
   const [huidigStap, setHuidigStap] = useState(1);
   const [medewerkerDraftId, setMedewerkerDraftId] = useState<number | null>(null);
   const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
+  const wizardVersieRef = useRef(0);
   const [geselecteerdeMiddelen, setGeselecteerdeMiddelen] = useState<string[]>([]);
   const [onboardingTaken, setOnboardingTaken] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(STANDAARD_ONBOARDING_TAKEN.map((t) => [t.id, true])),
@@ -1121,6 +1135,14 @@ function VastFormulier({
       inFlightDebounceRef.current = null;
     }
   }
+
+  function neemWizardLockOver(resultaat: { versie: number; bijgewerkt_op?: string | null }) {
+    wizardVersieRef.current = resultaat.versie;
+    if (resultaat.bijgewerkt_op) {
+      bijgewerktOpRef.current = resultaat.bijgewerkt_op;
+      setDraftBijgewerktOp(resultaat.bijgewerkt_op);
+    }
+  }
   const duplicateCheck = useDuplicateCheckMedewerker();
   const [duplicaatMelding, setDuplicaatMelding] = useState<string | null>(null);
   const [duplicaatCheckUitgevoerd, setDuplicaatCheckUitgevoerd] = useState(false);
@@ -1134,6 +1156,7 @@ function VastFormulier({
     if (!wizardStatus || !resumeId || medewerkerDraftId) return;
     setMedewerkerDraftId(resumeId);
     setHuidigStap((wizardStatus as WizardStatus).huidig_stap ?? 1);
+    wizardVersieRef.current = (wizardStatus as WizardStatus).versie;
     // Zaai de optimistic-lock vanuit de server zodat de eerste save na hervatten
     // een geldige bijgewerkt_op heeft en 409-conflicten correct detecteert.
     const serverLock = (wizardStatus as WizardStatus).bijgewerkt_op ?? null;
@@ -1279,9 +1302,15 @@ function VastFormulier({
         // Ook bij de eerste stap-overgang meteen de formulierdata bewaren.
         const r = await slaVoortgangOp.mutateAsync({
           id: concept.id,
-          data: { stap: 3, medewerker_status: "concept", voortgang_data: bouwVoortgangData() },
+          data: {
+            stap: 3,
+            versie: 0,
+            medewerker_status: "concept",
+            voortgang_data: bouwVoortgangData(),
+            onboarding_stroom: "vast",
+          },
         });
-        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({
@@ -1301,11 +1330,12 @@ function VastFormulier({
           id: medewerkerDraftId,
           data: {
             stap: volgende,
+            versie: wizardVersieRef.current,
             voortgang_data: bouwVoortgangData(),
             ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
@@ -1328,14 +1358,12 @@ function VastFormulier({
           id: medewerkerDraftId,
           data: {
             stap: vorige,
+            versie: wizardVersieRef.current,
             voortgang_data: bouwVoortgangData(),
             ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        if (r.bijgewerkt_op) {
-          bijgewerktOpRef.current = r.bijgewerkt_op;
-          setDraftBijgewerktOp(r.bijgewerkt_op);
-        }
+        neemWizardLockOver(r);
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           // Optimistic-lock conflict: blokkeer navigatie zodat server- en UI-stap synchroon blijven.
@@ -1528,14 +1556,12 @@ function VastFormulier({
           id,
           data: {
             stap,
+            versie: wizardVersieRef.current,
             voortgang_data: data,
             ...(freshLock ? { bijgewerkt_op: freshLock } : {}),
           },
         });
-        if (r.bijgewerkt_op) {
-          bijgewerktOpRef.current = r.bijgewerkt_op;
-          setDraftBijgewerktOp(r.bijgewerkt_op);
-        }
+        neemWizardLockOver(r);
       }).catch(() => { /* Niet fataal — 409 of verbindingsprobleem */ }).finally(() => {
         if (inFlightDebounceRef.current === p) inFlightDebounceRef.current = null;
       });
@@ -1669,16 +1695,13 @@ function VastFormulier({
 
       if (medewerkerDraftId) {
         // Concept bestaat al — bijwerken met definitieve gegevens en afsluiten
-        const bijgewerktMw = await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
-        // Refresh lock: PATCH /medewerkers/:id zet een nieuw bijgewerktOp;
-        // gebruik die waarde zodat de wizard-voortgang PATCH de CAS haalt.
-        if (bijgewerktMw?.bijgewerkt_op) bijgewerktOpRef.current = bijgewerktMw.bijgewerkt_op;
-        await slaVoortgangOp.mutateAsync({
+        await bijwerk.mutateAsync({
           id: medewerkerDraftId,
           data: {
-            stap: TOTAAL_STAPPEN,
-            medewerker_status: "actief",
-            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
+            ...input,
+            onboarding_afronden: true,
+            onboarding_versie: wizardVersieRef.current,
+            onboarding_stroom: "vast",
           },
         });
         await maakGeselecteerdeMiddelenAan(medewerkerDraftId);

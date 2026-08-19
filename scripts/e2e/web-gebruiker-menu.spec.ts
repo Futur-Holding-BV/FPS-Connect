@@ -96,6 +96,40 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, 
     });
   });
 
+  await test.step("Bekijken als: portaal zonder rechten biedt altijd een weg terug", async () => {
+    await page.evaluate(() => {
+      window.localStorage.setItem(
+        "fps.bekijkenAlsPersoon",
+        JSON.stringify({
+          id: 999_999_999,
+          naam: "Testpersoon zonder toegang",
+          rol: "gebruiker",
+          functietitels: [],
+          bevoegdheden: {},
+        }),
+      );
+    });
+    await page.reload();
+
+    await expect(page.getByRole("heading", { name: "Geen toegang" })).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await page.getByRole("button", { name: "Terug naar mijn eigen weergave" }).click();
+    // Een vers E2E-profiel kan na de rolwissel opnieuw op het eenmalige
+    // welkomscherm landen. Dat staat los van Bekijken als; rond het af en
+    // controleer daarna de werkelijk herstelde eigen weergave.
+    const naarPlatform = page.getByRole("button", { name: "Naar het platform" });
+    if (await naarPlatform.isVisible().catch(() => false)) {
+      await naarPlatform.click();
+    }
+    await expect(page.getByRole("button", { name: /Eigen weergave/ })).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await expect.poll(
+      () => page.evaluate(() => window.localStorage.getItem("fps.bekijkenAlsPersoon")),
+    ).toBeNull();
+  });
+
   await test.step("Verwijderde knoppen: geen Wachtwoord- of Taal-knop meer in het menu", async () => {
     await expect(page.getByTitle("Wachtwoord wijzigen")).toHaveCount(0);
     await expect(page.locator('button[title="Taal"]')).toHaveCount(0);
@@ -124,6 +158,18 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, 
   });
 
   await test.step("Uitloggen (taakbalk): POST /auth/logout (204) en beland op het loginscherm", async () => {
+    await page.evaluate(() => {
+      window.localStorage.setItem(
+        "fps.bekijkenAlsPersoon",
+        JSON.stringify({
+          id: 999_999_999,
+          naam: "Achtergebleven weergave",
+          rol: "gebruiker",
+          functietitels: [],
+          bevoegdheden: {},
+        }),
+      );
+    });
     const [resp] = await Promise.all([
       page.waitForResponse(
         (r) => r.url().includes("/api/auth/logout") && r.request().method() === "POST",
@@ -135,5 +181,8 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, 
 
     // Sessie beëindigd: het loginscherm verschijnt weer.
     await expect(page.locator("#email")).toBeVisible({ timeout: 30_000 });
+    await expect.poll(
+      () => page.evaluate(() => window.localStorage.getItem("fps.bekijkenAlsPersoon")),
+    ).toBeNull();
   });
 });

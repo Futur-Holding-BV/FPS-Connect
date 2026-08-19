@@ -8,6 +8,7 @@ import {
   ApiError,
 } from "@workspace/api-client-react";
 import { useTaal } from "@/context/taal-context";
+import { wisOpgeslagenBekijkenAls } from "@/context/bekijken-als-opslag";
 import { zetMonitoringGebruiker } from "@/lib/foutmonitoring";
 import { isGeldigeTaal } from "@/i18n/talen";
 
@@ -107,6 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sessie kan al verlopen zijn; we loggen lokaal alsnog uit.
     }
     document.documentElement.style.removeProperty("--primary");
+    // Een hoofdbeheerder kan via "Bekijken als" op een portaal zonder rechten
+    // uitkomen. Die selectie hoort bij de sessie en mag een volgende login niet
+    // opnieuw achter het GeenToegang-scherm vastzetten.
+    wisOpgeslagenBekijkenAls();
     queryClient.clear();
     // Harde herlaad naar de app-root. De serversessie is nu vernietigd, dus
     // na een volledige herlaad haalt /auth/me een 401 op en verschijnt het
