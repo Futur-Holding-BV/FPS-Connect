@@ -253,12 +253,8 @@ const PlanningNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Planning" />;
 const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie" />;
 const WizardNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Wizard onboarding" />;
 
-/**
- * Puur uitvoerende veldmedewerkers (monteurs/timmermannen) mogen kantoor-
- * gerichte pagina's niet benaderen — ook niet via een directe URL.
- * Dezelfde criteria als in beheerder-layout.tsx (isUitvoerendVeld).
- */
-const UITVOERENDE_FUNCTIES = ["Monteur", "Timmerman", "Uitvoerder", "Onderhoudsmonteur"];
+// UITVOERENDE_FUNCTIES is verwijderd — enige bron van waarheid is nu de
+// server (is_uitvoerend_veld in de auth-payload), doorgegeven via useRol().
 
 /**
  * Pad-prefixen die voor veldmedewerkers zijn geblokkeerd. Elke prefix dekt
@@ -316,14 +312,8 @@ function AdaptieveDashboard() {
  * memoryLocation, zodat navigatie binnen een baan blijft.
  */
 export function ConnectRoutes() {
-  const { rol, functietitels } = useRol();
+  const { is_uitvoerend_veld: isUitvoerendVeld } = useRol();
   const [location] = useLocation();
-
-  const isHoofdbeheerder = rol === "hoofdbeheerder";
-  const isUitvoerendVeld =
-    !isHoofdbeheerder &&
-    functietitels.length > 0 &&
-    functietitels.every((f) => UITVOERENDE_FUNCTIES.includes(f));
 
   // Veldmedewerker op een geblokkeerd pad → toon omleidingspagina.
   if (

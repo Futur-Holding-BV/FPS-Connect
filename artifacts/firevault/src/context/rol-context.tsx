@@ -5,6 +5,21 @@ import { setGebruikerOverrideGetter } from "@workspace/api-client-react";
 
 export type { Rol };
 
+/**
+ * Enige definitie van uitvoerende functietitels voor de web-app.
+ * De server berekent `is_uitvoerend_veld` op basis van dezelfde lijst en
+ * stuurt die mee in de auth-payload — consumenten hoeven nooit zelf te
+ * matchen. Deze constante blijft hier uitsluitend voor de impersonatie-case
+ * (hoofdbeheerder die "bekijkt als" een teamlid: het teamlid-object heeft
+ * geen server-berekende vlag).
+ */
+export const UITVOERENDE_FUNCTIES = [
+  "Monteur",
+  "Timmerman",
+  "Uitvoerder",
+  "Onderhoudsmonteur",
+] as const;
+
 export type GeimiteerdePersoon = {
   id: number;
   naam: string;
@@ -23,6 +38,14 @@ type RolContextType = {
   kanWisselen: boolean;
   persoon: GeimiteerdePersoon | null;
   zetPersoon: (persoon: GeimiteerdePersoon | null) => void;
+  /**
+   * Eén bron van waarheid voor de buitendienst-check.
+   * - Zonder impersonatie: server-berekende vlag uit de auth-payload.
+   * - Bij impersonatie (hoofdbeheerder bekijkt als teamlid): lokaal berekend
+   *   uit de functietitels van het teamlid (teamlid-object heeft geen
+   *   server-vlag).
+   */
+  is_uitvoerend_veld: boolean;
 };
 
 const RolContext = createContext<RolContextType>({
@@ -33,6 +56,7 @@ const RolContext = createContext<RolContextType>({
   kanWisselen: false,
   persoon: null,
   zetPersoon: () => {},
+  is_uitvoerend_veld: false,
 });
 
 function leesOpgeslagenPersoon(): GeimiteerdePersoon | null {
@@ -103,9 +127,19 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
     return () => setGebruikerOverrideGetter(null);
   }, [kanWisselen, actievePersoon]);
 
+  // is_uitvoerend_veld: gebruik de server-vlag voor de ingelogde gebruiker;
+  // bij impersonatie lokaal berekenen uit de titels van het teamlid.
+  const is_uitvoerend_veld: boolean = kanWisselen && actievePersoon
+    ? (actievePersoon.rol !== "hoofdbeheerder" &&
+       actievePersoon.functietitels.length > 0 &&
+       actievePersoon.functietitels.every((f) =>
+         (UITVOERENDE_FUNCTIES as readonly string[]).includes(f),
+       ))
+    : (gebruiker?.is_uitvoerend_veld ?? false);
+
   return (
     <RolContext.Provider
-      value={{ rol, echteRol, functietitels, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon }}
+      value={{ rol, echteRol, functietitels, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon, is_uitvoerend_veld }}
     >
       {children}
     </RolContext.Provider>

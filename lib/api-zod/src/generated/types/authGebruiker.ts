@@ -28,4 +28,6 @@ export interface AuthGebruiker {
   is_hoofdtester?: boolean;
   /** Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset). */
   moet_wachtwoord_wijzigen?: boolean;
+  /** Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (Monteur/Timmerman/Uitvoerder/Onderhoudsmonteur, niet-hoofdbeheerder). */
+  is_uitvoerend_veld?: boolean;
 }

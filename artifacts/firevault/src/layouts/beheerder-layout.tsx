@@ -172,17 +172,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     [navigeer, toast],
   );
   const { heeftNiveau } = useBevoegdheid();
-  const { rol, functietitels } = useRol();
+  const { rol, is_uitvoerend_veld: isUitvoerendVeld } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
-  // Puur uitvoerende veldmedewerkers (monteurs/timmermannen) werken vanaf de
-  // telefoon; het beheerderportaal verbergt voor hen kantoorhoofdstukken die
-  // hun dagelijkse werk overstijgen (Projectaanpak, Communicatie, Declaraties).
-  const UITVOERENDE_FUNCTIES = ["Monteur", "Timmerman", "Uitvoerder", "Onderhoudsmonteur"];
-  const isUitvoerendVeld =
-    !isHoofdbeheerder &&
-    functietitels.length > 0 &&
-    functietitels.every((f) => UITVOERENDE_FUNCTIES.includes(f));
+  // isUitvoerendVeld comes from rol-context which derives it from the
+  // server-provided is_uitvoerend_veld flag (single source of truth).
+  // No local UITVOERENDE_FUNCTIES list needed here.
 
   const toonGebouwen      = heeftNiveau("gebouwen", 1);
   const toonCrm           = heeftNiveau("crm", 1);

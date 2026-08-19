@@ -161,6 +161,33 @@ authenticator.options = { window: 1 };
 
 const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
 
+/**
+ * Enige bron van waarheid voor de buitendienst-functietitels.
+ * Web-app (via rol-context) en monteur-app (via is_uitvoerend_veld in de
+ * auth-payload) lezen allebei uit deze serversijde definitie — nooit meer
+ * lokale kopiëen bijhouden.
+ */
+const UITVOERENDE_FUNCTIES_AUTH = [
+  "Monteur",
+  "Timmerman",
+  "Uitvoerder",
+  "Onderhoudsmonteur",
+] as const;
+
+function berekenIsUitvoerendVeld(g: {
+  rol?: string | null;
+  functietitels?: string[] | null;
+}): boolean {
+  if (g.rol === "hoofdbeheerder") return false;
+  const titels = g.functietitels ?? [];
+  return (
+    titels.length > 0 &&
+    titels.every((f) =>
+      (UITVOERENDE_FUNCTIES_AUTH as readonly string[]).includes(f),
+    )
+  );
+}
+
 const mapAuthGebruiker = (
   g: typeof gebruikersTable.$inferSelect,
   effectieveBev?: Record<string, number>,
@@ -177,6 +204,11 @@ const mapAuthGebruiker = (
   bevoegdheden: effectieveBev ?? (g.bevoegdheden as Record<string, number>) ?? {},
   is_hoofdtester: g.isHoofdtester ?? false,
   moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
+  /** Server-berekende vlag: gebruiker is puur uitvoerend veld (monteur/timmerman/…). */
+  is_uitvoerend_veld: berekenIsUitvoerendVeld({
+    rol: g.rol,
+    functietitels: g.functietitels,
+  }),
 });
 
 function vergrendeldRespons(vergrendeldTot: Date) {

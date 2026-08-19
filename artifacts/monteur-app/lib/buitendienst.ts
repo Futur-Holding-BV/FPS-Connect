@@ -1,7 +1,15 @@
-// Zelfde definitie als in de web-app (artifacts/firevault/src/routes/
-// connect-routes.tsx): iemand is "uitvoerend veld" (buitendienst) wanneer hij
-// géén hoofdbeheerder is en al zijn functietitels in de uitvoerende lijst
-// vallen. Deze lijst moet synchroon blijven met de web-app.
+/**
+ * Buitendienst-hulpfuncties voor de monteur-app.
+ *
+ * ENIGE BRON VAN WAARHEID: de server berekent `is_uitvoerend_veld` in
+ * mapAuthGebruiker (api-server/src/routes/auth.ts) op basis van de
+ * uitvoerende functietitellijst. De auth-payload (login én auth/me) bevat
+ * deze vlag. Gebruik altijd die server-vlag; de lokale functietitels dienen
+ * uitsluitend als fallback voor gecachte gebruikers die vóór de upgrade zijn
+ * opgeslagen en de vlag nog niet kennen.
+ */
+
+/** Fallback-lijst — houd synchroon met UITVOERENDE_FUNCTIES_AUTH in auth.ts. */
 export const UITVOERENDE_FUNCTIES = [
   "Monteur",
   "Timmerman",
@@ -12,8 +20,14 @@ export const UITVOERENDE_FUNCTIES = [
 export function isUitvoerendVeld(gebruiker: {
   rol?: string | null;
   functietitels?: string[] | null;
+  is_uitvoerend_veld?: boolean | null;
 }): boolean {
   if (!gebruiker) return false;
+  // Gebruik de server-berekende vlag wanneer aanwezig (primaire bron).
+  if (typeof gebruiker.is_uitvoerend_veld === "boolean") {
+    return gebruiker.is_uitvoerend_veld;
+  }
+  // Fallback: lokale berekening voor gecachte gebruikers zonder vlag.
   if (gebruiker.rol === "hoofdbeheerder") return false;
   const titels = gebruiker.functietitels ?? [];
   return (

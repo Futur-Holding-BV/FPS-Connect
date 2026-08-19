@@ -17,6 +17,7 @@
 - [KADER FPS Connect](kader-fps-connect.md) — attached_assets/KADER-FPS-Connect_*.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) + [Ontwikkelfilosofie](ontwikkelfilosofie.md) + [Changelog](changelog-verplichting.md) — taak pas gereed bij bewezen businessscenario; stabiliteit > functionaliteit; docs/changelog.md altijd bijwerken.
 - [Monteur-app](offline-first-monteur.md) + [web-PWA](monteur-webapp.md) + [app-lock](mobiele-app-lock.md) — offline-first AsyncStorage+SyncQueue; SW pre-cachet volledig manifest; biometrisch slot rond bearer-sessie, centrale gate in _layout.
+- [Buitendienst-auth-vlag](buitendienst-auth-vlag.md) — server bepaalt `is_uitvoerend_veld`; web en app gebruiken die auth-vlag, met alleen cache-fallback voor oude mobiele sessies.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
