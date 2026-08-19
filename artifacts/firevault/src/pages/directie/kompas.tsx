@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { SignaalDoorklik } from "@/components/signaal-doorklik";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -349,12 +350,15 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
           </div>
         ) : (
           lijst.map((obs, i) => (
-            <div
+            <SignaalDoorklik
               key={i}
+              actiePad={obs.actie_pad}
+              actieLabel={obs.actie_label}
               className={cn(
-                "flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs",
+                "flex w-full items-start gap-2 rounded-md border px-3 py-2.5 text-left text-xs",
                 OBSERVATIE_KLEUR[obs.ernst] ?? "border-border bg-muted/20 text-muted-foreground",
               )}
+              testId={`signaal-link-${obs.type}`}
             >
               {obs.ernst === "kritiek" || obs.ernst === "waarschuwing"
                 ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -374,6 +378,11 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
                 {obs.advies && (
                   <p className="text-[10px] italic opacity-75 mt-0.5">Advies: {obs.advies}</p>
                 )}
+                {obs.actie_label && (
+                  <p className="mt-1 flex items-center gap-1 text-[10px] font-medium">
+                    {obs.actie_label} <ChevronRightIcon className="h-3 w-3" />
+                  </p>
+                )}
               </div>
               <span className={cn(
                 "text-[9px] font-medium rounded px-1 py-0.5 leading-none whitespace-nowrap shrink-0",
@@ -381,7 +390,7 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
               )}>
                 {obs.ernst}
               </span>
-            </div>
+            </SignaalDoorklik>
           ))
         )}
       </CardContent>

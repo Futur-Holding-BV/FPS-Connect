@@ -52422,11 +52422,13 @@ components:
 
     FiePrognoseObservatie:
       type: object
-      required: [type, ernst, omschrijving]
+      required: [type, ernst, omschrijving, actie_pad, actie_label]
       properties:
         type:                { type: string }
         ernst:               { type: string }
         omschrijving:        { type: string }
+        actie_pad:           { type: ["string", "null"] }
+        actie_label:         { type: ["string", "null"] }
         waarde:              { type: ["number", "null"] }
         drempelwaarde:       { type: ["number", "null"] }
         afwijking_pct:       { type: ["number", "null"] }
@@ -52531,11 +52533,13 @@ components:
 
     LiquiditeitSignaal:
       type: object
-      required: [type, ernst, omschrijving]
+      required: [type, ernst, omschrijving, actie_pad, actie_label]
       properties:
         type:          { type: string }
         ernst:         { type: string }
         omschrijving:  { type: string }
+        actie_pad:     { type: ["string", "null"] }
+        actie_label:   { type: ["string", "null"] }
         waarde:        { type: ["number", "null"] }
         drempelwaarde: { type: ["number", "null"] }
         afwijking_pct: { type: ["number", "null"] }

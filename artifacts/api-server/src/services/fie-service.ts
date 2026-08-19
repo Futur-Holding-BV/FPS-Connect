@@ -18,6 +18,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { berekenLiquiditeitSignalen } from "./liquiditeit-service";
+import { bepaalSignaalActie, type SignaalActie } from "../lib/signaalActies";
 import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc, gte, lt, ne, inArray, isNull } from "drizzle-orm";
 
@@ -784,7 +785,7 @@ export interface FieKwartaalPrognose {
   prognose: number;
 }
 
-export interface FiePrognoseObservatie {
+export interface FiePrognoseObservatie extends SignaalActie {
   type: string;
   ernst: "info" | "waarschuwing" | "kritiek";
   omschrijving: string;
@@ -1016,7 +1017,7 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
       : null;
 
   // 5. Observaties genereren
-  const observaties: FiePrognoseObservatie[] = [];
+  const observaties: Array<Omit<FiePrognoseObservatie, keyof SignaalActie>> = [];
 
   if (!begroting) {
     const t = "geen_begroting";
@@ -1128,6 +1129,10 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
       : null;
   const breakEvenBereikt =
     breakEvenOmzet != null ? prognoseOmzet >= breakEvenOmzet : null;
+  const observatiesMetActies: FiePrognoseObservatie[] = observaties.map((observatie) => ({
+    ...observatie,
+    ...bepaalSignaalActie(observatie.type),
+  }));
 
   // Begroting per kwartaal (gelijkmatige spreiding van omzetDoel over 4 kwartalen)
   const begrotingPerKwartaal: { kwartaal: 1 | 2 | 3 | 4; begroting: number }[] =
@@ -1140,9 +1145,9 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
 
   // 6. Observaties persisteren (vervang alle observaties voor dit boekjaar)
   await db.delete(fieObservatiesTable).where(eq(fieObservatiesTable.boekjaar, boekjaar));
-  if (observaties.length > 0) {
+  if (observatiesMetActies.length > 0) {
     await db.insert(fieObservatiesTable).values(
-      observaties.map(o => ({
+      observatiesMetActies.map(o => ({
         boekjaar,
         type:          o.type,
         ernst:         o.ernst,
@@ -1178,7 +1183,7 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
     prognose_nettoresultaat:    prognoseNettoresultaat,
     kwartaal_verdeling:         kwartaalVerdeling,
     begroting_per_kwartaal:     begrotingPerKwartaal,
-    observaties,
+    observaties: observatiesMetActies,
     werkmaatschappij_verdeling: werkmaatschappijVerdeling,
   };
 }
@@ -1198,6 +1203,7 @@ export async function leesPrognoseObservaties(boekjaar: number): Promise<FieProg
     drempelwaarde: r.drempelwaarde ?? null,
     afwijking_pct: r.afwijkingPct ?? null,
     ...observatieMetadata(r.type),
+    ...bepaalSignaalActie(r.type),
   }));
 }
 

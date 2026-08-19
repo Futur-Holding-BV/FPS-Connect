@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:signaal-links": "tsx --test src/lib/signaalActies.test.ts",
     "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts",
     "check-sessie-velden": "bash scripts/check-sessie-velden.sh"
   },

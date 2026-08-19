@@ -58,6 +58,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { SignaalDoorklik } from "@/components/signaal-doorklik";
 
 // ─── Constanten ───────────────────────────────────────────────────────────────
 
@@ -629,18 +630,28 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
       {p.observaties.length > 0 && (
         <div className="space-y-2">
           {p.observaties.map((obs, i) => (
-            <div
+            <SignaalDoorklik
               key={i}
+              actiePad={obs.actie_pad}
+              actieLabel={obs.actie_label}
               className={cn(
-                "flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs",
+                "flex w-full items-start gap-2 rounded-md border px-3 py-2.5 text-left text-xs",
                 OBSERVATIE_KLEUR[obs.ernst] ?? "border-border bg-muted/20 text-muted-foreground"
               )}
+              testId={`signaal-link-${obs.type}`}
             >
               {obs.ernst === "kritiek" || obs.ernst === "waarschuwing"
                 ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
-              <p>{obs.omschrijving}</p>
-            </div>
+              <span className="min-w-0 flex-1">
+                <span className="block">{obs.omschrijving}</span>
+                {obs.actie_label && (
+                  <span className="mt-1 flex items-center gap-1 text-[10px] font-medium">
+                    {obs.actie_label} <ChevronRightIcon className="h-3 w-3" />
+                  </span>
+                )}
+              </span>
+            </SignaalDoorklik>
           ))}
         </div>
       )}
@@ -787,18 +798,28 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         <div className="space-y-1">
           <p className="text-[10px] font-medium text-muted-foreground px-1">Laatste signalen (vorige berekening)</p>
           {persistenteObservaties.map((obs, i) => (
-            <div
+            <SignaalDoorklik
               key={i}
+              actiePad={obs.actie_pad}
+              actieLabel={obs.actie_label}
               className={cn(
-                "flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs",
+                "flex w-full items-start gap-2 rounded-md border px-3 py-2.5 text-left text-xs",
                 OBSERVATIE_KLEUR[obs.ernst] ?? "border-border bg-muted/20 text-muted-foreground"
               )}
+              testId={`historisch-signaal-link-${obs.type}`}
             >
               {obs.ernst === "kritiek" || obs.ernst === "waarschuwing"
                 ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
-              <p>{obs.omschrijving}</p>
-            </div>
+              <span className="min-w-0 flex-1">
+                <span className="block">{obs.omschrijving}</span>
+                {obs.actie_label && (
+                  <span className="mt-1 flex items-center gap-1 text-[10px] font-medium">
+                    {obs.actie_label} <ChevronRightIcon className="h-3 w-3" />
+                  </span>
+                )}
+              </span>
+            </SignaalDoorklik>
           ))}
         </div>
       )}

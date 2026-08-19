@@ -32,6 +32,13 @@ jobs:
           echo "Typecheck alle packages" > /tmp/faalstap.txt
           pnpm run typecheck
 
+      # SIGNALEN_LINKS_01 — voorkomt dat bekende directiesignalen hun doelpad
+      # verliezen of dat de FIE-route actievelden uit het OpenAPI-contract filtert.
+      - name: Directiesignalen-doorklikcontrole
+        run: |
+          echo "Directiesignalen-doorklikcontrole" > /tmp/faalstap.txt
+          pnpm --filter @workspace/api-server run test:signaal-links
+
       # HERSTEL_01: dubbele methode+pad-declaraties = stille dode code (Express
       # neemt de eerste); vandaag twee keer ontstaan bij merges.
       - name: Dubbele-routes-controle

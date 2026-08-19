@@ -17073,6 +17073,10 @@ export interface FiePrognoseObservatie {
   ernst: string;
   omschrijving: string;
   /** @nullable */
+  actie_pad: string | null;
+  /** @nullable */
+  actie_label: string | null;
+  /** @nullable */
   waarde?: number | null;
   /** @nullable */
   drempelwaarde?: number | null;
@@ -17165,6 +17169,10 @@ export interface LiquiditeitSignaal {
   type: string;
   ernst: string;
   omschrijving: string;
+  /** @nullable */
+  actie_pad: string | null;
+  /** @nullable */
+  actie_label: string | null;
   /** @nullable */
   waarde?: number | null;
   /** @nullable */

@@ -21,6 +21,7 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { FINANCIEEL_AK_ADVIES_PROMPT } from "../lib/aiPrompts";
 import { bouwJaarReeks, bouwLopendJaar, bouwPostOntwikkeling, bouwSignaalKandidaten, bouwUrenSplitsingPerJaar, bepaalLoonkostenDekking, MAX_OPEN_ADVIEZEN } from "../lib/akEigenCijfers";
 import { logger } from "../lib/logger";
+import { maakFiePrognoseResponse } from "../lib/fiePrognoseResponse";
 import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, berekenScenarioDoorrekening, kopieerBegrotingAlsScenario, ScenarioFout, parseScenarioAannames, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
@@ -773,39 +774,7 @@ router.get("/fie/prognose/:boekjaar", lezen, async (req: Request, res: Response)
   }
 
   const p = await berekenJaarprognose(boekjaar);
-  return void res.json({
-    boekjaar:                   p.boekjaar,
-    heeft_begroting:            p.heeft_begroting,
-    omzet_doel:                 p.omzet_doel,
-    doel_marge_pct:             p.doel_marge_pct,
-    totaal_ak:                  p.totaal_ak,
-    bevestigde_omzet:           p.bevestigde_omzet,
-    aantal_bevestigde_offertes: p.aantal_bevestigde_offertes,
-    gewogen_pipeline:           p.gewogen_pipeline,
-    pijplijn_bruto:             p.pijplijn_bruto,
-    aantal_pipeline_offertes:   p.aantal_pipeline_offertes,
-    ohw_restwaarde:             p.ohw_restwaarde,
-    aantal_ohw_opdrachten:      p.aantal_ohw_opdrachten,
-    prognose_omzet:             p.prognose_omzet,
-    prognose_inclusief_ohw:     p.prognose_inclusief_ohw,
-    coverage_pct:               p.coverage_pct,
-    gap_tot_doel:               p.gap_tot_doel,
-    ak_dekkingsgraad_pct:       p.ak_dekkingsgraad_pct,
-    break_even_omzet:           p.break_even_omzet,
-    break_even_bereikt:         p.break_even_bereikt,
-    prognose_brutowinst:        p.prognose_brutowinst,
-    prognose_nettoresultaat:    p.prognose_nettoresultaat,
-    kwartaal_verdeling:         p.kwartaal_verdeling,
-    begroting_per_kwartaal:     p.begroting_per_kwartaal,
-    observaties:                p.observaties.map(o => ({
-      type:          o.type,
-      ernst:         o.ernst,
-      omschrijving:  o.omschrijving,
-      waarde:        o.waarde,
-      drempelwaarde: o.drempelwaarde,
-      afwijking_pct: o.afwijking_pct,
-    })),
-  });
+  return void res.json(maakFiePrognoseResponse(p));
 });
 
 // ── GET /fie/observaties/:boekjaar ────────────────────────────────────────────

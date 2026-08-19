@@ -1,3 +1,10 @@
+## 2026-08-19 — SIGNALEN_LINKS_01: directiesignalen openen hun onderliggende informatie
+
+- **Klikbare signalen**: FIE-observaties in Directiekompas en Bedrijfskompas (live én opgeslagen) en signalen in het liquiditeitsdashboard tonen nu een concrete vervolgactie en navigeren rechtstreeks naar de relevante begroting, offertepipeline, planning, facturen, crediteuren of liquiditeit.
+- **Eén server-side mapping**: alle zeven FIE-signaaltypes en vier liquiditeitssignaaltypes krijgen centraal een `actie_pad` en toegankelijk `actie_label`; de drie webschermen gebruiken hetzelfde API-contract en bouwen geen eigen, afwijkende routelogica op.
+- **Fail-closed voor nieuwe types**: een toekomstig onbekend signaal krijgt bewust geen actiepad en blijft als informatieve kaart zichtbaar, in plaats van misleidend naar een algemeen overzicht te linken.
+- **Bewijs**: de verplichte CI-doorklikcontrole bevestigt dat alle elf bekende types een concrete actie hebben, onbekende types expliciet niet klikbaar zijn, ieder toegewezen doelpad werkelijk in de webrouter bestaat en de live FIE-prognoseshape de actievelden door het OpenAPI/Zod-contract heen behoudt; API- en webtypechecks zijn groen.
+
 ## 2026-08-19 — REGISTER_01: acceptatieregister per acceptatiepunt (vervangt VOLLEDIGHEID_01)
 
 - **Register in de database** (migratie 0093, tabel `acceptatie_register`): één regel per acceptatiepunt per opdracht, met vier standen — **gehaald**, **niet_gebouwd**, **onbewezen** (code bestaat maar geëist bewijs ontbreekt) en **wacht_op_rene** — plus bewijs-vindplaats, bronbestand en toelichting.

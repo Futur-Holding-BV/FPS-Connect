@@ -1,13 +1,14 @@
 import { useLocation } from "wouter";
 import {
   Wallet, TrendingUp, TrendingDown, AlertTriangle, Info, ArrowDownCircle,
-  ArrowUpCircle, Banknote, RefreshCw,
+  ArrowUpCircle, Banknote, RefreshCw, ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SignaalDoorklik } from "@/components/signaal-doorklik";
 import {
   useGetLiquiditeit,
   type LiquiditeitDashboard,
@@ -99,7 +100,15 @@ function AgingTabel({ titel, aging }: { titel: string; aging: LiquiditeitAging }
 function SignaalRegel({ s }: { s: LiquiditeitSignaal }) {
   const Icoon = s.ernst === "kritiek" ? AlertTriangle : s.ernst === "waarschuwing" ? AlertTriangle : Info;
   return (
-    <div className={cn("rounded-lg border p-3", OBSERVATIE_KLEUR[s.ernst] ?? "border-border bg-muted/20")}>
+    <SignaalDoorklik
+      actiePad={s.actie_pad}
+      actieLabel={s.actie_label}
+      className={cn(
+        "w-full rounded-lg border p-3 text-left",
+        OBSERVATIE_KLEUR[s.ernst] ?? "border-border bg-muted/20",
+      )}
+      testId={`liquiditeit-signaal-link-${s.type}`}
+    >
       <div className="flex items-start gap-2">
         <Icoon className="w-4 h-4 mt-0.5 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -110,9 +119,14 @@ function SignaalRegel({ s }: { s: LiquiditeitSignaal }) {
           </div>
           <p className="text-sm mt-1">{s.omschrijving}</p>
           {s.advies && <p className="text-xs mt-1 opacity-80">Advies: {s.advies}</p>}
+          {s.actie_label && (
+            <p className="mt-1 flex items-center gap-1 text-[10px] font-medium">
+              {s.actie_label} <ChevronRight className="h-3 w-3" />
+            </p>
+          )}
         </div>
       </div>
-    </div>
+    </SignaalDoorklik>
   );
 }
 

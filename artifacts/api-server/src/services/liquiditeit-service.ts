@@ -12,10 +12,11 @@
 import { db, facturenTable, accountviewInstellingenTable } from "@workspace/db";
 import { and, eq, ne, or, isNull, sql } from "drizzle-orm";
 import { maakAccountViewClient } from "./accountview-client";
+import { bepaalSignaalActie, type SignaalActie } from "../lib/signaalActies";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface LiquiditeitSignaal {
+export interface LiquiditeitSignaal extends SignaalActie {
   type: string;
   ernst: "info" | "waarschuwing" | "kritiek";
   omschrijving: string;
@@ -188,7 +189,7 @@ export function bouwLiquiditeitSignalen(d: {
   cashflow: LiquiditeitCashflow[];
   werkkapitaal: number;
 }): LiquiditeitSignaal[] {
-  const signalen: LiquiditeitSignaal[] = [];
+  const signalen: Array<Omit<LiquiditeitSignaal, keyof SignaalActie>> = [];
 
   // 1. Negatieve nettoliquiditeit (alleen als banksaldo bekend is)
   if (d.netto_liquiditeit != null && d.netto_liquiditeit < DREMPEL_LIQUIDITEIT) {
@@ -257,7 +258,10 @@ export function bouwLiquiditeitSignalen(d: {
     });
   }
 
-  return signalen;
+  return signalen.map((signaal) => ({
+    ...signaal,
+    ...bepaalSignaalActie(signaal.type),
+  }));
 }
 
 // ─── Hoofdfunctie ─────────────────────────────────────────────────────────────
