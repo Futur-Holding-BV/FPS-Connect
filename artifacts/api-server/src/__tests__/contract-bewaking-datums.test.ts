@@ -3,6 +3,10 @@ import {
   maandTerug,
   dagenTot,
   berekenContractCrucialeDatum,
+  aanzegtermijnCheck,
+  isAanzegdeadlineMailKandidaat,
+  maandenVooruit,
+  dagVoor,
   berekenZzpCrucialeDatum,
   ketenregelingCheck,
   URGENT_DAGEN,
@@ -49,6 +53,33 @@ describe("maandTerug — kalenderveilige datumhelper", () => {
 
   it("31 december → 30 november (doelmaand heeft 30 dagen, geen jaargrens)", () => {
     expect(maandTerug("2026-12-31")).toBe("2026-11-30");
+  });
+});
+
+describe("maandenVooruit — kalenderveilige contractduurgrens", () => {
+  it("clampte 31 augustus na zes maanden op 28 februari", () => {
+    expect(maandenVooruit("2026-08-31", 6)).toBe("2027-02-28");
+  });
+});
+
+describe("zes kalendermaanden — inclusieve contracteinddatum", () => {
+  it("behandelt 1 januari tot en met 30 juni als precies zes maanden", () => {
+    expect(dagVoor(maandenVooruit("2026-01-01", 6))).toBe("2026-06-30");
+    expect(
+      berekenContractCrucialeDatum(
+        { startDatum: "2026-01-01", eindDatum: "2026-06-30" },
+        NU,
+      ).label,
+    ).toBe("Uiterste aanzegdatum");
+  });
+
+  it("behandelt de geclampte maand-eindegrens inclusief", () => {
+    expect(
+      berekenContractCrucialeDatum(
+        { startDatum: "2026-08-31", eindDatum: "2027-02-27" },
+        NU,
+      ).label,
+    ).toBe("Uiterste aanzegdatum");
   });
 });
 
@@ -122,6 +153,14 @@ describe("berekenContractCrucialeDatum — contract 6 maanden of langer (Wet Aan
     expect(result.label).toBe("Uiterste aanzegdatum");
   });
 
+  it("past de aanzegplicht niet toe op 180 dagen die nog geen zes kalendermaanden zijn", () => {
+    const result = berekenContractCrucialeDatum(
+      { startDatum: "2026-03-01", eindDatum: "2026-08-28" },
+      NU,
+    );
+    expect(result.label).toBe("Contract loopt af");
+  });
+
   it("aanzegdatum = 31 oktober → 30 september (doelmaand 30 dagen)", () => {
     const result = berekenContractCrucialeDatum(
       { startDatum: "2026-01-01", eindDatum: "2026-10-31" },
@@ -150,6 +189,68 @@ describe("berekenContractCrucialeDatum — contract 6 maanden of langer (Wet Aan
     );
     expect(result.label).toBe("Uiterste aanzegdatum");
     expect(result.urgent).toBe(false);
+  });
+});
+
+describe("aanzegtermijnCheck — signalering gebruikt uiterste aanzegdatum", () => {
+  it("signaleert wanneer het contract nog 35 dagen duurt maar de aanzegdeadline over vijf dagen is", () => {
+    // Zonder deze controle op de aanzegdatum zelf zou de oude 30-dagencheck op
+    // contracteinde dit pas vijf dagen te laat signaleren.
+    const boodschap = aanzegtermijnCheck(
+      { startDatum: "2026-01-01", eindDatum: "2026-09-22" },
+      NU,
+    );
+
+    expect(boodschap).toContain("uiterste aanzegdatum over 5 dag(en)");
+    expect(boodschap).toContain("2026-08-22");
+  });
+
+  it("maakt geen aanzegsignalering voor een contract korter dan zes maanden", () => {
+    expect(
+      aanzegtermijnCheck(
+        { startDatum: "2026-06-01", eindDatum: "2026-08-29" },
+        NU,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("isAanzegdeadlineMailKandidaat — maildeduplicatie en besluitpoort", () => {
+  const basis = {
+    type: "aanzegtermijn",
+    contractId: 42,
+    aanzegMailVerstuurdOp: null as Date | null,
+    startDatum: "2026-01-01",
+    eindDatum: "2026-09-22", // uiterste aanzegdatum 2026-08-22, dus over 5 dagen
+    contractStatus: "actief",
+  };
+
+  it("kiest een actieve aanzegdeadline binnen zeven dagen zonder besluit", () => {
+    expect(isAanzegdeadlineMailKandidaat(basis, new Set(), NU)).toBe(true);
+  });
+
+  it("kiest dezelfde aanzegtermijn niet opnieuw nadat alle ontvangers in de wachtrij staan", () => {
+    expect(
+      isAanzegdeadlineMailKandidaat(
+        { ...basis, aanzegMailVerstuurdOp: new Date("2026-08-17T06:30:00.000Z") },
+        new Set(),
+        NU,
+      ),
+    ).toBe(false);
+  });
+
+  it("kiest geen al verstreken aanzegdeadline", () => {
+    expect(
+      isAanzegdeadlineMailKandidaat(
+        { ...basis, eindDatum: "2026-08-15" },
+        new Set(),
+        NU,
+      ),
+    ).toBe(false);
+  });
+
+  it("slaat een contract met al vastgelegd besluit over", () => {
+    expect(isAanzegdeadlineMailKandidaat(basis, new Set([42]), NU)).toBe(false);
   });
 });
 

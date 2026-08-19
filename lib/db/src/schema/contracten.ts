@@ -66,6 +66,11 @@ export const contractSignaleringenTable = pgTable("contract_signaleringen", {
   status: text("status").notNull().default("nieuw"),                             // nieuw | gezien | afgehandeld
   gezienDoorId: integer("gezien_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   gezienOp: timestamp("gezien_op"),
+  // Geeft aan dat voor alle op dat moment bevoegde HRM-ontvangers een
+  // aanzegmail-intentie in de wachtrij staat. De per-ontvanger unieke
+  // wachtrijsleutel is de harde deduplicatiegrens; deze kolom is de
+  // signaleringsaudit en voorkomt nodeloze dagelijkse pogingen.
+  aanzegMailVerstuurdOp: timestamp("aanzeg_mail_verstuurd_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
   // Dedupe DB-geborgd: één signalering per contract per type (race-vrij).

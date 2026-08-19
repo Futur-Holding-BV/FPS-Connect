@@ -71,16 +71,151 @@ import { beoordeelVorigeWeek, bouwWeekControleItems, bouwTvtOpnameItems } from "
 import { vindGebruikersMetFunctietitel } from "./bouwMeldingen";
 import { haalInkoopHistorie, artikelSleutel, MIN_WAARNEMINGEN_INKOOP } from "./inkoopEigenCijfers";
 import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
-import { voerContractBewakingUit, haalCrucialeDatumItems } from "../routes/contract-bewaking";
+import {
+  berekenContractCrucialeDatum,
+  isAanzegdeadlineMailKandidaat,
+  voerContractBewakingUit,
+  haalCrucialeDatumItems,
+} from "../routes/contract-bewaking";
 import { berekenItems as berekenOhwItems } from "../routes/onderhanden-werk";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
+import { stuurAanzegdeadlineSignalering } from "../services/email";
 
 const DAG_MS = 86400000;
 
 function dagenTot(datumIso: string): number {
   const nu = new Date(); nu.setHours(0, 0, 0, 0);
   return Math.floor((new Date(datumIso).getTime() - nu.getTime()) / DAG_MS);
+}
+
+type ContractsignaalMetContract = {
+  s: typeof contractSignaleringenTable.$inferSelect;
+  medewerkerNaam: string | null;
+  eindDatum: string | null;
+  startDatum: string | null;
+  contractStatus: string | null;
+};
+
+/**
+ * De contractsignalering is de permanente, per-contract gededupliceerde bron
+ * voor deze waarschuwing. Claim de verzendmarkering vóór het plaatsen in de
+ * wachtrij, zodat gelijktijdige dagelijkse of handmatige runs niet dubbel
+ * klaarzetten. Als geen enkele wachtrij-invoer lukt, geven we de claim terug.
+ */
+async function stuurAanzegdeadlineMails(
+  signalen: ContractsignaalMetContract[],
+  beslotenContractIds: Set<number>,
+): Promise<void> {
+  const nu = new Date();
+  const kandidaten = signalen.filter(({ s, eindDatum, startDatum, contractStatus }) =>
+    isAanzegdeadlineMailKandidaat(
+      {
+        type: s.type,
+        contractId: s.contractId,
+        aanzegMailVerstuurdOp: s.aanzegMailVerstuurdOp,
+        eindDatum,
+        startDatum,
+        contractStatus,
+      },
+      beslotenContractIds,
+      nu,
+    ),
+  );
+  if (kandidaten.length === 0) return;
+
+  // HRM-beheerder is een effectief personeelsrecht, niet een rolnaam. Daardoor
+  // blijft de waarschuwing juist bij functieprofielen en multi-functies werken.
+  const gebruikers = await db
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      email: gebruikersTable.email,
+      rol: gebruikersTable.rol,
+      bevoegdheden: gebruikersTable.bevoegdheden,
+    })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.actief, true));
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
+  const ontvangers = gebruikers.filter(
+    (g) => g.email.trim().length > 0 && ((effectief.get(g.id) ?? {}).personeel ?? 0) >= 2,
+  );
+  if (ontvangers.length === 0) {
+    logger.warn(
+      { aantalKandidaten: kandidaten.length },
+      "Aanzegdeadline-mail niet klaargezet: geen actieve HRM-beheerder met e-mailadres",
+    );
+    return;
+  }
+
+  for (const { s, medewerkerNaam, eindDatum, startDatum } of kandidaten) {
+    // De filter hierboven garandeert deze velden; de guard houdt de mailstroom
+    // fail-closed bij een later gewijzigde query.
+    if (!s.contractId || !eindDatum || !startDatum) continue;
+    const deadline = berekenContractCrucialeDatum({ startDatum, eindDatum });
+    try {
+      const alleOntvangersInWachtrij = await db.transaction(async (tx) => {
+        // FOR UPDATE houdt de contractrij vast. Een nieuw contractbesluit heeft
+        // een FK naar die rij en moet daardoor wachten tot deze transactie
+        // commit; de besluitcheck en álle wachtrij-intenties zijn zo één
+        // atomair moment in de contracttijdlijn.
+        const [actiefContract] = await tx
+          .select({ id: arbeidsovereenkomstenTable.id })
+          .from(arbeidsovereenkomstenTable)
+          .where(and(
+            eq(arbeidsovereenkomstenTable.id, s.contractId),
+            eq(arbeidsovereenkomstenTable.status, "actief"),
+          ))
+          .for("update");
+        if (!actiefContract) return false;
+        const [recentBesluit] = await tx
+          .select({ id: contractBesluitenTable.id })
+          .from(contractBesluitenTable)
+          .where(eq(contractBesluitenTable.contractId, s.contractId))
+          .limit(1);
+        if (recentBesluit) return false;
+
+        for (const ontvanger of ontvangers) {
+          await stuurAanzegdeadlineSignalering({
+            naarEmail: ontvanger.email,
+            naarNaam: ontvanger.naam,
+            medewerkerNaam: medewerkerNaam ?? "onbekende medewerker",
+            aanzegDatum: deadline.datum,
+            contractEindDatum: eindDatum,
+            dagenTotAanzegdatum: deadline.dagen_tot,
+            // De sleutel bevat zowel het contractwindow als de ontvanger. De
+            // unieke database-index blijft ook na verzenden/afwijzen bestaan,
+            // zodat een crash of volgende loop nooit dubbel kan plaatsen.
+            deduplicatieSleutel: `contract-aanzeg:${s.id}:${ontvanger.id}`,
+            wachtrijSchrijver: tx,
+          });
+        }
+        return true;
+      });
+      if (!alleOntvangersInWachtrij) continue;
+
+      // Zet de auditmarkering pas ná alle huidige HRM-ontvangers. Een crash of
+      // gedeeltelijke fout laat hem leeg; de volgende loop probeert dan opnieuw
+      // terwijl de permanente per-ontvanger-sleutel dubbele wachtrij-items
+      // database-afgedwongen uitsluit.
+      await db
+        .update(contractSignaleringenTable)
+        .set({ aanzegMailVerstuurdOp: new Date() })
+        .where(and(
+          eq(contractSignaleringenTable.id, s.id),
+          isNull(contractSignaleringenTable.aanzegMailVerstuurdOp),
+        ));
+    } catch (err) {
+      // De transactierollback verwijdert in dat geval ook eventuele al
+      // klaargezette ontvangers; de volgende loop kan veilig opnieuw proberen.
+      logger.error(
+        { err, contractId: s.contractId },
+        "Aanzegdeadline-mail kon niet atomair in de wachtrij worden gezet",
+      );
+    }
+  }
 }
 
 // ── Voeders ───────────────────────────────────────────────────────────────────
@@ -92,20 +227,27 @@ function dagenTot(datumIso: string): number {
 async function voedContracten(): Promise<{ nieuw: number; afgehandeld: number }> {
   await voerContractBewakingUit();
   const signalen = await db
-    .select({ s: contractSignaleringenTable, medewerkerNaam: medewerkersTable.naam, eindDatum: arbeidsovereenkomstenTable.eindDatum })
+    .select({
+      s: contractSignaleringenTable,
+      medewerkerNaam: medewerkersTable.naam,
+      eindDatum: arbeidsovereenkomstenTable.eindDatum,
+      startDatum: arbeidsovereenkomstenTable.startDatum,
+      contractStatus: arbeidsovereenkomstenTable.status,
+    })
     .from(contractSignaleringenTable)
     .leftJoin(medewerkersTable, eq(contractSignaleringenTable.medewerkerId, medewerkersTable.id))
-    .leftJoin(arbeidsovereenkomstenTable, eq(contractSignaleringenTable.contractId, arbeidsovereenkomstenTable.id))
-    .where(eq(contractSignaleringenTable.status, "nieuw"));
+    .leftJoin(arbeidsovereenkomstenTable, eq(contractSignaleringenTable.contractId, arbeidsovereenkomstenTable.id));
 
   // Contracten met al een besluit hoeven geen besluit-item meer.
   const besloten = new Set(
     (await db.select({ contractId: contractBesluitenTable.contractId }).from(contractBesluitenTable))
       .map((b) => b.contractId),
   );
+  await stuurAanzegdeadlineMails(signalen, besloten);
 
   const items: WerkbakInvoer[] = [];
   for (const { s, medewerkerNaam, eindDatum } of signalen) {
+    if (s.status !== "nieuw") continue;
     const naam = medewerkerNaam ?? "onbekende medewerker";
     const verstrekenAanzeg = s.type === "aanzegtermijn" && s.boodschap.includes("verlopen zonder");
     const besluitNodig = ["60_dagen", "30_dagen", "aanzegtermijn", "verlopen"].includes(s.type) && s.contractId != null && !besloten.has(s.contractId);

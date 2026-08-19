@@ -646,3 +646,8 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Weergave via blob-URL**: `resolveDisplayUri(pad)` zet `idb://`-paden om naar een `URL.createObjectURL()`-URL (gecached per paginalevensduur). `opname/item/[itemId].tsx` en `werkdag/[id].tsx` lossen paden op via een `displayUris`-state + `useEffect` vóór weergave in `<Image>`.
 - **Native pad ongewijzigd**: alle `expo-file-system`-branches blijven exact zoals ze waren.
 - **Bewijs**: ≥20 foto's kunnen nu offline worden vastgelegd en volledig gesynchroniseerd na herstel van de verbinding.
+
+
+## 2026-08-19 — Contractbewaking: aanzegdeadline per mail
+
+- De dagelijkse bewakingsloop zet bij een uiterste aanzegdatum binnen zeven dagen een eenmalige waarschuwing per contract in de mail-wachtrij voor actieve HRM-beheerders. De waarschuwing gebruikt de daadwerkelijke aanzegdatum (één maand vóór contracteinde), respecteert de reguliere testdomein-/postbuscontrole en blijft uit zodra er al een contractbesluit is.

@@ -41,6 +41,11 @@ export const mailWachtrijTable = pgTable(
     onderwerp: text("onderwerp").notNull(),
     html: text("html").notNull(),
     soort: text("soort").notNull(),
+    // Een domein-specifieke, permanente sleutel voor systeemmails. Anders dan
+    // de bestaande partiële adres+onderwerp-index blijft deze ook bestaan na
+    // verzenden, afwijzen of mislukken en voorkomt hij herhaling bij een
+    // dagelijkse bewakingsloop.
+    deduplicatieSleutel: text("deduplicatie_sleutel"),
     // Bijlagen als [{ naam, contentType, inhoudBase64 }]; null = geen bijlagen.
     bijlagen: jsonb("bijlagen"),
     // "wachtend" | "verzonden" | "afgewezen" | "mislukt"
@@ -60,6 +65,9 @@ export const mailWachtrijTable = pgTable(
     uniqueIndex("mail_wachtrij_dedupe_idx")
       .on(t.naarEmail, t.onderwerp)
       .where(sql`${t.status} = 'wachtend'`),
+    uniqueIndex("mail_wachtrij_deduplicatie_sleutel_uniek")
+      .on(t.deduplicatieSleutel)
+      .where(sql`${t.deduplicatieSleutel} IS NOT NULL`),
   ],
 );
 

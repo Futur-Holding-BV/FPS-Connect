@@ -50,20 +50,21 @@ export function ketenregelingCheck(contracten: Array<{ contracttype: string; sta
   return null;
 }
 
-function aanzegtermijnCheck(contract: { eindDatum: string | null; startDatum: string }): string | null {
-  if (!contract.eindDatum) return null;
-  const duur = dagenTot(contract.startDatum) * -1 + dagenTot(contract.eindDatum);
-  // Contractduur >= 6 maanden → aanzegtermijn 1 maand (Wet Aanzegging)
-  if (duur >= 180) {
-    const resterend = dagenTot(contract.eindDatum);
-    if (resterend <= 30 && resterend >= 0) {
-      return `Aanzegtermijn: verloopt over ${resterend} dag(en). Wettelijk verplicht 1 maand voor einde bij contractduur >= 6 maanden.`;
-    }
-    if (resterend < 0) {
-      return `Aanzegtermijn: contract verlopen zonder tijdige aanzegging.`;
-    }
+export function aanzegtermijnCheck(
+  contract: { eindDatum: string | null; startDatum: string },
+  nu: Date = new Date(),
+): string | null {
+  const eindDatum = contract.eindDatum;
+  if (!eindDatum) return null;
+  const cruciaal = berekenContractCrucialeDatum({ startDatum: contract.startDatum, eindDatum }, nu);
+  // Contractduur >= 6 maanden → aanzegtermijn 1 maand (Wet Aanzegging).
+  // Gebruik de uiterste aanzegdatum zelf, niet de contracteinddatum: een
+  // contract dat over 35 dagen eindigt heeft al over 5 dagen een deadline.
+  if (cruciaal.label !== "Uiterste aanzegdatum" || cruciaal.dagen_tot > 30) return null;
+  if (cruciaal.dagen_tot >= 0) {
+    return `Aanzegtermijn: uiterste aanzegdatum over ${cruciaal.dagen_tot} dag(en) (${cruciaal.datum}). Wettelijk verplicht 1 maand voor einde bij contractduur >= 6 maanden.`;
   }
-  return null;
+  return `Aanzegtermijn: uiterste aanzegdatum ${cruciaal.datum} verstreken zonder tijdige aanzegging.`;
 }
 
 // ── Bewaking uitvoeren (genereer signaleringen voor actieve tijdelijke contracten) ──
@@ -282,6 +283,24 @@ export function maandTerug(isoDatum: string): string {
   return `${doelJaar}-${String(doelMaand).padStart(2, "0")}-${String(doelDag).padStart(2, "0")}`;
 }
 
+/** Kalenderveilig een aantal maanden vooruit, met dezelfde maand-eindeclamp als maandTerug. */
+export function maandenVooruit(isoDatum: string, aantalMaanden: number): string {
+  const [jaar, maand, dag] = isoDatum.slice(0, 10).split("-").map(Number);
+  const doelIndex = jaar * 12 + (maand - 1) + aantalMaanden;
+  const doelJaar = Math.floor(doelIndex / 12);
+  const doelMaand = (doelIndex % 12) + 1;
+  const laatsteDag = new Date(Date.UTC(doelJaar, doelMaand, 0)).getUTCDate();
+  const doelDag = Math.min(dag, laatsteDag);
+  return `${doelJaar}-${String(doelMaand).padStart(2, "0")}-${String(doelDag).padStart(2, "0")}`;
+}
+
+/** De kalenderdag vóór een ISO-datum, tijdzone-onafhankelijk. */
+export function dagVoor(isoDatum: string): string {
+  const [jaar, maand, dag] = isoDatum.slice(0, 10).split("-").map(Number);
+  const datum = new Date(Date.UTC(jaar, maand - 1, dag - 1));
+  return datum.toISOString().slice(0, 10);
+}
+
 // ── Geëxporteerde pure helpers voor cruciale-datums ───────────────────────────
 // Clock-injecteerbaar (nu-parameter) zodat unit-tests deterministisch zijn.
 // De routehandler en haalCrucialeDatumItems() roepen deze helpers aan;
@@ -300,27 +319,64 @@ export type CruciaalContractResultaat = {
 
 /**
  * Berekent de cruciale datum voor een tijdelijk arbeidscontract:
- * - duur >= 180 dagen → uiterste aanzegdatum (maandTerug(einddatum), Wet Aanzegging)
- * - duur < 180 dagen  → einddatum zelf
+ * - duur >= zes kalendermaanden (inclusieve einddatum) → uiterste aanzegdatum
+ *   (maandTerug(einddatum), Wet Aanzegging)
+ * - korter dan zes kalendermaanden → einddatum zelf
  */
 export function berekenContractCrucialeDatum(
   contract: { startDatum: string; eindDatum: string },
   nu: Date = new Date(),
 ): CruciaalContractResultaat {
-  const duurDagen = Math.round(
-    (new Date(contract.eindDatum).getTime() - new Date(contract.startDatum).getTime()) /
-      (1000 * 60 * 60 * 24),
-  );
   let datum = contract.eindDatum;
   let label = "Contract loopt af";
   let reden = `Tijdelijk contract eindigt op ${contract.eindDatum}.`;
-  if (duurDagen >= 180) {
+  // De einddatum telt mee: 1 januari t/m 30 juni is precies zes
+  // kalendermaanden. Daarom vergelijken we met de dag vóór de zesmaandsverjaardag.
+  const zesMaandenInclusief = dagVoor(maandenVooruit(contract.startDatum, 6));
+  if (contract.eindDatum >= zesMaandenInclusief) {
     datum = maandTerug(contract.eindDatum);
     label = "Uiterste aanzegdatum";
     reden = `Uiterlijk ${datum} schriftelijk aanzeggen (contract eindigt ${contract.eindDatum}, Wet Aanzegging).`;
   }
   const dagen = dagenTot(datum, nu);
   return { datum, label, dagen_tot: dagen, urgent: dagen <= URGENT_DAGEN, reden };
+}
+
+/**
+ * Bepaalt of de dagelijkse loop voor een contractsignalering precies één
+ * aanzegdeadline-mail mag klaarzetten. De permanente per-ontvanger-deduplicatie
+ * zit in de mail-wachtrij; deze helper bewaakt alleen de domeinvoorwaarden.
+ */
+export function isAanzegdeadlineMailKandidaat(
+  invoer: {
+    type: string;
+    contractId: number | null;
+    aanzegMailVerstuurdOp: Date | null;
+    eindDatum: string | null;
+    startDatum: string | null;
+    contractStatus: string | null;
+  },
+  beslotenContractIds: ReadonlySet<number>,
+  nu: Date = new Date(),
+): boolean {
+  if (
+    invoer.type !== "aanzegtermijn" ||
+    invoer.contractId == null ||
+    invoer.aanzegMailVerstuurdOp != null ||
+    beslotenContractIds.has(invoer.contractId) ||
+    invoer.contractStatus !== "actief" ||
+    !invoer.eindDatum ||
+    !invoer.startDatum
+  ) return false;
+  const deadline = berekenContractCrucialeDatum(
+    { startDatum: invoer.startDatum, eindDatum: invoer.eindDatum },
+    nu,
+  );
+  return (
+    deadline.label === "Uiterste aanzegdatum" &&
+    deadline.dagen_tot >= 0 &&
+    deadline.dagen_tot <= 7
+  );
 }
 
 export type CruciaalZzpResultaat = {

@@ -261,6 +261,7 @@ INDEX|magazijn_snoozes|magazijn_snoozes_pkey
 INDEX|magazijn_stellingscans|magazijn_stellingscans_pkey
 INDEX|mail_logboek|mail_logboek_pkey
 INDEX|mail_wachtrij|mail_wachtrij_dedupe_idx
+INDEX|mail_wachtrij|mail_wachtrij_deduplicatie_sleutel_uniek
 INDEX|mail_wachtrij|mail_wachtrij_pkey
 INDEX|mandagstaat_logs|mandagstaat_logs_opdracht_idx
 INDEX|mandagstaat_logs|mandagstaat_logs_pkey
@@ -1175,6 +1176,7 @@ KOLOM|contract_besluiten|nieuw_salaris|real|YES|
 KOLOM|contract_besluiten|status|text|NO|'in_behandeling'::text
 KOLOM|contract_besluiten|toelichting|text|YES|
 KOLOM|contract_signaleringen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|contract_signaleringen|aanzeg_mail_verstuurd_op|timestamp without time zone|YES|
 KOLOM|contract_signaleringen|ai_advies|text|YES|
 KOLOM|contract_signaleringen|boodschap|text|NO|
 KOLOM|contract_signaleringen|contract_id|integer|NO|
@@ -2863,6 +2865,7 @@ KOLOM|mail_wachtrij|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|mail_wachtrij|aangevraagd_door_id|integer|YES|
 KOLOM|mail_wachtrij|bijlagen|jsonb|YES|
 KOLOM|mail_wachtrij|campagne_ontvanger_id|integer|YES|
+KOLOM|mail_wachtrij|deduplicatie_sleutel|text|YES|
 KOLOM|mail_wachtrij|foutdetail|text|YES|
 KOLOM|mail_wachtrij|html|text|NO|
 KOLOM|mail_wachtrij|id|integer|NO|nextval('mail_wachtrij_id_seq'::regclass)

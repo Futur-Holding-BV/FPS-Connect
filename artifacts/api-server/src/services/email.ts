@@ -56,7 +56,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur" | "contract_aanzegdeadline";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -207,6 +207,7 @@ async function leesGraphFout(res: Response): Promise<MailFout> {
 }
 
 export type MailBijlage = { naam: string; contentType: string; inhoud: Buffer };
+type MailWachtrijSchrijver = Pick<typeof db, "insert">;
 
 // Test-/voorbeelddomeinen waar nooit echt naartoe gemaild mag worden. Mails
 // aan deze adressen (o.a. uit e2e-tests zoals KETEN01) leverden Microsoft-
@@ -366,6 +367,10 @@ export async function verstuurMail(opties: {
   bijlagen?: MailBijlage[];
   /** MARKETING_01: koppelt het wachtrij-item aan een campagne-ontvanger. */
   campagneOntvangerId?: number | null;
+  /** Permanente, domein-specifieke deduplicatie voor periodieke systeemmails. */
+  deduplicatieSleutel?: string | null;
+  /** Optioneel transactiehandvat om intent + domeinbesluit atomair vast te leggen. */
+  wachtrijSchrijver?: MailWachtrijSchrijver;
   /**
    * Alleen true voor mails waar de verzending zélf de expliciete menselijke
    * handeling is: account-mails (uitnodiging, wachtwoord-reset, testmail) en
@@ -376,7 +381,7 @@ export async function verstuurMail(opties: {
   direct?: boolean;
 }): Promise<void> {
   if (!opties.direct) {
-    await plaatsInMailWachtrij(opties);
+    await plaatsInMailWachtrij(opties, opties.wachtrijSchrijver);
     return;
   }
   await verstuurMailDirect(opties);
@@ -394,8 +399,9 @@ async function plaatsInMailWachtrij(opties: {
   verstuurdDoorId?: number | null;
   bijlagen?: MailBijlage[];
   campagneOntvangerId?: number | null;
-}): Promise<void> {
-  await db
+  deduplicatieSleutel?: string | null;
+}, schrijver: MailWachtrijSchrijver = db): Promise<void> {
+  await schrijver
     .insert(mailWachtrijTable)
     .values({
       naarEmail: opties.naarEmail,
@@ -413,6 +419,7 @@ async function plaatsInMailWachtrij(opties: {
           : null,
       aangevraagdDoorId: opties.verstuurdDoorId ?? null,
       campagneOntvangerId: opties.campagneOntvangerId ?? null,
+      deduplicatieSleutel: opties.deduplicatieSleutel ?? null,
     })
     .onConflictDoNothing();
   logger.info(
@@ -1504,6 +1511,67 @@ export async function stuurLeverbewakingSignalering(opties: {
   });
 
   await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "leverbewaking_signalering" });
+}
+
+// ── Contractbewaking: aanzegdeadline ───────────────────────────────────────────
+
+/**
+ * Zet een waarschuwing over een naderende uiterste aanzegdatum in de reguliere
+ * mail-wachtrij. De wachtrij voert bij goedkeuring de configuratie-, postbus- en
+ * testdomeincontrole uit; deze periodieke waarschuwing mag nooit direct mailen.
+ */
+export async function stuurAanzegdeadlineSignalering(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  medewerkerNaam: string;
+  aanzegDatum: string;
+  contractEindDatum: string;
+  dagenTotAanzegdatum: number;
+  deduplicatieSleutel: string;
+  wachtrijSchrijver?: MailWachtrijSchrijver;
+}): Promise<void> {
+  const {
+    naarEmail,
+    naarNaam,
+    medewerkerNaam,
+    aanzegDatum,
+    contractEindDatum,
+    dagenTotAanzegdatum,
+    deduplicatieSleutel,
+    wachtrijSchrijver,
+  } = opties;
+  const dagenTekst =
+    dagenTotAanzegdatum < 0
+      ? `is ${Math.abs(dagenTotAanzegdatum)} dag(en) verstreken`
+      : dagenTotAanzegdatum === 0
+        ? "is vandaag"
+        : `is over ${dagenTotAanzegdatum} dag(en)`;
+  const onderwerp = `Aanzegdeadline ${dagenTekst}: ${medewerkerNaam}`;
+  const basisUrl = publiekeAppUrl();
+  const contractenUrl = basisUrl ? `${basisUrl}/personeel/contracten` : null;
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Aanzegdeadline vereist aandacht",
+    paragrafen: [
+      `De uiterste schriftelijke aanzegdatum voor <strong>${escapeHtml(medewerkerNaam)}</strong> ${dagenTekst}.`,
+      `Aanzegdatum: <strong>${escapeHtml(aanzegDatum)}</strong>. Het contract eindigt op ${escapeHtml(contractEindDatum)}.`,
+      "Leg tijdig een contractbesluit vast en verzorg de schriftelijke aanzegging.",
+    ],
+    ...(contractenUrl ? { knop: { label: "Open contractbewaking", link: contractenUrl } } : {}),
+    voettekst:
+      "Automatische contractbewaking van FPS Connect &bull; Deze waarschuwing is bedoeld voor HRM-beheerders.",
+  });
+
+  await verstuurMail({
+    naarEmail,
+    naarNaam: naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "contract_aanzegdeadline",
+    deduplicatieSleutel,
+    wachtrijSchrijver,
+  });
 }
 
 // ── Aanvraag-bevestigingsmail ─────────────────────────────────────────────────
