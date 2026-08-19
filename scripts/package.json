@@ -35,6 +35,7 @@
     "bewijs-campagne-dosering": "tsx ./src/bewijs-campagne-dosering.ts",
     "bewijs-task676-escalaties": "tsx ./src/bewijs-task676-goedkeuring-escalaties.ts",
     "verificatie-onboarding-voorstel": "tsx ./src/verificatie-onboarding-voorstel.ts",
+    "verificatie-onboarding-1091": "tsx ./src/verificatie-onboarding-1091.ts",
     "toolbox-50-klaarzetten": "tsx ./src/toolbox-50-klaarzetten.ts",
     "smoketest-wizard-endpoints": "tsx ./src/smoketest-wizard-endpoints.ts",
     "bewijs-calc-kern-offerte": "tsx src/bewijs-calc-kern-offerte.ts",

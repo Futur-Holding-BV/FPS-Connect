@@ -10,8 +10,6 @@ import {
   useListCaoOpties,
   useListProfielen,
   useListMedewerkers,
-  useGetMedewerker,
-  getGetMedewerkerQueryKey,
   getListMedewerkersQueryKey,
   getGetHrmStatsQueryKey,
   useListAiVoorstellen,
@@ -37,17 +35,6 @@ import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   SelectGroup, SelectLabel,
@@ -654,13 +641,11 @@ function GeneriekeWizard({
   soort,
   onTerug,
   onGereed,
-  resumeId,
   context,
 }: {
   soort: GenerieveStroom;
   onTerug: () => void;
   onGereed: (id: number) => void;
-  resumeId?: number | null;
   context: OnboardingContext;
 }) {
   const config = GENERIEKE_CONFIGS[soort];
@@ -681,41 +666,26 @@ function GeneriekeWizard({
   const { toast } = useToast();
   const [medewerkerDraftId, setMedewerkerDraftId] = useState<number | null>(null);
   const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
-  const [draftVersie, setDraftVersie] = useState(0);
-  const { data: wizardStatus } = useGetWizardStatus(resumeId ?? 0, {
-    query: { enabled: !!resumeId, queryKey: getGetWizardStatusQueryKey(resumeId ?? 0) },
-  });
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bijgewerktOpRef = useRef<string | null>(null);
+  // Houdt de promise van een eventuele in-flight debounce-save bij zodat
+  // gaVorige/gaVolgende kunnen wachten tot de lock actueel is vóór ze
+  // hun eigen PATCH versturen.
+  const inFlightDebounceRef = useRef<Promise<void> | null>(null);
 
-  useEffect(() => {
-    if (!wizardStatus || !resumeId || medewerkerDraftId) return;
-    const status = wizardStatus as WizardStatus;
-    const data = (status.wizard_voortgang as Record<string, unknown> | null) ?? {};
-    const huidig = status.huidig_stap ?? 1;
-    const stapNummers = Object.keys(data)
-      .filter((k) => /^stap_\d+$/.test(k))
-      .map((k) => Number(k.slice(5)))
-      .filter((n) => data[`stap_${n}`] && typeof data[`stap_${n}`] === "object");
-    const kandidaat =
-      stapNummers.includes(huidig)
-        ? huidig
-        : stapNummers.filter((n) => n <= huidig).sort((a, b) => b - a)[0]
-          ?? stapNummers.sort((a, b) => b - a)[0];
-    const opgeslagen =
-      kandidaat === undefined
-        ? {}
-        : (data[`stap_${kandidaat}`] as Record<string, unknown>);
-    const formulier =
-      opgeslagen.form && typeof opgeslagen.form === "object"
-        ? opgeslagen.form as Partial<GeneriekeForm>
-        : opgeslagen as Partial<GeneriekeForm>;
-    setMedewerkerDraftId(resumeId);
-    setHuidigStap(huidig);
-    setForm((bestaand) => ({ ...bestaand, ...formulier }));
-    setDraftVersie(status.versie);
-    if (status.bijgewerkt_op) setDraftBijgewerktOp(status.bijgewerkt_op);
-  }, [wizardStatus, resumeId, medewerkerDraftId]);
+  // Gedeelde helper: annuleer de debounce-timer en wacht op een eventuele
+  // in-flight debounce-save. Roep aan bij elke actie die een PATCH verstuurt
+  // (gaVolgende, gaVorige, opslaan) zodat de lock altijd actueel is.
+  async function flushDebounce() {
+    if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
+    if (inFlightDebounceRef.current) {
+      try { await inFlightDebounceRef.current; } catch { /* ignore */ }
+      inFlightDebounceRef.current = null;
+    }
+  }
 
   async function gaVolgende() {
+    await flushDebounce();
     if (huidigStap === 1 && !form.naam.trim()) {
       toast({ title: "Naam is verplicht voor de volgende stap", variant: "destructive" });
       return;
@@ -724,18 +694,13 @@ function GeneriekeWizard({
       try {
         const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
         setMedewerkerDraftId(concept.id);
+        // Sla stap-1 formulierdata mee zodat geboortedatum e.d. bewaard blijven
+        // bij een directe onderbreking ná de eerste stap-overgang.
         const r = await slaVoortgangOp.mutateAsync({
           id: concept.id,
-          data: {
-            stap: 2,
-            versie: 0,
-            medewerker_status: "concept",
-            voortgang_data: form as unknown as Record<string, unknown>,
-            onboarding_stroom: soort,
-          },
+          data: { stap: 2, medewerker_status: "concept", voortgang_data: form as unknown as Record<string, unknown> },
         });
-        setDraftVersie(r.versie);
-        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({
@@ -754,14 +719,11 @@ function GeneriekeWizard({
           id: medewerkerDraftId,
           data: {
             stap: volgende,
-            versie: draftVersie,
             voortgang_data: form as unknown as Record<string, unknown>,
-            onboarding_stroom: soort,
-            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        setDraftVersie(r.versie);
-        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
@@ -773,13 +735,84 @@ function GeneriekeWizard({
     setHuidigStap((s) => Math.min(s + 1, TOTAAL));
   }
 
-  function gaVorige() {
+  async function gaVorige() {
     if (huidigStap === 1) { onTerug(); return; }
+    await flushDebounce();
+    if (medewerkerDraftId) {
+      const vorige = Math.max(huidigStap - 1, 1);
+      try {
+        const r = await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: vorige,
+            voortgang_data: form as unknown as Record<string, unknown>,
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
+          },
+        });
+        if (r.bijgewerkt_op) {
+          bijgewerktOpRef.current = r.bijgewerkt_op;
+          setDraftBijgewerktOp(r.bijgewerkt_op);
+        }
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          // Optimistic-lock conflict: wizard elders bijgewerkt — blokkeer navigatie
+          // om server- en UI-stap synchroon te houden.
+          toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
+          return;
+        }
+        // Netwerkfout: meld dat de data mogelijk niet bewaard is, maar navigeer
+        // toch terug (de huidige stap-data stond al op de server via eerdere save).
+        toast({ title: "Voortgang niet bewaard", description: "Controleer uw verbinding — uw laatste wijzigingen op deze stap zijn mogelijk niet opgeslagen.", variant: "default" });
+      }
+    }
     setHuidigStap((s) => Math.max(s - 1, 1));
   }
 
+  // Houd bijgewerktOpRef synchroon met de state.
+  useEffect(() => {
+    bijgewerktOpRef.current = draftBijgewerktOp;
+  }, [draftBijgewerktOp]);
+
+  // Debounced auto-save (≥ 1,5 s na de laatste wijziging).
+  // Elke save wordt geketend op de vorige in-flight save zodat de lock altijd
+  // actueel is: de nieuwe PATCH leest bijgewerktOpRef.current pas ná het
+  // afronden van de vorige PATCH (race-vrij ongeacht netwerk-timing).
+  useEffect(() => {
+    if (!medewerkerDraftId || huidigStap < 2) return;
+    // Snapshot de form-data op het moment van effect-setup; de lock wordt pas
+    // vlak vóór de PATCH gelezen (zie binnenin de ketting hieronder).
+    const id = medewerkerDraftId;
+    const stap = huidigStap;
+    const data = form as unknown as Record<string, unknown>;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      // Keten op een vorige in-flight save (indien aanwezig) zodat de lock
+      // altijd de meest recente bijgewerkt_op bevat.
+      const prevInFlight = inFlightDebounceRef.current;
+      const p: Promise<void> = (prevInFlight ?? Promise.resolve()).then(async () => {
+        const freshLock = bijgewerktOpRef.current;
+        const r = await slaVoortgangOp.mutateAsync({
+          id,
+          data: { stap, voortgang_data: data, ...(freshLock ? { bijgewerkt_op: freshLock } : {}) },
+        });
+        if (r.bijgewerkt_op) {
+          bijgewerktOpRef.current = r.bijgewerkt_op;
+          setDraftBijgewerktOp(r.bijgewerkt_op);
+        }
+      }).catch(() => { /* Niet fataal */ }).finally(() => {
+        if (inFlightDebounceRef.current === p) inFlightDebounceRef.current = null;
+      });
+      inFlightDebounceRef.current = p;
+    }, 1500);
+    return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, medewerkerDraftId, huidigStap]);
+
   async function opslaan() {
     if (!form.naam.trim()) { toast({ title: "Naam is verplicht", variant: "destructive" }); return; }
+    // Flush debounce vóór het afronden zodat de lock actueel is en er geen
+    // gelijktijdige autosave-PATCH kan conflicteren met de afrondende PATCH.
+    await flushDebounce();
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
@@ -804,22 +837,21 @@ function GeneriekeWizard({
         jaar: new Date().getFullYear(),
       };
       if (medewerkerDraftId) {
-        const bijgewerkt = await bijwerk.mutateAsync({
+        const bijgewerktMw = await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        // Refresh lock: PATCH /medewerkers/:id zet een nieuw bijgewerktOp;
+        // gebruik die waarde zodat de volgende wizard-voortgang PATCH de CAS haalt.
+        if (bijgewerktMw?.bijgewerkt_op) bijgewerktOpRef.current = bijgewerktMw.bijgewerkt_op;
+        await slaVoortgangOp.mutateAsync({
           id: medewerkerDraftId,
           data: {
-            ...input,
-            onboarding_afronden: true,
-            onboarding_versie: draftVersie,
-            onboarding_stroom: soort,
+            stap: TOTAAL,
+            medewerker_status: "actief",
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        const jw = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
-        if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
         onGereed(medewerkerDraftId);
       } else {
         const nieuw = await maak.mutateAsync({ data: input });
-        const jw = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
-        if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
         onGereed(nieuw.id);
       }
     } catch (err: unknown) {
@@ -1062,7 +1094,6 @@ function VastFormulier({
   const [huidigStap, setHuidigStap] = useState(1);
   const [medewerkerDraftId, setMedewerkerDraftId] = useState<number | null>(null);
   const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
-  const [draftVersie, setDraftVersie] = useState(0);
   const [geselecteerdeMiddelen, setGeselecteerdeMiddelen] = useState<string[]>([]);
   const [onboardingTaken, setOnboardingTaken] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(STANDAARD_ONBOARDING_TAKEN.map((t) => [t.id, true])),
@@ -1071,7 +1102,25 @@ function VastFormulier({
   const [bestandUploadActief, setBestandUploadActief] = useState(false);
   const [bestandAnalyseLoading, setBestandAnalyseLoading] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
+  // Debounced auto-save: timer-handle en de meest recente bijgewerkt_op via ref
+  // zodat de timer-callback altijd de actuele waarde leest, ook na een eerdere save.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bijgewerktOpRef = useRef<string | null>(null);
+  // In-flight debounce promise: gaVorige/gaVolgende/opslaan awaiten deze zodat
+  // ze de actuele bijgewerkt_op hebben vóór ze hun eigen PATCH sturen.
+  const inFlightDebounceRef = useRef<Promise<void> | null>(null);
   const TOTAAL_STAPPEN = WIZARD_STAPPEN.length;
+
+  // Gedeelde helper: annuleer de debounce-timer en wacht op een eventuele
+  // in-flight debounce-save. Verplicht aan het begin van elke actie die een
+  // wizard-voortgang-PATCH verstuurt (gaVolgende, gaVorige, opslaan).
+  async function flushDebounce() {
+    if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
+    if (inFlightDebounceRef.current) {
+      try { await inFlightDebounceRef.current; } catch { /* ignore */ }
+      inFlightDebounceRef.current = null;
+    }
+  }
   const duplicateCheck = useDuplicateCheckMedewerker();
   const [duplicaatMelding, setDuplicaatMelding] = useState<string | null>(null);
   const [duplicaatCheckUitgevoerd, setDuplicaatCheckUitgevoerd] = useState(false);
@@ -1085,7 +1134,13 @@ function VastFormulier({
     if (!wizardStatus || !resumeId || medewerkerDraftId) return;
     setMedewerkerDraftId(resumeId);
     setHuidigStap((wizardStatus as WizardStatus).huidig_stap ?? 1);
-    setDraftVersie((wizardStatus as WizardStatus).versie);
+    // Zaai de optimistic-lock vanuit de server zodat de eerste save na hervatten
+    // een geldige bijgewerkt_op heeft en 409-conflicten correct detecteert.
+    const serverLock = (wizardStatus as WizardStatus).bijgewerkt_op ?? null;
+    if (serverLock) {
+      bijgewerktOpRef.current = serverLock;
+      setDraftBijgewerktOp(serverLock);
+    }
     const data = ((wizardStatus as WizardStatus).wizard_voortgang as Record<string, unknown> | null) ?? {};
     // De server bewaart de voortgang per stap onder `stap_N` en de gezagheb-
     // bende positie in `_huidig_stap`. Herstel dáárvandaan: wie teruggaat en
@@ -1195,6 +1250,7 @@ function VastFormulier({
   }
 
   async function gaVolgende() {
+    await flushDebounce();
     if (huidigStap === 2 && !form.naam.trim()) {
       toast({ title: "Naam is verplicht voor de volgende stap", variant: "destructive" });
       return;
@@ -1223,16 +1279,9 @@ function VastFormulier({
         // Ook bij de eerste stap-overgang meteen de formulierdata bewaren.
         const r = await slaVoortgangOp.mutateAsync({
           id: concept.id,
-          data: {
-            stap: 3,
-            versie: 0,
-            medewerker_status: "concept",
-            voortgang_data: bouwVoortgangData(),
-            onboarding_stroom: "vast",
-          },
+          data: { stap: 3, medewerker_status: "concept", voortgang_data: bouwVoortgangData() },
         });
-        setDraftVersie(r.versie);
-        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({
@@ -1252,13 +1301,11 @@ function VastFormulier({
           id: medewerkerDraftId,
           data: {
             stap: volgende,
-            versie: draftVersie,
             voortgang_data: bouwVoortgangData(),
-            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
-        setDraftVersie(r.versie);
-        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+        if (r.bijgewerkt_op) { bijgewerktOpRef.current = r.bijgewerkt_op; setDraftBijgewerktOp(r.bijgewerkt_op); }
       } catch (err: unknown) {
         if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
           toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
@@ -1271,8 +1318,34 @@ function VastFormulier({
     setHuidigStap((s) => Math.min(s + 1, TOTAAL_STAPPEN));
   }
 
-  function gaVorige() {
+  async function gaVorige() {
     if (huidigStap === 1) { onTerug(); return; }
+    await flushDebounce();
+    if (medewerkerDraftId) {
+      const vorige = Math.max(huidigStap - 1, 1);
+      try {
+        const r = await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: vorige,
+            voortgang_data: bouwVoortgangData(),
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
+          },
+        });
+        if (r.bijgewerkt_op) {
+          bijgewerktOpRef.current = r.bijgewerkt_op;
+          setDraftBijgewerktOp(r.bijgewerkt_op);
+        }
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          // Optimistic-lock conflict: blokkeer navigatie zodat server- en UI-stap synchroon blijven.
+          toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
+          return;
+        }
+        // Netwerkfout: meld dat opslaan mislukt is, maar navigeer toch terug.
+        toast({ title: "Voortgang niet bewaard", description: "Controleer uw verbinding — uw laatste wijzigingen op deze stap zijn mogelijk niet opgeslagen.", variant: "default" });
+      }
+    }
     setHuidigStap((s) => Math.max(s - 1, 1));
   }
 
@@ -1424,6 +1497,58 @@ function VastFormulier({
     }
   }, [autoSelecteerIds]);
 
+  // Houd de bijgewerktOpRef synchroon met de state zodat de debounced auto-save
+  // altijd de actuele bijgewerkt_op doorstuurt (ook nadat gaVolgende of gaVorige
+  // die net hebben bijgewerkt).
+  useEffect(() => {
+    bijgewerktOpRef.current = draftBijgewerktOp;
+  }, [draftBijgewerktOp]);
+
+  // Debounced auto-save: bij elke formulierwijziging (≥ 1,5 s na de laatste
+  // toets / klik) wordt de huidige stap bewaard — zo gaat er niets verloren bij
+  // sluiten of teruggaan vóór de volgende stapovergang.
+  // Elke save wordt geketend op de vorige in-flight save (via inFlightDebounceRef)
+  // zodat de lock altijd actueel is, ook als twee debounce-timers dicht op
+  // elkaar vallen (race-vrij ongeacht netwerk-timing).
+  useEffect(() => {
+    if (!medewerkerDraftId || huidigStap < 2) return;
+    // Snapshot de form-data bij effect-setup; de lock wordt pas vlak vóór de
+    // PATCH gelezen (ná het afronden van de vorige save).
+    const id = medewerkerDraftId;
+    const stap = huidigStap;
+    const data = bouwVoortgangData();
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      // Keten op een vorige in-flight save zodat bijgewerktOpRef.current
+      // altijd de meest recente waarde heeft wanneer we de PATCH versturen.
+      const prevInFlight = inFlightDebounceRef.current;
+      const p: Promise<void> = (prevInFlight ?? Promise.resolve()).then(async () => {
+        const freshLock = bijgewerktOpRef.current;
+        const r = await slaVoortgangOp.mutateAsync({
+          id,
+          data: {
+            stap,
+            voortgang_data: data,
+            ...(freshLock ? { bijgewerkt_op: freshLock } : {}),
+          },
+        });
+        if (r.bijgewerkt_op) {
+          bijgewerktOpRef.current = r.bijgewerkt_op;
+          setDraftBijgewerktOp(r.bijgewerkt_op);
+        }
+      }).catch(() => { /* Niet fataal — 409 of verbindingsprobleem */ }).finally(() => {
+        if (inFlightDebounceRef.current === p) inFlightDebounceRef.current = null;
+      });
+      inFlightDebounceRef.current = p;
+    }, 1500);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+    // slaVoortgangOp.mutateAsync is stabiel; bouwVoortgangData leest via
+    // closure de juiste waarden dankzij de deps hieronder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, cvExtra, geselecteerdeMiddelen, onboardingTaken, onboardingDeadlines, medewerkerDraftId, huidigStap]);
+
   // Huidige CAO-optie voor de uren-preview.
   const huidigeCaoOptie = useMemo(
     () => (caoOpties ?? []).find((c) => c.naam === form.cao),
@@ -1471,6 +1596,9 @@ function VastFormulier({
       toast({ title: "Naam is verplicht", variant: "destructive" });
       return;
     }
+    // Flush debounce vóór het afronden zodat de lock actueel is en er geen
+    // gelijktijdige autosave-PATCH kan conflicteren met de afrondende PATCH.
+    await flushDebounce();
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
@@ -1541,13 +1669,16 @@ function VastFormulier({
 
       if (medewerkerDraftId) {
         // Concept bestaat al — bijwerken met definitieve gegevens en afsluiten
-        await bijwerk.mutateAsync({
+        const bijgewerktMw = await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        // Refresh lock: PATCH /medewerkers/:id zet een nieuw bijgewerktOp;
+        // gebruik die waarde zodat de wizard-voortgang PATCH de CAS haalt.
+        if (bijgewerktMw?.bijgewerkt_op) bijgewerktOpRef.current = bijgewerktMw.bijgewerkt_op;
+        await slaVoortgangOp.mutateAsync({
           id: medewerkerDraftId,
           data: {
-            ...input,
-            onboarding_afronden: true,
-            onboarding_versie: draftVersie,
-            onboarding_stroom: "vast",
+            stap: TOTAAL_STAPPEN,
+            medewerker_status: "actief",
+            ...(bijgewerktOpRef.current ? { bijgewerkt_op: bijgewerktOpRef.current } : {}),
           },
         });
         await maakGeselecteerdeMiddelenAan(medewerkerDraftId);
@@ -2349,12 +2480,10 @@ function VastFormulier({
 function ZzpFormulier({
   onTerug,
   onGereed,
-  resumeId,
   context,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
-  resumeId?: number | null;
   context: OnboardingContext;
 }) {
   const [form, setForm] = useState<ZzpForm>(() => ({ ...LEEG_ZZP, naam: context.naam }));
@@ -2362,29 +2491,7 @@ function ZzpFormulier({
   // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
   const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
-  const bijwerk = useUpdateMedewerker();
-  const { data: bestaand } = useGetMedewerker(resumeId ?? 0, {
-    query: { enabled: !!resumeId, queryKey: getGetMedewerkerQueryKey(resumeId ?? 0) },
-  });
-  const { data: wizardStatus } = useGetWizardStatus(resumeId ?? 0, {
-    query: { enabled: !!resumeId, queryKey: getGetWizardStatusQueryKey(resumeId ?? 0) },
-  });
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!bestaand || !resumeId) return;
-    setForm((huidig) => ({
-      ...huidig,
-      naam: context.naam,
-      bedrijfsnaam: bestaand.zzp_bedrijfsnaam ?? "",
-      ingehuurd_door_id: bestaand.uitzendbureau_id ?? null,
-      ingehuurd_door_tekst: bestaand.uitzendbureau_naam ?? bestaand.bedrijf_uitzendbureau ?? "",
-      functie_id: bestaand.functie_id ?? null,
-      werkmaatschappij: bestaand.werkmaatschappij,
-      start_datum: bestaand.in_dienst_sinds ?? huidig.start_datum,
-      eind_datum: bestaand.uit_dienst_per ?? "",
-    }));
-  }, [bestaand, resumeId, context.naam]);
 
   async function opslaan() {
     if (!form.naam.trim()) { toast({ title: "Naam is verplicht", variant: "destructive" }); return; }
@@ -2403,27 +2510,13 @@ function ZzpFormulier({
         in_dienst_sinds: form.start_datum || undefined,
         uit_dienst_per: form.eind_datum || undefined,
       };
-      const nieuw = resumeId
-        ? await bijwerk.mutateAsync({
-            id: resumeId,
-            data: {
-              ...input,
-              onboarding_afronden: true,
-              onboarding_versie: wizardStatus?.versie ?? context.onboarding_versie ?? 0,
-              onboarding_stroom: "zzp",
-            },
-          })
-        : await maak.mutateAsync({ data: input });
-      const jwZzp = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
-      if (jwZzp) toast({ title: `Let op: medewerker is ${jwZzp.leeftijd} jaar (minderjarig)`, description: jwZzp.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
-      onGereed(resumeId ?? nieuw.id);
+      const nieuw = await maak.mutateAsync({ data: input });
+      onGereed(nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
         toast({
-          title: resumeId ? "Onboarding is intussen gewijzigd" : "Al gekoppeld",
-          description: resumeId
-            ? "Ververs de pagina voordat u deze onboarding opnieuw afrondt."
-            : "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
           variant: "destructive",
         });
         return;
@@ -2522,10 +2615,8 @@ function ZzpFormulier({
       </div>
 
       <div className="flex gap-3">
-        <Button onClick={opslaan} disabled={maak.isPending || bijwerk.isPending}>
-          {(maak.isPending || bijwerk.isPending)
-            ? "Opslaan…"
-            : resumeId ? "ZZP-onboarding afronden" : "ZZP-er registreren"}
+        <Button onClick={opslaan} disabled={maak.isPending}>
+          {maak.isPending ? "Aanmaken…" : "ZZP-er registreren"}
         </Button>
         <Button variant="outline" onClick={onTerug}>Terug</Button>
       </div>
@@ -2538,12 +2629,10 @@ function ZzpFormulier({
 function UitzendFormulier({
   onTerug,
   onGereed,
-  resumeId,
   context,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
-  resumeId?: number | null;
   context: OnboardingContext;
 }) {
   const [form, setForm] = useState<UitzendForm>(() => ({ ...LEEG_UITZEND, naam: context.naam }));
@@ -2553,30 +2642,7 @@ function UitzendFormulier({
   // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
   const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
-  const bijwerk = useUpdateMedewerker();
-  const { data: bestaand } = useGetMedewerker(resumeId ?? 0, {
-    query: { enabled: !!resumeId, queryKey: getGetMedewerkerQueryKey(resumeId ?? 0) },
-  });
-  const { data: wizardStatus } = useGetWizardStatus(resumeId ?? 0, {
-    query: { enabled: !!resumeId, queryKey: getGetWizardStatusQueryKey(resumeId ?? 0) },
-  });
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!bestaand || !resumeId) return;
-    setSoort(bestaand.dienstverband === "inhuur" ? "inhuur" : "uitzend");
-    setUitzendbureauId(bestaand.uitzendbureau_id ?? null);
-    setForm((huidig) => ({
-      ...huidig,
-      naam: context.naam,
-      bureau_of_bedrijf: bestaand.uitzendbureau_naam ?? bestaand.bedrijf_uitzendbureau ?? "",
-      functie_id: bestaand.functie_id ?? null,
-      werkmaatschappij: bestaand.werkmaatschappij,
-      start_datum: bestaand.in_dienst_sinds ?? huidig.start_datum,
-      eind_datum: bestaand.uit_dienst_per ?? "",
-      opmerkingen: bestaand.opmerkingen ?? "",
-    }));
-  }, [bestaand, resumeId, context.naam]);
 
   async function opslaan() {
     if (!form.naam.trim()) { toast({ title: "Naam is verplicht", variant: "destructive" }); return; }
@@ -2597,27 +2663,13 @@ function UitzendFormulier({
         uit_dienst_per: form.eind_datum || undefined,
         opmerkingen: form.opmerkingen.trim() || undefined,
       };
-      const nieuw = resumeId
-        ? await bijwerk.mutateAsync({
-            id: resumeId,
-            data: {
-              ...input,
-              onboarding_afronden: true,
-              onboarding_versie: wizardStatus?.versie ?? context.onboarding_versie ?? 0,
-              onboarding_stroom: soort,
-            },
-          })
-        : await maak.mutateAsync({ data: input });
-      const jw = (nieuw as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
-      if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
-      onGereed(resumeId ?? nieuw.id);
+      const nieuw = await maak.mutateAsync({ data: input });
+      onGereed(nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
         toast({
-          title: resumeId ? "Onboarding is intussen gewijzigd" : "Al gekoppeld",
-          description: resumeId
-            ? "Ververs de pagina voordat u deze onboarding opnieuw afrondt."
-            : "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
           variant: "destructive",
         });
         return;
@@ -2718,12 +2770,8 @@ function UitzendFormulier({
       </div>
 
       <div className="flex gap-3">
-        <Button onClick={opslaan} disabled={maak.isPending || bijwerk.isPending}>
-          {(maak.isPending || bijwerk.isPending)
-            ? "Opslaan…"
-            : resumeId
-              ? `${soort === "uitzend" ? "Uitzend-" : "Inhuur"}onboarding afronden`
-              : `${soort === "uitzend" ? "Uitzendkracht" : "Inhuurkracht"} registreren`}
+        <Button onClick={opslaan} disabled={maak.isPending}>
+          {maak.isPending ? "Aanmaken…" : `${soort === "uitzend" ? "Uitzendkracht" : "Inhuurkracht"} registreren`}
         </Button>
         <Button variant="outline" onClick={onTerug}>Terug</Button>
       </div>
@@ -3005,8 +3053,6 @@ function AccountStap({
   // verdergaan; anders leggen we uit dat er al een profiel is.
   const [conflict, setConflict] = useState<{
     bestaandeGebruikerId: number | null;
-    bestaandeMedewerkerId: number | null;
-    medewerkerStatus: string | null;
     heeftMedewerkerprofiel: boolean;
   } | null>(null);
 
@@ -3065,9 +3111,6 @@ function AccountStap({
         const id = typeof data?.bestaande_gebruiker_id === "number" ? data.bestaande_gebruiker_id : null;
         setConflict({
           bestaandeGebruikerId: id,
-          bestaandeMedewerkerId:
-            typeof data?.bestaande_medewerker_id === "number" ? data.bestaande_medewerker_id : null,
-          medewerkerStatus: typeof data?.medewerker_status === "string" ? data.medewerker_status : null,
           heeftMedewerkerprofiel: data?.heeft_medewerkerprofiel === true,
         });
         setFout(data?.error ?? "Dit e-mailadres is al in gebruik bij een andere gebruiker.");
@@ -3175,9 +3218,8 @@ function AccountStap({
                 ) : conflict.bestaandeGebruikerId !== null ? (
                   <>
                     <p className="text-muted-foreground">
-                      {conflict.bestaandeMedewerkerId !== null
-                        ? "Er staat al een onafgeronde onboarding bij dit gebruikersaccount. Open die onboarding om te hervatten of opnieuw te beginnen."
-                        : "Er bestaat al een gebruikersaccount met dit e-mailadres, maar nog zonder medewerkerprofiel. U kunt de onboarding direct met dat account voortzetten."}
+                      Er bestaat al een gebruikersaccount met dit e-mailadres, maar nog zonder
+                      medewerkerprofiel. U kunt de onboarding direct met dat account voortzetten.
                     </p>
                     <Button
                       type="button"
@@ -3185,10 +3227,7 @@ function AccountStap({
                       onClick={() => onAangemaakt(conflict.bestaandeGebruikerId!)}
                       data-testid="knop-verder-bestaand-account"
                     >
-                      <ArrowRight className="h-4 w-4" />
-                      {conflict.bestaandeMedewerkerId !== null
-                        ? "Open bestaande onboarding"
-                        : "Ga verder met dit bestaande account"}
+                      <ArrowRight className="h-4 w-4" /> Ga verder met dit bestaande account
                     </Button>
                   </>
                 ) : (
@@ -3218,14 +3257,12 @@ function AccountStap({
 export default function OnboardenPagina() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { toast } = useToast();
   const zoekString = useSearch();
   const [stroom, setStroom] = useState<Stroom | null>(null);
   const [resumeId, setResumeId] = useState<number | null>(null);
   const [afrondMedewerkerId, setAfrondMedewerkerId] = useState<number | null>(null);
   const [cvStash, setCvStash] = useState<CvOnboardingStash | null>(null);
   const stashGelezen = useRef(false);
-  const herstartOnboarding = usePatchWizardVoortgang();
 
   const userIdParam = new URLSearchParams(zoekString).get("userId");
   const userId = userIdParam !== null && /^\d+$/.test(userIdParam.trim()) ? Number(userIdParam.trim()) : null;
@@ -3239,12 +3276,6 @@ export default function OnboardenPagina() {
     },
   });
   const context = contextQuery.data as OnboardingContext | undefined;
-  const onboardingStroom: Stroom = useMemo(() => {
-    const kandidaat = context?.onboarding_stroom;
-    return typeof kandidaat === "string" && STROMEN.some((optie) => optie.id === kandidaat)
-      ? kandidaat as Stroom
-      : "vast";
-  }, [context?.onboarding_stroom]);
 
   // CV-voorstel eenmalig uit sessionStorage lezen (wist bij lezen).
   // Ref-guard voorkomt dubbel lezen bij React StrictMode remount.
@@ -3259,46 +3290,6 @@ export default function OnboardenPagina() {
     setAfrondMedewerkerId(id);
     await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
     await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-  }
-
-  async function startOnboardingOpnieuw(): Promise<void> {
-    const medewerkerId = context?.concept_medewerker_id;
-    if (medewerkerId == null) return;
-    try {
-      await herstartOnboarding.mutateAsync({
-        id: medewerkerId,
-        data: {
-          stap: 1,
-          versie: context?.onboarding_versie ?? 0,
-          medewerker_status: "concept",
-          voortgang_data: {},
-          opnieuw_starten: true,
-          onboarding_stroom: onboardingStroom,
-        },
-      });
-      await queryClient.invalidateQueries({ queryKey: getGetWizardStatusQueryKey(medewerkerId) });
-      if (context?.gebruiker_id != null) {
-        await queryClient.invalidateQueries({
-          queryKey: getGetOnboardingContextQueryKey(context.gebruiker_id),
-        });
-      }
-      setResumeId(medewerkerId);
-      setStroom(onboardingStroom);
-      toast({
-        title: "Onboarding opnieuw gestart",
-        description: "De opgeslagen wizardvoortgang is gewist. Het gebruikersaccount en medewerkerprofiel zijn behouden.",
-      });
-    } catch (err: unknown) {
-      const melding =
-        err && typeof err === "object" && "data" in err
-          ? (err as { data?: { error?: string } }).data?.error
-          : null;
-      toast({
-        title: "Opnieuw starten mislukt",
-        description: melding ?? "De onboarding kon niet worden teruggezet naar stap 1.",
-        variant: "destructive",
-      });
-    }
   }
 
   // Zonder userId start de wizard met de accountstap: het gebruikersaccount
@@ -3395,57 +3386,22 @@ export default function OnboardenPagina() {
         {context.concept_medewerker_id != null && (
           <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3 space-y-2 max-w-3xl">
             <p className="text-xs font-medium text-blue-800">Lopende onboarding</p>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-sm">
-                Er staat nog een onvoltooide onboarding klaar voor {context.naam}
-                {context.onboarding_status ? ` (${context.onboarding_status.replaceAll("_", " ")})` : ""}.
+                Er staat nog een onvoltooide onboarding klaar voor {context.naam}.
               </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs shrink-0"
-                  onClick={() => {
-                    setResumeId(context.concept_medewerker_id ?? null);
-                    setStroom(onboardingStroom);
-                  }}
-                >
-                  Hervatten
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs shrink-0"
-                      disabled={herstartOnboarding.isPending}
-                      data-testid="knop-onboarding-opnieuw"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Opnieuw beginnen
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Onboarding opnieuw beginnen?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        De opgeslagen antwoorden en huidige stap van deze onboarding worden gewist.
-                        Het gebruikersaccount, het medewerkerprofiel en de uitnodiging blijven behouden.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => void startOnboardingOpnieuw()}>
-                        Ja, opnieuw beginnen
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs shrink-0"
+                onClick={() => { setResumeId(context.concept_medewerker_id ?? null); setStroom("vast"); }}
+              >
+                Hervatten
+              </Button>
             </div>
           </div>
         )}
-        {context.concept_medewerker_id == null && <TypeKiezer onKies={setStroom} />}
+        <TypeKiezer onKies={setStroom} />
       </div>
     );
   }
@@ -3467,7 +3423,6 @@ export default function OnboardenPagina() {
       <ZzpFormulier
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        resumeId={resumeId}
         context={context}
       />
     );
@@ -3477,7 +3432,6 @@ export default function OnboardenPagina() {
       <UitzendFormulier
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        resumeId={resumeId}
         context={context}
       />
     );
@@ -3496,7 +3450,6 @@ export default function OnboardenPagina() {
         soort={stroom}
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        resumeId={resumeId}
         context={context}
       />
     );

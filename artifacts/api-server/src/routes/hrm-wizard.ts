@@ -9,16 +9,12 @@ import {
   hrmOnboardingTakenTable,
   hrmAiVoorstellenTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, isNull, sql, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { logActiviteit } from "../lib/activiteit";
 import { analyseerEnSlaVoorstellenOp } from "../lib/hrm-ai-analyse";
-import {
-  HERVATBARE_ONBOARDING_STATUSSEN,
-  isHervatbareOnboardingStatus,
-} from "../lib/hrmOnboardingStatus";
 
 const router = Router();
 
@@ -144,29 +140,39 @@ router.get("/medewerkers/:id/wizard-status", lezen, async (req, res): Promise<vo
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const [m] = await db
-    .select({
-      id: medewerkersTable.id,
-      medewerkerStatus: medewerkersTable.medewerkerStatus,
-      wizardVoortgang: medewerkersTable.wizardVoortgang,
-      bijgewerktOp: medewerkersTable.bijgewerktOp,
-    })
-    .from(medewerkersTable)
-    .where(eq(medewerkersTable.id, id));
+  // Gebruik raw SQL om bijgewerkt_op op microseconde-precisie terug te geven
+  // (6 decimalen via 'US' in to_char). De client zaait hier de bijgewerktOpRef
+  // mee; als de PATCH-endpoint CLOCK_TIMESTAMP() gebruikt, moet de GET exact
+  // dezelfde precisie teruggeven om de CAS te laten slagen na hervatten.
+  type StatusRij = {
+    id: number; medewerker_status: string | null;
+    wizard_voortgang: Record<string, unknown> | null;
+    bijgewerkt_op: string | null;
+  };
+  const statusResult = await db.execute<StatusRij>(sql`
+    SELECT
+      id,
+      medewerker_status,
+      wizard_voortgang,
+      to_char(bijgewerkt_op AT TIME ZONE 'UTC',
+              'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS bijgewerkt_op
+    FROM medewerkers
+    WHERE id = ${id}
+  `);
+  const m = (statusResult.rows as StatusRij[])[0];
 
   if (!m) return void res.status(404).json({ error: "Medewerker niet gevonden" });
 
-  const voortgang = (m.wizardVoortgang as Record<string, unknown> | null) ?? {};
+  const voortgang = (m.wizard_voortgang as Record<string, unknown> | null) ?? {};
   const huidigStap = typeof voortgang._huidig_stap === "number" ? voortgang._huidig_stap : 1;
-  const versie = typeof voortgang._versie === "number" ? voortgang._versie : 0;
 
   return void res.json({
     id: m.id,
-    medewerker_status: m.medewerkerStatus ?? "concept",
+    medewerker_status: m.medewerker_status ?? "concept",
     huidig_stap: huidigStap,
     wizard_voortgang: voortgang,
-    versie,
-    bijgewerkt_op: m.bijgewerktOp.toISOString(),
+    // 6-decimalen string zodat het resume-effect de lock met volledige precisie zaait.
+    bijgewerkt_op: m.bijgewerkt_op ?? null,
   });
 });
 
@@ -174,155 +180,79 @@ router.patch("/medewerkers/:id/wizard-voortgang", schrijven, async (req, res): P
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  const {
-    stap,
-    medewerker_status,
-    voortgang_data,
-    bijgewerkt_op,
-    opnieuw_starten,
-    onboarding_stroom,
-    versie,
-  } = req.body as {
+  const { stap, medewerker_status, voortgang_data, bijgewerkt_op } = req.body as {
     stap: number;
     medewerker_status?: string;
     voortgang_data?: Record<string, unknown>;
     bijgewerkt_op?: string;
-    opnieuw_starten?: boolean;
-    onboarding_stroom?: string;
-    versie: number;
   };
 
-  if (!Number.isInteger(stap) || stap < 1 || stap > 50) {
-    return void res.status(400).json({ error: "stap moet een geheel getal tussen 1 en 50 zijn" });
-  }
-  if (!Number.isInteger(versie) || versie < 0) {
-    return void res.status(400).json({
-      error: "versie is verplicht en moet een niet-negatief geheel getal zijn",
-      code: "INVALID_ONBOARDING_VERSION",
-    });
-  }
-  if (
-    medewerker_status &&
-    !isHervatbareOnboardingStatus(medewerker_status) &&
-    medewerker_status !== "actief" &&
-    medewerker_status !== "onboarding_afgerond"
-  ) {
-    return void res.status(400).json({
-      error: "Ongeldige medewerker_status voor de onboarding-wizard.",
-      code: "INVALID_ONBOARDING_STATUS",
-    });
-  }
-
+  // Lees de huidige wizard-voortgang eerst (één read, niet in de update-WHERE
+  // om de voortgang te kunnen samenvoegen).
   const [huidig] = await db
     .select({
       wizardVoortgang: medewerkersTable.wizardVoortgang,
       bijgewerktOp: medewerkersTable.bijgewerktOp,
-      medewerkerStatus: medewerkersTable.medewerkerStatus,
     })
     .from(medewerkersTable)
     .where(eq(medewerkersTable.id, id));
 
   if (!huidig) return void res.status(404).json({ error: "Medewerker niet gevonden" });
 
-  const huidigeVoortgang =
-    (huidig.wizardVoortgang as Record<string, unknown> | null) ?? {};
-  const huidigeVersie =
-    typeof huidigeVoortgang._versie === "number" ? huidigeVoortgang._versie : 0;
-  if (versie !== huidigeVersie) {
-    return void res.status(409).json({
-      error: "De onboarding is elders bijgewerkt. Ververs de pagina en probeer opnieuw.",
-      code: "ONBOARDING_VERSION_CONFLICT",
-      server_versie: huidigeVersie,
-    });
-  }
-
-  if (!isHervatbareOnboardingStatus(huidig.medewerkerStatus)) {
-    return void res.status(409).json({
-      error: "Alleen een onafgeronde onboarding kan via de wizard worden gewijzigd.",
-      code: "ONBOARDING_ALREADY_COMPLETED",
-    });
-  }
-
-  if (opnieuw_starten === true) {
-    const nuTs = new Date();
-    const bewaardeStroom =
-      typeof huidigeVoortgang._onboarding_stroom === "string"
-        ? huidigeVoortgang._onboarding_stroom
-        : onboarding_stroom;
-    const nieuweVersie = huidigeVersie + 1;
-    const legeVoortgang: Record<string, unknown> = {
-      _huidig_stap: 1,
-      _versie: nieuweVersie,
-      ...(bewaardeStroom ? { _onboarding_stroom: bewaardeStroom } : {}),
-    };
-    const bijgewerkt = await db.transaction(async (tx) => {
-      const [rij] = await tx
-        .update(medewerkersTable)
-        .set({
-          medewerkerStatus: "concept",
-          wizardVoortgang: legeVoortgang,
-          bijgewerktOp: nuTs,
-        })
-        .where(and(
-          eq(medewerkersTable.id, id),
-          inArray(medewerkersTable.medewerkerStatus, [...HERVATBARE_ONBOARDING_STATUSSEN]),
-          sql`coalesce((${medewerkersTable.wizardVoortgang}->>'_versie')::integer, 0) = ${huidigeVersie}`,
-        ))
-        .returning({ id: medewerkersTable.id });
-      if (!rij) return null;
-      await logActiviteit({
-        type: "onboarding_opnieuw_gestart",
-        gebruikerId: req.session.userId ?? null,
-        omschrijving: `Onboarding opnieuw gestart voor medewerker ${id}`,
-      }, tx);
-      return rij;
-    });
-    if (!bijgewerkt) {
-      return void res.status(409).json({
-        error: "De onboardingstatus is intussen gewijzigd. Ververs de pagina en probeer opnieuw.",
-        code: "ONBOARDING_STATUS_CONFLICT",
-      });
-    }
-    return void res.json({
-      id,
-      medewerker_status: "concept",
-      huidig_stap: 1,
-      wizard_voortgang: legeVoortgang,
-      versie: nieuweVersie,
-      bijgewerkt_op: nuTs.toISOString(),
-    });
-  }
-
-  const nieuweVersie = huidigeVersie + 1;
+  const bestaand = (huidig.wizardVoortgang as Record<string, unknown> | null) ?? {};
   const nieuw: Record<string, unknown> = {
-    ...huidigeVoortgang,
+    ...bestaand,
     _huidig_stap: stap,
-    _versie: nieuweVersie,
     [`stap_${stap}`]: voortgang_data ?? {},
-    ...(onboarding_stroom ? { _onboarding_stroom: onboarding_stroom } : {}),
   };
 
-  const nuTs = new Date();
-  const update: Partial<typeof medewerkersTable.$inferInsert> = {
-    wizardVoortgang: nieuw,
-    bijgewerktOp: nuTs,
-  };
-  if (medewerker_status) update.medewerkerStatus = medewerker_status;
+  // True compare-and-swap (CAS) met DB-gegenereerde microseconde-tijdstempel.
+  //
+  // CLOCK_TIMESTAMP() genereert de werkelijke kloktijd op microseconde-precisie
+  // (niet de transactietijd). PostgreSQL serialiseert concurrente UPDATE-rijen
+  // via row-level locking: de tweede wacht op de eerste commit; daarna klopt
+  // de WHERE (bijgewerkt_op = client-lock) niet meer → 0 rijen → 409.
+  //
+  // We retourneren de tijdstempel als 6-decimalen ISO-string ('US' in to_char)
+  // zodat de client 'm verbatim bewaart en terugstuurt; de exacte vergelijking
+  // werkt daardoor zonder afkappen en zonder ms-precisie-afronding.
+  //
+  // - Lock meegestuurd + exact match → update slaagt.
+  // - Lock meegestuurd + geen match  → 0 rijen → 409.
+  // - Geen lock                      → unconditional write (eerste save / legacy).
+  const lockWhere = bijgewerkt_op
+    ? sql`id = ${id} AND bijgewerkt_op = ${bijgewerkt_op}::timestamptz`
+    : sql`id = ${id}`;
 
-  const [bijgewerkt] = await db
-    .update(medewerkersTable)
-    .set(update)
-    .where(and(
-      eq(medewerkersTable.id, id),
-      inArray(medewerkersTable.medewerkerStatus, [...HERVATBARE_ONBOARDING_STATUSSEN]),
-      sql`coalesce((${medewerkersTable.wizardVoortgang}->>'_versie')::integer, 0) = ${huidigeVersie}`,
-    ))
-    .returning({ id: medewerkersTable.id });
+  const statusSet = medewerker_status
+    ? sql`, medewerker_status = ${medewerker_status}`
+    : sql``;
 
-  if (!bijgewerkt) {
+  type CasRij = { bijgewerkt_op: string; medewerker_status: string | null };
+  const casResult = await db.execute<CasRij>(sql`
+    UPDATE medewerkers
+    SET
+      wizard_voortgang = ${JSON.stringify(nieuw)}::jsonb,
+      bijgewerkt_op    = CLOCK_TIMESTAMP()
+      ${statusSet}
+    WHERE ${lockWhere}
+    RETURNING
+      medewerker_status,
+      to_char(bijgewerkt_op AT TIME ZONE 'UTC',
+              'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS bijgewerkt_op
+  `);
+
+  const geraakt = casResult.rows as CasRij[];
+
+  // 0 rijen → lock klopte niet: concurrent schrijver won.
+  if (geraakt.length === 0) {
+    const [nu] = await db
+      .select({ bijgewerktOp: medewerkersTable.bijgewerktOp })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, id));
     return void res.status(409).json({
-      error: "De onboarding is intussen gewijzigd. Ververs de pagina en probeer opnieuw.",
-      code: "ONBOARDING_STATUS_CONFLICT",
+      error: "Conflict: wizard-voortgang is elders bijgewerkt. Ververs de pagina en herhaal.",
+      server_bijgewerkt_op: nu?.bijgewerktOp?.toISOString() ?? null,
     });
   }
 
@@ -337,11 +267,11 @@ router.patch("/medewerkers/:id/wizard-voortgang", schrijven, async (req, res): P
 
   return void res.json({
     id,
-    medewerker_status: medewerker_status ?? huidig.medewerkerStatus,
+    medewerker_status: geraakt[0].medewerker_status ?? medewerker_status ?? null,
     huidig_stap: stap,
     wizard_voortgang: nieuw,
-    versie: nieuweVersie,
-    bijgewerkt_op: nuTs.toISOString(),
+    // 6-decimalen string: client bewaart 'm verbatim en stuurt exact terug.
+    bijgewerkt_op: geraakt[0].bijgewerkt_op,
   });
 });
 

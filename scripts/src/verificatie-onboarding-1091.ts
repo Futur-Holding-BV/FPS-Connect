@@ -100,6 +100,7 @@ function herstelBron(data: Record<string, unknown>, huidig: number): Record<stri
 const FRED_EMAIL = "fred.wallinga.1091@fps.local";
 const FERNANDO_EMAIL = "fernando.zzp.1091@fps.local";
 
+const GIDEON_EMAIL = "gideon.vorige.1100@fps.local";
 async function maakTestGebruiker(naam: string, email: string): Promise<number> {
   const [bestaand] = await db.select({ id: gebruikersTable.id }).from(gebruikersTable).where(eq(gebruikersTable.email, email));
   if (bestaand) return bestaand.id;
@@ -109,7 +110,7 @@ async function maakTestGebruiker(naam: string, email: string): Promise<number> {
 
 async function ruimOp() {
   const gebruikers = await db.select({ id: gebruikersTable.id }).from(gebruikersTable)
-    .where(inArray(gebruikersTable.email, [FRED_EMAIL, FERNANDO_EMAIL]));
+    .where(inArray(gebruikersTable.email, [FRED_EMAIL, FERNANDO_EMAIL, GIDEON_EMAIL]));
   const ids = gebruikers.map((g) => g.id);
   if (ids.length > 0) {
     await db.delete(medewerkersTable).where(inArray(medewerkersTable.gebruikerId, ids));
@@ -253,6 +254,155 @@ async function main() {
     const lees2 = await api(admin, "GET", `/medewerkers/${fernandoId}`);
     check("gewijzigde bedrijfsnaam teruggelezen", lees2.json.zzp_bedrijfsnaam === "Costa Timmer & Montage", String(lees2.json.zzp_bedrijfsnaam));
     check("koppeling na bewerken intact", lees2.json.uitzendbureau_id === inlener!.id);
+
+    // ── Scenario 3: Bewaar bij gaVorige (taak 1100) ──
+    // Simuleert: wizard doorgelopen tot stap 5, gebruiker gaat terug naar
+    // stap 4 (gaVorige) — de gewijzigde formulierdata op stap 4 moet bewaard
+    // zijn zodat hervatten het juiste resultaat toont. Tevens controle dat de
+    // optimistic-locking veld (bijgewerkt_op) correct doorloopt.
+    console.log("\nScenario 3 — Bewaar bij gaVorige (Taak 1100):");
+    const gideonGebruikerId = await maakTestGebruiker("Gideon Vorige", GIDEON_EMAIL);
+    const maakGv = await api(admin, "POST", "/medewerkers", { naam: "Gideon Vorige", gebruiker_id: gideonGebruikerId });
+    check("scenario 3: concept aangemaakt", maakGv.status === 201 || maakGv.status === 200, `status ${maakGv.status}`);
+    const gideonId = maakGv.json.id as number;
+
+    // Stap 3: data opgeslagen bij stap 2→3 overgang
+    const dataStap3 = { form: { naam: "Gideon Vorige", functie_id: timmerman.id, werkmaatschappij: fpsBouw.naam }, cvExtra: {} };
+    const pS3 = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, { stap: 3, voortgang_data: dataStap3 });
+    check("stap 3 opgeslagen", pS3.status === 200, `status ${pS3.status}`);
+    const lock3 = (pS3.json.bijgewerkt_op as string | undefined) ?? null;
+
+    // Stap 4: data opgeslagen bij stap 3→4 overgang
+    const dataStap4v1 = { form: { ...dataStap3.form, dienstverband: "vast", contracturen_per_week: "40" }, cvExtra: {} };
+    const pS4 = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 4, voortgang_data: dataStap4v1, bijgewerkt_op: lock3,
+    });
+    check("stap 4 opgeslagen", pS4.status === 200, `status ${pS4.status}`);
+    const lock4 = (pS4.json.bijgewerkt_op as string | undefined) ?? null;
+
+    // Stap 5: data opgeslagen bij stap 4→5 overgang
+    const pS5 = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 5,
+      voortgang_data: { form: { ...dataStap4v1.form, cao: "FPS Bouw CAO" }, cvExtra: {} },
+      bijgewerkt_op: lock4,
+    });
+    check("stap 5 opgeslagen", pS5.status === 200, `status ${pS5.status}`);
+    const lock5 = (pS5.json.bijgewerkt_op as string | undefined) ?? null;
+
+    // gaVorige van stap 5 → stap 4: gebruiker heeft uren gewijzigd op stap 4,
+    // gaVorige slaat stap 4 op met de nieuwe waarden + optimistic lock.
+    const dataStap4v2 = { form: { ...dataStap4v1.form, contracturen_per_week: "32" }, cvExtra: { mobiel: "0699998888" } };
+    const pVorige = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 4, voortgang_data: dataStap4v2, bijgewerkt_op: lock5,
+    });
+    check("gaVorige: PATCH stap 4 slaagt", pVorige.status === 200, `status ${pVorige.status}`);
+
+    const stGv = await api(admin, "GET", `/medewerkers/${gideonId}/wizard-status`);
+    check("gaVorige: huidig_stap = 4", stGv.json.huidig_stap === 4, `huidig_stap = ${String(stGv.json.huidig_stap)}`);
+    const dataGv = (stGv.json.wizard_voortgang ?? {}) as Record<string, unknown>;
+    const hersteldGv = herstelForm(dataGv, stGv.json.huidig_stap as number);
+    check("gaVorige: gewijzigde uren bewaard (32i.p.v. 40)", hersteldGv.contracturen_per_week === "32",
+      JSON.stringify(hersteldGv));
+    check("gaVorige: functie en werkmaatschappij intact", hersteldGv.functie_id === timmerman.id && hersteldGv.werkmaatschappij === fpsBouw.naam);
+    const bronGv = herstelBron(dataGv, stGv.json.huidig_stap as number);
+    check("gaVorige: gewijzigde cvExtra bewaard", (bronGv.cvExtra as Record<string, unknown> | undefined)?.mobiel === "0699998888",
+      JSON.stringify(bronGv.cvExtra));
+
+    // Debounced auto-save: zelfde API-pad als gaVorige; we verifiëren dat een
+    // PATCH op de huidige stap (zonder stapovergang) de data correct opslaat.
+    const lockVorige = (pVorige.json.bijgewerkt_op as string | undefined) ?? null;
+    const dataDebounced = { form: { ...dataStap4v2.form, contracturen_per_week: "36" }, cvExtra: { mobiel: "0688887777" } };
+    const pDebounce = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 4, voortgang_data: dataDebounced, bijgewerkt_op: lockVorige,
+    });
+    check("debounced auto-save: PATCH huidige stap slaagt", pDebounce.status === 200, `status ${pDebounce.status}`);
+    const stDb = await api(admin, "GET", `/medewerkers/${gideonId}/wizard-status`);
+    const hersteldDb = herstelForm((stDb.json.wizard_voortgang ?? {}) as Record<string, unknown>, stDb.json.huidig_stap as number);
+    check("debounced auto-save: bijgewerkte uren bewaard", hersteldDb.contracturen_per_week === "36", JSON.stringify(hersteldDb));
+
+    // ── Scenario 3b: wizard-status geeft bijgewerkt_op terug (voor resume) ──
+    // Verifieer dat GET /wizard-status bijgewerkt_op meestuurt zodat de client
+    // de optimistic-lock kan zaaiïen na hervatten (was eerder altijd null).
+    check("wizard-status: bijgewerkt_op aanwezig in response", typeof stDb.json.bijgewerkt_op === "string" && stDb.json.bijgewerkt_op.length > 0,
+      `bijgewerkt_op = ${JSON.stringify(stDb.json.bijgewerkt_op)}`);
+
+    // ── Scenario 3c: twee gelijktijdige PATCHes met dezelfde actuele lock ──
+    // Simuleert twee browser-tabs die exact dezelfde (verse) bijgewerkt_op
+    // hebben en tegelijkertijd opslaan. True CAS garandeert dat precies één
+    // PATCH 200 krijgt en de ander 409 — ongeacht hoe snel ze na elkaar
+    // binnenkomen. De data van de winnende 200 moet bewaard blijven.
+    const lockConcurrent = (pDebounce.json.bijgewerkt_op as string | undefined) ?? null;
+    const [pCon1, pCon2] = await Promise.all([
+      api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+        stap: 4, voortgang_data: { form: { ...dataDebounced.form, contracturen_per_week: "41" }, cvExtra: {} },
+        bijgewerkt_op: lockConcurrent,
+      }),
+      api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+        stap: 4, voortgang_data: { form: { ...dataDebounced.form, contracturen_per_week: "42" }, cvExtra: {} },
+        bijgewerkt_op: lockConcurrent,
+      }),
+    ]);
+    const statussen = [pCon1.status, pCon2.status].sort().join(",");
+    check("gelijktijdige PATCH: exact één 200 en één 409", statussen === "200,409",
+      `statussen: ${statussen}`);
+    // De winnende waarde (41 of 42) moet bewaard zijn; niet de debounced "36".
+    const stNa = await api(admin, "GET", `/medewerkers/${gideonId}/wizard-status`);
+    const hersteldNa = herstelForm((stNa.json.wizard_voortgang ?? {}) as Record<string, unknown>, stNa.json.huidig_stap as number);
+    const winnend = pCon1.status === 200 ? "41" : "42";
+    check("gelijktijdige PATCH: data van winnende PATCH bewaard", hersteldNa.contracturen_per_week === winnend,
+      `verwacht ${winnend}, got ${String(hersteldNa.contracturen_per_week)}`);
+
+    // ── Scenario 3d: concept afronden (opslaan) na meerdere tussentijdse saves ──
+    // Simuleert de opslaan()-flow: eerst PATCH /medewerkers/:id (die bijgewerktOp
+    // ververst), daarna PATCH /wizard-voortgang met de verse lock. Beide moeten
+    // slagen ondanks de CAS — omdat we de lock vernieuwen uit de medewerker-response.
+    const lockNa = (stNa.json.bijgewerkt_op as string | undefined) ?? null;
+    // Stap 1: simuleer PATCH /medewerkers/:id (bijwerkt bijgewerktOp)
+    const pMedewerker = await api(admin, "PATCH", `/medewerkers/${gideonId}`, {
+      naam: "Gideon Vorige", dienstverband: "vast", jaar: 2026,
+    });
+    check("opslaan: PATCH /medewerkers slaagt", pMedewerker.status === 200,
+      `status ${pMedewerker.status}`);
+    // Stap 2: gebruik de verse lock uit de medewerker-response (zo doet opslaan() het)
+    const verseLock = (pMedewerker.json.bijgewerkt_op as string | undefined) ?? lockNa;
+    const pAfsluiten = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 8, medewerker_status: "actief", bijgewerkt_op: verseLock,
+    });
+    check("opslaan: wizard-voortgang afsluiten slaagt met verse lock", pAfsluiten.status === 200,
+      `status ${pAfsluiten.status}, body ${JSON.stringify(pAfsluiten.json)}`);
+    check("opslaan: medewerker_status = actief", pAfsluiten.json.medewerker_status === "actief",
+      String(pAfsluiten.json.medewerker_status));
+
+    // ── Scenario 3e: microseconde-precisie CAS-roundtrip ──
+    // CLOCK_TIMESTAMP() slaat 6 decimalen op; de server retourneert ze via
+    // to_char(..., 'US'); de client stuurt de string verbatim terug;
+    // de exacte vergelijking slaagt zonder date_trunc-afronding.
+    // We doen eerst een unconditional PATCH om een verse 6-decimalen lock te
+    // krijgen, dan sturen we die exact terug (200) én afgeknot (409).
+    const pVers = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+      stap: 6, voortgang_data: { uren: 30 },
+      // geen bijgewerkt_op → unconditional write, krijgt CLOCK_TIMESTAMP-lock terug
+    });
+    const lockUit = pVers.json.bijgewerkt_op as string | undefined;
+    check("CAS-lock: bijgewerkt_op heeft 6 decimalen (microseconde-precisie)",
+      typeof lockUit === "string" && /\.\d{6}Z$/.test(lockUit),
+      String(lockUit));
+    if (lockUit) {
+      // Stuur de 6-decimalen string verbatim terug → moet matchen
+      const pMicro = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+        stap: 6, voortgang_data: { uren: 31 }, bijgewerkt_op: lockUit,
+      });
+      check("CAS-lock: exacte microseconde-vergelijking slaagt (verbatim roundtrip)", pMicro.status === 200,
+        `status ${pMicro.status}`);
+      // Afgeknotte ms-string moet falen (bewijst dat exacte vergelijking actief is)
+      const huidigeLock = pMicro.json.bijgewerkt_op as string;
+      const msTrunc = huidigeLock.replace(/(\.\d{3})\d{3}Z$/, "$1Z");
+      const pTrunc = await api(admin, "PATCH", `/medewerkers/${gideonId}/wizard-voortgang`, {
+        stap: 6, voortgang_data: { uren: 32 }, bijgewerkt_op: msTrunc,
+      });
+      check("CAS-lock: afgeknotte ms-string faalt (exacte vergelijking actief)", pTrunc.status === 409,
+        `verwacht 409, got ${pTrunc.status}`);
+    }
   } finally {
     await ruimOp();
   }

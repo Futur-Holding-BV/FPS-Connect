@@ -614,6 +614,15 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - Nieuw signaaltype `ontbrekende_boekgegevens` toegevoegd aan `FACTUUR_SIGNAAL_TYPES` (tekstveld, geen DB-migratie nodig).
 
 
+## 2026-08-18 — Wizard-invoer niet meer kwijt bij teruggaan of tussentijds sluiten (taak #1100)
+
+- **Probleem**: de onboarding-wizard (`artifacts/firevault/src/pages/personeel/onboarden.tsx`) sloeg voortgang alleen op bij "Volgende". Wie een stap terugging (`gaVorige`) of het tabblad sloot vóór de volgende overgang verloor alle wijzigingen op de huidige stap.
+- **Fix — bewaar bij teruggaan**: `gaVorige()` is in `VastFormulier` en `GeneriekeWizard` async gemaakt. Vóór de PATCH wordt de debounce-timer geannuleerd en een eventuele in-flight debounce-save ge-awaited (via `inFlightDebounceRef`) zodat `bijgewerktOpRef.current` altijd actueel is. Bij 409 (optimistic-lock conflict) wordt navigatie geblokkeerd om server/UI synchroon te houden; bij netwerkfout wordt er gevaarschuwd maar wel teruggegaan.
+- **Fix — debounced auto-save (geserialiseerd)**: een `useEffect` met 1,5 s debounce persisteert de huidige stap op de achtergrond. Elke auto-save wordt geketend op de vorige in-flight save (`prevInFlight ?? Promise.resolve()`): de lock (`bijgewerkt_op`) wordt pas gelezen ná het afronden van de vorige PATCH, zodat twee opeenvolgende debounce-saves nooit dezelfde stale lock gebruiken (race-vrij). De in-flight promise staat in `inFlightDebounceRef`.
+- **Fix — gaVolgende + gaVorige + opslaan()**: alle drie roepen nu als eerste `flushDebounce()` aan — een gedeelde helper die de debounce-timer annuleert en een eventuele in-flight debounce-save awaits. `opslaan()` gebruikt `bijgewerktOpRef.current` (live lock) i.p.v. de potentieel stale `draftBijgewerktOp` state-waarde.
+- **Server: wizard-status geeft `bijgewerkt_op` terug**: de GET /wizard-status response bevat nu de `bijgewerkt_op` van de medewerker-rij; het resume-effect zaait hiermee de `bijgewerktOpRef` zodat de eerste save na hervatten een geldige lock heeft.
+- **Server: atomaire CAS-lock op wizard-voortgang PATCH**: de UPDATE gebruikt een exacte `date_trunc('milliseconds')`-vergelijking in de WHERE-clausule; twee gelijktijdige tabs met dezelfde lock kunnen niet meer allebei 200 krijgen (één wint, de ander krijgt 409). Verificatie: twee simultane PATCHes via `Promise.all` → precies één 200 en één 409.
+- **Bewijs**: `scripts/src/verificatie-onboarding-1091.ts` uitgebreid met Scenario 3 (11 nieuwe checks: gaVorige bewaart gewijzigde uren + cvExtra, optimistic-locking doorloopt, debounced-save pad); **35/35 geslaagd**.
 ## 2026-08-18 — VOORRAADTELLING fase 2: camera-telling met vakken tekenen op de foto
 
 - **Foto + vakken tekenen**: in een lopende telling kan de gebruiker een stellingfoto maken/uploaden en daar met muis of vinger één of meer rechthoekige vakken op tekenen (elk met aanduiding zoals "plank 1" en optioneel een magazijnlocatie). Vakcoördinaten worden als fracties (0..1) opgeslagen in de nieuwe tabel `voorraad_telling_vakken` (migratie 0085). Handmatig invullen blijft volledig gelijkwaardig — de camera is een aanvulling, geen voorwaarde.
