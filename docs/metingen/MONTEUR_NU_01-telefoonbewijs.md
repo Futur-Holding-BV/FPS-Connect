@@ -16,7 +16,7 @@ VPS-toegang en kan dit niet zelf meten.
 | A — Inloggen monteursaccount | — | — | 🔲 uitstaand |
 | B — Toegevoegd aan beginscherm | — | — | 🔲 uitstaand |
 | C — Offline foto + wachtrij leeg | — | — | 🔲 uitstaand |
-| D — Niet-buitendienstaccount → Connect | — | — | 🔲 uitstaand |
+| D — Kantooraccount blijft in telefoonomgeving | — | — | 🔲 uitstaand |
 
 Zodra alle vier ✅ zijn: status bij §5 van `docs/antwoorden/MONTEUR_NU_01.md`
 wijzigen naar **VOLLEDIG GEACCEPTEERD**.
@@ -113,23 +113,27 @@ Bewijs opslaan als:
 
 ---
 
-## Meting D — Niet-buitendienstaccount → gewone Connect
+## Meting D — Kantooraccount blijft in telefoonomgeving
 
 **Wat:** Open `connect.fps-one.nl/app` op de telefoon en log in met een account
 dat **geen** buitendienstrol heeft (bijv. beheerder, projectleider, of een
 kantoormedewerker zonder functietitel Monteur/Timmerman/Uitvoerder/
-Onderhoudsmonteur). Controleer dat de app direct doorstuurt naar de gewone
-Connect-omgeving (`connect.fps-one.nl/`, niet `/app/`).
+Onderhoudsmonteur). Controleer dat het account in de telefoonomgeving blijft en
+de zes persoonlijke ingangen **Verlof**, **Uren**, **Declaraties**,
+**Loonstrookjes**, **Certificaten** en **Opleidingen** ziet. Veldingangen zoals
+**Mijn werkdag** en **Mijn werk** mogen niet zichtbaar zijn.
 
-**Bewijs:** Schermafdruk van de adresbalk na redirect:
-`connect.fps-one.nl/` (of een subroute van de hoofdapp, zoals `/gebouwen`).
+**Bewijs:** Schermafdruk met de adresbalk op `connect.fps-one.nl/app/…` en het
+geopende persoonlijke menu.
 
-Bewijs opslaan als: `docs/metingen/afbeeldingen/MONTEUR_NU_01-D-redirect.jpg`
+Bewijs opslaan als: `docs/metingen/afbeeldingen/MONTEUR_NU_01-D-kantoor-app.jpg`
 
 **Uitkomst (invullen):**
 - Datum:
 - Testaccount (rol):
-- Redirect-doel (URL):
+- URL na inloggen:
+- Zes persoonlijke ingangen zichtbaar: ja / nee
+- Veldingangen afwezig: ja / nee
 - Uitkomst: ✅ / ❌
 - Opmerking:
 

@@ -700,6 +700,14 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Gerepareerde dialogen als regressiepad**: inspecties, beheermeldingen, LMRA, inkoopplanning en SnagStream worden expliciet door de controle meegenomen naast de volledige broncode.
 - **Bestaande restgevallen veilig gemaakt**: optionele filters en koppelingen in magazijn, leveranciers en facturen gebruiken nu een niet-lege sentinel en vertalen die terug naar de bestaande lege domeinwaarde, zonder het API-contract te wijzigen.
 
+
+## 2026-08-19 — TELEFOON_IEDEREEN_01: telefoonomgeving voor veld én kantoor
+
+- **Kantoorpoort verwijderd**: de web-PWA onder `/app/` stuurt niet-uitvoerende medewerkers niet langer terug naar Connect. Iedere ingelogde medewerker kan de telefoonomgeving gebruiken; de omgekeerde desktopafsluiting voor veldfuncties blijft staan.
+- **Menu per functie**: kantoor krijgt **Verlof**, **Uren**, **Declaraties**, **Loonstrookjes**, **Certificaten** en **Opleidingen** als zes persoonlijke hoofdingangen, aangevuld met module-ingangen waarvoor het account recht heeft. Veldfuncties houden hun bestaande werkmenu en krijgen ontbrekende persoonlijke ingangen onder **Meer**.
+- **Eigen opleidingen en certificaten**: het nieuwe certificaatscherm leest VCA/EHBO/BHV uitsluitend via `/mijn/certificaten`. Gewone medewerkers laden op Opleidingen alleen `/mijn/opleidingen`; de personeelscatalogus wordt niet meer zonder `personeel:1` opgevraagd.
+- **Server-side eigendom bewezen**: de telefoonproef logt in als veldmedewerker, kantoormedewerker zonder extra rechten en hoofdbeheerder. Het kantoorprofiel krijgt 200 op alle eigen-routes, 403 op de opleidingscatalogus en kan geen medewerker-id meesturen om de scope te veranderen.
+- **Bewijs**: volledige `e2e-menu`-suite groen (7 passed, incl. bestaande startmenu-, toolbox- en uurcoderegressies); aanvullende visuele telefoonproef (400×720) bevestigt het kantoormenu en het certificaatscherm. Testprofielen gebruiken per run willekeurige wachtwoorden/TOTP-secrets en worden na afloop gearchiveerd.
 ## 2026-08-19 — AZURE_SECRET_VERLOOP_01: waarschuwing vóór de Graph-faalmail uitvalt
 
 - **Maandelijkse Azure-controle**: GitHub Actions leest op de eerste dag van iedere maand via Microsoft Graph alle `passwordCredentials` van de mail-appregistratie uit en vergelijkt iedere vervaldatum met de 30-dagengrens.

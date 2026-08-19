@@ -9,6 +9,7 @@ import { Kaart, Ladenstaat, LijstFout, Statusmerk, bovenInset, netteWaarde, teks
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
+import { heeftBevoegdheid } from "@/lib/bevoegdheden";
 
 function isVerlopen(datum: string | null | undefined): boolean {
   if (!datum) return false;
@@ -27,14 +28,26 @@ export default function OpleidingenScherm() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { inhoudMaxBreedte } = useResponsive();
-  const { token } = useAuth();
-  const { data, isLoading, isError, refetch, isRefetching } = useListOpleidingen();
-  const { data: mijnData } = useGetMijnOpleidingen({ query: { queryKey: ["mijn", "opleidingen"], retry: false } });
+  const { token, gebruiker } = useAuth();
+  const magCatalogusBekijken = heeftBevoegdheid(gebruiker, { module: "personeel", niveau: 1 });
+  const catalogusQuery = useListOpleidingen({
+    query: { enabled: magCatalogusBekijken, queryKey: ["opleidingen"] },
+  });
+  const mijnQuery = useGetMijnOpleidingen({
+    query: { queryKey: ["mijn", "opleidingen"], retry: false },
+  });
 
   if (!token) return <Redirect href="/login" />;
 
-  const opleidingen = data ?? [];
-  const mijnOpleidingen = mijnData ?? [];
+  const opleidingen = magCatalogusBekijken ? (catalogusQuery.data ?? []) : [];
+  const mijnOpleidingen = mijnQuery.data ?? [];
+  const isLoading = mijnQuery.isLoading || (magCatalogusBekijken && catalogusQuery.isLoading);
+  const isError = mijnQuery.isError || (magCatalogusBekijken && catalogusQuery.isError);
+  const isRefetching = mijnQuery.isRefetching || catalogusQuery.isRefetching;
+  const refetch = () => {
+    void mijnQuery.refetch();
+    if (magCatalogusBekijken) void catalogusQuery.refetch();
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -66,13 +79,16 @@ export default function OpleidingenScherm() {
           contentContainerStyle={{ padding: ruimte.l, gap: ruimte.m, paddingBottom: insets.bottom + ruimte.xl, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />}
           ListEmptyComponent={
+            mijnOpleidingen.length === 0 ? (
             <Text style={[tekstStijl("standaard", c.mutedForeground), { textAlign: "center", marginTop: ruimte.xxl + ruimte.l }]}>
-              Geen opleidingen gevonden.
+              Er zijn nog geen opleidingen aan u gekoppeld.
             </Text>
+            ) : null
           }
           ListHeaderComponent={
-            mijnOpleidingen.length > 0 ? (
-              <View style={{ marginBottom: ruimte.xs }}>
+            <View style={{ marginBottom: ruimte.xs }}>
+              {mijnOpleidingen.length > 0 ? (
+                <>
                 <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
                   Mijn opleidingen
                 </Text>
@@ -113,11 +129,14 @@ export default function OpleidingenScherm() {
                     );
                   })}
                 </View>
+                </>
+              ) : null}
+              {magCatalogusBekijken ? (
                 <Text style={[tekstStijl("nadruk", c.foreground), { marginBottom: ruimte.s }]}>
                   Catalogus
                 </Text>
-              </View>
-            ) : null
+              ) : null}
+            </View>
           }
           renderItem={({ item }) => (
             <Kaart stijl={{ padding: ruimte.l + 2 }}>

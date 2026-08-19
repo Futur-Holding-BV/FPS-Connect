@@ -12,18 +12,33 @@
 // bevoegdheden staan op het hoogste niveau voor alle modules zodat elke
 // menukeuze (Gebouwen, Personeel, Fabrikanten) ook echt doorlinkt.
 import { pathToFileURL } from "node:url";
+import crypto from "node:crypto";
 
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 
-import { db, gebruikersTable, verlofsoortenTable } from "@workspace/db";
+import { db, gebruikersTable, medewerkersTable, verlofsoortenTable } from "@workspace/db";
 import { MODULE_IDS } from "@workspace/permissies";
 
 export const E2E_EMAIL = "e2e-menu@fps.local";
 export const E2E_WACHTWOORD = "E2eMenuTest!2026";
 // Vaste secret: de e2e-test gebruikt dezelfde secret om een live code te maken.
 export const E2E_TOTP_SECRET = "PAOSGYZWOEMU2HDD";
+
+// Drie vaste profielen voor de telefoonomgeving-voor-iedereen-proef:
+// veldfunctie, kantoor zonder aanvullende rechten en hoofdbeheerder.
+export const E2E_TELEFOON_VELD_EMAIL = "e2e-telefoon-veld@fps.local";
+export const E2E_TELEFOON_VELD_WACHTWOORD = `E2e!${crypto.randomBytes(18).toString("base64url")}`;
+export const E2E_TELEFOON_VELD_TOTP_SECRET = authenticator.generateSecret();
+
+export const E2E_TELEFOON_KANTOOR_EMAIL = "e2e-telefoon-kantoor@fps.local";
+export const E2E_TELEFOON_KANTOOR_WACHTWOORD = `E2e!${crypto.randomBytes(18).toString("base64url")}`;
+export const E2E_TELEFOON_KANTOOR_TOTP_SECRET = authenticator.generateSecret();
+
+export const E2E_TELEFOON_ADMIN_EMAIL = "e2e-telefoon-admin@fps.local";
+export const E2E_TELEFOON_ADMIN_WACHTWOORD = `E2e!${crypto.randomBytes(18).toString("base64url")}`;
+export const E2E_TELEFOON_ADMIN_TOTP_SECRET = authenticator.generateSecret();
 
 // Eigen vast account voor de web-e2e-suite (gebouw-detail + offerte-badge).
 // Bewust GESCHEIDEN van het monteur-account hierboven: de web- en monteur-suite
@@ -141,6 +156,7 @@ async function maakOfUpdateE2eAccount(opties: {
   // Optionele expliciete bevoegdheden-matrix. Zonder opgave krijgt het account
   // niveau 4 op alle modules (het historische gedrag van de bestaande accounts).
   bevoegdheden?: Record<string, number>;
+  functietitels?: string[];
 }): Promise<number> {
   weigerBuitenDev();
   const rol = opties.rol ?? "gebruiker";
@@ -165,6 +181,7 @@ async function maakOfUpdateE2eAccount(opties: {
         actief: true,
         gearchiveerd: false,
         bevoegdheden,
+        ...(opties.functietitels ? { functietitels: opties.functietitels } : {}),
         // NOTITIE_01: initialen vooraf zetten zodat de eenmalige
         // "Je initialen"-dialoog geen e2e-tests blokkeert.
         initialen: "E2E",
@@ -184,6 +201,7 @@ async function maakOfUpdateE2eAccount(opties: {
       tweeFactorIngeschakeld: true,
       actief: true,
       bevoegdheden,
+      functietitels: opties.functietitels ?? [],
       initialen: "E2E",
     })
     .returning({ id: gebruikersTable.id });
@@ -222,6 +240,20 @@ async function zorgVoorE2eVerlofsoort(): Promise<void> {
   });
 }
 
+async function zorgVoorMedewerker(gebruikerId: number, naam: string): Promise<number> {
+  const [bestaand] = await db
+    .select({ id: medewerkersTable.id })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+  if (bestaand) return bestaand.id;
+
+  const [nieuw] = await db
+    .insert(medewerkersTable)
+    .values({ gebruikerId, naam })
+    .returning({ id: medewerkersTable.id });
+  return nieuw.id;
+}
+
 // Vast e2e-account voor de monteur-suite (startmenu.spec.ts).
 export async function setupE2eAccount(): Promise<number> {
   const id = await maakOfUpdateE2eAccount({
@@ -229,9 +261,65 @@ export async function setupE2eAccount(): Promise<number> {
     naam: "E2E Test Monteur",
     wachtwoord: E2E_WACHTWOORD,
     totpSecret: E2E_TOTP_SECRET,
+    functietitels: ["Monteur"],
   });
   await zorgVoorE2eVerlofsoort();
   return id;
+}
+
+export async function setupE2eTelefoonProfielen(): Promise<{
+  veldId: number;
+  kantoorId: number;
+  adminId: number;
+}> {
+  const veldId = await maakOfUpdateE2eAccount({
+    email: E2E_TELEFOON_VELD_EMAIL,
+    naam: "E2E Telefoon Veld",
+    wachtwoord: E2E_TELEFOON_VELD_WACHTWOORD,
+    totpSecret: E2E_TELEFOON_VELD_TOTP_SECRET,
+    functietitels: ["Monteur"],
+  });
+  const kantoorId = await maakOfUpdateE2eAccount({
+    email: E2E_TELEFOON_KANTOOR_EMAIL,
+    naam: "E2E Telefoon Kantoor",
+    wachtwoord: E2E_TELEFOON_KANTOOR_WACHTWOORD,
+    totpSecret: E2E_TELEFOON_KANTOOR_TOTP_SECRET,
+    bevoegdheden: {},
+    functietitels: ["Administratief medewerker"],
+  });
+  const adminId = await maakOfUpdateE2eAccount({
+    email: E2E_TELEFOON_ADMIN_EMAIL,
+    naam: "E2E Telefoon Hoofdbeheerder",
+    wachtwoord: E2E_TELEFOON_ADMIN_WACHTWOORD,
+    totpSecret: E2E_TELEFOON_ADMIN_TOTP_SECRET,
+    rol: "hoofdbeheerder",
+    functietitels: ["Directeur"],
+  });
+
+  await Promise.all([
+    zorgVoorMedewerker(veldId, "E2E Telefoon Veld"),
+    zorgVoorMedewerker(kantoorId, "E2E Telefoon Kantoor"),
+    zorgVoorMedewerker(adminId, "E2E Telefoon Hoofdbeheerder"),
+    zorgVoorE2eVerlofsoort(),
+  ]);
+  return { veldId, kantoorId, adminId };
+}
+
+export async function archiveerE2eTelefoonProfielen(): Promise<void> {
+  const resultaten = await Promise.allSettled([
+    archiveerAccount(E2E_TELEFOON_VELD_EMAIL),
+    archiveerAccount(E2E_TELEFOON_KANTOOR_EMAIL),
+    archiveerAccount(E2E_TELEFOON_ADMIN_EMAIL),
+  ]);
+  const fouten = resultaten.filter(
+    (resultaat): resultaat is PromiseRejectedResult => resultaat.status === "rejected",
+  );
+  if (fouten.length > 0) {
+    throw new AggregateError(
+      fouten.map((fout) => fout.reason),
+      `${fouten.length} telefoonprofiel(en) konden niet worden gearchiveerd`,
+    );
+  }
 }
 
 // Vast e2e-account voor de web-suite (web-gebouw-detail + web-offerte-badge).
@@ -442,11 +530,18 @@ export async function archiveerE2eBedragenAccounts(): Promise<void> {
 // minResterendeSec=20: bij een cold-start Expo-load is 8 sec te krap; met 20 sec
 // buffer is de code zeker nog geldig als het inlogverzoek de server bereikt.
 export async function genereerVersTotp(minResterendeSec = 20): Promise<string> {
+  return genereerVersTotpVoor(E2E_TOTP_SECRET, minResterendeSec);
+}
+
+export async function genereerVersTotpVoor(
+  secret: string,
+  minResterendeSec = 20,
+): Promise<string> {
   const resterend = authenticator.timeRemaining();
   if (resterend < minResterendeSec) {
     await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
   }
-  return authenticator.generate(E2E_TOTP_SECRET);
+  return authenticator.generate(secret);
 }
 
 // Zelfde als genereerVersTotp maar voor het web-account.

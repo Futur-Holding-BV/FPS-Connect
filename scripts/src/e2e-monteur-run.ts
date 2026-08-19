@@ -15,6 +15,7 @@ import https from "node:https";
 
 import {
   archiveerE2eAccount,
+  archiveerE2eTelefoonProfielen,
   archiveerE2eUurcodesAppAccount,
 } from "./e2e-monteur-testaccount";
 
@@ -79,6 +80,47 @@ function isBereikbaar(url: string): Promise<boolean> {
       klaar(false);
     });
     req.on("error", () => klaar(false));
+  });
+}
+
+function publiekeApiPreflightBeschikbaar(): Promise<boolean> {
+  const apiDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (!apiDomain || !expoDomain) return Promise.resolve(false);
+  const origin = `https://${expoDomain}`;
+
+  return new Promise((resolve) => {
+    let afgerond = false;
+    const klaar = (waarde: boolean) => {
+      if (afgerond) return;
+      afgerond = true;
+      resolve(waarde);
+    };
+    const req = https.request(
+      `https://${apiDomain}/api/auth/mobile/login`,
+      {
+        method: "OPTIONS",
+        timeout: 5_000,
+        rejectUnauthorized: false,
+        headers: {
+          Origin: origin,
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type",
+        },
+      },
+      (res) => {
+        res.resume();
+        klaar(
+          res.statusCode === 204 &&
+            res.headers["access-control-allow-origin"] === origin,
+        );
+      },
+    );
+    req.on("timeout", () => {
+      req.destroy();
+      klaar(false);
+    });
+    req.on("error", () => klaar(false));
+    req.end();
   });
 }
 
@@ -291,6 +333,18 @@ async function preWarmExpoBundle(): Promise<void> {
   }
 }
 
+async function wachtOpPubliekeApi(): Promise<void> {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    if (await publiekeApiPreflightBeschikbaar()) {
+      log("Publieke API-preflight gezond.");
+      return;
+    }
+    await wacht(3_000);
+  }
+  throw new Error("Publieke API-preflight werd niet gezond binnen 120 seconden.");
+}
+
 async function main(): Promise<void> {
   let exitCode = 1;
   try {
@@ -298,6 +352,7 @@ async function main(): Promise<void> {
     for (const service of services) {
       await zorgServiceDraait(service);
     }
+    await wachtOpPubliekeApi();
     await preWarmExpoBundle();
     log("Alle services gezond, Playwright starten.");
     exitCode = await draaiPlaywright();
@@ -310,6 +365,7 @@ async function main(): Promise<void> {
     // activeert het opnieuw via de idempotente seeder.
     try {
       await archiveerE2eAccount();
+      await archiveerE2eTelefoonProfielen();
       await archiveerE2eUurcodesAppAccount();
       log("E2e-testaccount gearchiveerd en gedeactiveerd.");
     } catch (err) {

@@ -22,6 +22,7 @@ import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { heeftBevoegdheid, type Vereiste } from "@/lib/bevoegdheden";
+import { isUitvoerendVeld } from "@/lib/buitendienst";
 import kleuren from "@/constants/colors";
 import { useColors } from "@/hooks/useColors";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
@@ -108,6 +109,10 @@ export default function MenuScherm() {
     gebouwen: "/gebouwen",
     projecten: "/projecten",
     verlof: "/hrm/verlof",
+    declaraties: "/hrm/declaraties",
+    loonstrookjes: "/hrm/loonstrookjes",
+    certificaten: "/hrm/certificaten",
+    opleidingen: "/hrm/opleidingen",
     kalender: "/kalender",
     uren: "/uren",
     planning: "/planning",
@@ -144,9 +149,21 @@ export default function MenuScherm() {
   // backendroute werkelijk eist (gemeten; zie docs/metingen/APP_01_menu-bevoegdheden.md).
   // Wat de gebruiker niet mag, wordt NIET getoond — niet uitgegrijsd.
   const magPersoneel = heeftBevoegdheid(gebruiker, { module: "personeel", niveau: 1 });
+  const isVeldfunctie = gebruiker ? isUitvoerendVeld(gebruiker) : false;
 
   type MenuActie = RadiaalActie & { vereist?: Vereiste };
-  const acties: RadiaalActie[] = ([
+  const eigenZakenActies: RadiaalActie[] = [
+    { sleutel: "verlof", label: "Verlof", icoon: "calendar-outline", onPress: () => router.push("/hrm/verlof") },
+    { sleutel: "uren", label: "Uren", icoon: "stopwatch", onPress: () => router.push("/uren") },
+    { sleutel: "declaraties", label: "Declaraties", icoon: "receipt-outline", onPress: () => router.push("/hrm/declaraties") },
+    { sleutel: "loonstrookjes", label: "Loonstrookjes", icoon: "document-text-outline", onPress: () => router.push("/hrm/loonstrookjes") },
+    { sleutel: "certificaten", label: "Certificaten", icoon: "ribbon-outline", onPress: () => router.push("/hrm/certificaten") },
+    { sleutel: "opleidingen", label: "Opleidingen", icoon: "school-outline", onPress: () => router.push("/hrm/opleidingen") },
+  ];
+
+  // Veldfuncties houden hun bestaande werkmenu. Kantoor start met de zes
+  // persoonlijke ingangen; module-ingangen staan voor hen onder Meer.
+  const veldActies: RadiaalActie[] = ([
     { sleutel: "werkdag", label: "Mijn werkdag", icoon: "today", onPress: () => router.push("/werkdag") },
     { sleutel: "mijn_werk", label: "Mijn werk", icoon: "construct-outline", vereist: { module: "voorzieningen", niveau: 1 }, onPress: () => router.push("/mijn-werk") },
     { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", vereist: { module: "gebouwen", niveau: 1 }, onPress: () => router.push("/gebouwen") },
@@ -158,7 +175,7 @@ export default function MenuScherm() {
     { sleutel: "veiligheid", label: "Veiligheid", icoon: "shield-checkmark-outline", vereist: { module: "toolbox", niveau: 1 }, onPress: () => router.push("/veiligheid") },
   ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
 
-  const meerActies: RadiaalActie[] = ([
+  const moduleActies: RadiaalActie[] = ([
     { sleutel: "werkbak", label: "Werkbak", icoon: "file-tray-full-outline", badge: werkbakAantal?.totaal ?? 0, onPress: () => router.push("/werkbak" as "/werkdag") },
     { sleutel: "personeel", label: magPersoneel ? "Personeel" : "Mijn gegevens", icoon: "people-outline", onPress: () => router.push("/hrm") },
     { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
@@ -172,6 +189,27 @@ export default function MenuScherm() {
     { sleutel: "mijn_auto", label: "Mijn auto", icoon: "car-sport-outline", onPress: () => router.push("/mijn-auto") },
     { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
   ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
+
+  const kantoorModuleActies: RadiaalActie[] = ([
+    { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", vereist: { module: "gebouwen", niveau: 1 }, onPress: () => router.push("/gebouwen") },
+    { sleutel: "projecten", label: "Projecten", icoon: "briefcase-outline", vereist: { module: "projecten", niveau: 1 }, onPress: () => router.push("/projecten") },
+    { sleutel: "kalender", label: "Kalender", icoon: "calendar-number-outline", onPress: () => router.push("/kalender") },
+    { sleutel: "veiligheid", label: "Veiligheid", icoon: "shield-checkmark-outline", vereist: { module: "toolbox", niveau: 1 }, onPress: () => router.push("/veiligheid") },
+  ] as MenuActie[]).filter((a) => heeftBevoegdheid(gebruiker, a.vereist ?? "basis"));
+
+  const acties = isVeldfunctie ? veldActies : eigenZakenActies;
+  const zichtbareVeldSleutels = new Set(
+    veldActies.slice(0, 6).map((actie) => actie.sleutel),
+  );
+  const eigenZakenAanvullend = eigenZakenActies.filter(
+    (actie) => !zichtbareVeldSleutels.has(actie.sleutel),
+  );
+  const meerActies = isVeldfunctie
+    ? [...eigenZakenAanvullend, ...moduleActies]
+    : [
+        ...kantoorModuleActies,
+        ...moduleActies.filter((actie) => actie.sleutel !== "opname"),
+      ];
 
   function sluitModal() {
     setModalZichtbaar(false);

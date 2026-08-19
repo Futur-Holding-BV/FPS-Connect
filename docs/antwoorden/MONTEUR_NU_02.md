@@ -1,5 +1,9 @@
 # MONTEUR_NU_02 — Startpoortcontrole (18 augustus 2026)
 
+> **Historische momentopname.** De toen ontbrekende implementatie is later
+> geleverd. De actuele functiesplitsing en bewijsvoering staan in
+> `docs/antwoorden/TELEFOON_IEDEREEN_01.md`.
+
 ## Uitkomst: GESTOPT vóór het bouwen — startpoort niet gehaald
 
 De opdracht bevat een harde startpoort: deze taak mag pas bouwen nadat de

@@ -27,6 +27,9 @@ export type Gebruiker = {
   // Functietitels (uit HRM) — op web gebruikt om buitendienstprofielen te
   // herkennen (lib/buitendienst.ts); komt mee in de login/auth-me payload.
   functietitels?: string[] | null;
+  // Serverside afgeleide functieclassificatie; leidend voor het telefoonmenu
+  // en gelijk aan de vlag waarmee de desktopomgeving veldfuncties afsluit.
+  is_uitvoerend_veld?: boolean | null;
   // Effectieve bevoegdheden (module → niveau), berekend door de server bij
   // login en ververst bij elke app-start. GEEN eigen berekening in de app.
   bevoegdheden?: Record<string, number>;

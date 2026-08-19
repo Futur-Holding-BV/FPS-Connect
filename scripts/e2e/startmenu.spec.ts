@@ -16,7 +16,14 @@ import {
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
-const SLEUTELS = ["werkdag", "gebouwen", "verlof", "uren", "planning", "veiligheid"] as const;
+const SLEUTELS = [
+  "werkdag",
+  "mijn_werk",
+  "gebouwen",
+  "projecten",
+  "verlof",
+  "kalender",
+] as const;
 
 // Lichte inhoudscontrole per route: bovenop de URL-check verifiëren we dat het
 // doelscherm zijn eigen inhoud daadwerkelijk rendert (een kop of een lijstitem),
