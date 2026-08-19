@@ -1,3 +1,5 @@
+- **Externe adviseurs**: nieuw beheerscherm onder Personeel met bedrijf, contactpersoon, inzet, toegangsdatum en accountstatus. Beheerders kunnen gegevens en toegang verlengen via het bestaande adviseur-account. De dagelijkse bewakingsloop zet vanaf 14 dagen vóór de einddatum (en bij verlopen toegang) een actiepunt in de werkbak voor personeel:2, dat zichzelf sluit wanneer de toegang is verlengd of het account is uitgezet.
+
 ## 2026-08-19 — UREN_BUITENDIENST_01: geen volledige-weekbewaking voor kantoorpersoneel
 
 - **Alleen buitendienst**: de wekelijkse urenverantwoording beoordeelt uitsluitend medewerkers van wie de gekoppelde functie in het functiehuis expliciet als **uitvoerend** is gemarkeerd.

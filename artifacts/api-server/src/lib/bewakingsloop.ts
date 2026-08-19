@@ -62,6 +62,7 @@ import {
   werkgeversTable,
   grootboekrekeningenTable,
   accountviewInstellingenTable,
+  externeAdviseursTable,
 } from "@workspace/db";
 import { werkInboxMailboxToegangTable } from "@workspace/db";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
@@ -435,6 +436,41 @@ async function voedVerloopdatums(): Promise<{ nieuw: number; afgehandeld: number
       herkomstType: "medewerker_opleiding",
       herkomstId: mo.id,
       dedupSleutel: `certificaat:${mo.id}`,
+    });
+  }
+
+  // GEBRUIKERS_01: externe adviseurs hebben een harde toegangseinddatum. Alleen
+  // actieve accounts kunnen nog toegang verliezen; een inactief account levert
+  // daarom geen ruis in de werkbak op. Ook een al verstreken datum blijft open
+  // staan totdat de beheerder de toegang verlengt of het account uitzet.
+  const adviseurs = await db
+    .select({
+      adviseur: externeAdviseursTable,
+      naam: gebruikersTable.naam,
+    })
+    .from(externeAdviseursTable)
+    .innerJoin(gebruikersTable, eq(gebruikersTable.id, externeAdviseursTable.gebruikerId))
+    .where(eq(gebruikersTable.actief, true));
+  for (const { adviseur, naam } of adviseurs) {
+    const dagen = dagenTot(adviseur.toegangTot);
+    if (dagen > 14) continue;
+    const persoon = naam || adviseur.contactpersoon || "onbekende adviseur";
+    items.push({
+      soort: "doen",
+      bron: "verloopdatum",
+      titel: dagen < 0
+        ? `Toegang externe adviseur verlopen: ${persoon}`
+        : dagen === 0
+          ? `Toegang externe adviseur verloopt vandaag: ${persoon}`
+          : `Toegang externe adviseur verloopt over ${dagen} dagen: ${persoon}`,
+      omschrijving: `${persoon} (${adviseur.bedrijf}) is ingeschakeld voor ${adviseur.ingeschakeldVoor}. Toegang is geldig t/m ${adviseur.toegangTot}; verleng of wijzig deze toegang bewust.`,
+      vereisteModule: "personeel",
+      vereistNiveau: 2,
+      gewicht: dagen < 0 ? 85 : dagen <= 3 ? 75 : 60,
+      actiePad: "/personeel/adviseurs",
+      herkomstType: "externe_adviseur",
+      herkomstId: adviseur.id,
+      dedupSleutel: `externe_adviseur:${adviseur.id}:toegang`,
     });
   }
 
