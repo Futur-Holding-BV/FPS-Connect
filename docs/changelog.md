@@ -694,6 +694,11 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 
 - De keuzelijsten voor **Alle fabrikanten** en **Niet opgegeven** gebruiken nu een veilige interne keuze in plaats van een lege waarde. De app vertaalt die keuze direct terug naar de bestaande betekenis, zodat filters en opgeslagen gegevens hetzelfde blijven werken en monteurs niet vastlopen.
 
+
+## 2026-08-19 — Faalmail bij mislukte productie-release end-to-end beproefd
+
+- De GitHub Actions-test met `test_faalmail=TEST` heeft de faalmail via Microsoft Graph verstuurd en René heeft de e-mail teruggevonden. De test stopt vóór SSH, VPS-deploy en OTA-publicatie.
+- Een faalmailtest gebruikt voortaan een eigen Actions-wachtrij en simuleert de fout zonder de job zelf te laten falen. Daardoor kan de e-mailketen groen worden beproefd zonder een echte productiedeploy te blokkeren, een test door een nieuwe push te laten annuleren of een onjuist uitrolincident in Connect te melden.
 ## 2026-08-19 — SELECTITEM_01: lege keuzewaarden kunnen niet meer stil een dialoog laten crashen
 
 - **Automatische broncontrole**: de nieuwe `lint-select-items`-stap controleert alle Firevault-TSX-bestanden en blokkeert een `SelectItem` met `value=""` of `value={""}` voordat die via de standaardteststraat kan landen.

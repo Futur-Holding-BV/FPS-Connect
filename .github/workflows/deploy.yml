@@ -53,7 +53,13 @@ on:
 # Nooit twee deployments tegelijk; een lopende deploy wordt nooit geannuleerd,
 # een nieuwe push wacht netjes tot de vorige klaar is.
 concurrency:
-  group: production-deploy
+  # Een faalmailtest raakt de server nooit. Geef hem daarom een eigen wachtrij:
+  # nieuwe productie-pushes mogen de bewijsrun niet annuleren, en de test houdt
+  # een echte deploy ook niet tegen.
+  group: >-
+    ${{ github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.test_faalmail == 'TEST' &&
+        'production-faalmail-test' || 'production-deploy' }}
   cancel-in-progress: false
 
 # Expliciete token-scopes: contents-read voor de checkout, actions-read voor
@@ -382,21 +388,23 @@ jobs:
           echo "Sessieveld-antipatroon-controle" > /tmp/faalstap.txt
           pnpm --filter @workspace/api-server run check-sessie-velden 2>&1 | tee /tmp/stap-uitvoer.log
 
-      # Testmodus voor de faalmelding: faalt bewust vóór de server wordt
-      # aangeraakt, zodat de faalmail (met stapnaam + uitvoer) end-to-end
-      # bewezen kan worden zonder productie te raken.
-      - name: Faalmail-test (bewust falen)
+      # Testmodus voor de faalmelding: simuleert een fout vóór de server wordt
+      # aangeraakt. De mailstap herkent deze marker, maar de run blijft groen:
+      # zo bewijst de test uitsluitend de mailketen en opent hij geen vals
+      # uitrolincident in Connect.
+      - name: Faalmail-test (bewuste simulatie)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_faalmail == 'TEST'
         run: |
           set -euo pipefail
-          echo "Faalmail-test (bewust falen)" > /tmp/faalstap.txt
+          echo "Faalmail-test (bewuste simulatie)" > /tmp/faalstap.txt
           {
             echo "Dit is een bewuste testfout om de faalmelding te controleren."
             echo "De productieserver is NIET aangeraakt."
+            echo "De test-run vervolgt bewust groen na de faalmail."
           } | tee /tmp/stap-uitvoer.log
-          exit 1
 
       - name: SSH-sleutel en hostkey instellen
+        if: github.event.inputs.test_faalmail != 'TEST'
         env:
           PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
@@ -432,6 +440,7 @@ jobs:
           fi
 
       - name: Deployscript naar de server kopiëren
+        if: github.event.inputs.test_faalmail != 'TEST'
         env:
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
           PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
@@ -451,6 +460,7 @@ jobs:
             "${PROD_SSH_USER}@${PROD_SSH_HOST}:/tmp/deploy-production.sh" 2>&1 | tee /tmp/stap-uitvoer.log
 
       - name: Deploy uitvoeren op de VPS
+        if: github.event.inputs.test_faalmail != 'TEST'
         id: deploy
         env:
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
@@ -496,6 +506,7 @@ jobs:
       # release niet heeft inloggen of de kernapplicatie gebroken heeft.
       # Credentials staan als GitHub Actions secrets, nooit als platte tekst.
       - name: Smoketest uitvoeren
+        if: github.event.inputs.test_faalmail != 'TEST'
         id: smoketest
         env:
           SMOKETEST_EMAIL: ${{ secrets.SMOKETEST_EMAIL }}
@@ -736,6 +747,7 @@ jobs:
       # ophaalbaar) draait de update gewoon — overslaan is een optimalisatie,
       # nooit een risico.
       - name: OTA-update monteur-app (EAS Update, kanaal production)
+        if: github.event.inputs.test_faalmail != 'TEST'
         id: eas_update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -803,7 +815,7 @@ jobs:
       #  - meldde het deployscript SCHIJF_ALARM (schijf na opruimen nog boven
       #    85%) → dezelfde mail, ongewijzigd en zonder dagelijkse beperking.
       - name: Tijd- en schijfbewaking (mail bij trage uitrol of volle schijf)
-        if: success()
+        if: success() && github.event.inputs.test_faalmail != 'TEST'
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -967,7 +979,10 @@ jobs:
       # als de app zelf (client-credentials, geen wachtwoord). Bij een
       # geslaagde deploy géén melding (voorkomt mailmoeheid).
       - name: Faalmelding e-mailen naar René
-        if: failure()
+        if: >-
+          failure() ||
+          (github.event_name == 'workflow_dispatch' &&
+           github.event.inputs.test_faalmail == 'TEST')
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -976,6 +991,7 @@ jobs:
           MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
           RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          IS_FAALMAIL_TEST: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_faalmail == 'TEST' }}
         run: |
           set -euo pipefail
 
@@ -1006,7 +1022,9 @@ jobs:
           # stap die brak. Smoketest-uitkomst blijft apart benoemd.
           FAAL_STAP=$(cat /tmp/faalstap.txt 2>/dev/null || echo "onbekende stap (vóór de eerste controle)")
           SMOKETEST_OK="${{ steps.smoketest.outcome }}"
-          if [ "$SMOKETEST_OK" = "failure" ]; then
+          if [ "${IS_FAALMAIL_TEST}" = "true" ]; then
+            REDEN="Bewuste testfout: de faalmelding wordt end-to-end beproefd."
+          elif [ "$SMOKETEST_OK" = "failure" ]; then
             REDEN="Post-deploy smoketest gefaald: de site op connect.fps-one.nl reageert niet correct."
           else
             REDEN="Stap '${FAAL_STAP}' is gefaald."
@@ -1077,7 +1095,10 @@ jobs:
       # actiepunt in de werkbak van de hoofdbeheerder. Nooit fataal: bewaking
       # mag een deploy niet breken.
       - name: Uitrol terugmelden aan Connect
-        if: always()
+        if: >-
+          always() &&
+          !(github.event_name == 'workflow_dispatch' &&
+            github.event.inputs.test_faalmail == 'TEST')
         env:
           UITROL_RAPPORT_SLEUTEL: ${{ secrets.UITROL_RAPPORT_SLEUTEL }}
           JOB_STATUS: ${{ job.status }}

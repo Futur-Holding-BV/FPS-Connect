@@ -25,6 +25,23 @@ The step intentionally never notifies on a successful deploy (avoid mail
 fatigue) and always exits 0 on its own errors so a broken notification path
 never masks the real deploy failure in the Actions UI.
 
+## End-to-end faalmailtest
+
+`workflow_dispatch` met `test_faalmail=TEST` simuleert uitsluitend de falende
+stap en forceert de mailstap; de job zelf hoort groen te eindigen en geen
+uitrolrapport naar Connect te sturen.
+
+**Why:** de gewone deploy-concurrency bewaart slechts één actieve en één
+wachtende run. Een nieuwere push vervangt die wachtende run, ook wanneer
+`cancel-in-progress: false` is ingesteld. Een test in die wachtrij kan dus
+stil verdwijnen. Een bewust rode test zou bovendien een onjuist uitrolincident
+openen.
+
+**How to apply:** houd de test in een eigen concurrency-groep, laat haar vóór
+SSH/VPS/OTA stoppen en zet de faalmailvoorwaarde ook expliciet op de
+`test_faalmail`-invoer. Controleer voor afsluiten zowel de groene mailstap als
+ontvangst in de beheerder-inbox.
+
 **DEPLOY_SNELHEID_01 (aug 2026):** OTA-stap alleen bij wijzigingen in artifacts/monteur-app, lib/api-client-react of lib/ontwerp én alleen --platform android; api/caddy-builds mét cache (migrate blijft --no-cache, schema-in-image). Tijdbewaking: serverscript print TIJD|stap|Ns, workflow tee't ssh-uitvoer en mailt via dezelfde Graph-flow bij >480s of SCHIJF_ALARM (schijf na prune nog >85%); uitrol wordt daarop niet afgebroken, mail komt altijd van de Actions-runner.
 
 ## Bewaking mag alleen gemeten feiten melden

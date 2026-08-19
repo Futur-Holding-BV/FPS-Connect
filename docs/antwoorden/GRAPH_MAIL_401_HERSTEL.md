@@ -84,7 +84,9 @@ Voer een test-run uit via GitHub Actions → "Deploy naar productie" →
 
 - Bij succes: René ontvangt een e-mail met onderwerpregel
   "FPS Connect: productie-release GEFAALD" en de tekst "Dit is een bewuste
-  testfout".
+  testfout". De Actions-run eindigt daarna **groen**: de test simuleert alleen
+  de fout voor de faalmail en raakt de productieserver niet. De test wordt ook
+  niet als mislukte uitrol aan Connect teruggemeld.
 - Bij 401: de Actions-stap logt "Kon geen Graph-token ophalen (HTTP 401)" met
   het volledige Azure-antwoord (error code + description), zodat je precies
   weet wat er mis is.
@@ -102,3 +104,8 @@ kleurde. Dit is opgelost: de token-aanroep schrijft de respons nu naar een
 tijdelijk bestand, logt de HTTP-statuscode en verlaat de stap met exit 0
 (bewaking/faalmelding) respectievelijk exit 1 (noodfix, waarbij de melding
 verplicht is).
+
+De handmatige invoer `test_faalmail=TEST` gebruikt een aparte, veilige
+testwachtrij. Hij triggert de faalmail met een bewuste simulatie in plaats van
+een echte deployfout, zodat de run groen kan afronden en nieuwe productie-pushes
+het e-mailbewijs niet annuleren.
