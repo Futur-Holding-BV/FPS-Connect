@@ -699,3 +699,9 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Automatische broncontrole**: de nieuwe `lint-select-items`-stap controleert alle Firevault-TSX-bestanden en blokkeert een `SelectItem` met `value=""` of `value={""}` voordat die via de standaardteststraat kan landen.
 - **Gerepareerde dialogen als regressiepad**: inspecties, beheermeldingen, LMRA, inkoopplanning en SnagStream worden expliciet door de controle meegenomen naast de volledige broncode.
 - **Bestaande restgevallen veilig gemaakt**: optionele filters en koppelingen in magazijn, leveranciers en facturen gebruiken nu een niet-lege sentinel en vertalen die terug naar de bestaande lege domeinwaarde, zonder het API-contract te wijzigen.
+
+## 2026-08-19 — AZURE_SECRET_VERLOOP_01: waarschuwing vóór de Graph-faalmail uitvalt
+
+- **Maandelijkse Azure-controle**: GitHub Actions leest op de eerste dag van iedere maand via Microsoft Graph alle `passwordCredentials` van de mail-appregistratie uit en vergelijkt iedere vervaldatum met de 30-dagengrens.
+- **Betrouwbare waarschuwing**: bij een bijna verlopen of al verlopen secret ontvangt René eerst een Graph-mail; lukt dat niet, dan verschijnt een zichtbare Actions-waarschuwing en wordt een bestaand GitHub-issue bijgewerkt of aangemaakt.
+- **Controle faalt niet stil**: ontbrekende secrets, een ongeldig token, onleesbare vervaldatum of onvoldoende `Application.Read.All`-rechten maken de geplande controle rood met een concrete herstelmelding, in plaats van een geruststellende maar onvolledige uitslag.

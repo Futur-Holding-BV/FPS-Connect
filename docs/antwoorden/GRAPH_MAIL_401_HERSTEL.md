@@ -38,6 +38,23 @@ Replit). Ze moeten worden ingesteld via:
 | `MAIL_MAILBOX`        | Het mailbox-account dat `sendMail` uitvoert (bv. `app@fpsbrandpreventie.nl`) |
 | `RENE_ALERT_EMAIL`    | René's e-mailadres waar de meldingen naartoe gaan               |
 
+## Maandelijkse controle op vervaldatum
+
+De workflow `.github/workflows/azure-client-secret-expiry.yml` draait op de
+eerste dag van elke maand en is ook handmatig te starten. Hij zoekt de
+Azure-applicatie op basis van `AZURE_CLIENT_ID` en haalt daarna via
+`/applications/{id}/passwordCredentials` alle client-secrets op. Ook als er
+meerdere secrets bestaan, wordt elk `endDateTime` gecontroleerd.
+
+De app-registratie waarmee de GitHub Actions-token wordt opgehaald heeft naast
+`Mail.Send` ook de Microsoft Graph **Application permission
+`Application.Read.All`** nodig, inclusief admin consent. Zonder die leesmacht
+kan de workflow de vervaldatum niet betrouwbaar vaststellen: hij zet dan een
+zichtbare Actions-fout en maakt of werkt een GitHub-issue bij. Als een secret
+binnen 30 dagen verloopt, probeert de workflow eerst René per Graph-mail te
+waarschuwen en gebruikt hij hetzelfde issue als fallback wanneer mail niet
+werkt.
+
 ### Stap-voor-stap in Azure Portal
 
 1. Ga naar **Azure Portal → App registrations** en open de registratie die voor
