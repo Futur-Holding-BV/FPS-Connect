@@ -11,7 +11,11 @@ import {
   parseerFpsBatchRef,
   berekenSha256,
 } from "./bankafschriftImportService";
-import { isOnzekereAccountviewUitkomst } from "./accountviewExportService";
+import {
+  BANKEXPORT_CLAIM_TTL_MS,
+  isOnzekereAccountviewUitkomst,
+} from "./accountviewExportService";
+import { ACCOUNT_VIEW_POST_TIMEOUT_MS } from "./accountview-client";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // extractTokens
@@ -286,6 +290,12 @@ describe("Bedrag-matching precisie", () => {
 });
 
 describe("AccountView transportuitkomst", () => {
+  it("laat een claim pas ruim na de harde transporttimeout verlopen", () => {
+    expect(BANKEXPORT_CLAIM_TTL_MS).toBeGreaterThanOrEqual(
+      ACCOUNT_VIEW_POST_TIMEOUT_MS * 3,
+    );
+  });
+
   it("behandelt een verbindingsfout zonder HTTP-respons als onzeker", () => {
     expect(isOnzekereAccountviewUitkomst({
       geslaagd: false,

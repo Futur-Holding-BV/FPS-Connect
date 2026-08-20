@@ -29878,6 +29878,12 @@ paths:
                   enum: [camt053, mt940]
                   description: Bestandsformaat — camt053 voor ISO-20022 XML, mt940 voor legacy SWIFT
       responses:
+        "400":
+          description: Bestand, extensie of formaat ontbreekt of is ongeldig
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
         "201":
           description: Nieuw import aangemaakt en verwerkt
           content:
@@ -30003,8 +30009,6 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/BankAfletterVoorstel"
-        "404":
-          description: Mutatie niet gevonden
 
   /bankafschriften/mutaties/{id}/audit:
     get:
@@ -30030,8 +30034,6 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/BankAfletterAudit"
-        "404":
-          description: Mutatie niet gevonden
 
   /bankafschriften/voorstellen/{id}/toepassen:
     post:
@@ -30141,6 +30143,18 @@ paths:
                 $ref: "#/components/schemas/Foutmelding"
         "422":
           description: Mutatie niet exportklaar (ontbrekende configuratie of werkgever)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "502":
+          description: AccountView wees de boeking af of gaf een eenduidige technische fout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "503":
+          description: AccountView is niet geconfigureerd
           content:
             application/json:
               schema:

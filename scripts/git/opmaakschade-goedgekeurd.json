@@ -71,6 +71,22 @@
       "verwijderd": 23,
       "blob": "0047bb86221c209d16e2a263d67d00cc92ebdb76",
       "reden": "Inhoudelijk beoordeelde, samenhangende REGISTER_01-verificatie voor hergrading, idempotentie, races en stale-bewijs; geen opmaakschade."
+    },
+    {
+      "commit": "f0b682fe66bcfdca9da7f84c8ecf1e67871960fc",
+      "pad": "artifacts/api-server/src/services/accountviewExportService.ts",
+      "toegevoegd": 565,
+      "verwijderd": 3,
+      "blob": "92cbf221d9038033969c28d592b51dd8deb14479",
+      "reden": "Inhoudelijk beoordeelde, samenhangende BANK_01-uitbreiding voor fail-closed bankexport en geaudit herstel; claim-timeouthardening staat in de directe vervolgwijziging. Geen opmaakschade."
+    },
+    {
+      "commit": "f0b682fe66bcfdca9da7f84c8ecf1e67871960fc",
+      "pad": "lib/api-spec/openapi.yaml",
+      "toegevoegd": 612,
+      "verwijderd": 0,
+      "blob": "c17a3880f136c95169afa9f7f2d3dcf238b8549c",
+      "reden": "Inhoudelijk beoordeelde, samenhangende BANK_01-API-uitbreiding met één route- en schemablok; contractcorrecties staan in de directe vervolgwijziging. Geen opmaakschade."
     }
   ]
 }

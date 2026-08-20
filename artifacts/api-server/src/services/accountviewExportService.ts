@@ -33,6 +33,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import {
+  ACCOUNT_VIEW_POST_TIMEOUT_MS,
   maakAccountViewClient,
   type AccountviewBoeking,
   type AccountviewBoekingResultaat,
@@ -589,7 +590,13 @@ export interface BankmutatieExportUitkomst {
   testmodus?: boolean;
 }
 
-const BANKEXPORT_CLAIM_TTL_MS = 15 * 60 * 1000;
+// De claim mag pas verlopen lang nadat de lokale AccountView-POST door zijn
+// harde timeout is beëindigd. Verval maakt de mutatie uitsluitend 'onzeker';
+// een nieuwe poging blijft een expliciete, geaudite keuze na externe controle.
+export const BANKEXPORT_CLAIM_TTL_MS = Math.max(
+  15 * 60 * 1000,
+  ACCOUNT_VIEW_POST_TIMEOUT_MS * 3,
+);
 
 type BankmutatieVoorExport = typeof bankMutatiesTable.$inferSelect;
 
@@ -665,6 +672,9 @@ export async function exporteerBankmutatieNaarAccountView(
       mutatie.accountviewClaimOp.getTime() < Date.now() - BANKEXPORT_CLAIM_TTL_MS;
     if (claimVerlopen) {
       const fout = "De vorige AccountView-aanroep is onderbroken; controleer in AccountView of de bankmutatie al is geboekt voordat u een herstelkeuze maakt.";
+      const claimVoorwaarde = mutatie.accountviewClaimToken == null
+        ? isNull(bankMutatiesTable.accountviewClaimToken)
+        : eq(bankMutatiesTable.accountviewClaimToken, mutatie.accountviewClaimToken);
       const onzeker = await db.update(bankMutatiesTable)
         .set({
           accountviewStatus: "onzeker",
@@ -676,6 +686,7 @@ export async function exporteerBankmutatieNaarAccountView(
         .where(and(
           eq(bankMutatiesTable.id, mutatieId),
           eq(bankMutatiesTable.accountviewStatus, "bezig"),
+          claimVoorwaarde,
         ))
         .returning({ id: bankMutatiesTable.id });
       if (onzeker.length > 0) {

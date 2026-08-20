@@ -37216,6 +37216,8 @@ export const ExporteerBankmutatieAccountViewResponse = zod.object({
   "foutmelding": zod.string().nullish(),
   "testmodus": zod.boolean().nullish()
 })
+
+
 /**
  * @summary Onzekere AccountView-bankexport na externe controle herstellen
  */

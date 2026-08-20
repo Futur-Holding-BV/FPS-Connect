@@ -89,6 +89,8 @@ function vertaalFout(raw: string): string {
   return raw;
 }
 
+export const ACCOUNT_VIEW_POST_TIMEOUT_MS = 60_000;
+
 export class AccountViewClient {
   constructor(private config: AccountviewConfig) {}
 
@@ -122,6 +124,10 @@ export class AccountViewClient {
           "Accept": "application/json",
         },
         body: JSON.stringify(payload),
+        // Een externe POST mag nooit onbeperkt blijven leven. BANK_01 gebruikt
+        // een veel ruimere claimvervaltermijn; daardoor kan een oude claim pas
+        // naar 'onzeker' nadat deze lokale worker aantoonbaar is gestopt.
+        signal: AbortSignal.timeout(ACCOUNT_VIEW_POST_TIMEOUT_MS),
       });
 
       httpStatus = resp.status;

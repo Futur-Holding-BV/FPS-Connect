@@ -103741,7 +103741,7 @@ export const getGetBankMutatieVoorstellenQueryKey = (id: number,) => {
     }
 
 
-export const getGetBankMutatieVoorstellenQueryOptions = <TData = Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetBankMutatieVoorstellenQueryOptions = <TData = Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -103760,14 +103760,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetBankMutatieVoorstellenQueryResult = NonNullable<Awaited<ReturnType<typeof getBankMutatieVoorstellen>>>
-export type GetBankMutatieVoorstellenQueryError = ErrorType<void>
+export type GetBankMutatieVoorstellenQueryError = ErrorType<unknown>
 
 
 /**
  * @summary Afletter-voorstellen voor een bankmutatie
  */
 
-export function useGetBankMutatieVoorstellen<TData = Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError = ErrorType<void>>(
+export function useGetBankMutatieVoorstellen<TData = Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError = ErrorType<unknown>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -103818,7 +103818,7 @@ export const getGetBankMutatieAuditQueryKey = (id: number,) => {
     }
 
 
-export const getGetBankMutatieAuditQueryOptions = <TData = Awaited<ReturnType<typeof getBankMutatieAudit>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetBankMutatieAuditQueryOptions = <TData = Awaited<ReturnType<typeof getBankMutatieAudit>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -103837,14 +103837,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetBankMutatieAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getBankMutatieAudit>>>
-export type GetBankMutatieAuditQueryError = ErrorType<void>
+export type GetBankMutatieAuditQueryError = ErrorType<unknown>
 
 
 /**
  * @summary Audit-trail voor een bankmutatie
  */
 
-export function useGetBankMutatieAudit<TData = Awaited<ReturnType<typeof getBankMutatieAudit>>, TError = ErrorType<void>>(
+export function useGetBankMutatieAudit<TData = Awaited<ReturnType<typeof getBankMutatieAudit>>, TError = ErrorType<unknown>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankMutatieAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
