@@ -43,6 +43,7 @@ type KnopProps = {
   bezig?: boolean;
   disabled?: boolean;
   groot?: boolean;
+  testID?: string;
 };
 
 export function Knop({
@@ -52,6 +53,7 @@ export function Knop({
   bezig = false,
   disabled = false,
   groot = false,
+  testID,
 }: KnopProps) {
   const c = useColors();
 
@@ -73,6 +75,7 @@ export function Knop({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={isUit}
       style={({ pressed }) => [

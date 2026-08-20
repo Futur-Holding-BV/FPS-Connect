@@ -62,7 +62,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur" | "contract_aanzegdeadline" | "bankafschrift_import_mislukt";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur" | "contract_aanzegdeadline" | "bankafschrift_import_mislukt" | "ci_faalmelding";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -449,8 +449,9 @@ export async function verstuurMail(opties: {
    * Alleen true voor mails waar de verzending zélf de expliciete menselijke
    * handeling is: account-mails (uitnodiging, wachtwoord-reset, testmail) en
    * mails die een medewerker met een verstuur-knop verstuurt (offerte,
-   * factuur, bestelbon). Al het overige gaat fail-closed de mail-wachtrij in
-   * en wordt pas verzonden na goedkeuring door een beheerder.
+   * factuur, bestelbon), plus kritieke technische faalmeldingen die juist
+   * buiten de applicatiehandeling om direct moeten aankomen. Al het overige
+   * gaat fail-closed de mail-wachtrij in en wordt pas verzonden na goedkeuring.
    */
   direct?: boolean;
 }): Promise<void> {

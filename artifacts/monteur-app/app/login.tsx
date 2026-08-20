@@ -187,6 +187,7 @@ export default function Login() {
 
           <View style={{ gap: ruimte.l }}>
             <TekstVeld
+              testID="login-email"
               label="E-mailadres"
               value={email}
               onChangeText={setEmail}
@@ -196,6 +197,7 @@ export default function Login() {
               placeholder="naam@bedrijf.nl"
             />
             <TekstVeld
+              testID="login-wachtwoord"
               label="Wachtwoord"
               value={wachtwoord}
               onChangeText={setWachtwoord}
@@ -203,6 +205,7 @@ export default function Login() {
               placeholder="••••••••"
             />
             <TekstVeld
+              testID="login-code"
               label="Authenticatiecode (2FA)"
               value={code}
               onChangeText={(t) => setCode(t.replace(/\s/g, ""))}
@@ -226,7 +229,7 @@ export default function Login() {
             )}
 
             <View style={{ marginTop: ruimte.s }}>
-              <Knop titel="Inloggen" onPress={verstuur} bezig={bezig} groot />
+              <Knop testID="login-versturen" titel="Inloggen" onPress={verstuur} bezig={bezig} groot />
             </View>
 
             <Text

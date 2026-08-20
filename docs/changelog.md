@@ -1,3 +1,8 @@
+## 2026-08-20 — CI-poort, dagelijkse roodmelding en noodfixhistorie
+
+- De bestaande dagelijkse bewakingsloop waarschuwt via de bestaande Microsoft Graph-mailkoppeling zodra de bouwcontrole 24 uur onafgebroken rood is, en herhaalt dit hoogstens eenmaal per 24 uur tot een groene CI-melding de periode beëindigt. Een duurzame verzendstatus per periode en hoofdbeheerder voorkomt dubbelen bij gedeeltelijke verzendfouten; een inmiddels ingetrokken beheerder wordt vlak vóór verzending overgeslagen.
+- De deployterugmelding legt werkelijk gebruik van de bestaande noodfix-omweg append-only vast. De systeemstatus toont voor hoofdbeheerders de controleerbare telling en details over de afgelopen veertien dagen; gewone push-uitrollen schrijven geen noodfixregel.
+
 ## 2026-08-20 — Externe back-upstaffel fail-safe hersteld
 
 - **Exit 141 structureel verwijderd**: selectie van de nieuwste dump, vorige set en dagmappen gebruikt geen vroeg afgeknotte `head`-/`tail`-pijplijnen meer onder `pipefail`.

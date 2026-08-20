@@ -504,6 +504,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
             {meerActies.length > 0 && (
               <>
                 <Pressable
+                  testID="radiaal-meer"
                   onPress={() => setMeerOpen((waarde) => !waarde)}
                   style={({ pressed }) => ({
                     flexDirection: "row",

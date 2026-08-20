@@ -81,6 +81,7 @@
 - [AI Decision Engine (Fase 0)](ai-decision-engine.md) — passthrough-laag boven aiGateway; passthrough==directe gateway, human-in-the-loop via token; token-endpoints fail-closed op module-matrix.
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
 - [Uitrol-bewaking](uitrol-bewaking.md) — Actions meldt verwacht commit terug; werkbak-item zelfsluitend; ordening op run_id; sleutel base64 over SSH.
+- [Dagelijkse CI-maildeduplicatie](ci-mail-outbox.md) — multi-ontvanger Graph-waarschuwingen vereisen dedup per periode+ontvanger en actuele bevoegdheidscontrole vlak vóór verzending.
 - [Deploy-terugval vangnet](deploy-rollback-vangnet.md) + [faal-alerting](deploy-failure-alerting.md) — compose up-falen nooit fataal (doorvallen naar healthcheck/rollback), rollback herexporteert versievars; faalmail via Graph direct vanuit Actions runner (GitHub secrets, apart van Replit env).
 - [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext(type,id) wired into 8 core entities' primary mutation routes; sub-resources not in resolvers.ts payload deliberately skipped, re-check before assuming coverage.
 - [KLANTLOOS_01](klantloos.md) — rol klant volledig uit Connect verwijderd (aug 2026); alleen module-matrix-rechten; /portaal/:token en CRM-klanttermen blijven; nooit "of klant"-middleware terugbouwen.

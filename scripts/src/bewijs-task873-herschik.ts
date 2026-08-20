@@ -4,7 +4,7 @@
 import "./lib/prodGuard";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { authenticator } from "otplib";
 import { db, gebruikersTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
 
@@ -35,7 +35,37 @@ async function ruimOp(): Promise<void> {
   }
 }
 
-async function zorgVoorTestgebruiker(): Promise<void> {
+type AuditMomentopname = {
+  aantal: number;
+  hoogsteId: number;
+  vingerafdruk: string;
+};
+
+async function momentopnameBevoegdheidAudit(gebruikerId: number): Promise<AuditMomentopname> {
+  const resultaat = await db.execute(sql`
+    SELECT
+      count(*)::int AS aantal,
+      COALESCE(max(id), 0)::int AS hoogste_id,
+      md5(COALESCE(
+        string_agg(md5(row_to_json(b)::text), '|' ORDER BY id),
+        ''
+      )) AS vingerafdruk
+    FROM bevoegdheid_audit_log b
+    WHERE gebruiker_id = ${gebruikerId}
+  `);
+  const rij = resultaat.rows[0] as {
+    aantal: number;
+    hoogste_id: number;
+    vingerafdruk: string;
+  };
+  return {
+    aantal: Number(rij.aantal),
+    hoogsteId: Number(rij.hoogste_id),
+    vingerafdruk: rij.vingerafdruk,
+  };
+}
+
+async function zorgVoorTestgebruiker(): Promise<number> {
   const [bestaande] = await db
     .select({ id: gebruikersTable.id })
     .from(gebruikersTable)
@@ -56,22 +86,33 @@ async function zorgVoorTestgebruiker(): Promise<void> {
       .update(gebruikersTable)
       .set(waarden)
       .where(eq(gebruikersTable.id, bestaande.id));
-    return;
+    return bestaande.id;
   }
-  await db.insert(gebruikersTable).values({
+  const [ingevoegd] = await db.insert(gebruikersTable).values({
     ...waarden,
     email: EMAIL,
-  });
+  }).returning({ id: gebruikersTable.id });
+  return ingevoegd.id;
 }
 
 type ApiRegel = { id: number; omschrijving: string; volgorde: number; ouder_regel_id: number | null; hoofdstuk: string | null };
 
 async function main(): Promise<void> {
-  await ruimOp();
-  await zorgVoorTestgebruiker();
+  let gebruikerId: number | null = null;
+  let auditVoor: AuditMomentopname | null = null;
+  try {
+    await ruimOp();
+    const [bestaande] = await db
+      .select({ id: gebruikersTable.id })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.email, EMAIL))
+      .limit(1);
+    if (bestaande) auditVoor = await momentopnameBevoegdheidAudit(bestaande.id);
+    gebruikerId = await zorgVoorTestgebruiker();
+    auditVoor ??= await momentopnameBevoegdheidAudit(gebruikerId);
 
-  const [calc] = await db.insert(modCalcHeadersTable).values({ naam: CALC_MERK, status: "concept" } as typeof modCalcHeadersTable.$inferInsert).returning();
-  const calcId = calc.id;
+    const [calc] = await db.insert(modCalcHeadersTable).values({ naam: CALC_MERK, status: "concept" } as typeof modCalcHeadersTable.$inferInsert).returning();
+    const calcId = calc.id;
 
   // Seed: hoofdstuk "Wanden": A (met kinderen A1, A2), B, C; hoofdstuk "Kleppen": D.
   const basis = { calculatieId: calcId, categorie: "arbeid", eenheid: "st", hoeveelheid: 1, tarief: 0, totaal: 0, hoofdstuk: "Wanden" };
@@ -200,7 +241,19 @@ async function main(): Promise<void> {
   check(naA.length === 2 && naA[0] === volA + 1 && naA[1] === volA + 2, `8c. Concurrency: kinderen direct na ouder A (A=${volA}, kinderen=${naA.join(",")})`);
   check(rs.filter((r) => r.ouder_regel_id === ra.id).length === 2, "8d. Concurrency: ouder-kindrelatie intact");
 
-  await ruimOp();
+  } finally {
+    // Alleen de gemarkeerde calculatiedata is werkelijk verwijderbaar. Het vaste
+    // testaccount blijft bestaan, zodat een FK-cascade nooit kan proberen
+    // append-only bevoegdheidsaudit te verwijderen.
+    await ruimOp();
+    if (gebruikerId && auditVoor) {
+      const auditNa = await momentopnameBevoegdheidAudit(gebruikerId);
+      check(
+        JSON.stringify(auditNa) === JSON.stringify(auditVoor),
+        `11. Bevoegdheidsaudit volledig ongemoeid → ${JSON.stringify(auditNa)}`,
+      );
+    }
+  }
   console.log(fout.length ? `\n✗ ${fout.length} check(s) gefaald` : "\n✓ Alle checks geslaagd");
 }
 

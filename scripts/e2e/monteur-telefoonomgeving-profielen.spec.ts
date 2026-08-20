@@ -48,13 +48,15 @@ async function logIn(page: Page, profiel: Profiel): Promise<LoginResultaat> {
   });
   await page.goto("/");
 
-  const inputs = page.locator("input");
-  await expect(inputs.nth(0)).toBeVisible({ timeout: 60_000 });
-  await inputs.nth(0).fill(profiel.email);
-  await inputs.nth(1).fill(profiel.wachtwoord);
+  const email = page.getByTestId("login-email");
+  const wachtwoord = page.getByTestId("login-wachtwoord");
+  const code = page.getByTestId("login-code");
+  await expect(email).toBeVisible({ timeout: 60_000 });
+  await email.fill(profiel.email);
+  await wachtwoord.fill(profiel.wachtwoord);
 
   for (let poging = 1; poging <= 3; poging++) {
-    await inputs.nth(2).fill(await genereerVersTotpVoor(profiel.secret));
+    await code.fill(await genereerVersTotpVoor(profiel.secret));
     const loginRespons = page
       .waitForResponse(
         (respons) =>
@@ -63,7 +65,7 @@ async function logIn(page: Page, profiel: Profiel): Promise<LoginResultaat> {
         { timeout: 30_000 },
       )
       .catch(() => null);
-    await page.getByText("Inloggen", { exact: true }).click();
+    await page.getByTestId("login-versturen").click();
     const respons = await loginRespons;
 
     if (respons?.status() === 200) {
@@ -84,7 +86,7 @@ async function logIn(page: Page, profiel: Profiel): Promise<LoginResultaat> {
 
 async function openMeer(page: Page): Promise<void> {
   await page.getByTestId("radiaal-sluiten").click();
-  await page.getByText("Meer", { exact: true }).click();
+  await page.getByTestId("radiaal-meer").click();
 }
 
 test.describe.configure({ mode: "serial" });

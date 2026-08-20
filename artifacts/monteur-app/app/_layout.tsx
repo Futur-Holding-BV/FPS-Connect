@@ -274,7 +274,7 @@ function ToolboxPopupBewaker() {
 
   return (
     <Modal visible animationType="fade" transparent statusBarTranslucent>
-      <View style={{
+      <View testID="toolbox-maandpopup" style={{
         flex: 1,
         backgroundColor: kanUitstellen ? c.dark + "BF" : c.dark + "EB",
         alignItems: "center",
@@ -315,6 +315,7 @@ function ToolboxPopupBewaker() {
               : "De uitstelperiode is verstreken. Voltooi deze toolbox om door te gaan."}
           </Text>
           <Pressable
+            testID="toolbox-maandpopup-start"
             onPress={() => setDoetToolbox(true)}
             disabled={toolboxId == null}
             style={{ backgroundColor: c.warning, borderRadius: c.radius, padding: ruimte.m + 2, alignItems: "center", marginBottom: kanUitstellen ? ruimte.s + 2 : 0, opacity: toolboxId == null ? 0.6 : 1 }}

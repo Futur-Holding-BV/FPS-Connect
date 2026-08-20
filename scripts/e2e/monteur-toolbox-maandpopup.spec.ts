@@ -18,6 +18,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { and, eq } from "drizzle-orm";
 import { authenticator } from "otplib";
+import { Client } from "pg";
 
 import {
   db,
@@ -43,6 +44,10 @@ const TOOLBOX_TITEL = "E2E Maandtoolbox 1139";
 let gebruikerId = 0;
 let toolboxId = 0;
 let opdrachtId = 0;
+let gebruikteBestaandeOpdracht = false;
+let oorspronkelijkToolboxId: number | null = null;
+let bestaandeStatussen: Array<typeof toolboxMaandStatusTable.$inferSelect> = [];
+let maandSlot: Client | null = null;
 
 async function ruimSeedOp() {
   if (toolboxId > 0) {
@@ -60,6 +65,10 @@ async function ruimSeedOp() {
 }
 
 test.beforeAll(async () => {
+  maandSlot = new Client({ connectionString: process.env.DATABASE_URL });
+  await maandSlot.connect();
+  await maandSlot.query("SELECT pg_advisory_lock($1, $2)", [1193, 1139]);
+
   gebruikerId = await setupE2eUurcodesAppAccount();
   await ruimSeedOp();
 
@@ -88,21 +97,50 @@ test.beforeAll(async () => {
     uitleg: "Altijd eerst alarmeren.",
   });
 
-  // Bestaande maandopdracht van deze maand (dev-omgeving) opzij: er geldt één
-  // opdracht per maand.
   const nu = new Date();
-  await db.delete(toolboxMaandOpdrachtenTable).where(
+  const [bestaand] = await db
+    .select()
+    .from(toolboxMaandOpdrachtenTable)
+    .where(
+      and(
+        eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()),
+        eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1),
+      ),
+    )
+    .limit(1);
+  if (bestaand) {
+    gebruikteBestaandeOpdracht = true;
+    oorspronkelijkToolboxId = bestaand.toolboxId;
+    opdrachtId = bestaand.id;
+    bestaandeStatussen = await db
+      .select()
+      .from(toolboxMaandStatusTable)
+      .where(
+        and(
+          eq(toolboxMaandStatusTable.opdrachtId, opdrachtId),
+          eq(toolboxMaandStatusTable.gebruikerId, gebruikerId),
+        ),
+      );
+    await db
+      .update(toolboxMaandOpdrachtenTable)
+      .set({ toolboxId })
+      .where(eq(toolboxMaandOpdrachtenTable.id, bestaand.id));
+  } else {
+    const [opdr] = await db
+      .insert(toolboxMaandOpdrachtenTable)
+      .values({ toolboxId, jaar: nu.getFullYear(), maand: nu.getMonth() + 1 })
+      .returning({ id: toolboxMaandOpdrachtenTable.id });
+    opdrachtId = opdr.id;
+  }
+
+  // Alleen de status van het eigen e2e-account vervangen. De maandopdracht en
+  // statussen van andere gebruikers blijven ongemoeid.
+  await db.delete(toolboxMaandStatusTable).where(
     and(
-      eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()),
-      eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1),
+      eq(toolboxMaandStatusTable.opdrachtId, opdrachtId),
+      eq(toolboxMaandStatusTable.gebruikerId, gebruikerId),
     ),
   );
-
-  const [opdr] = await db
-    .insert(toolboxMaandOpdrachtenTable)
-    .values({ toolboxId, jaar: nu.getFullYear(), maand: nu.getMonth() + 1 })
-    .returning({ id: toolboxMaandOpdrachtenTable.id });
-  opdrachtId = opdr.id;
 
   // Uitstelperiode verstreken: eerste aanbieding 4 dagen terug → verplicht,
   // kan_uitstellen=false. Dit is exact het blokkerende geval van de melding.
@@ -114,8 +152,39 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await ruimSeedOp();
-  await archiveerE2eUurcodesAppAccount();
+  try {
+    if (opdrachtId > 0) {
+      await db.delete(toolboxMaandStatusTable).where(
+        and(
+          eq(toolboxMaandStatusTable.opdrachtId, opdrachtId),
+          eq(toolboxMaandStatusTable.gebruikerId, gebruikerId),
+        ),
+      );
+      if (gebruikteBestaandeOpdracht && oorspronkelijkToolboxId) {
+        await db
+          .update(toolboxMaandOpdrachtenTable)
+          .set({ toolboxId: oorspronkelijkToolboxId })
+          .where(eq(toolboxMaandOpdrachtenTable.id, opdrachtId));
+        if (bestaandeStatussen.length > 0) {
+          await db.insert(toolboxMaandStatusTable).values(bestaandeStatussen);
+        }
+      } else if (!gebruikteBestaandeOpdracht) {
+        await db
+          .delete(toolboxMaandOpdrachtenTable)
+          .where(eq(toolboxMaandOpdrachtenTable.id, opdrachtId));
+      }
+    }
+    await ruimSeedOp();
+    await archiveerE2eUurcodesAppAccount();
+  } finally {
+    if (maandSlot) {
+      await maandSlot
+        .query("SELECT pg_advisory_unlock($1, $2)", [1193, 1139])
+        .catch(() => undefined);
+      await maandSlot.end().catch(() => undefined);
+      maandSlot = null;
+    }
+  }
 });
 
 async function versTotp(minResterendeSec = 20): Promise<string> {
@@ -139,32 +208,37 @@ async function logIn(page: Page): Promise<void> {
   });
   await page.goto("/");
 
-  const inputs = page.locator("input");
-  await expect(inputs.nth(0)).toBeVisible({ timeout: 60_000 });
-  await inputs.nth(0).fill(E2E_UURCODES_APP_EMAIL);
-  await inputs.nth(1).fill(E2E_UURCODES_APP_WACHTWOORD);
+  const email = page.getByTestId("login-email");
+  const wachtwoord = page.getByTestId("login-wachtwoord");
+  const codeInvoer = page.getByTestId("login-code");
+  await expect(email).toBeVisible({ timeout: 60_000 });
+  await email.fill(E2E_UURCODES_APP_EMAIL);
+  await wachtwoord.fill(E2E_UURCODES_APP_WACHTWOORD);
 
   for (let poging = 1; poging <= 3; poging++) {
     if (poging > 1) await wachtOpNieuwTotpVenster();
     const code = await versTotp();
-    await inputs.nth(2).fill("");
-    await inputs.nth(2).fill(code);
-    await page.getByText("Inloggen", { exact: true }).click();
+    await codeInvoer.fill(code);
+    const loginRespons = page.waitForResponse(
+      (respons) =>
+        respons.url().includes("/api/auth/mobile/login") &&
+        respons.request().method() === "POST",
+      { timeout: 30_000 },
+    ).catch(() => null);
+    await page.getByTestId("login-versturen").click();
+    const respons = await loginRespons;
 
-    try {
-      await expect(
-        zichtbareTekst(page, "Verplichte maandtoolbox").first(),
-      ).toBeVisible({ timeout: 90_000 });
+    if (respons?.status() === 200) {
       return;
-    } catch {
-      if (poging === 3) throw new Error("Inloggen mislukt na 3 TOTP-pogingen (of popup niet verschenen).");
     }
   }
+  throw new Error("Inloggen mislukt na 3 TOTP-pogingen.");
 }
 
 test("app: verplichte maandtoolbox is vanuit de popup zelf af te ronden (geen deadlock)", async ({ page }) => {
   await test.step("inloggen — blokkerende popup verschijnt (uitstel verstreken)", async () => {
     await logIn(page);
+    await expect(page.getByTestId("toolbox-maandpopup")).toBeVisible({ timeout: 90_000 });
     await expect(zichtbareTekst(page, "De uitstelperiode is verstreken").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -174,33 +248,36 @@ test("app: verplichte maandtoolbox is vanuit de popup zelf af te ronden (geen de
   });
 
   await test.step("'Toolbox nu doen' opent de toolbox zelf (voorheen: niets)", async () => {
-    await zichtbareTekst(page, "Toolbox nu doen").first().click();
-    await expect(zichtbareTekst(page, "Introductie").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await expect(zichtbareTekst(page, "Naar controlevragen").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await page.getByTestId("toolbox-maandpopup-start").click();
+    const detail = page.getByTestId("toolbox-detail");
+    await expect(detail).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await expect(detail.getByText("Introductie", { exact: true })).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await expect(detail.getByText("Naar controlevragen", { exact: true })).toBeVisible({ timeout: INHOUD_TIMEOUT });
   });
 
   await test.step("quiz doorlopen", async () => {
-    await zichtbareTekst(page, "Naar controlevragen").first().click();
-    await expect(zichtbareTekst(page, "Wat doe je bij brand?").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await zichtbareTekst(page, "Alarmeren en het pand verlaten").first().click();
-    await zichtbareTekst(page, "Controleer").first().click();
-    await zichtbareTekst(page, "Afronden").first().click();
-    await expect(zichtbareTekst(page, "Quiz geslaagd").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    const detail = page.getByTestId("toolbox-detail");
+    await detail.getByText("Naar controlevragen", { exact: true }).click();
+    await expect(detail.getByText("Wat doe je bij brand?", { exact: true })).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await detail.getByText("Alarmeren en het pand verlaten", { exact: true }).click();
+    await detail.getByText("Controleer", { exact: true }).click();
+    await detail.getByText("Afronden", { exact: true }).click();
+    await expect(detail.getByText("Quiz geslaagd", { exact: true })).toBeVisible({ timeout: INHOUD_TIMEOUT });
   });
 
   await test.step("handtekening en afronden", async () => {
-    const inputs = page.locator("input").filter({ visible: true });
-    await inputs.last().fill("E2E Testmonteur 1139");
-    await zichtbareTekst(page, "Bevestigen en afronden").first().click();
-    await expect(zichtbareTekst(page, "Toolbox afgerond").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    // Let op: het radiaalmenu heeft óók een "Sluiten"; pak die van de
-    // detailmodal (zelfde dialog als het succes-scherm).
-    await page
-      .getByRole("dialog")
-      .filter({ hasText: "Toolbox afgerond" })
-      .getByText("Sluiten", { exact: true })
-      .first()
-      .click();
+    const detail = page.getByTestId("toolbox-detail");
+    await page.getByTestId("toolbox-handtekening").fill("E2E Testmonteur 1139");
+    const afrondRespons = page.waitForResponse(
+      (respons) =>
+        respons.url().includes(`/api/veiligheid/toolboxen/${toolboxId}/afronden`) &&
+        respons.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByTestId("toolbox-bevestigen").click();
+    expect((await afrondRespons).ok()).toBe(true);
+    await expect(detail.getByText("Toolbox afgerond", { exact: true })).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await page.getByTestId("toolbox-sluiten").click();
   });
 
   await test.step("popup is definitief weg — geen deadlock meer", async () => {

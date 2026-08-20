@@ -104,6 +104,9 @@ INDEX|chat_deelnemers|chat_deelnemers_gesprek_gebruiker
 INDEX|chat_deelnemers|chat_deelnemers_pkey
 INDEX|chat_gesprekken|chat_gesprekken_pkey
 INDEX|ci_rapporten|ci_rapporten_pkey
+INDEX|ci_rood_mail_verzendingen|ci_rood_mail_openstaand_idx
+INDEX|ci_rood_mail_verzendingen|ci_rood_mail_periode_ontvanger_uniek
+INDEX|ci_rood_mail_verzendingen|ci_rood_mail_verzendingen_pkey
 INDEX|clusters|clusters_pkey
 INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_pkey
 INDEX|collectieve_vrije_dagen|collectieve_vrije_dagen_uniek
@@ -369,6 +372,9 @@ INDEX|module_beoordelingen|module_beoordelingen_module_sleutel_unique
 INDEX|module_beoordelingen|module_beoordelingen_pkey
 INDEX|monteur_achievements|monteur_achievements_pkey
 INDEX|muis_gebeurtenissen|muis_gebeurtenissen_pkey
+INDEX|noodfix_uitrol_gebruik|noodfix_uitrol_aangemaakt_idx
+INDEX|noodfix_uitrol_gebruik|noodfix_uitrol_gebruik_pkey
+INDEX|noodfix_uitrol_gebruik|noodfix_uitrol_run_poging_uniek
 INDEX|object_rechten|object_rechten_gebruiker_idx
 INDEX|object_rechten|object_rechten_geldig_tot_idx
 INDEX|object_rechten|object_rechten_object_idx
@@ -1316,6 +1322,8 @@ KOLOM|chat_gesprekken|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|chat_gesprekken|id|integer|NO|nextval('chat_gesprekken_id_seq'::regclass)
 KOLOM|chat_gesprekken|naam|text|YES|
 KOLOM|chat_gesprekken|type|text|NO|'direct'::text
+KOLOM|ci_rapporten|aanhoudend_rood_mail_claim_op|timestamp without time zone|YES|
+KOLOM|ci_rapporten|aanhoudend_rood_mail_op|timestamp without time zone|YES|
 KOLOM|ci_rapporten|commit_sha|text|NO|
 KOLOM|ci_rapporten|conclusie|text|NO|
 KOLOM|ci_rapporten|gefaalde_taak|text|YES|
@@ -1324,6 +1332,18 @@ KOLOM|ci_rapporten|id|integer|NO|nextval('ci_rapporten_id_seq'::regclass)
 KOLOM|ci_rapporten|run_attempt|bigint|YES|
 KOLOM|ci_rapporten|run_id|bigint|YES|
 KOLOM|ci_rapporten|run_url|text|YES|
+KOLOM|ci_rood_mail_verzendingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|ci_rood_mail_verzendingen|ci_rapport_id|integer|NO|
+KOLOM|ci_rood_mail_verzendingen|claim_op|timestamp without time zone|YES|
+KOLOM|ci_rood_mail_verzendingen|gebruiker_id|integer|NO|
+KOLOM|ci_rood_mail_verzendingen|id|integer|NO|nextval('ci_rood_mail_verzendingen_id_seq'::regclass)
+KOLOM|ci_rood_mail_verzendingen|laatste_fout|text|YES|
+KOLOM|ci_rood_mail_verzendingen|ontvanger_email|text|NO|
+KOLOM|ci_rood_mail_verzendingen|ontvanger_naam|text|YES|
+KOLOM|ci_rood_mail_verzendingen|periode|integer|NO|
+KOLOM|ci_rood_mail_verzendingen|pogingen|integer|NO|0
+KOLOM|ci_rood_mail_verzendingen|status|text|NO|'wachtend'::text
+KOLOM|ci_rood_mail_verzendingen|verzonden_op|timestamp without time zone|YES|
 KOLOM|clusters|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|clusters|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|clusters|gebouw_id|integer|NO|
@@ -3565,6 +3585,15 @@ KOLOM|muis_gebeurtenissen|tijdstip|timestamp without time zone|NO|now()
 KOLOM|muis_gebeurtenissen|type|text|NO|
 KOLOM|muis_gebeurtenissen|x|double precision|NO|
 KOLOM|muis_gebeurtenissen|y|double precision|NO|
+KOLOM|noodfix_uitrol_gebruik|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|noodfix_uitrol_gebruik|actor|text|NO|
+KOLOM|noodfix_uitrol_gebruik|bypass_soort|text|NO|'ci_en_predeploy'::text
+KOLOM|noodfix_uitrol_gebruik|commit_sha|text|NO|
+KOLOM|noodfix_uitrol_gebruik|id|integer|NO|nextval('noodfix_uitrol_gebruik_id_seq'::regclass)
+KOLOM|noodfix_uitrol_gebruik|reden|text|NO|
+KOLOM|noodfix_uitrol_gebruik|run_attempt|bigint|NO|
+KOLOM|noodfix_uitrol_gebruik|run_id|bigint|NO|
+KOLOM|noodfix_uitrol_gebruik|run_url|text|NO|
 KOLOM|object_rechten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|object_rechten|gebruiker_id|integer|NO|
 KOLOM|object_rechten|geldig_tot|timestamp without time zone|YES|

@@ -81,6 +81,14 @@ import { berekenItems as berekenOhwItems } from "../routes/onderhanden-werk";
 import { voerFinancieleContractBewakingUit } from "../routes/financiele-contracten";
 import { haalVervalsignalen } from "./verlofVervalService";
 import { stuurAanzegdeadlineSignalering } from "../services/email";
+import { verstuurMail } from "../services/email";
+import {
+  bereidAanhoudendRodeCiMailVoor,
+  claimCiRoodMailVerzending,
+  herbevestigCiRoodMailOntvanger,
+  markeerCiRoodMailMislukt,
+  markeerCiRoodMailVerzonden,
+} from "./ciRoodMailClaim";
 
 const DAG_MS = 86400000;
 
@@ -833,6 +841,77 @@ async function voedCiRoodIntern(): Promise<{ nieuw: number; afgehandeld: number 
     });
   }
   return syncBron("ci_rood", items);
+}
+
+// CI_POORT_HERSTEL_01 — dezelfde dagelijkse loop bewaakt ook de duur van de
+// rode periode. Er komt nadrukkelijk geen tweede planner of mailtransport:
+// verstuurMail gebruikt dezelfde Microsoft Graph-koppeling als alle bestaande
+// systeemmail en de verzendmarkering op de eerste rode rapportregel dedupliceert.
+export async function waarschuwAanhoudendRodeCi(
+  nu = new Date(),
+): Promise<{ nieuw: number; afgehandeld: number }> {
+  const voorbereid = await bereidAanhoudendRodeCiMailVoor(nu);
+  if (!voorbereid) return { nieuw: 0, afgehandeld: 0 };
+
+  const ontsnapHtml = (waarde: string): string =>
+    waarde.replace(/[&<>"']/g, (teken) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[teken]!);
+  const commitKort = voorbereid.laatste.commitSha.slice(0, 8);
+  const onderwerp = `FPS Connect: bouwcontrole al ${voorbereid.besluit.duurUren} uur rood`;
+  const runLink = voorbereid.laatste.runUrl
+    ? `<p><a href="${ontsnapHtml(voorbereid.laatste.runUrl)}">Open de mislukte Actions-run</a></p>`
+    : "";
+  let verzonden = 0;
+  const fouten: unknown[] = [];
+
+  for (const openstaand of voorbereid.verzendingen) {
+    const claim = await claimCiRoodMailVerzending(openstaand.id, nu);
+    if (!claim) continue;
+    try {
+      const ontvanger = await herbevestigCiRoodMailOntvanger(claim, nu);
+      if (!ontvanger) continue;
+      await verstuurMail({
+        naarEmail: ontvanger.email,
+        naarNaam: ontvanger.naam,
+        onderwerp,
+        soort: "ci_faalmelding",
+        direct: true,
+        html: `
+          <h1>Bouwcontrole blijft rood</h1>
+          <p>De bouwcontrole op <strong>main</strong> is nu ${voorbereid.besluit.duurUren} uur onafgebroken rood.</p>
+          <p><strong>Commit:</strong> ${commitKort}<br>
+          <strong>Gefaalde taak:</strong> ${ontsnapHtml(voorbereid.laatste.gefaaldeTaak || "onbekend")}</p>
+          <p>Zolang de controle rood blijft, stopt de gewone push-uitrol vóór productie.</p>
+          ${runLink}
+        `,
+      });
+      await markeerCiRoodMailVerzonden(claim, nu);
+      verzonden += 1;
+    } catch (err) {
+      await markeerCiRoodMailMislukt(claim, err);
+      fouten.push(err);
+    }
+  }
+
+  logger.warn(
+    {
+      commit: commitKort,
+      duurUren: voorbereid.besluit.duurUren,
+      periode: voorbereid.periode,
+      ontvangers: verzonden,
+      mislukt: fouten.length,
+    },
+    "ci-bewaking: dagelijkse faalmelding verwerkt",
+  );
+  if (fouten.length > 0) {
+    throw new AggregateError(fouten, `${fouten.length} CI-faalmelding(en) niet verzonden`);
+  }
+  return { nieuw: verzonden, afgehandeld: 0 };
 }
 
 // ADMINISTRATIE_01 — de boekingspoort (controleerGrootboekSchema) laat bewust
@@ -2347,6 +2426,7 @@ export async function draaiBewakingsloop(): Promise<Record<string, { nieuw: numb
     ["uitrol_achterloop", voedUitrolAchterloop],
     // CI_SIGNAAL_01 — bouwcontrole op main is rood.
     ["ci_rood", voedCiRood],
+    ["ci_rood_mail", waarschuwAanhoudendRodeCi],
     // ADMINISTRATIE_01 — BV zonder rekeningschema: boekingspoort staat open.
     ["rekeningschema_open", voedRekeningschemaOpen],
   ];

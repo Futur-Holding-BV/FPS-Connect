@@ -281,7 +281,7 @@ export function ToolboxDetailModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={sluit}>
-      <View style={{ flex: 1, backgroundColor: c.background, paddingTop: insets.top }}>
+      <View testID="toolbox-detail" style={{ flex: 1, backgroundColor: c.background, paddingTop: insets.top }}>
         {/* Header */}
         <View style={{
           flexDirection: "row",
@@ -565,6 +565,7 @@ export function ToolboxDetailModal({
                       Uw bevestiging is geregistreerd. Geldig voor {detail.geldigheid_maanden} maanden.
                     </Text>
                     <Pressable
+                      testID="toolbox-sluiten"
                       onPress={sluit}
                       style={{ backgroundColor: c.primary, paddingHorizontal: ruimte.xl, paddingVertical: ruimte.m, borderRadius: c.radius, marginTop: ruimte.s }}
                     >
@@ -590,6 +591,7 @@ export function ToolboxDetailModal({
                         Handtekening (volledige naam)
                       </Text>
                       <TextInput
+                        testID="toolbox-handtekening"
                         value={handtekening}
                         onChangeText={setHandtekening}
                         placeholder="Uw naam als digitale handtekening"
@@ -608,6 +610,7 @@ export function ToolboxDetailModal({
                     </View>
 
                     <Pressable
+                      testID="toolbox-bevestigen"
                       onPress={afronden}
                       disabled={bezig || !handtekening.trim() || (heeftQuiz && !quizGeslaagd && (detail.min_score ?? 0) > 0)}
                       style={{

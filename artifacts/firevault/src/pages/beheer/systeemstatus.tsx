@@ -1,4 +1,5 @@
 import { useGetVersie, useGetVersieStatus } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,28 @@ import {
   CheckCircle2, XCircle, HelpCircle, RefreshCw, GitCommit,
   Calendar, Server, Database, HardDrive, Mail, BrainCircuit,
   ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
 
 const GITHUB_REPO = "https://github.com/Futur-Holding-BV/FPS-Connect";
 
 type StatusWaarde = "ok" | "fout" | "niet_geconfigureerd" | undefined;
+
+type UitrolGeschiedenis = {
+  venster_dagen: number;
+  vanaf: string;
+  noodfix_aantal: number;
+  noodfixes: Array<{
+    id: number;
+    commit: string;
+    actor: string;
+    reden: string;
+    run_url: string;
+    run_id: number;
+    run_attempt: number;
+    aangemaakt_op: string;
+  }>;
+};
 
 function StatusBol({ status, label }: { status: StatusWaarde; label: string }) {
   if (status === "ok") {
@@ -89,6 +107,22 @@ export default function SysteemstatusBeheer() {
   } = useGetVersieStatus();
 
   const isHoofdbeheerder = rol === "hoofdbeheerder";
+  const {
+    data: uitrolGeschiedenis,
+    isLoading: uitrolLoading,
+    refetch: refetchUitrol,
+  } = useQuery<UitrolGeschiedenis>({
+    queryKey: ["/api/uitrol/geschiedenis"],
+    enabled: isHoofdbeheerder,
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.BASE_URL}api/uitrol/geschiedenis`,
+        { credentials: "include" },
+      );
+      if (!response.ok) throw new Error("Uitrolgeschiedenis ophalen is mislukt");
+      return response.json() as Promise<UitrolGeschiedenis>;
+    },
+  });
 
   if (!isHoofdbeheerder) {
     return (
@@ -108,6 +142,7 @@ export default function SysteemstatusBeheer() {
   const handleVernieuwen = () => {
     void refetchVersie();
     void refetchStatus();
+    void refetchUitrol();
   };
 
   const meetTijdstip = dataUpdatedAt
@@ -207,6 +242,54 @@ export default function SysteemstatusBeheer() {
               </span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+            Uitrolgeschiedenis
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Noodfix-omweg gebruikt</p>
+              <p className="text-xs text-muted-foreground">
+                Controleerbaar venster van de afgelopen veertien dagen
+              </p>
+            </div>
+            <Badge
+              variant={uitrolGeschiedenis?.noodfix_aantal ? "destructive" : "secondary"}
+              data-testid="noodfix-aantal-14-dagen"
+            >
+              {uitrolLoading ? "laden..." : `${uitrolGeschiedenis?.noodfix_aantal ?? 0} keer`}
+            </Badge>
+          </div>
+
+          {uitrolGeschiedenis?.noodfixes.map((item) => (
+            <div key={item.id} className="rounded-md border p-3 text-sm space-y-1">
+              <div className="flex items-center justify-between gap-3">
+                <code className="font-mono">{item.commit.slice(0, 8)}</code>
+                <span className="text-xs text-muted-foreground">
+                  {formatGebouwdOp(item.aangemaakt_op)}
+                </span>
+              </div>
+              <p>{item.reden}</p>
+              <p className="text-xs text-muted-foreground">
+                Gestart door {item.actor} · poging {item.run_attempt}
+              </p>
+              <a
+                href={item.run_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Actions-run openen <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

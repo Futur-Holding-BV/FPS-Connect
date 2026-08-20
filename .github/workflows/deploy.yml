@@ -1251,6 +1251,8 @@ jobs:
           JOB_STATUS: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BASE_URL: https://connect.fps-one.nl
+          NOODFIX_REDEN: ${{ github.event.inputs.noodfix_reden || '' }}
+          NOODFIX_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           if [ -z "${UITROL_RAPPORT_SLEUTEL:-}" ]; then
@@ -1280,6 +1282,9 @@ jobs:
               falende_stap: process.env.FALENDE_STAP || null,
               run_url: process.env.RUN_URL,
               run_id: Number(process.env.GITHUB_RUN_ID) || null,
+              run_attempt: Number(process.env.GITHUB_RUN_ATTEMPT) || null,
+              noodfix_reden: process.env.NOODFIX_REDEN || null,
+              noodfix_actor: process.env.NOODFIX_REDEN ? process.env.NOODFIX_ACTOR : null,
             }));
           ")
           HTTP_CODE=$(curl -sS -o /tmp/uitrol-rapport-resp.json -w "%{http_code}" --max-time 20 \
