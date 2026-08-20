@@ -11,7 +11,7 @@ const ROUTER_BESTAND = new URL(
   import.meta.url,
 );
 const HERSTELMIGRATIE = new URL(
-  "../../../../lib/db/src/migrations/0105_werkbak-concrete-actie-paden.sql",
+  "../../../../lib/db/src/migrations/0106_werkbak-concrete-actie-paden.sql",
   import.meta.url,
 );
 
