@@ -13,15 +13,65 @@
 #
 # Gebruik op de VPS:  sudo ./herstelproef.sh
 set -euo pipefail
-SET="/srv/fps-backup/dagelijks/$(ls -1 /srv/fps-backup/dagelijks | sort | tail -1)"
-NET=fps-herstel
-PFX=herstel
+shopt -s nullglob
+
+BACKUP_ROOT="${BACKUP_DOEL:-/srv/fps-backup}"
+API_IMAGE="${HERSTEL_API_IMAGE:-deploy-api:latest}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=deploy/backup-set-validatie.sh
+source "$SCRIPT_DIR/backup-set-validatie.sh"
+
+nieuwste_dagset() {
+  local nieuwste="" nieuwste_naam="" pad naam
+  for pad in "$BACKUP_ROOT"/dagelijks/20??-??-??; do
+    [ -d "$pad" ] || continue
+    naam=$(basename "$pad")
+    if [ -z "$nieuwste" ] || [[ "$naam" > "$nieuwste_naam" ]]; then
+      nieuwste="$pad"
+      nieuwste_naam="$naam"
+    fi
+  done
+  printf '%s' "$nieuwste"
+}
+
+SET="${HERSTEL_SET:-$(nieuwste_dagset)}"
+[ -n "$SET" ] || { echo "FOUT: geen dagelijkse back-upset gevonden onder $BACKUP_ROOT"; exit 1; }
+[ -d "$SET" ] || { echo "FOUT: back-upset bestaat niet: $SET"; exit 1; }
+
+# Herstel uitsluitend uit de immutable dagelijkse staffel, nooit uit een live
+# productiepad of losse dump. realpath voorkomt omzeiling met ../ of symlinks.
+BACKUP_ROOT_REAL=$(realpath "$BACKUP_ROOT")
+SET_REAL=$(realpath "$SET")
+case "$SET_REAL" in
+  "$BACKUP_ROOT_REAL"/dagelijks/20??-??-??) ;;
+  *) echo "FOUT: herstelset valt buiten $BACKUP_ROOT_REAL/dagelijks: $SET_REAL"; exit 1 ;;
+esac
+SET="$SET_REAL"
+
+if ! valideer_reguliere_backupinhoud "$SET"; then
+  echo "FOUT: herstelset bevat een symlink of speciaal bestand; herstelproef niet gestart"
+  exit 1
+fi
+[ -f "$SET/manifest.json" ] || { echo "FOUT: manifest.json ontbreekt in $SET"; exit 1; }
+[ -f "$SET/sha256sums.txt" ] || { echo "FOUT: sha256sums.txt ontbreekt in $SET"; exit 1; }
+(cd "$SET" && sha256sum -c --quiet sha256sums.txt) || {
+  echo "FOUT: checksumcontrole van $SET is mislukt; herstelproef niet gestart"
+  exit 1
+}
+
+# Unieke namen maken parallelle of afgebroken proeven herkenbaar. Geen van deze
+# namen kan samenvallen met productie-services (api, db of minio).
+RUN_ID="$$"
+NET="fps-herstelproef-$RUN_ID"
+PFX="herstelproef-$RUN_ID"
 T0=$(date +%s)
 stap() { echo "== [$(( $(date +%s) - T0 ))s] $*"; }
 
 # gevoelige tijdelijke bestanden: root-only (0700) en altijd opruimen
 TMPD=$(mktemp -d /tmp/herstelproef.XXXXXX)
 chmod 0700 "$TMPD"
+exec 9>"/tmp/fps-herstelproef.lock"
+flock -n 9 || { echo "FOUT: er draait al een herstelproef"; exit 1; }
 
 # TOTP-hulpje (RFC 6238) — geen extra pakketten nodig
 cat > "$TMPD"/totp.py <<'PYEOF'
@@ -36,8 +86,8 @@ print(str((struct.unpack(">I",h[o:o+4])[0]&0x7fffffff)%1000000).zfill(6))
 PYEOF
 
 opruimen() {
-  docker rm -f ${PFX}-api ${PFX}-minio ${PFX}-db >/dev/null 2>&1 || true
-  docker network rm $NET >/dev/null 2>&1 || true
+  docker rm -f "${PFX}-api" "${PFX}-minio" "${PFX}-db" >/dev/null 2>&1 || true
+  docker network rm "$NET" >/dev/null 2>&1 || true
   rm -rf "$TMPD"
 }
 if [ -n "${KEEP:-}" ]; then
@@ -45,28 +95,32 @@ if [ -n "${KEEP:-}" ]; then
 else
   trap opruimen EXIT
 fi
-docker rm -f ${PFX}-api ${PFX}-minio ${PFX}-db >/dev/null 2>&1 || true
-docker network rm $NET >/dev/null 2>&1 || true
+docker rm -f "${PFX}-api" "${PFX}-minio" "${PFX}-db" >/dev/null 2>&1 || true
+docker network rm "$NET" >/dev/null 2>&1 || true
 
-stap "lege omgeving aanmaken (netwerk + verse db + verse minio) — set: $SET"
-docker network create $NET >/dev/null
-docker run -d --name ${PFX}-db --network $NET \
+stap "checksum-geldige set bevestigd; lege geïsoleerde omgeving aanmaken — set: $SET"
+docker network create "$NET" >/dev/null
+docker run -d --name "${PFX}-db" --network "$NET" \
   -e POSTGRES_USER=fps_app -e POSTGRES_PASSWORD=herstelproef -e POSTGRES_DB=fps_production \
   postgres:16-alpine >/dev/null
-docker run -d --name ${PFX}-minio --network $NET \
+docker run -d --name "${PFX}-minio" --network "$NET" \
   -e MINIO_ROOT_USER=fps_minio -e MINIO_ROOT_PASSWORD=herstelproefgeheim \
   minio/minio server /data >/dev/null
 # wachten tot de db ECHT klaar is (init herstart postgres; pg_isready is te vroeg true)
 for i in $(seq 1 60); do
-  docker exec ${PFX}-db psql -U fps_app -d fps_production -Atc "SELECT 1" >/dev/null 2>&1 && sleep 2 && \
-  docker exec ${PFX}-db psql -U fps_app -d fps_production -Atc "SELECT 1" >/dev/null 2>&1 && break
+  docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "SELECT 1" >/dev/null 2>&1 && sleep 2 && \
+  docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "SELECT 1" >/dev/null 2>&1 && break
   sleep 1
 done
+docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "SELECT 1" >/dev/null 2>&1 || {
+  echo "FOUT: geïsoleerde hersteldatabase werd niet gereed"
+  exit 1
+}
 
 # database-dump: gewoon gz, of age-versleuteld (dan is René's privésleutel nodig)
 if [ -f "$SET/db.sql.gz" ]; then
   stap "database terugzetten uit $SET/db.sql.gz"
-  gunzip -c "$SET/db.sql.gz" | docker exec -i ${PFX}-db psql -q -U fps_app -d fps_production >/dev/null
+  gunzip -c "$SET/db.sql.gz" | docker exec -i "${PFX}-db" psql -q -U fps_app -d fps_production >/dev/null
 elif [ -f "$SET/db.sql.gz.age" ]; then
   if [ -z "${AGE_KEY_FILE:-}" ] || [ ! -f "${AGE_KEY_FILE:-}" ]; then
     echo "FOUT: de set is versleuteld (db.sql.gz.age). Start met AGE_KEY_FILE=/pad/naar/age-privesleutel"
@@ -75,27 +129,46 @@ elif [ -f "$SET/db.sql.gz.age" ]; then
   fi
   stap "database terugzetten uit $SET/db.sql.gz.age (age-ontsleuteling)"
   age -d -i "$AGE_KEY_FILE" < "$SET/db.sql.gz.age" | gunzip -c \
-    | docker exec -i ${PFX}-db psql -q -U fps_app -d fps_production >/dev/null
+    | docker exec -i "${PFX}-db" psql -q -U fps_app -d fps_production >/dev/null
 else
   echo "FOUT: geen db.sql.gz of db.sql.gz.age in $SET"; exit 1
 fi
-RIJEN=$(docker exec ${PFX}-db psql -U fps_app -d fps_production -Atc "SELECT count(*) FROM gebruikers")
+RIJEN=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "SELECT count(*) FROM gebruikers")
 stap "database hersteld: $RIJEN gebruikers"
 
 stap "bestanden terugzetten naar verse MinIO"
-docker run --rm --network $NET -v "$SET/bestanden/fps-production:/restore:ro" \
+docker run --rm --network "$NET" -v "$SET/bestanden/fps-production:/restore:ro" \
   --entrypoint /bin/sh minio/mc:latest -c "
   mc alias set h http://${PFX}-minio:9000 fps_minio herstelproefgeheim &&
   mc mb h/fps-production &&
   mc mirror /restore h/fps-production" >/dev/null
-OBJ=$(docker run --rm --network $NET --entrypoint /bin/sh minio/mc:latest -c "
+OBJ=$(docker run --rm --network "$NET" --entrypoint /bin/sh minio/mc:latest -c "
   mc alias set h http://${PFX}-minio:9000 fps_minio herstelproefgeheim >/dev/null &&
   mc ls -r h/fps-production | wc -l")
 stap "objectopslag hersteld: $OBJ objecten"
 
 stap "applicatie starten tegen de herstelde omgeving"
-grep -vE "^(DATABASE_URL|POSTGRES_|S3_|PG)" /opt/fps-one/deploy/.env.production > "$TMPD"/herstel.env
-cat >> "$TMPD"/herstel.env <<EOF
+# De herstelcontainer krijgt bewust GEEN kopie van .env.production. Hij heeft
+# uitsluitend de minimale, niet-productie runtimeconfiguratie nodig. Daardoor
+# kunnen Azure, mail, Sentry, AI, betaal- en overige integraties tijdens een
+# proef geen extern effect hebben of productiegeheimen ontvangen.
+docker image inspect "$API_IMAGE" >/dev/null 2>&1 || {
+  echo "FOUT: herstel-API-image ontbreekt: $API_IMAGE"
+  exit 1
+}
+cat > "$TMPD"/herstel.env <<EOF
+NODE_ENV=production
+PORT=8080
+SESSION_SECRET=herstelproef-sessie-${RUN_ID}-alleen-lokaal
+PUBLIEKE_APP_URL=http://127.0.0.1:8899
+HERSTELPROEF=1
+MAIL_ENABLED=false
+SENTRY_DSN=
+SENTRY_DSN_WEB=
+AZURE_TENANT_ID=
+AZURE_CLIENT_ID=
+AZURE_CLIENT_SECRET=
+OPENAI_API_KEY=
 DATABASE_URL=postgresql://fps_app:herstelproef@${PFX}-db:5432/fps_production
 S3_ENDPOINT=http://${PFX}-minio:9000
 S3_PUBLIC_ENDPOINT=http://127.0.0.1:9899
@@ -104,25 +177,59 @@ S3_ACCESS_KEY_ID=fps_minio
 S3_SECRET_ACCESS_KEY=herstelproefgeheim
 S3_REGION=us-east-1
 EOF
-docker run -d --name ${PFX}-api --network $NET -p 127.0.0.1:8899:8080 \
+docker run -d --name "${PFX}-api" --network "$NET" -p 127.0.0.1:8899:8080 \
   --env-file "$TMPD"/herstel.env -e NODE_ENV=production -e PORT=8080 \
-  deploy-api:latest >/dev/null
+  "$API_IMAGE" >/dev/null
+HEALTH_OK=0
 for i in $(seq 1 60); do
-  curl -sf http://127.0.0.1:8899/api/healthz >/dev/null 2>&1 && break; sleep 2
+  if curl -fsS http://127.0.0.1:8899/api/healthz > "$TMPD"/health.json 2>/dev/null; then
+    HEALTH_OK=1
+    break
+  fi
+  sleep 2
 done
-HEALTH=$(curl -s http://127.0.0.1:8899/api/healthz)
+[ "$HEALTH_OK" -eq 1 ] || {
+  echo "FOUT: herstel-API gaf binnen 120 seconden geen gezonde /api/healthz"
+  exit 1
+}
+HEALTH=$(cat "$TMPD"/health.json)
+python3 - "$TMPD"/health.json <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as bestand:
+    status = json.load(bestand)
+if status.get("status") != "ok":
+    raise SystemExit("FOUT: herstel-API healthz bevat geen status=ok")
+PY
 stap "healthz: $HEALTH"
 
 stap "proefaccount inloggen op de herstelde applicatie (incl. 2FA)"
-docker exec ${PFX}-db psql -q -U fps_app -d fps_production -c "
+docker exec "${PFX}-db" psql -q -U fps_app -d fps_production -c "
   INSERT INTO gebruikers (naam, email, rol, wachtwoord, actief)
   VALUES ('Herstelproef', 'herstelproef@fps-one.nl', 'hoofdbeheerder', '\$2b\$10\$qWiIJg7YfoK8ihX4WbMUJO6v8vcCueRfuQNINGaghy5Ef2/KOj646', true)"
 LOGIN=$(curl -s -D "$TMPD"/headers.txt -o "$TMPD"/login.json -w "%{http_code}" \
   -H "X-Forwarded-Proto: https" -X POST http://127.0.0.1:8899/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"herstelproef@fps-one.nl","wachtwoord":"HerstelProef!2026"}')
+[ "$LOGIN" = "200" ] || {
+  echo "FOUT: login stap 1 gaf HTTP $LOGIN: $(cat "$TMPD"/login.json)"
+  exit 1
+}
 # Secure-cookie komt over http niet in een curl-jar; handmatig meenemen
-COOKIE=$(grep -i "set-cookie" "$TMPD"/headers.txt | head -1 | sed "s/^[Ss]et-[Cc]ookie: //" | cut -d";" -f1) || true
+COOKIE=$(awk '
+  BEGIN { IGNORECASE=1 }
+  /^set-cookie:/ {
+    sub(/^[^:]*:[[:space:]]*/, "")
+    sub(/;.*/, "")
+    print
+    exit
+  }
+' "$TMPD"/headers.txt) || true
+[ -n "$COOKIE" ] || {
+  echo "FOUT: login stap 1 gaf geen sessiecookie"
+  exit 1
+}
 stap "login stap 1: HTTP $LOGIN ($(cat "$TMPD"/login.json))"
 SECRET=$(curl -s -H "X-Forwarded-Proto: https" -H "Cookie: $COOKIE" -X POST \
   http://127.0.0.1:8899/api/auth/2fa/setup | python3 -c "import sys,json;print(json.load(sys.stdin)['secret'])")
@@ -136,17 +243,39 @@ TFA=$(curl -s -o "$TMPD"/act.json -w "%{http_code}" -H "X-Forwarded-Proto: https
 stap "login stap 2 (2FA-activeren): HTTP $TFA"
 
 stap "document openen uit de herstelde bestandsopslag"
-DOCPAD=$(docker exec ${PFX}-db psql -U fps_app -d fps_production -Atc \
+DOCPAD=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc \
   "SELECT pdf_url FROM documenten WHERE pdf_url IS NOT NULL LIMIT 1")
+case "$DOCPAD" in
+  /objects/*) ;;
+  *) echo "FOUT: herstelde database bevat geen geldig documentpad onder /objects/"; exit 1 ;;
+esac
+SET_DOCUMENT="$SET/bestanden/fps-production${DOCPAD#/objects}"
+[ -f "$SET_DOCUMENT" ] || {
+  echo "FOUT: document uit herstelde database ontbreekt in de herstelset"
+  exit 1
+}
 echo "documentpad uit herstelde DB: $DOCPAD"
 DOC=$(curl -s -H "X-Forwarded-Proto: https" -H "Cookie: $COOKIE" -o "$TMPD"/doc.bin \
   -w "%{http_code}" "http://127.0.0.1:8899/api/storage$DOCPAD")
+[ "$DOC" = "200" ] || {
+  echo "FOUT: document ophalen gaf HTTP $DOC"
+  exit 1
+}
 BYTES=$(stat -c %s "$TMPD"/doc.bin)
+[ "$BYTES" -gt 0 ] || { echo "FOUT: hersteld document is leeg"; exit 1; }
 KOP=$(head -c 5 "$TMPD"/doc.bin)
+[ "$KOP" = "%PDF-" ] || {
+  echo "FOUT: hersteld document begint niet met een PDF-header"
+  exit 1
+}
 stap "document: HTTP $DOC, $BYTES bytes, begint met: $KOP"
 SUM_APP=$(sha256sum "$TMPD"/doc.bin | cut -d" " -f1)
-SUM_SET=$(sha256sum "$SET/bestanden/fps-production${DOCPAD#/objects}" | cut -d" " -f1)
-if [ "$SUM_APP" = "$SUM_SET" ]; then CHECK="IDENTIEK"; else CHECK="AFWIJKEND ($SUM_APP vs $SUM_SET)"; fi
+SUM_SET=$(sha256sum "$SET_DOCUMENT" | cut -d" " -f1)
+[ "$SUM_APP" = "$SUM_SET" ] || {
+  echo "FOUT: checksum document wijkt af van de herstelset"
+  exit 1
+}
+CHECK="IDENTIEK"
 stap "checksum document vs back-upset: $CHECK"
 
 T=$(( $(date +%s) - T0 ))

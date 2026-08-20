@@ -20,8 +20,11 @@ dus niet wissen.
 - `/srv/fps-backup/{dagelijks,wekelijks,maandelijks}/…` met per set een
   `manifest.json` en `sha256sums.txt`;
 - bewaking (`check-offsite-backup.sh`, dagelijks 08:00): alarm in de app bij
-  een uitblijvende of verdacht kleine set, en — zodra de NAS-sleutel actief
-  is — bij een uitblijvende ophaling (> 36 uur).
+  een uitblijvende, checksum-ongeldige of verdacht kleine set, en — zodra de
+  NAS-sleutel actief is — bij een uitblijvende ophaling (> 36 uur). Een
+  staffelfout mailt direct via Microsoft Graph; daarna volgt hoogstens één
+  herinnering per kalenderdag zolang geen geslaagde set jonger dan 24 uur
+  bestaat.
 
 ## Wat René op de NAS instelt (eenmalig, ± 15 minuten)
 
@@ -66,3 +69,6 @@ dump op de VPS onversleuteld (zoals nu ook al het geval is in
   uitblijvende ophaling of set verschijnt een blokkerende melding.
 - Op de NAS: vergelijk `sha256sums.txt` in een opgehaalde set:
   `cd /volume1/fps-backup/dagelijks/<datum> && sha256sum -c sha256sums.txt`.
+- Een volledige productie- en herstelproef loopt via GitHub Actions
+  **Externe back-upstaffel en herstelproef**; zie
+  `deploy/BACKUP_RESTORE_PRODUCTION.md`.

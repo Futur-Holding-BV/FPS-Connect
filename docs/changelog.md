@@ -1,3 +1,10 @@
+## 2026-08-20 — Externe back-upstaffel fail-safe hersteld
+
+- **Exit 141 structureel verwijderd**: selectie van de nieuwste dump, vorige set en dagmappen gebruikt geen vroeg afgeknotte `head`-/`tail`-pijplijnen meer onder `pipefail`.
+- **Vorige volledige set blijft staan**: iedere nieuwe set wordt uniek gestaged, inclusief DB, objectopslag, config zonder geheimen, manifest en checksums, en pas na een geslaagde checksumcontrole atomair gepubliceerd. Fouten en signalen ruimen alleen staging op.
+- **Status en alarmering fail-closed**: `status.json` wordt atomair bijgewerkt met fase, originele exitcode/signaal en laatste geslaagde set. Een fout mailt direct via Graph; daarna volgt hoogstens één herinnering per dag zolang geen successet jonger dan 24 uur bestaat.
+- **Herstelbewijs zonder productierisico**: de herstelproef weigert sets buiten de dagstaffel, checksumfouten, symlinks en speciale bestanden; hij krijgt alleen minimale secretloze proefconfiguratie, gebruikt unieke tijdelijke containers/netwerken en laat health, login/2FA, documentopening en checksum hard falen. Dertien geïsoleerde regressieproeven dekken onder meer exit 23, SIGTERM/143, setbehoud, herinneringsdeduplicatie/retry, herstelpreflight, bestaande en interne symlinks en stale status; productieclaims worden pas na de Actions-run in het meetrapport ingevuld.
+
 ## 2026-08-20 — Mailverbindingstest werkt met alleen Mail.Send
 
 - **Alleen Mail.Send**: de verbindingstest leest het gebruikersobject van `MAIL_MAILBOX` niet langer via Graph. In plaats daarvan doet Connect een bewust ontvangerloze `sendMail`-probe; Graph valideert daarmee token, Application `Mail.Send` en postbustoegang, maar er wordt geen bericht verzonden.

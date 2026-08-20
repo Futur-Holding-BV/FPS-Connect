@@ -1,174 +1,188 @@
-# FPS Connect — Backup & Restore Productie
+# FPS Connect — externe back-upstaffel en herstelproef
 
-## Backupstrategie
+Dit runbook beschrijft de rampherstellijn buiten de productiecontainers. De
+interne app-back-ups blijven bestaan, maar gelden niet als vervanging voor deze
+externe staffel.
 
-| Type | Frequentie | Bewaarperiode | Locatie |
-|---|---|---|---|
-| Database dump (gzip) | Dagelijks 03:00 | 30 dagen | `/opt/fps-connect/deploy/db-backups/` |
-| Object Storage sync | Dagelijks 04:00 | Altijd | Externe bucket of `rsync` naar backup-server |
-| Volledige snapshot | Wekelijks | 4 weken | Server-snapshot via hostingprovider |
+## Grenzen die niet mogen wijzigen
 
----
+- Productie staat in `/opt/fps-one`; de externe staffel staat in
+  `/srv/fps-backup`.
+- De NAS **haalt** via het beperkte account `fps-nas`. De VPS krijgt nooit
+  schrijf- of inloggegevens van de NAS.
+- `fps-nas` blijft read-only en beperkt tot `/srv/fps-backup` (`rrsync -ro` +
+  `restrict`). Zie `deploy/NAS_KOPPELING.md`.
+- Een herstelproef gebruikt alleen tijdelijke containers, een eigen
+  `fps-herstelproef-*`-netwerk en poorten op `127.0.0.1`. De productiecontainers,
+  -database en -objectopslag worden nooit leeggemaakt of beschreven.
+- Productiehandelingen lopen uitsluitend via GitHub Actions. De agent gebruikt
+  geen rechtstreekse SSH-toegang.
 
-## Automatische dagelijkse database-backup
+## Dagelijkse keten
 
-### Instellen (eenmalig)
+| Tijd | Stap | Script / bron |
+|---|---|---|
+| 03:00 | PostgreSQL-dump maken | bestaande dumpcron, `deploy/db-backups` |
+| 03:30 | MinIO-mirror verversen | bestaande mirrorcron, `deploy/minio-backups` |
+| 04:00 | Zelfstandige staffelset bouwen | `deploy/backup-staffel.sh` |
+| circa 05:00 | NAS haalt read-only op | NAS-taak, zie `NAS_KOPPELING.md` |
+| 08:00 | Staffel en NAS-ophaling bewaken | `deploy/check-offsite-backup.sh` |
 
-```bash
-crontab -e
-```
+De staffel bewaart:
 
-Voeg toe:
-```
-# Database backup elke nacht om 03:00
-0 3 * * * cd /opt/fps-connect && docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production --profile backup run --rm backup >> /var/log/fps-backup.log 2>&1
+- 14 dagelijkse sets;
+- 13 wekelijkse sets (zondag);
+- 12 maandelijkse sets (eerste dag van de maand).
 
-# Opschoning: bewaar maximaal 30 dumps
-15 3 * * * find /opt/fps-connect/deploy/db-backups -name "fps_*.sql.gz" -mtime +30 -delete
-```
+Elke dagelijkse set bevat:
 
-### Handmatige backup
+- `db.sql.gz` of, met een geldige age-recipient, `db.sql.gz.age`;
+- `bestanden/` met de volledige MinIO-mirror;
+- `config/docker-compose.production.yml`;
+- `config/env-sleutels.txt` met uitsluitend namen, nooit waarden;
+- `config/migratiestand.txt`;
+- `manifest.json`;
+- `sha256sums.txt`, inclusief checksum van het manifest.
 
-```bash
-cd /opt/fps-connect
-docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production \
-  --profile backup run --rm backup
-```
+## Wat bij een fout gebeurt
 
-### Backup controleren
+`backup-staffel.sh` draait met `set -Eeuo pipefail`, maar gebruikt voor
+bronselectie geen `ls | head`, `sort | head` of andere vroeg afgeknotte
+pijplijnen.
 
-```bash
-ls -lh deploy/db-backups/
-# Verwacht: fps_YYYYMMDD_HHMMSS.sql.gz
+1. De nieuwe set wordt in een unieke verborgen staging-map gebouwd.
+2. Pas na manifestgeneratie en een geslaagde `sha256sum -c` wordt die map met
+   één rename als dagelijkse set gepubliceerd.
+3. Bij iedere opvangbare commandofout, `HUP`, `INT` of `TERM` wordt staging
+   verwijderd. Een eerder gepubliceerde volledige set wordt niet verwijderd of
+   vervangen.
+4. `status.json` wordt via een uniek tijdelijk bestand en rename atomair
+   bijgewerkt. De status bewaart fase, originele exitcode, signaal,
+   `laatste_geslaagde_run` en `laatste_geslaagde_set`.
+5. De API-container verzendt direct een Microsoft Graph-faalmail met zijn eigen
+   bestaande Azure-omgeving. Secrets worden niet naar de hostshell, logs of
+   status gekopieerd.
+6. De 08:00-bewaker blijft een blokkerende in-app melding maken. Zolang geen
+   geslaagde set jonger dan 24 uur bestaat, claimt hij hoogstens één
+   Graph-herinnering per lokale kalenderdag onder
+   `/srv/fps-backup/.alarmstatus/`.
 
-# Integriteitscontrole
-gunzip -t deploy/db-backups/fps_laatste.sql.gz && echo "OK" || echo "CORRUPT"
-```
+Een mislukte Graph-aanroep verandert de originele staffelexitcode niet. De fout
+blijft wel zichtbaar in de cron-/Actions-log.
 
----
-
-## Object Storage backup
-
-### Naar externe S3-bucket (aanbevolen)
-
-```bash
-# Eenmalig instellen
-rclone config create backup-storage s3 \
-  provider AWS \
-  region eu-west-1 \
-  access_key_id BACKUP_KEY_ID \
-  secret_access_key BACKUP_SECRET
-
-# Dagelijkse sync (toevoegen aan crontab)
-0 4 * * * rclone sync fps-production-storage:fps-production backup-storage:fps-backup/$(date +\%Y\%m\%d)/ >> /var/log/fps-storage-backup.log 2>&1
-```
-
-### Via rsync naar backup-server
-
-```bash
-rsync -avz --delete /opt/fps-connect/deploy/uploads/ \
-  backup-user@backup-server:/backups/fps-storage/ \
-  >> /var/log/fps-storage-rsync.log 2>&1
-```
-
----
-
-## Restore-procedure database
-
-### Volledige restore (noodgeval)
+## Status beoordelen
 
 ```bash
-# 1. Stop de API-server
-docker compose -f deploy/docker-compose.production.yml stop api
+sudo python3 - <<'PY'
+import json
+from pathlib import Path
 
-# 2. Maak een noodbackup van de huidige staat
-docker compose -f deploy/docker-compose.production.yml exec db \
-  pg_dump -U fps_app fps_production | gzip > /tmp/noodbackup_$(date +%Y%m%d_%H%M%S).sql.gz
-
-# 3. Database leegmaken
-docker compose -f deploy/docker-compose.production.yml exec db \
-  psql -U fps_app -d postgres -c "DROP DATABASE fps_production; CREATE DATABASE fps_production OWNER fps_app;"
-
-# 4. Restore uitvoeren
-gunzip -c deploy/db-backups/fps_YYYYMMDD_HHMMSS.sql.gz | \
-  docker compose -f deploy/docker-compose.production.yml exec -T db \
-  pg_restore -U fps_app -d fps_production --no-owner --no-acl
-
-# 5. API-server herstarten
-docker compose -f deploy/docker-compose.production.yml start api
-
-# 6. Verificatie
-curl -s https://fpsbrandpreventie.nl/api/healthz
-curl -s https://fpsbrandpreventie.nl/api/kantoor-release/actief
+status = json.loads(Path("/srv/fps-backup/status.json").read_text())
+print(json.dumps(status, indent=2, ensure_ascii=False))
+PY
 ```
 
-### Gedeeltelijke restore (specifieke tabel)
+Gezond betekent minimaal:
+
+- `uitkomst` is `geslaagd`;
+- `laatste_geslaagde_run` is minder dan 24 uur oud;
+- `laatste_geslaagde_set` bestaat;
+- die set bevat DB, bestanden, manifest en checksumlijst;
+- onderstaande controle eindigt zonder uitvoer en met exitcode 0:
 
 ```bash
-# Voorbeeld: alleen kantoor_releases herstellen
-gunzip -c deploy/db-backups/fps_YYYYMMDD.sql.gz | \
-  docker compose -f deploy/docker-compose.production.yml exec -T db \
-  pg_restore -U fps_app -d fps_production -t kantoor_releases --no-owner --data-only
+SET=/srv/fps-backup/dagelijks/JJJJ-MM-DD
+sudo bash -c 'cd "$1" && sha256sum -c --quiet sha256sums.txt' _ "$SET"
 ```
 
----
+Beheer → Back-ups leest hetzelfde `status.json` via de read-only mount van de
+API-container. Een groene broncode of deploy is op zichzelf geen bewijs dat de
+staffel op de VPS weer loopt.
 
-## Droge restore-controle (restore drill)
+## Veilige productieproef via GitHub Actions
 
-Voer dit uit op een testserver of met een tijdelijke container, zonder de productiedatabase aan te raken:
+Gebruik workflow **Externe back-upstaffel en herstelproef**:
+
+1. Open GitHub → Actions → **Externe back-upstaffel en herstelproef**.
+2. Kies `staffel_en_herstelproef`.
+3. Vul exact `HERSTELPROEF` in.
+4. Start uitsluitend vanaf `main`.
+
+De workflow:
+
+- gebruikt de reeds beheerde `PROD_SSH_*`-secrets;
+- kopieert exact de scripts van de gekozen commit naar een tijdelijke VPS-map;
+- bouwt een nieuwe set of valideert de reeds die dag gebouwde volledige set;
+- controleert DB-bestand, manifest, objectaantal en alle checksums;
+- start daarna `herstelproef.sh` met het expliciete immutable setpad;
+- verwijdert de tijdelijke scripts na afloop;
+- toont geen envwaarden, tokens, documentinhoud of individuele objectnamen.
+
+Een geslaagde workflowrun is het vereiste productie- en herstelbewijs. Leg
+run-id, commit, set, omvang, objectaantal, health, login/2FA,
+document-HTTP-status en checksumuitkomst vast in
+`docs/metingen/BACKUP_STAFFEL_HERSTEL_2026-08-20.md`.
+
+## Herstelproef handmatig door een beheerder
+
+Alleen wanneer GitHub Actions niet beschikbaar is:
 
 ```bash
-# Start een tijdelijke PostgreSQL-container
-docker run -d --name fps-restore-test \
-  -e POSTGRES_DB=fps_test \
-  -e POSTGRES_USER=fps_app \
-  -e POSTGRES_PASSWORD=testpass \
-  postgres:16-alpine
-
-# Wacht tot container gereed is
-sleep 5
-
-# Restore in testcontainer
-gunzip -c deploy/db-backups/fps_YYYYMMDD.sql.gz | \
-  docker exec -i fps-restore-test \
-  pg_restore -U fps_app -d fps_test --no-owner --no-acl
-
-# Controleer
-docker exec fps-restore-test psql -U fps_app -d fps_test -c "
-SELECT versienummer, status, is_actief FROM kantoor_releases;
-SELECT COUNT(*) AS gebruikers FROM gebruikers;
-SELECT COUNT(*) AS gebouwen FROM gebouwen;
-"
-
-# Opruimen
-docker rm -f fps-restore-test
-echo "Restore drill geslaagd"
+cd /opt/fps-one
+sudo BACKUP_DOEL=/srv/fps-backup bash deploy/herstelproef.sh
 ```
 
----
-
-## Backup-monitoring
-
-Voeg een eenvoudige controle toe die een waarschuwing geeft als de backup meer dan 25 uur oud is:
+Een specifieke set:
 
 ```bash
-# /opt/fps-connect/deploy/check-backup.sh
-#!/bin/bash
-LATEST=$(ls -t /opt/fps-connect/deploy/db-backups/fps_*.sql.gz 2>/dev/null | head -1)
-if [ -z "$LATEST" ]; then
-  echo "WAARSCHUWING: Geen backupbestand gevonden"
-  exit 1
-fi
-AGE=$(( ($(date +%s) - $(stat -c %Y "$LATEST")) / 3600 ))
-if [ "$AGE" -gt 25 ]; then
-  echo "WAARSCHUWING: Laatste backup is ${AGE} uur oud: $LATEST"
-  exit 1
-fi
-echo "OK: Laatste backup is ${AGE} uur oud: $(basename $LATEST)"
+cd /opt/fps-one
+sudo BACKUP_DOEL=/srv/fps-backup \
+  HERSTEL_SET=/srv/fps-backup/dagelijks/JJJJ-MM-DD \
+  bash deploy/herstelproef.sh
 ```
 
+De proef weigert:
+
+- een set buiten `/srv/fps-backup/dagelijks/JJJJ-MM-DD`;
+- een ontbrekend manifest of checksumlijst;
+- een set waarvan één checksum afwijkt;
+- een tweede gelijktijdige herstelproef.
+
+Voor een age-versleutelde DB is aanvullend nodig:
+
 ```bash
-chmod +x /opt/fps-connect/deploy/check-backup.sh
-# Toevoegen aan crontab (controle elke ochtend om 06:00)
-0 6 * * * /opt/fps-connect/deploy/check-backup.sh | mail -s "FPS Backup Status" admin@fpsbrandpreventie.nl
+sudo AGE_KEY_FILE=/veilig/pad/naar/privesleutel \
+  BACKUP_DOEL=/srv/fps-backup \
+  bash deploy/herstelproef.sh
 ```
+
+De privésleutel blijft buiten repository, logs, VPS-config en back-upset.
+
+## Lokale regressieproef
+
+```bash
+pnpm --filter @workspace/scripts run verificatie-backup-staffel
+```
+
+Deze proef gebruikt uitsluitend `/tmp`, fake rsync en een fake mailprogramma.
+Hij bewijst:
+
+1. meerdere dumps zonder `head`/SIGPIPE-141;
+2. een fout met originele exitcode 23 en geldige atomaire foutstatus;
+3. behoud van de vorige volledige set;
+4. `SIGTERM` als exitcode 143 + signaal `TERM`;
+5. maximaal één Graph-herinnering per kalenderdag;
+6. geen herinnering zolang de laatste geslaagde set jonger dan 24 uur is;
+7. een Graph-fout mag later opnieuw proberen en markeert pas na succes;
+8. een checksumfout blokkeert herstel vóór Docker;
+9. het Actions-bewijs weigert een symlinkset en status van vóór de huidige run;
+10. staffel, herstelproef én Actions-bewijs weigeren symlinks/speciale entries
+    binnen de set, inclusief een reeds bestaande symlink-dagset.
+
+## Noodherstel van productie
+
+Een echte productie-restore is destructief en valt **niet** onder de
+herstelproef. Stop, informeer de beheerder en maak vóór iedere wijziging een
+extra noodkopie. Gebruik pas daarna een afzonderlijk, expliciet goedgekeurd
+incidentplan. `herstelproef.sh` mag nooit worden aangepast om rechtstreeks naar
+de productiecontainers `db`, `minio` of `api` te schrijven.

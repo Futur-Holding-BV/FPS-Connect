@@ -23,16 +23,21 @@ en elke ophaling wordt onwisbaar gelogd (syslog + marker).
    (`fps-nas-pull.sh`): logt elke verbinding, dwingt read-only rsync af.
    Wachtwoord-login geblokkeerd; wacht alleen nog op René's publieke sleutel.
 3. **Bewaking** (uitbreiding SCHULD_01 punt 83):
-   - `check-offsite-backup.sh` (dagelijks 08:00): blokkerende in-app melding
-     aan alle hoofdbeheerders bij >36u geen set, verdacht kleine set (<50%
-     van gisteren), of — zodra de NAS-sleutel actief is — >36u geen ophaling.
+   - een staffelfout schrijft atomair status en mailt direct via Graph;
+     `check-offsite-backup.sh` (dagelijks 08:00) maakt daarnaast een
+     blokkerende in-app melding bij >36u geen set, checksumfout, verdacht
+     kleine set (<50% van gisteren), of — zodra de NAS-sleutel actief is —
+     >36u geen ophaling. Zonder verse (<24u) successet volgt hoogstens één
+     Graph-herinnering per kalenderdag.
    - **Eén plek zichtbaar**: Beheer → Back-ups toont nu twee kaarten
      ("klaargezette back-upset" en "laatste NAS-ophaling") via
      `GET /api/backups/offsite/status` (statusbestanden read-only gemount in
      de api-container).
 4. **Herstelproef** (`herstelproef.sh`, herhaalbaar op de VPS): zet de set
    terug in een volledig lege omgeving en bewijst de vier acceptatie-eisen.
-   Zie `docs/metingen/BACKUP_01_herstelproef.md`.
+   De actuele handmatige Actions-route staat in
+   `deploy/BACKUP_RESTORE_PRODUCTION.md`; meetbewijs staat in
+   `docs/metingen/BACKUP_STAFFEL_HERSTEL_2026-08-20.md`.
 
 ## Gemeten (niet aangenomen)
 

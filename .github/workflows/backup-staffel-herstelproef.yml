@@ -1,0 +1,144 @@
+name: Externe back-upstaffel en herstelproef
+
+on:
+  workflow_dispatch:
+    inputs:
+      actie:
+        description: "Bouw alleen een nieuwe set, of bouw én herstel in een lege geïsoleerde omgeving"
+        required: true
+        type: choice
+        default: staffel_en_herstelproef
+        options:
+          - alleen_staffel
+          - staffel_en_herstelproef
+      bevestiging:
+        description: "Typ HERSTELPROEF om de productie-VPS via het veilige Actions-pad te gebruiken"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: externe-backupstaffel-herstelproef
+  cancel-in-progress: false
+
+jobs:
+  bewijs:
+    name: Nieuwe set en geïsoleerd herstelbewijs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Bevestiging en branch controleren
+        env:
+          ACTIE: ${{ inputs.actie }}
+          BEVESTIGING: ${{ inputs.bevestiging }}
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF" = "refs/heads/main" ] || {
+            echo "FOUT: deze productieproef mag uitsluitend vanaf main draaien." >&2
+            exit 1
+          }
+          [ "$BEVESTIGING" = "HERSTELPROEF" ] || {
+            echo "FOUT: bevestiging moet exact HERSTELPROEF zijn." >&2
+            exit 1
+          }
+          case "$ACTIE" in
+            alleen_staffel|staffel_en_herstelproef) ;;
+            *) echo "FOUT: onbekende actie." >&2; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - name: Bewijsscripts syntactisch controleren
+        run: |
+          set -euo pipefail
+          bash -n \
+            deploy/backup-alert.sh \
+            deploy/backup-set-validatie.sh \
+            deploy/backup-staffel.sh \
+            deploy/backup-bewijs-productie.sh \
+            deploy/herstelproef.sh
+
+      - name: SSH veilig configureren
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -euo pipefail
+          [ -n "${PROD_SSH_KEY:-}" ] || { echo "FOUT: PROD_SSH_KEY ontbreekt." >&2; exit 1; }
+          [ -n "${PROD_SSH_HOST:-}" ] || { echo "FOUT: PROD_SSH_HOST ontbreekt." >&2; exit 1; }
+          [ -n "${PROD_SSH_USER:-}" ] || { echo "FOUT: PROD_SSH_USER ontbreekt." >&2; exit 1; }
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "$PROD_SSH_KEY" | sed 's/\\n/\n/g' > ~/.ssh/backup_key
+          chmod 600 ~/.ssh/backup_key
+          ssh-keyscan -p "$PROD_SSH_PORT" -H "$PROD_SSH_HOST" \
+            >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 644 ~/.ssh/known_hosts
+          grep -q . ~/.ssh/known_hosts || {
+            echo "FOUT: ssh-keyscan leverde geen hostkey op." >&2
+            exit 1
+          }
+
+      - name: Exacte back-upscripts van deze commit klaarzetten
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -euo pipefail
+          tar -czf /tmp/fps-backup-bewijs.tgz \
+            deploy/backup-alert.sh \
+            deploy/backup-set-validatie.sh \
+            deploy/backup-staffel.sh \
+            deploy/backup-bewijs-productie.sh \
+            deploy/herstelproef.sh
+          scp -i ~/.ssh/backup_key -P "$PROD_SSH_PORT" \
+            /tmp/fps-backup-bewijs.tgz \
+            "$PROD_SSH_USER@$PROD_SSH_HOST:/tmp/fps-backup-bewijs.tgz"
+
+      - name: Staffel bouwen, volledig controleren en optioneel herstellen
+        env:
+          ACTIE: ${{ inputs.actie }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ACTIE_B64=$(printf '%s' "$ACTIE" | base64 -w0)
+          ssh -i ~/.ssh/backup_key -p "$PROD_SSH_PORT" \
+            "$PROD_SSH_USER@$PROD_SSH_HOST" \
+            "ACTIE_B64=$ACTIE_B64 bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+          ACTIE=$(printf '%s' "$ACTIE_B64" | base64 -d)
+          case "$ACTIE" in
+            alleen_staffel|staffel_en_herstelproef) ;;
+            *) echo "FOUT: onbekende actie op de VPS." >&2; exit 1 ;;
+          esac
+
+          PROEF_DIR=$(mktemp -d /tmp/fps-backup-bewijs.XXXXXX)
+          opruimen() {
+            rm -rf "$PROEF_DIR"
+            rm -f /tmp/fps-backup-bewijs.tgz
+          }
+          trap opruimen EXIT
+          tar -xzf /tmp/fps-backup-bewijs.tgz -C "$PROEF_DIR"
+
+          sudo -n env BACKUP_DEPLOY_DIR=/opt/fps-one/deploy \
+            BACKUP_DOEL=/srv/fps-backup \
+            bash "$PROEF_DIR/deploy/backup-bewijs-productie.sh" "$ACTIE"
+          REMOTE
+
+      - name: Bewijs samenvatten
+        run: |
+          {
+            echo "## Externe back-upstaffel"
+            echo ""
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Actie: \`${{ inputs.actie }}\`"
+            echo "- De volledige, checksum-gevalideerde uitvoer staat in de voorgaande stap."
+            echo "- De herstelproef gebruikt uitsluitend tijdelijke containers, een eigen netwerk en loopback-poorten."
+          } >> "$GITHUB_STEP_SUMMARY"

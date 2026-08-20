@@ -52,6 +52,7 @@
     "verificatie-sentry-inbouw01": "tsx ./src/verificatie-sentry-inbouw01.ts",
     "sentry-eu-inventaris": "tsx ./src/sentry-eu-inventaris.ts",
     "verificatie-productrapport-inventaris": "tsx ./src/verificatie-productrapport-inventaris.ts",
+    "verificatie-backup-staffel": "bash ../deploy/tests/test-backup-staffel.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
