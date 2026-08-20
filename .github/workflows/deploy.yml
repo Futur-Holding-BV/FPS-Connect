@@ -422,14 +422,16 @@ jobs:
           PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
+          PROD_SSH_HOST_FINGERPRINT: ${{ secrets.PROD_SSH_HOST_FINGERPRINT }}
         run: |
           set -euo pipefail
           echo "SSH-sleutel en hostkey instellen" > /tmp/faalstap.txt
           : > /tmp/stap-uitvoer.log
           echo "controles-en-install|$(date +%s)" >> /tmp/mijlpalen.txt
 
-          if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_SSH_HOST:-}" ]; then
-            echo "FOUT: GitHub Secrets PROD_SSH_KEY en/of PROD_SSH_HOST ontbreken." >&2
+          if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_SSH_HOST:-}" ] \
+            || [ -z "${PROD_SSH_HOST_FINGERPRINT:-}" ]; then
+            echo "FOUT: PROD_SSH_KEY, PROD_SSH_HOST en/of PROD_SSH_HOST_FINGERPRINT ontbreken." >&2
             exit 1
           fi
 
@@ -442,15 +444,16 @@ jobs:
           printf '%s' "${PROD_SSH_KEY}" | sed 's/\\n/\n/g' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Host key veilig vastleggen: ssh-keyscan haalt de publieke hostkey
-          # op en pint die in known_hosts (StrictHostKeyChecking blijft aan).
-          ssh-keyscan -p "${PROD_SSH_PORT}" -H "${PROD_SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          chmod 644 ~/.ssh/known_hosts
-
-          if ! grep -q . ~/.ssh/known_hosts; then
-            echo "FOUT: ssh-keyscan leverde geen hostkey op voor de server." >&2
-            exit 1
-          fi
+          # Accepteer uitsluitend de vooraf buiten deze verbinding
+          # geverifieerde VPS-hostkey; een kale ssh-keyscan is geen bewijs.
+          bash deploy/pin-ssh-host-key.sh ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<'SSHCONFIG'
+          Host *
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+          SSHCONFIG
+          chmod 600 ~/.ssh/config
 
       - name: Deployscript naar de server kopiëren
         if: github.event.inputs.test_faalmail != 'TEST'

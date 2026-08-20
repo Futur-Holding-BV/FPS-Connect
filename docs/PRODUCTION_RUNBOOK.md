@@ -41,6 +41,7 @@ GitHub Actions (`deploy.yml`) SSHt naar de VPS om `deploy-production.sh` te draa
 | `PROD_SSH_HOST` | `149.210.181.47` | **Ja** |
 | `PROD_SSH_USER` | `rene` | **Ja** |
 | `PROD_SSH_PORT` | `22` (optioneel; standaard 22) | Nee |
+| `PROD_SSH_HOST_FINGERPRINT` | Vooraf door de VPS-beheerder geverifieerde `SHA256:…`-fingerprint van exact één SSH-hostkey | **Ja** |
 | `SMOKETEST_EMAIL` | E-mailadres smoketest-account | Nee |
 | `SMOKETEST_PASSWORD` | Wachtwoord smoketest-account | Nee |
 | `EXPO_TOKEN` | Expo access token (account `futur-holding`) voor de automatische OTA-update van de monteur-app na elke deploy | Nee* |

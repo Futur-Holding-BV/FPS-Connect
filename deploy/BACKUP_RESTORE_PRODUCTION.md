@@ -17,6 +17,10 @@ externe staffel.
   -database en -objectopslag worden nooit leeggemaakt of beschreven.
 - Productiehandelingen lopen uitsluitend via GitHub Actions. De agent gebruikt
   geen rechtstreekse SSH-toegang.
+- Iedere gezonde productie-deploy installeert idempotent de beheerde
+  `/etc/cron.d/fps-connect-backup`-keten voor 03:00, 03:30, 04:00 en 08:00.
+- GitHub Actions accepteert alleen de VPS-hostkey die exact overeenkomt met de
+  vooraf door de beheerder vastgelegde SHA-256-fingerprint.
 
 ## Dagelijkse keten
 

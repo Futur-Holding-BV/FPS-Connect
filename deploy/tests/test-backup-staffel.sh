@@ -574,4 +574,69 @@ if (status.uitkomst !== "fout") throw new Error("foutstatus voor symlinkset ontb
 NODE
 log_ok "staffel hergebruikt geen bestaande symlink als dagset"
 
+# 16. De beheerde planning bevat de volledige dagelijkse keten op de actuele
+# productiemap en is idempotent.
+maak_fixture "beheerde-backupplanning"
+CRONPAD="$FIXTURE/fps-connect-backup"
+env FPS_ROOT_DIR=/opt/fps-one FPS_BACKUP_CRON_TARGET="$CRONPAD" \
+  bash "$ROOT/deploy/install-backup-schedule.sh" >/dev/null
+assert_bestaat "$CRONPAD"
+grep -Fq "0 3 * * * root" "$CRONPAD" || faal "03:00 databaseback-up ontbreekt"
+grep -Fq "30 3 * * * root" "$CRONPAD" || faal "03:30 objectopslagback-up ontbreekt"
+grep -Fq "0 4 * * * root" "$CRONPAD" || faal "04:00 staffel ontbreekt"
+grep -Fq "0 8 * * * root" "$CRONPAD" || faal "08:00 bewaking ontbreekt"
+grep -Fq "/opt/fps-one" "$CRONPAD" || faal "actuele productiemap ontbreekt"
+if grep -Fq "/opt/fps-connect" "$CRONPAD"; then
+  faal "obsolete productiemap staat nog in de beheerde planning"
+fi
+CRON_SUM=$(sha256sum "$CRONPAD" | cut -d" " -f1)
+env FPS_ROOT_DIR=/opt/fps-one FPS_BACKUP_CRON_TARGET="$CRONPAD" \
+  bash "$ROOT/deploy/install-backup-schedule.sh" >/dev/null
+assert_gelijk "$CRON_SUM" "$(sha256sum "$CRONPAD" | cut -d" " -f1)" \
+  "tweede planninginstallatie is niet idempotent"
+log_ok "productiedeploy beheert de volledige 03:00-08:00 back-upplanning"
+
+# 17. known_hosts bevat alleen de vooraf gepinde hostkey, nooit alle
+# onbevestigde ssh-keyscan-uitvoer.
+maak_fixture "ssh-hostkey-pin"
+ssh-keygen -q -t ed25519 -N "" -f "$FIXTURE/verwacht" </dev/null
+ssh-keygen -q -t ed25519 -N "" -f "$FIXTURE/aanvaller" </dev/null
+awk '{ print "backup.example " $1 " " $2 }' \
+  "$FIXTURE/verwacht.pub" "$FIXTURE/aanvaller.pub" > "$FIXTURE/scan"
+cat > "$BIN/ssh-keyscan" <<'SH'
+#!/bin/bash
+cat "${FAKE_SSH_SCAN:?}"
+SH
+chmod +x "$BIN/ssh-keyscan"
+FINGERPRINT=$(ssh-keygen -lf "$FIXTURE/verwacht.pub" -E sha256 | awk '{ print $2 }')
+env \
+  PROD_SSH_HOST=backup.example \
+  PROD_SSH_PORT=22 \
+  PROD_SSH_HOST_FINGERPRINT="$FINGERPRINT" \
+  SSH_KEYSCAN_BIN="$BIN/ssh-keyscan" \
+  FAKE_SSH_SCAN="$FIXTURE/scan" \
+  bash "$ROOT/deploy/pin-ssh-host-key.sh" "$FIXTURE/known_hosts" >/dev/null
+assert_gelijk "1" "$(wc -l < "$FIXTURE/known_hosts" | tr -d ' ')" \
+  "known_hosts bevat niet exact één sleutel"
+VERWACHT_BLOB=$(awk '{ print $2 }' "$FIXTURE/verwacht.pub")
+AANVALLER_BLOB=$(awk '{ print $2 }' "$FIXTURE/aanvaller.pub")
+grep -Fq "$VERWACHT_BLOB" "$FIXTURE/known_hosts" || faal "gepinde hostkey ontbreekt"
+if grep -Fq "$AANVALLER_BLOB" "$FIXTURE/known_hosts"; then
+  faal "ongepinde hostkey is ten onrechte geaccepteerd"
+fi
+set +e
+env \
+  PROD_SSH_HOST=backup.example \
+  PROD_SSH_PORT=22 \
+  PROD_SSH_HOST_FINGERPRINT="SHA256:past-niet" \
+  SSH_KEYSCAN_BIN="$BIN/ssh-keyscan" \
+  FAKE_SSH_SCAN="$FIXTURE/scan" \
+  bash "$ROOT/deploy/pin-ssh-host-key.sh" "$FIXTURE/verkeerd-known-hosts" \
+  > "$FIXTURE/verkeerd.log" 2>&1
+RC=$?
+set -e
+assert_gelijk "1" "$RC" "afwijkende hostkey-fingerprint blokkeert niet"
+assert_niet_bestaat "$FIXTURE/verkeerd-known-hosts"
+log_ok "Actions accepteert uitsluitend de vooraf gepinde VPS-hostkey"
+
 echo "Alle $TEST_TELLER back-upstaffelproeven zijn geslaagd."

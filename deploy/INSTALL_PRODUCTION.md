@@ -311,23 +311,18 @@ AWS_SECRET_ACCESS_KEY=...
 
 ## Automatische dagelijkse backup
 
+De productie-deploy installeert de planning idempotent als
+`/etc/cron.d/fps-connect-backup`. Handmatige gebruikerscrontabs zijn niet de
+bron van waarheid. Eenmalig of na herstel kan dezelfde installatie expliciet:
+
 ```bash
-crontab -e
+cd /opt/fps-one
+sudo -n bash deploy/install-backup-schedule.sh
 ```
 
-```
-# Database backup dagelijks 03:00
-0 3 * * * cd /opt/fps-connect && docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production --profile backup run --rm backup >> /var/log/fps-backup.log 2>&1
-
-# Objectopslag-backup (geüploade bestanden) dagelijks 03:30
-30 3 * * * cd /opt/fps-connect && docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production --profile backup run --rm backup-minio >> /var/log/fps-backup.log 2>&1
-
-# Opschoning: bewaar maximaal 30 dumps
-15 3 * * * find /opt/fps-connect/deploy/db-backups -name "fps_*.sql.gz" -mtime +30 -delete
-
-# Backup-controle dagelijks 06:00
-0 6 * * * /opt/fps-connect/deploy/check-backup.sh >> /var/log/fps-backup-check.log 2>&1
-```
+De beheerde keten gebruikt uitsluitend `/opt/fps-one`: database om 03:00,
+opschoning om 03:15, objectopslag om 03:30, immutable externe staffel om 04:00
+en fail-closed bewaking om 08:00. Iedere hoofdtaak heeft een eigen `flock`.
 
 ---
 

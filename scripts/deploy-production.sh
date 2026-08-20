@@ -437,7 +437,12 @@ if healthcheck; then
   stap_tijd "healthcheck"
   if versiecheck "${DEPLOY_VERSIE_COMMIT}" \
     && app_versiecheck "${DEPLOY_VERSIE_COMMIT}" \
-    && pwa_productiecheck; then
+    && pwa_productiecheck \
+    && {
+      echo "=== STAP 11: beheerde back-upplanning installeren ==="
+      sudo -n bash deploy/install-backup-schedule.sh
+      stap_tijd "backupplanning"
+    }; then
     # Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release.
     docker image prune -f --filter "until=72h" || true
     echo "Deploy voltooid: release is gezond, de juiste versie draait en /app/ voldoet aan de PWA-installatiepoort."

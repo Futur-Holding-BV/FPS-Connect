@@ -54,6 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n \
+            deploy/pin-ssh-host-key.sh \
             deploy/backup-alert.sh \
             deploy/backup-set-validatie.sh \
             deploy/backup-staffel.sh \
@@ -66,22 +67,28 @@ jobs:
           PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
           PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
           PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_HOST_FINGERPRINT: ${{ secrets.PROD_SSH_HOST_FINGERPRINT }}
         run: |
           set -euo pipefail
           [ -n "${PROD_SSH_KEY:-}" ] || { echo "FOUT: PROD_SSH_KEY ontbreekt." >&2; exit 1; }
           [ -n "${PROD_SSH_HOST:-}" ] || { echo "FOUT: PROD_SSH_HOST ontbreekt." >&2; exit 1; }
           [ -n "${PROD_SSH_USER:-}" ] || { echo "FOUT: PROD_SSH_USER ontbreekt." >&2; exit 1; }
+          [ -n "${PROD_SSH_HOST_FINGERPRINT:-}" ] || {
+            echo "FOUT: PROD_SSH_HOST_FINGERPRINT ontbreekt." >&2
+            exit 1
+          }
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s' "$PROD_SSH_KEY" | sed 's/\\n/\n/g' > ~/.ssh/backup_key
           chmod 600 ~/.ssh/backup_key
-          ssh-keyscan -p "$PROD_SSH_PORT" -H "$PROD_SSH_HOST" \
-            >> ~/.ssh/known_hosts 2>/dev/null
-          chmod 644 ~/.ssh/known_hosts
-          grep -q . ~/.ssh/known_hosts || {
-            echo "FOUT: ssh-keyscan leverde geen hostkey op." >&2
-            exit 1
-          }
+          bash deploy/pin-ssh-host-key.sh ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<'SSHCONFIG'
+          Host *
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+          SSHCONFIG
+          chmod 600 ~/.ssh/config
 
       - name: Exacte back-upscripts van deze commit klaarzetten
         env:
