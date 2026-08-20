@@ -46,6 +46,7 @@
     "bewijs-calc-kern-offerte": "tsx src/bewijs-calc-kern-offerte.ts",
     "verificatie-snagstream-archief": "tsx ./src/verificatie-snagstream-archief.ts",
     "verificatie-sentry-inbouw01": "tsx ./src/verificatie-sentry-inbouw01.ts",
+    "sentry-eu-inventaris": "tsx ./src/sentry-eu-inventaris.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

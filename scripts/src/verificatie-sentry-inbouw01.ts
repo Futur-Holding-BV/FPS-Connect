@@ -37,6 +37,8 @@ async function main(): Promise<void> {
     metro,
     appJson,
     mobielPackage,
+    sentryEuInventaris,
+    productieRunbook,
   ] = await Promise.all([
     lees("lib/foutmonitoring/src/index.ts"),
     lees("artifacts/api-server/src/instrument.ts"),
@@ -50,6 +52,8 @@ async function main(): Promise<void> {
     lees("artifacts/monteur-app/metro.config.js"),
     lees("artifacts/monteur-app/app.json"),
     lees("artifacts/monteur-app/package.json"),
+    lees("scripts/src/sentry-eu-inventaris.ts"),
+    lees("docs/PRODUCTION_RUNBOOK.md"),
   ]);
   const fouten: string[] = [];
 
@@ -161,6 +165,31 @@ async function main(): Promise<void> {
       apiTest.includes(testWaarde) &&
       apiTest.includes("not.toContain"),
     "de wachtwoord-negatiefproef is niet aan route én scrubtest gekoppeld",
+    fouten,
+  );
+  eis(
+    sentryEuInventaris.includes(
+      'SENTRY_API_BASIS_URL = "https://de.sentry.io/api/0"',
+    ) &&
+      sentryEuInventaris.includes('SENTRY_API_METHODE = "GET"') &&
+      !/method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/.test(sentryEuInventaris),
+    "Sentry-inventaris is niet hard begrensd op de DE/EU-host en GET",
+    fouten,
+  );
+  eis(
+    ["org:read", "project:read", "event:read"].every((recht) =>
+      sentryEuInventaris.includes(`"${recht}"`),
+    ) &&
+      sentryEuInventaris.includes('BESCHERMD_PROJECT = "fps-connect-api"') &&
+      sentryEuInventaris.includes('TOKEN_SECRET = "SENTRY_AUTH_TOKEN"'),
+    "Sentry-inventaris mist leesrechten, secretgrens of bescherming van fps-connect-api",
+    fouten,
+  );
+  eis(
+    productieRunbook.includes("User Auth Token") &&
+      productieRunbook.includes("de.sentry.io/api/0") &&
+      productieRunbook.includes("geen regionale API-host"),
+    "productierunbook documenteert de EU-token- en connectorbeperking niet",
     fouten,
   );
 

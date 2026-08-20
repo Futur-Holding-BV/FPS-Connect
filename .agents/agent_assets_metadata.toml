@@ -144,3 +144,10 @@ uri = "file://screenshots/telefoon-kantoorgebruiker-bounce.png"
 type = "image"
 title = "Telefoon-test: kantoorgebruiker wordt naar Connect gestuurd"
 description = "Zelfde test met een kantoorgebruiker: die wordt (zoals ontworpen) uit /app/ naar de Connect-omgeving gestuurd — dit was exact wat René op zijn telefoon zag."
+
+[[outputs]]
+id = "H4We-U1D76qs9gUyJEmy-"
+uri = "file://.agents/outputs/migratieregister-creditfactuur-bewijs-2026-08-20.md"
+type = "text"
+title = "Bewijs migratieregister creditfacturen"
+description = "Volledige, onverkorte registers van ontwikkeling en productie met namen en checksums, plus de gerichte afwezigheidscontrole en groene hernoemingscheck."

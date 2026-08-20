@@ -99,6 +99,15 @@ Zie [`docs/roadmap/README.md`](docs/roadmap/README.md) voor het volledige overzi
 - Rode/oranje primaire kleur (HSL 12 90% 50%), donkere sidebar
 - Altijd meerkeuzevragen stellen via de `user_query` tool — nooit als platte tekst in het antwoord
 
+## Taakcoördinatie
+
+- Maximaal drie taken tegelijk actief. Een vierde taak wacht tot er een actieve taak is afgerond.
+- Start nooit twee actieve taken die hetzelfde bestand of dezelfde migratiereeks wijzigen. Stel de bestands- en migratie-overlap vooraf vast; plaats de tweede taak zo nodig in de wachtrij.
+- Maak geen nieuwe conceptvoorstellen zolang de bestaande voorstellen niet zijn ingedeeld via TAKEN_INDELING_01. Meld gevonden vervolgwerk alleen in het eindverslag.
+- Maak een opdracht die René expliciet geeft wél als taak aan. Zijn er al drie actieve taken, zet die taak in de wachtrij in plaats van hem te weigeren; zo'n expliciete opdracht is geen conceptvoorstel.
+- Geef geen tussenstanden; meld uitsluitend wanneer een taak gereed is, tenzij er informatie of actie van René nodig is.
+- Blokkeert een taak op een sleutel, toestemming of serverinstelling buiten de code, zet de taak stil en meld in één regel de vereiste actie. Bouw er niet omheen.
+
 ## Gotchas
 
 - Voer na elke OpenAPI wijziging altijd `pnpm --filter @workspace/api-spec run codegen` uit

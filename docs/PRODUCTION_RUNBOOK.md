@@ -163,6 +163,31 @@ Meldt een gebruiker een fout met een `FPS-`-code (bijv. `FPS-3A9C1B04`)?
 
 Geen event te vinden? Dan is de fout van vóór de Sentry-koppeling of ontbrak `SENTRY_DSN` — zoek dan op de code in de containerlogs: `docker logs deploy-api-1 2>&1 | grep FPS-3A9C1B04`.
 
+### Alleen-lezen Sentry-API-inventaris via de EU-host
+
+De organisatie `futur-holding` staat in Sentry's DE/EU-opslagregio. Beheer- en
+inventarisaanroepen gebruiken daarom uitsluitend
+`https://de.sentry.io/api/0`. De Replit Sentry-connector is hiervoor niet
+bruikbaar: die connector kan geen regionale API-host instellen en stuurt via
+zijn vaste host, waardoor een geldig EU-token alsnog wordt geweigerd.
+
+- Script: `pnpm --filter @workspace/scripts run sentry-eu-inventaris`
+- Tokentype: **User Auth Token** uit de DE/EU-Sentryomgeving; een Organization
+  Token werkt niet op `/api/0/organizations/...`.
+- Secret: `SENTRY_AUTH_TOKEN`; nooit in code, chat, commandoregel of logregels.
+- Rechten: uitsluitend `org:read`, `project:read` en `event:read`.
+- Methode: uitsluitend `GET`; het script bevat geen aanmaak-, wijzig- of
+  verwijderaanroep.
+- Beschermd productieproject: `fps-connect-api` komt alleen mee in de
+  organisatiebrede projectlijst en wordt daarna volledig overgeslagen. Er
+  volgt geen project- of issueaanroep voor dit project.
+
+Het verzoek draagt `Accept: application/json` en
+`Authorization: Bearer <SENTRY_AUTH_TOKEN>`. In de uitvoer staat alleen de
+placeholder `secret:SENTRY_AUTH_TOKEN`, nooit de waarde. Een `401 Invalid
+token` wijst eerst op een verkeerd tokentype of een token dat niet in de
+DE/EU-omgeving is aangemaakt; een `403` wijst op ontbrekende leesrechten.
+
 ### Meldingen lopen uitsluitend via het beheercentrum
 
 - Sentry stuurt issue-alerts en `resolved`/`archived`-statussen naar de
