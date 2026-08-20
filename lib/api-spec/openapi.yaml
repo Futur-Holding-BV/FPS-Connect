@@ -3273,7 +3273,7 @@ paths:
     get:
       operationId: listDocumenten
       tags: [bibliotheek]
-      summary: Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
+      summary: Actuele productrapporten met een geldige toepassing- en applicatiekoppeling
       parameters:
         - in: query
           name: zoek
@@ -3284,10 +3284,6 @@ paths:
           name: documenttype
           schema:
             $ref: "#/components/schemas/DocumentType"
-        - in: query
-          name: status
-          schema:
-            $ref: "#/components/schemas/DocumentStatus"
         - in: query
           name: goedkeuring_status
           schema:
@@ -3306,15 +3302,6 @@ paths:
           description: Filter op gekoppelde toepassing
           schema:
             type: integer
-        - in: query
-          name: alleen_actueel
-          description: Alleen de actuele revisie per documentgroep
-          schema:
-            type: boolean
-        - in: query
-          name: inclusief_gearchiveerd
-          schema:
-            type: boolean
       responses:
         "200":
           description: OK
@@ -3327,7 +3314,7 @@ paths:
     post:
       operationId: createDocument
       tags: [bibliotheek]
-      summary: Nieuw document toevoegen aan de bibliotheek (beheerder)
+      summary: Nieuw gekoppeld productrapport toevoegen (beheerder)
       requestBody:
         required: true
         content:
@@ -3346,7 +3333,7 @@ paths:
     post:
       operationId: aanleverenDocument
       tags: [bibliotheek]
-      summary: Document direct aanleveren bij de bibliotheek (Slim Upload; komt binnen als ter goedkeuring)
+      summary: Productrapport of contextdocument met verplichte, bevoegde bestemming aanleveren
       requestBody:
         required: true
         content:
@@ -3363,15 +3350,30 @@ paths:
         "400":
           description: Ongeldige invoer
         "422":
-          description: Categorie hoort niet in de bibliotheek (bijv. jaarrekening)
+          description: Categorie hoort bij een andere, contextspecifieke bestemming
         "503":
           description: Bestandsopslag niet beschikbaar
+
+  /documenten/herstelwerk:
+    get:
+      operationId: listDocumentHerstelwerk
+      tags: [bibliotheek]
+      summary: Toon bestaande algemene of ambigue documenten als handmatig herstelwerk
+      responses:
+        "200":
+          description: Read-only inventaris; documenten en objecten worden niet gewijzigd
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentHerstelwerk"
 
   /documenten/{id}:
     get:
       operationId: getDocument
       tags: [bibliotheek]
-      summary: Documentdetail
+      summary: Detail van een zichtbaar, actueel productrapport
       parameters:
         - in: path
           name: id
@@ -3578,7 +3580,7 @@ paths:
     get:
       operationId: listGekoppeldeDocumenten
       tags: [bibliotheek]
-      summary: Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
+      summary: Contextdocumenten gekoppeld aan een entiteit, met autorisatie op die bestemming
       parameters:
         - in: query
           name: doel_type
@@ -35951,11 +35953,22 @@ components:
 
     DocumentAanleverenInput:
       type: object
-      required: [categorie]
+      required: [categorie, bestand]
       properties:
         categorie:
           type: string
-          description: Slim Upload-categorie (bijv. tekening, contract, certificaat). Jaarrekeningen worden geweigerd; die gaan via /financieel/jaarrekeningen.
+          description: Productrapportcategorie, opdrachtstuk bij een opdracht, of adviesrapport bij een calculatie.
+        label_id:
+          type: array
+          description: Een of meer handmatig bevestigde toepassingen; verplicht voor productrapporten.
+          items:
+            type: integer
+        doel_type:
+          type: string
+          description: Concrete contextbestemming; opdracht voor opdrachtstukken of calculatie voor adviesrapporten.
+        doel_id:
+          type: integer
+          description: ID van de concrete contextbestemming.
         toelichting:
           type: string
         bestand:
@@ -35963,20 +35976,20 @@ components:
           format: binary
 
     DocumentAanleverResultaat:
-      description: Document plus optionele doorschakeling naar de importstroom (PRIJS_01 §4, prijslijst).
+      description: Opgeslagen document plus optionele verwijzing naar de calculatie-inleesstroom.
       allOf:
         - $ref: "#/components/schemas/Document"
         - type: object
           properties:
             doorschakeling:
               type: object
-              required: [naar, import_type, reden]
+              required: [naar, reden]
               properties:
                 naar:
                   type: string
-                  enum: [import]
-                import_type:
-                  type: string
+                  enum: [calculatie-inrichten]
+                document_id:
+                  type: integer
                 reden:
                   type: string
 
@@ -36047,6 +36060,34 @@ components:
           items:
             type: integer
 
+    DocumentHerstelwerk:
+      type: object
+      required:
+        [document_id, naam, documenttype, classificatie, status, snap_groep_id, snap_revisie_nummer]
+      properties:
+        document_id:
+          type: integer
+        naam:
+          type: string
+        documenttype:
+          $ref: "#/components/schemas/DocumentType"
+        classificatie:
+          type: string
+          enum: [herstelwerk]
+        status:
+          type: string
+          enum: [voorstel, herstelwerk, bevestigd, gemigreerd]
+        voorgestelde_bestemming:
+          type: ["string", "null"]
+        snap_pdf_url:
+          type: ["string", "null"]
+        snap_bestands_hash:
+          type: ["string", "null"]
+        snap_groep_id:
+          type: string
+        snap_revisie_nummer:
+          type: integer
+
     OpleverrapportNaarDmsInput:
       type: object
       required: [pdf_url]
@@ -36061,7 +36102,7 @@ components:
 
     DocumentInput:
       type: object
-      required: [naam]
+      required: [naam, documenttype, toepassing_ids]
       properties:
         naam:
           type: string
@@ -36098,6 +36139,7 @@ components:
           $ref: "#/components/schemas/GoedkeuringStatus"
         toepassing_ids:
           type: array
+          minItems: 1
           items:
             type: integer
 

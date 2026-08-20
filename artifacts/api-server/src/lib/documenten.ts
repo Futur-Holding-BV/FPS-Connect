@@ -6,6 +6,8 @@ import {
   documentGoedkeuringenTable,
   documentLogboekTable,
   labelsTable,
+  labelApplicatiesTable,
+  voorzieningTypesTable,
   gebruikersTable,
   gebouwenTable,
   crmKlantenTable,
@@ -14,7 +16,7 @@ import {
   voorzieningenTable,
   modCalcHeadersTable,
 } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 export const DOCUMENT_TYPES = [
   "eta",
@@ -35,6 +37,27 @@ export const DOCUMENT_TYPES = [
   "overig",
 ] as const;
 
+// De openbare bibliotheek is bewust smaller dan de centrale documentenopslag.
+// Contextdocumenten (offerte, opdracht, dossier, HRM, huisstijl, enz.) mogen in
+// documenten blijven bestaan voor hun eigen stroom, maar zijn geen productrapport.
+export const PRODUCTRAPPORT_TYPES = [
+  "eta",
+  "classificatierapport",
+  "testrapport",
+  "productcertificaat",
+  "dop",
+  "verwerkingsvoorschrift",
+  "productblad",
+] as const;
+export type ProductrapportType = (typeof PRODUCTRAPPORT_TYPES)[number];
+
+export function isProductrapportType(v: unknown): v is ProductrapportType {
+  return (
+    typeof v === "string" &&
+    (PRODUCTRAPPORT_TYPES as readonly string[]).includes(v)
+  );
+}
+
 export const DOCUMENT_STATUSSEN = [
   "actueel",
   "controle_nodig",
@@ -51,6 +74,121 @@ export function isDocumentType(v: unknown): v is DocumentType {
 }
 export function isDocumentStatus(v: unknown): v is DocumentStatus {
   return typeof v === "string" && (DOCUMENT_STATUSSEN as readonly string[]).includes(v);
+}
+
+export function normaliseerLabelIds(labelIds: unknown): number[] {
+  if (!Array.isArray(labelIds)) return [];
+  return Array.from(
+    new Set(
+      labelIds.filter(
+        (id): id is number => Number.isInteger(id) && Number(id) > 0,
+      ),
+    ),
+  );
+}
+
+// Een toepassing is pas een concrete productbestemming wanneer het label actief
+// is én aan ten minste één actieve applicatie is gekoppeld.
+export async function geldigeProductrapportLabelIds(
+  labelIds: unknown,
+): Promise<number[]> {
+  const schoon = normaliseerLabelIds(labelIds);
+  if (schoon.length === 0) return [];
+  const rows = await db
+    .select({ labelId: labelApplicatiesTable.labelId })
+    .from(labelApplicatiesTable)
+    .innerJoin(labelsTable, eq(labelsTable.id, labelApplicatiesTable.labelId))
+    .innerJoin(
+      voorzieningTypesTable,
+      eq(voorzieningTypesTable.code, labelApplicatiesTable.typeCode),
+    )
+    .where(
+      and(
+        inArray(labelApplicatiesTable.labelId, schoon),
+        eq(labelsTable.gearchiveerd, false),
+        eq(voorzieningTypesTable.actief, true),
+      ),
+    );
+  return Array.from(new Set(rows.map((row) => row.labelId)));
+}
+
+export function controleerProductrapportBestemming(
+  documenttype: unknown,
+  labelIds: unknown,
+  geldigeLabelIds: readonly number[],
+):
+  | { ok: true; documenttype: ProductrapportType; labelIds: number[] }
+  | { ok: false; error: string } {
+  if (!isProductrapportType(documenttype)) {
+    return {
+      ok: false,
+      error:
+        "Alleen technische productrapporten kunnen in de productrapportenbibliotheek worden opgeslagen.",
+    };
+  }
+  const gevraagd = normaliseerLabelIds(labelIds);
+  if (gevraagd.length === 0) {
+    return {
+      ok: false,
+      error:
+        "Kies minimaal één concrete toepassing met een actieve applicatie voordat u het productrapport opslaat.",
+    };
+  }
+  const geldig = new Set(geldigeLabelIds);
+  if (gevraagd.some((labelId) => !geldig.has(labelId))) {
+    return {
+      ok: false,
+      error:
+        "Een gekozen toepassing ontbreekt, is gearchiveerd of heeft geen actieve applicatiekoppeling.",
+    };
+  }
+  return { ok: true, documenttype, labelIds: gevraagd };
+}
+
+export async function valideerProductrapportBestemming(
+  documenttype: unknown,
+  labelIds: unknown,
+): Promise<
+  | { ok: true; documenttype: ProductrapportType; labelIds: number[] }
+  | { ok: false; error: string }
+> {
+  const gevraagd = normaliseerLabelIds(labelIds);
+  const geldig = await geldigeProductrapportLabelIds(gevraagd);
+  return controleerProductrapportBestemming(documenttype, gevraagd, geldig);
+}
+
+export function isZichtbaarProductrapport(
+  document: Pick<DocumentRow, "id" | "documenttype" | "status" | "gearchiveerd">,
+  geldigeDocumentIds: ReadonlySet<number>,
+): boolean {
+  return (
+    isProductrapportType(document.documenttype) &&
+    document.status === "actueel" &&
+    !document.gearchiveerd &&
+    geldigeDocumentIds.has(document.id)
+  );
+}
+
+export async function zichtbareProductrapportDocumentIds(): Promise<Set<number>> {
+  const rows = await db
+    .select({ documentId: documentToepassingenTable.documentId })
+    .from(documentToepassingenTable)
+    .innerJoin(labelsTable, eq(labelsTable.id, documentToepassingenTable.labelId))
+    .innerJoin(
+      labelApplicatiesTable,
+      eq(labelApplicatiesTable.labelId, labelsTable.id),
+    )
+    .innerJoin(
+      voorzieningTypesTable,
+      eq(voorzieningTypesTable.code, labelApplicatiesTable.typeCode),
+    )
+    .where(
+      and(
+        eq(labelsTable.gearchiveerd, false),
+        eq(voorzieningTypesTable.actief, true),
+      ),
+    );
+  return new Set(rows.map((row) => row.documentId));
 }
 
 export const GOEDKEURING_STATUSSEN = [
@@ -156,21 +294,26 @@ export async function mapDocument(d: DocumentRow) {
 
 // Vervangt de toepassing-koppelingen (labels) van een document door de opgegeven set.
 export async function syncDocumentToepassingen(documentId: number, labelIds: number[]) {
-  const schoon = Array.from(new Set(labelIds.filter((n) => Number.isInteger(n) && n > 0)));
-  await db
-    .delete(documentToepassingenTable)
-    .where(eq(documentToepassingenTable.documentId, documentId));
+  const schoon = normaliseerLabelIds(labelIds);
   if (schoon.length === 0) return;
   const bestaande = await db
     .select({ id: labelsTable.id })
     .from(labelsTable)
     .where(inArray(labelsTable.id, schoon));
-  const geldig = bestaande.map((b) => b.id);
-  if (geldig.length === 0) return;
-  await db
-    .insert(documentToepassingenTable)
-    .values(geldig.map((labelId) => ({ documentId, labelId })))
-    .onConflictDoNothing();
+  if (bestaande.length !== schoon.length) {
+    throw new Error(
+      "Toepassingskoppelingen zijn gewijzigd; bestaande koppelingen zijn behouden.",
+    );
+  }
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(documentToepassingenTable)
+      .where(eq(documentToepassingenTable.documentId, documentId));
+    await tx
+      .insert(documentToepassingenTable)
+      .values(schoon.map((labelId) => ({ documentId, labelId })))
+      .onConflictDoNothing();
+  });
 }
 
 // ── Polymorfe koppelingen (document ↔ entiteit) ─────────────────────────────

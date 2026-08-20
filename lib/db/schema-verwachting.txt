@@ -104,6 +104,11 @@ INDEX|document_koppelingen|document_koppelingen_document_id_doel_type_doel_id_un
 INDEX|document_koppelingen|document_koppelingen_doel_idx
 INDEX|document_koppelingen|document_koppelingen_pkey
 INDEX|document_logboek|document_logboek_pkey
+INDEX|document_migratie_inventaris|dmi_classificatie_idx
+INDEX|document_migratie_inventaris|dmi_documenttype_idx
+INDEX|document_migratie_inventaris|dmi_status_idx
+INDEX|document_migratie_inventaris|document_migratie_inventaris_document_id_key
+INDEX|document_migratie_inventaris|document_migratie_inventaris_pkey
 INDEX|document_studio_modellen|document_studio_modellen_actief_uniek
 INDEX|document_studio_modellen|document_studio_modellen_pkey
 INDEX|document_toepassingen|document_toepassingen_document_id_label_id_unique
@@ -1472,6 +1477,18 @@ KOLOM|document_logboek|gebruiker_id|integer|YES|
 KOLOM|document_logboek|gebruiker_naam|text|YES|
 KOLOM|document_logboek|id|integer|NO|nextval('document_logboek_id_seq'::regclass)
 KOLOM|document_logboek|tijdstip|timestamp without time zone|NO|now()
+KOLOM|document_migratie_inventaris|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|document_migratie_inventaris|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|document_migratie_inventaris|classificatie|text|NO|
+KOLOM|document_migratie_inventaris|document_id|integer|NO|
+KOLOM|document_migratie_inventaris|id|integer|NO|nextval('document_migratie_inventaris_id_seq'::regclass)
+KOLOM|document_migratie_inventaris|snap_bestands_hash|text|YES|
+KOLOM|document_migratie_inventaris|snap_documenttype|text|NO|
+KOLOM|document_migratie_inventaris|snap_groep_id|text|NO|
+KOLOM|document_migratie_inventaris|snap_pdf_url|text|YES|
+KOLOM|document_migratie_inventaris|snap_revisie_nummer|integer|NO|
+KOLOM|document_migratie_inventaris|status|text|NO|'voorstel'::text
+KOLOM|document_migratie_inventaris|voorgestelde_bestemming|text|YES|
 KOLOM|document_studio_modellen|aangemaakt_door|integer|YES|
 KOLOM|document_studio_modellen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|document_studio_modellen|bijgewerkt_op|timestamp without time zone|NO|now()

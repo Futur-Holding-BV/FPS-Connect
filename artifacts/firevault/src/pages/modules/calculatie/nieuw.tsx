@@ -27,6 +27,7 @@ export default function ModulesCalculatieNieuw() {
     const n = raw ? parseInt(raw, 10) : NaN;
     return Number.isInteger(n) && n > 0 ? n : null;
   })();
+  const adviesrapportUpload = new URLSearchParams(search).get("adviesrapport_upload") === "1";
 
   const [form, setForm] = useState({
     naam: "",
@@ -105,9 +106,12 @@ export default function ModulesCalculatieNieuw() {
     mutation: {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
-        navigate(adviesrapportId != null
-          ? `/modules/calculatie/${data.id}?adviesrapport=${adviesrapportId}`
-          : `/modules/calculatie/${data.id}`);
+        const adviesQuery = adviesrapportId != null
+          ? `adviesrapport=${adviesrapportId}`
+          : adviesrapportUpload
+            ? "adviesrapport_upload=1"
+            : "";
+        navigate(`/modules/calculatie/${data.id}${adviesQuery ? `?${adviesQuery}` : ""}`);
       },
       onError: (err) => {
         // Toon de werkelijke serverreden (bv. ontbrekende bevoegdheid) — een

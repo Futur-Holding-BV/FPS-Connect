@@ -5,6 +5,7 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListDocumenten,
+  useListDocumentHerstelwerk,
   getListDocumentenQueryKey,
   useGetDocument,
   getGetDocumentQueryKey,
@@ -53,6 +54,7 @@ import type {
   Label,
   DocumentAiAnalyseResultaat,
   DocumentKoppelVoorstel,
+  DocumentHerstelwerk,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -107,6 +109,15 @@ import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const GEEN = "__alle__";
+const PRODUCTRAPPORT_TYPES = [
+  DocumentType.eta,
+  DocumentType.classificatierapport,
+  DocumentType.testrapport,
+  DocumentType.productcertificaat,
+  DocumentType.dop,
+  DocumentType.verwerkingsvoorschrift,
+  DocumentType.productblad,
+] as const;
 
 export { TYPE_LABELS, STATUS_LABELS };
 
@@ -458,7 +469,11 @@ function DocumentFormulier({
         const next = { ...f };
         const map: Record<AiVeld, string | null | undefined> = {
           naam: res.naam,
-          documenttype: res.documenttype,
+          documenttype: PRODUCTRAPPORT_TYPES.includes(
+            res.documenttype as (typeof PRODUCTRAPPORT_TYPES)[number],
+          )
+            ? res.documenttype
+            : undefined,
           fabrikant: res.fabrikant,
           product: res.product,
           en_norm: res.en_norm,
@@ -505,11 +520,9 @@ function DocumentFormulier({
 
       const suggesties = res.toepassing_suggesties ?? [];
       if (suggesties.length > 0) {
+        // AI-toepassingssuggesties blijven geel voorstel — ze worden NIET
+        // automatisch in toepassing_ids geplaatst. De gebruiker togglet zelf.
         const ids = suggesties.map((s) => s.label_id);
-        setForm((f) => ({
-          ...f,
-          toepassing_ids: Array.from(new Set([...f.toepassing_ids, ...ids])),
-        }));
         setAiToepassingen(new Set(ids));
       } else {
         setAiToepassingen(new Set());
@@ -542,7 +555,12 @@ function DocumentFormulier({
   }
 
   const uploadMislukt = !!uploadError && !form.pdf_url;
-  const geldig = form.naam.trim() !== "" && form.documenttype !== "" && !uploadMislukt;
+  // Minimaal één toepassing verplicht voordat opslaan mogelijk is.
+  const geldig =
+    form.naam.trim() !== "" &&
+    form.documenttype !== "" &&
+    !uploadMislukt &&
+    form.toepassing_ids.length > 0;
   const bezig = maakDocument.isPending || maakRevisie.isPending || isUploading;
 
   async function bewaar() {
@@ -597,12 +615,12 @@ function DocumentFormulier({
       <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {mode === "revisie" ? "Nieuwe revisie toevoegen" : "Nieuw document toevoegen"}
+            {mode === "revisie" ? "Nieuwe revisie toevoegen" : "Nieuw productrapport toevoegen"}
           </DialogTitle>
           <DialogDescription>
             {mode === "revisie"
               ? "De vorige versie blijft bewaard en krijgt de status 'vervangen'."
-              : "Upload een PDF; de gegevens worden automatisch voorgesteld en kunnen worden aangepast."}
+              : "Upload een PDF; de gegevens worden automatisch voorgesteld en kunnen worden aangepast. Kies minimaal één toepassing."}
           </DialogDescription>
         </DialogHeader>
 
@@ -766,7 +784,7 @@ function DocumentFormulier({
                   <SelectValue placeholder="Kies type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(DocumentType).map((t) => (
+                  {(["eta", "classificatierapport", "testrapport", "productcertificaat", "dop", "verwerkingsvoorschrift", "productblad"] as const).map((t) => (
                     <SelectItem key={t} value={t}>
                       {TYPE_LABELS[t] ?? t}
                     </SelectItem>
@@ -857,14 +875,14 @@ function DocumentFormulier({
                 <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>
                   De AI stelt {aiToepassingen.size}{" "}
-                  {aiToepassingen.size === 1 ? "toepassing" : "toepassingen"} voor op
-                  basis van de herkende fabrikant, product en norm. Controleer de
-                  selectie en pas zo nodig aan.
+                  {aiToepassingen.size === 1 ? "toepassing" : "toepassingen"} voor
+                  (geel gemarkeerd). Klik om te bevestigen — niet bevestigde voorstellen
+                  worden niet opgeslagen.
                 </span>
               </div>
             )}
             <KoppelingenKiezer
-              titel="Gekoppelde toepassingen"
+              titel="Gekoppelde toepassingen *"
               opties={toepassingOpties}
               geselecteerd={form.toepassing_ids.map(String)}
               onToggle={(v) => toggleLijst(v)}
@@ -872,6 +890,11 @@ function DocumentFormulier({
                 new Set(Array.from(aiToepassingen).map(String))
               }
             />
+            {form.toepassing_ids.length === 0 && (
+              <p className="text-xs text-destructive">
+                Selecteer minimaal één toepassing om dit productrapport op te slaan.
+              </p>
+            )}
           </div>
         </div>
 
@@ -886,7 +909,7 @@ function DocumentFormulier({
               Annuleren
             </Button>
             <Button onClick={bewaar} disabled={!geldig || bezig}>
-              {bezig ? "Opslaan..." : mode === "revisie" ? "Revisie opslaan" : "Document opslaan"}
+              {bezig ? "Opslaan..." : mode === "revisie" ? "Revisie opslaan" : "Productrapport opslaan"}
             </Button>
           </div>
         </DialogFooter>
@@ -2130,36 +2153,20 @@ export function TabDocumenten() {
     "documenten_type",
     GEEN,
   );
-  const [statusFilter, setStatusFilter, wisStatusFilter] = useVoorkeur(
-    "documenten_status",
-    GEEN,
-  );
   const [fabrikantFilter, setFabrikantFilter, wisFabrikantFilter] = useVoorkeur(
     "documenten_fabrikant",
     "",
   );
-  const [alleenActueel, setAlleenActueel, wisAlleenActueel] = useVoorkeur(
-    "documenten_alleen_actueel",
-    true,
-  );
-  const [inclGearchiveerd, setInclGearchiveerd, wisInclGearchiveerd] =
-    useVoorkeur("documenten_incl_gearchiveerd", false);
 
   const filtersActief =
     zoek.trim() !== "" ||
     typeFilter !== GEEN ||
-    statusFilter !== GEEN ||
-    fabrikantFilter.trim() !== "" ||
-    !alleenActueel ||
-    inclGearchiveerd;
+    fabrikantFilter.trim() !== "";
 
   function wisFilters() {
     setZoek("");
     wisTypeFilter();
-    wisStatusFilter();
     wisFabrikantFilter();
-    wisAlleenActueel();
-    wisInclGearchiveerd();
   }
 
   const [nieuwOpen, setNieuwOpen] = useState(false);
@@ -2190,19 +2197,20 @@ export function TabDocumenten() {
     zoek: zoek.trim() || undefined,
     documenttype:
       typeFilter === GEEN ? undefined : (typeFilter as Document["documenttype"]),
-    status: statusFilter === GEEN ? undefined : (statusFilter as Document["status"]),
     fabrikant: fabrikantFilter.trim() || undefined,
-    alleen_actueel: alleenActueel || undefined,
-    inclusief_gearchiveerd: inclGearchiveerd || undefined,
   });
+  const { data: herstelwerk = [] } = useListDocumentHerstelwerk();
 
+  // Alleen labels met minstens één applicatie_code zijn geldige doeloptie voor productrapporten.
   const toepassingOpties = useMemo(
     () =>
-      (labels as Label[]).map((l) => ({
-        value: String(l.id),
-        label: l.naam,
-        sub: l.applicatie_codes.join(", "),
-      })),
+      (labels as Label[])
+        .filter((l) => l.applicatie_codes.length > 0)
+        .map((l) => ({
+          value: String(l.id),
+          label: l.naam,
+          sub: l.applicatie_codes.join(", "),
+        })),
     [labels],
   );
 
@@ -2216,10 +2224,41 @@ export function TabDocumenten() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        De centrale documentbibliotheek bevat ETA's, classificatierapporten, testrapporten,
-        productcertificaten, DoP's en verwerkingsvoorschriften. Documenten worden nooit
+        De centrale Productrapporten-bibliotheek bevat ETA's, classificatierapporten, testrapporten,
+        productcertificaten, DoP's, verwerkingsvoorschriften en productbladen. Documenten worden nooit
         overschreven: een inhoudelijke wijziging wordt als nieuwe revisie opgeslagen.
       </p>
+
+      {(herstelwerk as DocumentHerstelwerk[]).length > 0 && (
+        <Card className="border-amber-300 bg-amber-50/40">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 text-amber-700" />
+              Herstelwerk bestaande documenten
+              <Badge variant="secondary">{(herstelwerk as DocumentHerstelwerk[]).length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm">
+            <p className="text-muted-foreground mb-2">
+              Deze bestaande documenten hebben geen eenduidige product- of contextbestemming.
+              Ze zijn niet verwijderd en blijven bewaard totdat een beheerder ze handmatig routeert.
+            </p>
+            {(herstelwerk as DocumentHerstelwerk[]).slice(0, 10).map((item) => (
+              <div key={item.document_id} className="flex justify-between gap-4 border-t py-2">
+                <span className="truncate">{item.naam}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {TYPE_LABELS[item.documenttype] ?? item.documenttype}
+                </span>
+              </div>
+            ))}
+            {(herstelwerk as DocumentHerstelwerk[]).length > 10 && (
+              <p className="text-xs text-muted-foreground pt-1">
+                En nog {(herstelwerk as DocumentHerstelwerk[]).length - 10} documenten.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {magCreeren && (
         <div className="flex flex-wrap justify-end gap-2">
@@ -2236,7 +2275,7 @@ export function TabDocumenten() {
           </Button>
           <Button onClick={() => setNieuwOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nieuw document
+            Nieuw productrapport
           </Button>
         </div>
       )}
@@ -2269,22 +2308,9 @@ export function TabDocumenten() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={GEEN}>Alle types</SelectItem>
-                {Object.values(DocumentType).map((t) => (
+                {PRODUCTRAPPORT_TYPES.map((t) => (
                   <SelectItem key={t} value={t}>
                     {TYPE_LABELS[t] ?? t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={GEEN}>Alle statussen</SelectItem>
-                {Object.values(DocumentStatus).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABELS[s] ?? s}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -2295,26 +2321,6 @@ export function TabDocumenten() {
               onChange={(e) => setFabrikantFilter(e.target.value)}
               className="w-40"
             />
-            <div className="flex items-center gap-2">
-              <Switch
-                id="alleen-actueel"
-                checked={alleenActueel}
-                onCheckedChange={setAlleenActueel}
-              />
-              <UiLabel htmlFor="alleen-actueel" className="text-sm cursor-pointer">
-                Alleen actuele revisie
-              </UiLabel>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="incl-gearch-doc"
-                checked={inclGearchiveerd}
-                onCheckedChange={setInclGearchiveerd}
-              />
-              <UiLabel htmlFor="incl-gearch-doc" className="text-sm cursor-pointer">
-                Inclusief gearchiveerd
-              </UiLabel>
-            </div>
             {filtersActief && (
               <Button
                 variant="ghost"
@@ -2336,7 +2342,7 @@ export function TabDocumenten() {
             </div>
           ) : lijst.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
-              Geen documenten gevonden.
+              Geen productrapporten gevonden.
             </div>
           ) : (
             <table className="w-full text-sm">

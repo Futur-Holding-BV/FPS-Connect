@@ -7,8 +7,14 @@
  */
 
 export interface DocumentAanleverenInput {
-  /** Slim Upload-categorie (bijv. tekening, contract, certificaat). Jaarrekeningen worden geweigerd; die gaan via /financieel/jaarrekeningen. */
+  /** Productrapportcategorie, opdrachtstuk bij een opdracht, of adviesrapport bij een calculatie. */
   categorie: string;
+  /** Een of meer handmatig bevestigde toepassingen; verplicht voor productrapporten. */
+  label_id?: number[];
+  /** Concrete contextbestemming; opdracht voor opdrachtstukken of calculatie voor adviesrapporten. */
+  doel_type?: string;
+  /** ID van de concrete contextbestemming. */
+  doel_id?: number;
   toelichting?: string;
-  bestand?: Blob;
+  bestand: Blob;
 }

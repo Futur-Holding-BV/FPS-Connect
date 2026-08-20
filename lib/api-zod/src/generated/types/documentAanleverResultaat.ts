@@ -9,7 +9,7 @@ import type { Document } from './document';
 import type { DocumentAanleverResultaatDoorschakeling } from './documentAanleverResultaatDoorschakeling';
 
 /**
- * Document plus optionele doorschakeling naar de importstroom (PRIJS_01 §4, prijslijst).
+ * Opgeslagen document plus optionele verwijzing naar de calculatie-inleesstroom.
  */
 export type DocumentAanleverResultaat = Document & {
   doorschakeling?: DocumentAanleverResultaatDoorschakeling;

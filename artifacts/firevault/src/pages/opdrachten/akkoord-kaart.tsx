@@ -11,9 +11,9 @@ import {
   useTrekAkkoordIn,
   useUpdateOpdrachtCondities,
   useAkkoordAiVoorstel,
-  useListDocumenten,
+  useListGekoppeldeDocumenten,
   getGetOpdrachtAkkoordQueryKey,
-  getListDocumentenQueryKey,
+  getListGekoppeldeDocumentenQueryKey,
 } from "@workspace/api-client-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -202,12 +202,15 @@ function AkkoordVastleggenDialog({ opdrachtId, initieelDocumentId, onClose, onDo
   const [grond, setGrond] = useState<AkkoordVastleggenInputGrond>("opdrachtbevestiging");
   const [documentId, setDocumentId] = useState(initieelDocumentId ? String(initieelDocumentId) : "");
 
-  // Grond B-bewijs: alleen documenten die als opdrachtbevestiging in de
-  // bibliotheek staan (de server dwingt dit ook af — fail-closed).
-  const docParams = { documenttype: "opdrachtbevestiging" as const };
-  const { data: bevestigingsDocs, isLoading: docsLaden } = useListDocumenten(docParams, {
-    query: { queryKey: getListDocumentenQueryKey(docParams), enabled: true },
+  // Grond B-bewijs komt uitsluitend uit de concrete opdrachtcontext, niet uit
+  // Productrapporten. De server dwingt documenttype én opdrachtkoppeling af.
+  const docParams = { doel_type: "opdracht" as const, doel_id: opdrachtId };
+  const { data: gekoppeldeDocs, isLoading: docsLaden } = useListGekoppeldeDocumenten(docParams, {
+    query: { queryKey: getListGekoppeldeDocumentenQueryKey(docParams), enabled: true },
   });
+  const bevestigingsDocs = (gekoppeldeDocs ?? []).filter(
+    (document) => document.documenttype === "opdrachtbevestiging",
+  );
   const [herkomst, setHerkomst] = useState("");
   const [condities, setCondities] = useState<Record<ConditieVeld, string>>({
     betaaltermijn_dagen: "", garantietermijn: "", meerwerk: "",

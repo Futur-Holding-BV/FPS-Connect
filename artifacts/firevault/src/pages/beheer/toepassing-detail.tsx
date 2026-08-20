@@ -97,11 +97,10 @@ function ToepassingDetailInhoud({
     isSuccess: gekoppeldGeladen,
   } = useListDocumenten({
     label_id: toepassing.id,
-    inclusief_gearchiveerd: true,
   });
   // Selecteerbare documenten om toe te voegen: alleen actuele, niet-gearchiveerde
   // revisies (geen vervangen of ingetrokken documenten).
-  const { data: actueleDocs = [] } = useListDocumenten({ alleen_actueel: true });
+  const { data: actueleDocs = [] } = useListDocumenten();
 
   const { data: fabrikanten = [] } = useListFabrikanten();
 

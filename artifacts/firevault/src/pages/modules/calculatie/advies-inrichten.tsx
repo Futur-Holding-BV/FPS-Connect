@@ -3,7 +3,7 @@ import {
   useAdviesrapportAnalyseCalculatie,
   useCalcPlakVeldCorrectie,
   useCreateModCalcRegel,
-  useListDocumenten,
+  useListGekoppeldeDocumenten,
   type CalcAdviesAnalyse,
   type CalcAdviesVoorstel,
 } from "@workspace/api-client-react";
@@ -95,9 +95,12 @@ export function AdviesInrichten({
   const [drafts, setDrafts] = useState<Record<number, PuntDraft>>({});
   const [bewerken, setBewerken] = useState<Record<number, boolean>>({});
 
-  // Documentbibliotheek — kies een gearchiveerd adviesrapport.
-  const { data: documenten = [] } = useListDocumenten(undefined, {
-    query: { queryKey: ["documenten-adviesrapport"], enabled: open },
+  // Adviesrapporten horen bij deze calculatiecontext en nooit in Productrapporten.
+  const { data: documenten = [] } = useListGekoppeldeDocumenten({
+    doel_type: "calculatie",
+    doel_id: calculatieId,
+  }, {
+    query: { queryKey: ["calculatie-adviesrapporten", calculatieId], enabled: open },
   });
   const adviesrapporten = React.useMemo(
     () => (Array.isArray(documenten) ? documenten : []).filter((d: any) => {
@@ -279,7 +282,7 @@ export function AdviesInrichten({
                 </div>
               ) : adviesrapporten.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Geen adviesrapporten in de bibliotheek. Lever er een aan via Slim Upload (categorie “Adviesrapport”).
+                  Geen adviesrapporten aan deze calculatie gekoppeld.
                 </p>
               ) : (
                 <div className="space-y-1.5">

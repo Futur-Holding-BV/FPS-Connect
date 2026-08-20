@@ -16,7 +16,6 @@ import {
   useListGekoppeldeDocumenten,
   getListGekoppeldeDocumentenQueryKey,
   getGetUitvoeringOverzichtQueryKey,
-  useAddDocumentKoppeling,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
@@ -162,12 +161,6 @@ function UploadOpdrachtDocumentDialog({
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [bezig, setBezig] = useState(false);
-  const koppelMut = useAddDocumentKoppeling({
-    mutation: {
-      onError: () => toast({ title: "Koppelen mislukt", variant: "destructive" }),
-    },
-  });
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const bestand = fileRef.current?.files?.[0];
@@ -177,6 +170,8 @@ function UploadOpdrachtDocumentDialog({
       const form = new FormData();
       form.append("bestand", bestand);
       form.append("categorie", "bibliotheek");
+      form.append("doel_type", "opdracht");
+      form.append("doel_id", String(opdrachtId));
       const resp = await fetch("/api/documenten/aanleveren", {
         method: "POST",
         body: form,
@@ -187,11 +182,7 @@ function UploadOpdrachtDocumentDialog({
         toast({ title: fout.error ?? "Upload mislukt", variant: "destructive" });
         return;
       }
-      const doc = (await resp.json()) as { id: number };
-      await koppelMut.mutateAsync({
-        id: doc.id,
-        data: { doel_type: "opdracht", doel_id: opdrachtId },
-      });
+      await resp.json();
       toast({ title: "Document gekoppeld aan de opdracht" });
       onGekoppeld();
       onClose();
@@ -220,7 +211,7 @@ function UploadOpdrachtDocumentDialog({
               disabled={bezig}
             />
             <p className="text-xs text-muted-foreground">
-              Het document komt als "ter goedkeuring" in de bibliotheek en is direct aan deze opdracht gekoppeld.
+              Het document wordt uitsluitend bij deze opdracht opgeslagen.
             </p>
           </div>
           <DialogFooter>

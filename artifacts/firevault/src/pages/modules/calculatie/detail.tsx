@@ -9,6 +9,7 @@ import {
 } from "@workspace/calculatie";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
+import { leesEnWisAdviesrapportBestand } from "@/lib/adviesrapport-import-stash";
 import {
   useGetModCalculatie,
   useUpdateModCalculatie,
@@ -2277,9 +2278,11 @@ export default function ModulesCalculatieDetail() {
     if (typeof window !== "undefined" && window.location.search.includes("adviesrapport")) {
       const url = new URL(window.location.href);
       url.searchParams.delete("adviesrapport");
+      url.searchParams.delete("adviesrapport_upload");
       window.history.replaceState({}, "", url.pathname + url.search);
     }
   }, []);
+  const adviesUploadGestart = useRef(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -2288,6 +2291,69 @@ export default function ModulesCalculatieDetail() {
     // FIE-context herberekenen na elke wijziging aan regels/header (live margeadvies).
     queryClient.invalidateQueries({ queryKey: getGetFieContextCalculatieQueryKey(id) });
   }, [queryClient, id]);
+
+  useEffect(() => {
+    if (
+      adviesUploadGestart.current ||
+      id <= 0 ||
+      typeof window === "undefined" ||
+      new URLSearchParams(window.location.search).get("adviesrapport_upload") !== "1"
+    ) {
+      return;
+    }
+    adviesUploadGestart.current = true;
+    const bestand = leesEnWisAdviesrapportBestand();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("adviesrapport_upload");
+    window.history.replaceState({}, "", url.pathname + url.search);
+    if (!bestand) {
+      toast({
+        title: "Adviesrapport niet meer beschikbaar",
+        description: "Kies het bestand opnieuw vanuit Slim Upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    void (async () => {
+      const form = new FormData();
+      form.append("bestand", bestand);
+      form.append("categorie", "adviesrapport");
+      form.append("doel_type", "calculatie");
+      form.append("doel_id", String(id));
+      const response = await fetch("/api/documenten/aanleveren", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        id?: number;
+        error?: string;
+      };
+      if (!response.ok || typeof body.id !== "number") {
+        toast({
+          title: "Adviesrapport niet opgeslagen",
+          description: body.error ?? "De gekozen calculatie kon niet als bestemming worden bevestigd.",
+          variant: "destructive",
+        });
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["calculatie-adviesrapporten", id],
+      });
+      setAdviesDocumentId(body.id);
+      toast({
+        title: "Adviesrapport opgeslagen bij calculatie",
+        description: "Het rapport wordt nu per punt ingelezen.",
+      });
+    })().catch(() => {
+      toast({
+        title: "Adviesrapport niet opgeslagen",
+        description: "Probeer het bestand opnieuw vanuit Slim Upload.",
+        variant: "destructive",
+      });
+    });
+  }, [id, queryClient, toast]);
 
   const { data, isLoading } = useGetModCalculatie(id, {
     query: { queryKey: ["mod-calculatie", id], enabled: id > 0 },
@@ -2875,9 +2941,9 @@ export default function ModulesCalculatieDetail() {
           {adviesBronnen.map((doc: any) => (
             <div key={doc.id} className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Bron: adviesrapport</span>
-              <Link href={`/documenten/${doc.id}`} className="font-medium text-blue-600 hover:underline" title="Open het adviesrapport in de bibliotheek">
+              <a href={`/api/documenten/${doc.id}/download`} target="_blank" rel="noreferrer" className="font-medium text-blue-600 hover:underline" title="Download het adviesrapport uit deze calculatie">
                 {doc.naam}
-              </Link>
+              </a>
             </div>
           ))}
           {bronbestand && (

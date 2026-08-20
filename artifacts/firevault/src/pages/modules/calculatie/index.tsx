@@ -58,19 +58,24 @@ function formatDatum(s: string) {
 
 export default function ModulesCalculatie() {
   const [, navigate] = useLocation();
-  // ADVIES_01 §4.1: Slim Upload stuurt hierheen met ?adviesrapport=<document_id>.
-  // De gebruiker kiest of maakt een calculatie; het id reizen we mee zodat de
-  // detailpagina het rapport-inleespaneel automatisch opent.
+  const zoekParams = typeof window === "undefined"
+    ? new URLSearchParams()
+    : new URLSearchParams(window.location.search);
   const adviesrapportId = (() => {
     if (typeof window === "undefined") return null;
-    const raw = new URLSearchParams(window.location.search).get("adviesrapport");
+    const raw = zoekParams.get("adviesrapport");
     const n = raw ? parseInt(raw, 10) : NaN;
     return Number.isInteger(n) && n > 0 ? n : null;
   })();
+  const adviesrapportUpload = zoekParams.get("adviesrapport_upload") === "1";
+  const adviesBestemmingKiezen = adviesrapportId != null || adviesrapportUpload;
+  const adviesQuery = adviesrapportId != null
+    ? `adviesrapport=${adviesrapportId}`
+    : adviesrapportUpload
+      ? "adviesrapport_upload=1"
+      : "";
   const naarCalculatie = (calcId: number) =>
-    navigate(adviesrapportId != null
-      ? `/modules/calculatie/${calcId}?adviesrapport=${adviesrapportId}`
-      : `/modules/calculatie/${calcId}`);
+    navigate(`/modules/calculatie/${calcId}${adviesQuery ? `?${adviesQuery}` : ""}`);
   const [zoek, setZoek] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
   const [teVerwijderen, setTeVerwijderen] = useState<number | null>(null);
@@ -125,7 +130,7 @@ export default function ModulesCalculatie() {
             <Building2 className="h-4 w-4 mr-2" />
             Leveranciers & artikelen
           </Button>
-          <Button onClick={() => navigate(adviesrapportId != null ? `/modules/calculatie/nieuw?adviesrapport=${adviesrapportId}` : "/modules/calculatie/nieuw")}>
+          <Button onClick={() => navigate(`/modules/calculatie/nieuw${adviesQuery ? `?${adviesQuery}` : ""}`)}>
             <Plus className="h-4 w-4 mr-2" />
             Nieuwe calculatie
           </Button>
@@ -133,13 +138,13 @@ export default function ModulesCalculatie() {
       </div>
 
       {/* ADVIES_01 §4.1: banner wanneer een adviesrapport klaarstaat om in te lezen */}
-      {adviesrapportId != null && (
+      {adviesBestemmingKiezen && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
           <ClipboardList className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-900">
-            <p className="font-medium">Adviesrapport klaar om in te lezen</p>
+            <p className="font-medium">Kies de bestemming van het adviesrapport</p>
             <p className="mt-0.5 text-amber-800">
-              Kies hieronder een bestaande calculatie of maak een nieuwe — het rapport wordt daar per punt ingelezen.
+              Kies hieronder een bestaande calculatie of maak een nieuwe. Pas daarna wordt het rapport daar opgeslagen en per punt ingelezen.
             </p>
           </div>
         </div>

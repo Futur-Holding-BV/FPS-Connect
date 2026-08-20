@@ -9,6 +9,6 @@ import type { DocumentAanleverResultaatDoorschakelingNaar } from './documentAanl
 
 export type DocumentAanleverResultaatDoorschakeling = {
   naar: DocumentAanleverResultaatDoorschakelingNaar;
-  import_type: string;
+  document_id?: number;
   reden: string;
 };

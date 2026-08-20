@@ -22,6 +22,7 @@ import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
 import { stashPrijslijstBestand } from "@/lib/prijslijst-import-stash";
+import { stashAdviesrapportBestand } from "@/lib/adviesrapport-import-stash";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -563,7 +564,16 @@ function BeslisScherm({
     if (obBezig) return;
     setObBezig(true);
     try {
-      const { ok, status: st, documentId, foutmelding } = await uploadOpdrachtbevestiging(item.bestand, item.toelichting);
+      if (!gekozenOpdrachtId) {
+        toast({
+          title: "Geen opdracht gekozen",
+          description: "Selecteer eerst een opdracht voordat u de opdrachtbevestiging archiveert.",
+          variant: "destructive",
+        });
+        setObBezig(false);
+        return;
+      }
+      const { ok, status: st, documentId, foutmelding } = await uploadOpdrachtbevestiging(item.bestand, item.toelichting, gekozenOpdrachtId);
       if (!ok) {
         toast({
           title: "Opslaan mislukt",
@@ -591,8 +601,8 @@ function BeslisScherm({
         setTimeout(() => onNavigeer?.(`/opdrachten/${gekozenOpdrachtId}?akkoord_document=${documentId}`), 300);
       } else {
         toast({
-          title: "Opgeslagen in Documenten",
-          description: `${item.bestand.name} staat als opdrachtbevestiging in de bibliotheek en is later te koppelen via de akkoordkaart van een opdracht.`,
+          title: "Opgeslagen bij opdracht",
+          description: `${item.bestand.name} is gekoppeld aan de gekozen opdracht.`,
         });
       }
     } catch {
@@ -1018,15 +1028,11 @@ function BeslisScherm({
               wordt wel als opdrachtbevestiging gearchiveerd en kan later gekoppeld worden.
             </p>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            disabled={obBezig || (vereistBevestiging && !bevestigdAkkoord)}
-            onClick={() => void verzendOpdrachtbevestiging(false)}
-          >
-            Alleen archiveren in Documenten
-          </Button>
+          {magAkkoordKoppelen && (
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Selecteer een opdracht om de bevestiging te archiveren. Zonder opdracht kan het document niet worden opgeslagen.
+            </p>
+          )}
         </div>
       )}
 
@@ -1185,82 +1191,23 @@ function WachtrijKaart({
   );
 }
 
-// ── Bestand direct naar de documentbibliotheek aanleveren ────────────────────
-// Het document komt binnen als "ter goedkeuring" en wordt door een beheerder
-// beoordeeld in Documenten. Fail-loud: de servermelding wordt doorgegeven.
-
-async function uploadNaarBibliotheek(
-  bestand: File,
-  categorie: string,
-  toelichting?: string,
-): Promise<{ ok: boolean; status: number; foutmelding: string | null }> {
-  try {
-    const form = new FormData();
-    form.append("bestand", bestand);
-    form.append("categorie", categorie);
-    if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
-    const res = await fetch("/api/documenten/aanleveren", {
-      method: "POST",
-      body: form,
-      credentials: "include",
-    });
-    let foutmelding: string | null = null;
-    if (!res.ok) {
-      try {
-        const body = (await res.json()) as { error?: string };
-        foutmelding = typeof body.error === "string" ? body.error : null;
-      } catch { /* geen JSON-body */ }
-    }
-    return { ok: res.ok, status: res.status, foutmelding };
-  } catch {
-    return { ok: false, status: 0, foutmelding: null };
-  }
-}
-
-// ADVIES_01 §4.1: archiveer het adviesrapport en lees het document_id uit de
-// doorschakeling. Anders dan uploadNaarBibliotheek geeft deze het id terug zodat
-// de frontend naar de calculatiepagina kan navigeren met ?adviesrapport=<id>.
-async function uploadAdviesrapport(
-  bestand: File,
-  toelichting?: string,
-): Promise<{ ok: boolean; status: number; documentId: number | null; foutmelding: string | null }> {
-  try {
-    const form = new FormData();
-    form.append("bestand", bestand);
-    form.append("categorie", "adviesrapport");
-    if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
-    const res = await fetch("/api/documenten/aanleveren", {
-      method: "POST",
-      body: form,
-      credentials: "include",
-    });
-    let documentId: number | null = null;
-    let foutmelding: string | null = null;
-    try {
-      const body = (await res.json()) as { error?: string; doorschakeling?: { document_id?: number } };
-      if (res.ok) {
-        documentId = typeof body.doorschakeling?.document_id === "number" ? body.doorschakeling.document_id : null;
-      } else {
-        foutmelding = typeof body.error === "string" ? body.error : null;
-      }
-    } catch { /* geen JSON-body */ }
-    return { ok: res.ok, status: res.status, documentId, foutmelding };
-  } catch {
-    return { ok: false, status: 0, documentId: null, foutmelding: null };
-  }
-}
-
 // AKKOORD_01 §5: archiveer de opdrachtbevestiging in de bibliotheek (documenttype
 // "opdrachtbevestiging") en lees het document_id uit het antwoord, zodat de
 // frontend kan doorschakelen naar de akkoordpoort van de gekozen opdracht.
 async function uploadOpdrachtbevestiging(
   bestand: File,
   toelichting?: string,
+  opdrachtId?: string,
 ): Promise<{ ok: boolean; status: number; documentId: number | null; foutmelding: string | null }> {
+  if (!opdrachtId) {
+    return { ok: false, status: 0, documentId: null, foutmelding: "Geen opdracht gekozen. Selecteer eerst een opdracht." };
+  }
   try {
     const form = new FormData();
     form.append("bestand", bestand);
     form.append("categorie", "opdrachtbevestiging");
+    form.append("doel_type", "opdracht");
+    form.append("doel_id", opdrachtId);
     if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
     const res = await fetch("/api/documenten/aanleveren", {
       method: "POST",
@@ -1539,6 +1486,28 @@ export function SlimUploadBalk() {
       return;
     }
 
+    // Productrapport-categorieën: NOOIT algemeen opslaan zonder concrete bestemming.
+    // Navigeer naar /documenten en laat de gebruiker het type en de toepassing kiezen.
+    const isProductrapportCategorie =
+      cat === "testrapport" ||
+      cat === "certificaat" ||
+      cat === "eta" ||
+      cat === "dop" ||
+      cat === "productdocument" ||
+      cat === "bibliotheek";
+
+    if (isProductrapportCategorie) {
+      toast({
+        title: "Kies toepassing in Productrapporten",
+        description: `${bestand.name} is een productrapport. Ga naar Productrapporten, kies het type en de toepassing(en) en selecteer daar het bestand opnieuw.`,
+      });
+      setQueue((prev) =>
+        prev.map((i) => i.id === itemId ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
+      );
+      setTimeout(() => { navigate("/documenten"); opSluiten(); }, 300);
+      return;
+    }
+
     if (cat === "jaarrekening") {
       // Vertrouwelijke route: sla op onder Financieel › Jaarrekeningen (niet in het algemene archief).
       const geconsolideerd = item.geconsolideerd_override ?? item.suggestie?.subtype === "geconsolideerd";
@@ -1559,58 +1528,42 @@ export function SlimUploadBalk() {
         });
       });
     } else if (cat === "prijslijst") {
-      // PRIJS_01 §4: prijslijst wordt WÉL gearchiveerd in de bibliotheek (anders
-      // dan jaarrekening), maar de tabelinhoud gaat door naar de importstroom voor
-      // prijsafspraken. We stashen de File in-memory zodat de importpagina de
-      // prijzen kan analyseren zonder opnieuw kiezen, archiveren, en navigeren.
+      // Prijslijsten horen uitsluitend in de gerichte importstroom. De File
+      // blijft éénmalig in-memory tot de importpagina hem analyseert.
       stashPrijslijstBestand(bestand);
-      void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {
-        toast({
-          title: ok ? "Prijslijst gearchiveerd" : "Opslaan mislukt",
-          description: ok
-            ? `${bestand.name} staat in Documenten. Verwerk nu de prijzen in de importstroom.`
-            : status === 401 || status === 403
-              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
-              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
-          variant: ok ? undefined : "destructive",
-        });
+      toast({
+        title: "Prijslijst klaar voor import",
+        description: `${bestand.name} wordt niet algemeen opgeslagen. Bevestig leverancier, periode en prijzen in de importstroom.`,
       });
-      // Ongeacht de archiveringsuitkomst dóór naar de importstroom: de gebruiker
-      // heeft de File nog (gestasht) en kan daar de prijzen bevestigen.
       setTimeout(() => navigate("/beheer/import?type=prijsafspraken&bron=slim-upload"), 300);
     } else if (cat === "adviesrapport") {
-      // ADVIES_01 §4.1: adviesrapport wordt gearchiveerd; de server geeft in de
-      // doorschakeling het document_id terug. Anders dan bij de prijslijst hoeft
-      // de frontend de File NIET te bewaren — de analyse-route leest het
-      // gearchiveerde bestand zelf uit object storage. We navigeren met het id in
-      // de query zodat de calculatiepagina het rapport kan inlezen.
-      void uploadAdviesrapport(bestand, item.toelichting).then(({ ok, status, documentId, foutmelding }) => {
-        toast({
-          title: ok ? "Adviesrapport gearchiveerd" : "Opslaan mislukt",
-          description: ok
-            ? `${bestand.name} staat in Documenten. Kies of maak een calculatie om het rapport in te lezen.`
-            : status === 401 || status === 403
-              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
-              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
-          variant: ok ? undefined : "destructive",
-        });
-        if (ok && documentId != null) {
-          setTimeout(() => navigate(`/modules/calculatie?adviesrapport=${documentId}`), 300);
-        }
+      // Pas na de menselijke keuze van een calculatie wordt de File opgeslagen
+      // en atomair aan die bestemming gekoppeld.
+      stashAdviesrapportBestand(bestand);
+      toast({
+        title: "Kies een calculatie",
+        description: `${bestand.name} wordt pas opgeslagen nadat je een bestaande of nieuwe calculatie kiest.`,
       });
+      setTimeout(() => navigate("/modules/calculatie?adviesrapport_upload=1"), 300);
     } else {
-      // Lever het bestand direct aan bij de documentbibliotheek (fire and forget)
-      void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {
+      // Categorieën met een eigen pagina of geen directe upload-bestemming:
+      // navigeer naar de juiste pagina zodat de gebruiker de upload daar kan voltooien.
+      // Er wordt GEEN fetch naar /documenten/aanleveren gedaan.
+      const doelPad = info.pad;
+      if (doelPad && doelPad !== "/documenten") {
         toast({
-          title: ok ? "Opgeslagen in Documenten" : "Opslaan mislukt",
-          description: ok
-            ? `${bestand.name} (${info.label}) staat nu in Documenten, klaar ter goedkeuring.`
-            : status === 401 || status === 403
-              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
-              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
-          variant: ok ? undefined : "destructive",
+          title: `Ga naar ${info.label}`,
+          description: `${bestand.name} kan niet automatisch worden opgeslagen. Ga naar ${info.label} en upload het bestand daar.`,
         });
-      });
+        setTimeout(() => { navigate(doelPad); }, 300);
+      } else {
+        // Geen bekende eigen pagina en geen productrapport — markeer als verwerkt
+        // maar sla NIET op (geen fetch naar /documenten/aanleveren).
+        toast({
+          title: "Bestemming onduidelijk",
+          description: `${bestand.name} kon niet automatisch worden opgeslagen. Kies handmatig de juiste plek via het navigatiemenu.`,
+        });
+      }
     }
 
     // Markeer als afgehandeld — wachtrij blijft open

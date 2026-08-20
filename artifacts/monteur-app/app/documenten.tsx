@@ -22,7 +22,8 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 import { BevoegdheidGuard } from "@/components/BevoegdheidGuard";
 
-const TYPE_LABELS: Record<DocumentType, string> = {
+// Productrapporten-bibliotheek: uitsluitend de zeven productgerelateerde typen.
+const TYPE_LABELS: Partial<Record<DocumentType, string>> = {
   [DocumentType.eta]: "ETA",
   [DocumentType.classificatierapport]: "Classificatierapport",
   [DocumentType.testrapport]: "Testrapport",
@@ -30,12 +31,6 @@ const TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.dop]: "DoP",
   [DocumentType.verwerkingsvoorschrift]: "Verwerkingsvoorschrift",
   [DocumentType.productblad]: "Productblad",
-  [DocumentType.opleverrapport]: "Opleverrapport",
-  [DocumentType.tekening]: "Tekening",
-  [DocumentType.contract]: "Contract",
-  [DocumentType.verzekering]: "Verzekering",
-  [DocumentType.opdrachtbevestiging]: "Opdrachtbevestiging",
-  [DocumentType.overig]: "Overig",
 };
 
 const STATUS_LABELS: Record<DocumentStatus, string> = {
@@ -64,7 +59,7 @@ function Documenten() {
     isError,
     isRefetching,
     refetch,
-  } = useListDocumenten({ alleen_actueel: true });
+  } = useListDocumenten();
 
   if (!token) return <Redirect href="/login" />;
 
@@ -95,10 +90,10 @@ function Documenten() {
             </Text>
           </Pressable>
           <Text style={tekstStijl("schermtitel", c.darkForeground)}>
-            Documenten
+            Productrapporten
           </Text>
           <Text style={[tekstStijl("klein", c.darkMuted), { marginTop: ruimte.xs }]}>
-            Bibliotheek met certificaten en rapporten
+            ETA's, classificatierapporten, testrapporten, productcertificaten, DoP's, verwerkingsvoorschriften en productbladen
           </Text>
 
           <View style={{ marginTop: ruimte.m + 2 }}>
@@ -137,8 +132,8 @@ function Documenten() {
           ListEmptyComponent={
             <LegeStatus
               icoon="document-outline"
-              titel="Geen documenten"
-              beschrijving="Er zijn nog geen documenten door uw beheerder gedeeld."
+              titel="Geen productrapporten"
+              beschrijving="Er zijn nog geen productrapporten door uw beheerder gedeeld."
             />
           }
           renderItem={({ item }) => (

@@ -124,3 +124,45 @@ export const documentLogboekTable = pgTable("document_logboek", {
   tijdstip: timestamp("tijdstip").notNull().defaultNow(),
 });
 export type DocumentLogboek = typeof documentLogboekTable.$inferSelect;
+
+// ── DOCUMENT-MIGRATIE-INVENTARIS (TAAK_1167) ──────────────────────────────────
+// Inventarisatietabel voor de classificatie van bestaande documenten als:
+//   productrapport      — geldig productrapport (allowlist + actieve keten)
+//   gerichte_bestemming — precies één koppeling of werkgever-logo/briefpapier
+//   herstelwerk         — overige/ambigue documenten
+//
+// Snapshot-kolommen (snap_*) worden eenmalig gevuld op het moment van eerste INSERT
+// en nooit overschreven — dienen als referentie voor de dry-run verificatie.
+//
+// classificatie: productrapport | gerichte_bestemming | herstelwerk
+// status:        voorstel | herstelwerk | bevestigd | gemigreerd
+export const documentMigratieInventarisTable = pgTable("document_migratie_inventaris", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().unique().references(() => documentenTable.id, { onDelete: "cascade" }),
+  // Snapshot op moment van eerste inventarisatie (nooit overschreven)
+  snapPdfUrl: text("snap_pdf_url"),
+  snapBestandsHash: text("snap_bestands_hash"),
+  snapGroepId: text("snap_groep_id").notNull(),
+  snapRevisieNummer: integer("snap_revisie_nummer").notNull(),
+  snapDocumenttype: text("snap_documenttype").notNull(),
+  // Classificatie en bestemming
+  classificatie: text("classificatie").notNull(),
+  voorgesteldeBestemming: text("voorgestelde_bestemming"),
+  // Workflow-status
+  status: text("status").notNull().default("voorstel"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => ({
+  classificatieIdx: index("dmi_classificatie_idx").on(t.classificatie),
+  statusIdx: index("dmi_status_idx").on(t.status),
+  documenttypeIdx: index("dmi_documenttype_idx").on(t.snapDocumenttype),
+  classificatieCheck: check(
+    "dmi_classificatie_check",
+    sql`${t.classificatie} in ('productrapport','gerichte_bestemming','herstelwerk')`,
+  ),
+  statusCheck: check(
+    "dmi_status_check",
+    sql`${t.status} in ('voorstel','herstelwerk','bevestigd','gemigreerd')`,
+  ),
+}));
+export type DocumentMigratieInventaris = typeof documentMigratieInventarisTable.$inferSelect;

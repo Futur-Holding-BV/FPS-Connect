@@ -10,5 +10,5 @@ export type DocumentAanleverResultaatDoorschakelingNaar = typeof DocumentAanleve
 
 
 export const DocumentAanleverResultaatDoorschakelingNaar = {
-  import: 'import',
+  'calculatie-inrichten': 'calculatie-inrichten',
 } as const;

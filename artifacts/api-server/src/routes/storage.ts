@@ -32,6 +32,7 @@ import {
 import { eq, inArray, like, or } from "drizzle-orm";
 import { isBeperktTotToegewezen } from "../utils/rol";
 import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
+import { magDocumentObjectZien } from "../lib/document-toegang";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -312,6 +313,11 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
+    const documentToegang = await magDocumentObjectZien(req, objectPath);
+    if (documentToegang === false) {
+      res.status(403).json({ error: "Geen toegang tot dit document" });
+      return;
+    }
     // Gebouw-ACL: controleer of de gebruiker toegang heeft tot dit bestand.
     const userId = req.session.userId!;
     if (!(await magBestandInGebouw(userId, objectPath))) {
@@ -377,6 +383,11 @@ router.get("/storage/thumbnails/*path", requireAuth, async (req: Request, res: R
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
+    const documentToegang = await magDocumentObjectZien(req, objectPath);
+    if (documentToegang === false) {
+      res.status(403).json({ error: "Geen toegang tot dit document" });
+      return;
+    }
     // Gebouw-ACL
     const userId = req.session.userId!;
     if (!(await magBestandInGebouw(userId, objectPath))) {

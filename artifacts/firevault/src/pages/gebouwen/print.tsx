@@ -1673,7 +1673,7 @@ export default function GebouwPrint() {
   const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
-  const { data: documenten, isLoading: documentenLaden }      = useListDocumenten({ alleen_actueel: true });
+  const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
   const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
   const { data: clusters, isLoading: clustersLaden }          = useListClusters(gebouwId);
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();

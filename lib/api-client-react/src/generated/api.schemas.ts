@@ -5039,22 +5039,28 @@ export const DocumentType = {
 } as const;
 
 export interface DocumentAanleverenInput {
-  /** Slim Upload-categorie (bijv. tekening, contract, certificaat). Jaarrekeningen worden geweigerd; die gaan via /financieel/jaarrekeningen. */
+  /** Productrapportcategorie, opdrachtstuk bij een opdracht, of adviesrapport bij een calculatie. */
   categorie: string;
+  /** Een of meer handmatig bevestigde toepassingen; verplicht voor productrapporten. */
+  label_id?: number[];
+  /** Concrete contextbestemming; opdracht voor opdrachtstukken of calculatie voor adviesrapporten. */
+  doel_type?: string;
+  /** ID van de concrete contextbestemming. */
+  doel_id?: number;
   toelichting?: string;
-  bestand?: Blob;
+  bestand: Blob;
 }
 
 export type DocumentAanleverResultaatDoorschakelingNaar = typeof DocumentAanleverResultaatDoorschakelingNaar[keyof typeof DocumentAanleverResultaatDoorschakelingNaar];
 
 
 export const DocumentAanleverResultaatDoorschakelingNaar = {
-  import: 'import',
+  'calculatie-inrichten': 'calculatie-inrichten',
 } as const;
 
 export type DocumentAanleverResultaatDoorschakeling = {
   naar: DocumentAanleverResultaatDoorschakelingNaar;
-  import_type: string;
+  document_id?: number;
   reden: string;
 };
 
@@ -5135,11 +5141,44 @@ export interface Document {
 }
 
 /**
- * Document plus optionele doorschakeling naar de importstroom (PRIJS_01 §4, prijslijst).
+ * Opgeslagen document plus optionele verwijzing naar de calculatie-inleesstroom.
  */
 export type DocumentAanleverResultaat = Document & {
   doorschakeling?: DocumentAanleverResultaatDoorschakeling;
 };
+
+export type DocumentHerstelwerkClassificatie = typeof DocumentHerstelwerkClassificatie[keyof typeof DocumentHerstelwerkClassificatie];
+
+
+export const DocumentHerstelwerkClassificatie = {
+  herstelwerk: 'herstelwerk',
+} as const;
+
+export type DocumentHerstelwerkStatus = typeof DocumentHerstelwerkStatus[keyof typeof DocumentHerstelwerkStatus];
+
+
+export const DocumentHerstelwerkStatus = {
+  voorstel: 'voorstel',
+  herstelwerk: 'herstelwerk',
+  bevestigd: 'bevestigd',
+  gemigreerd: 'gemigreerd',
+} as const;
+
+export interface DocumentHerstelwerk {
+  document_id: number;
+  naam: string;
+  documenttype: DocumentType;
+  classificatie: DocumentHerstelwerkClassificatie;
+  status: DocumentHerstelwerkStatus;
+  /** @nullable */
+  voorgestelde_bestemming?: string | null;
+  /** @nullable */
+  snap_pdf_url?: string | null;
+  /** @nullable */
+  snap_bestands_hash?: string | null;
+  snap_groep_id: string;
+  snap_revisie_nummer: number;
+}
 
 export interface OpleverrapportNaarDmsInput {
   /** objectPath van het geüploade PDF-bestand (bv. /objects/uploads/<uuid>) */
@@ -5152,7 +5191,7 @@ export type DocumentInputAiMetadata = { [key: string]: unknown };
 
 export interface DocumentInput {
   naam: string;
-  documenttype?: DocumentType;
+  documenttype: DocumentType;
   fabrikant?: string;
   product?: string;
   en_norm?: string;
@@ -5167,7 +5206,8 @@ export interface DocumentInput {
   bestandsgrootte?: number;
   geldig_tot?: string;
   goedkeuring_status?: GoedkeuringStatus;
-  toepassing_ids?: number[];
+  /** @minItems 1 */
+  toepassing_ids: number[];
 }
 
 export interface DocumentUpdate {
@@ -18503,7 +18543,6 @@ export type ListDocumentenParams = {
  */
 zoek?: string;
 documenttype?: DocumentType;
-status?: DocumentStatus;
 goedkeuring_status?: GoedkeuringStatus;
 fabrikant?: string;
 /**
@@ -18514,11 +18553,6 @@ voorziening_type_code?: string;
  * Filter op gekoppelde toepassing
  */
 label_id?: number;
-/**
- * Alleen de actuele revisie per documentgroep
- */
-alleen_actueel?: boolean;
-inclusief_gearchiveerd?: boolean;
 };
 
 export type ListDocumentLogboekParams = {

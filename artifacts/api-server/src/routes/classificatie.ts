@@ -1,6 +1,14 @@
 import { Router } from "express";
-import { db, voorzieningTypesTable, labelsTable, testrapportenTable, labelApplicatiesTable } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
+import {
+  db,
+  voorzieningTypesTable,
+  labelsTable,
+  testrapportenTable,
+  labelApplicatiesTable,
+  documentenTable,
+  documentToepassingenTable,
+} from "@workspace/db";
+import { eq, asc, inArray, ne, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   mapLabel,
@@ -11,6 +19,10 @@ import {
   onbekendeApplicatieCodes,
   bepaalFabrikant,
 } from "../lib/classificatie";
+import {
+  geldigeProductrapportLabelIds,
+  isProductrapportType,
+} from "../lib/documenten";
 
 const router = Router();
 
@@ -280,7 +292,67 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
 router.put("/labels/:id/documenten", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    const ids = Array.isArray(req.body?.document_ids) ? req.body.document_ids : [];
+    const ids: number[] = Array.isArray(req.body?.document_ids)
+      ? Array.from(
+          new Set<number>(
+            req.body.document_ids
+              .map((documentId: unknown) => Number(documentId))
+              .filter(
+                (documentId: number) =>
+                  Number.isInteger(documentId) && documentId > 0,
+              ),
+          ),
+        )
+      : [];
+    const geldigeBestemmingsLabels = await geldigeProductrapportLabelIds([id]);
+    if (!geldigeBestemmingsLabels.includes(id)) {
+      return void res.status(400).json({
+        error:
+          "Deze toepassing is gearchiveerd of heeft geen actieve applicatiekoppeling.",
+      });
+    }
+    const gevraagdeDocumenten =
+      ids.length === 0
+        ? []
+        : await db
+            .select({ id: documentenTable.id, documenttype: documentenTable.documenttype })
+            .from(documentenTable)
+            .where(inArray(documentenTable.id, ids));
+    if (
+      gevraagdeDocumenten.length !== ids.length ||
+      gevraagdeDocumenten.some((document) => !isProductrapportType(document.documenttype))
+    ) {
+      return void res.status(400).json({
+        error: "Alleen bestaande technische productrapporten kunnen aan een toepassing worden gekoppeld.",
+      });
+    }
+
+    const huidige = await db
+      .select({ documentId: documentToepassingenTable.documentId })
+      .from(documentToepassingenTable)
+      .where(eq(documentToepassingenTable.labelId, id));
+    const gevraagd = new Set(ids);
+    for (const { documentId } of huidige) {
+      if (gevraagd.has(documentId)) continue;
+      const overige = await db
+        .select({ labelId: documentToepassingenTable.labelId })
+        .from(documentToepassingenTable)
+        .where(
+          and(
+            eq(documentToepassingenTable.documentId, documentId),
+            ne(documentToepassingenTable.labelId, id),
+          ),
+        );
+      const overigeGeldige = await geldigeProductrapportLabelIds(
+        overige.map((koppeling) => koppeling.labelId),
+      );
+      if (overigeGeldige.length === 0) {
+        return void res.status(400).json({
+          error:
+            "Deze wijziging zou een productrapport zonder geldige toepassing achterlaten. Koppel eerst een andere toepassing via het productrapport.",
+        });
+      }
+    }
     await syncLabelDocumenten(id, ids);
     const [l] = await db
       .update(labelsTable)

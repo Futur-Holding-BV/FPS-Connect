@@ -746,7 +746,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       >
                         <Link href="/documenten">
                           <Files />
-                          <span>Documenten</span>
+                          <span>Productrapporten</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

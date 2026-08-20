@@ -12,7 +12,7 @@ import type { GoedkeuringStatus } from './goedkeuringStatus';
 
 export interface DocumentInput {
   naam: string;
-  documenttype?: DocumentType;
+  documenttype: DocumentType;
   fabrikant?: string;
   product?: string;
   en_norm?: string;
@@ -27,5 +27,6 @@ export interface DocumentInput {
   bestandsgrootte?: number;
   geldig_tot?: string;
   goedkeuring_status?: GoedkeuringStatus;
-  toepassing_ids?: number[];
+  /** @minItems 1 */
+  toepassing_ids: number[];
 }

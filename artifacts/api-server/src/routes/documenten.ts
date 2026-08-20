@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import crypto from "node:crypto";
 import {
@@ -11,8 +11,10 @@ import {
   documentLogboekTable,
   labelsTable,
   labelApplicatiesTable,
+  opdrachtenTable,
+  documentMigratieInventarisTable,
 } from "@workspace/db";
-import { eq, and, ne, asc, desc, inArray, max } from "drizzle-orm";
+import { eq, and, ne, asc, desc, inArray, max, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   mapDocument,
@@ -22,10 +24,15 @@ import {
   mapLogboekRegel,
   syncDocumentToepassingen,
   isDocumentType,
+  isProductrapportType,
   isDocumentStatus,
   isGoedkeuringStatus,
   isKoppelingDoelType,
   isGetestVoor,
+  geldigeProductrapportLabelIds,
+  isZichtbaarProductrapport,
+  valideerProductrapportBestemming,
+  zichtbareProductrapportDocumentIds,
 } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -35,37 +42,38 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
 import { logger } from "../lib/logger";
 import type { DocumentType } from "../lib/documenten";
+import {
+  haalZichtbaarProductrapport,
+  magContextDoel,
+  magDocumentLezen,
+} from "../lib/document-toegang";
 
 const router = Router();
 
 const objectStorage = new ObjectStorageService();
 const uploadEnkel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
-/** Slim Upload-categorie → documenttype in de bibliotheek. Technische categorieën
- * behouden hun specifieke type; algemene bedrijfsdocumenten krijgen een eigen
- * generiek type (tekening/contract/verzekering) of vallen terug op "overig".
- * Jaarrekeningen horen hier bewust NIET in: die gaan via /financieel/jaarrekeningen.
+/** Uploadcategorie → opgeslagen documenttype. Productrapportcategorieën komen
+ * alleen met een toepassing in Productrapporten. Contextcategorieën worden
+ * uitsluitend met een concrete, gevalideerde doelkoppeling opgeslagen.
  */
 const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
   eta: "eta",
+  classificatierapport: "classificatierapport",
   dop: "dop",
   testrapport: "testrapport",
   certificaat: "productcertificaat",
+  productcertificaat: "productcertificaat",
   productdocument: "productblad",
+  productblad: "productblad",
+  verwerkingsvoorschrift: "verwerkingsvoorschrift",
   snagstream: "opleverrapport",
   tekening: "tekening",
   contract: "contract",
   verzekering: "verzekering",
-  // PRIJS_01 §4: prijslijsten worden wél in de bibliotheek gearchiveerd (anders
-  // dan jaarrekeningen), maar de tabelinhoud gaat via de importstroom naar
-  // prijsafspraken. Er is geen eigen DocumentType, dus "overig".
   // AKKOORD_01 §5: opdrachtbevestiging behoudt haar eigen documenttype zodat
   // ze als grond B-akkoordbewijs aan een opdracht gekoppeld kan worden.
   opdrachtbevestiging: "opdrachtbevestiging",
-  prijslijst: "overig",
-  // ADVIES_01 §4.1: het adviesrapport wordt gearchiveerd in de bibliotheek; de
-  // inhoud gaat via de doorschakeling door naar "calculatie-inrichten". Geen eigen
-  // DocumentType, dus "overig".
   adviesrapport: "overig",
   bibliotheek: "overig",
   offerte: "overig",
@@ -76,6 +84,22 @@ const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
   algemeen: "overig",
   onbekend: "overig",
 };
+
+async function eisZichtbaarProductrapport(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const document = await haalZichtbaarProductrapport(
+    parseInt(String(req.params.id)),
+  );
+  if (!document) {
+    res.status(404).json({ error: "Productrapport niet gevonden" });
+    return;
+  }
+  res.locals.productrapport = document;
+  next();
+}
 
 // POST /documenten/ai-analyse — AI-voorstel voor documentmetadata o.b.v. tekst (beheerder)
 router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
@@ -95,7 +119,13 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
       .select()
       .from(labelsTable)
       .where(eq(labelsTable.gearchiveerd, false));
-    const toepassing_suggesties = stelToepassingenVoor(resultaat, labels);
+    const geldigeLabelIds = new Set(
+      await geldigeProductrapportLabelIds(labels.map((label) => label.id)),
+    );
+    const toepassing_suggesties = stelToepassingenVoor(
+      resultaat,
+      labels.filter((label) => geldigeLabelIds.has(label.id)),
+    );
 
     return void res.json({ ...resultaat, toepassing_suggesties });
   } catch (err) {
@@ -120,12 +150,21 @@ router.post(
         .select()
         .from(documentenTable)
         .orderBy(asc(documentenTable.naam));
-      const actueel = documenten.filter((d) => d.status === "actueel" && !d.gearchiveerd);
+      const actueel = documenten.filter(
+        (d) =>
+          isProductrapportType(d.documenttype) &&
+          d.status === "actueel" &&
+          !d.gearchiveerd,
+      );
 
       const labels = await db
         .select()
         .from(labelsTable)
         .where(eq(labelsTable.gearchiveerd, false));
+      const geldigeLabelIds = new Set(
+        await geldigeProductrapportLabelIds(labels.map((label) => label.id)),
+      );
+      const productLabels = labels.filter((label) => geldigeLabelIds.has(label.id));
 
       const koppelingen = await db
         .select({
@@ -195,7 +234,7 @@ router.post(
         const huidige = reedsGekoppeld.get(d.id) ?? new Set<number>();
         const suggesties = stelToepassingenVoor(
           { fabrikant: d.fabrikant, product: d.product, en_norm: d.enNorm, naam: d.naam },
-          labels,
+          productLabels,
         ).filter((s) => !huidige.has(s.label_id));
         if (suggesties.length > 0) {
           voorstellen.push({
@@ -224,19 +263,17 @@ router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res)
     const {
       zoek,
       documenttype,
-      status,
       goedkeuring_status,
       fabrikant,
       voorziening_type_code,
       label_id,
-      alleen_actueel,
-      inclusief_gearchiveerd,
     } = req.query;
 
     let rows = await db.select().from(documentenTable).orderBy(asc(documentenTable.naam));
+    const zichtbareIds = await zichtbareProductrapportDocumentIds();
+    rows = rows.filter((d) => isZichtbaarProductrapport(d, zichtbareIds));
 
     if (documenttype) rows = rows.filter((d) => d.documenttype === documenttype);
-    if (status) rows = rows.filter((d) => d.status === status);
     if (goedkeuring_status) rows = rows.filter((d) => d.goedkeuringStatus === goedkeuring_status);
     if (fabrikant) {
       const q = String(fabrikant).toLowerCase();
@@ -252,9 +289,6 @@ router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res)
         );
       }
     }
-    if (alleen_actueel === "true") rows = rows.filter((d) => d.status === "actueel");
-    if (inclusief_gearchiveerd !== "true") rows = rows.filter((d) => !d.gearchiveerd);
-
     if (voorziening_type_code) {
       const koppel = await db
         .select({ documentId: documentToepassingenTable.documentId })
@@ -297,9 +331,10 @@ router.post(
         .select()
         .from(documentenTable)
         .where(eq(documentenTable.gearchiveerd, false));
+      const productrapporten = alle.filter((d) => isProductrapportType(d.documenttype));
 
       const treffers: { row: (typeof alle)[number]; reden: string }[] = [];
-      for (const d of alle) {
+      for (const d of productrapporten) {
         let reden: string | null = null;
         if (hash && d.bestandsHash && d.bestandsHash === hash) reden = "identiek_bestand";
         else if (
@@ -332,25 +367,29 @@ router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), as
       .select()
       .from(documentenTable)
       .where(eq(documentenTable.gearchiveerd, false));
+    const zichtbareIds = await zichtbareProductrapportDocumentIds();
+    const productrapporten = rows.filter((d) =>
+      isZichtbaarProductrapport(d, zichtbareIds),
+    );
 
     const vandaag = new Date();
     vandaag.setHours(0, 0, 0, 0);
     const grens = new Date(vandaag);
     grens.setDate(grens.getDate() + 90);
 
-    const verlopen: typeof rows = [];
-    const binnenkort: typeof rows = [];
-    for (const d of rows) {
-      if (d.status !== "actueel" || !d.geldigTot) continue;
+    const verlopen: typeof productrapporten = [];
+    const binnenkort: typeof productrapporten = [];
+    for (const d of productrapporten) {
+      if (!d.geldigTot) continue;
       const dt = new Date(d.geldigTot);
       if (Number.isNaN(dt.getTime())) continue;
       if (dt < vandaag) verlopen.push(d);
       else if (dt <= grens) binnenkort.push(d);
     }
-    const controle_nodig = rows.filter(
-      (d) => d.status === "controle_nodig" || d.status === "mogelijk_verouderd",
+    const controle_nodig: typeof productrapporten = [];
+    const ter_goedkeuring = productrapporten.filter(
+      (d) => d.goedkeuringStatus === "ter_goedkeuring",
     );
-    const ter_goedkeuring = rows.filter((d) => d.goedkeuringStatus === "ter_goedkeuring");
 
     return void res.json({
       verlopen: await mapDocumenten(verlopen),
@@ -373,8 +412,14 @@ router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (r
       .select()
       .from(documentLogboekTable)
       .orderBy(desc(documentLogboekTable.tijdstip))
-      .limit(limiet);
-    return void res.json(rows.map(mapLogboekRegel));
+      .limit(Math.max(limiet * 5, 500));
+    const zichtbareIds = await zichtbareProductrapportDocumentIds();
+    return void res.json(
+      rows
+        .filter((row) => row.documentId != null && zichtbareIds.has(row.documentId))
+        .slice(0, limiet)
+        .map(mapLogboekRegel),
+    );
   } catch (err) {
     req.log.error(err);
     return void res.status(500).json({ error: "Interne serverfout" });
@@ -382,12 +427,17 @@ router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (r
 });
 
 // GET /documenten/gekoppeld — documenten gekoppeld aan een entiteit
-router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get("/documenten/gekoppeld", async (req, res): Promise<void> => {
   try {
     const doelType = String(req.query.doel_type ?? "");
     const doelId = parseInt(String(req.query.doel_id ?? ""));
     if (!isKoppelingDoelType(doelType) || !Number.isInteger(doelId)) {
       return void res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
+    }
+    if (!(await magContextDoel(req, doelType, doelId, 1))) {
+      return void res.status(403).json({
+        error: "Geen toegang tot documenten van deze bestemming.",
+      });
     }
     const koppel = await db
       .select({ documentId: documentKoppelingenTable.documentId })
@@ -408,25 +458,82 @@ router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async 
   }
 });
 
+// GET /documenten/herstelwerk — inventaris van algemene/ambigue documenten.
+// Deze records blijven buiten Productrapporten en worden alleen ter handmatige
+// routering getoond; deze route wijzigt geen document of object.
+router.get(
+  "/documenten/herstelwerk",
+  requireBevoegdheid("bibliotheek", 2),
+  async (req, res): Promise<void> => {
+    try {
+      const rows = await db
+        .select({
+          documentId: documentMigratieInventarisTable.documentId,
+          naam: documentenTable.naam,
+          documenttype: documentenTable.documenttype,
+          classificatie: documentMigratieInventarisTable.classificatie,
+          status: documentMigratieInventarisTable.status,
+          voorgesteldeBestemming:
+            documentMigratieInventarisTable.voorgesteldeBestemming,
+          snapPdfUrl: documentMigratieInventarisTable.snapPdfUrl,
+          snapBestandsHash: documentMigratieInventarisTable.snapBestandsHash,
+          snapGroepId: documentMigratieInventarisTable.snapGroepId,
+          snapRevisieNummer:
+            documentMigratieInventarisTable.snapRevisieNummer,
+        })
+        .from(documentMigratieInventarisTable)
+        .innerJoin(
+          documentenTable,
+          eq(documentenTable.id, documentMigratieInventarisTable.documentId),
+        )
+        .where(
+          eq(documentMigratieInventarisTable.classificatie, "herstelwerk"),
+        )
+        .orderBy(asc(documentenTable.naam));
+      return void res.json(
+        rows.map((row) => ({
+          document_id: row.documentId,
+          naam: row.naam,
+          documenttype: row.documenttype,
+          classificatie: row.classificatie,
+          status: row.status,
+          voorgestelde_bestemming: row.voorgesteldeBestemming,
+          snap_pdf_url: row.snapPdfUrl,
+          snap_bestands_hash: row.snapBestandsHash,
+          snap_groep_id: row.snapGroepId,
+          snap_revisie_nummer: row.snapRevisieNummer,
+        })),
+      );
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
 // GET /documenten/:id — detail
-router.get("/documenten/:id", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get(
+  "/documenten/:id",
+  requireBevoegdheid("bibliotheek", 1),
+  eisZichtbaarProductrapport,
+  async (_req, res): Promise<void> => {
   try {
-    const id = parseInt(String(req.params.id));
-    const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
-    return void res.json(await mapDocument(d));
+    return void res.json(await mapDocument(res.locals.productrapport));
   } catch (err) {
-    req.log.error(err);
+    res.req.log.error(err);
     return void res.status(500).json({ error: "Interne serverfout" });
   }
-});
+  },
+);
 
 // GET /documenten/:id/revisies — revisiehistorie van de documentgroep
-router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get(
+  "/documenten/:id/revisies",
+  requireBevoegdheid("bibliotheek", 1),
+  eisZichtbaarProductrapport,
+  async (req, res): Promise<void> => {
   try {
-    const id = parseInt(String(req.params.id));
-    const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    const d = res.locals.productrapport;
     const rows = await db
       .select()
       .from(documentenTable)
@@ -437,10 +544,11 @@ router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), asy
     req.log.error(err);
     return void res.status(500).json({ error: "Interne serverfout" });
   }
-});
+  },
+);
 
 // POST /documenten/:id/ai-invullen — PDF uit object storage ophalen, AI-analyse uitvoeren en velden opslaan (beheerder)
-router.post("/documenten/:id/ai-invullen", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
+router.post("/documenten/:id/ai-invullen", requireBevoegdheid("bibliotheek", 3), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
@@ -545,34 +653,42 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
     if (!b.naam || !String(b.naam).trim()) {
       return void res.status(400).json({ error: "naam is verplicht" });
     }
-    if (b.documenttype !== undefined && !isDocumentType(b.documenttype)) {
-      return void res.status(400).json({ error: "Ongeldig documenttype" });
+    const bestemming = await valideerProductrapportBestemming(
+      b.documenttype,
+      b.toepassing_ids,
+    );
+    if (!bestemming.ok) {
+      return void res.status(400).json({ error: bestemming.error });
     }
-    const [d] = await db
-      .insert(documentenTable)
-      .values({
-        naam: String(b.naam).trim(),
-        documenttype: b.documenttype ?? "testrapport",
-        fabrikant: b.fabrikant ?? null,
-        product: b.product ?? null,
-        enNorm: b.en_norm ?? null,
-        rapportnummer: b.rapportnummer ?? null,
-        revisie: b.revisie ?? null,
-        datum: b.datum ?? null,
-        getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : null,
-        pdfUrl: b.pdf_url ?? null,
-        bestandsHash: typeof b.bestands_hash === "string" ? b.bestands_hash : null,
-        bestandsgrootte: Number.isInteger(b.bestandsgrootte) ? b.bestandsgrootte : null,
-        geldigTot: typeof b.geldig_tot === "string" && b.geldig_tot ? b.geldig_tot : null,
-        goedkeuringStatus: isGoedkeuringStatus(b.goedkeuring_status)
-          ? b.goedkeuring_status
-          : "goedgekeurd",
-        aiGeanalyseerd: b.ai_geanalyseerd === true,
-        aiMetadata: b.ai_metadata ?? null,
-      })
-      .returning();
-
-    if (Array.isArray(b.toepassing_ids)) await syncDocumentToepassingen(d.id, b.toepassing_ids);
+    const d = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(documentenTable)
+        .values({
+          naam: String(b.naam).trim(),
+          documenttype: bestemming.documenttype,
+          fabrikant: b.fabrikant ?? null,
+          product: b.product ?? null,
+          enNorm: b.en_norm ?? null,
+          rapportnummer: b.rapportnummer ?? null,
+          revisie: b.revisie ?? null,
+          datum: b.datum ?? null,
+          getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : null,
+          pdfUrl: b.pdf_url ?? null,
+          bestandsHash: typeof b.bestands_hash === "string" ? b.bestands_hash : null,
+          bestandsgrootte: Number.isInteger(b.bestandsgrootte) ? b.bestandsgrootte : null,
+          geldigTot: typeof b.geldig_tot === "string" && b.geldig_tot ? b.geldig_tot : null,
+          goedkeuringStatus: isGoedkeuringStatus(b.goedkeuring_status)
+            ? b.goedkeuring_status
+            : "goedgekeurd",
+          aiGeanalyseerd: b.ai_geanalyseerd === true,
+          aiMetadata: b.ai_metadata ?? null,
+        })
+        .returning();
+      await tx.insert(documentToepassingenTable).values(
+        bestemming.labelIds.map((labelId) => ({ documentId: row.id, labelId })),
+      );
+      return row;
+    });
 
     await logDocumentActie({
       documentId: d.id,
@@ -602,13 +718,11 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
   }
 });
 
-// POST /documenten/aanleveren — Slim Upload levert een document direct aan bij de
-// bibliotheek (multipart). Het bestand gaat fail-loud naar object storage en het
-// document komt binnen met goedkeuringsstatus "ter_goedkeuring", zodat een beheerder
-// het beoordeelt vóór het als goedgekeurd in de bibliotheek staat.
+// POST /documenten/aanleveren — multipart-upload met een verplichte bestemming.
+// Productrapporten vereisen een geldige toepassing/applicatiekoppeling.
+// Contextdocumenten vereisen hun eigen concrete, bevoegde bestemming.
 router.post(
   "/documenten/aanleveren",
-  requireBevoegdheid("bibliotheek", 2),
   uploadEnkel.single("bestand"),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -627,6 +741,70 @@ router.post(
         });
       }
       const documenttype = AANLEVER_CATEGORIE_NAAR_TYPE[categorie] ?? "overig";
+      const ruweLabelIds = Array.isArray(req.body?.label_id)
+        ? req.body.label_id
+        : req.body?.label_id !== undefined
+          ? [req.body.label_id]
+          : [];
+      const labelIds = ruweLabelIds
+        .map((waarde: unknown) => Number(waarde))
+        .filter((waarde: number) => Number.isInteger(waarde) && waarde > 0);
+      const doelType =
+        typeof req.body?.doel_type === "string" ? req.body.doel_type.trim() : "";
+      const doelId = Number(req.body?.doel_id);
+
+      let productBestemming:
+        | Awaited<ReturnType<typeof valideerProductrapportBestemming>>
+        | null = null;
+      let contextBestemming:
+        | { doelType: "opdracht" | "calculatie"; doelId: number }
+        | null = null;
+
+      if (isProductrapportType(documenttype)) {
+        if (
+          !req.permissies?.isHoofdbeheerder &&
+          !req.permissies?.heeftModuleRecht("bibliotheek", 2)
+        ) {
+          return void res.status(403).json({
+            error: "Geen bevoegdheid om productrapporten toe te voegen.",
+          });
+        }
+        productBestemming = await valideerProductrapportBestemming(
+          documenttype,
+          labelIds,
+        );
+        if (!productBestemming.ok) {
+          return void res.status(400).json({ error: productBestemming.error });
+        }
+      } else {
+        const isToegestaanOpdrachtstuk =
+          (categorie === "opdrachtbevestiging" || categorie === "bibliotheek") &&
+          doelType === "opdracht" &&
+          Number.isInteger(doelId) &&
+          doelId > 0;
+        const isToegestaanAdviesrapport =
+          categorie === "adviesrapport" &&
+          doelType === "calculatie" &&
+          Number.isInteger(doelId) &&
+          doelId > 0;
+        if (!isToegestaanOpdrachtstuk && !isToegestaanAdviesrapport) {
+          return void res.status(422).json({
+            error:
+              "Dit bestand hoort niet in Productrapporten. Upload het bij de offerte, organisatie, opdracht, het project of dossier waarvoor het bestemd is.",
+          });
+        }
+        const contextType = isToegestaanAdviesrapport
+          ? "calculatie"
+          : "opdracht";
+        const vereistNiveau = contextType === "calculatie" ? 2 : 3;
+        if (!(await magContextDoel(req, contextType, doelId, vereistNiveau))) {
+          return void res.status(403).json({
+            error:
+              "De gekozen bestemming bestaat niet of u mag daar geen documenten toevoegen.",
+          });
+        }
+        contextBestemming = { doelType: contextType, doelId };
+      }
       const toelichting =
         typeof req.body?.toelichting === "string" && req.body.toelichting.trim()
           ? req.body.toelichting.trim()
@@ -634,7 +812,9 @@ router.post(
 
       const bestandsnaam = bestand.originalname || "document";
       const veilig = bestandsnaam.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-      const subPath = `bibliotheek/aanlevering/${Date.now()}_${veilig}`;
+      const subPath = contextBestemming
+        ? `context/${contextBestemming.doelType}/${contextBestemming.doelId}/${Date.now()}_${veilig}`
+        : `productrapporten/aanlevering/${Date.now()}_${veilig}`;
 
       // Fail-loud: bij storage-uitval weigeren we het verzoek in plaats van een
       // dood pad te bewaren.
@@ -656,22 +836,42 @@ router.post(
       const naam = bestandsnaam.replace(/\.[^.]+$/, "").trim() || bestandsnaam;
       const bestandsHash = crypto.createHash("sha256").update(bestand.buffer).digest("hex");
 
-      const [d] = await db
-        .insert(documentenTable)
-        .values({
-          naam,
-          documenttype,
-          pdfUrl,
-          bestandsHash,
-          bestandsgrootte: bestand.buffer.length,
-          goedkeuringStatus: "ter_goedkeuring",
-          aiMetadata: {
-            bron: "slim_upload",
-            categorie,
-            ...(toelichting ? { toelichting } : {}),
-          },
-        })
-        .returning();
+      const d = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(documentenTable)
+          .values({
+            naam,
+            documenttype,
+            pdfUrl,
+            bestandsHash,
+            bestandsgrootte: bestand.buffer.length,
+            goedkeuringStatus: "ter_goedkeuring",
+            aiMetadata: {
+              bron: contextBestemming ? "context_upload" : "productrapport_upload",
+              categorie,
+              ...(toelichting ? { toelichting } : {}),
+            },
+          })
+          .returning();
+
+        if (productBestemming?.ok) {
+          await tx.insert(documentToepassingenTable).values(
+            productBestemming.labelIds.map((labelId) => ({
+              documentId: row.id,
+              labelId,
+            })),
+          );
+        }
+        if (contextBestemming) {
+          await tx.insert(documentKoppelingenTable).values({
+            documentId: row.id,
+            doelType: contextBestemming.doelType,
+            doelId: contextBestemming.doelId,
+            aangemaaktDoorId: req.session.userId ?? null,
+          });
+        }
+        return row;
+      });
 
       await logDocumentActie({
         documentId: d.id,
@@ -726,32 +926,15 @@ router.post(
 
       invalideerContext("document", d.id);
       const gemapt = await mapDocument(d);
-      // PRIJS_01 §4: prijslijst is gearchiveerd (hierboven), maar de gebruiker
-      // moet dóór naar de importstroom voor prijsafspraken. We geven een
-      // doorschakel-verwijzing mee zodat de frontend kan redirecten. Het bestand
-      // zelf wordt opnieuw aangeboden aan /import/prijslijst-voorstel (frontend
-      // heeft de File nog); we sturen geen bestand_id vanuit dit pad.
-      if (categorie === "prijslijst") {
-        return void res.status(201).json({
-          ...gemapt,
-          doorschakeling: {
-            naar: "import",
-            import_type: "prijsafspraken",
-            reden: "Prijslijst gearchiveerd — ga verder in de importstroom om de prijzen te verwerken.",
-          },
-        });
-      }
-      // ADVIES_01 §4.1: het adviesrapport is gearchiveerd; de gebruiker moet dóór
-      // naar "calculatie-inrichten". Anders dan bij de prijslijst sturen we hier
-      // WÉL het document_id mee: de analyse-route leest het gearchiveerde bestand
-      // zelf uit object storage, dus de frontend heeft de File niet nodig.
+      // Het rapport is al atomair gekoppeld aan de gekozen calculatie; de analyse
+      // gebruikt uitsluitend dit document-id binnen diezelfde context.
       if (categorie === "adviesrapport") {
         return void res.status(201).json({
           ...gemapt,
           doorschakeling: {
             naar: "calculatie-inrichten",
             document_id: d.id,
-            reden: "Adviesrapport gearchiveerd — kies of maak een calculatie om het rapport in te lezen.",
+            reden: "Adviesrapport opgeslagen bij de gekozen calculatie.",
           },
         });
       }
@@ -764,7 +947,7 @@ router.post(
 );
 
 // PATCH /documenten/:id — alleen status/gearchiveerd (inhoud is onveranderlijk) (beheerder)
-router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
+router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { status, gearchiveerd, geldig_tot } = req.body ?? {};
@@ -812,17 +995,32 @@ router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req
 });
 
 // POST /documenten/:id/revisies — nieuwe revisie (copy-on-revision) (beheerder)
-router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
+router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const b = req.body ?? {};
     const [bron] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
     if (!bron) return void res.status(404).json({ error: "Document niet gevonden" });
-    if (b.documenttype !== undefined && !isDocumentType(b.documenttype)) {
-      return void res.status(400).json({ error: "Ongeldig documenttype" });
+    const bronLabelIds = (
+      await db
+        .select({ labelId: documentToepassingenTable.labelId })
+        .from(documentToepassingenTable)
+        .where(eq(documentToepassingenTable.documentId, bron.id))
+    ).map((row) => row.labelId);
+    const bestemming = await valideerProductrapportBestemming(
+      b.documenttype ?? bron.documenttype,
+      Array.isArray(b.toepassing_ids) ? b.toepassing_ids : bronLabelIds,
+    );
+    if (!bestemming.ok) {
+      return void res.status(400).json({ error: bestemming.error });
     }
 
     const nieuw = await db.transaction(async (tx) => {
+      // Serialiseer revisies per documentgroep: zo kunnen twee gelijktijdige
+      // verzoeken niet hetzelfde revisienummer kiezen of twee actuele rijen maken.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${bron.groepId}))`,
+      );
       const [{ maxNum }] = await tx
         .select({ maxNum: max(documentenTable.revisieNummer) })
         .from(documentenTable)
@@ -836,7 +1034,7 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
           // velden worden overgenomen van de bron, zodat o.a. de PDF en metadata
           // niet stil verloren gaan bij een metadata-only revisie.
           naam: b.naam ? String(b.naam).trim() : bron.naam,
-          documenttype: b.documenttype ?? bron.documenttype,
+          documenttype: bestemming.documenttype,
           fabrikant: b.fabrikant ?? bron.fabrikant,
           product: b.product ?? bron.product,
           enNorm: b.en_norm ?? bron.enNorm,
@@ -853,7 +1051,7 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
           geldigTot: b.geldig_tot !== undefined ? b.geldig_tot || null : bron.geldigTot,
           goedkeuringStatus: isGoedkeuringStatus(b.goedkeuring_status)
             ? b.goedkeuring_status
-            : "goedgekeurd",
+            : bron.goedkeuringStatus,
           aiGeanalyseerd:
             b.ai_geanalyseerd === undefined
               ? bron.aiGeanalyseerd
@@ -878,26 +1076,15 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
         );
 
       // Koppelingen overnemen: body-override indien meegegeven, anders kopiëren van de bron.
-      const labelIds: number[] = Array.isArray(b.toepassing_ids)
-        ? b.toepassing_ids.filter((n: unknown) => Number.isInteger(n))
-        : (
-            await tx
-              .select({ labelId: documentToepassingenTable.labelId })
-              .from(documentToepassingenTable)
-              .where(eq(documentToepassingenTable.documentId, bron.id))
-          ).map((r) => r.labelId);
-
-      if (labelIds.length) {
-        const geldig = (
-          await tx.select({ id: labelsTable.id }).from(labelsTable).where(inArray(labelsTable.id, labelIds))
-        ).map((x) => x.id);
-        if (geldig.length) {
-          await tx
-            .insert(documentToepassingenTable)
-            .values(geldig.map((labelId) => ({ documentId: row.id, labelId })))
-            .onConflictDoNothing();
-        }
-      }
+      await tx
+        .insert(documentToepassingenTable)
+        .values(
+          bestemming.labelIds.map((labelId) => ({
+            documentId: row.id,
+            labelId,
+          })),
+        )
+        .onConflictDoNothing();
 
       return row;
     });
@@ -934,13 +1121,17 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
 });
 
 // PUT /documenten/:id/toepassingen — gekoppelde toepassingen instellen (beheerder)
-router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
+router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
     if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
     const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
-    await syncDocumentToepassingen(id, ids);
+    const bestemming = await valideerProductrapportBestemming(d.documenttype, ids);
+    if (!bestemming.ok) {
+      return void res.status(400).json({ error: bestemming.error });
+    }
+    await syncDocumentToepassingen(id, bestemming.labelIds);
     return void res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
@@ -950,7 +1141,7 @@ router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2),
 
 // ── KOPPELINGEN (document ↔ entiteit) ───────────────────────────────────────
 // GET /documenten/:id/koppelingen
-router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -969,6 +1160,7 @@ router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), 
 router.post(
   "/documenten/:id/koppelingen",
   requireBevoegdheid("bibliotheek", 2),
+  eisZichtbaarProductrapport,
   async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id));
@@ -1019,6 +1211,7 @@ router.post(
 router.delete(
   "/documenten/:id/koppelingen/:koppelingId",
   requireBevoegdheid("bibliotheek", 2),
+  eisZichtbaarProductrapport,
   async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id));
@@ -1093,7 +1286,7 @@ async function zetGoedkeuring(
 }
 
 // POST /documenten/:id/indienen — ter goedkeuring aanbieden
-router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
+router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     await zetGoedkeuring(req, res, "ter_goedkeuring", "ingediend");
   } catch (err) {
@@ -1106,6 +1299,7 @@ router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), as
 router.post(
   "/documenten/:id/goedkeuren",
   requireBevoegdheid("bibliotheek", 4),
+  eisZichtbaarProductrapport,
   async (req, res): Promise<void> => {
     try {
       await zetGoedkeuring(req, res, "goedgekeurd", "goedgekeurd");
@@ -1120,6 +1314,7 @@ router.post(
 router.post(
   "/documenten/:id/afkeuren",
   requireBevoegdheid("bibliotheek", 4),
+  eisZichtbaarProductrapport,
   async (req, res): Promise<void> => {
     try {
       await zetGoedkeuring(req, res, "afgekeurd", "afgekeurd");
@@ -1131,7 +1326,7 @@ router.post(
 );
 
 // GET /documenten/:id/goedkeuringen — goedkeuringshistorie
-router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -1147,7 +1342,7 @@ router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1)
 });
 
 // GET /documenten/:id/logboek — audittrail van één document
-router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), eisZichtbaarProductrapport, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -1163,11 +1358,14 @@ router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), asyn
 });
 
 // GET /documenten/:id/download — log de download en stuur door naar het bestand
-router.get("/documenten/:id/download", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
+router.get("/documenten/:id/download", async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
     if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    if (!(await magDocumentLezen(req, id))) {
+      return void res.status(404).json({ error: "Document niet gevonden" });
+    }
     if (!d.pdfUrl) return void res.status(404).json({ error: "Geen bestand gekoppeld" });
     await logDocumentActie({
       documentId: id,

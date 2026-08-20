@@ -5,7 +5,6 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
-import type { DocumentStatus } from './documentStatus';
 import type { DocumentType } from './documentType';
 import type { GoedkeuringStatus } from './goedkeuringStatus';
 
@@ -15,7 +14,6 @@ export type ListDocumentenParams = {
  */
 zoek?: string;
 documenttype?: DocumentType;
-status?: DocumentStatus;
 goedkeuring_status?: GoedkeuringStatus;
 fabrikant?: string;
 /**
@@ -26,9 +24,4 @@ voorziening_type_code?: string;
  * Filter op gekoppelde toepassing
  */
 label_id?: number;
-/**
- * Alleen de actuele revisie per documentgroep
- */
-alleen_actueel?: boolean;
-inclusief_gearchiveerd?: boolean;
 };
