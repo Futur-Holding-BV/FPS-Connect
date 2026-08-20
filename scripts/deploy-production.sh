@@ -349,6 +349,8 @@ stap_tijd "api-sourcemaps"
 echo "=== STAP 6: migraties (migrate-image vers bouwen + migratierunner + verificatie) ==="
 ${COMPOSE} build --no-cache migrate
 ${COMPOSE} run --rm -T migrate
+${COMPOSE} run --rm -T migrate pnpm --filter @workspace/scripts exec tsx \
+  src/vul-acceptatieregister.ts
 ${COMPOSE} run --rm -T \
   -e ACCEPTATIEREGISTER_HERGRADEER_PRODUCTIE=1 \
   -e ACCEPTATIEREGISTER_GIT_ALLEEN=1 \
