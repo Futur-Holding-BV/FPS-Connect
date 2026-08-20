@@ -1,0 +1,516 @@
+# TAKEN_INDELING_01 — voorgestelde taken
+
+## Bron en methode
+
+- Bron: `docs/metingen/TAKEN_EXPORT.md`, export 2026-08-20 09:51:56 UTC; 1192/1192 records en 24/24 batches.
+- Selectie: exact `Drafts` + `PROPOSED`: **479** unieke taken, hieronder elk precies eenmaal.
+- De export bevat geen taakbody. Lokale plannen zijn meegelezen; zonder sluitend codebewijs is `ONBEKEND` gebruikt met sluitmeting.
+- A vereist actuele code/route/test. C vereist concreet codegebrek plus registerdekking. Register is read-only gemeten; niets is teruggeschreven.
+- A=ingehaald; B=doublure; C=productgebrek; D=nieuwe wens; E=achterhaald.
+
+## Indeling
+
+Formaat: `taak | categorie | titel | korte onderbouwing en concrete vindplaats`.
+
+- #4 | **D** | Documenten echt afschermen, niet alleen verbergen | nieuwe wens: artifacts/api-server/src/lib/document-toegang.ts
+- #27 | **D** | Vraag om bevestiging voordat een gewijzigd profiel wordt teruggezet | nieuwe wens: artifacts/firevault/src/pages/personeel/profielen.tsx
+- #28 | **D** | Toon een melding wanneer opnieuw toepassen mislukt of slaagt | nieuwe wens: artifacts/api-server/src/lib/externeAdviseurHerstart.ts
+- #38 | **D** | Markeer aangepaste profielkoppelingen ook in het bewerkscherm | nieuwe wens: artifacts/firevault/src/pages/personeel/profielen.tsx
+- #45 | **D** | Onthoud ook de gekozen sortering en filters op het inspectie-overzicht | nieuwe wens: artifacts/firevault/src
+- #58 | **D** | Voorbereide spots zichtbaar maken in de monteur-werklijst | nieuwe wens: artifacts/monteur-app
+- #65 | **D** | Wijs vanuit de spotlijst een monteur toe aan een cluster | nieuwe wens: artifacts/firevault/src/pages/uitvoering/detail.tsx
+- #66 | **D** | Filter de spotlijst op cluster | nieuwe wens: artifacts/firevault/src
+- #75 | **D** | Laat gebruikers meerdere overgenomen koppelingen in één keer terugdraaien | nieuwe wens: artifacts/firevault/src/pages/personeel/profielen.tsx
+- #78 | **D** | Snel inzoomen op een groep overlappende spots | nieuwe wens: artifacts/firevault/src/pages/uitvoering/detail.tsx
+- #85 | **D** | Koppel een al-bestaande voorgestelde opleiding alsnog aan de functie | nieuwe wens: artifacts/api-server/src/lib/standaardProfielen.ts
+- #86 | **D** | Toon de nieuwe opleiding/cursus-details ook in de monteur-app | nieuwe wens: artifacts/monteur-app
+- #87 | **D** | Borg dat de kostenverdeling werkgever/werknemer altijd op 100% uitkomt | nieuwe wens: artifacts/api-server
+- #100 | **D** | Zorg dat de datumvalidatie-test altijd draait, ook zonder handmatige data | nieuwe wens: artifacts/api-server/src/lib/datumSaniteit.ts
+- #106 | **A** | [REEDS GEBOUWD] AVG-inzageverzoek — al volledig geïmplementeerd | bewezen: artifacts/api-server/src/lib/avgOpruiming.ts
+- #107 | **A** | [REEDS GEBOUWD] Automatische verwijdering log/accounts — al volledig geïmplementeerd | bewezen: artifacts/api-server/src/lib/avgOpruiming.ts
+- #108 | **D** | Offerte als PDF downloaden vanuit de Studio | nieuwe wens: artifacts/firevault/src/pages
+- #109 | **D** | Offertestatus vanuit de Studio wijzigen (concept → verzonden → geaccepteerd) | nieuwe wens: artifacts/api-server/src/routes/hrm.ts
+- #110 | **D** | AI-tekstgeneratie verbeteren: context uit begrotingsregels meesturen | nieuwe wens: artifacts/api-server/src/routes/studio.ts
+- #123 | **D** | Stuur ook een melding als een klant een offerte ondertekent of afwijst | nieuwe wens: artifacts/firevault/src/pages/offertes
+- #124 | **D** | Toon ongelezen klantvragen als badge in de offertelijst | nieuwe wens: artifacts/firevault/src/pages
+- #125 | **D** | Toon het e-mailadres van de klant zichtbaar in de klantvragenlijst | nieuwe wens: artifacts/api-server/src/routes/portaal.ts
+- #126 | **D** | Stuur een bevestigingsmail naar de klant zodra zijn vraag is ontvangen | nieuwe wens: artifacts/api-server/src/routes/portaal.ts
+- #129 | **B** | Stuur ook een melding als een klant een offerte afwijst | doublure #123: docs/metingen/TAKEN_EXPORT.md
+- #130 | **D** | Toon ondertekening-notificaties in het mail-logboek in de beheerdersomgeving | nieuwe wens: artifacts/api-server/src/services/email.ts
+- #131 | **D** | Voorkom ook dubbele handtekeningen bij gelijktijdige indiening | nieuwe wens: artifacts/api-server/src/routes/portaal.ts
+- #142 | **D** | Toon de gebruiker een bevestiging wanneer een AI-correctie is opgeslagen | nieuwe wens: artifacts/api-server/src/lib/aiDecisionEngine.ts
+- #143 | **D** | Verhinder dat dezelfde correctie meerdere keren wordt opgeslagen bij snel typen | nieuwe wens: artifacts/api-server/src/lib/aiDecisionEngine.ts
+- #144 | **D** | Laat beheerders de opgeslagen AI-correcties inzien en verwijderen | nieuwe wens: artifacts/api-server/src/lib/aiDecisionEngine.ts
+- #145 | **D** | Laat beheerders zelf kiezen wanneer de dagelijkse signalering verstuurd wordt | nieuwe wens: artifacts/api-server/src/lib/magazijnSignalering.ts
+- #146 | **D** | Voorkom dat de signalering-e-mail elke dag opnieuw verstuurd wordt als het tekort niet is opgelost | nieuwe wens: artifacts/api-server/src/lib/magazijnSignalering.ts
+- #147 | **D** | Toon kritieke voorraadartikelen ook als melding op het hoofddashboard | nieuwe wens: artifacts/api-server/src/lib/magazijnSignalering.ts
+- #152 | **D** | Maak een artikel zoeken mogelijk bij uitgifte zodat je niet het artikel-ID hoeft op te zoeken | nieuwe wens: artifacts/firevault/src/pages/magazijn/voorraad.tsx
+- #153 | **D** | Voorkom dat een uitgifte stilzwijgend mislukt doordat de voorraad op nul staat | nieuwe wens: artifacts/api-server/src/lib/magazijnSignalering.ts
+- #154 | **B** | Toon materiaalkosten ook in de nacalculatie zodat materiaal en arbeid samen worden vergeleken | doublure #255: docs/metingen/TAKEN_EXPORT.md
+- #155 | **D** | Scannen werkt ook als een artikel geen barcode heeft: toon duidelijke foutmelding | nieuwe wens: artifacts/firevault/src/pages/magazijn
+- #156 | **D** | Opdracht koppelen bij scanuitgifte zodat de voorraadmutatie traceerbaar is | nieuwe wens: artifacts/api-server
+- #157 | **D** | Voeg ook een barcode-printknop toe op de artikel-detailpagina zodat stickers aangemaakt kunnen worden | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #158 | **D** | Zorg dat een monteur de scanresultaten ook ziet als de verbinding wegvalt (offline ondersteuning) | nieuwe wens: artifacts/monteur-app/lib/offlineCache.ts
+- #161 | **D** | Toon een bevestiging na het koppelen van een nieuw bestand aan een bestaande registratie | nieuwe wens: artifacts/api-server/src/routes/documenten.ts
+- #162 | **ONBEKEND** | Zorg dat uploaden in bewerkmode ook de dubbeling-detectie triggert | onbekend: artifacts/firevault/src/pages/organisatie/studio.tsx; sluit met gerichte flowmeting
+- #166 | **A** | Laat Document Studio modellen goedkeuren en markeer ze als officieel Connect-template | bewezen: artifacts/firevault/src/pages/organisatie/studio.tsx
+- #167 | **D** | Onderhoudscontract-planning: kalenderweergave per maand zodat teams kunnen zien wanneer welk gebouw onderhoud krijgt | nieuwe wens: artifacts/firevault/src/pages/onderhoud/planning.tsx
+- #168 | **D** | Zorg dat Document Studio-uploads bewaard blijven als de API-server opnieuw opstart | nieuwe wens: artifacts/firevault/src/pages/organisatie/studio.tsx
+- #172 | **A** | Voorkom dat de offerte-printpagina kapot gaat bij een lege of mislukte modelquery | bewezen: artifacts/firevault/src/pages/offertes/print.tsx
+- #175 | **D** | Gebruik ook het Studio-logo op alle andere rapportpagina's (niet alleen het voorblad) | nieuwe wens: artifacts/firevault/src/pages/modules/calculatie/print.tsx
+- #176 | **D** | Laat het Studio-logo ook zien in het afdrukvoorbeeld van het certificaat | nieuwe wens: artifacts/firevault/src/pages/veiligheid/pbm.tsx
+- #206 | **D** | Laat beheerders het AI-logboek per maand als e-mail ontvangen | nieuwe wens: artifacts/firevault/src/pages/beheer/ai-aanroepen.tsx
+- #207 | **D** | Toon een waarschuwing als de AI-kosten een ingesteld maandbudget overschrijden | nieuwe wens: artifacts/firevault/src/pages/beheer/ai-aanroepen.tsx
+- #212 | **D** | Bevestig dat de drempelmelding ook echt wordt verstuurd als de drempel halverwege de maand wordt verlaagd | nieuwe wens: artifacts/api-server/src/lib/bewakingsloop.ts
+- #217 | **D** | Stuur de drempelmelding ook als in-app notificatie zodat beheerders zonder e-mail direct gewaarschuwd worden | nieuwe wens: artifacts/api-server/src/lib/bewakingsloop.ts
+- #218 | **D** | Zorg dat de AI-drempelwaarschuwing ook zichtbaar is voor beheerders in de webomgeving | nieuwe wens: artifacts/firevault/src/pages/beheer/ai-aanroepen.tsx
+- #237 | **A** | Toon een previewknop voor de ge-uploadde referentie in Document Studio | bewezen: artifacts/firevault/src/pages/organisatie/studio.tsx
+- #238 | **ONBEKEND** | Beheer-documentopmaak toont altijd het standaard FPS-logo in de preview in plaats van het werkgever-logo | onbekend: artifacts/firevault/src/pages/offertes/print.tsx; sluit met gerichte flowmeting
+- #239 | **D** | Zorg dat AI-kosten nooit verloren gaan bij een onbekend model | nieuwe wens: artifacts/api-server/src/routes/ai-log.ts
+- #240 | **D** | Maak prompt-versies zichtbaar in het AI-aanroep-logboek | nieuwe wens: artifacts/firevault/src/pages/beheer/ai-aanroepen.tsx
+- #241 | **A** | Bulk-barcodes afdrukken vanuit de artikelenlijst | bewezen: artifacts/firevault/src/pages/magazijn/artikelen-barcodes-bulk.tsx
+- #242 | **A** | Voorkom dat de barcodepagina leeg opent als een artikel geen code heeft | bewezen: artifacts/firevault/src/pages/magazijn/artikel-label.tsx
+- #245 | **A** | Toon statuswijzigingen terug in de offertegeschiedenis | bewezen: artifacts/api-server/src/routes/offertes.ts
+- #246 | **A** | Prevent een offerte-statuswijziging door onbevoegde gebruikers | bewezen: artifacts/api-server/src/routes/offertes.ts
+- #247 | **D** | Toon klantvragen ook als badge in de offerte-detailpagina zodat behandelaars ze nooit missen | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #248 | **D** | Stuur ook een afwijzingsbevestiging naar de klant zodat zij weten dat hun afwijzing is ontvangen | nieuwe wens: artifacts/api-server/src/routes/offertes.ts
+- #249 | **D** | Zorg dat nieuwe route-handlers automatisch getypeerd worden — zodat TS7030 nooit meer terugkomt | nieuwe wens: artifacts/api-server/src/routes/index.ts
+- #250 | **D** | Vul tarieven en normtijden voor bij opstart zodat de calculatiemodule direct bruikbaar is | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #251 | **A** | Toon in de offerte welke calculatie eraan ten grondslag lag | bewezen: artifacts/api-server/src/routes/offertes.ts
+- #252 | **A** | V1.5 Rapportenmodule — centrale bibliotheek voor definitieve rapporten per gebouw | bewezen: artifacts/api-server/src/__tests__/productrapporten-bibliotheek.test.ts
+- #253 | **D** | Zorg dat PDF-download betrouwbaar werkt bij grote rapporten met veel spots en foto's | nieuwe wens: artifacts/firevault/src/pages/gebouwen/gebouw-rapporten.tsx
+- #254 | **D** | Klant kan definitief opleverrapport inzien en downloaden vanuit FPS One portaal | nieuwe wens: artifacts/firevault/src/pages/portaal/index.tsx
+- #255 | **D** | Toon materiaalkosten per opdracht in de nacalculatie | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #256 | **D** | Toon gekoppelde uitgifte op de opdracht-detailpagina | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #257 | **D** | Exporteer de volledige nacalculatie als PDF voor archivering en opdrachtgever | nieuwe wens: artifacts/firevault/src/pages/opdrachten/nacalculatie.tsx
+- #258 | **D** | Toon materiaalkosten ook in de AI-projectcontroller signalen (bewaking boven begroting) | nieuwe wens: artifacts/api-server/src/lib/bewakingsloop.ts
+- #259 | **ONBEKEND** | Zorg dat magazijn-uitgiftes altijd aan een opdracht gekoppeld worden bij uitgifte | onbekend: artifacts/api-server/src/routes/magazijn.ts; sluit met gerichte flowmeting
+- #260 | **D** | Stuur automatisch een e-mail naar de gebruiker wanneer een AVG-verzoek is afgehandeld | nieuwe wens: artifacts/api-server/src/routes/privacy.ts
+- #261 | **A** | Zorg dat geanonimiseerde accounts niet meer kunnen inloggen of TOTP instellen | bewezen: artifacts/api-server/src/routes/auth.ts
+- #272 | **A** | Toon het werktype ook op de FIE-kompaspagina naast historische afwijkingen per type | bewezen: artifacts/firevault/src/pages/directie/kompas.tsx
+- #273 | **A** | Waarschuw als het werktype 'algemeen' is doordat een gebouw geen spots heeft | bewezen: artifacts/api-server/src/__tests__/fie-werktype-terugval.test.ts
+- #274 | **D** | Toon de leereffect-correctie ook in het print/opleverrapport van de calculatie | nieuwe wens: artifacts/firevault/src/pages/modules/calculatie/print.tsx
+- #275 | **A** | Verberg het Bedrijfskompas-blok niet als de calculatie nog leeg is, maar toon een instructieve lege staat | bewezen: artifacts/firevault/src/pages/directie/kompas.tsx
+- #281 | **ONBEKEND** | Voorkom dat ook het verwijderen van een leermoment stil faalt zonder melding | onbekend: artifacts/firevault/src/pages/directie/kompas.tsx; sluit met gerichte flowmeting
+- #283 | **D** | Prevent a specific werktype from getting permanently stuck when all spots are removed via archiving | nieuwe wens: artifacts/api-server/src/routes/fie.ts
+- #286 | **D** | Toon ook in het Directie Kompas een waarschuwingsbanner bij verouderde nacalculaties | nieuwe wens: artifacts/api-server/src/routes/fie.ts
+- #291 | **D** | Ververs de plattegrond automatisch als een beheerder een spot archiveert tijdens een actieve sessie | nieuwe wens: artifacts/monteur-app/app/plattegrond/
+- #292 | **D** | Voorkom dat de offline planning-cache verouderde (gearchiveerde) spots toont bij slechte verbinding | nieuwe wens: artifacts/monteur-app/app/plattegrond/
+- #293 | **D** | Voorkom dat gearchiveerde spots nog opduiken in de spotlijst en het dashboard | nieuwe wens: artifacts/monteur-app/app/plattegrond/
+- #307 | **D** | Laat klanten aanvraagdocumenten direct uploaden in het Adviescentrum | nieuwe wens: artifacts/firevault/src/components/slim-upload-balk.tsx
+- #308 | **D** | Zorg dat 'Details'-knop in e2e-gebouwdetailtest niet meer conflicteert met de nieuws-ticker | nieuwe wens: scripts/e2e/web-gebouw-detail.spec.ts
+- #309 | **D** | Toon uitvoeringsvoortgang live in de opdracht-samenvatting | nieuwe wens: artifacts/firevault/src/pages/opdrachten
+- #310 | **D** | Maak uitvoeringsrapporten zichtbaar na afronding (Fase E oplevering) | nieuwe wens: artifacts/firevault/src/pages/rapporten/index.tsx
+- #311 | **D** | Voorkom verlies van uitvoeringsdata bij serverherstart (sessie-hardening) | nieuwe wens: artifacts/api-server/src/routes/planning-module.ts
+- #312 | **D** | Zorg dat de adaptieve gids altijd de juiste stap toont, ook na app-herstart | nieuwe wens: artifacts/monteur-app/app
+- #313 | **D** | Voorkom verloren offline-stappen bij sync-conflicten | nieuwe wens: artifacts/monteur-app/app
+- #314 | **D** | Toon de adaptieve gids ook in de web-omgeving voor projectleiders | nieuwe wens: artifacts/monteur-app/app
+- #315 | **D** | Opleverdossier en overdrachtsnotitie zichtbaar maken in de documentbibliotheek van de opdracht | nieuwe wens: artifacts/firevault/src/pages/documenten/index.tsx
+- #316 | **D** | PIM print.tsx samenvatting — oplevering AI-blok toevoegen aan opleverrapport | nieuwe wens: artifacts/firevault
+- #317 | **D** | V1.5 Rapportenmodule — centrale rapportenbibliotheek met definitieve rapporten en versiebeheer | nieuwe wens: artifacts/firevault/src/pages/rapporten/index.tsx
+- #318 | **D** | Kennisbank beheer-UI: standaarden en leveranciersscores invoeren in FPS Connect | nieuwe wens: scripts/e2e/startmenu.spec.ts
+- #319 | **D** | KB-context automatisch meesturen in alle PIM AI-aanroepen, niet alleen werkvoorbereiding | nieuwe wens: artifacts/api-server/src
+- #320 | **D** | KB artikelen verrijken: goedkeuringsflow en vervangerslogica valideren | nieuwe wens: artifacts/firevault/src
+- #323 | **D** | Koppel de adaptieve uitvoeringsinterface aan de bestaande uitvoeringspagina | nieuwe wens: artifacts/firevault/src/pages
+- #324 | **D** | Implementeer de server-side API endpoints voor foto-analyse en relevante documenten | nieuwe wens: artifacts/api-server/src/routes
+- #325 | **D** | Zorg dat offline gemaakte foto's automatisch worden geanalyseerd zodra verbinding hersteld is | nieuwe wens: artifacts/monteur-app/app
+- #326 | **D** | Voorkom dat de tablet-uitvoeringsmodus onbedoeld actief blijft na het verlaten van de pagina | nieuwe wens: artifacts/monteur-app/app
+- #333 | **D** | Zorg dat de spot-type afleiding ook werkt als de opdracht geen gebouw heeft | nieuwe wens: artifacts/api-server/src/routes/fie.ts
+- #334 | **D** | Voorkom dat de VGE een verouderd spot-type gebruikt als de opdracht van gebouw wisselt | nieuwe wens: artifacts/api-server/src/routes/fie.ts
+- #335 | **D** | Toon de effectiviteitsscore ook rechtstreeks naast de visual in de bibliotheek-uploadflow | nieuwe wens: artifacts/firevault/src/components/slim-upload-balk.tsx
+- #336 | **D** | Zorg dat visuals zonder bewezen meerwaarde automatisch worden gesignaleerd aan de beheerder | nieuwe wens: artifacts/firevault/src/pages/beheer/ontwikkelstatus.tsx
+- #337 | **D** | Stap-duratie bijhouden zodat de gem. stap-tijdkolom nuttige data toont | nieuwe wens: artifacts/monteur-app/app
+- #343 | **D** | Voorkom dat de VGE effectiviteitslog productspecificaties kan overschrijven | nieuwe wens: artifacts/firevault/src/pages/beheer
+- #344 | **D** | Houd de VGE-monteur-app leeg zodra een visual wordt gedeactiveerd | nieuwe wens: artifacts/monteur-app/app
+- #348 | **D** | Controleer dat de visuele bibliotheek correct werkt na herpublicatie | nieuwe wens: artifacts/firevault/src/pages/beheer
+- #349 | **D** | Toon de bestand-preview van een visual in de bewerken-dialoog | nieuwe wens: artifacts/firevault/src/pages/beheer/documenten-tab.tsx
+- #352 | **D** | Laat de monteur een niet-ladende visual opnieuw proberen zonder de stap te verlaten | nieuwe wens: artifacts/monteur-app/app
+- #355 | **D** | Toon ook de VGE-guidance op telefoon in de uitvoeringsflow wanneer er geen guidance-sectie verschijnt | nieuwe wens: artifacts/monteur-app/app
+- #356 | **D** | Zorg dat VGE-afbeeldingen ook offline zichtbaar blijven in de visuele begeleiding | nieuwe wens: artifacts/monteur-app/app
+- #357 | **D** | Voorkom dat het tablet-middenvenster leeg blijft wanneer een stap geen guidance of foto heeft | nieuwe wens: artifacts/monteur-app/app
+- #360 | **D** | Zorg dat de monteur-app de stap-duur bijhoudt en meestuurt bij voltooien | nieuwe wens: artifacts/monteur-app/app
+- #361 | **D** | Voorkom dat effectiviteitsdata verdwijnt bij het verwijderen van een visual | nieuwe wens: artifacts/firevault/src/pages/beheer
+- #362 | **D** | Pas dezelfde URL-refresh fix toe op alle andere uploadplekken in de app | nieuwe wens: artifacts/firevault/src/components/slim-upload-balk.tsx
+- #363 | **D** | Voorkom dat de gebruiker een upload start met een al-verlopen URL | nieuwe wens: artifacts/firevault/src/components/slim-upload-balk.tsx
+- #369 | **ONBEKEND** | Voorkom dat een document zonder PDF wordt opgeslagen via de revisie-flow | onbekend: artifacts/firevault/src/pages/beheer/documenten-tab.tsx; sluit met gerichte flowmeting
+- #370 | **ONBEKEND** | Zorg dat documenten zonder pdf_url niet als downloadbaar worden getoond | onbekend: artifacts/firevault/src/pages/beheer/documenten-tab.tsx; sluit met gerichte flowmeting
+- #373 | **ONBEKEND** | Voorkom dat hetzelfde API-pad ooit weer twee keer de OpenAPI-spec inkomt | onbekend: lib/api-spec; sluit met gerichte flowmeting
+- #376 | **B** | Onthoud ook de gekozen sortering en filters op het inspectie-overzicht | doublure #45: docs/metingen/TAKEN_EXPORT.md
+- #377 | **B** | Laat gebruikers de spotlijst filteren op cluster | doublure #66: docs/metingen/TAKEN_EXPORT.md
+- #378 | **ONBEKEND** | Herstel het kaputte codegen-proces zodat API-wijzigingen automatisch worden verwerkt | onbekend: scripts/install.sh; sluit met gerichte flowmeting
+- #379 | **ONBEKEND** | Voeg de grootte-limiet ook toe aan de overige upload-URL-routes | onbekend: scripts/e2e/web-snagstream-archief.spec.ts; sluit met gerichte flowmeting
+- #380 | **ONBEKEND** | Verwijder het oude opslagbestand automatisch wanneer een beheerder het vervangt | onbekend: scripts/e2e/web-snagstream-archief.spec.ts; sluit met gerichte flowmeting
+- #381 | **ONBEKEND** | Zorg dat het bewerk-formulier ook sluit bij navigeren weg uit de dialoog | onbekend: artifacts/firevault/src/context/navigatie-bewaking.tsx; sluit met gerichte flowmeting
+- #384 | **ONBEKEND** | Voorkom dat de 'Opnieuw proberen'-knop zichtbaar blijft na annuleren en heropenen van het formulier | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #389 | **D** | Voorkom dat een mislukte upload het voltooien van een stap blokkeert zonder duidelijke melding | nieuwe wens: artifacts/firevault/src/components/slim-upload-balk.tsx
+- #390 | **B** | Toon ook uploadfouten op de bevinding-opname-pagina als consistent foutpatroon | doublure #389: docs/metingen/TAKEN_EXPORT.md
+- #394 | **ONBEKEND** | Fix overige typecheck-fouten in firevault zodat de buildpijplijn volledig schoon is | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #395 | **ONBEKEND** | Voorkom verlies van wachtende upload ook bij in-app navigatie (wouter) | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #396 | **ONBEKEND** | Fix kapotte uploadtypen (retryUpload / uploadFoutType ontbreken) zodat herhaalde uploads betrouwbaar werken | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #397 | **ONBEKEND** | Verwijder ook de lokale mapdirectory wanneer alle foto-uploads voor een opname-item zijn gewist | onbekend: artifacts/monteur-app/hooks/useFotoUpload.ts; sluit met gerichte flowmeting
+- #398 | **ONBEKEND** | Toon de sync-badge ook op het gebouw-detailscherm in de monteur-app | onbekend: artifacts/monteur-app; sluit met gerichte flowmeting
+- #399 | **ONBEKEND** | Voorkom dat een sync-fout stil verdwijnt na terugnavigeren naar een scherm | onbekend: artifacts/monteur-app/context/sync.tsx; sluit met gerichte flowmeting
+- #403 | **C** | Voorkom dat ook .js-bestanden in dist/ achterblijven na verwijdering van een bronbestand | gebrek: scripts/src/check-codegen-stale.ts; unmonitored: no matching point
+- #404 | **ONBEKEND** | Zorg dat de kwaliteitscheck sectie 11 de nieuwe opruimstap herkent en bevestigt | onbekend: scripts/src/check-codegen-stale.ts; sluit met gerichte flowmeting
+- #417 | **D** | Extend FPS Moments beyond birthdays (work anniversaries, milestones) | nieuwe wens: artifacts/firevault
+- #418 | **ONBEKEND** | Stop e2e-menu mobile login test from failing on a browser-level fetch error | onbekend: scripts/e2e/startmenu.spec.ts; sluit met gerichte flowmeting
+- #419 | **D** | Warn approvers when overriding a staffing shortfall on leave requests | nieuwe wens: artifacts/firevault
+- #420 | **D** | Seed default verlofsoorten so new installs aren't missing leave types | nieuwe wens: lib/db
+- #438 | **D** | Stel de reactietermijn in via het klantportaal zodat klanten officieel kunnen reageren | nieuwe wens: artifacts/firevault
+- #439 | **D** | Geef een melding wanneer een reactietermijn op het punt staat te verlopen | nieuwe wens: artifacts/firevault
+- #440 | **ONBEKEND** | Zorg dat de reactietermijn-filterstatus correct werkt bij vervangen rapporten | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #446 | **ONBEKEND** | Voorkom dat herclassificatie opnieuw een lege bewijsketen opslaat | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #447 | **D** | Toon hoeveel resultaten er overeenkomen bij elke zoekterm | nieuwe wens: artifacts/firevault
+- #448 | **B** | Onthoud ook de gekozen filters op de inspectie- en onderhoudspagina bij terugkeer | doublure #45: docs/metingen/TAKEN_EXPORT.md
+- #449 | **ONBEKEND** | Zorg dat klanten ook via de print-URL geen conceptrapporten kunnen bekijken | onbekend: artifacts/firevault/src/pages/gebouwen/print.tsx; sluit met gerichte flowmeting
+- #450 | **ONBEKEND** | Prevent herclassificatie from timing out when the inbox has many unclassified items | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #451 | **D** | Also let beheerders re-run AI classification on a single inbox item from its detail page | nieuwe wens: artifacts/firevault
+- #452 | **D** | Stuur de klant ook een herinnering als de reactietermijn bijna verloopt | nieuwe wens: artifacts/firevault
+- #453 | **D** | Toon een melding in FPS Connect als een klant-e-mail niet kon worden afgeleverd | nieuwe wens: artifacts/firevault
+- #454 | **D** | Koppel een rapport aan een werkbon vanuit het rapport-aanmaakscherm | nieuwe wens: artifacts/firevault
+- #455 | **D** | Toon werkbon-koppeling ook in de centrale rapportenbibliotheek | nieuwe wens: artifacts/firevault
+- #456 | **D** | Maak de handmatige correctie ongedaan zodat de AI weer volledig de regie krijgt | nieuwe wens: artifacts/firevault
+- #457 | **D** | Toon een visuele markering wanneer de toggle handmatig gecorrigeerd is (afwijkt van de AI) | nieuwe wens: artifacts/firevault
+- #461 | **D** | Zorg dat productie-DB bijgewerkt is vóór de volgende deploy | nieuwe wens: scripts/deploy-production.sh
+- #462 | **D** | Zorg dat ook toekomstige rapportenschema-drift meteen zichtbaar is, niet pas bij een e2e-crash | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #463 | **D** | Toon verlopen reactietermijnen ook in het onderhoud-dashboard als signaalkaart | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #464 | **D** | Herstel filter als je via de browser-terugknop terugkeert naar de rapportenbibliotheek | nieuwe wens: artifacts/api-server/src/lib/documenten.ts
+- #465 | **D** | Bevestig dat de signalering niet opnieuw verstuurd wordt na vervanging van een rapport | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #472 | **C** | Voorkom dat een te kort of zwak wachtwoord wordt opgeslagen bij gebruikersbeheer | gebrek: artifacts/api-server/src/routes/hrm.ts; unmonitored: no matching point
+- #477 | **ONBEKEND** | Herstel de fout waardoor verjaardagen van vandaag niet worden getoond | onbekend: artifacts/firevault/src/components/verjaardags-widget.tsx; sluit met gerichte flowmeting
+- #486 | **ONBEKEND** | Zorg dat productie uitnodigings- en wachtwoordmails kan versturen | onbekend: artifacts/api-server/src/routes/hrm.ts; sluit met gerichte flowmeting
+- #487 | **ONBEKEND** | Voorkom dat de deploy-workflow blijft wachten op een vervallen goedkeuring | onbekend: deploy/RELEASE_PRODUCTION_CHECKLIST.md; sluit met gerichte flowmeting
+- #499 | **ONBEKEND** | Voorkom dat inloggen opnieuw stilzwijgend faalt bij automatisch ingevulde velden | onbekend: artifacts/api-server/src/routes/auth.ts; sluit met gerichte flowmeting
+- #500 | **E** | Ruim de resterende bestanden van het ongebruikte registry-deploymodel op | achterhaald: docs/deployment.md
+- #503 | **D** | Laat directie een PDF-export van het meerjarenoverzicht downloaden | nieuwe wens: artifacts/api-server
+- #504 | **D** | Waarschuw bij dubbele of vervangen jaarrekeningen vóór goedkeuring | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #505 | **ONBEKEND** | Bevestig dat vertrouwelijke jaarrekeningen echt afgeschermd blijven | onbekend: artifacts/api-server/src/lib/documenten.ts; sluit met gerichte flowmeting
+- #508 | **D** | Laat een echte AI-functie via de nieuwe beslislaag lopen | nieuwe wens: artifacts/api-server/src/services/ai-prompt-governance.ts
+- #509 | **D** | Voorkom dat foutieve AI-uitvoer ongemerkt wordt opgeslagen | nieuwe wens: artifacts/api-server/src/services/ai-prompt-governance.ts
+- #510 | **D** | Bevestig dat de goedkeuringsflow werkt voor een ingelogde gebruiker | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #512 | **D** | Warn the team automatically when a release rolls back | nieuwe wens: deploy/ROLLBACK_PRODUCTION.md
+- #513 | **B** | Cover schema-changing releases with automatic rollback too | doublure #462: docs/metingen/TAKEN_EXPORT.md
+- #514 | **D** | Keep AI context fresh when spot photos, cluster assignments, and library documents change in bulk | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #515 | **D** | Catch future AI-context staleness bugs before they reach users | nieuwe wens: artifacts/api-server/src/services/ai-prompt-governance.ts
+- #516 | **ONBEKEND** | Zorg dat uitloggen ook op de mobiele monteur-app betrouwbaar naar het loginscherm terugkeert | onbekend: artifacts/firevault/src/components/gebruiker-menu.tsx; sluit met gerichte flowmeting
+- #517 | **ONBEKEND** | Herstel de mobiele menu-E2E zodat mobiele regressies weer automatisch worden opgevangen | onbekend: artifacts/monteur-app; sluit met gerichte flowmeting
+- #533 | **ONBEKEND** | Zorg dat een goedgekeurde aanvraag ook vervalt als een begrotingsregel wordt verwijderd | onbekend: docs/metingen/TAKEN_EXPORT.md; sluit met gerichte flowmeting
+- #534 | **D** | Maak in de offerte-Studio zichtbaar dat een goedkeuring vervallen is door een inhoudswijziging | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #537 | **ONBEKEND** | Prevent policy-less document types from silently failing to submit for approval | onbekend: artifacts/api-server/src/lib/documenten.ts; sluit met gerichte flowmeting
+- #538 | **D** | Let the approval overview show which project or building each request belongs to | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #539 | **D** | Confirm that weekstaat approval and contract approval survive a manager-role switch | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #549 | **ONBEKEND** | Voorkom dat een HRM-besluit vastgelegd wordt zonder vereiste formele goedkeuring | onbekend: artifacts/api-server/src/routes/hrm.ts; sluit met gerichte flowmeting
+- #551 | **ONBEKEND** | Zorg dat ter-goedkeuring-indienen ook werkt vanuit de 'Ter goedkeuring indienen'-knop in het goedkeuringswidget | onbekend: docs/metingen/TAKEN_EXPORT.md; sluit met gerichte flowmeting
+- #552 | **ONBEKEND** | Blokeer handmatig accorderen van een creditnota als goedkeuring nog loopt | onbekend: docs/metingen/TAKEN_EXPORT.md; sluit met gerichte flowmeting
+- #553 | **D** | Stuur ook een notificatie naar de indiener als een deelgoedkeuring plaatsvindt (meerdere goedkeurders vereist) | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #554 | **ONBEKEND** | Zorg dat mislukte uitkomst-notificaties niet stilzwijgend verdwijnen als de mailkoppeling niet geconfigureerd is | onbekend: artifacts/api-server/src/services/email; sluit met gerichte flowmeting
+- #570 | **D** | Bevestig dat de financiële KPI's op de projectkaart kloppen met de bedrijfscijfers | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #571 | **D** | Maak de terug-naar-project link ook zichtbaar vanuit gekoppelde documenten | nieuwe wens: artifacts/api-server/src/lib/documenten.ts
+- #573 | **D** | Toon het echte banksaldo in het liquiditeitsdashboard via AccountView | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #574 | **D** | Waarschuw de directie automatisch bij een dreigend liquiditeitstekort | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #575 | **D** | Laat medewerkers CRM-taken zien op hun eigen overzicht | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #576 | **ONBEKEND** | Voorkom dat AI-relatievoorstellen stilzwijgend falen zonder AI-gateway | onbekend: artifacts/api-server/src/services/ai-prompt-governance.ts; sluit met gerichte flowmeting
+- #577 | **D** | Zorg dat oude heatmap-gegevens automatisch worden opgeschoond | nieuwe wens: artifacts/firevault/src/components/heatmap-tracker.tsx
+- #578 | **D** | Toon beheerders daadwerkelijk een heatmap-weergave van de verzamelde data | nieuwe wens: artifacts/firevault/src/components/heatmap-tracker.tsx
+- #585 | **D** | Toon per verwerker wanneer de verwerkersovereenkomst opnieuw gecontroleerd moet worden | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #586 | **D** | Voorkom dat wijzigingen in het verwerkersregister onopgemerkt blijven | nieuwe wens: artifacts/firevault/src
+- #587 | **D** | Zorg dat AI-fotoselectie ook zonder gekoppeld gebouw bruikbaar blijft | nieuwe wens: artifacts/api-server/src/services/spot-ai.ts
+- #588 | **D** | Voorkom dat een onvolledige offerte per ongeluk verzonden wordt | nieuwe wens: artifacts/firevault/src/components/offerte-aanvraag-wizard.tsx
+- #589 | **D** | Bevestig dat de nieuwe offerte-wizard end-to-end werkt na login | nieuwe wens: artifacts/firevault/src/components/offerte-aanvraag-wizard.tsx
+- #590 | **D** | Beheerscherm voor de factuur-postbus zodat kantoor de import zelf instelt | nieuwe wens: artifacts/api-server/src/services/bankafschriftMailboxService.ts
+- #591 | **D** | Voorkom dat afkeurmails stil mislukken bij mailconfiguratieproblemen | nieuwe wens: artifacts/firevault/src/pages/facturen/detail.tsx
+- #592 | **D** | Laat de contractcontrole ook meelopen bij mailbox-geïmporteerde facturen | nieuwe wens: artifacts/api-server/src/services/factuurstroomService.ts
+- #593 | **D** | Geef klanten en monteurs uitleg op hun eigen schermen | nieuwe wens: artifacts/firevault/src
+- #594 | **D** | Voeg uitleg toe aan de overige organisatie- en loonschermen | nieuwe wens: artifacts/firevault/src/pages
+- #595 | **D** | Voorkom dat een scherm zonder hulptekst stilletjes ongemerkt blijft | nieuwe wens: artifacts/firevault/src
+- #601 | **D** | Zet een AI-inkoopadvies met één klik om in een actie (prijs opvragen of bestelling aanmaken) | nieuwe wens: artifacts/api-server/src/services/ai-inkoopadvies.ts
+- #602 | **D** | Markeer per AI-inkoopadvies of het is opgevolgd of afgewezen | nieuwe wens: artifacts/api-server/src/services/ai-inkoopadvies.ts
+- #603 | **D** | Voorkom dat de productiedatabase kolommen mist die de inkoopplanning laten crashen | nieuwe wens: artifacts/api-server/src/services
+- #604 | **C** | Zorg dat een hoofdbeheerder een gebouw echt kan verwijderen (nu altijd geblokkeerd) | gebrek: artifacts/api-server/src/routes/gebouwen.ts; unmonitored: no matching point
+- #631 | **D** | Toon in het beheer-heatmapscherm wie de tracker heeft ingeschakeld en wanneer | nieuwe wens: artifacts/firevault/src
+- #632 | **D** | Voorkom dat heatmap-events naar de server gaan als de instelling tussentijds wordt uitgeschakeld | nieuwe wens: artifacts/firevault/src
+- #633 | **B** | Toon een waarschuwing als een verwerker al meer dan een jaar geen getekende verwerkersovereenkomst heeft | doublure #585: docs/metingen/TAKEN_EXPORT.md
+- #634 | **D** | Verwerkersregister ook als PDF exporteren (naast CSV) | nieuwe wens: artifacts/firevault/src
+- #635 | **D** | Toon aankomende verjaardagen van collega's (komende 7 dagen) als zachte herinnering | nieuwe wens: artifacts/api-server/src/services/moments/verjaardag.ts
+- #636 | **ONBEKEND** | Voorkom dat de felicitatie verdwijnt bij pagina-verversing als de localStorage-sleutel al gezet is maar het dialoog nog niet gesloten was | onbekend: artifacts/firevault/src; sluit met gerichte flowmeting
+- #637 | **D** | Bevestig dat de verjaardag-toggle daadwerkelijk wordt opgeslagen en meteen zichtbaar is voor collega's | nieuwe wens: artifacts/api-server/src/services/moments/verjaardag.ts
+- #638 | **D** | Zorg dat de help-knop ook boven de taakbalk blijft als het scherm heel klein is | nieuwe wens: artifacts/firevault/src.
+- #639 | **D** | Toon jaarbegroting-voortgang live op het Directiekompas-dashboard | nieuwe wens: artifacts/firevault/src/pages/directie/kompas.tsx
+- #640 | **D** | Koppel afgesloten opdrachten automatisch aan de FIE-nacalculatie (leereffect Fase 5) | nieuwe wens: artifacts/api-server/src/services/fie-service.ts
+- #641 | **D** | Valideer dat het FIE-calculatieblok live bijwerkt wanneer een calculatieregel wordt gewijzigd | nieuwe wens: artifacts/api-server/src/services/fie-service.ts
+- #642 | **D** | Toon de monteur een herinneringsbanner als er een open kwartaalcontrole op hem wacht | nieuwe wens: artifacts/api-server/src/index.ts
+- #643 | **D** | Zorg dat verlopen kwartaalcontroles zichtbaar zijn voor de wagenparkbeheerder | nieuwe wens: artifacts/api-server/src/index.ts
+- #644 | **D** | Maak meldingen koppelbaar aan een bestaand onderhoudswerkorder zodat dubbele registratie verdwijnt | nieuwe wens: artifacts/api-server/src/routes
+- #645 | **ONBEKEND** | Voorkom dat een beheerder per ongeluk het eigen wachtwoord leeg maakt bij profielbewerking | onbekend: artifacts/firevault/src/pages/beheer/profielen.tsx; sluit met gerichte flowmeting
+- #646 | **D** | Stel de gebruiker op de hoogte wanneer een beheerder zijn wachtwoord heeft gewijzigd | nieuwe wens: artifacts/api-server/src
+- #647 | **D** | Verstuur offertes digitaal en laat klanten online ondertekenen | nieuwe wens: artifacts/firevault/src/pages/opdrachten/akkoord-kaart.tsx
+- #648 | **D** | Voeg klant-logo, projectfoto en kleurthema toe aan de offerte-cover | nieuwe wens: artifacts/firevault/src
+- #649 | **D** | Laat AI relevante bijlagen voorstellen op basis van spotgegevens | nieuwe wens: artifacts/api-server/src/services/spot-ai.ts
+- #650 | **ONBEKEND** | Prevent approval bypass when policy changes while a request is still open | onbekend: artifacts/api-server/src/services/goedkeuring-engine.ts; sluit met gerichte flowmeting
+- #651 | **D** | Connect approval decisions to HRM and finance documents (facturen, contracten) | nieuwe wens: artifacts/api-server/src/services/goedkeuring-engine.ts
+- #652 | **D** | Make approval request history searchable and exportable for auditors | nieuwe wens: artifacts/api-server/src/services/goedkeuring-engine.ts
+- #655 | **D** | Toon prognose-risico's met uitleg per observatie (impact, advies, betrouwbaarheid) | nieuwe wens: artifacts/api-server/src/lib/fiePrognoseResponse.ts
+- #656 | **D** | Voeg maandelijkse prognose-grafiek toe (begroting vs. verwachte omzet per maand) | nieuwe wens: artifacts/firevault/src/pages/directie/kompas.tsx
+- #657 | **D** | Prognose-signalen automatisch doorsturen als interne notificatie bij kritieke risico's | nieuwe wens: artifacts/api-server/src/lib/signaalActies.ts
+- #658 | **D** | Markeer welke Bedrijfskompas-signalen al zijn besproken in directievergadering | nieuwe wens: artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx
+- #659 | **D** | Exporteer het Bedrijfskompas als PDF voor directierapportage | nieuwe wens: artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx
+- #660 | **D** | Vergelijk KPI's van dit jaar met vorig jaar op het Bedrijfskompas | nieuwe wens: artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx
+- #664 | **D** | Stuur automatisch een herinnering als een verzonden offerte na X dagen niet bekeken is | nieuwe wens: artifacts/firevault/src/pages/offertes/studio.tsx
+- #665 | **D** | Zorg dat een verlopen portaallink automatisch de offerte op 'vervallen' zet | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #666 | **D** | Ondertekeningsbewijs als PDF genereren en bewaren in het dossier | nieuwe wens: artifacts/firevault/src/pages/offertes/print.tsx
+- #667 | **D** | Voorkom dat een gewijzigd huisstijlmodel ongemerkt doorwerkt in al verstuurde offertes | nieuwe wens: artifacts/firevault/src/pages/offertes/studio.tsx
+- #668 | **D** | Breid de template-integratie uit naar de factuurmodule zodra factuur-PDF's worden gegenereerd | nieuwe wens: artifacts/firevault/src/pages/offertes/print.tsx
+- #669 | **D** | Geef een waarschuwing in de Studio als een module actief is maar geen goedgekeurd template heeft | nieuwe wens: artifacts/firevault/src/pages/offertes/studio.tsx
+- #670 | **D** | Stuur automatisch een bericht aan de leidinggevende wanneer een teamlid verlof aanvraagt | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #671 | **D** | Laat leidinggevenden hun teamoverzicht ook op de medewerker-app zien | nieuwe wens: artifacts/monteur-app
+- #672 | **D** | Voorkom dat bezettingsdrempel onbedoeld kan worden omzeild door directe API-aanroepen | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #673 | **D** | Zorg dat een afgewezen inkoopbon zichtbaar terugkeert naar de indiener | nieuwe wens: artifacts/firevault/src/pages
+- #674 | **D** | Voorkom dat een bulkexport naar AccountView stilzwijgend niet-geaccordeerde facturen overslaat | nieuwe wens: artifacts/firevault
+- #675 | **D** | Kwaliteitscheck: bewijsvoering governance-facturatie end-to-end via live API | nieuwe wens: scripts/src/kwaliteitscheck.ts
+- #677 | **D** | Vervanger-instelling ook tonen in het beleidsregeloverzicht (tabelkolom of detailkaart) | nieuwe wens: artifacts/firevault
+- #678 | **D** | Voorkom dat een goedgekeurde weekstaat opnieuw ingediend kan worden | nieuwe wens: scripts/src/bewijs-loon-boekhouder.ts
+- #679 | **D** | Laat zien waarom een dossier 'definitief' werd via de governance-tijdlijn | nieuwe wens: artifacts/firevault
+- #680 | **D** | Zorg dat inspectie-goedkeuringen door de juiste rol worden afgehandeld | nieuwe wens: artifacts/firevault
+- #684 | **D** | Toon in de inkooporder-interface wanneer en naar wie de e-mail is verstuurd | nieuwe wens: artifacts/firevault
+- #685 | **D** | Zorg dat een mislukte leveranciers-e-mail nooit de orderstatus onterecht bijwerkt | nieuwe wens: artifacts/firevault
+- #686 | **D** | Voorkom dat reserveringen meetellen als vrije voorraad bij het picken | nieuwe wens: artifacts/firevault/src/pages/magazijn/picklijsten
+- #687 | **D** | Toon een samenvatting van wat er niet uitgeleverd kon worden na verwerken | nieuwe wens: artifacts/firevault/src/pages/magazijn/picklijsten
+- #692 | **D** | Waarschuw monteurs zichtbaar wanneer ze minder pikken dan gevraagd | nieuwe wens: artifacts/monteur-app/hooks/usePicklijstMelding.ts
+- #693 | **D** | Laat de picklijst-melding ook trillen of pushen op de achtergrond | nieuwe wens: artifacts/monteur-app/hooks/usePicklijstMelding.ts
+- #694 | **D** | Toon de gekoppelde opdracht duidelijk op elke picklijst | nieuwe wens: artifacts/firevault/src/pages/magazijn/picklijsten.tsx
+- #695 | **D** | Laat een gekozen functie ook CAO en verlofsaldo automatisch voorstellen | nieuwe wens: artifacts/firevault
+- #696 | **D** | Voorkom dat de onboarding-cascade stilzwijgend het verkeerde rechten-preset koppelt | nieuwe wens: scripts/src/bewijs-onboarding-context-profiel.ts
+- #703 | **D** | Onthoud pas een categorieregel nadat de AI de keuze heeft bevestigd | nieuwe wens: artifacts/firevault
+- #704 | **D** | Voorkom dat dezelfde automatiseringsregel meerdere keren voor hetzelfde bestand de AI-analyse triggert | nieuwe wens: artifacts/firevault
+- #705 | **D** | Toon AI-voorstellen als amber-markering totdat de beheerder ze bevestigt | nieuwe wens: artifacts/firevault
+- #706 | **D** | Voorkom dat AI invullen een document overschrijft dat al handmatig is ingevuld | nieuwe wens: artifacts/firevault
+- #712 | **D** | Zorg dat een mislukte AccountView-export niet stil verdwijnt | nieuwe wens: artifacts/firevault
+- #713 | **D** | Nachtelijke automatische export van magazijnmutaties inschakelen | nieuwe wens: artifacts/firevault
+- #714 | **D** | Toon het werkelijke journaalpost-bedrag per mutatie in de exportweergave | nieuwe wens: artifacts/firevault
+- #715 | **D** | Zorg dat de Melden-knop ook zichtbaar is op de desktopversie van het klantportaal zonder extra balk | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #722 | **D** | Controleer automatisch of de monteur-app nog inlogt na elke release | nieuwe wens: artifacts/monteur-app
+- #723 | **D** | Herstel automatisch de rate-limiter na de smoketest zodat de limiet niet volraakt | nieuwe wens: scripts/src
+- #726 | **ONBEKEND** | Bevestig dat Jacqueline, Ruben en de beheerder alle drie actief zijn op de VPS-database | onbekend: docs/metingen/TAKEN_EXPORT.md; sluit met gerichte flowmeting/productiequery
+- #733 | **D** | Voeg een smoketest toe die de API bereikbaar is na de post-merge deploy | nieuwe wens: scripts/post-merge.sh
+- #737 | **D** | Voorkom dat gebruikers zonder werkende mail permanent vastzitten bij wachtwoord-reset | nieuwe wens: artifacts/firevault/src/pages/auth/wachtwoord-reset
+- #746 | **ONBEKEND** | Vervang ook de isBeheerder-rolcheck in gebouwen/index.tsx door een bevoegdheidcheck | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #747 | **ONBEKEND** | Zorg dat archiveren/terugplaatsen gebouwen alleen voor gebruikers met volledig beheer werkt | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #749 | **ONBEKEND** | Zorg dat een vergrendeld account ook achter de gate uitleg krijgt en niet vastloopt | onbekend: artifacts/firevault/src/i18n/vertalingen.ts; sluit met gerichte flowmeting
+- #750 | **D** | Bevestig dat de wachtwoord-gate ook correct werkt in de monteur-app (mobiel) | nieuwe wens: artifacts/monteur-app
+- #755 | **D** | Bewijs dat de correctie-leerloop echt betere classificaties geeft na een handmatige correctie | nieuwe wens: artifacts/api-server
+- #756 | **D** | Document Studio completeren: beschrijving-veld toevoegen zodat AI meer context krijgt per documenttype | nieuwe wens: artifacts/firevault
+- #757 | **D** | Inbox-bewijs zichtbaar maken: laat beheerders zien welke AI-stappen welke uitkomst gaven | nieuwe wens: artifacts/api-server
+- #759 | **D** | Laat beheerders direct vanuit de inbox navigeren naar de aangemaakte offerte | nieuwe wens: artifacts/firevault
+- #764 | **D** | Controleer automatisch dat elke nieuwe pagina volledig scrollbaar blijft | nieuwe wens: artifacts/firevault
+- #765 | **D** | Zorg dat de calculatie-detailpagina ook volledig scrollbaar is op kleinere schermen | nieuwe wens: artifacts/firevault
+- #766 | **D** | Bevestig dat GitHub Actions automatisch deployt na elke taakmerge | nieuwe wens: .github/workflows
+- #767 | **D** | Stel smoketests in zodat een slechte deploy direct gemeld wordt | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #768 | **D** | Bevestig dat de 15-check smoketest volledig slaagt na de volgende productiedeploy | nieuwe wens: lib/db/scripts/smoketest-account.mjs
+- #769 | **D** | Verifieer dat de pre-deployment env-check alle ontbrekende vars correct blokkeert op de VPS | nieuwe wens: deploy/productie-env-checklist.md
+- #771 | **D** | Voorkom dat een nieuwe DB-kolom een login-uitval veroorzaakt bij de volgende deploy | nieuwe wens: lib/db/scripts/migrate.mjs
+- #774 | **ONBEKEND** | Heranalyseer-dossier werkt pas volledig als PDF-extractie is aangekoppeld (nu placeholder) | onbekend: artifacts/api-server; sluit met gerichte flowmeting
+- #777 | **D** | Hervat een lopende onboarding vanuit de ZZP- en uitzend-stroom na een onderbreking | nieuwe wens: artifacts/api-server
+- #778 | **D** | Zorg dat onboarding-taken niet dubbel worden aangemaakt bij hervatten van een wizard | nieuwe wens: artifacts/api-server
+- #779 | **D** | Stap terugklikken in de stepper om eerder ingevulde stappen te bewerken | nieuwe wens: artifacts/firevault
+- #786 | **A** | Zorg dat de accountvergrendeling (5 mislukte pogingen) ook automatisch bewezen blijft | bewezen: artifacts/api-server/src/routes/auth.ts
+- #790 | **D** | Controleer na de eerstvolgende productiedeploy dat onboarden echt werkt | nieuwe wens: artifacts/api-server
+- #794 | **D** | Voorkom dat dezelfde factuurmail twee keer als factuur wordt aangemaakt | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #795 | **ONBEKEND** | Maak de factuurverwerking bestand tegen halverwege-fouten (geen halve facturen) | onbekend: artifacts/api-server; sluit met gerichte flowmeting
+- #796 | **B** | Voorkom dubbele facturen ook bij handmatige upload en de oude mailbox-import | doublure #794: docs/metingen/TAKEN_EXPORT.md
+- #800 | **C** | Maak de leverancier-koppeling expliciet zodat naamswijzigingen de inkoperroute niet breken | gebrek: artifacts/api-server/src/routes/facturen.ts; covered: LEVERANCIER_01/punt 2
+- #801 | **D** | Laat een uitrol automatisch stoppen zodra de database afwijkt van de code | nieuwe wens: lib/db/scripts/schema-healthcheck.mjs
+- #805 | **D** | Fix de typecheck-fout in scripts zodat controles weer betrouwbaar draaien | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #807 | **D** | Splits de urenverhouding ook uit per werkmaatschappij | nieuwe wens: lib/db
+- #811 | **D** | Voorkom onnodige serverbelasting als de inbox in een achtergrond-tabblad open blijft staan | nieuwe wens: artifacts/firevault
+- #812 | **D** | Waarschuw de collega zelf zodra zijn Microsoft-koppeling stilletjes stopt te werken | nieuwe wens: artifacts/api-server
+- #819 | **D** | Stuur een signaal als een nieuw account na 7 dagen nog geen medewerkerdossier heeft | nieuwe wens: artifacts/api-server
+- #820 | **D** | Voer de nulmeting daadwerkelijk uit zodra René de testdocumenten aanlevert | nieuwe wens: docs/nulmeting-documentherkenning.md
+- #821 | **D** | Koppel actieve verzekeringspolissen aan het AK-dashboard zodat signalen de werkelijke premie vermelden | nieuwe wens: artifacts/firevault
+- #822 | **D** | Toon het AK-percentage ook per werkmaatschappij zodat directie ziet waar kosten afwijken | nieuwe wens: artifacts/firevault
+- #823 | **D** | Bewijs dat het AK-dashboard correct waarschuwt als een boekjaar de OHW-mutatie mist | nieuwe wens: artifacts/firevault
+- #827 | **D** | Laat het periodieke klant-afschermingsbewijs automatisch meedraaien | nieuwe wens: docs/avg-afscherming-beleid.md
+- #828 | **B** | Fix scripts-typecheckfouten zodat de kwaliteitscheck weer betrouwbaar groen kan worden | doublure #805: docs/metingen/TAKEN_EXPORT.md
+- #829 | **C** | Scherm persoonlijke HRM- en salarisbestanden af zodat niet elke medewerker ze kan openen | gebrek: artifacts/api-server/src/routes/hrm.ts; covered: LOON_01/punt 7
+- #830 | **D** | Controleer of de laatste revert-commit nog meer bestanden onbedoeld heeft gemangeld | nieuwe wens: docs/status
+- #831 | **C** | Verberg het Workflow-menu voor medewerkers zonder organisatie-recht | gebrek: artifacts/firevault/src/layouts/beheerder-layout.tsx; unmonitored: no matching point
+- #832 | **ONBEKEND** | Sluit de resterende open leesroutes uit de KLANT_01-meting voor medewerkers | onbekend: artifacts/firevault/src/routes/connect-routes.tsx; sluit met gerichte flowmeting
+- #833 | **ONBEKEND** | Voorkom een servercrash (500) bij een lege wijzigingsaanvraag op workflow-lanes | onbekend: artifacts/firevault/src/routes/connect-routes.tsx; sluit met gerichte flowmeting
+- #837 | **D** | Maak echt controleerbaar dat verzonden mails ook aankomen in de postbus | nieuwe wens: artifacts/firevault/src
+- #841 | **D** | Stuur René een melding wanneer de noodfix-bypass wordt gebruikt | nieuwe wens: artifacts/firevault/src
+- #845 | **ONBEKEND** | Bewaar het afstootadvies zodat het niet verdwijnt bij het verlaten van de pagina | onbekend: artifacts/firevault/src; sluit met gerichte flowmeting
+- #846 | **D** | Toon het afstootadvies ook op de voertuig-detailpagina | nieuwe wens: artifacts/firevault/src
+- #847 | **D** | Krijg vanzelf een seintje in de werkbak bij opvallend privégebruik van een bus | nieuwe wens: artifacts/firevault/src
+- #850 | **D** | Stuur Android-monteurs automatisch naar de juiste store op de /app-pagina | nieuwe wens: artifacts/firevault/src
+- #853 | **ONBEKEND** | Voorkom dat de monteur-app stilletjes naar een dood domein wijst na een omgevingswissel | onbekend: artifacts/monteur-app; sluit met gerichte flowmeting
+- #857 | **D** | Vang nieuwe lees-routes die per ongeluk bedragen lekken automatisch af | nieuwe wens: artifacts/firevault/src/routes/connect-routes.tsx
+- #860 | **D** | Stuur de melder een pushmelding zodra zijn meer-/minderwerkmelding is beoordeeld | nieuwe wens: artifacts/firevault/src
+- #861 | **D** | Zet een doorbelaste melding met één klik om in een regel of offerte voor de klant | nieuwe wens: artifacts/firevault/src
+- #862 | **ONBEKEND** | Tel ook goedgekeurde retourscans mee in de toebehoren-kostenpost | onbekend: artifacts/firevault/src; sluit met gerichte flowmeting
+- #863 | **ONBEKEND** | Markeer hoeveelheden zonder inkoopprijs ook op het scherm zelf | onbekend: artifacts/firevault/src; sluit met gerichte flowmeting
+- #867 | **C** | Geef ook bij het verlagen van een urenregel het overwerkslot-plafond terug | gebrek: scripts/src/bewijs-uren01.ts; unmonitored: no matching point
+- #874 | **D** | Vul de artikelenbibliotheek zodat adviesrapport-punten ook een materiaalprijs krijgen | nieuwe wens: artifacts/firevault/src/catalog/material
+- #875 | **D** | Voeg de drie ontbrekende normtijden toe die adviesrapporten nu op 'niet te beoordelen' laten stranden | nieuwe wens: lib/calculatie/src/kern.test.ts
+- #877 | **D** | Laat ook de andere bewijsscripts automatisch meedraaien als bewaking | nieuwe wens: scripts/src
+- #880 | **ONBEKEND** | Vul de functie-eisvelden zodat de cv-toetsing echt kan werken | onbekend: docs/metingen/WERVING_01_functievelden.md; sluit met gerichte flowmeting
+- #881 | **D** | Koppel een aangenomen kandidaat direct door naar de onboarding | nieuwe wens: artifacts/firevault/src
+- #882 | **D** | Waarschuw op tijd voordat sollicitantengegevens automatisch worden gewist | nieuwe wens: artifacts/firevault/src
+- #888 | **D** | Vertel monteurs wat er nieuw is na een app-update | nieuwe wens: artifacts/monteur-app
+- #893 | **D** | Controleer automatisch dat de doorstart-knop bij een bestaand e-mailadres blijft werken | nieuwe wens: artifacts/firevault
+- #896 | **D** | Toon in de functiestap de gecombineerde effectieve rechten (account + functie) | nieuwe wens: artifacts/firevault
+- #897 | **D** | Toon de behandelaar direct de link naar de concept-inkoopbon na goedkeuren | nieuwe wens: artifacts/firevault
+- #898 | **D** | Bewijs dat de bon-aanmaak nooit een goedkeuring laat doorgaan maar de bon stil laat mislukken | nieuwe wens: artifacts/firevault
+- #899 | **D** | Laat de behandelaar de hoeveelheid en eenheid aanpassen voordat de bon verstuurd wordt | nieuwe wens: artifacts/firevault
+- #903 | **ONBEKEND** | Bewijs dat ook de handmatige inkoopbon-aanmaak zonder akkoord geblokkeerd wordt | onbekend: artifacts/firevault; sluit met gerichte flowmeting
+- #904 | **D** | Koppel ook per e-mail binnengekomen opdrachtbevestigingen met één klik aan de opdracht | nieuwe wens: artifacts/firevault
+- #905 | **D** | Laat AI automatisch de juiste opdracht voorstellen bij een herkende opdrachtbevestiging | nieuwe wens: artifacts/firevault
+- #906 | **D** | Bevestig dat de klik-flow van upload tot vastgelegd akkoord in de browser blijft werken | nieuwe wens: scripts/e2e/web-keten-1-5.spec.ts
+- #907 | **D** | Waarschuw de monteur al vóór het uren schrijven als de opdracht nog geen akkoord heeft | nieuwe wens: artifacts/monteur-app/screens/uitvoering/layout.tsx
+- #912 | **ONBEKEND** | Laat ook de support-gegevens en schakelaars op de infopagina melden of opslaan lukte | onbekend: artifacts/firevault/src/pages/info.tsx; sluit met gerichte flowmeting
+- #916 | **ONBEKEND** | Stuur de klant een bevestigingsmail na het ondertekenen van de offerte | onbekend: scripts/e2e/web-keten-1-5.spec.ts; sluit met gerichte flowmeting
+- #917 | **D** | Bewijs dat de klantportaal-ondertekening ook werkt op mobiele schermen | nieuwe wens: scripts/e2e/web-keten-1-5.spec.ts
+- #918 | **D** | Zaai een standaard goedkeuringsregel voor inkoopfacturen zodat het label direct werkt | nieuwe wens: artifacts/firevault
+- #919 | **D** | Bewijs automatisch dat het goedkeuringslabel verschijnt en verdwijnt op de juiste schermen | nieuwe wens: artifacts/firevault
+- #923 | **D** | Zorg dat nieuwe teamleden de pre-push hook automatisch krijgen zonder install.sh te draaien | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #924 | **D** | Blokkeer ook hernoemde en gewijzigde migraties in de CI-pipeline | nieuwe wens: .github/workflows
+- #925 | **D** | Laat migrate.mjs hard stoppen bij een checksum-afwijking in plaats van waarschuwen | nieuwe wens: lib/db/scripts/migrate.mjs
+- #928 | **D** | Vang ook klantrol-verwijzingen in gedeelde lib-pakketten op | nieuwe wens: docs/antwoorden/CI_DEPLOY_POORT.md
+- #929 | **D** | Zorg dat de klantloos-controle ook in de CI-pipeline draait op pull requests | nieuwe wens: artifacts/api-server/scripts/check-testmarker.sh
+- #932 | **D** | Zorg dat rapport-mails nooit stilzwijgend wegvallen als het CRM-contact geen e-mail heeft ingevuld | nieuwe wens: artifacts/firevault/src/server/routes
+- #933 | **D** | Toon in het beheer-overzicht welke CRM-contacten de rapport-melding hebben ontvangen | nieuwe wens: artifacts/firevault/src/server/routes
+- #934 | **D** | Voorkom ook dubbele reactietermijn-meldingen wanneer de termijn verstrijkt | nieuwe wens: artifacts/firevault/src/server/routes
+- #937 | **B** | Zorg dat de klantloos-check ook in de CI-pijplijn draait (geen handmatige trigger vereist) | doublure #929: docs/metingen/TAKEN_EXPORT.md
+- #939 | **D** | Vang ook typefouten in de web-app (firevault) direct na de merge | nieuwe wens: artifacts/firevault
+- #940 | **D** | Blokkeer dubbele functiedeclaraties in routebestanden automatisch bij de merge | nieuwe wens: scripts/src/check-dubbele-routes.ts
+- #947 | **D** | Bewijs dat regiewerk in het uitvoeringsscherm echt opgeslagen wordt | nieuwe wens: artifacts/firevault/src
+- #948 | **D** | Toon de regiebegroting-samenvatting bovenaan de Regie-tab als waarschuwing bij budgetoverschrijding | nieuwe wens: artifacts/firevault/src
+- #949 | **D** | Voorkom dat iemand zonder offertes-recht de Stappen-tab toch opent via een directe URL | nieuwe wens: artifacts/firevault/src
+- #950 | **D** | Bewaak dat de uitvoering-overzichtpagina zelf nooit leeg blijft hangen voor een geldige gebruiker | nieuwe wens: artifacts/firevault/src
+- #951 | **D** | Bevestig dat een gekoppeld opdracht-document niet zichtbaar is voor wie de bibliotheek niet mag zien | nieuwe wens: artifacts/firevault/src/server/routes
+- #952 | **D** | Laat een monteur ook een al bestaand bibliotheek-document aan de opdracht koppelen zonder opnieuw te uploaden | nieuwe wens: artifacts/firevault/src/server/routes
+- #953 | **D** | Toon gekoppelde opdracht-documenten ook in de monteur-app zodat de monteur ze onderweg kan inzien | nieuwe wens: artifacts/monteur-app
+- #955 | **D** | Waarschuw automatisch voordat de GitHub-push-token verloopt | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #956 | **D** | Bewijs automatisch dat de nieuwe knoppenrij zichtbaar en klikbaar is op de drie pagina's | nieuwe wens: scripts/e2e
+- #957 | **D** | Zorg dat het ⋯-menu op de offerte-studio ook 'Versie vergelijken' bevat | nieuwe wens: artifacts/firevault/src
+- #961 | **D** | Toon hoeveel e-mailmeldingen uitgeschakeld zijn ook in de mobiele app | nieuwe wens: artifacts/firevault
+- #962 | **D** | Bewijs dat reactietermijn-meldingen ook de e-mailvoorkeur respecteren | nieuwe wens: artifacts/firevault/src/server/routes
+- #963 | **D** | Zorg dat een kapotte e-mailvoorkeur-query nooit een planning-run laat vastlopen | nieuwe wens: artifacts/firevault/src/server/routes
+- #972 | **D** | Waarschuw beheerders als de mail-wachtrij te lang stil staat | nieuwe wens: artifacts/firevault/src/server/routes
+- #973 | **D** | Bevestig dat een vastgelopen mail-item na herstel echt opnieuw te versturen is | nieuwe wens: artifacts/firevault/src/server/routes
+- #974 | **D** | Laat het PIM-advies ook de opdrachtgever-voorkeuren uit de Knowledge Base meewegen | nieuwe wens: artifacts/firevault/src
+- #975 | **D** | Bewijs dat het PIM-advies echt FPS-normen citeert wanneer de Knowledge Base gevuld is | nieuwe wens: artifacts/firevault/src
+- #976 | **D** | Toon vervolgvragen in het portaal als echte thread onder de oorspronkelijke vraag | nieuwe wens: artifacts/firevault/src/server/routes/offertes.ts
+- #977 | **D** | Laat de klant automatisch een seintje krijgen zodra zijn vraag beantwoord is | nieuwe wens: artifacts/firevault/src/server/routes
+- #978 | **D** | Toon in de app een melding 'Nieuwe versie beschikbaar — vernieuwen' | nieuwe wens: artifacts/monteur-app
+- #983 | **D** | Voorkom dat de monteur-app na een domeinwissel stilzwijgend onbereikbaar wordt | nieuwe wens: artifacts/monteur-app
+- #990 | **D** | Laat de escalatie-bewijscontrole automatisch meedraaien als vaste kwaliteitscheck | nieuwe wens: artifacts/firevault
+- #991 | **D** | Voorkom dat escalatiemails ongemerkt blijven wachten in de mail-wachtrij | nieuwe wens: artifacts/firevault/src/server/routes
+- #992 | **D** | Voorkom dat toekomstige AI-aanroepen ongemerkt buiten de gateway om gaan | nieuwe wens: docs/antwoorden/ASSISTENT_01.md
+- #993 | **D** | Laat verwerkte aanvragen ook op de inbox-statistieken zichtbaar terugkomen in het dashboard | nieuwe wens: artifacts/firevault/src/server/routes
+- #996 | **D** | Voorkom ook stille mislukking als deploy-faalmelding niet verstuurd kan worden | nieuwe wens: scripts/deploy
+- #997 | **ONBEKEND** | Hernoem de 'klant'-weergavemodus in calculatie zodat de term niet meer in broncode staat | onbekend: docs/audit-module-integratie-2026-07-02.md; sluit met gerichte flowmeting
+- #998 | **D** | Pas dezelfde veldmedewerkers-beveiliging toe op Projectaanpak-pagina's | nieuwe wens: artifacts/firevault/src
+- #999 | **D** | Deel de UITVOERENDE_FUNCTIES-constante tussen layout en routeguard zodat ze niet uit de pas lopen | nieuwe wens: artifacts/firevault/src
+- #1000 | **B** | Vraag om bevestiging voordat een gewijzigd profiel wordt teruggezet | doublure #27: docs/metingen/TAKEN_EXPORT.md
+- #1001 | **B** | Laat gebruikers meerdere overgenomen koppelingen in één keer terugdraaien | doublure #75: docs/metingen/TAKEN_EXPORT.md
+- #1002 | **B** | Markeer aangepaste profielkoppelingen ook in het bewerkscherm | doublure #38: docs/metingen/TAKEN_EXPORT.md
+- #1003 | **D** | Toon de definitief meegenomen mutaties ook in het verzend-overzicht | nieuwe wens: artifacts/firevault/src/pages/scab-mail/index.tsx
+- #1004 | **D** | Laat de server de mailtekst hergenereren als de mutatieselectie wordt opgeslagen | nieuwe wens: artifacts/api-server/src/routes/scab-mail.ts
+- #1005 | **D** | Markeer al-verwerkte mutaties als niet meer selecteerbaar voor nieuwe SCAB-mails | nieuwe wens: artifacts/api-server/src/routes/scab-mail.ts
+- #1006 | **D** | Bevestig dat een antwoord echt aankomt zodra Mail.Send-consent beschikbaar is | nieuwe wens: artifacts/api-server/src/services/email-verbindingstest.test.ts
+- #1007 | **D** | Waarschuw gebruikers proactief als hun Microsoft-koppeling alleen lezen maar niet versturen kan | nieuwe wens: artifacts/api-server/src/services/email.ts
+- #1009 | **ONBEKEND** | Voorkom dat de AI ook foto-analyse voor andere formulieren handmatige invoer overschrijft | onbekend: artifacts/api-server/src/routes/ai.ts; sluit met gerichte flowmeting
+- #1010 | **ONBEKEND** | Vang ook het geval dat de server een niet-JSON AI-antwoord teruggeeft bij fotoherkenning | onbekend: artifacts/api-server/src/routes/ai.ts; sluit met gerichte flowmeting
+- #1011 | **D** | Laat ook de opdrachtbevestiging en andere klantmails de eigen huisstijl van de werkmaatschappij dragen | nieuwe wens: artifacts/api-server/src/services/email.ts
+- #1012 | **D** | Voorkom dat de huisstijl-fallback stilletjes breekt: bewijs-script vast in CI meedraaien | nieuwe wens: artifacts/api-server/src/services/email.ts
+- #1015 | **ONBEKEND** | Zorg dat een bestelbon altijd de juiste werkmaatschappij toont, ook voor beheerders die meerdere werkmaatschappijen beheren | onbekend: artifacts/api-server/src/routes/bestelbonnen.ts; sluit met gerichte flowmeting
+- #1016 | **C** | Voorkom dat andere leveranciersmails nog 'FPS Brandpreventie' tonen voor andere werkmaatschappijen | gebrek: artifacts/api-server/src/services/email.ts; unmonitored: no matching point
+- #1019 | **D** | Toon ook het logo en volledige huisstijl op de mandagstaat-PDF, niet alleen de kleur | nieuwe wens: artifacts/api-server/src/lib/mandagstaat.ts
+- #1020 | **D** | Geef bestelbonnen een eigen afdrukpagina zodat je ze als PDF kunt opslaan | nieuwe wens: artifacts/api-server/src/routes/bestelbonnen.ts
+- #1021 | **D** | Zorg dat ook een verlopen EXPO_TOKEN op tijd een waarschuwing geeft, niet pas bij de volgende deploy | nieuwe wens: artifacts/api-server/src
+- #1026 | **ONBEKEND** | Voorkom dat toekomstige nieuwe schermen alsnog gegevens van afgeschermde oud-medewerkers lekken | onbekend: docs/avg-afscherming-beleid.md; sluit met gerichte flowmeting
+- #1031 | **D** | Laat de campagnepagina bounces en de autostop-reden tonen | nieuwe wens: artifacts/api-server/src/services/campagneVerzender.ts
+- #1033 | **D** | Laat beheerders de werkmaatschappij-koppeling instellen vanuit de campagnepagina | nieuwe wens: lib/db/src/migrations/0084_marketing-campagne-werkgever.sql
+- #1034 | **D** | Zorg dat ook de offerte-mails de eigen huisstijl van de werkmaatschappij dragen | nieuwe wens: artifacts/api-server/src/routes/offertes.ts
+- #1036 | **D** | Stop een campagne automatisch als te veel adressen onbestelbaar blijken | nieuwe wens: artifacts/api-server/src/services/campagneVerzender.ts
+- #1039 | **ONBEKEND** | Voorkom dat app-schermen bij een koude deep-link stilletjes op het menu belanden | onbekend: artifacts/monteur-app; sluit met gerichte flowmeting
+- #1040 | **D** | Stuur ook een directe app-link per WhatsApp of SMS mee bij de uitnodiging | nieuwe wens: artifacts/api-server/src/routes
+- #1041 | **D** | Zorg dat de QR-code op de activatiepagina ook werkt als de sessie al verlopen is | nieuwe wens: artifacts/firevault/src/pages
+- #1049 | **D** | Geef Werkvoorbereider ook leestoegang tot de merkenkast voor offertes en brieven | nieuwe wens: artifacts/api-server/src/lib/functie-rechten-autorisatie.ts
+- #1050 | **ONBEKEND** | Zorg dat de Social/Merk-modulenamen ook in de tabel 'Mijn toegang' correct verschijnen | onbekend: artifacts/api-server/src/lib/functie-rechten-autorisatie.ts; sluit met gerichte flowmeting
+- #1051 | **D** | Bewijsdocument vastleggen: teller ingesteld vóór eerste Connect-factuur | nieuwe wens: artifacts/api-server/src
+- #1052 | **ONBEKEND** | Zorg dat ook productiefacturen correct doorlopend nummeren na de eerste Connect-factuur | onbekend: artifacts/api-server/src/routes/facturen.ts; sluit met gerichte flowmeting
+- #1056 | **ONBEKEND** | Bewijs dat de werk-inbox-maillijst ook geen mails toont uit mailboxen waar je geen toegang toe hebt | onbekend: artifacts/api-server/src/routes/werk-inbox.ts; sluit met gerichte flowmeting
+- #1057 | **ONBEKEND** | Zorg dat de werk-inbox-badge direct verdwijnt na het afhandelen van de laatste mail | onbekend: artifacts/firevault/src/pages/werk-inbox/index.tsx; sluit met gerichte flowmeting
+- #1060 | **D** | Wijs deadline-werkbak-items toe aan de verantwoordelijke HR-medewerker per werkmaatschappij | nieuwe wens: artifacts/api-server/src/routes/contract-bewaking.ts
+- #1065 | **D** | Toon inleentermijn-afloop ook in de monteur-app zodat veldmedewerkers hun deadline zien | nieuwe wens: artifacts/api-server/src/routes/contract-bewaking.ts
+- #1066 | **ONBEKEND** | Bevestig dat inleentermijn-meldingen niet dubbel verschijnen naast contract-signaleringen | onbekend: artifacts/api-server/src/routes/contract-bewaking.ts; sluit met gerichte flowmeting
+- #1067 | **ONBEKEND** | Verberg ook actiefknoppen op de klaar-voor-export en signalen-pagina's voor alleen-lezen gebruikers | onbekend: artifacts/firevault/src/pages; sluit met gerichte flowmeting
+- #1068 | **ONBEKEND** | Zorg dat een alleen-lezen boekhouder nooit per ongeluk een bewerken-dialoog kan openen | onbekend: artifacts/firevault/src/pages; sluit met gerichte flowmeting
+- #1069 | **A** | Voorkom dat een factuur zonder toegewezen inkoper door willekeurig financieel-personeel bevestigd kan worden | bewezen: artifacts/api-server/src/routes/facturen.ts
+- #1070 | **D** | Laat het inkoper/beoordelaar-bewijs automatisch draaien zodat de sessieveld-bug nooit meer stilletjes terugkomt | nieuwe wens: artifacts/api-server/src/lib/functie-rechten-autorisatie.test.ts
+- #1071 | **ONBEKEND** | Voorkom dat ook sessie.rol verkeerd wordt uitgelezen buiten de auth-middleware | onbekend: artifacts/api-server/src/lib/functie-rechten-autorisatie.ts; sluit met gerichte flowmeting
+- #1072 | **D** | Catch misspelled session field lookups before they reach production | nieuwe wens: artifacts/api-server/src
+- #1075 | **ONBEKEND** | Zorg dat ook Social-only en Merk-only gebruikers hun hoofdstuk direct zien | onbekend: scripts/e2e/web-social-rechten.spec.ts; sluit met gerichte flowmeting
+- #1076 | **ONBEKEND** | Bevestig dat de campagnekoppeling ook server-side geweigerd wordt voor gebruikers zonder marketing-recht | onbekend: artifacts/api-server/src/__tests__/social-campagne-bevoegdheid.test.ts; sluit met gerichte flowmeting
+- #1077 | **A** | Vang een ontbrekende aanzegtermijn-melding op voordat die door een refactor verdwijnt | bewezen: artifacts/api-server/src/__tests__/contract-bewaking-datums.test.ts
+- #1078 | **D** | Vang ook type-fouten in de bewakingslogica vóór ze de pipeline bereiken | nieuwe wens: artifacts/api-server/src/lib/bewakingsloop.ts
+- #1085 | **D** | Voeg het rekenkern-offertebewijs toe aan de CI-pipeline zodat regressies direct worden gevangen | nieuwe wens: artifacts/api-server/src/scripts/verificatie-offerte-rekenkern.ts
+- #1086 | **D** | Voorkom dat een offerte stil een verkeerd totaal krijgt bij calculaties met bouwplaatskosten-regels | nieuwe wens: artifacts/api-server/src/routes/offertes.ts
+- #1093 | **A** | Vang het afstootbeleid ook op in de geautomatiseerde kwaliteitscontrole | bewezen: artifacts/api-server/src/lib/wagenparkAfstootBeleid.test.ts
+- #1095 | **D** | Zorg dat de smoketest ook de verkeerde commit-hash herkent (niet alleen dat er een hash is) | nieuwe wens: artifacts/api-server/src/instrument.ts
+- #1096 | **D** | Maak /api/versie controleerbaar zonder git op de server (geef ook de volledige SHA terug) | nieuwe wens: artifacts/api-server/src/instrument.ts
+- #1098 | **D** | Voorkom dat andere sabotage-patronen (bewuste syntax-fouten, exit(1)-calls in server-start) de deploy halen | nieuwe wens: deploy/Dockerfile.api
+- #1099 | **D** | Zorg dat de noodfix-bypass de testmarker-controle nooit kan omzeilen (CI-level hardening) | nieuwe wens: deploy/RELEASE_PRODUCTION_CHECKLIST.md
+- #1116 | **D** | Geef een seintje als een AccountView-boeking langer dan 10 minuten vastzit | nieuwe wens: artifacts/api-server/src/services/accountviewExportService.ts
+- #1117 | **A** | Zorg dat een herexport met identieke inhoud nooit dubbel in AccountView belandt | bewezen: artifacts/api-server/src/scripts/verificatie-concurrente-accountview-boeking.ts
+- #1120 | **D** | Voorkom dat de offerte-mail ook de verkeerde BV-huisstijl meestuurt | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #1121 | **B** | Catch missing BV on a quote before the PDF renderer gets a blank logo | doublure #1120: docs/metingen/TAKEN_EXPORT.md
+- #1125 | **D** | Blokkeer nachtdienst en dagmaximum voor minderjarige medewerkers in de planning | nieuwe wens: artifacts/api-server/src/routes/planning-module.ts
+- #1126 | **D** | Toon jonge werknemers en hun wettelijke limieten in het HRM-overzicht | nieuwe wens: artifacts/firevault/src/pages
+- #1127 | **D** | Meld leidinggevende automatisch bij inplanning van een minderjarige | nieuwe wens: artifacts/api-server/src/lib/planningMeldingenService.ts
+- #1131 | **D** | Camera-telling ook in de mobiele monteur-app kunnen gebruiken | nieuwe wens: artifacts/monteur-app
+- #1132 | **D** | Toon de bewijsfoto met kader ook op de print/PDF van een vastgestelde telling | nieuwe wens: artifacts/api-server/src/routes/metingen-bewaking.ts
+- #1133 | **D** | Voorkom dat een grote artikellijst de AI-telling stilzwijgend beperkt | nieuwe wens: artifacts/api-server/src/routes/metingen-bewaking.ts
+- #1140 | **D** | Medewerkers zonder startdatum kunnen niet automatisch aangevuld worden — toon ze apart | nieuwe wens: artifacts/api-server/src/routes/hrm.ts
+- #1141 | **C** | Voorkom dat een aangevuld oproep- of stagecontract zonder einddatum nooit bewaakt wordt | gebrek: artifacts/api-server/src/lib/bewakingsloop.ts; unmonitored: no matching point
+- #1142 | **D** | Houd bij hoeveel medewerkers via de aanvulling zijn opgepakt (auditspoor) | nieuwe wens: artifacts/api-server/src/routes/hrm.ts
+- #1148 | **ONBEKEND** | Zorg dat 'Akkoord en begrepen' in het startmenu dezelfde toolboxflow gebruikt als de popup | onbekend: artifacts/firevault/src/layouts/beheerder-layout.tsx; sluit met gerichte flowmeting
+- #1149 | **D** | Voorkom dat een kantooraccount de verplichte toolbox stiekem kan afronden (autorisatietest) | nieuwe wens: artifacts/firevault/src/lib/paneel-geschiktheid.ts
+- #1150 | **D** | Toon een subtiel 'auto-opgeslagen' signaal in de wizard zodat invoerders weten dat hun werk veilig is | nieuwe wens: artifacts/firevault/src/pages
+- #1151 | **D** | Bewaar ook de ZZP- en inhuurformulieren tussentijds zodat gegevens niet verloren gaan bij sluiten | nieuwe wens: artifacts/firevault/src/pages
+- #1160 | **D** | Zorg dat de buitendienst-functietitels op web en monteur-app nooit uit elkaar lopen | nieuwe wens: artifacts/api-server/src/lib/gebruiker-aanmaken.ts
+- #1161 | **C** | Voorkom dat offline foto's stil verdwijnen als IndexedDB vol raakt op het apparaat | gebrek: artifacts/monteur-app/lib/bestanden.ts; unmonitored: no matching point
+- #1162 | **C** | Ruim IndexedDB-blobs automatisch op zodra de sync slaagt, zodat apparaatopslag niet onbeperkt groeit | gebrek: artifacts/monteur-app/lib/bestanden.ts; unmonitored: no matching point
+- #1163 | **D** | Voorkom dat de impersonatie-weergave afwijkt wanneer een teamlid een nieuwe functietitel krijgt | nieuwe wens: artifacts/api-server/src/lib/gebruiker-aanmaken.ts
+- #1164 | **D** | Zorg dat een omgeving-mismatch (monteur in web, kantoor in app) zichtbaar wordt in de CI | nieuwe wens: artifacts/monteur-app
+- #1169 | **D** | Voorkom dat de directe contractbesluitknop ongemerkt verdwijnt | nieuwe wens: artifacts/firevault
+- #1172 | **A** | Blijf voorkomen dat AccountView-facturen zonder BTW-code toch worden geaccordeerd | bewezen: artifacts/api-server/src/services/factuurWerkmaatschappij.ts
+- #1173 | **D** | Maak de monteur-webapp weer testbaar zonder vastlopende login | nieuwe wens: artifacts/monteur-app
+- #1178 | **D** | Voorkom dat andere keuzedialogen bij openen stil verdwijnen | nieuwe wens: artifacts/firevault
+- #1181 | **D** | Laat beheerders de uitgevende BV van historische verkoopfacturen veilig herstellen | nieuwe wens: artifacts/api-server/src/services/factuurWerkmaatschappij.ts
+- #1185 | **D** | Maak 13 oude registeroordelen weer volledig herleidbaar | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #1187 | **D** | Voorkom dat contextbestanden na een opslagwijziging weer uitlekken | nieuwe wens: docs/metingen/TAKEN_EXPORT.md
+- #1192 | **D** | Laat de productiesmoketest na elke deploy echt draaien | nieuwe wens: deploy/RELEASE_PRODUCTION_CHECKLIST.md
+
+## Aantallen
+
+A 21; B 15; C 11; D 357; E 1; **ONBEKEND 74**; **totaal 479**.
+C-dekking: 2 registerpunten; 9 onbewaakte gaten.
+
+## Tien zwaarst wegende C-taken
+
+1. #829 — privacy HRM/salaris — covered: LOON_01/punt 7.
+2. #1161 — verlies offline foto’s — unmonitored: no matching point.
+3. #800 — financiële inkoperroute — covered: LEVERANCIER_01/punt 2.
+4. #867 — uren/overwerkslot — unmonitored: no matching point.
+5. #1016 — verkeerde BV-branding — unmonitored: no matching point.
+6. #472 — zwakke wachtwoorden — unmonitored: no matching point.
+7. #1141 — contractbewaking — unmonitored: no matching point.
+8. #403 — stale dist-code — unmonitored: no matching point.
+9. #1162 — onbegrensde apparaatopslag — unmonitored: no matching point.
+10. #831 — menu zonder organisatierecht — unmonitored: no matching point.
+
+## Controleverklaring
+
+- Alleen dit meetdocument is gewijzigd; taakstatussen, productcode en database-inhoud zijn niet gewijzigd.
+- Elke A noemt codebewijs; elke B een voorstelnummer; elke C codegebrek en registerdekking; elke ONBEKEND een sluitmeting.
