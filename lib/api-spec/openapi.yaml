@@ -9548,6 +9548,62 @@ paths:
         "404":
           description: Externe adviseur niet gevonden
 
+  /externe-adviseurs/{id}/herstart:
+    get:
+      operationId: getExterneAdviseurHerstartVoorvertoning
+      tags: [personeel]
+      summary: Bereken de impact van een volledige adviseur-onboardingherstart (alleen hoofdbeheerder)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verse voorvertoning met verwijder-, bewaar- en blokkaderegels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExterneAdviseurHerstartVoorvertoning"
+        "403":
+          description: Alleen hoofdbeheerder
+        "404":
+          description: Externe adviseur niet gevonden
+        "409":
+          description: Eigen account of hoofdbeheerder kan niet worden herstart
+    post:
+      operationId: restartExterneAdviseurOnboarding
+      tags: [personeel]
+      summary: Trek toegang in en anonimiseer het oude adviseuraccount voor een schone her-onboarding (alleen hoofdbeheerder)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExterneAdviseurHerstartInput"
+      responses:
+        "200":
+          description: Herstart atomair uitgevoerd; het oorspronkelijke e-mailadres is opnieuw beschikbaar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExterneAdviseurHerstartResultaat"
+        "400":
+          description: Bevestiging ontbreekt of klopt niet
+        "403":
+          description: Alleen hoofdbeheerder
+        "404":
+          description: Externe adviseur niet gevonden
+        "409":
+          description: Voorvertoning is verouderd, doelaccount is beschermd of operationele koppelingen blokkeren
+
   /uitzendbureau-koppelingen:
     get:
       operationId: listUitzendbureauKoppelingen
@@ -37596,6 +37652,98 @@ components:
           type: ["string", "null"]
         toegang_tot:
           type: string
+
+    ExterneAdviseurHerstartImpact:
+      type: object
+      required: [categorie, label, aantal, toelichting]
+      properties:
+        categorie:
+          type: string
+          enum: [verwijderen, anonimiseren, ontkoppelen, behouden]
+        label:
+          type: string
+        aantal:
+          type: integer
+          minimum: 0
+        toelichting:
+          type: string
+
+    ExterneAdviseurHerstartBlokkade:
+      type: object
+      required: [code, omschrijving, aantal, voorbeelden]
+      properties:
+        code:
+          type: string
+        omschrijving:
+          type: string
+        aantal:
+          type: integer
+          minimum: 1
+        voorbeelden:
+          type: array
+          items:
+            type: string
+
+    ExterneAdviseurHerstartVoorvertoning:
+      type: object
+      required:
+        [adviseur_id, gebruiker_id, naam, email, bevestigingstekst, impact_token,
+         uitvoerbaar, impact, blokkades]
+      properties:
+        adviseur_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        bevestigingstekst:
+          type: string
+          description: Persoonsgebonden tekst die exact moet worden overgenomen.
+        impact_token:
+          type: string
+          description: Vingerafdruk van deze serverberekende impact; uitvoering weigert een verouderde voorvertoning.
+        uitvoerbaar:
+          type: boolean
+        impact:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExterneAdviseurHerstartImpact"
+        blokkades:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExterneAdviseurHerstartBlokkade"
+
+    ExterneAdviseurHerstartInput:
+      type: object
+      required: [bevestiging, impact_token]
+      properties:
+        bevestiging:
+          type: string
+          minLength: 1
+        impact_token:
+          type: string
+          minLength: 1
+
+    ExterneAdviseurHerstartResultaat:
+      type: object
+      required:
+        [bericht, oude_gebruiker_id, vrijgegeven_email, sessies_beeindigd,
+         verwijderde_koppelingen, geanonimiseerd]
+      properties:
+        bericht:
+          type: string
+        oude_gebruiker_id:
+          type: integer
+        vrijgegeven_email:
+          type: string
+        sessies_beeindigd:
+          type: integer
+        verwijderde_koppelingen:
+          type: integer
+        geanonimiseerd:
+          type: boolean
 
     OnboardingContext:
       type: object

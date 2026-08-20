@@ -24,7 +24,7 @@
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen & picker-endpoint](toewijzingen-velden.md) — Toewijzing heeft naam/rol (niet gebruiker_naam); keuzelijsten via GET /toewijsbare-gebruikers (zie toewijsbare-gebruikers.md), NIET /gebruikers.
-- [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
+- [Stale gegenereerde exports](stale-lib-declarations.md) — nieuwe API-exports kunnen door composite- en dev-servercaches onzichtbaar blijven terwijl de broncode al klopt.
 - [Autorisatie](autorisatie-patroon.md) + [rol-filter](rol-filter.md) + [bekijken-als](bekijken-als-persoon.md) + [projectfuncties](projectfuncties.md) — matrix-driven scoping (nooit rolnaam); magBijGebouw fail-closed; effectieveContext op ÁLLE leesfilter-endpoints; rol bepaalt toegang, functie niet.
 - [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.
 - [Google Maps embed patroon](maps-embed.md) — GOOGLE_MAPS_API_KEY blijft server-side; GET /gebouwen/:id/kaart geeft embed_url terug; lat/lng geeft satellite view, anders place-query op adres+stad.

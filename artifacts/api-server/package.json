@@ -10,6 +10,7 @@
     "pretypecheck": "pnpm --workspace-root run typecheck:libs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:signaal-links": "node --test src/lib/signaalActies.test.mjs src/lib/werkbakActiePaden.test.mjs",
+    "verificatie-externe-adviseur-herstart": "tsx src/verificatie-externe-adviseur-herstart.ts",
     "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts",
     "check-sessie-velden": "bash scripts/check-sessie-velden.sh"
   },

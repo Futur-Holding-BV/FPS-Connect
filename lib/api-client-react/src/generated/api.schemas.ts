@@ -6437,6 +6437,7 @@ export interface ExterneAdviseurUpdate {
   toegang_tot?: string;
 }
 
+export type ExterneAdviseurHerstartImpactCategorie = typeof ExterneAdviseurHerstartImpactCategorie[keyof typeof ExterneAdviseurHerstartImpactCategorie];
 /**
  * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
  */
@@ -20090,3 +20091,56 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
+
+export const ExterneAdviseurHerstartImpactCategorie = {
+  verwijderen: 'verwijderen',
+  anonimiseren: 'anonimiseren',
+  ontkoppelen: 'ontkoppelen',
+  behouden: 'behouden',
+} as const;
+
+export interface ExterneAdviseurHerstartBlokkade {
+  code: string;
+  omschrijving: string;
+  /** @minimum 1 */
+  aantal: number;
+  voorbeelden: string[];
+}
+
+export interface ExterneAdviseurHerstartResultaat {
+  bericht: string;
+  oude_gebruiker_id: number;
+  vrijgegeven_email: string;
+  sessies_beeindigd: number;
+  verwijderde_koppelingen: number;
+  geanonimiseerd: boolean;
+}
+
+export interface ExterneAdviseurHerstartVoorvertoning {
+  adviseur_id: number;
+  gebruiker_id: number;
+  naam: string;
+  email: string;
+  /** Persoonsgebonden tekst die exact moet worden overgenomen. */
+  bevestigingstekst: string;
+  /** Vingerafdruk van deze serverberekende impact; uitvoering weigert een verouderde voorvertoning. */
+  impact_token: string;
+  uitvoerbaar: boolean;
+  impact: ExterneAdviseurHerstartImpact[];
+  blokkades: ExterneAdviseurHerstartBlokkade[];
+}
+
+export interface ExterneAdviseurHerstartInput {
+  /** @minLength 1 */
+  bevestiging: string;
+  /** @minLength 1 */
+  impact_token: string;
+}
+
+export interface ExterneAdviseurHerstartImpact {
+  categorie: ExterneAdviseurHerstartImpactCategorie;
+  label: string;
+  /** @minimum 0 */
+  aantal: number;
+  toelichting: string;
+}

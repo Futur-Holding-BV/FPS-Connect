@@ -8,7 +8,19 @@
 import { Router } from "express";
 import { db, externeAdviseursTable, gebruikersTable, medewerkersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import {
+  GetExterneAdviseurHerstartVoorvertoningParams,
+  GetExterneAdviseurHerstartVoorvertoningResponse,
+  RestartExterneAdviseurOnboardingBody,
+  RestartExterneAdviseurOnboardingParams,
+  RestartExterneAdviseurOnboardingResponse,
+} from "@workspace/api-zod";
+import { requireBevoegdheid, requireRol } from "../middlewares/auth";
+import {
+  berekenHerstartVoorvertoning,
+  HerstartFout,
+  voerHerstartUit,
+} from "../lib/externeAdviseurHerstart";
 
 const router = Router();
 
@@ -158,5 +170,64 @@ router.patch("/externe-adviseurs/:id", schrijven, async (req, res): Promise<void
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+const alleenHoofdbeheerder = requireRol("hoofdbeheerder");
+
+// Serverberekende impactvoorvertoning. Deze route staat bewust achter een
+// expliciete rolpoort naast de globale auth/permissiemiddleware.
+router.get(
+  "/externe-adviseurs/:id/herstart",
+  alleenHoofdbeheerder,
+  async (req, res): Promise<void> => {
+    try {
+      const params = GetExterneAdviseurHerstartVoorvertoningParams.safeParse(req.params);
+      if (!params.success || !Number.isInteger(params.data.id)) {
+        return void res.status(400).json({ error: "Ongeldig id" });
+      }
+      const actorId = req.session.userId;
+      if (!actorId) return void res.status(401).json({ error: "Niet ingelogd" });
+      const preview = await berekenHerstartVoorvertoning(db, params.data.id, actorId);
+      res.json(GetExterneAdviseurHerstartVoorvertoningResponse.parse(preview));
+    } catch (err) {
+      if (err instanceof HerstartFout) {
+        return void res.status(err.status).json({ error: err.message, ...err.details });
+      }
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+router.post(
+  "/externe-adviseurs/:id/herstart",
+  alleenHoofdbeheerder,
+  async (req, res): Promise<void> => {
+    try {
+      const params = RestartExterneAdviseurOnboardingParams.safeParse(req.params);
+      const body = RestartExterneAdviseurOnboardingBody.safeParse(req.body);
+      if (!params.success || !Number.isInteger(params.data.id)) {
+        return void res.status(400).json({ error: "Ongeldig id" });
+      }
+      if (!body.success) {
+        return void res.status(400).json({ error: "Bevestiging en impacttoken zijn verplicht" });
+      }
+      const actorId = req.session.userId;
+      if (!actorId) return void res.status(401).json({ error: "Niet ingelogd" });
+      const resultaat = await voerHerstartUit(
+        params.data.id,
+        actorId,
+        body.data.bevestiging,
+        body.data.impact_token,
+      );
+      res.json(RestartExterneAdviseurOnboardingResponse.parse(resultaat));
+    } catch (err) {
+      if (err instanceof HerstartFout) {
+        return void res.status(err.status).json({ error: err.message, ...err.details });
+      }
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 export default router;

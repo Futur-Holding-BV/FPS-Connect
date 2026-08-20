@@ -1111,8 +1111,6 @@ export const UpdateGebouwNotitieParams = zod.object({
 })
 
 
-
-
 export const UpdateGebouwNotitieBody = zod.object({
   "tekst": zod.string().min(1),
   "beller_naam": zod.string().nullish()
@@ -1493,7 +1491,6 @@ export const MaakRapportDefinitiefParams = zod.object({
 export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
 
 
-
 export const MaakRapportDefinitiefBody = zod.object({
   "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
 })
@@ -1743,7 +1740,6 @@ export const ListVoorzieningenResponse = zod.object({
 export const createVoorzieningBodyApplicatiesMax = 5;
 
 
-
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1905,7 +1901,6 @@ export const UpdateVoorzieningParams = zod.object({
 })
 
 export const updateVoorzieningBodyApplicatiesMax = 5;
-
 
 
 export const UpdateVoorzieningBody = zod.object({
@@ -2964,7 +2959,6 @@ export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrecti
 export const listOnlineGebruikersResponseInitialenMax = 3;
 
 
-
 export const ListOnlineGebruikersResponseItem = zod.object({
   "naam": zod.string(),
   "initialen": zod.string().max(listOnlineGebruikersResponseInitialenMax),
@@ -3938,7 +3932,6 @@ export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
  */
 
 
-
 export const CreateDocumentBody = zod.object({
   "naam": zod.string(),
   "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport', 'tekening', 'contract', 'verzekering', 'opdrachtbevestiging', 'overig']),
@@ -4113,8 +4106,6 @@ export const ListDocumentRevisiesResponse = zod.array(ListDocumentRevisiesRespon
 export const CreateDocumentRevisieParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const CreateDocumentRevisieBody = zod.object({
@@ -5057,9 +5048,6 @@ export const DeleteModuleBeoordelingResponse = zod.void()
  */
 
 
-
-
-
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
@@ -5067,10 +5055,6 @@ export const RequestUploadUrlBody = zod.object({
   "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
   "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
-
-
-
-
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -6719,9 +6703,6 @@ export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBel
  */
 
 
-
-
-
 export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "naam": zod.string().min(1),
   "document_type": zod.string().min(1),
@@ -6753,10 +6734,6 @@ export const CreateGoedkeuringBeleidsregelResponse = zod.void()
 export const UpdateGoedkeuringBeleidsregelParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const UpdateGoedkeuringBeleidsregelBody = zod.object({
@@ -6972,8 +6949,6 @@ export const GoedkeuringAanvraagAfwijzenParams = zod.object({
 })
 
 
-
-
 export const GoedkeuringAanvraagAfwijzenBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -7059,7 +7034,6 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 export const listGoedkeuringDashboardQueryVensterMin = 0;
 
 
-
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
@@ -7106,7 +7080,6 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
  * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
  */
 export const exportGoedkeuringDashboardQueryVensterMin = 0;
-
 
 
 export const ExportGoedkeuringDashboardQueryParams = zod.object({
@@ -7481,7 +7454,6 @@ export const GetHuidigeGebruikerResponse = zod.object({
  * @summary Eigen initialen instellen (getoond bij aantekeningen)
  */
 export const updateMijnInitialenBodyInitialenMax = 6;
-
 
 
 export const UpdateMijnInitialenBody = zod.object({
@@ -9426,7 +9398,6 @@ export const ListMarketingWerkgeverOptiesResponse = zod.array(ListMarketingWerkg
 export const getMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
 
 
-
 export const GetMarketingVerzendtempoResponse = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(getMarketingVerzendtempoResponseTempoPerMinuutMax)
 })
@@ -9438,13 +9409,11 @@ export const GetMarketingVerzendtempoResponse = zod.object({
 export const updateMarketingVerzendtempoBodyTempoPerMinuutMax = 60;
 
 
-
 export const UpdateMarketingVerzendtempoBody = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(updateMarketingVerzendtempoBodyTempoPerMinuutMax)
 })
 
 export const updateMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
-
 
 
 export const UpdateMarketingVerzendtempoResponse = zod.object({
@@ -10707,8 +10676,6 @@ export const CreateWerkgeverBankrekeningParams = zod.object({
 })
 
 
-
-
 export const CreateWerkgeverBankrekeningBody = zod.object({
   "iban": zod.string(),
   "tenaamstelling": zod.string(),
@@ -10725,8 +10692,6 @@ export const UpdateWerkgeverBankrekeningParams = zod.object({
   "id": zod.coerce.number(),
   "rekeningId": zod.coerce.number()
 })
-
-
 
 
 export const UpdateWerkgeverBankrekeningBody = zod.object({
@@ -10882,7 +10847,6 @@ export const ListFunctiesV2Response = zod.array(ListFunctiesV2ResponseItem)
  */
 
 
-
 export const CreateFunctieV2Body = zod.object({
   "naam": zod.string().min(1),
   "omschrijving": zod.string().optional(),
@@ -10934,8 +10898,6 @@ export const GetFunctieV2Response = zod.object({
 export const UpdateFunctieV2Params = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const UpdateFunctieV2Body = zod.object({
@@ -11004,8 +10966,6 @@ export const VervangGebruikerAfwijkingenParams = zod.object({
 })
 
 
-
-
 export const VervangGebruikerAfwijkingenBody = zod.object({
   "afwijkingen": zod.array(zod.object({
   "module_id": zod.string(),
@@ -11038,8 +10998,6 @@ export const VervangGebruikerAfwijkingenResponse = zod.object({
 export const PasFunctieRechtenToeParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const PasFunctieRechtenToeBody = zod.object({
@@ -11548,7 +11506,6 @@ export const ListMedewerkersResponse = zod.array(ListMedewerkersResponseItem)
 export const createMedewerkerBodyOnboardingVersieMin = 0;
 
 
-
 export const CreateMedewerkerBody = zod.object({
   "naam": zod.string(),
   "gebruiker_id": zod.number().nullish(),
@@ -11691,6 +11648,62 @@ export const UpdateExterneAdviseurResponse = zod.object({
 
 
 /**
+ * @summary Bereken de impact van een volledige adviseur-onboardingherstart (alleen hoofdbeheerder)
+ */
+export const GetExterneAdviseurHerstartVoorvertoningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const getExterneAdviseurHerstartVoorvertoningResponseImpactItemAantalMin = 0;
+
+
+export const GetExterneAdviseurHerstartVoorvertoningResponse = zod.object({
+  "adviseur_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "bevestigingstekst": zod.string().describe('Persoonsgebonden tekst die exact moet worden overgenomen.'),
+  "impact_token": zod.string().describe('Vingerafdruk van deze serverberekende impact; uitvoering weigert een verouderde voorvertoning.'),
+  "uitvoerbaar": zod.boolean(),
+  "impact": zod.array(zod.object({
+  "categorie": zod.enum(['verwijderen', 'anonimiseren', 'ontkoppelen', 'behouden']),
+  "label": zod.string(),
+  "aantal": zod.number().min(getExterneAdviseurHerstartVoorvertoningResponseImpactItemAantalMin),
+  "toelichting": zod.string()
+})),
+  "blokkades": zod.array(zod.object({
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "aantal": zod.number().min(1),
+  "voorbeelden": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Trek toegang in en anonimiseer het oude adviseuraccount voor een schone her-onboarding (alleen hoofdbeheerder)
+ */
+export const RestartExterneAdviseurOnboardingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const RestartExterneAdviseurOnboardingBody = zod.object({
+  "bevestiging": zod.string().min(1),
+  "impact_token": zod.string().min(1)
+})
+
+export const RestartExterneAdviseurOnboardingResponse = zod.object({
+  "bericht": zod.string(),
+  "oude_gebruiker_id": zod.number(),
+  "vrijgegeven_email": zod.string(),
+  "sessies_beeindigd": zod.number(),
+  "verwijderde_koppelingen": zod.number(),
+  "geanonimiseerd": zod.boolean()
+})
+
+
+/**
  * @summary Handmatig te koppelen uitzendbureau-teksten (nog zonder verwijzing naar crm_klanten)
  */
 export const ListUitzendbureauKoppelingenResponse = zod.object({
@@ -11726,7 +11739,6 @@ export const KoppelUitzendbureauResponse = zod.object({
  */
 export const onboardMedewerkerBodyContracturenPerWeekMin = 0;
 export const onboardMedewerkerBodyContracturenPerWeekMax = 48;
-
 
 
 export const OnboardMedewerkerBody = zod.object({
@@ -11844,7 +11856,6 @@ export const UpdateMedewerkerParams = zod.object({
 })
 
 export const updateMedewerkerBodyOnboardingVersieMin = 0;
-
 
 
 export const UpdateMedewerkerBody = zod.object({
@@ -12432,7 +12443,6 @@ export const CreateSaldoCorrectieParams = zod.object({
 export const createSaldoCorrectieBodyRedenMin = 3;
 
 
-
 export const CreateSaldoCorrectieBody = zod.object({
   "verlofsoort_id": zod.number(),
   "jaar": zod.number(),
@@ -12855,7 +12865,6 @@ export const GetWizardStatusParams = zod.object({
 export const getWizardStatusResponseVersieMin = 0;
 
 
-
 export const GetWizardStatusResponse = zod.object({
   "id": zod.number(),
   "medewerker_status": zod.string().nullable(),
@@ -12876,7 +12885,6 @@ export const PatchWizardVoortgangParams = zod.object({
 export const patchWizardVoortgangBodyVersieMin = 0;
 
 
-
 export const PatchWizardVoortgangBody = zod.object({
   "stap": zod.number(),
   "versie": zod.number().min(patchWizardVoortgangBodyVersieMin).describe('Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.'),
@@ -12888,7 +12896,6 @@ export const PatchWizardVoortgangBody = zod.object({
 })
 
 export const patchWizardVoortgangResponseVersieMin = 0;
-
 
 
 export const PatchWizardVoortgangResponse = zod.object({
@@ -14011,7 +14018,6 @@ export const DoorzettenNaarGarageResponse = zod.object({
 export const vraagAdviseurBodyVraagMax = 2000;
 
 export const vraagAdviseurBodyContextSchermMax = 300;
-
 
 
 export const VraagAdviseurBody = zod.object({
@@ -16224,8 +16230,6 @@ export const MeldMeerwerkParams = zod.object({
 })
 
 
-
-
 export const MeldMeerwerkBody = zod.object({
   "type": zod.enum(['meerwerk', 'minderwerk']),
   "fotos": zod.array(zod.string()).min(1),
@@ -17277,7 +17281,6 @@ export const AfwijzenPimAdviesParams = zod.object({
 })
 
 export const afwijzenPimAdviesBodyRedenMax = 1000;
-
 
 
 export const AfwijzenPimAdviesBody = zod.object({
@@ -20954,8 +20957,6 @@ export const ListAcceptatieregisterResponse = zod.array(ListAcceptatieregisterRe
 export const UpdateAcceptatiePuntParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const UpdateAcceptatiePuntBody = zod.object({
@@ -25909,7 +25910,6 @@ export const CrediterenFactuurParams = zod.object({
 
 
 export const crediterenFactuurBodyRedenMax = 500;
-
 
 
 export const CrediterenFactuurBody = zod.object({
@@ -31138,7 +31138,6 @@ export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
 
 
-
 export const GetMagazijnInstellingenResponse = zod.object({
   "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
   "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
@@ -31159,7 +31158,6 @@ export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
 export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
 
 
-
 export const UpdateMagazijnInstellingenBody = zod.object({
   "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
   "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
@@ -31173,7 +31171,6 @@ export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
 export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 
 export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
-
 
 
 export const UpdateMagazijnInstellingenResponse = zod.object({
@@ -31454,7 +31451,6 @@ export const SnoozeMagazijnArtikelParams = zod.object({
 })
 
 export const snoozeMagazijnArtikelBodyDagenMax = 90;
-
 
 
 export const SnoozeMagazijnArtikelBody = zod.object({
@@ -33959,7 +33955,6 @@ export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
 export const updateFieLeermomentBodyCorrectieFactorMax = 3;
 
 
-
 export const UpdateFieLeermomentBody = zod.object({
   "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
@@ -34089,7 +34084,6 @@ export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
 export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
 
 export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
-
 
 
 export const CreateLeverancierPrestatieBody = zod.object({
@@ -35788,7 +35782,6 @@ export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponse
 export const listBiaeEventsQueryLimietMax = 500;
 
 
-
 export const ListBiaeEventsQueryParams = zod.object({
   "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
 })
@@ -35928,8 +35921,6 @@ export const HandelWerkbakItemAfResponse = zod.object({
 export const ZetWerkbakItemWegParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const ZetWerkbakItemWegBody = zod.object({
@@ -36215,7 +36206,6 @@ export const zetWorkflowSterBodySterrenMin = 0;
 export const zetWorkflowSterBodySterrenMax = 3;
 
 
-
 export const ZetWorkflowSterBody = zod.object({
   "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
   "doel_sleutel": zod.string(),
@@ -36224,7 +36214,6 @@ export const ZetWorkflowSterBody = zod.object({
 
 export const zetWorkflowSterResponseSterrenMin = 0;
 export const zetWorkflowSterResponseSterrenMax = 3;
-
 
 
 export const ZetWorkflowSterResponse = zod.object({

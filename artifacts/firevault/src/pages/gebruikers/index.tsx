@@ -18,8 +18,13 @@ import {
   usePasFunctieRechtenToe,
   useVervangGebruikerAfwijkingen,
   useGetMailStatus,
+  useListExterneAdviseurs,
+  useGetExterneAdviseurHerstartVoorvertoning,
+  useRestartExterneAdviseurOnboarding,
   getGetMailStatusQueryKey,
   getListGebruikersQueryKey,
+  getListExterneAdviseursQueryKey,
+  getGetExterneAdviseurHerstartVoorvertoningQueryKey,
   getGetGebruikerBevoegdhedenV2QueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,7 +56,7 @@ import {
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Search, RotateCcw, Briefcase,
   ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
-  QrCode, Download, Link2,
+  QrCode, Download, Link2, UserRoundX,
 } from "lucide-react";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
 import { useQueryClient } from "@tanstack/react-query";
@@ -211,6 +216,9 @@ export default function Gebruikers() {
 
   const { toast } = useToast();
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
+  const { data: externeAdviseurs } = useListExterneAdviseurs({
+    query: { enabled: isHoofd, queryKey: getListExterneAdviseursQueryKey() },
+  });
   // Alleen hoofdbeheerders mogen mailconfiguratie inzien (systeem-bevoegdheid);
   // proactieve waarschuwing zodat een uitnodiging niet voor een verrassing zorgt.
   const { data: mailStatus } = useGetMailStatus({
@@ -230,6 +238,7 @@ export default function Gebruikers() {
   const wachtwoordResetten   = useGebruikerWachtwoordResetten();
   const sessiesBeeindigen    = useGebruikerSessiesBeeindigen();
   const ontgrendelenMutatie  = useGebruikerOntgrendelen();
+  const herstartMutatie      = useRestartExterneAdviseurOnboarding();
 
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
   const [toevoegenStap, setToevoegenStap] = useState<1 | 2>(1);
@@ -261,6 +270,23 @@ export default function Gebruikers() {
   const [wwResetMfa, setWwResetMfa]           = useState(false);
   const [wwResetResultaat, setWwResetResultaat] = useState<{ tijdelijk_wachtwoord?: string; resetlink_verstuurd?: boolean } | null>(null);
   const [sessiesTarget, setSessiesTarget]     = useState<Gebruiker | null>(null);
+  const [herstartTarget, setHerstartTarget] = useState<{ gebruiker: Gebruiker; adviseurId: number } | null>(null);
+  const [herstartBevestiging, setHerstartBevestiging] = useState("");
+  const [herstartFout, setHerstartFout] = useState<string | null>(null);
+  const {
+    data: herstartPreview,
+    isLoading: herstartPreviewLaadt,
+    error: herstartPreviewFout,
+  } = useGetExterneAdviseurHerstartVoorvertoning(
+    herstartTarget?.adviseurId ?? 0,
+    {
+      query: {
+        enabled: !!herstartTarget,
+        queryKey: getGetExterneAdviseurHerstartVoorvertoningQueryKey(herstartTarget?.adviseurId ?? 0),
+        retry: false,
+      },
+    },
+  );
 
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
@@ -525,6 +551,36 @@ export default function Gebruikers() {
     }
   }
 
+  async function bevestigVolledigeHerstart() {
+    if (!herstartTarget || !herstartPreview) return;
+    setHerstartFout(null);
+    try {
+      const resultaat = await herstartMutatie.mutateAsync({
+        id: herstartTarget.adviseurId,
+        data: {
+          bevestiging: herstartBevestiging,
+          impact_token: herstartPreview.impact_token,
+        },
+      });
+      await Promise.all([
+        invalideer(),
+        queryClient.invalidateQueries({ queryKey: getListExterneAdviseursQueryKey() }),
+      ]);
+      toast({
+        title: "Onboarding kan opnieuw beginnen",
+        description: `${resultaat.vrijgegeven_email} kan nu opnieuw worden uitgenodigd.`,
+      });
+      setHerstartTarget(null);
+      setHerstartBevestiging("");
+    } catch (err: unknown) {
+      const bericht =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "De herstart is niet uitgevoerd.";
+      setHerstartFout(bericht);
+    }
+  }
+
   // Interne FPS-gebruikers (staf).
   const internBron = useMemo(
     () => ((gebruikers ?? []) as Gebruiker[]).filter(
@@ -572,6 +628,10 @@ export default function Gebruikers() {
   }, [internBron, filterGroep, zoek]);
 
   const totaalGevonden = groepGefilterd.length;
+  const adviseurPerGebruiker = useMemo(
+    () => new Map((externeAdviseurs ?? []).map((a) => [a.gebruiker_id, a.id])),
+    [externeAdviseurs],
+  );
 
   // Gebruikers waarbij een of meer module-sleutels in de bevoegdheden-matrix
   // ontbreken. De aanvulactie zet die ontbrekende sleutels op niveau 0; de
@@ -655,6 +715,22 @@ export default function Gebruikers() {
                         <DropdownMenuItem onClick={() => setSessiesTarget(g)}>
                           <LogOut className="h-3.5 w-3.5 mr-2" /> Sessies beëindigen
                         </DropdownMenuItem>
+                        {g.rol !== "hoofdbeheerder" && adviseurPerGebruiker.has(g.id) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                setHerstartTarget({ gebruiker: g, adviseurId: adviseurPerGebruiker.get(g.id)! });
+                                setHerstartBevestiging("");
+                                setHerstartFout(null);
+                              }}
+                            >
+                              <UserRoundX className="h-3.5 w-3.5 mr-2" />
+                              Onboarding volledig opnieuw beginnen
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         {vergrendeld && (
                           <>
                             <DropdownMenuSeparator />
@@ -1064,6 +1140,116 @@ export default function Gebruikers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!herstartTarget}
+        onOpenChange={(open) => {
+          if (!open && !herstartMutatie.isPending) {
+            setHerstartTarget(null);
+            setHerstartBevestiging("");
+            setHerstartFout(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserRoundX className="h-5 w-5 text-destructive" />
+              Onboarding volledig opnieuw beginnen
+            </DialogTitle>
+            <DialogDescription>
+              Connect berekent eerst wat bij <strong>{herstartTarget?.gebruiker.naam}</strong> wordt verwijderd,
+              afgeschermd of behouden. De actie kan niet ongedaan worden gemaakt.
+            </DialogDescription>
+          </DialogHeader>
+
+          {herstartPreviewLaadt && (
+            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Impact controleren…
+            </div>
+          )}
+
+          {herstartPreviewFout && (
+            <Foutmelding tekst={herstartPreviewFout.message || "De impact kon niet worden berekend."} />
+          )}
+
+          {herstartPreview && (
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {herstartPreview.impact.map((regel, index) => (
+                  <div key={`${regel.categorie}-${regel.label}-${index}`} className="rounded-md border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium">{regel.label}</div>
+                      <Badge variant={regel.categorie === "behouden" ? "secondary" : "outline"}>
+                        {regel.aantal}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                      {regel.categorie}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{regel.toelichting}</p>
+                  </div>
+                ))}
+              </div>
+
+              {herstartPreview.blokkades.length > 0 && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-3">
+                  <div className="flex items-center gap-2 font-medium text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    Eerst verantwoordelijkheden overdragen
+                  </div>
+                  {herstartPreview.blokkades.map((blokkade) => (
+                    <div key={blokkade.code} className="text-sm">
+                      <div className="font-medium">{blokkade.omschrijving} ({blokkade.aantal})</div>
+                      <ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">
+                        {blokkade.voorbeelden.map((voorbeeld) => <li key={voorbeeld}>{voorbeeld}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {herstartPreview.uitvoerbaar && (
+                <div className="space-y-2 rounded-md border border-destructive/30 p-3">
+                  <Label htmlFor="adviseur-herstart-bevestiging">
+                    Typ exact <span className="font-mono font-semibold">{herstartPreview.bevestigingstekst}</span>
+                  </Label>
+                  <Input
+                    id="adviseur-herstart-bevestiging"
+                    autoComplete="off"
+                    value={herstartBevestiging}
+                    onChange={(event) => setHerstartBevestiging(event.target.value)}
+                  />
+                </div>
+              )}
+              {herstartFout && <Foutmelding tekst={herstartFout} />}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setHerstartTarget(null)}
+              disabled={herstartMutatie.isPending}
+            >
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={bevestigVolledigeHerstart}
+              disabled={
+                !herstartPreview?.uitvoerbaar ||
+                herstartBevestiging !== herstartPreview.bevestigingstekst ||
+                herstartMutatie.isPending
+              }
+            >
+              {herstartMutatie.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Bezig…</>
+              ) : "Volledig opnieuw beginnen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AlertDialog: sessies beëindigen */}
       <AlertDialog open={!!sessiesTarget} onOpenChange={(o) => { if (!o) setSessiesTarget(null); }}>
