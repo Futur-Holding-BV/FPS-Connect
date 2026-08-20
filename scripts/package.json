@@ -38,6 +38,7 @@
     "bewijs-task676-escalaties": "tsx ./src/bewijs-task676-goedkeuring-escalaties.ts",
     "verificatie-onboarding-voorstel": "tsx ./src/verificatie-onboarding-voorstel.ts",
     "verificatie-onboarding-1091": "tsx ./src/verificatie-onboarding-1091.ts",
+    "verificatie-externe-adviseur": "tsx ./src/verificatie-externe-adviseur.ts",
     "verificatie-gebruikers01-v2": "tsx ./src/verificatie-gebruikers01-v2.ts",
     "verificatie-gebruikers01-autorisatie": "tsx ./src/verificatie-gebruikers01-autorisatie.ts",
     "herstel-gebruikers01-v2-dryrun": "tsx ./src/herstel-gebruikers01-v2-dryrun.ts",

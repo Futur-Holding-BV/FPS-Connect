@@ -5,6 +5,10 @@
 - **Rechten opgeschoond**: de app-only mailkoppeling vereist alleen Application `Mail.Send`. De persoonlijke Werk-inbox gebruikt afzonderlijk gedelegeerd `User.Read`, `Mail.ReadWrite`, `Mail.ReadWrite.Shared`, `Mail.Send`, `Mail.Send.Shared` en `offline_access`.
 - **Bewijs**: vier regressietests dekken gezonde niet-verzendende probe, 403, 404 en een onverwachte 400; API- en Firevault-typechecks zijn groen. Productiemeting wordt na uitrol hieronder in het CI-deploypoortbewijs vastgelegd.
 
+## 2026-08-20 — Verlopende externe adviseuraccounts blijven bewaakt
+
+- **Regressiebewijs**: het geïsoleerde adviseur-fixturescript draait de echte werkbakbewakingsloop voor precies 14 dagen resterende toegang én voor een al verlopen datum. Het bewijst ook dat het actiepunt automatisch wordt afgehandeld bij verlengen buiten het venster en bij het deactiveren van het account. Fixture, adviseurrecord en werkbakitems worden ook bij een mislukte stap altijd opgeruimd.
+
 ## 2026-08-20 — SENTRY_INBOUW_01: drie veilige foutbronnen, meldbeleid alleen in beheercentrum
 
 - **Eén privacygrens voor API, Firevault en FPS Monteur**: het nieuwe gedeelde pakket bouwt vóór verzending een strikt allowlisted event en verwijdert gevoelige veldnamen recursief. Vrije fouttekst, breadcrumbs, requestinhoud, tokens, wachtwoorden, BSN, adressen, klantgegevens, namen en e-mail overleven de grens niet; alleen stackstructuur, omgeving/release, intern gebruikers-id plus rol en een veilig scherm- of handelingslabel blijven.
