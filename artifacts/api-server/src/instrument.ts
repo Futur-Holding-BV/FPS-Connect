@@ -12,6 +12,7 @@
  *   die, dan blijft release leeg — nooit een verzonnen waarde.
  */
 import * as Sentry from "@sentry/node";
+import { maakVeiligMonitoringEvent } from "@workspace/foutmonitoring";
 
 /**
  * Allowlist-scrub van een uitgaand Sentry-event.
@@ -27,22 +28,9 @@ import * as Sentry from "@sentry/node";
  * wie ze heeft toegevoegd.
  */
 export function scrubEvent<E extends Sentry.Event>(event: E): E {
-  if (event.request) {
-    event.request = {
-      ...(event.request.method ? { method: event.request.method } : {}),
-      ...(event.request.url ? { url: event.request.url.split("?")[0] } : {}),
-    };
-  }
-  delete event.user;
-  delete event.extra;
-  delete event.breadcrumbs;
-  if (event.contexts) {
-    const verzoek = event.contexts["verzoek"];
-    // Alleen onze eigen, bewust gevulde context behouden; runtime/os/device
-    // e.d. bevatten geen PII maar zijn ook niet nodig — allowlist is allowlist.
-    event.contexts = verzoek ? { verzoek } : {};
-  }
-  return event;
+  return maakVeiligMonitoringEvent(
+    event as unknown as Record<string, unknown>,
+  ) as E;
 }
 
 const dsn = process.env["SENTRY_DSN"]?.trim();

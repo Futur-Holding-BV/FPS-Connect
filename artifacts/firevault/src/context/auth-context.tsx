@@ -73,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // SENTRY_AAN_01: browserfouten dragen het ingelogde gebruikers-id mee
   // (bewust alleen het id — geen naam/e-mail naar de externe dienst).
   useEffect(() => {
-    zetMonitoringGebruiker(gebruiker ? { id: gebruiker.id } : null);
-  }, [gebruiker?.id]);
+    zetMonitoringGebruiker(
+      gebruiker ? { id: gebruiker.id, rol: gebruiker.rol } : null,
+    );
+  }, [gebruiker?.id, gebruiker?.rol]);
 
   useEffect(() => {
     if (gebruiker?.taal && isGeldigeTaal(gebruiker.taal)) {

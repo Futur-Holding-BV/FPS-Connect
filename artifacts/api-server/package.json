@@ -23,6 +23,7 @@
     "@types/yauzl": "^3.4.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/foutmonitoring": "workspace:*",
     "@workspace/permissies": "workspace:*",
     "archiver": "^8.0.0",
     "bcryptjs": "^3.0.3",

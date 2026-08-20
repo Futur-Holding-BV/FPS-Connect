@@ -14,6 +14,19 @@ NODE_ENV=production
 PORT=8080
 LOG_LEVEL=warn
 
+# ── Foutmonitoring (publieke DSN's zijn projectadressen, geen geheimen) ──────
+# Leeg laten schakelt het betreffende onderdeel fail-open uit.
+SENTRY_DSN=
+SENTRY_DSN_WEB=
+SENTRY_DSN_MOBILE=
+SENTRY_ENVIRONMENT=production
+SENTRY_PROJECT_API=fps-connect-api
+SENTRY_PROJECT_WEB=
+# Geheim; alleen via de echte ongetrackte productieomgeving instellen:
+SENTRY_AUTH_TOKEN=
+# Hetzelfde willekeurige geheim (min. 32 tekens) staat in futur-control.
+SENTRY_ROUTING_SIGNING_SECRET=
+
 # ── AI (kies één van de twee opties) ─────────────────────────────────────────
 # Optie A — eigen OpenAI API-sleutel:
 OPENAI_API_KEY=sk-...

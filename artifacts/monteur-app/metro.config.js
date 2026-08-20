@@ -1,13 +1,13 @@
 // Metro configuratie voor FPS Monteur — pnpm monorepo
 // De app staat in een subdirectory van de workspace-root. Metro moet de
 // gedeelde workspace-pakketten (lib/, etc.) kunnen vinden via watchFolders.
-const { getDefaultConfig } = require("expo/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const path = require("path");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
 
-const config = getDefaultConfig(projectRoot);
+const config = getSentryExpoConfig(projectRoot);
 
 // Voeg de workspace-root toe zodat @workspace/* packages gevonden worden
 config.watchFolders = [workspaceRoot];

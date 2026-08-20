@@ -37,9 +37,16 @@ import {
 import { ToolboxDetailModal } from "@/components/ToolboxDetailModal";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
+import {
+  rapporteerFout,
+  startFoutmonitoring,
+  zetMonitoringGebruiker,
+  zetMonitoringScherm,
+} from "@/lib/foutmonitoring";
 
 setBaseUrl(`https://${API_DOMEIN}`);
 setAuthTokenGetter(() => getHuidigToken());
+void startFoutmonitoring();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -586,6 +593,23 @@ function PicklijstBewaker() {
   return null;
 }
 
+function FoutmonitoringContext() {
+  const { gebruiker } = useAuth();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    zetMonitoringGebruiker(
+      gebruiker ? { id: gebruiker.id, rol: gebruiker.rol } : null,
+    );
+  }, [gebruiker?.id, gebruiker?.rol]);
+
+  useEffect(() => {
+    zetMonitoringScherm(pathname);
+  }, [pathname]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const { bezigLaden, vergrendeld, token, gebruiker } = useAuth();
   const pathname = usePathname();
@@ -610,6 +634,7 @@ function RootLayoutNav() {
   return (
     <>
       <BerichtMeldingMonitor />
+      <FoutmonitoringContext />
       <AiDrempelBewaker />
       <LmraBewaker />
       <ToolboxPopupBewaker />
@@ -674,11 +699,15 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+    if (fontError) rapporteerFout(fontError);
+  }, [fontError]);
+
   if (!fontsLoaded && !fontError) return null;
 
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
+      <ErrorBoundary onError={(fout) => rapporteerFout(fout)}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <SyncProvider>

@@ -148,15 +148,39 @@ Of trigger de deploy handmatig via GitHub Actions > `deploy.yml` > "Run workflow
 
 ---
 
-## Verwijzingscode terugzoeken in Sentry (SENTRY_01, 8 aug 2026)
+## Fouten terugzoeken en routeren in Sentry (SENTRY_INBOUW_01)
 
 Meldt een gebruiker een fout met een `FPS-`-code (bijv. `FPS-3A9C1B04`)?
 
-1. Open Sentry (EU): `https://futur-holding.de.sentry.io`, project **fps-connect-api**.
+1. Open Sentry (EU): `https://futur-holding.de.sentry.io` en kies het
+   API-, Firevault- of FPS Monteur-project dat bij de componenttag hoort.
 2. Zoek in Issues op de tag: `verwijzingscode:FPS-3A9C1B04`.
-3. Het event toont de stacktrace (bronbestand + regelnummer dankzij de sourcemap-upload in deploystap 5b), de release (commit-SHA) en methode/pad van het verzoek. Request body, cookies, authorization-headers en querystrings worden bewust nooit meegestuurd.
+3. Het event toont de veilige stacktrace, omgeving, release/commit, component,
+   alleen het interne gebruikers-id plus rol en een queryloos scherm- of
+   handelingslabel. Request body, cookies, authorization-headers,
+   querystringwaarden, vrije fouttekst, naam en e-mail worden bewust nooit
+   meegestuurd.
 
 Geen event te vinden? Dan is de fout van vóór de Sentry-koppeling of ontbrak `SENTRY_DSN` — zoek dan op de code in de containerlogs: `docker logs deploy-api-1 2>&1 | grep FPS-3A9C1B04`.
+
+### Meldingen lopen uitsluitend via het beheercentrum
+
+- Sentry stuurt issue-alerts en `resolved`/`archived`-statussen naar de
+  HMAC-getekende `futur-control`-webhook.
+- De bronapps leveren géén urgentie. Alleen het beheercentrum behandelt
+  blokkades op inloggen, uren opslaan, factuur versturen en betaalbatch
+  versturen als direct.
+- Een issue wordt pas na het tweede voorkomen meldbaar. Opgeloste issues en
+  eenmalige fouten geven geen beheermelding.
+- Directe meldingen worden alleen verwerkt op werkdagen 07:15–17:00 en in het
+  weekend 09:00–17:00. Overige actieve herhaalde fouten gaan om 17:00 in één
+  dagbericht.
+- Rechtstreekse Sentry-e-mail-, Slack- en pushacties naar beheerders blijven
+  uitgeschakeld. Het bestaande beheercentrumkanaal blijft de enige ontvanger.
+
+Controleer na een configuratiewijziging altijd eerst één positief getekend
+webhookevent en daarna een `resolved`-event. Een lege tabel of stille
+notificatiestroom is zonder die positieve kanaalcontrole geen bewijs.
 
 ---
 

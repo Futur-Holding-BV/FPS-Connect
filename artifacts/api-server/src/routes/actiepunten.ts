@@ -105,7 +105,9 @@ router.post("/dit-werkt-niet", requireAuth, async (req, res): Promise<void> => {
 // Alleen de hoofdbeheerder; de fout loopt door de centrale foutafhandelaar
 // (500 + verwijzingscode) en wordt — mét DSN — naar Sentry gestuurd.
 router.post("/monitoring-testfout", requireRol("hoofdbeheerder"), async (): Promise<void> => {
-  throw new Error("SENTRY_AAN_01: bewuste testfout voor het bewijs dat foutmonitoring meldingen aflevert");
+  throw new Error(
+    "SENTRY_INBOUW_01: bewuste testfout; wachtwoord=SENTRY-TEST-WACHTWOORD-NIET-VERZENDEN",
+  );
 });
 
 router.delete("/actiepunten/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {

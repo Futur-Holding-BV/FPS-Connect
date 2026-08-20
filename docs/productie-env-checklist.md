@@ -103,16 +103,33 @@ curl -s https://connect.fps-one.nl/api/versie/status
 
 ---
 
-## Foutmonitoring (Sentry — SENTRY_01)
+## Foutmonitoring (Sentry — SENTRY_INBOUW_01)
 
-Beide waarden staan uitsluitend in `deploy/.env.production` op de VPS (ongetrackt, blijft bij `git reset --hard` staan). Ze zijn **niet** verplicht: ontbreken ze, dan draait de app zonder monitoring door en slaat de deploy de sourcemap-upload over met een waarschuwing — een deploy mag hier nooit op stuklopen.
+De server- en publieke project-DSN's staan uitsluitend in
+`deploy/.env.production` op de VPS (ongetrackt, blijft bij `git reset --hard`
+staan). Ze zijn **niet** verplicht: ontbreken ze, dan draaien API, web en
+mobiel zonder monitoring door. Een ontbrekende uploadconfiguratie mag een
+deploy of mobiele start nooit blokkeren.
 
 | Variabele | Doel |
 |---|---|
 | `SENTRY_DSN` | DSN van project `fps-connect-api` (org `futur-holding`, EU-regio `de.sentry.io`). Zet Sentry-foutmonitoring in de API aan; leeg/afwezig = geen init, geen events. |
+| `SENTRY_DSN_WEB` | Publieke DSN van het Firevault-webproject. Wordt via `GET /api/monitoring-config` aan de browser geleverd; dit is geen geheim. |
+| `SENTRY_DSN_MOBILE` | Publieke DSN van het FPS Monteur-project. Wordt runtime via hetzelfde config-endpoint opgehaald en veilig lokaal gecachet voor offline herstart; dit is geen geheim. |
 | `SENTRY_AUTH_TOKEN` | Auth-token voor `sentry-cli sourcemaps upload` in stap 5b van `scripts/deploy-production.sh`. Alleen scope `project:releases` nodig. |
+| `SENTRY_ROUTING_SIGNING_SECRET` | Willekeurig geheim van minimaal 32 tekens, identiek ingesteld bij de API en `futur-control`. Tekent alleen serverhandelingen zodat een publieke web-/mobiele DSN nooit een directe blokkademelding kan nabootsen. |
 
 Optioneel: `SENTRY_ENVIRONMENT` (terugval: `NODE_ENV`).
+
+Voor een productie-EAS-build/update van FPS Monteur worden het
+Sentry-uploadtoken en de bijbehorende organisatie/projectkeuze als EAS-secrets
+ingesteld; zet ze nooit in `app.json`, `eas.json` of documentatie. De Expo-app
+haalt de runtime-DSN altijd uit het API-config-endpoint.
+
+Sentry heeft **geen** rechtstreekse e-mail-, Slack- of pushactie naar
+beheerders. Issue-alerts en issue-herstel gaan naar de getekende webhook van
+`Futur-Holding-BV/futur-control`; alleen dat beheercentrum past de
+herhaaldrempel, urgentie en dag-/nacht-/weekendtijden toe.
 
 ---
 

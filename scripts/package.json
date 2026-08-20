@@ -45,6 +45,7 @@
     "smoketest-wizard-endpoints": "tsx ./src/smoketest-wizard-endpoints.ts",
     "bewijs-calc-kern-offerte": "tsx src/bewijs-calc-kern-offerte.ts",
     "verificatie-snagstream-archief": "tsx ./src/verificatie-snagstream-archief.ts",
+    "verificatie-sentry-inbouw01": "tsx ./src/verificatie-sentry-inbouw01.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

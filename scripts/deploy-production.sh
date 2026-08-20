@@ -310,11 +310,15 @@ echo "=== STAP 5b: sourcemaps naar Sentry uploaden ==="
 # NB: onder set -euo pipefail mag een grep-zonder-treffer de deploy niet
 # stoppen — vandaar de expliciete || true.
 SENTRY_AUTH_TOKEN="$( (grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_API="$( (grep -E '^SENTRY_PROJECT_API=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_WEB="$( (grep -E '^SENTRY_PROJECT_WEB=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_API="${SENTRY_PROJECT_API:-fps-connect-api}"
 if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
   echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — sourcemap-upload overgeslagen (deploy gaat door)."
 else
   SENTRY_TMP="$(mktemp -d)"
   SENTRY_CID=""
+  SENTRY_WEB_CID=""
   set +e
   API_IMAGE="$(${COMPOSE} images -q api | head -1 || true)"
   if [ -z "${API_IMAGE}" ]; then
@@ -326,13 +330,32 @@ else
            getsentry/sentry-cli sourcemaps upload \
            --url https://de.sentry.io \
            --org futur-holding \
-           --project fps-connect-api \
+           --project "${SENTRY_PROJECT_API}" \
            --release "${GIT_COMMIT}" \
            /work \
-      && echo "Sourcemaps geüpload voor release ${GIT_COMMIT}." \
-      || echo "WAARSCHUWING: sourcemap-upload mislukt — deploy gaat door."
+      && echo "API-sourcemaps geüpload voor release ${GIT_COMMIT}." \
+      || echo "WAARSCHUWING: API-sourcemap-upload mislukt — deploy gaat door."
+  fi
+  CADDY_IMAGE="$(${COMPOSE} images -q caddy | head -1 || true)"
+  if [ -z "${SENTRY_PROJECT_WEB}" ]; then
+    echo "WAARSCHUWING: SENTRY_PROJECT_WEB ontbreekt — Firevault-sourcemap-upload overgeslagen."
+  elif [ -z "${CADDY_IMAGE}" ]; then
+    echo "WAARSCHUWING: caddy-image niet gevonden — Firevault-sourcemap-upload overgeslagen."
+  else
+    SENTRY_WEB_CID="$(docker create "${CADDY_IMAGE}")"
+    docker cp "${SENTRY_WEB_CID}:/opt/sentry/firevault" "${SENTRY_TMP}/firevault" \
+      && docker run --rm -v "${SENTRY_TMP}/firevault:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
+           getsentry/sentry-cli sourcemaps upload \
+           --url https://de.sentry.io \
+           --org futur-holding \
+           --project "${SENTRY_PROJECT_WEB}" \
+           --release "${GIT_COMMIT}" \
+           /work \
+      && echo "Firevault-sourcemaps geüpload voor release ${GIT_COMMIT}." \
+      || echo "WAARSCHUWING: Firevault-sourcemap-upload mislukt — deploy gaat door."
   fi
   [ -n "${SENTRY_CID}" ] && docker rm -f "${SENTRY_CID}" >/dev/null 2>&1
+  [ -n "${SENTRY_WEB_CID}" ] && docker rm -f "${SENTRY_WEB_CID}" >/dev/null 2>&1
   rm -rf "${SENTRY_TMP}"
   set -e
 fi

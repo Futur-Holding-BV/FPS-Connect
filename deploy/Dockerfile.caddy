@@ -117,6 +117,8 @@ FROM caddy:2-alpine AS runtime
 
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=frontend-builder /app/artifacts/firevault/dist/public /srv/public
+COPY --from=frontend-builder /app/artifacts/firevault/dist/public /opt/sentry/firevault
 COPY --from=frontend-builder /app/artifacts/monteur-app/dist-web /srv/app
+RUN find /srv/public -type f -name '*.map' -delete
 
 EXPOSE 80 443

@@ -4,18 +4,22 @@
  * - De configuratie (publieke browser-DSN + versie) komt van de server via
  *   GET /api/monitoring-config, zodat een DSN-wijziging géén rebuild vergt.
  *   Zonder DSN gebeurt er niets — identiek aan de serverkant.
- * - Elke fout draagt pagina (tag), gebruiker (id + naam, ná login) en versie
+ * - Elke fout draagt pagina (tag), gebruiker (alleen id), rol en versie
  *   (release = commit) mee. Meer niet: net als op de server is de scrub
  *   allowlist-gedacht — geen breadcrumbs, geen extra, geen request-data.
  * - Daarnaast houdt dit bestand de "laatste handeling" bij (laatst aangeklikte
  *   knop/link) voor de "Dit werkt niet"-melding.
  */
 import * as Sentry from "@sentry/react";
+import {
+  maakVeiligMonitoringEvent,
+  normaliseerMonitoringPad,
+} from "@workspace/foutmonitoring";
 
 let actief = false;
 // De config-fetch is async terwijl de app direct rendert: gebruiker en pagina
 // kunnen dus al gezet zijn vóór Sentry.init. Buffer ze en pas ze ná init toe.
-let gewensteGebruiker: { id: number } | null = null;
+let gewensteGebruiker: { id: number; rol: string } | null = null;
 let gewenstePagina: string | null = null;
 
 export async function startFoutmonitoring(): Promise<void> {
@@ -32,21 +36,22 @@ export async function startFoutmonitoring(): Promise<void> {
       sendDefaultPii: false,
       maxBreadcrumbs: 0,
       beforeSend(event) {
-        // Allowlist-scrub, spiegel van de serverkant: fout + tags + user
-        // (id/naam) + release blijven; al het overige gaat eruit.
-        delete event.extra;
-        delete event.breadcrumbs;
-        delete event.contexts;
-        if (event.request) event.request = { ...(event.request.url ? { url: event.request.url.split("?")[0] } : {}) };
-        // Privacy: alleen het gepseudonimiseerde gebruikers-id — nooit naam,
-        // e-mail of IP naar de externe dienst.
-        if (event.user) event.user = event.user.id ? { id: event.user.id } : {};
-        return event;
+        return maakVeiligMonitoringEvent(
+          event as unknown as Record<string, unknown>,
+        ) as unknown as typeof event;
+      },
+      beforeBreadcrumb() {
+        return null;
       },
     });
     actief = true;
+    Sentry.setTag("component", "firevault");
+    Sentry.setTag("handeling", "overig");
     // Init-race: alles wat vóór init al bekend was alsnog toepassen.
-    if (gewensteGebruiker) Sentry.setUser({ id: String(gewensteGebruiker.id) });
+    if (gewensteGebruiker) {
+      Sentry.setUser({ id: String(gewensteGebruiker.id) });
+      Sentry.setTag("rol", gewensteGebruiker.rol);
+    }
     if (gewenstePagina) Sentry.setTag("pagina", gewenstePagina);
   } catch {
     // Monitoring mag het laden van de app nooit hinderen.
@@ -54,15 +59,18 @@ export async function startFoutmonitoring(): Promise<void> {
 }
 
 /** Ná login aanroepen: koppel het gebruikers-id (pseudoniem) aan meldingen. */
-export function zetMonitoringGebruiker(gebruiker: { id: number } | null): void {
+export function zetMonitoringGebruiker(
+  gebruiker: { id: number; rol: string } | null,
+): void {
   gewensteGebruiker = gebruiker;
   if (!actief) return;
   Sentry.setUser(gebruiker ? { id: String(gebruiker.id) } : null);
+  Sentry.setTag("rol", gebruiker?.rol ?? "uitgelogd");
 }
 
 /** Bij elke routewissel aanroepen: pagina-tag voor volgende meldingen. */
 export function zetMonitoringPagina(pad: string): void {
-  const schoon = pad.split("?")[0] ?? pad;
+  const schoon = normaliseerMonitoringPad(pad) ?? "/onbekend";
   gewenstePagina = schoon;
   if (!actief) return;
   Sentry.setTag("pagina", schoon);

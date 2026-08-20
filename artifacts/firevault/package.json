@@ -1,6 +1,6 @@
 {
   "name": "@workspace/firevault",
-  "version": "1.5.10",
+  "version": "1.5.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -56,6 +56,7 @@
     "@uppy/react": "^5.0.0",
     "@vitejs/plugin-react": "catalog:",
     "@workspace/api-client-react": "workspace:*",
+    "@workspace/foutmonitoring": "workspace:*",
     "@workspace/object-storage-web": "workspace:*",
     "@workspace/ontwerp": "workspace:*",
     "@workspace/permissies": "workspace:*",

@@ -25,6 +25,9 @@
     },
     {
       "path": "../../lib/calculatie"
+    },
+    {
+      "path": "../../lib/foutmonitoring"
     }
   ]
 }

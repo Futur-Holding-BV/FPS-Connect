@@ -23,6 +23,9 @@
     },
     {
       "path": "../../lib/ontwerp"
+    },
+    {
+      "path": "../../lib/foutmonitoring"
     }
   ]
 }

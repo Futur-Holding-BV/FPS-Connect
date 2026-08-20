@@ -70,9 +70,15 @@ async function main(): Promise<void> {
     // V1 — publieke monitoring-config
     const v1 = await fetch(`${BASIS}/monitoring-config`);
     if (v1.status !== 200) faal(`V1 monitoring-config → ${v1.status}`);
-    const cfg = (await v1.json()) as { sentry_dsn_web: string | null; commit: string | null };
-    if (!("sentry_dsn_web" in cfg) || !cfg.commit) faal(`V1: onverwachte config: ${JSON.stringify(cfg)}`);
-    ok(`V1 Monitoring-config publiek bereikbaar (dsn_web=${cfg.sentry_dsn_web ? "gezet" : "leeg (dev)"}, commit=${cfg.commit})`);
+    const cfg = (await v1.json()) as {
+      sentry_dsn_web: string | null;
+      sentry_dsn_mobile: string | null;
+      commit: string | null;
+    };
+    if (!("sentry_dsn_web" in cfg) || !("sentry_dsn_mobile" in cfg) || !cfg.commit) {
+      faal(`V1: onverwachte config: ${JSON.stringify(cfg)}`);
+    }
+    ok(`V1 Monitoring-config publiek bereikbaar (dsn_web=${cfg.sentry_dsn_web ? "gezet" : "leeg (dev)"}, dsn_mobile=${cfg.sentry_dsn_mobile ? "gezet" : "leeg (dev)"}, commit=${cfg.commit})`);
 
     // V2 — testfout niet voor gewone gebruikers
     const v2 = await api(gb, "POST", "/monitoring-testfout");

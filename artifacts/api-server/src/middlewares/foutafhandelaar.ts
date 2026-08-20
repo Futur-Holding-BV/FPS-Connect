@@ -9,9 +9,41 @@
  * vinden is.
  */
 import type { Request, Response, NextFunction } from "express";
-import { randomBytes } from "crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import * as Sentry from "@sentry/node";
+import { normaliseerMonitoringPad } from "@workspace/foutmonitoring";
 import { logger } from "../lib/logger";
+
+export function maakVeiligHandelingslabel(req: Request): {
+  handeling: string;
+  pad: string;
+} {
+  const routePad =
+    typeof req.route?.path === "string" ? req.route.path : undefined;
+  const sjabloon =
+    routePad && /^[a-zA-Z0-9_./:-]{1,160}$/.test(routePad)
+      ? `${req.baseUrl}${routePad}`.replace(/\/{2,}/g, "/")
+      : undefined;
+  const pad =
+    sjabloon && /^\/[a-zA-Z0-9_./:-]{1,180}$/.test(sjabloon)
+      ? sjabloon
+      : (normaliseerMonitoringPad(req.originalUrl ?? req.path) ?? "/onbekend");
+  return {
+    handeling: `${req.method.toUpperCase()}:${pad}`,
+    pad,
+  };
+}
+
+export function maakRoutingBewijs(
+  verwijzingscode: string,
+  handeling: string,
+): string | undefined {
+  const geheim = process.env["SENTRY_ROUTING_SIGNING_SECRET"];
+  if (!geheim || geheim.length < 32) return undefined;
+  return createHmac("sha256", geheim)
+    .update(`${verwijzingscode}:${handeling}`)
+    .digest("hex");
+}
 
 export function maakVerwijzingscode(): string {
   return `FPS-${randomBytes(4).toString("hex").toUpperCase()}`;
@@ -51,12 +83,30 @@ export function foutafhandelaar(err: unknown, req: Request, res: Response, next:
   }
 
   const code = maakVerwijzingscode();
+  const { handeling, pad } = maakVeiligHandelingslabel(req);
+  const routingBewijs = maakRoutingBewijs(code, handeling);
+  const gebruikerId = req.session?.userId;
+  const rol = req.session?.rol;
   // SENTRY_01 §2.4: alleen de onverwachte 500 gaat naar Sentry, met de
   // verwijzingscode als tag — de code die een gebruiker voorleest is zo de
   // zoeksleutel in Sentry. Zonder SENTRY_DSN is dit een no-op.
   Sentry.captureException(err, {
-    tags: { verwijzingscode: code },
-    contexts: { verzoek: { methode: req.method, pad: req.originalUrl?.split("?")[0], status: 500 } },
+    user: typeof gebruikerId === "number" ? { id: String(gebruikerId) } : undefined,
+    tags: {
+      component: "api",
+      verwijzingscode: code,
+      handeling,
+      ...(routingBewijs ? { routing_bewijs: routingBewijs } : {}),
+      ...(typeof rol === "string" ? { rol } : {}),
+    },
+    contexts: {
+      verzoek: {
+        methode: req.method,
+        pad,
+        status: 500,
+        handeling,
+      },
+    },
   });
   logger.error(
     { verwijzingscode: code, method: req.method, pad: req.originalUrl?.split("?")[0], err },

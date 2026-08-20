@@ -119,6 +119,9 @@ export default defineConfig(async ({ command }) => {
     build: {
       outDir: path.resolve(import.meta.dirname, "dist/public"),
       emptyOutDir: true,
+      // Verborgen sourcemaps worden in de Caddy-image buiten de publieke root
+      // bewaard voor de fail-open Sentry-upload en vóór serving verwijderd.
+      sourcemap: "hidden",
     },
     server: {
       port,
