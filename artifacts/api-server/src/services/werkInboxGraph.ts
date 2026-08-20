@@ -49,19 +49,19 @@ export function ontbrekendeScopes(opgeslagenScope: string | null | undefined): s
 // Review MAIL_01: nooit een voorspelbare fallback — een bekende secret zou
 // iedereen in staat stellen OAuth-states namens willekeurige gebruikers te
 // ondertekenen. Zonder configuratie faalt de OAuth-flow expliciet.
-const SESSION_SECRET = (() => {
+function haalSessionSecret(): string {
   const s = process.env["SESSION_SECRET"];
   if (!s || s.length < 16) {
     throw new Error("SESSION_SECRET ontbreekt of is te kort — vereist voor het ondertekenen van OAuth-states van de werk-inbox.");
   }
   return s;
-})();
+}
 
 // ── State-parameter (stateless, HMAC-gesigned) ────────────────────────────────
 
 export function maakOAuthState(gebruikerId: number, nonce: string): string {
   const payload = Buffer.from(JSON.stringify({ uid: gebruikerId, n: nonce, ts: Date.now() })).toString("base64url");
-  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  const sig = crypto.createHmac("sha256", haalSessionSecret()).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
 
@@ -70,7 +70,7 @@ export function verifyOAuthState(state: string): { uid: number; nonce: string } 
   if (dot < 0) return null;
   const payload = state.slice(0, dot);
   const sig     = state.slice(dot + 1);
-  const verwacht = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  const verwacht = crypto.createHmac("sha256", haalSessionSecret()).update(payload).digest("base64url");
   if (sig.length !== verwacht.length) return null;
   if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(verwacht))) return null;
   try {

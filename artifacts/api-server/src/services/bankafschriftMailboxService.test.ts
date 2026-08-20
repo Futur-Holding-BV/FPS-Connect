@@ -3,6 +3,23 @@
 
 import { describe, it, expect } from "vitest";
 import { bepaalBijlageFormaat, isPermanenteFout } from "./bankafschriftMailboxService";
+import { maakOAuthState } from "./werkInboxGraph";
+
+describe("werk-inbox OAuth-secretgrens", () => {
+  it("laat mailboxhelpers zonder secret laden maar weigert OAuth-state ondertekening", () => {
+    const bestaand = process.env["SESSION_SECRET"];
+    delete process.env["SESSION_SECRET"];
+    try {
+      expect(bepaalBijlageFormaat("bankafschrift.xml", "application/xml")).toBe("camt053");
+      expect(() => maakOAuthState(1, "nonce-met-minstens-zestien-tekens")).toThrow(
+        /SESSION_SECRET ontbreekt of is te kort/,
+      );
+    } finally {
+      if (bestaand == null) delete process.env["SESSION_SECRET"];
+      else process.env["SESSION_SECRET"] = bestaand;
+    }
+  });
+});
 
 describe("bepaalBijlageFormaat", () => {
   // ── CAMT via extensie ────────────────────────────────────────────────────
