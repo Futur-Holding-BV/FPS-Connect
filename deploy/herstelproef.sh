@@ -17,6 +17,7 @@ shopt -s nullglob
 
 BACKUP_ROOT="${BACKUP_DOEL:-/srv/fps-backup}"
 API_IMAGE="${HERSTEL_API_IMAGE:-deploy-api:latest}"
+MIGRATE_IMAGE="${HERSTEL_MIGRATE_IMAGE:-deploy-migrate:latest}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=deploy/backup-set-validatie.sh
 source "$SCRIPT_DIR/backup-set-validatie.sh"
@@ -142,6 +143,19 @@ elif [ -f "$SET/db.sql.gz.age" ]; then
 else
   echo "FOUT: geen db.sql.gz of db.sql.gz.age in $SET"; exit 1
 fi
+
+# Een immutable dagset kan ouder zijn dan de huidige applicatie-image. Breng
+# daarom uitsluitend de zojuist herstelde, geïsoleerde database via dezelfde
+# fail-closed migratierunner naar het huidige schema voordat de API start.
+docker image inspect "$MIGRATE_IMAGE" >/dev/null 2>&1 || {
+  echo "FOUT: herstel-migratie-image ontbreekt: $MIGRATE_IMAGE"
+  exit 1
+}
+stap "herstelde database migreren naar het huidige applicatieschema"
+docker run --rm --network "$NET" \
+  -e DATABASE_URL="postgresql://fps_app:herstelproef@${PFX}-db:5432/fps_production" \
+  "$MIGRATE_IMAGE"
+
 RIJEN=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "SELECT count(*) FROM gebruikers")
 stap "database hersteld: $RIJEN gebruikers"
 

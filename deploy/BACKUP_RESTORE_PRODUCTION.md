@@ -126,6 +126,8 @@ De workflow:
 - bouwt een nieuwe set of valideert de reeds die dag gebouwde volledige set;
 - controleert DB-bestand, manifest, objectaantal en alle checksums;
 - start daarna `herstelproef.sh` met het expliciete immutable setpad;
+- migreert uitsluitend de tijdelijke hersteldatabase naar het actuele schema
+  voordat de actuele API-image start; de set en productie blijven ongewijzigd;
 - verwijdert de tijdelijke scripts na afloop;
 - toont geen envwaarden, tokens, documentinhoud of individuele objectnamen.
 
