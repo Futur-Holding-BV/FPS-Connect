@@ -1,6 +1,6 @@
 {
   "name": "@workspace/firevault",
-  "version": "1.5.13",
+  "version": "1.5.15",
   "private": true,
   "type": "module",
   "scripts": {

@@ -172,7 +172,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     [navigeer, toast],
   );
   const { heeftNiveau } = useBevoegdheid();
-  const { rol, is_uitvoerend_veld: isUitvoerendVeld } = useRol();
+  const { rol, is_uitvoerend_veld: isUitvoerendVeld, heeftLoonfundamentToegang } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
   // isUitvoerendVeld comes from rol-context which derives it from the
@@ -207,6 +207,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonOrganisatie = heeftNiveau("organisatie", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
+  const toonLoonfundament = heeftLoonfundamentToegang;
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
   const magGoedkeurenActies = heeftNiveau("goedkeuring", 3);
   // WERKBAK_02: team & overleg = personeel≥2 of planning≥2 (of hoofdbeheerder).
@@ -1875,7 +1876,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Loon — scheiding vóór salarismodules */}
-              {(toonSalarisMutaties || toonScabMail || toonLoonOutput || toonBoekhouderPortaal || toonSalarisarchief) && (
+              {(toonSalarisMutaties || toonScabMail || toonLoonOutput || toonBoekhouderPortaal || toonSalarisarchief || toonLoonfundament) && (
               <TweeTrapsHoofdstuk
                 sleutel="loon"
                 titel="Loon"
@@ -1960,6 +1961,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               <Link href="/salarisarchief">
                                 <HardDriveUpload />
                                 <span>Salarisarchief</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonLoonfundament && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/loonfundament" || location.startsWith("/loonfundament/")}
+                            >
+                              <Link href="/loonfundament">
+                                <ScrollText />
+                                <span>Loonfundament</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

@@ -229,6 +229,8 @@ import WervingDetailPagina from "@/pages/personeel/werving-detail";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { Lock, ShieldOff } from "lucide-react";
 import { useEffect } from "react";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import LoonfundamentPagina from "@/pages/loonfundament/index";
 
 const WeekstatenPagina = () => <WeekstatenPaginaComponent />;
 
@@ -252,9 +254,21 @@ const PlanningNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Planning" />;
 const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie" />;
 const WizardNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Wizard onboarding" />;
 
-// UITVOERENDE_FUNCTIES is verwijderd — enige bron van waarheid is nu de
-// server (is_uitvoerend_veld in de auth-payload), doorgegeven via useRol().
+/**
+ * LOON_02A — Route-guard voor het Loonfundament.
+ * Bevoegdheidscheck vindt plaats VÓÓR de pagina (met datahooks) wordt gemount,
+ * zodat onbevoegde gebruikers geen loonverzoeken triggeren.
+ * Onbevoegden worden direct omgeleid naar /.
+ */
+function LoonFundamentRouteGuard() {
+  const { heeftLoonfundamentToegang } = useRol();
 
+  if (!heeftLoonfundamentToegang) {
+    return <Redirect to="/" />;
+  }
+
+  return <LoonfundamentPagina />;
+}
 /**
  * Pad-prefixen die voor veldmedewerkers zijn geblokkeerd. Elke prefix dekt
  * zowel het exacte pad als alle sub-paden (bijv. /offertes/123).
@@ -640,6 +654,9 @@ export function ConnectRoutes() {
         <Route path="/mijn/declaraties" component={MijnDeclaratiesPagina} />
         <Route path="/mijn/verlof" component={MijnVerlofPagina} />
 
+
+        {/* ── Loonfundament (LOON_02A) — bewaakt via LoonFundamentRouteGuard ── */}
+        <Route path="/loonfundament" component={LoonFundamentRouteGuard} />
 
         {/* ── Overig ── */}
         <Route path="/info" component={InfoPagina} />

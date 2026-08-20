@@ -37,6 +37,7 @@ type RolContextType = {
    *   het teamlid-object indien aanwezig, anders false.
    */
   is_uitvoerend_veld: boolean;
+  heeftLoonfundamentToegang: boolean;
 };
 
 const RolContext = createContext<RolContextType>({
@@ -48,6 +49,7 @@ const RolContext = createContext<RolContextType>({
   persoon: null,
   zetPersoon: () => {},
   is_uitvoerend_veld: false,
+  heeftLoonfundamentToegang: false,
 });
 
 function leesOpgeslagenPersoon(): GeimiteerdePersoon | null {
@@ -122,10 +124,13 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   const is_uitvoerend_veld: boolean = kanWisselen && actievePersoon
     ? (actievePersoon.is_uitvoerend_veld ?? false)
     : (gebruiker?.is_uitvoerend_veld ?? false);
+  const heeftLoonfundamentToegang: boolean =
+    rol === "hoofdbeheerder" ||
+    (!actievePersoon && gebruiker?.heeft_loonfundament_toegang === true);
 
   return (
     <RolContext.Provider
-      value={{ rol, echteRol, functietitels, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon, is_uitvoerend_veld }}
+      value={{ rol, echteRol, functietitels, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon, is_uitvoerend_veld, heeftLoonfundamentToegang }}
     >
       {children}
     </RolContext.Provider>

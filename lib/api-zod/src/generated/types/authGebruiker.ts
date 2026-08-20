@@ -30,4 +30,6 @@ export interface AuthGebruiker {
   moet_wachtwoord_wijzigen?: boolean;
   /** Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid. */
   is_uitvoerend_veld?: boolean;
+  /** LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of een gebruiker die aan het systeemprofiel Externe boekhouder is gekoppeld; een los toegekend module-recht is niet voldoende. */
+  heeft_loonfundament_toegang: boolean;
 }

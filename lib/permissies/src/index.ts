@@ -185,6 +185,12 @@ export const MODULES = [
     omschrijving:
       "CAMT.053/MT940-import, bankafschriftverwerking, automatisch afletteren van bankmutaties tegen facturen en betaalbatches. Niveau 1 = inzien, niveau 2 = handmatig koppelen, niveau 3 = importeren en verwerken, niveau 4 = volledig beheer inclusief terugdraaien",
   },
+  {
+    id: "loonfundament",
+    label: "Loonfundament",
+    omschrijving:
+      "Loonadministratie: inkomstenverhoudingen, loonafspraken, jaarparameters en loonstatussen. Niveau 4 = volledig beheer (exclusief voor Externe boekhouder)",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -449,6 +455,8 @@ export const PRESETS: Preset[] = [
     // financieel_vertrouwelijk zodat hij facturen, OHW en de jaarrekening kan
     // inzien. Projecten, offertes en opdrachten blijven bewust dicht.
     // BANK_01: Externe boekhouder krijgt volledig beheer over bankafschriften.
+    // LOON_02A: loonfundament niveau 4 — uitsluitend Externe boekhouder heeft
+    // toegang tot de loonverwerkingsmodule.
     bevoegdheden: matrix({
       salarisarchief: 3,
       salaris_mutaties: 1,
@@ -456,6 +464,7 @@ export const PRESETS: Preset[] = [
       financieel: 1,
       financieel_vertrouwelijk: 1,
       bankafschriften: 4,
+      loonfundament: 4,
     }),
   },
   {

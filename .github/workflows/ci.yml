@@ -193,6 +193,7 @@ jobs:
           psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -q -f lib/db/schema.sql
           pnpm --filter @workspace/scripts run seed-profielen
           pnpm --filter @workspace/db run migrate
+          pnpm --filter @workspace/api-server exec tsx src/scripts/verificatie-loonfundament.ts
           pnpm --filter @workspace/scripts exec tsx src/vul-acceptatieregister.ts
           pnpm --filter @workspace/scripts exec tsx src/vul-register01-punten.ts
           if NODE_ENV=test \

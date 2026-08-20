@@ -96,6 +96,8 @@ INDEX|calc_plak_analyses|calc_plak_analyses_pkey
 INDEX|calculatie_regels|calculatie_regels_pkey
 INDEX|calculaties|calculaties_nummer_uniek
 INDEX|calculaties|calculaties_pkey
+INDEX|cao_catalogus|cao_catalogus_code_key
+INDEX|cao_catalogus|cao_catalogus_pkey
 INDEX|chat_berichten|chat_berichten_gesprek_aangemaakt_idx
 INDEX|chat_berichten|chat_berichten_pkey
 INDEX|chat_deelnemers|chat_deelnemers_gesprek_gebruiker
@@ -300,7 +302,22 @@ INDEX|leverancier_prestaties|idx_lev_prestaties_leverancier
 INDEX|leverancier_prestaties|leverancier_prestaties_pkey
 INDEX|leveranciers|leveranciers_pkey
 INDEX|login_pogingen|login_pogingen_pkey
+INDEX|loon_afspraken|loon_afspraken_ikv_ingangsdatum_uniek
+INDEX|loon_afspraken|loon_afspraken_pkey
+INDEX|loon_inkomstenverhoudingen|loon_ikv_werkgever_medewerker_volgnummer_uniek
+INDEX|loon_inkomstenverhoudingen|loon_inkomstenverhoudingen_pkey
+INDEX|loon_jaarbronnen|loon_jaarbronnen_pkey
+INDEX|loon_jaarbronnen|loon_jaarbronnen_set_bronsoort_uniek
+INDEX|loon_jaarparameters|loon_jaarparameters_pkey
+INDEX|loon_jaarparameters|loon_jaarparameters_set_sleutel_uniek
+INDEX|loon_jaarsets|loon_jaarsets_jaar_volledig_uniek
+INDEX|loon_jaarsets|loon_jaarsets_pkey
+INDEX|loon_migratiebevindingen|loon_migratiebevindingen_pkey
 INDEX|loon_output_bestanden|loon_output_bestanden_pkey
+INDEX|loon_staat_tijdvakregels|loon_staat_tijdvakregels_pkey
+INDEX|loon_staat_tijdvakregels|loon_staat_tijdvakregels_staat_nummer_uniek
+INDEX|loon_staten|loon_staten_ikv_jaar_uniek
+INDEX|loon_staten|loon_staten_pkey
 INDEX|magazijn_inkooporder_regels|magazijn_inkooporder_regels_pkey
 INDEX|magazijn_inkooporders|magazijn_inkooporders_inkoopnummer_uniek
 INDEX|magazijn_inkooporders|magazijn_inkooporders_pkey
@@ -1274,6 +1291,13 @@ KOLOM|calculaties|omschrijving|text|YES|
 KOLOM|calculaties|opname_id|integer|YES|
 KOLOM|calculaties|status|text|NO|'concept'::text
 KOLOM|calculaties|verzonden_op|timestamp without time zone|YES|
+KOLOM|cao_catalogus|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|cao_catalogus|actief|boolean|NO|true
+KOLOM|cao_catalogus|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|cao_catalogus|code|text|NO|
+KOLOM|cao_catalogus|id|integer|NO|nextval('cao_catalogus_id_seq'::regclass)
+KOLOM|cao_catalogus|naam|text|NO|
+KOLOM|cao_catalogus|omschrijving|text|YES|
 KOLOM|chat_berichten|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|chat_berichten|afzender_id|integer|YES|
 KOLOM|chat_berichten|bijlage_type|text|YES|
@@ -2956,6 +2980,81 @@ KOLOM|login_pogingen|nieuw_apparaat|boolean|NO|false
 KOLOM|login_pogingen|nieuw_ip|boolean|NO|false
 KOLOM|login_pogingen|tijdstip|timestamp without time zone|NO|now()
 KOLOM|login_pogingen|user_agent|text|YES|
+KOLOM|loon_afspraken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_afspraken|anoniementarief|boolean|NO|false
+KOLOM|loon_afspraken|bedrag_cents|integer|NO|
+KOLOM|loon_afspraken|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_afspraken|id|integer|NO|nextval('loon_afspraken_id_seq'::regclass)
+KOLOM|loon_afspraken|ingangsdatum|date|NO|
+KOLOM|loon_afspraken|inkomstenverhouding_id|integer|NO|
+KOLOM|loon_afspraken|loonheffingskorting|boolean|NO|false
+KOLOM|loon_afspraken|loonsoort|text|NO|'maandloon'::text
+KOLOM|loon_afspraken|schaal|text|YES|
+KOLOM|loon_afspraken|tabelkeuze|text|NO|'wit'::text
+KOLOM|loon_afspraken|trede|text|YES|
+KOLOM|loon_afspraken|vaste_toeslagen|jsonb|NO|'[]'::jsonb
+KOLOM|loon_afspraken|vastgelegd_door_id|integer|YES|
+KOLOM|loon_inkomstenverhoudingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_inkomstenverhoudingen|aanstelling_id|integer|NO|
+KOLOM|loon_inkomstenverhoudingen|actief|boolean|NO|true
+KOLOM|loon_inkomstenverhoudingen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_inkomstenverhoudingen|code_aard_arbeidsverhouding|text|YES|
+KOLOM|loon_inkomstenverhoudingen|code_invloed_verzekeringsplicht|text|YES|
+KOLOM|loon_inkomstenverhoudingen|contract_onbepaalde_tijd|boolean|NO|false
+KOLOM|loon_inkomstenverhoudingen|datum_aanvang|date|NO|
+KOLOM|loon_inkomstenverhoudingen|datum_einde|date|YES|
+KOLOM|loon_inkomstenverhoudingen|id|integer|NO|nextval('loon_inkomstenverhoudingen_id_seq'::regclass)
+KOLOM|loon_inkomstenverhoudingen|medewerker_id|integer|NO|
+KOLOM|loon_inkomstenverhoudingen|oproepovereenkomst|boolean|NO|false
+KOLOM|loon_inkomstenverhoudingen|schriftelijke_arbeidsovereenkomst|boolean|NO|true
+KOLOM|loon_inkomstenverhoudingen|verzekerd_wia|boolean|NO|true
+KOLOM|loon_inkomstenverhoudingen|verzekerd_ww|boolean|NO|true
+KOLOM|loon_inkomstenverhoudingen|verzekerd_zw|boolean|NO|true
+KOLOM|loon_inkomstenverhoudingen|volgnummer|integer|NO|
+KOLOM|loon_inkomstenverhoudingen|werkgever_id|integer|NO|
+KOLOM|loon_jaarbronnen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_jaarbronnen|bestandsgrootte|integer|NO|
+KOLOM|loon_jaarbronnen|bron_url|text|NO|
+KOLOM|loon_jaarbronnen|bronsoort|text|NO|
+KOLOM|loon_jaarbronnen|geladen_op|timestamp without time zone|NO|
+KOLOM|loon_jaarbronnen|id|integer|NO|nextval('loon_jaarbronnen_id_seq'::regclass)
+KOLOM|loon_jaarbronnen|jaarset_id|integer|NO|
+KOLOM|loon_jaarbronnen|mime_type|text|NO|
+KOLOM|loon_jaarbronnen|officiele_bestandsnaam|text|NO|
+KOLOM|loon_jaarbronnen|officiele_versie|text|NO|
+KOLOM|loon_jaarbronnen|sha256|text|NO|
+KOLOM|loon_jaarbronnen|vindplaats|text|NO|
+KOLOM|loon_jaarparameters|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_jaarparameters|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_jaarparameters|bron_id|integer|YES|
+KOLOM|loon_jaarparameters|datatype|text|NO|'decimal'::text
+KOLOM|loon_jaarparameters|id|integer|NO|nextval('loon_jaarparameters_id_seq'::regclass)
+KOLOM|loon_jaarparameters|jaarset_id|integer|NO|
+KOLOM|loon_jaarparameters|reden|text|YES|
+KOLOM|loon_jaarparameters|rekenstatus|text|NO|'niet_berekend'::text
+KOLOM|loon_jaarparameters|sleutel|text|NO|
+KOLOM|loon_jaarparameters|vindplaats|text|YES|
+KOLOM|loon_jaarparameters|waarde|jsonb|YES|
+KOLOM|loon_jaarsets|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_jaarsets|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_jaarsets|fouten|jsonb|NO|'[]'::jsonb
+KOLOM|loon_jaarsets|geladen_door_id|integer|YES|
+KOLOM|loon_jaarsets|geladen_op|timestamp without time zone|YES|
+KOLOM|loon_jaarsets|id|integer|NO|nextval('loon_jaarsets_id_seq'::regclass)
+KOLOM|loon_jaarsets|jaar|integer|NO|
+KOLOM|loon_jaarsets|parameter_aantal|integer|NO|0
+KOLOM|loon_jaarsets|status|text|NO|'concept'::text
+KOLOM|loon_jaarsets|versie|integer|NO|1
+KOLOM|loon_jaarsets|vervangen_op|timestamp without time zone|YES|
+KOLOM|loon_jaarsets|volledig|boolean|NO|false
+KOLOM|loon_migratiebevindingen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_migratiebevindingen|entiteit_id|integer|NO|
+KOLOM|loon_migratiebevindingen|entiteit_type|text|NO|
+KOLOM|loon_migratiebevindingen|id|integer|NO|nextval('loon_migratiebevindingen_id_seq'::regclass)
+KOLOM|loon_migratiebevindingen|oorspronkelijke_waarde|text|YES|
+KOLOM|loon_migratiebevindingen|opgelost_op|timestamp without time zone|YES|
+KOLOM|loon_migratiebevindingen|reden|text|NO|
+KOLOM|loon_migratiebevindingen|veld|text|NO|
 KOLOM|loon_output_bestanden|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|loon_output_bestanden|bestandsgrootte|integer|YES|
 KOLOM|loon_output_bestanden|bestandsnaam|text|NO|
@@ -2979,6 +3078,25 @@ KOLOM|loon_output_bestanden|uploader_naam|text|YES|
 KOLOM|loon_output_bestanden|werkgever_id|integer|YES|
 KOLOM|loon_output_bestanden|werkmaatschappij|text|YES|
 KOLOM|loon_output_bestanden|zichtbaar_medewerker|boolean|NO|false
+KOLOM|loon_staat_tijdvakregels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_staat_tijdvakregels|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_staat_tijdvakregels|cumulatieven|jsonb|NO|'{}'::jsonb
+KOLOM|loon_staat_tijdvakregels|id|integer|NO|nextval('loon_staat_tijdvakregels_id_seq'::regclass)
+KOLOM|loon_staat_tijdvakregels|loonstaat_id|integer|NO|
+KOLOM|loon_staat_tijdvakregels|periode_einde|date|NO|
+KOLOM|loon_staat_tijdvakregels|periode_start|date|NO|
+KOLOM|loon_staat_tijdvakregels|reden|text|YES|
+KOLOM|loon_staat_tijdvakregels|rekenstatus|text|NO|'niet_berekend'::text
+KOLOM|loon_staat_tijdvakregels|tijdvak_waarden|jsonb|NO|'{}'::jsonb
+KOLOM|loon_staat_tijdvakregels|tijdvaknummer|integer|NO|
+KOLOM|loon_staat_tijdvakregels|vindplaats|text|YES|
+KOLOM|loon_staten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|loon_staten|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|loon_staten|id|integer|NO|nextval('loon_staten_id_seq'::regclass)
+KOLOM|loon_staten|inkomstenverhouding_id|integer|NO|
+KOLOM|loon_staten|kalenderjaar|integer|NO|
+KOLOM|loon_staten|status|text|NO|'concept'::text
+KOLOM|loon_staten|tijdvak|text|NO|'maand'::text
 KOLOM|magazijn_inkooporder_regels|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|magazijn_inkooporder_regels|artikel_id|integer|NO|
 KOLOM|magazijn_inkooporder_regels|btw_percentage|integer|NO|21
@@ -3170,6 +3288,7 @@ KOLOM|materiaal_aanvragen|status|text|NO|'nieuw'::text
 KOLOM|materiaal_aanvragen|volgens_opdracht|text|YES|
 KOLOM|medewerker_aanstellingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|medewerker_aanstellingen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|medewerker_aanstellingen|cao_id|integer|NO|
 KOLOM|medewerker_aanstellingen|cao|text|YES|
 KOLOM|medewerker_aanstellingen|contracturen_per_week|real|YES|
 KOLOM|medewerker_aanstellingen|functie_id|integer|YES|
@@ -5371,6 +5490,7 @@ KOLOM|werkgever_bankrekeningen|id|integer|NO|nextval('werkgever_bankrekeningen_i
 KOLOM|werkgever_bankrekeningen|tenaamstelling|text|NO|
 KOLOM|werkgever_bankrekeningen|werkgever_id|integer|NO|
 KOLOM|werkgevers|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|werkgevers|aangiftetijdvak|text|YES|
 KOLOM|werkgevers|actief|boolean|NO|true
 KOLOM|werkgevers|adres|text|YES|
 KOLOM|werkgevers|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -5378,7 +5498,10 @@ KOLOM|werkgevers|boekhouder_email|text|YES|
 KOLOM|werkgevers|boekhouder_naam|text|YES|
 KOLOM|werkgevers|briefpapier_document_id|integer|YES|
 KOLOM|werkgevers|btw|text|YES|
+KOLOM|werkgevers|cao_id|integer|NO|
 KOLOM|werkgevers|cao|text|NO|'Metaal & Techniek'::text
+KOLOM|werkgevers|eigenrisicodrager_wga|boolean|NO|false
+KOLOM|werkgevers|eigenrisicodrager_zw|boolean|NO|false
 KOLOM|werkgevers|email|text|YES|
 KOLOM|werkgevers|handtekening_url|text|YES|
 KOLOM|werkgevers|iban|text|YES|
@@ -5392,6 +5515,8 @@ KOLOM|werkgevers|lettertype|text|YES|
 KOLOM|werkgevers|logo_document_id|integer|YES|
 KOLOM|werkgevers|logo_url|text|YES|
 KOLOM|werkgevers|logo_varianten|jsonb|NO|'{}'::jsonb
+KOLOM|werkgevers|loonheffingennummer|text|YES|
+KOLOM|werkgevers|loonkostenvoordeel_instelling|boolean|NO|false
 KOLOM|werkgevers|loonperiode|text|YES|'maandelijks'::text
 KOLOM|werkgevers|marge_boven|numeric|YES|
 KOLOM|werkgevers|marge_links|numeric|YES|
@@ -5405,8 +5530,10 @@ KOLOM|werkgevers|personeelsbeleid|text|YES|
 KOLOM|werkgevers|plaats|text|YES|
 KOLOM|werkgevers|postcode|text|YES|
 KOLOM|werkgevers|primaire_kleur|text|YES|'#F23B0D'::text
+KOLOM|werkgevers|risicogroep|text|YES|
 KOLOM|werkgevers|salarisverwerker|text|YES|
 KOLOM|werkgevers|scab_email_adres|text|YES|
+KOLOM|werkgevers|sectorcode|text|YES|
 KOLOM|werkgevers|telefoon|text|YES|
 KOLOM|werkgevers|voettekst_positie|text|YES|
 KOLOM|werkgevers|voettekst|text|YES|

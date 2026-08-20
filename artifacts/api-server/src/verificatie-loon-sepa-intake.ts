@@ -70,8 +70,14 @@ async function opruimen(): Promise<void> {
 
 try {
   // ── Opzet: werkgever met bekend IBAN + actieve verwerken-mailbox ────────────
+  const { caoCatalogusTable } = await import("@workspace/db");
+  const [cao] = await db.select({ id: caoCatalogusTable.id })
+    .from(caoCatalogusTable)
+    .where(eq(caoCatalogusTable.code, "ONBEKEND"));
+  if (!cao) throw new Error("CAO-catalogus ontbreekt");
   const [wg] = await db.insert(werkgeversTable).values({
     naam: `${MARK} Testwerkgever BV`,
+    caoId: cao.id,
     scabEmailAdres: "loon@scab-e2e.nl",
   }).returning();
   werkgeverId = wg.id;

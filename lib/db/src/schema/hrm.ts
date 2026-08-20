@@ -6,11 +6,30 @@
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
 import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, jsonb, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable, profielenTable } from "./gebruikers";
 import { documentenTable } from "./documenten";
 import { crmKlantenTable } from "./crm";
+
+// ── CAO-catalogus ─────────────────────────────────────────────────────────────
+// Vaste katalogus van CAO-codes die binnen de FPS Groep worden toegepast.
+// Eén rij per CAO; werkgevers en aanstellingen verwijzen hiernaar via cao_id.
+// De code is de compacte technische sleutel (bv. "MT", "BI", "ONBEKEND").
+export const caoCatalogusTable = pgTable("cao_catalogus", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  naam: text("naam").notNull(),
+  omschrijving: text("omschrijving"),
+  actief: boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertCaoCatalogusSchema = createInsertSchema(caoCatalogusTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertCaoCatalogus = z.infer<typeof insertCaoCatalogusSchema>;
+export type CaoCatalogus = typeof caoCatalogusTable.$inferSelect;
 
 // Werkgever — hoofdentiteit binnen de FPS Groep. Elke werkmaatschappij is een
 // eigen werkgever met eigen CAO, huisstijl (logo/briefpapier), personeelsbeleid,
@@ -62,6 +81,22 @@ export const werkgeversTable = pgTable("werkgevers", {
   internContactNaam: text("intern_contact_naam"),
   internContactEmail: text("intern_contact_email"),
   scabEmailAdres: text("scab_email_adres"),
+  // LOON_02A: FK naar cao_catalogus; verplicht na migratie-backfill.
+  // De database-trigger vult een ontbrekende waarde fail-closed vanuit naam/
+  // legacytekst (of ONBEKEND). default(NULL) maakt bestaande insert-fixtures
+  // typecompatibel; de kolom blijft in PostgreSQL NOT NULL.
+  caoId: integer("cao_id").notNull().default(sql`NULL`).references(() => caoCatalogusTable.id, { onDelete: "restrict" }),
+  // LOON_02A: loonheffingen- en sectorkentekens voor loonaangifte.
+  loonheffingennummer: text("loonheffingennummer"),
+  sectorcode: text("sectorcode"),
+  risicogroep: text("risicogroep"),
+  // LOON_02A: aangiftetijdvak: maand | vier_weken
+  aangiftetijdvak: text("aangiftetijdvak"),
+  // LOON_02A: eigenrisico-dragerschap WGA en ZW (Ziektewet).
+  eigenrisicodragerWga: boolean("eigenrisicodrager_wga").notNull().default(false),
+  eigenrisicodragerZw: boolean("eigenrisicodrager_zw").notNull().default(false),
+  // LOON_02A: loonkostenvoordeel instelling (true = LKV van toepassing).
+  loonkostenvoordeelInstelling: boolean("loonkostenvoordeel_instelling").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -504,6 +539,9 @@ export const medewerkerAanstellingenTable = pgTable("medewerker_aanstellingen", 
   werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   functieId: integer("functie_id").references(() => functiesTable.id, { onDelete: "set null" }),
   cao: text("cao"),
+  // LOON_02A: FK naar cao_catalogus; verplicht na migratie-backfill.
+  // Zie werkgevers.caoId: de BEFORE-trigger vult vóór de NOT NULL-controle.
+  caoId: integer("cao_id").notNull().default(sql`NULL`).references(() => caoCatalogusTable.id, { onDelete: "restrict" }),
   contracturenPerWeek: real("contracturen_per_week"),
   isHoofd: boolean("is_hoofd").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

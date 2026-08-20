@@ -141,6 +141,7 @@ import merkenkastRouter from "./merkenkast";
 import beeldbankRouter from "./beeldbank";
 import functiesV2Router from "./functies-v2";
 import bankafschriftenRouter from "./bankafschriften";
+import loonfundamentRouter from "./loonfundament";
 
 const router: IRouter = Router();
 
@@ -309,5 +310,7 @@ router.use(werkbakRouter);
 // zijn (paden verschillen), maar expliciete volgorde voorkomt schaduw.
 router.use(werkstroomRouter);
 router.use(bankafschriftenRouter);
+// LOON_02A — Loonfundament: inkomstenverhoudingen, loonafspraken, jaarparameters en loonstaten.
+router.use(loonfundamentRouter);
 
 export default router;

@@ -1111,8 +1111,6 @@ export const UpdateGebouwNotitieParams = zod.object({
 })
 
 
-
-
 export const UpdateGebouwNotitieBody = zod.object({
   "tekst": zod.string().min(1),
   "beller_naam": zod.string().nullish()
@@ -1493,7 +1491,6 @@ export const MaakRapportDefinitiefParams = zod.object({
 export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
 
 
-
 export const MaakRapportDefinitiefBody = zod.object({
   "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
 })
@@ -1743,7 +1740,6 @@ export const ListVoorzieningenResponse = zod.object({
 export const createVoorzieningBodyApplicatiesMax = 5;
 
 
-
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1905,7 +1901,6 @@ export const UpdateVoorzieningParams = zod.object({
 })
 
 export const updateVoorzieningBodyApplicatiesMax = 5;
-
 
 
 export const UpdateVoorzieningBody = zod.object({
@@ -2964,7 +2959,6 @@ export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrecti
 export const listOnlineGebruikersResponseInitialenMax = 3;
 
 
-
 export const ListOnlineGebruikersResponseItem = zod.object({
   "naam": zod.string(),
   "initialen": zod.string().max(listOnlineGebruikersResponseInitialenMax),
@@ -3938,7 +3932,6 @@ export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
  */
 
 
-
 export const CreateDocumentBody = zod.object({
   "naam": zod.string(),
   "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport', 'tekening', 'contract', 'verzekering', 'opdrachtbevestiging', 'overig']),
@@ -4113,8 +4106,6 @@ export const ListDocumentRevisiesResponse = zod.array(ListDocumentRevisiesRespon
 export const CreateDocumentRevisieParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const CreateDocumentRevisieBody = zod.object({
@@ -5057,9 +5048,6 @@ export const DeleteModuleBeoordelingResponse = zod.void()
  */
 
 
-
-
-
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
@@ -5067,10 +5055,6 @@ export const RequestUploadUrlBody = zod.object({
   "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
   "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
-
-
-
-
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -6719,9 +6703,6 @@ export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBel
  */
 
 
-
-
-
 export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "naam": zod.string().min(1),
   "document_type": zod.string().min(1),
@@ -6753,10 +6734,6 @@ export const CreateGoedkeuringBeleidsregelResponse = zod.void()
 export const UpdateGoedkeuringBeleidsregelParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const UpdateGoedkeuringBeleidsregelBody = zod.object({
@@ -6972,8 +6949,6 @@ export const GoedkeuringAanvraagAfwijzenParams = zod.object({
 })
 
 
-
-
 export const GoedkeuringAanvraagAfwijzenBody = zod.object({
   "reden": zod.string().min(1)
 })
@@ -7059,7 +7034,6 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 export const listGoedkeuringDashboardQueryVensterMin = 0;
 
 
-
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
@@ -7106,7 +7080,6 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
  * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
  */
 export const exportGoedkeuringDashboardQueryVensterMin = 0;
-
 
 
 export const ExportGoedkeuringDashboardQueryParams = zod.object({
@@ -7268,7 +7241,8 @@ export const TaalWijzigenResponse = zod.object({
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
   "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
-  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n'),
+  "heeft_loonfundament_toegang": zod.boolean().describe('LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of een gebruiker die aan het systeemprofiel Externe boekhouder is gekoppeld; een los toegekend module-recht is niet voldoende.\n')
 })
 
 
@@ -7419,7 +7393,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
   "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
-  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n'),
+  "heeft_loonfundament_toegang": zod.boolean().describe('LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of een gebruiker die aan het systeemprofiel Externe boekhouder is gekoppeld; een los toegekend module-recht is niet voldoende.\n')
 })
 
 
@@ -7445,7 +7420,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
   "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
-  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n'),
+  "heeft_loonfundament_toegang": zod.boolean().describe('LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of een gebruiker die aan het systeemprofiel Externe boekhouder is gekoppeld; een los toegekend module-recht is niet voldoende.\n')
 })
 
 
@@ -7473,7 +7449,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "is_hoofdtester": zod.boolean().optional(),
   "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n'),
-  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n')
+  "is_uitvoerend_veld": zod.boolean().optional().describe('Server-berekende vlag: true wanneer de gebruiker puur uitvoerend veld is (alle functietitels vallen in de uitvoerende lijst: Monteur, Timmerman, Uitvoerder, Onderhoudsmonteur) én niet de rol hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag als enige bron van waarheid voor omgevingskeuze en menuzichtbaarheid.\n'),
+  "heeft_loonfundament_toegang": zod.boolean().describe('LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of een gebruiker die aan het systeemprofiel Externe boekhouder is gekoppeld; een los toegekend module-recht is niet voldoende.\n')
 })
 
 
@@ -7481,7 +7458,6 @@ export const GetHuidigeGebruikerResponse = zod.object({
  * @summary Eigen initialen instellen (getoond bij aantekeningen)
  */
 export const updateMijnInitialenBodyInitialenMax = 6;
-
 
 
 export const UpdateMijnInitialenBody = zod.object({
@@ -9426,7 +9402,6 @@ export const ListMarketingWerkgeverOptiesResponse = zod.array(ListMarketingWerkg
 export const getMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
 
 
-
 export const GetMarketingVerzendtempoResponse = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(getMarketingVerzendtempoResponseTempoPerMinuutMax)
 })
@@ -9438,13 +9413,11 @@ export const GetMarketingVerzendtempoResponse = zod.object({
 export const updateMarketingVerzendtempoBodyTempoPerMinuutMax = 60;
 
 
-
 export const UpdateMarketingVerzendtempoBody = zod.object({
   "tempo_per_minuut": zod.number().min(1).max(updateMarketingVerzendtempoBodyTempoPerMinuutMax)
 })
 
 export const updateMarketingVerzendtempoResponseTempoPerMinuutMax = 60;
-
 
 
 export const UpdateMarketingVerzendtempoResponse = zod.object({
@@ -10707,8 +10680,6 @@ export const CreateWerkgeverBankrekeningParams = zod.object({
 })
 
 
-
-
 export const CreateWerkgeverBankrekeningBody = zod.object({
   "iban": zod.string(),
   "tenaamstelling": zod.string(),
@@ -10725,8 +10696,6 @@ export const UpdateWerkgeverBankrekeningParams = zod.object({
   "id": zod.coerce.number(),
   "rekeningId": zod.coerce.number()
 })
-
-
 
 
 export const UpdateWerkgeverBankrekeningBody = zod.object({
@@ -10882,7 +10851,6 @@ export const ListFunctiesV2Response = zod.array(ListFunctiesV2ResponseItem)
  */
 
 
-
 export const CreateFunctieV2Body = zod.object({
   "naam": zod.string().min(1),
   "omschrijving": zod.string().optional(),
@@ -10934,8 +10902,6 @@ export const GetFunctieV2Response = zod.object({
 export const UpdateFunctieV2Params = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const UpdateFunctieV2Body = zod.object({
@@ -11004,8 +10970,6 @@ export const VervangGebruikerAfwijkingenParams = zod.object({
 })
 
 
-
-
 export const VervangGebruikerAfwijkingenBody = zod.object({
   "afwijkingen": zod.array(zod.object({
   "module_id": zod.string(),
@@ -11038,8 +11002,6 @@ export const VervangGebruikerAfwijkingenResponse = zod.object({
 export const PasFunctieRechtenToeParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const PasFunctieRechtenToeBody = zod.object({
@@ -11548,7 +11510,6 @@ export const ListMedewerkersResponse = zod.array(ListMedewerkersResponseItem)
 export const createMedewerkerBodyOnboardingVersieMin = 0;
 
 
-
 export const CreateMedewerkerBody = zod.object({
   "naam": zod.string(),
   "gebruiker_id": zod.number().nullish(),
@@ -11700,8 +11661,6 @@ export const GetExterneAdviseurHerstartVoorvertoningParams = zod.object({
 export const getExterneAdviseurHerstartVoorvertoningResponseImpactItemAantalMin = 0;
 
 
-
-
 export const GetExterneAdviseurHerstartVoorvertoningResponse = zod.object({
   "adviseur_id": zod.number(),
   "gebruiker_id": zod.number(),
@@ -11731,9 +11690,6 @@ export const GetExterneAdviseurHerstartVoorvertoningResponse = zod.object({
 export const RestartExterneAdviseurOnboardingParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
 
 
 export const RestartExterneAdviseurOnboardingBody = zod.object({
@@ -11787,7 +11743,6 @@ export const KoppelUitzendbureauResponse = zod.object({
  */
 export const onboardMedewerkerBodyContracturenPerWeekMin = 0;
 export const onboardMedewerkerBodyContracturenPerWeekMax = 48;
-
 
 
 export const OnboardMedewerkerBody = zod.object({
@@ -11905,7 +11860,6 @@ export const UpdateMedewerkerParams = zod.object({
 })
 
 export const updateMedewerkerBodyOnboardingVersieMin = 0;
-
 
 
 export const UpdateMedewerkerBody = zod.object({
@@ -12493,7 +12447,6 @@ export const CreateSaldoCorrectieParams = zod.object({
 export const createSaldoCorrectieBodyRedenMin = 3;
 
 
-
 export const CreateSaldoCorrectieBody = zod.object({
   "verlofsoort_id": zod.number(),
   "jaar": zod.number(),
@@ -12916,7 +12869,6 @@ export const GetWizardStatusParams = zod.object({
 export const getWizardStatusResponseVersieMin = 0;
 
 
-
 export const GetWizardStatusResponse = zod.object({
   "id": zod.number(),
   "medewerker_status": zod.string().nullable(),
@@ -12937,7 +12889,6 @@ export const PatchWizardVoortgangParams = zod.object({
 export const patchWizardVoortgangBodyVersieMin = 0;
 
 
-
 export const PatchWizardVoortgangBody = zod.object({
   "stap": zod.number(),
   "versie": zod.number().min(patchWizardVoortgangBodyVersieMin).describe('Versie uit de laatste wizard-status of PATCH-response; stale versies geven 409.'),
@@ -12949,7 +12900,6 @@ export const PatchWizardVoortgangBody = zod.object({
 })
 
 export const patchWizardVoortgangResponseVersieMin = 0;
-
 
 
 export const PatchWizardVoortgangResponse = zod.object({
@@ -14072,7 +14022,6 @@ export const DoorzettenNaarGarageResponse = zod.object({
 export const vraagAdviseurBodyVraagMax = 2000;
 
 export const vraagAdviseurBodyContextSchermMax = 300;
-
 
 
 export const VraagAdviseurBody = zod.object({
@@ -16285,8 +16234,6 @@ export const MeldMeerwerkParams = zod.object({
 })
 
 
-
-
 export const MeldMeerwerkBody = zod.object({
   "type": zod.enum(['meerwerk', 'minderwerk']),
   "fotos": zod.array(zod.string()).min(1),
@@ -17338,7 +17285,6 @@ export const AfwijzenPimAdviesParams = zod.object({
 })
 
 export const afwijzenPimAdviesBodyRedenMax = 1000;
-
 
 
 export const AfwijzenPimAdviesBody = zod.object({
@@ -21015,8 +20961,6 @@ export const ListAcceptatieregisterResponse = zod.array(ListAcceptatieregisterRe
 export const UpdateAcceptatiePuntParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const UpdateAcceptatiePuntBody = zod.object({
@@ -25975,7 +25919,6 @@ export const CrediterenFactuurParams = zod.object({
 export const crediterenFactuurBodyRedenMax = 500;
 
 
-
 export const CrediterenFactuurBody = zod.object({
   "geheel": zod.boolean().describe('true = alle nog niet gecrediteerde regels; false = alleen regel_ids'),
   "regel_ids": zod.array(zod.number()).min(1).optional(),
@@ -28954,6 +28897,417 @@ export const PostBoekhouderVerlofIdVerwerkenResponse = zod.object({
 })
 
 
+export const ListLoonfundamentCaoCatalogusResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "naam": zod.string(),
+  "actief": zod.boolean()
+})
+export const ListLoonfundamentCaoCatalogusResponse = zod.array(ListLoonfundamentCaoCatalogusResponseItem)
+
+
+export const ListLoonfundamentAanstellingenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string(),
+  "cao_id": zod.number(),
+  "cao_naam": zod.string()
+})
+export const ListLoonfundamentAanstellingenResponse = zod.array(ListLoonfundamentAanstellingenResponseItem)
+
+
+export const ListLoonInhoudingsplichtigenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "cao_id": zod.number(),
+  "cao_code": zod.string(),
+  "cao_naam": zod.string(),
+  "loonheffingennummer": zod.string().nullish(),
+  "sectorcode": zod.string().nullish(),
+  "risicogroep": zod.string().nullish(),
+  "aangiftetijdvak": zod.union([zod.literal('maand'),zod.literal('vier_weken'),zod.literal(null)]).nullish(),
+  "eigenrisicodrager_wga": zod.boolean(),
+  "eigenrisicodrager_zw": zod.boolean(),
+  "loonkostenvoordeel_instelling": zod.boolean(),
+  "compleet": zod.boolean(),
+  "migratiebevindingen": zod.array(zod.object({
+  "id": zod.number(),
+  "entiteit_type": zod.string(),
+  "entiteit_id": zod.number(),
+  "veld": zod.string(),
+  "oorspronkelijke_waarde": zod.string().nullish(),
+  "reden": zod.string(),
+  "opgelost_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+}))
+})
+export const ListLoonInhoudingsplichtigenResponse = zod.array(ListLoonInhoudingsplichtigenResponseItem)
+
+
+export const UpdateLoonInhoudingsplichtigeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateLoonInhoudingsplichtigeBodyLoonheffingennummerRegExp = new RegExp('^[0-9]{9}L[0-9]{2}$');
+export const updateLoonInhoudingsplichtigeBodySectorcodeRegExp = new RegExp('^[0-9]{2}$');
+export const updateLoonInhoudingsplichtigeBodyRisicogroepRegExp = new RegExp('^[0-9]{1,2}$');
+
+
+export const UpdateLoonInhoudingsplichtigeBody = zod.object({
+  "cao_id": zod.number().optional(),
+  "loonheffingennummer": zod.string().regex(updateLoonInhoudingsplichtigeBodyLoonheffingennummerRegExp).nullish(),
+  "sectorcode": zod.string().regex(updateLoonInhoudingsplichtigeBodySectorcodeRegExp).nullish(),
+  "risicogroep": zod.string().regex(updateLoonInhoudingsplichtigeBodyRisicogroepRegExp).nullish(),
+  "aangiftetijdvak": zod.union([zod.literal('maand'),zod.literal('vier_weken'),zod.literal(null)]).nullish(),
+  "eigenrisicodrager_wga": zod.boolean().optional(),
+  "eigenrisicodrager_zw": zod.boolean().optional(),
+  "loonkostenvoordeel_instelling": zod.boolean().optional()
+})
+
+export const UpdateLoonInhoudingsplichtigeResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "cao_id": zod.number(),
+  "cao_code": zod.string(),
+  "cao_naam": zod.string(),
+  "loonheffingennummer": zod.string().nullish(),
+  "sectorcode": zod.string().nullish(),
+  "risicogroep": zod.string().nullish(),
+  "aangiftetijdvak": zod.union([zod.literal('maand'),zod.literal('vier_weken'),zod.literal(null)]).nullish(),
+  "eigenrisicodrager_wga": zod.boolean(),
+  "eigenrisicodrager_zw": zod.boolean(),
+  "loonkostenvoordeel_instelling": zod.boolean(),
+  "compleet": zod.boolean(),
+  "migratiebevindingen": zod.array(zod.object({
+  "id": zod.number(),
+  "entiteit_type": zod.string(),
+  "entiteit_id": zod.number(),
+  "veld": zod.string(),
+  "oorspronkelijke_waarde": zod.string().nullish(),
+  "reden": zod.string(),
+  "opgelost_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+}))
+})
+
+
+export const ListLoonInkomstenverhoudingenQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional(),
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+
+export const ListLoonInkomstenverhoudingenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "aanstelling_id": zod.number(),
+  "volgnummer": zod.number().min(1),
+  "datum_aanvang": zod.coerce.date(),
+  "datum_einde": zod.coerce.date().nullish(),
+  "code_aard_arbeidsverhouding": zod.string().nullish(),
+  "contract_onbepaalde_tijd": zod.boolean(),
+  "schriftelijke_arbeidsovereenkomst": zod.boolean(),
+  "oproepovereenkomst": zod.boolean(),
+  "verzekerd_zw": zod.boolean(),
+  "verzekerd_ww": zod.boolean(),
+  "verzekerd_wia": zod.boolean(),
+  "code_invloed_verzekeringsplicht": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListLoonInkomstenverhoudingenResponse = zod.array(ListLoonInkomstenverhoudingenResponseItem)
+
+
+export const CreateLoonInkomstenverhoudingBody = zod.object({
+  "werkgever_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "aanstelling_id": zod.number(),
+  "volgnummer": zod.number().min(1),
+  "datum_aanvang": zod.coerce.date(),
+  "datum_einde": zod.coerce.date().nullish(),
+  "code_aard_arbeidsverhouding": zod.string().nullish(),
+  "contract_onbepaalde_tijd": zod.boolean(),
+  "schriftelijke_arbeidsovereenkomst": zod.boolean(),
+  "oproepovereenkomst": zod.boolean(),
+  "verzekerd_zw": zod.boolean(),
+  "verzekerd_ww": zod.boolean(),
+  "verzekerd_wia": zod.boolean(),
+  "code_invloed_verzekeringsplicht": zod.string().nullish()
+})
+
+export const CreateLoonInkomstenverhoudingResponse = zod.void()
+
+
+export const UpdateLoonInkomstenverhoudingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const UpdateLoonInkomstenverhoudingBody = zod.object({
+  "volgnummer": zod.number().min(1).optional(),
+  "datum_aanvang": zod.coerce.date().optional(),
+  "datum_einde": zod.coerce.date().nullish(),
+  "code_aard_arbeidsverhouding": zod.string().nullish(),
+  "contract_onbepaalde_tijd": zod.boolean().optional(),
+  "schriftelijke_arbeidsovereenkomst": zod.boolean().optional(),
+  "oproepovereenkomst": zod.boolean().optional(),
+  "verzekerd_zw": zod.boolean().optional(),
+  "verzekerd_ww": zod.boolean().optional(),
+  "verzekerd_wia": zod.boolean().optional(),
+  "code_invloed_verzekeringsplicht": zod.string().nullish(),
+  "actief": zod.boolean().optional()
+})
+
+
+export const UpdateLoonInkomstenverhoudingResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "aanstelling_id": zod.number(),
+  "volgnummer": zod.number().min(1),
+  "datum_aanvang": zod.coerce.date(),
+  "datum_einde": zod.coerce.date().nullish(),
+  "code_aard_arbeidsverhouding": zod.string().nullish(),
+  "contract_onbepaalde_tijd": zod.boolean(),
+  "schriftelijke_arbeidsovereenkomst": zod.boolean(),
+  "oproepovereenkomst": zod.boolean(),
+  "verzekerd_zw": zod.boolean(),
+  "verzekerd_ww": zod.boolean(),
+  "verzekerd_wia": zod.boolean(),
+  "code_invloed_verzekeringsplicht": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+export const ListLoonAfsprakenQueryParams = zod.object({
+  "inkomstenverhouding_id": zod.coerce.number()
+})
+
+export const listLoonAfsprakenResponseBedragCentsMin = 0;
+
+
+export const listLoonAfsprakenResponseVasteToeslagenItemBedragCentsMin = 0;
+
+
+export const ListLoonAfsprakenResponseItem = zod.object({
+  "id": zod.number(),
+  "inkomstenverhouding_id": zod.number(),
+  "ingangsdatum": zod.coerce.date(),
+  "loonsoort": zod.enum(['uurloon', 'maandloon', 'weekloon', 'stukloon', 'overig']),
+  "bedrag_cents": zod.number().min(listLoonAfsprakenResponseBedragCentsMin),
+  "schaal": zod.string().nullish(),
+  "trede": zod.string().nullish(),
+  "vaste_toeslagen": zod.array(zod.object({
+  "omschrijving": zod.string().min(1),
+  "bedrag_cents": zod.number().min(listLoonAfsprakenResponseVasteToeslagenItemBedragCentsMin)
+})),
+  "loonheffingskorting": zod.boolean(),
+  "tabelkeuze": zod.enum(['wit', 'groen']),
+  "anoniementarief": zod.boolean(),
+  "vastgelegd_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListLoonAfsprakenResponse = zod.array(ListLoonAfsprakenResponseItem)
+
+
+export const createLoonAfspraakBodyBedragCentsMin = 0;
+
+
+export const createLoonAfspraakBodyVasteToeslagenItemBedragCentsMin = 0;
+
+
+export const CreateLoonAfspraakBody = zod.object({
+  "inkomstenverhouding_id": zod.number(),
+  "ingangsdatum": zod.coerce.date(),
+  "loonsoort": zod.enum(['uurloon', 'maandloon', 'weekloon', 'stukloon', 'overig']),
+  "bedrag_cents": zod.number().min(createLoonAfspraakBodyBedragCentsMin),
+  "schaal": zod.string().nullish(),
+  "trede": zod.string().nullish(),
+  "vaste_toeslagen": zod.array(zod.object({
+  "omschrijving": zod.string().min(1),
+  "bedrag_cents": zod.number().min(createLoonAfspraakBodyVasteToeslagenItemBedragCentsMin)
+})),
+  "loonheffingskorting": zod.boolean(),
+  "tabelkeuze": zod.enum(['wit', 'groen']),
+  "anoniementarief": zod.boolean()
+})
+
+export const CreateLoonAfspraakResponse = zod.void()
+
+
+export const ListLoonJaarparametersResponseItem = zod.object({
+  "id": zod.number(),
+  "jaar": zod.number(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'volledig', 'onvolledig', 'bron_gewijzigd', 'vervangen']),
+  "volledig": zod.boolean(),
+  "parameter_aantal": zod.number(),
+  "fouten": zod.array(zod.object({
+  "sleutel": zod.string().nullish(),
+  "reden": zod.string()
+})),
+  "geladen_op": zod.string().nullish(),
+  "bron_bestandsnaam": zod.string().nullable()
+})
+export const ListLoonJaarparametersResponse = zod.array(ListLoonJaarparametersResponseItem)
+
+
+export const GetLoonJaarparametersParams = zod.object({
+  "jaar": zod.coerce.number()
+})
+
+export const getLoonJaarparametersQueryAlleDefault = false;
+
+export const GetLoonJaarparametersQueryParams = zod.object({
+  "alle": zod.coerce.boolean().default(getLoonJaarparametersQueryAlleDefault)
+})
+
+export const getLoonJaarparametersResponseTwoBronnenItemSha256RegExp = new RegExp('^[0-9a-f]{64}$');
+
+
+export const GetLoonJaarparametersResponse = zod.object({
+  "id": zod.number(),
+  "jaar": zod.number(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'volledig', 'onvolledig', 'bron_gewijzigd', 'vervangen']),
+  "volledig": zod.boolean(),
+  "parameter_aantal": zod.number(),
+  "fouten": zod.array(zod.object({
+  "sleutel": zod.string().nullish(),
+  "reden": zod.string()
+})),
+  "geladen_op": zod.string().nullish(),
+  "bron_bestandsnaam": zod.string().nullable()
+}).and(zod.object({
+  "bronnen": zod.array(zod.object({
+  "id": zod.number(),
+  "bronsoort": zod.string(),
+  "bron_url": zod.string().url(),
+  "officiele_bestandsnaam": zod.string(),
+  "officiele_versie": zod.string(),
+  "sha256": zod.string().regex(getLoonJaarparametersResponseTwoBronnenItemSha256RegExp),
+  "mime_type": zod.string(),
+  "bestandsgrootte": zod.number(),
+  "vindplaats": zod.string(),
+  "geladen_op": zod.string()
+})),
+  "parameters": zod.array(zod.object({
+  "id": zod.number(),
+  "sleutel": zod.string(),
+  "datatype": zod.string(),
+  "waarde": zod.unknown().optional(),
+  "rekenstatus": zod.enum(['berekend', 'niet_berekend']),
+  "reden": zod.string().nullish(),
+  "bron_id": zod.number().nullish(),
+  "vindplaats": zod.string().nullish()
+}))
+}))
+
+
+export const GetLoonJaarGereedheidParams = zod.object({
+  "jaar": zod.coerce.number()
+})
+
+export const GetLoonJaarGereedheidResponse = zod.object({
+  "jaar": zod.number(),
+  "gereed": zod.boolean(),
+  "status": zod.enum(['volledig', 'ontbreekt', 'onvolledig', 'bron_gewijzigd', 'niet_herleidbaar']),
+  "redenen": zod.array(zod.string()),
+  "jaarset_id": zod.number().nullable()
+})
+
+
+export const importLoonJaarparametersBodyBronnenItemVerwachteSha256RegExp = new RegExp('^[0-9a-f]{64}$');
+
+export const importLoonJaarparametersBodyBronnenMin = 7;
+export const importLoonJaarparametersBodyBronnenMax = 7;
+
+
+export const ImportLoonJaarparametersBody = zod.object({
+  "jaar": zod.number(),
+  "bronnen": zod.array(zod.object({
+  "bronsoort": zod.enum(['primaire_xlsx', 'rekenvoorschriften', 'parameterbijlage', 'gegevensspecificaties', 'loonbelastingtabellen', 'cijferbijlage', 'handboek']),
+  "bron_url": zod.string().url(),
+  "officiele_bestandsnaam": zod.string().min(1),
+  "officiele_versie": zod.string().min(1),
+  "verwachte_sha256": zod.string().regex(importLoonJaarparametersBodyBronnenItemVerwachteSha256RegExp),
+  "vindplaats": zod.string().min(1)
+})).min(importLoonJaarparametersBodyBronnenMin).max(importLoonJaarparametersBodyBronnenMax)
+})
+
+export const ImportLoonJaarparametersResponse = zod.void()
+
+
+export const ListLoonStatenQueryParams = zod.object({
+  "kalenderjaar": zod.coerce.number().optional(),
+  "inkomstenverhouding_id": zod.coerce.number().optional()
+})
+
+
+export const ListLoonStatenResponseItem = zod.object({
+  "id": zod.number(),
+  "inkomstenverhouding_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "werkgever_naam": zod.string(),
+  "kalenderjaar": zod.number(),
+  "tijdvak": zod.enum(['maand', 'vier_weken']),
+  "status": zod.enum(['concept', 'gesloten']),
+  "tijdvakregels": zod.array(zod.object({
+  "id": zod.number(),
+  "loonstaat_id": zod.number(),
+  "tijdvaknummer": zod.number().min(1),
+  "periode_start": zod.coerce.date(),
+  "periode_einde": zod.coerce.date(),
+  "rekenstatus": zod.enum(['berekend', 'niet_berekend']),
+  "reden": zod.string().nullish(),
+  "vindplaats": zod.string().nullish(),
+  "tijdvak_waarden": zod.record(zod.string(), zod.unknown()),
+  "cumulatieven": zod.record(zod.string(), zod.unknown())
+})),
+  "aangemaakt_op": zod.string()
+})
+export const ListLoonStatenResponse = zod.array(ListLoonStatenResponseItem)
+
+
+export const CreateLoonStaatBody = zod.object({
+  "inkomstenverhouding_id": zod.number(),
+  "kalenderjaar": zod.number(),
+  "tijdvak": zod.enum(['maand', 'vier_weken'])
+})
+
+export const CreateLoonStaatResponse = zod.void()
+
+
+export const CreateLoonStaatTijdvakregelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const createLoonStaatTijdvakregelBodyRekenstatusDefault = `niet_berekend`;
+
+
+export const CreateLoonStaatTijdvakregelBody = zod.object({
+  "tijdvaknummer": zod.number().min(1),
+  "periode_start": zod.coerce.date(),
+  "periode_einde": zod.coerce.date(),
+  "rekenstatus": zod.enum(['niet_berekend']).default(createLoonStaatTijdvakregelBodyRekenstatusDefault),
+  "reden": zod.string().min(1),
+  "vindplaats": zod.string().nullish()
+})
+
+export const CreateLoonStaatTijdvakregelResponse = zod.void()
+
+
 /**
  * @summary Salarisverwerker-instellingen werkgever bijwerken
  */
@@ -31202,7 +31556,6 @@ export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
 
 
-
 export const GetMagazijnInstellingenResponse = zod.object({
   "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
   "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
@@ -31223,7 +31576,6 @@ export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
 export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
 
 
-
 export const UpdateMagazijnInstellingenBody = zod.object({
   "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
   "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
@@ -31237,7 +31589,6 @@ export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
 export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
 
 export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
-
 
 
 export const UpdateMagazijnInstellingenResponse = zod.object({
@@ -31518,7 +31869,6 @@ export const SnoozeMagazijnArtikelParams = zod.object({
 })
 
 export const snoozeMagazijnArtikelBodyDagenMax = 90;
-
 
 
 export const SnoozeMagazijnArtikelBody = zod.object({
@@ -34023,7 +34373,6 @@ export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
 export const updateFieLeermomentBodyCorrectieFactorMax = 3;
 
 
-
 export const UpdateFieLeermomentBody = zod.object({
   "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
@@ -34153,7 +34502,6 @@ export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
 export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
 
 export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
-
 
 
 export const CreateLeverancierPrestatieBody = zod.object({
@@ -35852,7 +36200,6 @@ export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponse
 export const listBiaeEventsQueryLimietMax = 500;
 
 
-
 export const ListBiaeEventsQueryParams = zod.object({
   "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
 })
@@ -35992,8 +36339,6 @@ export const HandelWerkbakItemAfResponse = zod.object({
 export const ZetWerkbakItemWegParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const ZetWerkbakItemWegBody = zod.object({
@@ -36279,7 +36624,6 @@ export const zetWorkflowSterBodySterrenMin = 0;
 export const zetWorkflowSterBodySterrenMax = 3;
 
 
-
 export const ZetWorkflowSterBody = zod.object({
   "doel_type": zod.enum(['werkbak', 'mail_conversatie']),
   "doel_sleutel": zod.string(),
@@ -36288,7 +36632,6 @@ export const ZetWorkflowSterBody = zod.object({
 
 export const zetWorkflowSterResponseSterrenMin = 0;
 export const zetWorkflowSterResponseSterrenMax = 3;
-
 
 
 export const ZetWorkflowSterResponse = zod.object({
@@ -37190,8 +37533,6 @@ export const WijsVoorstelAfParams = zod.object({
 })
 
 
-
-
 export const WijsVoorstelAfBody = zod.object({
   "reden": zod.string().min(1).describe('Verplichte motivering voor de afwijzing')
 })
@@ -37224,8 +37565,6 @@ export const ExporteerBankmutatieAccountViewResponse = zod.object({
 export const HerstelBankmutatieAccountViewParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const HerstelBankmutatieAccountViewBody = zod.object({

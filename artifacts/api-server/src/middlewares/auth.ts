@@ -1,6 +1,12 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import { db, gebruikersTable, externeAdviseursTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  db,
+  gebruikersTable,
+  externeAdviseursTable,
+  profielenTable,
+  gebruikerProfielenTable,
+} from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
 import { type ModuleId } from "@workspace/permissies";
 import { PermissieService } from "../lib/permissie-service";
@@ -195,6 +201,80 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
         return;
       }
       next();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  };
+}
+
+const EXTERNE_BOEKHOUDER_PROFIEL = "Externe boekhouder";
+
+/**
+ * De identiteitspoort van LOON_02A. Een los, handmatig toegekend
+ * loonfundamentrecht is nadrukkelijk niet voldoende: alleen de hoofdbeheerder
+ * of een gebruiker die daadwerkelijk aan het meegeleverde systeemprofiel
+ * "Externe boekhouder" is gekoppeld mag loondata benaderen.
+ */
+export async function heeftLoonfundamentIdentiteit(gebruikerId: number): Promise<boolean> {
+  const [gebruiker] = await db
+    .select({
+      rol: gebruikersTable.rol,
+      herkomstProfielNaam: profielenTable.naam,
+      herkomstProfielSysteem: profielenTable.systeem,
+    })
+    .from(gebruikersTable)
+    .leftJoin(
+      profielenTable,
+      eq(profielenTable.id, gebruikersTable.herkomstProfielId),
+    )
+    .where(eq(gebruikersTable.id, gebruikerId));
+
+  if (!gebruiker) return false;
+  if (gebruiker.rol === "hoofdbeheerder") return true;
+  if (
+    gebruiker.herkomstProfielSysteem === true &&
+    gebruiker.herkomstProfielNaam === EXTERNE_BOEKHOUDER_PROFIEL
+  ) {
+    return true;
+  }
+
+  const [gekoppeldProfiel] = await db
+    .select({ id: gebruikerProfielenTable.id })
+    .from(gebruikerProfielenTable)
+    .innerJoin(
+      profielenTable,
+      eq(profielenTable.id, gebruikerProfielenTable.profielId),
+    )
+    .where(
+      and(
+        eq(gebruikerProfielenTable.gebruikerId, gebruikerId),
+        eq(profielenTable.naam, EXTERNE_BOEKHOUDER_PROFIEL),
+        eq(profielenTable.systeem, true),
+      ),
+    )
+    .limit(1);
+  return Boolean(gekoppeldProfiel);
+}
+
+/**
+ * Combineert de niet-toekenbare identiteitspoort met het niveaurecht.
+ * effectieveContext zorgt dat "Bekijken als" dezelfde fail-closed grens
+ * gebruikt als de rest van de API.
+ */
+export function requireLoonfundamentToegang(minNiveau: number): RequestHandler {
+  const controleerNiveau = requireBevoegdheid("loonfundament", minNiveau);
+  return async (req, res, next): Promise<void> => {
+    try {
+      const context = await effectieveContext(req);
+      if (!(await heeftLoonfundamentIdentiteit(context.userId))) {
+        res.status(403).json({
+          error: "Geen toegang tot het loonfundament",
+          code: "LOONFUNDAMENT_IDENTITEIT_VEREIST",
+        });
+        return;
+      }
+      await controleerNiveau(req, res, next);
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });

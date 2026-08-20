@@ -8,7 +8,7 @@ import QRCode from "qrcode";
 import { db, gebruikersTable, wachtwoordResetTokensTable, externeAdviseursTable } from "@workspace/db";
 import { eq, and, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { maakToken } from "../lib/token";
-import { requireAuth } from "../middlewares/auth";
+import { heeftLoonfundamentIdentiteit, requireAuth } from "../middlewares/auth";
 import { legLoginPogingVast } from "./systeem";
 import { verstuurWachtwoordResetMail } from "../services/email.js";
 import {
@@ -172,6 +172,7 @@ const mapAuthGebruiker = (
   effectieveBev?: Record<string, number>,
   isUitvoerendVeld?: boolean,
   actueleFunctienamen: string[] = [],
+  heeftLoonfundamentToegang = false,
 ) => ({
   id: g.id,
   naam: g.naam,
@@ -187,6 +188,8 @@ const mapAuthGebruiker = (
   moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
   /** Server-berekende vlag via functies.uitvoerend op actuele aanstellingen (GEBRUIKERS_01 v2). */
   is_uitvoerend_veld: isUitvoerendVeld ?? false,
+  /** LOON_02A: niet afgeleid uit een los recht, maar uit hoofdbeheerder/profielidentiteit. */
+  heeft_loonfundament_toegang: heeftLoonfundamentToegang,
 });
 
 function vergrendeldRespons(vergrendeldTot: Date) {
@@ -447,11 +450,12 @@ router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<
       userAgent: verzoekUserAgent(req),
       gelukt: true,
     });
-    const [bev, uitvoerend] = await Promise.all([
+    const [bev, uitvoerend, loonfundamentToegang] = await Promise.all([
       berekenEffectieveBevoegdheden(g!.id),
       berekenIsUitvoerendVeldViaDb(g!.id, g!.rol),
+      heeftLoonfundamentIdentiteit(g!.id),
     ]);
-    res.json({ ...mapAuthGebruiker(g, bev, uitvoerend, [...(await haalActieveFunctieNamen(g.id))]), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    res.json({ ...mapAuthGebruiker(g, bev, uitvoerend, [...(await haalActieveFunctieNamen(g.id))], loonfundamentToegang), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -523,11 +527,12 @@ router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<voi
     });
     // Auth-routes worden bewust NIET geauditlogd — wachtwoorden, tokens en
     // TOTP-secrets mogen nooit in audit_log terechtkomen.
-    const [bev2fa, uitvoerend2fa] = await Promise.all([
+    const [bev2fa, uitvoerend2fa, loonfundamentToegang] = await Promise.all([
       berekenEffectieveBevoegdheden(g.id),
       berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+      heeftLoonfundamentIdentiteit(g.id),
     ]);
-    res.json({ ...mapAuthGebruiker(g, bev2fa, uitvoerend2fa, [...(await haalActieveFunctieNamen(g.id))]), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    res.json({ ...mapAuthGebruiker(g, bev2fa, uitvoerend2fa, [...(await haalActieveFunctieNamen(g.id))], loonfundamentToegang), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -592,13 +597,14 @@ router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
     const token = maakToken(g.id, g.tokenVersie);
-    const [bevMobiel, uitvoerendMobiel] = await Promise.all([
+    const [bevMobiel, uitvoerendMobiel, loonfundamentToegang] = await Promise.all([
       berekenEffectieveBevoegdheden(g.id),
       berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+      heeftLoonfundamentIdentiteit(g.id),
     ]);
     return void res.json({
       token,
-      gebruiker: mapAuthGebruiker(g, bevMobiel, uitvoerendMobiel, [...(await haalActieveFunctieNamen(g.id))]),
+      gebruiker: mapAuthGebruiker(g, bevMobiel, uitvoerendMobiel, [...(await haalActieveFunctieNamen(g.id))], loonfundamentToegang),
     });
   } catch (err) {
     req.log.error(err);
@@ -775,11 +781,12 @@ router.post("/auth/taal", async (req, res): Promise<void> => {
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
-    const [bevTaal, uitvoerendTaal] = await Promise.all([
+    const [bevTaal, uitvoerendTaal, loonfundamentToegang] = await Promise.all([
       berekenEffectieveBevoegdheden(g.id),
       berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+      heeftLoonfundamentIdentiteit(g.id),
     ]);
-    res.json(mapAuthGebruiker(g, bevTaal, uitvoerendTaal, [...(await haalActieveFunctieNamen(g.id))]));
+    res.json(mapAuthGebruiker(g, bevTaal, uitvoerendTaal, [...(await haalActieveFunctieNamen(g.id))], loonfundamentToegang));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -929,11 +936,12 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       req.session.destroy(() => {});
       return void res.status(401).json({ error: "Niet ingelogd" });
     }
-    const [bevMe, uitvoerendMe] = await Promise.all([
+    const [bevMe, uitvoerendMe, loonfundamentToegang] = await Promise.all([
       berekenEffectieveBevoegdheden(g.id),
       berekenIsUitvoerendVeldViaDb(g.id, g.rol),
+      heeftLoonfundamentIdentiteit(g.id),
     ]);
-    res.json(mapAuthGebruiker(g, bevMe, uitvoerendMe, [...(await haalActieveFunctieNamen(g.id))]));
+    res.json(mapAuthGebruiker(g, bevMe, uitvoerendMe, [...(await haalActieveFunctieNamen(g.id))], loonfundamentToegang));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

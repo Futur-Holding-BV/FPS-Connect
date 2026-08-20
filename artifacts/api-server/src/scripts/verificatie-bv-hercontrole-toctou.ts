@@ -19,6 +19,7 @@ import {
   gebouwenTable,
   werkgeversTable,
   accountviewInstellingenTable,
+  caoCatalogusTable,
 } from "@workspace/db";
 
 if (process.env.REPLIT_DEPLOYMENT || process.env.NODE_ENV === "production") {
@@ -40,8 +41,10 @@ function check(naam: string, ok: boolean, detail?: unknown): void {
 }
 
 async function main(): Promise<void> {
-  const [bvA] = await db.insert(werkgeversTable).values({ naam: "TOCTOU BV Alpha" }).returning();
-  const [bvB] = await db.insert(werkgeversTable).values({ naam: "TOCTOU BV Beta" }).returning();
+  const [cao] = await db.select({ id: caoCatalogusTable.id }).from(caoCatalogusTable).where(eq(caoCatalogusTable.code, "ONBEKEND"));
+  if (!cao) throw new Error("CAO-catalogus ontbreekt");
+  const [bvA] = await db.insert(werkgeversTable).values({ naam: "TOCTOU BV Alpha", caoId: cao.id }).returning();
+  const [bvB] = await db.insert(werkgeversTable).values({ naam: "TOCTOU BV Beta", caoId: cao.id }).returning();
   if (!bvA || !bvB) throw new Error("BV's niet aangemaakt");
   const [gebouw] = await db.insert(gebouwenTable)
     .values({ naam: "TOCTOU Gebouw", adres: "Racestraat 1", stad: "Testdam", werkgeverId: bvA.id }).returning();

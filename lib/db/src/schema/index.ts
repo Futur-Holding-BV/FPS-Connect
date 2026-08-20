@@ -84,3 +84,4 @@ export * from "./voorkeuren";
 export * from "./werving";
 export * from "./beeldbank";
 export * from "./bankafschriften";
+export * from "./loonfundament";

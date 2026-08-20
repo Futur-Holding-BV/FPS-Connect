@@ -40,6 +40,8 @@ tags:
     description: E-mailarchief per gebouw
   - name: personeel
     description: HRM - medewerkers, functiehuis, opleidingen, bekwaamheden en verlof
+  - name: loonfundament
+    description: Afgeschermd fiscaal loonfundament voor inhoudingsplichtigen, inkomstenverhoudingen, loonafspraken, jaarparameters en loonstaten
   - name: dossiers
     description: Project- en gebouwdossiers met documentstatussen en archivering
   - name: offertes
@@ -23461,6 +23463,322 @@ paths:
               schema:
                 $ref: '#/components/schemas/BoekhouderVerwerkResultaat'
 
+  # ── LOON_02A fiscaal loonfundament ───────────────────────────────────────
+  /loonfundament/cao-catalogus:
+    get:
+      operationId: listLoonfundamentCaoCatalogus
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: CAO-catalogus
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonCao" }
+        "403": { description: Geen toegang }
+
+  /loonfundament/aanstellingen:
+    get:
+      operationId: listLoonfundamentAanstellingen
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Aanstellingen die aan een inkomstenverhouding gekoppeld kunnen worden
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonAanstellingKeuze" }
+        "403": { description: Geen toegang }
+
+  /loonfundament/inhoudingsplichtigen:
+    get:
+      operationId: listLoonInhoudingsplichtigen
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Inhoudingsplichtigen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonInhoudingsplichtige" }
+        "403": { description: Geen toegang }
+
+  /loonfundament/inhoudingsplichtigen/{id}:
+    patch:
+      operationId: updateLoonInhoudingsplichtige
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonInhoudingsplichtigeUpdate" }
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonInhoudingsplichtige" }
+        "400": { description: Ongeldige fiscale gegevens }
+        "403": { description: Geen toegang }
+        "404": { description: Niet gevonden }
+
+  /loonfundament/inkomstenverhoudingen:
+    get:
+      operationId: listLoonInkomstenverhoudingen
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: werkgever_id
+          in: query
+          schema: { type: integer }
+        - name: medewerker_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Inkomstenverhoudingen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonInkomstenverhouding" }
+        "403": { description: Geen toegang }
+    post:
+      operationId: createLoonInkomstenverhouding
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonInkomstenverhoudingInput" }
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonInkomstenverhouding" }
+        "400": { description: Ongeldige invoer of aanstellingskoppeling }
+        "403": { description: Geen toegang }
+        "409": { description: Volgnummer bestaat al voor deze medewerker en werkgever }
+
+  /loonfundament/inkomstenverhoudingen/{id}:
+    patch:
+      operationId: updateLoonInkomstenverhouding
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonInkomstenverhoudingUpdate" }
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonInkomstenverhouding" }
+        "400": { description: Ongeldige invoer of aanstellingskoppeling }
+        "403": { description: Geen toegang }
+        "404": { description: Niet gevonden }
+        "409": { description: Fiscale sleutel bestaat al }
+
+  /loonfundament/loonafspraken:
+    get:
+      operationId: listLoonAfspraken
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: inkomstenverhouding_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Historische loonafspraken
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonAfspraak" }
+        "403": { description: Geen toegang }
+    post:
+      operationId: createLoonAfspraak
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonAfspraakInput" }
+      responses:
+        "201":
+          description: Historische afspraak toegevoegd
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonAfspraak" }
+        "400": { description: Ongeldige afspraak }
+        "403": { description: Geen toegang }
+        "409": { description: Er bestaat al een afspraak op deze ingangsdatum }
+
+  /loonfundament/jaarparameters:
+    get:
+      operationId: listLoonJaarparameters
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Importhistorie en gereedheidsstatus per jaar
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonJaarsetSamenvatting" }
+        "403": { description: Geen toegang }
+
+  /loonfundament/jaarparameters/{jaar}:
+    get:
+      operationId: getLoonJaarparameters
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: jaar
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: alle
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Bronset en parameterregels; standaard alleen niet-herleidbare regels
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonJaarsetDetail" }
+        "403": { description: Geen toegang }
+        "404": { description: Geen import voor dit jaar }
+
+  /loonfundament/jaarparameters/{jaar}/gereedheid:
+    get:
+      operationId: getLoonJaarGereedheid
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: jaar
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Fail-closed gereedheidscontrole voor een toekomstige rekenkern
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonJaarGereedheid" }
+        "403": { description: Geen toegang }
+
+  /loonfundament/jaarparameters/import:
+    post:
+      operationId: importLoonJaarparameters
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonJaarImportInput" }
+      responses:
+        "201":
+          description: Jaarbronset atomair geïmporteerd
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonJaarsetSamenvatting" }
+        "400": { description: Bronset of XLSX ongeldig/onvolledig }
+        "403": { description: Geen toegang }
+        "409": { description: Bronhash gewijzigd of identieke versie al geladen }
+
+  /loonfundament/loonstaten:
+    get:
+      operationId: listLoonStaten
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: kalenderjaar
+          in: query
+          schema: { type: integer }
+        - name: inkomstenverhouding_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Loonstaten
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LoonStaat" }
+        "403": { description: Geen toegang }
+    post:
+      operationId: createLoonStaat
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonStaatInput" }
+      responses:
+        "201":
+          description: Loonstaat aangemaakt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonStaat" }
+        "400": { description: Ongeldige loonstaat }
+        "403": { description: Geen toegang }
+        "409": { description: Loonstaat bestaat al }
+
+  /loonfundament/loonstaten/{id}/tijdvakregels:
+    post:
+      operationId: createLoonStaatTijdvakregel
+      tags: [loonfundament]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoonStaatTijdvakregelInput" }
+      responses:
+        "201":
+          description: Tijdvakregel toegevoegd
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoonStaatTijdvakregel" }
+        "400": { description: Ongeldige tijdvakregel }
+        "403": { description: Geen toegang }
+        "404": { description: Loonstaat niet gevonden }
+        "409": { description: Tijdvaknummer bestaat al }
+
   /werkgevers/{id}/salaris-config:
     patch:
       summary: Salarisverwerker-instellingen werkgever bijwerken
@@ -36144,7 +36462,7 @@ components:
 
     AuthGebruiker:
       type: object
-      required: [id, naam, email, rol, bevoegdheden]
+      required: [id, naam, email, rol, bevoegdheden, heeft_loonfundament_toegang]
       properties:
         id:
           type: integer
@@ -36192,6 +36510,12 @@ components:
             hoofdbeheerder heeft. Web-app en monteur-app gebruiken deze vlag
             als enige bron van waarheid voor omgevingskeuze en
             menuzichtbaarheid.
+        heeft_loonfundament_toegang:
+          type: boolean
+          description: >
+            LOON_02A-identiteitspoort. Alleen waar voor de hoofdbeheerder of
+            een gebruiker die aan het systeemprofiel Externe boekhouder is
+            gekoppeld; een los toegekend module-recht is niet voldoende.
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:
@@ -37348,6 +37672,451 @@ components:
           type: ["string", "null"]
         bijschrift:
           type: ["string", "null"]
+
+    # ── LOON_02A fiscaal loonfundament ─────────────────────────────────────
+    LoonCao:
+      type: object
+      required: [id, code, naam, actief]
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        naam: { type: string }
+        actief: { type: boolean }
+
+    LoonMigratiebevinding:
+      type: object
+      required: [id, entiteit_type, entiteit_id, veld, reden, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        entiteit_type: { type: string }
+        entiteit_id: { type: integer }
+        veld: { type: string }
+        oorspronkelijke_waarde: { type: ["string", "null"] }
+        reden: { type: string }
+        opgelost_op: { type: ["string", "null"] }
+        aangemaakt_op: { type: string }
+
+    LoonAanstellingKeuze:
+      type: object
+      required: [id, medewerker_id, medewerker_naam, werkgever_id, werkgever_naam, cao_id, cao_naam]
+      properties:
+        id: { type: integer }
+        medewerker_id: { type: integer }
+        medewerker_naam: { type: string }
+        werkgever_id: { type: integer }
+        werkgever_naam: { type: string }
+        cao_id: { type: integer }
+        cao_naam: { type: string }
+
+    LoonInhoudingsplichtige:
+      type: object
+      required:
+        - id
+        - naam
+        - cao_id
+        - cao_code
+        - cao_naam
+        - eigenrisicodrager_wga
+        - eigenrisicodrager_zw
+        - loonkostenvoordeel_instelling
+        - compleet
+        - migratiebevindingen
+      properties:
+        id: { type: integer }
+        naam: { type: string }
+        cao_id: { type: integer }
+        cao_code: { type: string }
+        cao_naam: { type: string }
+        loonheffingennummer: { type: ["string", "null"] }
+        sectorcode: { type: ["string", "null"] }
+        risicogroep: { type: ["string", "null"] }
+        aangiftetijdvak:
+          type: ["string", "null"]
+          enum: [maand, vier_weken, null]
+        eigenrisicodrager_wga: { type: boolean }
+        eigenrisicodrager_zw: { type: boolean }
+        loonkostenvoordeel_instelling: { type: boolean }
+        compleet: { type: boolean }
+        migratiebevindingen:
+          type: array
+          items: { $ref: "#/components/schemas/LoonMigratiebevinding" }
+
+    LoonInhoudingsplichtigeUpdate:
+      type: object
+      properties:
+        cao_id: { type: integer }
+        loonheffingennummer:
+          type: ["string", "null"]
+          pattern: '^[0-9]{9}L[0-9]{2}$'
+        sectorcode:
+          type: ["string", "null"]
+          pattern: '^[0-9]{2}$'
+        risicogroep:
+          type: ["string", "null"]
+          pattern: '^[0-9]{1,2}$'
+        aangiftetijdvak:
+          type: ["string", "null"]
+          enum: [maand, vier_weken, null]
+        eigenrisicodrager_wga: { type: boolean }
+        eigenrisicodrager_zw: { type: boolean }
+        loonkostenvoordeel_instelling: { type: boolean }
+
+    LoonInkomstenverhouding:
+      type: object
+      required:
+        - id
+        - werkgever_id
+        - werkgever_naam
+        - medewerker_id
+        - medewerker_naam
+        - aanstelling_id
+        - volgnummer
+        - datum_aanvang
+        - contract_onbepaalde_tijd
+        - schriftelijke_arbeidsovereenkomst
+        - oproepovereenkomst
+        - verzekerd_zw
+        - verzekerd_ww
+        - verzekerd_wia
+        - actief
+        - aangemaakt_op
+        - bijgewerkt_op
+      properties:
+        id: { type: integer }
+        werkgever_id: { type: integer }
+        werkgever_naam: { type: string }
+        medewerker_id: { type: integer }
+        medewerker_naam: { type: string }
+        aanstelling_id: { type: integer }
+        volgnummer: { type: integer, minimum: 1 }
+        datum_aanvang: { type: string, format: date }
+        datum_einde: { type: ["string", "null"], format: date }
+        code_aard_arbeidsverhouding: { type: ["string", "null"] }
+        contract_onbepaalde_tijd: { type: boolean }
+        schriftelijke_arbeidsovereenkomst: { type: boolean }
+        oproepovereenkomst: { type: boolean }
+        verzekerd_zw: { type: boolean }
+        verzekerd_ww: { type: boolean }
+        verzekerd_wia: { type: boolean }
+        code_invloed_verzekeringsplicht: { type: ["string", "null"] }
+        actief: { type: boolean }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    LoonInkomstenverhoudingInput:
+      type: object
+      required:
+        - werkgever_id
+        - medewerker_id
+        - aanstelling_id
+        - volgnummer
+        - datum_aanvang
+        - contract_onbepaalde_tijd
+        - schriftelijke_arbeidsovereenkomst
+        - oproepovereenkomst
+        - verzekerd_zw
+        - verzekerd_ww
+        - verzekerd_wia
+      properties:
+        werkgever_id: { type: integer }
+        medewerker_id: { type: integer }
+        aanstelling_id: { type: integer }
+        volgnummer: { type: integer, minimum: 1 }
+        datum_aanvang: { type: string, format: date }
+        datum_einde: { type: ["string", "null"], format: date }
+        code_aard_arbeidsverhouding: { type: ["string", "null"] }
+        contract_onbepaalde_tijd: { type: boolean }
+        schriftelijke_arbeidsovereenkomst: { type: boolean }
+        oproepovereenkomst: { type: boolean }
+        verzekerd_zw: { type: boolean }
+        verzekerd_ww: { type: boolean }
+        verzekerd_wia: { type: boolean }
+        code_invloed_verzekeringsplicht: { type: ["string", "null"] }
+
+    LoonInkomstenverhoudingUpdate:
+      type: object
+      properties:
+        volgnummer: { type: integer, minimum: 1 }
+        datum_aanvang: { type: string, format: date }
+        datum_einde: { type: ["string", "null"], format: date }
+        code_aard_arbeidsverhouding: { type: ["string", "null"] }
+        contract_onbepaalde_tijd: { type: boolean }
+        schriftelijke_arbeidsovereenkomst: { type: boolean }
+        oproepovereenkomst: { type: boolean }
+        verzekerd_zw: { type: boolean }
+        verzekerd_ww: { type: boolean }
+        verzekerd_wia: { type: boolean }
+        code_invloed_verzekeringsplicht: { type: ["string", "null"] }
+        actief: { type: boolean }
+
+    LoonVasteToeslag:
+      type: object
+      required: [omschrijving, bedrag_cents]
+      properties:
+        omschrijving: { type: string, minLength: 1 }
+        bedrag_cents: { type: integer, minimum: 0 }
+
+    LoonAfspraak:
+      type: object
+      required:
+        - id
+        - inkomstenverhouding_id
+        - ingangsdatum
+        - loonsoort
+        - bedrag_cents
+        - vaste_toeslagen
+        - loonheffingskorting
+        - tabelkeuze
+        - anoniementarief
+        - aangemaakt_op
+      properties:
+        id: { type: integer }
+        inkomstenverhouding_id: { type: integer }
+        ingangsdatum: { type: string, format: date }
+        loonsoort:
+          type: string
+          enum: [uurloon, maandloon, weekloon, stukloon, overig]
+        bedrag_cents: { type: integer, minimum: 0 }
+        schaal: { type: ["string", "null"] }
+        trede: { type: ["string", "null"] }
+        vaste_toeslagen:
+          type: array
+          items: { $ref: "#/components/schemas/LoonVasteToeslag" }
+        loonheffingskorting: { type: boolean }
+        tabelkeuze:
+          type: string
+          enum: [wit, groen]
+        anoniementarief: { type: boolean }
+        vastgelegd_door_id: { type: ["integer", "null"] }
+        aangemaakt_op: { type: string }
+
+    LoonAfspraakInput:
+      type: object
+      required:
+        - inkomstenverhouding_id
+        - ingangsdatum
+        - loonsoort
+        - bedrag_cents
+        - vaste_toeslagen
+        - loonheffingskorting
+        - tabelkeuze
+        - anoniementarief
+      properties:
+        inkomstenverhouding_id: { type: integer }
+        ingangsdatum: { type: string, format: date }
+        loonsoort:
+          type: string
+          enum: [uurloon, maandloon, weekloon, stukloon, overig]
+        bedrag_cents: { type: integer, minimum: 0 }
+        schaal: { type: ["string", "null"] }
+        trede: { type: ["string", "null"] }
+        vaste_toeslagen:
+          type: array
+          items: { $ref: "#/components/schemas/LoonVasteToeslag" }
+        loonheffingskorting: { type: boolean }
+        tabelkeuze:
+          type: string
+          enum: [wit, groen]
+        anoniementarief: { type: boolean }
+
+    LoonJaarbron:
+      type: object
+      required:
+        - id
+        - bronsoort
+        - bron_url
+        - officiele_bestandsnaam
+        - officiele_versie
+        - sha256
+        - mime_type
+        - bestandsgrootte
+        - vindplaats
+        - geladen_op
+      properties:
+        id: { type: integer }
+        bronsoort: { type: string }
+        bron_url: { type: string, format: uri }
+        officiele_bestandsnaam: { type: string }
+        officiele_versie: { type: string }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        mime_type: { type: string }
+        bestandsgrootte: { type: integer }
+        vindplaats: { type: string }
+        geladen_op: { type: string }
+
+    LoonJaarparameter:
+      type: object
+      required: [id, sleutel, datatype, rekenstatus]
+      properties:
+        id: { type: integer }
+        sleutel: { type: string }
+        datatype: { type: string }
+        waarde: {}
+        rekenstatus:
+          type: string
+          enum: [berekend, niet_berekend]
+        reden: { type: ["string", "null"] }
+        bron_id: { type: ["integer", "null"] }
+        vindplaats: { type: ["string", "null"] }
+
+    LoonJaarsetSamenvatting:
+      type: object
+      required: [id, jaar, versie, status, volledig, parameter_aantal, fouten, bron_bestandsnaam]
+      properties:
+        id: { type: integer }
+        jaar: { type: integer }
+        versie: { type: integer }
+        status:
+          type: string
+          enum: [concept, volledig, onvolledig, bron_gewijzigd, vervangen]
+        volledig: { type: boolean }
+        parameter_aantal: { type: integer }
+        fouten:
+          type: array
+          items:
+            type: object
+            required: [reden]
+            properties:
+              sleutel: { type: ["string", "null"] }
+              reden: { type: string }
+        geladen_op: { type: ["string", "null"] }
+        bron_bestandsnaam: { type: ["string", "null"] }
+
+    LoonJaarsetDetail:
+      allOf:
+        - $ref: "#/components/schemas/LoonJaarsetSamenvatting"
+        - type: object
+          required: [bronnen, parameters]
+          properties:
+            bronnen:
+              type: array
+              items: { $ref: "#/components/schemas/LoonJaarbron" }
+            parameters:
+              type: array
+              items: { $ref: "#/components/schemas/LoonJaarparameter" }
+
+    LoonJaarGereedheid:
+      type: object
+      required: [jaar, gereed, status, redenen, jaarset_id]
+      properties:
+        jaar: { type: integer }
+        gereed: { type: boolean }
+        status:
+          type: string
+          enum: [volledig, ontbreekt, onvolledig, bron_gewijzigd, niet_herleidbaar]
+        redenen:
+          type: array
+          items: { type: string }
+        jaarset_id: { type: ["integer", "null"] }
+
+    LoonJaarImportBronInput:
+      type: object
+      required: [bronsoort, bron_url, officiele_bestandsnaam, officiele_versie, verwachte_sha256, vindplaats]
+      properties:
+        bronsoort:
+          type: string
+          enum:
+            - primaire_xlsx
+            - rekenvoorschriften
+            - parameterbijlage
+            - gegevensspecificaties
+            - loonbelastingtabellen
+            - cijferbijlage
+            - handboek
+        bron_url: { type: string, format: uri }
+        officiele_bestandsnaam: { type: string, minLength: 1 }
+        officiele_versie: { type: string, minLength: 1 }
+        verwachte_sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        vindplaats: { type: string, minLength: 1 }
+
+    LoonJaarImportInput:
+      type: object
+      required: [jaar, bronnen]
+      properties:
+        jaar: { type: integer }
+        bronnen:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: "#/components/schemas/LoonJaarImportBronInput" }
+
+    LoonStaatTijdvakregel:
+      type: object
+      required:
+        - id
+        - loonstaat_id
+        - tijdvaknummer
+        - periode_start
+        - periode_einde
+        - rekenstatus
+        - tijdvak_waarden
+        - cumulatieven
+      properties:
+        id: { type: integer }
+        loonstaat_id: { type: integer }
+        tijdvaknummer: { type: integer, minimum: 1 }
+        periode_start: { type: string, format: date }
+        periode_einde: { type: string, format: date }
+        rekenstatus:
+          type: string
+          enum: [berekend, niet_berekend]
+        reden: { type: ["string", "null"] }
+        vindplaats: { type: ["string", "null"] }
+        tijdvak_waarden: { type: object, additionalProperties: true }
+        cumulatieven: { type: object, additionalProperties: true }
+
+    LoonStaatTijdvakregelInput:
+      type: object
+      required: [tijdvaknummer, periode_start, periode_einde, reden]
+      properties:
+        tijdvaknummer: { type: integer, minimum: 1 }
+        periode_start: { type: string, format: date }
+        periode_einde: { type: string, format: date }
+        rekenstatus:
+          type: string
+          enum: [niet_berekend]
+          default: niet_berekend
+        reden: { type: string, minLength: 1 }
+        vindplaats: { type: ["string", "null"] }
+
+    LoonStaat:
+      type: object
+      required:
+        - id
+        - inkomstenverhouding_id
+        - medewerker_naam
+        - werkgever_naam
+        - kalenderjaar
+        - tijdvak
+        - status
+        - tijdvakregels
+        - aangemaakt_op
+      properties:
+        id: { type: integer }
+        inkomstenverhouding_id: { type: integer }
+        medewerker_naam: { type: string }
+        werkgever_naam: { type: string }
+        kalenderjaar: { type: integer }
+        tijdvak:
+          type: string
+          enum: [maand, vier_weken]
+        status:
+          type: string
+          enum: [concept, gesloten]
+        tijdvakregels:
+          type: array
+          items: { $ref: "#/components/schemas/LoonStaatTijdvakregel" }
+        aangemaakt_op: { type: string }
+
+    LoonStaatInput:
+      type: object
+      required: [inkomstenverhouding_id, kalenderjaar, tijdvak]
+      properties:
+        inkomstenverhouding_id: { type: integer }
+        kalenderjaar: { type: integer }
+        tijdvak:
+          type: string
+          enum: [maand, vier_weken]
 
     Werkgever:
       type: object

@@ -48,6 +48,7 @@ import {
   externeAdviseursTable,
   werkgeverBankrekeningenTable,
   werkgeverBankrekeningLogsTable,
+  caoCatalogusTable,
 } from "@workspace/db";
 import { isGeldigIban, normaliseerIban } from "../lib/iban";
 import { berekenLeeftijd, jongeWerknemerMelding } from "../lib/jongeWerknemerRegel";
@@ -91,6 +92,16 @@ function isUniekeGebruikerKoppeling(err: unknown): boolean {
     (err as { code?: string } | null)?.code ??
     ((err as { cause?: { code?: string } } | null)?.cause?.code ?? null);
   return code === "23505";
+}
+
+function isLoonfundamentAanstellingConflict(err: unknown): boolean {
+  const code =
+    (err as { code?: string } | null)?.code ??
+    ((err as { cause?: { code?: string } } | null)?.cause?.code ?? null);
+  const message =
+    (err as { message?: string } | null)?.message ??
+    ((err as { cause?: { message?: string } } | null)?.cause?.message ?? "");
+  return code === "P0001" && message.includes("inkomstenverhouding");
 }
 
 const lezen = requireBevoegdheid("personeel", 1);
@@ -231,6 +242,40 @@ async function werkgeverIdVoor(werkmaatschappij: unknown): Promise<number | null
   return w?.id ?? null;
 }
 
+async function caoIdVoor(
+  caoNaam: unknown,
+  werkgeverId?: number | null,
+  werkgeverNaam?: string | null,
+): Promise<number | null> {
+  const bindendeCode = werkgeverNaam === "FPS Bouw" || werkgeverNaam === "FPS Brandpreventie"
+    ? "MT"
+    : werkgeverNaam === "FPS Bouw en Renovatie"
+      ? "BI"
+      : null;
+  if (bindendeCode) {
+    const [cao] = await db
+      .select({ id: caoCatalogusTable.id })
+      .from(caoCatalogusTable)
+      .where(eq(caoCatalogusTable.code, bindendeCode));
+    return cao?.id ?? null;
+  }
+  if (werkgeverId) {
+    const [werkgever] = await db
+      .select({ caoId: werkgeversTable.caoId })
+      .from(werkgeversTable)
+      .where(eq(werkgeversTable.id, werkgeverId));
+    if (werkgever) return werkgever.caoId;
+  }
+  const naam = typeof caoNaam === "string" && caoNaam.trim()
+    ? caoNaam.trim()
+    : "Onbekend (migratie)";
+  const [cao] = await db
+    .select({ id: caoCatalogusTable.id })
+    .from(caoCatalogusTable)
+    .where(eq(caoCatalogusTable.naam, naam));
+  return cao?.id ?? null;
+}
+
 router.get("/werkgevers", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(werkgeversTable).orderBy(werkgeversTable.naam);
@@ -252,11 +297,17 @@ router.post("/werkgevers", schrijven, async (req, res): Promise<void> => {
     if (logo_url && typeof logo_url === "string" && logo_url.toLowerCase().endsWith(".svg")) {
       return void res.status(400).json({ error: "SVG-logo's worden niet ondersteund. Gebruik PNG, JPEG of WebP." });
     }
+    const caoNaam = typeof cao === "string" && cao.trim() ? cao.trim() : "Metaal & Techniek";
+    const caoId = await caoIdVoor(caoNaam, null, naam.trim());
+    if (!caoId) {
+      return void res.status(400).json({ error: "Kies een CAO uit de CAO-catalogus" });
+    }
     const [w] = await db
       .insert(werkgeversTable)
       .values({
         naam: naam.trim(),
-        cao: cao || "Metaal & Techniek",
+        cao: caoNaam,
+        caoId,
         logoDocumentId: logo_document_id ?? null,
         briefpapierDocumentId: briefpapier_document_id ?? null,
         personeelsbeleid: personeelsbeleid ?? null,
@@ -311,6 +362,21 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
     const id = parseId(req.params.id);
     const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief, boekhouder_naam, boekhouder_email, scab_email_adres, intern_contact_naam, intern_contact_email, logo_varianten, merk_kleuren, lettertype, omschrijving_kort, omschrijving_lang } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
+    const [huidigeCaoContext] = await db
+      .select({ naam: werkgeversTable.naam, cao: werkgeversTable.cao })
+      .from(werkgeversTable)
+      .where(eq(werkgeversTable.id, id));
+    const moetCaoBijwerken = cao !== undefined || nieuweNaam !== undefined;
+    const nieuwCaoId = moetCaoBijwerken
+      ? await caoIdVoor(
+          cao !== undefined ? cao : huidigeCaoContext?.cao,
+          null,
+          nieuweNaam ?? huidigeCaoContext?.naam,
+        )
+      : undefined;
+    if (moetCaoBijwerken && !nieuwCaoId) {
+      return void res.status(400).json({ error: "Kies een CAO uit de CAO-catalogus" });
+    }
 
     // SVG wordt niet ondersteund door PDFKit — weiger SVG-logo's bij opslaan.
     if (logo_url && typeof logo_url === "string" && logo_url.toLowerCase().endsWith(".svg")) {
@@ -341,6 +407,7 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
         .set({
           naam: nieuweNaam,
           cao,
+          caoId: nieuwCaoId ?? undefined,
           logoDocumentId: logo_document_id !== undefined ? logo_document_id : undefined,
           briefpapierDocumentId: briefpapier_document_id !== undefined ? briefpapier_document_id : undefined,
           personeelsbeleid,
@@ -5214,12 +5281,17 @@ router.post("/medewerkers/:id/aanstellingen", schrijven, async (req, res): Promi
     const nieuweFunctieId = functie_id == null ? null : parseId(functie_id);
     if (!(await staFunctieWisselToe(req, res, null, nieuweFunctieId))) return;
     const werkgeverId = await werkgeverIdVoor(werkmaatschappij.trim());
+    const caoId = await caoIdVoor(cao, werkgeverId, werkmaatschappij.trim());
+    if (!caoId) {
+      return void res.status(400).json({ error: "Kies een CAO uit de CAO-catalogus" });
+    }
     const [nieuw] = await db
       .insert(medewerkerAanstellingenTable)
       .values({
         medewerkerId: medId,
         werkmaatschappij: werkmaatschappij.trim(),
         werkgeverId: werkgeverId ?? null,
+        caoId,
         functieId: nieuweFunctieId,
         cao: cao?.trim() || null,
         contracturenPerWeek: contracturen_per_week ?? null,
@@ -5268,11 +5340,21 @@ router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (
 
     const nieuweWm = werkmaatschappij?.trim() ?? huidig[0].werkmaatschappij;
     const werkgeverId = await werkgeverIdVoor(nieuweWm);
+    const effectiefWerkgeverId = werkgeverId ?? huidig[0].werkgeverId;
+    const caoId = await caoIdVoor(
+      cao !== undefined ? cao : huidig[0].cao,
+      effectiefWerkgeverId,
+      nieuweWm,
+    );
+    if (!caoId) {
+      return void res.status(400).json({ error: "Kies een CAO uit de CAO-catalogus" });
+    }
     const [bijgewerkt] = await db
       .update(medewerkerAanstellingenTable)
       .set({
         werkmaatschappij: nieuweWm,
-        werkgeverId: werkgeverId ?? huidig[0].werkgeverId,
+        werkgeverId: effectiefWerkgeverId,
+        caoId,
         functieId: nieuweFunctieId,
         cao: cao !== undefined ? (cao?.trim() || null) : huidig[0].cao,
         contracturenPerWeek: contracturen_per_week !== undefined ? (contracturen_per_week ?? null) : huidig[0].contracturenPerWeek,
@@ -5294,6 +5376,11 @@ router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (
 
     res.json(mapAanstelling(bijgewerkt, functieNaam));
   } catch (err) {
+    if (isLoonfundamentAanstellingConflict(err)) {
+      return void res.status(409).json({
+        error: "Deze aanstelling heeft een inkomstenverhouding en kan daarom niet naar een andere werkgever worden verplaatst.",
+      });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
