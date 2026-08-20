@@ -56,7 +56,6 @@ import {
   offertesTable,
   offerteTrackingTable,
   opnamesTable,
-  calculatiesTable,
   uitrolRapportenTable,
   ciRapportenTable,
   werkgeversTable,
@@ -1648,7 +1647,7 @@ async function voedAiInkoopAfwijking(): Promise<{ nieuw: number; afgehandeld: nu
 // Artikelen onder minimumvoorraad (dezelfde aggregatie als magazijnSignalering.ts:
 // som van voorraad per artikel, actieve artikelen met een ingestelde
 // minimum_voorraad), met respect voor actieve snoozes uit magazijn_snoozes.
-// Item per artikel aan de bevoegdheidsgroep magazijn≥2. actiePad /magazijn.
+// Item per artikel aan de bevoegdheidsgroep magazijn≥2, rechtstreeks naar het artikel.
 async function voedAiMagazijnBestelsuggestie(): Promise<{ nieuw: number; afgehandeld: number }> {
   const [voorraad, artikelen, snoozes] = await Promise.all([
     db.select({ artikelId: voorraadTable.artikelId, hoeveelheid: voorraadTable.hoeveelheid }).from(voorraadTable),
@@ -1686,7 +1685,7 @@ async function voedAiMagazijnBestelsuggestie(): Promise<{ nieuw: number; afgehan
       vereisteModule: "magazijn",
       vereistNiveau: 2,
       gewicht: 30,
-      actiePad: "/magazijn",
+      actiePad: `/magazijn/artikelen/${a.id}`,
       herkomstType: "artikel",
       herkomstId: a.id,
       dedupSleutel: `ai-magazijn:${a.id}`,
@@ -1805,7 +1804,7 @@ async function voedCrucialeDeadlinesHrm(): Promise<{ nieuw: number; afgehandeld:
       vereistNiveau: 2,
       alleenHoofdbeheerder: false,
       gewicht: d.dagen_tot < 0 ? 95 : d.dagen_tot <= 7 ? 85 : 70,
-      actiePad: "/personeel/contracten",
+      actiePad: `/personeel/${d.medewerker_id}`,
       herkomstType: `cruciale_deadline_${d.bron}`,
       herkomstId: d.medewerker_id,
       dedupSleutel: `cruciale-deadline:${bronLabel}:${d.medewerker_id}`,
@@ -2105,7 +2104,7 @@ async function voedOpnameZonderCalculatie(): Promise<{ nieuw: number; afgehandel
       titel: `Opname M${r.nummer} (${r.naam}) heeft na ${drempelDagen}+ dagen nog geen calculatie`,
       omschrijving: `De opname is gedaan maar er is geen calculatie aan gekoppeld — het werk blijft zo commercieel liggen.`,
       gewicht: 35,
-      actiePad: r.gebouwId ? `/gebouwen/${r.gebouwId}?tab=opnames` : `/opnames`,
+      actiePad: `/opname/${r.id}`,
       herkomstType: "opname",
       herkomstId: r.id,
     };
@@ -2117,54 +2116,37 @@ async function voedOpnameZonderCalculatie(): Promise<{ nieuw: number; afgehandel
   return syncBron("opname_zonder_calculatie", items);
 }
 
-// V5 — definitieve calculatie (niet-concept of verzonden) zonder offerte (weten, opsteller).
-// Beide calculatietabellen (fase 0 aanname 2): mod_calc_headers (ENK, waar
-// offertes.calculatie_id naar wijst) én legacy calculaties. Een legacy-
-// calculatie kán niet aan een offerte gekoppeld worden — het signaal blijft
-// dan staan tot de calculatie in de ENK-module is overgezet of teruggezet
-// naar concept; precies de aandacht die "weten" vraagt.
+// V5 — definitieve ENK-calculatie (niet-concept of verzonden) zonder offerte
+// (weten, opsteller). Alleen mod_calc_headers telt mee: offertes.calculatie_id
+// verwijst naar die tabel. Een legacy-calculatie kan volgens het datamodel nooit
+// aan een offerte worden gekoppeld en is daarom geen oplosbaar V5-signaal.
 async function voedCalculatieZonderOfferte(): Promise<{ nieuw: number; afgehandeld: number }> {
-  const [enk, legacy] = await Promise.all([
-    db.select({
-      id: modCalcHeadersTable.id, naam: modCalcHeadersTable.naam, nummer: modCalcHeadersTable.nummer,
-      aangemaaktDoorId: modCalcHeadersTable.aangemaaktDoorId,
-    })
-      .from(modCalcHeadersTable)
-      .where(and(
-        sql`(${modCalcHeadersTable.status} <> 'concept' OR ${modCalcHeadersTable.verzondenOp} IS NOT NULL)`,
-        sql`NOT EXISTS (SELECT 1 FROM offertes o WHERE o.calculatie_id = ${modCalcHeadersTable.id})`,
-      )),
-    db.select({
-      id: calculatiesTable.id, naam: calculatiesTable.naam, nummer: calculatiesTable.nummer,
-      aangemaaktDoorId: calculatiesTable.aangemaaktDoorId,
-    })
-      .from(calculatiesTable)
-      .where(sql`(${calculatiesTable.status} <> 'concept' OR ${calculatiesTable.verzondenOp} IS NOT NULL)`),
-  ]);
-  const rijen = [
-    ...enk.map((r) => ({ ...r, legacy: false })),
-    ...legacy.map((r) => ({ ...r, legacy: true })),
-  ];
+  const rijen = await db.select({
+    id: modCalcHeadersTable.id, naam: modCalcHeadersTable.naam, nummer: modCalcHeadersTable.nummer,
+    aangemaaktDoorId: modCalcHeadersTable.aangemaaktDoorId,
+  })
+    .from(modCalcHeadersTable)
+    .where(and(
+      sql`(${modCalcHeadersTable.status} <> 'concept' OR ${modCalcHeadersTable.verzondenOp} IS NOT NULL)`,
+      sql`NOT EXISTS (SELECT 1 FROM offertes o WHERE o.calculatie_id = ${modCalcHeadersTable.id})`,
+    ));
   const kandidaten = [...new Set(rijen.map((r) => r.aangemaaktDoorId).filter((x): x is number => x != null))];
   const bevoegd = new Set(await filterOntvangersOpBevoegdheid(kandidaten, "calculaties", 1));
   const items = rijen.map((r): WerkbakInvoer => {
-    const sleutel = r.legacy ? `legacy-${r.id}` : `${r.id}`;
     const basis = {
       soort: "weten" as const,
       bron: "calculatie_zonder_offerte",
       titel: `Calculatie C${r.nummer} (${r.naam}) is definitief maar heeft geen offerte`,
-      omschrijving: r.legacy
-        ? `Deze calculatie staat nog in de oude module en kan daar niet aan een offerte gekoppeld worden. Zet haar over naar de ENK-calculatiemodule of leg vast waarom niet.`
-        : `De calculatie is afgerond zonder dat er een offerte uit is voortgekomen. Maak de offerte of leg vast waarom niet.`,
+      omschrijving: `De calculatie is afgerond zonder dat er een offerte uit is voortgekomen. Maak de offerte of leg vast waarom niet.`,
       gewicht: 30,
-      actiePad: `/calculaties/${r.id}`,
-      herkomstType: r.legacy ? "calculatie_legacy" : "calculatie",
+      actiePad: `/modules/calculatie/${r.id}`,
+      herkomstType: "calculatie",
       herkomstId: r.id,
     };
     if (r.aangemaaktDoorId != null && bevoegd.has(r.aangemaaktDoorId)) {
-      return { ...basis, gebruikerId: r.aangemaaktDoorId, dedupSleutel: `calculatie-zonder-offerte:${sleutel}:${r.aangemaaktDoorId}` };
+      return { ...basis, gebruikerId: r.aangemaaktDoorId, dedupSleutel: `calculatie-zonder-offerte:${r.id}:${r.aangemaaktDoorId}` };
     }
-    return { ...basis, vereisteModule: "calculaties", vereistNiveau: 2, dedupSleutel: `calculatie-zonder-offerte:${sleutel}:groep` };
+    return { ...basis, vereisteModule: "calculaties", vereistNiveau: 2, dedupSleutel: `calculatie-zonder-offerte:${r.id}:groep` };
   });
   return syncBron("calculatie_zonder_offerte", items);
 }

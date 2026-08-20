@@ -227,27 +227,43 @@ export async function syncBron(bron: string, items: WerkbakInvoer[]): Promise<{ 
   return db.transaction(async (tx) => {
     let nieuw = 0;
     for (const item of items) {
+      const actueleWaarden = {
+        soort: item.soort,
+        titel: item.titel,
+        omschrijving: item.omschrijving ?? null,
+        gebruikerId: item.gebruikerId ?? null,
+        vereisteModule: item.vereisteModule ?? null,
+        vereistNiveau: item.vereistNiveau ?? null,
+        alleenHoofdbeheerder: item.alleenHoofdbeheerder ?? false,
+        gewicht: item.gewicht ?? 0,
+        actiePad: item.actiePad ?? null,
+        actieType: item.actieType ?? null,
+        herkomstType: item.herkomstType,
+        herkomstId: item.herkomstId ?? null,
+      };
       const rijen = await tx
         .insert(werkbakItemsTable)
         .values({
-          soort: item.soort,
+          ...actueleWaarden,
           bron: item.bron,
-          titel: item.titel,
-          omschrijving: item.omschrijving ?? null,
-          gebruikerId: item.gebruikerId ?? null,
-          vereisteModule: item.vereisteModule ?? null,
-          vereistNiveau: item.vereistNiveau ?? null,
-          alleenHoofdbeheerder: item.alleenHoofdbeheerder ?? false,
-          gewicht: item.gewicht ?? 0,
-          actiePad: item.actiePad ?? null,
-          actieType: item.actieType ?? null,
-          herkomstType: item.herkomstType,
-          herkomstId: item.herkomstId ?? null,
           dedupSleutel: item.dedupSleutel,
         })
         .onConflictDoNothing()
         .returning({ id: werkbakItemsTable.id });
-      if (rijen.length > 0) nieuw += 1;
+      if (rijen.length > 0) {
+        nieuw += 1;
+      } else {
+        // Een voeder is ook de bron van waarheid voor titel, doelgroep en
+        // deep-link. Houd bestaande open items actueel bij routewijzigingen.
+        await tx
+          .update(werkbakItemsTable)
+          .set({ ...actueleWaarden, bijgewerktOp: new Date() })
+          .where(and(
+            eq(werkbakItemsTable.bron, bron),
+            eq(werkbakItemsTable.dedupSleutel, item.dedupSleutel),
+            eq(werkbakItemsTable.status, "open"),
+          ));
+      }
     }
     const actueleSleutels = items.map((i) => i.dedupSleutel);
     const voorwaarden = [eq(werkbakItemsTable.bron, bron), eq(werkbakItemsTable.status, "open")];

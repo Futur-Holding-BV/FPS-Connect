@@ -1788,9 +1788,19 @@ router.post("/projecten/:id/overwerk-toestemming", requireAuth, async (req, res)
   const { datum, uren, toelichting } = req.body ?? {};
   if (!datum || uren == null) return void res.status(400).json({ error: "datum en uren zijn verplicht" });
 
-  const [project] = await db.select({ id: projectenTable.id, titel: projectenTable.naam })
-    .from(projectenTable).where(eq(projectenTable.id, projectId)).limit(1);
+  const [[project], [opdracht]] = await Promise.all([
+    db.select({ id: projectenTable.id, titel: projectenTable.naam })
+      .from(projectenTable)
+      .where(eq(projectenTable.id, projectId))
+      .limit(1),
+    db.select({ id: opdrachtenTable.id })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.projectId, projectId))
+      .orderBy(sql`CASE WHEN ${opdrachtenTable.status} = 'actief' THEN 0 ELSE 1 END`, desc(opdrachtenTable.id))
+      .limit(1),
+  ]);
   if (!project) return void res.status(404).json({ error: "Project niet gevonden" });
+  if (!opdracht) return void res.status(409).json({ error: "Project heeft geen gekoppelde opdracht" });
 
   const [aanvraag] = await db.insert(overwerkSlotenTable).values({
     projectId, status: "aangevraagd",
@@ -1809,14 +1819,14 @@ router.post("/projecten/:id/overwerk-toestemming", requireAuth, async (req, res)
   for (const plId of plIds) {
     if (await meldWerkbakItem({
       soort: "doen", bron: "overwerk_toestemming", titel, omschrijving,
-      gebruikerId: plId, gewicht: 55, actiePad: `/projecten`,
+      gebruikerId: plId, gewicht: 55, actiePad: `/opdrachten/${opdracht.id}`,
       herkomstType: "overwerk_slot", herkomstId: aanvraag.id,
       dedupSleutel: `overwerk_toestemming:${aanvraag.id}:pl:${plId}`,
     })) geplaatst++;
   }
   if (await meldWerkbakItem({
     soort: "doen", bron: "overwerk_toestemming", titel, omschrijving,
-    alleenHoofdbeheerder: true, gewicht: 55, actiePad: `/projecten`,
+    alleenHoofdbeheerder: true, gewicht: 55, actiePad: `/opdrachten/${opdracht.id}`,
     herkomstType: "overwerk_slot", herkomstId: aanvraag.id,
     dedupSleutel: `overwerk_toestemming:${aanvraag.id}:hb`,
   })) geplaatst++;

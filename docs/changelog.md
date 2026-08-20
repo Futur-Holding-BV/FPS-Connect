@@ -1,5 +1,12 @@
 - **Externe adviseurs**: nieuw beheerscherm onder Personeel met bedrijf, contactpersoon, inzet, toegangsdatum en accountstatus. Beheerders kunnen gegevens en toegang verlengen via het bestaande adviseur-account. De dagelijkse bewakingsloop zet vanaf 14 dagen vóór de einddatum (en bij verlopen toegang) een actiepunt in de werkbak voor personeel:2, dat zichzelf sluit wanneer de toegang is verlengd of het account is uitgezet.
 
+## 2026-08-19 — SIGNALEN_LINKS_01: werkbak opent het concrete dossier
+
+- **Overwerk en dossiers**: een verzoek om overwerk opent voortaan direct de gekoppelde opdracht; een opname zonder calculatie opent de betreffende opname.
+- **Magazijn en HRM**: bestelsuggesties openen het artikel en cruciale HRM-deadlines openen het medewerkerdossier waarop de deadline betrekking heeft.
+- **Oplosbare calculatiesignalen**: calculatie-zonder-offerte bewaakt alleen ENK-calculaties die volgens het datamodel werkelijk aan een offerte gekoppeld kunnen worden en opent hun bestaande detailpagina.
+- **Bestaande items hersteld**: de datamigratie zet ook al openstaande meldingen om naar de concrete route; periodieke voeders werken voortaan de inhoud en deep-link van een bestaand open item bij.
+- **Vaste routepoort**: de bestaande CI-doorklikcontrole leest nu alle werkbak-`actiePad`-toewijzingen uit de API-bron en controleert ze tegen de routes in `connect-routes.tsx`, met aanvullende eisen voor de vijf herstelde deep-links.
 
 ## 2026-08-19 — Inkoopfactuur-goedkeuringsbeleid dekkend maken
 
