@@ -23,6 +23,30 @@
       "verwijderd": 92,
       "blob": "7ad972d8fb158c7626830f6feacbbcca27c1b161",
       "reden": "Inhoudelijk beoordeelde, samenhangende SnagStream-archiefinterface voor uploadcontrole, duplicaatbesluitvorming, zoeken, filters en gebouwenoverzicht."
+    },
+    {
+      "commit": "1c7c396eb2984a071ef935033f9a776129865d98",
+      "pad": "artifacts/firevault/src/pages/gebruikers/index.tsx",
+      "toegevoegd": 318,
+      "verwijderd": 709,
+      "blob": "61035231fcf0fbb500d98b47a100b48c78e52902",
+      "reden": "Inhoudelijk beoordeelde, samenhangende GEBRUIKERS_01 v2-wijziging die functies leidend maakt, de oude profielinterface verwijdert en rechtenescalatie sluit."
+    },
+    {
+      "commit": "36f35a364860fbdfca42d1e626ed9fae039d7b7a",
+      "pad": "artifacts/firevault/src/pages/snagstream/index.tsx",
+      "toegevoegd": 405,
+      "verwijderd": 92,
+      "blob": "365442ebf4e247a3b8b4a17ffd0b9ab345ea123e",
+      "reden": "Inhoudelijk beoordeelde, samenhangende uitbreiding van de SnagStream-interface voor meerdere PDF's, per-bestandstatus, conflictbesluiten en cleanup."
+    },
+    {
+      "commit": "36f35a364860fbdfca42d1e626ed9fae039d7b7a",
+      "pad": "scripts/e2e/web-snagstream-archief.spec.ts",
+      "toegevoegd": 391,
+      "verwijderd": 1,
+      "blob": "8cba41f19f5d625a5fd495cc118f00c30bad6280",
+      "reden": "Inhoudelijk beoordeelde, samenhangende uitbreiding van de SnagStream-e2e voor multi-upload, IDOR, annuleren, objectopslagcleanup en race-afhandeling."
     }
   ]
 }
