@@ -66,6 +66,7 @@ NET="fps-herstelproef-$RUN_ID"
 PFX="herstelproef-$RUN_ID"
 T0=$(date +%s)
 stap() { echo "== [$(( $(date +%s) - T0 ))s] $*"; }
+TEST_TOTP_SECRET="JBSWY3DPEHPK3PXP"
 
 # gevoelige tijdelijke bestanden: root-only (0700) en altijd opruimen
 TMPD=$(mktemp -d /tmp/herstelproef.XXXXXX)
@@ -86,9 +87,17 @@ print(str((struct.unpack(">I",h[o:o+4])[0]&0x7fffffff)%1000000).zfill(6))
 PYEOF
 
 opruimen() {
+  local rc=$?
+  trap - EXIT
+  if [ "$rc" -ne 0 ] && docker inspect "${PFX}-api" >/dev/null 2>&1; then
+    echo "HERSTELDIAGNOSE|api-log=begin"
+    docker logs "${PFX}-api" 2>&1 || true
+    echo "HERSTELDIAGNOSE|api-log=einde"
+  fi
   docker rm -f "${PFX}-api" "${PFX}-minio" "${PFX}-db" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
   rm -rf "$TMPD"
+  exit "$rc"
 }
 if [ -n "${KEEP:-}" ]; then
   trap 'rm -rf "$TMPD"' EXIT   # geheimen ruimen we ALTIJD op, ook met KEEP=1
@@ -206,8 +215,18 @@ stap "healthz: $HEALTH"
 
 stap "proefaccount inloggen op de herstelde applicatie (incl. 2FA)"
 docker exec "${PFX}-db" psql -q -U fps_app -d fps_production -c "
-  INSERT INTO gebruikers (naam, email, rol, wachtwoord, actief)
-  VALUES ('Herstelproef', 'herstelproef@fps-one.nl', 'hoofdbeheerder', '\$2b\$10\$qWiIJg7YfoK8ihX4WbMUJO6v8vcCueRfuQNINGaghy5Ef2/KOj646', true)"
+  INSERT INTO gebruikers (
+    naam, email, rol, wachtwoord, actief, totp_secret, twee_factor_ingeschakeld
+  )
+  VALUES (
+    'Herstelproef',
+    'herstelproef@fps-one.nl',
+    'hoofdbeheerder',
+    '\$2b\$10\$qWiIJg7YfoK8ihX4WbMUJO6v8vcCueRfuQNINGaghy5Ef2/KOj646',
+    true,
+    '$TEST_TOTP_SECRET',
+    true
+  )"
 LOGIN=$(curl -s -D "$TMPD"/headers.txt -o "$TMPD"/login.json -w "%{http_code}" \
   -H "X-Forwarded-Proto: https" -X POST http://127.0.0.1:8899/api/auth/login \
   -H "Content-Type: application/json" \
@@ -231,16 +250,23 @@ COOKIE=$(awk '
   exit 1
 }
 stap "login stap 1: HTTP $LOGIN ($(cat "$TMPD"/login.json))"
-SECRET=$(curl -s -H "X-Forwarded-Proto: https" -H "Cookie: $COOKIE" -X POST \
-  http://127.0.0.1:8899/api/auth/2fa/setup | python3 -c "import sys,json;print(json.load(sys.stdin)['secret'])")
-CODE=$(python3 "$TMPD"/totp.py "$SECRET")
+python3 - "$TMPD"/login.json <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as bestand:
+    antwoord = json.load(bestand)
+if antwoord.get("status") != "verify_2fa":
+    raise SystemExit("FOUT: login stap 1 vraagt geen bestaande 2FA-verificatie")
+PY
+CODE=$(python3 "$TMPD"/totp.py "$TEST_TOTP_SECRET")
 # NB: curl eindigt op deze call soms met exit 23 (afgekapte body) terwijl de
 # server 200 geeft en de sessie geldig is; daarom niet op curl-exit vertrouwen.
 TFA=$(curl -s -o "$TMPD"/act.json -w "%{http_code}" -H "X-Forwarded-Proto: https" -H "Cookie: $COOKIE" \
-  -X POST http://127.0.0.1:8899/api/auth/2fa/activeren -H "Content-Type: application/json" \
+  -X POST http://127.0.0.1:8899/api/auth/2fa/verify -H "Content-Type: application/json" \
   -d "{\"code\":\"$CODE\"}") || true
-[ "$TFA" = "200" ] || { echo "FOUT: 2FA-activeren gaf HTTP $TFA: $(cat "$TMPD"/act.json)"; exit 1; }
-stap "login stap 2 (2FA-activeren): HTTP $TFA"
+[ "$TFA" = "200" ] || { echo "FOUT: 2FA-verificatie gaf HTTP $TFA: $(cat "$TMPD"/act.json)"; exit 1; }
+stap "login stap 2 (bestaande 2FA verifiëren): HTTP $TFA"
 
 stap "document openen uit de herstelde bestandsopslag"
 DOCPAD=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc \
