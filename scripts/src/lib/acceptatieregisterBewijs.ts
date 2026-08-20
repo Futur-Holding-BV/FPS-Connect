@@ -6,9 +6,8 @@ import {
   ACCEPTATIE_BRONKRACHT,
   ACCEPTATIE_BRONSOORTEN,
   acceptatieRegisterTable,
-  db,
   type AcceptatieBronsoort,
-} from "@workspace/db";
+} from "@workspace/db/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 export type BewijsKandidaat = {
@@ -120,6 +119,9 @@ export async function registreerGroenBewijs(invoer: RegistreerGroenBewijsInvoer)
     );
   }
 
+  // De pure actualiteits- en bronkrachtfuncties uit dit bestand worden ook door
+  // een DB-loze CI-poort geladen. Open de database daarom pas op het schrijfpad.
+  const { db } = await import("@workspace/db");
   return db.transaction(async (tx) => {
     // De eenmalige historische hergrading neemt hetzelfde slot exclusief.
     // Groene scripts delen het onderling, maar kunnen daardoor nooit midden in
