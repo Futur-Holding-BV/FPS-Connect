@@ -1,10 +1,18 @@
-# Herstel: Microsoft Graph token-aanroep geeft HTTP 401 (faalmail en tijdbewaking)
+# Herstel: Microsoft Graph weigert het client-secret (AADSTS7000215)
 
 **Symptoom:** de GitHub Actions-stappen "Faalmelding e-mailen naar René" en
 "Tijd- en schijfbewaking" geven een HTTP 401 bij het ophalen van een
 Graph-bearer-token. Hierdoor werd een succesvolle deploy als rood gemarkeerd
-en werden echte faalmeldingen niet bezorgd (geconstateerd in run 32147986350,
-18-08-2026).
+en werden echte faalmeldingen niet bezorgd.
+
+Het volledige, door GitHub geredigeerde Azure-antwoord is:
+
+```text
+error: invalid_client
+error_code: AADSTS7000215
+Invalid client secret provided. Ensure the secret being sent in the request is
+the client secret value, not the client secret ID.
+```
 
 ---
 
@@ -13,18 +21,62 @@ en werden echte faalmeldingen niet bezorgd (geconstateerd in run 32147986350,
 De stappen gebruiken de Microsoft Graph API met *client-credentials*:
 `client_id + client_secret → access_token → sendMail`.
 
-Een 401 op de token-aanroep (`login.microsoftonline.com/.../oauth2/v2.0/token`)
-betekent: het client-secret is verlopen, of de app-registratie bestaat niet
-meer.
+`AADSTS7000215` bewijst specifiek dat de waarde in het GitHub Actions-secret
+`AZURE_CLIENT_SECRET` niet geldig is voor de app die door `AZURE_CLIENT_ID`
+wordt aangewezen. Mogelijke oorzaken zijn:
+
+- de secret is verlopen of in Azure ingetrokken;
+- de secretwaarde hoort bij een andere app-registratie;
+- de **Secret ID** is opgeslagen in plaats van de eenmalig zichtbare
+  **Value**.
+
+De fout bewijst niet op zichzelf dat de secret verlopen is. Een onbekend
+client-ID geeft een andere Azure-fout (`AADSTS700016`).
 
 Een 403 *na* het ophalen van het token betekent: het token is geldig maar de
 app-registratie mist de `Mail.Send` applicatiemacht.
 
 ---
 
-## Benodigde stap: nieuwe Azure-gegevens in de GitHub-secrets zetten
+## Exacte Azure-registratie
 
-De workflow leest deze vijf waarden uit **GitHub Actions Secrets** (niet uit
+| Onderdeel | Waarde |
+|---|---|
+| Microsoft-tenant | `244325c9-8a1b-4634-8b05-e1042b2fdbf7` |
+| Beoogde app-registratie | `FPS Connect Mail` |
+| Productiedomein | `fpsbrandpreventie.nl` |
+| Vereiste Graph-machtiging | `Mail.Send` — Application, met admin consent |
+
+Andere Application-machtigingen zijn niet vereist voor deze app-only
+mailkoppeling. De verbindingstest valideert de postbus via een ontvangerloze
+`sendMail`-probe en doet geen gebruikers-leesoproep. De persoonlijke Werk-inbox
+gebruikt apart gedelegeerd `User.Read` en gedelegeerde mailrechten.
+
+De tenant is op 20 augustus 2026 publiek geverifieerd via de Microsoft
+OpenID-configuratie van `fpsbrandpreventie.nl`. De naam `FPS Connect Mail`
+komt uit de FPS Connect-herbouwdocumentatie. GitHub maskeert het daadwerkelijke
+Application (client) ID in de Actions-log; vergelijk daarom in Azure de
+Application (client) ID van deze registratie met de ingestelde client-ID's.
+
+## Twee afzonderlijke secretlocaties
+
+GitHub Actions en de Connect-productieruntime lezen niet uit dezelfde
+secretopslag:
+
+| Gebruik | Locatie | Client-ID die de code gebruikt | Secret |
+|---|---|---|---|
+| Deploy-, faal- en noodfixmail | GitHub repository → Settings → Secrets and variables → Actions | `AZURE_CLIENT_ID` | `AZURE_CLIENT_SECRET` |
+| Alle Connect-appmail | VPS `/opt/fps-connect/.env.production` | bij voorkeur `AZURE_CLIENT_ID_NEW`, anders `AZURE_CLIENT_ID` | `AZURE_CLIENT_SECRET` |
+
+Werk bij herstel dezelfde geldige secretwaarde op **beide** plaatsen bij en
+controleer dat `AZURE_CLIENT_ID` en `AZURE_CLIENT_ID_NEW` naar dezelfde
+app-registratie `FPS Connect Mail` wijzen. Alleen een GitHub-secret bijwerken
+herstelt de Connect-appmail niet; alleen de VPS bijwerken herstelt de
+Actions-meldingen niet.
+
+## Benodigde stap: nieuw Azure-secret maken en plaatsen
+
+De workflow leest deze zes waarden uit **GitHub Actions Secrets** (niet uit
 Replit). Ze moeten worden ingesteld via:
 
 > GitHub → repository → Settings → Secrets and variables → Actions
@@ -57,19 +109,25 @@ werkt.
 
 ### Stap-voor-stap in Azure Portal
 
-1. Ga naar **Azure Portal → App registrations** en open de registratie die voor
-   FPS Connect wordt gebruikt.
-2. Controleer onder **Certificates & secrets → Client secrets** of het geheim
-   geldig is. Maak een nieuw geheim aan als het verlopen is. Kopieer de waarde
-   direct — die is later niet meer zichtbaar.
-3. Controleer onder **API permissions** of `Mail.Send` (type: Application, niet
+1. Meld aan in tenant `244325c9-8a1b-4634-8b05-e1042b2fdbf7`.
+2. Ga naar **Azure Portal → App registrations → FPS Connect Mail**.
+3. Controleer op **Overview** de **Application (client) ID** tegen
+   `AZURE_CLIENT_ID` in GitHub en `AZURE_CLIENT_ID_NEW` op de VPS.
+4. Ga naar **Certificates & secrets → Client secrets → New client secret**.
+   Kopieer na het aanmaken de kolom **Value**, nadrukkelijk niet de
+   **Secret ID**. De Value is later niet meer zichtbaar.
+5. Vervang GitHub Actions-secret `AZURE_CLIENT_SECRET` met deze Value.
+6. Vervang op de VPS `AZURE_CLIENT_SECRET` in
+   `/opt/fps-connect/.env.production` met dezelfde Value en herstart daarna de
+   API-server.
+7. Controleer onder **API permissions** of `Mail.Send` (type: Application, niet
    Delegated) aanwezig en **goedgekeurd** is door een Azure-beheerder
    (de kolom "Status" moet "Granted" tonen).
-4. Als `Mail.Send` ontbreekt: voeg toe via **Add a permission → Microsoft Graph
+8. Als `Mail.Send` ontbreekt: voeg toe via **Add a permission → Microsoft Graph
    → Application permissions → Mail.Send** en laat een beheerder "Grant admin
    consent" klikken.
 
-### Nieuw geheim aanmaken (alleen als verlopen)
+### Nieuw geheim aanmaken
 
 - Geef het geheim een beschrijvende naam, bv. `fps-connect-deploy-alerts`.
 - Kies een vervaldatum van minimaal 1 jaar.
@@ -77,10 +135,62 @@ werkt.
 
 ---
 
+## Vastgestelde impact
+
+### GitHub Actions-mail
+
+- Op 17 augustus 2026 om 15:30 UTC verstuurde run
+  `32042358763` nog aantoonbaar een faalmelding.
+- De eerste volledig gelogde `AADSTS7000215` staat in run
+  `32147986350` van 18 augustus 2026 om 14:34 UTC.
+- De noodfixrun `32229451303` kreeg dezelfde fout op 19 augustus om
+  07:47 UTC.
+- De twee latere faalmailtests `32280586391` en `32281531087` kregen op
+  19 augustus om 17:24 en 17:28 UTC opnieuw dezelfde fout. Dat de runs groen
+  zijn, bewijst alleen dat de graceful-exit werkte; er is geen testmail
+  verstuurd.
+- Tussen de eerste volledig bewezen 401 en 20 augustus 04:46 UTC faalden
+  veertien deployruns waarvoor een Actions-faalmelding hoorde te worden
+  verstuurd. De twee groene faalmailtests zijn daar niet bij meegeteld.
+
+Het precieze omslagmoment ligt dus na de aantoonbaar geslaagde verzending van
+17 augustus 15:30 UTC en uiterlijk op 18 augustus 14:34 UTC.
+
+### Connect-appmail
+
+De productiedatabase toont:
+
+- laatste geregistreerde succesvolle appmail:
+  `wachtwoord_reset`, 11 augustus 2026 07:56:41 UTC;
+- geen geregistreerde mislukte appmail;
+- geen `wachtend`, `verzenden` of `mislukt` item in `mail_wachtrij`;
+- sinds die laatste verzending geen wachtwoord-reset-token, uitnodiging,
+  uitnodigingsherinnering of offerte-maillog aangemaakt.
+
+Er is daarom **geen bekend Connect-bericht om opnieuw te verzenden**. Dit
+bewijst echter niet dat de VPS-credential nog geldig is: sinds 11 augustus is
+geen appmailpoging geregistreerd en `/api/versie/status` controleert alleen of
+mailvariabelen aanwezig zijn, niet of Azure een token afgeeft. Test de
+Connect-runtime daarom afzonderlijk na het bijwerken van de VPS-secret.
+
+---
+
 ## Controleer na het bijwerken
 
-Voer een test-run uit via GitHub Actions → "Deploy naar productie" →
-"Run workflow" → vul bij **test_faalmail** het woord `TEST` in.
+1. Voer een test-run uit via GitHub Actions → "Deploy naar productie" →
+   "Run workflow" → vul bij **test_faalmail** het woord `TEST` in.
+2. Controleer de daadwerkelijke ontvangst van de e-mail met onderwerp
+   "FPS Connect: productie-release GEFAALD".
+3. Open in Connect als gebruiker met `systeem:2` de beheerpagina voor
+   e-mail. Voer eerst de verbindingstest uit
+   (`POST /api/mail/verbindingstest`) en verstuur daarna een echte testmail
+   (`POST /api/mail/testmail`).
+   De verbindingstest vereist uitsluitend Application `Mail.Send` en verstuurt
+   zelf geen bericht.
+4. Controleer zowel de daadwerkelijke ontvangst als een nieuwe rij met status
+   `verzonden` in `mail_logboek`.
+5. Voer daarna de verplichte noodfix-beproeving opnieuw uit en controleer de
+   daadwerkelijke ontvangst van de noodfixmail.
 
 - Bij succes: René ontvangt een e-mail met onderwerpregel
   "FPS Connect: productie-release GEFAALD" en de tekst "Dit is een bewuste
@@ -104,6 +214,9 @@ kleurde. Dit is opgelost: de token-aanroep schrijft de respons nu naar een
 tijdelijk bestand, logt de HTTP-statuscode en verlaat de stap met exit 0
 (bewaking/faalmelding) respectievelijk exit 1 (noodfix, waarbij de melding
 verplicht is).
+
+Een groene faalmailtest is daardoor op zichzelf geen verzendbewijs: de log moet
+`Faalmelding verzonden naar René.` bevatten én de e-mail moet ontvangen zijn.
 
 De handmatige invoer `test_faalmail=TEST` gebruikt een aparte, veilige
 testwachtrij. Hij triggert de faalmail met een bewuste simulatie in plaats van

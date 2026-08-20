@@ -49,6 +49,12 @@ on:
           Productie wordt hierbij nooit geraakt.
         required: false
         default: ""
+      test_connect_mail:
+        description: >-
+          Optioneel ontvangstadres voor één echte Connect-testmail na een
+          geslaagde handmatige deploy. Leeg laten = mailproef overslaan.
+        required: false
+        default: ""
 
 # Nooit twee deployments tegelijk; een lopende deploy wordt nooit geannuleerd,
 # een nieuwe push wacht netjes tot de vorige klaar is.
@@ -725,6 +731,79 @@ jobs:
           fi
           echo "Smoketest geslaagd (${GESLAAGD}/${TOTAAL} checks)."
           echo "smoketest|$(date +%s)" >> /tmp/mijlpalen.txt
+
+      # Alleen bij een bewust ingevuld adres tijdens workflow_dispatch. Deze
+      # bewijsproef verandert normale deployments niet: hij controleert eerst de
+      # niet-verzendende Mail.Send-probe en verstuurt daarna precies één testmail.
+      - name: Productie-mailverbinding en echte testmail beproeven
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.test_connect_mail != '' &&
+          github.event.inputs.test_faalmail != 'TEST'
+        env:
+          SMOKETEST_EMAIL: ${{ secrets.SMOKETEST_EMAIL }}
+          SMOKETEST_PASSWORD: ${{ secrets.SMOKETEST_PASSWORD }}
+          TEST_CONNECT_MAIL: ${{ github.event.inputs.test_connect_mail }}
+        run: |
+          set -euo pipefail
+          echo "Productie-mailverbinding en echte testmail beproeven" > /tmp/faalstap.txt
+          exec > >(tee /tmp/stap-uitvoer.log) 2>&1
+
+          if [ -z "${SMOKETEST_EMAIL:-}" ] || [ -z "${SMOKETEST_PASSWORD:-}" ]; then
+            echo "SMOKETEST_EMAIL en/of SMOKETEST_PASSWORD ontbreekt; aangevraagde mailproef kan niet draaien." >&2
+            exit 1
+          fi
+          if ! node -e 'process.exit(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.TEST_CONNECT_MAIL || "") ? 0 : 1)'; then
+            echo "test_connect_mail is geen geldig e-mailadres." >&2
+            exit 1
+          fi
+
+          echo "::add-mask::${TEST_CONNECT_MAIL}"
+          BASE_URL="https://connect.fps-one.nl"
+          COOKIEJAR=$(mktemp)
+          trap 'rm -f "$COOKIEJAR" /tmp/mailproef-login.json /tmp/mailproef-verbinding.json /tmp/mailproef-testmail.json /tmp/mailproef-logboek.json' EXIT
+
+          LOGIN_BODY=$(node -e 'console.log(JSON.stringify({email:process.env.SMOKETEST_EMAIL,wachtwoord:process.env.SMOKETEST_PASSWORD}))')
+          LOGIN_HTTP=$(curl -sS --max-time 20 -o /tmp/mailproef-login.json -w "%{http_code}" \
+            -c "$COOKIEJAR" \
+            -X POST "${BASE_URL}/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "$LOGIN_BODY" 2>/dev/null || echo "000")
+          if [ "$LOGIN_HTTP" -ne 200 ]; then
+            echo "Productie-mailproef: aanmelden gaf HTTP ${LOGIN_HTTP} (verwacht 200)." >&2
+            exit 1
+          fi
+
+          VERBINDING_HTTP=$(curl -sS --max-time 30 -o /tmp/mailproef-verbinding.json -w "%{http_code}" \
+            -b "$COOKIEJAR" \
+            -X POST "${BASE_URL}/api/mail/verbindingstest" 2>/dev/null || echo "000")
+          if [ "$VERBINDING_HTTP" -ne 200 ] || ! node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync("/tmp/mailproef-verbinding.json","utf8"));process.exit(r.ok===true?0:1)'; then
+            echo "Productie-mailproef: verbindingstest niet geslaagd (HTTP ${VERBINDING_HTTP})." >&2
+            cat /tmp/mailproef-verbinding.json >&2 || true
+            exit 1
+          fi
+          echo "OK: productieverbindingstest bevestigt token, Mail.Send en postbustoegang."
+
+          TESTMAIL_BODY=$(node -e 'console.log(JSON.stringify({naar_email:process.env.TEST_CONNECT_MAIL}))')
+          TESTMAIL_HTTP=$(curl -sS --max-time 30 -o /tmp/mailproef-testmail.json -w "%{http_code}" \
+            -b "$COOKIEJAR" \
+            -X POST "${BASE_URL}/api/mail/testmail" \
+            -H "Content-Type: application/json" \
+            -d "$TESTMAIL_BODY" 2>/dev/null || echo "000")
+          if [ "$TESTMAIL_HTTP" -ne 200 ] || ! node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync("/tmp/mailproef-testmail.json","utf8"));process.exit(r.ok===true?0:1)'; then
+            echo "Productie-mailproef: echte testmail niet door Graph geaccepteerd (HTTP ${TESTMAIL_HTTP})." >&2
+            cat /tmp/mailproef-testmail.json >&2 || true
+            exit 1
+          fi
+
+          LOGBOEK_HTTP=$(curl -sS --max-time 20 -o /tmp/mailproef-logboek.json -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/mail/logboek" 2>/dev/null || echo "000")
+          if [ "$LOGBOEK_HTTP" -ne 200 ] || ! node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync("/tmp/mailproef-logboek.json","utf8"));const adres=(process.env.TEST_CONNECT_MAIL||"").toLowerCase();process.exit(Array.isArray(rows)&&rows.some(r=>String(r.naar_email||"").toLowerCase()===adres&&r.soort==="test"&&r.status==="verzonden")?0:1)'; then
+            echo "Productie-mailproef: geen bijbehorende verzonden-rij in mail_logboek (HTTP ${LOGBOEK_HTTP})." >&2
+            exit 1
+          fi
+
+          echo "::notice::Productie-mailproef geslaagd: verbinding ok, één echte testmail door Graph geaccepteerd en mail_logboek status=verzonden."
 
       # ─── OTA-update monteur-app (EAS Update) ───────────────────────────────
       # Na een geslaagde deploy + smoketest wordt de monteur-app automatisch

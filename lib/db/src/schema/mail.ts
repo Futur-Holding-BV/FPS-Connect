@@ -15,7 +15,8 @@ export const mailLogboekTable = pgTable("mail_logboek", {
   // "verzonden" | "mislukt"
   status: text("status").notNull(),
   // Bij mislukken: "niet_geconfigureerd" | "testadres_onderdrukt" |
-  // "token_verlopen" | "mailbox_onbereikbaar" | "rate_limit" | "verzendfout"
+  // "token_verlopen" | "onvoldoende_rechten" | "mailbox_onbereikbaar" |
+  // "rate_limit" | "verzendfout"
   foutCategorie: text("fout_categorie"),
   foutdetail: text("foutdetail"),
   // Gebruiker die de verzending startte (sessie); null bij systeemverzending.

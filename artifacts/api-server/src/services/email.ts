@@ -30,6 +30,7 @@ export type MailFoutCategorie =
   | "niet_geconfigureerd"
   | "testadres_onderdrukt"
   | "token_verlopen"
+  | "onvoldoende_rechten"
   | "mailbox_onbereikbaar"
   | "rate_limit"
   | "verzendfout";
@@ -41,6 +42,8 @@ export const MAIL_FOUT_OMSCHRIJVING: Record<MailFoutCategorie, string> = {
     "Het opgegeven e-mailadres is een test- of voorbeeldadres. De e-mail is niet verstuurd.",
   token_verlopen:
     "Aanmelden bij Microsoft 365 is mislukt — token verlopen of ongeldige gegevens.",
+  onvoldoende_rechten:
+    "Microsoft 365 weigert toegang tot de postbus — controleer Mail.Send en de app-toegang tot deze postbus.",
   mailbox_onbereikbaar:
     "De postbus is niet bereikbaar of bestaat niet in Microsoft 365.",
   rate_limit:
@@ -122,10 +125,7 @@ function veiligFoutdetail(tekst: string | null | undefined, max = 500): string |
 }
 
 // ── Microsoft Graph ──────────────────────────────────────────────────────────
-/**
- * Client-credentials app-token voor Microsoft Graph. Gedeeld met de automatische
- * factuur-mailbox-import (Mail.Read op de gedeelde postbus).
- */
+/** Client-credentials app-token voor Microsoft Graph (Mail.Send). */
 export async function haalGraphAppToken(): Promise<string> {
   return haalAccessToken();
 }
@@ -182,6 +182,14 @@ function classificeerGraphFout(
     return new MailFout("token_verlopen", veiligBericht);
   }
   if (
+    status === 403 ||
+    c.includes("accessdenied") ||
+    c.includes("authorization_requestdenied") ||
+    c.includes("erroraccessdenied")
+  ) {
+    return new MailFout("onvoldoende_rechten", veiligBericht);
+  }
+  if (
     status === 404 ||
     c.includes("mailboxnotenabled") ||
     c.includes("invaliduser") ||
@@ -196,7 +204,12 @@ function classificeerGraphFout(
   );
 }
 
-async function leesGraphFout(res: Response): Promise<MailFout> {
+type GraphFoutInhoud = {
+  code: string | null;
+  bericht: string | null;
+};
+
+async function leesGraphFoutInhoud(res: Response): Promise<GraphFoutInhoud> {
   let code: string | null = null;
   let bericht: string | null = null;
   try {
@@ -206,7 +219,42 @@ async function leesGraphFout(res: Response): Promise<MailFout> {
   } catch {
     /* responsbody niet leesbaar */
   }
+  return { code, bericht };
+}
+
+async function leesGraphFout(res: Response): Promise<MailFout> {
+  const { code, bericht } = await leesGraphFoutInhoud(res);
   return classificeerGraphFout(res.status, code, bericht);
+}
+
+/**
+ * De verbindingstest gebruikt bewust een verder geldig sendMail-verzoek zonder
+ * ontvanger. Graph valideert eerst de appmachtiging en de doelpostbus en wijst
+ * daarna het bericht af omdat er geen ontvanger is. Alleen die specifieke 400
+ * geldt als geslaagde, niet-verzendende probe.
+ */
+function isVerwachteOntvangerlozeProbeFout(
+  status: number,
+  code: string | null,
+  bericht: string | null,
+): boolean {
+  if (status !== 400) return false;
+  const c = (code ?? "").toLowerCase();
+  const b = (bericht ?? "").toLowerCase();
+  const ontvangerOntbreekt =
+    b.includes("recipient") ||
+    b.includes("torecipients") ||
+    b.includes("no recipients") ||
+    b.includes("without recipients") ||
+    b.includes("property 'to'") ||
+    b.includes('property "to"');
+  return (
+    ontvangerOntbreekt &&
+    (c.includes("invalidrecipient") ||
+      c.includes("invalid_recipient") ||
+      c.includes("badrequest") ||
+      c.includes("invalidparameter"))
+  );
 }
 
 export type MailBijlage = { naam: string; contentType: string; inhoud: Buffer };
@@ -306,8 +354,10 @@ async function verstuurViaGraph(opties: {
 }
 
 /**
- * Controleert de volledige keten: aanmelden (token) én postbus bereikbaar.
- * Gooit een MailFout met de juiste categorie als iets faalt.
+ * Controleert aanmelden, Mail.Send en toegang tot de doelpostbus zonder een
+ * bericht te versturen. De bewust ontvangerloze sendMail-probe vereist geen
+ * rechten om gebruikersobjecten te lezen. Gooit een MailFout met de juiste
+ * categorie als iets faalt.
  */
 export async function testVerbinding(): Promise<void> {
   if (!isGeconfigureerd()) {
@@ -316,16 +366,37 @@ export async function testVerbinding(): Promise<void> {
   const token = await haalAccessToken();
   const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
     MAIL_MAILBOX,
-  )}?$select=id,mail,userPrincipalName`;
+  )}/sendMail`;
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          subject: "FPS Connect verbindingstest — niet verzenden",
+          body: {
+            contentType: "Text",
+            content:
+              "Niet verzenden: dit ontvangerloze bericht controleert uitsluitend Mail.Send en postbustoegang.",
+          },
+          toRecipients: [],
+        },
+        saveToSentItems: false,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
   } catch {
     throw new MailFout("mailbox_onbereikbaar", "Microsoft Graph niet bereikbaar");
   }
-  if (!res.ok) {
-    throw await leesGraphFout(res);
-  }
+  if (res.ok) return;
+
+  const { code, bericht } = await leesGraphFoutInhoud(res);
+  if (isVerwachteOntvangerlozeProbeFout(res.status, code, bericht)) return;
+  throw classificeerGraphFout(res.status, code, bericht);
 }
 
 // ── Logboek ──────────────────────────────────────────────────────────────────

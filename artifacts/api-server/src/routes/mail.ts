@@ -39,11 +39,14 @@ router.get("/mail/status", requireBevoegdheid("systeem", 1), (_req, res) => {
   });
 });
 
-// POST /mail/verbindingstest — token ophalen + postbus bereikbaarheid
+// POST /mail/verbindingstest — token + Mail.Send + postbustoegang, zonder mail
 router.post("/mail/verbindingstest", requireBevoegdheid("systeem", 2), async (req, res): Promise<void> => {
   try {
     await testVerbinding();
-    res.json({ ok: true, melding: "Verbinding met Microsoft 365 is in orde." });
+    res.json({
+      ok: true,
+      melding: "Aanmelden, Mail.Send en toegang tot de Microsoft 365-postbus zijn in orde.",
+    });
   } catch (err) {
     if (err instanceof MailFout) {
       return void res.json({
