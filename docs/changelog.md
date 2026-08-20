@@ -1,3 +1,31 @@
+## 2026-08-20 — Instapdocument en klantloze opdrachtmap
+
+- De repository heeft nu een beknopte hoofd-README met doel, omgevingen, start- en bouwcommando's, mappenkaart, gegevensmodel, uitrolroute, productiecontroles, afhankelijkheden en harde systeemgrenzen.
+- Unieke opdrachtteksten uit `attached_assets` zijn onder leesbare namen zonder uploadtijdstempel naar `docs/opdrachten` verplaatst; lege en exacte dubbele opdrachten zijn niet behouden.
+- Alle overige uploads zijn uit Git verwijderd, waaronder klantdocumenten, facturen, offertes, foto's, screenshots en een Minecraft/Fabric-bestand. `attached_assets` is voortaan genegeerd.
+- De ENK-importproef gebruikt voortaan een klantloze synthetische PDF in geheugen in plaats van de verwijderde Akor-begroting.
+
+## 2026-08-20 — Jaar van personeelsdatums blijft behouden
+
+- De datumkiezer bewaart het gekozen viercijferige jaar nu rechtstreeks als `JJJJ-MM-DD`, met een gecontroleerde maand/jaarselectie van 1900 tot en met 2100.
+- **In dienst sinds** en **Geboortedatum** gebruiken functionele formulierupdates, zodat een wijziging van het ene datumveld het andere niet kan terugzetten vanuit verouderde formulierstatus.
+- Een bestaande ongeldige datum wordt zichtbaar gemarkeerd. Bij opslaan noemt de melding voortaan de concrete datumvelden die niet zijn opgeslagen, in plaats van alleen “Opslaan mislukt”.
+- Regressietests bewijzen dat geboortejaar 1987 en indienstjaar 2014 exact worden behouden en dat onder meer `82026-07-14` en onmogelijke kalenderdatums worden geweigerd.
+
+## 2026-08-20 — AI-contractanalyse werkt bestaand contract bij
+
+- **Overnemen in dossier** maakt niet langer een tweede arbeidsovereenkomst wanneer onboarding al een basiscontract voor dezelfde medewerker heeft vastgelegd.
+- De overname hergebruikt eerst het gekoppelde brondocument, daarna dezelfde startdatum en ten slotte precies één nog niet gekoppeld onboardingcontract. Salaris, proeftijd, opzegtermijn en andere uitgelezen voorwaarden verrijken zo de bestaande contracthistorie.
+- Velden die de AI niet aantreft wissen geen reeds vastgelegde contractvoorwaarden. Een bevestigd conceptcontract wordt actief; een startdatum die al aan een document is gekoppeld wordt altijd met `409` geweigerd, ook voor oude verzoeken zonder document-id.
+- De overname is per medewerker atomair en idempotent: ook twee gelijktijdige klikken en later opnieuw overnemen blijven op één contractrecord. Bij meerdere ambigue kandidaten volgt een expliciete fout in plaats van een nieuwe gok.
+- Een ingelogde regressieproef met synthetische gegevens heeft het bijwerken, gelijktijdig herhalen, documentkoppeling en uitblijven van een tweede contract end-to-end bewezen; de testgegevens zijn daarna verwijderd.
+
+## 2026-08-20 — Wagenparkvoertuig koppelen aan werknemer
+
+- Bij het toevoegen en bewerken van een voertuig kan een beheerder nu een vaste werknemer/chauffeur kiezen uit de bestaande lijst met toewijsbare personen, of de koppeling expliciet verwijderen.
+- De bestaande voertuigkoppeling in database en API wordt hergebruikt. De keuze verschijnt na opslaan direct als **Chauffeur (vast)** op het voertuigdossier en bepaalt ook welke auto via de persoonlijke wagenparkroute wordt gevonden.
+- De browserproef heeft aanmaken, koppelen, zichtbaar teruglezen, ontkoppelen met expliciete `null` en opruimen van het tijdelijke voertuig end-to-end bewezen.
+
 ## 2026-08-20 — CI-poort, dagelijkse roodmelding en noodfixhistorie
 
 - De bestaande dagelijkse bewakingsloop waarschuwt via de bestaande Microsoft Graph-mailkoppeling zodra de bouwcontrole 24 uur onafgebroken rood is, en herhaalt dit hoogstens eenmaal per 24 uur tot een groene CI-melding de periode beëindigt. Een duurzame verzendstatus per periode en hoofdbeheerder voorkomt dubbelen bij gedeeltelijke verzendfouten; een inmiddels ingetrokken beheerder wordt vlak vóór verzending overgeslagen.

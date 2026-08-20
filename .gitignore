@@ -47,6 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+/attached_assets/
 
 # Playwright e2e output
 test-results/

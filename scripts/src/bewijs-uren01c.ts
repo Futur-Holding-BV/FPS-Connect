@@ -6,7 +6,7 @@
 // Acceptatie-eisen §9:
 //   14. De mandagstaat wordt gegenereerd uit goedgekeurde uren — per week per
 //       werk per medewerker per dag, met naam/geboortedatum/BSN en
-//       handtekeningvelden. Voorbeeld: Adastraat 4 Almelo, week 9, AKOR
+//       handtekeningvelden. Voorbeeld: Voorbeeldstraat 4 Teststad, week 9, Voorbeeld Aannemer
 //       Nijverdal, één medewerker, 4,25 uur op maandag. Log +1 rij.
 //   15. Het BSN staat alleen op de mandagstaat — niet in weekstaat-detail,
 //       AVG-export of andere uren-uitvoer.
@@ -127,15 +127,15 @@ async function main(): Promise<void> {
   aangemaakt.werkgevers.push(wg.id);
 
   const [geb] = await db.insert(gebouwenTable).values({
-    naam: "Adastraat 4 Almelo", adres: "Adastraat 4", stad: "Almelo",
+    naam: "Voorbeeldstraat 4 Teststad", adres: "Voorbeeldstraat 4", stad: "Teststad",
     werkgeverId: wg.id,
   } as typeof gebouwenTable.$inferInsert).returning({ id: gebouwenTable.id });
   aangemaakt.gebouwen.push(geb.id);
 
-  // §9.14: opdracht "Adastraat 4 Almelo", opdrachtgever AKOR Nijverdal, vereist=true.
+  // §9.14: opdracht "Voorbeeldstraat 4 Teststad", opdrachtgever Voorbeeld Aannemer, vereist=true.
   const [opd] = await db.insert(opdrachtenTable).values({
-    titel: "Adastraat 4 Almelo", werknummer: "BW01C-ADA",
-    opdrachtgever: "AKOR Nijverdal", gebouwId: geb.id,
+    titel: "Voorbeeldstraat 4 Teststad", werknummer: "BW01C-VRB",
+    opdrachtgever: "Voorbeeld Aannemer", gebouwId: geb.id,
     mandagstaatVereist: true, status: "actief",
   } as typeof opdrachtenTable.$inferInsert).returning({ id: opdrachtenTable.id });
   aangemaakt.opdrachten.push(opd.id);
@@ -143,7 +143,7 @@ async function main(): Promise<void> {
   // §9.17-hulp: tweede opdracht mét vereist-vlag maar zónder goedgekeurde uren.
   const [opdLeeg] = await db.insert(opdrachtenTable).values({
     titel: "Bewijs UREN_01c leeg", werknummer: "BW01C-LEEG",
-    opdrachtgever: "AKOR Nijverdal", gebouwId: geb.id,
+    opdrachtgever: "Voorbeeld Aannemer", gebouwId: geb.id,
     mandagstaatVereist: true, status: "actief",
   } as typeof opdrachtenTable.$inferInsert).returning({ id: opdrachtenTable.id });
   aangemaakt.opdrachten.push(opdLeeg.id);
@@ -261,7 +261,7 @@ async function main(): Promise<void> {
   // (a) opdracht MÉT goedgekeurde uren → definitief-respons met bijlage (geen waarschuwing).
   const [factA] = await db.insert(facturenTable).values({
     type: "verkoop", opdrachtId: opd.id, gebouwId: geb.id, status: "ontvangen",
-    relatienaam: "AKOR Nijverdal", omschrijving: "Bewijs UREN_01c factuur A",
+    relatienaam: "Voorbeeld Aannemer", omschrijving: "Bewijs UREN_01c factuur A",
     factuurdatum: "2025-03-05", bedragExclBtw: "1000.00", bedragInclBtw: "1210.00", btwBedrag: "210.00",
   } as typeof facturenTable.$inferInsert).returning({ id: facturenTable.id });
   aangemaakt.facturen.push(factA.id);
@@ -277,7 +277,7 @@ async function main(): Promise<void> {
   // (b) opdracht MÉT vereist-vlag ZONDER goedgekeurde uren → waarschuwing, GEEN blokkade.
   const [factB] = await db.insert(facturenTable).values({
     type: "verkoop", opdrachtId: opdLeeg.id, gebouwId: geb.id, status: "ontvangen",
-    relatienaam: "AKOR Nijverdal", omschrijving: "Bewijs UREN_01c factuur B",
+    relatienaam: "Voorbeeld Aannemer", omschrijving: "Bewijs UREN_01c factuur B",
     factuurdatum: "2025-03-05", bedragExclBtw: "500.00", bedragInclBtw: "605.00", btwBedrag: "105.00",
   } as typeof facturenTable.$inferInsert).returning({ id: facturenTable.id });
   aangemaakt.facturen.push(factB.id);

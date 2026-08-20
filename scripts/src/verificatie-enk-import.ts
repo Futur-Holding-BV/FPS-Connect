@@ -1,6 +1,6 @@
 // Verificatie ENK-import (backend, tegen dev-omgeving):
 //   1. Login admin (wachtwoord + TOTP)
-//   2. POST /modules/calculaties/import/analyse met de echte ENK-PDF
+//   2. POST /modules/calculaties/import/analyse met een synthetische ENK-PDF
 //   3. Controle analyse: kop, hoofdstukken, centen-totalen, verschil van 1 cent
 //   4. POST bevestig (totaal_keuze=enk) → calculatie + correctieregel
 //   5. GET calculatie-detail: totaal == ENK-totaal
@@ -8,8 +8,6 @@
 //   7. Bibliotheek-lijst en importlog in DB
 // Ruimt eigen testdata op (ook bij falen).
 import "./lib/prodGuard";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import { eq, inArray } from "drizzle-orm";
 import {
   db,
@@ -26,6 +24,7 @@ import {
   archiveerE2eWachtwoordAccounts,
   setupE2eWachtwoordAccounts,
 } from "./e2e-wachtwoord-testaccounts";
+import { maakSynthetischeEnkPdf } from "./lib/synthetische-enk-pdf";
 
 const DOMEIN = process.env.REPLIT_DEV_DOMAIN;
 if (!DOMEIN) {
@@ -33,7 +32,6 @@ if (!DOMEIN) {
   process.exit(1);
 }
 const BASIS = `https://${DOMEIN}/api`;
-const PDF_PAD = resolve(process.cwd(), "../attached_assets/begroting_120_woningen_omgeving_Bartokstraat_Almelo_-_Akor_1781209311666.pdf");
 
 class Sessie {
   private cookies = new Map<string, string>();
@@ -90,11 +88,11 @@ async function main(): Promise<void> {
     log(`STAP 0 PASS — admin (id ${adminId}) ingelogd met wachtwoord + TOTP`);
   }
 
-  // ── STAP 1: analyse van de echte ENK-PDF ─────────────────────────────────
-  const pdfBuffer = readFileSync(PDF_PAD);
+  // ── STAP 1: analyse van een klantloze synthetische ENK-PDF ────────────────
+  const pdfBuffer = maakSynthetischeEnkPdf();
   const upload = async () => {
     const form = new FormData();
-    form.append("bestand", new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" }), "begroting_120_woningen_Bartokstraat_Almelo.pdf");
+    form.append("bestand", new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" }), "synthetische-enk-test.pdf");
     return admin.fetch("/modules/calculaties/import/analyse", { method: "POST", body: form });
   };
   const rA = await upload();
@@ -103,7 +101,7 @@ async function main(): Promise<void> {
   gemaakteBronIds.push(analyse["bronbestand_id"]);
   eis(analyse["calculatienummer"] === "FPS-BP-00098", "stap 1", `calculatienummer=${analyse["calculatienummer"]}`);
   eis(analyse["projectnummer"] === "BPC-00091", "stap 1", `projectnummer=${analyse["projectnummer"]}`);
-  eis(analyse["opdrachtgever"] === "AKOR Nijverdal", "stap 1", `opdrachtgever=${analyse["opdrachtgever"]}`);
+  eis(analyse["opdrachtgever"] === "Testopdrachtgever", "stap 1", `opdrachtgever=${analyse["opdrachtgever"]}`);
   eis(analyse["totaal_enk_centen"] === 16546374, "stap 1", `totaal_enk_centen=${analyse["totaal_enk_centen"]}`);
   eis(analyse["totaal_connect_centen"] === 16546373, "stap 1", `totaal_connect_centen=${analyse["totaal_connect_centen"]}`);
   eis(analyse["verschil_centen"] === 1, "stap 1", `verschil_centen=${analyse["verschil_centen"]}`);

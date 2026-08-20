@@ -1,6 +1,6 @@
 // E2E: firevault web-app — ENK-import volledige businessflow (regressietest).
 //
-// Borgt de flow uit modules/calculatie/import.tsx: upload van een echte
+// Borgt de flow uit modules/calculatie/import.tsx: upload van een synthetische
 // ENK-PDF → analyse → controlescherm met totaalvergelijking (ENK € 165.463,74
 // vs Connect € 165.463,73, verschil € 0,01) → keuze "ENK-totaal aanhouden"
 // → calculatie aanmaken met zichtbare correctieregel → detailpagina toont
@@ -13,8 +13,6 @@
 // Draaien: pnpm --filter @workspace/scripts run e2e-web
 // Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
 // REPLIT_DEV_DOMAIN.
-import { resolve } from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
 import { eq, inArray } from "drizzle-orm";
 
@@ -32,12 +30,9 @@ import {
   E2E_WEB_ADMIN_TOTP_SECRET,
   setupE2eWebAdminAccount,
 } from "../src/e2e-monteur-testaccount";
+import { maakSynthetischeEnkPdf } from "../src/lib/synthetische-enk-pdf";
 
 const INHOUD_TIMEOUT = 30_000;
-const PDF_PAD = resolve(
-  new URL("../../", import.meta.url).pathname,
-  "attached_assets/begroting_120_woningen_omgeving_Bartokstraat_Almelo_-_Akor_1781209311666.pdf",
-);
 
 // ── Login ────────────────────────────────────────────────────────────────────
 async function logIn(page: Page): Promise<void> {
@@ -102,12 +97,16 @@ test("Web: ENK-PDF importeren — analyse, totaalvergelijking en calculatie met 
   await test.step("PDF uploaden: analyse toont herkende gegevens en totaalvergelijking", async () => {
     // Er zijn twee file-inputs (globale slim-upload-balk + import-dropzone);
     // selecteer op het accept-attribuut van de import-dropzone.
-    await page.locator('input[type="file"][accept=".pdf,.csv,.xlsx,.xls"]').setInputFiles(PDF_PAD);
+    await page.locator('input[type="file"][accept=".pdf,.csv,.xlsx,.xls"]').setInputFiles({
+      name: "synthetische-enk-test.pdf",
+      mimeType: "application/pdf",
+      buffer: maakSynthetischeEnkPdf(),
+    });
 
     // Controlescherm verschijnt na de analyse (PDF-parse kan even duren).
     await expect(page.getByRole("heading", { name: "Import controleren" })).toBeVisible({ timeout: 60_000 });
 
-    // Herkende kopgegevens uit de echte ENK-PDF.
+    // Herkende kopgegevens uit de synthetische ENK-PDF.
     await expect(page.getByText("FPS-BP-00098")).toBeVisible();
     await expect(page.getByText("BPC-00091")).toBeVisible();
 
@@ -142,7 +141,7 @@ test("Web: ENK-PDF importeren — analyse, totaalvergelijking en calculatie met 
 
     // Projectgegevens-strip toont het geïmporteerde bronbestand.
     await expect(page.getByText("Geïmporteerd uit:")).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await expect(page.getByText(/begroting_120_woningen/).first()).toBeVisible();
+    await expect(page.getByText(/synthetische-enk-test/).first()).toBeVisible();
   });
 
   await test.step("DB-bewijs: correctieregel van € 0,01 aanwezig", async () => {

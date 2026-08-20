@@ -1,7 +1,7 @@
 // Offerte Intelligence (Fase 1 — PREP) — Parallel spoor, formeel akkoord gebruiker.
 //
-// Datamodel + structuur op basis van het echte FPS-offerteformat (Parkzicht
-// Oldenzaal / WBO Wonen + bijbehorend prijzenblad). Fase 1 bevat BEWUST GEEN
+// Datamodel + structuur op basis van het FPS-offerteformat en een gesanitiseerd
+// voorbeeldprijzenblad. Fase 1 bevat BEWUST GEEN
 // AI-logica en GEEN automatische offerteverzending. De aiVeld/aiHint/aiVoorstel
 // velden zijn voorbereidingen zodat later "Spot -> Calculatie -> Offerte" en
 // AI-voorstellen kunnen worden aangezet; AI stelt voor, een mens beslist.

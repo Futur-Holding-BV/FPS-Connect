@@ -145,7 +145,7 @@ const RAPPORTEN: Rapport[] = [
   },
   {
     titel: "Brandveiligheidsinspectie kantoorgebouw Twentepoort",
-    kop: "Opdrachtgever: Twentepoort Vastgoed BV, Almelo. Inspectie kantoorgebouw 5 verdiepingen met parkeerkelder.",
+    kop: "Opdrachtgever: Voorbeeld Vastgoed BV, Teststad. Inspectie kantoorgebouw 5 verdiepingen met parkeerkelder.",
     hoofdstukken: [
       { titel: "Hoofdstuk 1 — Constructie", punten: [
         "1.1  Stalen kolommen parkeerkelder. Tekortkoming: acht dragende stalen kolommen zonder brandwerende bescherming (eis 90 minuten). Geadviseerd herstel: kolommen voorzien van brandwerende coating.",
@@ -164,7 +164,7 @@ const RAPPORTEN: Rapport[] = [
   },
   {
     titel: "Adviesrapport doorvoeringen woontoren Residentie Botermarkt",
-    kop: "Opdrachtgever: Woningstichting Sint Joseph, Almelo. Herstelplan brandwerende doorvoeringen na renovatie standleidingen.",
+    kop: "Opdrachtgever: Voorbeeld Woningstichting, Teststad. Herstelplan brandwerende doorvoeringen na renovatie standleidingen.",
     hoofdstukken: [
       { titel: "Hoofdstuk 1 — Standleidingen", punten: [
         "1.1  Kunststof standleidingen badkamers. Tekortkoming: 84 nieuwe PVC-standleidingen doorvoeren de woningscheidende vloeren zonder voorziening. Geadviseerd herstel: per doorvoer een brandwerende manchet aanbrengen om de kunststof leiding.",

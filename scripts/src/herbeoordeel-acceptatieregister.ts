@@ -17,7 +17,11 @@ import {
   db,
 } from "@workspace/db";
 import { and, asc, eq, lt, or, sql } from "drizzle-orm";
-import { acceptatieregisterHerbeoordeling, valideerHerbeoordeling } from "./data/acceptatieregister-herbeoordeling";
+import {
+  acceptatieregisterHerbeoordeling,
+  opdrachtDocumentPad,
+  valideerHerbeoordeling,
+} from "./data/acceptatieregister-herbeoordeling";
 import { isBronActueel, laatsteGitWijziging } from "./lib/acceptatieregisterBewijs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -340,7 +344,7 @@ async function voerHerbeoordelingUit(
     const relevanteCodepaden = [...(auditPadenPerCode.get(huidig.opdrachtCode) ?? [])].sort();
     const bewijsVindplaats = huidig.bewijsVindplaats?.trim()
       || (huidig.bronBestand
-        ? (huidig.bronBestand.includes("/") ? huidig.bronBestand : `attached_assets/${huidig.bronBestand}`)
+        ? (huidig.bronBestand.includes("/") ? huidig.bronBestand : opdrachtDocumentPad(huidig.bronBestand))
         : relevanteCodepaden.join("; "));
     const vindplaatsAangevuld = Boolean(bewijsVindplaats) && bewijsVindplaats !== huidig.bewijsVindplaats;
     if (relevanteCodepaden.length === 0) {

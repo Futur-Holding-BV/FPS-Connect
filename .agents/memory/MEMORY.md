@@ -15,7 +15,7 @@
 - [NUMMER_01 kenmerkketen](kenmerkketen.md) — nummers uit DB-sequences, kenmerk altijd berekend, bevriezen alleen bij versturen/definitief; offertes kopiëren=nieuw nummer, inkoop=letterherziening+snapshot.
 - [Connect-assistent & zijrand](assistent-zijrand.md) — één chatpaneel in vaste zijrand; context/rechten in de gegevensvraag (bouwContextBundel + DATA_TOOLS), nooit prompt-only; connect-kennis.md = promptbron.
 - [Caddyfile statische routes](caddyfile-mjs.md) — mjs verplicht; matchers zijn AND; kapsel een geneste app in een specifieke handle vóór de algemene static-handle.
-- [KADER FPS Connect](kader-fps-connect.md) — attached_assets/KADER-FPS-Connect_*.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
+- [KADER FPS Connect](kader-fps-connect.md) — docs/opdrachten/kader-fps-connect.md vóór elke opdracht lezen; binnenlaag, eenrichting, klantloos, migraties immutabel, geen productieremmen.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) + [Ontwikkelfilosofie](ontwikkelfilosofie.md) + [Changelog](changelog-verplichting.md) — taak pas gereed bij bewezen businessscenario; stabiliteit > functionaliteit; docs/changelog.md altijd bijwerken.
 - [Monteur-app](offline-first-monteur.md) + [web-PWA](monteur-webapp.md) + [app-lock](mobiele-app-lock.md) — offline-first AsyncStorage+SyncQueue; SW pre-cachet volledig manifest; biometrisch slot rond bearer-sessie, centrale gate in _layout.
 - [Buitendienst-auth-vlag](buitendienst-auth-vlag.md) — server bepaalt `is_uitvoerend_veld`; web en app gebruiken die auth-vlag, met alleen cache-fallback voor oude mobiele sessies.

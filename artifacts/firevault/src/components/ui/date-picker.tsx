@@ -1,11 +1,17 @@
 import * as React from "react"
 import { CalendarIcon } from "lucide-react"
 import { nl } from "date-fns/locale"
-import { format, parse, isValid } from "date-fns"
+import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import {
+  formatYmd,
+  MAX_DATUM_JAAR,
+  MIN_DATUM_JAAR,
+  parseYmd,
+} from "@/components/ui/date-picker-ymd"
 
 interface DatePickerProps {
   value?: string | null
@@ -18,15 +24,8 @@ interface DatePickerProps {
   max?: string
 }
 
-function parseYMD(s: string | null | undefined): Date | undefined {
-  if (!s) return undefined
-  const d = parse(s, "yyyy-MM-dd", new Date())
-  return isValid(d) ? d : undefined
-}
-
-function toYMD(d: Date): string {
-  return format(d, "yyyy-MM-dd")
-}
+const STANDAARD_STARTMAAND = parseYmd(`${MIN_DATUM_JAAR}-01-01`)!
+const STANDAARD_EINDMAAND = parseYmd(`${MAX_DATUM_JAAR}-12-31`)!
 
 export function DatePicker({
   value,
@@ -39,9 +38,16 @@ export function DatePicker({
   max,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const selected = parseYMD(value)
-  const fromDate = parseYMD(min)
-  const toDate = parseYMD(max)
+  const selected = parseYmd(value)
+  const fromDate = parseYmd(min)
+  const toDate = parseYmd(max)
+  const [month, setMonth] = React.useState<Date>(selected ?? new Date())
+  const heeftOngeldigeWaarde = Boolean(value && !selected)
+
+  React.useEffect(() => {
+    const opgeslagenDatum = parseYmd(value)
+    if (opgeslagenDatum) setMonth(opgeslagenDatum)
+  }, [value])
 
   const isDisabledDay = React.useCallback(
     (day: Date) => {
@@ -59,16 +65,20 @@ export function DatePicker({
           id={id}
           variant="outline"
           disabled={disabled}
+          aria-invalid={heeftOngeldigeWaarde || undefined}
           className={cn(
             "w-full justify-start text-left font-normal",
             !selected && "text-muted-foreground",
+            heeftOngeldigeWaarde && "border-destructive text-destructive",
             className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           {selected
             ? format(selected, "d MMMM yyyy", { locale: nl })
-            : placeholder}
+            : heeftOngeldigeWaarde
+              ? "Ongeldige datum — kies opnieuw"
+              : placeholder}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -76,12 +86,15 @@ export function DatePicker({
           mode="single"
           selected={selected}
           onSelect={(day) => {
-            onChange(day ? toYMD(day) : "")
+            onChange(day ? formatYmd(day) : "")
             setOpen(false)
           }}
           disabled={isDisabledDay}
           captionLayout="dropdown"
-          defaultMonth={selected ?? new Date()}
+          month={month}
+          onMonthChange={setMonth}
+          startMonth={fromDate ?? STANDAARD_STARTMAAND}
+          endMonth={toDate ?? STANDAARD_EINDMAAND}
         />
       </PopoverContent>
     </Popover>

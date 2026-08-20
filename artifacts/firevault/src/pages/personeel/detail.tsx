@@ -66,6 +66,7 @@ import {
   getListAiVoorstellenQueryKey,
   getListHrmMiddelenQueryKey,
   getListOnboardingTakenQueryKey,
+  ApiError,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -88,6 +89,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
+import { isGeldigeYmd, parseYmd } from "@/components/ui/date-picker-ymd";
 import { Label } from "@/components/ui/label";
 import { UitzendbureauSelect } from "@/components/uitzendbureau-select";
 import { Badge } from "@/components/ui/badge";
@@ -445,10 +447,30 @@ function dagenTot(datum?: string | null): number | null {
   return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
 }
 
+const PROFIEL_DATUMVELDEN = [
+  ["in_dienst_sinds", "In dienst sinds"],
+  ["uit_dienst_per", "Uit dienst per"],
+  ["inleen_einddatum", "Inleen-einddatum"],
+  ["geboortedatum", "Geboortedatum"],
+  ["rijbewijs_vervaldatum", "Vervaldatum rijbewijs"],
+  ["vca_vervaldatum", "Vervaldatum VCA"],
+  ["ehbo_vervaldatum", "Vervaldatum EHBO"],
+  ["bhv_vervaldatum", "Vervaldatum BHV"],
+] as const satisfies ReadonlyArray<readonly [keyof MedewerkerInput, string]>;
+
+function ongeldigeProfielDatums(form: MedewerkerInput): string[] {
+  return PROFIEL_DATUMVELDEN.flatMap(([veld, label]) => {
+    const waarde = form[veld];
+    return typeof waarde === "string" && waarde !== "" && !isGeldigeYmd(waarde)
+      ? [label]
+      : [];
+  });
+}
+
 function fmtDatum(datum?: string | null) {
   if (!datum) return "—";
-  const d = new Date(datum);
-  if (Number.isNaN(d.getTime())) return datum;
+  const d = parseYmd(datum);
+  if (!d) return datum;
   return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -1337,6 +1359,15 @@ export default function MedewerkerDetailPagina() {
       toast({ title: "Naam is verplicht", variant: "destructive" });
       return;
     }
+    const fouteDatums = ongeldigeProfielDatums(profielForm);
+    if (fouteDatums.length > 0) {
+      toast({
+        title: "Controleer de datums",
+        description: `${fouteDatums.join(", ")} ${fouteDatums.length === 1 ? "heeft" : "hebben"} geen geldig viercijferig jaar.`,
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const bijgewerkt = await updMedewerker.mutateAsync({ id, data: { ...profielForm, naam: profielForm.naam.trim() } });
       await invalideerMedewerker();
@@ -1344,8 +1375,25 @@ export default function MedewerkerDetailPagina() {
       setProfielOpen(false);
       const jw = (bijgewerkt as unknown as Record<string, unknown>).jonge_werknemer as { leeftijd: number; beperkingen?: Array<{ omschrijving: string }>; schendingen?: Array<{ omschrijving: string }> } | undefined;
       if (jw) toast({ title: `Let op: medewerker is ${jw.leeftijd} jaar (minderjarig)`, description: jw.beperkingen?.[0]?.omschrijving ?? "Arbeidstijdenwet-beperkingen zijn van toepassing. Raadpleeg het HRM-overzicht jonge werknemers." });
-    } catch {
-      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    } catch (error) {
+      const data = error instanceof ApiError
+        ? error.data as { error?: string; velden?: unknown } | null
+        : null;
+      const foutVelden = Array.isArray(data?.velden)
+        ? data.velden.filter((veld): veld is string => typeof veld === "string")
+        : [];
+      const veldLabels = foutVelden.length > 0
+        ? foutVelden
+          .map((veld) => PROFIEL_DATUMVELDEN.find(([sleutel]) => sleutel === veld)?.[1] ?? veld)
+          .join(", ")
+        : undefined;
+      toast({
+        title: veldLabels ? "Datums niet opgeslagen" : "Opslaan mislukt",
+        description: veldLabels
+          ? `${data?.error ?? "Ongeldige datum"} Controleer: ${veldLabels}.`
+          : data?.error,
+        variant: "destructive",
+      });
     }
   }
 
@@ -3079,7 +3127,12 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>In dienst sinds</Label>
-                <DatePicker value={profielForm.in_dienst_sinds ?? ""} onChange={(v) => setProfielForm({ ...profielForm, in_dienst_sinds: v || undefined })} />
+                <DatePicker
+                  value={profielForm.in_dienst_sinds ?? ""}
+                  onChange={(v) => setProfielForm((huidig) => huidig
+                    ? { ...huidig, in_dienst_sinds: v || undefined }
+                    : huidig)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Uit dienst per</Label>
@@ -3100,7 +3153,12 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Geboortedatum</Label>
-                <DatePicker value={profielForm.geboortedatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, geboortedatum: v || undefined })} />
+                <DatePicker
+                  value={profielForm.geboortedatum ?? ""}
+                  onChange={(v) => setProfielForm((huidig) => huidig
+                    ? { ...huidig, geboortedatum: v || undefined }
+                    : huidig)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Geboorteplaats</Label>

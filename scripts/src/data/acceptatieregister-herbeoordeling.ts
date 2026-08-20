@@ -2376,13 +2376,26 @@ const ruweAcceptatieregisterHerbeoordeling: readonly RuweHerbeoordelingRegel[] =
   },
 ];
 
+export function opdrachtDocumentPad(bestandsnaam: string): string {
+  const zonderExtensie = bestandsnaam.replace(/\.(?:md|txt)$/i, "");
+  const leesbareNaam = zonderExtensie
+    .replace(/(?:[_-]\d{13})+$/g, "")
+    .replace(/^Pasted-+/, "")
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "opdracht";
+  return `docs/opdrachten/${leesbareNaam}.md`;
+}
+
 export const acceptatieregisterHerbeoordeling: readonly HerbeoordelingRegel[] =
   ruweAcceptatieregisterHerbeoordeling.map((regel) => ({
     ...regel,
     bron_soort: regel.bron_soort === "opdrachtcriterium" ? "antwoorddocument" : regel.bron_soort,
     bewijs_vindplaats:
       regel.bron_soort === "opdrachtcriterium" && !regel.bewijs_vindplaats.includes("/")
-        ? `attached_assets/${regel.bewijs_vindplaats}`
+        ? opdrachtDocumentPad(regel.bewijs_vindplaats)
         : regel.bewijs_vindplaats,
   }));
 

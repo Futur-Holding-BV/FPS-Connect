@@ -13,6 +13,7 @@ import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../li
 import { extraheerArbeidsovereenkomst, proeftijdNaarDagen } from "../services/contractExtractie";
 import { voerContractBewakingUit } from "./contract-bewaking";
 import { invalideerContext } from "../lib/aiContext/cache";
+import { kiesContractOvernameDoel } from "../lib/contractOvernameSelectie";
 import { haalVervalsignalen } from "../lib/verlofVervalService";
 import { zaaiVerlofPresets } from "../lib/verlofPresets";
 import {
@@ -5530,9 +5531,10 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res):
 });
 
 // ─── Contractvoorstel overnemen in het dienstverband ─────────────────────────
-// De gebruiker neemt het extractievoorstel met één handeling over: er wordt een
-// arbeidsovereenkomst-rij aangemaakt (nooit stil — alleen op expliciete actie).
-// Einddatum + contracttype landen daarmee in de bestaande contractbewaking.
+// De gebruiker neemt het extractievoorstel met één handeling over. Een contract
+// dat al bij onboarding is aangemaakt wordt op brondocument/startdatum
+// bijgewerkt; alleen zonder passende rij ontstaat een nieuwe arbeidsovereenkomst.
+// Daardoor is opnieuw overnemen idempotent en ontstaat geen dubbel contract.
 router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): Promise<void> => {
   try {
     const medId = parseId(req.params.id);
@@ -5609,6 +5611,17 @@ router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): 
 
     const salarisEenheid = str("salaris_eenheid");
     const geldigeEenheden = ["maand", "4-weken", "week", "uur", "jaar"];
+    const geldigeSalarisEenheid =
+      salarisEenheid && geldigeEenheden.includes(salarisEenheid) ? salarisEenheid : null;
+    const proeftijdDagen = proeftijdNaarDagen(str("proeftijd"));
+    const functieOmschrijving = str("functie");
+    const cao = str("cao");
+    const opzegtermijn = str("opzegtermijn");
+    const aanzegtermijn = str("aanzegtermijn");
+    const reiskostenvergoeding = str("reiskostenvergoeding");
+    const concurrentiebeding = jaNee("concurrentiebeding");
+    const relatiebeding = jaNee("relatiebeding");
+    const notities = str("notities");
 
     // Herkomst-borging: document_id moet een contractdocument van déze medewerker zijn.
     let documentId: number | null = null;
@@ -5643,33 +5656,137 @@ router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): 
       else waarschuwingen.push(`Werkmaatschappij "${wmNaam}" kon niet eenduidig aan een geregistreerde werkgever worden gekoppeld; koppel de werkgever handmatig.`);
     }
 
-    const [rij] = await db.insert(arbeidsovereenkomstenTable).values({
-      medewerkerId: medId,
-      werkgeverId,
-      contracttype,
-      startDatum,
-      eindDatum,
-      proeftijdDagen: proeftijdNaarDagen(str("proeftijd")),
-      functieOmschrijving: str("functie"),
-      cao: str("cao"),
-      salarisBruto: salaris,
-      salarisEenheid: salarisEenheid && geldigeEenheden.includes(salarisEenheid) ? salarisEenheid : null,
-      arbeidsduurPerWeek: urenPerWeek,
-      urenMinPerWeek: urenMin,
-      urenMaxPerWeek: urenMax,
-      opzegtermijn: str("opzegtermijn"),
-      aanzegtermijn: str("aanzegtermijn"),
-      reiskostenvergoeding: str("reiskostenvergoeding"),
-      concurrentiebeding: jaNee("concurrentiebeding"),
-      relatiebeding: jaNee("relatiebeding"),
-      ingebrachtDocumentId: documentId,
-      notities: str("notities"),
-      status: "actief",
-      aangemaaktDoorId: req.session.userId ?? null,
-    }).returning();
+    const overname = await db.transaction(async (tx) => {
+      // De lock maakt check + update/insert atomair voor één medewerker. Zonder
+      // deze lock kunnen twee gelijktijdige klikken alsnog beide een rij maken.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hrm-contract-overname'), ${medId})`);
 
-    // Activeer de bewaking direct zodat een aflopend contract meteen zichtbaar is.
-    if (eindDatum) await voerContractBewakingUit();
+      const opBrondocument = documentId == null
+        ? []
+        : await tx
+          .select()
+          .from(arbeidsovereenkomstenTable)
+          .where(
+            and(
+              eq(arbeidsovereenkomstenTable.medewerkerId, medId),
+              eq(arbeidsovereenkomstenTable.ingebrachtDocumentId, documentId),
+            ),
+          )
+          .orderBy(desc(arbeidsovereenkomstenTable.bijgewerktOp))
+          .limit(2);
+
+      const opStartdatum = await tx
+        .select()
+        .from(arbeidsovereenkomstenTable)
+        .where(
+          and(
+            eq(arbeidsovereenkomstenTable.medewerkerId, medId),
+            eq(arbeidsovereenkomstenTable.startDatum, startDatum),
+          ),
+        )
+        .orderBy(desc(arbeidsovereenkomstenTable.bijgewerktOp))
+        .limit(2);
+
+      // Onboarding legt al vóór documentanalyse een basiscontract vast. Als
+      // het contract zelf een gecorrigeerde startdatum vermeldt, mag dat
+      // verschil niet alsnog tot een tweede rij leiden. Deze fallback is
+      // bewust beperkt tot precies één nog niet gekoppeld onboarding-contract.
+      const onboardingContracten = await tx
+        .select()
+        .from(arbeidsovereenkomstenTable)
+        .where(
+          and(
+            eq(arbeidsovereenkomstenTable.medewerkerId, medId),
+            isNull(arbeidsovereenkomstenTable.ingebrachtDocumentId),
+            inArray(arbeidsovereenkomstenTable.status, ["concept", "actief"]),
+            eq(arbeidsovereenkomstenTable.notities, "Aangemaakt via onboarding."),
+          ),
+        )
+        .orderBy(desc(arbeidsovereenkomstenTable.bijgewerktOp))
+        .limit(2);
+
+      const selectie = kiesContractOvernameDoel({
+        documentId,
+        opBrondocument,
+        opStartdatum,
+        onboardingContracten,
+      });
+      if (selectie.conflict) return { conflict: true as const };
+      const bestaand = selectie.contract;
+
+      if (bestaand) {
+        const [rij] = await tx
+          .update(arbeidsovereenkomstenTable)
+          .set({
+            contracttype,
+            startDatum,
+            // Een leeg AI-veld betekent "niet aangetroffen", niet "wis de
+            // bestaande waarde". Expliciet verwijderen hoort in bewerken.
+            ...(eindDatum != null && { eindDatum }),
+            ...(werkgeverId != null && { werkgeverId }),
+            ...(proeftijdDagen != null && { proeftijdDagen }),
+            ...(functieOmschrijving != null && { functieOmschrijving }),
+            ...(cao != null && { cao }),
+            ...(salaris != null && { salarisBruto: salaris }),
+            ...(geldigeSalarisEenheid != null && { salarisEenheid: geldigeSalarisEenheid }),
+            ...(urenPerWeek != null && { arbeidsduurPerWeek: urenPerWeek }),
+            ...(urenMin != null && { urenMinPerWeek: urenMin }),
+            ...(urenMax != null && { urenMaxPerWeek: urenMax }),
+            ...(opzegtermijn != null && { opzegtermijn }),
+            ...(aanzegtermijn != null && { aanzegtermijn }),
+            ...(reiskostenvergoeding != null && { reiskostenvergoeding }),
+            ...(concurrentiebeding != null && { concurrentiebeding }),
+            ...(relatiebeding != null && { relatiebeding }),
+            ...(documentId != null && { ingebrachtDocumentId: documentId }),
+            ...(notities != null && { notities }),
+            ...(bestaand.status === "concept" && { status: "actief" }),
+            bijgewerktOp: new Date(),
+          })
+          .where(eq(arbeidsovereenkomstenTable.id, bestaand.id))
+          .returning();
+        return { conflict: false as const, rij, bijgewerkt: true };
+      }
+
+      const [rij] = await tx
+        .insert(arbeidsovereenkomstenTable)
+        .values({
+          medewerkerId: medId,
+          werkgeverId,
+          contracttype,
+          startDatum,
+          eindDatum,
+          proeftijdDagen,
+          functieOmschrijving,
+          cao,
+          salarisBruto: salaris,
+          salarisEenheid: geldigeSalarisEenheid,
+          arbeidsduurPerWeek: urenPerWeek,
+          urenMinPerWeek: urenMin,
+          urenMaxPerWeek: urenMax,
+          opzegtermijn,
+          aanzegtermijn,
+          reiskostenvergoeding,
+          concurrentiebeding,
+          relatiebeding,
+          ingebrachtDocumentId: documentId,
+          notities,
+          status: "actief",
+          aangemaaktDoorId: req.session.userId ?? null,
+        })
+        .returning();
+      return { conflict: false as const, rij, bijgewerkt: false };
+    });
+
+    if (overname.conflict) {
+      return void res.status(409).json({
+        error: "Er bestaan meerdere contracten voor dit brondocument of deze startdatum. Werk eerst de dubbele contractregistratie bij.",
+      });
+    }
+    const { rij, bijgewerkt } = overname;
+
+    // Herbereken de bewaking ook na bijwerken zodat een nieuw uitgelezen
+    // eindmoment direct zichtbaar wordt.
+    if (rij.status === "actief" && rij.eindDatum) await voerContractBewakingUit();
     invalideerContext("medewerker", medId);
     logAudit({
       gebruikerId: req.session.userId ?? null,
@@ -5677,20 +5794,28 @@ router.post("/medewerkers/:id/contract-overnemen", schrijven, async (req, res): 
       ipAdres: req.ip ?? null,
       sessieId: null,
       module: "personeel",
-      actie: "contract-overgenomen",
+      actie: bijgewerkt ? "contract-bijgewerkt-uit-document" : "contract-overgenomen",
       entiteit: "arbeidsovereenkomsten",
       entiteitId: rij.id,
-      nieuweWaarde: { medewerker_id: medId, contracttype, start_datum: startDatum, eind_datum: eindDatum },
+      nieuweWaarde: {
+        medewerker_id: medId,
+        contracttype,
+        start_datum: startDatum,
+        eind_datum: eindDatum,
+        bijgewerkt,
+        brondocument_id: documentId,
+      },
     });
 
-    res.status(201).json({
+    res.status(bijgewerkt ? 200 : 201).json({
       id: rij.id,
       medewerker_id: medId,
       contracttype: rij.contracttype,
       start_datum: rij.startDatum,
       eind_datum: rij.eindDatum,
       werkgever_id: rij.werkgeverId,
-      bewaking_actief: Boolean(eindDatum),
+      bijgewerkt,
+      bewaking_actief: rij.status === "actief" && Boolean(rij.eindDatum),
       waarschuwingen,
     });
   } catch (err) {

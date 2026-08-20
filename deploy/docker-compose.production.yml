@@ -95,9 +95,9 @@ services:
       # De eenmalige registerhergrading leest uitsluitend commitdatums uit git;
       # de repository blijft read-only en wordt niet in het image gebakken.
       - ../.git:/app/.git:ro
-      # De idempotente inventarisvuller leest de acceptatiecriteria uit de
-      # uitgecheckte bronbestanden. Alleen lezen; assets blijven buiten het image.
-      - ../attached_assets:/app/attached_assets:ro
+      # De idempotente inventarisvuller leest de acceptatiecriteria uit het
+      # opgeschoonde opdrachtarchief. Alleen lezen; documenten blijven buiten het image.
+      - ../docs/opdrachten:/app/docs/opdrachten:ro
     depends_on:
       db:
         condition: service_healthy

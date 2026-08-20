@@ -44,9 +44,9 @@ function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
 const DUMMY_META_KLANT: DocumentMeta = {
   titel: "Opleverrapport Brandveiligheid",
   ondertitel: "Rapportage van gerealiseerde brandwerende voorzieningen conform Bouwbesluit",
-  projectNaam: "Burg. Wallerstraat Oldenzaal — WBO Wonen",
+  projectNaam: "Voorbeeldproject Teststad — Voorbeeld Wonen",
   projectNummer: "PRJ-2025-042",
-  klantNaam: "WBO Wonen",
+  klantNaam: "Voorbeeld Wonen",
   klantLogoUrl: "logo-fps-one.png",
   heroImageUrl: "project-foto.jpg",
   auteur: "J. de Vries",
@@ -74,7 +74,7 @@ const DUMMY_META_OP: DocumentMeta = {
   titel: "Laatste Minuut Risico Analyse (LMRA)",
   projectNaam: "Burg. Wallerstraat Oldenzaal",
   projectNummer: "PRJ-2025-042",
-  klantNaam: "WBO Wonen",
+  klantNaam: "Voorbeeld Wonen",
   auteur: "M. Pietersen",
   datum: "12 augustus 2026",
   versie: "1.0",
@@ -171,7 +171,7 @@ export default function DocumentDesignSystem() {
             kenmerk: "FACT-2025-0042",
           }}
           debiteur={{
-            naam: "WBO Wonen",
+            naam: "Voorbeeld Wonen",
             tav: "Afd. Vastgoedbeheer",
             adres: "Burg. Wallerstraat 12",
             postcodeWoonplaats: "7575 AB Oldenzaal",

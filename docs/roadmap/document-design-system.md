@@ -6,7 +6,7 @@ Strategische, modulebrede fundering. **Vastgelegd, NIET vooruit bouwen:** pas bo
 
 Geen los "briefpapier" per document, maar één centraal **Document Design System** binnen FPS Connect. Alle documenten uit FPS Connect worden vanuit één documentmotor gegenereerd, met verschillende templatefamilies per documenttype. De bestaande FPS-offerteopmaak is de referentie voor klantdocumenten.
 
-Referentiedocumenten (door gebruiker aangeleverd): aanbesteding-sjabloon en de offerte "Burg. Wallerstraat Oldenzaal — WBO Wonen".
+Referentiedocumenten (door gebruiker aangeleverd): aanbesteding-sjabloon en een synthetische voorbeeld-offerte.
 
 ## Templatefamilies
 

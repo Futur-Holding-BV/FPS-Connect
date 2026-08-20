@@ -2,7 +2,7 @@
 
 ## 8 augustus 2026 · gebouwd en bewezen op dev
 
-**Opdracht:** de ENK-kenmerknummerketen G→M→C→O met inkoop (O…/I…, G…/I…) en facturen (O…/F… + fiscaal nummer per BV), volgens `attached_assets/NUMMER_01_kenmerknummers-2_1786175837356.md`.
+**Opdracht:** de ENK-kenmerknummerketen G→M→C→O met inkoop (O…/I…, G…/I…) en facturen (O…/F… + fiscaal nummer per BV), volgens `docs/opdrachten/nummer-01-kenmerknummers-2.md`.
 
 ### Wat is gebouwd
 

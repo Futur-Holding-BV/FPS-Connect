@@ -1,5 +1,5 @@
 /**
- * REGISTER_01 Fase 0 — vult het acceptatieregister vanuit attached_assets.
+ * REGISTER_01 Fase 0 — vult het acceptatieregister vanuit docs/opdrachten.
  *
  * Loopt alle opdrachtbestanden (.md/.txt) langs, zoekt de paragraaf
  * "Acceptatie" (of "Acceptatiecriteria") en neemt de genummerde punten over
@@ -7,7 +7,7 @@
  *
  * - Opdrachtcode uit de bestandsnaam (bv. APP_01, NP_INKOOP_01); bestanden
  *   zonder code (Pasted-...) krijgen een leesbare slug-code.
- * - Per opdrachtcode wint het nieuwste bestand (Replit-timestamp in de naam).
+ * - Per opdrachtcode wint bij meerdere bronnen de leesbare hoofdnaam.
  * - Idempotent: bestaande regels behouden hun stand/bewijs; alleen de
  *   omschrijving en bron worden ververst. Nieuwe punten komen erbij als
  *   "onbewezen" (het bestaan van code is niet het door de opdracht geëiste bewijs).
@@ -19,17 +19,17 @@ import path from "node:path";
 import { db, acceptatieRegisterTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
-const MAP = path.resolve(process.cwd(), "..", "attached_assets");
+const MAP = path.resolve(process.cwd(), "..", "docs", "opdrachten");
 const DRY = process.argv.includes("--dry");
 
 type Punt = { nummer: number; tekst: string };
 type Opdracht = { code: string; bestand: string; ts: number; punten: Punt[] };
 
 function opdrachtCodeUitNaam(naam: string): string | null {
-  // Codes als APP_01, NP_INKOOP_01 — het cijferdeel is exact 2 cijfers en
-  // mag niet doorlopen in de Replit-timestamp (13 cijfers).
-  const m = naam.match(/^([A-Z][A-Z0-9]*(?:_[A-Z0-9]+?)*_\d{2})(?!\d)/);
-  return m ? m[1]! : null;
+  // Archiefnamen zijn kebab-case; codes als APP_01 en NP_INKOOP_01 worden
+  // voor de bestaande registersleutel teruggezet naar hoofdletters/underscores.
+  const m = naam.match(/^([a-z][a-z0-9]*(?:-[a-z0-9]+?)*-\d{2})(?:-|\.|$)/i);
+  return m ? m[1]!.toUpperCase().replaceAll("-", "_") : null;
 }
 
 function slugCode(naam: string, inhoud: string): string {
@@ -94,7 +94,13 @@ function verzamel(): Map<string, Opdracht> {
     const code = opdrachtCodeUitNaam(naam) ?? slugCode(naam, inhoud);
     const ts = timestampUitNaam(naam);
     const bestaand = perCode.get(code);
-    if (!bestaand || ts > bestaand.ts) perCode.set(code, { code, bestand: naam, ts, punten });
+    if (
+      !bestaand
+      || ts > bestaand.ts
+      || (ts === bestaand.ts && naam.localeCompare(bestaand.bestand) > 0)
+    ) {
+      perCode.set(code, { code, bestand: naam, ts, punten });
+    }
   }
   return perCode;
 }
@@ -123,11 +129,11 @@ async function main(): Promise<void> {
           puntNummer: p.nummer,
           omschrijving: p.tekst,
           bronBestand: o.bestand,
-          bewijsVindplaats: `attached_assets/${o.bestand}`,
+          bewijsVindplaats: `docs/opdrachten/${o.bestand}`,
           bronSoort: "antwoorddocument",
           bronDatum: new Date(o.ts || Date.now()),
           laatsteCodeWijzigingOp: new Date(o.ts || Date.now()),
-          relevanteCodepaden: [`attached_assets/${o.bestand}`],
+          relevanteCodepaden: [`docs/opdrachten/${o.bestand}`],
           beoordeeldOp: new Date(),
         })
         .onConflictDoUpdate({

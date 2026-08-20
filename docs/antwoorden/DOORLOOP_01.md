@@ -1,6 +1,6 @@
 # Antwoorden bij DOORLOOP_01 — uitgevoerd op 8 augustus 2026
 
-Opdrachtbron: `attached_assets/DOORLOOP_01_1786167481396.md`. Uitgevoerd: punt 1
+Opdrachtbron: `docs/opdrachten/doorloop-01.md`. Uitgevoerd: punt 1
 en 2 uit §6 (vandaag-lijst). Punten 4–6 zijn als vervolgtaken voorgesteld.
 
 ## §1.1 — Import afgesloten (GEMETEN, was open)

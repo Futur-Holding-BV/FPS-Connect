@@ -7,6 +7,7 @@ import {
   getRdwVoertuigGegevens,
   getGetVoertuigQueryKey,
   getListVoertuigenQueryKey,
+  useListToewijsbareGebruikers,
   ApiError,
   VoertuigInputAandrijving,
   VoertuigInputEigendomsType,
@@ -76,6 +77,8 @@ export default function WagenparkFormPagina() {
 
   const maakAan = useCreateVoertuig();
   const werkBij = useUpdateVoertuig();
+  const { data: toewijsbareGebruikers = [], isLoading: werknemersLaden } =
+    useListToewijsbareGebruikers();
 
   // Formulierstaat — gevuld uit bestaand voertuig zodra geladen
   const [kenteken,      setKenteken]      = useState("");
@@ -97,6 +100,7 @@ export default function WagenparkFormPagina() {
   const [leasemij,      setLeasemij]      = useState("");
   const [leaseEind,     setLeaseEind]     = useState("");
   const [opmerkingen,   setOpmerkingen]   = useState("");
+  const [chauffeurId,   setChauffeurId]   = useState("");
   const [rdwOpgehaaldOp, setRdwOpgehaaldOp] = useState<string | null>(null);
 
   // Init uit bestaand voertuig (eenmalig)
@@ -122,6 +126,7 @@ export default function WagenparkFormPagina() {
     setLeasemij(bestaand.leasemaatschappij ?? "");
     setLeaseEind(isoNaarDatumInput(bestaand.lease_eind_datum));
     setOpmerkingen(bestaand.opmerkingen ?? "");
+    setChauffeurId(bestaand.chauffeur_id ? String(bestaand.chauffeur_id) : "");
     setRdwOpgehaaldOp(bestaand.rdw_opgehaald_op ?? null);
   }
 
@@ -211,6 +216,7 @@ export default function WagenparkFormPagina() {
       lease_eind_datum: datumInputNaarIso(leaseEind),
       rdw_opgehaald_op: rdwOpgehaaldOp,
       opmerkingen: opmerkingen.trim() || null,
+      chauffeur_id: chauffeurId ? Number(chauffeurId) : null,
     };
 
     const opties = {
@@ -394,6 +400,26 @@ export default function WagenparkFormPagina() {
                   <SelectItem value={VoertuigInputEigendomsType.eigendom}>Eigendom</SelectItem>
                   <SelectItem value={VoertuigInputEigendomsType.lease}>Lease</SelectItem>
                   <SelectItem value={VoertuigInputEigendomsType.huur}>Huur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label htmlFor="vaste-chauffeur">Vaste werknemer / chauffeur</Label>
+              <Select
+                value={chauffeurId || "geen"}
+                onValueChange={(waarde) => setChauffeurId(waarde === "geen" ? "" : waarde)}
+                disabled={werknemersLaden}
+              >
+                <SelectTrigger id="vaste-chauffeur">
+                  <SelectValue placeholder={werknemersLaden ? "Werknemers laden..." : "Geen werknemer gekoppeld"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen werknemer gekoppeld</SelectItem>
+                  {toewijsbareGebruikers.map((gebruiker) => (
+                    <SelectItem key={gebruiker.id} value={String(gebruiker.id)}>
+                      {gebruiker.naam}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
