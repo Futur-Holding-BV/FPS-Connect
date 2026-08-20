@@ -47,6 +47,30 @@
       "verwijderd": 1,
       "blob": "8cba41f19f5d625a5fd495cc118f00c30bad6280",
       "reden": "Inhoudelijk beoordeelde, samenhangende uitbreiding van de SnagStream-e2e voor multi-upload, IDOR, annuleren, objectopslagcleanup en race-afhandeling."
+    },
+    {
+      "commit": "9b0af9e4c33e721d7da1bfd72f99816f3647a8ec",
+      "pad": "artifacts/api-server/src/routes/facturen.ts",
+      "toegevoegd": 412,
+      "verwijderd": 48,
+      "blob": "610a02538f3526674630e4610fcf082d640b5d90",
+      "reden": "Inhoudelijk beoordeelde, samenhangende GELDSTROOM_01-crediteringshardening voor definitieve verkoopfacturen; geen opmaakschade."
+    },
+    {
+      "commit": "60bf3953de4663268a795bbe081627bad3546d52",
+      "pad": "docs/status/STATUS_2026-08-20.md",
+      "toegevoegd": 8,
+      "verwijderd": 380,
+      "blob": "007864c4dbe77107494e08939a78fddce3bb483f",
+      "reden": "Inhoudelijk beoordeelde, bewust compacte REGISTER_01-statusgeneratie met volledige hergraderingssamenvatting; geen opmaakschade."
+    },
+    {
+      "commit": "60bf3953de4663268a795bbe081627bad3546d52",
+      "pad": "scripts/src/verificatie-register01.ts",
+      "toegevoegd": 383,
+      "verwijderd": 23,
+      "blob": "0047bb86221c209d16e2a263d67d00cc92ebdb76",
+      "reden": "Inhoudelijk beoordeelde, samenhangende REGISTER_01-verificatie voor hergrading, idempotentie, races en stale-bewijs; geen opmaakschade."
     }
   ]
 }
