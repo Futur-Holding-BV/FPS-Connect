@@ -4,6 +4,7 @@
 - **Fail-closed foutonderscheid**: alleen de specifieke Graph-400 over de ontbrekende ontvanger geldt als gezonde verbinding. Een 403 wordt begrijpelijk gemeld als ontbrekende `Mail.Send`-/postbustoegang, een 404 als niet-bestaande postbus en iedere andere 400 blijft een verzendfout.
 - **Rechten opgeschoond**: de app-only mailkoppeling vereist alleen Application `Mail.Send`. De persoonlijke Werk-inbox gebruikt afzonderlijk gedelegeerd `User.Read`, `Mail.ReadWrite`, `Mail.ReadWrite.Shared`, `Mail.Send`, `Mail.Send.Shared` en `offline_access`.
 - **Bewijs**: vier regressietests dekken gezonde niet-verzendende probe, 403, 404 en een onverwachte 400; API- en Firevault-typechecks zijn groen. Productiemeting wordt na uitrol hieronder in het CI-deploypoortbewijs vastgelegd.
+- **Productiebouw hersteld**: de verplichte noodfixrun bracht aan het licht dat de gegroeide frontendbundel de standaard V8-heapgrens van circa 2 GB bereikte. Alleen het Vite-proces in het frontend-builderstadium krijgt daarom een heaplimiet van 4 GB; runtimecontainers en overige Node-processen blijven ongewijzigd.
 
 ## 2026-08-20 — SENTRY_INBOUW_01: drie veilige foutbronnen, meldbeleid alleen in beheercentrum
 

@@ -53,8 +53,10 @@ ENV VITE_FEATURE_WIZARD_ONBOARDING=${VITE_FEATURE_WIZARD_ONBOARDING}
 ARG VITE_FEATURE_WIZARD_ONBOARDING=true
 ENV VITE_FEATURE_WIZARD_ONBOARDING=${VITE_FEATURE_WIZARD_ONBOARDING}
 
-# Stap 3: Vite bouwt de frontend
-RUN pnpm --filter @workspace/firevault run build
+# Stap 3: Vite bouwt de frontend. De gegenereerde OpenAPI-client en de
+# applicatiebundel passeren samen de standaard V8-heapgrens van circa 2 GB;
+# verruim uitsluitend dit buildproces, niet de runtimecontainers.
+RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @workspace/firevault run build
 
 # Stap 3b: monteuromgeving (/app) — Expo web-export van de echte monteur-app.
 # EXPO_PUBLIC_-variabelen worden door Metro in de webbundel gebakken; de
