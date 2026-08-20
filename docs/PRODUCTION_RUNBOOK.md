@@ -250,6 +250,14 @@ Bij falen stuurt de workflow automatisch een e-mail naar René (via de Graph/mai
 
 Als de secrets ontbreken, wordt de smoketest overgeslagen met een waarschuwing (de deploy mislukt er niet door).
 
+Voor een eenmalige handmatige bewijsrun zonder deze repositorysecrets kan bij
+`workflow_dispatch` het veld `herstel_smoketest_account` exact op `HERSTEL`
+worden gezet. De job genereert dan een willekeurig wachtwoord, maskeert het vóór
+gebruik en zet via het bestaande idempotente productie-script uitsluitend het
+vaste account `smoketest@fps-brandpreventie.nl` klaar. Het wachtwoord wordt via
+stdin naar de VPS gestuurd, blijft alleen tijdens die ene Actions-job beschikbaar
+en wordt niet als workflowinput, logregel, bestand of repositorysecret bewaard.
+
 **Noodfix: gate bewust passeren**
 
 De pre-deploy controles (typecheck, dubbele-routes, klant-poort) kunnen in een

@@ -79,7 +79,115 @@ Elk gebruik van de noodfix wordt op **drie plekken** zichtbaar:
 
 ## Bewijs van beproeving
 
-### Status: noodfix-beproeving geblokkeerd vóór productie
+### Status: geslaagd — noodfixroute volledig beproefd
+
+Op **20 augustus 2026** is de noodfixroute definitief handmatig gestart via
+`workflow_dispatch` op `main`. De beproefde commit wijzigde alleen de
+deployworkflow en documentatie; de applicatieruntime zelf was al ongewijzigd
+gezond. De CI-poort en pre-deploy controles zijn zoals bedoeld overgeslagen, de
+verplichte auditmail is verzonden én door René als ontvangen bevestigd, de
+productiedeploy is geslaagd en alle controles na de deploy waren groen.
+
+#### Definitieve noodfix-run
+
+```text
+Actions-run       : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32342864086
+Run-nummer        : 506 (poging 1)
+Commit-SHA        : 83918250d0cf345abde3470ca39d669f324d8e69
+Run aangemaakt    : 2026-08-20 07:11:32 UTC
+Deployjob gestart : 2026-08-20 07:13:46 UTC
+Noodfix-waarschuwing: 2026-08-20 07:13:53 UTC
+GitHub-actor      : vinkrene-jpg
+Noodfix-reden     : Definitieve verplichte beproeving van de noodfixroute,
+                    inclusief auditmail, productie-smoketest en echte
+                    Connect-mailproef.
+Run afgerond      : 2026-08-20 07:21:31 UTC (success)
+```
+
+De Actions-log bevat de verplichte `::warning::`-annotatie met de werkelijke
+commit, tijd en reden:
+
+```text
+::warning::NOODFIX ACTIEF — CI-poort en pre-deploy controles bewust omzeild.
+Commit  : 83918250d0cf345abde3470ca39d669f324d8e69
+Tijdstip: 2026-08-20 07:13:53 UTC
+Persoon : vink***-jpg
+Reden   : Definitieve verplichte beproeving van de noodfixroute, inclusief auditmail, productie-smoketest en echte Connect-mailproef.
+```
+
+GitHub maskeerde in de losse logtekst automatisch het substring `rene`, omdat
+dit overlapt met afgeschermde mailconfiguratie. De actor is daardoor in die ene
+regel als `vink***-jpg` weergegeven. De onverhulde waarde `vinkrene-jpg` staat
+wel in de Actions-runmetadata als zowel `actor` als `triggering_actor`, en in
+het ontvangen mailonderwerp. De auditidentiteit is daarmee eenduidig zonder de
+secretmaskering te verzwakken.
+
+#### Ontvangen noodfix-auditmail
+
+De stap **Noodfix — vastleggen en melding sturen** gaf om 07:13:54 UTC:
+
+```text
+Noodfix-melding verzonden naar René.
+```
+
+René heeft op **20 augustus 2026** bevestigd dat de specifieke mail
+daadwerkelijk in zijn inbox is ontvangen. De vastgelegde inhoud:
+
+```text
+Onderwerp: FPS Connect: NOODFIX — CI-poort omzeild door vinkrene-jpg
+
+NOODFIX: CI-poort handmatig omzeild.
+
+Commit  : 83918250d0cf345abde3470ca39d669f324d8e69
+Bericht : Maak eenmalige productiemailproef uitvoerbaar
+Tijdstip: 2026-08-20 07:13:53 UTC
+Persoon : vinkrene-jpg
+Reden   : Definitieve verplichte beproeving van de noodfixroute, inclusief auditmail, productie-smoketest en echte Connect-mailproef.
+
+De CI-poort is bewust overgeslagen. Controleer of de commit veilig is
+en zorg dat CI alsnog groen wordt gemaakt.
+
+Actions-run: https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32342864086
+```
+
+#### Productie-, smoke- en mailbewijs
+
+Na de geslaagde VPS-deploy is het vaste productie-smoketestaccount met een
+eenmalig, vooraf gemaskeerd willekeurig wachtwoord klaargezet. Het wachtwoord is
+alleen binnen deze Actions-job gebruikt en niet in invoer, log, bestand of
+repositorysecret bewaard. De externe smoketest rapporteerde:
+
+```text
+Smoketest resultaat: 15/15 checks geslaagd.
+```
+
+Daaronder vielen onder meer `GET /api/healthz`, `GET /api/versie`, twee
+consistente systeemstatusmetingen, een echte login en sessie, gebruikers- en
+gebouwenlijsten en het aanmaken, wijzigen en weer verwijderen van een
+testgebouw. De productie-mailproef rapporteerde aansluitend:
+
+```text
+OK: productieverbindingstest bevestigt token, Mail.Send en postbustoegang.
+Productie-mailproef geslaagd: verbinding ok, één echte testmail door Graph
+geaccepteerd en mail_logboek status=verzonden.
+```
+
+De testmail met onderwerp `Testbericht van FPS Connect`, afkomstig van
+`app@fpsbrandpreventie.nl`, is onafhankelijk in de tijdelijke bewijsinbox
+ontvangen op **2026-08-20 07:19:09 UTC**. Daarmee is zowel Graph-acceptatie als
+werkelijke aflevering bewezen.
+
+Externe eindcontrole op **2026-08-20 07:24:40 UTC**:
+
+- `GET https://connect.fps-one.nl/api/healthz` →
+  `{"status":"ok"}` (HTTP 200)
+- `GET https://connect.fps-one.nl/api/versie` →
+  `{"versie":"2026.08.20-83918250","commit":"83918250","achterloop":false}`
+  (HTTP 200)
+- `GET https://connect.fps-one.nl/api/versie/status` →
+  `{"db":"ok","opslag":"ok","mail":"ok","ai":"ok"}` (HTTP 200)
+
+### Eerdere geblokkeerde beproeving
 
 Op **19 augustus 2026** is de verplichte handmatige `workflow_dispatch` op
 `main` uitgevoerd. De run bereikte de verplichte auditstap, maar stopte daar
