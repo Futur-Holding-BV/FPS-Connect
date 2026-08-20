@@ -102,6 +102,14 @@
 - **Nog nodig op de VPS (beheerder)**: `SENTRY_DSN` (API-project) en `SENTRY_DSN_WEB` (browser-project) in `deploy/.env.production`; daarna testfout afvuren en het event in Sentry aanwijzen.
 - **Bewijs**: `scripts/src/verificatie-sentry-aan01.ts` — config publiek, testfout 403/500+verwijzingscode, melding landt als actiepunt met alle vijf velden, validatie 400/401 (alles groen, dev).
 
+
+## 2026-08-19 — Verkoopfactuurmail geeft nooit meer stil succes
+
+- **Fail-closed verzending**: een test- of voorbeeldadres dat door de mailbeveiliging wordt onderdrukt, wordt niet langer als `verzonden` gelogd. De factuurroute geeft een duidelijke 422; Microsoft 365-fouten geven een duidelijke 502. Alleen na een geslaagde directe Graph-overdracht volgen de succesrespons en factuurtijdlijnregel.
+- **Geen stille wachtrij**: `POST /facturen/:id/verzenden-klant` blijft een expliciet direct verzendpad. Het gedragsbewijs controleert nu zowel bij succes als falen dat geen `mail_wachtrij`-item ontstaat.
+- **Inhoud bewezen**: de productiehelper voor de HTML-mail wordt getest op FPS-oranje `#F23B0D`, de vóór definitief herberekende totalen (€ 1.100,00 / € 231,00 / € 1.331,00), de gewijzigde factuurregel en HTML-escaping.
+- **Echte kanaalbeproeving**: `scripts/src/verificatie-geldstroom01.ts` verstuurt de definitieve verkoopfactuur via de echte Microsoft Graph-configuratie naar de gedeelde productiepostbus en controleert daarna mail-logboek, tijdlijn en lege wachtrij. De ontvangst in de postbus is op 19 augustus 2026 handmatig bevestigd. Het faalpad gebruikt een onderdrukt voorbeeldadres en bewijst een duidelijke fout zonder succes-tijdlijn.
+
 ## 2026-08-19 — GELDSTROOM_01: de twee geld-uiteinden als één keten (verkoopfacturatie + inkoop-goedkeuringspoorten)
 
 - **Verkoopfactuur samenstellen op de opdracht** (`POST /opdrachten/:id/verkoopfactuur`, financieel:2): concept-verkoopfactuur mét regels uit de gekozen bron — de offerte (optionele niet-gekozen regels tellen niet mee; omschrijving = maatregel + ruimte) of de werkbegroting. Btw standaard 21%/"H" per regel, relatienaam uit de CRM-klant, vervaldatum uit de betalingstermijn, F-nummer per offerte onder advisory lock. Regels blijven daarna gewoon aanpasbaar; het fiscale nummer wordt pas bij "Definitief maken" uitgegeven (NUMMER_01 §4.6, per BV).

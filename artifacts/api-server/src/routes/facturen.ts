@@ -61,8 +61,9 @@ import { controleerFactuurRegels, type FactuurPrijscontrole } from "../services/
 // accordeer-/goedkeuringspaden mogen die stroom nooit passeren.
 const STROOM_STATUSSEN = new Set(["wacht_op_inkoper", "wacht_op_goedkeuring", "klaar_voor_betaling"]);
 const STROOM_MELDING = "Deze factuur zit in de factuurstroom. Gebruik de stroomacties (inkoper bevestigen, goedkeuren of afwijzen) op de factuurdetailpagina.";
-import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
+import { MailFout, verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
 import { schrijfTijdlijn, maakAfwijsMailTekst } from "../services/factuurstroomService";
+import { bouwVerkoopfactuurMailHtml } from "../services/verkoopfactuurMail";
 import { verwerkMandagstaatVoorFactuur } from "../lib/mandagstaat";
 import { PermissieService } from "../lib/permissie-service";
 import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
@@ -669,56 +670,44 @@ router.post("/facturen/:id/verzenden-klant", requireBevoegdheid("financieel", 3)
 
   const regels = await db.select().from(factuurRegelsTable)
     .where(eq(factuurRegelsTable.factuurId, id)).orderBy(factuurRegelsTable.regelnummer);
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const euroF = (v: string | null) => v == null ? "" : `€ ${Number.parseFloat(v).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const regelsHtml = regels.map((r) => `
-    <tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;">${esc(r.omschrijving)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${r.hoeveelheid ?? ""} ${esc(r.eenheid ?? "")}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${euroF(r.stukprijs)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${euroF(r.bedragExclBtw)}</td>
-    </tr>`).join("");
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#212631;">
-      <div style="background:#F23B0D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
-        <h2 style="margin:0;">Factuur ${esc(factuur.factuurnummer)}</h2>
-        ${factuur.kenmerk ? `<div style="opacity:.9;font-size:13px;">Kenmerk: ${esc(factuur.kenmerk)}</div>` : ""}
-      </div>
-      <div style="border:1px solid #eee;border-top:0;padding:20px;border-radius:0 0 8px 8px;">
-        <p>Geachte ${esc(naarNaam ?? "relatie")},</p>
-        <p>${body.bericht ? esc(body.bericht) : "Hierbij ontvangt u onze factuur. Wij verzoeken u vriendelijk het bedrag binnen de betalingstermijn te voldoen."}</p>
-        <table style="margin:12px 0;font-size:14px;">
-          <tr><td style="padding:2px 12px 2px 0;color:#666;">Factuurdatum</td><td>${esc(factuur.factuurdatum ?? "")}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0;color:#666;">Vervaldatum</td><td>${esc(factuur.vervaldatum ?? "")}</td></tr>
-        </table>
-        ${regels.length > 0 ? `
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <thead><tr>
-            <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #212631;">Omschrijving</th>
-            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Aantal</th>
-            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Stukprijs</th>
-            <th style="text-align:right;padding:6px 8px;border-bottom:2px solid #212631;">Bedrag excl.</th>
-          </tr></thead>
-          <tbody>${regelsHtml}</tbody>
-        </table>` : ""}
-        <table style="margin:12px 0 0 auto;font-size:14px;">
-          <tr><td style="padding:2px 12px 2px 0;color:#666;">Totaal excl. btw</td><td style="text-align:right;">${euroF(factuur.bedragExclBtw)}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0;color:#666;">Btw</td><td style="text-align:right;">${euroF(factuur.btwBedrag)}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0;font-weight:bold;">Totaal incl. btw</td><td style="text-align:right;font-weight:bold;">${euroF(factuur.bedragInclBtw)}</td></tr>
-        </table>
-      </div>
-    </div>`;
+  const html = bouwVerkoopfactuurMailHtml({
+    factuur: {
+      factuurnummer: factuur.factuurnummer,
+      kenmerk: factuur.kenmerk,
+      factuurdatum: factuur.factuurdatum,
+      vervaldatum: factuur.vervaldatum,
+      bedragExclBtw: factuur.bedragExclBtw,
+      btwBedrag: factuur.btwBedrag,
+      bedragInclBtw: factuur.bedragInclBtw,
+    },
+    regels,
+    naarNaam,
+    bericht: body.bericht,
+  });
 
   const userId = sessionUserId(req);
-  await verstuurMail({
-    naarEmail,
-    naarNaam,
-    onderwerp: body.onderwerp?.trim() || `Factuur ${factuur.factuurnummer}${factuur.kenmerk ? ` — ${factuur.kenmerk}` : ""}`,
-    html,
-    soort: "verkoopfactuur",
-    verstuurdDoorId: userId,
-    direct: true,
-  });
+  try {
+    await verstuurMail({
+      naarEmail,
+      naarNaam,
+      onderwerp: body.onderwerp?.trim() || `Factuur ${factuur.factuurnummer}${factuur.kenmerk ? ` — ${factuur.kenmerk}` : ""}`,
+      html,
+      soort: "verkoopfactuur",
+      verstuurdDoorId: userId,
+      direct: true,
+    });
+  } catch (err) {
+    req.log.warn({ err, factuurId: id }, "Verkoopfactuurmail niet verstuurd");
+    if (err instanceof MailFout) {
+      const status = err.categorie === "testadres_onderdrukt" ? 422 : 502;
+      res.status(status).json({ error: `Factuur niet verstuurd. ${err.message}` });
+      return;
+    }
+    res.status(502).json({
+      error: "Factuur niet verstuurd. De maildienst gaf een onverwachte fout. Probeer het later opnieuw.",
+    });
+    return;
+  }
   const [wie] = userId ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1) : [];
   await schrijfTijdlijn(id, `${wie?.naam ?? "Een medewerker"} heeft de factuur per e-mail naar de klant verstuurd (${naarEmail}).`, wie?.naam ?? null);
   res.json({ ok: true, naar: naarEmail });

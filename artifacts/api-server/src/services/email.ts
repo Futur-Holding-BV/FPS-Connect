@@ -28,6 +28,7 @@ const AFZENDER_NAAM = "FPS Connect";
 // ── Foutmodel ────────────────────────────────────────────────────────────────
 export type MailFoutCategorie =
   | "niet_geconfigureerd"
+  | "testadres_onderdrukt"
   | "token_verlopen"
   | "mailbox_onbereikbaar"
   | "rate_limit"
@@ -36,6 +37,8 @@ export type MailFoutCategorie =
 export const MAIL_FOUT_OMSCHRIJVING: Record<MailFoutCategorie, string> = {
   niet_geconfigureerd:
     "De mailkoppeling is niet geconfigureerd (Azure-gegevens ontbreken).",
+  testadres_onderdrukt:
+    "Het opgegeven e-mailadres is een test- of voorbeeldadres. De e-mail is niet verstuurd.",
   token_verlopen:
     "Aanmelden bij Microsoft 365 is mislukt — token verlopen of ongeldige gegevens.",
   mailbox_onbereikbaar:
@@ -250,11 +253,11 @@ async function verstuurViaGraph(opties: {
   bijlagen?: MailBijlage[];
 }): Promise<void> {
   if (isTestAdres(opties.naarEmail)) {
-    logger.info(
+    logger.warn(
       { naar: opties.naarEmail, onderwerp: knip(opties.onderwerp, 120) },
       "Mail onderdrukt: testdomein-adres, niet verzonden",
     );
-    return;
+    throw new MailFout("testadres_onderdrukt");
   }
   const token = await haalAccessToken();
   const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(

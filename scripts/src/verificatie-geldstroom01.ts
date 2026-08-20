@@ -7,7 +7,9 @@
  *  V2. Regels blijven aanpasbaar (PATCH regel).
  *  V3. Versturen naar de klant vóór definitief → 409 (fiscaal nummer eerst).
  *  V4. Definitief maken → fiscaal nummer uit de BV-teller (NUMMER_01 §4.6).
- *  V5. Versturen naar de klant ná definitief → mailpad wordt doorlopen.
+ *  V5. Versturen naar de klant ná definitief → echte Microsoft Graph-overdracht
+ *      naar de gedeelde productiepostbus; logboek + tijdlijn, nooit wachtrij.
+ *  V5b. Onderdrukte/falende mail → duidelijke fout, geen verzonden-tijdlijn.
  *  V6. Samenstellen uit de WERKBEGROTING werkt ook.
  *
  * Inkoopkant (FACTUUR_03):
@@ -29,12 +31,14 @@ import {
   db, gebruikersTable, offertesTable, offerteRegelsTable, opdrachtenTable,
   facturenTable, factuurRegelsTable, projectBegrotingenTable,
   werkbegrotingRegelsTable, betaalbatchesTable, appInstellingenTable,
-  werkgeversTable, goedkeuringBeleidsregelsTable, crmKlantenTable,
+   werkgeversTable, goedkeuringBeleidsregelsTable, crmKlantenTable,
+   factuurTijdlijnTable, mailLogboekTable, mailWachtrijTable,
 } from "@workspace/db";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 const BASIS = `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
 const WACHTWOORD = "Geldstroom01Test!2026";
+const ECHTE_MAILBOX = process.env.MAIL_MAILBOX;
 
 function faal(msg: string): never { console.error(`❌ FAAL: ${msg}`); process.exit(1); }
 function ok(msg: string) { console.log(`✅ ${msg}`); }
@@ -159,15 +163,71 @@ async function main() {
   if (v4b.status !== 409) faal(`V4b: regelwijziging ná definitief moet 409 geven, kreeg ${v4b.status}: ${JSON.stringify(v4b.json)}`);
   ok("V4b Regelwijziging ná definitief geweigerd (409) — correcties via creditering");
 
-  // ── V5: versturen naar klant ─────────────────────────────────────────────
-  const v5 = await api(fin, "POST", `/facturen/${factuurId}/verzenden-klant`, { email: "geldstroom01-klant@voorbeeld.example" });
-  if (v5.status === 200) {
-    ok(`V5 Factuur per e-mail verstuurd naar ${v5.json["naar"]}`);
-  } else if (v5.status === 503) {
-    ok("V5 Mailpad doorlopen tot verzendpunt; e-mail niet geconfigureerd in dev (503, expliciet — geen stille fallback)");
-  } else {
-    faal(`V5 versturen → ${v5.status}: ${JSON.stringify(v5.json)}`);
+  // ── V5: echte Graph-overdracht naar de gedeelde productiepostbus ─────────
+  if (!ECHTE_MAILBOX) faal("V5: MAIL_MAILBOX ontbreekt; echte mailbeproeving kan niet draaien");
+  const onderwerpV5 = `GELDSTROOM_01 verkoopfactuur ${f4.factuurnummer} ${new Date().toISOString()}`;
+  const v5 = await api(fin, "POST", `/facturen/${factuurId}/verzenden-klant`, {
+    email: ECHTE_MAILBOX,
+    onderwerp: onderwerpV5,
+    bericht: "Automatische end-to-end-beproeving van de verkoopfactuurmail. Deze mail mag worden genegeerd.",
+  });
+  if (v5.status !== 200 || v5.json["ok"] !== true) {
+    faal(`V5 echte verkoopfactuurmail → ${v5.status}: ${JSON.stringify(v5.json)}`);
   }
+  const [mailLogV5] = await db
+    .select()
+    .from(mailLogboekTable)
+    .where(and(eq(mailLogboekTable.onderwerp, onderwerpV5), eq(mailLogboekTable.soort, "verkoopfactuur")))
+    .limit(1);
+  if (!mailLogV5 || mailLogV5.status !== "verzonden" || mailLogV5.foutCategorie !== null) {
+    faal(`V5: mail_logboek mist verzonden-bewijs: ${JSON.stringify(mailLogV5)}`);
+  }
+  const wachtrijV5 = await db
+    .select({ id: mailWachtrijTable.id })
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.onderwerp, onderwerpV5));
+  if (wachtrijV5.length !== 0) faal(`V5: directe verkoopfactuurmail staat onverwacht in de wachtrij (${wachtrijV5.length} rij(en))`);
+  const tijdlijnV5 = await db
+    .select()
+    .from(factuurTijdlijnTable)
+    .where(eq(factuurTijdlijnTable.factuurId, factuurId));
+  if (!tijdlijnV5.some((regel) => regel.tekst.includes("per e-mail naar de klant verstuurd"))) {
+    faal("V5: verzonden-tijdlijnregel ontbreekt");
+  }
+  ok("V5 Echte verkoopfactuurmail door Microsoft Graph geaccepteerd voor de gedeelde productiepostbus; status=verzonden, tijdlijn aanwezig, wachtrij leeg");
+
+  // ── V5b: onderdrukte mail is een zichtbare fout, nooit stil succes ────────
+  const tijdlijnAantalVoorFout = tijdlijnV5.length;
+  const onderwerpV5b = `GELDSTROOM_01 onderdrukt ${f4.factuurnummer} ${new Date().toISOString()}`;
+  const v5b = await api(fin, "POST", `/facturen/${factuurId}/verzenden-klant`, {
+    email: "geldstroom01-klant@voorbeeld.example",
+    onderwerp: onderwerpV5b,
+  });
+  const fouttekstV5b = String(v5b.json["error"] ?? "");
+  if (v5b.status !== 422 || !fouttekstV5b.includes("Factuur niet verstuurd") || !fouttekstV5b.includes("test- of voorbeeldadres")) {
+    faal(`V5b: verwacht duidelijke 422-mailfout, kreeg ${v5b.status}: ${JSON.stringify(v5b.json)}`);
+  }
+  const [mailLogV5b] = await db
+    .select()
+    .from(mailLogboekTable)
+    .where(and(eq(mailLogboekTable.onderwerp, onderwerpV5b), eq(mailLogboekTable.soort, "verkoopfactuur")))
+    .limit(1);
+  if (!mailLogV5b || mailLogV5b.status !== "mislukt" || mailLogV5b.foutCategorie !== "testadres_onderdrukt") {
+    faal(`V5b: mislukte mail niet eerlijk gelogd: ${JSON.stringify(mailLogV5b)}`);
+  }
+  const wachtrijV5b = await db
+    .select({ id: mailWachtrijTable.id })
+    .from(mailWachtrijTable)
+    .where(eq(mailWachtrijTable.onderwerp, onderwerpV5b));
+  if (wachtrijV5b.length !== 0) faal("V5b: mislukte directe mail is stil in de wachtrij beland");
+  const tijdlijnNaFout = await db
+    .select({ id: factuurTijdlijnTable.id })
+    .from(factuurTijdlijnTable)
+    .where(eq(factuurTijdlijnTable.factuurId, factuurId));
+  if (tijdlijnNaFout.length !== tijdlijnAantalVoorFout) {
+    faal("V5b: mislukte mail heeft ten onrechte een verzonden-tijdlijnregel geschreven");
+  }
+  ok("V5b Onderdrukte mail geeft duidelijke 422-fout; status=mislukt, geen verzonden-tijdlijn en geen wachtrij-item");
 
   // ── V6: samenstellen uit werkbegroting ───────────────────────────────────
   const [opdracht2] = await db.insert(opdrachtenTable).values({

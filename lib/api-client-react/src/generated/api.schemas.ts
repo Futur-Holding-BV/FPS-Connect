@@ -19990,4 +19990,3 @@ werkgever_id?: number;
 export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
-
