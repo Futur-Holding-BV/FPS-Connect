@@ -79,11 +79,95 @@ Elk gebruik van de noodfix wordt op **drie plekken** zichtbaar:
 
 ## Bewijs van beproeving
 
-### Status: live beproeving geslaagd
+### Status: noodfix-beproeving geblokkeerd vóór productie
 
-Op **19 augustus 2026** is de poort live beproefd met een echte push naar
-`main`. De test was een tijdelijke, bewust fout gemaakte unit-testverwachting;
-deze is in de daaropvolgende herstelcommit teruggezet.
+Op **19 augustus 2026** is de verplichte handmatige `workflow_dispatch` op
+`main` uitgevoerd. De run bereikte de verplichte auditstap, maar stopte daar
+terecht vóór een deployment: Microsoft Graph weigerde het token met HTTP 401.
+Er is daarom **geen noodfix-mail verzonden**, de VPS is niet aangeraakt en deze
+poging geldt nadrukkelijk niet als geslaagde eindbeproeving. Herhaal de
+beproeving nadat het Azure-client-secret in GitHub Actions én op de
+productie-VPS is vernieuwd en beide mailpaden afzonderlijk zijn getest.
+
+#### Werkelijke noodfix-run — auditmail geblokkeerd
+
+```
+Actions-run       : https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32229451303
+Commit-SHA        : 83f6be17102aaf090191f4f7214502a53fda7b41
+Run gestart       : 2026-08-19 07:47:15 UTC
+Noodfix-stap      : 2026-08-19 07:47:28 UTC
+GitHub-actor      : vinkrene-jpg
+Noodfix-reden     : Verplichte live-beproeving van de noodfix-route op een onschuldige release; geen productie-incident.
+Run afgerond      : 2026-08-19 07:47:32 UTC (failure)
+```
+
+De Actions-annotaties tonen de verplichte waarschuwing:
+
+```
+::warning::NOODFIX ACTIEF — CI-poort en pre-deploy controles bewust omzeild.
+```
+
+Daarna blokkeerde de workflow fail-closed in **Noodfix — vastleggen en melding
+sturen**:
+
+```
+NOODFIX GEBLOKKEERD: kon geen Graph-token ophalen (HTTP 401).
+Controleer AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET in de GitHub-secrets.
+```
+
+Het volledige Azure-antwoord specificeert de oorzaak:
+
+```text
+invalid_client
+AADSTS7000215: Invalid client secret provided. Ensure the secret being sent is
+the client secret value, not the client secret ID.
+```
+
+Daarmee is specifiek het GitHub Actions-secret `AZURE_CLIENT_SECRET` ongeldig
+voor de ingestelde `AZURE_CLIENT_ID`; de fout bewijst niet zonder meer dat de
+secret verlopen is.
+
+De stappen voor SSH, kopiëren naar de server, VPS-deploy en smoketest zijn
+allemaal overgeslagen. De gevraagde e-mail met onderwerp
+`FPS Connect: NOODFIX — CI-poort omzeild door ...` is door deze blokkade niet
+verstuurd en kan dus niet als ontvangen bewijs worden opgenomen.
+
+#### Productiecontrole na de geblokkeerde run
+
+Controle vanaf buitenaf op **2026-08-19 07:48:25 UTC**:
+
+- `GET https://connect.fps-one.nl/api/healthz` → `{"status":"ok"}` (HTTP 200)
+- `GET https://connect.fps-one.nl/api/versie` →
+  `{"versie":"2026.08.19-83f6be17","commit":"83f6be17","achterloop":false}`
+  (HTTP 200)
+
+#### Onderzoek naar de mailstoring — 20 augustus 2026
+
+- GitHub Actions-mail werkte nog aantoonbaar in run `32042358763` op
+  17 augustus om 15:30 UTC.
+- De eerste volledig gelogde `AADSTS7000215` staat in run `32147986350` op
+  18 augustus om 14:34 UTC.
+- De faalmailtests `32280586391` en `32281531087` kregen op 19 augustus om
+  17:24 en 17:28 UTC opnieuw dezelfde 401. De laatste test eindigde groen omdat
+  een gewone faalmail de deployuitkomst niet mag overschrijven, maar de log
+  zegt expliciet dat geen Graph-token en dus geen mail is verkregen.
+- Vanaf de eerste volledig bewezen 401 tot en met 20 augustus 04:46 UTC waren
+  er veertien mislukte deployruns waarvoor een Actions-faalmelding hoorde te
+  worden verstuurd; daarnaast zijn de twee groene testmails niet verstuurd.
+- De productiedatabase bevat geen mislukte of wachtende Connect-appmail. De
+  laatste succesvolle appmail was een wachtwoord-reset op 11 augustus om
+  07:56:41 UTC. Sindsdien zijn geen reset-tokens, uitnodigingen,
+  uitnodigingsherinneringen of offerte-maillogs aangemaakt.
+
+GitHub Actions en Connect gebruiken aparte secretopslag. De bewezen fout zit
+in GitHub Actions. Of het VPS-secret dezelfde fout heeft, is niet uit
+`/api/versie/status` af te leiden; dat endpoint controleert alleen aanwezigheid
+van variabelen. Na herstel moeten daarom zowel de GitHub-faalmailtest als een
+Connect-testmail werkelijk worden ontvangen. Zie
+`docs/antwoorden/GRAPH_MAIL_401_HERSTEL.md` voor tenant, app-registratie en
+exacte herstelplaatsen.
+
+### Eerder bewijs: rode CI wordt door de gewone deploypoort geblokkeerd
 
 #### Rode commit — deploy geblokkeerd
 

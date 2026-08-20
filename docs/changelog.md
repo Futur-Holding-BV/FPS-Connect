@@ -1,3 +1,10 @@
+## 2026-08-20 — Mailverbindingstest werkt met alleen Mail.Send
+
+- **Alleen Mail.Send**: de verbindingstest leest het gebruikersobject van `MAIL_MAILBOX` niet langer via Graph. In plaats daarvan doet Connect een bewust ontvangerloze `sendMail`-probe; Graph valideert daarmee token, Application `Mail.Send` en postbustoegang, maar er wordt geen bericht verzonden.
+- **Fail-closed foutonderscheid**: alleen de specifieke Graph-400 over de ontbrekende ontvanger geldt als gezonde verbinding. Een 403 wordt begrijpelijk gemeld als ontbrekende `Mail.Send`-/postbustoegang, een 404 als niet-bestaande postbus en iedere andere 400 blijft een verzendfout.
+- **Rechten opgeschoond**: de app-only mailkoppeling vereist alleen Application `Mail.Send`. De persoonlijke Werk-inbox gebruikt afzonderlijk gedelegeerd `User.Read`, `Mail.ReadWrite`, `Mail.ReadWrite.Shared`, `Mail.Send`, `Mail.Send.Shared` en `offline_access`.
+- **Bewijs**: vier regressietests dekken gezonde niet-verzendende probe, 403, 404 en een onverwachte 400; API- en Firevault-typechecks zijn groen. Productiemeting wordt na uitrol hieronder in het CI-deploypoortbewijs vastgelegd.
+
 ## 2026-08-20 — SENTRY_INBOUW_01: drie veilige foutbronnen, meldbeleid alleen in beheercentrum
 
 - **Eén privacygrens voor API, Firevault en FPS Monteur**: het nieuwe gedeelde pakket bouwt vóór verzending een strikt allowlisted event en verwijdert gevoelige veldnamen recursief. Vrije fouttekst, breadcrumbs, requestinhoud, tokens, wachtwoorden, BSN, adressen, klantgegevens, namen en e-mail overleven de grens niet; alleen stackstructuur, omgeving/release, intern gebruikers-id plus rol en een veilig scherm- of handelingslabel blijven.
@@ -8,6 +15,12 @@
 - **EU-inventaris fail-closed**: Sentry-beheerinventaris gebruikt uitsluitend `GET` op `https://de.sentry.io/api/0` met een User Auth Token uit `SENTRY_AUTH_TOKEN` en alleen `org:read`, `project:read` en `event:read`. De Replit-connector is vastgelegd als onbruikbaar voor deze EU-organisatie omdat hij geen regionale API-host kan instellen; het productieproject `fps-connect-api` wordt na de organisatiebrede lijst volledig overgeslagen.
 
 - **Externe adviseurs**: nieuw beheerscherm onder Personeel met bedrijf, contactpersoon, inzet, toegangsdatum en accountstatus. Beheerders kunnen gegevens en toegang verlengen via het bestaande adviseur-account. De dagelijkse bewakingsloop zet vanaf 14 dagen vóór de einddatum (en bij verlopen toegang) een actiepunt in de werkbak voor personeel:2, dat zichzelf sluit wanneer de toegang is verlengd of het account is uitgezet.
+
+## 2026-08-19 — Noodfix-beproeving geblokkeerd vóór productie
+
+- **Werkelijke dispatch vastgelegd**: de handmatige noodfix-run op `main` registreerde commit, tijdstip, GitHub-actor en reden, en sloeg de CI-poort zoals bedoeld over.
+- **Fail-closed bewijs**: Microsoft Graph weigerde de auditmail-tokenaanvraag met HTTP 401; de workflow stopte daarom vóór SSH, VPS-deploy en smoketest. Er is geen noodfix-mail verzonden en de beproeving moet na het vernieuwen van de Azure/GitHub-mailsecrets opnieuw worden uitgevoerd.
+- **Productie bleef gezond**: externe controles op `/api/healthz` en `/api/versie` gaven HTTP 200; de versie bleef `83f6be17`.
 
 ## 2026-08-19 — SIGNALEN_LINKS_01: werkbak opent het concrete dossier
 

@@ -43,10 +43,18 @@ Noteer de volgende waarden (nodig voor `.env`):
 ## Stap 3 — API-rechten instellen
 
 1. Ga naar **API permissions → Add a permission → Microsoft Graph → Application permissions**
-2. Voeg toe:
+2. Voeg voor de app-only mailkoppeling uitsluitend toe:
    - `Mail.Send` — e-mail versturen als de app
-   - `Mail.ReadWrite` *(optioneel)* — voor e-mails in de postbus lezen (inbox-adapter)
 3. Klik **Grant admin consent** — vereist tenantbeheerder
+
+Andere Application-machtigingen zijn niet nodig. De verbindingstest gebruikt
+geen `GET /users/{adres}` meer, maar een bewust ontvangerloze `sendMail`-probe.
+Die valideert het token, `Mail.Send` en de toegang tot `MAIL_MAILBOX` zonder
+een bericht te verzenden.
+
+De persoonlijke Werk-inbox is een afzonderlijke, gedelegeerde OAuth-koppeling.
+Daarvoor gebruikt Connect `User.Read`, `Mail.ReadWrite`,
+`Mail.ReadWrite.Shared`, `Mail.Send`, `Mail.Send.Shared` en `offline_access`.
 
 ---
 
@@ -92,13 +100,25 @@ MAIL_FROM=FPS Connect <noreply@fps-brandpreventie.nl>
 
 ## Verificatie
 
-Test of het e-mailen werkt via de API:
+Test eerst of het token, `Mail.Send` en de gedeelde postbus bereikbaar zijn:
 
 ```bash
-curl -X POST https://connect.fps-brandpreventie.nl/api/beheer/mail-test \
+curl -X POST https://connect.fps-one.nl/api/mail/verbindingstest \
+  -H "Cookie: <sessiecookie>"
+```
+
+Bij succes is geen bericht verstuurd: Connect doet een ontvangerloze
+`sendMail`-probe en verwacht van Graph de specifieke afwijzing dat een
+ontvanger ontbreekt. Een 403 blijft een fout over ontbrekende `Mail.Send`- of
+postbustoegang; een 404 blijft een fout over een niet-bestaande postbus.
+
+Verstuur daarna een echt testbericht:
+
+```bash
+curl -X POST https://connect.fps-one.nl/api/mail/testmail \
   -H "Cookie: <sessiecookie>" \
   -H "Content-Type: application/json" \
-  -d '{"ontvanger": "beheerder@fps-brandpreventie.nl"}'
+  -d '{"naar_email": "beheerder@fpsbrandpreventie.nl"}'
 ```
 
 ---
@@ -120,5 +140,7 @@ Client secrets verlopen (standaard 24 maanden). Plan een **agenda-herinnering**:
 |---|---|---|
 | `AADSTS700016` | App ID onjuist | Controleer `AZURE_CLIENT_ID_NEW` en `AZURE_TENANT_ID` |
 | `AADSTS7000215` | Secret verlopen of ongeldig | Nieuw secret aanmaken |
+| `ErrorAccessDenied` / HTTP 403 | `Mail.Send` ontbreekt of app heeft geen toegang tot de postbus | Controleer Application-machtiging, admin consent en Application Access Policy |
+| `Request_ResourceNotFound` / HTTP 404 | `MAIL_MAILBOX` bestaat niet | Controleer het exacte adres van de gedeelde postbus |
 | `ErrorSendAsDenied` | Postbus-rechten ontbreken | Application Access Policy instellen (stap 4) |
 | `InvalidAuthenticationToken` | Token verlopen | App herstart; token wordt automatisch vernieuwd |

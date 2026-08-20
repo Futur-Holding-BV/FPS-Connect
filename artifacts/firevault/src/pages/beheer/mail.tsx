@@ -39,6 +39,7 @@ const SOORT_LABEL: Record<string, string> = {
 const FOUT_LABEL: Record<string, string> = {
   niet_geconfigureerd: "Niet geconfigureerd",
   token_verlopen: "Aanmelden mislukt",
+  onvoldoende_rechten: "Onvoldoende Microsoft-rechten",
   mailbox_onbereikbaar: "Postbus onbereikbaar",
   rate_limit: "Tijdelijk geblokkeerd",
   verzendfout: "Verzendfout",
