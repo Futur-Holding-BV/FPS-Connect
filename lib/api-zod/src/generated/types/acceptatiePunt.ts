@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { AcceptatiePuntBronSoort } from './acceptatiePuntBronSoort';
 import type { AcceptatiePuntStand } from './acceptatiePuntStand';
 
 export interface AcceptatiePunt {
@@ -15,6 +16,13 @@ export interface AcceptatiePunt {
   stand: AcceptatiePuntStand;
   bewijs_vindplaats?: string | null;
   bron_bestand?: string | null;
+  bron_soort: AcceptatiePuntBronSoort;
+  bron_datum: Date;
+  laatste_code_wijziging_op: Date;
+  relevante_codepaden: string[];
+  beoordeeld_op: Date;
+  /** true wanneer het geleverde bewijs actueel is t.o.v. de laatste codewijziging: bron_datum is niet ouder dan laatste_code_wijziging_op. */
+  bewijs_actueel: boolean;
   toelichting?: string | null;
   bijgewerkt_op: Date;
 }

@@ -10,6 +10,7 @@ import {
   db, gebruikersTable, medewerkersTable, opdrachtenTable, urenRegistratiesTable,
   documentenTable, offertesTable, materiaalAanvragenTable, inkoopbonnenTable,
 } from "@workspace/db";
+import { registreerGroenBewijs } from "./lib/acceptatieregisterBewijs";
 
 const BASIS = process.env.BEWIJS_API_BASIS ?? `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
 const WW = `${randomBytes(12).toString("base64url")}Aa1!`;
@@ -232,6 +233,15 @@ async function main(): Promise<void> {
     titel: `${MERK} materiaalflow`, status: "actief", type: "aanneem", offerteId: offMat.id,
   } as typeof opdrachtenTable.$inferInsert).returning();
 
+  // 16-vooraf) Het handmatige inkoopbonpad gebruikt dezelfde centrale poort.
+  r = await fetch(`${BASIS}/opdrachten/${opdrMat.id}/inkoopplanning/inkoopbonnen`, {
+    method: "POST", headers: hdrs,
+    body: JSON.stringify({ leverancier: `${MERK} handmatig`, regels: [] }),
+  });
+  j = await r.json().catch(() => ({}));
+  check(r.status === 422 && (j as { code?: string }).code === "AKKOORD_ONTBREEKT",
+    `handmatige inkoopbon zonder akkoord geweigerd met 422 AKKOORD_ONTBREEKT (kreeg ${r.status} ${JSON.stringify(j).slice(0, 120)})`);
+
   r = await fetch(`${BASIS}/materiaal-aanvragen`, {
     method: "POST", headers: hdrs,
     body: JSON.stringify({ opdracht_id: opdrMat.id, reden: "nodig", omschrijving: `${MERK} brandkleppen`, volgens_opdracht: "ja" }),
@@ -282,11 +292,33 @@ async function main(): Promise<void> {
   check(naGoedkeuring?.inkoopbonId === goed.inkoopbon?.id,
     `aanvraag is gekoppeld aan de aangemaakte bon (inkoopbonId=${naGoedkeuring?.inkoopbonId})`);
 
+  r = await fetch(`${BASIS}/opdrachten/${opdrMat.id}/inkoopplanning/inkoopbonnen`, {
+    method: "POST", headers: hdrs,
+    body: JSON.stringify({ leverancier: `${MERK} handmatig`, regels: [] }),
+  });
+  check(r.status === 201, `handmatige inkoopbon mét akkoord toegestaan (kreeg ${r.status})`);
+
   await ruimOp();
 
   if (fout.length) {
     console.error(`\n✗ ${fout.length} controle(s) gefaald.`);
   } else {
+    const bijgewerkt = await registreerGroenBewijs({
+      opdrachtCode: "AKKOORD_01",
+      puntNummers: [1, 2],
+      scriptPad: "scripts/src/bewijs-akkoord01.ts",
+      bronBestand: "AKKOORD_01_akkoordpoort_1786383771282.md",
+      relevanteCodepaden: [
+        "artifacts/api-server/src/routes/uren.ts",
+        "artifacts/api-server/src/lib/akkoordPoort.ts",
+        "artifacts/api-server/src/lib/inkoopbonService.ts",
+        "artifacts/api-server/src/routes/werkvoorbereiding.ts",
+        "artifacts/api-server/src/routes/materiaal-aanvragen.ts",
+      ],
+      volledigGeslaagd: true,
+      toelichting: "Groene HTTP-run bewijst de urenpoort en beide inkoopbonpaden vóór en na akkoord.",
+    });
+    console.log(`✓ ${bijgewerkt} gekoppelde registerpunten automatisch op gehaald gezet.`);
     console.log("\n✓ Alle AKKOORD_01-controles geslaagd.");
   }
 }

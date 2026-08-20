@@ -20934,6 +20934,12 @@ export const ListAcceptatieregisterResponseItem = zod.object({
   "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']),
   "bewijs_vindplaats": zod.string().nullish(),
   "bron_bestand": zod.string().nullish(),
+  "bron_soort": zod.enum(['bewijsscript', 'code', 'meetrapport', 'antwoorddocument']),
+  "bron_datum": zod.coerce.date(),
+  "laatste_code_wijziging_op": zod.coerce.date(),
+  "relevante_codepaden": zod.array(zod.string()),
+  "beoordeeld_op": zod.coerce.date(),
+  "bewijs_actueel": zod.boolean().describe('true wanneer het geleverde bewijs actueel is t.o.v. de laatste codewijziging: bron_datum is niet ouder dan laatste_code_wijziging_op.'),
   "toelichting": zod.string().nullish(),
   "bijgewerkt_op": zod.coerce.date()
 })
@@ -20947,11 +20953,19 @@ export const UpdateAcceptatiePuntParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+
+
 export const UpdateAcceptatiePuntBody = zod.object({
   "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']).optional(),
   "bewijs_vindplaats": zod.string().nullish(),
+  "bron_bestand": zod.string().nullish(),
+  "bron_soort": zod.enum(['bewijsscript', 'code', 'meetrapport', 'antwoorddocument']).optional(),
+  "bron_datum": zod.coerce.date().optional(),
+  "laatste_code_wijziging_op": zod.coerce.date().optional(),
+  "relevante_codepaden": zod.array(zod.string()).min(1).optional(),
   "toelichting": zod.string().nullish()
-})
+}).describe('Bijwerken van een acceptatiepunt. Metadata (bron_\*, laatste_code_wijziging_op) mag altijd worden opgeslagen. Promotie naar stand \"gehaald\" vereist een complete, herleidbare bewijsketen; bewijs dat ouder is dan de laatste codewijziging wordt geweigerd (409). Een sterkere actuele bron kan niet door een zwakkere bron worden overschreven.')
 
 export const UpdateAcceptatiePuntResponse = zod.object({
   "id": zod.number(),
@@ -20961,6 +20975,12 @@ export const UpdateAcceptatiePuntResponse = zod.object({
   "stand": zod.enum(['gehaald', 'niet_gebouwd', 'onbewezen', 'wacht_op_rene']),
   "bewijs_vindplaats": zod.string().nullish(),
   "bron_bestand": zod.string().nullish(),
+  "bron_soort": zod.enum(['bewijsscript', 'code', 'meetrapport', 'antwoorddocument']),
+  "bron_datum": zod.coerce.date(),
+  "laatste_code_wijziging_op": zod.coerce.date(),
+  "relevante_codepaden": zod.array(zod.string()),
+  "beoordeeld_op": zod.coerce.date(),
+  "bewijs_actueel": zod.boolean().describe('true wanneer het geleverde bewijs actueel is t.o.v. de laatste codewijziging: bron_datum is niet ouder dan laatste_code_wijziging_op.'),
   "toelichting": zod.string().nullish(),
   "bijgewerkt_op": zod.coerce.date()
 })

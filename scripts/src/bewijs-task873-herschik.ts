@@ -13,7 +13,7 @@ import { db, gebruikersTable, modCalcHeadersTable, modCalcRegelsTable } from "@w
 const BASIS = process.env.BEWIJS_API_BASIS ?? `https://${process.env.REPLIT_DEV_DOMAIN}/api`;
 const TOTP = authenticator.generateSecret();
 const WW = `${randomBytes(12).toString("base64url")}Aa1!`;
-const EMAIL = "bewijs-task873@fps.local";
+const EMAIL = `bewijs-task873-${randomBytes(6).toString("hex")}@fps.local`;
 const CALC_MERK = "TASK873-HERSCHIK-TEST";
 
 if (process.env.REPLIT_DEPLOYMENT || process.env.NODE_ENV === "production") {
@@ -33,7 +33,19 @@ async function ruimOp(): Promise<void> {
     await db.delete(modCalcRegelsTable).where(inArray(modCalcRegelsTable.calculatieId, ids));
     await db.delete(modCalcHeadersTable).where(inArray(modCalcHeadersTable.id, ids));
   }
-  await db.delete(gebruikersTable).where(like(gebruikersTable.email, EMAIL));
+  const bewijsGebruikers = await db
+    .select({ id: gebruikersTable.id })
+    .from(gebruikersTable)
+    .where(like(gebruikersTable.email, "bewijs-task873%@fps.local"));
+  for (const gebruiker of bewijsGebruikers) {
+    await db
+      .update(gebruikersTable)
+      .set({
+        actief: false,
+        email: `gearchiveerd-task873-${gebruiker.id}@fps.local`,
+      })
+      .where(eq(gebruikersTable.id, gebruiker.id));
+  }
 }
 
 type ApiRegel = { id: number; omschrijving: string; volgorde: number; ouder_regel_id: number | null; hoofdstuk: string | null };

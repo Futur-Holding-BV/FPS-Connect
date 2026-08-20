@@ -38,7 +38,10 @@ for (const code of codes) {
   // Fail-closed: alles wat niet expliciet gehaald of wacht_op_rene is, telt als open.
   const open = punten.filter((p) => p.stand !== "gehaald" && p.stand !== "wacht_op_rene");
   const wacht = punten.filter((p) => p.stand === "wacht_op_rene");
-  const nietBijgewerkt = punten.filter((p) => p.bijgewerktOp.toISOString().slice(0, 10) !== vandaag);
+  const nietBijgewerkt = punten.filter((p) => p.beoordeeldOp.toISOString().slice(0, 10) !== vandaag);
+  const verouderdBewijs = punten.filter(
+    (p) => p.stand === "gehaald" && p.bronDatum.getTime() < p.laatsteCodeWijzigingOp.getTime(),
+  );
   let codeFout = false;
   for (const p of open) {
     console.error(`  OPEN  ${p.puntNummer}. [${p.stand}] ${p.omschrijving.slice(0, 100)}`);
@@ -51,13 +54,17 @@ for (const code of codes) {
     codeFout = true;
   }
   if (nietBijgewerkt.length > 0) {
-    console.error(`FOUT: ${nietBijgewerkt.length} registerregel(s) van ${code} zijn vandaag niet bijgewerkt (punt ${nietBijgewerkt.map((p) => p.puntNummer).join(", ")}) — herbeoordeel élk punt bij oplevering.`);
+    console.error(`FOUT: ${nietBijgewerkt.length} registerregel(s) van ${code} zijn vandaag niet beoordeeld (punt ${nietBijgewerkt.map((p) => p.puntNummer).join(", ")}) — herbeoordeel élk punt bij oplevering.`);
+    codeFout = true;
+  }
+  if (verouderdBewijs.length > 0) {
+    console.error(`FOUT: ${verouderdBewijs.length} gehaald punt(en) hebben bewijs van vóór de laatste relevante codewijziging (punt ${verouderdBewijs.map((p) => p.puntNummer).join(", ")}) — voer een nieuwe meting uit.`);
     codeFout = true;
   }
   if (codeFout) {
     fout = true;
   } else {
-    console.log(`OK: alle bouwbare punten van ${code} zijn gehaald en vandaag herbeoordeeld${wacht.length ? ` (${wacht.length} wachten op René)` : ""}.`);
+    console.log(`OK: alle bouwbare punten van ${code} zijn gehaald met actueel bewijs en vandaag herbeoordeeld${wacht.length ? ` (${wacht.length} wachten op René)` : ""}.`);
   }
 }
 

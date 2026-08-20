@@ -4,20 +4,28 @@
  * V1: register gevuld (≥ 400 punten, ≥ 50 opdrachten) met alleen geldige standen.
  * V2: GET /api/acceptatieregister zonder login → 401; gewone gebruiker → 403.
  * V3: hoofdbeheerder ziet de lijst inclusief de REGISTER_01-punten.
- * V4: PATCH met ongeldige stand → 400; geldige stand-wissel → 200 en persistent,
- *     daarna netjes teruggezet.
+ * V4: PATCH-validatie, stale-bewijsblokkade, idempotente zelfpromotie en
+ *     werkbak-deduplicatie/automatische sluiting.
  * V5: oplever-check faalt (exit 1) op een opdracht met open punten en slaagt op
  *     een volledig gehaalde opdracht.
  * V6: statusrapport van vandaag bestaat en is gegenereerd uit het register.
  *
  * Testaccounts worden na afloop gearchiveerd.
  */
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { db, gebruikersTable, acceptatieRegisterTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import {
+  acceptatieRegisterHergradeerRunsTable,
+  acceptatieRegisterTable,
+  db,
+  gebruikersTable,
+  werkbakItemsTable,
+} from "@workspace/db";
+import { and, eq, sql } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { authenticator } from "otplib";
+import { isBronActueel, kiesSterksteActueleBron, registreerGroenBewijs } from "./lib/acceptatieregisterBewijs";
+import { acceptatieregisterHerbeoordeling } from "./data/acceptatieregister-herbeoordeling";
 
 const TOTPS = new Map<string, string>();
 const BASIS = process.env["API_BASIS"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"]}/api`;
@@ -60,20 +68,58 @@ async function api(token: string | null, methode: string, pad: string, body?: un
 
 type Punt = { id: number; opdracht_code: string; punt_nummer: number; stand: string };
 
+async function wachtOpProcesTekst(
+  stream: NodeJS.ReadableStream,
+  tekst: string,
+  timeoutMs = 10_000,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    let buffer = "";
+    const timer = setTimeout(() => reject(new Error(`Timeout op procesuitvoer: ${tekst}`)), timeoutMs);
+    stream.on("data", (chunk: Buffer | string) => {
+      buffer += chunk.toString();
+      if (!buffer.includes(tekst)) return;
+      clearTimeout(timer);
+      resolve();
+    });
+    stream.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
 async function main(): Promise<void> {
   const stempel = Date.now();
   const hbEmail = `register01-hb-${stempel}@voorbeeld.example`;
   const gbEmail = `register01-gb-${stempel}@voorbeeld.example`;
   const hbId = await maakAccount(hbEmail, "Register01 Hoofdbeheerder", "hoofdbeheerder");
   const gbId = await maakAccount(gbEmail, "Register01 Gebruiker", "gebruiker");
+  const testCode = `REGISTER_HERGRADE_TEST_${stempel}`;
+  const testDedup = `acceptatieregister:${testCode}:1`;
+  let testPuntId: number | null = null;
   try {
     // V1 — vulling en geldige standen
     const [tellers] = (await db.execute(sql`
       SELECT count(*)::int AS punten, count(DISTINCT opdracht_code)::int AS opdrachten,
-             count(*) FILTER (WHERE stand NOT IN ('gehaald','niet_gebouwd','onbewezen','wacht_op_rene'))::int AS ongeldig
-      FROM acceptatie_register`)).rows as { punten: number; opdrachten: number; ongeldig: number }[];
+             count(*) FILTER (WHERE stand NOT IN ('gehaald','niet_gebouwd','onbewezen','wacht_op_rene'))::int AS ongeldig,
+             count(*) FILTER (
+               WHERE bewijs_vindplaats IS NULL OR btrim(bewijs_vindplaats) = ''
+                  OR bron_bestand IS NULL OR btrim(bron_bestand) = ''
+                  OR bron_soort IS NULL OR bron_datum IS NULL
+                  OR laatste_code_wijziging_op IS NULL OR beoordeeld_op IS NULL
+             )::int AS metadata_ontbreekt
+      FROM acceptatie_register`)).rows as {
+        punten: number;
+        opdrachten: number;
+        ongeldig: number;
+        metadata_ontbreekt: number;
+      }[];
     if (!tellers || tellers.punten < 400 || tellers.opdrachten < 50) faal(`V1: register te leeg: ${JSON.stringify(tellers)}`);
     if (tellers.ongeldig !== 0) faal(`V1: ${tellers.ongeldig} regels met ongeldige stand`);
+    if (tellers.metadata_ontbreekt !== 0) {
+      faal(`V1: ${tellers.metadata_ontbreekt} regels missen bronmetadata`);
+    }
     ok(`V1 Register gevuld: ${tellers.punten} punten over ${tellers.opdrachten} opdrachten, alle standen geldig`);
 
     // V2 — autorisatie
@@ -93,8 +139,173 @@ async function main(): Promise<void> {
     if (eigen.length < 5) faal(`V3: REGISTER_01-punten ontbreken (${eigen.length})`);
     ok(`V3 Hoofdbeheerder ziet ${punten.length} punten, incl. ${eigen.length} REGISTER_01-punten`);
 
-    // V4 — PATCH validatie + persistentie
-    const doel = eigen[0]!;
+    const [runVoorHerstart] = await db
+      .select()
+      .from(acceptatieRegisterHergradeerRunsTable)
+      .where(eq(acceptatieRegisterHergradeerRunsTable.sleutel, "acceptatieregister-hergrading-2026-08-20-v1"));
+    if (runVoorHerstart?.status === "mislukt") {
+      const regressieId = eigen[0]!.id;
+      const bewijsRaceId = eigen[1]!.id;
+      const [voorPatch, voorBewijsRace] = await Promise.all([
+        db
+          .select()
+          .from(acceptatieRegisterTable)
+          .where(eq(acceptatieRegisterTable.id, regressieId))
+          .then((rijen) => rijen[0]),
+        db
+          .select()
+          .from(acceptatieRegisterTable)
+          .where(eq(acceptatieRegisterTable.id, bewijsRaceId))
+          .then((rijen) => rijen[0]),
+      ]);
+      if (!voorPatch || !voorBewijsRace) faal("V3a: regressieregels ontbreken");
+      const naClaimPatch = await api(hb, "PATCH", `/acceptatieregister/${regressieId}`, { stand: "wacht_op_rene" });
+      if (naClaimPatch.status !== 200) faal(`V3a: PATCH na mislukte productieclaim → ${naClaimPatch.status}`);
+
+      const motor = spawn(
+        "pnpm",
+        ["exec", "tsx", "src/herbeoordeel-acceptatieregister.ts", "--eenmalig-productie", "--geen-rapportbestand"],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            NODE_ENV: "test",
+            ACCEPTATIEREGISTER_HERGRADEER_PRODUCTIE: "1",
+            ACCEPTATIEREGISTER_HERGRADEER_TEST_PAUZE_MS: "1200",
+          },
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      motor.stdout.pipe(process.stdout);
+      motor.stderr.pipe(process.stderr);
+      const motorKlaar = new Promise<void>((resolve, reject) => {
+        motor.once("error", reject);
+        motor.once("exit", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`Hergradeer-herstart stopte met exitcode ${code}`));
+        });
+      });
+      await wachtOpProcesTekst(motor.stdout, "[hergradeertest] exclusief slot verkregen");
+      const bewijsStart = Date.now();
+      const bewijsKlaar = registreerGroenBewijs({
+        opdrachtCode: voorBewijsRace.opdrachtCode,
+        puntNummers: [voorBewijsRace.puntNummer],
+        scriptPad: "scripts/src/verificatie-register01.ts",
+        relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+        volledigGeslaagd: true,
+        toelichting: "Gelijktijdigheidsproef: groene promotie wacht op historische hergrading.",
+      });
+      await Promise.all([motorKlaar, bewijsKlaar]);
+      const bewijsWachttijd = Date.now() - bewijsStart;
+
+      const [naHerstart, naBewijsRace] = await Promise.all([
+        db
+          .select()
+          .from(acceptatieRegisterTable)
+          .where(eq(acceptatieRegisterTable.id, regressieId))
+          .then((rijen) => rijen[0]),
+        db
+          .select()
+          .from(acceptatieRegisterTable)
+          .where(eq(acceptatieRegisterTable.id, bewijsRaceId))
+          .then((rijen) => rijen[0]),
+      ]);
+      if (naHerstart?.stand !== "wacht_op_rene") {
+        faal(`V3a: oordeel na eerste claim is bij herstart overschreven (${naHerstart?.stand})`);
+      }
+      if (naBewijsRace?.stand !== "gehaald" || naBewijsRace.bronSoort !== "bewijsscript" || bewijsWachttijd < 700) {
+        faal(`V3a: groene scriptpromotie wachtte niet op de motor: ${JSON.stringify({
+          stand: naBewijsRace?.stand,
+          bronSoort: naBewijsRace?.bronSoort,
+          bewijsWachttijd,
+        })}`);
+      }
+
+      const herstel = async (voor: typeof acceptatieRegisterTable.$inferSelect): Promise<void> => {
+        await db.update(acceptatieRegisterTable).set({
+          opdrachtCode: voor.opdrachtCode,
+          puntNummer: voor.puntNummer,
+          omschrijving: voor.omschrijving,
+          stand: voor.stand,
+          bewijsVindplaats: voor.bewijsVindplaats,
+          bronBestand: voor.bronBestand,
+          bronSoort: voor.bronSoort,
+          bronDatum: voor.bronDatum,
+          laatsteCodeWijzigingOp: voor.laatsteCodeWijzigingOp,
+          relevanteCodepaden: voor.relevanteCodepaden,
+          beoordeeldOp: voor.beoordeeldOp,
+          toelichting: voor.toelichting,
+          aangemaaktOp: voor.aangemaaktOp,
+          bijgewerktOp: voor.bijgewerktOp,
+        }).where(eq(acceptatieRegisterTable.id, voor.id));
+      };
+      await herstel(voorPatch);
+      await herstel(voorBewijsRace);
+      ok(`V3a PATCH en groene scriptpromotie overleven herstart; script wachtte ${bewijsWachttijd} ms op het exclusieve slot`);
+    }
+
+    const doelSleutels = new Set(
+      acceptatieregisterHerbeoordeling.map((punt) => `${punt.opdracht_code}#${punt.punt_nummer}`),
+    );
+    const doelRijen = (await db.select().from(acceptatieRegisterTable))
+      .filter((punt) => doelSleutels.has(`${punt.opdrachtCode}#${punt.puntNummer}`));
+    const doelVerdeling = doelRijen.reduce<Record<string, number>>((acc, punt) => {
+      acc[punt.stand] = (acc[punt.stand] ?? 0) + 1;
+      return acc;
+    }, {});
+    const [productierun] = await db
+      .select()
+      .from(acceptatieRegisterHergradeerRunsTable)
+      .where(eq(acceptatieRegisterHergradeerRunsTable.sleutel, "acceptatieregister-hergrading-2026-08-20-v1"));
+    const staleGehaald = doelRijen.filter(
+      (punt) => punt.stand === "gehaald" && !isBronActueel(punt.bronDatum, punt.laatsteCodeWijzigingOp),
+    );
+    const toegestaneScriptPromoties = new Set(["AKKOORD_01#1", "AKKOORD_01#2", "FACTUUR_03#1"]);
+    const ongeldigePromoties = doelRijen.filter(
+      (punt) => punt.stand === "gehaald" && !toegestaneScriptPromoties.has(`${punt.opdrachtCode}#${punt.puntNummer}`),
+    );
+    const nietDoorRunBeoordeeld = productierun
+      ? doelRijen.filter((punt) => punt.beoordeeldOp.getTime() < productierun.gestartOp.getTime() - 60_000)
+      : doelRijen;
+    if (
+      doelRijen.length !== 213
+      || doelVerdeling["niet_gebouwd"] !== 20
+      || (doelVerdeling["onbewezen"] ?? 0) + (doelVerdeling["gehaald"] ?? 0) !== 193
+      || staleGehaald.length !== 0
+      || ongeldigePromoties.length !== 0
+      || nietDoorRunBeoordeeld.length !== 0
+      || productierun?.status !== "voltooid"
+    ) {
+      faal(`V3b: hergrading niet volledig toegepast: ${JSON.stringify({
+        doelRijen: doelRijen.length,
+        doelVerdeling,
+        staleGehaald: staleGehaald.length,
+        ongeldigePromoties: ongeldigePromoties.length,
+        nietDoorRunBeoordeeld: nietDoorRunBeoordeeld.length,
+        productierun: productierun?.status,
+      })}`);
+    }
+    ok("V3b Eenmalige motor hergradeerde exact 213 doelpunten, corrigeerde stale bewijs en registreerde voltooiing");
+
+    const nu = new Date();
+    const [testPunt] = await db.insert(acceptatieRegisterTable).values({
+      opdrachtCode: testCode,
+      puntNummer: 1,
+      omschrijving: "Tijdelijk registerpunt voor hergradeerketen",
+      stand: "onbewezen",
+      bewijsVindplaats: "scripts/src/verificatie-register01.ts",
+      bronBestand: "scripts/src/verificatie-register01.ts",
+      bronSoort: "code",
+      bronDatum: nu,
+      laatsteCodeWijzigingOp: nu,
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      beoordeeldOp: nu,
+      toelichting: "Tijdelijk regressiepunt",
+    }).returning({ id: acceptatieRegisterTable.id });
+    testPuntId = testPunt!.id;
+    const doel: Punt = { id: testPunt.id, opdracht_code: testCode, punt_nummer: 1, stand: "onbewezen" };
+
+    // V4 — PATCH-validatie + stale-bewijsblokkade
     const fout400 = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: "kapot" });
     if (fout400.status !== 400) faal(`V4: ongeldige stand moet 400, kreeg ${fout400.status}`);
     const leeg = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {});
@@ -103,13 +314,140 @@ async function main(): Promise<void> {
     if (onbekendVeld.status !== 400) faal(`V4: onbekend veld moet 400, kreeg ${onbekendVeld.status}`);
     const zonderBewijs = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: "gehaald", bewijs_vindplaats: null });
     if (zonderBewijs.status !== 400) faal(`V4: gehaald zonder bewijs moet 400, kreeg ${zonderBewijs.status}`);
-    const oude = doel.stand;
+    const stale = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "gehaald",
+      bewijs_vindplaats: "scripts/src/verificatie-register01.ts",
+      bron_bestand: "scripts/src/verificatie-register01.ts",
+      bron_soort: "bewijsscript",
+      bron_datum: "2026-08-01T00:00:00.000Z",
+      laatste_code_wijziging_op: "2026-08-20T00:00:00.000Z",
+      relevante_codepaden: ["scripts/src/verificatie-register01.ts"],
+    });
+    if (stale.status !== 400) faal(`V4: handmatig bewijsscriptbewijs moet 400, kreeg ${stale.status}`);
+    const staleCode = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "gehaald",
+      bewijs_vindplaats: "scripts/src/verificatie-register01.ts",
+      bron_bestand: "scripts/src/verificatie-register01.ts",
+      bron_soort: "code",
+      bron_datum: "2026-08-01T00:00:00.000Z",
+      laatste_code_wijziging_op: "2026-08-20T00:00:00.000Z",
+      relevante_codepaden: ["scripts/src/verificatie-register01.ts"],
+    });
+    if (staleCode.status !== 409) faal(`V4: stale codebewijs moet 409, kreeg ${staleCode.status}`);
     const wissel = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: "wacht_op_rene" });
     if (wissel.status !== 200) faal(`V4: geldige PATCH → ${wissel.status}`);
     const [naDb] = await db.select().from(acceptatieRegisterTable).where(eq(acceptatieRegisterTable.id, doel.id));
     if (naDb?.stand !== "wacht_op_rene") faal(`V4: stand niet gepersisteerd (${naDb?.stand})`);
-    await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: oude });
-    ok("V4 PATCH: ongeldige stand/lege body/onbekend veld/gehaald-zonder-bewijs → 400; geldige wissel persistent en teruggezet");
+    await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: "wacht_op_rene" });
+    const openItems = await db.select({ id: werkbakItemsTable.id }).from(werkbakItemsTable)
+      .where(and(eq(werkbakItemsTable.dedupSleutel, testDedup), eq(werkbakItemsTable.status, "open")));
+    if (openItems.length !== 1) faal(`V4: wacht_op_rene moet exact één open werkbakitem hebben, vond ${openItems.length}`);
+
+    const geenPromotie = await registreerGroenBewijs({
+      opdrachtCode: testCode,
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      volledigGeslaagd: false,
+      toelichting: "Mag niet worden geschreven.",
+    });
+    if (geenPromotie !== 0) faal("V4: falende/onvolledige run heeft het register gemuteerd");
+    const [nogWacht] = await db.select().from(acceptatieRegisterTable).where(eq(acceptatieRegisterTable.id, doel.id));
+    if (nogWacht?.stand !== "wacht_op_rene") faal("V4: onvolledige run heeft stand toch gewijzigd");
+
+    await registreerGroenBewijs({
+      opdrachtCode: testCode,
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      volledigGeslaagd: true,
+      toelichting: "Groene regressierun.",
+    });
+    await registreerGroenBewijs({
+      opdrachtCode: testCode,
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      volledigGeslaagd: true,
+      toelichting: "Groene regressierun.",
+    });
+    const [naPromotie] = await db.select().from(acceptatieRegisterTable).where(eq(acceptatieRegisterTable.id, doel.id));
+    const openNaPromotie = await db.select({ id: werkbakItemsTable.id }).from(werkbakItemsTable)
+      .where(and(eq(werkbakItemsTable.dedupSleutel, testDedup), eq(werkbakItemsTable.status, "open")));
+    if (naPromotie?.stand !== "gehaald" || naPromotie.bronSoort !== "bewijsscript" || openNaPromotie.length !== 0) {
+      faal("V4: groene helper promoveert niet idempotent of sluit werkbakitem niet automatisch");
+    }
+    const zwakker = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "gehaald",
+      bron_soort: "antwoorddocument",
+      bron_datum: new Date().toISOString(),
+      laatste_code_wijziging_op: new Date().toISOString(),
+    });
+    if (zwakker.status !== 409) faal(`V4: zwakkere bron mag scriptbewijs niet overschrijven, kreeg ${zwakker.status}`);
+
+    const toekomstigeCodeDatum = new Date(Date.now() + 60_000);
+    const maakSterkBewijsStale = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "onbewezen",
+      laatste_code_wijziging_op: toekomstigeCodeDatum.toISOString(),
+    });
+    if (maakSterkBewijsStale.status !== 200) faal(`V4: sterk bewijs stale markeren → ${maakSterkBewijsStale.status}`);
+    const zwakkerMaarActueel = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "gehaald",
+      bewijs_vindplaats: "docs/metingen/register01-actueel.md",
+      bron_bestand: "docs/metingen/register01-actueel.md",
+      bron_soort: "antwoorddocument",
+      bron_datum: new Date(toekomstigeCodeDatum.getTime() + 1_000).toISOString(),
+      laatste_code_wijziging_op: toekomstigeCodeDatum.toISOString(),
+      relevante_codepaden: ["scripts/src/verificatie-register01.ts"],
+    });
+    if (zwakkerMaarActueel.status !== 200) {
+      faal(`V4: actueel zwakker bewijs moet stale sterker bewijs mogen vervangen, kreeg ${zwakkerMaarActueel.status}`);
+    }
+
+    await registreerGroenBewijs({
+      opdrachtCode: testCode,
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      volledigGeslaagd: true,
+      toelichting: "Groene regressierun voor tweestapsblokkade.",
+    });
+    const eersteStap = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, { stand: "onbewezen" });
+    if (eersteStap.status !== 200) faal(`V4: eerste tweestap-PATCH → ${eersteStap.status}`);
+    const [versSterk] = await db.select().from(acceptatieRegisterTable).where(eq(acceptatieRegisterTable.id, doel.id));
+    const tweedeStap = await api(hb, "PATCH", `/acceptatieregister/${doel.id}`, {
+      stand: "gehaald",
+      bewijs_vindplaats: "docs/metingen/register01-omweg.md",
+      bron_bestand: "docs/metingen/register01-omweg.md",
+      bron_soort: "antwoorddocument",
+      bron_datum: new Date().toISOString(),
+      laatste_code_wijziging_op: versSterk!.laatsteCodeWijzigingOp.toISOString(),
+      relevante_codepaden: ["scripts/src/verificatie-register01.ts"],
+    });
+    if (tweedeStap.status !== 409) faal(`V4: tweestapsomweg moet actueel sterker bewijs blijven beschermen, kreeg ${tweedeStap.status}`);
+    await registreerGroenBewijs({
+      opdrachtCode: testCode,
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      volledigGeslaagd: true,
+      toelichting: "Groene regressierun herstelt eindtoestand.",
+    });
+    ok("V4 PATCH/stale/helper/werkbak: actueel sterker bewijs atomair beschermd, stale sterker bewijs vervangbaar, tweestapsomweg geblokkeerd");
+
+    // V4b — vaste bewijskrachtvolgorde.
+    const codeDatum = new Date("2026-08-02T00:00:00Z");
+    const bronDatum = new Date("2026-08-03T00:00:00Z");
+    const sterkste = kiesSterksteActueleBron([
+      { bronSoort: "antwoorddocument" as const, bronDatum, laatsteCodeWijzigingOp: codeDatum },
+      { bronSoort: "meetrapport" as const, bronDatum, laatsteCodeWijzigingOp: codeDatum },
+      { bronSoort: "code" as const, bronDatum, laatsteCodeWijzigingOp: codeDatum },
+      { bronSoort: "bewijsscript" as const, bronDatum, laatsteCodeWijzigingOp: codeDatum },
+    ]);
+    if (sterkste?.bronSoort !== "bewijsscript" || isBronActueel(new Date("2026-08-01"), codeDatum)) {
+      faal("V4b: bewijskrachtvolgorde of stale-datumvergelijking onjuist");
+    }
+    ok("V4b Bewijskrachtvolgorde = script > code > meetrapport > antwoorddocument; oud bewijs is stale");
 
     // V5 — oplever-check gedrag
     const openCode = punten.find((p) => p.stand === "niet_gebouwd")?.opdracht_code;
@@ -117,21 +455,20 @@ async function main(): Promise<void> {
     let faalde = false;
     try { execSync(`pnpm exec tsx src/oplever-check.ts ${openCode}`, { stdio: "pipe" }); } catch { faalde = true; }
     if (!faalde) faal(`V5: oplever-check hoort te falen op ${openCode}`);
-    execSync(`pnpm exec tsx src/oplever-check.ts REGISTER_01`, { stdio: "pipe" });
-    ok(`V5 Oplever-check faalt op ${openCode} (open punten) en slaagt op REGISTER_01`);
+    execSync(`pnpm exec tsx src/oplever-check.ts ${testCode}`, { stdio: "pipe" });
+    ok(`V5 Oplever-check faalt op ${openCode} (open punten) en slaagt op actueel groen regressiepunt`);
 
     // V5b — deels-verouderd register: één regel op gisteren → oplever-check faalt
-    const eigenPunt = eigen[1]!;
-    await db.execute(sql`UPDATE acceptatie_register SET bijgewerkt_op = now() - interval '1 day' WHERE id = ${eigenPunt.id}`);
+    await db.execute(sql`UPDATE acceptatie_register SET beoordeeld_op = now() - interval '1 day' WHERE id = ${doel.id}`);
     let faaldeStale = false;
-    try { execSync(`pnpm exec tsx src/oplever-check.ts REGISTER_01`, { stdio: "pipe" }); } catch { faaldeStale = true; }
-    await db.execute(sql`UPDATE acceptatie_register SET bijgewerkt_op = now() WHERE id = ${eigenPunt.id}`);
-    if (!faaldeStale) faal("V5b: oplever-check hoort te falen zodra één regel niet vandaag is bijgewerkt");
-    ok("V5b Oplever-check faalt zodra ook maar één registerregel verouderd is");
+    try { execSync(`pnpm exec tsx src/oplever-check.ts ${testCode}`, { stdio: "pipe" }); } catch { faaldeStale = true; }
+    await db.execute(sql`UPDATE acceptatie_register SET beoordeeld_op = now() WHERE id = ${doel.id}`);
+    if (!faaldeStale) faal("V5b: oplever-check hoort te falen zodra één regel niet vandaag is beoordeeld");
+    ok("V5b Oplever-check faalt zodra ook maar één registeroordeel niet vandaag is beoordeeld");
 
     // V5c — DB-invariant: ongeldige stand wordt door de CHECK geweigerd
     let dbWeigerde = false;
-    try { await db.execute(sql`UPDATE acceptatie_register SET stand = 'kapot' WHERE id = ${eigenPunt.id}`); }
+    try { await db.execute(sql`UPDATE acceptatie_register SET stand = 'kapot' WHERE id = ${doel.id}`); }
     catch { dbWeigerde = true; }
     if (!dbWeigerde) faal("V5c: DB CHECK-constraint op stand ontbreekt of grijpt niet in");
     ok("V5c DB weigert ongeldige standen (CHECK-constraint)");
@@ -142,11 +479,34 @@ async function main(): Promise<void> {
     if (!existsSync(pad)) faal(`V6: ${pad} ontbreekt — draai genereer-statusrapport.ts`);
     const inhoud = readFileSync(pad, "utf8");
     if (!inhoud.includes("Gegenereerd uit het acceptatieregister")) faal("V6: rapport is niet uit het register gegenereerd");
-    if (!inhoud.includes("| REGISTER_01 |")) faal("V6: REGISTER_01 ontbreekt in de opdrachttabel");
-    ok(`V6 Statusrapport STATUS_${datum}.md gegenereerd uit het register`);
+    if (!inhoud.includes("Verschil sinds ochtendmeting") || !inhoud.includes("| Wacht op René |")) {
+      faal("V6: rapport bevat niet uitsluitend de vier standen plus ochtendverschil");
+    }
+    ok(`V6 Statusrapport STATUS_${datum}.md bevat de vier nieuwe aantallen en ochtendverschillen`);
+
+    const eigenPromotie = await registreerGroenBewijs({
+      opdrachtCode: "REGISTER_01",
+      puntNummers: [1, 2, 3, 4, 5],
+      scriptPad: "scripts/src/verificatie-register01.ts",
+      relevanteCodepaden: [
+        "lib/db/src/migrations/0111_acceptatieregister_hergradeerbaar.sql",
+        "artifacts/api-server/src/routes/acceptatieregister.ts",
+        "artifacts/firevault/src/pages/beheer/acceptatieregister.tsx",
+        "scripts/src/herbeoordeel-acceptatieregister.ts",
+        "scripts/src/oplever-check.ts",
+        "scripts/src/genereer-statusrapport.ts",
+      ],
+      volledigGeslaagd: true,
+      toelichting: "Groene end-to-end registerrun bewijst bronhiërarchie, stale-blokkade, zelfpromotie, werkbakdeduplicatie, automatische sluiting, oplevercheck en statusrapport.",
+    });
+    ok(`V7 Groene registerrun promoveert ${eigenPromotie} REGISTER_01-punten via de centrale helper`);
 
     console.log("\nAlle REGISTER_01-verificaties groen.");
   } finally {
+    if (testPuntId != null) {
+      await db.delete(acceptatieRegisterTable).where(eq(acceptatieRegisterTable.id, testPuntId)).catch(() => {});
+      await db.delete(werkbakItemsTable).where(eq(werkbakItemsTable.dedupSleutel, testDedup)).catch(() => {});
+    }
     await db.update(gebruikersTable).set({ actief: false, email: `gearchiveerd-${hbId}@voorbeeld.example` }).where(eq(gebruikersTable.id, hbId));
     await db.update(gebruikersTable).set({ actief: false, email: `gearchiveerd-${gbId}@voorbeeld.example` }).where(eq(gebruikersTable.id, gbId));
   }

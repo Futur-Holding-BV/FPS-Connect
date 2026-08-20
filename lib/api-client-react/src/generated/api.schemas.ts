@@ -11025,6 +11025,16 @@ export const AcceptatiePuntStand = {
   wacht_op_rene: 'wacht_op_rene',
 } as const;
 
+export type AcceptatiePuntBronSoort = typeof AcceptatiePuntBronSoort[keyof typeof AcceptatiePuntBronSoort];
+
+
+export const AcceptatiePuntBronSoort = {
+  bewijsscript: 'bewijsscript',
+  code: 'code',
+  meetrapport: 'meetrapport',
+  antwoorddocument: 'antwoorddocument',
+} as const;
+
 export interface AcceptatiePunt {
   id: number;
   opdracht_code: string;
@@ -11033,8 +11043,50 @@ export interface AcceptatiePunt {
   stand: AcceptatiePuntStand;
   bewijs_vindplaats?: string | null;
   bron_bestand?: string | null;
+  bron_soort: AcceptatiePuntBronSoort;
+  bron_datum: string;
+  laatste_code_wijziging_op: string;
+  relevante_codepaden: string[];
+  beoordeeld_op: string;
+  /** true wanneer het geleverde bewijs actueel is t.o.v. de laatste codewijziging: bron_datum is niet ouder dan laatste_code_wijziging_op. */
+  bewijs_actueel: boolean;
   toelichting?: string | null;
   bijgewerkt_op: string;
+}
+
+export type AcceptatiePuntUpdateStand = typeof AcceptatiePuntUpdateStand[keyof typeof AcceptatiePuntUpdateStand];
+
+
+export const AcceptatiePuntUpdateStand = {
+  gehaald: 'gehaald',
+  niet_gebouwd: 'niet_gebouwd',
+  onbewezen: 'onbewezen',
+  wacht_op_rene: 'wacht_op_rene',
+} as const;
+
+export type AcceptatiePuntUpdateBronSoort = typeof AcceptatiePuntUpdateBronSoort[keyof typeof AcceptatiePuntUpdateBronSoort];
+
+
+export const AcceptatiePuntUpdateBronSoort = {
+  bewijsscript: 'bewijsscript',
+  code: 'code',
+  meetrapport: 'meetrapport',
+  antwoorddocument: 'antwoorddocument',
+} as const;
+
+/**
+ * Bijwerken van een acceptatiepunt. Metadata (bron_*, laatste_code_wijziging_op) mag altijd worden opgeslagen. Promotie naar stand "gehaald" vereist een complete, herleidbare bewijsketen; bewijs dat ouder is dan de laatste codewijziging wordt geweigerd (409). Een sterkere actuele bron kan niet door een zwakkere bron worden overschreven.
+ */
+export interface AcceptatiePuntUpdate {
+  stand?: AcceptatiePuntUpdateStand;
+  bewijs_vindplaats?: string | null;
+  bron_bestand?: string | null;
+  bron_soort?: AcceptatiePuntUpdateBronSoort;
+  bron_datum?: string;
+  laatste_code_wijziging_op?: string;
+  /** @minItems 1 */
+  relevante_codepaden?: string[];
+  toelichting?: string | null;
 }
 
 export interface Actiepunt {
@@ -19162,20 +19214,8 @@ export type UpdateActiepuntBody = {
   status?: UpdateActiepuntBodyStatus;
 };
 
-export type UpdateAcceptatiePuntBodyStand = typeof UpdateAcceptatiePuntBodyStand[keyof typeof UpdateAcceptatiePuntBodyStand];
-
-
-export const UpdateAcceptatiePuntBodyStand = {
-  gehaald: 'gehaald',
-  niet_gebouwd: 'niet_gebouwd',
-  onbewezen: 'onbewezen',
-  wacht_op_rene: 'wacht_op_rene',
-} as const;
-
-export type UpdateAcceptatiePuntBody = {
-  stand?: UpdateAcceptatiePuntBodyStand;
-  bewijs_vindplaats?: string | null;
-  toelichting?: string | null;
+export type UpdateAcceptatiePunt409 = {
+  error?: string;
 };
 
 export type MeldDitWerktNietBody = {

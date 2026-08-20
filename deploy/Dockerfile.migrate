@@ -2,7 +2,11 @@ FROM node:24-slim
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN npm install -g pnpm@10.26.1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm@10.26.1 \
+    && git config --system --add safe.directory /app
 
 WORKDIR /app
 
@@ -20,8 +24,12 @@ COPY lib/db/package.json                  lib/db/
 COPY lib/db/tsconfig.json                 lib/db/
 COPY lib/object-storage-web/package.json  lib/object-storage-web/
 COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
+COPY lib/ontwerp/package.json             lib/ontwerp/
+COPY lib/ontwerp/tsconfig.json            lib/ontwerp/
 COPY lib/permissies/package.json          lib/permissies/
 COPY lib/permissies/tsconfig.json         lib/permissies/
+COPY scripts/package.json                 scripts/
+COPY scripts/tsconfig.json                scripts/
 
 # --ignore-scripts voorkomt dat pnpm 'prepare: tsc --build' uitvoert
 # voor lib/api-client-react terwijl de bronbestanden er nog niet zijn
@@ -29,6 +37,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Stap 2: alleen de db-bronbestanden kopiëren (drizzle-kit werkt direct op TS)
 COPY lib/db/ lib/db/
+COPY scripts/src/ scripts/src/
 
 # SCHEMA_01 (aug 2026): drizzle-kit push is uit het deployproces verwijderd.
 # apply-additive blijft als idempotente legacy-stap (draagt oudere wijzigingen

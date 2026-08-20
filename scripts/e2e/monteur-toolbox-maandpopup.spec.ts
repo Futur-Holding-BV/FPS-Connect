@@ -21,7 +21,6 @@ import { authenticator } from "otplib";
 
 import {
   db,
-  gebruikersTable,
   toolboxMaandOpdrachtenTable,
   toolboxMaandStatusTable,
   veiligheidToolboxenTable,
@@ -62,12 +61,6 @@ async function ruimSeedOp() {
 
 test.beforeAll(async () => {
   gebruikerId = await setupE2eUurcodesAppAccount();
-  // De maandtoolbox geldt alleen voor bouw-functies (besluit 18-08-2026);
-  // geef het testaccount een monteursfunctie.
-  await db
-    .update(gebruikersTable)
-    .set({ functietitels: ["Monteur"] })
-    .where(eq(gebruikersTable.id, gebruikerId));
   await ruimSeedOp();
 
   const [tb] = await db

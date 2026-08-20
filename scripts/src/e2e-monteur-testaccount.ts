@@ -15,10 +15,17 @@ import { pathToFileURL } from "node:url";
 import crypto from "node:crypto";
 
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 
-import { db, gebruikersTable, medewerkersTable, verlofsoortenTable } from "@workspace/db";
+import {
+  db,
+  functiesTable,
+  gebruikersTable,
+  medewerkerAanstellingenTable,
+  medewerkersTable,
+  verlofsoortenTable,
+} from "@workspace/db";
 import { MODULE_IDS } from "@workspace/permissies";
 
 export const E2E_EMAIL = "e2e-menu@fps.local";
@@ -214,6 +221,8 @@ async function maakOfUpdateE2eAccount(opties: {
 // een bestaande soort met deze naam wordt alleen op "actief" gezet, niet
 // gedupliceerd.
 const E2E_VERLOFSOORT_NAAM = "E2E Vakantiedagen";
+const E2E_UITVOERENDE_FUNCTIE_NAAM = "Monteur";
+const E2E_FUNCTIE_WERKMAATSCHAPPIJ = "E2E";
 
 async function zorgVoorE2eVerlofsoort(): Promise<void> {
   weigerBuitenDev();
@@ -240,16 +249,74 @@ async function zorgVoorE2eVerlofsoort(): Promise<void> {
   });
 }
 
-async function zorgVoorMedewerker(gebruikerId: number, naam: string): Promise<number> {
+async function zorgVoorE2eUitvoerendeFunctie(): Promise<number> {
+  const [bestaand] = await db
+    .select({ id: functiesTable.id })
+    .from(functiesTable)
+    .where(
+      and(
+        eq(functiesTable.naam, E2E_UITVOERENDE_FUNCTIE_NAAM),
+        eq(functiesTable.werkmaatschappij, E2E_FUNCTIE_WERKMAATSCHAPPIJ),
+      ),
+    );
+
+  if (bestaand) {
+    await db
+      .update(functiesTable)
+      .set({
+        actief: true,
+        uitvoerend: true,
+        profielId: null,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(functiesTable.id, bestaand.id));
+    return bestaand.id;
+  }
+
+  const [nieuw] = await db
+    .insert(functiesTable)
+    .values({
+      werkmaatschappij: E2E_FUNCTIE_WERKMAATSCHAPPIJ,
+      naam: E2E_UITVOERENDE_FUNCTIE_NAAM,
+      omschrijving: "Technische testfunctie voor het uitvoerende telefoonprofiel.",
+      uitvoerend: true,
+      actief: true,
+      profielId: null,
+    })
+    .returning({ id: functiesTable.id });
+  return nieuw.id;
+}
+
+async function zorgVoorMedewerker(
+  gebruikerId: number,
+  naam: string,
+  functieId: number | null,
+): Promise<number> {
   const [bestaand] = await db
     .select({ id: medewerkersTable.id })
     .from(medewerkersTable)
     .where(eq(medewerkersTable.gebruikerId, gebruikerId));
-  if (bestaand) return bestaand.id;
+
+  if (bestaand) {
+    await db
+      .update(medewerkersTable)
+      .set({
+        naam,
+        functieId,
+        actief: true,
+        inDienstSinds: null,
+        uitDienstPer: null,
+      })
+      .where(eq(medewerkersTable.id, bestaand.id));
+    await db
+      .delete(medewerkerAanstellingenTable)
+      .where(eq(medewerkerAanstellingenTable.medewerkerId, bestaand.id));
+    return bestaand.id;
+  }
 
   const [nieuw] = await db
     .insert(medewerkersTable)
-    .values({ gebruikerId, naam })
+    .values({ gebruikerId, naam, functieId, actief: true })
     .returning({ id: medewerkersTable.id });
   return nieuw.id;
 }
@@ -263,7 +330,11 @@ export async function setupE2eAccount(): Promise<number> {
     totpSecret: E2E_TOTP_SECRET,
     functietitels: ["Monteur"],
   });
-  await zorgVoorE2eVerlofsoort();
+  const functieId = await zorgVoorE2eUitvoerendeFunctie();
+  await Promise.all([
+    zorgVoorMedewerker(id, "E2E Test Monteur", functieId),
+    zorgVoorE2eVerlofsoort(),
+  ]);
   return id;
 }
 
@@ -295,11 +366,12 @@ export async function setupE2eTelefoonProfielen(): Promise<{
     rol: "hoofdbeheerder",
     functietitels: ["Directeur"],
   });
+  const uitvoerendeFunctieId = await zorgVoorE2eUitvoerendeFunctie();
 
   await Promise.all([
-    zorgVoorMedewerker(veldId, "E2E Telefoon Veld"),
-    zorgVoorMedewerker(kantoorId, "E2E Telefoon Kantoor"),
-    zorgVoorMedewerker(adminId, "E2E Telefoon Hoofdbeheerder"),
+    zorgVoorMedewerker(veldId, "E2E Telefoon Veld", uitvoerendeFunctieId),
+    zorgVoorMedewerker(kantoorId, "E2E Telefoon Kantoor", null),
+    zorgVoorMedewerker(adminId, "E2E Telefoon Hoofdbeheerder", null),
     zorgVoorE2eVerlofsoort(),
   ]);
   return { veldId, kantoorId, adminId };
@@ -414,13 +486,20 @@ export async function archiveerE2eUurcodesAccount(): Promise<void> {
 
 // App-variant (monteur-suite) van het uurcodes-zonder-recht-account.
 export async function setupE2eUurcodesAppAccount(): Promise<number> {
-  return maakOfUpdateE2eAccount({
+  const gebruikerId = await maakOfUpdateE2eAccount({
     email: E2E_UURCODES_APP_EMAIL,
     naam: "E2E App Uurcodes Zonder Recht",
     wachtwoord: E2E_UURCODES_APP_WACHTWOORD,
     totpSecret: E2E_UURCODES_APP_TOTP_SECRET,
     bevoegdheden: { planning: 1 },
   });
+  const functieId = await zorgVoorE2eUitvoerendeFunctie();
+  await zorgVoorMedewerker(
+    gebruikerId,
+    "E2E App Uurcodes Zonder Recht",
+    functieId,
+  );
+  return gebruikerId;
 }
 
 export async function archiveerE2eUurcodesAppAccount(): Promise<void> {

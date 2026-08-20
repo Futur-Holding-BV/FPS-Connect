@@ -1,0 +1,237 @@
+# Herbeoordeling acceptatieregister — 2026-08-20
+
+- Modus: GEMETEN en toegepast
+- Inventaris: 213 open technische punten, elk exact één keer beoordeeld
+- Auditgrens (herhaalbaar met --audit-op): 2026-08-20T05:45:26.907Z
+- Pad-gebaseerde code-audit: 436 registerregels gecontroleerd
+- Veertiendaagse deelcontrole: 430 regels met een relevante padwijziging in het venster
+- Niet pad-gebaseerd controleerbaar: 2 (NP_INKOOP_01#2:bron, NP_INKOOP_01#3:bron)
+- Verouderde gehaalde oordelen gecorrigeerd: 0
+- Scriptpromoties die nog op een groene run wachten: 0
+- Beoordeeld op: 2026-08-20T05:45:26.907Z
+- Commit: 1c213454df137e552f580f5513c89367f2132995
+
+## Verdeling
+
+| Stand | Nieuw | Verschil sinds ochtendmeting |
+| --- | ---: | ---: |
+| gehaald | 16 | -193 |
+| niet_gebouwd | 20 | -3 |
+| onbewezen | 386 | +196 |
+| wacht_op_rene | 16 | +0 |
+
+## Herbeoordeelde technische punten
+
+- AANVRAAG_01#6: onbewezen — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#1: niet_gebouwd — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#2: niet_gebouwd — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#3: onbewezen — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#4: niet_gebouwd — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#5: niet_gebouwd — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#6: onbewezen — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#7: onbewezen — huidige code
+- AANVULLING-IMPORT-BESTAANDE-GEREEDSCHAPSLIJST-UI#8: niet_gebouwd — huidige code
+- AKKOORD_01#1: gehaald — actuele groene script-run
+- AKKOORD_01#2: gehaald — actuele groene script-run
+- AKKOORD_01#3: onbewezen — huidige code
+- AKKOORD_01#4: onbewezen — huidige code
+- AKKOORD_01#5: onbewezen — huidige code
+- AKKOORD_01#6: niet_gebouwd — huidige code
+- AKKOORD_01#7: onbewezen — huidige code
+- BOUW_01#1: onbewezen — huidige code
+- BOUW_01#2: onbewezen — huidige code
+- BOUW_01#3: onbewezen — huidige code
+- BOUW_01#4: onbewezen — huidige code
+- BOUW_01#5: onbewezen — huidige code
+- BOUW_01#6: onbewezen — huidige code
+- BOUW_01#7: onbewezen — huidige code
+- BOUW_01#9: onbewezen — huidige code
+- BOUW_01#10: onbewezen — huidige code
+- CALCULATIE_AI_01#6: onbewezen — huidige code
+- CALC_INVOER_01#1: onbewezen — huidige code
+- CALC_INVOER_01#2: onbewezen — huidige code
+- CALC_INVOER_01#3: onbewezen — huidige code
+- CALC_INVOER_01#4: onbewezen — huidige code
+- CALC_INVOER_01#5: onbewezen — huidige code
+- CALC_INVOER_01#6: onbewezen — huidige code
+- CALC_INVOER_01#7: onbewezen — huidige code
+- CONTRACT_01#1: onbewezen — huidige code
+- CONTRACT_01#3: onbewezen — huidige code
+- CONTRACT_01#6: onbewezen — huidige code
+- CONTRACT_01#7: onbewezen — huidige code
+- DOCUMENT_01#1: onbewezen — huidige code
+- DOCUMENT_01#2: onbewezen — huidige code
+- DOCUMENT_01#3: onbewezen — huidige code
+- DOCUMENT_01#4: onbewezen — huidige code
+- DOCUMENT_01#5: onbewezen — huidige code
+- DOCUMENT_01#6: onbewezen — huidige code
+- FACTUUR_01#1: onbewezen — huidige code
+- FACTUUR_01#2: onbewezen — huidige code
+- FACTUUR_01#3: onbewezen — huidige code
+- FACTUUR_01#4: onbewezen — huidige code
+- FACTUUR_01#5: onbewezen — huidige code
+- FACTUUR_03#1: gehaald — actuele groene script-run
+- FACTUUR_03#2: niet_gebouwd — huidige code
+- FACTUUR_03#3: niet_gebouwd — huidige code
+- FACTUUR_03#4: niet_gebouwd — huidige code
+- FACTUUR_03#5: niet_gebouwd — huidige code
+- FACTUUR_03#6: niet_gebouwd — huidige code
+- FACTUUR_03#7: niet_gebouwd — huidige code
+- FACTUUR_03#8: niet_gebouwd — huidige code
+- FINANCIEEL_AI_01#1: onbewezen — huidige code
+- FINANCIEEL_AI_01#2: onbewezen — huidige code
+- FINANCIEEL_AI_01#3: onbewezen — huidige code
+- FINANCIEEL_AI_01#4: onbewezen — huidige code
+- FINANCIEEL_AI_01#5: onbewezen — huidige code
+- FINANCIEEL_AI_01#6: onbewezen — huidige code
+- FINANCIEEL_AI_01#7: onbewezen — huidige code
+- HERSTEL_01#1: onbewezen — huidige code
+- HERSTEL_01#2: onbewezen — huidige code
+- HERSTEL_01#4: onbewezen — huidige code
+- HERSTEL_01#5: onbewezen — huidige code
+- HERSTEL_01#6: onbewezen — huidige code
+- HERSTEL_01#7: onbewezen — huidige code
+- HRM_01#1: onbewezen — huidige code
+- HRM_01#2: onbewezen — huidige code
+- HRM_01#4: onbewezen — huidige code
+- HRM_01#5: onbewezen — huidige code
+- HRM_01#6: onbewezen — huidige code
+- HRM_01#7: onbewezen — huidige code
+- HRM_01#8: onbewezen — huidige code
+- HRM_01#10: onbewezen — huidige code
+- INKOOP_01#1: niet_gebouwd — huidige code
+- INKOOP_01#2: niet_gebouwd — huidige code
+- INKOOP_01#3: niet_gebouwd — huidige code
+- INKOOP_01#4: onbewezen — huidige code
+- INKOOP_01#5: onbewezen — huidige code
+- INKOOP_01#6: onbewezen — huidige code
+- INKOOP_01#7: onbewezen — huidige code
+- INKOOP_01#8: niet_gebouwd — huidige code
+- INKOOP_01#9: onbewezen — huidige code
+- INKOOP_01#10: onbewezen — huidige code
+- INKOOP_01#11: onbewezen — huidige code
+- INKOOP_AI_01#1: onbewezen — huidige code
+- INKOOP_AI_01#2: onbewezen — huidige code
+- INKOOP_AI_01#3: onbewezen — huidige code
+- INKOOP_AI_01#4: onbewezen — huidige code
+- INKOOP_AI_01#5: onbewezen — huidige code
+- INKOOP_AI_01#6: onbewezen — huidige code
+- INKOOP_AI_01#7: onbewezen — huidige code
+- KALENDER_01#1: onbewezen — huidige code
+- KALENDER_01#2: onbewezen — huidige code
+- KALENDER_01#3: onbewezen — huidige code
+- KALENDER_01#4: onbewezen — huidige code
+- KALENDER_01#5: onbewezen — huidige code
+- KALENDER_01#6: onbewezen — huidige code
+- KALENDER_01#7: onbewezen — huidige code
+- KALENDER_01#8: onbewezen — huidige code
+- KALENDER_01#9: onbewezen — huidige code
+- KALENDER_01#10: onbewezen — huidige code
+- KALENDER_01#11: onbewezen — huidige code
+- KALENDER_01#12: onbewezen — huidige code
+- LEVERANCIER_01#1: onbewezen — huidige code
+- LEVERANCIER_01#2: onbewezen — huidige code
+- LEVERANCIER_01#3: onbewezen — huidige code
+- LEVERANCIER_01#4: onbewezen — huidige code
+- LEVERANCIER_01#5: onbewezen — huidige code
+- LEVERANCIER_01#6: onbewezen — huidige code
+- LEVERANCIER_01#7: onbewezen — huidige code
+- LOON_01#4: onbewezen — huidige code
+- LOON_01#5: onbewezen — huidige code
+- LOON_01#6: onbewezen — huidige code
+- LOON_01#7: onbewezen — huidige code
+- MAIL_01#1: onbewezen — huidige code
+- MAIL_01#2: onbewezen — huidige code
+- MAIL_01#3: onbewezen — huidige code
+- MAIL_01#4: onbewezen — huidige code
+- MAIL_01#5: onbewezen — huidige code
+- MAIL_01#6: onbewezen — huidige code
+- MAIL_01#7: onbewezen — huidige code
+- MAIL_01#8: onbewezen — huidige code
+- MAIL_01#9: onbewezen — huidige code
+- MATERIAAL_01#4: onbewezen — huidige code
+- MERGE_01#2: onbewezen — huidige code
+- MERGE_01#3: onbewezen — huidige code
+- MERGE_01#4: onbewezen — huidige code
+- MERGE_01#6: onbewezen — huidige code
+- MONTEURAPP_01#4: onbewezen — huidige code
+- MONTEURAPP_01#5: onbewezen — huidige code
+- MONTEURAPP_01#6: onbewezen — huidige code
+- NAV_01#1: onbewezen — huidige code
+- NAV_01#2: onbewezen — huidige code
+- NAV_01#5: onbewezen — huidige code
+- NOTITIE_01#6: onbewezen — huidige code
+- NP_INKOOP_01#4: onbewezen — huidige code
+- NUMMER_01#3: onbewezen — huidige code
+- NUMMER_01#6: onbewezen — huidige code
+- NUMMER_01#7: onbewezen — huidige code
+- OPDRACHT-MAAK-N-COMPLEET-END-TO-END-TESTSCENARIO#1: onbewezen — huidige code
+- OPDRACHT-MAAK-N-COMPLEET-END-TO-END-TESTSCENARIO#2: onbewezen — huidige code
+- OPDRACHT-MAAK-N-COMPLEET-END-TO-END-TESTSCENARIO#3: onbewezen — huidige code
+- OPDRACHT-MAAK-N-COMPLEET-END-TO-END-TESTSCENARIO#4: onbewezen — huidige code
+- OPDRACHT-MAAK-N-COMPLEET-END-TO-END-TESTSCENARIO#5: onbewezen — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#1: niet_gebouwd — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#2: niet_gebouwd — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#3: onbewezen — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#4: onbewezen — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#5: onbewezen — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#6: niet_gebouwd — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#8: onbewezen — huidige code
+- OPDRACHT-REPLIT-NOODMODUS-EN-FALLBACK-BIJ-STORIN#9: onbewezen — huidige code
+- PANEEL_01#2: onbewezen — huidige code
+- PANEEL_01#3: onbewezen — huidige code
+- PANEEL_01#7: onbewezen — huidige code
+- PLANNER_01#1: onbewezen — huidige code
+- PLANNER_01#2: onbewezen — huidige code
+- PLANNER_01#3: onbewezen — huidige code
+- PLANNER_01#4: onbewezen — huidige code
+- PLANNER_01#5: onbewezen — huidige code
+- PLANNER_01#6: onbewezen — huidige code
+- PLANNER_01#7: onbewezen — huidige code
+- PLANNER_01#8: onbewezen — huidige code
+- PLANNER_01#9: onbewezen — huidige code
+- PLANNER_01#10: onbewezen — huidige code
+- PLANNER_01#11: onbewezen — huidige code
+- PRIJS_01#8: onbewezen — huidige code
+- PRIJS_01#11: onbewezen — huidige code
+- RECHTEN_01#1: onbewezen — huidige code
+- RECHTEN_01#2: onbewezen — huidige code
+- RECHTEN_01#3: onbewezen — huidige code
+- RECHTEN_01#4: onbewezen — huidige code
+- RECHTEN_01#5: onbewezen — huidige code
+- RECHTEN_01#6: onbewezen — huidige code
+- ROLLEN#1: onbewezen — huidige code
+- ROLLEN#2: onbewezen — huidige code
+- ROLLEN#3: onbewezen — huidige code
+- ROLLEN#4: onbewezen — huidige code
+- ROLLEN#5: onbewezen — huidige code
+- ROLLEN#6: onbewezen — huidige code
+- ROLLEN#7: onbewezen — huidige code
+- ROLLEN#8: onbewezen — huidige code
+- ROLLEN#9: onbewezen — huidige code
+- ROLLEN#10: onbewezen — huidige code
+- SCENARIO_01#1: onbewezen — huidige code
+- SCENARIO_01#2: onbewezen — huidige code
+- SCENARIO_01#3: onbewezen — huidige code
+- SCENARIO_01#4: onbewezen — huidige code
+- SCENARIO_01#5: onbewezen — huidige code
+- SCENARIO_01#6: onbewezen — huidige code
+- SCENARIO_01#7: onbewezen — huidige code
+- SCENARIO_01#8: onbewezen — huidige code
+- SCHEMA_01#1: onbewezen — huidige code
+- SCHEMA_01#2: onbewezen — huidige code
+- SCHEMA_01#3: onbewezen — huidige code
+- SCHEMA_01#4: onbewezen — huidige code
+- SCHEMA_01#5: onbewezen — huidige code
+- SCHEMA_01#6: onbewezen — huidige code
+- UREN_01#12: onbewezen — huidige code
+- UREN_01#15: onbewezen — huidige code
+- VORM_01#1: onbewezen — huidige code
+- VORM_01#2: onbewezen — huidige code
+- VORM_01#3: onbewezen — huidige code
+- VORM_01#4: onbewezen — huidige code
+- VORM_01#5: onbewezen — huidige code
+- VORM_01#6: onbewezen — huidige code
+- WVB_01#5: onbewezen — huidige code
+- WVB_01#7: onbewezen — huidige code
+- WVB_01#8: onbewezen — huidige code

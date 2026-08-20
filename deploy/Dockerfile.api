@@ -18,6 +18,8 @@ COPY lib/api-zod/package.json             lib/api-zod/
 COPY lib/api-zod/tsconfig.json            lib/api-zod/
 COPY lib/db/package.json                  lib/db/
 COPY lib/db/tsconfig.json                 lib/db/
+COPY lib/foutmonitoring/package.json      lib/foutmonitoring/
+COPY lib/foutmonitoring/tsconfig.json     lib/foutmonitoring/
 COPY lib/object-storage-web/package.json  lib/object-storage-web/
 COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
 COPY lib/permissies/package.json          lib/permissies/

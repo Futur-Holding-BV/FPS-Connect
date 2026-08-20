@@ -44,9 +44,17 @@ const services: Service[] = [
   {
     naam: "expo monteur-app",
     // De Expo-app draait buiten de /api-proxy op het Expo dev-domein.
+    // CI mag nooit een lokale, genegeerde .env met een oud Replit-domein
+    // inbakken: de runner levert de actuele domeinen zelf expliciet aan.
     healthUrl: expoDomain ? `https://${expoDomain}/status` : "",
-    startCommando: "pnpm --filter @workspace/monteur-app run dev",
-    startEnv: { PORT: "21646", BASE_PATH: "/monteur-app/" },
+    startCommando: "pnpm --filter @workspace/monteur-app exec expo start --localhost --port $PORT --clear",
+    startEnv: {
+      PORT: "21646",
+      BASE_PATH: "/monteur-app/",
+      EXPO_NO_DOTENV: "1",
+      __EXPO_ENV_LOADED: "[]",
+      EXPO_PUBLIC_DOMAIN: process.env.REPLIT_DEV_DOMAIN ?? "",
+    },
     startTimeoutMs: 180_000,
   },
 ];

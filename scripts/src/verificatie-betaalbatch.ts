@@ -13,6 +13,7 @@ import {
   setupE2eWebAdminAccount,
   E2E_WEB_ADMIN_EMAIL, E2E_WEB_ADMIN_WACHTWOORD, E2E_WEB_ADMIN_TOTP_SECRET,
 } from "./e2e-monteur-testaccount";
+import { registreerGroenBewijs } from "./lib/acceptatieregisterBewijs";
 
 const BASIS = process.env.API_BASIS
   ?? (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}/api` : "http://localhost:8080/api");
@@ -193,6 +194,21 @@ async function main() {
     }
   }
 
+  if (gefaald === 0) {
+    const bijgewerkt = await registreerGroenBewijs({
+      opdrachtCode: "FACTUUR_03",
+      puntNummers: [1],
+      scriptPad: "scripts/src/verificatie-betaalbatch.ts",
+      bronBestand: "FACTUUR_03_betaling_1786157194600.md",
+      relevanteCodepaden: [
+        "artifacts/api-server/src/routes/betaalbatch.ts",
+        "lib/db/src/schema/facturen.ts",
+      ],
+      volledigGeslaagd: true,
+      toelichting: "Groene HTTP-run bewijst de selectielijst vóór bestandsaanmaak, inclusief betaalbaar- en uitsluitredenen.",
+    });
+    console.log(`  ✓ ${bijgewerkt} gekoppeld registerpunt automatisch op gehaald gezet`);
+  }
   console.log(`\nResultaat: ${geslaagd} geslaagd, ${gefaald} gefaald`);
   process.exit(gefaald > 0 ? 1 : 0);
 }

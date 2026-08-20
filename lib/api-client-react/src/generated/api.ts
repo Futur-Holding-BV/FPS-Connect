@@ -36,6 +36,7 @@ import type {
   AbonnementInput,
   AbonnementUpdate,
   AcceptatiePunt,
+  AcceptatiePuntUpdate,
   AccountviewExportLog,
   AccountviewExportResultaat,
   AccountviewInstellingen,
@@ -1074,7 +1075,7 @@ import type {
   UitzendbureauKoppelInput,
   UitzendbureauKoppelOverzicht,
   UitzendbureauKoppelResultaat,
-  UpdateAcceptatiePuntBody,
+  UpdateAcceptatiePunt409,
   UpdateActiepuntBody,
   UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
@@ -1289,6 +1290,8 @@ export const getHealthCheckQueryKey = () => {
     `/api/healthz`
     ] as const;
     }
+
+
 export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
@@ -1364,6 +1367,8 @@ export const getGetVersieQueryKey = () => {
     `/api/versie`
     ] as const;
     }
+
+
 export const getGetVersieQueryOptions = <TData = Awaited<ReturnType<typeof getVersie>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVersie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
@@ -59554,23 +59559,23 @@ export const getUpdateAcceptatiePuntUrl = (id: number,) => {
  * @summary Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
  */
 export const updateAcceptatiePunt = async (id: number,
-    updateAcceptatiePuntBody: UpdateAcceptatiePuntBody, options?: RequestInit): Promise<AcceptatiePunt> => {
+    acceptatiePuntUpdate: AcceptatiePuntUpdate, options?: RequestInit): Promise<AcceptatiePunt> => {
 
   return customFetch<AcceptatiePunt>(getUpdateAcceptatiePuntUrl(id),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateAcceptatiePuntBody)
+    body: JSON.stringify(acceptatiePuntUpdate)
   }
 );}
 
 
 
 
-export const getUpdateAcceptatiePuntMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext> => {
+export const getUpdateAcceptatiePuntMutationOptions = <TError = ErrorType<UpdateAcceptatiePunt409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<AcceptatiePuntUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<AcceptatiePuntUpdate>}, TContext> => {
 
 const mutationKey = ['updateAcceptatiePunt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -59582,7 +59587,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAcceptatiePunt>>, {id: number;data: BodyType<UpdateAcceptatiePuntBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAcceptatiePunt>>, {id: number;data: BodyType<AcceptatiePuntUpdate>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  updateAcceptatiePunt(id,data,requestOptions)
@@ -59596,18 +59601,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateAcceptatiePuntMutationResult = NonNullable<Awaited<ReturnType<typeof updateAcceptatiePunt>>>
-    export type UpdateAcceptatiePuntMutationBody = BodyType<UpdateAcceptatiePuntBody>
-    export type UpdateAcceptatiePuntMutationError = ErrorType<unknown>
+    export type UpdateAcceptatiePuntMutationBody = BodyType<AcceptatiePuntUpdate>
+    export type UpdateAcceptatiePuntMutationError = ErrorType<UpdateAcceptatiePunt409>
 
     /**
  * @summary Stand/bewijs/toelichting van een acceptatiepunt bijwerken (hoofdbeheerder)
  */
-export const useUpdateAcceptatiePunt = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<UpdateAcceptatiePuntBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useUpdateAcceptatiePunt = <TError = ErrorType<UpdateAcceptatiePunt409>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAcceptatiePunt>>, TError,{id: number;data: BodyType<AcceptatiePuntUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateAcceptatiePunt>>,
         TError,
-        {id: number;data: BodyType<UpdateAcceptatiePuntBody>},
+        {id: number;data: BodyType<AcceptatiePuntUpdate>},
         TContext
       > => {
       return useMutation(getUpdateAcceptatiePuntMutationOptions(options));

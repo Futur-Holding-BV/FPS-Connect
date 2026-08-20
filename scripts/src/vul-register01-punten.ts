@@ -10,6 +10,7 @@ const punten: { nr: number; oms: string; stand: string; bewijs: string }[] = [
   { nr: 4, oms: "Bouwcontrole faalt bij oplevering zonder bijgewerkte registerregels; opdracht met onbewezen/niet_gebouwd punten is hoogstens deels opgeleverd", stand: "gehaald", bewijs: "scripts/src/oplever-check.ts + registercontrole in kwaliteitscheck.ts" },
   { nr: 5, oms: "Statusrapport docs/status/STATUS_<datum>.md wordt gegenereerd uit het register in plaats van handmatig geschreven", stand: "gehaald", bewijs: "scripts/src/genereer-statusrapport.ts → docs/status/STATUS_2026-08-19.md" },
 ];
+const beoordeeldOp = new Date();
 
 for (const p of punten) {
   await db
@@ -21,6 +22,11 @@ for (const p of punten) {
       stand: p.stand,
       bewijsVindplaats: p.bewijs,
       bronBestand: "chat-opdracht 2026-08-19",
+      bronSoort: "code",
+      bronDatum: beoordeeldOp,
+      laatsteCodeWijzigingOp: beoordeeldOp,
+      relevanteCodepaden: ["scripts/src/verificatie-register01.ts"],
+      beoordeeldOp,
     })
     .onConflictDoUpdate({
       target: [acceptatieRegisterTable.opdrachtCode, acceptatieRegisterTable.puntNummer],

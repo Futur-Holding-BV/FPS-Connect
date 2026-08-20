@@ -5,10 +5,13 @@ description: Register per acceptatiepunt met vier standen; oplevering en statusr
 
 # Acceptatieregister
 
-- Tabel `acceptatie_register`: één regel per (opdracht_code, punt_nummer); vier standen: `gehaald`, `niet_gebouwd`, `onbewezen` (gebouwd maar bewijs ontbreekt), `wacht_op_rene`. Standen zijn fail-closed: alleen `gehaald` bij aantoonbaar bewijs.
-- **Oplevering van een opdracht loopt door het register**: bij elke oplevering standen + bewijs_vindplaats bijwerken, dan `scripts/src/oplever-check.ts <CODE>` draaien (faalt op open punten of niet-vandaag-bijgewerkte regels). De kwaliteitscheck eist dat opdrachtcodes in de nieuwste changelog-sectie diezelfde dag bijgewerkte registerregels hebben (lokaal, met DB; CI heeft geen DB).
-- **Statusrapport wordt gegenereerd**, niet geschreven: `scripts/src/genereer-statusrapport.ts` → `docs/status/STATUS_<datum>.md`. Nooit meer handmatig statusrapporten opstellen.
-- Vulling uit Acceptatie-paragrafen via `vul-acceptatieregister.ts` (herdraaibaar; bewaart stand/bewijs). Opdrachten die alleen via chat binnenkomen handmatig als registerregels toevoegen — anders blokkeert de kwaliteitscheck op de changelog-code.
-- Invarianten zitten in DB (CHECK op stand) én API (strikte PATCH: geen lege body, "gehaald" eist bewijs-vindplaats); oplever-check faalt zodra één regel niet op de opleverdag is herbeoordeeld.
-- **Why:** vinkje-per-opdracht was te grof; René wil per punt zien wat echt bewezen is, en oplevering zonder herbeoordeling mag niet kunnen.
-- Les: migratiemap is `lib/db/src/migrations/` (niet `lib/db/migrations/`).
+- Het register oordeelt per acceptatiepunt in precies vier standen en werkt fail-closed: alleen aantoonbaar, actueel bewijs mag `gehaald` opleveren.
+- Bewijskracht is altijd: volledig groene script-run → huidige code → meetrapport → antwoorddocument. Een zwakkere bron mag een sterker actueel oordeel niet overschrijven.
+- Actualiteit wordt bepaald tegenover concrete relevante codewijzigingen. Niet-herleidbaar of ouder bewijs valt terug naar `onbewezen` totdat een nieuwe meting bestaat.
+- Scriptbewijs promoveert alleen de eigen gekoppelde punten, uitsluitend na een volledig groene run en idempotent bij herhaling.
+- Elke regel die op een hoofdbeheerder wacht heeft precies één open actie; een ander oordeel sluit die actie automatisch.
+- Een historische bulkhergrading is eenmalig: bewaar de eerste rijbaseline, commit data plus runmarker atomair en coördineer alle schrijvers met hetzelfde gedeelde/exclusieve DB-slot. Een retry slaat nieuwere oordelen over.
+
+**Why:** de eerste vulling liet ouder bewijs te lang als gehaald staan; zonder baseline en schrijverslot kon een afgebroken of gelijktijdige hergrading bovendien een nieuwer oordeel terug overschrijven.
+
+**How to apply:** registreer bronsoort, bron- en codedatum plus relevante codegrens; meet opnieuw na relevante codewijzigingen, promoveer nooit handmatig op basis van alleen een oud document en laat elke nieuwe registerschrijver het coördinatieslot delen.

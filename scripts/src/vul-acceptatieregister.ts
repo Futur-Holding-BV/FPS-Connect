@@ -118,7 +118,18 @@ async function main(): Promise<void> {
     for (const p of o.punten) {
       const r = await db
         .insert(acceptatieRegisterTable)
-        .values({ opdrachtCode: o.code, puntNummer: p.nummer, omschrijving: p.tekst, bronBestand: o.bestand })
+        .values({
+          opdrachtCode: o.code,
+          puntNummer: p.nummer,
+          omschrijving: p.tekst,
+          bronBestand: o.bestand,
+          bewijsVindplaats: `attached_assets/${o.bestand}`,
+          bronSoort: "antwoorddocument",
+          bronDatum: new Date(o.ts || Date.now()),
+          laatsteCodeWijzigingOp: new Date(o.ts || Date.now()),
+          relevanteCodepaden: [`attached_assets/${o.bestand}`],
+          beoordeeldOp: new Date(),
+        })
         .onConflictDoUpdate({
           target: [acceptatieRegisterTable.opdrachtCode, acceptatieRegisterTable.puntNummer],
           set: { omschrijving: p.tekst, bronBestand: o.bestand },

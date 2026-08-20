@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateAcceptatiePuntBodyStand = typeof UpdateAcceptatiePuntBodyStand[keyof typeof UpdateAcceptatiePuntBodyStand];
+export type AcceptatiePuntUpdateStand = typeof AcceptatiePuntUpdateStand[keyof typeof AcceptatiePuntUpdateStand];
 
 
-export const UpdateAcceptatiePuntBodyStand = {
+export const AcceptatiePuntUpdateStand = {
   gehaald: 'gehaald',
   niet_gebouwd: 'niet_gebouwd',
   onbewezen: 'onbewezen',

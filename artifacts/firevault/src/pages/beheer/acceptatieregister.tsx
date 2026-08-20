@@ -21,9 +21,12 @@ import {
   UserRound,
   ChevronDown,
   ChevronRight,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 type Stand = "gehaald" | "niet_gebouwd" | "onbewezen" | "wacht_op_rene";
+type BronSoort = "bewijsscript" | "code" | "meetrapport" | "antwoorddocument";
 
 const STAND_META: Record<Stand, { label: string; icon: typeof CheckCircle2; klasse: string }> = {
   gehaald: { label: "Gehaald", icon: CheckCircle2, klasse: "border-emerald-200 bg-emerald-50 text-emerald-700" },
@@ -31,6 +34,34 @@ const STAND_META: Record<Stand, { label: string; icon: typeof CheckCircle2; klas
   onbewezen: { label: "Gebouwd, onbewezen", icon: CircleHelp, klasse: "border-amber-200 bg-amber-50 text-amber-700" },
   wacht_op_rene: { label: "Wacht op René", icon: UserRound, klasse: "border-sky-200 bg-sky-50 text-sky-700" },
 };
+
+const BRON_SOORT_LABEL: Record<BronSoort, string> = {
+  bewijsscript: "Bewijsscript",
+  code: "Code",
+  meetrapport: "Meetrapport",
+  antwoorddocument: "Antwoorddocument",
+};
+const BRON_SOORTEN: BronSoort[] = ["bewijsscript", "code", "meetrapport", "antwoorddocument"];
+
+function formatDatum(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function ActueelBadge({ actueel }: { actueel: boolean }) {
+  const Icon = actueel ? ShieldCheck : ShieldAlert;
+  const klasse = actueel
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-red-200 bg-red-50 text-red-700";
+  return (
+    <Badge variant="outline" className={`gap-1 whitespace-nowrap ${klasse}`}>
+      <Icon className="h-3 w-3" />
+      {actueel ? "Bewijs actueel" : "Bewijs verouderd"}
+    </Badge>
+  );
+}
 
 const STAND_VOLGORDE: Stand[] = ["niet_gebouwd", "onbewezen", "wacht_op_rene", "gehaald"];
 
@@ -50,21 +81,65 @@ function PuntRij({ punt }: { punt: AcceptatiePunt }) {
   const update = useUpdateAcceptatiePunt();
   const [bewerken, setBewerken] = useState(false);
   const [bewijs, setBewijs] = useState(punt.bewijs_vindplaats ?? "");
+  const [bronBestand, setBronBestand] = useState(punt.bron_bestand ?? "");
+  const [bronSoort, setBronSoort] = useState<BronSoort | "">((punt.bron_soort as BronSoort) ?? "");
+  const [bronDatum, setBronDatum] = useState(punt.bron_datum ? punt.bron_datum.slice(0, 10) : "");
+  const [codeWijziging, setCodeWijziging] = useState(
+    punt.laatste_code_wijziging_op ? punt.laatste_code_wijziging_op.slice(0, 10) : "",
+  );
+  const [fout, setFout] = useState<string | null>(null);
 
   const ververs = () => queryClient.invalidateQueries({ queryKey: getListAcceptatieregisterQueryKey() });
 
   function zetStand(stand: Stand) {
     if (update.isPending || punt.stand === stand) return;
-    update.mutate({ id: punt.id, data: { stand } }, { onSuccess: ververs });
+    setFout(null);
+    update.mutate(
+      { id: punt.id, data: { stand } },
+      {
+        onSuccess: ververs,
+        onError: (e: unknown) => {
+          const err = e as { response?: { data?: { error?: string } } };
+          setFout(err.response?.data?.error ?? "Bijwerken mislukt — controleer het bewijs.");
+        },
+      },
+    );
   }
 
   function bewaarBewijs() {
     if (update.isPending) return;
+    setFout(null);
+    if (!bronSoort || !bronDatum || !codeWijziging) {
+      setFout("Bronsoort, brondatum en laatste codewijziging zijn verplicht.");
+      return;
+    }
     update.mutate(
-      { id: punt.id, data: { bewijs_vindplaats: bewijs.trim() || null } },
-      { onSuccess: () => { setBewerken(false); ververs(); } },
+      {
+        id: punt.id,
+        data: {
+          bewijs_vindplaats: bewijs.trim() || null,
+          bron_bestand: bronBestand.trim() || null,
+          bron_soort: bronSoort,
+          bron_datum: `${bronDatum}T00:00:00.000Z`,
+          laatste_code_wijziging_op: `${codeWijziging}T00:00:00.000Z`,
+        },
+      },
+      {
+        onSuccess: () => {
+          setBewerken(false);
+          ververs();
+        },
+        onError: (e: unknown) => {
+          const err = e as { response?: { data?: { error?: string } } };
+          setFout(err.response?.data?.error ?? "Opslaan mislukt.");
+        },
+      },
     );
   }
+
+  const bronSoortLabel = punt.bron_soort ? BRON_SOORT_LABEL[punt.bron_soort as BronSoort] : null;
+  const bronDatumLabel = formatDatum(punt.bron_datum);
+  const codeDatumLabel = formatDatum(punt.laatste_code_wijziging_op);
 
   return (
     <div className="py-3">
@@ -78,27 +153,78 @@ function PuntRij({ punt }: { punt: AcceptatiePunt }) {
           {punt.bewijs_vindplaats && !bewerken && (
             <p className="text-xs text-muted-foreground">
               Bewijs: <span className="font-mono">{punt.bewijs_vindplaats}</span>
+              {punt.bron_bestand && <span className="ml-1">· <span className="font-mono">{punt.bron_bestand}</span></span>}
             </p>
           )}
+          {!bewerken && (bronSoortLabel || bronDatumLabel) && (
+            <p className="text-xs text-muted-foreground">
+              {bronSoortLabel && <span>Bronsoort: <span className="font-medium">{bronSoortLabel}</span></span>}
+              {bronSoortLabel && bronDatumLabel && <span> · </span>}
+              {bronDatumLabel && <span>Brondatum: <span className="font-medium">{bronDatumLabel}</span></span>}
+              {codeDatumLabel && <span> · Laatste codewijziging: <span className="font-medium">{codeDatumLabel}</span></span>}
+            </p>
+          )}
+          {fout && <p className="text-xs font-medium text-red-600">{fout}</p>}
           {bewerken && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="grid max-w-md gap-2 pt-1">
               <Input
                 value={bewijs}
                 onChange={(e) => setBewijs(e.target.value)}
                 placeholder="Vindplaats van het bewijs (script, meetdocument…)"
-                className="h-8 max-w-md text-xs"
+                className="h-8 text-xs"
               />
-              <Button type="button" size="sm" variant="outline" disabled={update.isPending} onClick={bewaarBewijs}>
-                Opslaan
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setBewerken(false)}>
-                Annuleren
-              </Button>
+              <Input
+                value={bronBestand}
+                onChange={(e) => setBronBestand(e.target.value)}
+                placeholder="Bronbestand (pad/naam van het bewijsbestand)"
+                className="h-8 text-xs"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={bronSoort}
+                  onChange={(e) => setBronSoort(e.target.value as BronSoort | "")}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="">Bronsoort…</option>
+                  {BRON_SOORTEN.map((s) => (
+                    <option key={s} value={s}>
+                      {BRON_SOORT_LABEL[s]}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Brondatum
+                  <Input
+                    type="date"
+                    value={bronDatum}
+                    onChange={(e) => setBronDatum(e.target.value)}
+                    className="h-8 w-36 text-xs"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Laatste codewijziging
+                  <Input
+                    type="date"
+                    value={codeWijziging}
+                    onChange={(e) => setCodeWijziging(e.target.value)}
+                    className="h-8 w-36 text-xs"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={update.isPending} onClick={bewaarBewijs}>
+                  Opslaan
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setBewerken(false); setFout(null); }}>
+                  Annuleren
+                </Button>
+              </div>
             </div>
           )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-1">
           <StandBadge stand={punt.stand} />
+          {(punt.bron_soort || punt.stand === "gehaald") && <ActueelBadge actueel={punt.bewijs_actueel} />}
           <div className="flex items-center gap-1">
             {STAND_VOLGORDE.map((s) => {
               const meta = STAND_META[s];

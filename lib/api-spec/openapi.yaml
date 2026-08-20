@@ -17481,18 +17481,23 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                stand: { type: string, enum: [gehaald, niet_gebouwd, onbewezen, wacht_op_rene] }
-                bewijs_vindplaats: { type: string, nullable: true }
-                toelichting: { type: string, nullable: true }
+            schema: { $ref: '#/components/schemas/AcceptatiePuntUpdate' }
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AcceptatiePunt' }
+        '409':
+          description: >-
+            Bewijs is verouderd — niet-code bewijs met een bron_datum ouder dan
+            de laatste codewijziging kan niet naar "gehaald".
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
   /dit-werkt-niet:
     post:
       operationId: meldDitWerktNiet
@@ -43970,7 +43975,7 @@ components:
         werkgever_id: { type: integer, nullable: true }
     AcceptatiePunt:
       type: object
-      required: [id, opdracht_code, punt_nummer, omschrijving, stand, bijgewerkt_op]
+      required: [id, opdracht_code, punt_nummer, omschrijving, stand, bron_soort, bron_datum, laatste_code_wijziging_op, relevante_codepaden, beoordeeld_op, bewijs_actueel, bijgewerkt_op]
       properties:
         id: { type: integer }
         opdracht_code: { type: string }
@@ -43979,8 +43984,41 @@ components:
         stand: { type: string, enum: [gehaald, niet_gebouwd, onbewezen, wacht_op_rene] }
         bewijs_vindplaats: { type: string, nullable: true }
         bron_bestand: { type: string, nullable: true }
+        bron_soort: { type: string, enum: [bewijsscript, code, meetrapport, antwoorddocument] }
+        bron_datum: { type: string, format: date-time }
+        laatste_code_wijziging_op: { type: string, format: date-time }
+        relevante_codepaden:
+          type: array
+          items: { type: string }
+        beoordeeld_op: { type: string, format: date-time }
+        bewijs_actueel:
+          type: boolean
+          description: >-
+            true wanneer het geleverde bewijs actueel is t.o.v. de laatste
+            codewijziging: bron_datum is niet ouder dan
+            laatste_code_wijziging_op.
         toelichting: { type: string, nullable: true }
         bijgewerkt_op: { type: string, format: date-time }
+    AcceptatiePuntUpdate:
+      type: object
+      description: >-
+        Bijwerken van een acceptatiepunt. Metadata (bron_*, laatste_code_wijziging_op)
+        mag altijd worden opgeslagen. Promotie naar stand "gehaald" vereist een
+        complete, herleidbare bewijsketen; bewijs dat ouder is dan de laatste
+        codewijziging wordt geweigerd (409). Een sterkere actuele bron kan niet
+        door een zwakkere bron worden overschreven.
+      properties:
+        stand: { type: string, enum: [gehaald, niet_gebouwd, onbewezen, wacht_op_rene] }
+        bewijs_vindplaats: { type: string, nullable: true }
+        bron_bestand: { type: string, nullable: true }
+        bron_soort: { type: string, enum: [bewijsscript, code, meetrapport, antwoorddocument] }
+        bron_datum: { type: string, format: date-time }
+        laatste_code_wijziging_op: { type: string, format: date-time }
+        relevante_codepaden:
+          type: array
+          minItems: 1
+          items: { type: string }
+        toelichting: { type: string, nullable: true }
     Actiepunt:
       type: object
       required: [id, titel, categorie, status, volgorde, aangemaakt_op]

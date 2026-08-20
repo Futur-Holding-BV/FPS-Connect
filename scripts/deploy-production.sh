@@ -289,6 +289,51 @@ echo "=== STAP 5: API-image bouwen ==="
 ${COMPOSE} build api
 stap_tijd "api-image-bouwen"
 
+# ─── STAP 5b: API-sourcemaps naar Sentry (SENTRY_01) ─────────────────────────
+# Uploadt de sourcemaps uit de zojuist gebouwde api-image naar Sentry, zodat
+# stacktraces naar echte bronbestanden wijzen i.p.v. dist/index.mjs. Faalt of
+# ontbreekt hier iets, dan gaat de deploy gewoon door — een mislukte
+# sourcemap-upload is nooit een reden om een werkende release tegen te houden.
+echo "=== STAP 5b: API-sourcemaps naar Sentry uploaden ==="
+# NB: onder set -euo pipefail mag een grep-zonder-treffer de deploy niet
+# stoppen — vandaar de expliciete || true.
+SENTRY_AUTH_TOKEN="$( (grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_API="$( (grep -E '^SENTRY_PROJECT_API=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_WEB="$( (grep -E '^SENTRY_PROJECT_WEB=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
+SENTRY_PROJECT_API="${SENTRY_PROJECT_API:-fps-connect-api}"
+if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
+  echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — sourcemap-upload overgeslagen (deploy gaat door)."
+else
+  SENTRY_TMP=""
+  SENTRY_CID=""
+  set +e
+  SENTRY_TMP="$(mktemp -d)"
+  if [ -z "${SENTRY_TMP}" ] || [ ! -d "${SENTRY_TMP}" ]; then
+    echo "WAARSCHUWING: tijdelijke map voor API-sourcemaps kon niet worden gemaakt — upload overgeslagen."
+  else
+    API_IMAGE="$(${COMPOSE} images -q api | head -1 || true)"
+    if [ -z "${API_IMAGE}" ]; then
+      echo "WAARSCHUWING: api-image niet gevonden — sourcemap-upload overgeslagen."
+    else
+      SENTRY_CID="$(docker create "${API_IMAGE}")"
+      docker cp "${SENTRY_CID}:/app/dist" "${SENTRY_TMP}/dist" \
+        && docker run --rm -v "${SENTRY_TMP}/dist:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
+             getsentry/sentry-cli sourcemaps upload \
+             --url https://de.sentry.io \
+             --org futur-holding \
+             --project "${SENTRY_PROJECT_API}" \
+             --release "${GIT_COMMIT}" \
+             /work \
+        && echo "API-sourcemaps geüpload voor release ${GIT_COMMIT}." \
+        || echo "WAARSCHUWING: API-sourcemap-upload mislukt — deploy gaat door."
+    fi
+  fi
+  [ -n "${SENTRY_CID}" ] && docker rm -f "${SENTRY_CID}" >/dev/null 2>&1
+  [ -n "${SENTRY_TMP}" ] && rm -rf "${SENTRY_TMP}"
+  set -e
+fi
+stap_tijd "api-sourcemaps"
+
 # ─── STAP 6: database-migraties uitvoeren ────────────────────────────────────
 # Het migrate-image MOET zelf ook zonder cache herbouwd worden: het schema zit
 # in het image gebakken. Een verouderd migrate-image meldt "geen migraties"
@@ -301,69 +346,14 @@ stap_tijd "api-image-bouwen"
 #  1. schema-healthcheck (bestaand vangnet, kritieke kolommen);
 #  2. schema-drift-check (vergelijkt de hele database met lib/db/schema-
 #     verwachting.txt en meldt élk verschil in de deploylog).
-# ─── STAP 5b: sourcemaps naar Sentry (SENTRY_01) ─────────────────────────────
-# Uploadt de sourcemaps uit de zojuist gebouwde api-image naar Sentry, zodat
-# stacktraces naar echte bronbestanden wijzen i.p.v. dist/index.mjs. Faalt of
-# ontbreekt hier iets, dan gaat de deploy gewoon door — een mislukte
-# sourcemap-upload is nooit een reden om een werkende release tegen te houden.
-echo "=== STAP 5b: sourcemaps naar Sentry uploaden ==="
-# NB: onder set -euo pipefail mag een grep-zonder-treffer de deploy niet
-# stoppen — vandaar de expliciete || true.
-SENTRY_AUTH_TOKEN="$( (grep -E '^SENTRY_AUTH_TOKEN=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
-SENTRY_PROJECT_API="$( (grep -E '^SENTRY_PROJECT_API=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
-SENTRY_PROJECT_WEB="$( (grep -E '^SENTRY_PROJECT_WEB=' deploy/.env.production 2>/dev/null || true) | head -1 | cut -d= -f2-)"
-SENTRY_PROJECT_API="${SENTRY_PROJECT_API:-fps-connect-api}"
-if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
-  echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — sourcemap-upload overgeslagen (deploy gaat door)."
-else
-  SENTRY_TMP="$(mktemp -d)"
-  SENTRY_CID=""
-  SENTRY_WEB_CID=""
-  set +e
-  API_IMAGE="$(${COMPOSE} images -q api | head -1 || true)"
-  if [ -z "${API_IMAGE}" ]; then
-    echo "WAARSCHUWING: api-image niet gevonden — sourcemap-upload overgeslagen."
-  else
-    SENTRY_CID="$(docker create "${API_IMAGE}")"
-    docker cp "${SENTRY_CID}:/app/dist" "${SENTRY_TMP}/dist" \
-      && docker run --rm -v "${SENTRY_TMP}/dist:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
-           getsentry/sentry-cli sourcemaps upload \
-           --url https://de.sentry.io \
-           --org futur-holding \
-           --project "${SENTRY_PROJECT_API}" \
-           --release "${GIT_COMMIT}" \
-           /work \
-      && echo "API-sourcemaps geüpload voor release ${GIT_COMMIT}." \
-      || echo "WAARSCHUWING: API-sourcemap-upload mislukt — deploy gaat door."
-  fi
-  CADDY_IMAGE="$(${COMPOSE} images -q caddy | head -1 || true)"
-  if [ -z "${SENTRY_PROJECT_WEB}" ]; then
-    echo "WAARSCHUWING: SENTRY_PROJECT_WEB ontbreekt — Firevault-sourcemap-upload overgeslagen."
-  elif [ -z "${CADDY_IMAGE}" ]; then
-    echo "WAARSCHUWING: caddy-image niet gevonden — Firevault-sourcemap-upload overgeslagen."
-  else
-    SENTRY_WEB_CID="$(docker create "${CADDY_IMAGE}")"
-    docker cp "${SENTRY_WEB_CID}:/opt/sentry/firevault" "${SENTRY_TMP}/firevault" \
-      && docker run --rm -v "${SENTRY_TMP}/firevault:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
-           getsentry/sentry-cli sourcemaps upload \
-           --url https://de.sentry.io \
-           --org futur-holding \
-           --project "${SENTRY_PROJECT_WEB}" \
-           --release "${GIT_COMMIT}" \
-           /work \
-      && echo "Firevault-sourcemaps geüpload voor release ${GIT_COMMIT}." \
-      || echo "WAARSCHUWING: Firevault-sourcemap-upload mislukt — deploy gaat door."
-  fi
-  [ -n "${SENTRY_CID}" ] && docker rm -f "${SENTRY_CID}" >/dev/null 2>&1
-  [ -n "${SENTRY_WEB_CID}" ] && docker rm -f "${SENTRY_WEB_CID}" >/dev/null 2>&1
-  rm -rf "${SENTRY_TMP}"
-  set -e
-fi
-stap_tijd "sentry-sourcemaps"
-
 echo "=== STAP 6: migraties (migrate-image vers bouwen + migratierunner + verificatie) ==="
 ${COMPOSE} build --no-cache migrate
 ${COMPOSE} run --rm -T migrate
+${COMPOSE} run --rm -T \
+  -e ACCEPTATIEREGISTER_HERGRADEER_PRODUCTIE=1 \
+  -e ACCEPTATIEREGISTER_GIT_ALLEEN=1 \
+  migrate pnpm --filter @workspace/scripts exec tsx \
+  src/herbeoordeel-acceptatieregister.ts --eenmalig-productie --geen-rapportbestand
 ${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run schema-healthcheck
 echo "=== STAP 6b: schema-drift-check (database vs. vastgelegde verwachting) ==="
 ${COMPOSE} run --rm -T migrate pnpm --filter @workspace/db run drift-check
@@ -374,6 +364,46 @@ stap_tijd "migraties"
 echo "=== STAP 7: Caddy/frontend-image bouwen ==="
 ${COMPOSE} build caddy
 stap_tijd "caddy-image-bouwen"
+
+# ─── STAP 7b: Firevault-sourcemaps uit de NIEUWE caddy-image ─────────────────
+# Deze upload hoort bewust ná de caddy-build: eerder zou de vorige image onder
+# de nieuwe release worden geregistreerd. Net als bij de API blijft de upload
+# fail-soft; een foutmonitoringstoring mag de applicatierelease niet blokkeren.
+echo "=== STAP 7b: Firevault-sourcemaps naar Sentry uploaden ==="
+if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
+  echo "WAARSCHUWING: SENTRY_AUTH_TOKEN ontbreekt in deploy/.env.production — Firevault-sourcemap-upload overgeslagen (deploy gaat door)."
+elif [ -z "${SENTRY_PROJECT_WEB}" ]; then
+  echo "WAARSCHUWING: SENTRY_PROJECT_WEB ontbreekt — Firevault-sourcemap-upload overgeslagen."
+else
+  SENTRY_WEB_TMP=""
+  SENTRY_WEB_CID=""
+  set +e
+  SENTRY_WEB_TMP="$(mktemp -d)"
+  if [ -z "${SENTRY_WEB_TMP}" ] || [ ! -d "${SENTRY_WEB_TMP}" ]; then
+    echo "WAARSCHUWING: tijdelijke map voor Firevault-sourcemaps kon niet worden gemaakt — upload overgeslagen."
+  else
+    CADDY_IMAGE="$(${COMPOSE} images -q caddy | head -1 || true)"
+    if [ -z "${CADDY_IMAGE}" ]; then
+      echo "WAARSCHUWING: caddy-image niet gevonden — Firevault-sourcemap-upload overgeslagen."
+    else
+      SENTRY_WEB_CID="$(docker create "${CADDY_IMAGE}")"
+      docker cp "${SENTRY_WEB_CID}:/opt/sentry/firevault" "${SENTRY_WEB_TMP}/firevault" \
+        && docker run --rm -v "${SENTRY_WEB_TMP}/firevault:/work" -e SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN}" \
+             getsentry/sentry-cli sourcemaps upload \
+             --url https://de.sentry.io \
+             --org futur-holding \
+             --project "${SENTRY_PROJECT_WEB}" \
+             --release "${GIT_COMMIT}" \
+             /work \
+        && echo "Firevault-sourcemaps geüpload voor release ${GIT_COMMIT}." \
+        || echo "WAARSCHUWING: Firevault-sourcemap-upload mislukt — deploy gaat door."
+    fi
+  fi
+  [ -n "${SENTRY_WEB_CID}" ] && docker rm -f "${SENTRY_WEB_CID}" >/dev/null 2>&1
+  [ -n "${SENTRY_WEB_TMP}" ] && rm -rf "${SENTRY_WEB_TMP}"
+  set -e
+fi
+stap_tijd "firevault-sourcemaps"
 
 # ─── STAP 8: containers starten ──────────────────────────────────────────────
 # LET OP (18 aug 2026): `up -d` mag het script hier NIET afbreken. Toen de

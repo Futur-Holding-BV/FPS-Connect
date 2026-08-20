@@ -53,6 +53,13 @@ jobs:
           echo "Klantloos-controle" > /tmp/faalstap.txt
           pnpm --filter @workspace/scripts run klantloos-check
 
+      # REGISTER_01: de 213-puntsinventaris, vaste bewijskrachtvolgorde,
+      # scriptkoppelingen en stale-bewijsinvariant mogen niet stil terugvallen.
+      - name: Acceptatieregister-hergradingcontrole
+        run: |
+          echo "Acceptatieregister-hergradingcontrole" > /tmp/faalstap.txt
+          pnpm --filter @workspace/scripts run controle-acceptatieregister-hergrading
+
       # SESSIE_01: verbiedt session["gebruikerId"] (het veld heet userId) en
       # session["naam"]/session["gebruikerNaam"] (bestaan niet in SessionData).
       # Vangt de stille autorisatie-breuk die in aug 2026 in 8+ routes zat.
@@ -144,3 +151,70 @@ jobs:
             cat /tmp/ci-rapport-resp.json >&2 || true
             exit 0
           fi
+
+  acceptatieregister-integratie:
+    name: Acceptatieregister DB/API-keten
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fps_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fps_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fps_ci
+      SESSION_SECRET: register-ci-session-secret-minstens-32-tekens
+      API_BASIS: http://127.0.0.1:8080/api
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migreer en vul wegwerpregister
+        run: |
+          set -euo pipefail
+          pnpm --filter @workspace/db run migrate
+          pnpm --filter @workspace/scripts exec tsx src/vul-acceptatieregister.ts
+          pnpm --filter @workspace/scripts exec tsx src/vul-register01-punten.ts
+          if NODE_ENV=test \
+            ACCEPTATIEREGISTER_HERGRADEER_PRODUCTIE=1 \
+            ACCEPTATIEREGISTER_HERGRADEER_TEST_FAAL_NA=1 \
+            pnpm --filter @workspace/scripts exec tsx src/herbeoordeel-acceptatieregister.ts \
+            --eenmalig-productie --geen-rapportbestand; then
+            echo "Hergradeertest had gecontroleerd moeten falen"
+            exit 1
+          fi
+      - name: Bouw API en bewijs echte registerketen
+        run: |
+          set -euo pipefail
+          pnpm --filter @workspace/api-server run build
+          PORT=8080 NODE_ENV=test pnpm --filter @workspace/api-server run start >/tmp/register-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill ${API_PID} 2>/dev/null || true; cat /tmp/register-api.log' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/api/healthz >/dev/null
+          pnpm --filter @workspace/scripts run verificatie-register01
+          pnpm --filter @workspace/scripts exec tsx src/genereer-statusrapport.ts
+          TWEEDE_RUN="$(
+            ACCEPTATIEREGISTER_HERGRADEER_PRODUCTIE=1 \
+              pnpm --filter @workspace/scripts exec tsx src/herbeoordeel-acceptatieregister.ts \
+              --eenmalig-productie --geen-rapportbestand
+          )"
+          printf '%s\n' "${TWEEDE_RUN}"
+          printf '%s\n' "${TWEEDE_RUN}" | grep -q '"modus": "overgeslagen"'

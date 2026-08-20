@@ -21,5 +21,6 @@ description: Wegwijzer naar alle Playwright/e2e-valkuil-topicfiles; lees het bet
 - [Stale EXPO_PUBLIC_DOMAIN monteur-app](monteur-env-stale-domein.md) — fix .env op $REPLIT_DEV_DOMAIN, Metro-cache wissen, expo herstarten.
 - [runTest infra-failure diagnosis](runtest-infra-failure-diagnosis.md) — bij "Maximum iterations" eerst Playwright zelf checken, anders curl-bewijs.
 - [E2e-suite mutex contention](e2e-suite-mutex.md) — eigen mutex-sleutel per suite of ruimere web-timeout.
+- [E2e HRM-functiefixtures](e2e-hrm-functie-fixtures.md) — veld-/bouwclassificatie vereist echte functies; voorkom dat naamgebaseerde presetkoppeling testrechten lekt.
 
 - **Retry = verse worker, beforeAll draait opnieuw**: Playwright-retries starten een nieuwe worker; seed-data uit beforeAll dupliceert dan (en id-variabelen wijzen naar de nieuwe rij terwijl de UI de oude toont). Seeds idempotent maken (eerst restanten wissen op stabiele sleutel) en waitForResponse-predicaten niet op een specifiek geseed id pinnen. Voorbeeld: monteur-uren-uurcodes-recht.spec.ts.

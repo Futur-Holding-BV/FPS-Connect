@@ -121,6 +121,9 @@ export const WERKBAK_BRONNEN = [
   "uitrol_achterloop",
   // CI_SIGNAAL_01 — bouwcontrole (Typecheck & build) op main is rood.
   "ci_rood",
+  // REGISTER_01: ieder punt dat op een besluit van de hoofdbeheerder wacht.
+  // De database-trigger synchroniseert dit ook bij script- en directe DB-wijzigingen.
+  "acceptatieregister",
 ] as const;
 
 export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
