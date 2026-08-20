@@ -240,7 +240,25 @@ docker exec "${PFX}-db" psql -q -U fps_app -d fps_production -c "
     true,
     '$TEST_TOTP_SECRET',
     true
-  )"
+  );
+  INSERT INTO gebruiker_profielen (gebruiker_id, profiel_id)
+  SELECT g.id, p.id
+  FROM gebruikers g
+  CROSS JOIN profielen p
+  WHERE g.email = 'herstelproef@fps-one.nl'
+    AND p.naam = 'Directie'
+  ON CONFLICT DO NOTHING"
+PROFIELEN=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "
+  SELECT count(*)
+  FROM gebruiker_profielen gp
+  JOIN gebruikers g ON g.id = gp.gebruiker_id
+  JOIN profielen p ON p.id = gp.profiel_id
+  WHERE g.email = 'herstelproef@fps-one.nl'
+    AND p.naam = 'Directie'")
+[ "$PROFIELEN" = "1" ] || {
+  echo "FOUT: tijdelijk proefaccount kreeg niet exact één Directie-profiel"
+  exit 1
+}
 LOGIN=$(curl -s -D "$TMPD"/headers.txt -o "$TMPD"/login.json -w "%{http_code}" \
   -H "X-Forwarded-Proto: https" -X POST http://127.0.0.1:8899/api/auth/login \
   -H "Content-Type: application/json" \
