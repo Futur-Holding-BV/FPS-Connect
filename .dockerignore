@@ -43,4 +43,7 @@ artifacts/mockup-sandbox
 attached_assets
 scripts/*
 !scripts/package.json
+!scripts/tsconfig.json
+!scripts/src/
+!scripts/src/**
 docs
