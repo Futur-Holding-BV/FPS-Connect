@@ -10,7 +10,7 @@
 - **Productiehergrading vult eerst de registerinventaris**: het migratiepad mount `attached_assets` read-only, draait de idempotente inventarisvuller na de schema-migraties en start pas daarna de eenmalige hergrading. Bestaande standen blijven behouden en de bronbestanden komen niet in het image.
 - **Herstelproef bewijst een normale bestaande 2FA-login**: het tijdelijke proefaccount krijgt uitsluitend in de geïsoleerde hersteldatabase een vaste testsleutel en doorloopt `verify_2fa` in plaats van de inschrijfflow. Bij falen komt de geïsoleerde API-log vóór cleanup in Actions terecht.
 - **Oudere dagset wordt alleen in de herstelomgeving gemigreerd**: na databaseherstel draait de actuele fail-closed migratie-image tegen de tijdelijke database voordat de actuele API start. De immutable set en productie blijven onaangeroerd; ontbrekende nieuwere tabellen kunnen de functionele herstelproef niet meer breken.
-- **Hersteld document doorloopt echte matrix-autorisatie**: het tijdelijke hoofdbeheerderaccount krijgt in de geïsoleerde database exact één bestaand `Directie`-profiel. De documentdownload bewijst daardoor niet alleen opslagherstel, maar ook toegang via de normale bevoegdhedenmatrix.
+- **Hersteld document doorloopt echte matrix- en contextautorisatie**: het tijdelijke hoofdbeheerderaccount krijgt in de geïsoleerde database exact één bestaand `Directie`-profiel en het gekozen document exact één tijdelijke koppeling aan een hersteld gebouw. De download bewijst daardoor opslagherstel via de normale document-, gebouw- en bevoegdhedenpoorten.
 
 ## 2026-08-20 — Mailverbindingstest werkt met alleen Mail.Send
 

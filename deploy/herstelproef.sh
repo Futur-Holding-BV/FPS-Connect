@@ -301,12 +301,36 @@ TFA=$(curl -s -o "$TMPD"/act.json -w "%{http_code}" -H "X-Forwarded-Proto: https
 stap "login stap 2 (bestaande 2FA verifiëren): HTTP $TFA"
 
 stap "document openen uit de herstelde bestandsopslag"
-DOCPAD=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc \
-  "SELECT pdf_url FROM documenten WHERE pdf_url IS NOT NULL LIMIT 1")
+DOCINFO=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc \
+  "SELECT id || '|' || pdf_url FROM documenten WHERE pdf_url IS NOT NULL LIMIT 1")
+DOCID=${DOCINFO%%|*}
+DOCPAD=${DOCINFO#*|}
+case "$DOCID" in
+  ''|*[!0-9]*) echo "FOUT: herstelde database bevat geen geldig document-id"; exit 1 ;;
+esac
 case "$DOCPAD" in
   /objects/*) ;;
   *) echo "FOUT: herstelde database bevat geen geldig documentpad onder /objects/"; exit 1 ;;
 esac
+GEBOUWID=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc \
+  "SELECT id FROM gebouwen ORDER BY id LIMIT 1")
+case "$GEBOUWID" in
+  ''|*[!0-9]*) echo "FOUT: herstelde database bevat geen gebouw voor de document-ACL"; exit 1 ;;
+esac
+docker exec "${PFX}-db" psql -q -U fps_app -d fps_production -c "
+  INSERT INTO document_koppelingen (document_id, doel_type, doel_id)
+  VALUES ($DOCID, 'gebouw', $GEBOUWID)
+  ON CONFLICT DO NOTHING"
+KOPPELINGEN=$(docker exec "${PFX}-db" psql -U fps_app -d fps_production -Atc "
+  SELECT count(*)
+  FROM document_koppelingen
+  WHERE document_id = $DOCID
+    AND doel_type = 'gebouw'
+    AND doel_id = $GEBOUWID")
+[ "$KOPPELINGEN" = "1" ] || {
+  echo "FOUT: tijdelijk hersteld document kreeg niet exact één gebouwkoppeling"
+  exit 1
+}
 SET_DOCUMENT="$SET/bestanden/fps-production${DOCPAD#/objects}"
 [ -f "$SET_DOCUMENT" ] || {
   echo "FOUT: document uit herstelde database ontbreekt in de herstelset"
