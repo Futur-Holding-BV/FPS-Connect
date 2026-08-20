@@ -66,7 +66,10 @@ ok 12 - staffel publiceert geen set met een symlink in de inhoud
 ok 13 - herstelproef weigert symlinks in de set vóór Docker
 ok 14 - productiebewijs weigert zelfstandig symlinkinhoud
 ok 15 - staffel hergebruikt geen bestaande symlink als dagset
-Alle 15 back-upstaffelproeven zijn geslaagd.
+ok 16 - productiedeploy beheert de volledige 03:00-08:00 back-upplanning
+ok 17 - Actions accepteert uitsluitend de vooraf gepinde VPS-hostkey
+ok 18 - Actions weigert gepinde RSA- en ECDSA-hostkeys
+Alle 18 back-upstaffelproeven zijn geslaagd.
 ```
 
 De proef gebruikt uitsluitend tijdelijke mappen, fake rsync en een fake
@@ -85,17 +88,17 @@ GitHub→VPS-kanaal en nooit rechtstreekse agent-SSH.
 
 | Bewijs | Stand |
 |---|---|
-| Actions-run | **GEMETEN GROEN** — [32375837377](https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32375837377), actie `staffel_en_herstelproef` |
-| Commit | **GEMETEN** — `93e92a9be700d4c0774a168b5412b41c7730d4c3`; CI en productie-deploy waren groen en `/api/versie` gaf `93e92a9b` zonder achterloop |
+| Actions-run | **GEMETEN GROEN** — [32389750819](https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32389750819), actie `staffel_en_herstelproef` |
+| Commit | **GEMETEN** — `6c680abcdb8f1d83a399adc4ece757a0a9d34bc1`; [CI 32388569450](https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32388569450) en [productie-deploy 32388569946](https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32388569946) waren groen. De deploy passeerde vóór SSH uitsluitend de beheerdergeverifieerde, gepinde `ssh-ed25519`-hostfingerprint. |
 | Volledige dagset | **GEMETEN** — bestaande immutable set `dagelijks/2026-08-20` bleef ongewijzigd; totale omvang `293.379.490` bytes; 2 dagelijkse sets aanwezig |
 | DB-bestand + manifest + checksums | **GEMETEN GROEN** — `db.sql.gz`, manifest en alle checksums geldig; `geheimen_opgenomen=false` |
 | Objectaantal en bytes | **GEMETEN** — 251 bestanden, samen `292.915.391` bytes |
-| Herstel naar lege PostgreSQL + MinIO | **GEMETEN GROEN** — 13 gebruikers teruggezet; tijdelijke database van 109 geregistreerde migraties met 13 actuele migraties bijgewerkt; 251 objecten naar verse tijdelijke MinIO hersteld |
+| Herstel naar lege PostgreSQL + MinIO | **GEMETEN GROEN** — 13 gebruikers teruggezet; tijdelijke database van 109 geregistreerde migraties met 17 actuele migraties tot 126 bijgewerkt; 251 objecten naar verse tijdelijke MinIO hersteld |
 | API-health | **GEMETEN GROEN** — `{"status":"ok"}` tegen de tijdelijke herstelomgeving |
 | Login + 2FA | **GEMETEN GROEN** — normale login vroeg `verify_2fa`; bestaande TOTP-verificatie gaf HTTP 200 |
 | Document uit herstelde opslag + identieke checksum | **GEMETEN GROEN** — herstelde PDF via de normale document-, gebouw- en bevoegdhedenpoorten gaf HTTP 200, `1.537.761` bytes, `%PDF-`; SHA-256 was **IDENTIEK** aan het bestand in de immutable set |
 
-De herstelproef was in 30 seconden gereed. Alle mutaties — actuele migraties,
+De herstelproef was in 33 seconden gereed. Alle mutaties — actuele migraties,
 het tijdelijke proefaccount en de tijdelijke documentcontext — vonden alleen in
 de geïsoleerde hersteldatabase plaats. De back-upset en productie zijn niet
 gewijzigd.

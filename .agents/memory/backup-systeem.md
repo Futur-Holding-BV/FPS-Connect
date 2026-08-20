@@ -63,3 +63,18 @@ Gepland via `planDagelijksBackup()` aangeroepen in `artifacts/api-server/src/ind
 
 **How to apply:** Laat de actuele migratierunner alleen tegen het tijdelijke herstelnetwerk lopen. Maak eventuele proefaccounts, profielen en documentcontext uitsluitend in die tijdelijke database en vergelijk het opgehaalde document met de immutable setchecksum.
 - UI-proef op herstelde omgeving: herstel-Caddy met eigen Caddyfile die `header_up Origin https://connect.fps-one.nl` zet (anders 403 "Niet toegestaan vanaf deze herkomst") + X-Forwarded-Proto https.
+
+## VPS-hosttrust
+
+Pin voor productie-SSH zowel de volledige SHA-256-fingerprint als exact het
+verwachte sleuteltype `ssh-ed25519`; een fingerprintmatch zonder typecontrole is
+niet voldoende.
+
+**Why:** Een correct vergeleken fingerprint kan nog steeds bij een RSA- of
+ECDSA-sleutel horen als per ongeluk de verkeerde beheerdersfingerprint wordt
+opgeslagen. Dan lijkt hosttrust streng, terwijl de afgesproken
+ed25519-algoritmegrens ontbreekt.
+
+**How to apply:** Filter gescande hostkeys eerst fail-closed op exact
+`ssh-ed25519`, vergelijk daarna pas de fingerprint en bewijs negatief dat
+correct gepinde RSA- en ECDSA-sleutels geen `known_hosts` opleveren.
