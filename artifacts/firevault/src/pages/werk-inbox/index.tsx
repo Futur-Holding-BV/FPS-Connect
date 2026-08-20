@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { WerkInboxMailInhoud } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -72,12 +73,7 @@ type MailItem = {
 
 type MailDetail = {
   meta: MailItem;
-  inhoud: {
-    van?: string;
-    aan?: string[];
-    body?: string;
-    bijlagen?: { naam: string; contentType: string; contentId?: string }[];
-  };
+  inhoud: WerkInboxMailInhoud;
   inhoud_waarschuwing: string | null;
   notities: { id: number; tekst: string; aangemaaktOp: string; gebruikerId: number; auteurNaam: string | null }[];
   aanwezigheid: Aanwezige[];
@@ -673,12 +669,23 @@ function MailDetailView({
         {/* Mail body */}
         <div className="flex-1 overflow-y-auto pb-14">
           {inhoud.body ? (
-            <iframe
-              srcDoc={inhoud.body}
-              sandbox=""
-              title="E-mailinhoud"
-              className="w-full h-full min-h-[300px] border-0"
-            />
+            inhoud.contentType === "html" ? (
+              <iframe
+                srcDoc={inhoud.body}
+                sandbox=""
+                referrerPolicy="no-referrer"
+                title="E-mailinhoud"
+                className="w-full h-full min-h-[300px] border-0"
+                data-testid="mailinhoud-html"
+              />
+            ) : (
+              <div
+                className="p-4 text-sm whitespace-pre-wrap break-words"
+                data-testid="mailinhoud-tekst"
+              >
+                {inhoud.body}
+              </div>
+            )
           ) : (
             <div className="p-4 text-sm text-muted-foreground">
               {meta.snippet ?? "Geen inhoud beschikbaar. Controleer uw Microsoft 365-verbinding."}

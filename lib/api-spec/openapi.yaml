@@ -84,6 +84,8 @@ tags:
     description: Governance & Approval Engine — generiek goedkeuringsbeleid en -aanvragen voor elk documenttype (offertes, inkoop, etc.)
   - name: bankafschriften
     description: BANK_01 — CAMT.053/MT940-import, bankafschriftverwerking, automatisch afletteren en AccountView-journaalpost
+  - name: werk-inbox
+    description: Gedeelde Microsoft 365-werk-inbox
 
 paths:
   /healthz:
@@ -124,6 +126,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VersieStatus"
+
+  /werk-inbox/mails/{messageId}:
+    get:
+      operationId: getWerkInboxMailDetail
+      tags: [werk-inbox]
+      summary: Werk-inboxbericht met genormaliseerde Graph-inhoud ophalen
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Berichtdetail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WerkInboxMailDetail"
+        "404":
+          description: Bericht niet gevonden of niet toegankelijk
 
   # ── DASHBOARD ────────────────────────────────────────────────────────────
   /dashboard/stats:
@@ -55705,3 +55728,79 @@ components:
           type: ["string", "null"]
         tijdstip:
           type: string
+
+    WerkInboxBijlage:
+      type: object
+      required: [naam, contentType]
+      properties:
+        naam:
+          type: string
+        contentType:
+          type: string
+        contentId:
+          type: string
+
+    WerkInboxMailInhoud:
+      type: object
+      required: [van, aan, cc, body, contentType, bijlagen]
+      properties:
+        van:
+          type: ["string", "null"]
+        aan:
+          type: array
+          items:
+            type: string
+        cc:
+          type: array
+          items:
+            type: string
+        body:
+          type: string
+        contentType:
+          type: string
+          enum: [html, text]
+        bijlagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/WerkInboxBijlage"
+
+    WerkInboxMailDetail:
+      type: object
+      required:
+        - meta
+        - inhoud
+        - inhoud_waarschuwing
+        - notities
+        - koppelingen
+        - aanwezigheid
+        - mijn_recht
+        - mailbox_modus
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        inhoud:
+          $ref: "#/components/schemas/WerkInboxMailInhoud"
+        inhoud_waarschuwing:
+          type: ["string", "null"]
+        notities:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        koppelingen:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        aanwezigheid:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        mijn_recht:
+          type: string
+          enum: [lezen, behandelen, beheren]
+        mailbox_modus:
+          type: string
+          enum: [verwerken, ondersteunen, registreren]

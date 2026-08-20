@@ -12,6 +12,7 @@
 
 import { Router } from "express";
 import { db } from "@workspace/db";
+import { GetWerkInboxMailDetailResponse } from "@workspace/api-zod";
 import {
   werkInboxTokensTable,
   werkInboxMailboxenTable,
@@ -664,6 +665,14 @@ router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res): Promis
   const inhoudWaarschuwing = inhoud
     ? null
     : "Mailinhoud kon niet worden opgehaald van Microsoft 365. Controleer of uw account Exchange-toegang tot deze mailbox heeft.";
+  const veiligeInhoud = inhoud ?? {
+    van: null,
+    aan: [],
+    cc: [],
+    body: "",
+    contentType: "text" as const,
+    bijlagen: [],
+  };
 
   // Gedeelde notities + koppelingen, met auteursnaam.
   const notities = await db.select({
@@ -694,16 +703,16 @@ router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res): Promis
   meldAanwezigheid(messageId, uid, await gebruikersNaam(uid), "bekijkt");
   const anderen = leesAanwezigheid(messageId, uid);
 
-  res.json({
+  res.json(GetWerkInboxMailDetailResponse.parse({
     meta,
-    inhoud: inhoud ?? {},
+    inhoud: veiligeInhoud,
     inhoud_waarschuwing: inhoudWaarschuwing,
     notities,
     koppelingen,
     aanwezigheid: anderen,
     mijn_recht: gevonden.recht,
     mailbox_modus: gevonden.mailbox.modus,
-  });
+  }));
 });
 
 // ─── Aanwezigheid (opdracht §5.2) ────────────────────────────────────────────

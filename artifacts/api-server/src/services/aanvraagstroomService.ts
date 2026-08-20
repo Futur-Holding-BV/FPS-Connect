@@ -175,8 +175,8 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
   // Mailtekst ophalen (volledige body; snippet is te kort voor analyse)
   let mailTekst = mail.snippet ?? "";
   const detail = await haalVolledigeMail(mail.gebruikerId, mail.mailboxAdres, mail.messageId, isPersoonlijk);
-  if (detail?.body?.content) {
-    mailTekst = detail.body.contentType?.toLowerCase() === "html" ? stripHtml(detail.body.content) : detail.body.content;
+  if (detail?.body) {
+    mailTekst = detail.contentType === "html" ? stripHtml(detail.body) : detail.body;
   }
 
   // Bijlagen: opslaan + tekst meenemen in de analyse

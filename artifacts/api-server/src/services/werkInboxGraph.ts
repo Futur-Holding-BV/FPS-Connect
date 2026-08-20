@@ -263,13 +263,100 @@ interface GraphMessage {
 }
 
 interface GraphMessageDetail extends GraphMessage {
-  body: { contentType: string; content: string };
-  toRecipients: Array<{ emailAddress: { name: string; address: string } }>;
-  ccRecipients: Array<{ emailAddress: { name: string; address: string } }>;
+  body?: unknown;
+  toRecipients?: unknown;
+  ccRecipients?: unknown;
+  attachments?: unknown;
 }
 
 const MAIL_VELDEN = "id,subject,bodyPreview,receivedDateTime,isRead,hasAttachments,from,conversationId";
 const MAX_PER_MAILBOX = 50;
+
+export type WerkInboxInhoudstype = "html" | "text";
+
+export interface WerkInboxMailInhoud {
+  van: string | null;
+  aan: string[];
+  cc: string[];
+  body: string;
+  contentType: WerkInboxInhoudstype;
+  bijlagen: Array<{
+    naam: string;
+    contentType: string;
+    contentId?: string;
+  }>;
+}
+
+function alsObject(waarde: unknown): Record<string, unknown> | null {
+  return typeof waarde === "object" && waarde !== null && !Array.isArray(waarde)
+    ? waarde as Record<string, unknown>
+    : null;
+}
+
+function alsTekst(waarde: unknown): string | null {
+  return typeof waarde === "string" ? waarde : null;
+}
+
+function normaliseerEmailAdres(waarde: unknown): string | null {
+  const houder = alsObject(waarde);
+  const emailAdres = alsObject(houder?.["emailAddress"]) ?? houder;
+  if (!emailAdres) return null;
+
+  const naam = alsTekst(emailAdres["name"])?.trim() ?? "";
+  const adres = alsTekst(emailAdres["address"])?.trim() ?? "";
+  if (naam && adres) return `${naam} <${adres}>`;
+  return adres || naam || null;
+}
+
+function normaliseerOntvangers(waarde: unknown): string[] {
+  if (!Array.isArray(waarde)) return [];
+  return waarde
+    .map(normaliseerEmailAdres)
+    .filter((adres): adres is string => adres !== null);
+}
+
+function normaliseerBijlagen(waarde: unknown): WerkInboxMailInhoud["bijlagen"] {
+  if (!Array.isArray(waarde)) return [];
+  return waarde.flatMap((item) => {
+    const bijlage = alsObject(item);
+    const naam = alsTekst(bijlage?.["name"])?.trim();
+    if (!bijlage || !naam) return [];
+
+    const contentId = alsTekst(bijlage["contentId"])?.trim();
+    return [{
+      naam,
+      contentType: alsTekst(bijlage["contentType"])?.trim() || "application/octet-stream",
+      ...(contentId ? { contentId } : {}),
+    }];
+  });
+}
+
+/**
+ * Expliciete grens tussen Microsoft Graph en de interne werk-inbox-API.
+ * Samengestelde Graph-waarden worden hier vertaald; objecten worden nooit via
+ * impliciete stringconversie als "[object Object]" aan de client doorgegeven.
+ */
+export function normaliseerGraphBericht(waarde: unknown): WerkInboxMailInhoud {
+  const bericht = alsObject(waarde);
+  const graphBody = alsObject(bericht?.["body"]);
+  const body = alsTekst(graphBody?.["content"])
+    ?? alsTekst(bericht?.["body"])
+    ?? "";
+  const graphInhoudstype = (
+    alsTekst(graphBody?.["contentType"])
+    ?? alsTekst(bericht?.["contentType"])
+    ?? "text"
+  ).toLowerCase();
+
+  return {
+    van: normaliseerEmailAdres(bericht?.["from"]),
+    aan: normaliseerOntvangers(bericht?.["toRecipients"]),
+    cc: normaliseerOntvangers(bericht?.["ccRecipients"]),
+    body,
+    contentType: graphInhoudstype === "html" ? "html" : "text",
+    bijlagen: normaliseerBijlagen(bericht?.["attachments"]),
+  };
+}
 
 async function haalMailsVanMailbox(
   accessToken: string,
@@ -316,7 +403,7 @@ export async function haalVolledigeMail(
   mailboxAdres: string,
   messageId: string,
   isPersonlijk: boolean,
-): Promise<GraphMessageDetail | null> {
+): Promise<WerkInboxMailInhoud | null> {
   const token = await haalGeldigToken(gebruikerId);
   if (!token) return null;
 
@@ -324,11 +411,16 @@ export async function haalVolledigeMail(
     ? "https://graph.microsoft.com/v1.0/me/messages"
     : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
 
-  const res = await fetch(`${basis}/${encodeURIComponent(messageId)}`, {
+  const params = new URLSearchParams({
+    $select: `${MAIL_VELDEN},body,toRecipients,ccRecipients`,
+    $expand: "attachments($select=id,name,contentType,contentId,isInline,size)",
+  });
+  const res = await fetch(`${basis}/${encodeURIComponent(messageId)}?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
-  return res.json() as Promise<GraphMessageDetail>;
+  const graphBericht = await res.json() as GraphMessageDetail;
+  return normaliseerGraphBericht(graphBericht);
 }
 
 // ── Bijlagen ophalen (FACTUUR_02: factuur-PDF's uit de mail) ─────────────────

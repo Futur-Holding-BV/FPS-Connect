@@ -1251,6 +1251,7 @@ import type {
   WerkgeverBankrekeningInput,
   WerkgeverInput,
   WerkgeverSalarisConfig,
+  WerkInboxMailDetail,
   WervingKanaalOverzicht,
   WervingKandidaat,
   WervingKandidaatDetail,
@@ -89281,3 +89282,60 @@ export const useHerstelBankmutatieAccountView = <TError = ErrorType<Foutmelding 
       > => {
       return useMutation(getHerstelBankmutatieAccountViewMutationOptions(options));
     }
+
+
+export const getGetWerkInboxMailDetailUrl = (messageId: string,) => {
+
+  return `/api/werk-inbox/mails/${messageId}`
+}
+
+/**
+ * @summary Werk-inboxbericht met genormaliseerde Graph-inhoud ophalen
+ */
+export const getWerkInboxMailDetail = async (messageId: string, options?: RequestInit): Promise<WerkInboxMailDetail> => {
+
+  return customFetch<WerkInboxMailDetail>(getGetWerkInboxMailDetailUrl(messageId),
+  {
+    ...options,
+    method: 'GET'
+  }
+);}
+
+
+export const getGetWerkInboxMailDetailQueryKey = (messageId: string,) => {
+    return [
+    `/api/werk-inbox/mails/${messageId}`
+    ] as const;
+    }
+
+
+export const getGetWerkInboxMailDetailQueryOptions = <TData = Awaited<ReturnType<typeof getWerkInboxMailDetail>>, TError = ErrorType<void>>(messageId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkInboxMailDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkInboxMailDetailQueryKey(messageId);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkInboxMailDetail>>> = ({ signal }) => getWerkInboxMailDetail(messageId, { signal, ...requestOptions });
+
+   return  { queryKey, queryFn, enabled: messageId !== null && messageId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkInboxMailDetail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkInboxMailDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkInboxMailDetail>>>
+export type GetWerkInboxMailDetailQueryError = ErrorType<void>
+
+
+/**
+ * @summary Werk-inboxbericht met genormaliseerde Graph-inhoud ophalen
+ */
+export function useGetWerkInboxMailDetail<TData = Awaited<ReturnType<typeof getWerkInboxMailDetail>>, TError = ErrorType<void>>(
+ messageId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkInboxMailDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkInboxMailDetailQueryOptions(messageId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

@@ -1,3 +1,9 @@
+## 2026-08-20 — Werk-inbox toont echte berichtinhoud
+
+- Microsoft Graph-berichtdetails worden aan de API-grens genormaliseerd: de berichttekst is altijd een string, het inhoudstype staat apart en samengestelde afzender-, ontvanger- en bijlagewaarden krijgen een stabiele interne vorm.
+- HTML-mail blijft in het gesandboxte berichtframe; platte tekst gebruikt een eigen veilige tekstweergave die regeleinden behoudt.
+- Regressietests bewijzen dat een Graph-body-object nooit meer als `[object Object]` in Connect kan verschijnen.
+
 ## 2026-08-20 — Instapdocument en klantloze opdrachtmap
 
 - De repository heeft nu een beknopte hoofd-README met doel, omgevingen, start- en bouwcommando's, mappenkaart, gegevensmodel, uitrolroute, productiecontroles, afhankelijkheden en harde systeemgrenzen.

@@ -8,3 +8,4 @@ description: Wegwijzer naar Orval/OpenAPI codegen-valkuilen; lees het betreffend
 - api-zod-types-conflict.md — index.ts alleen export * from generated/api
 - openapi-pad-prefix.md — paden zonder /api/-prefix (Orval baseUrl voegt toe)
 - js-yaml-override.md — security-override in pnpm-workspace.yaml mag js-yaml voor orval nooit naar 5.x duwen (default-export weg → codegen crasht); houd `js-yaml@>=4.0.0 <=4.1.1: '>=4.2.0 <5'`
+- orval-generated-baseline-drift.md — controleer codegen-numstat vóór commit; een achterlopende generated baseline mag een kleine contractwijziging niet veranderen in onreviewbare repositorybrede churn.

@@ -20937,3 +20937,62 @@ export const LoonAfspraakInputLoonsoort = {
   stukloon: 'stukloon',
   overig: 'overig',
 } as const;
+
+export interface WerkInboxBijlage {
+  naam: string;
+  contentType: string;
+  contentId?: string;
+}
+
+export type WerkInboxMailInhoudContentType = typeof WerkInboxMailInhoudContentType[keyof typeof WerkInboxMailInhoudContentType];
+
+export const WerkInboxMailInhoudContentType = {
+  html: 'html',
+  text: 'text',
+} as const;
+
+export interface WerkInboxMailInhoud {
+  /** @nullable */
+  van: string | null;
+  aan: string[];
+  cc: string[];
+  body: string;
+  contentType: WerkInboxMailInhoudContentType;
+  bijlagen: WerkInboxBijlage[];
+}
+
+export type WerkInboxMailDetailMeta = { [key: string]: unknown };
+
+export type WerkInboxMailDetailNotitiesItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailKoppelingenItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailAanwezigheidItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailMijnRecht = typeof WerkInboxMailDetailMijnRecht[keyof typeof WerkInboxMailDetailMijnRecht];
+
+export const WerkInboxMailDetailMijnRecht = {
+  lezen: 'lezen',
+  behandelen: 'behandelen',
+  beheren: 'beheren',
+} as const;
+
+export type WerkInboxMailDetailMailboxModus = typeof WerkInboxMailDetailMailboxModus[keyof typeof WerkInboxMailDetailMailboxModus];
+
+export const WerkInboxMailDetailMailboxModus = {
+  verwerken: 'verwerken',
+  ondersteunen: 'ondersteunen',
+  registreren: 'registreren',
+} as const;
+
+export interface WerkInboxMailDetail {
+  meta: WerkInboxMailDetailMeta;
+  inhoud: WerkInboxMailInhoud;
+  /** @nullable */
+  inhoud_waarschuwing: string | null;
+  notities: WerkInboxMailDetailNotitiesItem[];
+  koppelingen: WerkInboxMailDetailKoppelingenItem[];
+  aanwezigheid: WerkInboxMailDetailAanwezigheidItem[];
+  mijn_recht: WerkInboxMailDetailMijnRecht;
+  mailbox_modus: WerkInboxMailDetailMailboxModus;
+}

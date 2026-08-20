@@ -37580,3 +37580,33 @@ export const HerstelBankmutatieAccountViewResponse = zod.object({
   "foutmelding": zod.string().nullish(),
   "testmodus": zod.boolean().nullish()
 })
+
+
+/**
+ * @summary Werk-inboxbericht met genormaliseerde Graph-inhoud ophalen
+ */
+export const GetWerkInboxMailDetailParams = zod.object({
+  "messageId": zod.coerce.string()
+})
+
+export const GetWerkInboxMailDetailResponse = zod.object({
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "inhoud": zod.object({
+  "van": zod.string().nullable(),
+  "aan": zod.array(zod.string()),
+  "cc": zod.array(zod.string()),
+  "body": zod.string(),
+  "contentType": zod.enum(['html', 'text']),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "contentType": zod.string(),
+  "contentId": zod.string().optional()
+}))
+}),
+  "inhoud_waarschuwing": zod.string().nullable(),
+  "notities": zod.array(zod.record(zod.string(), zod.unknown())),
+  "koppelingen": zod.array(zod.record(zod.string(), zod.unknown())),
+  "aanwezigheid": zod.array(zod.record(zod.string(), zod.unknown())),
+  "mijn_recht": zod.enum(['lezen', 'behandelen', 'beheren']),
+  "mailbox_modus": zod.enum(['verwerken', 'ondersteunen', 'registreren'])
+})
