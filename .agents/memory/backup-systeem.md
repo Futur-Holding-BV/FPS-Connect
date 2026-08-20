@@ -57,5 +57,9 @@ Gepland via `planDagelijksBackup()` aangeroepen in `artifacts/api-server/src/ind
 
 - VPS-kant: `deploy/backup-staffel.sh` (cron 04:00, staffel 14d/13w/12m onder /srv/fps-backup, hardlinks), `fps-nas` leesaccount (rrsync -ro, ForceCommand `fps-nas-pull.sh` logt naar syslog + /var/lib/fps-nas/laatste-verbinding), bewaking `check-offsite-backup.sh` (08:00, alarm via SQL-insert gebruikers_meldingen type backup_alarm).
 - App-zichtbaarheid: `GET /api/backups/offsite/status` leest `OFFSITE_BACKUP_DIR`/`OFFSITE_NAS_DIR` (compose mount /srv/fps-backup + /var/lib/fps-nas read-only); UI-kaarten in beheer/backup.tsx (OffsiteStatusKaart). Buiten prod: `{geconfigureerd:false}`.
-- Herstelproef: `/usr/local/bin/herstelproef.sh` (repo deploy/), lege omgeving in 22s volledig terug. Valkuilen: pg_isready te vroeg true (dubbele SELECT 1); Secure-cookie over http → Cookie-header handmatig + `X-Forwarded-Proto: https`; login altijd 2FA (setup→TOTP→activeren); storage-route `/api/storage/objects/*path`; S3-envnamen `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY`; curl exit 23 op 2FA-activeren bij geslaagde 200 → status beoordelen, niet exitcode.
+- Een oudere immutable dagset wordt uitsluitend in een lege, geïsoleerde herstelomgeving gebruikt. Migreer de tijdelijke hersteldatabase naar het actuele schema vóór de actuele API start; wijzig nooit de set of productie. Functioneel bewijs gebruikt een normale 2FA-login en een echt hersteld document via matrix- en contextautorisatie.
+
+**Why:** Een geldige oudere set kan tabellen missen die de actuele API al tijdens 2FA nodig heeft. Zonder tijdelijke migratie gaf een gezonde restore toch een 500; een contextloos document wordt terecht fail-closed geweigerd.
+
+**How to apply:** Laat de actuele migratierunner alleen tegen het tijdelijke herstelnetwerk lopen. Maak eventuele proefaccounts, profielen en documentcontext uitsluitend in die tijdelijke database en vergelijk het opgehaalde document met de immutable setchecksum.
 - UI-proef op herstelde omgeving: herstel-Caddy met eigen Caddyfile die `header_up Origin https://connect.fps-one.nl` zet (anders 403 "Niet toegestaan vanaf deze herkomst") + X-Forwarded-Proto https.

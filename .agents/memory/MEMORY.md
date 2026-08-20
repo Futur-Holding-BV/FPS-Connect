@@ -61,7 +61,7 @@
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.
 - [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.
-- [Back-up & Herstel systeem](backup-systeem.md) — backup_records tabel; ObjectStorageService.uploadBackupFile/downloadBackupFile; backupService.ts (pg_dump+gzip+sha256); dagelijks 03:00 via recursieve setTimeout; restore vereist "HERSTEL BEVESTIGEN" + hoofdbeheerder.
+- [Back-up & Herstel systeem](backup-systeem.md) — interne back-ups en externe staffel; oudere immutable set alleen geïsoleerd migreren vóór actuele API start.
 - [FPS Connect PWA](fps-pwa.md) — manifest+SW in firevault/public; icons PNG via ImageMagick; QR via /api/auth/pwa-qr (qrcode pkg).
 - [Wagenpark-module patronen](wagenpark-module.md) — voertuigdoc-download alleen via eigen ACL-route; delete=unlink; scan-first bij server-uploads; effectieveContext is async; rit-dedupe via unieke index.
 - [Werkdag-module patroon](werkdag-module.md) — planning_items=work orders; uitvoering_status via SQL ALTER (geen drizzle push); medewerker opzoeken via gebruiker_id in sessie; useFocusEffect voor refresh bij terugkeer.
