@@ -450,7 +450,14 @@ async function main(): Promise<void> {
     ok("V4b Bewijskrachtvolgorde = script > code > meetrapport > antwoorddocument; oud bewijs is stale");
 
     // V5 — oplever-check gedrag
-    const openCode = punten.find((p) => p.stand === "niet_gebouwd")?.opdracht_code;
+    // `punten` is bewust vóór de herstartproef opgehaald en kan daardoor nog
+    // de oude standen bevatten. Lees voor deze opleverproef de actuele DB-stand.
+    const [openPunt] = await db
+      .select({ opdrachtCode: acceptatieRegisterTable.opdrachtCode })
+      .from(acceptatieRegisterTable)
+      .where(eq(acceptatieRegisterTable.stand, "niet_gebouwd"))
+      .limit(1);
+    const openCode = openPunt?.opdrachtCode;
     if (!openCode) faal("V5: geen opdracht met niet_gebouwd punt gevonden");
     let faalde = false;
     try { execSync(`pnpm exec tsx src/oplever-check.ts ${openCode}`, { stdio: "pipe" }); } catch { faalde = true; }
