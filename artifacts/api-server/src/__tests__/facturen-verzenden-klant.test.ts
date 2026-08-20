@@ -45,13 +45,10 @@ vi.mock("../services/email", async (importOriginal) => {
   };
 });
 
-vi.mock("../services/factuurstroomService", async (importOriginal) => {
-  const werkelijk = await importOriginal<typeof import("../services/factuurstroomService")>();
-  return {
-    ...werkelijk,
-    schrijfTijdlijn: mockSchrijfTijdlijn,
-  };
-});
+vi.mock("../services/factuurstroomService", () => ({
+  schrijfTijdlijn: mockSchrijfTijdlijn,
+  maakAfwijsMailTekst: vi.fn(() => "Afwijsmail"),
+}));
 
 const verkoopfactuur = {
   id: 42,
