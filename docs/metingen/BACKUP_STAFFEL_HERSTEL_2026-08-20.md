@@ -85,14 +85,17 @@ GitHub→VPS-kanaal en nooit rechtstreekse agent-SSH.
 
 | Bewijs | Stand |
 |---|---|
-| Actions-run | nog uit te voeren na beschikbaarheid van deze workflow op `main` |
-| Commit | nog vast te leggen uit de run |
-| Nieuwe volledige dagset | nog te meten |
-| DB-bestand + manifest + checksums | nog te meten |
-| Objectaantal en bytes | nog te meten |
-| Herstel naar lege PostgreSQL + MinIO | nog te meten |
-| API-health | nog te meten |
-| Login + 2FA | nog te meten |
-| Document uit herstelde opslag + identieke checksum | nog te meten |
+| Actions-run | **GEMETEN GROEN** — [32375837377](https://github.com/Futur-Holding-BV/FPS-Connect/actions/runs/32375837377), actie `staffel_en_herstelproef` |
+| Commit | **GEMETEN** — `93e92a9be700d4c0774a168b5412b41c7730d4c3`; CI en productie-deploy waren groen en `/api/versie` gaf `93e92a9b` zonder achterloop |
+| Volledige dagset | **GEMETEN** — bestaande immutable set `dagelijks/2026-08-20` bleef ongewijzigd; totale omvang `293.379.490` bytes; 2 dagelijkse sets aanwezig |
+| DB-bestand + manifest + checksums | **GEMETEN GROEN** — `db.sql.gz`, manifest en alle checksums geldig; `geheimen_opgenomen=false` |
+| Objectaantal en bytes | **GEMETEN** — 251 bestanden, samen `292.915.391` bytes |
+| Herstel naar lege PostgreSQL + MinIO | **GEMETEN GROEN** — 13 gebruikers teruggezet; tijdelijke database van 109 geregistreerde migraties met 13 actuele migraties bijgewerkt; 251 objecten naar verse tijdelijke MinIO hersteld |
+| API-health | **GEMETEN GROEN** — `{"status":"ok"}` tegen de tijdelijke herstelomgeving |
+| Login + 2FA | **GEMETEN GROEN** — normale login vroeg `verify_2fa`; bestaande TOTP-verificatie gaf HTTP 200 |
+| Document uit herstelde opslag + identieke checksum | **GEMETEN GROEN** — herstelde PDF via de normale document-, gebouw- en bevoegdhedenpoorten gaf HTTP 200, `1.537.761` bytes, `%PDF-`; SHA-256 was **IDENTIEK** aan het bestand in de immutable set |
 
-Pas na een groene Actions-run worden bovenstaande velden als **GEMETEN** ingevuld.
+De herstelproef was in 30 seconden gereed. Alle mutaties — actuele migraties,
+het tijdelijke proefaccount en de tijdelijke documentcontext — vonden alleen in
+de geïsoleerde hersteldatabase plaats. De back-upset en productie zijn niet
+gewijzigd.
