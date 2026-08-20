@@ -33,6 +33,7 @@ import {
   useGetDriewegControle,
   useGetInkooporderSuggestie,
   useKoppelInkoopbon,
+  useCrediterenFactuur,
 } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { NieuweLeverancierDialoog } from "@/components/nieuwe-leverancier-dialoog";
@@ -49,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useListFactuurRegels, useUpdateFactuurRegel } from "@workspace/api-client-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Sparkles, CheckCircle2, AlertTriangle, XCircle,
@@ -58,11 +59,12 @@ import {
   Send, CornerDownRight, CheckCheck, ArrowLeftRight, Bell, Gavel,
   BellRing, FileWarning, Plus, Printer,
 } from "lucide-react";
-import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
+import type { Factuur, FactuurRegel, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { GrootboekSelect } from "@/components/grootboek-select";
 import { BtwSelect } from "@/components/btw-select";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // FACTUUR_02 §4 — gesloten afwijsredenlijst (geen vrije tekst)
 const STROOM_AFWIJSREDENEN: Record<string, string> = {
@@ -139,6 +141,7 @@ export default function FactuurDetailPagina() {
   const [exportResultaat, setExportResultaat] = useState<{ geslaagd: boolean; boekingId?: string | null; fout?: string | null; testmodus?: boolean } | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [verzendKlantOpen, setVerzendKlantOpen] = useState(false);
+  const [crediteerOpen, setCrediteerOpen] = useState(false);
   const [verzendEmail, setVerzendEmail] = useState("");
   const [verzendBericht, setVerzendBericht] = useState("");
   const [exportBezig, setExportBezig] = useState(false);
@@ -409,6 +412,7 @@ export default function FactuurDetailPagina() {
   const isVerkoop = f.type === "verkoop";
   const kanDefinitief = isVerkoop && !f.factuurnummer && !f.geblokkeerd;
   const kanVerzendenKlant = isVerkoop && !!f.factuurnummer;
+  const kanCrediteren = isVerkoop && !!f.factuurnummer && f.subtype !== "creditnota";
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -437,7 +441,7 @@ export default function FactuurDetailPagina() {
                   </h1>
                   <KenmerkKop kenmerk={f.kenmerk} toelichting="Dit kenmerk staat op de uitgaande factuur. Automatisch berekend, niet bewerkbaar." />
                   <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${f.type === "inkoop" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-600"}`}>
-                    {f.type === "inkoop" ? "Inkoopfactuur" : "Verkoopfactuur"}
+                    {f.type === "inkoop" ? "Inkoopfactuur" : f.subtype === "creditnota" ? "Creditfactuur" : "Verkoopfactuur"}
                   </span>
                   <ImportBadge bron={f.bron} importId={f.import_id} />
                 </div>
@@ -472,7 +476,7 @@ export default function FactuurDetailPagina() {
               <Button size="sm" variant="outline" onClick={() => window.open(`/facturen/${id}/print`, "_blank")}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" />Afdrukken
               </Button>
-              {magMuteren && (
+              {magMuteren && !(isVerkoop && !!f.factuurnummer) && (
                 <Button size="sm" variant="outline" onClick={() => openBewerk(f)}>Bewerken</Button>
               )}
               {magMuteren && kanDefinitief && (
@@ -484,6 +488,11 @@ export default function FactuurDetailPagina() {
               {magMuteren && kanVerzendenKlant && (
                 <Button size="sm" variant="outline" onClick={() => setVerzendKlantOpen(true)} data-testid="button-verzenden-klant">
                   <ArrowUpRight className="h-3.5 w-3.5 mr-1.5" />Versturen naar klant
+                </Button>
+              )}
+              {magMuteren && kanCrediteren && (
+                <Button size="sm" variant="outline" onClick={() => setCrediteerOpen(true)} data-testid="button-crediteren">
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Crediteren
                 </Button>
               )}
               {magMuteren && kanAccorderen && (
@@ -544,6 +553,20 @@ export default function FactuurDetailPagina() {
           </div>
         </CardContent>
       </Card>
+
+      {f.subtype === "creditnota" && f.oorspronkelijke_factuur_id && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-4 py-3 text-sm text-blue-900 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-medium">Correctie op een definitieve verkoopfactuur</p>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Deze creditfactuur boekt geselecteerde regels van factuur {f.oorspronkelijke_factuurnummer ?? `#${f.oorspronkelijke_factuur_id}`} tegen.
+            </p>
+          </div>
+          <Link href={`/facturen/${f.oorspronkelijke_factuur_id}`}>
+            <Button size="sm" variant="outline">Bronfactuur openen</Button>
+          </Link>
+        </div>
+      )}
 
       {/* Ter beoordeling medewerker banner */}
       {isTerBeoordelingMedewerker && (
@@ -879,7 +902,7 @@ export default function FactuurDetailPagina() {
       })()}
 
       {/* Factuurregels (AI-extractie) */}
-      <FactuurRegelsKaart factuurId={id} vergrendeld={f.status === "verwerkt" || f.status === "verzonden_naar_accountview" || f.accountview_status === "success" || f.accountview_status === "verzenden"} />
+      <FactuurRegelsKaart factuurId={id} vergrendeld={!!f.factuurnummer || f.status === "verwerkt" || f.status === "verzonden_naar_accountview" || f.accountview_status === "success" || f.accountview_status === "verzenden"} />
 
       {/* AI metadata */}
       {f.ai_metadata && Object.keys(f.ai_metadata).length > 0 && (
@@ -1713,6 +1736,12 @@ export default function FactuurDetailPagina() {
       </Dialog>
 
       {/* Export resultaat dialog */}
+      <CrediteerDialog
+        open={crediteerOpen}
+        onOpenChange={setCrediteerOpen}
+        factuur={f}
+      />
+
       {exportResultaat && (
         <Dialog open onOpenChange={() => setExportResultaat(null)}>
           <DialogContent className="max-w-md">
@@ -1740,6 +1769,176 @@ export default function FactuurDetailPagina() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+function CrediteerDialog({
+  open,
+  onOpenChange,
+  factuur,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  factuur: Factuur;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [modus, setModus] = useState<"geheel" | "regels">("geheel");
+  const [regelIds, setRegelIds] = useState<Set<number>>(new Set());
+  const [reden, setReden] = useState("");
+  const { data: regels = [], isLoading } = useListFactuurRegels(
+    factuur.id,
+    { query: { queryKey: ["factuur-regels", factuur.id], enabled: open } },
+  );
+  const beschikbareRegels = (regels as FactuurRegel[]).filter((regel) => !regel.is_gecrediteerd);
+
+  useEffect(() => {
+    if (!open) return;
+    setModus("geheel");
+    setRegelIds(new Set());
+    setReden("");
+  }, [open]);
+
+  const crediteerMut = useCrediterenFactuur({
+    mutation: {
+      onSuccess: (creditfactuur) => {
+        queryClient.invalidateQueries({ queryKey: ["factuur", factuur.id] });
+        queryClient.invalidateQueries({ queryKey: ["factuur-regels", factuur.id] });
+        queryClient.invalidateQueries({ queryKey: ["facturen"] });
+        toast({
+          title: "Creditfactuur aangemaakt",
+          description: `Fiscaal nummer ${creditfactuur.factuurnummer ?? ""} is toegekend. De creditfactuur staat klaar voor accordering en AccountView.`,
+        });
+        onOpenChange(false);
+        window.location.assign(`${import.meta.env.BASE_URL}facturen/${creditfactuur.id}`);
+      },
+      onError: (error) => {
+        const apiError = error as { data?: { error?: string; detail?: string }; message?: string };
+        toast({
+          title: "Crediteren mislukt",
+          description: apiError.data?.detail ?? apiError.data?.error ?? apiError.message ?? "Onbekende fout",
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  const toggleRegel = (regelId: number) => {
+    setRegelIds((huidig) => {
+      const volgend = new Set(huidig);
+      if (volgend.has(regelId)) volgend.delete(regelId);
+      else volgend.add(regelId);
+      return volgend;
+    });
+  };
+  const kanAanmaken = reden.trim().length > 0
+    && beschikbareRegels.length > 0
+    && (modus === "geheel" || regelIds.size > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Factuur {factuur.factuurnummer} crediteren</DialogTitle>
+          <DialogDescription>
+            Kies welke regels u met een nieuw fiscaal document wilt tegenboeken.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            De bronfactuur blijft ongewijzigd. Connect maakt direct een definitieve creditfactuur met een eigen fiscaal nummer uit dezelfde BV-reeks.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`rounded-lg border p-3 text-left transition-colors ${modus === "geheel" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+              onClick={() => setModus("geheel")}
+              data-testid="credit-modus-geheel"
+            >
+              <span className="text-sm font-medium">Gehele factuur</span>
+              <span className="block text-xs text-muted-foreground mt-1">Alle nog openstaande regels tegenboeken.</span>
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg border p-3 text-left transition-colors ${modus === "regels" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+              onClick={() => setModus("regels")}
+              data-testid="credit-modus-regels"
+            >
+              <span className="text-sm font-medium">Per regel</span>
+              <span className="block text-xs text-muted-foreground mt-1">Zelf kiezen welke regels worden tegengeboekt.</span>
+            </button>
+          </div>
+
+          {modus === "regels" && (
+            <div className="rounded-lg border max-h-64 overflow-y-auto">
+              {isLoading ? (
+                <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />Regels laden…
+                </div>
+              ) : regels.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">Deze factuur heeft geen regels.</p>
+              ) : (
+                (regels as FactuurRegel[]).map((regel) => (
+                  <label
+                    key={regel.id}
+                    className={`flex items-start gap-3 px-3 py-2 border-b last:border-0 ${regel.is_gecrediteerd ? "bg-muted/40 text-muted-foreground" : "cursor-pointer hover:bg-muted/30"}`}
+                  >
+                    <Checkbox
+                      checked={regel.is_gecrediteerd || regelIds.has(regel.id)}
+                      disabled={regel.is_gecrediteerd}
+                      onCheckedChange={() => toggleRegel(regel.id)}
+                      aria-label={`Regel ${regel.regelnummer} selecteren`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium truncate">{regel.omschrijving}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {regel.is_gecrediteerd ? "Al gecrediteerd" : `${regel.hoeveelheid ?? ""}${regel.eenheid ? ` ${regel.eenheid}` : ""}`}
+                      </span>
+                    </span>
+                    <span className="text-sm font-mono shrink-0">{euro(regel.bedrag_excl_btw)}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+
+          {beschikbareRegels.length === 0 && !isLoading && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Alle regels van deze factuur zijn al gecrediteerd.
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="credit-reden">Reden van de correctie</Label>
+            <Textarea
+              id="credit-reden"
+              value={reden}
+              onChange={(e) => setReden(e.target.value)}
+              maxLength={500}
+              placeholder="Bijvoorbeeld: onjuist aantal gefactureerd"
+              data-testid="input-credit-reden"
+            />
+            <p className="text-xs text-muted-foreground">Deze reden wordt in het auditspoor bij beide facturen vastgelegd.</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuleren</Button>
+          <Button
+            disabled={!kanAanmaken || crediteerMut.isPending}
+            onClick={() => crediteerMut.mutate({
+              id: factuur.id,
+              data: modus === "geheel"
+                ? { geheel: true, reden: reden.trim() }
+                : { geheel: false, regel_ids: [...regelIds], reden: reden.trim() },
+            })}
+            data-testid="button-credit-aanmaken"
+          >
+            {crediteerMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+            Creditfactuur aanmaken
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

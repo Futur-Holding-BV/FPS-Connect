@@ -172,13 +172,14 @@ export async function claimAccountviewVerzending(
 /**
  * ADMINISTRATIE_01 fase 3 — hercontrole ná de verzend-claim (TOCTOU).
  *
- * De BV op offerte/opdracht en de koppeling-BV blijven muteerbaar tussen de
- * eerste controle en de externe call. Daarom moet élk verzendpad (service,
+ * De koppeling-BV blijft muteerbaar tussen de eerste controle en de externe
+ * call. De factuur-BV is vanaf fiscale nummering een vaste momentopname; voor
+ * concept/legacy blijft de werk-keten de fail-closed fallback. Daarom moet élk verzendpad (service,
  * forceer-herexport, batch-export) deze hercontrole draaien direct ná
  * claimAccountviewVerzending en vlak vóór client.verzendBoeking. De
  * AccountView-instellingen worden hier bewust VERS gelezen (niet de eerder
- * opgehaalde rij) en controleerFactuurAdministratieBv leest de BV-keten
- * (offerte → opdracht → gebouw) altijd live uit de database. Bij weigering
+ * opgehaalde rij) en controleerFactuurAdministratieBv leest de vaste factuur-BV
+ * of anders de legacy-keten uit de database. Bij weigering
  * wordt de claim teruggegeven door de factuur op error te zetten, en krijgt
  * de aanroeper de leesbare weigering terug.
  *
@@ -191,7 +192,7 @@ export async function claimAccountviewVerzending(
  */
 type AccountviewInstellingen = typeof accountviewInstellingenTable.$inferSelect;
 export async function hercontroleerBvNaClaim(
-  factuur: Pick<typeof facturenTable.$inferSelect, "id" | "offerteId" | "opdrachtId" | "gebouwId">,
+  factuur: Pick<typeof facturenTable.$inferSelect, "id" | "type" | "factuurnummer" | "werkgeverId" | "werkgeverVastgelegdOp" | "offerteId" | "opdrachtId" | "gebouwId">,
 ): Promise<{ bvFout: string; inst: null } | { bvFout: null; inst: AccountviewInstellingen }> {
   const [versInst] = await db.select().from(accountviewInstellingenTable)
     .where(eq(accountviewInstellingenTable.id, 1)).limit(1);

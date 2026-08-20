@@ -20913,6 +20913,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/Factuur"
 
+  /facturen/{id}/crediteren:
+    post:
+      operationId: crediterenFactuur
+      summary: Definitieve verkoopfactuur geheel of per regel crediteren
+      description: >
+        Maakt direct een definitieve creditfactuur met een eigen fiscaal nummer
+        uit dezelfde BV-reeks. De bronfactuur blijft ongewijzigd. Eerder
+        gecrediteerde regels kunnen niet nogmaals worden tegengeboekt.
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurCrediteringInput"
+      responses:
+        "201":
+          description: Definitieve creditfactuur met eigen fiscaal nummer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+        "400":
+          description: Ongeldige selectie
+        "409":
+          description: Bronfactuur of geselecteerde regel is niet crediteerbaar
+        "422":
+          description: Geen definitieve gewone verkoopfactuur of geen BV bepaalbaar
+
   /opdrachten/{id}/verkoopfactuur:
     post:
       operationId: samenstellenVerkoopfactuur
@@ -47395,6 +47430,12 @@ components:
           type: string
           nullable: true
           description: "Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null"
+        oorspronkelijke_factuur_id:
+          type: ["integer", "null"]
+          description: "Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd"
+        oorspronkelijke_factuurnummer:
+          type: ["string", "null"]
+          description: "Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur"
         offerte_id:
           type: integer
           nullable: true
@@ -47793,6 +47834,25 @@ components:
         status:
           type: string
           nullable: true
+
+    FactuurCrediteringInput:
+      type: object
+      required: [geheel, reden]
+      properties:
+        geheel:
+          type: boolean
+          description: "true = alle nog niet gecrediteerde regels; false = alleen regel_ids"
+        regel_ids:
+          type: array
+          uniqueItems: true
+          minItems: 1
+          items:
+            type: integer
+        reden:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: "Verplichte correctiereden voor het auditspoor"
 
     FactuurUploadUrlInput:
       type: object
@@ -48332,7 +48392,7 @@ components:
 
     FactuurRegel:
       type: object
-      required: [id, factuur_id, regelnummer, omschrijving, bron, aangemaakt_op, bijgewerkt_op]
+      required: [id, factuur_id, regelnummer, omschrijving, bron, is_gecrediteerd, aangemaakt_op, bijgewerkt_op]
       properties:
         id: { type: integer }
         factuur_id: { type: integer }
@@ -48349,6 +48409,10 @@ components:
         kostenplaats: { type: string, nullable: true }
         categorie: { type: string, nullable: true }
         inkoopbon_regel_id: { type: integer, nullable: true }
+        oorspronkelijke_factuur_regel_id: { type: integer, nullable: true }
+        is_gecrediteerd:
+          type: boolean
+          description: "Alleen relevant op een bronfactuur: deze regel is al volledig tegengeboekt"
         bron: { type: string }
         ai_vertrouwen: { type: number, nullable: true }
         aangemaakt_op: { type: string }

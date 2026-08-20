@@ -2511,7 +2511,17 @@ function FacturatieTab({ opdrachtId, kanSamenstellen }: { opdrachtId: number; ka
       onError: (e) => toast({ title: "Samenstellen mislukt", description: (e as { message?: string })?.message ?? "Onbekende fout", variant: "destructive" }),
     },
   });
-  const verkoop = (facturen as { id: number; type?: string; factuurnummer?: string | null; kenmerk?: string | null; status?: string; bedrag_incl_btw?: string | null; factuurdatum?: string | null }[]).filter((f) => f.type === "verkoop");
+  const verkoop = (facturen as {
+    id: number;
+    type?: string;
+    subtype?: string | null;
+    factuurnummer?: string | null;
+    oorspronkelijke_factuurnummer?: string | null;
+    kenmerk?: string | null;
+    status?: string;
+    bedrag_incl_btw?: string | null;
+    factuurdatum?: string | null;
+  }[]).filter((f) => f.type === "verkoop");
 
   return (
     <div className="space-y-4">
@@ -2559,9 +2569,15 @@ function FacturatieTab({ opdrachtId, kanSamenstellen }: { opdrachtId: number; ka
                 <Link key={f.id} href={`/facturen/${f.id}`} className="flex items-center justify-between gap-3 py-2 hover:bg-muted/50 px-2 -mx-2 rounded" data-testid={`link-verkoopfactuur-${f.id}`}>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {f.factuurnummer ? `Factuur ${f.factuurnummer}` : "Concept (nog geen fiscaal nummer)"}
+                      {f.subtype === "creditnota"
+                        ? `Creditfactuur ${f.factuurnummer ?? "(nog geen fiscaal nummer)"}`
+                        : f.factuurnummer ? `Factuur ${f.factuurnummer}` : "Concept (nog geen fiscaal nummer)"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">{f.kenmerk ?? f.factuurdatum ?? ""}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {f.subtype === "creditnota" && f.oorspronkelijke_factuurnummer
+                        ? `Correctie op factuur ${f.oorspronkelijke_factuurnummer}`
+                        : f.kenmerk ?? f.factuurdatum ?? ""}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {f.bedrag_incl_btw && <span className="text-sm tabular-nums">€ {Number.parseFloat(f.bedrag_incl_btw).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>}

@@ -67,6 +67,7 @@ import { bouwVerkoopfactuurMailHtml } from "../services/verkoopfactuurMail";
 import { verwerkMandagstaatVoorFactuur } from "../lib/mandagstaat";
 import { PermissieService } from "../lib/permissie-service";
 import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
+import { CrediterenFactuurBody, CrediterenFactuurParams } from "@workspace/api-zod";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -91,6 +92,13 @@ function paramInt(val: unknown): number {
 
 async function mapFactuur(r: typeof facturenTable.$inferSelect) {
   const factuurBv = await bepaalFactuurWerkmaatschappij(r);
+  const [oorspronkelijkeFactuur] = r.oorspronkelijkeFactuurId
+    ? await db
+        .select({ factuurnummer: facturenTable.factuurnummer })
+        .from(facturenTable)
+        .where(eq(facturenTable.id, r.oorspronkelijkeFactuurId))
+        .limit(1)
+    : [null];
   const [gebouw] = r.gebouwId
     ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, r.gebouwId)).limit(1)
     : [null];
@@ -108,6 +116,8 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     id: r.id,
     type: r.type,
     subtype: r.subtype ?? null,
+    oorspronkelijke_factuur_id: r.oorspronkelijkeFactuurId ?? null,
+    oorspronkelijke_factuurnummer: oorspronkelijkeFactuur?.factuurnummer ?? null,
     // NUMMER_01 §4.6: F-nummer per offerte + kenmerk (O405/F002); het fiscale
     // factuurnummer staat los daarvan in `factuurnummer`.
     offerte_id: r.offerteId,
@@ -273,7 +283,17 @@ router.post("/facturen", requireBevoegdheid("financieel", 2), async (req: Reques
     });
     return;
   }
-  const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
+  // Een creditnota is geen vrij aan te maken factuursoort: alleen de
+  // /facturen/:id/crediteren-route mag haar maken, omdat die bronfactuur,
+  // bronregels, negatieve bedragen en fiscale BV atomair vastlegt.
+  if (body.subtype === "creditnota") {
+    res.status(422).json({
+      error: "Een creditnota kan alleen vanuit een definitieve verkoopfactuur worden aangemaakt",
+      detail: "Open de oorspronkelijke verkoopfactuur en gebruik Crediteren, geheel of per regel.",
+    });
+    return;
+  }
+  const TOEGESTANE_SUBTYPES = new Set(["prijsafwijking"]);
   const subtype = body.subtype && TOEGESTANE_SUBTYPES.has(body.subtype) ? body.subtype : null;
   // NUMMER_01 §4.6: verkoopfactuur onder een offerte krijgt bij aanmaak een
   // F-volgnummer per offerte (F001, F002, …) — het fiscale factuurnummer wordt
@@ -423,61 +443,91 @@ router.put("/facturen/factuurnummer-tellers/:werkgeverId", requireBevoegdheid("f
 // één transactie. Een concept verbruikt dus nooit een fiscaal nummer.
 router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id));
-  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
-  if (factuur.type !== "verkoop") {
-    res.status(422).json({ error: "Alleen verkoopfacturen krijgen een fiscaal nummer uit de eigen reeks" });
-    return;
-  }
-  if (factuur.factuurnummer) {
-    res.status(409).json({ error: "Deze factuur heeft al een fiscaal factuurnummer", factuurnummer: factuur.factuurnummer });
-    return;
-  }
+  type DefinitiefResultaat =
+    | { ok: true; factuur: typeof facturenTable.$inferSelect }
+    | { ok: false; status: number; error: string; detail?: string; factuurnummer?: string };
 
-  // ADMINISTRATIE_01 fase 3: de fiscale reeks volgt de BV van het WERK via
-  // dezelfde gedeelde keten als print/export (offerte → opdracht →
-  // gebouw-default) — nooit een eigen afwijkende afleiding, anders krijgt
-  // een factuur van BV B het nummer uit de reeks van BV A.
-  const factuurBv = await bepaalFactuurWerkmaatschappij(factuur);
-  const werkgeverId = factuurBv?.id ?? null;
-  if (!werkgeverId) {
-    res.status(422).json({
-      error: "Geen BV bepaalbaar voor de fiscale reeks",
-      detail: "Stel de werkmaatschappij in op het werk (offerte/opdracht) of koppel de factuur aan een gebouw met BV; het fiscale factuurnummer is per BV.",
-    });
-    return;
-  }
-
-  const resultaat = await db.transaction(async (tx) => {
-    // Row-lock op de factuur + hercheck ín de transactie: twee gelijktijdige
-    // definitief-verzoeken kunnen anders elk een tellernummer verbruiken.
+  const resultaat: DefinitiefResultaat = await db.transaction(async (tx): Promise<DefinitiefResultaat> => {
+    // Vaste lockvolgorde: factuur → offerte → opdracht → gebouw → werkgever →
+    // teller. Daardoor kan noch een tweede definitief-verzoek, noch een
+    // gelijktijdige wijziging van de werk-BV tussen afleiding en nummeruitgifte
+    // glippen.
     const [vergrendeld] = await tx
-      .select({ factuurnummer: facturenTable.factuurnummer })
+      .select()
       .from(facturenTable)
       .where(eq(facturenTable.id, id))
       .for("update");
-    if (!vergrendeld || vergrendeld.factuurnummer) return null;
+    if (!vergrendeld) return { ok: false, status: 404, error: "Factuur niet gevonden" };
+    if (vergrendeld.type !== "verkoop") {
+      return { ok: false, status: 422, error: "Alleen verkoopfacturen krijgen een fiscaal nummer uit de eigen reeks" };
+    }
+    // Verdediging in de diepte tegen oude of rechtstreeks ingevoerde concepten:
+    // de crediteringsroute maakt creditnota's al direct definitief binnen haar
+    // eigen bron-locktransactie. Dit algemene pad mag dat nooit omzeilen.
+    if (vergrendeld.subtype === "creditnota") {
+      return {
+        ok: false,
+        status: 422,
+        error: "Creditnota's kunnen alleen via Crediteren op de oorspronkelijke verkoopfactuur definitief worden gemaakt",
+      };
+    }
+    if (vergrendeld.factuurnummer) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Deze factuur heeft al een fiscaal factuurnummer",
+        factuurnummer: vergrendeld.factuurnummer,
+      };
+    }
+
+    // De gedeelde BV-keten wordt pas ná de factuur-lock opnieuw gelezen. Alle
+    // aanwezige bronrijen worden in dezelfde transactie gelockt, óók wanneer
+    // een hoger geprioriteerde bron nu nog geen BV heeft.
+    const factuurBv = await bepaalFactuurWerkmaatschappij(vergrendeld, {
+      uitvoerder: tx as unknown as typeof db,
+      vergrendelBronnen: true,
+    });
+    const werkgeverId = factuurBv?.id ?? null;
+    if (!werkgeverId) {
+      return {
+        ok: false,
+        status: 422,
+        error: "Geen BV bepaalbaar voor de fiscale reeks",
+        detail: "Stel de werkmaatschappij in op het werk (offerte/opdracht) of koppel de factuur aan een gebouw met BV; het fiscale factuurnummer is per BV.",
+      };
+    }
+
     // Teller per BV onder slot: eerst rij garanderen, dan atomair ophogen.
     await tx
       .insert(factuurnummerTellersTable)
-      .values({ werkgeverId: werkgeverId!, laatsteNummer: 0 })
+      .values({ werkgeverId, laatsteNummer: 0 })
       .onConflictDoNothing();
     const [teller] = await tx
       .update(factuurnummerTellersTable)
       .set({ laatsteNummer: sql`${factuurnummerTellersTable.laatsteNummer} + 1`, bijgewerktOp: new Date() })
-      .where(eq(factuurnummerTellersTable.werkgeverId, werkgeverId!))
+      .where(eq(factuurnummerTellersTable.werkgeverId, werkgeverId))
       .returning();
-    const fiscaal = String(teller.laatsteNummer).padStart(5, "0");
-    const kenmerk = await kenmerkVoorFactuur(factuur.offerteId, factuur.nummer);
+    const fiscaal = String(teller!.laatsteNummer).padStart(5, "0");
+    const kenmerk = await kenmerkVoorFactuur(vergrendeld.offerteId, vergrendeld.nummer);
     const [bijgewerkt] = await tx
       .update(facturenTable)
-      .set({ factuurnummer: fiscaal, kenmerk, bijgewerktOp: new Date() })
+      .set({
+        factuurnummer: fiscaal,
+        werkgeverId,
+        werkgeverVastgelegdOp: new Date(),
+        kenmerk,
+        bijgewerktOp: new Date(),
+      })
       .where(eq(facturenTable.id, id))
       .returning();
-    return bijgewerkt;
+    return { ok: true, factuur: bijgewerkt! };
   });
-  if (!resultaat) {
-    res.status(409).json({ error: "Deze factuur heeft al een fiscaal factuurnummer" });
+  if (!resultaat.ok) {
+    res.status(resultaat.status).json({
+      error: resultaat.error,
+      ...(resultaat.detail ? { detail: resultaat.detail } : {}),
+      ...(resultaat.factuurnummer ? { factuurnummer: resultaat.factuurnummer } : {}),
+    });
     return;
   }
 
@@ -485,12 +535,261 @@ router.post("/facturen/:id/definitief", requireBevoegdheid("financieel", 2), asy
   // factuur in object storage opgeslagen zodat ze aantoonbaar met de factuur
   // meegaan; de paden komen terug in de respons. Nooit blokkerend — ontbreken
   // (geen uren of geen personeelsrecht) levert alleen een waarschuwing.
-  const { paden, waarschuwing } = await mandagstatenVoorVerkoopfactuur(resultaat, req.permissies!, sessionUserId(req));
+  const { paden, waarschuwing } = await mandagstatenVoorVerkoopfactuur(resultaat.factuur, req.permissies!, sessionUserId(req));
   res.json({
-    ...(await mapFactuur(resultaat)),
+    ...(await mapFactuur(resultaat.factuur)),
     mandagstaat_waarschuwing: waarschuwing,
     mandagstaat_paden: paden,
   });
+});
+
+// ── GELDSTROOM_01: definitieve verkoopfactuur crediteren ─────────────────────
+// De bronfactuur blijft fiscaal ongewijzigd. De creditfactuur krijgt in dezelfde
+// transactie een eigen F-kenmerk en fiscaal nummer uit exact dezelfde BV-reeks.
+// Een source-row lock + unieke DB-index voorkomen dubbele tegenboeking bij twee
+// gelijktijdige verzoeken.
+router.post("/facturen/:id/crediteren", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const params = CrediterenFactuurParams.safeParse(req.params);
+  const body = CrediterenFactuurBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: "Ongeldige creditering", detail: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: "Ongeldige creditering", detail: body.error.message });
+    return;
+  }
+  const id = params.data.id;
+  const reden = body.data.reden.trim();
+  const gekozenIds = [...new Set(body.data.regel_ids ?? [])];
+  if (!reden) {
+    res.status(400).json({ error: "Een reden voor de correctie is verplicht" });
+    return;
+  }
+  if (!body.data.geheel && gekozenIds.length === 0) {
+    res.status(400).json({ error: "Selecteer minimaal één factuurregel of kies 'Gehele factuur'" });
+    return;
+  }
+
+  // De bestaande BV-resolver is de enige bron voor fiscale nummering. Dezelfde
+  // resolver wordt ook door /definitief en de AccountView-poort gebruikt.
+  const [bronVooraf] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!bronVooraf) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+  if (bronVooraf.type !== "verkoop" || bronVooraf.subtype === "creditnota" || !bronVooraf.factuurnummer) {
+    res.status(422).json({ error: "Alleen een definitieve gewone verkoopfactuur kan worden gecrediteerd" });
+    return;
+  }
+  if (bronVooraf.werkgeverId == null || bronVooraf.werkgeverVastgelegdOp == null) {
+    res.status(422).json({
+      error: "Fiscale BV van de bronfactuur is niet aantoonbaar vastgelegd",
+      detail: "Crediteren is fail-closed geblokkeerd totdat een bevoegde herstelactie de uitgevende BV expliciet vastlegt.",
+    });
+    return;
+  }
+  const werkgeverId = bronVooraf.werkgeverId;
+
+  type CreditResultaat =
+    | { ok: true; factuur: typeof facturenTable.$inferSelect; aantalRegels: number }
+    | { ok: false; status: number; error: string; detail?: string };
+
+  const resultaat: CreditResultaat = await db.transaction(async (tx): Promise<CreditResultaat> => {
+    const [bron] = await tx
+      .select()
+      .from(facturenTable)
+      .where(eq(facturenTable.id, id))
+      .limit(1)
+      .for("update");
+    if (!bron) return { ok: false, status: 404, error: "Factuur niet gevonden" };
+    if (bron.type !== "verkoop" || bron.subtype === "creditnota" || !bron.factuurnummer) {
+      return { ok: false, status: 409, error: "Deze factuur is niet meer crediteerbaar" };
+    }
+    if (bron.werkgeverId !== werkgeverId || bron.werkgeverVastgelegdOp == null) {
+      return {
+        ok: false,
+        status: 409,
+        error: "De fiscale BV-momentopname van de bronfactuur is niet meer geldig",
+        detail: "Crediteren is geblokkeerd om boeking in een verkeerde fiscale reeks te voorkomen.",
+      };
+    }
+
+    const bronRegels = await tx
+      .select()
+      .from(factuurRegelsTable)
+      .where(eq(factuurRegelsTable.factuurId, id))
+      .orderBy(factuurRegelsTable.regelnummer, factuurRegelsTable.id);
+    if (bronRegels.length === 0) {
+      return { ok: false, status: 422, error: "Deze factuur heeft geen regels om te crediteren" };
+    }
+
+    const alGecrediteerd = await tx
+      .select({ bronRegelId: factuurRegelsTable.oorspronkelijkeFactuurRegelId })
+      .from(factuurRegelsTable)
+      .innerJoin(facturenTable, eq(factuurRegelsTable.factuurId, facturenTable.id))
+      .where(and(
+        eq(facturenTable.oorspronkelijkeFactuurId, id),
+        isNotNull(factuurRegelsTable.oorspronkelijkeFactuurRegelId),
+      ));
+    const gebruikteIds = new Set(alGecrediteerd.map((r) => r.bronRegelId).filter((v): v is number => v != null));
+    const bronPerId = new Map(bronRegels.map((r) => [r.id, r]));
+
+    let teCrediteren: typeof bronRegels;
+    if (body.data.geheel) {
+      teCrediteren = bronRegels.filter((r) => !gebruikteIds.has(r.id));
+    } else {
+      const onbekend = gekozenIds.find((regelId) => !bronPerId.has(regelId));
+      if (onbekend != null) {
+        return { ok: false, status: 422, error: "Een geselecteerde regel hoort niet bij deze factuur" };
+      }
+      const dubbel = gekozenIds.find((regelId) => gebruikteIds.has(regelId));
+      if (dubbel != null) {
+        return {
+          ok: false,
+          status: 409,
+          error: "Een geselecteerde regel is al gecrediteerd",
+          detail: "Vernieuw de factuur en selecteer alleen nog openstaande regels.",
+        };
+      }
+      teCrediteren = gekozenIds.map((regelId) => bronPerId.get(regelId)!);
+    }
+    if (teCrediteren.length === 0) {
+      return { ok: false, status: 409, error: "Deze factuur is al volledig gecrediteerd" };
+    }
+
+    const creditRegels: Array<{
+      bron: (typeof bronRegels)[number];
+      exclCenten: number;
+      btwCenten: number;
+      stukprijsCenten: number | null;
+    }> = [];
+    for (const regel of teCrediteren) {
+      const excl = naarCenten(regel.bedragExclBtw);
+      if (excl == null || Number.isNaN(excl)) {
+        return {
+          ok: false,
+          status: 422,
+          error: `Regel ${regel.regelnummer} heeft geen geldig bedrag en kan niet worden gecrediteerd`,
+        };
+      }
+      const opgeslagenBtw = naarCenten(regel.btwBedrag);
+      const btw = opgeslagenBtw != null && !Number.isNaN(opgeslagenBtw)
+        ? opgeslagenBtw
+        : Math.round((excl * (regel.btwPercentage ?? 0)) / 100);
+      const stukprijs = naarCenten(regel.stukprijs);
+      creditRegels.push({
+        bron: regel,
+        exclCenten: -excl,
+        btwCenten: -btw,
+        stukprijsCenten: stukprijs == null || Number.isNaN(stukprijs) ? null : -stukprijs,
+      });
+    }
+
+    let fNummer: number | null = null;
+    if (bron.offerteId) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(864201, ${bron.offerteId})`);
+      const [m] = await tx
+        .select({ max: sql<number>`COALESCE(MAX(${facturenTable.nummer}), 0)` })
+        .from(facturenTable)
+        .where(eq(facturenTable.offerteId, bron.offerteId));
+      fNummer = Number(m?.max ?? 0) + 1;
+    }
+
+    await tx
+      .insert(factuurnummerTellersTable)
+      .values({ werkgeverId, laatsteNummer: 0 })
+      .onConflictDoNothing();
+    const [teller] = await tx
+      .update(factuurnummerTellersTable)
+      .set({
+        laatsteNummer: sql`${factuurnummerTellersTable.laatsteNummer} + 1`,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(factuurnummerTellersTable.werkgeverId, werkgeverId))
+      .returning();
+    const fiscaalNummer = String(teller!.laatsteNummer).padStart(5, "0");
+    const kenmerk = await kenmerkVoorFactuur(bron.offerteId, fNummer);
+    const totaalExcl = creditRegels.reduce((som, r) => som + r.exclCenten, 0);
+    const totaalBtw = creditRegels.reduce((som, r) => som + r.btwCenten, 0);
+    const vandaag = new Date().toISOString().slice(0, 10);
+
+    const [creditfactuur] = await tx
+      .insert(facturenTable)
+      .values({
+        type: "verkoop",
+        subtype: "creditnota",
+        werkgeverId,
+        werkgeverVastgelegdOp: new Date(),
+        oorspronkelijkeFactuurId: bron.id,
+        offerteId: bron.offerteId,
+        opdrachtId: bron.opdrachtId,
+        gebouwId: bron.gebouwId,
+        nummer: fNummer,
+        kenmerk,
+        factuurnummer: fiscaalNummer,
+        factuurdatum: vandaag,
+        vervaldatum: vandaag,
+        omschrijving: `Credit op factuur ${bron.factuurnummer}: ${reden}`,
+        relatienaam: bron.relatienaam,
+        relatieCode: bron.relatieCode,
+        relatieAdres: bron.relatieAdres,
+        bedragExclBtw: centenNaarBedrag(totaalExcl),
+        btwBedrag: centenNaarBedrag(totaalBtw),
+        bedragInclBtw: centenNaarBedrag(totaalExcl + totaalBtw),
+        btwCode: bron.btwCode,
+        grootboekrekening: bron.grootboekrekening,
+        kostenplaats: bron.kostenplaats,
+        dagboek: bron.dagboek,
+        projectCode: bron.projectCode,
+        uploaderId: sessionUserId(req),
+        status: "klaar_voor_boeking",
+        bron: "creditering",
+      })
+      .returning();
+
+    for (const [index, creditRegel] of creditRegels.entries()) {
+      const regel = creditRegel.bron;
+      await tx.insert(factuurRegelsTable).values({
+        factuurId: creditfactuur!.id,
+        oorspronkelijkeFactuurRegelId: regel.id,
+        regelnummer: index + 1,
+        omschrijving: `Credit: ${regel.omschrijving}`,
+        hoeveelheid: regel.hoeveelheid,
+        eenheid: regel.eenheid,
+        stukprijs: creditRegel.stukprijsCenten == null ? null : centenNaarBedrag(creditRegel.stukprijsCenten),
+        bedragExclBtw: centenNaarBedrag(creditRegel.exclCenten),
+        btwCode: regel.btwCode,
+        btwPercentage: regel.btwPercentage,
+        btwBedrag: centenNaarBedrag(creditRegel.btwCenten),
+        grootboekrekening: regel.grootboekrekening,
+        kostenplaats: regel.kostenplaats,
+        categorie: regel.categorie,
+        bron: "creditering",
+      });
+    }
+
+    return { ok: true, factuur: creditfactuur!, aantalRegels: creditRegels.length };
+  });
+
+  if (!resultaat.ok) {
+    res.status(resultaat.status).json({ error: resultaat.error, ...(resultaat.detail ? { detail: resultaat.detail } : {}) });
+    return;
+  }
+
+  const userId = sessionUserId(req);
+  const [wie] = userId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1)
+    : [];
+  const actor = wie?.naam ?? "Een medewerker";
+  await schrijfTijdlijn(
+    resultaat.factuur.id,
+    `${actor} heeft deze creditfactuur aangemaakt voor factuur ${bronVooraf.factuurnummer} (${resultaat.aantalRegels} regel${resultaat.aantalRegels === 1 ? "" : "s"}). Reden: ${reden}`,
+    wie?.naam ?? null,
+  );
+  await schrijfTijdlijn(
+    id,
+    `${actor} heeft creditfactuur ${resultaat.factuur.factuurnummer} aangemaakt (${resultaat.aantalRegels} regel${resultaat.aantalRegels === 1 ? "" : "s"}). Reden: ${reden}`,
+    wie?.naam ?? null,
+  );
+  res.status(201).json(await mapFactuur(resultaat.factuur));
 });
 
 // ── GELDSTROOM_01: verkoopfactuur samenstellen uit offerte of werkbegroting ──
@@ -1268,6 +1567,15 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: R
 
   const [bestaand] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!bestaand) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (bestaand.type === "verkoop" && bestaand.factuurnummer) {
+    res.status(409).json({
+      error: "Een definitieve verkoopfactuur is fiscaal onwijzigbaar",
+      detail: bestaand.subtype === "creditnota"
+        ? "Deze creditfactuur is al definitief."
+        : "Maak een creditfactuur om dit fiscale document te corrigeren.",
+    });
+    return;
+  }
 
   // FACTUUR_02 §5 — stroomstatussen zijn uitsluitend via de stroomacties te
   // wijzigen. Via de generieke PATCH mag de status van een stroom-factuur niet
@@ -1285,7 +1593,13 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: R
 
   const update: Partial<typeof facturenTable.$inferInsert> = { bijgewerktOp: new Date() };
   if ("subtype" in body) {
-    const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
+    if (body["subtype"] === "creditnota") {
+      res.status(409).json({
+        error: "Een creditfactuur kan alleen via de actie 'Crediteren' worden aangemaakt",
+      });
+      return;
+    }
+    const TOEGESTANE_SUBTYPES = new Set(["prijsafwijking"]);
     const sub = body["subtype"];
     update.subtype = typeof sub === "string" && TOEGESTANE_SUBTYPES.has(sub) ? sub : null;
   }
@@ -1318,19 +1632,54 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: R
   if ("gebouw_id" in body) update.gebouwId = body["gebouw_id"] as number | null;
   if ("status" in body) update.status = body["status"] as string;
 
-  const [updated] = await db.update(facturenTable).set(update).where(eq(facturenTable.id, id)).returning();
-  if (!updated) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  const [updated] = await db
+    .update(facturenTable)
+    .set(update)
+    .where(and(
+      eq(facturenTable.id, id),
+      or(ne(facturenTable.type, "verkoop"), isNull(facturenTable.factuurnummer)),
+    ))
+    .returning();
+  if (!updated) {
+    res.status(409).json({
+      error: "De verkoopfactuur is inmiddels definitief gemaakt en kan niet meer worden gewijzigd",
+      detail: "Maak een creditfactuur om het fiscale document te corrigeren.",
+    });
+    return;
+  }
   res.json(await mapFactuur(updated));
 });
 
 // ── DELETE /facturen/:id ───────────────────────────────────────────────────────
 router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
+  const [bestaand] = await db
+    .select({ type: facturenTable.type, factuurnummer: facturenTable.factuurnummer })
+    .from(facturenTable)
+    .where(eq(facturenTable.id, id))
+    .limit(1);
+  if (!bestaand) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (bestaand.type === "verkoop" && bestaand.factuurnummer) {
+    res.status(409).json({
+      error: "Een definitieve verkoopfactuur kan niet worden verwijderd",
+      detail: "Het fiscale dossier blijft bewaard; corrigeer een gewone verkoopfactuur via een creditfactuur.",
+    });
+    return;
+  }
   // FINANCIEEL_KETEN_01: verwijderen is een besluit — leg vast wie, wat en
   // wanneer. Via RETURNING: alleen een daadwerkelijk verwijderde rij wordt
   // gelogd (geen vals log bij gelijktijdige verwijdering).
-  const [f] = await db.delete(facturenTable).where(eq(facturenTable.id, id))
+  const [f] = await db.delete(facturenTable).where(and(
+    eq(facturenTable.id, id),
+    or(ne(facturenTable.type, "verkoop"), isNull(facturenTable.factuurnummer)),
+  ))
     .returning({ factuurnummer: facturenTable.factuurnummer, relatienaam: facturenTable.relatienaam, bedrag: facturenTable.bedragInclBtw });
+  if (!f) {
+    res.status(409).json({
+      error: "De verkoopfactuur is inmiddels definitief gemaakt en kan niet worden verwijderd",
+    });
+    return;
+  }
   if (f) {
     await logActiviteit({
       type: "factuur_verwijderd",
@@ -2961,9 +3310,22 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
 // GET /facturen/:id/regels
 router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
-  const regels = await db.select().from(factuurRegelsTable)
-    .where(eq(factuurRegelsTable.factuurId, id))
-    .orderBy(factuurRegelsTable.regelnummer);
+  const [regels, gecrediteerdeRegels] = await Promise.all([
+    db.select().from(factuurRegelsTable)
+      .where(eq(factuurRegelsTable.factuurId, id))
+      .orderBy(factuurRegelsTable.regelnummer),
+    db
+      .select({ bronRegelId: factuurRegelsTable.oorspronkelijkeFactuurRegelId })
+      .from(factuurRegelsTable)
+      .innerJoin(facturenTable, eq(factuurRegelsTable.factuurId, facturenTable.id))
+      .where(and(
+        eq(facturenTable.oorspronkelijkeFactuurId, id),
+        isNotNull(factuurRegelsTable.oorspronkelijkeFactuurRegelId),
+      )),
+  ]);
+  const gecrediteerdeIds = new Set(
+    gecrediteerdeRegels.map((r) => r.bronRegelId).filter((v): v is number => v != null),
+  );
   res.json(regels.map((r) => ({
     id: r.id,
     factuur_id: r.factuurId,
@@ -2980,6 +3342,8 @@ router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (r
     kostenplaats: r.kostenplaats,
     categorie: r.categorie,
     inkoopbon_regel_id: r.inkoopbonRegelId,
+    oorspronkelijke_factuur_regel_id: r.oorspronkelijkeFactuurRegelId,
+    is_gecrediteerd: gecrediteerdeIds.has(r.id),
     bron: r.bron,
     ai_vertrouwen: r.aiVertrouwen,
     aangemaakt_op: r.aangemaaktOp.toISOString(),

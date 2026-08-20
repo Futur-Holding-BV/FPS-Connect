@@ -12809,6 +12809,16 @@ export interface Factuur {
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
   subtype?: string | null;
+  /**
+     * Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd
+     * @nullable
+     */
+  oorspronkelijke_factuur_id?: number | null;
+  /**
+     * Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur
+     * @nullable
+     */
+  oorspronkelijke_factuurnummer?: string | null;
   /** Gekoppelde offerte (basis voor het F-kenmerk); null bij losse/geïmporteerde facturen */
   offerte_id?: number | null;
   /** NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …) */
@@ -13024,6 +13034,19 @@ export interface FactuurUpdateInput {
   project_code?: string | null;
   gebouw_id?: number | null;
   status?: string | null;
+}
+
+export interface FactuurCrediteringInput {
+  /** true = alle nog niet gecrediteerde regels; false = alleen regel_ids */
+  geheel: boolean;
+  /** @minItems 1 */
+  regel_ids?: number[];
+  /**
+     * Verplichte correctiereden voor het auditspoor
+     * @minLength 1
+     * @maxLength 500
+     */
+  reden: string;
 }
 
 export interface FactuurUploadUrlInput {
@@ -13357,6 +13380,9 @@ export interface FactuurRegel {
   kostenplaats?: string | null;
   categorie?: string | null;
   inkoopbon_regel_id?: number | null;
+  oorspronkelijke_factuur_regel_id?: number | null;
+  /** Alleen relevant op een bronfactuur: deze regel is al volledig tegengeboekt */
+  is_gecrediteerd: boolean;
   bron: string;
   ai_vertrouwen?: number | null;
   aangemaakt_op: string;

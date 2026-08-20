@@ -428,6 +428,7 @@ export * from './factuurContractcontroleContract';
 export * from './factuurContractcontroleSignalenItem';
 export * from './factuurCorrespondentie';
 export * from './factuurCorrespondentieUpdateInput';
+export * from './factuurCrediteringInput';
 export * from './factuurDoorstuurInput';
 export * from './factuurHerexportInput';
 export * from './factuurHerinnering';

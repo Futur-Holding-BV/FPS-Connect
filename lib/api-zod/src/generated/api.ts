@@ -873,6 +873,8 @@ export const ListGebouwFacturenResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25200,6 +25202,8 @@ export const ListFacturenResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25319,6 +25323,8 @@ export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25461,6 +25467,8 @@ export const GetFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25563,6 +25571,8 @@ export const UpdateFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25654,6 +25664,8 @@ export const AiUitlezenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25735,6 +25747,8 @@ export const AccorderenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25817,6 +25831,8 @@ export const DefinitiefMakenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -25881,6 +25897,28 @@ export const DefinitiefMakenFactuurResponse = zod.object({
   "incasso_datum": zod.string().nullish(),
   "incasso_referentie": zod.string().nullish()
 })
+
+
+/**
+ * Maakt direct een definitieve creditfactuur met een eigen fiscaal nummer uit dezelfde BV-reeks. De bronfactuur blijft ongewijzigd. Eerder gecrediteerde regels kunnen niet nogmaals worden tegengeboekt.
+ * @summary Definitieve verkoopfactuur geheel of per regel crediteren
+ */
+export const CrediterenFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const crediterenFactuurBodyRedenMax = 500;
+
+
+
+export const CrediterenFactuurBody = zod.object({
+  "geheel": zod.boolean().describe('true = alle nog niet gecrediteerde regels; false = alleen regel_ids'),
+  "regel_ids": zod.array(zod.number()).min(1).optional(),
+  "reden": zod.string().min(1).max(crediterenFactuurBodyRedenMax).describe('Verplichte correctiereden voor het auditspoor')
+})
+
+export const CrediterenFactuurResponse = zod.void()
 
 
 /**
@@ -26054,6 +26092,8 @@ export const BlokkerenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26181,6 +26221,8 @@ export const AfkeurenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26464,6 +26506,8 @@ export const BeoordelenFactuurPLResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26550,6 +26594,8 @@ export const BeoordelenFactuurWVBResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26636,6 +26682,8 @@ export const DoorstuurenFactuurMedewerkerResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26722,6 +26770,8 @@ export const BeoordelenFactuurMedewerkerResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -26925,6 +26975,8 @@ export const IncassoFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
   "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "oorspronkelijke_factuur_id": zod.number().nullish().describe('Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd'),
+  "oorspronkelijke_factuurnummer": zod.string().nullish().describe('Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur'),
   "offerte_id": zod.number().nullish().describe('Gekoppelde offerte (basis voor het F-kenmerk); null bij losse\/geïmporteerde facturen'),
   "nummer": zod.number().nullish().describe('NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …)'),
   "kenmerk": zod.string().nullish().describe('Berekend kenmerk (bijv. O405\/F002); niet bewerkbaar, los van het fiscale factuurnummer'),
@@ -27120,6 +27172,8 @@ export const ListFactuurRegelsResponseItem = zod.object({
   "kostenplaats": zod.string().nullish(),
   "categorie": zod.string().nullish(),
   "inkoopbon_regel_id": zod.number().nullish(),
+  "oorspronkelijke_factuur_regel_id": zod.number().nullish(),
+  "is_gecrediteerd": zod.boolean().describe('Alleen relevant op een bronfactuur: deze regel is al volledig tegengeboekt'),
   "bron": zod.string(),
   "ai_vertrouwen": zod.number().nullish(),
   "aangemaakt_op": zod.string(),

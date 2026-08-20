@@ -728,6 +728,15 @@ De bewakingsloop draait dagelijks om 06:30 en is gezond (deploy-logs bevestigen 
 - **Bewijs**: `scripts/src/verificatie-administratie01-fase3.ts` is uitgebreid naar 26/26 groene checks, inclusief ontbrekende koppeling, mismatch, onbekende bron, ongeldige referentie, conflict tussen magazijn- en opdracht-BV en tien gelijktijdige testmodus-exports zonder pool-deadlock.
 
 
+## 2026-08-19 — Creditfactuur voor definitieve verkoopfacturen
+
+- **Fiscaal juiste correctieroute**: een definitieve verkoopfactuur kan vanaf de detailpagina geheel of per regel worden gecrediteerd. De bronfactuur blijft ongewijzigd; de creditfactuur wordt direct definitief met een eigen nummer uit dezelfde BV-reeks. Losse creditnota's via algemeen aanmaken of definitief maken worden geweigerd en een databasepoort bewaakt de fiscale bronrelatie, BV-snapshot en negatieve totalen.
+- **Blijvend herleidbaar**: iedere creditfactuur verwijst naar de oorspronkelijke factuur en iedere creditregel naar de tegengeboekte bronregel. De opdracht toont creditfacturen herkenbaar in de Facturatie-tab.
+- **Dubbele correctie uitgesloten**: reeds gecrediteerde regels zijn niet opnieuw selecteerbaar en de server serialiseert gelijktijdige verzoeken. Een unieke databasepoort voorkomt dubbele tegenboeking ook bij een race.
+- **AccountView zonder omweg**: de credit krijgt negatieve boekwaarden en doorloopt na accordering het bestaande, BV-bewaakte AccountView-exportpad.
+- **Fiscaal dossier gesloten**: zowel de definitieve bronfactuur als de creditfactuur zijn op kop- en regelniveau onwijzigbaar en niet te verwijderen. Bij nummeruitgifte worden factuur en de volledige werk-BV-keten in één transactie vergrendeld voordat BV-snapshot en teller worden vastgelegd. Die snapshot blijft leidend bij creditering en AccountView; historische verkoop zonder aantoonbare snapshot faalt gesloten in plaats van een actuele werk-BV te raden.
+- **Bewijs**: de GELDSTROOM_01-verificatie controleert een deelcredit, de resterende gehele credit, eigen fiscale nummers, negatieve totalen, bronrelaties, onveranderbaarheid en één geslaagd plus één geweigerd gelijktijdig verzoek. Een deterministische raceproef wijzigt de offerte-BV tijdens definitief maken en bewijst dat snapshot en tellerrij dezelfde gelockte BV volgen; twee bypass-proeven bewijzen dat losse creditnota's geen fiscaal nummer kunnen krijgen.
+
 ## 2026-08-19 — Handmatig factuur accorderen: BTW-code vooraf verplicht bij AccountView-export
 
 - **Voorkomt mislukte automatische boekingen**: bij een actieve AccountView-exportkoppeling weigert handmatig accorderen nu met een heldere 422-melding wanneer de BTW-code ontbreekt. De factuur blijft daarbij ongewijzigd, zodat er geen automatische boekingspoging of faalmailreeks start. Met een uitgeschakelde exportkoppeling blijft accorderen ongewijzigd mogelijk.

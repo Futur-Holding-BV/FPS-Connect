@@ -129,13 +129,16 @@ INDEX|fabrikanten|fabrikanten_naam_unique
 INDEX|fabrikanten|fabrikanten_pkey
 INDEX|facturen|facturen_mailstroom_bijlage_uniek
 INDEX|facturen|facturen_offerte_nummer_uniek
+INDEX|facturen|facturen_oorspronkelijke_factuur_idx
 INDEX|facturen|facturen_pkey
+INDEX|facturen|facturen_werkgever_idx
 INDEX|factuur_correspondentie|factuur_correspondentie_pkey
 INDEX|factuur_herinneringen|factuur_herinneringen_pkey
 INDEX|factuur_import_instellingen|factuur_import_instellingen_pkey
 INDEX|factuur_import_log|factuur_import_log_message_id_bijlage_naam_unique
 INDEX|factuur_import_log|factuur_import_log_pkey
 INDEX|factuur_opmerkingen|factuur_opmerkingen_pkey
+INDEX|factuur_regels|factuur_regels_een_credit_per_bronregel_uq
 INDEX|factuur_regels|factuur_regels_pkey
 INDEX|factuur_signalen|factuur_signalen_open_factuur_uq
 INDEX|factuur_signalen|factuur_signalen_open_kans_uq
@@ -1680,6 +1683,7 @@ KOLOM|facturen|offerte_id|integer|YES|
 KOLOM|facturen|omschrijving|text|YES|
 KOLOM|facturen|onderhoudscontract_id|integer|YES|
 KOLOM|facturen|onzekere_velden|jsonb|YES|
+KOLOM|facturen|oorspronkelijke_factuur_id|integer|YES|
 KOLOM|facturen|opdracht_id|integer|YES|
 KOLOM|facturen|opmerkingen|text|YES|
 KOLOM|facturen|payload_hash|text|YES|
@@ -1700,6 +1704,8 @@ KOLOM|facturen|uploader_id|integer|YES|
 KOLOM|facturen|vervaldatum|text|YES|
 KOLOM|facturen|voorstel_bron_id|integer|YES|
 KOLOM|facturen|voorstel_bron|text|YES|
+KOLOM|facturen|werkgever_id|integer|YES|
+KOLOM|facturen|werkgever_vastgelegd_op|timestamp with time zone|YES|
 KOLOM|factuur_correspondentie|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|factuur_correspondentie|afkeur_categorie|text|YES|
 KOLOM|factuur_correspondentie|ai_gegenereerd|boolean|NO|false
@@ -1768,6 +1774,7 @@ KOLOM|factuur_regels|id|integer|NO|nextval('factuur_regels_id_seq'::regclass)
 KOLOM|factuur_regels|inkoopbon_regel_id|integer|YES|
 KOLOM|factuur_regels|kostenplaats|text|YES|
 KOLOM|factuur_regels|omschrijving|text|NO|
+KOLOM|factuur_regels|oorspronkelijke_factuur_regel_id|integer|YES|
 KOLOM|factuur_regels|regelnummer|integer|NO|1
 KOLOM|factuur_regels|stukprijs|numeric|YES|
 KOLOM|factuur_signalen|aangemaakt_op|timestamp without time zone|NO|now()

@@ -22,6 +22,9 @@ export interface FactuurRegel {
   kostenplaats?: string | null;
   categorie?: string | null;
   inkoopbon_regel_id?: number | null;
+  oorspronkelijke_factuur_regel_id?: number | null;
+  /** Alleen relevant op een bronfactuur: deze regel is al volledig tegengeboekt */
+  is_gecrediteerd: boolean;
   bron: string;
   ai_vertrouwen?: number | null;
   aangemaakt_op: string;

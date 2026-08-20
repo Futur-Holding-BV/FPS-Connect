@@ -251,8 +251,12 @@ router.post("/grootboekrekeningen/omzetten", requireBevoegdheid("systeem", 2), a
   const kandidaten = await db
     .selectDistinct({
       id: facturenTable.id,
+      type: facturenTable.type,
       status: facturenTable.status,
       avStatus: facturenTable.accountviewStatus,
+      factuurnummer: facturenTable.factuurnummer,
+      werkgeverId: facturenTable.werkgeverId,
+      werkgeverVastgelegdOp: facturenTable.werkgeverVastgelegdOp,
       offerteId: facturenTable.offerteId,
       opdrachtId: facturenTable.opdrachtId,
       gebouwId: facturenTable.gebouwId,

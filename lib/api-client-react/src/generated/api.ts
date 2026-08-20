@@ -294,6 +294,7 @@ import type {
   FactuurContractcontrole,
   FactuurCorrespondentie,
   FactuurCorrespondentieUpdateInput,
+  FactuurCrediteringInput,
   FactuurDoorstuurInput,
   FactuurHerexportInput,
   FactuurHerinnering,
@@ -71954,6 +71955,78 @@ export const useDefinitiefMakenFactuur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDefinitiefMakenFactuurMutationOptions(options));
+    }
+
+export const getCrediterenFactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/crediteren`
+}
+
+/**
+ * Maakt direct een definitieve creditfactuur met een eigen fiscaal nummer uit dezelfde BV-reeks. De bronfactuur blijft ongewijzigd. Eerder gecrediteerde regels kunnen niet nogmaals worden tegengeboekt.
+ * @summary Definitieve verkoopfactuur geheel of per regel crediteren
+ */
+export const crediterenFactuur = async (id: number,
+    factuurCrediteringInput: FactuurCrediteringInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getCrediterenFactuurUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurCrediteringInput)
+  }
+);}
+
+
+
+
+export const getCrediterenFactuurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crediterenFactuur>>, TError,{id: number;data: BodyType<FactuurCrediteringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof crediterenFactuur>>, TError,{id: number;data: BodyType<FactuurCrediteringInput>}, TContext> => {
+
+const mutationKey = ['crediterenFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof crediterenFactuur>>, {id: number;data: BodyType<FactuurCrediteringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  crediterenFactuur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CrediterenFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof crediterenFactuur>>>
+    export type CrediterenFactuurMutationBody = BodyType<FactuurCrediteringInput>
+    export type CrediterenFactuurMutationError = ErrorType<void>
+
+    /**
+ * @summary Definitieve verkoopfactuur geheel of per regel crediteren
+ */
+export const useCrediterenFactuur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crediterenFactuur>>, TError,{id: number;data: BodyType<FactuurCrediteringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof crediterenFactuur>>,
+        TError,
+        {id: number;data: BodyType<FactuurCrediteringInput>},
+        TContext
+      > => {
+      return useMutation(getCrediterenFactuurMutationOptions(options));
     }
 
 export const getSamenstellenVerkoopfactuurUrl = (id: number,) => {

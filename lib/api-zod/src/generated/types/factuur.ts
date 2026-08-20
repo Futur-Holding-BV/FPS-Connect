@@ -20,6 +20,16 @@ export interface Factuur {
   type: string;
   /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
   subtype?: string | null;
+  /**
+     * Bij een creditfactuur: id van de definitieve verkoopfactuur die wordt gecorrigeerd
+     * @nullable
+     */
+  oorspronkelijke_factuur_id?: number | null;
+  /**
+     * Bij een creditfactuur: fiscaal nummer van de gecorrigeerde verkoopfactuur
+     * @nullable
+     */
+  oorspronkelijke_factuurnummer?: string | null;
   /** Gekoppelde offerte (basis voor het F-kenmerk); null bij losse/geïmporteerde facturen */
   offerte_id?: number | null;
   /** NUMMER_01 §4.6: volgnummer binnen de offerte (F001, F002, …) */

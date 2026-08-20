@@ -152,6 +152,15 @@ export const facturenTable = pgTable("facturen", {
   // Opdracht/project-koppeling (voor verkoopfacturen en gelinkte inkoopfacturen)
   opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   inkoopbonId: integer("inkoopbon_id"), // soft ref naar inkoopbonnen.id (geen FK — cross-schema dep)
+  // Fiscale momentopname van de uitgevende BV. Vanaf definitief maken is dit
+  // leidend voor creditering en AccountView; harde FK in migratie 0102.
+  werkgeverId: integer("werkgever_id"),
+  // Alleen een expliciete timestamp maakt werkgeverId een betrouwbare fiscale
+  // snapshot. Legacy zonder deze marker faalt gesloten (migratie 0103).
+  werkgeverVastgelegdOp: timestamp("werkgever_vastgelegd_op"),
+  // GELDSTROOM_01 creditfactuur: blijvende verwijzing naar het fiscale
+  // brondocument. Self-reference als harde FK in migratie 0101.
+  oorspronkelijkeFactuurId: integer("oorspronkelijke_factuur_id"),
   // NUMMER_01 §4.6: kenmerkketen — verkoopfactuur hangt aan de offerte (O405/F002)
   offerteId: integer("offerte_id"), // FK in DB (migratie 0010); soft ref hier tegen circulaire import
   // NUMMER_01 §4.6: F-volgnummer per offerte vanaf 1 — uitdrukkelijk NIET het factuurnummer
@@ -431,6 +440,9 @@ export const factuurRegelsTable = pgTable("factuur_regels", {
 
   // Koppeling aan inkoopbon-regel voor 3-weg matching
   inkoopbonRegelId: integer("inkoopbon_regel_id"),         // soft ref — geen FK (cross-schema)
+  // GELDSTROOM_01 creditfactuur: elke bronregel kan maximaal één keer worden
+  // tegengeboekt. De harde FK + unieke partiële index staan in migratie 0101.
+  oorspronkelijkeFactuurRegelId: integer("oorspronkelijke_factuur_regel_id"),
 
   // Herkomst van de regel
   bron: text("bron").notNull().default("handmatig"),       // ai | handmatig | inkooporder | regie | termijn | meerwerk

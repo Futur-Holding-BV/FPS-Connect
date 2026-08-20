@@ -11,6 +11,9 @@
  *      naar de gedeelde productiepostbus; logboek + tijdlijn, nooit wachtrij.
  *  V5b. Onderdrukte/falende mail → duidelijke fout, geen verzonden-tijdlijn.
  *  V6. Samenstellen uit de WERKBEGROTING werkt ook.
+ *  V7. Een definitieve verkoopfactuur kan per regel en geheel worden
+ *      gecrediteerd; iedere credit krijgt een eigen fiscaal nummer en dezelfde
+ *      bronregel kan ook bij gelijktijdige verzoeken maar één keer mee.
  *
  * Inkoopkant (FACTUUR_03):
  *  I1. goedkeuren-stroom ZONDER passende beleidsregel → 422 fail-closed
@@ -31,8 +34,9 @@ import {
   db, gebruikersTable, offertesTable, offerteRegelsTable, opdrachtenTable,
   facturenTable, factuurRegelsTable, projectBegrotingenTable,
   werkbegrotingRegelsTable, betaalbatchesTable, appInstellingenTable,
-   werkgeversTable, goedkeuringBeleidsregelsTable, crmKlantenTable,
-   factuurTijdlijnTable, mailLogboekTable, mailWachtrijTable,
+  werkgeversTable, goedkeuringBeleidsregelsTable, crmKlantenTable,
+  factuurTijdlijnTable, mailLogboekTable, mailWachtrijTable,
+  factuurnummerTellersTable,
 } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
@@ -87,8 +91,8 @@ async function api(auth: string, methode: string, pad: string, body?: unknown): 
 }
 
 async function main() {
-  const opgeruimd: { facturen: number[]; opdrachten: number[]; offertes: number[]; klanten: number[]; begrotingen: number[]; batches: number[]; beleidsregels: number[]; gebruikers: number[] } =
-    { facturen: [], opdrachten: [], offertes: [], klanten: [], begrotingen: [], batches: [], beleidsregels: [], gebruikers: [] };
+  const opgeruimd: { facturen: number[]; opdrachten: number[]; offertes: number[]; klanten: number[]; begrotingen: number[]; batches: number[]; beleidsregels: number[]; gebruikers: number[]; werkgevers: number[] } =
+    { facturen: [], opdrachten: [], offertes: [], klanten: [], begrotingen: [], batches: [], beleidsregels: [], gebruikers: [], werkgevers: [] };
 
   const adminId = await maakGebruiker(ACCOUNTS.admin);
   const finId = await maakGebruiker(ACCOUNTS.fin);
@@ -104,6 +108,11 @@ async function main() {
   opgeruimd.klanten.push(klant.id);
   const [wgVooraf] = await db.select({ id: werkgeversTable.id }).from(werkgeversTable).limit(1);
   if (!wgVooraf) faal("Geen werkgever (BV) aanwezig in dev");
+  const [andereWerkgever] = await db
+    .insert(werkgeversTable)
+    .values({ naam: `GELDSTROOM_01 tijdelijke race-BV ${Date.now()}` })
+    .returning({ id: werkgeversTable.id });
+  opgeruimd.werkgevers.push(andereWerkgever.id);
   const [offerte] = await db.insert(offertesTable).values({
     titel: "GELDSTROOM_01 testofferte", klantId: klant.id, opdrachtgever: "GELDSTROOM_01 Testklant BV",
     betalingstermijnDagen: 14, werkmaatschappijId: wgVooraf.id,
@@ -151,17 +160,223 @@ async function main() {
   if (v3.status !== 409) faal(`V3 versturen vóór definitief: verwacht 409, kreeg ${v3.status}: ${JSON.stringify(v3.json)}`);
   ok("V3 Versturen vóór definitief geweigerd (409: eerst fiscaal nummer)");
 
-  // ── V4: definitief maken → fiscaal nummer ────────────────────────────────
-  const v4 = await api(fin, "POST", `/facturen/${factuurId}/definitief`);
+  // ── V3b/c: creditnota kan niet om de beschermde creditroute heen ─────────
+  const v3b = await api(fin, "POST", "/facturen", {
+    type: "verkoop",
+    subtype: "creditnota",
+    relatienaam: "GELDSTROOM_01 ongeldige losse credit",
+    bedrag_excl_btw: "-10.00",
+    btw_bedrag: "-2.10",
+    bedrag_incl_btw: "-12.10",
+  });
+  if (v3b.status !== 422) {
+    faal(`V3b: losse creditnota via algemeen aanmaakpad moet 422 geven, kreeg ${v3b.status}`);
+  }
+  const [losCreditConcept] = await db
+    .insert(facturenTable)
+    .values({
+      type: "verkoop",
+      subtype: "creditnota",
+      offerteId: offerte.id,
+      relatienaam: "GELDSTROOM_01 rechtstreeks ingevoerd creditconcept",
+      bedragExclBtw: "-10.00",
+      btwBedrag: "-2.10",
+      bedragInclBtw: "-12.10",
+    })
+    .returning({ id: facturenTable.id });
+  opgeruimd.facturen.push(losCreditConcept.id);
+  const v3c = await api(fin, "POST", `/facturen/${losCreditConcept.id}/definitief`);
+  if (v3c.status !== 422) {
+    faal(`V3c: rechtstreeks ingevoerd creditconcept definitief maken moet 422 geven, kreeg ${v3c.status}`);
+  }
+  const [losCreditNaPoging] = await db
+    .select({ factuurnummer: facturenTable.factuurnummer })
+    .from(facturenTable)
+    .where(eq(facturenTable.id, losCreditConcept.id));
+  if (losCreditNaPoging?.factuurnummer != null) {
+    faal(`V3c: geweigerde losse credit verbruikte toch fiscaal nummer ${losCreditNaPoging.factuurnummer}`);
+  }
+  ok("V3b/c Losse creditnota wordt bij algemeen aanmaken én definitief maken geweigerd; alleen de beschermde creditroute blijft open");
+
+  // ── V4: definitief maken → atomaire BV-snapshot + fiscaal nummer ─────────
+  // Houd de offerte-BV in een aparte transactie vast en wijzig haar daar naar
+  // BV B. /definitief moet aantoonbaar op die bronlock wachten, daarna B
+  // herlezen en uitsluitend de teller van B ophogen. De oude pre-transactie-
+  // afleiding rondde al af met BV A terwijl deze wijziging nog niet committed was.
+  const [tellerVoorafA] = await db
+    .select({ laatsteNummer: factuurnummerTellersTable.laatsteNummer })
+    .from(factuurnummerTellersTable)
+    .where(eq(factuurnummerTellersTable.werkgeverId, wgVooraf.id));
+  const tellerstandVoorafA = tellerVoorafA?.laatsteNummer ?? 0;
+  let definitiefPromise: ReturnType<typeof api> | undefined;
+  await db.transaction(async (tx) => {
+    const pidResult = await tx.execute(sql`SELECT pg_backend_pid()::int AS pid`);
+    const blockerPid = Number((pidResult.rows[0] as { pid: number } | undefined)?.pid);
+    if (!Number.isInteger(blockerPid)) faal("V4: backend-pid voor raceproef ontbreekt");
+
+    await tx
+      .update(offertesTable)
+      .set({ werkmaatschappijId: andereWerkgever.id })
+      .where(eq(offertesTable.id, offerte.id));
+
+    definitiefPromise = api(fin, "POST", `/facturen/${factuurId}/definitief`);
+    let bronLockAfgewacht = false;
+    for (let poging = 0; poging < 40; poging++) {
+      const wachtResultaat = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT 1
+          FROM pg_stat_activity
+          WHERE ${blockerPid} = ANY(pg_blocking_pids(pid))
+        ) AS geblokkeerd
+      `);
+      bronLockAfgewacht =
+        (wachtResultaat.rows[0] as { geblokkeerd?: boolean } | undefined)?.geblokkeerd === true;
+      if (bronLockAfgewacht) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!bronLockAfgewacht) {
+      faal("V4: definitief maken wachtte niet op de gelockte offerte-BV");
+    }
+  });
+  const v4 = await definitiefPromise!;
   if (v4.status !== 200) faal(`V4 definitief → ${v4.status}: ${JSON.stringify(v4.json)}`);
   const [f4] = await db.select().from(facturenTable).where(eq(facturenTable.id, factuurId));
   if (!f4.factuurnummer) faal("V4: fiscaal nummer ontbreekt na definitief");
-  ok(`V4 Definitief gemaakt: fiscaal nummer ${f4.factuurnummer} (pas bij definitief uitgegeven)`);
+  if (f4.werkgeverId !== andereWerkgever.id || !f4.werkgeverVastgelegdOp) {
+    faal(`V4: fiscale BV-momentopname volgde niet de gelockte keten (${f4.werkgeverId} i.p.v. ${andereWerkgever.id})`);
+  }
+  const [tellerNaA] = await db
+    .select({ laatsteNummer: factuurnummerTellersTable.laatsteNummer })
+    .from(factuurnummerTellersTable)
+    .where(eq(factuurnummerTellersTable.werkgeverId, wgVooraf.id));
+  const [tellerNaB] = await db
+    .select({ laatsteNummer: factuurnummerTellersTable.laatsteNummer })
+    .from(factuurnummerTellersTable)
+    .where(eq(factuurnummerTellersTable.werkgeverId, andereWerkgever.id));
+  if ((tellerNaA?.laatsteNummer ?? 0) !== tellerstandVoorafA || tellerNaB?.laatsteNummer !== 1) {
+    faal(`V4: verkeerde BV-teller gewijzigd (A ${tellerstandVoorafA}→${tellerNaA?.laatsteNummer ?? 0}, B=${tellerNaB?.laatsteNummer ?? 0})`);
+  }
+  ok(`V4 Definitief wacht op de gelockte werk-BV en gebruikt atomair snapshot+teller van BV B; fiscaal nummer ${f4.factuurnummer}`);
 
   // ── V4b: ná definitief zijn regels onwijzigbaar (fiscale onveranderbaarheid) ─
   const v4b = await api(fin, "PATCH", `/facturen/${factuurId}/regels/${eersteRegel.id}`, { bedrag_excl_btw: "1.00" });
   if (v4b.status !== 409) faal(`V4b: regelwijziging ná definitief moet 409 geven, kreeg ${v4b.status}: ${JSON.stringify(v4b.json)}`);
   ok("V4b Regelwijziging ná definitief geweigerd (409) — correcties via creditering");
+  const v4c = await api(fin, "PATCH", `/facturen/${factuurId}`, { omschrijving: "Ongeoorloofde kopwijziging" });
+  if (v4c.status !== 409) faal(`V4c: kopwijziging ná definitief moet 409 geven, kreeg ${v4c.status}`);
+  const v4d = await api(admin, "DELETE", `/facturen/${factuurId}`);
+  if (v4d.status !== 409) faal(`V4d: definitieve verkoopfactuur verwijderen moet 409 geven, kreeg ${v4d.status}`);
+  ok("V4c/d Definitief fiscaal dossier is ook op kopniveau onwijzigbaar en onverwijderbaar");
+
+  // Wijzig de live werk-keten ná nummeruitgifte terug naar BV A. De factuur, creditering en
+  // AccountView-resolver moeten vanaf nu uitsluitend de fiscale BV-snapshot
+  // blijven gebruiken.
+  await db
+    .update(offertesTable)
+    .set({ werkmaatschappijId: wgVooraf.id })
+    .where(eq(offertesTable.id, offerte.id));
+  // Simuleer een legacy-factuur waarvoor de BV bij uitgifte niet expliciet is
+  // vastgelegd. De huidige offerte-BV mag dan niet als historische waarheid
+  // worden gebruikt.
+  await db
+    .update(facturenTable)
+    .set({ werkgeverId: null, werkgeverVastgelegdOp: null })
+    .where(eq(facturenTable.id, factuurId));
+  const legacyLezing = await api(fin, "GET", `/facturen/${factuurId}`);
+  if (legacyLezing.status !== 200 || legacyLezing.json["werkmaatschappij_id"] !== null) {
+    faal(`V4e: legacy zonder snapshot valt terug op actuele offerte-BV: ${JSON.stringify(legacyLezing.json)}`);
+  }
+  const legacyCredit = await api(fin, "POST", `/facturen/${factuurId}/crediteren`, {
+    geheel: true,
+    reden: "Legacy zonder fiscale BV moet blokkeren",
+  });
+  if (legacyCredit.status !== 422) {
+    faal(`V4e: legacy zonder fiscale BV moet creditering fail-closed blokkeren, kreeg ${legacyCredit.status}`);
+  }
+  // De fiscale snapshot-gate geldt bewust niet voor historische inkoopfacturen:
+  // hun externe leveranciersnummer is geen door Connect uitgegeven BV-reeks.
+  const [legacyInkoop] = await db
+    .insert(facturenTable)
+    .values({
+      type: "inkoop",
+      factuurnummer: `LEGACY-IN-${Date.now()}`,
+      offerteId: offerte.id,
+      relatienaam: "GELDSTROOM_01 legacy leverancier",
+      bedragInclBtw: "121.00",
+      bedragExclBtw: "100.00",
+    })
+    .returning({ id: facturenTable.id });
+  opgeruimd.facturen.push(legacyInkoop.id);
+  const legacyInkoopLezing = await api(fin, "GET", `/facturen/${legacyInkoop.id}`);
+  if (legacyInkoopLezing.status !== 200 || legacyInkoopLezing.json["werkmaatschappij_id"] !== wgVooraf.id) {
+    faal(`V4e: legacy inkoopfactuur mag bestaande dynamische BV-afleiding niet verliezen: ${JSON.stringify(legacyInkoopLezing.json)}`);
+  }
+  await db
+    .update(facturenTable)
+    .set({ werkgeverId: andereWerkgever.id, werkgeverVastgelegdOp: f4.werkgeverVastgelegdOp })
+    .where(eq(facturenTable.id, factuurId));
+  const v4e = await api(fin, "GET", `/facturen/${factuurId}`);
+  if (v4e.status !== 200 || v4e.json["werkmaatschappij_id"] !== andereWerkgever.id) {
+    faal(`V4e: gewijzigde offerte-BV overschrijft fiscale snapshot: ${JSON.stringify(v4e.json)}`);
+  }
+  ok("V4e Latere wijziging van offerte-BV overschrijft de bevroren factuur-BV niet");
+
+  // ── V7: creditfactuur per regel + geheel + concurrency ────────────────────
+  const v7deel = await api(fin, "POST", `/facturen/${factuurId}/crediteren`, {
+    geheel: false,
+    regel_ids: [eersteRegel.id],
+    reden: "GELDSTROOM_01 gedeeltelijke correctie",
+  });
+  if (v7deel.status !== 201) faal(`V7 gedeeltelijk crediteren → ${v7deel.status}: ${JSON.stringify(v7deel.json)}`);
+  const deelCreditId = v7deel.json["id"] as number;
+  opgeruimd.facturen.push(deelCreditId);
+  const [deelCredit] = await db.select().from(facturenTable).where(eq(facturenTable.id, deelCreditId));
+  const deelRegels = await db.select().from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, deelCreditId));
+  if (deelCredit.subtype !== "creditnota" || deelCredit.oorspronkelijkeFactuurId !== factuurId) {
+    faal(`V7: creditfactuur mist subtype/bronrelatie: ${JSON.stringify({ subtype: deelCredit.subtype, bron: deelCredit.oorspronkelijkeFactuurId })}`);
+  }
+  if (deelCredit.werkgeverId !== f4.werkgeverId) faal("V7: creditfactuur gebruikt niet de bevroren BV van de bronfactuur");
+  if (!deelCredit.factuurnummer || deelCredit.factuurnummer === f4.factuurnummer) faal("V7: creditfactuur mist een eigen fiscaal nummer");
+  if (deelCredit.bedragExclBtw !== "-500.00" || deelCredit.btwBedrag !== "-105.00" || deelCredit.bedragInclBtw !== "-605.00") {
+    faal(`V7: negatieve credittotalen onjuist: ${deelCredit.bedragExclBtw}/${deelCredit.btwBedrag}/${deelCredit.bedragInclBtw}`);
+  }
+  if (deelRegels.length !== 1 || deelRegels[0]!.oorspronkelijkeFactuurRegelId !== eersteRegel.id || deelRegels[0]!.bedragExclBtw !== "-500.00") {
+    faal("V7: creditregel mist exacte negatieve waarde of blijvende bronregelrelatie");
+  }
+  const v7dubbel = await api(fin, "POST", `/facturen/${factuurId}/crediteren`, {
+    geheel: false,
+    regel_ids: [eersteRegel.id],
+    reden: "GELDSTROOM_01 dubbele correctie moet falen",
+  });
+  if (v7dubbel.status !== 409) faal(`V7: dezelfde bronregel opnieuw crediteren moet 409 geven, kreeg ${v7dubbel.status}`);
+
+  // Twee gelijktijdige geheel-verzoeken richten zich op de enige resterende
+  // bronregel. Het row lock serialiseert ze: exact één credit slaagt.
+  const [raceA, raceB] = await Promise.all([
+    api(fin, "POST", `/facturen/${factuurId}/crediteren`, { geheel: true, reden: "GELDSTROOM_01 resterende regels A" }),
+    api(fin, "POST", `/facturen/${factuurId}/crediteren`, { geheel: true, reden: "GELDSTROOM_01 resterende regels B" }),
+  ]);
+  const raceResultaten = [raceA, raceB];
+  const raceSucces = raceResultaten.filter((r) => r.status === 201);
+  const raceConflict = raceResultaten.filter((r) => r.status === 409);
+  if (raceSucces.length !== 1 || raceConflict.length !== 1) {
+    faal(`V7: concurrency verwacht 1×201 + 1×409, kreeg ${raceA.status} + ${raceB.status}`);
+  }
+  const geheelCreditId = raceSucces[0]!.json["id"] as number;
+  opgeruimd.facturen.push(geheelCreditId);
+  const [geheelCredit] = await db.select().from(facturenTable).where(eq(facturenTable.id, geheelCreditId));
+  const geheelRegels = await db.select().from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, geheelCreditId));
+  if (geheelCredit.oorspronkelijkeFactuurId !== factuurId || geheelRegels.length !== 1) {
+    faal("V7: geheel-credit mist bronfactuur of de resterende bronregel");
+  }
+  if (new Set([f4.factuurnummer, deelCredit.factuurnummer, geheelCredit.factuurnummer]).size !== 3) {
+    faal("V7: bronfactuur en beide creditfacturen moeten elk een uniek fiscaal nummer hebben");
+  }
+  const creditPatch = await api(fin, "PATCH", `/facturen/${deelCreditId}`, { bedrag_incl_btw: "1.00" });
+  if (creditPatch.status !== 409) faal(`V7: definitieve creditfactuur wijzigen moet 409 geven, kreeg ${creditPatch.status}`);
+  const creditDelete = await api(admin, "DELETE", `/facturen/${deelCreditId}`);
+  if (creditDelete.status !== 409) faal(`V7: definitieve creditfactuur verwijderen moet 409 geven, kreeg ${creditDelete.status}`);
+  ok(`V7 Credit per regel en geheel: bron ${f4.factuurnummer}, credits ${deelCredit.factuurnummer} en ${geheelCredit.factuurnummer}; dubbele/race-credit → 409`);
 
   // ── V5: echte Graph-overdracht naar de gedeelde productiepostbus ─────────
   if (!ECHTE_MAILBOX) faal("V5: MAIL_MAILBOX ontbreekt; echte mailbeproeving kan niet draaien");
@@ -311,6 +526,7 @@ async function main() {
   if (!batchWasActief) await db.update(appInstellingenTable).set({ betaalbatchActief: false }).where(eq(appInstellingenTable.id, inst.id));
   await db.delete(goedkeuringBeleidsregelsTable).where(inArray(goedkeuringBeleidsregelsTable.id, opgeruimd.beleidsregels));
   await db.delete(betaalbatchesTable).where(inArray(betaalbatchesTable.id, opgeruimd.batches));
+  await db.delete(facturenTable).where(inArray(facturenTable.id, [deelCreditId, geheelCreditId]));
   await db.delete(facturenTable).where(inArray(facturenTable.id, opgeruimd.facturen));
   await db.delete(werkbegrotingRegelsTable).where(inArray(werkbegrotingRegelsTable.begrotingId, opgeruimd.begrotingen));
   await db.delete(projectBegrotingenTable).where(inArray(projectBegrotingenTable.id, opgeruimd.begrotingen));
@@ -318,6 +534,9 @@ async function main() {
   await db.delete(offerteRegelsTable).where(inArray(offerteRegelsTable.offerteId, opgeruimd.offertes));
   await db.delete(offertesTable).where(inArray(offertesTable.id, opgeruimd.offertes));
   await db.delete(crmKlantenTable).where(inArray(crmKlantenTable.id, opgeruimd.klanten));
+  if (opgeruimd.werkgevers.length > 0) {
+    await db.delete(werkgeversTable).where(inArray(werkgeversTable.id, opgeruimd.werkgevers));
+  }
   await db.update(gebruikersTable).set({ actief: false, gearchiveerd: true }).where(inArray(gebruikersTable.id, opgeruimd.gebruikers));
   ok("Testdata opgeruimd, testaccounts gearchiveerd");
   console.log("\n🎉 GELDSTROOM_01: alle bewijspunten geslaagd");
