@@ -87,6 +87,22 @@
       "verwijderd": 0,
       "blob": "c17a3880f136c95169afa9f7f2d3dcf238b8549c",
       "reden": "Inhoudelijk beoordeelde, samenhangende BANK_01-API-uitbreiding met één route- en schemablok; contractcorrecties staan in de directe vervolgwijziging. Geen opmaakschade."
+    },
+    {
+      "commit": "74d662a8ec05755a92a708426f0d50f2c050a4e0",
+      "pad": "lib/api-spec/openapi.yaml",
+      "toegevoegd": 770,
+      "verwijderd": 1,
+      "blob": "e1df36c642b0dc113f3da795a7007cde80b14eeb",
+      "reden": "Inhoudelijk beoordeelde, samenhangende LOON_02A-API-uitbreiding met één loonfundament-route- en schemablok; geen opmaakschade."
+    },
+    {
+      "commit": "74d662a8ec05755a92a708426f0d50f2c050a4e0",
+      "pad": "lib/api-zod/src/generated/api.ts",
+      "toegevoegd": 419,
+      "verwijderd": 80,
+      "blob": "13b031a7d091a47f929b9add356d748de68d561a",
+      "reden": "Door Orval gegenereerde validators voor exact dezelfde beoordeelde LOON_02A-contractuitbreiding; geen dubbele exports of opmaakschade."
     }
   ]
 }
