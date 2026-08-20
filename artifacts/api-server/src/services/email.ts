@@ -62,7 +62,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur" | "contract_aanzegdeadline";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen" | "declaratie_doorgezet" | "campagne" | "campagne_proef" | "accountview_boeking_mislukt" | "bankrekening_gewijzigd" | "verkoopfactuur" | "contract_aanzegdeadline" | "bankafschrift_import_mislukt";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -2334,4 +2334,103 @@ export async function stuurAccountviewBoekingMisluktMail(opties: {
     voettekst: "Dit is een automatische melding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
   });
   await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "accountview_boeking_mislukt" });
+}
+
+export async function stuurAccountviewBankmutatieMisluktMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  mutatieId: number;
+  bankreferentie: string;
+  tegenpartijNaam?: string | null;
+  bedrag: string;
+  reden: string;
+  deduplicatieSleutel: string;
+}): Promise<void> {
+  const bedragTekst = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" })
+    .format(parseFloat(opties.bedrag));
+  const onderwerp = `AccountView-bankboeking mislukt: ${opties.bankreferentie}`;
+  const basisUrl = publiekeAppUrl();
+  const html = mailShell({
+    titel: "AccountView-bankboeking mislukt",
+    kopje: `${escapeHtml(opties.bankreferentie)}${opties.tegenpartijNaam ? ` — ${escapeHtml(opties.tegenpartijNaam)}` : ""} (${bedragTekst})`,
+    paragrafen: [
+      "De bankmutatie is niet naar AccountView doorgegeven. De mutatie blijft in FPS Connect beschikbaar om na herstel opnieuw te exporteren.",
+      `<strong>Reden:</strong> ${escapeHtml(opties.reden)}`,
+    ],
+    knop: { label: "Open bankafschriften", link: `${basisUrl}/facturen/bankafschriften` },
+    voettekst: "Dit is een automatische melding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "accountview_boeking_mislukt",
+    deduplicatieSleutel: opties.deduplicatieSleutel,
+  });
+}
+
+export async function stuurBankafschriftMisluktMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  mailboxAdres: string;
+  messageId: string;
+  bijlageNaam?: string | null;
+  foutOmschrijving: string;
+  /** Unieke sleutel voor deduplicatie: mailbox+message+bijlage+fouttype */
+  deduplicatieSleutel: string;
+}): Promise<void> {
+  const bijlageTekst = opties.bijlageNaam ? ` (bijlage: ${escapeHtml(opties.bijlageNaam)})` : "";
+  const onderwerp = `Bankafschrift import mislukt — ${escapeHtml(opties.mailboxAdres)}`;
+  const basisUrl = publiekeAppUrl();
+  const html = mailShell({
+    titel: "Bankafschrift import mislukt",
+    kopje: `Bankafschrift kon niet worden verwerkt`,
+    paragrafen: [
+      `Een bankafschrift in mailbox <strong>${escapeHtml(opties.mailboxAdres)}</strong>${bijlageTekst} kon niet automatisch worden ingelezen.`,
+      `<strong>Reden:</strong> ${escapeHtml(opties.foutOmschrijving)}`,
+      "De mail staat nog open in de werk-inbox en is gemarkeerd met een fout. Controleer de bijlage handmatig en verwerk het bankafschrift opnieuw als dat nodig is.",
+    ],
+    knop: { label: "Open werk-inbox", link: `${basisUrl}/werk-inbox` },
+    voettekst: "Dit is een automatische melding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "bankafschrift_import_mislukt",
+    deduplicatieSleutel: opties.deduplicatieSleutel,
+  });
+}
+
+export async function stuurBankafschriftHiaatMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  bestandsnaam: string;
+  importId: number;
+  hiaten: string[];
+  deduplicatieSleutel: string;
+}): Promise<void> {
+  const onderwerp = `Hiaat in bankafschriftreeks — ${opties.bestandsnaam}`;
+  const basisUrl = publiekeAppUrl();
+  const hiaten = opties.hiaten.slice(0, 10).map((h) => `&bull; ${escapeHtml(h)}`).join("<br>");
+  const html = mailShell({
+    titel: "Hiaat in bankafschriftreeks",
+    kopje: escapeHtml(opties.bestandsnaam),
+    paragrafen: [
+      "Het bankafschrift is ingelezen, maar de afschriftvolgorde is niet volledig. De mutaties blijven zichtbaar met een waarschuwing; controleer of een tussenliggend afschrift ontbreekt.",
+      hiaten,
+    ],
+    knop: { label: "Open bankafschriften", link: `${basisUrl}/facturen/bankafschriften` },
+    voettekst: "Dit is een automatische melding van FPS Connect &bull; U ontvangt dit bericht omdat u hoofdbeheerder bent.",
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "bankafschrift_import_mislukt",
+    deduplicatieSleutel: opties.deduplicatieSleutel,
+  });
 }

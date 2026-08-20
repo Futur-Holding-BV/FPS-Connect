@@ -179,6 +179,12 @@ export const MODULES = [
     omschrijving:
       "Onkostendeclaraties: indienen, beoordelen (directeur/hoofdbeheerder) en verwerken (administratie/Hoekwoning). Niveau 1 = eigen inzien, niveau 2 = aanmaken en indienen, niveau 3 = beoordelen en goedkeuren/afwijzen, niveau 4 = verwerken en beleid beheren",
   },
+  {
+    id: "bankafschriften",
+    label: "Bankafschriften & Afletteren",
+    omschrijving:
+      "CAMT.053/MT940-import, bankafschriftverwerking, automatisch afletteren van bankmutaties tegen facturen en betaalbatches. Niveau 1 = inzien, niveau 2 = handmatig koppelen, niveau 3 = importeren en verwerken, niveau 4 = volledig beheer inclusief terugdraaien",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -430,6 +436,8 @@ export const PRESETS: Preset[] = [
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, projecten: 2, planning: 1, merk: 1,
       financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
       goedkeuring: 3, declaraties: 4,
+      // BANK_01: Administratie verwerkt bankafschriften en aflettert volledig.
+      bankafschriften: 4,
     }),
   },
   {
@@ -440,12 +448,14 @@ export const PRESETS: Preset[] = [
     // RECHTEN_BOEKHOUDER_01: daarnaast leesrecht (niveau 1) op financieel en
     // financieel_vertrouwelijk zodat hij facturen, OHW en de jaarrekening kan
     // inzien. Projecten, offertes en opdrachten blijven bewust dicht.
+    // BANK_01: Externe boekhouder krijgt volledig beheer over bankafschriften.
     bevoegdheden: matrix({
       salarisarchief: 3,
       salaris_mutaties: 1,
       boekhouder_portaal: 4,
       financieel: 1,
       financieel_vertrouwelijk: 1,
+      bankafschriften: 4,
     }),
   },
   {

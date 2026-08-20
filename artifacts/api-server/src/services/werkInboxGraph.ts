@@ -364,6 +364,62 @@ export async function haalBijlagen(
   return (data.value ?? []).filter((b) => typeof b.contentBytes === "string" && b.contentBytes.length > 0);
 }
 
+/**
+ * BANK_01 — Strikte variant van haalBijlagen: GOOIT een leesbare fout bij
+ * ontbrekend token, Graph 403/404 of netwerkfout. Backward-compatible met
+ * haalBijlagen (die stil terugvalt op []).
+ * Gebruik uitsluitend voor bankafschrift-intake, niet voor andere stromen.
+ */
+export async function haalBijlagenStrikt(
+  gebruikerId: number,
+  mailboxAdres: string,
+  messageId: string,
+  isPersonlijk: boolean,
+): Promise<GraphBijlage[]> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) {
+    throw new Error(
+      `Geen geldig Microsoft-token voor gebruiker ${gebruikerId} — koppel het account opnieuw.`,
+    );
+  }
+
+  const basis = isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/messages"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `${basis}/${encodeURIComponent(messageId)}/attachments?$select=id,name,contentType,size,contentBytes`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (err) {
+    throw new Error(
+      `Netwerkfout bij ophalen bijlagen voor bericht ${messageId}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  if (res.status === 403) {
+    throw new Error(
+      `Graph geeft 403 (geen toegang) bij het ophalen van bijlagen voor mailbox ${mailboxAdres} — controleer de Exchange-toegang.`,
+    );
+  }
+  if (res.status === 404) {
+    throw new Error(
+      `Graph geeft 404 (niet gevonden) bij het ophalen van bijlagen voor bericht ${messageId} — het bericht bestaat niet of is verwijderd.`,
+    );
+  }
+  if (!res.ok) {
+    throw new Error(
+      `Graph HTTP ${res.status} bij het ophalen van bijlagen voor bericht ${messageId}.`,
+    );
+  }
+
+  const data = (await res.json()) as { value?: GraphBijlage[] };
+  // Alleen echte bestandsbijlagen met inhoud (geen inline/item attachments zonder bytes)
+  return (data.value ?? []).filter((b) => typeof b.contentBytes === "string" && b.contentBytes.length > 0);
+}
+
 // ── Markeer gelezen/ongelezen ─────────────────────────────────────────────────
 
 export async function markeerGelezen(

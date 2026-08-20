@@ -182,6 +182,7 @@ import FinancieelDashboardPagina from "@/pages/facturen/dashboard";
 import ExportlogPagina from "@/pages/facturen/exportlog";
 import FactuurstroomBewakingPagina from "@/pages/facturen/stroom";
 import BetaalbatchPagina from "@/pages/facturen/betaalbatch";
+import BankafschriftenPagina from "@/pages/facturen/bankafschriften";
 import SalarisarchiefPagina from "@/pages/salarisarchief/index";
 import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail";
 import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
@@ -438,6 +439,7 @@ export function ConnectRoutes() {
         <Route path="/facturen/controlebox" component={ControleboxPagina} />
         <Route path="/facturen/stroom" component={FactuurstroomBewakingPagina} />
         <Route path="/facturen/betaalbatch" component={BetaalbatchPagina} />
+        <Route path="/facturen/bankafschriften" component={BankafschriftenPagina} />
         <Route path="/facturen/:id" component={FactuurDetailPagina} />
         <Route path="/facturen" component={FacturenPagina} />
         <Route path="/salarisarchief/batch/:id" component={SalarisarchiefBatchDetailPagina} />

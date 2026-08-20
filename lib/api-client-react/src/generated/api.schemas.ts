@@ -5,6 +5,260 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type BankHiatSignaalSoort = typeof BankHiatSignaalSoort[keyof typeof BankHiatSignaalSoort];
+
+
+export const BankHiatSignaalSoort = {
+  volgnummer_hiaat: 'volgnummer_hiaat',
+  datumreeks_hiaat: 'datumreeks_hiaat',
+  saldo_mismatch: 'saldo_mismatch',
+} as const;
+
+export interface BankHiatSignaal {
+  iban: string;
+  statement_id: string;
+  soort: BankHiatSignaalSoort;
+  detail: string;
+}
+
+export interface BankImportResultaat {
+  ok: boolean;
+  /** true als het bestand al eerder verwerkt is (SHA-256 gelijk) */
+  duplicate: boolean;
+  /** @nullable */
+  import_id: number | null;
+  /** @nullable */
+  aantal_nieuwe_afschriften?: number | null;
+  /** @nullable */
+  aantal_nieuwe_mutaties?: number | null;
+  /** @nullable */
+  aantal_gematcht?: number | null;
+  /** @nullable */
+  hiat_signalen?: BankHiatSignaal[] | null;
+  /** @nullable */
+  onbekend_ibans?: string[] | null;
+  /**
+     * Leesbaar label — 'MT940 (legacy)' voor mt940, 'CAMT.053' voor camt053
+     * @nullable
+     */
+  formaat_label?: string | null;
+  /** @nullable */
+  fout?: string | null;
+}
+
+export type BankImportFormaat = typeof BankImportFormaat[keyof typeof BankImportFormaat];
+
+
+export const BankImportFormaat = {
+  camt053: 'camt053',
+  mt940: 'mt940',
+} as const;
+
+export type BankImportBron = typeof BankImportBron[keyof typeof BankImportBron];
+
+
+export const BankImportBron = {
+  upload: 'upload',
+  mailbox: 'mailbox',
+} as const;
+
+export interface BankImport {
+  id: number;
+  sha256: string;
+  formaat: BankImportFormaat;
+  /** 'MT940 (legacy)' voor mt940, 'CAMT.053' voor camt053 */
+  formaat_label?: string;
+  bestandsnaam: string;
+  bron: BankImportBron;
+  status: string;
+  /** @nullable */
+  fout?: string | null;
+  /** @nullable */
+  aantal_mutaties?: number | null;
+  /** @nullable */
+  aantal_afschriften?: number | null;
+  /** @nullable */
+  aantal_gematcht?: number | null;
+  /** @nullable */
+  aantal_hiaten?: number | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  aangemaakt_door?: number | null;
+}
+
+export type BankMutatieCreditDebit = typeof BankMutatieCreditDebit[keyof typeof BankMutatieCreditDebit];
+
+
+export const BankMutatieCreditDebit = {
+  CRDT: 'CRDT',
+  DBIT: 'DBIT',
+} as const;
+
+export type BankMutatieReconciliatieStatus = typeof BankMutatieReconciliatieStatus[keyof typeof BankMutatieReconciliatieStatus];
+
+
+export const BankMutatieReconciliatieStatus = {
+  onbekend: 'onbekend',
+  gematcht: 'gematcht',
+  meerdere_kandidaten: 'meerdere_kandidaten',
+  geen_kandidaat: 'geen_kandidaat',
+  handmatig: 'handmatig',
+} as const;
+
+export interface BankMutatie {
+  id: number;
+  afschrift_id: number;
+  bankrekening_id: number;
+  werkgever_id: number;
+  bankreferentie: string;
+  /** @nullable */
+  tx_referentie?: string | null;
+  /** @nullable */
+  end_to_end_referentie?: string | null;
+  /** Gesigneerd bedrag als decimale string (credit positief, debet negatief) */
+  bedrag: string;
+  valuta: string;
+  credit_debit: BankMutatieCreditDebit;
+  /** ISO date string YYYY-MM-DD (notNull in DB) */
+  boekdatum: string;
+  /**
+     * ISO date string YYYY-MM-DD of null
+     * @nullable
+     */
+  valuedatum?: string | null;
+  /** @nullable */
+  tegenpartij_iban?: string | null;
+  /** @nullable */
+  tegenpartij_naam?: string | null;
+  /** @nullable */
+  remittance?: string | null;
+  g_rekening: boolean;
+  reconciliatie_status: BankMutatieReconciliatieStatus;
+  /** @nullable */
+  matched_factuur_id?: number | null;
+  /** @nullable */
+  matched_batchregel_id?: number | null;
+  /** @nullable */
+  accountview_status?: string | null;
+  /** @nullable */
+  accountview_id?: string | null;
+  /** @nullable */
+  accountview_fout?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type BankAfletterVoorstelStatus = typeof BankAfletterVoorstelStatus[keyof typeof BankAfletterVoorstelStatus];
+
+
+export const BankAfletterVoorstelStatus = {
+  voorstel: 'voorstel',
+  geaccepteerd: 'geaccepteerd',
+  afgewezen: 'afgewezen',
+  geen_kandidaat: 'geen_kandidaat',
+  vervallen: 'vervallen',
+} as const;
+
+export interface BankAfletterVoorstel {
+  id: number;
+  mutatie_id: number;
+  /** @nullable */
+  factuur_id?: number | null;
+  /**
+     * Soft-referentie naar betaalbatch_regels.id
+     * @nullable
+     */
+  batchregel_id?: number | null;
+  status: BankAfletterVoorstelStatus;
+  /** Volgorde van voorkeur (1 = best) */
+  rang: number;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  beslist_door?: number | null;
+  /** @nullable */
+  beslist_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface BankAfletterAudit {
+  id: number;
+  mutatie_id: number;
+  /** @nullable */
+  voorstel_id?: number | null;
+  /** automatisch_gematcht | geaccepteerd | afgewezen | teruggedraaid | vervallen | accountview_export */
+  actie: string;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface VoorstelAfwijzenInput {
+  /**
+     * Verplichte motivering voor de afwijzing
+     * @minLength 1
+     */
+  reden: string;
+}
+
+export interface BankmutatieAccountViewResultaat {
+  ok: boolean;
+  geslaagd: boolean;
+  /** @nullable */
+  boeking_id?: string | null;
+  /** @nullable */
+  foutmelding?: string | null;
+  /** @nullable */
+  testmodus?: boolean | null;
+}
+
+export type BankmutatieAccountViewHerstelInputActie = typeof BankmutatieAccountViewHerstelInputActie[keyof typeof BankmutatieAccountViewHerstelInputActie];
+
+
+export const BankmutatieAccountViewHerstelInputActie = {
+  bevestig_geboekt: 'bevestig_geboekt',
+  opnieuw_proberen: 'opnieuw_proberen',
+} as const;
+
+export interface BankmutatieAccountViewHerstelInput {
+  actie: BankmutatieAccountViewHerstelInputActie;
+  /**
+     * Verplichte toelichting op de controle in AccountView
+     * @minLength 1
+     */
+  reden: string;
+  /**
+     * Verplicht bij bevestig_geboekt
+     * @nullable
+     */
+  accountview_boeking_id?: string | null;
+}
+
+export interface VoorstelActieResultaat {
+  ok: boolean;
+  /** ID van het verwerkte voorstel */
+  voorstel_id: number;
+}
+
+export interface Foutmelding {
+  /** Mensleesbare foutomschrijving */
+  error: string;
+  /**
+     * Optionele aanvullende toelichting
+     * @nullable
+     */
+  detail?: string | null;
+  /** @nullable */
+  hiat_signalen?: BankHiatSignaal[] | null;
+  /** @nullable */
+  onbekend_ibans?: string[] | null;
+}
+
 export type SocialKanaalEisenKanaal = typeof SocialKanaalEisenKanaal[keyof typeof SocialKanaalEisenKanaal];
 
 
@@ -6438,6 +6692,61 @@ export interface ExterneAdviseurUpdate {
 }
 
 export type ExterneAdviseurHerstartImpactCategorie = typeof ExterneAdviseurHerstartImpactCategorie[keyof typeof ExterneAdviseurHerstartImpactCategorie];
+
+
+export const ExterneAdviseurHerstartImpactCategorie = {
+  verwijderen: 'verwijderen',
+  anonimiseren: 'anonimiseren',
+  ontkoppelen: 'ontkoppelen',
+  behouden: 'behouden',
+} as const;
+
+export interface ExterneAdviseurHerstartImpact {
+  categorie: ExterneAdviseurHerstartImpactCategorie;
+  label: string;
+  /** @minimum 0 */
+  aantal: number;
+  toelichting: string;
+}
+
+export interface ExterneAdviseurHerstartBlokkade {
+  code: string;
+  omschrijving: string;
+  /** @minimum 1 */
+  aantal: number;
+  voorbeelden: string[];
+}
+
+export interface ExterneAdviseurHerstartVoorvertoning {
+  adviseur_id: number;
+  gebruiker_id: number;
+  naam: string;
+  email: string;
+  /** Persoonsgebonden tekst die exact moet worden overgenomen. */
+  bevestigingstekst: string;
+  /** Vingerafdruk van deze serverberekende impact; uitvoering weigert een verouderde voorvertoning. */
+  impact_token: string;
+  uitvoerbaar: boolean;
+  impact: ExterneAdviseurHerstartImpact[];
+  blokkades: ExterneAdviseurHerstartBlokkade[];
+}
+
+export interface ExterneAdviseurHerstartInput {
+  /** @minLength 1 */
+  bevestiging: string;
+  /** @minLength 1 */
+  impact_token: string;
+}
+
+export interface ExterneAdviseurHerstartResultaat {
+  bericht: string;
+  oude_gebruiker_id: number;
+  vrijgegeven_email: string;
+  sessies_beeindigd: number;
+  verwijderde_koppelingen: number;
+  geanonimiseerd: boolean;
+}
+
 /**
  * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
  */
@@ -12678,6 +12987,8 @@ export interface AccountviewInstellingen {
   testmodus?: boolean;
   dagboek_inkoop?: string | null;
   dagboek_verkoop?: string | null;
+  /** Expliciet AccountView-bankdagboek; leeg blokkeert BANK_01-export */
+  dagboek_bank?: string | null;
   grootboek_standaard?: string | null;
   btw_codes?: AccountviewInstellingenBtwCodes;
   kostenplaatsen?: AccountviewInstellingenKostenplaatsen;
@@ -12716,6 +13027,8 @@ export interface AccountviewInstellingenInput {
   testmodus?: boolean;
   dagboek_inkoop?: string | null;
   dagboek_verkoop?: string | null;
+  /** Expliciet AccountView-bankdagboek; leeg blokkeert BANK_01-export */
+  dagboek_bank?: string | null;
   grootboek_standaard?: string | null;
   btw_codes?: AccountviewInstellingenInputBtwCodes;
   kostenplaatsen?: AccountviewInstellingenInputKostenplaatsen;
@@ -20092,55 +20405,71 @@ export type PlanSocialBerichtBody = {
   gepland_op: string;
 };
 
-export const ExterneAdviseurHerstartImpactCategorie = {
-  verwijderen: 'verwijderen',
-  anonimiseren: 'anonimiseren',
-  ontkoppelen: 'ontkoppelen',
-  behouden: 'behouden',
+/**
+ * Bestandsformaat — camt053 voor ISO-20022 XML, mt940 voor legacy SWIFT
+ */
+export type ImporteerBankafschriftBodyFormaat = typeof ImporteerBankafschriftBodyFormaat[keyof typeof ImporteerBankafschriftBodyFormaat];
+
+
+export const ImporteerBankafschriftBodyFormaat = {
+  camt053: 'camt053',
+  mt940: 'mt940',
 } as const;
 
-export interface ExterneAdviseurHerstartBlokkade {
-  code: string;
-  omschrijving: string;
-  /** @minimum 1 */
-  aantal: number;
-  voorbeelden: string[];
-}
+export type ImporteerBankafschriftBody = {
+  /** Bankafschriftbestand (XML voor CAMT.053, TXT/STA voor MT940) */
+  bestand: Blob;
+  /** Bestandsformaat — camt053 voor ISO-20022 XML, mt940 voor legacy SWIFT */
+  formaat: ImporteerBankafschriftBodyFormaat;
+};
 
-export interface ExterneAdviseurHerstartResultaat {
-  bericht: string;
-  oude_gebruiker_id: number;
-  vrijgegeven_email: string;
-  sessies_beeindigd: number;
-  verwijderde_koppelingen: number;
-  geanonimiseerd: boolean;
-}
+export type ListBankImportsParams = {
+/**
+ * Filter op werkgever
+ */
+werkgever_id?: number;
+};
 
-export interface ExterneAdviseurHerstartVoorvertoning {
-  adviseur_id: number;
-  gebruiker_id: number;
-  naam: string;
-  email: string;
-  /** Persoonsgebonden tekst die exact moet worden overgenomen. */
-  bevestigingstekst: string;
-  /** Vingerafdruk van deze serverberekende impact; uitvoering weigert een verouderde voorvertoning. */
-  impact_token: string;
-  uitvoerbaar: boolean;
-  impact: ExterneAdviseurHerstartImpact[];
-  blokkades: ExterneAdviseurHerstartBlokkade[];
-}
+export type ListBankImports200 = {
+  items: BankImport[];
+};
 
-export interface ExterneAdviseurHerstartInput {
-  /** @minLength 1 */
-  bevestiging: string;
-  /** @minLength 1 */
-  impact_token: string;
-}
+export type ListBankMutatiesParams = {
+werkgever_id?: number;
+iban?: string;
+/**
+ * Filter op reconciliatiestatus van de mutatie
+ */
+reconciliatie_status?: ListBankMutatiesReconciliatieStatus;
+g_rekening?: boolean;
+/**
+ * @maximum 500
+ */
+limit?: number;
+offset?: number;
+};
 
-export interface ExterneAdviseurHerstartImpact {
-  categorie: ExterneAdviseurHerstartImpactCategorie;
-  label: string;
-  /** @minimum 0 */
-  aantal: number;
-  toelichting: string;
-}
+export type ListBankMutatiesReconciliatieStatus = typeof ListBankMutatiesReconciliatieStatus[keyof typeof ListBankMutatiesReconciliatieStatus];
+
+
+export const ListBankMutatiesReconciliatieStatus = {
+  onbekend: 'onbekend',
+  gematcht: 'gematcht',
+  meerdere_kandidaten: 'meerdere_kandidaten',
+  geen_kandidaat: 'geen_kandidaat',
+  handmatig: 'handmatig',
+  afgewezen: 'afgewezen',
+} as const;
+
+export type ListBankMutaties200 = {
+  items: BankMutatie[];
+  totaal: number;
+};
+
+export type GetBankMutatieVoorstellen200 = {
+  items: BankAfletterVoorstel[];
+};
+
+export type GetBankMutatieAudit200 = {
+  items: BankAfletterAudit[];
+};

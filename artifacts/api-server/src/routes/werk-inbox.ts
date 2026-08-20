@@ -66,6 +66,7 @@ import {
 import { logger } from "../lib/logger";
 import { verwerkFactuurmails } from "../services/factuurstroomService";
 import { verwerkAanvraagmails } from "../services/aanvraagstroomService";
+import { verwerkBankafschriftMails } from "../services/bankafschriftMailboxService";
 
 const router = Router();
 
@@ -287,7 +288,9 @@ router.post("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void
     res.status(403).json({ error: "Alleen de hoofdbeheerder kan mailboxen toevoegen." });
     return;
   }
-  const { emailAdres, label, modus } = req.body as { emailAdres?: string; label?: string; modus?: string };
+  const { emailAdres, label, modus, isBankafschriftmailbox } = req.body as {
+    emailAdres?: string; label?: string; modus?: string; isBankafschriftmailbox?: boolean;
+  };
   if (!emailAdres || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAdres)) {
     res.status(400).json({ error: "Ongeldig e-mailadres." });
     return;
@@ -298,7 +301,12 @@ router.post("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void
   }
   try {
     const [rij] = await db.insert(werkInboxMailboxenTable)
-      .values({ emailAdres: emailAdres.toLowerCase(), label: label ?? null, modus: (modus as WerkInboxModus | undefined) ?? "ondersteunen" })
+      .values({
+        emailAdres: emailAdres.toLowerCase(),
+        label: label ?? null,
+        modus: (modus as WerkInboxModus | undefined) ?? "ondersteunen",
+        ...(isBankafschriftmailbox !== undefined && { isBankafschriftmailbox }),
+      })
       .returning();
     res.status(201).json(rij);
   } catch {
@@ -314,9 +322,9 @@ router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise
     res.status(recht ? 403 : 404).json({ error: recht ? "Hiervoor is het recht Beheren op deze mailbox nodig." : "Niet gevonden." });
     return;
   }
-  const { label, actief, volgorde, modus, isFactuurmailbox, isAanvraagmailbox } = req.body as {
+  const { label, actief, volgorde, modus, isFactuurmailbox, isAanvraagmailbox, isBankafschriftmailbox } = req.body as {
     label?: string; actief?: boolean; volgorde?: number; modus?: string;
-    isFactuurmailbox?: boolean; isAanvraagmailbox?: boolean;
+    isFactuurmailbox?: boolean; isAanvraagmailbox?: boolean; isBankafschriftmailbox?: boolean;
   };
   if (modus !== undefined && !WERK_INBOX_MODI.includes(modus as WerkInboxModus)) {
     res.status(400).json({ error: `Ongeldige modus. Kies uit: ${WERK_INBOX_MODI.join(", ")}` });
@@ -330,6 +338,7 @@ router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise
       ...(modus !== undefined && { modus: modus as WerkInboxModus }),
       ...(isFactuurmailbox !== undefined && { isFactuurmailbox }),
       ...(isAanvraagmailbox !== undefined && { isAanvraagmailbox }),
+      ...(isBankafschriftmailbox !== undefined && { isBankafschriftmailbox }),
     })
     .where(eq(werkInboxMailboxenTable.id, id))
     .returning();
@@ -507,6 +516,8 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => 
     import("../services/loonSepaIntakeService")
       .then(({ verwerkLoonSepaMails }) => verwerkLoonSepaMails())
       .catch((err) => req.log.error({ err }, "loon-sepa-intake: pijplijn na sync mislukt"));
+    // BANK_01: bankafschrift-mailboxen automatisch verwerken na elke sync.
+    verwerkBankafschriftMails().catch((err) => req.log.error({ err }, "bank-mailbox: pijplijn na sync mislukt"));
     res.json(resultaat);
   } catch (err) {
     if (err instanceof GeenToegang) {

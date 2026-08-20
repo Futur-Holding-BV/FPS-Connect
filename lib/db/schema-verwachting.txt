@@ -8,6 +8,7 @@ INDEX|acceptatie_register|acceptatie_register_bron_datum_idx
 INDEX|acceptatie_register|acceptatie_register_pkey
 INDEX|acceptatie_register|acceptatie_register_stand_idx
 INDEX|acceptatie_register|acceptatie_register_uniek
+INDEX|accountview_export_logs|accountview_export_logs_bank_mutatie_idx
 INDEX|accountview_export_logs|accountview_export_logs_pkey
 INDEX|accountview_instellingen|accountview_instellingen_pkey
 INDEX|accountview_project_mapping|accountview_project_mapping_pkey
@@ -41,10 +42,41 @@ INDEX|avg_opschoon_log|avg_opschoon_log_pkey
 INDEX|avg_verwerkers|avg_verwerkers_pkey
 INDEX|backup_records|backup_records_pkey
 INDEX|backup_records|backup_records_slug_unique
+INDEX|bank_afletter_audit|bank_afletter_audit_aangemaakt_idx
+INDEX|bank_afletter_audit|bank_afletter_audit_mutatie_idx
+INDEX|bank_afletter_audit|bank_afletter_audit_pkey
+INDEX|bank_aflettervoorstellen|bank_afletterv_factuur_idx
+INDEX|bank_aflettervoorstellen|bank_afletterv_kandidaat_uniek
+INDEX|bank_aflettervoorstellen|bank_afletterv_mutatie_idx
+INDEX|bank_aflettervoorstellen|bank_afletterv_status_idx
+INDEX|bank_aflettervoorstellen|bank_aflettervoorstellen_pkey
+INDEX|bank_afschriften|bank_afschriften_iban_idx
+INDEX|bank_afschriften|bank_afschriften_import_idx
+INDEX|bank_afschriften|bank_afschriften_pkey
+INDEX|bank_afschriften|bank_afschriften_rekening_statement_uniek
+INDEX|bank_afschriften|bank_afschriften_werkgever_idx
+INDEX|bank_import_archieven|bank_import_archieven_import_werkgever_uniek
+INDEX|bank_import_archieven|bank_import_archieven_pkey
+INDEX|bank_imports|bank_imports_mailbox_message_idx
+INDEX|bank_imports|bank_imports_pkey
+INDEX|bank_imports|bank_imports_sha256_uniek
+INDEX|bank_imports|bank_imports_status_idx
+INDEX|bank_mailbijlage_claims|bank_mailbijlage_claims_lease_idx
+INDEX|bank_mailbijlage_claims|bank_mailbijlage_claims_pkey
+INDEX|bank_mailbijlage_claims|bank_mailbijlage_claims_uniek
+INDEX|bank_mutaties|bank_mutaties_accountview_claim_idx
+INDEX|bank_mutaties|bank_mutaties_afschrift_idx
+INDEX|bank_mutaties|bank_mutaties_endtoend_idx
+INDEX|bank_mutaties|bank_mutaties_factuur_idx
+INDEX|bank_mutaties|bank_mutaties_pkey
+INDEX|bank_mutaties|bank_mutaties_reconciliatie_idx
+INDEX|bank_mutaties|bank_mutaties_rekening_referentie_uniek
+INDEX|bank_mutaties|bank_mutaties_werkgever_idx
 INDEX|bedrijfssluitingen|bedrijfssluitingen_pkey
 INDEX|beeldbank_uploads|beeldbank_uploads_gebouw_idx
 INDEX|beeldbank_uploads|beeldbank_uploads_pkey
 INDEX|bekwaamheden|bekwaamheden_pkey
+INDEX|betaalbatch_regels|betaalbatch_regels_bank_mutatie_uniek
 INDEX|betaalbatch_regels|betaalbatch_regels_factuur_uniek
 INDEX|betaalbatch_regels|betaalbatch_regels_pkey
 INDEX|betaalbatches|betaalbatches_pkey
@@ -638,8 +670,9 @@ KOLOM|accountview_export_logs|aangemeld_door_gebruiker|text|YES|
 KOLOM|accountview_export_logs|accountview_boeking_id|text|YES|
 KOLOM|accountview_export_logs|accountview_response|jsonb|YES|
 KOLOM|accountview_export_logs|actie|text|NO|'export'::text
+KOLOM|accountview_export_logs|bank_mutatie_id|integer|YES|
 KOLOM|accountview_export_logs|export_op|timestamp without time zone|NO|now()
-KOLOM|accountview_export_logs|factuur_id|integer|NO|
+KOLOM|accountview_export_logs|factuur_id|integer|YES|
 KOLOM|accountview_export_logs|foutmelding|text|YES|
 KOLOM|accountview_export_logs|gebruiker_id|integer|YES|
 KOLOM|accountview_export_logs|http_status|integer|YES|
@@ -655,6 +688,7 @@ KOLOM|accountview_instellingen|api_key|text|YES|
 KOLOM|accountview_instellingen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|accountview_instellingen|btw_codes|jsonb|YES|'{}'::jsonb
 KOLOM|accountview_instellingen|crediteur_mapping|jsonb|YES|'{}'::jsonb
+KOLOM|accountview_instellingen|dagboek_bank|text|YES|
 KOLOM|accountview_instellingen|dagboek_inkoop|text|YES|'INK'::text
 KOLOM|accountview_instellingen|dagboek_verkoop|text|YES|'VRK'::text
 KOLOM|accountview_instellingen|debiteur_mapping|jsonb|YES|'{}'::jsonb
@@ -956,6 +990,101 @@ KOLOM|backup_records|soort|text|NO|'handmatig'::text
 KOLOM|backup_records|status|text|NO|'bezig'::text
 KOLOM|backup_records|versie_app|text|YES|
 KOLOM|backup_records|voltooid_op|timestamp without time zone|YES|
+KOLOM|bank_afletter_audit|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_afletter_audit|actie|text|NO|
+KOLOM|bank_afletter_audit|gebruiker_id|integer|YES|
+KOLOM|bank_afletter_audit|gebruiker_naam|text|YES|
+KOLOM|bank_afletter_audit|id|integer|NO|nextval('bank_afletter_audit_id_seq'::regclass)
+KOLOM|bank_afletter_audit|mutatie_id|integer|NO|
+KOLOM|bank_afletter_audit|payload|text|YES|
+KOLOM|bank_afletter_audit|reden|text|YES|
+KOLOM|bank_afletter_audit|voorstel_id|integer|YES|
+KOLOM|bank_aflettervoorstellen|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_aflettervoorstellen|batchregel_id|integer|YES|
+KOLOM|bank_aflettervoorstellen|beslist_door|integer|YES|
+KOLOM|bank_aflettervoorstellen|beslist_op|timestamp without time zone|YES|
+KOLOM|bank_aflettervoorstellen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|bank_aflettervoorstellen|factuur_id|integer|YES|
+KOLOM|bank_aflettervoorstellen|id|integer|NO|nextval('bank_aflettervoorstellen_id_seq'::regclass)
+KOLOM|bank_aflettervoorstellen|mutatie_id|integer|NO|
+KOLOM|bank_aflettervoorstellen|rang|integer|NO|1
+KOLOM|bank_aflettervoorstellen|reden|text|YES|
+KOLOM|bank_aflettervoorstellen|score|numeric|YES|
+KOLOM|bank_aflettervoorstellen|status|text|NO|'voorstel'::text
+KOLOM|bank_afschriften|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_afschriften|banknaam|text|YES|
+KOLOM|bank_afschriften|bankrekening_id|integer|NO|
+KOLOM|bank_afschriften|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|bank_afschriften|eindsaldo|numeric|NO|
+KOLOM|bank_afschriften|iban|text|NO|
+KOLOM|bank_afschriften|id|integer|NO|nextval('bank_afschriften_id_seq'::regclass)
+KOLOM|bank_afschriften|import_id|integer|NO|
+KOLOM|bank_afschriften|mutatiesom|numeric|NO|
+KOLOM|bank_afschriften|openingssaldo|numeric|NO|
+KOLOM|bank_afschriften|reeks_hiaat|boolean|NO|false
+KOLOM|bank_afschriften|statement_id|text|NO|
+KOLOM|bank_afschriften|status|text|NO|'verwerkt'::text
+KOLOM|bank_afschriften|tot_datum|text|NO|
+KOLOM|bank_afschriften|valuta|text|NO|'EUR'::text
+KOLOM|bank_afschriften|van_datum|text|NO|
+KOLOM|bank_afschriften|volgnummer|integer|YES|
+KOLOM|bank_afschriften|werkgever_id|integer|NO|
+KOLOM|bank_import_archieven|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_import_archieven|id|integer|NO|nextval('bank_import_archieven_id_seq'::regclass)
+KOLOM|bank_import_archieven|import_id|integer|NO|
+KOLOM|bank_import_archieven|object_path|text|NO|
+KOLOM|bank_import_archieven|werkgever_id|integer|NO|
+KOLOM|bank_imports|aangemaakt_door|integer|YES|
+KOLOM|bank_imports|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_imports|attachment_id|text|YES|
+KOLOM|bank_imports|bestandsnaam|text|NO|
+KOLOM|bank_imports|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|bank_imports|bron|text|NO|
+KOLOM|bank_imports|content_type|text|YES|
+KOLOM|bank_imports|formaat|text|NO|
+KOLOM|bank_imports|fout|text|YES|
+KOLOM|bank_imports|id|integer|NO|nextval('bank_imports_id_seq'::regclass)
+KOLOM|bank_imports|mail_message_id|text|YES|
+KOLOM|bank_imports|mailbox_adres|text|YES|
+KOLOM|bank_imports|sha256|text|NO|
+KOLOM|bank_imports|status|text|NO|'nieuw'::text
+KOLOM|bank_mailbijlage_claims|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_mailbijlage_claims|attachment_id|text|NO|
+KOLOM|bank_mailbijlage_claims|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|bank_mailbijlage_claims|claim_token|text|YES|
+KOLOM|bank_mailbijlage_claims|fout|text|YES|
+KOLOM|bank_mailbijlage_claims|id|integer|NO|nextval('bank_mailbijlage_claims_id_seq'::regclass)
+KOLOM|bank_mailbijlage_claims|import_id|integer|YES|
+KOLOM|bank_mailbijlage_claims|lease_tot|timestamp without time zone|YES|
+KOLOM|bank_mailbijlage_claims|mail_message_id|text|NO|
+KOLOM|bank_mailbijlage_claims|mailbox_adres|text|NO|
+KOLOM|bank_mailbijlage_claims|status|text|NO|'bezig'::text
+KOLOM|bank_mutaties|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|bank_mutaties|accountview_claim_op|timestamp without time zone|YES|
+KOLOM|bank_mutaties|accountview_claim_token|text|YES|
+KOLOM|bank_mutaties|accountview_fout|text|YES|
+KOLOM|bank_mutaties|accountview_id|text|YES|
+KOLOM|bank_mutaties|accountview_status|text|YES|
+KOLOM|bank_mutaties|afschrift_id|integer|NO|
+KOLOM|bank_mutaties|bankreferentie|text|NO|
+KOLOM|bank_mutaties|bankrekening_id|integer|NO|
+KOLOM|bank_mutaties|bedrag|numeric|NO|
+KOLOM|bank_mutaties|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|bank_mutaties|boekdatum|text|NO|
+KOLOM|bank_mutaties|credit_debit|text|NO|
+KOLOM|bank_mutaties|end_to_end_referentie|text|YES|
+KOLOM|bank_mutaties|g_rekening|boolean|NO|false
+KOLOM|bank_mutaties|id|integer|NO|nextval('bank_mutaties_id_seq'::regclass)
+KOLOM|bank_mutaties|matched_batchregel_id|integer|YES|
+KOLOM|bank_mutaties|matched_factuur_id|integer|YES|
+KOLOM|bank_mutaties|reconciliatie_status|text|NO|'onbekend'::text
+KOLOM|bank_mutaties|remittance|text|YES|
+KOLOM|bank_mutaties|tegenpartij_iban|text|YES|
+KOLOM|bank_mutaties|tegenpartij_naam|text|YES|
+KOLOM|bank_mutaties|tx_referentie|text|YES|
+KOLOM|bank_mutaties|valuedatum|text|YES|
+KOLOM|bank_mutaties|valuta|text|NO|'EUR'::text
+KOLOM|bank_mutaties|werkgever_id|integer|NO|
 KOLOM|bedrijfssluitingen|aangemaakt_door_id|integer|YES|
 KOLOM|bedrijfssluitingen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|bedrijfssluitingen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -984,13 +1113,16 @@ KOLOM|bekwaamheden|opmerking|text|YES|
 KOLOM|bekwaamheden|vastgesteld_door|text|YES|
 KOLOM|bekwaamheden|vastgesteld_op|text|YES|
 KOLOM|betaalbatch_regels|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|betaalbatch_regels|bank_mutatie_id|integer|YES|
 KOLOM|betaalbatch_regels|batch_id|integer|NO|
 KOLOM|betaalbatch_regels|bedrag|numeric|NO|
 KOLOM|betaalbatch_regels|crediteur_iban|text|NO|
 KOLOM|betaalbatch_regels|crediteur_naam|text|NO|
 KOLOM|betaalbatch_regels|factuur_id|integer|NO|
+KOLOM|betaalbatch_regels|gematcht_bedrag|numeric|YES|
 KOLOM|betaalbatch_regels|id|integer|NO|nextval('betaalbatch_regels_id_seq'::regclass)
 KOLOM|betaalbatch_regels|omschrijving|text|NO|
+KOLOM|betaalbatch_regels|reconciliatie_status|text|NO|'onbekend'::text
 KOLOM|betaalbatches|aangemaakt_door|integer|YES|
 KOLOM|betaalbatches|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|betaalbatches|aantal_betalingen|integer|NO|0
@@ -1004,6 +1136,8 @@ KOLOM|betaalbatches|debiteur_naam|text|NO|
 KOLOM|betaalbatches|id|integer|NO|nextval('betaalbatches_id_seq'::regclass)
 KOLOM|betaalbatches|status|text|NO|'concept'::text
 KOLOM|betaalbatches|totaal_bedrag|numeric|NO|0
+KOLOM|betaalbatches|uitgevoerd_import_id|integer|YES|
+KOLOM|betaalbatches|uitgevoerd_op|timestamp without time zone|YES|
 KOLOM|betaalbatches|uitvoerdatum|text|NO|
 KOLOM|betaalbatches|werkgever_id|integer|NO|
 KOLOM|bevoegdheid_audit_log|actie|text|NO|
@@ -5098,6 +5232,7 @@ KOLOM|werk_inbox_mailboxen|actief|boolean|NO|true
 KOLOM|werk_inbox_mailboxen|email_adres|text|NO|
 KOLOM|werk_inbox_mailboxen|id|integer|NO|nextval('werk_inbox_mailboxen_id_seq'::regclass)
 KOLOM|werk_inbox_mailboxen|is_aanvraagmailbox|boolean|NO|false
+KOLOM|werk_inbox_mailboxen|is_bankafschriftmailbox|boolean|NO|false
 KOLOM|werk_inbox_mailboxen|is_factuurmailbox|boolean|NO|false
 KOLOM|werk_inbox_mailboxen|laatst_gesynct_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mailboxen|label|text|YES|
@@ -5112,6 +5247,8 @@ KOLOM|werk_inbox_mails|afzender_email|text|NO|''::text
 KOLOM|werk_inbox_mails|afzender_naam|text|YES|
 KOLOM|werk_inbox_mails|ai_logboek_json|text|YES|
 KOLOM|werk_inbox_mails|ai_voorstel_json|text|YES|
+KOLOM|werk_inbox_mails|bankafschrift_fout|text|YES|
+KOLOM|werk_inbox_mails|bankafschrift_verwerkt_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|beantwoord_op|timestamp without time zone|YES|
 KOLOM|werk_inbox_mails|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|werk_inbox_mails|conversation_id|text|YES|

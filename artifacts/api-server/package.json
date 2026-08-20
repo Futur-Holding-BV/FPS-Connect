@@ -12,6 +12,7 @@
     "test:signaal-links": "node --test src/lib/signaalActies.test.mjs src/lib/werkbakActiePaden.test.mjs",
     "verificatie-externe-adviseur-herstart": "tsx src/verificatie-externe-adviseur-herstart.ts",
     "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts",
+    "verificatie-bank01": "tsx src/verificatie-bank01.ts",
     "check-sessie-velden": "bash scripts/check-sessie-velden.sh"
   },
   "dependencies": {

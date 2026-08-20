@@ -290,7 +290,7 @@ export default function BoekhoudingBeheer() {
               <CardDescription>Standaard dagboek- en grootboekrekening voor nieuwe boekingen</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div>
                   <Label>Dagboek inkoop</Label>
                   <Input
@@ -308,6 +308,16 @@ export default function BoekhoudingBeheer() {
                     value={veld("dagboek_verkoop", inst?.dagboek_verkoop) as string}
                     onChange={(e) => setVeld("dagboek_verkoop", e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>Dagboek bank</Label>
+                  <Input
+                    className="mt-1"
+                    placeholder="BNK"
+                    value={veld("dagboek_bank", inst?.dagboek_bank) as string}
+                    onChange={(e) => setVeld("dagboek_bank", e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Verplicht voor export van bankmutaties.</p>
                 </div>
                 <div>
                   <Label>Standaard grootboekrekening</Label>

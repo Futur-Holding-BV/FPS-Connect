@@ -23,6 +23,8 @@ export interface AccountviewInstellingenInput {
   testmodus?: boolean;
   dagboek_inkoop?: string | null;
   dagboek_verkoop?: string | null;
+  /** Expliciet AccountView-bankdagboek; leeg blokkeert BANK_01-export */
+  dagboek_bank?: string | null;
   grootboek_standaard?: string | null;
   btw_codes?: AccountviewInstellingenInputBtwCodes;
   kostenplaatsen?: AccountviewInstellingenInputKostenplaatsen;

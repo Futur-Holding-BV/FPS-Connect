@@ -24,3 +24,9 @@ Tijdelijk gedeployde en daarna hernoemde/verwijderde migratiebestanden laten rij
 
 ## Nummerbotsing na parallelle merges (0083, 18 aug 2026)
 Twee taken introduceren onafhankelijk hetzelfde migratienummer → check-hernoeming/CI-poort blokkeert álle deploys. Herstel: het NIEUWE (nog niet op prod gedraaide) bestand hernummeren naar het eerstvolgende vrije nummer, en in migrate.mjs een gerichte `HERNUMMERD`-reconciliatie (exact paar, alleen bij identieke checksum, vóór de pre-check) zodat dev/CI-databases met de oude registratienaam meebewegen. Alleen de dev-DB updaten is niet genoeg (architect-afwijzing): elke andere DB met de oude rij zou hard STOPpen.
+
+**Regel bij kettingbotsingen:** als meerdere parallel gemergde migratieketens hetzelfde nummerbereik gebruiken, behoud de oudste keten en schuif iedere nieuwere keten als geheel door naar één vrij, oplopend bereik. Wijzig alleen bestandsnamen; de SQL-bytes en checksums moeten identiek blijven. Neem in `HERNUMMERD` elke aantoonbaar gebruikte tussennaam op, niet alleen de eerste en laatste naam.
+
+**Why:** een migratie kan in development of CI al onder een tussennaam geregistreerd zijn voordat een volgende parallelle merge opnieuw hernummering afdwingt. Zonder die tussenstap kan dezelfde SQL later als “openstaand” gelden of blokkeert de pre-check een database die terecht vóór die laatste naamwijziging liep.
+
+**How to apply:** controleer alle hashes vóór en na hernoemen, draai `check-hernoeming`, laat `migrate` de registraties checksum-gebonden verzoenen en voer `migrate` direct nogmaals uit; de tweede run moet nul openstaande migraties melden. Sluit af met drift-check.

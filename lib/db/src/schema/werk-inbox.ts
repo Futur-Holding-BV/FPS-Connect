@@ -41,6 +41,8 @@ export const werkInboxMailboxenTable = pgTable("werk_inbox_mailboxen", {
   isFactuurmailbox: boolean("is_factuurmailbox").notNull().default(false),
   // AANVRAAG_01: mails in deze mailbox gaan automatisch de aanvraagstroom in.
   isAanvraagmailbox: boolean("is_aanvraagmailbox").notNull().default(false),
+  // BANK_01: mails in deze mailbox worden als bankafschrift-inname behandeld.
+  isBankafschriftmailbox: boolean("is_bankafschriftmailbox").notNull().default(false),
   // Bewaking achtergrondsync: laatste succesvolle sync + laatste stilstand-alarm.
   laatstGesynctOp: timestamp("laatst_gesynct_op"),
   syncAlarmOp:     timestamp("sync_alarm_op"),
@@ -82,6 +84,9 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
   aanvraagVerwerktOp:  timestamp("aanvraag_verwerkt_op"),
   // LOON_01: wanneer de SEPA-loonintake deze mail heeft verwerkt (dedupe).
   sepaVerwerktOp:      timestamp("sepa_verwerkt_op"),
+  // BANK_01: wanneer de bankafschrift-pijplijn deze mail heeft verwerkt (dedupe).
+  bankafschriftVerwerktOp: timestamp("bankafschrift_verwerkt_op"),
+  bankafschriftFout:       text("bankafschrift_fout"),
   isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
   verwerktOp:          timestamp("verwerkt_op"),
   afgehandeldOp:       timestamp("afgehandeld_op"),

@@ -818,6 +818,14 @@ export function startFactuurstroomAchtergrond(): void {
       } catch (err) {
         logger.warn({ err }, "loon-sepa-intake: achtergrond-verwerking mislukt");
       }
+      // BANK_01: bankafschrift-mailboxen (isBankafschriftmailbox=true) automatisch
+      // verwerken. Bewaking via bestaande syncbewaking (actief/verwerken).
+      try {
+        const { verwerkBankafschriftMails } = await import("./bankafschriftMailboxService");
+        await verwerkBankafschriftMails();
+      } catch (err) {
+        logger.warn({ err }, "bank-mailbox: achtergrond-verwerking mislukt");
+      }
       // AANVRAAG_01: aanvraagpijplijn draait per token-gebruiker mee vanwege de
       // persoonlijke-intake-vlag (aanvraag_intake_persoonlijk).
       const tokenGebruikers = await db.selectDistinct({ gebruikerId: werkInboxTokensTable.gebruikerId }).from(werkInboxTokensTable);

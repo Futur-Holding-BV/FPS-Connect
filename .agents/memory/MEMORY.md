@@ -152,3 +152,4 @@
 - [GELDSTROOM_01 verkoopfacturatie](geldstroom-verkoopfacturatie.md) — regel-mutatie herberekent verkoop-koptotalen in centen (zelfde tx); fiscaal nummer=onwijzigbaar (409); goedkeuren-stroom fail-closed op beleid; batchvrijgave=hoofdbeheerder-rol.
 - [Acceptatieregister](acceptatieregister.md) — oplevering loopt door acceptatie_register (4 standen, fail-closed); oplever-check + kwaliteitscheck eisen bijgewerkte regels; statusrapport wordt gegenereerd, nooit handgeschreven.
 - [Offerte-status split](offerte-status-split.md) — portaal schrijft status=geaccepteerd, studio=ondertekend; "getekend?"-checks moeten beide kennen (of portaal_status=ondertekend gebruiken).
+- [Bankafschriftimport (BANK_01)](bankafschrift-import.md) — CAMT leidend; claimtokens bewaken mailboxleases; AccountView-onzeker nooit auto-retry; uitgevoerd eist volledig bankbewijs.

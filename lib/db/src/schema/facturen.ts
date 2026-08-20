@@ -27,6 +27,7 @@ export const accountviewInstellingenTable = pgTable("accountview_instellingen", 
   testmodus: boolean("testmodus").notNull().default(true),
   dagboekInkoop: text("dagboek_inkoop").default("INK"),
   dagboekVerkoop: text("dagboek_verkoop").default("VRK"),
+  dagboekBank: text("dagboek_bank"),
   grootboekStandaard: text("grootboek_standaard"),
   btwCodes: jsonb("btw_codes").default("{}"),
   kostenplaatsen: jsonb("kostenplaatsen").default("{}"),
@@ -356,9 +357,15 @@ export const factuurHerinneringenTable = pgTable("factuur_herinneringen", {
 export type FactuurHerinnering = typeof factuurHerinneringenTable.$inferSelect;
 
 // ── AccountView export logs ───────────────────────────────────────────────────
+// BANK_01: factuur_id is nullable zodat het log ook voor bankmutatie-exports
+// kan worden gebruikt. bank_mutatie_id is gevuld bij een bankmutatie-export.
+// Precies één van (factuur_id, bank_mutatie_id) moet gevuld zijn.
 export const accountviewExportLogsTable = pgTable("accountview_export_logs", {
   id: serial("id").primaryKey(),
-  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+  // Nullable: BANK_01 maakt ook bank-mutatie-exports mogelijk.
+  factuurId: integer("factuur_id").references(() => facturenTable.id, { onDelete: "cascade" }),
+  // BANK_01: soft ref bank_mutaties.id (FK in migratie 0107 na aanmaken van die tabel)
+  bankMutatieId: integer("bank_mutatie_id"),
 
   // Exportpoging
   gebruikerId: integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
@@ -608,7 +615,9 @@ export type Grootboekrekening = typeof grootboekrekeningenTable.$inferSelect;
 export const betaalbatchesTable = pgTable("betaalbatches", {
   id: serial("id").primaryKey(),
   werkgeverId: integer("werkgever_id").notNull().references(() => werkgeversTable.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("concept"), // concept | bestand_aangemaakt | bevestigd | geannuleerd
+  // concept | bestand_aangemaakt | bevestigd | geannuleerd | uitgevoerd
+  // BANK_01: 'uitgevoerd' wordt uitsluitend door bankbewijs (CAMT/MT940) gezet.
+  status: text("status").notNull().default("concept"),
   uitvoerdatum: text("uitvoerdatum").notNull(),
   debiteurIban: text("debiteur_iban").notNull(),
   debiteurNaam: text("debiteur_naam").notNull(),
@@ -618,6 +627,9 @@ export const betaalbatchesTable = pgTable("betaalbatches", {
   bestandAangemaaktOp: timestamp("bestand_aangemaakt_op"),
   bevestigdOp: timestamp("bevestigd_op"),
   bevestigdDoor: integer("bevestigd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // BANK_01: gezet zodra bankbewijs alle regels dekt.
+  uitgevoerdOp: timestamp("uitgevoerd_op"),
+  uitgevoerdImportId: integer("uitgevoerd_import_id"), // soft ref bank_imports.id
   aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -631,6 +643,11 @@ export const betaalbatchRegelsTable = pgTable("betaalbatch_regels", {
   crediteurIban: text("crediteur_iban").notNull(),
   bedrag: numeric("bedrag", { precision: 12, scale: 2 }).notNull(),
   omschrijving: text("omschrijving").notNull(),
+  // BANK_01: reconciliatiestatus en bankmutatiekoppeling per regel.
+  // onbekend | gematcht | deels_gematcht | geen_kandidaat | meerdere_kandidaten | handmatig
+  reconciliatieStatus: text("reconciliatie_status").notNull().default("onbekend"),
+  bankMutatieId: integer("bank_mutatie_id"), // soft ref bank_mutaties.id (FK in migratie 0107)
+  gematchBedrag: numeric("gematcht_bedrag", { precision: 14, scale: 2 }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [uniqueIndex("betaalbatch_regels_factuur_uniek").on(t.factuurId)]);
 

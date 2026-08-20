@@ -197,6 +197,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonToolboxen     = heeftNiveau("toolbox", 1);
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
   const toonFinancieel    = heeftNiveau("financieel", 1);
+  const toonBankafschriften = heeftNiveau("bankafschriften", 1);
   const toonSalarisarchief = heeftNiveau("salarisarchief", 1);
   const toonSalarisMutaties = heeftNiveau("salaris_mutaties", 1);
   const toonScabMail = heeftNiveau("scab_mail", 1);
@@ -1298,7 +1299,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             (location.startsWith("/facturen/") &&
                               location !== "/facturen/klaar-voor-export" &&
                               location !== "/facturen/exportlog" &&
-                              location !== "/facturen/controlebox")
+                              location !== "/facturen/controlebox" &&
+                              location !== "/facturen/bankafschriften")
                           }
                         >
                           <Link href="/facturen/dashboard">
@@ -1307,6 +1309,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      {toonBankafschriften && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/facturen/bankafschriften"}
+                          >
+                            <Link href="/facturen/bankafschriften">
+                              <CreditCard />
+                              <span>Bankafschriften</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {heeftNiveau("financieel", 2) && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton

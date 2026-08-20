@@ -140,6 +140,7 @@ import socialRouter from "./social";
 import merkenkastRouter from "./merkenkast";
 import beeldbankRouter from "./beeldbank";
 import functiesV2Router from "./functies-v2";
+import bankafschriftenRouter from "./bankafschriften";
 
 const router: IRouter = Router();
 
@@ -307,5 +308,6 @@ router.use(werkbakRouter);
 // WERKBAK_02 — vóór de generieke werkbak-routes met /:id zou niet eens nodig
 // zijn (paden verschillen), maar expliciete volgorde voorkomt schaduw.
 router.use(werkstroomRouter);
+router.use(bankafschriftenRouter);
 
 export default router;

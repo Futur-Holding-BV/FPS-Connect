@@ -35,6 +35,7 @@ type Mailbox = {
   modus: "verwerken" | "ondersteunen" | "registreren";
   isFactuurmailbox: boolean;
   isAanvraagmailbox: boolean;
+  isBankafschriftmailbox: boolean;
   laatstGesynctOp: string | null;
   aangemaaktOp: string;
   werkendeKoppelingen: number;
@@ -445,6 +446,7 @@ export default function MailboxenBeheer() {
                   </span>
                   {mb.isFactuurmailbox && <Badge variant="secondary" className="text-xs">Facturen</Badge>}
                   {mb.isAanvraagmailbox && <Badge variant="secondary" className="text-xs">Aanvragen</Badge>}
+                  {mb.isBankafschriftmailbox && <Badge variant="secondary" className="text-xs">Bankafschriften</Badge>}
                 </CardTitle>
                 <CardDescription className="text-xs">{mb.emailAdres}</CardDescription>
               </div>
@@ -490,21 +492,46 @@ export default function MailboxenBeheer() {
               <span className="text-xs text-muted-foreground">{MODUS_INFO[mb.modus].uitleg}</span>
             </div>
             {mb.modus === "verwerken" && (
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <label className="flex items-center gap-1.5">
-                  <Switch
-                    checked={mb.isFactuurmailbox}
-                    onCheckedChange={(v) => bijwerken.mutate({ id: mb.id, patch: { isFactuurmailbox: v } })}
-                  />
-                  Factuurstroom
-                </label>
-                <label className="flex items-center gap-1.5">
-                  <Switch
-                    checked={mb.isAanvraagmailbox}
-                    onCheckedChange={(v) => bijwerken.mutate({ id: mb.id, patch: { isAanvraagmailbox: v } })}
-                  />
-                  Aanvraagstroom
-                </label>
+              <div className="space-y-3 pt-1 border-t mt-4">
+                <p className="text-xs font-medium text-muted-foreground">Automatische stroomkoppelingen</p>
+                <div className="flex flex-col sm:flex-row gap-6 text-xs">
+                  <label className="flex items-start gap-2">
+                    <Switch
+                      checked={mb.isFactuurmailbox}
+                      onCheckedChange={(v) => bijwerken.mutate({ id: mb.id, patch: { isFactuurmailbox: v } })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-medium text-foreground">Factuurstroom</div>
+                      <div className="text-muted-foreground mt-0.5">Herkent en importeert PDF inkoopfacturen.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2">
+                    <Switch
+                      checked={mb.isAanvraagmailbox}
+                      onCheckedChange={(v) => bijwerken.mutate({ id: mb.id, patch: { isAanvraagmailbox: v } })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-medium text-foreground">Aanvraagstroom</div>
+                      <div className="text-muted-foreground mt-0.5">Maakt concept-aanvragen uit inkomende mails.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2">
+                    <Switch
+                      checked={mb.isBankafschriftmailbox}
+                      onCheckedChange={(v) => bijwerken.mutate({ id: mb.id, patch: { isBankafschriftmailbox: v } })}
+                      className="mt-0.5"
+                      data-testid={`switch-bankafschriftmailbox-${mb.id}`}
+                    />
+                    <div>
+                      <div className="font-medium text-foreground">Bankafschriften</div>
+                      <div className="text-muted-foreground mt-0.5 max-w-[200px]">Importeert dagafschriften (CAMT.053 of MT940 XML/TXT).</div>
+                    </div>
+                  </label>
+                </div>
               </div>
             )}
             <SyncStatusSectie mailbox={mb} />

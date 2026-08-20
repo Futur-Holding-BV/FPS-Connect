@@ -13,7 +13,8 @@
 // - mislukt de boeking, dan gaat er een faalmail met de reden naar de
 //   hoofdbeheerder(s) en blijft de handmatige exportknop gewoon werken.
 
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { controleerFactuurAdministratieBv } from "./factuurWerkmaatschappij";
 import {
   db,
@@ -26,11 +27,21 @@ import {
   gebruikersTable,
   factuurSignalenTable,
   factuurTijdlijnTable,
+  bankMutatiesTable,
+  bankAfletterAuditTable,
+  werkgeversTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { maakAccountViewClient, type AccountviewBoeking } from "./accountview-client";
+import {
+  maakAccountViewClient,
+  type AccountviewBoeking,
+  type AccountviewBoekingResultaat,
+} from "./accountview-client";
 import { checkVereistGoedkeuring, haalOpenAanvraag } from "./goedkeuring-engine";
-import { stuurAccountviewBoekingMisluktMail } from "./email";
+import {
+  stuurAccountviewBankmutatieMisluktMail,
+  stuurAccountviewBoekingMisluktMail,
+} from "./email";
 
 type Factuur = typeof facturenTable.$inferSelect;
 
@@ -565,4 +576,555 @@ async function stuurFaalmailNaarHoofdbeheerders(factuur: Factuur, reden: string,
       logger.error({ err, factuurId: factuur.id, naar: o.email }, "AccountView-faalmail versturen mislukt");
     }
   }
+}
+
+export interface BankmutatieExportUitkomst {
+  ok: boolean;
+  httpStatus: number;
+  fout?: string;
+  detail?: string;
+  geslaagd?: boolean;
+  boekingId?: string | null;
+  foutmelding?: string | null;
+  testmodus?: boolean;
+}
+
+const BANKEXPORT_CLAIM_TTL_MS = 15 * 60 * 1000;
+
+type BankmutatieVoorExport = typeof bankMutatiesTable.$inferSelect;
+
+export type BankexportHerstelActie = "bevestig_geboekt" | "opnieuw_proberen";
+
+export async function exporteerBankmutatieNaarAccountView(
+  mutatieId: number,
+  gebruikerId?: number | null,
+): Promise<BankmutatieExportUitkomst> {
+  // 1. Lees mutatie op
+  const [mutatie] = await db
+    .select()
+    .from(bankMutatiesTable)
+    .where(eq(bankMutatiesTable.id, mutatieId))
+    .limit(1);
+
+  if (!mutatie) {
+    return { ok: false, httpStatus: 404, fout: "Bankmutatie niet gevonden" };
+  }
+  if (mutatie.reconciliatieStatus !== "gematcht") {
+    return {
+      ok: false,
+      httpStatus: 422,
+      fout: "Bankmutatie is nog niet eenduidig afgeletterd",
+      detail: "Alleen een gematchte bankmutatie mag naar AccountView worden doorgegeven.",
+    };
+  }
+
+  // 2. Idempotent herstel: was er al een geslaagde export voor deze mutatie?
+  const [bestaandGeslaagd] = await db
+    .select()
+    .from(accountviewExportLogsTable)
+    .where(
+      and(
+        eq(accountviewExportLogsTable.bankMutatieId, mutatieId),
+        eq(accountviewExportLogsTable.status, "geslaagd"),
+      ),
+    )
+    .orderBy(desc(accountviewExportLogsTable.exportOp))
+    .limit(1);
+
+  if (bestaandGeslaagd) {
+    // Herstel de status op de mutatie als die nog niet juist staat
+    if (mutatie.accountviewStatus !== "geslaagd") {
+      await db
+        .update(bankMutatiesTable)
+        .set({
+          accountviewStatus: "geslaagd",
+          accountviewId: bestaandGeslaagd.accountviewBoekingId,
+          accountviewFout: null,
+          accountviewClaimToken: null,
+          accountviewClaimOp: null,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(bankMutatiesTable.id, mutatieId));
+    }
+    logger.info({ mutatieId, logId: bestaandGeslaagd.id },
+      "bankmutatie AccountView-export: idempotent herstel — geslaagd log gevonden");
+    return {
+      ok: true,
+      httpStatus: 200,
+      geslaagd: true,
+      boekingId: bestaandGeslaagd.accountviewBoekingId,
+      foutmelding: null,
+    };
+  }
+
+  // Een verlopen bezig-claim wordt nooit automatisch opnieuw verzonden: de
+  // externe boeking kan al gelukt zijn terwijl Connect vóór statusopslag crashte.
+  if (mutatie.accountviewStatus === "bezig") {
+    const claimVerlopen =
+      mutatie.accountviewClaimOp == null ||
+      mutatie.accountviewClaimOp.getTime() < Date.now() - BANKEXPORT_CLAIM_TTL_MS;
+    if (claimVerlopen) {
+      const fout = "De vorige AccountView-aanroep is onderbroken; controleer in AccountView of de bankmutatie al is geboekt voordat u een herstelkeuze maakt.";
+      const onzeker = await db.update(bankMutatiesTable)
+        .set({
+          accountviewStatus: "onzeker",
+          accountviewFout: fout,
+          accountviewClaimToken: null,
+          accountviewClaimOp: null,
+          bijgewerktOp: new Date(),
+        })
+        .where(and(
+          eq(bankMutatiesTable.id, mutatieId),
+          eq(bankMutatiesTable.accountviewStatus, "bezig"),
+        ))
+        .returning({ id: bankMutatiesTable.id });
+      if (onzeker.length > 0) {
+        await db.insert(bankAfletterAuditTable).values({
+          mutatieId,
+          actie: "accountview_export_onzeker",
+          reden: fout,
+          gebruikerId: gebruikerId ?? null,
+        });
+        await stuurBankexportFaalmelding(mutatie, fout);
+      }
+      return {
+        ok: false,
+        httpStatus: 409,
+        fout: "AccountView-uitkomst is onzeker",
+        detail: fout,
+      };
+    }
+    return {
+      ok: false,
+      httpStatus: 409,
+      fout: "Export loopt al",
+      detail: "De bankmutatie wordt momenteel naar AccountView verzonden.",
+    };
+  }
+  if (mutatie.accountviewStatus === "onzeker") {
+    return {
+      ok: false,
+      httpStatus: 409,
+      fout: "AccountView-uitkomst is onzeker",
+      detail: mutatie.accountviewFout ?? "Controleer eerst in AccountView of deze mutatie al is geboekt.",
+    };
+  }
+
+  // 3. Atomaire claim: zet accountviewStatus op 'bezig'
+  const claimToken = randomUUID();
+  const claimOp = new Date();
+  const geclaimd = await db
+    .update(bankMutatiesTable)
+    .set({
+      accountviewStatus: "bezig",
+      accountviewFout: null,
+      accountviewClaimToken: claimToken,
+      accountviewClaimOp: claimOp,
+      bijgewerktOp: claimOp,
+    })
+    .where(
+      and(
+        eq(bankMutatiesTable.id, mutatieId),
+        or(
+          isNull(bankMutatiesTable.accountviewStatus),
+          eq(bankMutatiesTable.accountviewStatus, "mislukt"),
+        ),
+        eq(bankMutatiesTable.reconciliatieStatus, "gematcht"),
+      ),
+    )
+    .returning({ id: bankMutatiesTable.id });
+
+  if (geclaimd.length === 0) {
+    return {
+      ok: false,
+      httpStatus: 409,
+      fout: "Export loopt al of is al geslaagd",
+      detail: "De bankmutatie wordt al geëxporteerd of is al succesvol geboekt in AccountView.",
+    };
+  }
+
+  // 4. Werkgever ophalen
+  const werkgeverId = mutatie.werkgeverId;
+  const [werkgever] = await db
+    .select({ naam: werkgeversTable.naam })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.id, werkgeverId))
+    .limit(1);
+
+  // 5. AccountView-instellingen VERS ophalen ná claim (TOCTOU-bescherming)
+  const [versInst] = await db
+    .select()
+    .from(accountviewInstellingenTable)
+    .where(eq(accountviewInstellingenTable.id, 1))
+    .limit(1);
+
+  if (!versInst) {
+    await registreerBankexportFout(mutatie, "AccountView is niet geconfigureerd", gebruikerId, claimToken);
+    return { ok: false, httpStatus: 503, fout: "AccountView is niet geconfigureerd" };
+  }
+  if (!versInst.exportActief) {
+    const fout = "AccountView-export is niet actief";
+    await registreerBankexportFout(mutatie, fout, gebruikerId, claimToken);
+    return { ok: false, httpStatus: 422, fout };
+  }
+
+  // Werkgever-administratie-controle
+  if (versInst.werkgeverId == null || versInst.werkgeverId !== werkgeverId) {
+    const fout = `Bankmutatie hoort bij werkgever ${werkgeverId}, maar de AccountView-koppeling boekt voor werkgever ${versInst.werkgeverId}. Export geblokkeerd.`;
+    await registreerBankexportFout(mutatie, fout, gebruikerId, claimToken);
+    return { ok: false, httpStatus: 422, fout: "Werkmaatschappij-controle geweigerd", detail: fout };
+  }
+
+  // 6. Bouw nul-BTW-journaalpost-payload
+  const isCredit = mutatie.creditDebit === "CRDT";
+  const dagboek = versInst.dagboekBank?.trim();
+  if (!dagboek) {
+    const fout = "Het AccountView-bankdagboek is niet geconfigureerd";
+    await registreerBankexportFout(mutatie, fout, gebruikerId, claimToken);
+    return { ok: false, httpStatus: 422, fout };
+  }
+
+  const bedragFloat = parseFloat(mutatie.bedrag ?? "0");
+  // Gesigneerd: credit is positief, debet negatief (zoals in de DB)
+  const gesigneerdBedrag = Math.abs(bedragFloat) * (isCredit ? 1 : -1);
+
+  const omschrijving = [mutatie.remittance, mutatie.bankreferentie]
+    .filter(Boolean)
+    .join(" — ")
+    .slice(0, 200) || `Bankmutatie ${mutatie.bankreferentie}`;
+
+  const boeking: AccountviewBoeking = {
+    dagboek,
+    administratiecode: versInst.administratiecode ?? "",
+    factuurnummer: mutatie.bankreferentie,
+    factuurdatum: mutatie.boekdatum,
+    vervaldatum: mutatie.boekdatum,
+    relatienaam: mutatie.tegenpartijNaam ?? werkgever?.naam ?? "Onbekend",
+    omschrijving,
+    bedragExclBtw: gesigneerdBedrag,
+    btwBedrag: 0,
+    bedragInclBtw: gesigneerdBedrag,
+    btwCode: "0",
+    type: isCredit ? "verkoop" : "inkoop",
+  };
+
+  // 7. Log aanmaken
+  const [logEntry] = await db
+    .insert(accountviewExportLogsTable)
+    .values({
+      factuurId: null,
+      bankMutatieId: mutatieId,
+      gebruikerId: gebruikerId ?? null,
+      testmodus: versInst.testmodus,
+      verzondenPayload: boeking as unknown as Record<string, unknown>,
+      status: "bezig",
+      actie: "export",
+    })
+    .returning();
+
+  // 8. Verzenden
+  const client = maakAccountViewClient(versInst);
+  let resultaat;
+  try {
+    resultaat = await client.verzendBoeking(boeking);
+  } catch (err) {
+    resultaat = {
+      geslaagd: false,
+      foutmelding: err instanceof Error ? err.message : String(err),
+      testmodus: versInst.testmodus,
+    };
+  }
+
+  const onzekereUitkomst = isOnzekereAccountviewUitkomst(resultaat);
+
+  // 9. Log bijwerken
+  await db
+    .update(accountviewExportLogsTable)
+    .set({
+      accountviewResponse: resultaat.rawResponse as Record<string, unknown> | null,
+      httpStatus: resultaat.httpStatus ?? null,
+      status: resultaat.geslaagd ? "geslaagd" : (onzekereUitkomst ? "onzeker" : "mislukt"),
+      accountviewBoekingId: resultaat.boekingId ?? null,
+      foutmelding: resultaat.foutmelding ?? null,
+    })
+    .where(eq(accountviewExportLogsTable.id, logEntry!.id));
+
+  // 10. Een transport-/serverfout na de POST kan betekenen dat AccountView de
+  // boeking wel ontving maar Connect de bevestiging niet. Nooit automatisch
+  // retrybaar maken: eerst expliciet in AccountView controleren.
+  if (onzekereUitkomst) {
+    const fout = `AccountView gaf geen eenduidige uitkomst na verzending: ${resultaat.foutmelding ?? `HTTP ${resultaat.httpStatus ?? 0}`}`;
+    const bijgewerkt = await db.update(bankMutatiesTable)
+      .set({
+        accountviewStatus: "onzeker",
+        accountviewFout: fout.slice(0, 1000),
+        accountviewClaimToken: null,
+        accountviewClaimOp: null,
+        bijgewerktOp: new Date(),
+      })
+      .where(and(
+        eq(bankMutatiesTable.id, mutatieId),
+        eq(bankMutatiesTable.accountviewClaimToken, claimToken),
+      ))
+      .returning({ id: bankMutatiesTable.id });
+    if (bijgewerkt.length > 0) {
+      await db.insert(bankAfletterAuditTable).values({
+        mutatieId,
+        actie: "accountview_export_onzeker",
+        reden: fout.slice(0, 1000),
+        gebruikerId: gebruikerId ?? null,
+      });
+      await stuurBankexportFaalmelding(mutatie, fout);
+    }
+    return {
+      ok: false,
+      httpStatus: 409,
+      fout: "AccountView-uitkomst is onzeker",
+      detail: fout,
+      geslaagd: false,
+      boekingId: null,
+      foutmelding: resultaat.foutmelding ?? null,
+      testmodus: versInst.testmodus,
+    };
+  }
+
+  // 11. Mutatie-status bijwerken
+  if (resultaat.geslaagd) {
+    const bijgewerkt = await db
+      .update(bankMutatiesTable)
+      .set({
+        accountviewStatus: "geslaagd",
+        accountviewId: resultaat.boekingId ?? null,
+        accountviewFout: null,
+        accountviewClaimToken: null,
+        accountviewClaimOp: null,
+        bijgewerktOp: new Date(),
+      })
+      .where(and(
+        eq(bankMutatiesTable.id, mutatieId),
+        eq(bankMutatiesTable.accountviewClaimToken, claimToken),
+      ))
+      .returning({ id: bankMutatiesTable.id });
+    if (bijgewerkt.length > 0) {
+      await db.insert(bankAfletterAuditTable).values({
+        mutatieId,
+        actie: "accountview_export",
+        reden: `Geslaagd${resultaat.boekingId ? `: ${resultaat.boekingId}` : ""}`,
+        gebruikerId: gebruikerId ?? null,
+      });
+    }
+  } else {
+    await registreerBankexportFout(mutatie, resultaat.foutmelding ?? "Onbekende fout", gebruikerId, claimToken);
+  }
+
+  return {
+    ok: resultaat.geslaagd,
+    httpStatus: resultaat.geslaagd ? 200 : 502,
+    fout: resultaat.geslaagd ? undefined : "AccountView-export mislukt",
+    detail: resultaat.geslaagd ? undefined : (resultaat.foutmelding ?? "Onbekende fout"),
+    geslaagd: resultaat.geslaagd,
+    boekingId: resultaat.boekingId ?? null,
+    foutmelding: resultaat.foutmelding ?? null,
+    testmodus: versInst.testmodus,
+  };
+}
+
+/**
+ * Herstelt uitsluitend een onzekere export na een expliciete controle in
+ * AccountView. Er is bewust geen automatische retry: de eerdere externe POST
+ * kan al gelukt zijn terwijl alleen de lokale succesopslag wegviel.
+ */
+export async function herstelOnzekereBankexport(
+  mutatieId: number,
+  actie: BankexportHerstelActie,
+  reden: string,
+  gebruikerId: number | null,
+  accountviewBoekingId?: string | null,
+): Promise<BankmutatieExportUitkomst> {
+  const schoneReden = reden.trim();
+  if (!schoneReden) {
+    return { ok: false, httpStatus: 400, fout: "Een toelichting op de controle in AccountView is verplicht" };
+  }
+  const boekingId = accountviewBoekingId?.trim() ?? "";
+  if (actie === "bevestig_geboekt" && !boekingId) {
+    return { ok: false, httpStatus: 400, fout: "Het gecontroleerde AccountView-boekings-ID is verplicht" };
+  }
+
+  return db.transaction(async (tx) => {
+    const [mutatie] = await tx.select()
+      .from(bankMutatiesTable)
+      .where(eq(bankMutatiesTable.id, mutatieId))
+      .for("update")
+      .limit(1);
+    if (!mutatie) return { ok: false, httpStatus: 404, fout: "Bankmutatie niet gevonden" };
+    if (mutatie.accountviewStatus === "geslaagd") {
+      return {
+        ok: true,
+        httpStatus: 200,
+        geslaagd: true,
+        boekingId: mutatie.accountviewId,
+        foutmelding: null,
+      };
+    }
+    if (mutatie.accountviewStatus !== "onzeker") {
+      return {
+        ok: false,
+        httpStatus: 409,
+        fout: "Alleen een onzekere AccountView-export kan handmatig worden hersteld",
+      };
+    }
+
+    const [laatsteLog] = await tx.select()
+      .from(accountviewExportLogsTable)
+      .where(eq(accountviewExportLogsTable.bankMutatieId, mutatieId))
+      .orderBy(desc(accountviewExportLogsTable.exportOp))
+      .limit(1);
+
+    if (actie === "bevestig_geboekt") {
+      await tx.update(bankMutatiesTable)
+        .set({
+          accountviewStatus: "geslaagd",
+          accountviewId: boekingId,
+          accountviewFout: null,
+          accountviewClaimToken: null,
+          accountviewClaimOp: null,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(bankMutatiesTable.id, mutatieId));
+      if (laatsteLog) {
+        await tx.update(accountviewExportLogsTable)
+          .set({
+            status: "geslaagd",
+            accountviewBoekingId: boekingId,
+            foutmelding: `Handmatig bevestigd na controle: ${schoneReden}`.slice(0, 1000),
+          })
+          .where(eq(accountviewExportLogsTable.id, laatsteLog.id));
+      } else {
+        await tx.insert(accountviewExportLogsTable).values({
+          factuurId: null,
+          bankMutatieId: mutatieId,
+          gebruikerId,
+          testmodus: false,
+          actie: "herstel",
+          status: "geslaagd",
+          accountviewBoekingId: boekingId,
+          foutmelding: `Handmatig bevestigd na controle: ${schoneReden}`.slice(0, 1000),
+        });
+      }
+      await tx.insert(bankAfletterAuditTable).values({
+        mutatieId,
+        actie: "accountview_herstel_bevestigd",
+        reden: `${schoneReden} (AccountView-ID: ${boekingId})`.slice(0, 1000),
+        gebruikerId,
+      });
+      return {
+        ok: true,
+        httpStatus: 200,
+        geslaagd: true,
+        boekingId,
+        foutmelding: null,
+      };
+    }
+
+    await tx.update(bankMutatiesTable)
+      .set({
+        accountviewStatus: "mislukt",
+        accountviewId: null,
+        accountviewFout: `Vrijgegeven voor nieuwe poging na controle: ${schoneReden}`.slice(0, 1000),
+        accountviewClaimToken: null,
+        accountviewClaimOp: null,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(bankMutatiesTable.id, mutatieId));
+    if (laatsteLog?.status === "bezig") {
+      await tx.update(accountviewExportLogsTable)
+        .set({
+          status: "mislukt",
+          foutmelding: `Onzekere uitkomst gecontroleerd; vrijgegeven voor retry: ${schoneReden}`.slice(0, 1000),
+        })
+        .where(eq(accountviewExportLogsTable.id, laatsteLog.id));
+    }
+    await tx.insert(bankAfletterAuditTable).values({
+      mutatieId,
+      actie: "accountview_herstel_retry",
+      reden: schoneReden.slice(0, 1000),
+      gebruikerId,
+    });
+    return {
+      ok: true,
+      httpStatus: 200,
+      geslaagd: false,
+      boekingId: null,
+      foutmelding: "Export is vrijgegeven voor een nieuwe, expliciete poging.",
+    };
+  });
+}
+
+async function stuurBankexportFaalmelding(
+  mutatie: BankmutatieVoorExport,
+  fout: string,
+): Promise<void> {
+  const beheerders = await db
+    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email })
+    .from(gebruikersTable)
+    .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)));
+  for (const beheerder of beheerders) {
+    if (!beheerder.email) continue;
+    try {
+      await stuurAccountviewBankmutatieMisluktMail({
+        naarEmail: beheerder.email,
+        naarNaam: beheerder.naam,
+        mutatieId: mutatie.id,
+        bankreferentie: mutatie.bankreferentie,
+        tegenpartijNaam: mutatie.tegenpartijNaam,
+        bedrag: mutatie.bedrag,
+        reden: fout,
+        deduplicatieSleutel: `accountview-bankmutatie:${mutatie.id}:${fout.slice(0, 80)}:${beheerder.id}`,
+      });
+    } catch (err) {
+      logger.warn({ err, mutatieId: mutatie.id, beheerderId: beheerder.id }, "bankmutatie AccountView-faalmail kon niet worden ingepland");
+    }
+  }
+}
+
+export function isOnzekereAccountviewUitkomst(
+  resultaat: Pick<AccountviewBoekingResultaat, "geslaagd" | "httpStatus" | "testmodus">,
+): boolean {
+  if (resultaat.geslaagd || resultaat.testmodus) return false;
+  const status = resultaat.httpStatus ?? 0;
+  return status === 0 || status === 408 || status >= 500;
+}
+
+async function registreerBankexportFout(
+  mutatie: BankmutatieVoorExport,
+  fout: string,
+  gebruikerId?: number | null,
+  claimToken?: string,
+): Promise<void> {
+  const voorwaarden = [eq(bankMutatiesTable.id, mutatie.id)];
+  if (claimToken) voorwaarden.push(eq(bankMutatiesTable.accountviewClaimToken, claimToken));
+  const bijgewerkt = await db.update(bankMutatiesTable)
+    .set({
+      accountviewStatus: "mislukt",
+      accountviewFout: fout,
+      accountviewClaimToken: null,
+      accountviewClaimOp: null,
+      bijgewerktOp: new Date(),
+    })
+    .where(and(...voorwaarden))
+    .returning({ id: bankMutatiesTable.id });
+  if (bijgewerkt.length === 0) {
+    logger.warn(
+      { mutatieId: mutatie.id },
+      "bankmutatie AccountView-fout kwam terug voor een niet-meer-eigen claim; status en meldingen niet overschreven",
+    );
+    return;
+  }
+  await db.insert(bankAfletterAuditTable).values({
+    mutatieId: mutatie.id,
+    actie: "accountview_export",
+    reden: `Mislukt: ${fout}`.slice(0, 1000),
+    gebruikerId: gebruikerId ?? null,
+  });
+  await stuurBankexportFaalmelding(mutatie, fout);
 }

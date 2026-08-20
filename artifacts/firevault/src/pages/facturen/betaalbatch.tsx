@@ -27,7 +27,8 @@ const euro = (v: number) => `€ ${v.toLocaleString("nl-NL", { minimumFractionDi
 const STATUS_LABEL: Record<string, { label: string; klasse: string }> = {
   concept: { label: "Concept", klasse: "bg-slate-100 text-slate-700" },
   bestand_aangemaakt: { label: "Bestand aangemaakt", klasse: "bg-blue-100 text-blue-800" },
-  bevestigd: { label: "Bevestigd (betaald)", klasse: "bg-green-100 text-green-800" },
+  bevestigd: { label: "Handmatig bevestigd", klasse: "bg-amber-100 text-amber-800" },
+  uitgevoerd: { label: "Uitgevoerd (bankbewijs)", klasse: "bg-green-100 text-green-800" },
   geannuleerd: { label: "Geannuleerd", klasse: "bg-slate-100 text-slate-500 line-through" },
 };
 
@@ -244,9 +245,16 @@ export default function BetaalbatchPagina() {
               </div>
             );
           })}
-          <p className="text-xs text-muted-foreground pt-2">
-            Let op: er is nog geen bankafschrift-import (CAMT/MT940); bevestigen zet de facturen daarom in één handeling op betaald.
-          </p>
+          <div className="pt-4 mt-2 border-t flex justify-between items-center text-sm">
+            <p className="text-muted-foreground">
+              Voor automatische reconciliatie van uitgevoerde batches, zie de bankafschriften werkruimte.
+            </p>
+            {((gebruiker as any)?.bevoegdheden?.bankafschriften ?? 0) >= 1 && (
+              <Button variant="link" size="sm" asChild>
+                <Link href="/facturen/bankafschriften">Naar Bankafschriften →</Link>
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

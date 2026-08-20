@@ -80,6 +80,8 @@ tags:
     description: Vertrouwelijke financiele jaarstukken — (geconsolideerde) jaarrekeningen, kerncijferextractie met bronbewijs en het meerjarenoverzicht (recht financieel_vertrouwelijk)
   - name: goedkeuring
     description: Governance & Approval Engine — generiek goedkeuringsbeleid en -aanvragen voor elk documenttype (offertes, inkoop, etc.)
+  - name: bankafschriften
+    description: BANK_01 — CAMT.053/MT940-import, bankafschriftverwerking, automatisch afletteren en AccountView-journaalpost
 
 paths:
   /healthz:
@@ -29852,8 +29854,610 @@ paths:
           description: Niet gevonden
 
 
+  # ── BANK_01 — Bankafschriften ─────────────────────────────────────────────
+
+  /bankafschriften/import:
+    post:
+      operationId: importeerBankafschrift
+      tags: [bankafschriften]
+      summary: Bankafschrift importeren (CAMT.053 of MT940)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [bestand, formaat]
+              properties:
+                bestand:
+                  type: string
+                  format: binary
+                  description: Bankafschriftbestand (XML voor CAMT.053, TXT/STA voor MT940)
+                formaat:
+                  type: string
+                  enum: [camt053, mt940]
+                  description: Bestandsformaat — camt053 voor ISO-20022 XML, mt940 voor legacy SWIFT
+      responses:
+        "201":
+          description: Nieuw import aangemaakt en verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankImportResultaat"
+        "200":
+          description: Duplicaat — bestand was al eerder verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankImportResultaat"
+        "413":
+          description: Bestand te groot (maximaal 10 MiB)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "422":
+          description: Permanente parse-fout, ongeldig IBAN of saldo-mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+
+  /bankafschriften/imports:
+    get:
+      operationId: listBankImports
+      tags: [bankafschriften]
+      summary: Overzicht van bankafschrift-imports
+      parameters:
+        - in: query
+          name: werkgever_id
+          schema:
+            type: integer
+          description: Filter op werkgever
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BankImport"
+
+  /bankafschriften/mutaties:
+    get:
+      operationId: listBankMutaties
+      tags: [bankafschriften]
+      summary: Bankmutatieoverzicht met filters
+      parameters:
+        - in: query
+          name: werkgever_id
+          schema:
+            type: integer
+        - in: query
+          name: iban
+          schema:
+            type: string
+        - in: query
+          name: reconciliatie_status
+          schema:
+            type: string
+            enum: [onbekend, gematcht, meerdere_kandidaten, geen_kandidaat, handmatig, afgewezen]
+          description: Filter op reconciliatiestatus van de mutatie
+        - in: query
+          name: g_rekening
+          schema:
+            type: boolean
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, totaal]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BankMutatie"
+                  totaal:
+                    type: integer
+
+  /bankafschriften/mutaties/{id}/voorstellen:
+    get:
+      operationId: getBankMutatieVoorstellen
+      tags: [bankafschriften]
+      summary: Afletter-voorstellen voor een bankmutatie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BankAfletterVoorstel"
+        "404":
+          description: Mutatie niet gevonden
+
+  /bankafschriften/mutaties/{id}/audit:
+    get:
+      operationId: getBankMutatieAudit
+      tags: [bankafschriften]
+      summary: Audit-trail voor een bankmutatie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BankAfletterAudit"
+        "404":
+          description: Mutatie niet gevonden
+
+  /bankafschriften/voorstellen/{id}/toepassen:
+    post:
+      operationId: pasVoorstelToe
+      tags: [bankafschriften]
+      summary: Afletter-voorstel toepassen (koppeling bevestigen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Voorstel toegepast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorstelActieResultaat"
+        "404":
+          description: Voorstel niet gevonden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "409":
+          description: State-race — voorstel al toegepast of afgewezen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "422":
+          description: Bedrag-mismatch of zakelijke validatiefout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+
+  /bankafschriften/voorstellen/{id}/afwijzen:
+    post:
+      operationId: wijsVoorstelAf
+      tags: [bankafschriften]
+      summary: Afletter-voorstel afwijzen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorstelAfwijzenInput"
+      responses:
+        "200":
+          description: Voorstel afgewezen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorstelActieResultaat"
+        "404":
+          description: Voorstel niet gevonden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "409":
+          description: State-race — voorstel al verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "422":
+          description: Zakelijke validatiefout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+
+  /bankafschriften/mutaties/{id}/accountview:
+    post:
+      operationId: exporteerBankmutatieAccountView
+      tags: [bankafschriften]
+      summary: Bankmutatie als journaalpost exporteren naar AccountView
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Export geslaagd of reeds eerder geslaagd (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankmutatieAccountViewResultaat"
+        "404":
+          description: Mutatie niet gevonden
+        "409":
+          description: Export loopt al of AccountView-status verhindert opnieuw exporteren
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "422":
+          description: Mutatie niet exportklaar (ontbrekende configuratie of werkgever)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+
+  /bankafschriften/mutaties/{id}/accountview-herstel:
+    post:
+      operationId: herstelBankmutatieAccountView
+      tags: [bankafschriften]
+      summary: Onzekere AccountView-bankexport na externe controle herstellen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankmutatieAccountViewHerstelInput"
+      responses:
+        "200":
+          description: Bestaande boeking bevestigd of export vrijgegeven voor retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankmutatieAccountViewResultaat"
+        "400":
+          description: Ongeldige herstelkeuze of ontbrekende toelichting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "404":
+          description: Mutatie niet gevonden
+        "409":
+          description: Mutatie heeft geen onzekere AccountView-status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+
 components:
   schemas:
+
+    # ── BANK_01 schemas ────────────────────────────────────────────────────────
+
+    BankImportResultaat:
+      type: object
+      required: [ok, import_id, duplicate]
+      properties:
+        ok:
+          type: boolean
+        duplicate:
+          type: boolean
+          description: true als het bestand al eerder verwerkt is (SHA-256 gelijk)
+        import_id:
+          type: ["integer", "null"]
+        aantal_nieuwe_afschriften:
+          type: ["integer", "null"]
+        aantal_nieuwe_mutaties:
+          type: ["integer", "null"]
+        aantal_gematcht:
+          type: ["integer", "null"]
+        hiat_signalen:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/BankHiatSignaal"
+        onbekend_ibans:
+          type: ["array", "null"]
+          items:
+            type: string
+        formaat_label:
+          type: ["string", "null"]
+          description: Leesbaar label — 'MT940 (legacy)' voor mt940, 'CAMT.053' voor camt053
+        fout:
+          type: ["string", "null"]
+
+    BankHiatSignaal:
+      type: object
+      required: [iban, statement_id, soort, detail]
+      properties:
+        iban:
+          type: string
+        statement_id:
+          type: string
+        soort:
+          type: string
+          enum: [volgnummer_hiaat, datumreeks_hiaat, saldo_mismatch]
+        detail:
+          type: string
+
+    BankImport:
+      type: object
+      required: [id, sha256, formaat, bestandsnaam, bron, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        sha256:
+          type: string
+        formaat:
+          type: string
+          enum: [camt053, mt940]
+        formaat_label:
+          type: string
+          description: "'MT940 (legacy)' voor mt940, 'CAMT.053' voor camt053"
+        bestandsnaam:
+          type: string
+        bron:
+          type: string
+          enum: [upload, mailbox]
+        status:
+          type: string
+        fout:
+          type: ["string", "null"]
+        aantal_mutaties:
+          type: ["integer", "null"]
+        aantal_afschriften:
+          type: ["integer", "null"]
+        aantal_gematcht:
+          type: ["integer", "null"]
+        aantal_hiaten:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
+        aangemaakt_door:
+          type: ["integer", "null"]
+
+    BankMutatie:
+      type: object
+      required: [id, afschrift_id, bankrekening_id, werkgever_id, bankreferentie, bedrag, valuta, credit_debit, boekdatum, reconciliatie_status, g_rekening, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        afschrift_id:
+          type: integer
+        bankrekening_id:
+          type: integer
+        werkgever_id:
+          type: integer
+        bankreferentie:
+          type: string
+        tx_referentie:
+          type: ["string", "null"]
+        end_to_end_referentie:
+          type: ["string", "null"]
+        bedrag:
+          type: string
+          description: Gesigneerd bedrag als decimale string (credit positief, debet negatief)
+        valuta:
+          type: string
+        credit_debit:
+          type: string
+          enum: [CRDT, DBIT]
+        boekdatum:
+          type: string
+          description: ISO date string YYYY-MM-DD (notNull in DB)
+        valuedatum:
+          type: ["string", "null"]
+          description: ISO date string YYYY-MM-DD of null
+        tegenpartij_iban:
+          type: ["string", "null"]
+        tegenpartij_naam:
+          type: ["string", "null"]
+        remittance:
+          type: ["string", "null"]
+        g_rekening:
+          type: boolean
+        reconciliatie_status:
+          type: string
+          enum: [onbekend, gematcht, meerdere_kandidaten, geen_kandidaat, handmatig]
+        matched_factuur_id:
+          type: ["integer", "null"]
+        matched_batchregel_id:
+          type: ["integer", "null"]
+        accountview_status:
+          type: ["string", "null"]
+        accountview_id:
+          type: ["string", "null"]
+        accountview_fout:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    BankAfletterVoorstelStatus:
+      type: string
+      enum: [voorstel, geaccepteerd, afgewezen, geen_kandidaat, vervallen]
+
+    BankAfletterVoorstel:
+      type: object
+      required: [id, mutatie_id, status, rang, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        mutatie_id:
+          type: integer
+        factuur_id:
+          type: ["integer", "null"]
+        batchregel_id:
+          type: ["integer", "null"]
+          description: Soft-referentie naar betaalbatch_regels.id
+        status:
+          $ref: "#/components/schemas/BankAfletterVoorstelStatus"
+        rang:
+          type: integer
+          description: Volgorde van voorkeur (1 = best)
+        reden:
+          type: ["string", "null"]
+        beslist_door:
+          type: ["integer", "null"]
+        beslist_op:
+          type: ["string", "null"]
+          format: date-time
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    BankAfletterAudit:
+      type: object
+      required: [id, mutatie_id, actie, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        mutatie_id:
+          type: integer
+        voorstel_id:
+          type: ["integer", "null"]
+        actie:
+          type: string
+          description: automatisch_gematcht | geaccepteerd | afgewezen | teruggedraaid | vervallen | accountview_export
+        reden:
+          type: ["string", "null"]
+        gebruiker_id:
+          type: ["integer", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
+
+    VoorstelAfwijzenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+          minLength: 1
+          description: Verplichte motivering voor de afwijzing
+
+    BankmutatieAccountViewResultaat:
+      type: object
+      required: [ok, geslaagd]
+      properties:
+        ok:
+          type: boolean
+        geslaagd:
+          type: boolean
+        boeking_id:
+          type: ["string", "null"]
+        foutmelding:
+          type: ["string", "null"]
+        testmodus:
+          type: ["boolean", "null"]
+
+    BankmutatieAccountViewHerstelInput:
+      type: object
+      required: [actie, reden]
+      properties:
+        actie:
+          type: string
+          enum: [bevestig_geboekt, opnieuw_proberen]
+        reden:
+          type: string
+          minLength: 1
+          description: Verplichte toelichting op de controle in AccountView
+        accountview_boeking_id:
+          type: ["string", "null"]
+          description: Verplicht bij bevestig_geboekt
+
+    VoorstelActieResultaat:
+      type: object
+      required: [ok, voorstel_id]
+      properties:
+        ok:
+          type: boolean
+        voorstel_id:
+          type: integer
+          description: ID van het verwerkte voorstel
+
+    Foutmelding:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Mensleesbare foutomschrijving
+        detail:
+          type: ["string", "null"]
+          description: Optionele aanvullende toelichting
+        hiat_signalen:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/BankHiatSignaal"
+        onbekend_ibans:
+          type: ["array", "null"]
+          items:
+            type: string
 
     SocialKanaalEisen:
       type: object
@@ -47404,6 +48008,10 @@ components:
         dagboek_verkoop:
           type: string
           nullable: true
+        dagboek_bank:
+          type: string
+          nullable: true
+          description: Expliciet AccountView-bankdagboek; leeg blokkeert BANK_01-export
         grootboek_standaard:
           type: string
           nullable: true
@@ -47465,6 +48073,10 @@ components:
         dagboek_verkoop:
           type: string
           nullable: true
+        dagboek_bank:
+          type: string
+          nullable: true
+          description: Expliciet AccountView-bankdagboek; leeg blokkeert BANK_01-export
         grootboek_standaard:
           type: string
           nullable: true

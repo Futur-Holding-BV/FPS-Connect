@@ -26,6 +26,7 @@ function mapInstellingen(r: typeof accountviewInstellingenTable.$inferSelect) {
     testmodus: r.testmodus,
     dagboek_inkoop: r.dagboekInkoop,
     dagboek_verkoop: r.dagboekVerkoop,
+    dagboek_bank: r.dagboekBank,
     grootboek_standaard: r.grootboekStandaard,
     btw_codes: r.btwCodes,
     kostenplaatsen: r.kostenplaatsen,
@@ -61,6 +62,7 @@ router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), asyn
   if ("testmodus" in body) updateData.testmodus = Boolean(body["testmodus"]);
   if ("dagboek_inkoop" in body) updateData.dagboekInkoop = body["dagboek_inkoop"] as string | null;
   if ("dagboek_verkoop" in body) updateData.dagboekVerkoop = body["dagboek_verkoop"] as string | null;
+  if ("dagboek_bank" in body) updateData.dagboekBank = body["dagboek_bank"] as string | null;
   if ("grootboek_standaard" in body) updateData.grootboekStandaard = body["grootboek_standaard"] as string | null;
   if ("btw_codes" in body) updateData.btwCodes = body["btw_codes"] as Record<string, unknown> | null;
   if ("kostenplaatsen" in body) updateData.kostenplaatsen = body["kostenplaatsen"] as Record<string, unknown> | null;
