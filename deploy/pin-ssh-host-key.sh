@@ -13,12 +13,12 @@ KEYGEN_BIN="${SSH_KEYGEN_BIN:-ssh-keygen}"
 case "$PORT" in
   ''|*[!0-9]*) echo "FOUT: PROD_SSH_PORT is geen geldig poortnummer." >&2; exit 1 ;;
 esac
-case "$VERWACHT" in
-  SHA256:*) ;;
-  *) echo "FOUT: PROD_SSH_HOST_FINGERPRINT moet een SHA256-fingerprint zijn." >&2; exit 1 ;;
-esac
-if printf '%s' "$HOST$VERWACHT" | grep -q '[[:space:]]'; then
-  echo "FOUT: host of fingerprint bevat witruimte." >&2
+if ! printf '%s\n' "$VERWACHT" | grep -Eq '^SHA256:[A-Za-z0-9+/]{43}$'; then
+  echo "FOUT: PROD_SSH_HOST_FINGERPRINT moet een volledige SHA256-fingerprint zijn." >&2
+  exit 1
+fi
+if printf '%s' "$HOST" | grep -q '[[:space:]]'; then
+  echo "FOUT: host bevat witruimte." >&2
   exit 1
 fi
 
@@ -36,6 +36,8 @@ fi
 while IFS= read -r regel; do
   [ -n "$regel" ] || continue
   case "$regel" in \#*) continue ;; esac
+  sleuteltype=$(printf '%s\n' "$regel" | awk 'NF >= 3 { print $2 }')
+  [ "$sleuteltype" = "ssh-ed25519" ] || continue
   fingerprint=$(printf '%s\n' "$regel" \
     | "$KEYGEN_BIN" -lf - -E sha256 2>/dev/null \
     | awk 'NR == 1 { print $2 }')
@@ -53,4 +55,4 @@ fi
 
 mkdir -p "$(dirname "$DOEL")"
 install -m 0644 "$MATCHES" "$DOEL"
-echo "VPS-hostkey komt exact overeen met de vooraf gepinde fingerprint."
+echo "VPS-hostkey is ssh-ed25519 en komt exact overeen met de vooraf gepinde fingerprint."

@@ -639,4 +639,34 @@ assert_gelijk "1" "$RC" "afwijkende hostkey-fingerprint blokkeert niet"
 assert_niet_bestaat "$FIXTURE/verkeerd-known-hosts"
 log_ok "Actions accepteert uitsluitend de vooraf gepinde VPS-hostkey"
 
+# 18. Ook een correct gepinde fingerprint mag nooit een ander sleuteltype dan
+# ssh-ed25519 toelaten.
+maak_fixture "ssh-hostkey-type"
+ssh-keygen -q -t rsa -b 2048 -N "" -f "$FIXTURE/rsa" </dev/null
+ssh-keygen -q -t ecdsa -b 256 -N "" -f "$FIXTURE/ecdsa" </dev/null
+cat > "$BIN/ssh-keyscan" <<'SH'
+#!/bin/bash
+cat "${FAKE_SSH_SCAN:?}"
+SH
+chmod +x "$BIN/ssh-keyscan"
+for TYPE in rsa ecdsa; do
+  awk '{ print "backup.example " $1 " " $2 }' \
+    "$FIXTURE/$TYPE.pub" > "$FIXTURE/$TYPE-scan"
+  TYPE_FINGERPRINT=$(ssh-keygen -lf "$FIXTURE/$TYPE.pub" -E sha256 | awk '{ print $2 }')
+  set +e
+  env \
+    PROD_SSH_HOST=backup.example \
+    PROD_SSH_PORT=22 \
+    PROD_SSH_HOST_FINGERPRINT="$TYPE_FINGERPRINT" \
+    SSH_KEYSCAN_BIN="$BIN/ssh-keyscan" \
+    FAKE_SSH_SCAN="$FIXTURE/$TYPE-scan" \
+    bash "$ROOT/deploy/pin-ssh-host-key.sh" "$FIXTURE/$TYPE-known-hosts" \
+    > "$FIXTURE/$TYPE.log" 2>&1
+  RC=$?
+  set -e
+  assert_gelijk "1" "$RC" "gepinde $TYPE-hostkey is ten onrechte geaccepteerd"
+  assert_niet_bestaat "$FIXTURE/$TYPE-known-hosts"
+done
+log_ok "Actions weigert gepinde RSA- en ECDSA-hostkeys"
+
 echo "Alle $TEST_TELLER back-upstaffelproeven zijn geslaagd."
