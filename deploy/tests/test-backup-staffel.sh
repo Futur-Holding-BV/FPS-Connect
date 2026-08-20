@@ -256,8 +256,9 @@ assert_gelijk "1" "$RC" "fout blijft zichtbaar"
 assert_niet_bestaat "$ALERT_LOG"
 log_ok "verse successet onderdrukt de dagelijkse Graph-herinnering"
 
-# 6. Een mislukte Graph-poging zet geen verzonden-marker. Een volgende
-# controle op dezelfde dag mag opnieuw proberen en markeert pas na succes.
+# 6. Een mislukte Graph-poging zet geen verzonden-marker, maar blijft wel
+# atomair zichtbaar als mislukte dag. Een volgende controle mag opnieuw
+# proberen en markeert pas na een werkelijk geslaagde verzending.
 maak_fixture "herinnering-retry-na-mailfout"
 voer_staffel_uit "$GISTEREN" >/dev/null
 node - "$DOEL/status.json" <<'NODE'
@@ -276,16 +277,106 @@ RC1=$?
 set -e
 assert_gelijk "1" "$RC1" "bewaker blijft ongezond bij mailfout"
 assert_niet_bestaat "$DOEL/.alarmstatus/staffel-herinnering-$VANDAAG"
+DAGSTATUS="$DOEL/.alarmstatus/staffel-herinnering-status-$VANDAAG.json"
+assert_bestaat "$DAGSTATUS"
+assert_gelijk "mislukt" "$(json_veld "$DAGSTATUS" uitkomst)" "mislukte Graph-dag blijft zichtbaar"
+assert_gelijk "1" "$(json_veld "$DAGSTATUS" pogingen)" "eerste mislukte Graph-poging geregistreerd"
 set +e
-voer_bewaker_uit > "$FIXTURE/mailherstel.log" 2>&1
+voer_bewaker_uit FAKE_ALERT_FAIL=1 > "$FIXTURE/mailfout-2.log" 2>&1
 RC2=$?
 set -e
-assert_gelijk "1" "$RC2" "bewaker blijft ongezond na mailherstel"
+assert_gelijk "1" "$RC2" "bewaker blijft ongezond bij tweede mailfout"
+assert_niet_bestaat "$DOEL/.alarmstatus/staffel-herinnering-$VANDAAG"
+assert_gelijk "2" "$(json_veld "$DAGSTATUS" pogingen)" "tweede mislukte Graph-poging geregistreerd"
+set +e
+voer_bewaker_uit > "$FIXTURE/mailherstel.log" 2>&1
+RC3=$?
+set -e
+assert_gelijk "1" "$RC3" "bewaker blijft ongezond na mailherstel"
 assert_gelijk "1" "$(wc -l < "$ALERT_LOG" | tr -d ' ')" "één geslaagde herinnering"
 assert_bestaat "$DOEL/.alarmstatus/staffel-herinnering-$VANDAAG"
-log_ok "mislukte Graph-poging wordt later opnieuw geprobeerd en pas na succes gemarkeerd"
+assert_gelijk "geslaagd" "$(json_veld "$DAGSTATUS" uitkomst)" "alleen echte mail-success sluit de dag succesvol af"
+set +e
+voer_bewaker_uit > "$FIXTURE/mail-na-succes.log" 2>&1
+RC4=$?
+set -e
+assert_gelijk "1" "$RC4" "bewaker blijft ongezond na succesvolle herinnering"
+assert_gelijk "1" "$(wc -l < "$ALERT_LOG" | tr -d ' ')" "geen tweede geslaagde herinnering op dezelfde dag"
+log_ok "mislukte Graph-dag blijft zichtbaar en pas één echte verzending sluit de dag succesvol af"
 
-# 7. Een corrupte set wordt door herstelproef.sh geweigerd vóór ook maar één
+# 7. Als het proces crasht nadat Graph succes meldde maar vóór de successtatus,
+# blijft de dag onzeker en wordt niet blind opnieuw verzonden.
+maak_fixture "herinnering-crash-na-graph-succes"
+voer_staffel_uit "$GISTEREN" >/dev/null
+node - "$DOEL/status.json" <<'NODE'
+const fs = require("node:fs");
+const pad = process.argv[2];
+const status = JSON.parse(fs.readFileSync(pad, "utf8"));
+status.uitkomst = "fout";
+status.detail = "testfout";
+status.laatste_run = new Date().toISOString();
+status.laatste_geslaagde_run = new Date(Date.now() - 30 * 3600_000).toISOString();
+fs.writeFileSync(pad, `${JSON.stringify(status, null, 2)}\n`);
+NODE
+set +e
+voer_bewaker_uit BACKUP_TEST_CRASH_NA_GRAPH_SUCCES=1 > "$FIXTURE/crash.log" 2>&1
+RC1=$?
+set -e
+assert_gelijk "137" "$RC1" "testproces is na Graph-succes hard gestopt"
+assert_gelijk "1" "$(wc -l < "$ALERT_LOG" | tr -d ' ')" "Graph kreeg vóór de crash precies één bericht"
+DAGSTATUS="$DOEL/.alarmstatus/staffel-herinnering-status-$VANDAAG.json"
+assert_gelijk "bezig" "$(json_veld "$DAGSTATUS" uitkomst)" "onafgeronde poging bleef vooraf duurzaam geregistreerd"
+set +e
+voer_bewaker_uit > "$FIXTURE/na-crash.log" 2>&1
+RC2=$?
+voer_bewaker_uit > "$FIXTURE/na-crash-2.log" 2>&1
+RC3=$?
+set -e
+assert_gelijk "1" "$RC2" "eerste controle na crash blijft ongezond"
+assert_gelijk "1" "$RC3" "tweede controle na crash blijft ongezond"
+assert_gelijk "1" "$(wc -l < "$ALERT_LOG" | tr -d ' ')" "onzekere poging wordt niet dubbel verzonden"
+assert_niet_bestaat "$DOEL/.alarmstatus/staffel-herinnering-$VANDAAG"
+assert_gelijk "onzeker" "$(json_veld "$DAGSTATUS" uitkomst)" "crashdag wordt niet vals als geslaagd gemarkeerd"
+log_ok "crash na Graph-succes blijft onzeker en veroorzaakt geen tweede verzending"
+
+# 8. Transportverlies nadat Graph het bericht mogelijk accepteerde is onzeker,
+# niet retrybaar en nooit vals geslaagd.
+maak_fixture "herinnering-onzekere-transportuitkomst"
+voer_staffel_uit "$GISTEREN" >/dev/null
+node - "$DOEL/status.json" <<'NODE'
+const fs = require("node:fs");
+const pad = process.argv[2];
+const status = JSON.parse(fs.readFileSync(pad, "utf8"));
+status.uitkomst = "fout";
+status.detail = "testfout";
+status.laatste_run = new Date().toISOString();
+status.laatste_geslaagde_run = new Date(Date.now() - 30 * 3600_000).toISOString();
+fs.writeFileSync(pad, `${JSON.stringify(status, null, 2)}\n`);
+NODE
+cat > "$BIN/docker" <<'SH'
+#!/bin/bash
+printf 'mogelijk-geaccepteerd\n' >> "${ALERT_LOG:?}"
+# Bewust dezelfde numerieke exitcode als een bekende Node/Graph-afwijzing.
+# Zonder geldige sentinel moet dit altijd als Docker-transportverlies gelden.
+exit 5
+SH
+chmod +x "$BIN/docker"
+set +e
+voer_bewaker_uit BACKUP_ALERT_COMMAND= > "$FIXTURE/onzeker.log" 2>&1
+RC1=$?
+voer_bewaker_uit BACKUP_ALERT_COMMAND= > "$FIXTURE/onzeker-2.log" 2>&1
+RC2=$?
+set -e
+assert_gelijk "1" "$RC1" "bewaker blijft ongezond bij onzekere Graph-uitkomst"
+assert_gelijk "1" "$RC2" "volgende controle blijft ongezond zonder retry"
+assert_gelijk "1" "$(wc -l < "$ALERT_LOG" | tr -d ' ')" "mogelijk geaccepteerde mail wordt niet dubbel verzonden"
+DAGSTATUS="$DOEL/.alarmstatus/staffel-herinnering-status-$VANDAAG.json"
+assert_gelijk "onzeker" "$(json_veld "$DAGSTATUS" uitkomst)" "transportverlies blijft eerlijk onzeker"
+assert_gelijk "5" "$(json_veld "$DAGSTATUS" exit_code)" "onzekere overlappende transportexitcode blijft zichtbaar"
+assert_niet_bestaat "$DOEL/.alarmstatus/staffel-herinnering-$VANDAAG"
+log_ok "onzekere Graph-transportuitkomst veroorzaakt geen retry of valse successtatus"
+
+# 9. Een corrupte set wordt door herstelproef.sh geweigerd vóór ook maar één
 # Docker-/containerhandeling kan starten.
 maak_fixture "herstel-weigert-corrupt"
 voer_staffel_uit "$VANDAAG" >/dev/null

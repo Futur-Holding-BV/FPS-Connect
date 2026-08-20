@@ -31,7 +31,12 @@ De oude foutafhandeling dekte alleen expliciete `fout()`-aanroepen. Een vroege
   originele exitcode, het signaal, de fase en de laatste geslaagde set/run.
 - Een staffelfout veroorzaakt direct een Graph-mail vanuit de bestaande
   API-container. De bewaker verstuurt daarna hoogstens één herinnering per
-  kalenderdag zolang geen geslaagde set jonger dan 24 uur bestaat.
+  kalenderdag zolang geen geslaagde set jonger dan 24 uur bestaat. Iedere
+  mislukte herinneringspoging blijft atomair per dag geregistreerd; alleen een
+  werkelijk geslaagde verzending zet de succesmarker en sluit verdere
+  verzendingen die dag uit. Een crash na Graph-succes blijft `onzeker`, zonder
+  tweede verzending en zonder valse successtatus. Ook timeout/transportverlies
+  na mogelijke Graph-acceptatie blijft `onzeker` en blokkeert een blinde retry.
 - De herstelproef accepteert alleen een checksum-geldige immutable dagset en
   gebruikt unieke tijdelijke containers en een eigen netwerk.
 
@@ -51,15 +56,17 @@ ok 2 - foutstatus is atomair, exitcode blijft 23 en vorige set blijft intact
 ok 3 - SIGTERM schrijft geldige status en ruimt de onvolledige set op
 ok 4 - oude successet geeft hoogstens één Graph-herinnering per kalenderdag
 ok 5 - verse successet onderdrukt de dagelijkse Graph-herinnering
-ok 6 - mislukte Graph-poging wordt later opnieuw geprobeerd en pas na succes gemarkeerd
-ok 7 - checksumfout blokkeert de herstelproef vóór Docker
-ok 8 - productiebewijs weigert een symlink als dagelijkse set
-ok 9 - productiebewijs weigert status van vóór de huidige run
-ok 10 - staffel publiceert geen set met een symlink in de inhoud
-ok 11 - herstelproef weigert symlinks in de set vóór Docker
-ok 12 - productiebewijs weigert zelfstandig symlinks in de setinhoud
-ok 13 - staffel hergebruikt geen bestaande symlink als dagset
-Alle 13 back-upstaffelproeven zijn geslaagd.
+ok 6 - mislukte Graph-dag blijft zichtbaar en pas één echte verzending sluit de dag succesvol af
+ok 7 - crash na Graph-succes blijft onzeker en veroorzaakt geen tweede verzending
+ok 8 - onzekere Graph-transportuitkomst veroorzaakt geen retry of valse successtatus
+ok 9 - checksumfout blokkeert de herstelproef vóór Docker
+ok 10 - productiebewijs weigert een symlink als dagelijkse set
+ok 11 - productiebewijs weigert status van vóór de huidige run
+ok 12 - staffel publiceert geen set met een symlink in de inhoud
+ok 13 - herstelproef weigert symlinks in de set vóór Docker
+ok 14 - productiebewijs weigert zelfstandig symlinkinhoud
+ok 15 - staffel hergebruikt geen bestaande symlink als dagset
+Alle 15 back-upstaffelproeven zijn geslaagd.
 ```
 
 De proef gebruikt uitsluitend tijdelijke mappen, fake rsync en een fake

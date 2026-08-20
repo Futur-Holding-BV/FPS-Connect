@@ -108,21 +108,139 @@ geslaagde_set_is_vers() {
   [ "$GESLAAGD_UUR_OUD" -lt "$SUCCES_MAX_UUR" ]
 }
 
-dagelijkse_herinnering_is_verstuurd() {
+schrijf_dagelijkse_herinnering_status() {
+  local uitkomst="${1:?uitkomst ontbreekt}"
+  local exitcode="${2:--}"
+  local verhoog_pogingen="${3:-0}"
+  local detail="${4:-}"
+  local alarmmap="$DOEL/.alarmstatus"
+  local statuspad="$alarmmap/staffel-herinnering-status-$VANDAAG.json"
+  local tijdelijk tijdstip
+  mkdir -p "$alarmmap"
+  tijdelijk=$(mktemp "$alarmmap/.staffel-herinnering-status.XXXXXX")
+  tijdstip=$(date -Is)
+  python3 - "$statuspad" "$tijdelijk" "$VANDAAG" "$tijdstip" "$uitkomst" "$exitcode" "$verhoog_pogingen" "$detail" <<'PY'
+import json
+import os
+import sys
+
+(
+    bestaand_pad,
+    tijdelijk_pad,
+    datum,
+    tijdstip,
+    uitkomst,
+    exitcode,
+    verhoog_pogingen,
+    detail,
+) = sys.argv[1:]
+bestaand = {}
+try:
+    with open(bestaand_pad, "r", encoding="utf-8") as bestand:
+        bestaand = json.load(bestand)
+except (OSError, json.JSONDecodeError):
+    pass
+
+try:
+    pogingen = int(bestaand.get("pogingen", 0))
+except (ValueError, TypeError):
+    pogingen = 0
+if verhoog_pogingen == "1":
+    pogingen += 1
+
+status = {
+    "uitkomst": uitkomst,
+    "datum": datum,
+    "pogingen": pogingen,
+    "bijgewerkt_op": tijdstip,
+}
+laatste_poging = bestaand.get("laatste_poging")
+if verhoog_pogingen == "1":
+    laatste_poging = tijdstip
+if laatste_poging:
+    status["laatste_poging"] = laatste_poging
+if exitcode != "-":
+    status["exit_code"] = int(exitcode)
+if detail:
+    status["detail"] = detail
+
+with open(tijdelijk_pad, "w", encoding="utf-8") as bestand:
+    json.dump(status, bestand, ensure_ascii=False, indent=2)
+    bestand.write("\n")
+    bestand.flush()
+    os.fsync(bestand.fileno())
+PY
+  mv -f "$tijdelijk" "$statuspad"
+}
+
+dagelijkse_herinnering_is_geblokkeerd() {
   local alarmmap="$DOEL/.alarmstatus"
   local marker="$alarmmap/staffel-herinnering-$VANDAAG"
+  local statuspad="$alarmmap/staffel-herinnering-status-$VANDAAG.json"
   mkdir -p "$alarmmap"
-  [ -e "$marker" ]
+  HERINNERING_DAGSTATUS=""
+  if [ -e "$marker" ]; then
+    HERINNERING_DAGSTATUS="geslaagd"
+    return 0
+  fi
+  [ -f "$statuspad" ] || return 1
+  HERINNERING_DAGSTATUS=$(python3 - "$statuspad" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as bestand:
+        status = json.load(bestand)
+    print(str(status.get("uitkomst") or "onleesbaar"))
+except (OSError, json.JSONDecodeError):
+    print("onleesbaar")
+PY
+)
+  case "$HERINNERING_DAGSTATUS" in
+    mislukt)
+      return 1
+      ;;
+    bezig)
+      schrijf_dagelijkse_herinnering_status \
+        "onzeker" "-" 0 \
+        "Vorige Graph-poging is niet afgerond; niet opnieuw verzonden om een dubbel bericht te voorkomen."
+      HERINNERING_DAGSTATUS="onzeker"
+      return 0
+      ;;
+    geslaagd|onzeker|onleesbaar)
+      return 0
+      ;;
+    *)
+      HERINNERING_DAGSTATUS="onleesbaar"
+      return 0
+      ;;
+  esac
+}
+
+markeer_dagelijkse_herinnering_bezig() {
+  schrijf_dagelijkse_herinnering_status "bezig" "-" 1
 }
 
 markeer_dagelijkse_herinnering_verstuurd() {
   local alarmmap="$DOEL/.alarmstatus"
   local marker="$alarmmap/staffel-herinnering-$VANDAAG"
   local tijdelijk
-  mkdir -p "$alarmmap"
+  schrijf_dagelijkse_herinnering_status "geslaagd" "-" 0
   tijdelijk=$(mktemp "$alarmmap/.staffel-herinnering.XXXXXX")
   printf '%s\n' "$(date -Is)" > "$tijdelijk"
   mv -f "$tijdelijk" "$marker"
+}
+
+markeer_dagelijkse_herinnering_mislukt() {
+  local exitcode="${1:?exitcode ontbreekt}"
+  schrijf_dagelijkse_herinnering_status "mislukt" "$exitcode" 0
+}
+
+markeer_dagelijkse_herinnering_onzeker() {
+  local exitcode="${1:?exitcode ontbreekt}"
+  schrijf_dagelijkse_herinnering_status \
+    "onzeker" "$exitcode" 0 \
+    "Graph-uitkomst is door timeout of transportverlies niet betrouwbaar vast te stellen; niet opnieuw verzonden."
 }
 
 stuur_in_app_melding() {
@@ -225,7 +343,7 @@ stuur_in_app_melding "$TEKST" || \
 # Alleen de staffelfout wordt per Graph herinnerd; een verse geslaagde set
 # onderdrukt de herinnering ook als alleen de NAS-ophaling achterloopt.
 if ! geslaagde_set_is_vers; then
-  if ! dagelijkse_herinnering_is_verstuurd; then
+  if ! dagelijkse_herinnering_is_geblokkeerd; then
     HERINNERING="De externe back-upstaffel heeft nog geen geslaagde set van minder dan $SUCCES_MAX_UUR uur oud.
 
 Controle: $(date -Is)
@@ -234,13 +352,38 @@ Laatste geslaagde set: ${LAATSTE_GESLAAGDE_SET:-onbekend}
 Problemen: $(printf '%s; ' "${PROBLEMEN[@]}")
 
 Dit is de enige staffelherinnering voor $VANDAAG. De vorige volledige set blijft beschikbaar."
+    markeer_dagelijkse_herinnering_bezig
     if stuur_backup_graph_mail "FPS Connect: externe back-upstaffel nog niet hersteld" "$HERINNERING"; then
+      if [ "${BACKUP_TEST_CRASH_NA_GRAPH_SUCCES:-0}" = "1" ]; then
+        if [ "${BACKUP_TEST_MODE:-0}" != "1" ]; then
+          echo "$LOGP WAARSCHUWING: crashhaak is alleen toegestaan in testmodus." >&2
+          exit 1
+        fi
+        kill -KILL "$$"
+      fi
       markeer_dagelijkse_herinnering_verstuurd
     else
-      echo "$LOGP WAARSCHUWING: dagelijkse Graph-herinnering kon niet worden verzonden; volgende controle mag opnieuw proberen." >&2
+      graph_exit=$?
+      if [ "${BACKUP_GRAPH_UITKOMST:-onzeker}" = "mislukt" ]; then
+        markeer_dagelijkse_herinnering_mislukt "$graph_exit"
+        echo "$LOGP WAARSCHUWING: dagelijkse Graph-herinnering is aantoonbaar mislukt; volgende controle mag opnieuw proberen." >&2
+      else
+        markeer_dagelijkse_herinnering_onzeker "$graph_exit"
+        echo "$LOGP WAARSCHUWING: Graph-uitkomst is onzeker; geen automatische retry om dubbel mailen te voorkomen." >&2
+      fi
     fi
   else
-    echo "$LOGP Graph-herinnering is vandaag al verzonden; geen tweede verzending"
+    case "$HERINNERING_DAGSTATUS" in
+      geslaagd)
+        echo "$LOGP Graph-herinnering is vandaag al verzonden; geen tweede verzending"
+        ;;
+      onzeker|bezig)
+        echo "$LOGP vorige Graph-poging heeft een onzekere uitkomst; geen tweede verzending om dubbel mailen te voorkomen" >&2
+        ;;
+      *)
+        echo "$LOGP Graph-dagstatus is niet betrouwbaar leesbaar; fail-closed geen tweede verzending" >&2
+        ;;
+    esac
   fi
 elif [ -n "$GESLAAGD_UUR_OUD" ]; then
   echo "$LOGP geen Graph-herinnering: laatste geslaagde set is $GESLAAGD_UUR_OUD uur oud"

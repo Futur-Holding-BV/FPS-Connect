@@ -2,10 +2,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import express from "express";
 import { createServer, type Server } from "node:http";
 
-const mockVerstuurMail = vi.fn();
-const mockSchrijfTijdlijn = vi.fn();
-const mockWhere = vi.fn();
-const mockFrom = vi.fn(() => ({ where: mockWhere }));
+const { mockVerstuurMail, mockSchrijfTijdlijn, mockWhere, mockFrom } = vi.hoisted(() => {
+  const mockWhere = vi.fn();
+  const mockFrom = vi.fn(() => ({ where: mockWhere }));
+  return {
+    mockVerstuurMail: vi.fn(),
+    mockSchrijfTijdlijn: vi.fn(),
+    mockWhere,
+    mockFrom,
+  };
+});
 
 vi.mock("@workspace/db", async (importOriginal) => {
   const werkelijk = await importOriginal<typeof import("@workspace/db")>();

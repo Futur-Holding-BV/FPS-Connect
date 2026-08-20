@@ -28,7 +28,13 @@ en elke ophaling wordt onwisbaar gelogd (syslog + marker).
      blokkerende in-app melding bij >36u geen set, checksumfout, verdacht
      kleine set (<50% van gisteren), of — zodra de NAS-sleutel actief is —
      >36u geen ophaling. Zonder verse (<24u) successet volgt hoogstens één
-     Graph-herinnering per kalenderdag.
+      geslaagde Graph-herinnering per kalenderdag. Mislukte pogingen blijven in
+      `.alarmstatus` atomair als mislukt zichtbaar en mogen opnieuw proberen;
+      alleen een werkelijk geslaagde verzending zet de dagmarker. Een
+      onafgeronde poging wordt `onzeker` en wordt niet herhaald, zodat een crash
+      na Graph-acceptatie geen dubbel bericht en ook geen valse succesdag geeft.
+      Ook sendMail-timeouts en transportverlies zijn `onzeker`; alleen bewezen
+      pre-dispatchfouten en expliciete Graph-afwijzingen zijn retrybaar.
    - **Eén plek zichtbaar**: Beheer → Back-ups toont nu twee kaarten
      ("klaargezette back-upset" en "laatste NAS-ophaling") via
      `GET /api/backups/offsite/status` (statusbestanden read-only gemount in

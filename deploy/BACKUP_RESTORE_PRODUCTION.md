@@ -67,8 +67,19 @@ pijplijnen.
    Graph-herinnering per lokale kalenderdag onder
    `/srv/fps-backup/.alarmstatus/`.
 
-Een mislukte Graph-aanroep verandert de originele staffelexitcode niet. De fout
-blijft wel zichtbaar in de cron-/Actions-log.
+Een herinneringspoging wordt vóór de externe Graph-aanroep atomair als `bezig`
+vastgelegd in `staffel-herinnering-status-YYYY-MM-DD.json`. Een aantoonbaar
+mislukte aanroep wordt `mislukt`, inclusief pogingsteller, laatste-pogingtijd
+en exitcode, en mag later opnieuw proberen. Alleen na een werkelijk geslaagde
+Graph-aanroep wordt de status `geslaagd` en daarna de compatibele dagmarker
+geschreven. Eindigt het proces tussen de Graph-aanroep en die successtatus, dan
+wordt `bezig` bij de volgende controle `onzeker`: de dag heet niet geslaagd,
+maar er wordt fail-closed ook niet opnieuw verzonden omdat Graph de eerste mail
+al geaccepteerd kan hebben. Hetzelfde geldt voor een sendMail-timeout of
+Docker-transportverlies. Alleen bewezen fouten vóór sendMail en expliciete
+Graph-non-2xx-antwoorden worden `mislukt` en retrybaar. Zo blijft een volledig
+mislukte dag zichtbaar en kan een onzekere uitkomst geen dubbel bericht
+veroorzaken.
 
 ## Status beoordelen
 
@@ -173,10 +184,15 @@ Hij bewijst:
 4. `SIGTERM` als exitcode 143 + signaal `TERM`;
 5. maximaal één Graph-herinnering per kalenderdag;
 6. geen herinnering zolang de laatste geslaagde set jonger dan 24 uur is;
-7. een Graph-fout mag later opnieuw proberen en markeert pas na succes;
-8. een checksumfout blokkeert herstel vóór Docker;
-9. het Actions-bewijs weigert een symlinkset en status van vóór de huidige run;
-10. staffel, herstelproef én Actions-bewijs weigeren symlinks/speciale entries
+7. Graph-fouten blijven per dag atomair als mislukt zichtbaar, mogen opnieuw
+   proberen en leveren na de eerste echte verzending geen tweede succesmail;
+8. een crash direct na Graph-succes blijft `onzeker` en veroorzaakt geen tweede
+   verzending of valse successtatus;
+9. timeout/transportverlies na mogelijke Graph-acceptatie blijft `onzeker`
+   zonder automatische retry;
+10. een checksumfout blokkeert herstel vóór Docker;
+11. het Actions-bewijs weigert een symlinkset en status van vóór de huidige run;
+12. staffel, herstelproef én Actions-bewijs weigeren symlinks/speciale entries
     binnen de set, inclusief een reeds bestaande symlink-dagset.
 
 ## Noodherstel van productie
