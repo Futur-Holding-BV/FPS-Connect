@@ -6,6 +6,7 @@
 - **Bewijs**: vier regressietests dekken gezonde niet-verzendende probe, 403, 404 en een onverwachte 400; API- en Firevault-typechecks zijn groen. Productiemeting wordt na uitrol hieronder in het CI-deploypoortbewijs vastgelegd.
 - **Productiebouw hersteld**: de verplichte noodfixrun bracht aan het licht dat de gegroeide frontendbundel de standaard V8-heapgrens van circa 2 GB bereikte. Alleen het Vite-proces in het frontend-builderstadium krijgt daarom een heaplimiet van 4 GB; runtimecontainers en overige Node-processen blijven ongewijzigd.
 - **Eenmalig bewijsaccount zonder opgeslagen wachtwoord**: wanneer de twee optionele `SMOKETEST_*`-repositorysecrets ontbreken, kan een handmatige bewijsrun met expliciet `HERSTEL` het bestaande vaste productie-smoketestaccount klaarzetten met een willekeurig, vooraf gemaskeerd wachtwoord. Het wachtwoord gaat alleen via stdin naar de VPS en blijft uitsluitend binnen die Actions-job beschikbaar.
+- **Noodfixroute definitief in productie bewezen**: handmatige run 32342864086 op commit `83918250d0cf345abde3470ca39d669f324d8e69` is volledig geslaagd. De auditmail is door Graph geaccepteerd en door René als ontvangen bevestigd, de echte smoketest behaalde 15/15, de Connect-mailproef bevestigde `Mail.Send` plus `mail_logboek.status=verzonden`, de afzonderlijke testmail is werkelijk ontvangen en `/api/healthz`, `/api/versie` en `/api/versie/status` bleven groen.
 
 ## 2026-08-20 — SENTRY_INBOUW_01: drie veilige foutbronnen, meldbeleid alleen in beheercentrum
 
