@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AdviseurVraagInputGeschiedenisItemRol = typeof AdviseurVraagInputGeschiedenisItemRol[keyof typeof AdviseurVraagInputGeschiedenisItemRol];
+export type AdviseurBerichtItemRol = typeof AdviseurBerichtItemRol[keyof typeof AdviseurBerichtItemRol];
 
 
-export const AdviseurVraagInputGeschiedenisItemRol = {
+export const AdviseurBerichtItemRol = {
   user: 'user',
   assistant: 'assistant',
 } as const;

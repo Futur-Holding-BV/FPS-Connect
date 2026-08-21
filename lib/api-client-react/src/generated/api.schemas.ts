@@ -8994,6 +8994,7 @@ export interface OfferteVraag {
 }
 
 export interface OfferteVraagAntwoordInput {
+  /** Gevalideerde antwoordtekst. Iedere feitelijke claim eindigt met bronnummer(s) die verwijzen naar de geordende citaties-array. */
   antwoord: string;
   /** Klant-e-mailadres voor antwoordnotificatie (optioneel) */
   naar_email?: string;
@@ -18655,18 +18656,53 @@ export interface DoorzettenGarageInput {
   notitie?: string;
 }
 
-export type AdviseurVraagInputGeschiedenisItemRol = typeof AdviseurVraagInputGeschiedenisItemRol[keyof typeof AdviseurVraagInputGeschiedenisItemRol];
+export type AdviseurBerichtItemRol = typeof AdviseurBerichtItemRol[keyof typeof AdviseurBerichtItemRol];
 
 
-export const AdviseurVraagInputGeschiedenisItemRol = {
+export const AdviseurBerichtItemRol = {
   user: 'user',
   assistant: 'assistant',
 } as const;
 
-export type AdviseurVraagInputGeschiedenisItem = {
-  rol: AdviseurVraagInputGeschiedenisItemRol;
+/**
+ * Klik-veilige bronverwijzing binnen Connect (intern app-pad).
+ */
+export interface AdviseurCitatie {
+  label: string;
+  bron: string;
+  /** @nullable */
+  entiteitstype?: string | null;
+  /** @nullable */
+  entiteit_id?: number | null;
+  /**
+     * Intern app-pad; nooit een externe URL.
+     * @nullable
+     */
+  href?: string | null;
+}
+
+export interface AdviseurBerichtItem {
+  id: number;
+  rol: AdviseurBerichtItemRol;
   inhoud: string;
-};
+  aangemaakt_op: string;
+  /** De eerder geautoriseerde, klik-veilige bronnen van dit assistentbericht. */
+  citaties: AdviseurCitatie[];
+}
+
+/**
+ * Het huidige adviseur-gesprek van de actor binnen de actuele effectieve gebruiker+rol+autorisatiesnapshot. De server selecteert de isolatiesleutel; het gesprek is server-eigendom.
+ */
+export interface AdviseurGesprekDetail {
+  /** @nullable */
+  gesprek_id: number | null;
+  /**
+     * Niet-inhoudelijke servervingerafdruk. Een wijziging betekent dat de client eerder lokaal getoonde historie moet vervangen.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  autorisatie_context: string;
+  berichten: AdviseurBerichtItem[];
+}
 
 export type AdviseurVraagInputContextObjectType = typeof AdviseurVraagInputContextObjectType[keyof typeof AdviseurVraagInputContextObjectType];
 
@@ -18680,10 +18716,15 @@ export const AdviseurVraagInputContextObjectType = {
   dossier: 'dossier',
   onderhoud: 'onderhoud',
   klant: 'klant',
+  project: 'project',
+  calculatie: 'calculatie',
+  opdracht: 'opdracht',
+  factuur: 'factuur',
+  leverancier: 'leverancier',
 } as const;
 
 /**
- * Waar de gebruiker nu is (ASSISTENT_01 fase 2)
+ * Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side
  */
 export type AdviseurVraagInputContext = {
   /** @maxLength 300 */
@@ -18692,16 +18733,50 @@ export type AdviseurVraagInputContext = {
   object_id?: number;
 };
 
+/**
+ * Alleen de vraag en optionele paginacontext. De geschiedenis wordt bewust NIET geaccepteerd van de client: die is server-eigendom en komt uit de database (per actor+effectieve gebruiker+rol geïsoleerd).
+ */
 export interface AdviseurVraagInput {
-  /** @maxLength 2000 */
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
   vraag: string;
-  geschiedenis?: AdviseurVraagInputGeschiedenisItem[];
-  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2) */
+  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side */
   context?: AdviseurVraagInputContext;
 }
 
+/**
+ * Expliciete uitkomst, inclusief geen-toegang/geen-data.
+ */
+export type AdviseurAntwoordUitkomst = typeof AdviseurAntwoordUitkomst[keyof typeof AdviseurAntwoordUitkomst];
+
+
+export const AdviseurAntwoordUitkomst = {
+  beantwoord: 'beantwoord',
+  geen_toegang: 'geen_toegang',
+  geen_data: 'geen_data',
+  verduidelijking: 'verduidelijking',
+  gateway_onbeschikbaar: 'gateway_onbeschikbaar',
+  limiet_bereikt: 'limiet_bereikt',
+  ai_fout: 'ai_fout',
+} as const;
+
 export interface AdviseurAntwoord {
   antwoord: string;
+  /**
+     * Id van het server-eigen gesprek (null bij niet-persistente uitkomst).
+     * @nullable
+     */
+  gesprek_id: number | null;
+  /**
+     * Niet-inhoudelijke servervingerafdruk van de actuele gespreksbevoegdheid.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  autorisatie_context: string;
+  /** Expliciete uitkomst, inclusief geen-toegang/geen-data. */
+  uitkomst: AdviseurAntwoordUitkomst;
+  citaties: AdviseurCitatie[];
 }
 
 export type MedewerkerCaoKeuzeType = typeof MedewerkerCaoKeuzeType[keyof typeof MedewerkerCaoKeuzeType];

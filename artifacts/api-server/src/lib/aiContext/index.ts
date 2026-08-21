@@ -7,7 +7,8 @@
 // rolnaam), het geheel binnen het tokenbudget te trimmen en te leveren als
 // `contextBronnen: AiContextBron[]` plus vlakke LogContext-velden.
 //
-// De service is los valideerbaar: hij is nog NIET aangesloten op AI-functies.
+// De service is los valideerbaar en wordt onder meer door de vaste Connect-
+// assistent gebruikt.
 
 import type { AiContextBron, LogContext } from "../aiGateway";
 import {
@@ -22,7 +23,7 @@ import {
 } from "./types";
 import { budgetVoorSlot, trimBronnen, type TrimbareBron } from "./tokenBudget";
 import { leesCache, schrijfCache } from "./cache";
-import { DB_RESOLVERS } from "./resolvers";
+import { DB_RESOLVERS, vindGebouwIdVoorContextKnoop } from "./resolvers";
 
 export * from "./types";
 export { schatTokens, schatBronTokens, SLOT_BUDGET, budgetVoorSlot, trimBronnen } from "./tokenBudget";
@@ -35,14 +36,13 @@ const STANDAARD_MAX_DIEPTE = 2;
 //
 // Faithful mirror van de route-level gating: de Context Service kan geen data
 // leveren die de gebruiker zelf niet mag zien.
-//   - gebouw-gescoped : magBijGebouw(gebouwId) EN (klant | module-lees |
-//                       object-recht). Klanten zien uitsluitend hun eigen
-//                       (toegewezen) gebouwen, nooit interne modules.
-//   - niet-gescoped   : geen klant EN module-leesrecht.
+//   - gebouw-gescoped : magBijGebouw(gebouwId) EN (module-lees of object-recht).
+//   - niet-gescoped   : module-leesrecht.
 // Hoofdbeheerder ziet alles.
 export function magKnoopZien(type: ContextEntiteitType, knoop: OpgehaaldeKnoop, scope: ContextScope): boolean {
   if (scope.isHoofdbeheerder) return true;
   const cfg = ENTITEIT_CONFIG[type];
+  if (!cfg) return false;
 
   if (cfg.gebouwGescoped) {
     if (!scope.magBijGebouw(knoop.gebouwId)) return false;
@@ -76,6 +76,37 @@ async function haalKnoop(
   return knoop;
 }
 
+/**
+ * Productiepoort vóór de inhoudelijke resolver/cache-read. Voor
+ * gebouwgebonden knopen wordt alleen de gebouw-id als scope-metadata gelezen;
+ * pas na magBijGebouw() mag de volledige knoop worden opgehaald.
+ *
+ * Bij geïnjecteerde testresolvers is geen DB-metadata beschikbaar. De pure
+ * module/objectpoort draait daar wel vooraf; de gebouwcontrole volgt op de
+ * geïnjecteerde knoop via magKnoopZien().
+ */
+async function magVoorInhoudelijkeQuery(
+  type: ContextEntiteitType,
+  id: number,
+  scope: ContextScope,
+  gebruikDbResolvers: boolean,
+): Promise<boolean> {
+  if (scope.isHoofdbeheerder) return true;
+  const cfg = ENTITEIT_CONFIG[type];
+  if (!cfg) return false;
+
+  const heeftMatrixrecht =
+    scope.heeftModuleRecht(cfg.module, 1) ||
+    (cfg.gebouwGescoped && scope.heeftObjectRecht(type, id, 1));
+  if (!heeftMatrixrecht) return false;
+
+  if (cfg.gebouwGescoped && gebruikDbResolvers) {
+    const gebouwId = await vindGebouwIdVoorContextKnoop(type, id);
+    return scope.magBijGebouw(gebouwId);
+  }
+  return true;
+}
+
 // Voegt de vlakke velden van een knoop toe zonder bestaande (eerder gezette,
 // belangrijker) niet-lege waarden te overschrijven. De wortel wordt als eerste
 // samengevoegd en wint dus.
@@ -104,8 +135,24 @@ export async function bouwContextBundel(opties: ContextBundelOpties): Promise<Co
   const weggelaten: WeggelatenBron[] = [];
   const flat: Partial<LogContext> = {};
   const trimbaar: TrimbareBron[] = [];
+  const gebruikDbResolvers = resolvers === DB_RESOLVERS;
 
   // ── Wortel ──────────────────────────────────────────────────────────────
+  if (!(await magVoorInhoudelijkeQuery(entiteitstype, entiteitId, scope, gebruikDbResolvers))) {
+    return {
+      geautoriseerd: false,
+      contextBronnen: [],
+      logContext: {
+        module: "ai-context",
+        entiteitstype,
+        entiteitId,
+        gebruikerId: scope.userId,
+      },
+      weggelaten: [{ type: entiteitstype, id: entiteitId, reden: "geen-toegang" }],
+      tokenSchatting: 0,
+      diepteBereikt: 0,
+    };
+  }
   const wortel = await haalKnoop(entiteitstype, entiteitId, resolvers, gebruikCache);
   if (!wortel) {
     return {
@@ -152,6 +199,21 @@ export async function bouwContextBundel(opties: ContextBundelOpties): Promise<Co
   while (wachtrij.length > 0) {
     const item = wachtrij.shift()!;
     const sleutel = `${item.type}:${item.id}`;
+
+    if (
+      item.diepte > 0 &&
+      !(await magVoorInhoudelijkeQuery(item.type, item.id, scope, gebruikDbResolvers))
+    ) {
+      // Geen inhoudelijke query/cache-read en geen uitbreiding achter deze
+      // autorisatiegrens.
+      weggelaten.push({
+        type: item.type,
+        id: item.id,
+        reden: "geen-toegang",
+        relatie: item.relatie,
+      });
+      continue;
+    }
 
     const knoop = voorafOpgehaald.get(sleutel) ?? (await haalKnoop(item.type, item.id, resolvers, gebruikCache));
     if (!knoop) {

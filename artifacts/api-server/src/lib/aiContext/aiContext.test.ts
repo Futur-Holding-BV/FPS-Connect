@@ -56,6 +56,11 @@ function maakResolvers(knopen: OpgehaaldeKnoop[]): ResolverKaart {
     document: maker("document"),
     klant: maker("klant"),
     medewerker: maker("medewerker"),
+    project: maker("project"),
+    calculatie: maker("calculatie"),
+    opdracht: maker("opdracht"),
+    factuur: maker("factuur"),
+    leverancier: maker("leverancier"),
   };
 }
 
@@ -91,6 +96,40 @@ describe("magKnoopZien (scoping via matrix + gebouwtoewijzing, nooit rolnaam)", 
   it("niet-gescoped vereist module-leesrecht", () => {
     expect(magKnoopZien("medewerker", knoop("medewerker", 1, null), scope({ heeftModuleRecht: () => true }))).toBe(true);
     expect(magKnoopZien("medewerker", knoop("medewerker", 1, null), scope({ heeftModuleRecht: () => false }))).toBe(false);
+  });
+
+  it.each([
+    ["project", "projecten"],
+    ["calculatie", "calculatie"],
+    ["opdracht", "opdrachten"],
+    ["factuur", "financieel"],
+    ["leverancier", "inkoop"],
+  ] as const)("%s-context weigert zonder het bijbehorende module-leesrecht", (type, module) => {
+    const gebouwId = type === "leverancier" || type === "factuur" ? null : 7;
+    expect(magKnoopZien(
+      type,
+      knoop(type, 1, gebouwId),
+      scope({ magBijGebouw: () => true, heeftModuleRecht: (m) => m !== module }),
+    )).toBe(false);
+  });
+
+  it.each(["project", "calculatie", "opdracht"] as const)(
+    "%s-context weigert vóór uitlezen buiten de gebouwscope",
+    (type) => {
+      expect(magKnoopZien(
+        type,
+        knoop(type, 1, 7),
+        scope({ magBijGebouw: () => false, heeftModuleRecht: () => true }),
+      )).toBe(false);
+    },
+  );
+
+  it("factuurcontext volgt de modulebrede gewone factuurroutes", () => {
+    expect(magKnoopZien(
+      "factuur",
+      knoop("factuur", 1, 7),
+      scope({ magBijGebouw: () => false, heeftModuleRecht: (m) => m === "financieel" }),
+    )).toBe(true);
   });
 });
 
@@ -155,6 +194,25 @@ describe("bouwContextBundel (orchestrator)", () => {
     });
     expect(bundel.geautoriseerd).toBe(false);
     expect(bundel.weggelaten[0].reden).toBe("geen-toegang");
+  });
+
+  it("roept de inhoudelijke resolver niet aan zonder module- of objectrecht", async () => {
+    let aangeroepen = 0;
+    const resolvers = maakResolvers([knoop("project", 1, 7)]);
+    resolvers.project = async () => {
+      aangeroepen++;
+      return knoop("project", 1, 7);
+    };
+    const bundel = await bouwContextBundel({
+      entiteitstype: "project",
+      entiteitId: 1,
+      scope: scope({ heeftModuleRecht: () => false, heeftObjectRecht: () => false }),
+      resolvers,
+      gebruikCache: false,
+    });
+    expect(bundel.geautoriseerd).toBe(false);
+    expect(bundel.weggelaten[0]?.reden).toBe("geen-toegang");
+    expect(aangeroepen).toBe(0);
   });
 
   it("bouwt de graaf: voorziening → gebouw → klant (volledige context, niet alleen het formulier)", async () => {

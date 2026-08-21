@@ -25,6 +25,11 @@ const GELDIGE_TYPES: ContextEntiteitType[] = [
   "dossier",
   "onderhoud",
   "klant",
+  "project",
+  "calculatie",
+  "opdracht",
+  "factuur",
+  "leverancier",
 ];
 
 router.get(

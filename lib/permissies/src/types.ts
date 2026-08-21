@@ -53,3 +53,26 @@ export interface PermissieContext {
   nu: Date;                                // evaluatiemoment
   werkmaatschappijId?: number | null;      // toekomstige tenant-scope
 }
+
+/**
+ * Canonieke, niet-inhoudelijke momentopname van alle autorisatiedimensies die
+ * een gegevensquery kunnen begrenzen. De adviseur gebruikt hiervan een hash
+ * als harde grens voor server-eigen gesprekshistorie.
+ */
+export interface AutorisatieSnapshot {
+  userId: number;
+  rol: string;
+  bevoegdheden: Array<[moduleId: string, niveau: number]>;
+  actieveObjectRechten: Array<{
+    id: number;
+    objectType: string;
+    objectId: number;
+    moduleId: string | null;
+    niveau: number;
+    geldigVan: string | null;
+    geldigTot: string | null;
+    werkmaatschappijId: number | null;
+  }>;
+  toegewezenGebouwIds: number[];
+  werkmaatschappijId: number | null;
+}

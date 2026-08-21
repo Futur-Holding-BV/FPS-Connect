@@ -7,6 +7,7 @@
  */
 
 export interface OfferteVraagAntwoordInput {
+  /** Gevalideerde antwoordtekst. Iedere feitelijke claim eindigt met bronnummer(s) die verwijzen naar de geordende citaties-array. */
   antwoord: string;
   /** Klant-e-mailadres voor antwoordnotificatie (optioneel) */
   naar_email?: string;

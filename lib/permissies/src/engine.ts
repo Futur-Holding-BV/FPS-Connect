@@ -1,4 +1,4 @@
-import type { PermissieContext } from "./types";
+import type { AutorisatieSnapshot, PermissieContext } from "./types";
 
 // Inline om circulaire import met index.ts te vermijden.
 function heeftNiveauIntern(
@@ -120,6 +120,73 @@ export class PermissieEngine {
     if (!this.isBeperkt()) return true;
     if (this.ctx.toegewezenGebouwIds.includes(gebouwId)) return true;
     return this.heeftObjectRecht("gebouw", gebouwId, 1);
+  }
+
+  /**
+   * SQL-scope voor leesqueries op gebouwgebonden gegevens.
+   *
+   * `null` betekent brede toegang. Een array betekent dat de query vóór het
+   * lezen met deze gebouw-id's begrensd moet worden. Actieve objectrechten
+   * tellen mee, zodat dit exact dezelfde beslissing gebruikt als
+   * magBijGebouw().
+   */
+  get toegestaneGebouwIds(): number[] | null {
+    if (this.isHoofdbeheerder || !this.isBeperkt()) return null;
+    const nu = this.ctx.nu;
+    const objectGebouwIds = this.ctx.objectRechten
+      .filter(
+        (r) =>
+          r.objectType === "gebouw" &&
+          r.niveau >= 1 &&
+          (r.geldigVan === null || r.geldigVan <= nu) &&
+          (r.geldigTot === null || r.geldigTot > nu),
+      )
+      .map((r) => r.objectId);
+    return [...new Set([...this.ctx.toegewezenGebouwIds, ...objectGebouwIds])];
+  }
+
+  /**
+   * Canonieke momentopname van iedere autorisatiedimensie die een gegevensquery
+   * kan begrenzen. Alleen momenteel actieve objectrechten tellen mee: zodra een
+   * tijdgebonden recht ingaat of verloopt, verandert de snapshot automatisch.
+   */
+  get autorisatieSnapshot(): AutorisatieSnapshot {
+    const nu = this.ctx.nu;
+    const actieveObjectRechten = this.ctx.objectRechten
+      .filter(
+        (recht) =>
+          recht.niveau > 0 &&
+          (recht.geldigVan === null || recht.geldigVan <= nu) &&
+          (recht.geldigTot === null || recht.geldigTot > nu),
+      )
+      .map((recht) => ({
+        id: recht.id,
+        objectType: recht.objectType,
+        objectId: recht.objectId,
+        moduleId: recht.moduleId,
+        niveau: recht.niveau,
+        geldigVan: recht.geldigVan?.toISOString() ?? null,
+        geldigTot: recht.geldigTot?.toISOString() ?? null,
+        werkmaatschappijId: recht.werkmaatschappijId,
+      }))
+      .sort((a, b) =>
+        a.objectType.localeCompare(b.objectType) ||
+        a.objectId - b.objectId ||
+        (a.moduleId ?? "").localeCompare(b.moduleId ?? "") ||
+        a.niveau - b.niveau ||
+        a.id - b.id,
+      );
+
+    return {
+      userId: this.ctx.userId,
+      rol: this.ctx.rol.trim().toLowerCase(),
+      bevoegdheden: Object.entries(this.ctx.bevoegdheden)
+        .map(([moduleId, niveau]) => [moduleId, niveau] as [string, number])
+        .sort(([a], [b]) => a.localeCompare(b)),
+      actieveObjectRechten,
+      toegewezenGebouwIds: [...new Set(this.ctx.toegewezenGebouwIds)].sort((a, b) => a - b),
+      werkmaatschappijId: this.ctx.werkmaatschappijId ?? null,
+    };
   }
 
   // ── Stubs voor toekomstige dimensies ───────────────────────────────────

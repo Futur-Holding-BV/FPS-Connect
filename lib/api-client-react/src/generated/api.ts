@@ -50,6 +50,7 @@ import type {
   ActivatielinkResponse,
   Activiteit,
   AdviseurAntwoord,
+  AdviseurGesprekDetail,
   AdviseurVraagInput,
   AfwijkingenResultaat,
   AfwijkingenVervangInput,
@@ -40579,6 +40580,85 @@ export const useDoorzettenNaarGarage = <TError = ErrorType<unknown>,
       return useMutation(getDoorzettenNaarGarageMutationOptions(options));
     }
 
+export const getGetAdviseurGesprekUrl = () => {
+
+
+
+
+  return `/api/adviseur/gesprek`
+}
+
+/**
+ * @summary Haal het huidige adviseur-gesprek op van de effectieve gebruiker (server selecteert op actor+effectieve identiteit+rol+actuele autorisatiesnapshot; nooit een willekeurig id accepteren). Retourneert de bounded berichtenlijst zodat het gesprek na navigatie/sluiting hernomen kan worden.
+
+ */
+export const getAdviseurGesprek = async ( options?: RequestInit): Promise<AdviseurGesprekDetail> => {
+
+  return customFetch<AdviseurGesprekDetail>(getGetAdviseurGesprekUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdviseurGesprekQueryKey = () => {
+    return [
+    `/api/adviseur/gesprek`
+    ] as const;
+    }
+
+
+export const getGetAdviseurGesprekQueryOptions = <TData = Awaited<ReturnType<typeof getAdviseurGesprek>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdviseurGesprek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdviseurGesprekQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdviseurGesprek>>> = ({ signal }) => getAdviseurGesprek({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdviseurGesprek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdviseurGesprekQueryResult = NonNullable<Awaited<ReturnType<typeof getAdviseurGesprek>>>
+export type GetAdviseurGesprekQueryError = ErrorType<void>
+
+
+/**
+ * @summary Haal het huidige adviseur-gesprek op van de effectieve gebruiker (server selecteert op actor+effectieve identiteit+rol+actuele autorisatiesnapshot; nooit een willekeurig id accepteren). Retourneert de bounded berichtenlijst zodat het gesprek na navigatie/sluiting hernomen kan worden.
+
+ */
+
+export function useGetAdviseurGesprek<TData = Awaited<ReturnType<typeof getAdviseurGesprek>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdviseurGesprek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdviseurGesprekQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getVraagAdviseurUrl = () => {
 
 
@@ -40588,7 +40668,8 @@ export const getVraagAdviseurUrl = () => {
 }
 
 /**
- * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur. De effectieve identiteit en rechten zijn server-autoritatief; de conversatiegeschiedenis is server-eigendom (uit de database, per actor+effectieve gebruiker+rol+ actuele autorisatiesnapshot geïsoleerd) en wordt nooit door de client aangeleverd. Alleen de (optionele) paginacontext mag worden meegestuurd.
+
  */
 export const vraagAdviseur = async (adviseurVraagInput: AdviseurVraagInput, options?: RequestInit): Promise<AdviseurAntwoord> => {
 
@@ -40604,7 +40685,7 @@ export const vraagAdviseur = async (adviseurVraagInput: AdviseurVraagInput, opti
 
 
 
-export const getVraagAdviseurMutationOptions = <TError = ErrorType<unknown>,
+export const getVraagAdviseurMutationOptions = <TError = ErrorType<Foutmelding | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext> => {
 
@@ -40633,12 +40714,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type VraagAdviseurMutationResult = NonNullable<Awaited<ReturnType<typeof vraagAdviseur>>>
     export type VraagAdviseurMutationBody = BodyType<AdviseurVraagInput>
-    export type VraagAdviseurMutationError = ErrorType<unknown>
+    export type VraagAdviseurMutationError = ErrorType<Foutmelding | void>
 
     /**
- * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur. De effectieve identiteit en rechten zijn server-autoritatief; de conversatiegeschiedenis is server-eigendom (uit de database, per actor+effectieve gebruiker+rol+ actuele autorisatiesnapshot geïsoleerd) en wordt nooit door de client aangeleverd. Alleen de (optionele) paginacontext mag worden meegestuurd.
+
  */
-export const useVraagAdviseur = <TError = ErrorType<unknown>,
+export const useVraagAdviseur = <TError = ErrorType<Foutmelding | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof vraagAdviseur>>,

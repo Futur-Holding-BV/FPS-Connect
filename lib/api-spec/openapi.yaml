@@ -86,6 +86,8 @@ tags:
     description: BANK_01 — CAMT.053/MT940-import, bankafschriftverwerking, automatisch afletteren en AccountView-journaalpost
   - name: werk-inbox
     description: Gedeelde Microsoft 365-werk-inbox
+  - name: adviseur
+    description: FPS Bedrijfsadviseur — interne AI-assistent met server-eigen, per actor+effectieve gebruiker+rol geïsoleerde conversatie, begrensde historie uit de database, alleen-lezen tooling en volledige audittrail
 
 paths:
   /healthz:
@@ -11724,11 +11726,40 @@ paths:
                   status: { type: string }
                   opvolg_notitie: { type: string, nullable: true }
 
+  /adviseur/gesprek:
+    get:
+      operationId: getAdviseurGesprek
+      tags: [adviseur]
+      summary: >
+        Haal het huidige adviseur-gesprek op van de effectieve gebruiker (server
+        selecteert op actor+effectieve identiteit+rol+actuele
+        autorisatiesnapshot; nooit een willekeurig id accepteren). Retourneert
+        de bounded berichtenlijst zodat het gesprek na navigatie/sluiting
+        hernomen kan worden.
+      responses:
+        "200":
+          description: Huidig gesprek (leeg als er nog geen berichten zijn)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviseurGesprekDetail"
+        "401":
+          description: Niet ingelogd
+        "403":
+          description: Geen toegang
+        "404":
+          description: Gebruiker niet gevonden
+
   /adviseur/vraag:
     post:
       operationId: vraagAdviseur
       tags: [adviseur]
-      summary: Stel een vraag aan de FPS Bedrijfsadviseur
+      summary: >
+        Stel een vraag aan de FPS Bedrijfsadviseur. De effectieve identiteit en
+        rechten zijn server-autoritatief; de conversatiegeschiedenis is
+        server-eigendom (uit de database, per actor+effectieve gebruiker+rol+
+        actuele autorisatiesnapshot geïsoleerd) en wordt nooit door de client
+        aangeleverd. Alleen de (optionele) paginacontext mag worden meegestuurd.
       requestBody:
         required: true
         content:
@@ -11737,11 +11768,27 @@ paths:
               $ref: "#/components/schemas/AdviseurVraagInput"
       responses:
         "200":
-          description: Antwoord van de adviseur
+          description: Antwoord van de adviseur (ook bij geen-toegang/geen-data)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdviseurAntwoord"
+        "400":
+          description: Ongeldige of ontbrekende vraag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foutmelding"
+        "401":
+          description: Niet ingelogd
+        "403":
+          description: Geen toegang
+        "404":
+          description: Gebruiker niet gevonden
+        "502":
+          description: AI-aanroep mislukt
+        "503":
+          description: AI niet beschikbaar
 
   /capaciteit/bezetting:
     get:
@@ -41837,6 +41884,9 @@ components:
       properties:
         antwoord:
           type: string
+          description: >
+            Gevalideerde antwoordtekst. Iedere feitelijke claim eindigt met
+            bronnummer(s) die verwijzen naar de geordende citaties-array.
         naar_email:
           type: string
           description: Klant-e-mailadres voor antwoordnotificatie (optioneel)
@@ -55200,43 +55250,117 @@ components:
         notitie:
           type: string
 
+    AdviseurBerichtItem:
+      type: object
+      required: [id, rol, inhoud, aangemaakt_op, citaties]
+      properties:
+        id:
+          type: integer
+        rol:
+          type: string
+          enum: [user, assistant]
+        inhoud:
+          type: string
+        aangemaakt_op:
+          type: string
+          format: date-time
+        citaties:
+          type: array
+          description: De eerder geautoriseerde, klik-veilige bronnen van dit assistentbericht.
+          items:
+            $ref: "#/components/schemas/AdviseurCitatie"
+
+    AdviseurGesprekDetail:
+      type: object
+      required: [gesprek_id, autorisatie_context, berichten]
+      description: >
+        Het huidige adviseur-gesprek van de actor binnen de actuele effectieve
+        gebruiker+rol+autorisatiesnapshot. De server selecteert de
+        isolatiesleutel; het gesprek is server-eigendom.
+      properties:
+        gesprek_id:
+          type: ["integer", "null"]
+        autorisatie_context:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          description: >
+            Niet-inhoudelijke servervingerafdruk. Een wijziging betekent dat de
+            client eerder lokaal getoonde historie moet vervangen.
+        berichten:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdviseurBerichtItem"
+
     AdviseurVraagInput:
       type: object
       required: [vraag]
+      description: >
+        Alleen de vraag en optionele paginacontext. De geschiedenis wordt
+        bewust NIET geaccepteerd van de client: die is server-eigendom en komt
+        uit de database (per actor+effectieve gebruiker+rol geïsoleerd).
       properties:
         vraag:
           type: string
+          minLength: 1
           maxLength: 2000
-        geschiedenis:
-          type: array
-          items:
-            type: object
-            required: [rol, inhoud]
-            properties:
-              rol:
-                type: string
-                enum: [user, assistant]
-              inhoud:
-                type: string
         context:
           type: object
-          description: Waar de gebruiker nu is (ASSISTENT_01 fase 2)
+          description: Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side
           properties:
             scherm:
               type: string
               maxLength: 300
             object_type:
               type: string
-              enum: [gebouw, voorziening, offerte, medewerker, document, dossier, onderhoud, klant]
+              enum: [gebouw, voorziening, offerte, medewerker, document, dossier, onderhoud, klant, project, calculatie, opdracht, factuur, leverancier]
             object_id:
               type: integer
 
+    AdviseurCitatie:
+      type: object
+      required: [label, bron]
+      description: Klik-veilige bronverwijzing binnen Connect (intern app-pad).
+      properties:
+        label:
+          type: string
+        bron:
+          type: string
+        entiteitstype:
+          type: ["string", "null"]
+        entiteit_id:
+          type: ["integer", "null"]
+        href:
+          type: ["string", "null"]
+          description: Intern app-pad; nooit een externe URL.
+
     AdviseurAntwoord:
       type: object
-      required: [antwoord]
+      required: [antwoord, gesprek_id, autorisatie_context, uitkomst, citaties]
       properties:
         antwoord:
           type: string
+        gesprek_id:
+          type: ["integer", "null"]
+          description: Id van het server-eigen gesprek (null bij niet-persistente uitkomst).
+        autorisatie_context:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          description: Niet-inhoudelijke servervingerafdruk van de actuele gespreksbevoegdheid.
+        uitkomst:
+          type: string
+          enum:
+            - beantwoord
+            - geen_toegang
+            - geen_data
+            - verduidelijking
+            - gateway_onbeschikbaar
+            - limiet_bereikt
+            - ai_fout
+          description: Expliciete uitkomst, inclusief geen-toegang/geen-data.
+        citaties:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdviseurCitatie"
 
     MedewerkerCaoKeuze:
       type: object

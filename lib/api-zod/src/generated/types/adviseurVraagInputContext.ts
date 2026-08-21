@@ -8,7 +8,7 @@
 import type { AdviseurVraagInputContextObjectType } from './adviseurVraagInputContextObjectType';
 
 /**
- * Waar de gebruiker nu is (ASSISTENT_01 fase 2)
+ * Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side
  */
 export type AdviseurVraagInputContext = {
   /** @maxLength 300 */

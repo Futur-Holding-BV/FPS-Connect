@@ -23,6 +23,15 @@ INDEX|accountview_relatie_mapping|accountview_relatie_mapping_pkey
 INDEX|actiepunten|actiepunten_pkey
 INDEX|activiteiten|activiteiten_gebouw_tijdstip_idx
 INDEX|activiteiten|activiteiten_pkey
+INDEX|adviseur_audit|adviseur_audit_actor_idx
+INDEX|adviseur_audit|adviseur_audit_gebruiker_idx
+INDEX|adviseur_audit|adviseur_audit_gesprek_idx
+INDEX|adviseur_audit|adviseur_audit_pkey
+INDEX|adviseur_audit|adviseur_audit_uitkomst_idx
+INDEX|adviseur_berichten|adviseur_berichten_gesprek_aangemaakt_idx
+INDEX|adviseur_berichten|adviseur_berichten_pkey
+INDEX|adviseur_gesprekken|adviseur_gesprekken_actor_gebruiker_rol_auth_uniq
+INDEX|adviseur_gesprekken|adviseur_gesprekken_pkey
 INDEX|ai_aanroepen|ai_aanroepen_pkey
 INDEX|ai_beslissingen|ai_beslissingen_pkey
 INDEX|ai_beslissingen|ai_beslissingen_token_unique
@@ -782,6 +791,34 @@ KOLOM|activiteiten|tijdstip|timestamp without time zone|NO|now()
 KOLOM|activiteiten|type|text|NO|
 KOLOM|activiteiten|voorziening_id|integer|YES|
 KOLOM|activiteiten|voorziening_nummer|text|YES|
+KOLOM|adviseur_audit|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|adviseur_audit|actor_id|integer|YES|
+KOLOM|adviseur_audit|antwoord|text|YES|
+KOLOM|adviseur_audit|autorisatie_hash|text|YES|
+KOLOM|adviseur_audit|bronbewijs|jsonb|YES|
+KOLOM|adviseur_audit|citaties|jsonb|YES|
+KOLOM|adviseur_audit|context_gebruikt|jsonb|YES|
+KOLOM|adviseur_audit|effectieve_rol|text|NO|
+KOLOM|adviseur_audit|gebruiker_id|integer|YES|
+KOLOM|adviseur_audit|gesprek_id|integer|YES|
+KOLOM|adviseur_audit|geweigerde_tools|jsonb|YES|
+KOLOM|adviseur_audit|id|integer|NO|nextval('adviseur_audit_id_seq'::regclass)
+KOLOM|adviseur_audit|tool_autorisaties|jsonb|YES|
+KOLOM|adviseur_audit|uitkomst|text|NO|
+KOLOM|adviseur_audit|vraag|text|NO|
+KOLOM|adviseur_berichten|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|adviseur_berichten|citaties|jsonb|YES|
+KOLOM|adviseur_berichten|gesprek_id|integer|NO|
+KOLOM|adviseur_berichten|id|integer|NO|nextval('adviseur_berichten_id_seq'::regclass)
+KOLOM|adviseur_berichten|inhoud|text|NO|
+KOLOM|adviseur_berichten|rol|text|NO|
+KOLOM|adviseur_gesprekken|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|adviseur_gesprekken|actor_id|integer|NO|
+KOLOM|adviseur_gesprekken|autorisatie_hash|text|NO|
+KOLOM|adviseur_gesprekken|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|adviseur_gesprekken|effectieve_rol|text|NO|
+KOLOM|adviseur_gesprekken|gebruiker_id|integer|NO|
+KOLOM|adviseur_gesprekken|id|integer|NO|nextval('adviseur_gesprekken_id_seq'::regclass)
 KOLOM|ai_aanroepen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|ai_aanroepen|completion_tokens|integer|YES|
 KOLOM|ai_aanroepen|context_json|jsonb|YES|

@@ -2,7 +2,7 @@
 // Assistent. Vast in-/uitklapbaar element; de ingeklapte stand wordt onthouden
 // (localStorage). Op de telefoon is de assistent een eigen scherm (/assistent),
 // geen zwevend venster over de inhoud heen.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Inbox, Bot, X, ListTodo } from "lucide-react";
@@ -10,58 +10,40 @@ import { cn } from "@/lib/utils";
 import { WerkbakInhoud, useWerkbakAantal } from "@/components/werkbak-paneel";
 import { AssistentInhoud } from "@/components/assistent-inhoud";
 import { ActiepuntenInhoud } from "@/components/actiepunten-inhoud";
-import { useAuth } from "@/context/auth-context";
-
-type ZijrandTab = "werkbak" | "assistent" | "actiepunten";
-
-const OPSLAG_OPEN = "fps.zijrand.open";
-const OPSLAG_TAB = "fps.zijrand.tab";
-
-function leesOpen(): boolean {
-  try { return localStorage.getItem(OPSLAG_OPEN) === "1"; } catch { return false; }
-}
-function leesTab(): ZijrandTab {
-  try { const t = localStorage.getItem(OPSLAG_TAB); return t === "werkbak" || t === "actiepunten" ? t : "assistent"; } catch { return "assistent"; }
-}
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useAssistentState, DockTab } from "@/lib/assistent-state";
 
 /**
  * Knoppen voor de topbalk + het (altijd gemounte, verborgen bij dicht) paneel.
  * Gemount houden bewaart het assistent-gesprek bij dicht-/openklappen.
  */
 export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { metWerkbak?: boolean; zonderPaneel?: boolean }) {
-  const [, navigeer] = useLocation();
-  const [open, setOpen] = useState<boolean>(leesOpen);
-  const [tab, setTab] = useState<ZijrandTab>(metWerkbak ? leesTab : () => "assistent");
+  const [location, navigeer] = useLocation();
   const werkbakAantal = useWerkbakAantal();
-  const { gebruiker } = useAuth();
-  const isHoofdbeheerder = gebruiker?.rol === "hoofdbeheerder";
+  const { heeftNiveau } = useBevoegdheid();
 
+  const magActiepuntenZien = heeftNiveau("actiepunten", 1) || heeftNiveau("goedkeuring", 3);
+
+  const isMobile = useIsMobile();
+  const { isDockOpen, setIsDockOpen, dockTab, setDockTab } = useAssistentState();
+
+  // Telefoon = scherm gesloten, paneel gesloten
   useEffect(() => {
-    try { localStorage.setItem(OPSLAG_OPEN, open ? "1" : "0"); } catch { /* privé-modus */ }
-  }, [open]);
-  useEffect(() => {
-    try { localStorage.setItem(OPSLAG_TAB, tab); } catch { /* privé-modus */ }
-  }, [tab]);
+    if (isMobile && isDockOpen) {
+      setIsDockOpen(false);
+    }
+  }, [isMobile, isDockOpen, setIsDockOpen]);
 
-  const isMobiel = (): boolean => typeof window !== "undefined" && window.innerWidth < 640;
-
-  // Krimpt het venster naar telefoonformaat terwijl het paneel open staat,
-  // dan sluit het paneel — op mobiel is de assistent een eigen scherm.
-  useEffect(() => {
-    const bijResize = () => { if (window.innerWidth < 640) setOpen(false); };
-    window.addEventListener("resize", bijResize);
-    return () => window.removeEventListener("resize", bijResize);
-  }, []);
-
-  const openTab = useCallback((gewenst: ZijrandTab) => {
-    if (gewenst === "assistent" && (isMobiel() || zonderPaneel)) {
+  const openTab = useCallback((gewenst: DockTab) => {
+    if (gewenst === "assistent" && (isMobile || zonderPaneel)) {
       // Telefoon: eigen scherm, geen zwevend venster (ASSISTENT_01 §3)
       navigeer("/assistent");
       return;
     }
-    setOpen((was) => (was && tab === gewenst ? false : true));
-    setTab(gewenst);
-  }, [navigeer, tab, zonderPaneel]);
+    setIsDockOpen(isDockOpen && dockTab === gewenst ? false : true);
+    setDockTab(gewenst);
+  }, [navigeer, dockTab, isDockOpen, zonderPaneel, isMobile, setIsDockOpen, setDockTab]);
 
   return (
     <>
@@ -97,10 +79,10 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
       </Button>
 
       {/* Paneel: altijd gemount zodat het gesprek bewaard blijft; verborgen bij dicht */}
-      {!zonderPaneel && <div
+      {!zonderPaneel && location !== "/assistent" && <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-background border-l border-border shadow-xl flex-col",
-          open ? "flex" : "hidden",
+          "fixed inset-y-0 right-0 z-50 hidden w-[420px] bg-background border-l border-border shadow-xl flex-col",
+          isDockOpen && "md:flex",
         )}
         data-testid="paneel-zijrand"
       >
@@ -108,10 +90,10 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
           {metWerkbak && (
             <button
               type="button"
-              onClick={() => setTab("werkbak")}
+              onClick={() => setDockTab("werkbak")}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium",
-                tab === "werkbak" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+                dockTab === "werkbak" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
               data-testid="tab-zijrand-werkbak"
             >
@@ -121,22 +103,22 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
           )}
           <button
             type="button"
-            onClick={() => setTab("assistent")}
+            onClick={() => setDockTab("assistent")}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium",
-              tab === "assistent" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+              dockTab === "assistent" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
             data-testid="tab-zijrand-assistent"
           >
             <Bot className="h-3.5 w-3.5" /> Assistent
           </button>
-          {metWerkbak && isHoofdbeheerder && (
+          {metWerkbak && magActiepuntenZien && (
             <button
               type="button"
-              onClick={() => setTab("actiepunten")}
+              onClick={() => setDockTab("actiepunten")}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium",
-                tab === "actiepunten" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+                dockTab === "actiepunten" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
               data-testid="tab-zijrand-actiepunten"
             >
@@ -147,7 +129,7 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
             variant="ghost"
             size="sm"
             className="ml-auto h-7 w-7 p-0"
-            onClick={() => setOpen(false)}
+            onClick={() => setIsDockOpen(false)}
             title="Sluiten"
             data-testid="knop-zijrand-sluiten"
           >
@@ -155,14 +137,14 @@ export function ZijrandKnoppen({ metWerkbak = false, zonderPaneel = false }: { m
           </Button>
         </div>
         {metWerkbak && (
-          <div className={cn("flex-1 min-h-0 flex-col", tab === "werkbak" && open ? "flex" : "hidden")}>
-            <WerkbakInhoud onNavigeer={() => setOpen(false)} actief={open && tab === "werkbak"} />
+          <div className={cn("flex-1 min-h-0 flex-col", dockTab === "werkbak" && isDockOpen ? "flex" : "hidden")}>
+            <WerkbakInhoud onNavigeer={() => setIsDockOpen(false)} actief={isDockOpen && dockTab === "werkbak"} />
           </div>
         )}
-        <div className={cn("flex-1 min-h-0 flex-col", tab === "assistent" ? "flex" : "hidden")}>
+        <div className={cn("flex-1 min-h-0 flex-col", dockTab === "assistent" ? "flex" : "hidden")}>
           <AssistentInhoud />
         </div>
-        {metWerkbak && isHoofdbeheerder && tab === "actiepunten" && (
+        {metWerkbak && magActiepuntenZien && dockTab === "actiepunten" && (
           <div className="flex-1 min-h-0 flex flex-col">
             <ActiepuntenInhoud />
           </div>

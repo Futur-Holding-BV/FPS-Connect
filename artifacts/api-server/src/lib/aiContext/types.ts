@@ -8,7 +8,7 @@
 
 import type { AiContextBron, LogContext } from "../aiGateway";
 
-// De acht kernentiteiten waarrond context wordt opgebouwd.
+// Kernentiteiten waarrond context wordt opgebouwd.
 export type ContextEntiteitType =
   | "gebouw"
   | "voorziening"
@@ -17,7 +17,12 @@ export type ContextEntiteitType =
   | "document"
   | "dossier"
   | "onderhoud"
-  | "klant"; // klantloos-ok: CRM-entiteitstype (graafknooptype), geen rol
+  | "klant" // klantloos-ok: CRM-entiteitstype (graafknooptype), geen rol
+  | "project"
+  | "calculatie"
+  | "opdracht"
+  | "factuur"
+  | "leverancier";
 
 // ── Scoping-contract ─────────────────────────────────────────────────────────
 //
@@ -91,6 +96,13 @@ export const ENTITEIT_CONFIG: Record<ContextEntiteitType, EntiteitConfig> = {
   document: { module: "bibliotheek", gebouwGescoped: false },
   medewerker: { module: "personeel", gebouwGescoped: false },
   klant: { module: "crm", gebouwGescoped: false },
+  project: { module: "projecten", gebouwGescoped: true },
+  calculatie: { module: "calculatie", gebouwGescoped: true },
+  opdracht: { module: "opdrachten", gebouwGescoped: true },
+  // De gewone factuurroutes zijn modulebreed en leggen geen gebouwscope op.
+  // Gerelateerde project-/gebouwknopen worden in de graaf wél apart getoetst.
+  factuur: { module: "financieel", gebouwGescoped: false },
+  leverancier: { module: "inkoop", gebouwGescoped: false },
 };
 
 // ── Model-slots & tokenbudget ────────────────────────────────────────────────

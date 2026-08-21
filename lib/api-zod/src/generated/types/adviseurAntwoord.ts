@@ -5,7 +5,22 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { AdviseurAntwoordUitkomst } from './adviseurAntwoordUitkomst';
+import type { AdviseurCitatie } from './adviseurCitatie';
 
 export interface AdviseurAntwoord {
   antwoord: string;
+  /**
+     * Id van het server-eigen gesprek (null bij niet-persistente uitkomst).
+     * @nullable
+     */
+  gesprek_id: number | null;
+  /**
+     * Niet-inhoudelijke servervingerafdruk van de actuele gespreksbevoegdheid.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  autorisatie_context: string;
+  /** Expliciete uitkomst, inclusief geen-toegang/geen-data. */
+  uitkomst: AdviseurAntwoordUitkomst;
+  citaties: AdviseurCitatie[];
 }

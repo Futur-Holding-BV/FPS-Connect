@@ -97,6 +97,7 @@ import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
 import AssistentPagina from "@/pages/assistent";
 import { AssistentContextProvider } from "@/lib/assistent-context";
+import { AssistentStateProvider } from "@/lib/assistent-state";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
 import ContractbewakingPagina from "@/pages/personeel/contracten";
@@ -602,11 +603,13 @@ function Gate() {
         <Route path="/modules/calculatie/:id/print" component={ModulesCalculatiePrint} />
         <Route>
           <AssistentContextProvider>
-            <AchievementProvider>
-              <Portalen />
-              <OndersteuningWidget />
-              <HeatmapTracker />
-            </AchievementProvider>
+            <AssistentStateProvider>
+              <AchievementProvider>
+                <Portalen />
+                <OndersteuningWidget />
+                <HeatmapTracker />
+              </AchievementProvider>
+            </AssistentStateProvider>
           </AssistentContextProvider>
         </Route>
       </Switch>

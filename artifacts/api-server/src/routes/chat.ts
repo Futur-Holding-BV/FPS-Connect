@@ -435,6 +435,20 @@ router.post("/chat/gesprekken/:id/gelezen", requireAuth, async (req, res): Promi
   const userId = req.session.userId!;
   const gesprekId = parseInt(String(req.params.id), 10);
 
+  // Deelnemer-toegangscontrole: alleen een daadwerkelijke deelnemer mag zijn
+  // gelezenTot bijwerken. Zo kan een willekeurige gebruiker niet de
+  // gelezenTot van een ander gesprek manipuleren.
+  const [toegang] = await db
+    .select()
+    .from(chatDeelnemersTable)
+    .where(and(eq(chatDeelnemersTable.gesprekId, gesprekId), eq(chatDeelnemersTable.gebruikerId, userId)))
+    .limit(1);
+
+  if (!toegang) {
+    res.status(403).json({ error: "Geen toegang" });
+    return;
+  }
+
   // Zoek het laatste bericht id
   const [laatste] = await db
     .select({ id: chatBerichtenTable.id })

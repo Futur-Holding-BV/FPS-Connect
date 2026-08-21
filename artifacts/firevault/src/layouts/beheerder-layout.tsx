@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { ZijrandKnoppen } from "@/components/zijrand-paneel";
+import { useAssistentState } from "@/lib/assistent-state";
 import { useTranslation } from "react-i18next";
 import {
   useListChatGesprekken,
@@ -159,6 +160,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     [navigeer, toast],
   );
   const { heeftNiveau } = useBevoegdheid();
+  const { isDockOpen, openVoorVraag } = useAssistentState();
   const { rol, is_uitvoerend_veld: isUitvoerendVeld, heeftLoonfundamentToegang } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
@@ -2035,6 +2037,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <main ref={mainRef} className={cn(
+        "transition-[padding]",
+        isDockOpen && location !== "/assistent" && "md:pr-[420px]",
         "flex-1 bg-background min-h-0",
         (banenActief || location.startsWith("/berichten") || location.startsWith("/werk-inbox"))
           ? "overflow-hidden flex flex-col"
@@ -2064,6 +2068,28 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             {location.startsWith("/personeel/onboarden") && <OnboardingStoppenKnop />}
             {paneelBeschikbaar && <BanenMenu />}
+            {location !== "/assistent" && (
+              <form
+                className="hidden md:flex relative mr-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const val = (e.currentTarget.elements.namedItem("assistent-q") as HTMLInputElement)?.value;
+                  if (val) {
+                    openVoorVraag(val);
+                    (e.currentTarget as HTMLFormElement).reset();
+                  }
+                }}
+              >
+                <input
+                  name="assistent-q"
+                  type="text"
+                  placeholder="Vraag iets over dit scherm"
+                  className="h-8 w-64 rounded-md border border-input bg-background/50 px-3 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  data-testid="assistent-balk-input"
+                  onFocus={() => { if (!isDockOpen) openVoorVraag(); }}
+                />
+              </form>
+            )}
             <ZijrandKnoppen metWerkbak />
             <DitWerktNietKnop />
             <MeldingKnop />

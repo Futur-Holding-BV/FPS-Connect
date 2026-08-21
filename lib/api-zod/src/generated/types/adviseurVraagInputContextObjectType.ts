@@ -18,4 +18,9 @@ export const AdviseurVraagInputContextObjectType = {
   dossier: 'dossier',
   onderhoud: 'onderhoud',
   klant: 'klant',
+  project: 'project',
+  calculatie: 'calculatie',
+  opdracht: 'opdracht',
+  factuur: 'factuur',
+  leverancier: 'leverancier',
 } as const;

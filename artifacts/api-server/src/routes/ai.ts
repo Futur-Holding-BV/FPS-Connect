@@ -92,6 +92,39 @@ const FORMULIER_VELDBESCHRIJVINGEN: Record<string, Record<string, string>> = {
   },
 };
 
+export function saneerInvulVelden(
+  formulierType: string,
+  invoer: unknown,
+): Record<string, string | null> {
+  if (!invoer || typeof invoer !== "object" || Array.isArray(invoer)) return {};
+  const toegestaneVelden = FORMULIER_VELDBESCHRIJVINGEN[formulierType];
+  if (!toegestaneVelden) return {};
+  const resultaat: Record<string, string | null> = {};
+  for (const [sleutel, waarde] of Object.entries(invoer as Record<string, unknown>)) {
+    if (!(sleutel in toegestaneVelden)) continue;
+    if (waarde === null) {
+      resultaat[sleutel] = null;
+    } else if (typeof waarde === "string") {
+      resultaat[sleutel] = waarde.slice(0, 1000);
+    } else if (typeof waarde === "number" || typeof waarde === "boolean") {
+      resultaat[sleutel] = String(waarde).slice(0, 1000);
+    }
+  }
+  return resultaat;
+}
+
+export const INVUL_MODULE_PER_FORMULIER: Readonly<Record<string, string>> = {
+  crm_organisatie: "crm",
+  crm_contactpersoon: "crm",
+  gebouw: "gebouwen",
+  leverancier: "inkoop",
+  werkmaatschappij: "organisatie",
+  concurrent: "crm",
+  wagenpark_voertuig: "wagenpark",
+  medewerker: "personeel",
+  magazijn_artikel: "magazijn",
+};
+
 // ── Interne DB-context laden ──────────────────────────────────────────────────
 
 async function laadInternContext(
@@ -148,11 +181,56 @@ function bouwZoektekst(formulierType: string, huidigVelden: Record<string, strin
   }
 }
 
+// ── Autorisatiehulp voor /ai/invullen context_id ─────────────────────────────
+// Controleert of de effectieve gebruiker de entiteit achter context_id mag zien,
+// overeenkomstig de gewone module+objectscoping (zelfde regels als de
+// respectieve lijstroutes). Fail-closed: twijfel = geweigerd.
+async function magContextIdZien(
+  formulierType: string,
+  contextId: number,
+  req: import("express").Request,
+): Promise<boolean> {
+  const permissies = req.permissies;
+  if (!permissies) return false;
+  if (permissies.isHoofdbeheerder) return true;
+
+  try {
+    if (formulierType === "crm_organisatie" || formulierType === "crm_contactpersoon") {
+      // CRM: iedereen met CRM-leesrecht mag organisatiedata inzien (niet per-object)
+      return permissies.heeftModuleRecht("crm", 1);
+    }
+    if (formulierType === "gebouw") {
+      // Gebouw: gebouwtoewijzing verplicht
+      return permissies.heeftModuleRecht("gebouwen", 1) && permissies.magBijGebouw(contextId);
+    }
+    if (formulierType === "leverancier") {
+      return permissies.heeftModuleRecht("inkoop", 1);
+    }
+    if (formulierType === "werkmaatschappij") {
+      return permissies.isHoofdbeheerder;
+    }
+    if (formulierType === "concurrent") {
+      return permissies.heeftModuleRecht("crm", 1);
+    }
+    if (formulierType === "wagenpark_voertuig") {
+      return permissies.heeftModuleRecht("wagenpark", 1);
+    }
+    if (formulierType === "medewerker") {
+      return permissies.heeftModuleRecht("personeel", 1);
+    }
+    if (formulierType === "magazijn_artikel") {
+      return permissies.heeftModuleRecht("magazijn", 1);
+    }
+    // Onbekend formuliertype — context_id niet toegestaan
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // ── POST /ai/invullen ─────────────────────────────────────────────────────────
 
 router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
-  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet geconfigureerd" });
-
   const body = req.body as Record<string, unknown>;
   const formulier_type = typeof body.formulier_type === "string" ? body.formulier_type.trim() : null;
   const raw_context_id = body.context_id;
@@ -162,6 +240,14 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
     return void res.status(400).json({ error: "Ongeldig formulier_type" });
   }
 
+  // Ook zonder context_id geldt altijd dezelfde modulepoort als op het gewone
+  // scherm. Clientvelden of promptinstructies zijn nooit een autorisatiegrens.
+  const invulModule = INVUL_MODULE_PER_FORMULIER[formulier_type];
+  if (!invulModule || !req.permissies?.heeftModuleRecht(invulModule, 1)) {
+    return void res.status(403).json({ error: "Geen toegang" });
+  }
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet geconfigureerd" });
+
   // context_id moet een positief integer zijn of null
   const context_id: number | null = (() => {
     if (raw_context_id == null) return null;
@@ -169,6 +255,20 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
     if (!Number.isInteger(n) || n <= 0) return null;
     return n;
   })();
+
+  // Autoriseer de context_id: de effectieve gebruiker moet het object mogen zien.
+  // Fail-closed: als de check mislukt, sturen we geen context naar de AI.
+  const effectiefContextId: number | null = (() => {
+    if (context_id == null) return null;
+    return context_id;
+  })();
+  if (effectiefContextId !== null) {
+    const magZien = await magContextIdZien(formulier_type, effectiefContextId, req);
+    if (!magZien) {
+      // Weiger — onthul niet eens dat het object bestaat (outside-permission)
+      return void res.status(403).json({ error: "Geen toegang" });
+    }
+  }
 
   // huidige_velden: alleen plain object met string-sleutels en string-waarden;
   // maximaal 50 velden, elke waarde maximaal 500 tekens
@@ -193,7 +293,7 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
     .map(([k, omschr]) => `  "${k}": ${omschr}`)
     .join("\n");
 
-  const internContext  = await laadInternContext(formulier_type, context_id, huidige_velden);
+  const internContext  = await laadInternContext(formulier_type, effectiefContextId, huidige_velden);
   const zoektekst      = bouwZoektekst(formulier_type, huidige_velden);
 
   const huidigGevuld = Object.entries(huidige_velden)
@@ -223,7 +323,7 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
   });
   if (webResultaatInvullen.ok) {
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(webResultaatInvullen.inhoud) as Record<string, string | null>; } catch { data = {}; }
+    try { data = saneerInvulVelden(formulier_type, JSON.parse(webResultaatInvullen.inhoud)); } catch { data = {}; }
     return void res.json({ velden: data });
   }
   req.log.warn({ fout: webResultaatInvullen.fout }, "Web search niet beschikbaar voor ai/invullen, fallback naar kennismodel");
@@ -244,7 +344,12 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
       promptVersie: AI_INVULLEN_PROMPT.versie,
     });
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(aiInvulResultaat.ok ? aiInvulResultaat.inhoud : "{}") as Record<string, string | null>; } catch { data = {}; }
+    try {
+      data = saneerInvulVelden(
+        formulier_type,
+        JSON.parse(aiInvulResultaat.ok ? aiInvulResultaat.inhoud : "{}"),
+      );
+    } catch { data = {}; }
     res.json({ velden: data });
   } catch (err) {
     req.log.error(err);
@@ -273,6 +378,30 @@ const AI_CORRECTIE_PREFIXES = [
   "offerte_email", "scab_mail", "toolbox", "pim", "studio_huisstijl", "financieel_contract",
 ] as const;
 
+const CORRECTIE_MODULE_PER_PREFIX: Record<(typeof AI_CORRECTIE_PREFIXES)[number], string> = {
+  "formulier.crm_organisatie": "crm",
+  "formulier.crm_contactpersoon": "crm",
+  "formulier.gebouw": "gebouwen",
+  "formulier.leverancier": "inkoop",
+  "formulier.werkmaatschappij": "organisatie",
+  "formulier.concurrent": "crm",
+  "formulier.wagenpark_voertuig": "wagenpark",
+  "formulier.medewerker": "personeel",
+  "formulier.magazijn_artikel": "magazijn",
+  spot: "voorzieningen",
+  gereedschap: "gereedschappen",
+  incident: "veiligheid",
+  hrm_voorstel: "personeel",
+  tekening: "gebouwen",
+  projectsamenvatting: "projecten",
+  offerte_email: "offertes",
+  scab_mail: "scab_mail",
+  toolbox: "toolbox",
+  pim: "opdrachten",
+  studio_huisstijl: "organisatie",
+  financieel_contract: "financieel",
+};
+
 const VELD_SUFFIX_RE = /^[a-z0-9_]+$/;
 
 // Eenvoudige in-memory rate-limiter per gebruiker (review-bevinding: de route
@@ -293,13 +422,15 @@ function correctieToegestaan(gebruikerId: number): boolean {
   return t.n <= CORRECTIE_LIMIET_PER_UUR;
 }
 
-function isToegestaanCorrectieVeld(veldNaam: string): boolean {
+export function moduleVoorCorrectieVeld(veldNaam: string): string | null {
   for (const prefix of AI_CORRECTIE_PREFIXES) {
     if (veldNaam.startsWith(prefix + ".")) {
-      return VELD_SUFFIX_RE.test(veldNaam.slice(prefix.length + 1));
+      return VELD_SUFFIX_RE.test(veldNaam.slice(prefix.length + 1))
+        ? CORRECTIE_MODULE_PER_PREFIX[prefix]
+        : null;
     }
   }
-  return false;
+  return null;
 }
 
 router.post("/ai/veld-correctie", requireAuth, async (req, res): Promise<void> => {
@@ -308,10 +439,14 @@ router.post("/ai/veld-correctie", requireAuth, async (req, res): Promise<void> =
     if (!veld_naam || ai_voorstel === undefined || ai_voorstel === null || gekozen === undefined || gekozen === null) {
       return void res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
     }
-    if (!isToegestaanCorrectieVeld(String(veld_naam))) {
+    const module = moduleVoorCorrectieVeld(String(veld_naam));
+    if (!module) {
       return void res.status(400).json({ error: "Ongeldig veld" });
     }
-    const gebruikerId = req.session.userId ?? null;
+    if (!req.permissies?.heeftModuleRecht(module, 1)) {
+      return void res.status(403).json({ error: "Geen toegang" });
+    }
+    const gebruikerId = req.permissies.userId;
     if (gebruikerId !== null && !correctieToegestaan(gebruikerId)) {
       return void res.status(429).json({ error: "Te veel correcties; probeer het later opnieuw" });
     }

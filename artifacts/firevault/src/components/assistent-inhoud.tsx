@@ -1,10 +1,13 @@
-// ASSISTENT_01 — de Connect-assistent. Gebruikt het bestaande AiChatPanel
-// (geen tweede chatonderdeel) en de bestaande adviseur-route via de AI-poort.
-// Het paneel doet niets tot de gebruiker een vraag stelt.
-import AiChatPanel from "@/components/ai-chat-panel";
-import { useVraagAdviseur } from "@workspace/api-client-react";
-import type { AiChatBericht, AiChatAntwoord } from "@workspace/api-client-react";
+import { useEffect, useRef } from "react";
+import AiChatPanel, { AiChatPanelRef } from "@/components/ai-chat-panel";
+import {
+  getGetAdviseurGesprekQueryKey,
+  useGetAdviseurGesprek,
+  useVraagAdviseur,
+} from "@workspace/api-client-react";
+import type { AiChatBericht } from "@workspace/api-client-react";
 import { useAssistentContext } from "@/lib/assistent-context";
+import { useAssistentState } from "@/lib/assistent-state";
 import { MapPin } from "lucide-react";
 
 const SNELLE_ACTIES = [
@@ -16,17 +19,80 @@ const SNELLE_ACTIES = [
 export function AssistentInhoud({ className }: { className?: string }) {
   const { mutateAsync: vraagAdviseur } = useVraagAdviseur();
   const ctx = useAssistentContext();
+  const {
+    contextKey,
+    autorisatieContext, setAutorisatieContext,
+    berichten, setBerichten,
+    invoer, setInvoer,
+    bezig, setBezig,
+    signalen, setSignalen,
+    registreerListener
+  } = useAssistentState();
 
-  async function onVerstuur(berichten: AiChatBericht[]): Promise<AiChatAntwoord> {
-    const laatste = berichten[berichten.length - 1];
-    const geschiedenis = berichten.slice(0, -1).slice(-10).map((b) => ({
-      rol: (b.rol === "gebruiker" ? "user" : "assistant") as "user" | "assistant",
-      inhoud: b.inhoud,
+  const panelRef = useRef<AiChatPanelRef>(null);
+  const contextKeyRef = useRef(contextKey);
+  const gesprek = useGetAdviseurGesprek({
+    query: {
+      queryKey: [...getGetAdviseurGesprekQueryKey(), contextKey],
+      staleTime: 0,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      refetchInterval: 60_000,
+    },
+  });
+
+  useEffect(() => {
+    contextKeyRef.current = contextKey;
+  }, [contextKey]);
+
+  useEffect(() => {
+    if (!gesprek.data || gesprek.isFetching || bezig) return;
+    const geladen = gesprek.data.berichten.map((bericht) => ({
+      rol: bericht.rol === "user" ? "gebruiker" as const : "assistent" as const,
+      inhoud: bericht.inhoud,
+      citaties: bericht.citaties.map((citatie) => ({
+        label: citatie.label,
+        bron: citatie.bron,
+        entiteitstype: citatie.entiteitstype,
+        entiteit_id: citatie.entiteit_id,
+        href: citatie.href,
+      })),
     }));
+    if (contextKey !== contextKeyRef.current) return;
+    const autorisatieGewijzigd =
+      autorisatieContext !== null &&
+      autorisatieContext !== gesprek.data.autorisatie_context;
+    setAutorisatieContext(gesprek.data.autorisatie_context);
+    if (autorisatieGewijzigd || berichten.length === 0) {
+      setBerichten(geladen);
+      if (autorisatieGewijzigd) setSignalen([]);
+    }
+  }, [
+    gesprek.data,
+    gesprek.isFetching,
+    contextKey,
+    bezig,
+    berichten.length,
+    autorisatieContext,
+    setBerichten,
+    setAutorisatieContext,
+    setSignalen,
+  ]);
+
+  useEffect(() => {
+    return registreerListener((vraag?: string) => {
+      if (vraag && panelRef.current) {
+        panelRef.current.verstuur(vraag, null);
+      }
+    });
+  }, [registreerListener]);
+
+  async function onVerstuur(nieuweBerichten: AiChatBericht[]) {
+    const aanvraagContext = contextKey;
+    const laatste = nieuweBerichten[nieuweBerichten.length - 1];
     const result = await vraagAdviseur({
       data: {
         vraag: laatste?.inhoud ?? "",
-        geschiedenis,
         context: {
           scherm: ctx.scherm,
           ...(ctx.objectType && ctx.objectId
@@ -35,7 +101,13 @@ export function AssistentInhoud({ className }: { className?: string }) {
         },
       },
     });
-    return { antwoord: result.antwoord };
+    if (aanvraagContext !== contextKeyRef.current) return null;
+    const autorisatieGewijzigd =
+      autorisatieContext !== null &&
+      autorisatieContext !== result.autorisatie_context;
+    setAutorisatieContext(result.autorisatie_context);
+    if (autorisatieGewijzigd) setSignalen([]);
+    return { ...result, vervangGesprek: autorisatieGewijzigd };
   }
 
   return (
@@ -49,13 +121,20 @@ export function AssistentInhoud({ className }: { className?: string }) {
         <span className="truncate">Je kijkt naar: {ctx.label}</span>
       </div>
       <AiChatPanel
-        // key op object: bij een ander open object start een nieuw gesprek,
-        // zodat antwoorden nooit over het verkeerde object gaan
-        key={ctx.objectType && ctx.objectId ? `${ctx.objectType}-${ctx.objectId}` : "algemeen"}
+        ref={panelRef}
         onVerstuur={onVerstuur}
         snelleActies={SNELLE_ACTIES}
-        placeholder="Stel een vraag over Connect of je werk…"
+        placeholder="Vraag iets over dit scherm..."
         className="flex-1 border-0 min-h-0"
+        berichten={berichten}
+        setBerichten={setBerichten}
+        invoer={invoer}
+        setInvoer={setInvoer}
+        bezig={bezig}
+        setBezig={setBezig}
+        signalen={signalen}
+        setSignalen={setSignalen}
+        zonderAfbeeldingen={true}
       />
     </div>
   );

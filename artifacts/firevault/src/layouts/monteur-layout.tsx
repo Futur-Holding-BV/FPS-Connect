@@ -16,6 +16,8 @@ import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 import { MeldingKnop } from "@/components/melding-knop";
 import { DitWerktNietKnop } from "@/components/dit-werkt-niet-knop";
+import { useAssistentState } from "@/lib/assistent-state";
+import { cn } from "@/lib/utils";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
@@ -33,6 +35,7 @@ const ROUTES_CONTROLEUR = [
 ];
 
 export default function MonteurLayout({ children }: { children: React.ReactNode }) {
+  const { isDockOpen, openVoorVraag } = useAssistentState();
   const [location] = useLocation();
   const { rol } = useRol();
   const { t } = useTranslation();
@@ -90,7 +93,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-0 overflow-y-auto bg-background">
+      <main className={cn("flex-1 min-h-0 overflow-y-auto bg-background transition-[padding]", isDockOpen && location !== "/assistent" && "md:pr-[420px]")}>
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
           <SidebarTrigger title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />
@@ -100,7 +103,27 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
             <MeldingKnop />
           </div>
         </div>
-        <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-border">
+        <div className="hidden md:flex items-center justify-end gap-2 px-4 py-2 border-b border-border">
+          {location !== "/assistent" && (<form
+            className="hidden md:flex relative mr-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const val = (e.currentTarget.elements.namedItem("assistent-q") as HTMLInputElement)?.value;
+              if (val) {
+                openVoorVraag(val);
+                (e.currentTarget as HTMLFormElement).reset();
+              }
+            }}
+          >
+            <input
+              name="assistent-q"
+              type="text"
+              placeholder="Vraag iets over dit scherm"
+              className="h-8 w-64 rounded-md border border-input bg-background/50 px-3 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              data-testid="assistent-balk-input"
+              onFocus={() => { if (!isDockOpen) openVoorVraag(); }}
+            />
+          </form>)}
           <ZijrandKnoppen />
           <DitWerktNietKnop />
           <MeldingKnop />

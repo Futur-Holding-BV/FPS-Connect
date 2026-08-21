@@ -24,6 +24,12 @@ import {
   crmContactpersonenTable,
   medewerkersTable,
   functiesTable,
+  projectenTable,
+  modCalcHeadersTable,
+  modCalcRegelsTable,
+  opdrachtenTable,
+  facturenTable,
+  leveranciersTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import type {
@@ -33,6 +39,76 @@ import type {
   OpgehaaldeKnoop,
   ResolverKaart,
 } from "./types";
+
+/**
+ * Leest uitsluitend de minimale scope-metadata die nodig is om een
+ * gebouwgebonden knoop te autoriseren. De inhoudelijke resolver mag pas ná deze
+ * controle draaien.
+ */
+export async function vindGebouwIdVoorContextKnoop(
+  type: ContextEntiteitType,
+  id: number,
+): Promise<number | null> {
+  if (type === "gebouw") return id;
+
+  const eersteGebouwId = async (
+    query: Promise<Array<{ gebouwId: number | null }>>,
+  ): Promise<number | null> => (await query)[0]?.gebouwId ?? null;
+
+  switch (type) {
+    case "voorziening":
+      return eersteGebouwId(
+        db.select({ gebouwId: voorzieningenTable.gebouwId })
+          .from(voorzieningenTable)
+          .where(eq(voorzieningenTable.id, id))
+          .limit(1),
+      );
+    case "onderhoud":
+      return eersteGebouwId(
+        db.select({ gebouwId: onderhoudTable.gebouwId })
+          .from(onderhoudTable)
+          .where(eq(onderhoudTable.id, id))
+          .limit(1),
+      );
+    case "offerte":
+      return eersteGebouwId(
+        db.select({ gebouwId: offertesTable.gebouwId })
+          .from(offertesTable)
+          .where(eq(offertesTable.id, id))
+          .limit(1),
+      );
+    case "dossier":
+      return eersteGebouwId(
+        db.select({ gebouwId: dossiersTable.gebouwId })
+          .from(dossiersTable)
+          .where(eq(dossiersTable.id, id))
+          .limit(1),
+      );
+    case "project":
+      return eersteGebouwId(
+        db.select({ gebouwId: projectenTable.gebouwId })
+          .from(projectenTable)
+          .where(eq(projectenTable.id, id))
+          .limit(1),
+      );
+    case "calculatie":
+      return eersteGebouwId(
+        db.select({ gebouwId: modCalcHeadersTable.gebouwId })
+          .from(modCalcHeadersTable)
+          .where(eq(modCalcHeadersTable.id, id))
+          .limit(1),
+      );
+    case "opdracht":
+      return eersteGebouwId(
+        db.select({ gebouwId: opdrachtenTable.gebouwId })
+          .from(opdrachtenTable)
+          .where(eq(opdrachtenTable.id, id))
+          .limit(1),
+      );
+    default:
+      return null;
+  }
+}
 
 function knoop(
   type: ContextEntiteitType,
@@ -48,7 +124,16 @@ function knoop(
   return {
     type,
     id,
-    bron: { type: "kennisbron", bronId: `${type}:${id}`, payload: { entiteit: type, ...payload } },
+    bron: {
+      type: "kennisbron",
+      bronId: `${type}:${id}`,
+      payload: {
+        entiteit: type,
+        entiteitstype: type,
+        entiteitId: id,
+        ...payload,
+      },
+    },
     flat: opties.flat,
     gebouwId: opties.gebouwId,
     relaties: opties.relaties ?? [],
@@ -309,6 +394,175 @@ const medewerkerResolver: ContextResolver = async (id) => {
   });
 };
 
+// ── Project ──────────────────────────────────────────────────────────────────
+const projectResolver: ContextResolver = async (id) => {
+  const [p] = await db.select().from(projectenTable).where(eq(projectenTable.id, id)).limit(1);
+  if (!p) return null;
+  const relaties: KnoopVerwijzing[] = [];
+  if (p.gebouwId) relaties.push({ type: "gebouw", id: p.gebouwId, relatie: "gebouw", prioriteitOffset: 10 });
+  if (p.crmKlantId) relaties.push({ type: "klant", id: p.crmKlantId, relatie: "opdrachtgever", prioriteitOffset: 20 });
+  return knoop("project", id, {
+    naam: p.naam,
+    werknummer: p.werknummer,
+    status: p.status,
+    werkmaatschappij: p.werkmaatschappij,
+    omschrijving: p.omschrijving,
+    startDatum: p.startDatum,
+    eindDatum: p.eindDatum,
+  }, {
+    gebouwId: p.gebouwId,
+    flat: {
+      project_id: id,
+      gebouw_id: p.gebouwId,
+      klant_id: p.crmKlantId,
+      workflow_type: "project",
+      workflow_status: p.status,
+    },
+    relaties,
+    inkortbaarVeld: "omschrijving",
+  });
+};
+
+// ── Calculatie ───────────────────────────────────────────────────────────────
+const calculatieResolver: ContextResolver = async (id) => {
+  const [c] = await db
+    .select()
+    .from(modCalcHeadersTable)
+    .where(eq(modCalcHeadersTable.id, id))
+    .limit(1);
+  if (!c) return null;
+  const regels = await db
+    .select({
+      soort: modCalcRegelsTable.soort,
+      omschrijving: modCalcRegelsTable.omschrijving,
+      eenheid: modCalcRegelsTable.eenheid,
+      hoeveelheid: modCalcRegelsTable.hoeveelheid,
+      totaal: modCalcRegelsTable.totaal,
+      optioneel: modCalcRegelsTable.optioneel,
+    })
+    .from(modCalcRegelsTable)
+    .where(eq(modCalcRegelsTable.calculatieId, id))
+    .orderBy(modCalcRegelsTable.volgorde)
+    .limit(50);
+  const relaties: KnoopVerwijzing[] = c.gebouwId
+    ? [{ type: "gebouw", id: c.gebouwId, relatie: "gebouw", prioriteitOffset: 10 }]
+    : [];
+  return knoop("calculatie", id, {
+    nummer: c.nummer,
+    naam: c.naam,
+    referentie: c.referentie,
+    projectNaam: c.projectNaam,
+    status: c.status,
+    omschrijving: c.omschrijving,
+    regels,
+  }, {
+    gebouwId: c.gebouwId,
+    flat: {
+      calculatie_id: id,
+      gebouw_id: c.gebouwId,
+      workflow_type: "calculatie",
+      workflow_status: c.status,
+    },
+    relaties,
+    inkortbaarVeld: "omschrijving",
+  });
+};
+
+// ── Opdracht ─────────────────────────────────────────────────────────────────
+const opdrachtResolver: ContextResolver = async (id) => {
+  const [o] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id)).limit(1);
+  if (!o) return null;
+  const relaties: KnoopVerwijzing[] = [];
+  if (o.gebouwId) relaties.push({ type: "gebouw", id: o.gebouwId, relatie: "gebouw", prioriteitOffset: 10 });
+  if (o.projectId) relaties.push({ type: "project", id: o.projectId, relatie: "project", prioriteitOffset: 15 });
+  if (o.offerteId) relaties.push({ type: "offerte", id: o.offerteId, relatie: "offerte", prioriteitOffset: 15 });
+  return knoop("opdracht", id, {
+    titel: o.titel,
+    werknummer: o.werknummer,
+    opdrachtgever: o.opdrachtgever,
+    status: o.status,
+    type: o.type,
+    aiFase: o.aiFase,
+    omschrijving: o.omschrijving,
+    budgetUren: o.budgetUren,
+    akkoordGrond: o.akkoordGrond,
+  }, {
+    gebouwId: o.gebouwId,
+    flat: {
+      project_id: o.projectId,
+      gebouw_id: o.gebouwId,
+      offerte_id: o.offerteId,
+      workflow_type: "opdracht",
+      workflow_status: o.status,
+    },
+    relaties,
+    inkortbaarVeld: "omschrijving",
+  });
+};
+
+// ── Factuur ──────────────────────────────────────────────────────────────────
+const factuurResolver: ContextResolver = async (id) => {
+  const [f] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!f) return null;
+  const relaties: KnoopVerwijzing[] = [];
+  if (f.gebouwId) relaties.push({ type: "gebouw", id: f.gebouwId, relatie: "gebouw", prioriteitOffset: 10 });
+  if (f.leverancierId) relaties.push({ type: "leverancier", id: f.leverancierId, relatie: "leverancier", prioriteitOffset: 15 });
+  if (f.projectId) relaties.push({ type: "project", id: f.projectId, relatie: "project", prioriteitOffset: 15 });
+  if (f.opdrachtId) relaties.push({ type: "opdracht", id: f.opdrachtId, relatie: "opdracht", prioriteitOffset: 15 });
+  if (f.offerteId) relaties.push({ type: "offerte", id: f.offerteId, relatie: "offerte", prioriteitOffset: 15 });
+  return knoop("factuur", id, {
+    type: f.type,
+    factuurnummer: f.factuurnummer,
+    factuurdatum: f.factuurdatum,
+    vervaldatum: f.vervaldatum,
+    relatienaam: f.relatienaam,
+    bedragExclBtw: f.bedragExclBtw,
+    btwBedrag: f.btwBedrag,
+    bedragInclBtw: f.bedragInclBtw,
+    status: f.status,
+    betaalstatus: f.betaalstatus,
+    omschrijving: f.omschrijving,
+  }, {
+    gebouwId: f.gebouwId,
+    flat: {
+      project_id: f.projectId,
+      gebouw_id: f.gebouwId,
+      offerte_id: f.offerteId,
+      workflow_type: "factuur",
+      workflow_status: f.status,
+    },
+    relaties,
+    inkortbaarVeld: "omschrijving",
+  });
+};
+
+// ── Leverancier ──────────────────────────────────────────────────────────────
+const leverancierResolver: ContextResolver = async (id) => {
+  const [l] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, id)).limit(1);
+  if (!l) return null;
+  return knoop("leverancier", id, {
+    code: l.code,
+    naam: l.naam,
+    adres: l.adres,
+    huisnummer: l.huisnummer,
+    postcode: l.postcode,
+    stad: l.stad,
+    contactpersoon: l.contactpersoon,
+    contactEmail: l.contactEmail,
+    contactTelefoon: l.contactTelefoon,
+    categorie: l.categorie,
+    betalingstermijnDagen: l.betalingstermijnDagen,
+    actief: l.actief,
+    levertijdDagen: l.levertijdDagen,
+    leveringsgebied: l.leveringsgebied,
+    certificeringen: l.certificeringen,
+  }, {
+    gebouwId: null,
+    flat: { workflow_type: "leverancier", workflow_status: l.actief ? "actief" : "inactief" },
+    relaties: [],
+  });
+};
+
 export const DB_RESOLVERS: ResolverKaart = {
   gebouw: gebouwResolver,
   voorziening: voorzieningResolver,
@@ -318,4 +572,9 @@ export const DB_RESOLVERS: ResolverKaart = {
   document: documentResolver,
   klant: klantResolver,
   medewerker: medewerkerResolver,
+  project: projectResolver,
+  calculatie: calculatieResolver,
+  opdracht: opdrachtResolver,
+  factuur: factuurResolver,
+  leverancier: leverancierResolver,
 };

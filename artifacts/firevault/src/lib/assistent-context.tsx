@@ -7,7 +7,8 @@ import { useLocation } from "wouter";
 /** Objecttypen die de server-contextmotor kent (lib/aiContext). */
 export type AssistentObjectType =
   | "gebouw" | "voorziening" | "offerte" | "medewerker"
-  | "document" | "dossier" | "onderhoud" | "klant";
+  | "document" | "dossier" | "onderhoud" | "klant"
+  | "project" | "calculatie" | "opdracht" | "factuur" | "leverancier";
 
 export interface AssistentContextWaarde {
   scherm: string;
@@ -25,16 +26,10 @@ const OBJECT_PATRONEN: Array<{ regex: RegExp; type: AssistentObjectType; naam: s
   { regex: /^\/personeel\/(\d+)/, type: "medewerker", naam: "medewerker" },
   { regex: /^\/crm\/(\d+)/, type: "klant", naam: "klant" },
   { regex: /^\/onderhoud\/werkbonnen\/(\d+)/, type: "onderhoud", naam: "werkbon" },
-];
-
-// Detailpagina's zonder servertype in de contextmotor: wel een leesbaar
-// etiket + schermpad, geen object-context (bewuste keuze — de contextmotor
-// kent deze typen (nog) niet; de opdracht-/calculatiepagina's hebben
-// bovendien hun eigen ingebedde AI-chat).
-const LABEL_PATRONEN: Array<{ regex: RegExp; naam: string }> = [
-  { regex: /^\/facturen\/(\d+)/, naam: "factuur" },
-  { regex: /^\/opdrachten\/(\d+)/, naam: "opdracht" },
-  { regex: /^\/modules\/calculatie\/(\d+)/, naam: "calculatie" },
+  { regex: /^\/modules\/calculatie\/(\d+)/, type: "calculatie", naam: "calculatie" },
+  { regex: /^\/opdrachten\/(\d+)/, type: "opdracht", naam: "opdracht" },
+  { regex: /^\/facturen\/(\d+)/, type: "factuur", naam: "factuur" },
+  { regex: /^\/leveranciers\/(\d+)/, type: "leverancier", naam: "leverancier" },
 ];
 
 // Eerste padsegment → leesbare schermnaam
@@ -73,10 +68,6 @@ export function bepaalContextUitRoute(pad: string): AssistentContextWaarde {
       const id = Number(m[1]);
       return { scherm: pad, objectType: p.type, objectId: id, label: `${p.naam} #${id}` };
     }
-  }
-  for (const p of LABEL_PATRONEN) {
-    const m = pad.match(p.regex);
-    if (m?.[1]) return { scherm: pad, label: `${p.naam} #${Number(m[1])}` };
   }
   const segment = pad.split("/")[1] ?? "";
   const naam = SCHERM_NAMEN[segment] ?? segment;

@@ -522,7 +522,7 @@ export const GROEP_OPTIES = [
 export type ProfielGroep = (typeof GROEP_OPTIES)[number];
 
 // ── Re-exports centrale rechtenstructuur ──────────────────────────────────
-export type { ObjectType, ObjectRecht, PermissieContext } from "./types";
+export type { ObjectType, ObjectRecht, PermissieContext, AutorisatieSnapshot } from "./types";
 export { PermissieEngine } from "./engine";
 
 // ── Migratie / fallback ────────────────────────────────────────────────────

@@ -14260,7 +14260,34 @@ export const DoorzettenNaarGarageResponse = zod.object({
 
 
 /**
- * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ * @summary Haal het huidige adviseur-gesprek op van de effectieve gebruiker (server selecteert op actor+effectieve identiteit+rol+actuele autorisatiesnapshot; nooit een willekeurig id accepteren). Retourneert de bounded berichtenlijst zodat het gesprek na navigatie/sluiting hernomen kan worden.
+
+ */
+export const getAdviseurGesprekResponseAutorisatieContextRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const GetAdviseurGesprekResponse = zod.object({
+  "gesprek_id": zod.number().nullable(),
+  "autorisatie_context": zod.string().regex(getAdviseurGesprekResponseAutorisatieContextRegExp).describe('Niet-inhoudelijke servervingerafdruk. Een wijziging betekent dat de client eerder lokaal getoonde historie moet vervangen.\n'),
+  "berichten": zod.array(zod.object({
+  "id": zod.number(),
+  "rol": zod.enum(['user', 'assistant']),
+  "inhoud": zod.string(),
+  "aangemaakt_op": zod.coerce.date(),
+  "citaties": zod.array(zod.object({
+  "label": zod.string(),
+  "bron": zod.string(),
+  "entiteitstype": zod.string().nullish(),
+  "entiteit_id": zod.number().nullish(),
+  "href": zod.string().nullish().describe('Intern app-pad; nooit een externe URL.')
+}).describe('Klik-veilige bronverwijzing binnen Connect (intern app-pad).')).describe('De eerder geautoriseerde, klik-veilige bronnen van dit assistentbericht.')
+}))
+}).describe('Het huidige adviseur-gesprek van de actor binnen de actuele effectieve gebruiker+rol+autorisatiesnapshot. De server selecteert de isolatiesleutel; het gesprek is server-eigendom.\n')
+
+
+/**
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur. De effectieve identiteit en rechten zijn server-autoritatief; de conversatiegeschiedenis is server-eigendom (uit de database, per actor+effectieve gebruiker+rol+ actuele autorisatiesnapshot geïsoleerd) en wordt nooit door de client aangeleverd. Alleen de (optionele) paginacontext mag worden meegestuurd.
+
  */
 export const vraagAdviseurBodyVraagMax = 2000;
 
@@ -14269,20 +14296,29 @@ export const vraagAdviseurBodyContextSchermMax = 300;
 
 
 export const VraagAdviseurBody = zod.object({
-  "vraag": zod.string().max(vraagAdviseurBodyVraagMax),
-  "geschiedenis": zod.array(zod.object({
-  "rol": zod.enum(['user', 'assistant']),
-  "inhoud": zod.string()
-})).optional(),
+  "vraag": zod.string().min(1).max(vraagAdviseurBodyVraagMax),
   "context": zod.object({
   "scherm": zod.string().max(vraagAdviseurBodyContextSchermMax).optional(),
-  "object_type": zod.enum(['gebouw', 'voorziening', 'offerte', 'medewerker', 'document', 'dossier', 'onderhoud', 'klant']).optional(),
+  "object_type": zod.enum(['gebouw', 'voorziening', 'offerte', 'medewerker', 'document', 'dossier', 'onderhoud', 'klant', 'project', 'calculatie', 'opdracht', 'factuur', 'leverancier']).optional(),
   "object_id": zod.number().optional()
-}).optional().describe('Waar de gebruiker nu is (ASSISTENT_01 fase 2)')
-})
+}).optional().describe('Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side')
+}).describe('Alleen de vraag en optionele paginacontext. De geschiedenis wordt bewust NIET geaccepteerd van de client: die is server-eigendom en komt uit de database (per actor+effectieve gebruiker+rol geïsoleerd).\n')
+
+export const vraagAdviseurResponseAutorisatieContextRegExp = new RegExp('^[a-f0-9]{64}$');
+
 
 export const VraagAdviseurResponse = zod.object({
-  "antwoord": zod.string()
+  "antwoord": zod.string(),
+  "gesprek_id": zod.number().nullable().describe('Id van het server-eigen gesprek (null bij niet-persistente uitkomst).'),
+  "autorisatie_context": zod.string().regex(vraagAdviseurResponseAutorisatieContextRegExp).describe('Niet-inhoudelijke servervingerafdruk van de actuele gespreksbevoegdheid.'),
+  "uitkomst": zod.enum(['beantwoord', 'geen_toegang', 'geen_data', 'verduidelijking', 'gateway_onbeschikbaar', 'limiet_bereikt', 'ai_fout']).describe('Expliciete uitkomst, inclusief geen-toegang\/geen-data.'),
+  "citaties": zod.array(zod.object({
+  "label": zod.string(),
+  "bron": zod.string(),
+  "entiteitstype": zod.string().nullish(),
+  "entiteit_id": zod.number().nullish(),
+  "href": zod.string().nullish().describe('Intern app-pad; nooit een externe URL.')
+}).describe('Klik-veilige bronverwijzing binnen Connect (intern app-pad).'))
 })
 
 
@@ -16071,7 +16107,7 @@ export const BeantwoordOfferteVraagParams = zod.object({
 })
 
 export const BeantwoordOfferteVraagBody = zod.object({
-  "antwoord": zod.string(),
+  "antwoord": zod.string().describe('Gevalideerde antwoordtekst. Iedere feitelijke claim eindigt met bronnummer(s) die verwijzen naar de geordende citaties-array.\n'),
   "naar_email": zod.string().optional().describe('Klant-e-mailadres voor antwoordnotificatie (optioneel)'),
   "naar_naam": zod.string().optional()
 })

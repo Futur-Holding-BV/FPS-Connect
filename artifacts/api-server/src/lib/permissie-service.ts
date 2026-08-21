@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import {
   PermissieEngine,
   type Bevoegdheden,
+  type AutorisatieSnapshot,
   type ObjectRecht,
   type PermissieContext,
 } from "@workspace/permissies";
@@ -83,6 +84,12 @@ export class PermissieService {
   }
   get userId(): number {
     return this.gebruikerId;
+  }
+  get toegestaneGebouwIds(): number[] | null {
+    return this.e.toegestaneGebouwIds;
+  }
+  get autorisatieSnapshot(): AutorisatieSnapshot {
+    return this.e.autorisatieSnapshot;
   }
 
   heeftModuleRecht(module: string, minNiveau: number): boolean {

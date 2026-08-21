@@ -6,12 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdviseurVraagInputContext } from './adviseurVraagInputContext';
-import type { AdviseurVraagInputGeschiedenisItem } from './adviseurVraagInputGeschiedenisItem';
 
+/**
+ * Alleen de vraag en optionele paginacontext. De geschiedenis wordt bewust NIET geaccepteerd van de client: die is server-eigendom en komt uit de database (per actor+effectieve gebruiker+rol geïsoleerd).
+ */
 export interface AdviseurVraagInput {
-  /** @maxLength 2000 */
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
   vraag: string;
-  geschiedenis?: AdviseurVraagInputGeschiedenisItem[];
-  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2) */
+  /** Waar de gebruiker nu is (ASSISTENT_01 fase 2); afscherming gebeurt server-side */
   context?: AdviseurVraagInputContext;
 }
