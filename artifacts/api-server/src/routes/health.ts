@@ -1,7 +1,12 @@
 import { execSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import {
+  backupRecordsTable,
+  db,
+  mailLogboekTable,
+} from "@workspace/db";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -124,6 +129,92 @@ router.get("/status", async (_req, res): Promise<void> => {
     db_latency_ms: dbLatencyMs,
     timestamp: new Date().toISOString(),
     omgeving: process.env.NODE_ENV ?? "development",
+  });
+});
+
+type Meetstatus = "ok" | "unknown" | "error";
+
+interface VeiligeTijdmeting {
+  status: Meetstatus;
+  last_success_at: string | null;
+}
+
+function veiligeIso(waarde: Date | string | null | undefined): string | null {
+  if (!waarde) return null;
+  const datum = waarde instanceof Date ? waarde : new Date(waarde);
+  return Number.isNaN(datum.getTime()) ? null : datum.toISOString();
+}
+
+async function laatsteGeslaagdeDatabaseBackup(): Promise<VeiligeTijdmeting> {
+  try {
+    const rijen = await db
+      .select({ lastSuccessAt: backupRecordsTable.voltooidOp })
+      .from(backupRecordsTable)
+      .where(inArray(backupRecordsTable.status, ["klaar", "geverifieerd"]))
+      .orderBy(desc(backupRecordsTable.voltooidOp))
+      .limit(1);
+    const lastSuccessAt = veiligeIso(rijen[0]?.lastSuccessAt);
+    return {
+      status: lastSuccessAt ? "ok" : "unknown",
+      last_success_at: lastSuccessAt,
+    };
+  } catch {
+    return { status: "error", last_success_at: null };
+  }
+}
+
+async function laatsteGeslaagdeNasPull(): Promise<VeiligeTijdmeting> {
+  const nasDir = process.env["OFFSITE_NAS_DIR"];
+  if (!nasDir) return { status: "unknown", last_success_at: null };
+  try {
+    const lastSuccessAt = veiligeIso(
+      (await readFile(`${nasDir}/laatste-verbinding`, "utf8")).trim(),
+    );
+    return {
+      status: lastSuccessAt ? "ok" : "unknown",
+      last_success_at: lastSuccessAt,
+    };
+  } catch {
+    return { status: "error", last_success_at: null };
+  }
+}
+
+async function laatsteGeslaagdeUitgaandeMail(): Promise<VeiligeTijdmeting> {
+  try {
+    const rijen = await db
+      .select({ lastSuccessAt: mailLogboekTable.aangemaaktOp })
+      .from(mailLogboekTable)
+      .where(eq(mailLogboekTable.status, "verzonden"))
+      .orderBy(desc(mailLogboekTable.aangemaaktOp))
+      .limit(1);
+    const lastSuccessAt = veiligeIso(rijen[0]?.lastSuccessAt);
+    return {
+      status: lastSuccessAt ? "ok" : "unknown",
+      last_success_at: lastSuccessAt,
+    };
+  } catch {
+    return { status: "error", last_success_at: null };
+  }
+}
+
+/**
+ * BEWAKING_01: minimaal machineleesbaar productieadres voor futur-control.
+ * De response is een vaste allowlist: geen ontvangers, onderwerpen, inhoud,
+ * bestandspaden, configuratie, sleutels of onderliggende foutmeldingen.
+ */
+router.get("/beheerstatus", async (_req, res): Promise<void> => {
+  const [database_backup, nas_pull, outgoing_mail] = await Promise.all([
+    laatsteGeslaagdeDatabaseBackup(),
+    laatsteGeslaagdeNasPull(),
+    laatsteGeslaagdeUitgaandeMail(),
+  ]);
+  res.json({
+    version: VERSIE,
+    commit: COMMIT === "onbekend" ? null : COMMIT,
+    database_backup,
+    nas_pull,
+    outgoing_mail,
+    measured_at: new Date().toISOString(),
   });
 });
 
