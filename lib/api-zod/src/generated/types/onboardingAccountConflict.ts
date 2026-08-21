@@ -15,6 +15,8 @@ export interface OnboardingAccountConflict {
   code: OnboardingAccountConflictCode;
   /** @nullable */
   bestaande_gebruiker_id: number | null;
+  /** Alleen true wanneer stap 0 dit account aantoonbaar als onafgerond onboardingaccount heeft aangemaakt. */
+  heeft_onboarding_herkomst: boolean;
   /** Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar. */
   heeft_medewerkerprofiel: boolean;
   /**

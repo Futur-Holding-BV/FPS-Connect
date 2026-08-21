@@ -23,6 +23,7 @@ import {
   getGetOnboardingContextQueryKey,
   useDuplicateCheckMedewerker,
   useCreateOnboardingAccount,
+  useCreateOnboardingConcept,
   useCreateExterneAdviseur,
 } from "@workspace/api-client-react";
 import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus, OnboardingContext } from "@workspace/api-client-react";
@@ -676,6 +677,7 @@ function GeneriekeWizard({
   // Live uit de werkgevers-API; shadow't bewust de statische fallback-import.
   const { namen: WERKMAATSCHAPPIJEN, caoVoor: caoVoorWerkmaatschappij } = useWerkmaatschappijen();
   const maak = useCreateMedewerker();
+  const maakConcept = useCreateOnboardingConcept();
   const slaVoortgangOp = usePatchWizardVoortgang();
   const bijwerk = useUpdateMedewerker();
   const { toast } = useToast();
@@ -752,7 +754,13 @@ function GeneriekeWizard({
     }
     if (huidigStap === 1 && !medewerkerDraftId) {
       try {
-        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
+        const concept = await maakConcept.mutateAsync({
+          data: {
+            naam: form.naam.trim(),
+            gebruiker_id: context.gebruiker_id,
+            onboarding_stroom: soort,
+          },
+        });
         setMedewerkerDraftId(concept.id);
         // Sla stap-1 formulierdata mee zodat geboortedatum e.d. bewaard blijven
         // bij een directe onderbreking ná de eerste stap-overgang.
@@ -915,7 +923,13 @@ function GeneriekeWizard({
         });
         onGereed(medewerkerDraftId);
       } else {
-        const nieuw = await maak.mutateAsync({ data: input });
+        const nieuw = await maak.mutateAsync({
+          data: {
+            ...input,
+            onboarding_afronden: true,
+            onboarding_stroom: soort,
+          },
+        });
         onGereed(nieuw.id);
       }
     } catch (err: unknown) {
@@ -1141,6 +1155,7 @@ function VastFormulier({
   const { data: caoOpties } = useListCaoOpties();
   const { data: bestaandeMedewerkers } = useListMedewerkers();
   const maak = useCreateMedewerker();
+  const maakConcept = useCreateOnboardingConcept();
   const bijwerk = useUpdateMedewerker();
   const slaVoortgangOp = usePatchWizardVoortgang();
   const beoordeelVoorstel = usePatchAiVoorstel();
@@ -1348,7 +1363,13 @@ function VastFormulier({
         }
       }
       try {
-        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
+        const concept = await maakConcept.mutateAsync({
+          data: {
+            naam: form.naam.trim(),
+            gebruiker_id: context.gebruiker_id,
+            onboarding_stroom: "vast",
+          },
+        });
         setMedewerkerDraftId(concept.id);
         // Ook bij de eerste stap-overgang meteen de formulierdata bewaren.
         const r = await slaVoortgangOp.mutateAsync({
@@ -1756,7 +1777,13 @@ function VastFormulier({
         await maakOnboardingTakenAan(medewerkerDraftId);
         onGereed(medewerkerDraftId);
       } else {
-        const nieuw = await maak.mutateAsync({ data: input });
+        const nieuw = await maak.mutateAsync({
+          data: {
+            ...input,
+            onboarding_afronden: true,
+            onboarding_stroom: "vast",
+          },
+        });
         await maakGeselecteerdeMiddelenAan(nieuw.id);
         await maakOnboardingTakenAan(nieuw.id);
         onGereed(nieuw.id);
@@ -2585,7 +2612,13 @@ function ZzpFormulier({
               onboarding_stroom: "zzp",
             },
           })
-        : await maak.mutateAsync({ data: input });
+        : await maak.mutateAsync({
+            data: {
+              ...input,
+              onboarding_afronden: true,
+              onboarding_stroom: "zzp",
+            },
+          });
       onGereed(resumeId ?? nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
@@ -2775,7 +2808,13 @@ function UitzendFormulier({
               onboarding_stroom: soort,
             },
           })
-        : await maak.mutateAsync({ data: input });
+        : await maak.mutateAsync({
+            data: {
+              ...input,
+              onboarding_afronden: true,
+              onboarding_stroom: soort,
+            },
+          });
       onGereed(resumeId ?? nieuw.id);
     } catch (err: unknown) {
       if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
@@ -3165,6 +3204,7 @@ function AccountStap({
   // verdergaan; anders leggen we uit dat er al een profiel is.
   const [conflict, setConflict] = useState<{
     bestaandeGebruikerId: number | null;
+    heeftOnboardingHerkomst: boolean;
     heeftMedewerkerprofiel: boolean;
   } | null>(null);
 
@@ -3206,6 +3246,7 @@ function AccountStap({
         const id = typeof data?.bestaande_gebruiker_id === "number" ? data.bestaande_gebruiker_id : null;
         setConflict({
           bestaandeGebruikerId: id,
+          heeftOnboardingHerkomst: data?.heeft_onboarding_herkomst === true,
           heeftMedewerkerprofiel: data?.heeft_medewerkerprofiel === true,
         });
         setFout(data?.error ?? "Dit e-mailadres is al in gebruik bij een andere gebruiker.");
@@ -3269,7 +3310,7 @@ function AccountStap({
                     Het bestaande account met dit e-mailadres heeft al een medewerkerprofiel; een
                     tweede onboarding is niet mogelijk. Bekijk de medewerker in de medewerkerslijst.
                   </p>
-                ) : conflict.bestaandeGebruikerId !== null ? (
+                ) : conflict.bestaandeGebruikerId !== null && conflict.heeftOnboardingHerkomst ? (
                   <>
                     <p className="text-muted-foreground">
                       Er bestaat al een gebruikersaccount met dit e-mailadres, maar nog zonder
@@ -3284,6 +3325,12 @@ function AccountStap({
                       <ArrowRight className="h-4 w-4" /> Ga verder met dit bestaande account
                     </Button>
                   </>
+                ) : conflict.bestaandeGebruikerId !== null ? (
+                  <p className="text-muted-foreground">
+                    Dit bestaande account is niet door deze onboarding aangemaakt en kan daarom niet
+                    veilig worden hergebruikt of verwijderd. Rond het account eerst via
+                    Beheer → Gebruikers af, of gebruik een ander e-mailadres voor een nieuwe onboarding.
+                  </p>
                 ) : (
                   <p className="text-muted-foreground">
                     Er bestaat al een account met dit e-mailadres. Zoek het op via Beheer →

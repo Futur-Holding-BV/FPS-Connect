@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useGetVeiligheidMeldingen } from "@workspace/api-client-react";
 import { AlertTriangle, X, ArrowRight, ShieldAlert, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 
 const SESSION_BANNER_KEY = "fps.veiligheidsmelding.banner_verborgen";
 const SESSION_MODAL_KEY  = "fps.veiligheidsmelding.modal_getoond";
@@ -25,6 +26,8 @@ function setModalGetoond() {
 }
 
 export function VeiligheidMeldingBanner() {
+  const [locatie] = useLocation();
+  const { requestNavigatie } = useNavigatieBewaking();
   const [verborgen, setVerborgenState] = useState(isVerborgen);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -109,16 +112,17 @@ export function VeiligheidMeldingBanner() {
             )}
           </div>
 
-          <Link href="/veiligheid/meldingen">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="shrink-0 text-xs font-semibold bg-white/15 hover:bg-white/25 border border-white/30 text-white"
-            >
-              Bekijk nu
-              <ChevronRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shrink-0 text-xs font-semibold bg-white/15 hover:bg-white/25 border border-white/30 text-white"
+            onClick={() => requestNavigatie("/veiligheid/meldingen", {
+              instroom: { label: "Veiligheidsmelding", pad: locatie },
+            })}
+          >
+            Bekijk nu
+            <ChevronRight className="h-3.5 w-3.5 ml-1" />
+          </Button>
 
           {/* Verberg alleen voor niet-kritieke meldingen ook per sessie */}
           <button
@@ -174,15 +178,18 @@ export function VeiligheidMeldingBanner() {
             <Button variant="outline" onClick={() => setModalOpen(false)}>
               Sluiten
             </Button>
-            <Link href="/veiligheid/meldingen">
-              <Button
-                className="bg-red-700 hover:bg-red-800 text-white"
-                onClick={() => setModalOpen(false)}
-              >
-                <ArrowRight className="h-4 w-4 mr-1.5" />
-                Ga naar meldingen
-              </Button>
-            </Link>
+            <Button
+              className="bg-red-700 hover:bg-red-800 text-white"
+              onClick={() => {
+                setModalOpen(false);
+                requestNavigatie("/veiligheid/meldingen", {
+                  instroom: { label: "Veiligheidsmelding", pad: locatie },
+                });
+              }}
+            >
+              <ArrowRight className="h-4 w-4 mr-1.5" />
+              Ga naar meldingen
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -72,7 +72,7 @@ export interface MedewerkerInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
-  /** Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate. */
+  /** Rond het onboardingprofiel in dezelfde transactie af en wis de tijdelijke onboardingherkomst. */
   onboarding_afronden?: boolean;
   /**
      * Verplichte versie uit wizard-status wanneer onboarding_afronden true is.

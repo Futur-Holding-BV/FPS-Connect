@@ -83,6 +83,7 @@ import { UrenPerUurcodeSectie } from "./uren-per-uurcode-sectie";
 import { AkkoordKaart } from "./akkoord-kaart";
 import { useRol } from "@/context/rol-context";
 import { OverwerkslotKaart } from "./overwerkslot-kaart";
+import { useUrlTabNavigatie } from "@/hooks/use-url-tab-navigatie";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -620,6 +621,7 @@ export default function OpdrachtDetailPagina() {
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
   const [afrondenDialoog, setAfrondenDialoog] = useState(false);
   const zoekParams = useSearch();
+  const navigeerNaarTab = useUrlTabNavigatie();
   const [activeTab, setActiveTabState] = useState(() => {
     const gevraagd = new URLSearchParams(zoekParams).get("tab") ?? "";
     return FASE_ALIAS[gevraagd] ?? "voorbereiding";
@@ -632,9 +634,7 @@ export default function OpdrachtDetailPagina() {
   }, [zoekParams]);
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", tab);
-    window.history.replaceState(null, "", url.toString());
+    navigeerNaarTab(tab);
   };
   const scrollNaar = (sectieId: string) =>
     setTimeout(() => document.getElementById(sectieId)?.scrollIntoView({ behavior: "smooth" }), 50);

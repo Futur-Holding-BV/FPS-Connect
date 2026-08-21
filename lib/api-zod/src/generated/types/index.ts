@@ -1262,6 +1262,8 @@ export * from './onboardingAccountConflict';
 export * from './onboardingAccountConflictCode';
 export * from './onboardingAccountInput';
 export * from './onboardingAccountResultaat';
+export * from './onboardingAnnulerenResultaat';
+export * from './onboardingConceptInput';
 export * from './onboardingContext';
 export * from './onboardingFout';
 export * from './onboardingVoorstelInvoer';

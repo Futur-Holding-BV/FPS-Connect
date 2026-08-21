@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useMeldDirty } from "@/hooks/use-navigatie-bewaking";
 import { StickyNote, Loader2, Send, Pencil, X, Check, Phone, Mail, Footprints } from "lucide-react";
 
 const TYPE_OPTIES = [
@@ -69,6 +70,17 @@ export default function GebouwNotities({ gebouwId }: { gebouwId: number }) {
   const [bellerNaam, setBellerNaam] = useState("");
   const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [bewerkTekst, setBewerkTekst] = useState("");
+  const bewerkteNotitie = bewerkId === null
+    ? null
+    : notities?.find((notitie) => notitie.id === bewerkId);
+  const heeftOnopgeslagenWijzigingen =
+    tekst.trim() !== "" ||
+    bellerNaam.trim() !== "" ||
+    type !== "algemeen" ||
+    (bewerkteNotitie !== undefined &&
+      bewerkteNotitie !== null &&
+      bewerkTekst.trim() !== bewerkteNotitie.tekst.trim());
+  useMeldDirty(heeftOnopgeslagenWijzigingen);
 
   function ververs() {
     void queryClient.invalidateQueries({ queryKey: getListGebouwNotitiesQueryKey(gebouwId) });

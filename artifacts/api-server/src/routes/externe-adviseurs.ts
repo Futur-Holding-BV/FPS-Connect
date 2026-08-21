@@ -109,18 +109,61 @@ router.post("/externe-adviseurs", schrijven, async (req, res): Promise<void> => 
     if (bestaand) {
       return void res.status(409).json({ error: "Dit account is al geregistreerd als externe adviseur." });
     }
-    const [nieuw] = await db
-      .insert(externeAdviseursTable)
-      .values({
-        gebruikerId: gebruiker_id,
-        bedrijf: bedrijf.trim(),
-        contactpersoon: typeof contactpersoon === "string" && contactpersoon.trim() ? contactpersoon.trim() : null,
-        ingeschakeldVoor: ingeschakeld_voor.trim(),
-        functietitel: typeof functietitel === "string" && functietitel.trim() ? functietitel.trim() : null,
-        toegangTot: toegang_tot,
-      })
-      .returning();
-    res.status(201).json(mapAdviseur(nieuw, { naam: g.naam, email: g.email, actief: g.actief }));
+    const resultaat = await db.transaction(async (tx) => {
+      const [vergrendeldeGebruiker] = await tx
+        .select({ id: gebruikersTable.id })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruiker_id))
+        .for("update");
+      if (!vergrendeldeGebruiker) {
+        return { soort: "niet_gevonden" as const };
+      }
+      const [medewerkerNaLock] = await tx
+        .select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, gebruiker_id))
+        .limit(1);
+      if (medewerkerNaLock) {
+        return { soort: "medewerker" as const };
+      }
+      const [adviseurNaLock] = await tx
+        .select({ id: externeAdviseursTable.id })
+        .from(externeAdviseursTable)
+        .where(eq(externeAdviseursTable.gebruikerId, gebruiker_id))
+        .limit(1);
+      if (adviseurNaLock) {
+        return { soort: "bestaand" as const };
+      }
+
+      const [aangemaakt] = await tx
+        .insert(externeAdviseursTable)
+        .values({
+          gebruikerId: gebruiker_id,
+          bedrijf: bedrijf.trim(),
+          contactpersoon: typeof contactpersoon === "string" && contactpersoon.trim() ? contactpersoon.trim() : null,
+          ingeschakeldVoor: ingeschakeld_voor.trim(),
+          functietitel: typeof functietitel === "string" && functietitel.trim() ? functietitel.trim() : null,
+          toegangTot: toegang_tot,
+        })
+        .returning();
+      await tx
+        .update(gebruikersTable)
+        .set({ onboardingConceptOp: null })
+        .where(eq(gebruikersTable.id, gebruiker_id));
+      return { soort: "aangemaakt" as const, adviseur: aangemaakt };
+    });
+    if (resultaat.soort === "niet_gevonden") {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+    }
+    if (resultaat.soort === "medewerker") {
+      return void res.status(409).json({
+        error: "Dit account heeft al een medewerkerprofiel; een externe adviseur staat bewust buiten het personeelsbestand.",
+      });
+    }
+    if (resultaat.soort === "bestaand") {
+      return void res.status(409).json({ error: "Dit account is al geregistreerd als externe adviseur." });
+    }
+    res.status(201).json(mapAdviseur(resultaat.adviseur, { naam: g.naam, email: g.email, actief: g.actief }));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

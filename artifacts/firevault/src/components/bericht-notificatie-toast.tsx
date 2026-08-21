@@ -5,6 +5,7 @@ import {
   useListChatGesprekken,
   type ChatGesprek,
 } from "@workspace/api-client-react";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 
 interface ToastData {
   gesprekId: number;
@@ -20,6 +21,7 @@ function gesprekNaam(g: ChatGesprek): string {
 
 export function BerichtNotificatieToast() {
   const [location] = useLocation();
+  const { requestNavigatie } = useNavigatieBewaking();
   const [toast, setToast] = useState<ToastData | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vorigeOngelezen = useRef(new Map<number, number>());
@@ -79,7 +81,9 @@ export function BerichtNotificatieToast() {
       className="fixed bottom-5 right-5 z-[200] flex items-start gap-3 bg-card border border-border rounded-xl shadow-xl px-4 py-3 w-80 cursor-pointer animate-in slide-in-from-bottom-4 duration-300"
       onClick={() => {
         setToast(null);
-        window.location.href = `/berichten?gesprek=${toast.gesprekId}`;
+        requestNavigatie(`/berichten?gesprek=${toast.gesprekId}`, {
+          instroom: { label: "Berichten", pad: location },
+        });
       }}
       role="alert"
       aria-live="polite"

@@ -11752,7 +11752,7 @@ export const CreateMedewerkerBody = zod.object({
   "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
-  "onboarding_afronden": zod.boolean().optional().describe('Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.'),
+  "onboarding_afronden": zod.boolean().optional().describe('Rond het onboardingprofiel in dezelfde transactie af en wis de tijdelijke onboardingherkomst.'),
   "onboarding_versie": zod.number().min(createMedewerkerBodyOnboardingVersieMin).optional().describe('Verplichte versie uit wizard-status wanneer onboarding_afronden true is.'),
   "onboarding_stroom": zod.string().optional().describe('Wizardstroom die bij de atomaire afronding behouden blijft.')
 })
@@ -11790,6 +11790,18 @@ export const CreateOnboardingAccountBody = zod.object({
 }).describe('Invoer voor de accountstap van de één-flow onboarding; het account wordt least-privilege aangemaakt met rol \"gebruiker\". Rechten volgen pas uit de gekozen functie.')
 
 export const CreateOnboardingAccountResponse = zod.void()
+
+
+/**
+ * @summary Maak een conceptmedewerker voor een aantoonbaar door stap 0 aangemaakt onboardingaccount
+ */
+export const CreateOnboardingConceptBody = zod.object({
+  "naam": zod.string(),
+  "gebruiker_id": zod.number(),
+  "onboarding_stroom": zod.string().optional()
+}).describe('Start een conceptmedewerker uitsluitend voor een account waarvan de server-side onboardingherkomst al door stap 0 is vastgelegd.')
+
+export const CreateOnboardingConceptResponse = zod.void()
 
 
 /**
@@ -12111,7 +12123,7 @@ export const UpdateMedewerkerBody = zod.object({
   "inleen_einddatum": zod.string().optional().describe('Datum waarop de inleen- of inhuurperiode formeel afloopt (YYYY-MM-DD). Alleen relevant bij dienstverband \"uitzend\" of \"inhuur\".'),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
   "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
-  "onboarding_afronden": zod.boolean().optional().describe('Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.'),
+  "onboarding_afronden": zod.boolean().optional().describe('Rond het onboardingprofiel in dezelfde transactie af en wis de tijdelijke onboardingherkomst.'),
   "onboarding_versie": zod.number().min(updateMedewerkerBodyOnboardingVersieMin).optional().describe('Verplichte versie uit wizard-status wanneer onboarding_afronden true is.'),
   "onboarding_stroom": zod.string().optional().describe('Wizardstroom die bij de atomaire afronding behouden blijft.')
 })
@@ -13090,6 +13102,21 @@ export const GetWizardStatusResponse = zod.object({
   "wizard_voortgang": zod.record(zod.string(), zod.unknown()).optional(),
   "versie": zod.number().min(getWizardStatusResponseVersieMin).describe('Monotoon oplopende wizard-versie; stuur deze bij de volgende PATCH ongewijzigd terug.'),
   "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)')
+})
+
+
+/**
+ * Verwijdert uitsluitend een onafgeronde onboarding, het eventuele medewerkerconcept, gekoppelde onboardinggegevens en het gebruikersaccount. Afgeronde, actieve of operationele accounts worden geweigerd.
+ * @summary Annuleer een onafgeronde onboarding en verwijder het gekoppelde account
+ */
+export const CancelOnboardingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CancelOnboardingResponse = zod.object({
+  "gebruiker_id": zod.number(),
+  "medewerker_id": zod.number().nullable(),
+  "account_verwijderd": zod.boolean()
 })
 
 

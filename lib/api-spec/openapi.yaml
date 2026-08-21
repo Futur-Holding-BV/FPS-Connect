@@ -9576,6 +9576,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/OnboardingAccountConflict"
 
+  /medewerkers/onboarding-concept:
+    post:
+      operationId: createOnboardingConcept
+      tags: [personeel]
+      summary: Maak een conceptmedewerker voor een aantoonbaar door stap 0 aangemaakt onboardingaccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingConceptInput"
+      responses:
+        "201":
+          description: Conceptmedewerker aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+        "400":
+          description: naam of gebruiker_id ontbreekt
+        "404":
+          description: Gebruiker niet gevonden (code USER_NOT_FOUND)
+        "409":
+          description: Geen aantoonbare onboardingherkomst, al een medewerkerprofiel of externe adviseur
+
   /externe-adviseurs:
     get:
       operationId: listExterneAdviseurs
@@ -10708,6 +10733,30 @@ paths:
                 $ref: "#/components/schemas/WizardStatus"
         "404":
           description: Niet gevonden
+
+  /gebruikers/{id}/onboarding:
+    delete:
+      operationId: cancelOnboarding
+      tags: [personeel]
+      summary: Annuleer een onafgeronde onboarding en verwijder het gekoppelde account
+      description: Verwijdert uitsluitend een onafgeronde onboarding, het eventuele medewerkerconcept, gekoppelde onboardinggegevens en het gebruikersaccount. Afgeronde, actieve of operationele accounts worden geweigerd.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Onboarding geannuleerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingAnnulerenResultaat"
+        "404":
+          description: Gebruiker niet gevonden
+        "409":
+          description: Onboarding is afgerond, gelijktijdig gewijzigd of heeft operationele afhankelijkheden
 
   /medewerkers/{id}/wizard-voortgang:
     patch:
@@ -39214,7 +39263,7 @@ components:
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
         onboarding_afronden:
           type: boolean
-          description: Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate.
+          description: Rond het onboardingprofiel in dezelfde transactie af en wis de tijdelijke onboardingherkomst.
         onboarding_versie:
           type: integer
           minimum: 0
@@ -39238,6 +39287,20 @@ components:
           type: boolean
           description: Verstuur direct een activatie-uitnodiging per e-mail.
 
+    OnboardingConceptInput:
+      type: object
+      required: [naam, gebruiker_id]
+      description: >-
+        Start een conceptmedewerker uitsluitend voor een account waarvan de
+        server-side onboardingherkomst al door stap 0 is vastgelegd.
+      properties:
+        naam:
+          type: string
+        gebruiker_id:
+          type: integer
+        onboarding_stroom:
+          type: string
+
     OnboardingAccountResultaat:
       type: object
       required: [id, naam, email, uitnodiging_verstuurd]
@@ -39256,7 +39319,7 @@ components:
 
     OnboardingAccountConflict:
       type: object
-      required: [error, code, bestaande_gebruiker_id, heeft_medewerkerprofiel]
+      required: [error, code, bestaande_gebruiker_id, heeft_onboarding_herkomst, heeft_medewerkerprofiel]
       description: 409-antwoord van de onboarding-accountstap wanneer het e-mailadres al bestaat, met doorstart-informatie voor "ga verder met bestaand account".
       properties:
         error:
@@ -39266,6 +39329,9 @@ components:
           enum: [EMAIL_ALREADY_EXISTS]
         bestaande_gebruiker_id:
           type: ["integer", "null"]
+        heeft_onboarding_herkomst:
+          type: boolean
+          description: Alleen true wanneer stap 0 dit account aantoonbaar als onafgerond onboardingaccount heeft aangemaakt.
         heeft_medewerkerprofiel:
           type: boolean
           description: Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar.
@@ -55670,6 +55736,17 @@ components:
         onboarding_stroom:
           type: string
           description: Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten.
+
+    OnboardingAnnulerenResultaat:
+      type: object
+      required: [gebruiker_id, medewerker_id, account_verwijderd]
+      properties:
+        gebruiker_id:
+          type: integer
+        medewerker_id:
+          type: ["integer", "null"]
+        account_verwijderd:
+          type: boolean
 
     HrmMiddel:
       type: object

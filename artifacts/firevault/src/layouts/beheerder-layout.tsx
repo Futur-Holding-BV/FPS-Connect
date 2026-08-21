@@ -31,7 +31,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound, Link2,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserMinus, UserPlus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor, Images,
+  UserMinus, UserPlus, UserX, Car, GitBranch, Palette, Monitor, Images,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet, GitCompareArrows,
   Users2, Star,
@@ -46,7 +46,8 @@ import { useRol } from "@/context/rol-context";
 import { useSidebarHoofdstukken } from "@/hooks/use-sidebar-hoofdstukken";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
+import { NavigatieBewakingProvider } from "@/context/navigatie-bewaking";
+import { HierarchischeNavigatie } from "@/components/navigatie/hierarchische-navigatie";
 import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
 import { PaneelProvider, usePaneel } from "@/components/paneel/paneel-context";
@@ -54,6 +55,7 @@ import { BanenMenu } from "@/components/paneel/banen-menu";
 import { BanenWeergave } from "@/components/paneel/banen-weergave";
 import { isPaneelGeschikt } from "@/lib/paneel-geschiktheid";
 import { useToast } from "@/hooks/use-toast";
+import { OnboardingStoppenKnop } from "@/components/onboarding/onboarding-stoppen-knop";
 
 function PwaInstalleerKnop() {
   const [prompt, setPrompt] = useState<Event & { prompt: () => Promise<void> } | null>(null);
@@ -80,21 +82,6 @@ function PwaInstalleerKnop() {
     >
       <Monitor className="h-3.5 w-3.5 shrink-0" />
       <span>App op bureaublad installeren</span>
-    </button>
-  );
-}
-
-function TerugKnop() {
-  const { requestTerug } = useNavigatieBewaking();
-  return (
-    <button
-      onClick={requestTerug}
-      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
-      title="Terug"
-      type="button"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      <span className="hidden sm:inline">Terug</span>
     </button>
   );
 }
@@ -2061,7 +2048,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             style={{ backgroundColor: `hsl(var(--hoofdstuk-${hoofdstukVanRoute(location)}))` }}
           />
         )}
-        {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
+        {/* Universele topbalk — vaste structuur, onafhankelijk van browsergeschiedenis */}
         <div className={cn(
           "z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border",
           (location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? "flex-shrink-0" : "sticky top-0",
@@ -2073,8 +2060,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               FPS <span className="font-semibold text-muted-foreground">Connect</span>
             </span>
           </span>
-          <TerugKnop />
+          {!banenActief && <HierarchischeNavigatie />}
           <div className="ml-auto flex items-center gap-2">
+            {location.startsWith("/personeel/onboarden") && <OnboardingStoppenKnop />}
             {paneelBeschikbaar && <BanenMenu />}
             <ZijrandKnoppen metWerkbak />
             <DitWerktNietKnop />

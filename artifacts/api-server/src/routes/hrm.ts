@@ -1347,6 +1347,8 @@ async function maakArbeidsovereenkomstBijOnboarding(opts: {
   });
 }
 
+class OnboardingHerkomstOntbreektError extends Error {}
+
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
     const {
@@ -1355,7 +1357,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       in_dienst_sinds, uit_dienst_per, inleen_einddatum, noodcontact_naam, noodcontact_telefoon, geboortedatum,
       geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum,
       vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen,
-      verlofsoort_ids, jaar,
+      verlofsoort_ids, jaar, onboarding_afronden, onboarding_stroom,
     } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const fouteDatums = ongeldigeDatumvelden(req.body as Record<string, unknown>);
@@ -1434,6 +1436,25 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
     // Medewerker + arbeidsovereenkomst atomair: nooit een definitieve
     // medewerker zonder contract voor de bewaking (review-eis GEBRUIKERS_01).
     const m = await db.transaction(async (tx) => {
+      if (onboarding_afronden === true) {
+        const [vergrendeldeGebruiker] = await tx
+          .select({
+            id: gebruikersTable.id,
+            onboardingConceptOp: gebruikersTable.onboardingConceptOp,
+          })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, gebruikerId))
+          .for("update");
+        if (!vergrendeldeGebruiker) {
+          throw new Error("Gebruikersaccount verdween tijdens onboarding");
+        }
+        if (!vergrendeldeGebruiker.onboardingConceptOp) {
+          throw new OnboardingHerkomstOntbreektError(
+            "Dit account is niet door de onboardingstroom aangemaakt",
+          );
+        }
+      }
+
       const [rij] = await tx
       .insert(medewerkersTable)
       .values({
@@ -1468,7 +1489,16 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         ehboVervaldatum: ehbo_vervaldatum || null,
         bhvVervaldatum: bhv_vervaldatum || null,
         cvTekst: cv_tekst || null,
-        actief: actief ?? true,
+        actief: onboarding_afronden === true ? true : (actief ?? true),
+        medewerkerStatus: onboarding_afronden === true ? "actief" : undefined,
+        wizardVoortgang: onboarding_afronden === true
+          ? {
+              _versie: 1,
+              ...(typeof onboarding_stroom === "string" && onboarding_stroom
+                ? { _onboarding_stroom: onboarding_stroom }
+                : {}),
+            }
+          : undefined,
         opmerkingen,
       })
       .returning();
@@ -1486,6 +1516,12 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         uren: urenWaarde,
         aangemaaktDoorId: req.session.userId ?? null,
       }, tx);
+      if (onboarding_afronden === true) {
+        await tx
+          .update(gebruikersTable)
+          .set({ onboardingConceptOp: null })
+          .where(eq(gebruikersTable.id, gebruikerId));
+      }
       return rij;
     });
 
@@ -1529,8 +1565,116 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       ...(jongeWerknemer ? { jonge_werknemer: jongeWerknemer } : {}),
     });
   } catch (err) {
+    if (err instanceof OnboardingHerkomstOntbreektError) {
+      return void res.status(409).json({
+        error:
+          "Dit account is niet door de onboardingstroom aangemaakt en kan niet via onboarding worden afgerond.",
+        code: "ONBOARDING_PROVENANCE_REQUIRED",
+      });
+    }
     // Race met gelijktijdige onboarding: de unieke index op gebruiker_id is de
     // laatste wacht; vertaal een unique-violation naar hetzelfde 409-contract.
+    if (isUniekeGebruikerKoppeling(err)) {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+      });
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Een conceptmedewerker mag uitsluitend ontstaan bij een account dat stap 0
+// van dezelfde onboardingstroom zelf heeft aangemaakt. De algemene
+// medewerkerroute kan deze persistente herkomst nooit zetten.
+router.post("/medewerkers/onboarding-concept", schrijven, async (req, res): Promise<void> => {
+  const { naam, gebruiker_id, onboarding_stroom } = req.body ?? {};
+  const gebruikerId = parseId(gebruiker_id);
+  if (typeof naam !== "string" || !naam.trim()) {
+    return void res.status(400).json({ error: "naam is verplicht" });
+  }
+  if (!Number.isFinite(gebruikerId)) {
+    return void res.status(400).json({ error: "gebruiker_id is verplicht" });
+  }
+
+  try {
+    const werkgeverId = await werkgeverIdVoor("FPS Brandpreventie");
+    const resultaat = await db.transaction(async (tx) => {
+      const [gebruiker] = await tx
+        .select({
+          id: gebruikersTable.id,
+          onboardingConceptOp: gebruikersTable.onboardingConceptOp,
+        })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId))
+        .for("update");
+      if (!gebruiker) return { soort: "niet_gevonden" as const };
+      if (!gebruiker.onboardingConceptOp) {
+        return { soort: "geen_herkomst" as const };
+      }
+
+      const [bestaandeMedewerker] = await tx
+        .select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+      if (bestaandeMedewerker) {
+        return { soort: "al_medewerker" as const };
+      }
+      const [bestaandeAdviseur] = await tx
+        .select({ id: externeAdviseursTable.id })
+        .from(externeAdviseursTable)
+        .where(eq(externeAdviseursTable.gebruikerId, gebruikerId));
+      if (bestaandeAdviseur) {
+        return { soort: "externe_adviseur" as const };
+      }
+
+      const [medewerker] = await tx
+        .insert(medewerkersTable)
+        .values({
+          naam: naam.trim(),
+          gebruikerId,
+          werkmaatschappij: "FPS Brandpreventie",
+          werkgeverId,
+          actief: false,
+          medewerkerStatus: "concept",
+          wizardVoortgang: {
+            _versie: 0,
+            ...(typeof onboarding_stroom === "string" && onboarding_stroom
+              ? { _onboarding_stroom: onboarding_stroom }
+              : {}),
+          },
+        })
+        .returning();
+      return { soort: "aangemaakt" as const, medewerker };
+    });
+
+    if (resultaat.soort === "niet_gevonden") {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
+    }
+    if (resultaat.soort === "geen_herkomst") {
+      return void res.status(409).json({
+        error:
+          "Dit account is niet door de onboardingstroom aangemaakt en kan niet als onboardingconcept worden gebruikt.",
+        code: "ONBOARDING_PROVENANCE_REQUIRED",
+      });
+    }
+    if (resultaat.soort === "al_medewerker") {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+      });
+    }
+    if (resultaat.soort === "externe_adviseur") {
+      return void res.status(409).json({
+        error: "Dit account is geregistreerd als externe adviseur en hoort niet in het personeelsbestand.",
+        code: "IS_EXTERNE_ADVISEUR",
+      });
+    }
+
+    invalideerContext("medewerker", resultaat.medewerker.id);
+    res.status(201).json(await medewerkerNaarJson(resultaat.medewerker));
+  } catch (err) {
     if (isUniekeGebruikerKoppeling(err)) {
       return void res.status(409).json({
         error: "Deze gebruiker heeft al een medewerkerprofiel.",
@@ -1643,6 +1787,10 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
           bevoegdheden: {},
           herkomstProfielId: null,
         });
+        await tx
+          .update(gebruikersTable)
+          .set({ onboardingConceptOp: new Date() })
+          .where(eq(gebruikersTable.id, nieuw.id));
         return nieuw;
       });
     } catch (err) {
@@ -1654,7 +1802,10 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
         // alleen het id (geen rechten/rollen) en de aanroeper heeft al
         // personeel:2 (dezelfde gate als de rest van de onboarding).
         const [bestaande] = await db
-          .select({ id: gebruikersTable.id })
+          .select({
+            id: gebruikersTable.id,
+            onboardingConceptOp: gebruikersTable.onboardingConceptOp,
+          })
           .from(gebruikersTable)
           .where(sql`lower(${gebruikersTable.email}) = lower(${email.trim()})`);
         // Statusbewust, gelijk aan de onboarding-context: alleen een afgerond
@@ -1678,6 +1829,7 @@ router.post("/medewerkers/onboarding-account", schrijven, async (req, res): Prom
           error: "Dit e-mailadres is al in gebruik bij een andere gebruiker.",
           code: "EMAIL_ALREADY_EXISTS",
           bestaande_gebruiker_id: bestaande?.id ?? null,
+          heeft_onboarding_herkomst: Boolean(bestaande?.onboardingConceptOp),
           heeft_medewerkerprofiel: heeftMedewerkerprofiel,
           bestaande_medewerker_id: medewerkerId,
           medewerker_status: medewerkerStatus,
@@ -2009,6 +2161,16 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         code: "INVALID_ONBOARDING_VERSION",
       });
     }
+    if (
+      onboarding_afronden === true &&
+      gebruiker_id !== undefined &&
+      parseId(gebruiker_id) !== huidigeMedewerker.gebruikerId
+    ) {
+      return void res.status(409).json({
+        error: "Het gekoppelde account kan niet tijdens het afronden van de onboarding worden gewijzigd.",
+        code: "ONBOARDING_ACCOUNT_CHANGE_NOT_ALLOWED",
+      });
+    }
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, met de unieke index als laatste wacht).
     if (gebruiker_id != null) {
@@ -2067,16 +2229,41 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
     // Update + eventuele contractaanmaak atomair (zie POST /medewerkers).
     const resultaat = await db.transaction(async (tx) => {
     let afgerondeWizardVoortgang: Record<string, unknown> | undefined;
+    let vergrendeldeOnboardingGebruikerId: number | null = null;
     if (onboarding_afronden === true) {
+      if (!huidigeMedewerker.gebruikerId) {
+        return { soort: "geen-onboarding-herkomst" as const };
+      }
+      const [onboardingGebruiker] = await tx
+        .select({
+          id: gebruikersTable.id,
+          onboardingConceptOp: gebruikersTable.onboardingConceptOp,
+        })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, huidigeMedewerker.gebruikerId))
+        .for("update");
+      if (!onboardingGebruiker?.onboardingConceptOp) {
+        return { soort: "geen-onboarding-herkomst" as const };
+      }
+      vergrendeldeOnboardingGebruikerId = onboardingGebruiker.id;
+
       const [actueel] = await tx
         .select({
           medewerkerStatus: medewerkersTable.medewerkerStatus,
           wizardVoortgang: medewerkersTable.wizardVoortgang,
+          gebruikerId: medewerkersTable.gebruikerId,
         })
         .from(medewerkersTable)
         .where(eq(medewerkersTable.id, parseId(req.params.id)))
         .for("update");
       if (!actueel) return { soort: "niet-gevonden" as const };
+      if (actueel.gebruikerId !== vergrendeldeOnboardingGebruikerId) {
+        return {
+          soort: "onboarding-conflict" as const,
+          serverVersie: null,
+          medewerkerStatus: actueel.medewerkerStatus,
+        };
+      }
 
       const bestaandeVoortgang =
         (actueel.wizardVoortgang as Record<string, unknown> | null) ?? {};
@@ -2106,7 +2293,9 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       .update(medewerkersTable)
       .set({
         naam,
-        gebruikerId: gebruiker_id !== undefined ? nieuweGebruikerId : undefined,
+        gebruikerId: onboarding_afronden === true
+          ? undefined
+          : (gebruiker_id !== undefined ? nieuweGebruikerId : undefined),
         email,
         telefoon,
         mobiel,
@@ -2165,6 +2354,12 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         aangemaaktDoorId: req.session.userId ?? null,
       }, tx);
     }
+    if (onboarding_afronden === true && vergrendeldeOnboardingGebruikerId) {
+      await tx
+        .update(gebruikersTable)
+        .set({ onboardingConceptOp: null })
+        .where(eq(gebruikersTable.id, vergrendeldeOnboardingGebruikerId));
+    }
     return { soort: "bijgewerkt" as const, rij };
     });
     if (resultaat.soort === "niet-gevonden") {
@@ -2176,6 +2371,13 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         code: "ONBOARDING_VERSION_CONFLICT",
         server_versie: resultaat.serverVersie,
         medewerker_status: resultaat.medewerkerStatus,
+      });
+    }
+    if (resultaat.soort === "geen-onboarding-herkomst") {
+      return void res.status(409).json({
+        error:
+          "Dit account is niet door de onboardingstroom aangemaakt en kan niet via onboarding worden afgerond.",
+        code: "ONBOARDING_PROVENANCE_REQUIRED",
       });
     }
     const m = resultaat.rij;

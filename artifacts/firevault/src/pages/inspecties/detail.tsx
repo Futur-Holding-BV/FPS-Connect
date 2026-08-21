@@ -41,6 +41,7 @@ import {
   Trash2, Camera, Wrench, RefreshCw, Image, ExternalLink,
 } from "lucide-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -345,6 +346,7 @@ const LEEG_FORM: BevindingForm = {
 };
 
 export default function InspectieDetail() {
+  const { requestNavigatie } = useNavigatieBewaking();
   const { id } = useParams<{ id: string }>();
   const inspectieId = parseInt(id ?? "0");
   const { toast } = useToast();
@@ -421,7 +423,7 @@ export default function InspectieDetail() {
       onSuccess: (data) => {
         setHerinspectieOpen(false);
         toast({ title: "Herinspectie ingepland" });
-        window.location.href = `/inspecties/${data.id}`;
+        requestNavigatie(`/inspecties/${data.id}`);
       },
       onError: () => toast({ title: "Herinspectie aanmaken mislukt", variant: "destructive" }),
     },

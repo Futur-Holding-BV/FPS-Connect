@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useZetAssistentLabel } from "@/lib/assistent-context";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import {
   useGetOfferte,
   useUpdateOfferte,
@@ -205,6 +206,7 @@ export default function ProposalStudio() {
   const offerteId = parseInt(id ?? "0", 10);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { requestNavigatie } = useNavigatieBewaking();
   const { heeftNiveau } = useBevoegdheid();
   const kanSchrijven = heeftNiveau("offertes", 2);
   const kanIntrekken = heeftNiveau("offertes", 3);
@@ -265,7 +267,7 @@ export default function ProposalStudio() {
         void queryClient.invalidateQueries({ queryKey: getListOpdrachtenQueryKey(opdrachtenParams as Parameters<typeof getListOpdrachtenQueryKey>[0]) });
         toast({ title: "Opdracht aangemaakt" });
         setMaakOpdrachtDialoog(false);
-        window.location.href = `/opdrachten/${data.id}`;
+        requestNavigatie(`/opdrachten/${data.id}`);
       },
       onError: (err: unknown) => {
         const status = (err as { response?: { status?: number } })?.response?.status;
@@ -901,7 +903,7 @@ export default function ProposalStudio() {
                   <Badge variant="outline" className="px-3 py-1 text-sm font-normal bg-blue-50 text-blue-700 border-blue-200">
                     <Hammer className="h-3 w-3 mr-1.5" />
                     Op basis van calculatie:{" "}
-                    <Link href={`/modules/calculaties/${offerte.calculatie_id}`} className="ml-1 font-semibold hover:underline text-blue-700">
+                    <Link href={`/modules/calculatie/${offerte.calculatie_id}`} className="ml-1 font-semibold hover:underline text-blue-700">
                       {offerte.calculatie_naam || `#${offerte.calculatie_id}`}
                     </Link>
                   </Badge>

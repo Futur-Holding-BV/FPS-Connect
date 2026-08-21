@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, ExternalLink, Archive, CircleAlert, ListTodo, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 
 const BRON_LABELS: Record<string, string> = {
   goedkeuringsaanvraag: "Goedkeuring",
@@ -91,7 +92,8 @@ export function WerkbakInhoud({ onNavigeer, actief = true }: { onNavigeer: () =>
 }
 
 function WerkbakItemKaart({ item, onNavigeer }: { item: WerkbakItem; onNavigeer: () => void }) {
-  const [, navigeer] = useLocation();
+  const [locatie] = useLocation();
+  const { requestNavigatie } = useNavigatieBewaking();
   const [wegzetten, setWegzetten] = useState(false);
   const [reden, setReden] = useState("");
   const { toast } = useToast();
@@ -151,7 +153,12 @@ function WerkbakItemKaart({ item, onNavigeer }: { item: WerkbakItem; onNavigeer:
               size="sm"
               variant="outline"
               className="h-7 text-xs"
-              onClick={() => { navigeer(item.actie_pad!); onNavigeer(); }}
+              onClick={() => {
+                requestNavigatie(item.actie_pad!, {
+                  instroom: { label: "Werkbak", pad: locatie },
+                });
+                onNavigeer();
+              }}
               data-testid={`knop-open-item-${item.id}`}
             >
               <ExternalLink className="h-3 w-3 mr-1" /> Openen

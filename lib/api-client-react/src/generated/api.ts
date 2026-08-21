@@ -867,6 +867,8 @@ import type {
   OnboardingAccountConflict,
   OnboardingAccountInput,
   OnboardingAccountResultaat,
+  OnboardingAnnulerenResultaat,
+  OnboardingConceptInput,
   OnboardingContext,
   OnboardingFout,
   OnboardingVoorstelInvoer,
@@ -33226,6 +33228,76 @@ export const useCreateOnboardingAccount = <TError = ErrorType<void | OnboardingA
       return useMutation(getCreateOnboardingAccountMutationOptions(options));
     }
 
+export const getCreateOnboardingConceptUrl = () => {
+
+
+
+
+  return `/api/medewerkers/onboarding-concept`
+}
+
+/**
+ * @summary Maak een conceptmedewerker voor een aantoonbaar door stap 0 aangemaakt onboardingaccount
+ */
+export const createOnboardingConcept = async (onboardingConceptInput: OnboardingConceptInput, options?: RequestInit): Promise<Medewerker> => {
+
+  return customFetch<Medewerker>(getCreateOnboardingConceptUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onboardingConceptInput)
+  }
+);}
+
+
+
+
+export const getCreateOnboardingConceptMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingConcept>>, TError,{data: BodyType<OnboardingConceptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOnboardingConcept>>, TError,{data: BodyType<OnboardingConceptInput>}, TContext> => {
+
+const mutationKey = ['createOnboardingConcept'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOnboardingConcept>>, {data: BodyType<OnboardingConceptInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOnboardingConcept(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOnboardingConceptMutationResult = NonNullable<Awaited<ReturnType<typeof createOnboardingConcept>>>
+    export type CreateOnboardingConceptMutationBody = BodyType<OnboardingConceptInput>
+    export type CreateOnboardingConceptMutationError = ErrorType<void>
+
+    /**
+ * @summary Maak een conceptmedewerker voor een aantoonbaar door stap 0 aangemaakt onboardingaccount
+ */
+export const useCreateOnboardingConcept = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingConcept>>, TError,{data: BodyType<OnboardingConceptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOnboardingConcept>>,
+        TError,
+        {data: BodyType<OnboardingConceptInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOnboardingConceptMutationOptions(options));
+    }
+
 export const getListExterneAdviseursUrl = () => {
 
 
@@ -37031,6 +37103,77 @@ export function useGetWizardStatus<TData = Awaited<ReturnType<typeof getWizardSt
 
 
 
+
+export const getCancelOnboardingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/onboarding`
+}
+
+/**
+ * Verwijdert uitsluitend een onafgeronde onboarding, het eventuele medewerkerconcept, gekoppelde onboardinggegevens en het gebruikersaccount. Afgeronde, actieve of operationele accounts worden geweigerd.
+ * @summary Annuleer een onafgeronde onboarding en verwijder het gekoppelde account
+ */
+export const cancelOnboarding = async (id: number, options?: RequestInit): Promise<OnboardingAnnulerenResultaat> => {
+
+  return customFetch<OnboardingAnnulerenResultaat>(getCancelOnboardingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getCancelOnboardingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOnboarding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelOnboarding>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['cancelOnboarding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelOnboarding>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelOnboarding(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof cancelOnboarding>>>
+
+    export type CancelOnboardingMutationError = ErrorType<void>
+
+    /**
+ * @summary Annuleer een onafgeronde onboarding en verwijder het gekoppelde account
+ */
+export const useCancelOnboarding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOnboarding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelOnboarding>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCancelOnboardingMutationOptions(options));
+    }
 
 export const getPatchWizardVoortgangUrl = (id: number,) => {
 

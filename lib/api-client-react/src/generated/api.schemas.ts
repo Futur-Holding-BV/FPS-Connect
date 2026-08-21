@@ -7171,7 +7171,7 @@ export interface MedewerkerInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
-  /** Rond een bestaand onboardingprofiel in dezelfde transactie af als deze medewerkerupdate. */
+  /** Rond het onboardingprofiel in dezelfde transactie af en wis de tijdelijke onboardingherkomst. */
   onboarding_afronden?: boolean;
   /**
      * Verplichte versie uit wizard-status wanneer onboarding_afronden true is.
@@ -7192,6 +7192,15 @@ export interface OnboardingAccountInput {
   telefoon?: string | null;
   /** Verstuur direct een activatie-uitnodiging per e-mail. */
   uitnodigen?: boolean;
+}
+
+/**
+ * Start een conceptmedewerker uitsluitend voor een account waarvan de server-side onboardingherkomst al door stap 0 is vastgelegd.
+ */
+export interface OnboardingConceptInput {
+  naam: string;
+  gebruiker_id: number;
+  onboarding_stroom?: string;
 }
 
 export interface OnboardingAccountResultaat {
@@ -7221,6 +7230,8 @@ export interface OnboardingAccountConflict {
   code: OnboardingAccountConflictCode;
   /** @nullable */
   bestaande_gebruiker_id: number | null;
+  /** Alleen true wanneer stap 0 dit account aantoonbaar als onafgerond onboardingaccount heeft aangemaakt. */
+  heeft_onboarding_herkomst: boolean;
   /** Alleen true bij een afgerond of regulier medewerkerprofiel; alle onafgeronde onboardingstatussen zijn hervatbaar. */
   heeft_medewerkerprofiel: boolean;
   /**
@@ -19121,6 +19132,13 @@ export interface WizardVoortgangInput {
   opnieuw_starten?: boolean;
   /** Wizardtype dat bij deze voortgang hoort; wordt gebruikt om een onafgeronde onboarding in de juiste stroom te hervatten. */
   onboarding_stroom?: string;
+}
+
+export interface OnboardingAnnulerenResultaat {
+  gebruiker_id: number;
+  /** @nullable */
+  medewerker_id: number | null;
+  account_verwijderd: boolean;
 }
 
 export interface HrmMiddel {

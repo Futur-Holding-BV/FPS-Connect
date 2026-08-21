@@ -3,6 +3,8 @@ import { Router as WouterRouter, useLocation } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import { X, Copy } from "lucide-react";
 import { ConnectRoutes } from "@/routes/connect-routes";
+import { HierarchischeNavigatie } from "@/components/navigatie/hierarchische-navigatie";
+import { NavigatieBewakingProvider } from "@/context/navigatie-bewaking";
 import { normaliseerPad, isPaneelGeschikt } from "@/lib/paneel-geschiktheid";
 import { cn } from "@/lib/utils";
 
@@ -134,15 +136,20 @@ export function Baan({
       />
       <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
         <WouterRouter hook={loc.hook}>
-          <BaanBewaker
-            index={index}
-            onPadWijzig={meldPad}
-            onNietGeschikt={onNietGeschikt}
-            onSchermnaam={setSchermnaam}
-          />
-          <div className="p-3 md:p-4">
-            <ConnectRoutes />
-          </div>
+          <NavigatieBewakingProvider>
+            <BaanBewaker
+              index={index}
+              onPadWijzig={meldPad}
+              onNietGeschikt={onNietGeschikt}
+              onSchermnaam={setSchermnaam}
+            />
+            <div className="sticky top-0 z-10 border-b border-border bg-background">
+              <HierarchischeNavigatie compact />
+            </div>
+            <div className="p-3 md:p-4">
+              <ConnectRoutes />
+            </div>
+          </NavigatieBewakingProvider>
         </WouterRouter>
       </div>
     </div>

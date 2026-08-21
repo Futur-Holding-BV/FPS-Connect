@@ -2461,6 +2461,7 @@ KOLOM|gebruikers|laatst_online|timestamp without time zone|YES|
 KOLOM|gebruikers|mislukte_pogingen|integer|NO|0
 KOLOM|gebruikers|moet_wachtwoord_wijzigen|boolean|NO|false
 KOLOM|gebruikers|naam|text|NO|
+KOLOM|gebruikers|onboarding_concept_op|timestamp without time zone|YES|
 KOLOM|gebruikers|rol|text|NO|'gebruiker'::text
 KOLOM|gebruikers|taal|text|NO|'nl'::text
 KOLOM|gebruikers|telefoon|text|YES|

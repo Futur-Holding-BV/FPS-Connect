@@ -85,6 +85,7 @@ import type {
 } from "@workspace/api-client-react";
 import { MODULES, NIVEAUS as RECHTEN_NIVEAUS } from "@workspace/permissies";
 import { useRol } from "@/context/rol-context";
+import { useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1044,6 +1045,7 @@ export default function MedewerkerDetailPagina() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
   const [, navigate] = useLocation();
+  const { requestNavigatie } = useNavigatieBewaking();
   const search = useSearch();
   const zoekParams = new URLSearchParams(search);
   const contractIdUitZoekstring = Number(zoekParams.get("contract_id"));
@@ -1405,7 +1407,7 @@ export default function MedewerkerDetailPagina() {
       await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
       toast({ title: "Medewerker verwijderd" });
-      window.history.back();
+      requestNavigatie("/personeel");
     } catch {
       toast({ title: "Verwijderen mislukt", variant: "destructive" });
     }
@@ -2301,7 +2303,12 @@ export default function MedewerkerDetailPagina() {
 
       <Tabs
         value={zoekParams.get("tab") ?? "contracten"}
-        onValueChange={(tab) => navigate(tab === "contracten" ? `/personeel/${id}` : `/personeel/${id}?tab=${tab}`)}
+        onValueChange={(tab) =>
+          requestNavigatie(
+            tab === "contracten" ? `/personeel/${id}` : `/personeel/${id}?tab=${tab}`,
+            { vervang: true },
+          )
+        }
       >
         <TabsList>
           <TabsTrigger value="contracten">Contracten</TabsTrigger>

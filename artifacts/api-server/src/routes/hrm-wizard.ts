@@ -6,6 +6,7 @@ import {
   medewerkerAanstellingenTable,
   medewerkerDocumentenTable,
   gebruikersTable,
+  externeAdviseursTable,
   hrmMiddelenTable,
   hrmOnboardingTakenTable,
   hrmAiVoorstellenTable,
@@ -21,6 +22,8 @@ import {
   isHervatbareOnboardingStatus,
 } from "../lib/hrmOnboardingStatus";
 import { controleerFunctiesVoorActor } from "../lib/functie-rechten-autorisatie";
+import { invalideerContext } from "../lib/aiContext";
+import { vindBlokkerendeOnboardingAfhankelijkheden } from "../lib/onboardingAnnulering";
 
 const router = Router();
 
@@ -182,6 +185,231 @@ router.get("/medewerkers/:id/wizard-status", lezen, async (req, res): Promise<vo
     // 6-decimalen string zodat het resume-effect de lock met volledige precisie zaait.
     bijgewerkt_op: m.bijgewerkt_op ?? null,
   });
+});
+
+router.delete("/gebruikers/:id/onboarding", schrijven, async (req, res): Promise<void> => {
+  const gebruikerId = parseInt(String(req.params.id), 10);
+  if (isNaN(gebruikerId)) return void res.status(400).json({ error: "Ongeldig id" });
+  if (req.session.userId === gebruikerId) {
+    return void res.status(409).json({
+      error: "U kunt uw eigen account niet via een onboarding annuleren.",
+      code: "ONBOARDING_EIGEN_ACCOUNT",
+    });
+  }
+
+  try {
+    const resultaat = await db.transaction(async (tx) => {
+      const gebruikerResultaat = await tx.execute<{
+        id: number;
+        rol: string;
+        is_hoofdtester: boolean;
+        onboarding_concept_op: Date | null;
+      }>(sql`
+        SELECT
+          g.id,
+          g.rol,
+          g.is_hoofdtester,
+          g.onboarding_concept_op
+        FROM gebruikers g
+        WHERE g.id = ${gebruikerId}
+        FOR UPDATE
+      `);
+      const gebruiker = gebruikerResultaat.rows[0];
+      if (!gebruiker) return { soort: "niet_gevonden" as const };
+
+      const medewerkerResultaat = await tx.execute<{
+        id: number;
+        gebruiker_id: number | null;
+        functie_id: number | null;
+        medewerker_status: string | null;
+      }>(sql`
+        SELECT id, gebruiker_id, functie_id, medewerker_status
+        FROM medewerkers
+        WHERE gebruiker_id = ${gebruikerId}
+        FOR UPDATE
+      `);
+      const medewerker = medewerkerResultaat.rows[0] ?? null;
+
+      if (medewerker) {
+        const functieControle = await controleerFunctiesVoorActor(req.permissies, [
+          medewerker.functie_id,
+        ]);
+        if (!functieControle.ok) {
+          return {
+            soort: "niet_toegestaan" as const,
+            status: functieControle.status,
+            body: functieControle.body,
+          };
+        }
+        if (!isHervatbareOnboardingStatus(medewerker.medewerker_status)) {
+          return { soort: "afgerond" as const };
+        }
+      }
+
+      const [adviseur] = await tx
+        .select({ id: externeAdviseursTable.id })
+        .from(externeAdviseursTable)
+        .where(eq(externeAdviseursTable.gebruikerId, gebruikerId))
+        .limit(1);
+      if (!gebruiker.onboarding_concept_op) {
+        return { soort: "geen_onboarding_herkomst" as const };
+      }
+      if (
+        adviseur ||
+        gebruiker.rol !== "gebruiker" ||
+        gebruiker.is_hoofdtester
+      ) {
+        return { soort: "operationeel_account" as const };
+      }
+
+      const blokkerendeAccountKoppelingen =
+        await vindBlokkerendeOnboardingAfhankelijkheden(
+          tx,
+          "gebruikers",
+          gebruikerId,
+        );
+      const blokkerendeMedewerkerKoppelingen = medewerker
+        ? await vindBlokkerendeOnboardingAfhankelijkheden(
+            tx,
+            "medewerkers",
+            medewerker.id,
+          )
+        : [];
+      const blokkerendeKoppelingen = [
+        ...blokkerendeAccountKoppelingen,
+        ...blokkerendeMedewerkerKoppelingen,
+      ];
+      if (blokkerendeKoppelingen.length > 0) {
+        return {
+          soort: "operationele_koppelingen" as const,
+          koppelingen: blokkerendeKoppelingen,
+        };
+      }
+
+      const documenten = medewerker
+        ? await tx
+            .select({ objectPath: medewerkerDocumentenTable.objectPath })
+            .from(medewerkerDocumentenTable)
+            .where(eq(medewerkerDocumentenTable.medewerkerId, medewerker.id))
+        : [];
+
+      let verwijderdMedewerkerId: number | null = null;
+      if (medewerker) {
+        const [verwijderd] = await tx
+          .delete(medewerkersTable)
+          .where(
+            and(
+              eq(medewerkersTable.id, medewerker.id),
+              eq(medewerkersTable.gebruikerId, gebruikerId),
+              inArray(
+                medewerkersTable.medewerkerStatus,
+                [...HERVATBARE_ONBOARDING_STATUSSEN],
+              ),
+            ),
+          )
+          .returning({ id: medewerkersTable.id });
+
+        if (!verwijderd) return { soort: "gelijktijdig_gewijzigd" as const };
+        verwijderdMedewerkerId = verwijderd.id;
+      }
+
+      await tx.execute(sql`
+        DELETE FROM "session"
+        WHERE sess->>'userId' = ${String(gebruikerId)}
+      `);
+      const [verwijderdeGebruiker] = await tx
+        .delete(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId))
+        .returning({ id: gebruikersTable.id });
+      if (!verwijderdeGebruiker) {
+        return { soort: "gelijktijdig_gewijzigd" as const };
+      }
+
+      await logActiviteit(
+        {
+          type: "onboarding_geannuleerd",
+          gebruikerId: req.session.userId ?? null,
+          omschrijving:
+            "Een onafgeronde onboarding, het medewerkerconcept en het gekoppelde gebruikersaccount zijn verwijderd.",
+        },
+        tx,
+      );
+      return {
+        soort: "verwijderd" as const,
+        gebruikerId: verwijderdeGebruiker.id,
+        medewerkerId: verwijderdMedewerkerId,
+        documenten,
+      };
+    });
+
+    if (resultaat.soort === "niet_gevonden") {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+    }
+    if (resultaat.soort === "niet_toegestaan") {
+      return void res.status(resultaat.status).json(resultaat.body);
+    }
+    if (resultaat.soort === "afgerond" || resultaat.soort === "gelijktijdig_gewijzigd") {
+      return void res.status(409).json({
+        error: "Alleen een onafgeronde onboarding kan via deze actie worden verwijderd.",
+        code: "ONBOARDING_NIET_ANNULEERBAAR",
+      });
+    }
+    if (resultaat.soort === "operationeel_account") {
+      return void res.status(409).json({
+        error:
+          "Dit account is al operationeel of heeft een afgerond extern profiel en kan niet als onafgeronde onboarding worden verwijderd.",
+        code: "ONBOARDING_ACCOUNT_OPERATIONEEL",
+      });
+    }
+    if (resultaat.soort === "geen_onboarding_herkomst") {
+      return void res.status(409).json({
+        error:
+          "Dit account heeft geen aantoonbare onafgeronde onboarding en kan daarom niet via deze actie worden verwijderd.",
+        code: "ONBOARDING_PROVENANCE_REQUIRED",
+      });
+    }
+    if (resultaat.soort === "operationele_koppelingen") {
+      return void res.status(409).json({
+        error:
+          "Deze onboarding kan niet worden verwijderd omdat het account of profiel al operationele gegevens heeft.",
+        code: "ONBOARDING_OPERATIONAL_DEPENDENCIES",
+        koppelingen: resultaat.koppelingen,
+      });
+    }
+
+    const storage = new ObjectStorageService();
+    for (const document of resultaat.documenten) {
+      try {
+        await storage.deleteObjectEntity(document.objectPath);
+      } catch (err) {
+        logger.warn(
+          { err, medewerkerId: resultaat.medewerkerId, gebruikerId },
+          "Onboardingdocument kon na annuleren niet uit objectopslag worden verwijderd",
+        );
+      }
+    }
+
+    if (resultaat.medewerkerId !== null) {
+      invalideerContext("medewerker", resultaat.medewerkerId);
+    }
+
+    return void res.json({
+      gebruiker_id: resultaat.gebruikerId,
+      medewerker_id: resultaat.medewerkerId,
+      account_verwijderd: true,
+    });
+  } catch (err) {
+    const databaseError = err as { code?: string };
+    if (databaseError.code === "23503") {
+      return void res.status(409).json({
+        error:
+          "Deze onboarding heeft al operationele koppelingen en kan daarom niet automatisch worden verwijderd.",
+        code: "ONBOARDING_HEEFT_AFHANKELIJKHEDEN",
+      });
+    }
+    logger.error({ err, gebruikerId }, "Onboarding annuleren mislukt");
+    return void res.status(500).json({ error: "Onboarding annuleren mislukt" });
+  }
 });
 
 router.patch("/medewerkers/:id/wizard-voortgang", schrijven, async (req, res): Promise<void> => {

@@ -1,6 +1,7 @@
 import { KenmerkKop } from "@/components/kenmerk-kop";
 import { useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
+import { useUrlTabNavigatie } from "@/hooks/use-url-tab-navigatie";
 import {
   useGetGebouw,
   useUpdateGebouw,
@@ -65,7 +66,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  ArrowLeft,
   Layers,
   Users,
   X,
@@ -571,7 +571,8 @@ export default function GebouwDetail() {
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
   const search = useSearch();
-  const [segment, setSegment] = useState(() => new URLSearchParams(search).get("tab") ?? "dashboard");
+  const segment = new URLSearchParams(search).get("tab") ?? "dashboard";
+  const setSegment = useUrlTabNavigatie();
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
   const [archiveerBezig, setArchiveerBezig] = useState(false);
@@ -749,11 +750,6 @@ export default function GebouwDetail() {
 
       {/* ── Compacte header ── */}
       <div data-testid="projectkop" className="flex items-center gap-3">
-        <Link href="/gebouwen">
-          <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 xl:flex-nowrap">
           <KenmerkKop kenmerk={(gebouw as any).kenmerk ?? gebouw.werknummer} />
           <h1

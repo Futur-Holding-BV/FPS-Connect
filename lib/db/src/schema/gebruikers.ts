@@ -37,6 +37,10 @@ export const gebruikersTable = pgTable("gebruikers", {
   uitnodigingGeopendOp: timestamp("uitnodiging_geopend_op"),
   uitnodigingOpnieuwVerstuurdOp: timestamp("uitnodiging_opnieuw_verstuurd_op"),
   uitnodigingGeaccepteerdOp: timestamp("uitnodiging_geaccepteerd_op"),
+  // Server-side provenance voor een nog onafgeronde onboarding. Alleen de
+  // onboardingroutes zetten/wissen dit veld; de annuleerroute vereist het
+  // voordat account + concept hard verwijderd mogen worden.
+  onboardingConceptOp: timestamp("onboarding_concept_op"),
   taal: text("taal").notNull().default("nl"),
   functietitels: text("functietitels").array().notNull().default([]),
   // Bevoegdheden-matrix: module-id -> niveau (0-4). Bron van toegang voor de
