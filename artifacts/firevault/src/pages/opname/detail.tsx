@@ -6,6 +6,7 @@ import { useParams, Link } from "wouter";
 import {
   useGetOpname,
   useOpnameSpotsAanmaken,
+  useListModCalculaties, getListModCalculatiesQueryKey,
   type OpnameSpotsAanmakenResultaat,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,8 @@ import {
   MapPin,
   Package,
   Sparkles,
+  Calculator,
+  ExternalLink,
 } from "lucide-react";
 
 const ACTIE_LABEL: Record<string, string> = {
@@ -70,6 +73,9 @@ export default function OpnameDetailPagina() {
   const isDefinitief = opname?.status === "definitief";
   const heeftGebouw = Boolean(opname?.gebouw_id);
   const kanSpotsAanmaken = kanSchrijven && isDefinitief && heeftGebouw && resultaat === null;
+
+  const { data: calculaties } = useListModCalculaties(undefined, { query: { enabled: !!opname?.id, queryKey: getListModCalculatiesQueryKey(undefined) } });
+  const gekoppeldeCalculaties = (calculaties ?? []).filter((c: any) => c.opname_id === opname?.id);
 
   async function maakSpotsAan() {
     if (!opname) return;
@@ -162,6 +168,36 @@ export default function OpnameDetailPagina() {
         <Card className="mb-5">
           <CardContent className="p-4 text-sm text-muted-foreground">
             {opname.notities}
+          </CardContent>
+        </Card>
+      )}
+
+      {gekoppeldeCalculaties.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-primary" /> Gekoppelde Calculaties
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {gekoppeldeCalculaties.map((calc: any) => (
+                <div key={calc.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{calc.titel}</p>
+                      <Badge variant="outline" className="text-xs">{calc.status}</Badge>
+                    </div>
+                    {calc.klanttekst && <p className="text-xs text-muted-foreground mt-0.5 truncate">{calc.klanttekst}</p>}
+                  </div>
+                  <Link href={`/modules/calculatie/${calc.id}`}>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      Naar calculatie <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

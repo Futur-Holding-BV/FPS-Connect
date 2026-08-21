@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useSearch } from "wouter";
 import {
   useListAanvraagVoorstellen,
   useAccepteerAanvraagVoorstel,
@@ -34,8 +34,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Sparkles, Check, X, Mail, Paperclip, Send, Building2, Target,
-  ExternalLink, AlertTriangle, Inbox, Clock,
+  Sparkles, Check, X, CheckCircle2, Mail, Paperclip, Send, FileText, Building2, Target,
+  ExternalLink, AlertTriangle, Inbox, Clock, User, Quote, Phone,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -48,18 +48,30 @@ const STATUS_KLEUR: Record<string, string> = {
   geaccepteerd: "bg-emerald-100 text-emerald-700 border-emerald-200",
   afgewezen: "bg-gray-100 text-gray-500 border-gray-200",
 };
-const BV_OPTIES = ["FPS Bouw", "FPS Brandpreventie", "FPS Onderhoud"];
+
+
+type AiKlantKandidaat = { id: number, naam: string, redenen: string[], sterkte: string };
+
+type AiBronBewijsSlot = { waarde?: string | null, bron_zin?: string | null };
 
 type AiVoorstel = {
   titel?: string | null;
+  werkzaamheden?: string | null;
+  contact_naam?: string | null;
+  contact_email?: string | null;
+  contact_telefoon?: string | null;
   klant_id?: number | null;
   klant_naam?: string | null;
+  klant_adres?: string | null;
+  klant_postcode?: string | null;
+  klant_stad?: string | null;
   klant_onbekend?: boolean;
-  klant_kandidaten?: string[];
+  klant_kandidaten?: AiKlantKandidaat[];
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   gebouw_adres?: string | null;
   gebouw_stad?: string | null;
+  gebouw_postcode?: string | null;
   bv?: string | null;
   meerwerk_project_id?: number | null;
   meerwerk_project_naam?: string | null;
@@ -68,6 +80,25 @@ type AiVoorstel = {
   ontbrekende_stukken?: string[];
   samenvatting?: string | null;
   onzekere_velden?: string[];
+  bron_bewijs?: {
+    organisatienaam?: AiBronBewijsSlot;
+    opdrachtgever_adres?: AiBronBewijsSlot;
+    opdrachtgever_postcode?: AiBronBewijsSlot;
+    opdrachtgever_stad?: AiBronBewijsSlot;
+    contactpersoon?: AiBronBewijsSlot;
+    email?: AiBronBewijsSlot;
+    telefoon?: AiBronBewijsSlot;
+    gebouwnaam?: AiBronBewijsSlot;
+    adres?: AiBronBewijsSlot;
+    stad?: AiBronBewijsSlot;
+    postcode?: AiBronBewijsSlot;
+    titel?: AiBronBewijsSlot;
+    werkzaamheden?: AiBronBewijsSlot;
+    bv?: AiBronBewijsSlot;
+    werknummer?: AiBronBewijsSlot;
+    ontbrekende_stukken?: AiBronBewijsSlot;
+    samenvatting?: AiBronBewijsSlot;
+  };
 };
 
 function ai(v: AanvraagVoorstel): AiVoorstel {
@@ -77,12 +108,23 @@ function ai(v: AanvraagVoorstel): AiVoorstel {
 export default function CrmAanvragenPagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const zoekString = useSearch();
   const [statusFilter, setStatusFilter] = useState("open");
   const [accepteerVoor, setAccepteerVoor] = useState<AanvraagVoorstel | null>(null);
   const [antwoordVoor, setAntwoordVoor] = useState<AanvraagVoorstel | null>(null);
 
   const { data: voorstellen = [], isLoading } = useListAanvraagVoorstellen();
   const { data: intake } = useGetAanvraagIntakeInstellingen();
+
+  useEffect(() => {
+    const voorstelId = Number(new URLSearchParams(zoekString).get("voorstel"));
+    if (!Number.isInteger(voorstelId) || voorstelId <= 0 || voorstellen.length === 0) return;
+    const voorstel = voorstellen.find((item) => item.id === voorstelId);
+    if (!voorstel) return;
+    setStatusFilter(voorstel.status === "open" ? "open" : "alle");
+    setAccepteerVoor(voorstel);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [voorstellen, zoekString]);
 
   const invalideer = () => {
     void qc.invalidateQueries({ queryKey: getListAanvraagVoorstellenQueryKey() });
@@ -236,6 +278,15 @@ export default function CrmAanvragenPagina() {
                             <Paperclip className="w-3 h-3" /> {b.naam}
                           </a>
                         ))}
+                        {v.inbox_item_id != null ? (
+                          <a href={`/api/aanvragen/voorstellen/${v.id}/bronbestand`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                            <FileText className="w-3 h-3" /> Primair bronbestand
+                          </a>
+                        ) : (
+                          <Link href="/werk-inbox" className="text-primary hover:underline flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> Bronmail in Werk-inbox
+                          </Link>
+                        )}
                         {v.projectkans_id != null && (
                           <Link href="/crm/projectkansen" className="text-primary hover:underline flex items-center gap-1">
                             <Target className="w-3 h-3" /> Projectkans #{v.projectkans_id}
@@ -253,7 +304,7 @@ export default function CrmAanvragenPagina() {
                       )}
                       {(a.ontbrekende_stukken ?? []).length > 0 && (
                         <p className="text-xs mt-1.5 text-amber-700">
-                          Ontbreekt om te calculeren: {(a.ontbrekende_stukken ?? []).join(", ")}
+                          Calculatiestap — nog nodig: {(a.ontbrekende_stukken ?? []).join(", ")}
                         </p>
                       )}
                     </div>
@@ -281,11 +332,40 @@ export default function CrmAanvragenPagina() {
       )}
 
       {accepteerVoor && (
-        <AccepteerDialog voorstel={accepteerVoor} onSluit={() => setAccepteerVoor(null)} onKlaar={() => { setAccepteerVoor(null); invalideer(); }} />
+        <AccepteerDialog
+          voorstel={accepteerVoor}
+          onSluit={() => setAccepteerVoor(null)}
+          onKlaar={() => {
+            setAccepteerVoor(null);
+            invalideer();
+          }}
+        />
       )}
       {antwoordVoor && (
         <AntwoordDialog voorstel={antwoordVoor} onSluit={() => setAntwoordVoor(null)} onKlaar={() => { setAntwoordVoor(null); invalideer(); }} />
       )}
+    </div>
+  );
+}
+
+function FieldWithEvidence({ label, value, bronZin, unconfirmed, children }: { label: string; value?: string | null; bronZin?: string | null; unconfirmed?: boolean; children: React.ReactNode }) {
+  const hasEvidence = !!bronZin;
+  return (
+    <div className="space-y-1">
+      <Label className="flex items-center justify-between">
+        <span>{label}</span>
+      </Label>
+      <div className="flex flex-col gap-1.5">
+        <div className={`relative rounded-md border transition-colors focus-within:ring-1 focus-within:ring-ring ${unconfirmed ? 'bg-amber-50 border-amber-200 focus-within:border-amber-400' : 'bg-background'}`}>
+          {children}
+        </div>
+        {hasEvidence && (
+          <div className="flex gap-2 p-2 bg-muted/50 rounded-md border text-xs text-muted-foreground mt-0.5" data-testid={`bewijs-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Quote className="w-3.5 h-3.5 shrink-0 mt-0.5 opacity-50" />
+            <p className="italic leading-snug">"{bronZin}"</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -305,6 +385,13 @@ function AfwijsKnop({ voorstel, onKlaar }: { voorstel: AanvraagVoorstel; onKlaar
   );
 }
 
+
+function isZwak(s: string) {
+  if (!s) return false;
+  s = s.toLowerCase();
+  return s.includes("zwak") || s.includes("laag") || s.includes("ambigu") || s.includes("low");
+}
+
 function AccepteerDialog({ voorstel, onSluit, onKlaar }: { voorstel: AanvraagVoorstel; onSluit: () => void; onKlaar: () => void }) {
   const { toast } = useToast();
   const a = ai(voorstel);
@@ -312,20 +399,48 @@ function AccepteerDialog({ voorstel, onSluit, onKlaar }: { voorstel: AanvraagVoo
   const { data: gebouwen = [] } = useListGebouwen();
   const { data: projecten = [] } = useListProjecten();
 
-  const [titel, setTitel] = useState(a.titel ?? voorstel.onderwerp);
-  const [klantKeuze, setKlantKeuze] = useState<string>(a.klant_id ? String(a.klant_id) : "nieuw");
-  const [nieuweKlantNaam, setNieuweKlantNaam] = useState(a.klant_naam ?? "");
-  const [gebouwKeuze, setGebouwKeuze] = useState<string>(a.gebouw_id ? String(a.gebouw_id) : (a.gebouw_adres ? "nieuw" : "geen"));
-  const [nieuwGebouwNaam, setNieuwGebouwNaam] = useState(a.gebouw_naam ?? a.gebouw_adres ?? "");
+  const kandidaatMatch = a.klant_id ? a.klant_kandidaten?.find(k => k.id === a.klant_id) : null;
+  const isKandidaatZwak = kandidaatMatch && isZwak(kandidaatMatch.sterkte);
+
+  const initKlantId = (!isKandidaatZwak && (voorstel.klant_id ?? a.klant_id)) || null;
+  const initGebouwId = voorstel.gebouw_id ?? a.gebouw_id;
+
+  const [titel, setTitel] = useState(
+    a.gebouw_naam ?? (a.titel as string) ?? voorstel.onderwerp ?? "",
+  );
+  const [werkzaamheden, setWerkzaamheden] = useState(a.werkzaamheden ?? "");
+
+  const [klantKeuze, setKlantKeuze] = useState<string>(initKlantId ? String(initKlantId) : "nieuw");
+  const [nieuweKlantNaam, setNieuweKlantNaam] = useState(voorstel.klant_naam ?? a.klant_naam ?? "");
+  const [nieuweKlantAdres, setNieuweKlantAdres] = useState(a.klant_adres ?? "");
+  const [nieuweKlantPostcode, setNieuweKlantPostcode] = useState(a.klant_postcode ?? "");
+  const [nieuweKlantStad, setNieuweKlantStad] = useState(a.klant_stad ?? "");
+  const [gebouwKeuze, setGebouwKeuze] = useState<string>(initGebouwId ? String(initGebouwId) : (a.gebouw_adres ? "nieuw" : "geen"));
   const [nieuwGebouwAdres, setNieuwGebouwAdres] = useState(a.gebouw_adres ?? "");
+  const [nieuwGebouwPostcode, setNieuwGebouwPostcode] = useState(a.gebouw_postcode ?? "");
   const [nieuwGebouwStad, setNieuwGebouwStad] = useState(a.gebouw_stad ?? "");
-  const [bv, setBv] = useState<string>(a.bv ?? "geen");
-  const [type, setType] = useState<string>(voorstel.voorstel_type);
+  const gekozenKlant =
+    klantKeuze !== "nieuw"
+      ? klanten.find((klant) => klant.id === Number(klantKeuze))
+      : null;
+  const gekozenKlantMistNaw =
+    gekozenKlant != null &&
+    (!gekozenKlant.naam?.trim() ||
+      !gekozenKlant.adres?.trim() ||
+      !gekozenKlant.postcode?.trim() ||
+      !gekozenKlant.stad?.trim());
+
+  const [type, setType] = useState<string>(voorstel.voorstel_type || "nieuwe_aanvraag");
   const [projectId, setProjectId] = useState<string>(a.meerwerk_project_id ? String(a.meerwerk_project_id) : "");
+
+  const [succesCalculatieId, setSuccesCalculatieId] = useState<number | null>(null);
 
   const accepteer = useAccepteerAanvraagVoorstel({
     mutation: {
-      onSuccess: () => { onKlaar(); toast({ title: "Aanvraag vastgelegd als projectkans" }); },
+      onSuccess: (data: any) => {
+        toast({ title: "Aanvraag succesvol verwerkt" });
+        setSuccesCalculatieId(data?.calculatie_id ?? null);
+      },
       onError: (err) => {
         const fout = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
         toast({ title: "Accorderen mislukt", description: fout ?? "Onbekende fout", variant: "destructive" });
@@ -335,8 +450,46 @@ function AccepteerDialog({ voorstel, onSluit, onKlaar }: { voorstel: AanvraagVoo
 
   const opslaan = () => {
     if (!titel.trim()) { toast({ title: "Titel is verplicht", variant: "destructive" }); return; }
-    if (klantKeuze === "nieuw" && !nieuweKlantNaam.trim()) {
-      toast({ title: "Bevestig de klant", description: "Kies een bestaande relatie of vul de naam van de nieuwe relatie in.", variant: "destructive" });
+    if (!werkzaamheden.trim()) {
+      toast({ title: "Opdrachtomschrijving is verplicht", variant: "destructive" });
+      return;
+    }
+    if (
+      klantKeuze === "nieuw" &&
+      (!nieuweKlantNaam.trim() ||
+        !nieuweKlantAdres.trim() ||
+        !nieuweKlantPostcode.trim() ||
+        !nieuweKlantStad.trim())
+    ) {
+      toast({
+        title: "Opdrachtgever is onvolledig",
+        description: "Vul naam, adres, postcode en plaats van de nieuwe opdrachtgever in.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (gekozenKlantMistNaw) {
+      toast({
+        title: "Opdrachtgever is onvolledig",
+        description:
+          "Vul de NAW-gegevens van deze relatie eerst aan in CRM of maak een volledige nieuwe opdrachtgever aan.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (gebouwKeuze === "geen") {
+      toast({ title: "Gebouw is verplicht", description: "Kies een bestaand gebouw of maak een nieuwe aan.", variant: "destructive" });
+      return;
+    }
+    if (
+      gebouwKeuze === "nieuw" &&
+      (!nieuwGebouwAdres.trim() || !nieuwGebouwPostcode.trim() || !nieuwGebouwStad.trim())
+    ) {
+      toast({
+        title: "Gebouwadres is onvolledig",
+        description: "Vul adres, postcode en plaats van het nieuwe gebouw in.",
+        variant: "destructive",
+      });
       return;
     }
     if (type === "meerwerk" && !projectId) {
@@ -347,112 +500,223 @@ function AccepteerDialog({ voorstel, onSluit, onKlaar }: { voorstel: AanvraagVoo
       id: voorstel.id,
       data: {
         titel: titel.trim(),
-        ...(klantKeuze !== "nieuw" ? { klant_id: Number(klantKeuze) } : { nieuwe_klant: { naam: nieuweKlantNaam.trim(), email: voorstel.afzender_email } }),
+        werkzaamheden: werkzaamheden.trim(),
+        ...(klantKeuze !== "nieuw"
+          ? { klant_id: Number(klantKeuze) }
+          : {
+              nieuwe_klant: {
+                naam: nieuweKlantNaam.trim(),
+                adres: nieuweKlantAdres.trim(),
+                postcode: nieuweKlantPostcode.trim(),
+                stad: nieuweKlantStad.trim(),
+              },
+            }),
         ...(gebouwKeuze !== "geen" && gebouwKeuze !== "nieuw" ? { gebouw_id: Number(gebouwKeuze) } : {}),
-        ...(gebouwKeuze === "nieuw" && nieuwGebouwNaam.trim() && nieuwGebouwAdres.trim()
-          ? { nieuw_gebouw: { naam: nieuwGebouwNaam.trim(), adres: nieuwGebouwAdres.trim(), ...(nieuwGebouwStad.trim() ? { stad: nieuwGebouwStad.trim() } : {}) } }
+        ...(gebouwKeuze === "nieuw" && titel.trim() && nieuwGebouwAdres.trim()
+          ? { nieuw_gebouw: { naam: titel.trim(), adres: nieuwGebouwAdres.trim(), postcode: nieuwGebouwPostcode.trim(), stad: nieuwGebouwStad.trim() } }
           : {}),
-        ...(bv !== "geen" ? { bv } : {}),
         voorstel_type: type,
         ...(type === "meerwerk" ? { gerelateerd_project_id: Number(projectId) } : {}),
       },
     });
   };
 
+  if (succesCalculatieId) {
+    return (
+      <Dialog open onOpenChange={() => { onKlaar(); onSluit(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 className="w-5 h-5" /> Aanvraag Geaccepteerd
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm">De aanvraag is succesvol omgezet naar een calculatiedossier. U kunt nu direct door naar de calculatie of deze dialoog sluiten.</p>
+            <Link href={`/modules/calculatie/${succesCalculatieId}`}>
+              <Button className="w-full justify-start gap-2" variant="outline" data-testid="voorstel-bevestigd-calculatie-link" onClick={() => { onKlaar(); onSluit(); }}>
+                <ExternalLink className="w-4 h-4" /> Open Calculatiedossier #{succesCalculatieId}
+              </Button>
+            </Link>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { onKlaar(); onSluit(); }}>Sluiten</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onSluit(); }}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+    <Dialog open onOpenChange={(o) => { if (!o) onSluit(); }}>
+      <DialogContent className="sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Aanvraag accorderen</DialogTitle>
-          <DialogDescription>
-            Controleer het AI-voorstel. Pas na uw bevestiging wordt de projectkans (en eventueel een nieuwe relatie of gebouw) vastgelegd.
-          </DialogDescription>
+          <DialogTitle>Intake & Voorstel Accorderen</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Titel</Label>
-            <Input value={titel} onChange={(e) => setTitel(e.target.value)} />
-          </div>
-          <div>
-            <Label>Klant</Label>
-            <Select value={klantKeuze} onValueChange={setKlantKeuze}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nieuw">Nieuwe relatie aanmaken…</SelectItem>
-                {klanten.map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.naam}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {klantKeuze === "nieuw" && (
-              <div className="mt-2">
-                <Input placeholder="Naam nieuwe relatie" value={nieuweKlantNaam} onChange={(e) => setNieuweKlantNaam(e.target.value)} />
-                {(a.klant_kandidaten ?? []).length > 0 && (
-                  <p className="text-xs text-amber-700 mt-1">Mogelijk bestaand: {(a.klant_kandidaten ?? []).join(", ")} — controleer dit eerst.</p>
-                )}
-              </div>
+
+        <div className="space-y-6 py-4">
+          <div className="rounded-md border bg-muted/30 p-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Oorspronkelijke bron</p>
+              <p className="text-xs text-muted-foreground">
+                Controleer het ongewijzigde bronbestand naast de gele AI-voorstellen.
+              </p>
+            </div>
+            {voorstel.inbox_item_id != null ? (
+              <a href={`/api/aanvragen/voorstellen/${voorstel.id}/bronbestand`} target="_blank" rel="noopener noreferrer">
+                <Button type="button" variant="outline" size="sm" data-testid="open-primair-bronbestand">
+                  <FileText className="w-4 h-4 mr-1" /> Open bronbestand
+                </Button>
+              </a>
+            ) : (
+              <Link href="/werk-inbox">
+                <Button type="button" variant="outline" size="sm">
+                  <Mail className="w-4 h-4 mr-1" /> Open bronmail
+                </Button>
+              </Link>
             )}
           </div>
-          <div>
-            <Label>Gebouw</Label>
-            <Select value={gebouwKeuze} onValueChange={setGebouwKeuze}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="geen">Geen gebouw koppelen</SelectItem>
-                <SelectItem value="nieuw">Nieuw gebouw aanmaken…</SelectItem>
-                {gebouwen.map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {gebouwKeuze === "nieuw" && (
-              <div className="mt-2 space-y-2">
-                <Input placeholder="Naam" value={nieuwGebouwNaam} onChange={(e) => setNieuwGebouwNaam(e.target.value)} />
-                <Input placeholder="Adres" value={nieuwGebouwAdres} onChange={(e) => setNieuwGebouwAdres(e.target.value)} />
-                <Input placeholder="Plaats" value={nieuwGebouwStad} onChange={(e) => setNieuwGebouwStad(e.target.value)} />
-              </div>
-            )}
-          </div>
-          <div>
-            <Label>BV</Label>
-            <Select value={bv} onValueChange={setBv}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="geen">Nog niet bekend</SelectItem>
-                {BV_OPTIES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Soort</Label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nieuwe_aanvraag">Nieuwe aanvraag</SelectItem>
-                <SelectItem value="meerwerk">Meerwerk op lopende opdracht</SelectItem>
-              </SelectContent>
-            </Select>
-            {type === "meerwerk" && (
-              <div className="mt-2">
-                <Select value={projectId} onValueChange={setProjectId}>
-                  <SelectTrigger><SelectValue placeholder="Kies de lopende opdracht" /></SelectTrigger>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="md:col-span-2">
+              <FieldWithEvidence
+                label="Project-/gebouwnaam"
+                bronZin={
+                  a.bron_bewijs?.gebouwnaam?.bron_zin ??
+                  a.bron_bewijs?.titel?.bron_zin
+                }
+              >
+                <Input className="border-0 shadow-none focus-visible:ring-0" value={titel} onChange={(e) => setTitel(e.target.value)} data-testid="input-titel" />
+              </FieldWithEvidence>
+            </div>
+
+            <FieldWithEvidence label="Gevraagde werkzaamheden" bronZin={a.bron_bewijs?.werkzaamheden?.bron_zin}>
+              <Textarea className="border-0 shadow-none focus-visible:ring-0 min-h-[80px] resize-none" value={werkzaamheden} onChange={(e) => setWerkzaamheden(e.target.value)} data-testid="input-werkzaamheden" />
+            </FieldWithEvidence>
+
+            <div className="md:col-span-2">
+              <FieldWithEvidence label="Opdrachtgever (Relatie)" bronZin={a.bron_bewijs?.organisatienaam?.bron_zin} unconfirmed={!initKlantId}>
+                <Select value={klantKeuze} onValueChange={setKlantKeuze}>
+                  <SelectTrigger className="border-0 shadow-none focus-visible:ring-0" data-testid="select-klant">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {projecten.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.naam}{p.werknummer ? ` (${p.werknummer})` : ""}</SelectItem>
-                    ))}
+                    <SelectItem value="nieuw">Nieuwe relatie aanmaken…</SelectItem>
+                    {klanten.map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </FieldWithEvidence>
+
+              {(a.klant_kandidaten ?? []).length > 0 && (
+                <div className="pl-4 mt-2 mb-2 bg-amber-50 p-2 rounded text-xs border border-amber-200">
+                  <p className="font-semibold text-amber-800 flex items-center gap-1 mb-1">
+                    <AlertTriangle className="w-3 h-3" /> Mogelijke CRM matches ({a.klant_kandidaten!.length}):
+                  </p>
+                  <ul className="space-y-2 text-amber-700">
+                    {(a.klant_kandidaten ?? []).map((kandidaat) => (
+                      <li key={kandidaat.id} className="flex items-start justify-between gap-2 bg-white/50 p-1.5 rounded">
+                        <div>
+                          <strong>{kandidaat.naam}</strong> (sterkte: {kandidaat.sterkte})<br/>
+                          <span className="opacity-80 leading-snug block">{kandidaat.redenen.join(", ")}</span>
+                        </div>
+                        <Button size="sm" variant="outline" className="h-6 text-xs px-2 shrink-0" onClick={() => setKlantKeuze(String(kandidaat.id))}>
+                          Kies
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {klantKeuze === "nieuw" && (
+                <div className="pl-4 border-l-2 border-primary/20 mt-2 grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <FieldWithEvidence label="Naam opdrachtgever" bronZin={a.bron_bewijs?.organisatienaam?.bron_zin}>
+                      <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Naam nieuwe relatie" value={nieuweKlantNaam} onChange={(e) => setNieuweKlantNaam(e.target.value)} data-testid="input-nieuwe-klant" />
+                    </FieldWithEvidence>
+                  </div>
+                  <div className="col-span-2">
+                    <FieldWithEvidence label="Adres opdrachtgever" bronZin={a.bron_bewijs?.opdrachtgever_adres?.bron_zin}>
+                      <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Adres" value={nieuweKlantAdres} onChange={(e) => setNieuweKlantAdres(e.target.value)} data-testid="input-nieuwe-klant-adres" />
+                    </FieldWithEvidence>
+                  </div>
+                  <FieldWithEvidence label="Postcode opdrachtgever" bronZin={a.bron_bewijs?.opdrachtgever_postcode?.bron_zin}>
+                    <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Postcode" value={nieuweKlantPostcode} onChange={(e) => setNieuweKlantPostcode(e.target.value)} data-testid="input-nieuwe-klant-postcode" />
+                  </FieldWithEvidence>
+                  <FieldWithEvidence label="Plaats opdrachtgever" bronZin={a.bron_bewijs?.opdrachtgever_stad?.bron_zin}>
+                    <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Plaats" value={nieuweKlantStad} onChange={(e) => setNieuweKlantStad(e.target.value)} data-testid="input-nieuwe-klant-stad" />
+                  </FieldWithEvidence>
+                </div>
+              )}
+              {gekozenKlantMistNaw && (
+                <p className="mt-2 text-xs font-medium text-destructive">
+                  Deze CRM-relatie mist naam, adres, postcode of plaats en kan nog niet
+                  als opdrachtgever worden gebruikt.
+                </p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <FieldWithEvidence label="Gebouw / Uitvoeringslocatie" bronZin={a.bron_bewijs?.adres?.bron_zin} unconfirmed={!initGebouwId && !!a.gebouw_adres}>
+                <Select value={gebouwKeuze} onValueChange={setGebouwKeuze}>
+                  <SelectTrigger className="border-0 shadow-none focus-visible:ring-0" data-testid="select-gebouw">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Selecteer een gebouw…</SelectItem>
+                    <SelectItem value="nieuw">Nieuw gebouw aanmaken…</SelectItem>
+                    {gebouwen.map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FieldWithEvidence>
+
+              {gebouwKeuze === "nieuw" && (
+                <div className="pl-4 border-l-2 border-primary/20 space-y-2 mt-2 grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <FieldWithEvidence label="Adres" bronZin={a.bron_bewijs?.adres?.bron_zin}>
+                      <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Adres" value={nieuwGebouwAdres} onChange={(e) => setNieuwGebouwAdres(e.target.value)} data-testid="input-nieuw-gebouw-adres" />
+                    </FieldWithEvidence>
+                  </div>
+                  <FieldWithEvidence label="Postcode" bronZin={a.bron_bewijs?.postcode?.bron_zin}>
+                    <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Postcode" value={nieuwGebouwPostcode} onChange={(e) => setNieuwGebouwPostcode(e.target.value)} data-testid="input-nieuw-gebouw-postcode" />
+                  </FieldWithEvidence>
+                  <FieldWithEvidence label="Stad" bronZin={a.bron_bewijs?.stad?.bron_zin}>
+                    <Input className="border-0 shadow-none focus-visible:ring-0" placeholder="Stad" value={nieuwGebouwStad} onChange={(e) => setNieuwGebouwStad(e.target.value)} data-testid="input-nieuw-gebouw-stad" />
+                  </FieldWithEvidence>
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-2 space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Aanvraag Type</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" checked={type === "nieuwe_aanvraag"} onChange={() => setType("nieuwe_aanvraag")} /> Nieuwe Opdracht
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" checked={type === "meerwerk"} onChange={() => setType("meerwerk")} /> Meerwerk op bestaande
+                </label>
               </div>
-            )}
+              {type === "meerwerk" && (
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Kies het gerelateerde project..." /></SelectTrigger>
+                  <SelectContent>
+                    {projecten.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onSluit}>Annuleren</Button>
-          <Button onClick={opslaan} disabled={accepteer.isPending}>
-            {accepteer.isPending ? "Bezig…" : "Accorderen & vastleggen"}
+          <Button onClick={opslaan} disabled={accepteer.isPending} data-testid="button-opslaan-intake">
+            {accepteer.isPending ? "Bezig..." : "Accorderen & Start Intake"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
 function AntwoordDialog({ voorstel, onSluit, onKlaar }: { voorstel: AanvraagVoorstel; onSluit: () => void; onKlaar: () => void }) {
   const { toast } = useToast();
   const [tekst, setTekst] = useState(voorstel.concept_antwoord ?? "");

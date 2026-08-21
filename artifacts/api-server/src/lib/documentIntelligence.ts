@@ -1334,18 +1334,50 @@ export async function analyseerOpdrachtbevestiging(input: {
 // Hoort bewust hiér (de ene documentherkenner) — hergebruikt de bestaande
 // categorie "aanvraag"; er komt geen tweede herkenner.
 
+// AANVRAAG_01 §2 — bronbewijs per veld: letterlijk citaat/zin uit de brontekst.
+export interface AanvraagVeldBewijs {
+  bron_zin: string | null;   // letterlijk kort citaat uit de mail/bijlage waarop de waarde berust
+}
+
 export interface AanvraagStroomVelden {
   titel: string | null;              // korte werktitel afgeleid uit de aanvraag
   klant_naam: string | null;         // organisatienaam van de aanvrager
+  klant_adres: string | null;        // NAW van opdrachtgever, nooit de uitvoeringslocatie
+  klant_postcode: string | null;
+  klant_stad: string | null;
   contact_naam: string | null;
+  contact_email: string | null;      // e-mailadres contactpersoon (indien vermeld)
+  contact_telefoon: string | null;   // telefoonnummer contactpersoon (indien vermeld)
   gebouw_naam: string | null;        // naam/aanduiding van het pand
   gebouw_adres: string | null;
   gebouw_stad: string | null;
+  gebouw_postcode: string | null;    // postcode van het gebouw (indien vermeld)
+  werkzaamheden: string | null;      // beschrijving van gevraagde werkzaamheden
   bv: string | null;                 // FPS Bouw | FPS Brandpreventie | FPS Onderhoud
   werknummer_verwijzing: string | null; // werk-/projectnummer dat in de mail genoemd wordt
   ontbrekende_stukken: string[];     // wat er aantoonbaar ontbreekt om te kunnen calculeren
   samenvatting: string | null;
   onzekere_velden: string[];
+  // AANVRAAG_01 §2 — bronbewijs per gevuld veld
+  bron_bewijs: {
+    organisatienaam: AanvraagVeldBewijs | null;
+    opdrachtgever_adres: AanvraagVeldBewijs | null;
+    opdrachtgever_postcode: AanvraagVeldBewijs | null;
+    opdrachtgever_stad: AanvraagVeldBewijs | null;
+    contactpersoon: AanvraagVeldBewijs | null;
+    email: AanvraagVeldBewijs | null;
+    telefoon: AanvraagVeldBewijs | null;
+    gebouwnaam: AanvraagVeldBewijs | null;
+    adres: AanvraagVeldBewijs | null;
+    stad: AanvraagVeldBewijs | null;
+    postcode: AanvraagVeldBewijs | null;
+    titel: AanvraagVeldBewijs | null;
+    werkzaamheden: AanvraagVeldBewijs | null;
+    bv: AanvraagVeldBewijs | null;
+    werknummer: AanvraagVeldBewijs | null;
+    ontbrekende_stukken: AanvraagVeldBewijs | null;
+    samenvatting: AanvraagVeldBewijs | null;
+  };
 }
 
 export interface AanvraagStroomAnalyse {
@@ -1358,13 +1390,172 @@ export interface AanvraagStroomAnalyse {
 const AANVRAAG_STROOM_PROMPT = `Je leest een e-mail (met eventuele bijlagetekst) gericht aan een Nederlands bouw-/brandpreventiebedrijf (FPS: FPS Bouw, FPS Brandpreventie, FPS Onderhoud).
 Bepaal of dit een prijsaanvraag is: een offerteaanvraag, RFQ, bestek of verzoek om werk uit te voeren/te calculeren. Een factuur, nieuwsbrief, bevestiging of interne mail is GEEN aanvraag.
 Geef uitsluitend JSON met exact deze sleutels:
-{"is_aanvraag":bool,"titel":string|null,"klant_naam":string|null,"contact_naam":string|null,"gebouw_naam":string|null,"gebouw_adres":string|null,"gebouw_stad":string|null,"bv":"FPS Bouw"|"FPS Brandpreventie"|"FPS Onderhoud"|null,"werknummer_verwijzing":string|null,"ontbrekende_stukken":[string],"samenvatting":string|null,"onzekere_velden":[string]}
+{"is_aanvraag":bool,"titel":string|null,"klant_naam":string|null,"klant_adres":string|null,"klant_postcode":string|null,"klant_stad":string|null,"contact_naam":string|null,"contact_email":string|null,"contact_telefoon":string|null,"gebouw_naam":string|null,"gebouw_adres":string|null,"gebouw_stad":string|null,"gebouw_postcode":string|null,"werkzaamheden":string|null,"bv":"FPS Bouw"|"FPS Brandpreventie"|"FPS Onderhoud"|null,"werknummer_verwijzing":string|null,"ontbrekende_stukken":[string],"samenvatting":string|null,"onzekere_velden":[string],"bron_bewijs":{"organisatienaam":{"bron_zin":string|null}|null,"opdrachtgever_adres":{"bron_zin":string|null}|null,"opdrachtgever_postcode":{"bron_zin":string|null}|null,"opdrachtgever_stad":{"bron_zin":string|null}|null,"contactpersoon":{"bron_zin":string|null}|null,"email":{"bron_zin":string|null}|null,"telefoon":{"bron_zin":string|null}|null,"gebouwnaam":{"bron_zin":string|null}|null,"adres":{"bron_zin":string|null}|null,"stad":{"bron_zin":string|null}|null,"postcode":{"bron_zin":string|null}|null,"titel":{"bron_zin":string|null}|null,"werkzaamheden":{"bron_zin":string|null}|null,"bv":{"bron_zin":string|null}|null,"werknummer":{"bron_zin":string|null}|null,"ontbrekende_stukken":{"bron_zin":string|null}|null,"samenvatting":{"bron_zin":string|null}|null}}
 Regels:
 - titel: korte Nederlandse werktitel (bv. "Brandwerende doorvoeringen Zorgcentrum De Linde").
+- klant_adres, klant_postcode en klant_stad: alleen het NAW-adres van de opdrachtgever/aanvrager. Neem de uitvoeringslocatie uitsluitend op in de gebouw_* velden. Als de bron dit onderscheid niet bewijst, laat de klantvelden null.
 - bv: alleen invullen als het uit het ontvangende mailadres of de inhoud blijkt; anders null.
 - werknummer_verwijzing: alleen een werk-/project-/opdrachtnummer dat LETTERLIJK in de tekst staat; nooit verzinnen.
 - ontbrekende_stukken: alleen dingen die aantoonbaar nodig zijn om te calculeren en aantoonbaar ontbreken (bv. plattegronden, bestek, aantallen). Verzin nooit een ontbrekend stuk. Twijfel = leeg laten.
-- Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden. Verzin nooit gegevens.`;
+- Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden. Verzin nooit gegevens.
+- Neem alle voorstelwaarden letterlijk over uit de bron; parafraseer niet. De voorgestelde waarde moet zelf in het bijbehorende citaat staan. Geef samenvatting alleen als letterlijk bronfragment en noem bij ontbrekende_stukken uitsluitend woorden die letterlijk in het citaat staan.
+- bron_bewijs: voor ELK gevuld voorstelveld MOET je in het bijbehorende slot een letterlijke korte zin of citaat uit de brontekst opgeven. Dit geldt ook voor gebouwnaam, stad, postcode, bv, werknummer, ontbrekende_stukken en samenvatting. Zonder letterlijk citaat wordt de waarde verwijderd.`;
+
+// ── C. Citaatnormalisatie: vereenvoudig tekst en controleer letterlijk voorkomen ─
+// Exporteer als _test helper zodat unit-tests dit direct kunnen aanroepen.
+export function normaliseerCitaatTekst(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[\u00a0\u2019\u2018\u201c\u201d]/g, " ") // NBSP en typografische quotes
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Geeft true als bron_zin (na normalisatie) letterlijk voorkomt in de samengestelde brontekst. */
+export function citaatGeldig(bronZin: string | null, brontekst: string): boolean {
+  if (!bronZin || bronZin.trim().length < 4) return false;
+  return normaliseerCitaatTekst(brontekst).includes(normaliseerCitaatTekst(bronZin));
+}
+
+function normaliseerBewijsWaarde(tekst: string): string {
+  return tekst
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function citaatOndersteuntWaarde(
+  waarde: string | null | undefined,
+  bewijs: AanvraagVeldBewijs | null,
+  brontekst: string,
+): boolean {
+  if (!waarde?.trim() || !citaatGeldig(bewijs?.bron_zin ?? null, brontekst)) {
+    return false;
+  }
+  const voorstel = normaliseerBewijsWaarde(waarde);
+  const citaat = normaliseerBewijsWaarde(bewijs?.bron_zin ?? "");
+  return voorstel.length >= 4 && citaat.includes(voorstel);
+}
+
+function citaatOndersteuntWaarden(
+  waarden: string[],
+  bewijs: AanvraagVeldBewijs | null,
+  brontekst: string,
+): boolean {
+  if (waarden.length === 0 || !citaatGeldig(bewijs?.bron_zin ?? null, brontekst)) {
+    return false;
+  }
+  const citaat = normaliseerBewijsWaarde(bewijs?.bron_zin ?? "");
+  return waarden.every((waarde) => {
+    const voorstel = normaliseerBewijsWaarde(waarde);
+    return voorstel.length >= 4 && citaat.includes(voorstel);
+  });
+}
+
+/**
+ * Fail-closed bronbewijs-validatie (AANVRAAG_01 §2).
+ * Voor elk intakevoorstelveld geldt: als het citaat niet letterlijk in de
+ * brontekst voorkomt of de voorgestelde waarde niet in dat citaat staat, worden
+ * ZOWEL de AI-waarde ALS het bewijs op null gezet. Zo tonen we nooit een
+ * ononderbouwde AI-waarde als feit.
+ */
+export function valideerBronBewijs(
+  velden: AanvraagStroomVelden,
+  brontekst: string,
+): AanvraagStroomVelden {
+  const bb = velden.bron_bewijs;
+  const okOrganisatie = citaatOndersteuntWaarde(velden.klant_naam, bb.organisatienaam, brontekst);
+  const okOpdrachtgeverAdres = citaatOndersteuntWaarde(velden.klant_adres, bb.opdrachtgever_adres, brontekst);
+  const okOpdrachtgeverPostcode = citaatOndersteuntWaarde(velden.klant_postcode, bb.opdrachtgever_postcode, brontekst);
+  const okOpdrachtgeverStad = citaatOndersteuntWaarde(velden.klant_stad, bb.opdrachtgever_stad, brontekst);
+  const okContact = citaatOndersteuntWaarde(velden.contact_naam, bb.contactpersoon, brontekst);
+  const okEmail = citaatOndersteuntWaarde(velden.contact_email, bb.email, brontekst);
+  const okTelefoon = citaatOndersteuntWaarde(velden.contact_telefoon, bb.telefoon, brontekst);
+  const okGebouwnaam = citaatOndersteuntWaarde(velden.gebouw_naam, bb.gebouwnaam, brontekst);
+  const okAdres = citaatOndersteuntWaarde(velden.gebouw_adres, bb.adres, brontekst);
+  const okStad = citaatOndersteuntWaarde(velden.gebouw_stad, bb.stad, brontekst);
+  const okPostcode = citaatOndersteuntWaarde(velden.gebouw_postcode, bb.postcode, brontekst);
+  const okTitel = citaatOndersteuntWaarde(velden.titel, bb.titel, brontekst);
+  const okWerkzaamheden = citaatOndersteuntWaarde(velden.werkzaamheden, bb.werkzaamheden, brontekst);
+  const okBv = citaatOndersteuntWaarde(velden.bv, bb.bv, brontekst);
+  const okWerknummer = citaatOndersteuntWaarde(velden.werknummer_verwijzing, bb.werknummer, brontekst);
+  const okOntbrekendeStukken = citaatOndersteuntWaarden(
+    velden.ontbrekende_stukken,
+    bb.ontbrekende_stukken,
+    brontekst,
+  );
+  const okSamenvatting = citaatOndersteuntWaarde(velden.samenvatting, bb.samenvatting, brontekst);
+
+  // Bewijs-entry behouden als geldig, anders {bron_zin:null} (of null als er geen entry was).
+  const bewijs = (entry: AanvraagVeldBewijs | null, ok: boolean): AanvraagVeldBewijs | null => {
+    if (!entry) return null;
+    return ok ? entry : { bron_zin: null };
+  };
+
+  return {
+    ...velden,
+    // Fail-closed: waarde weg als citaat ongeldig.
+    klant_naam: okOrganisatie ? velden.klant_naam : null,
+    klant_adres: okOpdrachtgeverAdres ? velden.klant_adres : null,
+    klant_postcode: okOpdrachtgeverPostcode ? velden.klant_postcode : null,
+    klant_stad: okOpdrachtgeverStad ? velden.klant_stad : null,
+    contact_naam: okContact ? velden.contact_naam : null,
+    contact_email: okEmail ? velden.contact_email : null,
+    contact_telefoon: okTelefoon ? velden.contact_telefoon : null,
+    gebouw_naam: okGebouwnaam ? velden.gebouw_naam : null,
+    gebouw_adres: okAdres ? velden.gebouw_adres : null,
+    gebouw_stad: okStad ? velden.gebouw_stad : null,
+    gebouw_postcode: okPostcode ? velden.gebouw_postcode : null,
+    titel: okTitel ? velden.titel : null,
+    werkzaamheden: okWerkzaamheden ? velden.werkzaamheden : null,
+    bv: okBv ? velden.bv : null,
+    werknummer_verwijzing: okWerknummer ? velden.werknummer_verwijzing : null,
+    ontbrekende_stukken: okOntbrekendeStukken ? velden.ontbrekende_stukken : [],
+    samenvatting: okSamenvatting ? velden.samenvatting : null,
+    onzekere_velden: velden.onzekere_velden.filter((veld) => {
+      const waarden: Record<string, unknown> = {
+        titel: okTitel && velden.titel,
+        klant_naam: okOrganisatie && velden.klant_naam,
+        klant_adres: okOpdrachtgeverAdres && velden.klant_adres,
+        klant_postcode: okOpdrachtgeverPostcode && velden.klant_postcode,
+        klant_stad: okOpdrachtgeverStad && velden.klant_stad,
+        contact_naam: okContact && velden.contact_naam,
+        contact_email: okEmail && velden.contact_email,
+        contact_telefoon: okTelefoon && velden.contact_telefoon,
+        gebouw_naam: okGebouwnaam && velden.gebouw_naam,
+        gebouw_adres: okAdres && velden.gebouw_adres,
+        gebouw_stad: okStad && velden.gebouw_stad,
+        gebouw_postcode: okPostcode && velden.gebouw_postcode,
+        werkzaamheden: okWerkzaamheden && velden.werkzaamheden,
+        bv: okBv && velden.bv,
+        werknummer_verwijzing: okWerknummer && velden.werknummer_verwijzing,
+        ontbrekende_stukken: okOntbrekendeStukken && velden.ontbrekende_stukken.length > 0,
+        samenvatting: okSamenvatting && velden.samenvatting,
+      };
+      return Boolean(waarden[veld]);
+    }),
+    bron_bewijs: {
+      organisatienaam: bewijs(bb.organisatienaam, okOrganisatie),
+      opdrachtgever_adres: bewijs(bb.opdrachtgever_adres, okOpdrachtgeverAdres),
+      opdrachtgever_postcode: bewijs(bb.opdrachtgever_postcode, okOpdrachtgeverPostcode),
+      opdrachtgever_stad: bewijs(bb.opdrachtgever_stad, okOpdrachtgeverStad),
+      contactpersoon: bewijs(bb.contactpersoon, okContact),
+      email: bewijs(bb.email, okEmail),
+      telefoon: bewijs(bb.telefoon, okTelefoon),
+      gebouwnaam: bewijs(bb.gebouwnaam, okGebouwnaam),
+      adres: bewijs(bb.adres, okAdres),
+      stad: bewijs(bb.stad, okStad),
+      postcode: bewijs(bb.postcode, okPostcode),
+      titel: bewijs(bb.titel, okTitel),
+      werkzaamheden: bewijs(bb.werkzaamheden, okWerkzaamheden),
+      bv: bewijs(bb.bv, okBv),
+      werknummer: bewijs(bb.werknummer, okWerknummer),
+      ontbrekende_stukken: bewijs(bb.ontbrekende_stukken, okOntbrekendeStukken),
+      samenvatting: bewijs(bb.samenvatting, okSamenvatting),
+    },
+  };
+}
 
 export async function analyseerAanvraagVoorStroom(input: {
   mailOnderwerp: string;
@@ -1375,41 +1566,85 @@ export async function analyseerAanvraagVoorStroom(input: {
   if (!heeftGateway()) {
     return { ok: false, is_aanvraag: false, velden: null, fout: "AI-gateway niet beschikbaar" };
   }
-  let tekst = `Onderwerp: ${input.mailOnderwerp}\nAfzender: ${input.mailAfzender}\n\nMailtekst:\n${input.mailTekst.slice(0, 8000)}`;
+  // C. Bewaar de volledige brontekst zodat citaten gevalideerd kunnen worden.
+  let brontekst = `Onderwerp: ${input.mailOnderwerp}\nAfzender: ${input.mailAfzender}\n\nMailtekst:\n${input.mailTekst.slice(0, 8000)}`;
   for (const b of input.bijlageTeksten ?? []) {
-    tekst += `\n\nBijlage "${b.naam}":\n${b.tekst.slice(0, 4000)}`;
+    brontekst += `\n\nBijlage "${b.naam}":\n${b.tekst.slice(0, 4000)}`;
   }
   const resultaat = await aiGateway.chat(
     "fast",
     {
       response_format: { type: "json_object" },
-      max_tokens: 800,
-      messages: [{ role: "system", content: AANVRAAG_STROOM_PROMPT }, { role: "user", content: tekst }],
+      max_tokens: 1200,
+      messages: [{ role: "system", content: AANVRAAG_STROOM_PROMPT }, { role: "user", content: brontekst }],
     },
     undefined,
-    { module: "crm", functie: "aanvraagstroom_extractie", promptNaam: "aanvraagstroom-extractie", promptVersie: "1.0.0" },
+    { module: "crm", functie: "aanvraagstroom_extractie", promptNaam: "aanvraagstroom-extractie", promptVersie: "2.0.0" },
   );
   if (!resultaat.ok) {
     return { ok: false, is_aanvraag: false, velden: null, fout: resultaat.fout };
   }
   try {
     const json = JSON.parse(resultaat.inhoud) as Record<string, unknown>;
-    const s = (k: string): string | null => (typeof json[k] === "string" && (json[k] as string).trim() !== "" ? (json[k] as string).trim() : null);
-    const lijst = (k: string): string[] => (Array.isArray(json[k]) ? (json[k] as unknown[]).filter((v): v is string => typeof v === "string") : []);
+    // fail-closed: trim & reject empty strings
+    const s = (k: string): string | null => {
+      const v = json[k];
+      if (typeof v !== "string") return null;
+      const t = v.trim();
+      return t.length > 0 ? t : null;
+    };
+    const lijst = (k: string): string[] => (Array.isArray(json[k]) ? (json[k] as unknown[]).filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim()) : []);
     const bvRuw = s("bv");
-    const velden: AanvraagStroomVelden = {
+    // Parse bronbewijs — veilig: altijd een object teruggeven
+    const rawBewijs = (json["bron_bewijs"] && typeof json["bron_bewijs"] === "object") ? (json["bron_bewijs"] as Record<string, unknown>) : {};
+    const parseBewijs = (k: string): AanvraagVeldBewijs | null => {
+      const entry = rawBewijs[k];
+      if (!entry || typeof entry !== "object") return null;
+      const bz = (entry as Record<string, unknown>)["bron_zin"];
+      const bronZin = typeof bz === "string" && bz.trim().length > 0 ? bz.trim() : null;
+      return { bron_zin: bronZin };
+    };
+    const veldenRuw: AanvraagStroomVelden = {
       titel: s("titel"),
       klant_naam: s("klant_naam"),
+      klant_adres: s("klant_adres"),
+      klant_postcode: s("klant_postcode"),
+      klant_stad: s("klant_stad"),
       contact_naam: s("contact_naam"),
+      contact_email: s("contact_email"),
+      contact_telefoon: s("contact_telefoon"),
       gebouw_naam: s("gebouw_naam"),
       gebouw_adres: s("gebouw_adres"),
       gebouw_stad: s("gebouw_stad"),
+      gebouw_postcode: s("gebouw_postcode"),
+      werkzaamheden: s("werkzaamheden"),
       bv: bvRuw && ["FPS Bouw", "FPS Brandpreventie", "FPS Onderhoud"].includes(bvRuw) ? bvRuw : null,
       werknummer_verwijzing: s("werknummer_verwijzing"),
       ontbrekende_stukken: lijst("ontbrekende_stukken"),
       samenvatting: s("samenvatting"),
       onzekere_velden: lijst("onzekere_velden"),
+      bron_bewijs: {
+        organisatienaam: parseBewijs("organisatienaam"),
+        opdrachtgever_adres: parseBewijs("opdrachtgever_adres"),
+        opdrachtgever_postcode: parseBewijs("opdrachtgever_postcode"),
+        opdrachtgever_stad: parseBewijs("opdrachtgever_stad"),
+        contactpersoon: parseBewijs("contactpersoon"),
+        email: parseBewijs("email"),
+        telefoon: parseBewijs("telefoon"),
+        gebouwnaam: parseBewijs("gebouwnaam"),
+        adres: parseBewijs("adres"),
+        stad: parseBewijs("stad"),
+        postcode: parseBewijs("postcode"),
+        titel: parseBewijs("titel"),
+        werkzaamheden: parseBewijs("werkzaamheden"),
+        bv: parseBewijs("bv"),
+        werknummer: parseBewijs("werknummer"),
+        ontbrekende_stukken: parseBewijs("ontbrekende_stukken"),
+        samenvatting: parseBewijs("samenvatting"),
+      },
     };
+    // C. Valideer bronbewijs: verzonnen citaten worden null-ed (fail-closed).
+    const velden = valideerBronBewijs(veldenRuw, brontekst);
     return { ok: true, is_aanvraag: json["is_aanvraag"] === true, velden, fout: null };
   } catch {
     return { ok: false, is_aanvraag: false, velden: null, fout: "AI-antwoord was geen geldige JSON" };

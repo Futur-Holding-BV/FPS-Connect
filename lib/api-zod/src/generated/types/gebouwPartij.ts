@@ -20,5 +20,15 @@ export interface GebouwPartij {
   postcode?: string | null;
   plaats?: string | null;
   opmerkingen?: string | null;
+  /**
+     * CRM-klant gekoppeld aan deze partij (AANVRAAG_01)
+     * @nullable
+     */
+  klant_id?: number | null;
+  /**
+     * CRM-contactpersoon gekoppeld aan deze partij (AANVRAAG_01)
+     * @nullable
+     */
+  contactpersoon_id?: number | null;
   aangemaakt_op: string;
 }

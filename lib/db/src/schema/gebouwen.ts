@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, real, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, boolean, primaryKey, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -98,9 +99,25 @@ export const gebouwPartijenTable = pgTable("gebouw_partijen", {
   postcode: text("postcode"),
   plaats: text("plaats"),
   opmerkingen: text("opmerkingen"),
+  // AANVRAAG_01 §1 — CRM-koppeling: welke klant/contact is deze partij
+  // FKs zonder .references() om circular import te vermijden (crm.ts -> gebouwen.ts -> crm.ts)
+  // SQL-FK wordt afgedwongen via migratie 0128.
+  klantId: integer("klant_id"),
+  contactpersoonId: integer("contactpersoon_id"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  index("gebouw_partijen_klant_idx")
+    .on(t.klantId)
+    .where(sql`klant_id IS NOT NULL`),
+  index("gebouw_partijen_contactpersoon_idx")
+    .on(t.contactpersoonId)
+    .where(sql`contactpersoon_id IS NOT NULL`),
+  // F. Partial unique index (gelijk aan migratie 0128): per gebouw max één opdrachtgever per klant
+  uniqueIndex("gebouw_partijen_gebouw_type_klant_uq")
+    .on(t.gebouwId, t.type, t.klantId)
+    .where(sql`klant_id IS NOT NULL`),
+]);
 
 export const insertGebouwPartijSchema = createInsertSchema(gebouwPartijenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertGebouwPartij = z.infer<typeof insertGebouwPartijSchema>;

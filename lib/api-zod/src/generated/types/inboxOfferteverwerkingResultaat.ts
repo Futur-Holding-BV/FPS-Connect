@@ -10,17 +10,8 @@ import type { InboxOfferteverwerkingResultaatAangemaakt } from './inboxOfferteve
 
 export interface InboxOfferteverwerkingResultaat {
   inbox_item: InboxItem;
-  /** @nullable */
-  offerte_id?: number | null;
-  /** @nullable */
-  offerte_titel?: string | null;
-  /** @nullable */
-  gebouw_id?: number | null;
-  /** @nullable */
-  gebouw_naam?: string | null;
-  /** @nullable */
-  opname_id?: number | null;
+  voorstel_id: number;
   /** @nullable */
   ai_samenvatting?: string | null;
-  aangemaakt?: InboxOfferteverwerkingResultaatAangemaakt;
+  aangemaakt: InboxOfferteverwerkingResultaatAangemaakt;
 }

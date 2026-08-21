@@ -1,6 +1,13 @@
 INDEX|aanvraag_planningen|aanvraag_planningen_antwoord_token_unique
 INDEX|aanvraag_planningen|aanvraag_planningen_pkey
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_calculatie_idx
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_calculatie_uq
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_contactpersoon_idx
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_gebouw_idx
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_inbox_item_idx
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_klant_idx
 INDEX|aanvraag_voorstellen|aanvraag_voorstellen_mail_uq
+INDEX|aanvraag_voorstellen|aanvraag_voorstellen_opname_idx
 INDEX|aanvraag_voorstellen|aanvraag_voorstellen_pkey
 INDEX|abonnementen|abonnementen_pkey
 INDEX|acceptatie_register_hergradeer_runs|acceptatie_register_hergradeer_runs_pkey
@@ -229,6 +236,9 @@ INDEX|gebouw_email_samenvattingen|gebouw_email_samenvattingen_pkey
 INDEX|gebouw_emails|gebouw_emails_pkey
 INDEX|gebouw_notities|gebouw_notities_gebouw_id_idx
 INDEX|gebouw_notities|gebouw_notities_pkey
+INDEX|gebouw_partijen|gebouw_partijen_contactpersoon_idx
+INDEX|gebouw_partijen|gebouw_partijen_gebouw_type_klant_uq
+INDEX|gebouw_partijen|gebouw_partijen_klant_idx
 INDEX|gebouw_partijen|gebouw_partijen_pkey
 INDEX|gebouw_publicaties|gebouw_publicaties_pkey
 INDEX|gebouw_toewijzingen|gebouw_toewijzingen_pkey
@@ -360,8 +370,12 @@ INDEX|mod_calc_adviezen|mod_calc_adviezen_pkey
 INDEX|mod_calc_artikelen|mod_calc_artikelen_pkey
 INDEX|mod_calc_bronbestanden|mod_calc_bronbestanden_pkey
 INDEX|mod_calc_eenheden|mod_calc_eenheden_pkey
+INDEX|mod_calc_headers|mod_calc_headers_aanvraag_voorstel_uq
 INDEX|mod_calc_headers|mod_calc_headers_nummer_uq
+INDEX|mod_calc_headers|mod_calc_headers_opdrachtgever_contact_idx
+INDEX|mod_calc_headers|mod_calc_headers_opdrachtgever_klant_idx
 INDEX|mod_calc_headers|mod_calc_headers_pkey
+INDEX|mod_calc_headers|mod_calc_headers_werkmaatschappij_idx
 INDEX|mod_calc_inkoop_items|mod_calc_inkoop_items_pkey
 INDEX|mod_calc_leveranciers|mod_calc_leveranciers_pkey
 INDEX|mod_calc_normtijden|mod_calc_normtijden_pkey
@@ -644,17 +658,24 @@ KOLOM|aanvraag_voorstellen|beoordeeld_op|timestamp without time zone|YES|
 KOLOM|aanvraag_voorstellen|bijgewerkt_op|timestamp without time zone|NO|now()
 KOLOM|aanvraag_voorstellen|bijlagen|jsonb|YES|
 KOLOM|aanvraag_voorstellen|binnengekomen_op|timestamp without time zone|NO|
+KOLOM|aanvraag_voorstellen|calculatie_id|integer|YES|
 KOLOM|aanvraag_voorstellen|concept_antwoord|text|YES|
 KOLOM|aanvraag_voorstellen|concept_vorm|text|NO|'bevestiging'::text
+KOLOM|aanvraag_voorstellen|contactpersoon_id|integer|YES|
+KOLOM|aanvraag_voorstellen|gebouw_id|integer|YES|
 KOLOM|aanvraag_voorstellen|gebruiker_id|integer|NO|
 KOLOM|aanvraag_voorstellen|id|integer|NO|nextval('aanvraag_voorstellen_id_seq'::regclass)
+KOLOM|aanvraag_voorstellen|inbox_item_id|integer|YES|
 KOLOM|aanvraag_voorstellen|is_persoonlijk|boolean|NO|false
+KOLOM|aanvraag_voorstellen|klant_id|integer|YES|
 KOLOM|aanvraag_voorstellen|mail_message_id|text|NO|
 KOLOM|aanvraag_voorstellen|mailbox_adres|text|NO|
 KOLOM|aanvraag_voorstellen|onderwerp|text|NO|''::text
+KOLOM|aanvraag_voorstellen|opname_id|integer|YES|
 KOLOM|aanvraag_voorstellen|projectkans_id|integer|YES|
 KOLOM|aanvraag_voorstellen|status|text|NO|'open'::text
 KOLOM|aanvraag_voorstellen|voorstel_type|text|NO|'nieuwe_aanvraag'::text
+KOLOM|aanvraag_voorstellen|werkmaatschappij_id|integer|YES|
 KOLOM|abonnementen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|abonnementen|actief|boolean|NO|true
 KOLOM|abonnementen|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -2319,9 +2340,11 @@ KOLOM|gebouw_notities|verwijderd_op|timestamp without time zone|YES|
 KOLOM|gebouw_partijen|aangemaakt_op|timestamp without time zone|NO|now()
 KOLOM|gebouw_partijen|adres|text|YES|
 KOLOM|gebouw_partijen|bijgewerkt_op|timestamp without time zone|NO|now()
+KOLOM|gebouw_partijen|contactpersoon_id|integer|YES|
 KOLOM|gebouw_partijen|email|text|YES|
 KOLOM|gebouw_partijen|gebouw_id|integer|NO|
 KOLOM|gebouw_partijen|id|integer|NO|nextval('gebouw_partijen_id_seq'::regclass)
+KOLOM|gebouw_partijen|klant_id|integer|YES|
 KOLOM|gebouw_partijen|naam|text|NO|
 KOLOM|gebouw_partijen|opmerkingen|text|YES|
 KOLOM|gebouw_partijen|organisatie|text|YES|
@@ -3447,6 +3470,7 @@ KOLOM|mod_calc_eenheden|type|text|NO|'vrije_projecteenheid'::text
 KOLOM|mod_calc_eenheden|volgorde|integer|NO|0
 KOLOM|mod_calc_headers|aangemaakt_door_id|integer|YES|
 KOLOM|mod_calc_headers|aangemaakt_op|timestamp without time zone|NO|now()
+KOLOM|mod_calc_headers|aanvraag_voorstel_id|integer|YES|
 KOLOM|mod_calc_headers|abk_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|ak_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|bijgewerkt_op|timestamp without time zone|NO|now()
@@ -3458,6 +3482,8 @@ KOLOM|mod_calc_headers|korting|numeric|NO|0
 KOLOM|mod_calc_headers|naam|text|NO|
 KOLOM|mod_calc_headers|nummer|integer|NO|nextval('seq_nummer_c'::regclass)
 KOLOM|mod_calc_headers|omschrijving|text|YES|
+KOLOM|mod_calc_headers|opdrachtgever_contactpersoon_id|integer|YES|
+KOLOM|mod_calc_headers|opdrachtgever_klant_id|integer|YES|
 KOLOM|mod_calc_headers|opmerkingen|text|YES|
 KOLOM|mod_calc_headers|opname_id|integer|YES|
 KOLOM|mod_calc_headers|opslag_abk|numeric|NO|10
@@ -3471,6 +3497,7 @@ KOLOM|mod_calc_headers|referentie|text|YES|
 KOLOM|mod_calc_headers|risico_is_vast|boolean|NO|false
 KOLOM|mod_calc_headers|status|text|NO|'concept'::text
 KOLOM|mod_calc_headers|verzonden_op|timestamp without time zone|YES|
+KOLOM|mod_calc_headers|werkmaatschappij_id|integer|YES|
 KOLOM|mod_calc_headers|werknummer|text|YES|
 KOLOM|mod_calc_headers|winst_is_vast|boolean|NO|false
 KOLOM|mod_calc_inkoop_items|aangemaakt_op|timestamp without time zone|NO|now()

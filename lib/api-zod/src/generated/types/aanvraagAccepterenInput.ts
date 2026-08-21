@@ -5,16 +5,20 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
-import type { AanvraagAccepterenInputNieuweKlant } from './aanvraagAccepterenInputNieuweKlant';
 import type { AanvraagAccepterenInputNieuwGebouw } from './aanvraagAccepterenInputNieuwGebouw';
+import type { NieuweOpdrachtgeverInput } from './nieuweOpdrachtgeverInput';
 
 export interface AanvraagAccepterenInput {
   titel: string;
-  klant_id?: number;
-  nieuwe_klant?: AanvraagAccepterenInputNieuweKlant;
-  gebouw_id?: number;
+  werkzaamheden: string;
+  contact_naam?: string | null;
+  contact_email?: string | null;
+  contact_telefoon?: string | null;
+  klant_id?: number | null;
+  nieuwe_klant?: NieuweOpdrachtgeverInput;
+  gebouw_id?: number | null;
   nieuw_gebouw?: AanvraagAccepterenInputNieuwGebouw;
-  bv?: string;
-  voorstel_type?: string;
-  gerelateerd_project_id?: number;
+  bv?: string | null;
+  voorstel_type?: string | null;
+  gerelateerd_project_id?: number | null;
 }

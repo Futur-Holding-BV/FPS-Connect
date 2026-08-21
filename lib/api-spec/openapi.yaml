@@ -32583,6 +32583,26 @@ components:
           type: ["string", "null"]
         beoordeel_notitie:
           type: ["string", "null"]
+        inbox_item_id:
+          type: ["integer", "null"]
+        klant_id:
+          type: ["integer", "null"]
+        klant_naam:
+          type: ["string", "null"]
+        contactpersoon_id:
+          type: ["integer", "null"]
+        contact_naam:
+          type: ["string", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        opname_id:
+          type: ["integer", "null"]
+        calculatie_id:
+          type: ["integer", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+        werkmaatschappij_naam:
+          type: ["string", "null"]
 
     AanvraagSignaal:
       type: object
@@ -32617,29 +32637,51 @@ components:
         notitie:
           type: string
 
+    NieuweOpdrachtgeverInput:
+      type: object
+      required: [naam, adres, postcode, stad]
+      properties:
+        naam:
+          type: string
+        adres:
+          type: string
+        postcode:
+          type: string
+        stad:
+          type: string
+        email:
+          type: string
+        telefoon:
+          type: string
+
     AanvraagAccepterenInput:
       type: object
-      required: [titel]
+      required: [titel, werkzaamheden]
       properties:
         titel:
           type: string
+        werkzaamheden:
+          type: string
+        contact_naam:
+          type: string
+          nullable: true
+        contact_email:
+          type: string
+          nullable: true
+        contact_telefoon:
+          type: string
+          nullable: true
         klant_id:
           type: integer
+          nullable: true
         nieuwe_klant:
-          type: object
-          required: [naam]
-          properties:
-            naam:
-              type: string
-            email:
-              type: string
-            telefoon:
-              type: string
+          $ref: "#/components/schemas/NieuweOpdrachtgeverInput"
         gebouw_id:
           type: integer
+          nullable: true
         nieuw_gebouw:
           type: object
-          required: [naam, adres]
+          required: [naam, adres, stad, postcode]
           properties:
             naam:
               type: string
@@ -32647,12 +32689,17 @@ components:
               type: string
             stad:
               type: string
+            postcode:
+              type: string
         bv:
           type: string
+          nullable: true
         voorstel_type:
           type: string
+          nullable: true
         gerelateerd_project_id:
           type: integer
+          nullable: true
 
     AanvraagAfwijzenInput:
       type: object
@@ -33396,40 +33443,38 @@ components:
 
     InboxOfferteavanvraagInput:
       type: object
-      required: [werkmaatschappij_id]
+      required: [werkmaatschappij_id, email]
       properties:
         werkmaatschappij_id:
           type: integer
-        bestaand_gebouw_id:
-          type: integer
-          description: Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken
+          description: ID van de werkmaatschappij (werkgevers.id)
+        email:
+          type: string
+          format: binary
+          description: Het bronbestand (e-mail als .eml of .msg)
+        bijlagen:
+          type: array
+          maxItems: 10
+          description: Optionele bijlagen die samen met de aanvraag als bewijsbron worden opgeslagen en gelezen
+          items:
+            type: string
+            format: binary
 
     InboxOfferteverwerkingResultaat:
       type: object
-      required: [inbox_item]
+      required: [inbox_item, voorstel_id, aangemaakt]
       properties:
         inbox_item:
           $ref: "#/components/schemas/InboxItem"
-        offerte_id:
-          type: ["integer", "null"]
-        offerte_titel:
-          type: ["string", "null"]
-        gebouw_id:
-          type: ["integer", "null"]
-        gebouw_naam:
-          type: ["string", "null"]
-        opname_id:
-          type: ["integer", "null"]
+        voorstel_id:
+          type: integer
         ai_samenvatting:
           type: ["string", "null"]
         aangemaakt:
           type: object
+          required: [voorstel]
           properties:
-            offerte:
-              type: boolean
-            gebouw:
-              type: boolean
-            opname:
+            voorstel:
               type: boolean
 
     AanvraagPlanning:
@@ -34158,6 +34203,12 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        klant_id:
+          type: ["integer", "null"]
+          description: CRM-klant gekoppeld aan deze partij (AANVRAAG_01)
+        contactpersoon_id:
+          type: ["integer", "null"]
+          description: CRM-contactpersoon gekoppeld aan deze partij (AANVRAAG_01)
         aangemaakt_op:
           type: string
 
@@ -34389,7 +34440,7 @@ components:
 
     GebouwInput:
       type: object
-      required: [naam, adres]
+      required: [naam, adres, stad, postcode, omschrijving]
       properties:
         werknummer:
           type: string
@@ -34407,6 +34458,9 @@ components:
           type: string
         klant_id:
           type: integer
+          description: Bestaande CRM-opdrachtgever voor dit project
+        nieuwe_klant:
+          $ref: "#/components/schemas/NieuweOpdrachtgeverInput"
         aantal_verdiepingen:
           type: integer
         hoogte:
@@ -44475,6 +44529,24 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+        aanvraag_voorstel_id:
+          type: ["integer", "null"]
+        opdrachtgever_klant_id:
+          type: ["integer", "null"]
+        opdrachtgever_klant_naam:
+          type: ["string", "null"]
+        opdrachtgever_contactpersoon_id:
+          type: ["integer", "null"]
+        opdrachtgever_contactpersoon_naam:
+          type: ["string", "null"]
+        opdrachtgever_contactpersoon_email:
+          type: ["string", "null"]
+        opdrachtgever_contactpersoon_telefoon:
+          type: ["string", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+        werkmaatschappij_naam:
+          type: ["string", "null"]
 
     MaakOfferteResult:
       type: object

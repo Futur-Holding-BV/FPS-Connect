@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:signaal-links": "node --test src/lib/signaalActies.test.mjs src/lib/werkbakActiePaden.test.mjs",
     "test:ci-rood-mail-claim": "tsx --test src/lib/ciRoodMailClaim.integration.ts",
+    "test:aanvraag-intake": "AANVRAAG_TEST_DATABASE_URL=\"$DATABASE_URL\" pnpm --workspace-root exec vitest run artifacts/api-server/src/__tests__/aanvraag-intake.test.ts artifacts/api-server/src/__tests__/aanvraag-upload-race.integration.test.ts artifacts/api-server/src/__tests__/aanvraag-upload-opslagcleanup.test.ts lib/api-client-react/src/inbox-offerteaanvraag-multipart.test.ts",
     "verificatie-externe-adviseur-herstart": "tsx src/verificatie-externe-adviseur-herstart.ts",
     "verificatie-mail-naar-factuur": "tsx src/verificatie-mail-naar-factuur.ts",
     "verificatie-bank01": "tsx src/verificatie-bank01.ts",

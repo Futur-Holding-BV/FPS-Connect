@@ -31,6 +31,8 @@ import {
   werkgeversTable,
   documentStudioModellenTable,
   medewerkersTable,
+  crmKlantenTable,
+  crmContactpersonenTable,
 } from "@workspace/db";
 import { isNull, lte, gte, inArray } from "drizzle-orm";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
@@ -201,6 +203,13 @@ function mapHeader(
     subtotaal?: number;
     totaalNaOpslagen?: number;
     kenmerk?: string | null;
+    // AANVRAAG_01 §6
+    aanvraagVoorstelId?: number | null;
+    opdrachtgeverKlantNaam?: string | null;
+    opdrachtgeverContactpersoonNaam?: string | null;
+    opdrachtgeverContactpersoonEmail?: string | null;
+    opdrachtgeverContactpersoonTelefoon?: string | null;
+    werkmaatschappijNaam?: string | null;
   },
 ) {
   return {
@@ -238,6 +247,16 @@ function mapHeader(
     aangemaakt_door_naam: extra?.aangemaaktDoorNaam ?? null,
     aangemaakt_op: iso(h.aangemaaktOp),
     bijgewerkt_op: iso(h.bijgewerktOp),
+    // AANVRAAG_01 §6 — intake herkomst
+    aanvraag_voorstel_id: (h as any).aanvraagVoorstelId ?? extra?.aanvraagVoorstelId ?? null,
+    opdrachtgever_klant_id: (h as any).opdrachtgeverKlantId ?? null,
+    opdrachtgever_klant_naam: extra?.opdrachtgeverKlantNaam ?? null,
+    opdrachtgever_contactpersoon_id: (h as any).opdrachtgeverContactpersoonId ?? null,
+    opdrachtgever_contactpersoon_naam: extra?.opdrachtgeverContactpersoonNaam ?? null,
+    opdrachtgever_contactpersoon_email: extra?.opdrachtgeverContactpersoonEmail ?? null,
+    opdrachtgever_contactpersoon_telefoon: extra?.opdrachtgeverContactpersoonTelefoon ?? null,
+    werkmaatschappij_id: (h as any).werkmaatschappijId ?? null,
+    werkmaatschappij_naam: extra?.werkmaatschappijNaam ?? null,
   };
 }
 
@@ -495,17 +514,28 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
   try {
     const { status, zoek } = req.query as Record<string, string>;
 
+    // E. Join klant, contact, werkmaatschappij voor de intake-herkomst velden
+    const klantAlias = crmKlantenTable;
+    const contactAlias = crmContactpersonenTable;
     const rows = await db
       .select({
         header: modCalcHeadersTable,
         gebouwNaam: gebouwenTable.naam,
         opnameNaam: opnamesTable.naam,
         makerNaam: gebruikersTable.naam,
+        klantNaamJoin: klantAlias.naam,
+        contactNaamJoin: contactAlias.naam,
+        contactEmailJoin: contactAlias.email,
+        contactTelefoonJoin: contactAlias.telefoon,
+        werkmaatschappijNaamJoin: werkgeversTable.naam,
       })
       .from(modCalcHeadersTable)
       .leftJoin(gebouwenTable, eq(modCalcHeadersTable.gebouwId, gebouwenTable.id))
       .leftJoin(opnamesTable, eq(modCalcHeadersTable.opnameId, opnamesTable.id))
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(klantAlias, eq((modCalcHeadersTable as any).opdrachtgeverKlantId, klantAlias.id))
+      .leftJoin(contactAlias, eq((modCalcHeadersTable as any).opdrachtgeverContactpersoonId, contactAlias.id))
+      .leftJoin(werkgeversTable, eq((modCalcHeadersTable as any).werkmaatschappijId, werkgeversTable.id))
       .orderBy(desc(modCalcHeadersTable.aangemaaktOp));
 
     const allRegels = await db.select({
@@ -550,7 +580,8 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
       );
     }
 
-    res.json(await Promise.all(resultaten.map(async ({ header, gebouwNaam, opnameNaam, makerNaam }) => {
+    res.json(await Promise.all(resultaten.map(async (r) => {
+      const { header, gebouwNaam, opnameNaam, makerNaam, klantNaamJoin, contactNaamJoin, contactEmailJoin, contactTelefoonJoin, werkmaatschappijNaamJoin } = r;
       const calcRegels = regelsByCalc.get(header.id) ?? [];
       const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
         opslagMateriaal: header.opslagMateriaal ?? 0,
@@ -565,7 +596,19 @@ router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> =>
         risicoIsVast: header.risicoIsVast ?? false,
         winstIsVast: header.winstIsVast ?? false,
       });
-      return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, opnameNaam: opnameNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen, kenmerk: await kenmerkVoorModCalc(header.gebouwId, header.nummer) });
+      return mapHeader(header, {
+        gebouwNaam: gebouwNaam ?? null,
+        opnameNaam: opnameNaam ?? null,
+        aangemaaktDoorNaam: makerNaam ?? null,
+        subtotaal,
+        totaalNaOpslagen: totaal_na_opslagen,
+        kenmerk: await kenmerkVoorModCalc(header.gebouwId, header.nummer),
+        opdrachtgeverKlantNaam: klantNaamJoin ?? null,
+        opdrachtgeverContactpersoonNaam: contactNaamJoin ?? null,
+        opdrachtgeverContactpersoonEmail: contactEmailJoin ?? null,
+        opdrachtgeverContactpersoonTelefoon: contactTelefoonJoin ?? null,
+        werkmaatschappijNaam: werkmaatschappijNaamJoin ?? null,
+      });
     })));
   } catch (e) {
     req.log.error(e);
@@ -923,17 +966,26 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void
   try {
     const id = parseId(req.params["id"]);
 
+    // E. Join klant, contact, werkmaatschappij voor intake-herkomst namen
     const [headerRow] = await db
       .select({
         header: modCalcHeadersTable,
         gebouwNaam: gebouwenTable.naam,
         opnameNaam: opnamesTable.naam,
         makerNaam: gebruikersTable.naam,
+        klantNaamJoin: crmKlantenTable.naam,
+        contactNaamJoin: crmContactpersonenTable.naam,
+        contactEmailJoin: crmContactpersonenTable.email,
+        contactTelefoonJoin: crmContactpersonenTable.telefoon,
+        werkmaatschappijNaamJoin: werkgeversTable.naam,
       })
       .from(modCalcHeadersTable)
       .leftJoin(gebouwenTable, eq(modCalcHeadersTable.gebouwId, gebouwenTable.id))
       .leftJoin(opnamesTable, eq(modCalcHeadersTable.opnameId, opnamesTable.id))
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(crmKlantenTable, eq((modCalcHeadersTable as any).opdrachtgeverKlantId, crmKlantenTable.id))
+      .leftJoin(crmContactpersonenTable, eq((modCalcHeadersTable as any).opdrachtgeverContactpersoonId, crmContactpersonenTable.id))
+      .leftJoin(werkgeversTable, eq((modCalcHeadersTable as any).werkmaatschappijId, werkgeversTable.id))
       .where(eq(modCalcHeadersTable.id, id));
 
     if (!headerRow) return void res.status(404).json({ error: "Niet gevonden" });
@@ -980,6 +1032,11 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void
         subtotaal,
         totaalNaOpslagen: totaal_na_opslagen,
         kenmerk: await kenmerkVoorModCalc(headerRow.header.gebouwId, headerRow.header.nummer),
+        opdrachtgeverKlantNaam: headerRow.klantNaamJoin ?? null,
+        opdrachtgeverContactpersoonNaam: headerRow.contactNaamJoin ?? null,
+        opdrachtgeverContactpersoonEmail: headerRow.contactEmailJoin ?? null,
+        opdrachtgeverContactpersoonTelefoon: headerRow.contactTelefoonJoin ?? null,
+        werkmaatschappijNaam: headerRow.werkmaatschappijNaamJoin ?? null,
       }),
       optioneel_totaal,
       regels,
@@ -1622,12 +1679,16 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res): P
 });
 
 // ── Maak offerte vanuit calculatie ─────────────────────────────────────────
+// AANVRAAG_01 §7 — status moet exact intern_akkoord zijn, anders 409.
 router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
 
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
     if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (header.status !== "intern_akkoord") {
+      return void res.status(409).json({ error: `Calculatie heeft status '${header.status}'. Een offerte kan alleen worden aangemaakt als de status exact 'intern_akkoord' is.` });
+    }
 
     const alleRegels = await db.select().from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, id))

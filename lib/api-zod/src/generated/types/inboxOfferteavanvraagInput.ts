@@ -7,7 +7,13 @@
  */
 
 export interface InboxOfferteavanvraagInput {
+  /** ID van de werkmaatschappij (werkgevers.id) */
   werkmaatschappij_id: number;
-  /** Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken */
-  bestaand_gebouw_id?: number;
+  /** Het bronbestand (e-mail als .eml of .msg) */
+  email: Blob;
+  /**
+     * Optionele bijlagen die samen met de aanvraag als bewijsbron worden opgeslagen en gelezen
+     * @maxItems 10
+     */
+  bijlagen?: Blob[];
 }

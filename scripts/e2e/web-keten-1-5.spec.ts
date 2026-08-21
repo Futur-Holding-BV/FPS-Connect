@@ -169,22 +169,23 @@ test("KETEN_01 hermeting: proces 1 t/m 5", async ({ page }) => {
       .filter({ has: page.getByRole("button", { name: "Accorderen", exact: true }) })
       .last();
     await kaart.getByRole("button", { name: "Accorderen", exact: true }).click();
-    // Acceptatiedialoog "Aanvraag accorderen": titel is voorgevuld; klant + gebouw → nieuw.
-    const dialoog = page.getByRole("dialog").filter({ hasText: "Aanvraag accorderen" });
+    // Acceptatiedialoog: uitsluitend de vier startgegevens.
+    const dialoog = page.getByRole("dialog").filter({ has: page.getByTestId("button-opslaan-intake") });
     await expect(dialoog).toBeVisible({ timeout: 10_000 });
-    const titelVeld = dialoog.locator("input").first();
-    await titelVeld.fill(`Brandwerend afdichten — ${MERK}`);
-    // Combobox 1 = Klant → "Nieuwe relatie aanmaken…".
-    await dialoog.getByRole("combobox").nth(0).click();
+    await dialoog.getByTestId("input-titel").fill(`Brandwerend afdichten — ${MERK}`);
+    await dialoog.getByTestId("input-werkzaamheden").fill("Brandwerende doorvoeringen afdichten");
+    await dialoog.getByTestId("select-klant").click();
     await page.getByRole("option", { name: /Nieuwe relatie aanmaken/i }).click();
     await dialoog.getByPlaceholder("Naam nieuwe relatie").fill(`Keten Testklant ${MERK}`);
-    // Combobox 2 = Gebouw → "Nieuw gebouw aanmaken…".
-    await dialoog.getByRole("combobox").nth(1).click();
+    await dialoog.getByTestId("input-nieuwe-klant-adres").fill("Relatiestraat 2");
+    await dialoog.getByTestId("input-nieuwe-klant-postcode").fill("1234 AB");
+    await dialoog.getByTestId("input-nieuwe-klant-stad").fill("Utrecht");
+    await dialoog.getByTestId("select-gebouw").click();
     await page.getByRole("option", { name: /Nieuw gebouw aanmaken/i }).click();
-    await dialoog.getByPlaceholder("Naam", { exact: true }).fill(`Ketengebouw ${MERK}`);
-    await dialoog.getByPlaceholder("Adres", { exact: true }).fill("Ketenstraat 1");
-    await dialoog.getByPlaceholder("Plaats", { exact: true }).fill("Utrecht");
-    await dialoog.getByRole("button", { name: /Accorderen & vastleggen/i }).click();
+    await dialoog.getByTestId("input-nieuw-gebouw-adres").fill("Ketenstraat 1");
+    await dialoog.getByTestId("input-nieuw-gebouw-postcode").fill("5678 CD");
+    await dialoog.getByTestId("input-nieuw-gebouw-stad").fill("Utrecht");
+    await dialoog.getByTestId("button-opslaan-intake").click();
     await page.waitForTimeout(2500);
     await kiek(page, "p1-aanvragen-na");
 

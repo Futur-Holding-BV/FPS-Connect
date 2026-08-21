@@ -9,5 +9,6 @@
 export type AanvraagAccepterenInputNieuwGebouw = {
   naam: string;
   adres: string;
-  stad?: string;
+  stad: string;
+  postcode: string;
 };

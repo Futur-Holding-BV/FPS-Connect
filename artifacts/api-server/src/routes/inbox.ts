@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { publiekeAppUrl } from "../lib/publiekeUrl";
 import multer from "multer";
 import crypto from "crypto";
@@ -7,6 +7,7 @@ import {
   inboxItemsTable,
   inboxAuditLogTable,
   aanvraagPlanningenTable,
+  aanvraagVoorstellenTable,
   gebouwenTable,
   offertesTable,
   opnamesTable,
@@ -21,8 +22,10 @@ import { parseEmailBestand } from "../services/email-ai";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { stuurAanvraagBevestiging } from "../services/email";
-import { classificeerDocument, type DocCategorie, type BewijsStap } from "../lib/documentIntelligence";
+import { classificeerDocument, type DocCategorie, type BewijsStap, analyseerAanvraagVoorStroom, extraheerTekst } from "../lib/documentIntelligence";
 import { analyseerCvBestand } from "../lib/cvAnalyse";
+import { zoekKlant } from "../services/aanvraagstroomService";
+import { statusVoorAanvraagUploadConflict } from "../services/aanvraagUploadIdempotentie";
 
 const objectStorage = new ObjectStorageService();
 
@@ -625,358 +628,353 @@ router.post("/inbox/items/:id/ter-beoordeling", schrijven, async (req, res): Pro
 });
 
 // ── OFFERTE-AANVRAAG UPLOADEN & AI VERWERKEN ─────────────────────────────────
-const upload = multer({ storage: multer.memoryStorage() });
+// AANVRAAG_01 §4 — intake-only route: GEEN offerte/gebouw/opname/project vóór akkoord.
+// Schrijft uitsluitend: inbox_item (nieuw), auditlog, aanvraag_voorstel (open).
+const MAX_AANVRAAG_BESTAND_BYTES = 25 * 1024 * 1024;
+const MAX_AANVRAAG_TOTAAL_BYTES = 50 * 1024 * 1024;
+const aanvraagUploadBytes = new WeakMap<object, number>();
 
-interface AiAanvraagExtractie {
-  opdrachtgever: string | null;
-  contactpersoon: string | null;
-  contactpersoon_email: string | null;
-  contactpersoon_telefoon: string | null;
-  gebouw_naam: string | null;
-  adres: string | null;
-  stad: string | null;
-  postcode: string | null;
-  beschrijving_werkzaamheden: string | null;
-  offerte_titel: string | null;
-  samenvatting: string | null;
-  // Volledigheids-velden — null = niet vermeld in de e-mail → stel wél vraag
-  responstermijn: string | null;        // bijv. "2 weken" of null
-  opname_gevraagd: string | null;       // "ja", "nee", of null
-  plattegronden_status: string | null;  // "meegezonden", "nog te zenden", of null
+class AanvraagUploadTotaalTeGroot extends Error {
+  constructor() {
+    super("Aanvraagupload is in totaal te groot.");
+    this.name = "AanvraagUploadTotaalTeGroot";
+  }
 }
 
-async function extraheerAanvraagVeldenMetAi(
-  emailTekst: string,
-  onderwerp: string | null,
-  afzender: string | null,
-): Promise<AiAanvraagExtractie> {
-  if (!heeftGateway()) {
-    return {
-      opdrachtgever: afzender ?? null,
-      contactpersoon: null,
-      contactpersoon_email: afzender ?? null,
-      contactpersoon_telefoon: null,
-      gebouw_naam: null,
-      adres: null,
-      stad: null,
-      postcode: null,
-      beschrijving_werkzaamheden: emailTekst.slice(0, 400),
-      offerte_titel: onderwerp ?? "Offerte-aanvraag",
-      samenvatting: emailTekst.slice(0, 200),
-      responstermijn: null,
-      opname_gevraagd: null,
-      plattegronden_status: null,
+const begrensdeAanvraagOpslag: multer.StorageEngine = {
+  _handleFile(req, file, callback) {
+    const delen: Buffer[] = [];
+    let grootte = 0;
+    let afgerond = false;
+
+    const rondAf = (fout?: Error) => {
+      if (afgerond) return;
+      afgerond = true;
+      if (fout) {
+        file.stream.resume();
+        callback(fout);
+        return;
+      }
+      callback(null, { buffer: Buffer.concat(delen), size: grootte });
     };
-  }
 
-  const prompt = `Je bent een assistent voor een brandpreventie-bedrijf. Extraheer de volgende gegevens uit de offerte-aanvraag e-mail en geef ze terug als JSON. Gebruik null als een veld niet gevonden of niet vermeld kan worden.
-
-E-mail onderwerp: ${onderwerp ?? "(geen)"}
-Afzender: ${afzender ?? "(onbekend)"}
-Inhoud:
-${emailTekst.slice(0, 3000)}
-
-Geef JSON terug met exact deze velden:
-{
-  "opdrachtgever": "naam van de organisatie/opdrachtgever",
-  "contactpersoon": "naam van de contactpersoon",
-  "contactpersoon_email": "e-mailadres contactpersoon",
-  "contactpersoon_telefoon": "telefoonnummer",
-  "gebouw_naam": "naam van het gebouw of project",
-  "adres": "straat + huisnummer",
-  "stad": "stad/gemeente",
-  "postcode": "postcode",
-  "beschrijving_werkzaamheden": "samenvatting van gevraagde werkzaamheden (max 300 tekens)",
-  "offerte_titel": "korte duidelijke titel voor de offerte (max 80 tekens)",
-  "samenvatting": "beknopte samenvatting van de aanvraag (max 200 tekens)",
-  "responstermijn": "gewenste responstermijn als die EXPLICIET vermeld is (bijv. '2 weken', '1 maand'), anders null",
-  "opname_gevraagd": "expliciet 'ja' of 'nee' als opname van gebouw is besproken, anders null",
-  "plattegronden_status": "'meegezonden' als plattegronden zijn bijgevoegd, 'nog te zenden' als ze nog komen, anders null"
-}`;
-
-  try {
-    const inboxResultaat = await aiGateway.chat("default", {
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 800,
-    }, undefined, {
-      module: "inbox",
-      functie: "extraheerAanvraagVelden",
-      promptNaam: "inbox-aanvraag-extractie",
-      promptVersie: "1.0.0",
+    file.stream.on("data", (deel: Buffer) => {
+      if (afgerond) return;
+      grootte += deel.length;
+      const totaal = (aanvraagUploadBytes.get(req) ?? 0) + deel.length;
+      aanvraagUploadBytes.set(req, totaal);
+      if (totaal > MAX_AANVRAAG_TOTAAL_BYTES) {
+        rondAf(new AanvraagUploadTotaalTeGroot());
+        return;
+      }
+      delen.push(deel);
     });
-    const tekst = inboxResultaat.ok ? inboxResultaat.inhoud : "{}";
-    return JSON.parse(tekst) as AiAanvraagExtractie;
-  } catch {
-    return {
-      opdrachtgever: afzender ?? null,
-      contactpersoon: null,
-      contactpersoon_email: afzender ?? null,
-      contactpersoon_telefoon: null,
-      gebouw_naam: null,
-      adres: null,
-      stad: null,
-      postcode: null,
-      beschrijving_werkzaamheden: emailTekst.slice(0, 400),
-      offerte_titel: onderwerp ?? "Offerte-aanvraag",
-      samenvatting: emailTekst.slice(0, 200),
-      responstermijn: null,
-      opname_gevraagd: null,
-      plattegronden_status: null,
-    };
-  }
+    file.stream.on("error", (fout) => rondAf(fout));
+    file.stream.on("end", () => rondAf());
+  },
+  _removeFile(_req, file, callback) {
+    delete (file as Partial<Express.Multer.File>).buffer;
+    callback(null);
+  },
+};
+
+const upload = multer({
+  storage: begrensdeAanvraagOpslag,
+  limits: {
+    fileSize: MAX_AANVRAAG_BESTAND_BYTES,
+    files: 11,
+    fields: 10,
+    parts: 21,
+  },
+});
+const verwerkAanvraagUpload = upload.fields([
+  { name: "email", maxCount: 1 },
+  { name: "bijlagen", maxCount: 10 },
+]);
+
+function begrensAanvraagUpload(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  verwerkAanvraagUpload(req, res, (fout) => {
+    if (!fout) {
+      next();
+      return;
+    }
+    if (fout instanceof multer.MulterError || fout instanceof AanvraagUploadTotaalTeGroot) {
+      res.status(413).json({
+        error: "Upload te groot: maximaal 25 MB per bestand en 50 MB in totaal.",
+      });
+      return;
+    }
+    next(fout);
+  });
+}
+
+function onderwerpUitBestandsnaam(bestandsnaam: string): string {
+  return bestandsnaam.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Offerte-aanvraag";
 }
 
 router.post(
   "/inbox/offerte-aanvraag",
   schrijven,
-  upload.fields([
-    { name: "email", maxCount: 1 },
-    { name: "bijlagen", maxCount: 10 },
-  ]),
+  begrensAanvraagUpload,
   async (req, res): Promise<void> => {
+    const uploadObjectPaden: string[] = [];
+    let uploadObjectenOvergedragen = false;
+    const ruimMislukteUploadOp = async (): Promise<void> => {
+      if (uploadObjectenOvergedragen || uploadObjectPaden.length === 0) return;
+      const paden = [...new Set(uploadObjectPaden)];
+      uploadObjectPaden.length = 0;
+      await Promise.all(paden.map(async (objectPad) => {
+        try {
+          await objectStorage.deleteBestand(objectPad);
+        } catch (opruimFout) {
+          req.log.warn({ opruimFout, objectPad }, "mislukte aanvraagupload kon niet volledig worden opgeruimd");
+        }
+      }));
+    };
+
     try {
+      // ── Input validatie ───────────────────────────────────────────────────────
       const werkmaatschappijId = req.body?.werkmaatschappij_id
         ? parseInt(String(req.body.werkmaatschappij_id), 10)
         : null;
-
       if (!werkmaatschappijId || isNaN(werkmaatschappijId)) {
         return void res.status(400).json({ error: "werkmaatschappij_id is verplicht" });
       }
 
-      const bestaandGebouwId = req.body?.bestaand_gebouw_id
-        ? parseInt(String(req.body.bestaand_gebouw_id), 10)
-        : null;
-
       const files = req.files as Record<string, Express.Multer.File[]> | undefined;
       const emailBestand = files?.["email"]?.[0] ?? null;
+      if (!emailBestand) {
+        return void res.status(400).json({ error: "bronbestand (email) is verplicht" });
+      }
 
+      // A. 401 vóór writes als sessie geen userId heeft
       const gebruikerId = req.session.userId ?? null;
+      if (!gebruikerId) {
+        return void res.status(401).json({ error: "Niet ingelogd." });
+      }
 
+      // ── Werkmaatschappij valideren ────────────────────────────────────────────
       const [werkgever] = await db
         .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
         .from(werkgeversTable)
         .where(eq(werkgeversTable.id, werkmaatschappijId));
-
       if (!werkgever) {
         return void res.status(400).json({ error: "Werkmaatschappij niet gevonden" });
       }
 
-      // Valideer bestaand gebouw als opgegeven
-      if (bestaandGebouwId && !isNaN(bestaandGebouwId)) {
-        const [bestaandGebouw] = await db
-          .select({ id: gebouwenTable.id })
-          .from(gebouwenTable)
-          .where(eq(gebouwenTable.id, bestaandGebouwId));
-        if (!bestaandGebouw) {
-          return void res.status(400).json({ error: "Gebouw niet gevonden" });
-        }
+      // ── A. Stabiele SHA-256 identiteit VÓÓR upload (idempotentie op exacte bronbytes) ─
+      const emailBestandsnaam = emailBestand.originalname;
+      const sha256 = crypto
+        .createHash("sha256")
+        .update(emailBestand.buffer)
+        .digest("hex");
+      const mailMessageIdUpload = `upload:${sha256}`;
+
+      // ── Idempotentie: controleer vóór upload of we dit bestand al kennen ──────
+      const bestaandVoorstelVroeg = await db
+        .select({ id: aanvraagVoorstellenTable.id })
+        .from(aanvraagVoorstellenTable)
+        .where(eq(aanvraagVoorstellenTable.mailMessageId, mailMessageIdUpload))
+        .limit(1);
+      if (bestaandVoorstelVroeg.length > 0) {
+        return void res.status(409).json({ error: "Dit bronbestand is al verwerkt.", voorstel_id: bestaandVoorstelVroeg[0].id });
       }
 
-      let ai: AiAanvraagExtractie = {
-        opdrachtgever: null,
-        contactpersoon: null,
-        contactpersoon_email: null,
-        contactpersoon_telefoon: null,
-        gebouw_naam: null,
-        adres: null,
-        stad: null,
-        postcode: null,
-        beschrijving_werkzaamheden: null,
-        offerte_titel: "Offerte-aanvraag",
-        samenvatting: null,
-        responstermijn: null,
-        opname_gevraagd: null,
-        plattegronden_status: null,
-      };
+      // ── Upload bronbestand naar object storage ────────────────────────────────
+      // Elke request krijgt eigen paden. Daardoor kan een verliezende race veilig
+      // alleen zijn eigen blobs compenseren, terwijl de SHA de DB-idempotentie bewaakt.
+      const uploadRequestId = crypto.randomUUID();
+      const veiligNaam = emailBestandsnaam.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+      const bronSubPath = `algemeen/inbox/emails/${sha256.slice(0, 16)}_${uploadRequestId}_${veiligNaam}`;
+      let bronBestandspad: string;
+      const verwachtBronPad = `/objects/${bronSubPath}`;
+      const bronPadIndex = uploadObjectPaden.push(verwachtBronPad) - 1;
+      try {
+        bronBestandspad = await objectStorage.uploadBestand(bronSubPath, emailBestand.buffer, emailBestand.mimetype ?? "application/octet-stream");
+        uploadObjectPaden[bronPadIndex] = bronBestandspad;
+      } catch (err) {
+        await ruimMislukteUploadOp();
+        req.log.error({ err }, "Object storage niet beschikbaar — aanvraagbron niet opgeslagen");
+        return void res.status(503).json({
+          error: "De bestandsopslag is momenteel niet beschikbaar. De aanvraag is niet opgeslagen.",
+        });
+      }
 
-      let emailBestandsnaam = "(geen e-mail)";
-
-      if (emailBestand) {
-        emailBestandsnaam = emailBestand.originalname;
+      // ── Upload bijlagen ───────────────────────────────────────────────────────
+      const bijlagenBestanden = files?.["bijlagen"] ?? [];
+      const opgeslagenBijlagen: Array<{ naam: string; url: string }> = [];
+      const bijlageTeksten: Array<{ naam: string; tekst: string }> = [];
+      for (const [bijlageIndex, b] of bijlagenBestanden.slice(0, 10).entries()) {
+        const bijlageSha = crypto.createHash("sha256").update(b.buffer).digest("hex");
+        const veiligBijlage = b.originalname.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+        const subPath = `algemeen/inbox/emails/${bijlageSha.slice(0, 16)}_${uploadRequestId}_${bijlageIndex}_${veiligBijlage}`;
+        const verwachtBijlagePad = `/objects/${subPath}`;
+        const bijlagePadIndex = uploadObjectPaden.push(verwachtBijlagePad) - 1;
         try {
-          const geparseerd = await parseEmailBestand(
-            emailBestand.originalname,
-            emailBestand.buffer,
-          );
-          ai = await extraheerAanvraagVeldenMetAi(
-            geparseerd.inhoudTekst ?? "",
-            geparseerd.onderwerp,
-            geparseerd.afzender,
-          );
-        } catch (parseErr) {
-          req.log.warn({ parseErr }, "E-mail parsen mislukt — velden leeg");
+          const url = await objectStorage.uploadBestand(subPath, b.buffer, b.mimetype ?? "application/octet-stream");
+          uploadObjectPaden[bijlagePadIndex] = url;
+          opgeslagenBijlagen.push({ naam: b.originalname, url });
+        } catch (err) {
+          await ruimMislukteUploadOp();
+          req.log.error({ err, naam: b.originalname }, "bijlage opslaan mislukt — aanvraag niet vastgelegd");
+          return void res.status(503).json({
+            error: `Bijlage "${b.originalname}" kon niet worden opgeslagen. De aanvraag is niet opgeslagen.`,
+          });
+        }
+
+        const extractie = await extraheerTekst(
+          b.buffer,
+          b.mimetype ?? "application/octet-stream",
+          b.originalname,
+        );
+        const tekst = extractie.tekst?.trim() ?? "";
+        if (tekst.length >= 40) {
+          bijlageTeksten.push({ naam: b.originalname, tekst });
         }
       }
 
-      const vandaag = new Date().toISOString().slice(0, 10);
-      const offerteNummer = `AO-${Date.now()}`;
-
-      let aangemaaktGebouwId: number | null = null;
-      let aangemaaktGebouwNaam: string | null = null;
-      let aangemaaktOpnameId: number | null = null;
-
-      if (bestaandGebouwId && !isNaN(bestaandGebouwId)) {
-        // Gebruik het meegegeven bestaande gebouw
-        const [bestaand] = await db
-          .select({ id: gebouwenTable.id, naam: gebouwenTable.naam })
-          .from(gebouwenTable)
-          .where(eq(gebouwenTable.id, bestaandGebouwId));
-        if (bestaand) {
-          aangemaaktGebouwId = bestaand.id;
-          aangemaaktGebouwNaam = bestaand.naam;
-        }
-      } else if (ai.adres) {
-        const gebouwNaam =
-          ai.gebouw_naam ??
-          ([ai.opdrachtgever, ai.adres].filter(Boolean).join(" — ") ||
-            "Nieuw gebouw");
-
-        const [gebouw] = await db
-          .insert(gebouwenTable)
-          .values({
-            naam: gebouwNaam,
-            adres: ai.adres,
-            stad: ai.stad ?? undefined,
-            postcode: ai.postcode ?? undefined,
-            werkgeverId: werkmaatschappijId,
-          })
-          .returning();
-
-        aangemaaktGebouwId = gebouw.id;
-        aangemaaktGebouwNaam = gebouw.naam;
+      // ── E-mail parsen & AI-analyse ────────────────────────────────────────────
+      let emailTekst = "";
+      let emailOnderwerp: string | null = null;
+      let emailAfzender: string | null = null;
+      let emailAfzenderNaam: string | null = null;
+      let emailAfzenderAdres = "";
+      try {
+        const geparseerd = await parseEmailBestand(emailBestandsnaam, emailBestand.buffer);
+        emailTekst = geparseerd.inhoudTekst ?? "";
+        emailOnderwerp = geparseerd.onderwerp;
+        emailAfzender = geparseerd.afzender;
+        // Probeer naam en adres te splitsen uit "Naam <adres>"
+        const m = geparseerd.afzender?.match(/^(.+?)\s*<([^>]+)>$/) ?? null;
+        if (m) { emailAfzenderNaam = m[1].trim() || null; emailAfzenderAdres = m[2].trim(); }
+        else { emailAfzenderAdres = geparseerd.afzender?.trim() ?? ""; }
+      } catch (parseErr) {
+        req.log.warn({ parseErr }, "E-mail parsen mislukt — velden leeg");
       }
 
-      const offerteTitel = ai.offerte_titel ?? onderwerp(emailBestandsnaam);
-
-      const [offerte] = await db
-        .insert(offertesTable)
-        .values({
-          offertenummer: offerteNummer,
-          titel: offerteTitel,
-          opdrachtgever: ai.opdrachtgever ?? undefined,
-          gebouwId: aangemaaktGebouwId ?? undefined,
-          onsKenmerk: werkgever.naam,
-          status: "concept",
-          portaalStatus: "concept",
-          aangemaaktDoorId: gebruikerId ?? undefined,
-        })
-        .returning();
-
-      if (aangemaaktGebouwId) {
-        const [opname] = await db
-          .insert(opnamesTable)
-          .values({
-            naam: `Opname — ${ai.opdrachtgever ?? offerteTitel}`,
-            datum: vandaag,
-            gebouwId: aangemaaktGebouwId,
-            notities: ai.beschrijving_werkzaamheden ?? undefined,
-            aangemaaktDoorId: gebruikerId ?? undefined,
-          })
-          .returning();
-        aangemaaktOpnameId = opname.id;
-      }
-
-      const [inboxItem] = await db
-        .insert(inboxItemsTable)
-        .values({
-          bestandsnaam: emailBestandsnaam,
-          bestandspad: await (async () => {
-            if (emailBestand?.buffer) {
-              const subPath = opslagSubPath("email", emailBestandsnaam);
-              try { return await objectStorage.uploadBestand(subPath, emailBestand.buffer, emailBestand.mimetype ?? "application/octet-stream"); }
-              catch { return `/objects/${subPath}`; }
-            }
-            return `inbox/offerte-aanvraag/${Date.now()}_${emailBestandsnaam}`;
-          })(),
-          bestandsgrootte: emailBestand?.size ?? null,
-          mimetype: emailBestand?.mimetype ?? null,
-          geuploadDoor: gebruikerId,
-          // Aanvraag is in dit verzoek volledig afgehandeld (offerte + evt. gebouw/opname
-          // aangemaakt en gekoppeld) — markeer direct als verwerkt zodat de beheerder
-          // ziet dat deze mail niet meer op actie wacht.
-          status: "verwerkt",
-          documentCategorie: "offerte_aanvraag",
-          bestemming: "Offertes",
-          aiBetrouwbaarheid: heeftGateway() ? "hoog" : "midden",
-          aiSamenvatting: ai.samenvatting ?? `Offerte-aanvraag van ${ai.opdrachtgever ?? "onbekend"}`,
-          aiRedenering: `Werkmaatschappij: ${werkgever.naam}. Offerte ${offerteNummer} aangemaakt.`,
-          aiVolgendeActie: "Offerte bekijken en uitwerken",
-          gekoppeldeEntiteitType: "offerte",
-          gekoppeldeEntiteitId: offerte.id,
-          gekoppeldeEntiteitNaam: offerteTitel,
-          opmerkingen: ai.beschrijving_werkzaamheden ?? null,
-        })
-        .returning();
-
-      await db.insert(inboxAuditLogTable).values({
-        inboxItemId: inboxItem.id,
-        actie: "geregistreerd",
-        gebruikerId,
-        details: `Offerte-aanvraag verwerkt. Offerte ${offerteNummer} aangemaakt${aangemaaktGebouwId ? `, gebouw #${aangemaaktGebouwId}` : ""}${aangemaaktOpnameId ? `, opname #${aangemaaktOpnameId}` : ""}.`,
+      const analyse = await analyseerAanvraagVoorStroom({
+        mailOnderwerp: emailOnderwerp ?? onderwerpUitBestandsnaam(emailBestandsnaam),
+        mailAfzender: emailAfzender ?? "(onbekend)",
+        mailTekst: emailTekst,
+        bijlageTeksten,
       });
 
-      // ── Bevestigingsmail + planning-record ────────────────────────────────────
-      const antwoordToken = crypto.randomBytes(24).toString("hex");
-      const vragen: Array<"responstermijn" | "opname" | "plattegronden"> = [];
-      if (!ai.responstermijn) vragen.push("responstermijn");
-      if (!ai.opname_gevraagd) vragen.push("opname");
-      if (!ai.plattegronden_status) vragen.push("plattegronden");
+      const velden = analyse.ok && analyse.velden ? analyse.velden : null;
+      const aiSamenvatting = velden?.samenvatting ?? null;
 
-      const [planning] = await db.insert(aanvraagPlanningenTable).values({
-        inboxItemId: inboxItem.id,
-        offerteId: offerte.id,
-        afzenderEmail: ai.contactpersoon_email ?? null,
-        afzenderNaam: ai.contactpersoon ?? null,
-        aiResponstermijn: ai.responstermijn ?? null,
-        aiOpname: ai.opname_gevraagd ?? null,
-        aiPlattegronden: ai.plattegronden_status ?? null,
-        antwoordToken,
-      }).returning();
+      // ── CRM-matching (kandidaten) — GEEN automatische aanmaak ────────────────
+      const klantMatch = velden
+        ? await zoekKlant(emailAfzenderAdres, velden.contact_email, velden.klant_naam)
+        : { klantId: null, klantNaam: null, kandidaten: [] };
 
-      if (ai.contactpersoon_email) {
-        const baseUrl = publiekeAppUrl() ?? "https://fpsbrandpreventie.nl";
-        const antwoordUrl = `${baseUrl}/api/inbox/aanvraag-antwoord/${antwoordToken}`;
+      // ── Één transactie: alleen inbox_item + auditlog + aanvraag_voorstel ──────
+      // Race-condition: als twee gelijktijdige requests door de vroege check glippen,
+      // vangt de UNIQUE constraint op mail_message_id de tweede op als error code 23505.
+      let resultaat: { inboxItem: typeof inboxItemsTable.$inferSelect; voorstel: typeof aanvraagVoorstellenTable.$inferSelect };
+      try {
+      resultaat = await db.transaction(async (tx) => {
+        const [inboxItem] = await tx
+          .insert(inboxItemsTable)
+          .values({
+            bestandsnaam: emailBestandsnaam,
+            bestandspad: bronBestandspad,
+            bestandsgrootte: emailBestand.size ?? null,
+            mimetype: emailBestand.mimetype ?? null,
+            geuploadDoor: gebruikerId,
+            status: "nieuw",
+            documentCategorie: "offerte_aanvraag",
+            bestemming: "CRM",
+            aiBetrouwbaarheid: heeftGateway() && analyse.ok ? "hoog" : "midden",
+            aiSamenvatting: aiSamenvatting ?? `Offerte-aanvraag van ${velden?.klant_naam ?? "onbekend"}`,
+            aiVolgendeActie: "Aanvraagvoorstel beoordelen en accepteren",
+          })
+          .returning();
 
-        void stuurAanvraagBevestiging({
-          naarEmail: ai.contactpersoon_email,
-          contactpersoon: ai.contactpersoon ?? null,
-          offerteTitel: offerteTitel,
-          werkmaatschappij: werkgever.naam,
-          antwoordUrl,
-          vragen,
+        await tx.insert(inboxAuditLogTable).values({
           inboxItemId: inboxItem.id,
-        }).then(async () => {
-          await db.update(aanvraagPlanningenTable)
-            .set({ bevestigingVerzondOp: new Date() })
-            .where(eq(aanvraagPlanningenTable.id, planning.id));
-        }).catch(() => void 0);
+          actie: "geregistreerd",
+          gebruikerId,
+          details: `Offerte-aanvraag ontvangen. AI-voorstel aangemaakt, wacht op beoordeling.`,
+        });
+
+        const [voorstel] = await tx
+          .insert(aanvraagVoorstellenTable)
+          .values({
+            gebruikerId,
+            mailMessageId: mailMessageIdUpload,
+            mailboxAdres: werkgever.naam,
+            isPersoonlijk: false,
+            afzenderNaam: emailAfzenderNaam,
+            afzenderEmail: emailAfzenderAdres,
+            onderwerp: emailOnderwerp ?? onderwerpUitBestandsnaam(emailBestandsnaam),
+            binnengekomenOp: new Date(),
+            voorstelType: "nieuwe_aanvraag",
+            status: "open",
+            inboxItemId: inboxItem.id,
+            werkmaatschappijId: werkmaatschappijId,
+            aiVoorstel: {
+              titel: velden?.titel ?? null,
+              klant_id: klantMatch.klantId,
+              klant_naam: klantMatch.klantNaam ?? velden?.klant_naam ?? null,
+              klant_adres: velden?.klant_adres ?? null,
+              klant_postcode: velden?.klant_postcode ?? null,
+              klant_stad: velden?.klant_stad ?? null,
+              klant_onbekend: klantMatch.klantId == null,
+              klant_kandidaten: klantMatch.kandidaten,
+              contact_naam: velden?.contact_naam ?? null,
+              contact_email: velden?.contact_email ?? null,
+              contact_telefoon: velden?.contact_telefoon ?? null,
+              gebouw_naam: velden?.gebouw_naam ?? null,
+              gebouw_adres: velden?.gebouw_adres ?? null,
+              gebouw_stad: velden?.gebouw_stad ?? null,
+              gebouw_postcode: velden?.gebouw_postcode ?? null,
+              werkzaamheden: velden?.werkzaamheden ?? null,
+              // De gekozen werkmaatschappij is menselijke invoer; nooit een AI-gok.
+              bv: werkgever.naam,
+              ontbrekende_stukken: velden?.ontbrekende_stukken ?? [],
+              samenvatting: aiSamenvatting,
+              onzekere_velden: velden?.onzekere_velden ?? [],
+              bron_bewijs: velden?.bron_bewijs ?? null,
+            },
+            bijlagen: opgeslagenBijlagen,
+          })
+          .returning();
+
+        return { inboxItem, voorstel };
+      });
+      } catch (txErr: unknown) {
+        if (statusVoorAanvraagUploadConflict(txErr) === 409) {
+          const bestaand = await db
+            .select({ id: aanvraagVoorstellenTable.id })
+            .from(aanvraagVoorstellenTable)
+            .where(eq(aanvraagVoorstellenTable.mailMessageId, mailMessageIdUpload))
+            .limit(1);
+          await ruimMislukteUploadOp();
+          return void res.status(409).json({ error: "Dit bronbestand is al verwerkt.", voorstel_id: bestaand[0]?.id ?? null });
+        }
+        throw txErr;
       }
 
+      uploadObjectenOvergedragen = true;
       res.status(201).json({
-        inbox_item: mapItem(inboxItem),
-        offerte_id: offerte.id,
-        offerte_titel: offerteTitel,
-        gebouw_id: aangemaaktGebouwId,
-        gebouw_naam: aangemaaktGebouwNaam,
-        opname_id: aangemaaktOpnameId,
-        ai_samenvatting: ai.samenvatting,
+        inbox_item: mapItem(resultaat.inboxItem),
+        voorstel_id: resultaat.voorstel.id,
+        ai_samenvatting: aiSamenvatting,
         aangemaakt: {
-          offerte: true,
-          gebouw: aangemaaktGebouwId !== null,
-          opname: aangemaaktOpnameId !== null,
+          voorstel: true,
         },
       });
     } catch (err) {
+      await ruimMislukteUploadOp();
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
-
-function onderwerp(bestandsnaam: string): string {
-  return bestandsnaam.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Offerte-aanvraag";
-}
 
 // ── VERWIJDEREN ───────────────────────────────────────────────────────────────
 router.delete("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload, Sparkles, X, ChevronRight, ChevronLeft, Trash2, CheckCircle2, AlertCircle,
   FileText, BookOpen, Receipt, Users, Archive, FolderOpen,
@@ -17,7 +18,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-import { useListMedewerkers, useListGebouwen, useListWerkgevers, useListOpdrachten, getListOpdrachtenQueryKey } from "@workspace/api-client-react";
+import {
+  getListAanvraagVoorstellenQueryKey,
+  getListOpdrachtenQueryKey,
+  useListMedewerkers,
+  useListOpdrachten,
+  useListWerkgevers,
+  useVerwerkInboxOfferteavanvraag,
+} from "@workspace/api-client-react";
 import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
@@ -430,13 +438,13 @@ function BeslisScherm({
   }, [medewerkerVoorstel?.id, docTypeVoorstel]);
   const [cvBezig, setCvBezig] = useState(false);
   const [aanvraagWerkmaatschappijId, setAanvraagWerkmaatschappijId] = useState("");
-  const [aanvraagGebouwId, setAanvraagGebouwId] = useState("");
   const [aanvraagBezig, setAanvraagBezig] = useState(false);
   const [gekozenOpdrachtId, setGekozenOpdrachtId] = useState("");
   const [obBezig, setObBezig] = useState(false);
+  const qc = useQueryClient();
+  const verwerkAanvraagMutatie = useVerwerkInboxOfferteavanvraag();
   const { data: medewerkerLijst } = useListMedewerkers();
   const { data: werkgeversLijst } = useListWerkgevers();
-  const { data: gebouwenLijst } = useListGebouwen();
   const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
   const magOnboarden = heeftNiveau("personeel", 2);
@@ -508,50 +516,39 @@ function BeslisScherm({
     if (!aanvraagWerkmaatschappijId) return;
     setAanvraagBezig(true);
     try {
-      const form = new FormData();
-      form.append("email", item.bestand);
-      form.append("werkmaatschappij_id", aanvraagWerkmaatschappijId);
-      if (aanvraagGebouwId) {
-        form.append("bestaand_gebouw_id", aanvraagGebouwId);
-      }
-      const res = await fetch("/api/inbox/offerte-aanvraag", {
-        method: "POST",
-        body: form,
-        credentials: "include",
+      const resultaat = await verwerkAanvraagMutatie.mutateAsync({
+        data: {
+          werkmaatschappij_id: Number(aanvraagWerkmaatschappijId),
+          email: item.bestand,
+        },
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        toast({
-          title: "Verwerken mislukt",
-          description: body.error ?? "Probeer het opnieuw.",
-          variant: "destructive",
-        });
-        return;
+      if (!resultaat.voorstel_id) {
+        throw new Error("De aanvraag is opgeslagen, maar het voorstelnummer ontbreekt.");
       }
-      const resultaat = await res.json() as {
-        offerte_id?: number | null;
-        gebouw_id?: number | null;
-        offerte_titel?: string | null;
-        gebouw_naam?: string | null;
-      };
+      await qc.invalidateQueries({ queryKey: getListAanvraagVoorstellenQueryKey() });
       onBevestigen(effectiefeCat);
       onLogActie?.({
         bestandsnaam: item.bestand.name,
         categorie: effectiefeCat,
-        actie: "aanvraag_verwerkt",
+        actie: "aanvraag_voorstel_klaargezet",
         impactNiveau,
         bevestigd: true,
         geweigerd: false,
       });
-      if (resultaat.offerte_id) {
-        setTimeout(() => onNavigeer?.(`/offertes/${resultaat.offerte_id}`), 300);
-      } else if (resultaat.gebouw_id) {
-        setTimeout(() => onNavigeer?.(`/gebouwen/${resultaat.gebouw_id}`), 300);
-      } else {
-        setTimeout(() => onNavigeer?.("/offertes"), 300);
-      }
-    } catch {
-      toast({ title: "Verbindingsfout", description: "Controleer uw internetverbinding.", variant: "destructive" });
+      toast({
+        title: "Aanvraagvoorstel klaargezet",
+        description: "Controleer de brongebonden voorstellen en bevestig daarna zelf de intake.",
+      });
+      setTimeout(
+        () => onNavigeer?.(`/crm/aanvragen?voorstel=${resultaat.voorstel_id}`),
+        300,
+      );
+    } catch (err) {
+      toast({
+        title: "Verwerken mislukt",
+        description: err instanceof Error ? err.message : "Probeer het opnieuw.",
+        variant: "destructive",
+      });
     } finally {
       setAanvraagBezig(false);
     }
@@ -931,7 +928,7 @@ function BeslisScherm({
       {/* Aanvraag-formulier */}
       {effectiefeCat === "aanvraag" && (
         <div className="space-y-2 rounded border border-border bg-muted/30 p-3">
-          <p className="text-xs font-medium text-foreground">Offerte-aanvraag verwerken</p>
+          <p className="text-xs font-medium text-foreground">Aanvraagvoorstel klaarzetten</p>
           {suggestie?.gevonden_gegevens?.gebouw_naam || suggestie?.organisatie ? (
             <p className="text-xs text-muted-foreground">
               AI herkend: <span className="font-medium">{suggestie.gevonden_gegevens?.gebouw_naam ?? suggestie.organisatie}</span>
@@ -950,19 +947,9 @@ function BeslisScherm({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Koppelen aan bestaand gebouw <span className="opacity-60">(optioneel)</span></label>
-            <Select value={aanvraagGebouwId} onValueChange={setAanvraagGebouwId}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Nieuw gebouw aanmaken..." />
-              </SelectTrigger>
-              <SelectContent>
-                {(gebouwenLijst ?? []).map((g) => (
-                  <SelectItem key={g.id} value={String(g.id)} className="text-xs">{g.naam}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Er wordt nog geen gebouw of offerte aangemaakt. Controleer eerst de brongebonden voorstellen in Aanvragen.
+          </p>
           <Button
             size="sm"
             className="w-full gap-1.5"
@@ -970,7 +957,7 @@ function BeslisScherm({
             onClick={() => void verzendAanvraag()}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
-            {aanvraagBezig ? "Verwerken..." : "Aanvraag verwerken"}
+            {aanvraagBezig ? "Klaarzetten..." : "Voorstel klaarzetten"}
           </Button>
         </div>
       )}
@@ -1477,7 +1464,7 @@ export function SlimUploadBalk() {
     herlaadRecente();
 
     if (cat === "aanvraag" || cat === "opdrachtbevestiging") {
-      // De BeslisScherm heeft dit al verwerkt (aanvraag via POST /inbox/offerte-aanvraag,
+      // De BeslisScherm heeft dit al verwerkt (aanvraag via het gegenereerde multipartcontract,
       // opdrachtbevestiging via /documenten/aanleveren + doorschakeling naar de
       // akkoordpoort). Geen extra upload naar de documentbibliotheek nodig.
       setQueue((prev) =>

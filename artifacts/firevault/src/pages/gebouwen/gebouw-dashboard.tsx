@@ -7,15 +7,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  MapPin,
-  Hash,
   Calendar,
   Users,
   ClipboardList,
@@ -37,6 +34,11 @@ import {
   FileText,
   Activity,
 } from "lucide-react";
+import {
+  leidProjectFasenAf,
+  type FaseStatus,
+  type ProjectFase,
+} from "./gebouw-projectfasen";
 
 const EURO_FMT = new Intl.NumberFormat("nl-NL", {
   style: "currency",
@@ -45,16 +47,7 @@ const EURO_FMT = new Intl.NumberFormat("nl-NL", {
   maximumFractionDigits: 0,
 });
 
-type FaseStatus = "niet_gestart" | "bezig" | "gereed" | "aandacht";
 type Ernst = "laag" | "middel" | "hoog";
-
-interface Fase {
-  id: string;
-  label: string;
-  korteLabel: string;
-  status: FaseStatus;
-  tab: string;
-}
 
 interface Signaal {
   tekst: string;
@@ -90,111 +83,6 @@ interface DashboardProps {
   heeftFinancieelInzicht: boolean;
 }
 
-function leidFasenAf(
-  calcs: any[],
-  offertes: any[],
-  opnames: any[],
-  facturen: any[],
-  gebouw: any,
-): Fase[] {
-  const geaccepteerd = offertes.some((o) => o.status === "geaccepteerd");
-  const gewonnen = calcs.some((c) => c.status === "gewonnen");
-  const heeftOpdracht = geaccepteerd || gewonnen;
-
-  return [
-    {
-      id: "opname",
-      label: "Opname",
-      korteLabel: "Opname",
-      status: opnames.some((o) => o.status === "gereed")
-        ? "gereed"
-        : opnames.length > 0
-          ? "bezig"
-          : "niet_gestart",
-      tab: "opnames",
-    },
-    {
-      id: "calculatie",
-      label: "Calculatie",
-      korteLabel: "Calc.",
-      status: gewonnen ? "gereed" : calcs.length > 0 ? "bezig" : "niet_gestart",
-      tab: "calculaties",
-    },
-    {
-      id: "offerte",
-      label: "Offerte",
-      korteLabel: "Offerte",
-      status: geaccepteerd
-        ? "gereed"
-        : offertes.length > 0
-          ? "bezig"
-          : "niet_gestart",
-      tab: "offertes",
-    },
-    {
-      id: "opdracht",
-      label: "Opdracht",
-      korteLabel: "Opdracht",
-      status: heeftOpdracht ? "gereed" : "niet_gestart",
-      tab: "project",
-    },
-    {
-      id: "werkbegroting",
-      label: "Werkbegroting",
-      korteLabel: "WB",
-      status: "niet_gestart",
-      tab: "calculaties",
-    },
-    {
-      id: "inkoop",
-      label: "Inkoop",
-      korteLabel: "Inkoop",
-      status: "niet_gestart",
-      tab: "calculaties",
-    },
-    {
-      id: "planning",
-      label: "Planning",
-      korteLabel: "Planning",
-      status: "niet_gestart",
-      tab: "uitvoering",
-    },
-    {
-      id: "uitvoering",
-      label: "Uitvoering",
-      korteLabel: "Uitv.",
-      status: "niet_gestart",
-      tab: "uitvoering",
-    },
-    {
-      id: "oplevering",
-      label: "Oplevering",
-      korteLabel: "Oplev.",
-      status: gebouw.gereed_op ? "gereed" : "niet_gestart",
-      tab: "rapporten",
-    },
-    {
-      id: "facturatie",
-      label: "Facturatie",
-      korteLabel: "Factuur",
-      status:
-        facturen.length > 0 && facturen.some((f) => f.status === "betaald")
-          ? "gereed"
-          : facturen.length > 0
-            ? "bezig"
-            : "niet_gestart",
-      tab: "facturen",
-    },
-    {
-      id: "onderhoud",
-      label: "Onderhoud",
-      korteLabel: "Onderh.",
-      status: "niet_gestart",
-      tab: "beheer",
-    },
-  ];
-}
-
 function faseKleur(status: FaseStatus) {
   switch (status) {
     case "gereed":
@@ -228,13 +116,26 @@ function faseKleur(status: FaseStatus) {
   }
 }
 
+function faseStatusUitleg(status: FaseStatus): string {
+  switch (status) {
+    case "gereed":
+      return "Gereed. Groen betekent dat deze fase is afgerond.";
+    case "bezig":
+      return "Bezig. De accentkleur betekent dat deze fase actief is.";
+    case "aandacht":
+      return "Aandacht nodig. Oranje betekent dat deze fase aandacht vraagt.";
+    default:
+      return "Nog niet gestart. Grijs betekent dat deze fase nog niet is begonnen.";
+  }
+}
+
 function FaseStap({
   fase,
   index,
   isLaatste,
   onClick,
 }: {
-  fase: Fase;
+  fase: ProjectFase;
   index: number;
   isLaatste: boolean;
   onClick: () => void;
@@ -248,31 +149,26 @@ function FaseStap({
           <button
             type="button"
             onClick={onClick}
-            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg border transition-colors hover:bg-slate-100 ${kl.ring} min-w-[3.5rem]`}
+            aria-label={`${fase.label}: ${faseStatusUitleg(fase.status)}`}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-colors hover:bg-slate-100 ${kl.ring} whitespace-nowrap`}
           >
             <div
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${kl.getal}`}
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${kl.getal}`}
             >
               {fase.status === "gereed" ? (
-                <CheckCircle2 className="h-3.5 w-3.5" />
+                <CheckCircle2 className="h-3 w-3" />
               ) : (
                 index + 1
               )}
             </div>
-            <span className={`text-[10px] font-medium leading-tight text-center ${kl.label}`}>
+            <span className={`text-xs font-medium leading-none ${kl.label}`}>
               {fase.korteLabel}
             </span>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
-          {fase.label} —{" "}
-          {fase.status === "gereed"
-            ? "Gereed"
-            : fase.status === "bezig"
-              ? "Bezig"
-              : fase.status === "aandacht"
-                ? "Aandacht nodig"
-                : "Nog niet gestart"}
+        <TooltipContent side="bottom" className="max-w-64 text-xs">
+          <span className="font-medium">{fase.label}</span>
+          <span className="block text-muted-foreground">{faseStatusUitleg(fase.status)}</span>
         </TooltipContent>
       </Tooltip>
       {!isLaatste && (
@@ -422,8 +318,6 @@ export function GebouwDashboard({
   heeftFinancieelInzicht,
 }: DashboardProps) {
   const projectleider = toewijzingen.find((t) => t.project_rol === "Projectleider");
-  const werkvoorbereider = toewijzingen.find((t) => t.project_rol === "Werkvoorbereider");
-  const projectAdmin = toewijzingen.find((t) => t.project_rol === "Project-admin");
 
   const geaccepteerdeOfferte = gebouwOffertes.find((o) => o.status === "geaccepteerd");
   const gewonnenCalc = gebouwCalcs.find((c) => c.status === "gewonnen");
@@ -449,14 +343,13 @@ export function GebouwDashboard({
   );
   const aantalSpots = gebouw.stats?.totaal ?? 0;
 
-  const fasen = leidFasenAf(
+  const fasen = leidProjectFasenAf(
     gebouwCalcs,
     gebouwOffertes,
     gebouwOpnames,
     gebouwFacturen,
     gebouw,
   );
-  const huidigeFase = [...fasen].reverse().find((f) => f.status !== "niet_gestart");
 
   const gezondheidSignalen: Signaal[] = [];
   if (!projectleider)
@@ -505,113 +398,18 @@ export function GebouwDashboard({
           : "grijs";
 
   return (
-    <div className="space-y-6">
-      {/* ── Projectkop ─────────────────────────────────────────── */}
-      <Card className="border-slate-200">
-        <CardContent className="pt-5 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-slate-900 truncate">
-                  {gebouw.naam}
-                </h2>
-                {gebouw.projectnummer && (
-                  <Badge variant="outline" className="gap-1 text-xs font-mono shrink-0">
-                    <Hash className="h-3 w-3" />
-                    {gebouw.projectnummer}
-                  </Badge>
-                )}
-                {gebouw.werkmaatschappij && (
-                  <Badge variant="secondary" className="text-xs shrink-0">
-                    {gebouw.werkmaatschappij}
-                  </Badge>
-                )}
-                <GezondheidBadge score={gezondheidScore} />
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-                {(gebouw.adres || gebouw.stad) && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    {[gebouw.adres, gebouw.stad].filter(Boolean).join(", ")}
-                  </span>
-                )}
-                {projectleider && (
-                  <span className="flex items-center gap-1">
-                    <ClipboardList className="h-3.5 w-3.5 shrink-0" />
-                    PL: {projectleider.naam}
-                  </span>
-                )}
-                {werkvoorbereider && (
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5 shrink-0" />
-                    WV: {werkvoorbereider.naam}
-                  </span>
-                )}
-                {gebouw.start_datum && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 shrink-0" />
-                    Start: {new Date(gebouw.start_datum).toLocaleDateString("nl-NL")}
-                  </span>
-                )}
-                {gebouw.eind_datum && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 shrink-0" />
-                    Gepland: {new Date(gebouw.eind_datum).toLocaleDateString("nl-NL")}
-                  </span>
-                )}
-                {huidigeFase && (
-                  <span className="flex items-center gap-1 font-medium text-primary">
-                    <Activity className="h-3.5 w-3.5 shrink-0" />
-                    Fase: {huidigeFase.label}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Snelkoppelingen */}
-            <div className="flex flex-wrap gap-2 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8 text-xs"
-                onClick={() => onNavigeer("offertes")}
-              >
-                <Euro className="h-3.5 w-3.5" />
-                Offertes
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8 text-xs"
-                onClick={() => onNavigeer("uitvoering")}
-              >
-                <Wrench className="h-3.5 w-3.5" />
-                Uitvoering
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-8 text-xs"
-                onClick={() => onNavigeer("facturen")}
-              >
-                <Receipt className="h-3.5 w-3.5" />
-                Facturen
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Voortgangsbalk ─────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+    <div className="space-y-4">
+      {/* ── Compacte projectflow ───────────────────────────────── */}
+      <div
+        data-testid="projectflow"
+        className="rounded-lg border bg-card px-3 py-2"
+        aria-label="Projectflow"
+      >
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <span className="shrink-0 text-xs font-semibold text-muted-foreground">
             Projectflow
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-0 overflow-x-auto pb-1">
+          </span>
+          <div className="flex items-center gap-0">
             {fasen.map((fase, i) => (
               <FaseStap
                 key={fase.id}
@@ -622,29 +420,8 @@ export function GebouwDashboard({
               />
             ))}
           </div>
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground border-t pt-3">
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />
-              Gereed
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-primary shrink-0" />
-              Bezig
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
-              Aandacht
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300 shrink-0" />
-              Niet gestart
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              Klik op een stap om door te navigeren
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* ── Hoofdcontent: financieel + sidebar ─────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
@@ -694,13 +471,19 @@ export function GebouwDashboard({
                   label="Documenten"
                   aantal={gebouwDocumenten.length}
                   icoon={<FileText className="h-4 w-4" />}
-                  onClick={() => onNavigeer("project")}
+                  onClick={() => onNavigeer("documenten")}
                 />
                 <DossierRegel
                   label="Facturen"
                   aantal={gebouwFacturen.length}
                   icoon={<Receipt className="h-4 w-4" />}
                   onClick={() => onNavigeer("facturen")}
+                />
+                <DossierRegel
+                  label="Rapporten"
+                  aantal={0}
+                  icoon={<FileText className="h-4 w-4" />}
+                  onClick={() => onNavigeer("rapporten")}
                 />
               </div>
             </CardContent>

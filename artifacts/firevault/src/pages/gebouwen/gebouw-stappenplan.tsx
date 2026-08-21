@@ -21,6 +21,8 @@ type Stap = {
   beschrijving: string;
   status: StapStatus;
   icoon: React.ReactNode;
+  ontbrekendeVelden?: string[];
+  doelTab?: string;
 };
 
 type Fase = {
@@ -51,7 +53,17 @@ function StatusBadge({ status }: { status: StapStatus }) {
   );
 }
 
-function StapRij({ stap, volgnummer }: { stap: Stap; volgnummer: number }) {
+function StapRij({
+  stap,
+  volgnummer,
+  onNavigeer,
+  onSluit,
+}: {
+  stap: Stap;
+  volgnummer: number;
+  onNavigeer?: (tab: string) => void;
+  onSluit: () => void;
+}) {
   const ringKleur =
     stap.status === "gereed"      ? "border-green-400 bg-green-50"
     : stap.status === "ontbrekend" ? "border-amber-400 bg-amber-50"
@@ -68,6 +80,27 @@ function StapRij({ stap, volgnummer }: { stap: Stap; volgnummer: number }) {
           <StatusBadge status={stap.status} />
         </div>
         <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{stap.beschrijving}</p>
+        {stap.status === "ontbrekend" && (stap.ontbrekendeVelden?.length ?? 0) > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-medium text-amber-800">
+              Vul in deze stap aan: {stap.ontbrekendeVelden!.join(", ")}.
+            </p>
+            {stap.doelTab && onNavigeer && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 border-amber-400 bg-white text-xs text-amber-800"
+                onClick={() => {
+                  onSluit();
+                  onNavigeer(stap.doelTab!);
+                }}
+              >
+                Naar deze stap
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -76,19 +109,39 @@ function StapRij({ stap, volgnummer }: { stap: Stap; volgnummer: number }) {
 function StappenplanInhoud({
   gebouwId,
   gebouw,
+  onNavigeer,
+  onSluit,
 }: {
   gebouwId: number;
   gebouw: any;
+  onNavigeer?: (tab: string) => void;
+  onSluit: () => void;
 }) {
   const { data: partijen }     = useListGebouwPartijen(gebouwId);
   const { data: toewijzingen } = useListGebouwToewijzingen(gebouwId);
 
   const verdiepingen: any[] = gebouw?.verdiepingen ?? [];
 
-  const heeftAdres         = !!(gebouw?.adres && gebouw?.stad);
-  const heeftOpdrachtgever = (partijen ?? []).some(
+  const opdrachtgever = (partijen ?? []).find(
     (p: any) => p.type === "opdrachtgever" || p.type === "eigenaar",
   );
+  const ontbrekendeProjectvelden = [
+    !gebouw?.naam?.trim() ? "project-/gebouwnaam" : null,
+    !gebouw?.omschrijving?.trim() ? "opdrachtomschrijving" : null,
+  ].filter((veld): veld is string => veld != null);
+  const ontbrekendeGebouwNaw = [
+    !gebouw?.adres?.trim() ? "adres" : null,
+    !gebouw?.postcode?.trim() ? "postcode" : null,
+    !gebouw?.stad?.trim() ? "plaats" : null,
+  ].filter((veld): veld is string => veld != null);
+  const ontbrekendeOpdrachtgeverNaw = opdrachtgever
+    ? [
+        !opdrachtgever.naam?.trim() ? "naam opdrachtgever" : null,
+        !opdrachtgever.adres?.trim() ? "adres opdrachtgever" : null,
+        !opdrachtgever.postcode?.trim() ? "postcode opdrachtgever" : null,
+        !opdrachtgever.plaats?.trim() ? "plaats opdrachtgever" : null,
+      ].filter((veld): veld is string => veld != null)
+    : ["opdrachtgever"];
   const heeftBouwlagen  = verdiepingen.length > 0;
   const heeftToewijzing = (toewijzingen ?? []).length > 0;
 
@@ -102,24 +155,30 @@ function StappenplanInhoud({
           icoon: <Building2 className="h-4 w-4" />,
           titel: "Project/gebouw aanmaken",
           beschrijving:
-            "Registreer het gebouw met naam, projectnummer en type. Dit is de basis van het administratieve dossier.",
-          status: "gereed",
+            "Leg de project-/gebouwnaam en opdrachtomschrijving vast. Deze gegevens reizen mee naar opname en calculatie.",
+          status: ontbrekendeProjectvelden.length === 0 ? "gereed" : "ontbrekend",
+          ontbrekendeVelden: ontbrekendeProjectvelden,
+          doelTab: "project",
         },
         {
           id: "gegevens",
           icoon: <MapPin className="h-4 w-4" />,
-          titel: "Gebouwgegevens controleren",
+          titel: "Gebouw-/projectadres controleren",
           beschrijving:
-            "Controleer en vul adres, postcode, stad, gebouwtype en aanvullende kenmerken in (tabblad 'Project & gegevens').",
-          status: heeftAdres ? "gereed" : "ontbrekend",
+            "Controleer het NAW-adres van de uitvoeringslocatie. Overige gebouwkenmerken volgen pas wanneer opname of uitvoering ze nodig heeft.",
+          status: ontbrekendeGebouwNaw.length === 0 ? "gereed" : "ontbrekend",
+          ontbrekendeVelden: ontbrekendeGebouwNaw,
+          doelTab: "project",
         },
         {
           id: "opdrachtgever",
           icoon: <Users className="h-4 w-4" />,
-          titel: "Opdrachtgever en contactgegevens toevoegen",
+          titel: "Opdrachtgever controleren",
           beschrijving:
-            "Koppel de opdrachtgever, eigenaar of aanvrager aan het project via 'Contactpartijen' in tabblad 'Project & gegevens'.",
-          status: heeftOpdrachtgever ? "gereed" : "ontbrekend",
+            "Controleer de gekoppelde CRM-opdrachtgever en diens NAW-gegevens bij de contactpartijen.",
+          status: ontbrekendeOpdrachtgeverNaw.length === 0 ? "gereed" : "ontbrekend",
+          ontbrekendeVelden: ontbrekendeOpdrachtgeverNaw,
+          doelTab: "project",
         },
         {
           id: "emails",
@@ -142,6 +201,8 @@ function StappenplanInhoud({
           beschrijving:
             "Maak bouwlagen aan en upload een PDF-plattegrond per verdieping via tabblad 'Uitvoering'. Zonder plattegrond kunnen monteurs geen spots intekenen.",
           status: heeftBouwlagen ? "gereed" : "ontbrekend",
+          ontbrekendeVelden: heeftBouwlagen ? [] : ["minimaal één bouwlaag"],
+          doelTab: "uitvoering",
         },
       ],
     },
@@ -156,64 +217,17 @@ function StappenplanInhoud({
           beschrijving:
             "Wijs monteurs, controleurs en een projectadministrateur toe via tabblad 'Beheer' (Teamleden). Toegewezen monteurs krijgen toegang tot dit gebouw in de monteur-app.",
           status: heeftToewijzing ? "gereed" : "ontbrekend",
+          ontbrekendeVelden: heeftToewijzing ? [] : ["projectteam of monteur"],
+          doelTab: "beheer",
         },
       ],
     },
   ];
 
-  const alleStappen      = fasen.flatMap(f => f.stappen);
-  const aantalGereed     = alleStappen.filter(s => s.status === "gereed").length;
-  const aantalOntbrekend = alleStappen.filter(s => s.status === "ontbrekend").length;
-  const administratiefGereed = aantalOntbrekend === 0;
-
   let volgnummer = 0;
 
   return (
     <div className="space-y-5">
-      {/* Voortgangsoverzicht */}
-      <div
-        className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${
-          administratiefGereed
-            ? "bg-green-50 border-green-200"
-            : "bg-amber-50 border-amber-200"
-        }`}
-      >
-        <div className="mt-0.5 shrink-0">
-          {administratiefGereed ? (
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-          ) : (
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-          )}
-        </div>
-        <div className="flex-1 space-y-1">
-          <p
-            className={`text-sm font-semibold ${
-              administratiefGereed ? "text-green-800" : "text-amber-800"
-            }`}
-          >
-            {administratiefGereed
-              ? "Administratief gereed om door te zetten naar uitvoering"
-              : "Nog niet administratief gereed voor uitvoering"}
-          </p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge
-              variant="outline"
-              className="text-green-700 border-green-300 bg-white text-xs"
-            >
-              <CheckCircle2 className="h-3 w-3 mr-1" /> {aantalGereed} gereed
-            </Badge>
-            {aantalOntbrekend > 0 && (
-              <Badge
-                variant="outline"
-                className="text-amber-700 border-amber-300 bg-white text-xs"
-              >
-                <AlertCircle className="h-3 w-3 mr-1" /> {aantalOntbrekend} ontbrekend
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Stappen per fase */}
       <div className="max-h-[62vh] overflow-y-auto pr-1 space-y-5">
         {fasen.map((fase) => (
@@ -226,7 +240,15 @@ function StappenplanInhoud({
             <div className="space-y-2">
               {fase.stappen.map((stap) => {
                 volgnummer += 1;
-                return <StapRij key={stap.id} stap={stap} volgnummer={volgnummer} />;
+                return (
+                  <StapRij
+                    key={stap.id}
+                    stap={stap}
+                    volgnummer={volgnummer}
+                    onNavigeer={onNavigeer}
+                    onSluit={onSluit}
+                  />
+                );
               })}
             </div>
           </div>
@@ -244,10 +266,12 @@ export default function GebouwStappenplan({
   gebouwId,
   gebouw,
   compact,
+  onNavigeer,
 }: {
   gebouwId: number;
   gebouw: any;
   compact?: boolean;
+  onNavigeer?: (tab: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -282,7 +306,12 @@ export default function GebouwStappenplan({
             </DialogTitle>
           </DialogHeader>
           {open && (
-            <StappenplanInhoud gebouwId={gebouwId} gebouw={gebouw} />
+            <StappenplanInhoud
+              gebouwId={gebouwId}
+              gebouw={gebouw}
+              onNavigeer={onNavigeer}
+              onSluit={() => setOpen(false)}
+            />
           )}
         </DialogContent>
       </Dialog>

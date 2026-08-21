@@ -1,3 +1,29 @@
+## 2026-08-21 — Projectpagina’s compact en dossiergestuurd
+
+- De gedeelde gebouw-/projectdetailpagina heeft nog één compacte projectkop. Projectnaam, adres, werkmaatschappij, startdatum, projectstatus en actuele fase staan op desktop op één regel; de dubbele projectnaamkaart op het dashboard is vervallen.
+- De projectflow staat op één horizontale regel zonder losse legenda of klik-uitleg. Iedere stap benoemt status én kleurbetekenis in een toegankelijke tooltip en blijft naar de bestaande inhoud navigeren.
+- De zichtbare tabrij bevat alleen **Dashboard**, **Gebouw**, **Uitvoering**, **Beheer** en **Documenten**. Calculaties, offertes, opdrachten, meer-/minderwerk, opnames, facturen en rapporten blijven via het Projectdossier binnen twee klikken bereikbaar; bestaande directe `?tab=`-links blijven werken.
+- Paginauitleg blijft standaard uit en de bestaande persoonlijke weergaveschakelaar blijft leidend. Op 1920×1080 begint de projectinhoud binnen 200 pixels; de browserregressie meet deze grens, controleert de vijf tabs, tooltips, zeven dossierbestemmingen en een oude diepe link.
+- De flowafleiding volgt de werkelijke opnamestatussen: een definitieve opname is afgerond en een conceptopname is bezig. Een gerichte regressietest borgt daarmee ook de juiste kleur, tooltip en actuele fase in de projectkop.
+
+## 2026-08-21 — Projectstart teruggebracht tot vier intakegegevens
+
+- Een gebouw of project start voortaan met alleen een volledige opdrachtgever-NAW, project-/gebouwnaam, opdrachtomschrijving en volledige gebouw-/project-NAW. De opdrachtgever kan een complete bestaande CRM-relatie zijn of wordt in dezelfde transactie nieuw als prospect aangemaakt.
+- Handmatig aanmaken en aanvraagacceptatie gebruiken dezelfde opdrachtgeverpoort. Een bestaande of nieuwe relatie zonder naam, adres, postcode of plaats wordt zichtbaar geweigerd; het gebouw en de opdrachtgeverpartij ontstaan atomair.
+- Aanvraag-, mail- en bijlage-AI vult alleen controleerbare voorstellen in: ieder voorstel vervalt wanneer het citaat niet in de bron staat of de voorgestelde waarde niet letterlijk door dat citaat wordt gedragen.
+- Naam, omschrijving en NAW lopen zonder dubbele uitvraag door naar gebouw, opdrachtgeverpartij, opname en calculatie. Overige ontbrekende informatie verschijnt alleen in de processtap die haar nodig heeft; de algemene gereedheidsbalk is verwijderd en gerichte knoppen openen de juiste tab.
+- Contactpersoon en werkmaatschappij zijn geen aanvullende startpoorten meer. Een bekende voorstelwerkmaatschappij blijft onveranderlijk broncontext; uploadbestanden zijn begrensd op bestands- en verzoekniveau en worden bij overschrijding vóór gegevensopslag met 413 geweigerd.
+- API-, web- en scripttypechecks, 37 intake-regressietests, de compacte-uploadbrowserproef en de volledige aanvraagacceptatieketen zijn groen. De onafhankelijke review vond geen resterende blokkerende correctheids-, beveiligings- of integriteitsproblemen; tijdelijke testgegevens zijn opgeruimd.
+
+## 2026-08-21 — Aanvraag pas na controle naar calculatie
+
+- Een geüploade aanvraagmail of aanvraag uit de Werk-inbox wordt eerst uitsluitend als bron, auditregistratie en AI-voorstel bewaard. De AI mag geen calculatieregels, aantallen, normtijden, prijzen, marges, offerte of project aanmaken.
+- Elk AI-feit dat zichtbaar of vooringevuld wordt, blijft alleen staan met een letterlijk citaat uit het bronbestand; anders wordt het veld leeggelaten. De beoordelaar kan het onveranderde bronbestand veilig vanuit het voorstel openen en bevestigt zelf opdrachtgever, project-/gebouwnaam, opdrachtomschrijving en gebouw-/project-NAW.
+- De uploadwizard verstuurt maximaal tien gekozen bijlagen nu contractueel als afzonderlijke multipartbestanden. Ze worden vóór de databasehandeling opgeslagen; leesbare tekst wordt aan dezelfde citeerbare bronbundel toegevoegd en een opslagfout stopt de intake zichtbaar. Iedere uploadpoging gebruikt eigen objectpaden en ruimt die bij een latere opslag-, analyse- of databasefout weer op, zodat een verliezende gelijktijdige upload nooit bestanden van de winnaar verwijdert.
+- Na bevestiging ontstaan precies één lege opname en één lege modulaire calculatie met herleidbare aanvraagcontext. Een offerte blijft geblokkeerd totdat de calculatie intern akkoord is.
+- Exact dezelfde bronbytes zijn idempotent, ook wanneer bij de tweede upload een andere werkmaatschappij wordt gekozen. Gelijktijdige bevestigingen delen een transactionele opdrachtgeverpartij-lock en herhaalde bevestiging wordt geweigerd.
+- Gerichte regressietests, typechecks, migratie- en driftcontroles, onafhankelijke code-review en een volledige browserproef bewijzen de keten; alle tijdelijke testgegevens en het testbestand zijn daarna verwijderd.
+
 ## 2026-08-20 — Werk-inbox toont echte berichtinhoud
 
 - Microsoft Graph-berichtdetails worden aan de API-grens genormaliseerd: de berichttekst is altijd een string, het inhoudstype staat apart en samengestelde afzender-, ontvanger- en bijlagewaarden krijgen een stabiele interne vorm.

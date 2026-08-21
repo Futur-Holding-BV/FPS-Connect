@@ -3,7 +3,8 @@ import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListWerkgevers,
-  getListOffertesQueryKey,
+  getListAanvraagVoorstellenQueryKey,
+  useVerwerkInboxOfferteavanvraag,
 } from "@workspace/api-client-react";
 import type { InboxOfferteverwerkingResultaat } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   FileText, Plus, XCircle, Sparkles, Upload, Building2, Mail,
-  Paperclip, X, CheckCircle, CheckCircle2, ExternalLink,
+  Paperclip, X, CheckCircle, ExternalLink,
 } from "lucide-react";
 
 function formatBytes(bytes: number) {
@@ -33,7 +34,7 @@ interface AanvraagState {
 }
 
 const ACCEPTEER_EMAIL = ".eml,.msg,.pdf,.docx,.doc,.txt";
-const ACCEPTEER_BIJLAGEN = ".pdf,.docx,.doc,.xlsx,.xls,.jpg,.jpeg,.png,.eml,.msg";
+const ACCEPTEER_BIJLAGEN = ".pdf,.docx,.doc,.xlsx,.xls,.txt,.jpg,.jpeg,.png,.eml,.msg";
 
 const LEEG: AanvraagState = {
   stap: "werkmaatschappij",
@@ -46,6 +47,7 @@ const LEEG: AanvraagState = {
 
 export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const qc = useQueryClient();
+  const verwerkMutatie = useVerwerkInboxOfferteavanvraag();
   const [aanvraag, setAanvraag] = useState<AanvraagState>(LEEG);
   const [dropActief, setDropActief] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -73,29 +75,20 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
   }, []);
 
   async function verwerkAanvraag() {
-    if (!aanvraag.werkmaatschappijId) return;
+    if (!aanvraag.werkmaatschappijId || !aanvraag.emailBestand) return;
     setAanvraag((a) => ({ ...a, stap: "verwerken", fout: null }));
 
     try {
-      const form = new FormData();
-      form.append("werkmaatschappij_id", aanvraag.werkmaatschappijId);
-      if (aanvraag.emailBestand) form.append("email", aanvraag.emailBestand);
-      for (const b of aanvraag.bijlagen) form.append("bijlagen", b);
-
-      const resp = await fetch("/api/inbox/offerte-aanvraag", {
-        method: "POST",
-        body: form,
-        credentials: "include",
+      const resultaat = await verwerkMutatie.mutateAsync({
+        data: {
+          werkmaatschappij_id: Number(aanvraag.werkmaatschappijId),
+          email: aanvraag.emailBestand,
+          bijlagen: aanvraag.bijlagen.length > 0 ? aanvraag.bijlagen : undefined,
+        },
       });
 
-      if (!resp.ok) {
-        const foutData = await resp.json().catch(() => ({ error: "Onbekende fout" }));
-        throw new Error((foutData as { error?: string }).error ?? "Verwerken mislukt");
-      }
-
-      const resultaat = await resp.json() as InboxOfferteverwerkingResultaat;
       setAanvraag((a) => ({ ...a, stap: "resultaat", resultaat }));
-      await qc.invalidateQueries({ queryKey: getListOffertesQueryKey() });
+      await qc.invalidateQueries({ queryKey: getListAanvraagVoorstellenQueryKey() });
     } catch (err) {
       setAanvraag((a) => ({ ...a, stap: "upload", fout: err instanceof Error ? err.message : "Verwerken mislukt" }));
     }
@@ -106,7 +99,7 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-primary" /> Offerte-aanvraag verwerken
+            <Mail className="w-4 h-4 text-primary" /> Aanvraag-voorstel verwerken
           </DialogTitle>
         </DialogHeader>
 
@@ -115,7 +108,7 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
           <div className="space-y-4">
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-800">
               <p className="font-medium flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Werkmaatschappij selecteren</p>
-              <p className="mt-1">Kies eerst welke werkmaatschappij deze aanvraag in behandeling neemt. AI verwerkt de e-mail daarna automatisch.</p>
+              <p className="mt-1">Kies eerst welke werkmaatschappij deze aanvraag in behandeling neemt. AI verwerkt de e-mail daarna automatisch als voorstel.</p>
             </div>
             <div>
               <Label>Werkmaatschappij <span className="text-destructive">*</span></Label>
@@ -154,7 +147,7 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
 
             {/* E-mail uploaden */}
             <div>
-              <Label className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> E-mail (offerte-aanvraag)</Label>
+              <Label className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Bron aanvraag</Label>
               <div
                 className={`mt-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${dropActief ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
                 onDragOver={(e) => { e.preventDefault(); setDropActief(true); }}
@@ -187,12 +180,12 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
                 ) : (
                   <div className="text-muted-foreground">
                     <Upload className="w-6 h-6 mx-auto mb-1 opacity-50" />
-                    <p className="text-xs">Sleep of klik om e-mail te uploaden</p>
+                    <p className="text-xs">Sleep of klik om de aanvraag te uploaden</p>
                     <p className="text-xs opacity-60 mt-0.5">.eml, .msg, .pdf, .docx, .txt</p>
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Geen e-mail? AI verwerkt dan alleen de bijlagen en opmerkingen.</p>
+              <p className="text-xs text-muted-foreground mt-1">Verplicht: de bron-email moet worden geüpload.</p>
             </div>
 
             {/* Bijlagen */}
@@ -240,7 +233,7 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
               <Button variant="outline" onClick={() => setAanvraag((a) => ({ ...a, stap: "werkmaatschappij", fout: null }))}>
                 Terug
               </Button>
-              <Button onClick={verwerkAanvraag} className="gap-1.5">
+              <Button onClick={verwerkAanvraag} disabled={!aanvraag.emailBestand} className="gap-1.5" data-testid="button-ai-verwerken">
                 <Sparkles className="w-3.5 h-3.5" /> AI laten verwerken
               </Button>
             </DialogFooter>
@@ -250,17 +243,17 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
         {/* Stap 3 — Verwerken */}
         {aanvraag.stap === "verwerken" && (
           <div className="py-8 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto animate-pulse">
-              <Sparkles className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto animate-pulse">
+              <Sparkles className="w-6 h-6 text-amber-600" />
             </div>
             <div>
               <p className="font-medium">AI analyseert de aanvraag...</p>
-              <p className="text-sm text-muted-foreground mt-1">E-mail wordt gelezen en verwerkt. Even geduld.</p>
+              <p className="text-sm text-muted-foreground mt-1">Leesbare tekst uit de e-mail en bijlagen wordt als bron verwerkt. Even geduld.</p>
             </div>
             <div className="space-y-1.5 text-xs text-muted-foreground">
-              <p>Opdrachtgever en adres extraheren</p>
+              <p>Relatie en contactpersoon koppelen</p>
               <p>Gevraagde werkzaamheden samenvatten</p>
-              <p>Offerte en gebouw aanmaken</p>
+              <p>Intake-voorstel klaarzetten ter beoordeling</p>
             </div>
           </div>
         )}
@@ -271,7 +264,7 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-emerald-800 text-sm">Aanvraag verwerkt</p>
+                <p className="font-medium text-emerald-800 text-sm">Aanvraag klaargezet</p>
                 {aanvraag.resultaat.ai_samenvatting && (
                   <p className="text-xs text-emerald-700 mt-1">{aanvraag.resultaat.ai_samenvatting}</p>
                 )}
@@ -279,54 +272,23 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
             </div>
 
             <div className="space-y-2">
-              {aanvraag.resultaat.aangemaakt?.offerte && aanvraag.resultaat.offerte_id && (
-                <a
-                  href={`/offertes/${aanvraag.resultaat.offerte_id}`}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:border-primary/40 hover:bg-muted/30 transition-colors group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded bg-orange-100 flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Offerte aangemaakt</p>
-                      <p className="text-xs text-muted-foreground">{aanvraag.resultaat.offerte_titel}</p>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                </a>
-              )}
-
-              {aanvraag.resultaat.aangemaakt?.gebouw && aanvraag.resultaat.gebouw_id && (
-                <Link href={`/gebouwen/${aanvraag.resultaat.gebouw_id}`}>
-                  <div className="flex items-center justify-between p-3 rounded-lg border hover:border-primary/40 hover:bg-muted/30 transition-colors group cursor-pointer">
+              {aanvraag.resultaat.aangemaakt?.voorstel && aanvraag.resultaat.voorstel_id && (
+                <Link href={`/crm/aanvragen`}>
+                  <div
+                    className="flex items-center justify-between p-3 rounded-lg border hover:border-amber-400 hover:bg-amber-50 transition-colors group cursor-pointer"
+                    onClick={sluit}
+                    data-testid="voorstel-id" data-voorstel-id={aanvraag.resultaat.voorstel_id}
+                  >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center">
-                        <Building2 className="w-4 h-4 text-blue-600" />
+                      <div className="w-8 h-8 rounded bg-amber-100 flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-amber-700" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">Gebouw aangemaakt</p>
-                        <p className="text-xs text-muted-foreground">{aanvraag.resultaat.gebouw_naam}</p>
+                        <p className="text-sm font-medium">Beoordeel het voorstel</p>
+                        <p className="text-xs text-muted-foreground group-hover:text-amber-700 transition-colors">Controleer de AI suggesties en bevestig de intake</p>
                       </div>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                  </div>
-                </Link>
-              )}
-
-              {aanvraag.resultaat.aangemaakt?.opname && aanvraag.resultaat.opname_id && (
-                <Link href={`/opname/${aanvraag.resultaat.opname_id}`}>
-                  <div className="flex items-center justify-between p-3 rounded-lg border hover:border-primary/40 hover:bg-muted/30 transition-colors group cursor-pointer">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded bg-purple-100 flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Opname ingepland</p>
-                        <p className="text-xs text-muted-foreground">Veldopname klaar om in te vullen</p>
-                      </div>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-amber-700 transition-colors" />
                   </div>
                 </Link>
               )}
@@ -334,9 +296,6 @@ export function OfferteAanvraagWizard({ open, onOpenChange }: { open: boolean; o
 
             <DialogFooter>
               <Button variant="outline" onClick={sluit}>Sluiten</Button>
-              <Button onClick={() => setAanvraag(LEEG)} className="gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Nieuwe aanvraag
-              </Button>
             </DialogFooter>
           </div>
         )}

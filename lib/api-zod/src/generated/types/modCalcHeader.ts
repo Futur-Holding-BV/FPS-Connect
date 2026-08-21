@@ -50,4 +50,22 @@ export interface ModCalcHeader {
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /** @nullable */
+  aanvraag_voorstel_id?: number | null;
+  /** @nullable */
+  opdrachtgever_klant_id?: number | null;
+  /** @nullable */
+  opdrachtgever_klant_naam?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_id?: number | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_naam?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_email?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_telefoon?: string | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WerkInboxMailInhoud } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -760,11 +761,30 @@ function MailDetailView({
               Koppelingen ({koppelingen.length})
             </p>
             <div className="flex flex-wrap gap-2">
-              {koppelingen.map((k) => (
-                <Badge key={k.id} variant="secondary" className="text-xs capitalize">
-                  {k.entityType}: {k.entityLabel ?? k.entityId}
-                </Badge>
-              ))}
+              {koppelingen.map((k) => {
+                let href = "";
+                if (k.entityType === "klant") href = `/crm/klanten/${k.entityId}`;
+                else if (k.entityType === "gebouw") href = `/gebouwen/${k.entityId}`;
+                else if (k.entityType === "contactpersoon") href = `/crm/contactpersonen/${k.entityId}`;
+                else if (k.entityType === "aanvraag_voorstel") href = `/crm/aanvragen`;
+                else if (k.entityType === "calculatie" || k.entityType === "mod_calculatie_header") href = `/modules/calculatie/${k.entityId}`;
+
+                if (href) {
+                  return (
+                    <Link key={k.id} href={href}>
+                      <Badge variant="secondary" className="text-xs capitalize cursor-pointer hover:bg-secondary/80">
+                        {k.entityType}: {k.entityLabel ?? k.entityId}
+                      </Badge>
+                    </Link>
+                  );
+                }
+
+                return (
+                  <Badge key={k.id} variant="secondary" className="text-xs capitalize">
+                    {k.entityType}: {k.entityLabel ?? k.entityId}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         )}

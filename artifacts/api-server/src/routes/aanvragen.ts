@@ -1,34 +1,52 @@
 // ─── AANVRAAG_01: aanvraagvoorstellen — accorderen, afwijzen, antwoord versturen ─
 //
 // De AI stelt voor; hier beslist de mens. Pas bij accepteren wordt een
-// projectkans vastgelegd (en eventueel — na expliciete bevestiging — een nieuwe
-// relatie of een nieuw gebouw). Er ontstaat hier NOOIT een project: dat gebeurt
-// uitsluitend bij ondertekening van de offerte (proces 2).
+// CRM-relatie, gebouw, opname, calculatie vastgelegd.
+// Er ontstaat hier NOOIT een offerte/project/offerteregel.
 
 import { Router } from "express";
+// H. Generated Zod body validator voor accepteer-route
+import { AccepteerAanvraagVoorstelBody } from "@workspace/api-zod";
 import {
   db,
   aanvraagVoorstellenTable,
   crmCommercieelTable,
   crmKlantenTable,
+  crmContactpersonenTable,
   factuurSignalenTable,
   gebouwenTable,
+  gebouwPartijenTable,
+  opnamesTable,
+  modCalcHeadersTable,
+  inboxItemsTable,
+  inboxAuditLogTable,
   gebruikersTable,
+  werkgeversTable,
   projectenTable,
   werkInboxKoppelingenTable,
   werkInboxMailsTable,
   werkInboxTokensTable,
   FPS_BEDRIJVEN,
 } from "@workspace/db";
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { beantwoordMail } from "../services/werkInboxGraph";
+import {
+  OpdrachtgeverFout,
+  resolveerOpdrachtgever,
+} from "../services/opdrachtgever";
+import { ObjectStorageService } from "../lib/objectStorage";
 
 const router = Router();
+const objectStorage = new ObjectStorageService();
 const lezen = requireBevoegdheid("crm", 1);
 const schrijven = requireBevoegdheid("crm", 2);
 
-function voorstelNaarJson(v: typeof aanvraagVoorstellenTable.$inferSelect, beoordeeldDoorNaam?: string | null) {
+function voorstelNaarJson(
+  v: typeof aanvraagVoorstellenTable.$inferSelect,
+  beoordeeldDoorNaam?: string | null,
+  extra?: { klantNaam?: string | null; contactNaam?: string | null; werkmaatschappijNaam?: string | null },
+) {
   return {
     id: v.id,
     mail_message_id: v.mailMessageId,
@@ -48,61 +66,133 @@ function voorstelNaarJson(v: typeof aanvraagVoorstellenTable.$inferSelect, beoor
     beoordeeld_door_naam: beoordeeldDoorNaam ?? null,
     beoordeeld_op: v.beoordeeldOp?.toISOString() ?? null,
     beoordeel_notitie: v.beoordeelNotitie,
+    // AANVRAAG_01 §6 — result-FKs na acceptatie
+    inbox_item_id: v.inboxItemId ?? null,
+    klant_id: v.klantId ?? null,
+    klant_naam: extra?.klantNaam ?? null,
+    contactpersoon_id: v.contactpersoonId ?? null,
+    contact_naam: extra?.contactNaam ?? null,
+    gebouw_id: v.gebouwId ?? null,
+    opname_id: v.opnameId ?? null,
+    calculatie_id: v.calculatieId ?? null,
+    werkmaatschappij_id: v.werkmaatschappijId ?? null,
+    werkmaatschappij_naam: extra?.werkmaatschappijNaam ?? null,
   };
 }
 
 // ── Lijst ─────────────────────────────────────────────────────────────────────
+// E. Join klant, contact, werkmaatschappij zodat geaccepteerde voorstellen namen tonen.
 router.get("/aanvragen/voorstellen", lezen, async (req, res): Promise<void> => {
   const status = typeof req.query["status"] === "string" ? req.query["status"] : undefined;
   const rijen = await db.select({
     v: aanvraagVoorstellenTable,
     beoordeeldDoorNaam: gebruikersTable.naam,
+    klantNaam: crmKlantenTable.naam,
+    contactNaam: crmContactpersonenTable.naam,
+    werkmaatschappijNaam: werkgeversTable.naam,
   })
     .from(aanvraagVoorstellenTable)
     .leftJoin(gebruikersTable, eq(gebruikersTable.id, aanvraagVoorstellenTable.beoordeeldDoorId))
+    .leftJoin(crmKlantenTable, eq(crmKlantenTable.id, aanvraagVoorstellenTable.klantId))
+    .leftJoin(crmContactpersonenTable, eq(crmContactpersonenTable.id, aanvraagVoorstellenTable.contactpersoonId))
+    .leftJoin(werkgeversTable, eq(werkgeversTable.id, (aanvraagVoorstellenTable as any).werkmaatschappijId))
     .where(status ? eq(aanvraagVoorstellenTable.status, status) : undefined)
     .orderBy(desc(aanvraagVoorstellenTable.binnengekomenOp))
     .limit(200);
-  res.json(rijen.map((r) => voorstelNaarJson(r.v, r.beoordeeldDoorNaam)));
+  res.json(rijen.map((r) => voorstelNaarJson(r.v, r.beoordeeldDoorNaam, {
+    klantNaam: r.klantNaam,
+    contactNaam: r.contactNaam,
+    werkmaatschappijNaam: r.werkmaatschappijNaam,
+  })));
 });
 
-// ── Accepteren: pas hier wordt er iets vastgelegd ─────────────────────────────
-router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res): Promise<void> => {
+// ── Voorstelgebonden bronbestand ─────────────────────────────────────────────
+// Accepteert bewust een voorstel-id, nooit een vrij inbox-item-id. Zo kan een
+// CRM-beoordelaar alleen de bron openen van een voorstel dat via deze module
+// zichtbaar is, en geen willekeurig HR- of financieel inboxdocument opvragen.
+router.get("/aanvragen/voorstellen/:id/bronbestand", lezen, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
-  const body = req.body as {
-    titel?: string;
-    klant_id?: number;
-    nieuwe_klant?: { naam: string; email?: string; telefoon?: string };
-    gebouw_id?: number;
-    nieuw_gebouw?: { naam: string; adres: string; stad?: string };
-    bv?: string;
-    voorstel_type?: string;
-    gerelateerd_project_id?: number;
-  };
-
-  const [bestaat] = await db.select({ id: aanvraagVoorstellenTable.id, status: aanvraagVoorstellenTable.status })
-    .from(aanvraagVoorstellenTable).where(eq(aanvraagVoorstellenTable.id, id));
-  if (!bestaat) { res.status(404).json({ error: "Voorstel niet gevonden." }); return; }
-  if (bestaat.status !== "open") {
-    res.status(409).json({ error: `Dit voorstel is al beoordeeld (${bestaat.status}).` });
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "Ongeldig voorstel-id." });
     return;
   }
 
+  try {
+    const [bron] = await db.select({
+      bestandsnaam: inboxItemsTable.bestandsnaam,
+      bestandspad: inboxItemsTable.bestandspad,
+      mimetype: inboxItemsTable.mimetype,
+    })
+      .from(aanvraagVoorstellenTable)
+      .innerJoin(inboxItemsTable, eq(inboxItemsTable.id, aanvraagVoorstellenTable.inboxItemId))
+      .where(eq(aanvraagVoorstellenTable.id, id))
+      .limit(1);
+    if (!bron?.bestandspad?.startsWith("/objects/")) {
+      res.status(404).json({ error: "Het bronbestand is niet beschikbaar." });
+      return;
+    }
+
+    const storageFile = await objectStorage.getObjectEntityFile(bron.bestandspad);
+    const download = await objectStorage.downloadObject(storageFile);
+    if (!download.ok) {
+      res.status(download.status).json({ error: "Het bronbestand is niet beschikbaar." });
+      return;
+    }
+    const buffer = Buffer.from(await download.arrayBuffer());
+    res.setHeader("Content-Type", bron.mimetype ?? "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(bron.bestandsnaam)}`);
+    res.send(buffer);
+  } catch (err) {
+    req.log.warn({ err, voorstelId: id }, "Aanvraagbron downloaden mislukt");
+    res.status(404).json({ error: "Het bronbestand is niet beschikbaar." });
+  }
+});
+
+// ── Accepteren: CRM-relatie + contact + gebouw + opname + calculatie ──────────
+// AANVRAAG_01 §5 — vereist crm:2, gebouwen:3, calculaties:3
+const accepterenBevoegd = [
+  requireBevoegdheid("crm", 2),
+  requireBevoegdheid("gebouwen", 3),
+  requireBevoegdheid("calculaties", 3),
+];
+
+router.post("/aanvragen/voorstellen/:id/accepteren", ...accepterenBevoegd, async (req, res): Promise<void> => {
+  const id = Number(req.params["id"]);
+
+  // H. Valideer body met gegenereerd Zod schema (safe: geeft leesbare fout terug)
+  const bodyParse = AccepteerAanvraagVoorstelBody.safeParse(req.body);
+  if (!bodyParse.success) {
+    res.status(400).json({ error: "Ongeldige invoer.", details: bodyParse.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) });
+    return;
+  }
+  const body = bodyParse.data;
+
+  // ── Input validatie (vóór DB) ─────────────────────────────────────────────
   const titel = (body.titel ?? "").trim();
   if (!titel) { res.status(400).json({ error: "titel is verplicht." }); return; }
-  if (body.bv && !(FPS_BEDRIJVEN as readonly string[]).includes(body.bv)) {
-    res.status(400).json({ error: "Onbekende BV." });
-    return;
-  }
+  const werkzaamheden = (body.werkzaamheden ?? "").trim();
+  if (!werkzaamheden) { res.status(400).json({ error: "werkzaamheden is verplicht." }); return; }
   if (body.voorstel_type && !["nieuwe_aanvraag", "meerwerk"].includes(body.voorstel_type)) {
-    res.status(400).json({ error: "Ongeldig voorsteltype." });
-    return;
+    res.status(400).json({ error: "Ongeldig voorsteltype." }); return;
   }
-
-  // Relatie: bestaand id, of expliciet bevestigde nieuwe relatie — nooit stilzwijgend (§ acceptatie 8).
-  if (!body.klant_id && !body.nieuwe_klant?.naam?.trim()) {
-    res.status(422).json({ error: "De afzender is nog geen relatie. Bevestig eerst de klant: kies een bestaande relatie of bevestig het aanmaken van een nieuwe." });
-    return;
+  // Gebouw is verplicht (§5)
+  if (
+    !body.gebouw_id &&
+    !(
+      body.nieuw_gebouw?.naam?.trim() &&
+      body.nieuw_gebouw.adres?.trim() &&
+      body.nieuw_gebouw.postcode?.trim() &&
+      body.nieuw_gebouw.stad?.trim()
+    )
+  ) {
+    res.status(422).json({
+      error:
+        "Kies een bestaand gebouw of vul naam, adres, postcode en plaats van het nieuwe gebouw in.",
+    }); return;
+  }
+  // Klant is verplicht
+  if (!body.klant_id && !body.nieuwe_klant) {
+    res.status(422).json({ error: "Kies een bestaande opdrachtgever of maak een nieuwe aan." }); return;
   }
 
   const beoordelaarId = req.session.userId ?? null;
@@ -111,101 +201,281 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
     constructor(public code: number, message: string) { super(message); }
   }
 
-  let resultaat: { kans: typeof crmCommercieelTable.$inferSelect; voorstel: typeof aanvraagVoorstellenTable.$inferSelect };
+  let resultaat: {
+    voorstel: typeof aanvraagVoorstellenTable.$inferSelect;
+    kans: typeof crmCommercieelTable.$inferSelect | null;
+    klantNaam: string;
+    contactNaam: string;
+    werkmaatschappijNaam: string | null;
+    calculatieId: number;
+    opnameId: number;
+    klantId: number;
+    contactpersoonId: number | null;
+    gebouwId: number;
+  };
+
   try {
     resultaat = await db.transaction(async (tx) => {
-    // Eerst het open voorstel claimen (conditionele update): een tweede gelijktijdig
-    // verzoek faalt hier direct, vóórdat er relaties/gebouwen/kansen ontstaan.
-    const [voorstel] = await tx.update(aanvraagVoorstellenTable)
-      .set({ status: "geaccepteerd", beoordeeldDoorId: beoordelaarId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
-      .where(and(eq(aanvraagVoorstellenTable.id, id), eq(aanvraagVoorstellenTable.status, "open")))
-      .returning();
-    if (!voorstel) throw new StroomFout(409, "Dit voorstel is al beoordeeld.");
+      // ── 1. Claim het voorstel (conditionele update — EERSTE mutatie) ─────────
+      const [voorstel] = await tx.update(aanvraagVoorstellenTable)
+        .set({ status: "geaccepteerd", beoordeeldDoorId: beoordelaarId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+        .where(and(eq(aanvraagVoorstellenTable.id, id), eq(aanvraagVoorstellenTable.status, "open")))
+        .returning();
+      if (!voorstel) throw new StroomFout(409, "Dit voorstel is al beoordeeld.");
 
-    const voorstelType = body.voorstel_type ?? voorstel.voorstelType;
+      // ── 2. Bekende werkmaatschappij meenemen, maar niet opnieuw uitvragen ─────
+      // Een upload/mailvoorstel draagt deze normaal al. Ontbreekt hij, dan mag de
+      // projectstart met de vier intakegegevens alsnog door; koppeling kan later.
+      const werkmaatschappijId = voorstel.werkmaatschappijId;
+      let wm: { id: number; naam: string } | null = null;
+      if (werkmaatschappijId) {
+        [wm] = await tx.select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+          .from(werkgeversTable).where(eq(werkgeversTable.id, werkmaatschappijId));
+        if (!wm) throw new StroomFout(400, "Werkmaatschappij niet gevonden.");
+      }
 
-    // Meerwerk vereist een expliciet gekozen lopende opdracht.
-    let gerelateerdProjectId: number | null = null;
-    if (voorstelType === "meerwerk") {
-      if (!body.gerelateerd_project_id) throw new StroomFout(422, "Meerwerk vereist een expliciet gekozen lopende opdracht.");
-      const [project] = await tx.select({ id: projectenTable.id }).from(projectenTable).where(eq(projectenTable.id, body.gerelateerd_project_id));
-      if (!project) throw new StroomFout(404, "De gekozen opdracht bestaat niet.");
-      gerelateerdProjectId = project.id;
-    }
+      const voorstelType = body.voorstel_type ?? voorstel.voorstelType;
 
-    // Klant: gekozen id valideren, of expliciet bevestigde nieuwe relatie aanmaken.
-    let klantId = body.klant_id ?? null;
-    if (klantId) {
-      const [klant] = await tx.select({ id: crmKlantenTable.id }).from(crmKlantenTable).where(eq(crmKlantenTable.id, klantId));
-      if (!klant) throw new StroomFout(404, "De gekozen relatie bestaat niet.");
-    } else if (body.nieuwe_klant?.naam?.trim()) {
-      const [nieuw] = await tx.insert(crmKlantenTable).values({
-        naam: body.nieuwe_klant.naam.trim(),
-        email: body.nieuwe_klant.email?.trim() || voorstel.afzenderEmail || null,
-        telefoon: body.nieuwe_klant.telefoon?.trim() || null,
-        status: "prospect",
-      }).returning({ id: crmKlantenTable.id });
-      klantId = nieuw.id;
-    }
-    if (!klantId) throw new StroomFout(422, "De klant ontbreekt.");
+      // ── 3. Meerwerk: gerelateerd project valideren ───────────────────────────
+      let gerelateerdProjectId: number | null = null;
+      if (voorstelType === "meerwerk") {
+        if (!body.gerelateerd_project_id) throw new StroomFout(422, "Meerwerk vereist een expliciet gekozen lopende opdracht.");
+        const [project] = await tx.select({ id: projectenTable.id }).from(projectenTable).where(eq(projectenTable.id, body.gerelateerd_project_id));
+        if (!project) throw new StroomFout(404, "De gekozen opdracht bestaat niet.");
+        gerelateerdProjectId = project.id;
+      }
 
-    // Gebouw (optioneel): bestaand id valideren, of expliciet bevestigd nieuw — nooit vanzelf.
-    let gebouwId = body.gebouw_id ?? null;
-    if (gebouwId) {
-      const [gebouw] = await tx.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
-      if (!gebouw) throw new StroomFout(404, "Het gekozen gebouw bestaat niet.");
-    } else if (body.nieuw_gebouw?.naam?.trim() && body.nieuw_gebouw?.adres?.trim()) {
-      const [nieuwGebouw] = await tx.insert(gebouwenTable).values({
-        naam: body.nieuw_gebouw.naam.trim(),
-        adres: body.nieuw_gebouw.adres.trim(),
-        stad: body.nieuw_gebouw.stad?.trim() || null,
-      }).returning({ id: gebouwenTable.id });
-      gebouwId = nieuwGebouw.id;
-    }
+      // ── 4. Opdrachtgever: gedeelde AANVRAAG_OPDRACHTGEVER_01-resolver ──────
+      const klant = await resolveerOpdrachtgever(tx, {
+        klantId: body.klant_id,
+        nieuweKlant: body.nieuwe_klant
+          ? {
+              ...body.nieuwe_klant,
+              email: body.nieuwe_klant.email?.trim() || voorstel.afzenderEmail || null,
+            }
+          : null,
+      });
+      const klantId = klant.id;
+      const klantNaam = klant.naam;
 
-    // Projectkans vastleggen (fase signaal; reactieklok start bij binnenkomst van de mail)
-    const ai = (voorstel.aiVoorstel ?? {}) as Record<string, unknown>;
-    const [kans] = await tx.insert(crmCommercieelTable).values({
-      klantId,
-      gebouwId,
-      titel,
-      kansType: "offerte",
-      fase: "signaal",
-      aiSamenvatting: typeof ai["samenvatting"] === "string" ? (ai["samenvatting"] as string) : null,
-      bronMailMessageId: voorstel.mailMessageId,
-      binnengekomenOp: voorstel.binnengekomenOp,
-      beantwoordOp: voorstel.antwoordVerstuurdOp,
-      bedrijfBv: body.bv ?? null,
-      gerelateerdProjectId,
-      verantwoordelijkeId: beoordelaarId,
-    }).returning();
+      // ── 5. Optioneel broncontact: nooit een projectstartpoort ─────────────────
+      // Alleen wanneer naam én e-mail in de bron/body aanwezig zijn, leggen we een
+      // contact vast. Ontbrekende contactgegevens horen bij een latere processtap.
+      const contactNaam = (body.contact_naam ?? voorstel.afzenderNaam ?? "").trim();
+      const contactEmail = (body.contact_email ?? voorstel.afzenderEmail ?? "").trim().toLowerCase();
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${klantId})`);
+      let contactpersoonId: number | null = null;
+      let resolvedContactNaam = contactNaam || klantNaam;
+      if (contactNaam && contactEmail) {
+        const [bestaandContact] = await tx.select({ id: crmContactpersonenTable.id, naam: crmContactpersonenTable.naam })
+          .from(crmContactpersonenTable)
+          .where(and(eq(crmContactpersonenTable.klantId, klantId), ilike(crmContactpersonenTable.email, contactEmail)))
+          .limit(1);
+        if (bestaandContact) {
+          contactpersoonId = bestaandContact.id;
+          resolvedContactNaam = bestaandContact.naam;
+          const contactUpdates: Record<string, unknown> = { bijgewerktOp: new Date() };
+          if (contactNaam !== bestaandContact.naam) contactUpdates.naam = contactNaam;
+          if (body.contact_telefoon?.trim()) contactUpdates.telefoon = body.contact_telefoon.trim();
+          if (Object.keys(contactUpdates).length > 1) {
+            await tx.update(crmContactpersonenTable)
+              .set(contactUpdates as any)
+              .where(eq(crmContactpersonenTable.id, contactpersoonId));
+            if (contactUpdates.naam) resolvedContactNaam = contactNaam;
+          }
+        } else {
+          const [nieuwContact] = await tx.insert(crmContactpersonenTable).values({
+            klantId,
+            naam: contactNaam,
+            email: contactEmail,
+            telefoon: body.contact_telefoon?.trim() || null,
+          }).returning();
+          contactpersoonId = nieuwContact.id;
+        }
+      }
 
-    // Bronmail + entiteiten koppelen in de werk-inbox
-    const koppelingen: Array<{ entityType: string; entityId: number; entityLabel: string }> = [
-      { entityType: "klant", entityId: klantId, entityLabel: titel },
-    ];
-    if (gebouwId) koppelingen.push({ entityType: "gebouw", entityId: gebouwId, entityLabel: titel });
-    if (gerelateerdProjectId) koppelingen.push({ entityType: "project", entityId: gerelateerdProjectId, entityLabel: `Meerwerk: ${titel}` });
-    for (const k of koppelingen) {
-      await tx.insert(werkInboxKoppelingenTable).values({
-        messageId: voorstel.mailMessageId,
-        gebruikerId: voorstel.gebruikerId,
-        ...k,
-      }).onConflictDoNothing();
-    }
+      // ── 6. Gebouw: valideer (inclusief toegangscheck) of maak aan ─────────────
+      let gebouwId = body.gebouw_id ?? null;
+      if (gebouwId) {
+        // B. Toegangscheck vóór de transactie body (nu ín tx na claim, maar vóór writes)
+        if (req.permissies && !req.permissies.magBijGebouw(gebouwId)) {
+          throw new StroomFout(403, "Geen toegang tot het gekozen gebouw.");
+        }
+        const [g] = await tx.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
+        if (!g) throw new StroomFout(404, "Het gekozen gebouw bestaat niet.");
+      } else {
+        const ng = body.nieuw_gebouw!;
+        const [nieuwGebouw] = await tx.insert(gebouwenTable).values({
+          naam: ng.naam.trim(),
+          adres: ng.adres.trim(),
+          stad: ng.stad?.trim() || null,
+          postcode: ng.postcode?.trim() || null,
+          omschrijving: werkzaamheden,
+          // B. Werkmaatschappij relationeel meegeven op nieuw gebouw
+          werkgeverId: wm?.id ?? null,
+        }).returning();
+        gebouwId = nieuwGebouw.id;
+      }
 
-    const [bijgewerkt] = await tx.update(aanvraagVoorstellenTable)
-      .set({ voorstelType, projectkansId: kans.id, bijgewerktOp: new Date() })
-      .where(eq(aanvraagVoorstellenTable.id, id))
-      .returning();
-    return { kans, voorstel: bijgewerkt };
+      // ── 7. Gebouwpartij type opdrachtgever upsert (contactnaam, klantnaam als org, telefoon) ─
+      // naam = contactpersoon, organisatie = klantnaam, telefoon + email + beide FKs
+      // Een aparte gebouw+klant-lock maakt de read-then-insert ook expliciet veilig
+      // als deze stroom later vóór de algemene klant-lock wordt herschikt.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${"aanvraag-partij:" + gebouwId + ":" + klantId}, 0))`);
+      const [bestaandePartij] = await tx.select({ id: gebouwPartijenTable.id })
+        .from(gebouwPartijenTable)
+        .where(and(
+          eq(gebouwPartijenTable.gebouwId, gebouwId),
+          eq(gebouwPartijenTable.type, "opdrachtgever"),
+          eq(gebouwPartijenTable.klantId as any, klantId),
+        ))
+        .limit(1);
+      const partijVaarden = {
+        gebouwId,
+        type: "opdrachtgever",
+        naam: resolvedContactNaam,          // B. contactnaam als naam
+        organisatie: klantNaam,              // B. klantnaam als organisatie
+        email: contactEmail || null,
+        telefoon: body.contact_telefoon?.trim() || null,  // B. telefoon bewaren
+        adres: klant.adres,
+        postcode: klant.postcode,
+        plaats: klant.stad,
+        klantId: klantId as any,
+        contactpersoonId: contactpersoonId as any,
+        bijgewerktOp: new Date(),
+      };
+      if (!bestaandePartij) {
+        await tx.insert(gebouwPartijenTable).values(partijVaarden as any);
+      } else {
+        const { gebouwId: _g, type: _t, ...updates } = partijVaarden;
+        await tx.update(gebouwPartijenTable)
+          .set(updates as any)
+          .where(eq(gebouwPartijenTable.id, bestaandePartij.id));
+      }
+
+      // ── 8. Conceptopname (leeg — geen items; notities = bevestigde werkzaamheden) ─
+      const [opname] = await tx.insert(opnamesTable).values({
+        naam: `Opname — ${titel}`,
+        datum: new Date().toISOString().slice(0, 10),
+        gebouwId,
+        aangemaaktDoorId: beoordelaarId,
+        // B. Werkzaamheden als startnotitie zodat opname-medewerker context heeft
+        notities: werkzaamheden,
+      }).returning();
+
+      // ── 9. Concept modulaire calculatie (leeg — geen regels) ─────────────────
+      const [calculatie] = await tx.insert(modCalcHeadersTable).values({
+        naam: titel,
+        klantNaam,
+        gebouwId,
+        opnameId: opname.id,
+        status: "concept",
+        omschrijving: werkzaamheden,
+        aangemaaktDoorId: beoordelaarId,
+        aanvraagVoorstelId: id,
+        opdrachtgeverKlantId: klantId,
+        opdrachtgeverContactpersoonId: contactpersoonId,
+        werkmaatschappijId: wm?.id ?? null,
+      } as any).returning();
+
+      // ── 10. Projectkans (legacy compat — behoud voor navigatie) ──────────────
+      const ai = (voorstel.aiVoorstel ?? {}) as Record<string, unknown>;
+      // B. kansType "calculatie" is de fase voor een aanvraag die een calculatie gekregen heeft
+      const [kans] = await tx.insert(crmCommercieelTable).values({
+        klantId,
+        gebouwId,
+        titel,
+        kansType: "calculatie",
+        fase: "calculatie",
+        aiSamenvatting: typeof ai["samenvatting"] === "string" ? ai["samenvatting"] as string : null,
+        bronMailMessageId: voorstel.mailMessageId,
+        binnengekomenOp: voorstel.binnengekomenOp,
+        bedrijfBv: body.bv ?? (wm ? (wm.naam.includes("Brandpreventie") ? "FPS Brandpreventie" : wm.naam.includes("Onderhoud") ? "FPS Onderhoud" : "FPS Bouw") : null),
+        gerelateerdProjectId,
+        verantwoordelijkeId: beoordelaarId,
+      }).returning();
+
+      // ── 11. Werk-inbox koppelingen (mailbox_adres mee voor klant/gebouw/calculatie) ─
+      const mailboxAdresVoorstel = voorstel.mailboxAdres ?? null;
+      const koppelingen: Array<{ entityType: string; entityId: number; entityLabel: string }> = [
+        { entityType: "klant", entityId: klantId, entityLabel: klantNaam },
+        { entityType: "gebouw", entityId: gebouwId, entityLabel: titel },
+        { entityType: "calculatie", entityId: calculatie.id, entityLabel: titel },
+      ];
+      if (gerelateerdProjectId) koppelingen.push({ entityType: "project", entityId: gerelateerdProjectId, entityLabel: `Meerwerk: ${titel}` });
+      for (const k of koppelingen) {
+        await tx.insert(werkInboxKoppelingenTable).values({
+          messageId: voorstel.mailMessageId,
+          mailboxAdres: mailboxAdresVoorstel,
+          gebruikerId: voorstel.gebruikerId,
+          ...k,
+        }).onConflictDoNothing();
+      }
+
+      // ── 12. Inbox item bijwerken (verwerkt + gekoppeld aan calculatie) ────────
+      if (voorstel.inboxItemId) {
+        await tx.update(inboxItemsTable)
+          .set({
+            status: "verwerkt",
+            gekoppeldeEntiteitType: "calculatie",
+            gekoppeldeEntiteitId: calculatie.id,
+            gekoppeldeEntiteitNaam: titel,
+            bijgewerktOp: new Date(),
+          })
+          .where(eq(inboxItemsTable.id, voorstel.inboxItemId));
+        await tx.insert(inboxAuditLogTable).values({
+          inboxItemId: voorstel.inboxItemId,
+          actie: "verwerkt",
+          gebruikerId: beoordelaarId,
+          details: `Aanvraag geaccepteerd. Calculatie #${calculatie.id} aangemaakt.`,
+        });
+      }
+
+      // ── 13. Voorstel result-FKs opslaan ──────────────────────────────────────
+      const [bijgewerkt] = await tx.update(aanvraagVoorstellenTable)
+        .set({
+          voorstelType,
+          projectkansId: kans.id,
+          klantId,
+          contactpersoonId,
+          gebouwId,
+          opnameId: opname.id,
+          calculatieId: calculatie.id,
+          werkmaatschappijId: wm?.id ?? null,
+          bijgewerktOp: new Date(),
+        } as any)
+        .where(eq(aanvraagVoorstellenTable.id, id))
+        .returning();
+
+      return {
+        voorstel: bijgewerkt,
+        kans,
+        klantNaam,
+        contactNaam: resolvedContactNaam,
+        werkmaatschappijNaam: wm?.naam ?? null,
+        calculatieId: calculatie.id,
+        opnameId: opname.id,
+        klantId,
+        contactpersoonId,
+        gebouwId,
+      };
     });
   } catch (e) {
     if (e instanceof StroomFout) { res.status(e.code).json({ error: e.message }); return; }
+    if (e instanceof OpdrachtgeverFout) { res.status(e.status).json({ error: e.message }); return; }
     throw e;
   }
 
-  res.json({ ...voorstelNaarJson(resultaat.voorstel), projectkans_id: resultaat.kans.id });
+  res.json({
+    ...voorstelNaarJson(resultaat.voorstel, null, {
+      klantNaam: resultaat.klantNaam,
+      contactNaam: resultaat.contactNaam,
+      werkmaatschappijNaam: resultaat.werkmaatschappijNaam,
+    }),
+    projectkans_id: resultaat.kans?.id ?? null,
+    calculatie_id: resultaat.calculatieId,
+    opname_id: resultaat.opnameId,
+  });
 });
 
 // ── Afwijzen ──────────────────────────────────────────────────────────────────

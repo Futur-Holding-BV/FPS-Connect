@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, unique, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -169,10 +170,43 @@ export const aanvraagVoorstellenTable = pgTable("aanvraag_voorstellen", {
   beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   beoordeeldOp: timestamp("beoordeeld_op"),
   beoordeelNotitie: text("beoordeel_notitie"),
+  // AANVRAAG_01 §1 — intake result-FKs (nullable; alleen gevuld na acceptatie)
+  // inbox_item_id: FK zonder .references() om circular import te vermijden (inbox.ts -> crm.ts -> ...)
+  inboxItemId: integer("inbox_item_id"),
+  klantId: integer("klant_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
+  contactpersoonId: integer("contactpersoon_id").references(() => crmContactpersonenTable.id, { onDelete: "set null" }),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  // opname_id, calculatie_id: FKs zonder .references() — circular via opname.ts en mod-calculatie.ts
+  opnameId: integer("opname_id"),
+  calculatieId: integer("calculatie_id"),
+  // werkmaatschappij_id: FK zonder .references() om circular import te vermijden (hrm.ts -> crm.ts -> hrm.ts)
+  // SQL-FK wordt afgedwongen via migratie 0128.
+  werkmaatschappijId: integer("werkmaatschappij_id"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [
   unique("aanvraag_voorstellen_mail_uq").on(t.mailMessageId),
+  index("aanvraag_voorstellen_inbox_item_idx")
+    .on(t.inboxItemId)
+    .where(sql`inbox_item_id IS NOT NULL`),
+  index("aanvraag_voorstellen_klant_idx")
+    .on(t.klantId)
+    .where(sql`klant_id IS NOT NULL`),
+  index("aanvraag_voorstellen_contactpersoon_idx")
+    .on(t.contactpersoonId)
+    .where(sql`contactpersoon_id IS NOT NULL`),
+  index("aanvraag_voorstellen_gebouw_idx")
+    .on(t.gebouwId)
+    .where(sql`gebouw_id IS NOT NULL`),
+  index("aanvraag_voorstellen_opname_idx")
+    .on(t.opnameId)
+    .where(sql`opname_id IS NOT NULL`),
+  index("aanvraag_voorstellen_calculatie_idx")
+    .on(t.calculatieId)
+    .where(sql`calculatie_id IS NOT NULL`),
+  uniqueIndex("aanvraag_voorstellen_calculatie_uq")
+    .on(t.calculatieId)
+    .where(sql`calculatie_id IS NOT NULL`),
 ]);
 
 export type AanvraagVoorstel = typeof aanvraagVoorstellenTable.$inferSelect;

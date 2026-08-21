@@ -7,7 +7,5 @@
  */
 
 export type InboxOfferteverwerkingResultaatAangemaakt = {
-  offerte?: boolean;
-  gebouw?: boolean;
-  opname?: boolean;
+  voorstel: boolean;
 };

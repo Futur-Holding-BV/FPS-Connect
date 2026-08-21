@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   useListGebouwPartijen,
   useCreateGebouwPartij,
@@ -146,6 +147,7 @@ export default function GebouwPartijen({
   }
 
   const lijst = partijen ?? [];
+  const heeftOpdrachtgever = lijst.some((p) => p.type === "opdrachtgever");
 
   return (
     <Card>
@@ -158,6 +160,16 @@ export default function GebouwPartijen({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!isLoading && !heeftOpdrachtgever && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-800 flex items-start gap-2 mb-2">
+            <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+            <div>
+              <p className="font-medium text-red-900">Let op: Opdrachtgever ontbreekt</p>
+              <p>Dit gebouw heeft geen gekoppelde opdrachtgever. Voeg een partij van type "Opdrachtgever" toe voor volledige projectdata.</p>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Laden...
@@ -173,6 +185,20 @@ export default function GebouwPartijen({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {(p as any).klant_id && (
+                        <Link href={`/crm/klanten/${(p as any).klant_id}`}>
+                          <Badge variant="outline" className="text-[10px] bg-slate-50 hover:bg-slate-100 cursor-pointer text-slate-600">
+                            CRM Klant
+                          </Badge>
+                        </Link>
+                      )}
+                      {(p as any).contactpersoon_id && (
+                        <Link href={`/crm/contactpersonen/${(p as any).contactpersoon_id}`}>
+                          <Badge variant="outline" className="text-[10px] bg-slate-50 hover:bg-slate-100 cursor-pointer text-slate-600">
+                            CRM Contact
+                          </Badge>
+                        </Link>
+                      )}
                       <span className="font-medium">{p.naam}</span>
                       <Badge variant="secondary" className="text-xs">
                         {typeLabel(p.type)}

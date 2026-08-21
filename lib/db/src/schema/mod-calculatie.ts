@@ -1,8 +1,10 @@
-import { pgTable, serial, text, integer, real, numeric, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, numeric, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { opnamesTable } from "./opname";
+import { crmKlantenTable, crmContactpersonenTable } from "./crm";
+import { werkgeversTable } from "./hrm";
 
 export const modCalcTarievenTable = pgTable("mod_calc_tarieven", {
   id: serial("id").primaryKey(),
@@ -83,7 +85,27 @@ export const modCalcHeadersTable = pgTable("mod_calc_headers", {
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+  // AANVRAAG_01 §1 — intake herkomst-FKs (nullable)
+  // aanvraag_voorstel_id: FK zonder .references() om circular import te vermijden (crm.ts -> mod-calculatie.ts -> ...)
+  aanvraagVoorstelId: integer("aanvraag_voorstel_id"),
+  opdrachtgeverKlantId: integer("opdrachtgever_klant_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
+  opdrachtgeverContactpersoonId: integer("opdrachtgever_contactpersoon_id").references(() => crmContactpersonenTable.id, { onDelete: "set null" }),
+  werkmaatschappijId: integer("werkmaatschappij_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+}, (t) => [
+  index("mod_calc_headers_opdrachtgever_klant_idx")
+    .on(t.opdrachtgeverKlantId)
+    .where(sql`opdrachtgever_klant_id IS NOT NULL`),
+  index("mod_calc_headers_opdrachtgever_contact_idx")
+    .on(t.opdrachtgeverContactpersoonId)
+    .where(sql`opdrachtgever_contactpersoon_id IS NOT NULL`),
+  index("mod_calc_headers_werkmaatschappij_idx")
+    .on(t.werkmaatschappijId)
+    .where(sql`werkmaatschappij_id IS NOT NULL`),
+  // F. Partial unique index (gelijk aan migratie 0128): één calculatie per voorstel
+  uniqueIndex("mod_calc_headers_aanvraag_voorstel_uq")
+    .on(t.aanvraagVoorstelId)
+    .where(sql`aanvraag_voorstel_id IS NOT NULL`),
+]);
 
 export const modCalcEenhedenTable = pgTable("mod_calc_eenheden", {
   id: serial("id").primaryKey(),

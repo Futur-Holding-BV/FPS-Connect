@@ -11,7 +11,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { leesEnWisAdviesrapportBestand } from "@/lib/adviesrapport-import-stash";
 import {
-  useGetModCalculatie,
+  useGetOpname, getGetOpnameQueryKey, useGetModCalculatie,
   useUpdateModCalculatie,
   useDeleteModCalculatie,
   useDupliceerModCalculatie,
@@ -53,7 +53,7 @@ import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
 import { PlakInvoer } from "./plak-invoer";
 import { AdviesInrichten } from "./advies-inrichten";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,7 @@ import {
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
   ChevronDown, ChevronUp, Building2, BookOpen, Search,
-  TrendingUp, TrendingDown, Minus, AlertTriangle,
+  TrendingUp, TrendingDown, Minus, AlertTriangle, Layers, MapPin,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -87,6 +87,113 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+
+
+function SourceContextPanel({ header }: { header: any }) {
+  const { data: opname } = useGetOpname(header?.opname_id ?? 0, {
+    query: {
+      enabled: !!header?.opname_id,
+      queryKey: getGetOpnameQueryKey(header?.opname_id ?? 0),
+    }
+  });
+
+  if (!header) return null;
+  const heeftContext = !!header.aanvraag_voorstel_id || !!header.opdrachtgever_klant_naam || !!header.opdrachtgever_contactpersoon_naam || !!header.gebouw_naam || !!header.opname_naam;
+  if (!heeftContext) return null;
+
+  return (
+    <Card className="mb-6 bg-slate-50 border-slate-200">
+      <CardHeader className="pb-3 border-b border-slate-200">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Layers className="w-4 h-4 text-slate-500" /> Bron context
+        </CardTitle>
+        <CardDescription className="text-xs text-slate-500">
+          De onderstaande relatie- en brongegevens worden als read-only context voor deze calculatie weergegeven. Niet overgenomen in calculatieregels. Geen auto-fill.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          {header.aanvraag_voorstel_id && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Aanvraag</p>
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                <span className="font-medium">Voorstel #{header.aanvraag_voorstel_id}</span>
+              </div>
+            </div>
+          )}
+          {header.opdrachtgever_klant_naam && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Klant</p>
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-primary" />
+                <span className="font-medium truncate" title={header.opdrachtgever_klant_naam}>{header.opdrachtgever_klant_naam}</span>
+              </div>
+            </div>
+          )}
+          {header.opdrachtgever_contactpersoon_naam && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</p>
+              <div className="flex items-start gap-2">
+                <Users className="w-4 h-4 text-primary mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-medium block truncate">{header.opdrachtgever_contactpersoon_naam}</span>
+                  {header.opdrachtgever_contactpersoon_email && <span className="text-xs text-slate-500 block truncate">{header.opdrachtgever_contactpersoon_email}</span>}
+                  {header.opdrachtgever_contactpersoon_telefoon && <span className="text-xs text-slate-500 block truncate">{header.opdrachtgever_contactpersoon_telefoon}</span>}
+                </div>
+              </div>
+            </div>
+          )}
+          {header.gebouw_naam && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Gebouw</p>
+              <Link href={`/gebouwen/${header.gebouw_id}`} className="flex items-center gap-2 hover:underline group">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="font-medium truncate group-hover:text-primary transition-colors">{header.gebouw_naam}</span>
+              </Link>
+            </div>
+          )}
+          {header.opname_naam && (
+            <div className="space-y-1 lg:col-span-4 mt-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Veldopname</p>
+              <div className="border rounded bg-white p-3 space-y-3">
+                <Link href={`/opname/${header.opname_id}`} className="flex items-center gap-2 hover:underline group">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <span className="font-medium group-hover:text-primary transition-colors">{header.opname_naam}</span>
+                </Link>
+                {opname && (
+                  <div className="text-xs text-slate-600 space-y-2 mt-2 border-t pt-2">
+                    {opname.notities && (
+                      <div className="space-y-1">
+                        <span className="font-medium text-slate-700">Notities:</span>
+                        <p className="whitespace-pre-wrap">{opname.notities}</p>
+                      </div>
+                    )}
+                    {opname.items && opname.items.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="font-medium text-slate-700">Opname items ({opname.items.length}):</span>
+                        <ul className="list-disc pl-4 space-y-1 max-h-40 overflow-y-auto">
+                          {opname.items.map((i: any) => (
+                            <li key={i.id}>
+                              {i.hoeveelheid ? `${i.hoeveelheid}x ` : ''}
+                              <span className="font-medium">{i.type}</span>
+                              {i.beschrijving ? ` - ${i.beschrijving}` : ''}
+                              {i.ruimte ? ` (${i.ruimte})` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── Constanten ─────────────────────────────────────────────────────────────
 
@@ -2888,6 +2995,8 @@ export default function ModulesCalculatieDetail() {
           </DropdownMenu>
         </div>
       </div>
+
+      <SourceContextPanel header={data} />
 
       {/* Projectgegevens strip */}
       {(data.referentie || (data as any).werknummer || data.klant_naam || data.project_naam || data.gebouw_naam || (data as any).opname_naam || data.aangemaakt_door_naam || bronbestand) && (

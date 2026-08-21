@@ -1,13 +1,23 @@
 ---
 name: Gebouwkaart segmenten & projectformulier
-description: detail.tsx 3-segment tabbladen + bewerkbare/bevestigbare AI-projectsamenvatting met CRM-contactbeheer
+description: compacte projectdetail-shell met vijf hoofdtabbladen + bewerkbare/bevestigbare AI-projectsamenvatting
 ---
 
-# Gebouwkaart (gebouwen/detail.tsx)
+# Gebouwkaart
 
-- De drie segmenten (Project & gegevens / Uitvoering / Beheer) staan in een `Tabs`
-  (shadcn). Kop + actieknoppen (Bewerken, Gereedmelden, PDF, Stappenplan) blijven
-  ALTIJD boven de `Tabs`. Elke tab houdt zijn eigen `SegmentKop` als context.
+De zichtbare hoofdtabbladen zijn uitsluitend Dashboard, Gebouw, Uitvoering, Beheer
+en Documenten. Proces- en financiële bestemmingen blijven bestaande, direct
+linkbare inhoudssegmenten, maar worden geopend via de Projectdossier-kaarten in
+plaats van via een tweede brede tabrij.
+
+**Why:** de projectnaam en status stonden dubbel en de brede tabrij drukte de
+inhoud te ver omlaag. De compacte shell moet inhoud op desktop binnen 200 px
+laten beginnen, zonder bestaande dossierbestemmingen of diepe links te breken.
+
+**How to apply:** voeg geen nieuwe zichtbare projecttab toe voor calculaties,
+offertes, opdrachten, meer-/minderwerk, opnames, facturen of rapporten. Gebruik
+een bestaande of nieuwe dossierkaart en behoud het inhoudssegment voor directe
+links. Kop en acties blijven boven de tabs; elke hoofdtab houdt eigen context.
 
 # Projectformulier (gebouw-projectformulier.tsx)
 

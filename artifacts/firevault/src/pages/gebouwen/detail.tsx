@@ -11,7 +11,6 @@ import {
   useListToewijsbareGebruikers,
   useMeldGebouwGereed,
   useHerstelGebouwActief,
-  useListGebouwPartijen,
   useListOnderhoud,
   useArchiveerGebouw,
   useListGekoppeldeDocumenten,
@@ -117,6 +116,10 @@ import GebouwActiviteit from "./gebouw-activiteit";
 import GebouwStappenplan from "./gebouw-stappenplan";
 import GebouwRapporten from "./gebouw-rapporten";
 import { GebouwDashboard } from "./gebouw-dashboard";
+import {
+  bepaalActueleProjectFase,
+  leidProjectFasenAf,
+} from "./gebouw-projectfasen";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const PROJECT_ROLLEN = [
@@ -152,6 +155,10 @@ const OFFERTE_STATUS_LABEL: Record<string, string> = {
 };
 
 const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  nieuw_project: {
+    label: "Nieuw project",
+    className: "bg-slate-100 text-slate-700 border-slate-300",
+  },
   offerte_aanvraag: {
     label: "Offerte-aanvraag",
     className: "bg-amber-100 text-amber-800 border-amber-300",
@@ -293,10 +300,10 @@ function DataWaarschuwing({ punten }: { punten: string[] }) {
       <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
       <div>
         <p className="font-medium text-amber-700">
-          Mogelijk onvoldoende informatie voor de monteur
+          Uitvoeringsstap — nog nodig
         </p>
         <p className="text-amber-700/90 mt-0.5">
-          De volgende essentiële gegevens ontbreken nog:{" "}
+          Vul voor de uitvoering nog aan:{" "}
           {punten.join(", ")}.
         </p>
       </div>
@@ -471,7 +478,6 @@ export default function GebouwDetail() {
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
     useListGebouwToewijzingen(gebouwId);
   const { data: gebruikers } = useListToewijsbareGebruikers();
-  const { data: partijen } = useListGebouwPartijen(gebouwId);
   const { data: openActiepunten } = useListOnderhoud({
     gebouw_id: gebouwId,
     status: "open",
@@ -590,6 +596,15 @@ export default function GebouwDetail() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
+  const actueleProjectFase = bepaalActueleProjectFase(
+    leidProjectFasenAf(
+      gebouwCalcs,
+      gebouwOffertes,
+      gebouwOpnames,
+      gebouwFacturen,
+      gebouw,
+    ),
+  );
   const beschikbareGebruikers = gebruikers ?? [];
 
   // Toewijzen vereist het wijzig-/aanmaakniveau op gebouwen (zelfde drempel als
@@ -712,23 +727,10 @@ export default function GebouwDetail() {
     }
   }
 
-  const projectAdmin = (toewijzingen ?? []).find(
-    (t) => t.project_rol === "Project-admin",
-  );
-  const projectleider = (toewijzingen ?? []).find(
-    (t) => t.project_rol === "Projectleider",
-  );
-
-  const partijenLijst = partijen ?? [];
   const actiepunten = openActiepunten ?? [];
 
   const heeftPlattegrond = verdiepingenMetPlattegrond(gebouw.verdiepingen ?? []);
   const aantalSpots = gebouw.stats?.totaal ?? 0;
-
-  const ontbrekendeProjectdata: string[] = [];
-  if (!gebouw.adres) ontbrekendeProjectdata.push("adres van het gebouw");
-  if (partijenLijst.length === 0)
-    ontbrekendeProjectdata.push("contactpartijen (opdrachtgever/eigenaar)");
 
   const ontbrekendeUitvoeringsdata: string[] = [];
   if ((gebouw.verdiepingen ?? []).length === 0)
@@ -760,76 +762,80 @@ export default function GebouwDetail() {
   const verdiepingen = gebouw.verdiepingen ?? [];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-2 max-w-7xl mx-auto">
       <PaginaHulp pagina="gebouw-detail" />
 
       {/* ── Compacte header ── */}
-      <div className="flex items-start gap-3">
+      <div data-testid="projectkop" className="flex items-center gap-3">
         <Link href="/gebouwen">
-          <Button variant="outline" size="icon" className="shrink-0 mt-0.5">
+          <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <KenmerkKop kenmerk={(gebouw as any).kenmerk ?? gebouw.werknummer} />
-            <h1 data-paginatitel className="text-2xl font-bold tracking-tight leading-tight">
-              {gebouw.projectnummer
-                ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`
-                : gebouw.naam}
-            </h1>
-            {afgeleidStatus && !gebouw.gereed_op && (
-              <ProjectStatusBadge status={afgeleidStatus} />
-            )}
-            {gebouw.gereed_op && (
-              <Badge className="bg-green-600 text-white gap-1 shrink-0">
-                <CheckCircle className="h-3 w-3" /> Gereed
-              </Badge>
-            )}
-            <ImportBadge bron={(gebouw as { bron?: string | null }).bron} importId={(gebouw as { import_id?: number | null }).import_id} />
-          </div>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            {gebouw.adres}
-            {gebouw.stad ? `, ${gebouw.stad}` : ""}
-            {gebouw.postcode ? ` \u00b7 ${gebouw.postcode}` : ""}
-          </p>
-          {gebouw.gereed_op && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Gereedgemeld op{" "}
-              {new Date(gebouw.gereed_op).toLocaleDateString("nl-NL")}
-              {gebouw.gereed_door ? ` door ${gebouw.gereed_door}` : ""}
-            </p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 xl:flex-nowrap">
+          <KenmerkKop kenmerk={(gebouw as any).kenmerk ?? gebouw.werknummer} />
+          <h1
+            data-paginatitel
+            className="min-w-0 max-w-sm truncate text-xl font-bold tracking-tight"
+            title={
+              gebouw.projectnummer
+                ? `${gebouw.projectnummer} — ${gebouw.naam}`
+                : gebouw.naam
+            }
+          >
+            {gebouw.projectnummer
+              ? `${gebouw.projectnummer} — ${gebouw.naam}`
+              : gebouw.naam}
+          </h1>
+          {(gebouw.adres || gebouw.stad || gebouw.postcode) && (
+            <span
+              className="flex min-w-0 max-w-xs items-center gap-1 truncate text-xs text-muted-foreground"
+              title={[gebouw.adres, gebouw.postcode, gebouw.stad]
+                .filter(Boolean)
+                .join(", ")}
+            >
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">
+                {[gebouw.adres, gebouw.postcode, gebouw.stad]
+                  .filter(Boolean)
+                  .join(", ")}
+              </span>
+            </span>
           )}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-            {(gebouw as any).werkmaatschappij_naam && (
-              <span className="flex items-center gap-1">
-                <Building2 className="h-3 w-3" /> {(gebouw as any).werkmaatschappij_naam as string}
-              </span>
-            )}
-            {gebouw.werknummer && (
-              <span className="flex items-center gap-1">
-                <Hash className="h-3 w-3" /> {gebouw.werknummer}
-              </span>
-            )}
-            {gebouw.aangemaakt_op && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" /> Start{" "}
-                {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL")}
-              </span>
-            )}
-            {projectleider && (
-              <span className="flex items-center gap-1">
-                <ClipboardList className="h-3 w-3" /> Projectleider:{" "}
-                {projectleider.naam}
-              </span>
-            )}
-            {projectAdmin && (
-              <span className="flex items-center gap-1">
-                <ClipboardList className="h-3 w-3" /> Project-admin:{" "}
-                {projectAdmin.naam}
-              </span>
-            )}
-          </div>
+          {((gebouw as any).werkmaatschappij_naam ||
+            (gebouw as any).werkmaatschappij) && (
+            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+              <Building2 className="h-3 w-3" />
+              {((gebouw as any).werkmaatschappij_naam ??
+                (gebouw as any).werkmaatschappij) as string}
+            </span>
+          )}
+          {((gebouw as any).start_datum || gebouw.aangemaakt_op) && (
+            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              Start{" "}
+              {new Date(
+                (gebouw as any).start_datum ?? gebouw.aangemaakt_op,
+              ).toLocaleDateString("nl-NL")}
+            </span>
+          )}
+          {!gebouw.gereed_op && (
+            <ProjectStatusBadge status={afgeleidStatus ?? "nieuw_project"} />
+          )}
+          {gebouw.gereed_op && (
+            <Badge className="shrink-0 gap-1 bg-green-600 text-white">
+              <CheckCircle className="h-3 w-3" /> Gereed
+            </Badge>
+          )}
+          {actueleProjectFase && (
+            <Badge variant="outline" className="shrink-0 text-xs">
+              Fase: {actueleProjectFase.label}
+            </Badge>
+          )}
+          <ImportBadge
+            bron={(gebouw as { bron?: string | null }).bron}
+            importId={(gebouw as { import_id?: number | null }).import_id}
+          />
         </div>
       </div>
 
@@ -892,53 +898,32 @@ export default function GebouwDetail() {
           SEGMENT 1 — Project- en gebouwgegevens
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
-        <div className="sticky top-9 z-10 bg-background border-b -mx-3 px-3 md:-mx-4 md:px-4 xl:-mx-6 xl:px-6 py-2 flex items-start justify-between gap-4">
-          <TabsList className="w-full max-w-5xl justify-start">
-            <TabsTrigger value="dashboard" className="gap-1.5">
+        <div className="sticky top-9 z-10 -mx-3 flex items-center justify-between gap-4 border-b bg-background px-3 py-0.5 md:-mx-4 md:px-4 xl:-mx-6 xl:px-6">
+          <TabsList
+            data-testid="project-hoofdtabs"
+            className="h-8 w-full max-w-3xl flex-nowrap justify-start overflow-x-auto"
+          >
+            <TabsTrigger value="dashboard" className="h-7 gap-1.5 px-2 text-xs">
               <LayoutDashboard className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Dashboard</span>
               <span className="sm:hidden">Dash.</span>
             </TabsTrigger>
-            <TabsTrigger value="project" className="gap-1.5">
+            <TabsTrigger value="project" className="h-7 gap-1.5 px-2 text-xs">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Gebouw</span>
               <span className="sm:hidden">Gebouw</span>
             </TabsTrigger>
-            <TabsTrigger value="uitvoering" className="gap-1.5">
+            <TabsTrigger value="uitvoering" className="h-7 gap-1.5 px-2 text-xs">
               <Wrench className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Uitvoering</span>
             </TabsTrigger>
-            <TabsTrigger value="beheer" className="gap-1.5">
+            <TabsTrigger value="beheer" className="h-7 gap-1.5 px-2 text-xs">
               <Sparkles className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Beheer</span>
             </TabsTrigger>
-            <TabsTrigger value="rapporten" className="gap-1.5">
+            <TabsTrigger value="documenten" className="h-7 gap-1.5 px-2 text-xs">
               <FileText className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Rapporten</span>
-            </TabsTrigger>
-            <TabsTrigger value="calculaties" className="gap-1.5">
-              <Calculator className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Calculaties</span>
-            </TabsTrigger>
-            <TabsTrigger value="offertes" className="gap-1.5">
-              <Euro className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Offertes</span>
-            </TabsTrigger>
-            <TabsTrigger value="opdrachten" className="gap-1.5">
-              <ClipboardList className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Opdrachten</span>
-            </TabsTrigger>
-            <TabsTrigger value="meerwerk" className="gap-1.5">
-              <Scale className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Meer/min.</span>
-            </TabsTrigger>
-            <TabsTrigger value="opnames" className="gap-1.5">
-              <ListChecks className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Opnames</span>
-            </TabsTrigger>
-            <TabsTrigger value="facturen" className="gap-1.5">
-              <Receipt className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Facturen</span>
+              <span className="hidden sm:inline">Documenten</span>
             </TabsTrigger>
           </TabsList>
 
@@ -953,12 +938,22 @@ export default function GebouwDetail() {
                     onClick={() => setBewerkenOpen(true)}
                   />
                 )}
-                <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
+                <GebouwStappenplan
+                  gebouwId={gebouwId}
+                  gebouw={gebouw}
+                  compact
+                  onNavigeer={setSegment}
+                />
               </>
             )}
             {segment === "uitvoering" && (
               <>
-                <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
+                <GebouwStappenplan
+                  gebouwId={gebouwId}
+                  gebouw={gebouw}
+                  compact
+                  onNavigeer={setSegment}
+                />
               </>
             )}
             {segment === "beheer" && (
@@ -1027,7 +1022,7 @@ export default function GebouwDetail() {
           </div>
         </div>
 
-      <TabsContent value="dashboard" className="mt-6">
+      <TabsContent value="dashboard" className="mt-1" data-testid="project-segment-dashboard">
         <GebouwDashboard
           gebouw={gebouw}
           toewijzingen={toewijzingen ?? []}
@@ -1046,14 +1041,13 @@ export default function GebouwDetail() {
         />
       </TabsContent>
 
-      <TabsContent value="project" className="space-y-4 mt-6">
+      <TabsContent value="project" className="mt-4 space-y-4" data-testid="project-segment-project">
         <SegmentKop
           icoon={<Building2 className="h-5 w-5" />}
           titel="Gebouwgegevens"
           ondertitel="NAW-gegevens, contactpartijen, opdracht­omschrijving en open actiepunten"
           noodzakelijk
         />
-        <DataWaarschuwing punten={ontbrekendeProjectdata} />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
           <div className="xl:col-span-2 space-y-6">
 
@@ -1104,7 +1098,6 @@ export default function GebouwDetail() {
               </Card>
             )}
 
-            <GebouwDocumenten gebouwId={gebouwId} />
             <GebouwInboxAanvragen gebouwId={gebouwId} />
           </div>
 
@@ -1192,10 +1185,14 @@ export default function GebouwDetail() {
         </div>
       </TabsContent>
 
+      <TabsContent value="documenten" className="mt-4" data-testid="project-segment-documenten">
+        <GebouwDocumenten gebouwId={gebouwId} />
+      </TabsContent>
+
       {/* ════════════════════════════════════════════════════
           SEGMENT 2 — Uitvoering op locatie
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="uitvoering" className="space-y-4 mt-6">
+      <TabsContent value="uitvoering" className="space-y-4 mt-6" data-testid="project-segment-uitvoering">
         <SegmentKop
           icoon={<Wrench className="h-5 w-5" />}
           titel="Uitvoering"
@@ -1284,7 +1281,7 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 3 — Beheer en communicatie
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="beheer" className="space-y-4 mt-6">
+      <TabsContent value="beheer" className="space-y-4 mt-6" data-testid="project-segment-beheer">
         <SegmentKop
           icoon={<Sparkles className="h-5 w-5" />}
           titel="Beheer & Historie"
@@ -1498,14 +1495,14 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 4 — Opleverrapporten
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="rapporten" className="space-y-4 mt-6">
+      <TabsContent value="rapporten" className="space-y-4 mt-6" data-testid="project-segment-rapporten">
         <GebouwRapporten gebouwId={gebouwId} isBeheerder={isBeheerder} />
       </TabsContent>
 
       {/* ════════════════════════════════════════════════════
           SEGMENT 5 — Calculaties
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="calculaties" className="space-y-6 mt-6">
+      <TabsContent value="calculaties" className="space-y-6 mt-6" data-testid="project-segment-calculaties">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -1556,7 +1553,7 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 6 — Offertes
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="offertes" className="space-y-6 mt-6">
+      <TabsContent value="offertes" className="space-y-6 mt-6" data-testid="project-segment-offertes">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -1607,7 +1604,7 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT — Opdrachten
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="opdrachten" className="space-y-6 mt-6">
+      <TabsContent value="opdrachten" className="space-y-6 mt-6" data-testid="project-segment-opdrachten">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -1654,7 +1651,7 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT — Meer- en minderwerk
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="meerwerk" className="space-y-6 mt-6">
+      <TabsContent value="meerwerk" className="space-y-6 mt-6" data-testid="project-segment-meerwerk">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -1717,7 +1714,7 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 7 — Opnames
           ════════════════════════════════════════════════════ */}
-      <TabsContent value="opnames" className="space-y-6 mt-6">
+      <TabsContent value="opnames" className="space-y-6 mt-6" data-testid="project-segment-opnames">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -1767,7 +1764,7 @@ export default function GebouwDetail() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="facturen" className="space-y-6 mt-6">
+      <TabsContent value="facturen" className="space-y-6 mt-6" data-testid="project-segment-facturen">
         <GebouwFacturenTab
           gebouwId={gebouwId ?? 0}
           facturen={gebouwFacturen}

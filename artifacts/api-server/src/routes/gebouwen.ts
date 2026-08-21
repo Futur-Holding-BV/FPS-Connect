@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { CreateGebouwBody } from "@workspace/api-zod";
 import { db } from "@workspace/db";
 import {
   gebouwenTable,
@@ -23,6 +24,10 @@ import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
 import { haalActieveFunctieNamen } from "../lib/functieNamen";
+import {
+  OpdrachtgeverFout,
+  resolveerOpdrachtgever,
+} from "../services/opdrachtgever";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -254,6 +259,14 @@ router.get("/gebouwen", lezenGebouwen, async (req, res): Promise<void> => {
 // POST /gebouwen
 router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
+    const invoer = CreateGebouwBody.safeParse(req.body);
+    if (!invoer.success) {
+      res.status(400).json({
+        error: "Ongeldige invoer.",
+        details: invoer.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      });
+      return;
+    }
     const {
       werknummer,
       projectnummer,
@@ -272,9 +285,24 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
       latitude,
       longitude,
       werkgever_id,
-    } = req.body;
-    if (!naam || !adres) {
-      return void res.status(400).json({ error: "naam en adres zijn verplicht" });
+      nieuwe_klant,
+    } = invoer.data;
+    if (
+      !naam.trim() ||
+      !omschrijving.trim() ||
+      !adres.trim() ||
+      !postcode.trim() ||
+      !stad.trim()
+    ) {
+      return void res.status(422).json({
+        error:
+          "Project-/gebouwnaam, opdrachtomschrijving en volledig gebouwadres zijn verplicht.",
+      });
+    }
+    if (!klant_id && !nieuwe_klant) {
+      return void res.status(422).json({
+        error: "Kies een bestaande opdrachtgever of maak een nieuwe aan.",
+      });
     }
     // NUMMER_01 besluit 7: het systeem geeft het G-nummer zelf uit (seq_nummer_g);
     // handmatige invoer blijft alleen mogelijk voor bestaande externe nummers.
@@ -284,34 +312,66 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
         : await volgendeGWerknummer();
     const projectnummerWaarde =
       typeof projectnummer === "string" && projectnummer.trim() ? projectnummer.trim() : null;
-    const [gebouw] = await db
-      .insert(gebouwenTable)
-      .values({
-        werknummer: werknummerWaarde,
-        projectnummer: projectnummerWaarde,
-        naam,
-        adres: kapitaliseerWoorden(adres),
-        stad: typeof stad === "string" ? kapitaliseerWoorden(stad) : stad,
-        postcode,
-        omschrijving,
+    const { gebouw, opdrachtgever } = await db.transaction(async (tx) => {
+      const relatie = await resolveerOpdrachtgever(tx, {
         klantId: klant_id,
-        aantalVerdiepingen: aantal_verdiepingen,
-        hoogte,
-        breedte,
-        diepte,
-        oppervlakte,
-        gebouwType: gebouw_type,
-        latitude,
-        longitude,
-        werkgeverId: werkgever_id ?? null,
-      })
-      .returning();
+        nieuweKlant: nieuwe_klant,
+      });
+      const [nieuwGebouw] = await tx
+        .insert(gebouwenTable)
+        .values({
+          werknummer: werknummerWaarde,
+          projectnummer: projectnummerWaarde,
+          naam: kapitaliseerWoorden(naam.trim()),
+          adres: kapitaliseerWoorden(adres.trim()),
+          stad: kapitaliseerWoorden(stad.trim()),
+          postcode: postcode.trim(),
+          omschrijving: omschrijving.trim(),
+          aantalVerdiepingen: aantal_verdiepingen,
+          hoogte,
+          breedte,
+          diepte,
+          oppervlakte,
+          gebouwType: gebouw_type,
+          latitude,
+          longitude,
+          werkgeverId: werkgever_id ?? null,
+        })
+        .returning();
+      await tx.insert(gebouwPartijenTable).values({
+        gebouwId: nieuwGebouw.id,
+        type: "opdrachtgever",
+        naam: relatie.naam,
+        organisatie: relatie.naam,
+        adres: relatie.adres,
+        postcode: relatie.postcode,
+        plaats: relatie.stad,
+        telefoon: relatie.telefoon,
+        email: relatie.email,
+        klantId: relatie.id,
+      });
+      return { gebouw: nieuwGebouw, opdrachtgever: relatie };
+    });
     const wgNaam = gebouw.werkgeverId
       ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
       : null;
     invalideerContext("gebouw", gebouw.id);
-    res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId), [], null, wgNaam));
+    invalideerContext("klant", opdrachtgever.id);
+    res.status(201).json(
+      gebouwRij(
+        gebouw,
+        0,
+        opdrachtgever.naam,
+        [{ type: "opdrachtgever", naam: opdrachtgever.naam }],
+        null,
+        wgNaam,
+      ),
+    );
   } catch (err) {
+    if (err instanceof OpdrachtgeverFout) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
     if (uniekFoutAntwoord(err, res)) {
       return;
     }
@@ -1249,6 +1309,8 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
     postcode: p.postcode,
     plaats: p.plaats,
     opmerkingen: p.opmerkingen,
+    klant_id: (p as any).klantId ?? null,
+    contactpersoon_id: (p as any).contactpersoonId ?? null,
     aangemaakt_op: p.aangemaaktOp.toISOString(),
   };
 }

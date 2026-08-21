@@ -38,4 +38,24 @@ export interface AanvraagVoorstel {
   beoordeeld_op?: string | null;
   /** @nullable */
   beoordeel_notitie?: string | null;
+  /** @nullable */
+  inbox_item_id?: number | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  klant_naam?: string | null;
+  /** @nullable */
+  contactpersoon_id?: number | null;
+  /** @nullable */
+  contact_naam?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  opname_id?: number | null;
+  /** @nullable */
+  calculatie_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }

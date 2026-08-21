@@ -6,8 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AanvraagAccepterenInputNieuweKlant = {
+export interface NieuweOpdrachtgeverInput {
   naam: string;
+  adres: string;
+  postcode: string;
+  stad: string;
   email?: string;
   telefoon?: string;
-};
+}

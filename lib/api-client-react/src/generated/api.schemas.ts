@@ -2062,6 +2062,26 @@ export interface AanvraagVoorstel {
   beoordeeld_op?: string | null;
   /** @nullable */
   beoordeel_notitie?: string | null;
+  /** @nullable */
+  inbox_item_id?: number | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  klant_naam?: string | null;
+  /** @nullable */
+  contactpersoon_id?: number | null;
+  /** @nullable */
+  contact_naam?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  opname_id?: number | null;
+  /** @nullable */
+  calculatie_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }
 
 export interface AanvraagSignaal {
@@ -2088,27 +2108,35 @@ export interface AanvraagSignaalAfhandelenInput {
   notitie?: string;
 }
 
-export type AanvraagAccepterenInputNieuweKlant = {
+export interface NieuweOpdrachtgeverInput {
   naam: string;
+  adres: string;
+  postcode: string;
+  stad: string;
   email?: string;
   telefoon?: string;
-};
+}
 
 export type AanvraagAccepterenInputNieuwGebouw = {
   naam: string;
   adres: string;
-  stad?: string;
+  stad: string;
+  postcode: string;
 };
 
 export interface AanvraagAccepterenInput {
   titel: string;
-  klant_id?: number;
-  nieuwe_klant?: AanvraagAccepterenInputNieuweKlant;
-  gebouw_id?: number;
+  werkzaamheden: string;
+  contact_naam?: string | null;
+  contact_email?: string | null;
+  contact_telefoon?: string | null;
+  klant_id?: number | null;
+  nieuwe_klant?: NieuweOpdrachtgeverInput;
+  gebouw_id?: number | null;
   nieuw_gebouw?: AanvraagAccepterenInputNieuwGebouw;
-  bv?: string;
-  voorstel_type?: string;
-  gerelateerd_project_id?: number;
+  bv?: string | null;
+  voorstel_type?: string | null;
+  gerelateerd_project_id?: number | null;
 }
 
 export interface AanvraagAfwijzenInput {
@@ -2622,32 +2650,27 @@ export interface InboxItem {
 }
 
 export interface InboxOfferteavanvraagInput {
+  /** ID van de werkmaatschappij (werkgevers.id) */
   werkmaatschappij_id: number;
-  /** Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken */
-  bestaand_gebouw_id?: number;
+  /** Het bronbestand (e-mail als .eml of .msg) */
+  email: Blob;
+  /**
+     * Optionele bijlagen die samen met de aanvraag als bewijsbron worden opgeslagen en gelezen
+     * @maxItems 10
+     */
+  bijlagen?: Blob[];
 }
 
 export type InboxOfferteverwerkingResultaatAangemaakt = {
-  offerte?: boolean;
-  gebouw?: boolean;
-  opname?: boolean;
+  voorstel: boolean;
 };
 
 export interface InboxOfferteverwerkingResultaat {
   inbox_item: InboxItem;
-  /** @nullable */
-  offerte_id?: number | null;
-  /** @nullable */
-  offerte_titel?: string | null;
-  /** @nullable */
-  gebouw_id?: number | null;
-  /** @nullable */
-  gebouw_naam?: string | null;
-  /** @nullable */
-  opname_id?: number | null;
+  voorstel_id: number;
   /** @nullable */
   ai_samenvatting?: string | null;
-  aangemaakt?: InboxOfferteverwerkingResultaatAangemaakt;
+  aangemaakt: InboxOfferteverwerkingResultaatAangemaakt;
 }
 
 export interface AanvraagPlanning {
@@ -3194,6 +3217,16 @@ export interface GebouwPartij {
   postcode?: string | null;
   plaats?: string | null;
   opmerkingen?: string | null;
+  /**
+     * CRM-klant gekoppeld aan deze partij (AANVRAAG_01)
+     * @nullable
+     */
+  klant_id?: number | null;
+  /**
+     * CRM-contactpersoon gekoppeld aan deze partij (AANVRAAG_01)
+     * @nullable
+     */
+  contactpersoon_id?: number | null;
   aangemaakt_op: string;
 }
 
@@ -3350,10 +3383,12 @@ export interface GebouwInput {
   projectnummer?: string;
   naam: string;
   adres: string;
-  stad?: string;
-  postcode?: string;
-  omschrijving?: string;
+  stad: string;
+  postcode: string;
+  omschrijving: string;
+  /** Bestaande CRM-opdrachtgever voor dit project */
   klant_id?: number;
+  nieuwe_klant?: NieuweOpdrachtgeverInput;
   aantal_verdiepingen?: number;
   hoogte?: number;
   breedte?: number;
@@ -5845,6 +5880,461 @@ export interface LoonCao {
   naam: string;
   actief: boolean;
 }
+
+export interface LoonMigratiebevinding {
+  id: number;
+  entiteit_type: string;
+  entiteit_id: number;
+  veld: string;
+  /** @nullable */
+  oorspronkelijke_waarde?: string | null;
+  reden: string;
+  /** @nullable */
+  opgelost_op?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface LoonAanstellingKeuze {
+  id: number;
+  medewerker_id: number;
+  medewerker_naam: string;
+  werkgever_id: number;
+  werkgever_naam: string;
+  cao_id: number;
+  cao_naam: string;
+}
+
+/**
+ * @nullable
+ */
+export type LoonInhoudingsplichtigeAangiftetijdvak = typeof LoonInhoudingsplichtigeAangiftetijdvak[keyof typeof LoonInhoudingsplichtigeAangiftetijdvak] | null;
+
+
+export const LoonInhoudingsplichtigeAangiftetijdvak = {
+  maand: 'maand',
+  vier_weken: 'vier_weken',
+} as const;
+
+export interface LoonInhoudingsplichtige {
+  id: number;
+  naam: string;
+  cao_id: number;
+  cao_code: string;
+  cao_naam: string;
+  /** @nullable */
+  loonheffingennummer?: string | null;
+  /** @nullable */
+  sectorcode?: string | null;
+  /** @nullable */
+  risicogroep?: string | null;
+  /** @nullable */
+  aangiftetijdvak?: LoonInhoudingsplichtigeAangiftetijdvak;
+  eigenrisicodrager_wga: boolean;
+  eigenrisicodrager_zw: boolean;
+  loonkostenvoordeel_instelling: boolean;
+  compleet: boolean;
+  migratiebevindingen: LoonMigratiebevinding[];
+}
+
+/**
+ * @nullable
+ */
+export type LoonInhoudingsplichtigeUpdateAangiftetijdvak = typeof LoonInhoudingsplichtigeUpdateAangiftetijdvak[keyof typeof LoonInhoudingsplichtigeUpdateAangiftetijdvak] | null;
+
+
+export const LoonInhoudingsplichtigeUpdateAangiftetijdvak = {
+  maand: 'maand',
+  vier_weken: 'vier_weken',
+} as const;
+
+export interface LoonInhoudingsplichtigeUpdate {
+  cao_id?: number;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{9}L[0-9]{2}$
+     */
+  loonheffingennummer?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{2}$
+     */
+  sectorcode?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{1,2}$
+     */
+  risicogroep?: string | null;
+  /** @nullable */
+  aangiftetijdvak?: LoonInhoudingsplichtigeUpdateAangiftetijdvak;
+  eigenrisicodrager_wga?: boolean;
+  eigenrisicodrager_zw?: boolean;
+  loonkostenvoordeel_instelling?: boolean;
+}
+
+export interface LoonInkomstenverhouding {
+  id: number;
+  werkgever_id: number;
+  werkgever_naam: string;
+  medewerker_id: number;
+  medewerker_naam: string;
+  aanstelling_id: number;
+  /** @minimum 1 */
+  volgnummer: number;
+  datum_aanvang: string;
+  /** @nullable */
+  datum_einde?: string | null;
+  /** @nullable */
+  code_aard_arbeidsverhouding?: string | null;
+  contract_onbepaalde_tijd: boolean;
+  schriftelijke_arbeidsovereenkomst: boolean;
+  oproepovereenkomst: boolean;
+  verzekerd_zw: boolean;
+  verzekerd_ww: boolean;
+  verzekerd_wia: boolean;
+  /** @nullable */
+  code_invloed_verzekeringsplicht?: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface LoonInkomstenverhoudingInput {
+  werkgever_id: number;
+  medewerker_id: number;
+  aanstelling_id: number;
+  /** @minimum 1 */
+  volgnummer: number;
+  datum_aanvang: string;
+  /** @nullable */
+  datum_einde?: string | null;
+  /** @nullable */
+  code_aard_arbeidsverhouding?: string | null;
+  contract_onbepaalde_tijd: boolean;
+  schriftelijke_arbeidsovereenkomst: boolean;
+  oproepovereenkomst: boolean;
+  verzekerd_zw: boolean;
+  verzekerd_ww: boolean;
+  verzekerd_wia: boolean;
+  /** @nullable */
+  code_invloed_verzekeringsplicht?: string | null;
+}
+
+export interface LoonInkomstenverhoudingUpdate {
+  /** @minimum 1 */
+  volgnummer?: number;
+  datum_aanvang?: string;
+  /** @nullable */
+  datum_einde?: string | null;
+  /** @nullable */
+  code_aard_arbeidsverhouding?: string | null;
+  contract_onbepaalde_tijd?: boolean;
+  schriftelijke_arbeidsovereenkomst?: boolean;
+  oproepovereenkomst?: boolean;
+  verzekerd_zw?: boolean;
+  verzekerd_ww?: boolean;
+  verzekerd_wia?: boolean;
+  /** @nullable */
+  code_invloed_verzekeringsplicht?: string | null;
+  actief?: boolean;
+}
+
+export interface LoonVasteToeslag {
+  /** @minLength 1 */
+  omschrijving: string;
+  /** @minimum 0 */
+  bedrag_cents: number;
+}
+
+export type LoonAfspraakLoonsoort = typeof LoonAfspraakLoonsoort[keyof typeof LoonAfspraakLoonsoort];
+
+
+export const LoonAfspraakLoonsoort = {
+  uurloon: 'uurloon',
+  maandloon: 'maandloon',
+  weekloon: 'weekloon',
+  stukloon: 'stukloon',
+  overig: 'overig',
+} as const;
+
+export type LoonAfspraakTabelkeuze = typeof LoonAfspraakTabelkeuze[keyof typeof LoonAfspraakTabelkeuze];
+
+
+export const LoonAfspraakTabelkeuze = {
+  wit: 'wit',
+  groen: 'groen',
+} as const;
+
+export interface LoonAfspraak {
+  id: number;
+  inkomstenverhouding_id: number;
+  ingangsdatum: string;
+  loonsoort: LoonAfspraakLoonsoort;
+  /** @minimum 0 */
+  bedrag_cents: number;
+  /** @nullable */
+  schaal?: string | null;
+  /** @nullable */
+  trede?: string | null;
+  vaste_toeslagen: LoonVasteToeslag[];
+  loonheffingskorting: boolean;
+  tabelkeuze: LoonAfspraakTabelkeuze;
+  anoniementarief: boolean;
+  /** @nullable */
+  vastgelegd_door_id?: number | null;
+  aangemaakt_op: string;
+}
+
+export type LoonAfspraakInputLoonsoort = typeof LoonAfspraakInputLoonsoort[keyof typeof LoonAfspraakInputLoonsoort];
+
+
+export const LoonAfspraakInputLoonsoort = {
+  uurloon: 'uurloon',
+  maandloon: 'maandloon',
+  weekloon: 'weekloon',
+  stukloon: 'stukloon',
+  overig: 'overig',
+} as const;
+
+export type LoonAfspraakInputTabelkeuze = typeof LoonAfspraakInputTabelkeuze[keyof typeof LoonAfspraakInputTabelkeuze];
+
+
+export const LoonAfspraakInputTabelkeuze = {
+  wit: 'wit',
+  groen: 'groen',
+} as const;
+
+export interface LoonAfspraakInput {
+  inkomstenverhouding_id: number;
+  ingangsdatum: string;
+  loonsoort: LoonAfspraakInputLoonsoort;
+  /** @minimum 0 */
+  bedrag_cents: number;
+  /** @nullable */
+  schaal?: string | null;
+  /** @nullable */
+  trede?: string | null;
+  vaste_toeslagen: LoonVasteToeslag[];
+  loonheffingskorting: boolean;
+  tabelkeuze: LoonAfspraakInputTabelkeuze;
+  anoniementarief: boolean;
+}
+
+export interface LoonJaarbron {
+  id: number;
+  bronsoort: string;
+  bron_url: string;
+  officiele_bestandsnaam: string;
+  officiele_versie: string;
+  /** @pattern ^[0-9a-f]{64}$ */
+  sha256: string;
+  mime_type: string;
+  bestandsgrootte: number;
+  vindplaats: string;
+  geladen_op: string;
+}
+
+export type LoonJaarparameterRekenstatus = typeof LoonJaarparameterRekenstatus[keyof typeof LoonJaarparameterRekenstatus];
+
+
+export const LoonJaarparameterRekenstatus = {
+  berekend: 'berekend',
+  niet_berekend: 'niet_berekend',
+} as const;
+
+export interface LoonJaarparameter {
+  id: number;
+  sleutel: string;
+  datatype: string;
+  waarde?: unknown;
+  rekenstatus: LoonJaarparameterRekenstatus;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  bron_id?: number | null;
+  /** @nullable */
+  vindplaats?: string | null;
+}
+
+export type LoonJaarsetSamenvattingStatus = typeof LoonJaarsetSamenvattingStatus[keyof typeof LoonJaarsetSamenvattingStatus];
+
+
+export const LoonJaarsetSamenvattingStatus = {
+  concept: 'concept',
+  volledig: 'volledig',
+  onvolledig: 'onvolledig',
+  bron_gewijzigd: 'bron_gewijzigd',
+  vervangen: 'vervangen',
+} as const;
+
+export type LoonJaarsetSamenvattingFoutenItem = {
+  /** @nullable */
+  sleutel?: string | null;
+  reden: string;
+};
+
+export interface LoonJaarsetSamenvatting {
+  id: number;
+  jaar: number;
+  versie: number;
+  status: LoonJaarsetSamenvattingStatus;
+  volledig: boolean;
+  parameter_aantal: number;
+  fouten: LoonJaarsetSamenvattingFoutenItem[];
+  /** @nullable */
+  geladen_op?: string | null;
+  /** @nullable */
+  bron_bestandsnaam: string | null;
+}
+
+export type LoonJaarsetDetail = LoonJaarsetSamenvatting & {
+  bronnen: LoonJaarbron[];
+  parameters: LoonJaarparameter[];
+};
+
+export type LoonJaarGereedheidStatus = typeof LoonJaarGereedheidStatus[keyof typeof LoonJaarGereedheidStatus];
+
+
+export const LoonJaarGereedheidStatus = {
+  volledig: 'volledig',
+  ontbreekt: 'ontbreekt',
+  onvolledig: 'onvolledig',
+  bron_gewijzigd: 'bron_gewijzigd',
+  niet_herleidbaar: 'niet_herleidbaar',
+} as const;
+
+export interface LoonJaarGereedheid {
+  jaar: number;
+  gereed: boolean;
+  status: LoonJaarGereedheidStatus;
+  redenen: string[];
+  /** @nullable */
+  jaarset_id: number | null;
+}
+
+export type LoonJaarImportBronInputBronsoort = typeof LoonJaarImportBronInputBronsoort[keyof typeof LoonJaarImportBronInputBronsoort];
+
+
+export const LoonJaarImportBronInputBronsoort = {
+  primaire_xlsx: 'primaire_xlsx',
+  rekenvoorschriften: 'rekenvoorschriften',
+  parameterbijlage: 'parameterbijlage',
+  gegevensspecificaties: 'gegevensspecificaties',
+  loonbelastingtabellen: 'loonbelastingtabellen',
+  cijferbijlage: 'cijferbijlage',
+  handboek: 'handboek',
+} as const;
+
+export interface LoonJaarImportBronInput {
+  bronsoort: LoonJaarImportBronInputBronsoort;
+  bron_url: string;
+  /** @minLength 1 */
+  officiele_bestandsnaam: string;
+  /** @minLength 1 */
+  officiele_versie: string;
+  /** @pattern ^[0-9a-f]{64}$ */
+  verwachte_sha256: string;
+  /** @minLength 1 */
+  vindplaats: string;
+}
+
+export interface LoonJaarImportInput {
+  jaar: number;
+  /**
+     * @minItems 7
+     * @maxItems 7
+     */
+  bronnen: LoonJaarImportBronInput[];
+}
+
+export type LoonStaatTijdvakregelRekenstatus = typeof LoonStaatTijdvakregelRekenstatus[keyof typeof LoonStaatTijdvakregelRekenstatus];
+
+
+export const LoonStaatTijdvakregelRekenstatus = {
+  berekend: 'berekend',
+  niet_berekend: 'niet_berekend',
+} as const;
+
+export type LoonStaatTijdvakregelTijdvakWaarden = { [key: string]: unknown };
+
+export type LoonStaatTijdvakregelCumulatieven = { [key: string]: unknown };
+
+export interface LoonStaatTijdvakregel {
+  id: number;
+  loonstaat_id: number;
+  /** @minimum 1 */
+  tijdvaknummer: number;
+  periode_start: string;
+  periode_einde: string;
+  rekenstatus: LoonStaatTijdvakregelRekenstatus;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  vindplaats?: string | null;
+  tijdvak_waarden: LoonStaatTijdvakregelTijdvakWaarden;
+  cumulatieven: LoonStaatTijdvakregelCumulatieven;
+}
+
+export type LoonStaatTijdvakregelInputRekenstatus = typeof LoonStaatTijdvakregelInputRekenstatus[keyof typeof LoonStaatTijdvakregelInputRekenstatus];
+
+
+export const LoonStaatTijdvakregelInputRekenstatus = {
+  niet_berekend: 'niet_berekend',
+} as const;
+
+export interface LoonStaatTijdvakregelInput {
+  /** @minimum 1 */
+  tijdvaknummer: number;
+  periode_start: string;
+  periode_einde: string;
+  rekenstatus?: LoonStaatTijdvakregelInputRekenstatus;
+  /** @minLength 1 */
+  reden: string;
+  /** @nullable */
+  vindplaats?: string | null;
+}
+
+export type LoonStaatTijdvak = typeof LoonStaatTijdvak[keyof typeof LoonStaatTijdvak];
+
+
+export const LoonStaatTijdvak = {
+  maand: 'maand',
+  vier_weken: 'vier_weken',
+} as const;
+
+export type LoonStaatStatus = typeof LoonStaatStatus[keyof typeof LoonStaatStatus];
+
+
+export const LoonStaatStatus = {
+  concept: 'concept',
+  gesloten: 'gesloten',
+} as const;
+
+export interface LoonStaat {
+  id: number;
+  inkomstenverhouding_id: number;
+  medewerker_naam: string;
+  werkgever_naam: string;
+  kalenderjaar: number;
+  tijdvak: LoonStaatTijdvak;
+  status: LoonStaatStatus;
+  tijdvakregels: LoonStaatTijdvakregel[];
+  aangemaakt_op: string;
+}
+
+export type LoonStaatInputTijdvak = typeof LoonStaatInputTijdvak[keyof typeof LoonStaatInputTijdvak];
+
+
+export const LoonStaatInputTijdvak = {
+  maand: 'maand',
+  vier_weken: 'vier_weken',
+} as const;
+
+export interface LoonStaatInput {
+  inkomstenverhouding_id: number;
+  kalenderjaar: number;
+  tijdvak: LoonStaatInputTijdvak;
+}
+
 /**
  * MERK_01: map logo-variant (kleur/wit/zwart/liggend/vierkant/transparant) naar object-storage pad.
  */
@@ -6715,27 +7205,6 @@ export interface ExterneAdviseurHerstartImpact {
   /** @minimum 0 */
   aantal: number;
   toelichting: string;
-}
-
-export interface LoonInkomstenverhoudingInput {
-  werkgever_id: number;
-  medewerker_id: number;
-  aanstelling_id: number;
-  /** @minimum 1 */
-  volgnummer: number;
-  datum_aanvang: string;
-  /** @nullable */
-  datum_einde?: string | null;
-  /** @nullable */
-  code_aard_arbeidsverhouding?: string | null;
-  contract_onbepaalde_tijd: boolean;
-  schriftelijke_arbeidsovereenkomst: boolean;
-  oproepovereenkomst: boolean;
-  verzekerd_zw: boolean;
-  verzekerd_ww: boolean;
-  verzekerd_wia: boolean;
-  /** @nullable */
-  code_invloed_verzekeringsplicht?: string | null;
 }
 
 export interface ExterneAdviseurHerstartBlokkade {
@@ -10582,6 +11051,24 @@ export interface ModCalcHeader {
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /** @nullable */
+  aanvraag_voorstel_id?: number | null;
+  /** @nullable */
+  opdrachtgever_klant_id?: number | null;
+  /** @nullable */
+  opdrachtgever_klant_naam?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_id?: number | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_naam?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_email?: string | null;
+  /** @nullable */
+  opdrachtgever_contactpersoon_telefoon?: string | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }
 
 export interface MaakOfferteResult {
@@ -18805,6 +19292,68 @@ export interface BevoegdheidAuditLogRegel {
   tijdstip: string;
 }
 
+export interface WerkInboxBijlage {
+  naam: string;
+  contentType: string;
+  contentId?: string;
+}
+
+export type WerkInboxMailInhoudContentType = typeof WerkInboxMailInhoudContentType[keyof typeof WerkInboxMailInhoudContentType];
+
+
+export const WerkInboxMailInhoudContentType = {
+  html: 'html',
+  text: 'text',
+} as const;
+
+export interface WerkInboxMailInhoud {
+  /** @nullable */
+  van: string | null;
+  aan: string[];
+  cc: string[];
+  body: string;
+  contentType: WerkInboxMailInhoudContentType;
+  bijlagen: WerkInboxBijlage[];
+}
+
+export type WerkInboxMailDetailMeta = { [key: string]: unknown };
+
+export type WerkInboxMailDetailNotitiesItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailKoppelingenItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailAanwezigheidItem = { [key: string]: unknown };
+
+export type WerkInboxMailDetailMijnRecht = typeof WerkInboxMailDetailMijnRecht[keyof typeof WerkInboxMailDetailMijnRecht];
+
+
+export const WerkInboxMailDetailMijnRecht = {
+  lezen: 'lezen',
+  behandelen: 'behandelen',
+  beheren: 'beheren',
+} as const;
+
+export type WerkInboxMailDetailMailboxModus = typeof WerkInboxMailDetailMailboxModus[keyof typeof WerkInboxMailDetailMailboxModus];
+
+
+export const WerkInboxMailDetailMailboxModus = {
+  verwerken: 'verwerken',
+  ondersteunen: 'ondersteunen',
+  registreren: 'registreren',
+} as const;
+
+export interface WerkInboxMailDetail {
+  meta: WerkInboxMailDetailMeta;
+  inhoud: WerkInboxMailInhoud;
+  /** @nullable */
+  inhoud_waarschuwing: string | null;
+  notities: WerkInboxMailDetailNotitiesItem[];
+  koppelingen: WerkInboxMailDetailKoppelingenItem[];
+  aanwezigheid: WerkInboxMailDetailAanwezigheidItem[];
+  mijn_recht: WerkInboxMailDetailMijnRecht;
+  mailbox_modus: WerkInboxMailDetailMailboxModus;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -20050,6 +20599,20 @@ export type ListLoonInkomstenverhoudingenParams = {
 werkgever_id?: number;
 medewerker_id?: number;
 };
+
+export type ListLoonAfsprakenParams = {
+inkomstenverhouding_id: number;
+};
+
+export type GetLoonJaarparametersParams = {
+alle?: boolean;
+};
+
+export type ListLoonStatenParams = {
+kalenderjaar?: number;
+inkomstenverhouding_id?: number;
+};
+
 export type ListVoertuigenParams = {
 status?: string;
 gearchiveerd?: boolean;
@@ -20506,493 +21069,3 @@ export type GetBankMutatieVoorstellen200 = {
 export type GetBankMutatieAudit200 = {
   items: BankAfletterAudit[];
 };
-
-export type LoonAfspraakInputTabelkeuze = typeof LoonAfspraakInputTabelkeuze[keyof typeof LoonAfspraakInputTabelkeuze];
-
-export interface LoonAanstellingKeuze {
-  id: number;
-  medewerker_id: number;
-  medewerker_naam: string;
-  werkgever_id: number;
-  werkgever_naam: string;
-  cao_id: number;
-  cao_naam: string;
-}
-
-export type LoonAfspraakLoonsoort = typeof LoonAfspraakLoonsoort[keyof typeof LoonAfspraakLoonsoort];
-
-export interface LoonVasteToeslag {
-  /** @minLength 1 */
-  omschrijving: string;
-  /** @minimum 0 */
-  bedrag_cents: number;
-}
-
-export interface LoonInkomstenverhoudingUpdate {
-  /** @minimum 1 */
-  volgnummer?: number;
-  datum_aanvang?: string;
-  /** @nullable */
-  datum_einde?: string | null;
-  /** @nullable */
-  code_aard_arbeidsverhouding?: string | null;
-  contract_onbepaalde_tijd?: boolean;
-  schriftelijke_arbeidsovereenkomst?: boolean;
-  oproepovereenkomst?: boolean;
-  verzekerd_zw?: boolean;
-  verzekerd_ww?: boolean;
-  verzekerd_wia?: boolean;
-  /** @nullable */
-  code_invloed_verzekeringsplicht?: string | null;
-  actief?: boolean;
-}
-
-export const LoonStaatTijdvak = {
-  maand: 'maand',
-  vier_weken: 'vier_weken',
-} as const;
-
-export const LoonJaarparameterRekenstatus = {
-  berekend: 'berekend',
-  niet_berekend: 'niet_berekend',
-} as const;
-
-export interface LoonJaarImportBronInput {
-  bronsoort: LoonJaarImportBronInputBronsoort;
-  bron_url: string;
-  /** @minLength 1 */
-  officiele_bestandsnaam: string;
-  /** @minLength 1 */
-  officiele_versie: string;
-  /** @pattern ^[0-9a-f]{64}$ */
-  verwachte_sha256: string;
-  /** @minLength 1 */
-  vindplaats: string;
-}
-
-/**
- * @nullable
- */
-export type LoonInhoudingsplichtigeUpdateAangiftetijdvak = typeof LoonInhoudingsplichtigeUpdateAangiftetijdvak[keyof typeof LoonInhoudingsplichtigeUpdateAangiftetijdvak] | null;
-
-export type GetLoonJaarparametersParams = {
-alle?: boolean;
-};
-
-export type LoonStaatTijdvakregelInputRekenstatus = typeof LoonStaatTijdvakregelInputRekenstatus[keyof typeof LoonStaatTijdvakregelInputRekenstatus];
-
-export const LoonInhoudingsplichtigeUpdateAangiftetijdvak = {
-  maand: 'maand',
-  vier_weken: 'vier_weken',
-} as const;
-
-export interface LoonJaarbron {
-  id: number;
-  bronsoort: string;
-  bron_url: string;
-  officiele_bestandsnaam: string;
-  officiele_versie: string;
-  /** @pattern ^[0-9a-f]{64}$ */
-  sha256: string;
-  mime_type: string;
-  bestandsgrootte: number;
-  vindplaats: string;
-  geladen_op: string;
-}
-
-export type LoonJaarsetDetail = LoonJaarsetSamenvatting & {
-  bronnen: LoonJaarbron[];
-  parameters: LoonJaarparameter[];
-};
-
-export const LoonAfspraakLoonsoort = {
-  uurloon: 'uurloon',
-  maandloon: 'maandloon',
-  weekloon: 'weekloon',
-  stukloon: 'stukloon',
-  overig: 'overig',
-} as const;
-
-export interface LoonStaatTijdvakregelInput {
-  /** @minimum 1 */
-  tijdvaknummer: number;
-  periode_start: string;
-  periode_einde: string;
-  rekenstatus?: LoonStaatTijdvakregelInputRekenstatus;
-  /** @minLength 1 */
-  reden: string;
-  /** @nullable */
-  vindplaats?: string | null;
-}
-
-export type LoonJaarsetSamenvattingStatus = typeof LoonJaarsetSamenvattingStatus[keyof typeof LoonJaarsetSamenvattingStatus];
-
-export type ListLoonAfsprakenParams = {
-inkomstenverhouding_id: number;
-};
-
-export type LoonAfspraakInputLoonsoort = typeof LoonAfspraakInputLoonsoort[keyof typeof LoonAfspraakInputLoonsoort];
-
-export interface LoonJaarImportInput {
-  jaar: number;
-  /**
-     * @minItems 7
-     * @maxItems 7
-     */
-  bronnen: LoonJaarImportBronInput[];
-}
-
-export interface LoonAfspraak {
-  id: number;
-  inkomstenverhouding_id: number;
-  ingangsdatum: string;
-  loonsoort: LoonAfspraakLoonsoort;
-  /** @minimum 0 */
-  bedrag_cents: number;
-  /** @nullable */
-  schaal?: string | null;
-  /** @nullable */
-  trede?: string | null;
-  vaste_toeslagen: LoonVasteToeslag[];
-  loonheffingskorting: boolean;
-  tabelkeuze: LoonAfspraakTabelkeuze;
-  anoniementarief: boolean;
-  /** @nullable */
-  vastgelegd_door_id?: number | null;
-  aangemaakt_op: string;
-}
-
-export interface LoonInkomstenverhouding {
-  id: number;
-  werkgever_id: number;
-  werkgever_naam: string;
-  medewerker_id: number;
-  medewerker_naam: string;
-  aanstelling_id: number;
-  /** @minimum 1 */
-  volgnummer: number;
-  datum_aanvang: string;
-  /** @nullable */
-  datum_einde?: string | null;
-  /** @nullable */
-  code_aard_arbeidsverhouding?: string | null;
-  contract_onbepaalde_tijd: boolean;
-  schriftelijke_arbeidsovereenkomst: boolean;
-  oproepovereenkomst: boolean;
-  verzekerd_zw: boolean;
-  verzekerd_ww: boolean;
-  verzekerd_wia: boolean;
-  /** @nullable */
-  code_invloed_verzekeringsplicht?: string | null;
-  actief: boolean;
-  aangemaakt_op: string;
-  bijgewerkt_op: string;
-}
-
-export interface LoonInhoudingsplichtige {
-  id: number;
-  naam: string;
-  cao_id: number;
-  cao_code: string;
-  cao_naam: string;
-  /** @nullable */
-  loonheffingennummer?: string | null;
-  /** @nullable */
-  sectorcode?: string | null;
-  /** @nullable */
-  risicogroep?: string | null;
-  /** @nullable */
-  aangiftetijdvak?: LoonInhoudingsplichtigeAangiftetijdvak;
-  eigenrisicodrager_wga: boolean;
-  eigenrisicodrager_zw: boolean;
-  loonkostenvoordeel_instelling: boolean;
-  compleet: boolean;
-  migratiebevindingen: LoonMigratiebevinding[];
-}
-
-export interface LoonStaatTijdvakregel {
-  id: number;
-  loonstaat_id: number;
-  /** @minimum 1 */
-  tijdvaknummer: number;
-  periode_start: string;
-  periode_einde: string;
-  rekenstatus: LoonStaatTijdvakregelRekenstatus;
-  /** @nullable */
-  reden?: string | null;
-  /** @nullable */
-  vindplaats?: string | null;
-  tijdvak_waarden: LoonStaatTijdvakregelTijdvakWaarden;
-  cumulatieven: LoonStaatTijdvakregelCumulatieven;
-}
-
-export interface LoonStaatInput {
-  inkomstenverhouding_id: number;
-  kalenderjaar: number;
-  tijdvak: LoonStaatInputTijdvak;
-}
-
-export const LoonAfspraakTabelkeuze = {
-  wit: 'wit',
-  groen: 'groen',
-} as const;
-
-export const LoonInhoudingsplichtigeAangiftetijdvak = {
-  maand: 'maand',
-  vier_weken: 'vier_weken',
-} as const;
-
-export interface LoonInhoudingsplichtigeUpdate {
-  cao_id?: number;
-  /**
-     * @nullable
-     * @pattern ^[0-9]{9}L[0-9]{2}$
-     */
-  loonheffingennummer?: string | null;
-  /**
-     * @nullable
-     * @pattern ^[0-9]{2}$
-     */
-  sectorcode?: string | null;
-  /**
-     * @nullable
-     * @pattern ^[0-9]{1,2}$
-     */
-  risicogroep?: string | null;
-  /** @nullable */
-  aangiftetijdvak?: LoonInhoudingsplichtigeUpdateAangiftetijdvak;
-  eigenrisicodrager_wga?: boolean;
-  eigenrisicodrager_zw?: boolean;
-  loonkostenvoordeel_instelling?: boolean;
-}
-
-export const LoonJaarsetSamenvattingStatus = {
-  concept: 'concept',
-  volledig: 'volledig',
-  onvolledig: 'onvolledig',
-  bron_gewijzigd: 'bron_gewijzigd',
-  vervangen: 'vervangen',
-} as const;
-
-export const LoonStaatStatus = {
-  concept: 'concept',
-  gesloten: 'gesloten',
-} as const;
-
-export type LoonJaarImportBronInputBronsoort = typeof LoonJaarImportBronInputBronsoort[keyof typeof LoonJaarImportBronInputBronsoort];
-
-export type LoonJaarparameterRekenstatus = typeof LoonJaarparameterRekenstatus[keyof typeof LoonJaarparameterRekenstatus];
-
-export type LoonStaatTijdvakregelRekenstatus = typeof LoonStaatTijdvakregelRekenstatus[keyof typeof LoonStaatTijdvakregelRekenstatus];
-
-export const LoonJaarGereedheidStatus = {
-  volledig: 'volledig',
-  ontbreekt: 'ontbreekt',
-  onvolledig: 'onvolledig',
-  bron_gewijzigd: 'bron_gewijzigd',
-  niet_herleidbaar: 'niet_herleidbaar',
-} as const;
-
-export interface LoonMigratiebevinding {
-  id: number;
-  entiteit_type: string;
-  entiteit_id: number;
-  veld: string;
-  /** @nullable */
-  oorspronkelijke_waarde?: string | null;
-  reden: string;
-  /** @nullable */
-  opgelost_op?: string | null;
-  aangemaakt_op: string;
-}
-
-export type LoonStaatStatus = typeof LoonStaatStatus[keyof typeof LoonStaatStatus];
-
-export const LoonJaarImportBronInputBronsoort = {
-  primaire_xlsx: 'primaire_xlsx',
-  rekenvoorschriften: 'rekenvoorschriften',
-  parameterbijlage: 'parameterbijlage',
-  gegevensspecificaties: 'gegevensspecificaties',
-  loonbelastingtabellen: 'loonbelastingtabellen',
-  cijferbijlage: 'cijferbijlage',
-  handboek: 'handboek',
-} as const;
-
-export interface LoonStaat {
-  id: number;
-  inkomstenverhouding_id: number;
-  medewerker_naam: string;
-  werkgever_naam: string;
-  kalenderjaar: number;
-  tijdvak: LoonStaatTijdvak;
-  status: LoonStaatStatus;
-  tijdvakregels: LoonStaatTijdvakregel[];
-  aangemaakt_op: string;
-}
-
-export type LoonJaarGereedheidStatus = typeof LoonJaarGereedheidStatus[keyof typeof LoonJaarGereedheidStatus];
-
-export type LoonAfspraakTabelkeuze = typeof LoonAfspraakTabelkeuze[keyof typeof LoonAfspraakTabelkeuze];
-
-export const LoonStaatInputTijdvak = {
-  maand: 'maand',
-  vier_weken: 'vier_weken',
-} as const;
-
-export const LoonStaatTijdvakregelRekenstatus = {
-  berekend: 'berekend',
-  niet_berekend: 'niet_berekend',
-} as const;
-
-export const LoonAfspraakInputTabelkeuze = {
-  wit: 'wit',
-  groen: 'groen',
-} as const;
-
-/**
- * @nullable
- */
-export type LoonInhoudingsplichtigeAangiftetijdvak = typeof LoonInhoudingsplichtigeAangiftetijdvak[keyof typeof LoonInhoudingsplichtigeAangiftetijdvak] | null;
-
-export type ListLoonStatenParams = {
-kalenderjaar?: number;
-inkomstenverhouding_id?: number;
-};
-
-export interface LoonJaarsetSamenvatting {
-  id: number;
-  jaar: number;
-  versie: number;
-  status: LoonJaarsetSamenvattingStatus;
-  volledig: boolean;
-  parameter_aantal: number;
-  fouten: LoonJaarsetSamenvattingFoutenItem[];
-  /** @nullable */
-  geladen_op?: string | null;
-  /** @nullable */
-  bron_bestandsnaam: string | null;
-}
-
-export interface LoonJaarGereedheid {
-  jaar: number;
-  gereed: boolean;
-  status: LoonJaarGereedheidStatus;
-  redenen: string[];
-  /** @nullable */
-  jaarset_id: number | null;
-}
-
-export const LoonStaatTijdvakregelInputRekenstatus = {
-  niet_berekend: 'niet_berekend',
-} as const;
-
-export type LoonStaatTijdvakregelTijdvakWaarden = { [key: string]: unknown };
-
-export type LoonJaarsetSamenvattingFoutenItem = {
-  /** @nullable */
-  sleutel?: string | null;
-  reden: string;
-};
-
-export type LoonStaatTijdvakregelCumulatieven = { [key: string]: unknown };
-
-export interface LoonJaarparameter {
-  id: number;
-  sleutel: string;
-  datatype: string;
-  waarde?: unknown;
-  rekenstatus: LoonJaarparameterRekenstatus;
-  /** @nullable */
-  reden?: string | null;
-  /** @nullable */
-  bron_id?: number | null;
-  /** @nullable */
-  vindplaats?: string | null;
-}
-
-export type LoonStaatInputTijdvak = typeof LoonStaatInputTijdvak[keyof typeof LoonStaatInputTijdvak];
-
-export interface LoonAfspraakInput {
-  inkomstenverhouding_id: number;
-  ingangsdatum: string;
-  loonsoort: LoonAfspraakInputLoonsoort;
-  /** @minimum 0 */
-  bedrag_cents: number;
-  /** @nullable */
-  schaal?: string | null;
-  /** @nullable */
-  trede?: string | null;
-  vaste_toeslagen: LoonVasteToeslag[];
-  loonheffingskorting: boolean;
-  tabelkeuze: LoonAfspraakInputTabelkeuze;
-  anoniementarief: boolean;
-}
-
-export type LoonStaatTijdvak = typeof LoonStaatTijdvak[keyof typeof LoonStaatTijdvak];
-
-export const LoonAfspraakInputLoonsoort = {
-  uurloon: 'uurloon',
-  maandloon: 'maandloon',
-  weekloon: 'weekloon',
-  stukloon: 'stukloon',
-  overig: 'overig',
-} as const;
-
-export interface WerkInboxBijlage {
-  naam: string;
-  contentType: string;
-  contentId?: string;
-}
-
-export type WerkInboxMailInhoudContentType = typeof WerkInboxMailInhoudContentType[keyof typeof WerkInboxMailInhoudContentType];
-
-export const WerkInboxMailInhoudContentType = {
-  html: 'html',
-  text: 'text',
-} as const;
-
-export interface WerkInboxMailInhoud {
-  /** @nullable */
-  van: string | null;
-  aan: string[];
-  cc: string[];
-  body: string;
-  contentType: WerkInboxMailInhoudContentType;
-  bijlagen: WerkInboxBijlage[];
-}
-
-export type WerkInboxMailDetailMeta = { [key: string]: unknown };
-
-export type WerkInboxMailDetailNotitiesItem = { [key: string]: unknown };
-
-export type WerkInboxMailDetailKoppelingenItem = { [key: string]: unknown };
-
-export type WerkInboxMailDetailAanwezigheidItem = { [key: string]: unknown };
-
-export type WerkInboxMailDetailMijnRecht = typeof WerkInboxMailDetailMijnRecht[keyof typeof WerkInboxMailDetailMijnRecht];
-
-export const WerkInboxMailDetailMijnRecht = {
-  lezen: 'lezen',
-  behandelen: 'behandelen',
-  beheren: 'beheren',
-} as const;
-
-export type WerkInboxMailDetailMailboxModus = typeof WerkInboxMailDetailMailboxModus[keyof typeof WerkInboxMailDetailMailboxModus];
-
-export const WerkInboxMailDetailMailboxModus = {
-  verwerken: 'verwerken',
-  ondersteunen: 'ondersteunen',
-  registreren: 'registreren',
-} as const;
-
-export interface WerkInboxMailDetail {
-  meta: WerkInboxMailDetailMeta;
-  inhoud: WerkInboxMailInhoud;
-  /** @nullable */
-  inhoud_waarschuwing: string | null;
-  notities: WerkInboxMailDetailNotitiesItem[];
-  koppelingen: WerkInboxMailDetailKoppelingenItem[];
-  aanwezigheid: WerkInboxMailDetailAanwezigheidItem[];
-  mijn_recht: WerkInboxMailDetailMijnRecht;
-  mailbox_modus: WerkInboxMailDetailMailboxModus;
-}

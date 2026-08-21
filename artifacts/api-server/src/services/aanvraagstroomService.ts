@@ -6,6 +6,8 @@
 // automatisch de deur uit. Er ontstaat hier nooit een project (proces 1).
 
 import { and, eq, ilike, inArray, isNull, isNotNull, or } from "drizzle-orm";
+export { selecteerKlantUitKandidaten } from "./aanvraagMatchSelector";
+export type { KlantKandidaat, KlantSelectieResultaat } from "./aanvraagMatchSelector";
 import {
   db,
   aanvraagVoorstellenTable,
@@ -22,8 +24,7 @@ import {
 import { logger } from "../lib/logger";
 import { storageObjectsUrl } from "../lib/storageObjectsUrl";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { analyseerAanvraagVoorStroom, type AanvraagStroomVelden } from "../lib/documentIntelligence";
-import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { analyseerAanvraagVoorStroom, extraheerTekst, type AanvraagStroomVelden } from "../lib/documentIntelligence";
 import { haalBijlagen, haalVolledigeMail } from "./werkInboxGraph";
 import { maakSignaal } from "./factuurstroomService";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -66,38 +67,93 @@ function emailDomein(adres: string): string | null {
 // Publieke maildomeinen zeggen niets over de organisatie.
 const PUBLIEKE_DOMEINEN = new Set(["gmail.com", "hotmail.com", "outlook.com", "live.nl", "ziggo.nl", "kpnmail.nl", "icloud.com", "yahoo.com"]);
 
-/** Zoek de klant bij een afzender: alleen koppelen bij precies één match — nooit gokken. */
-async function zoekKlant(afzenderEmail: string, klantNaamAi: string | null): Promise<{ klantId: number | null; klantNaam: string | null; kandidaten: string[] }> {
-  // 1) exact e-mailadres op contactpersoon of organisatie
-  const viaContact = await db.select({ klantId: crmContactpersonenTable.klantId })
+// AANVRAAG_01 §3 — kandidaat-object voor CRM-matching
+// Types en pure selectiefunctie leven in aanvraagMatchSelector.ts (geen DB-deps → testbaar).
+import { selecteerKlantUitKandidaten as _selecteer } from "./aanvraagMatchSelector";
+import type { KlantKandidaat, KlantSelectieResultaat } from "./aanvraagMatchSelector";
+
+/** Zoek de klant bij een afzender: bewaart kandidaten als objecten met id, naam, redenen, sterkte.
+ *  Alleen bij precies één sterke match wordt de klant gepreselect.
+ *  Bij meerdere of uitsluitend zwakke kandidaten: nooit automatisch koppelen.
+ *  Kandidaten worden ALTIJD teruggegeven zodat de UI reden/sterkte kan tonen.
+ */
+export async function zoekKlant(
+  afzenderEmail: string,
+  contactEmail: string | null,
+  klantNaamAi: string | null,
+): Promise<KlantSelectieResultaat> {
+  const alleKandidaten = new Map<number, KlantKandidaat>();
+
+  // 1) Exact match op afzender-email in contactpersonen → sterk
+  const exactAfzender = await db.select({ klantId: crmContactpersonenTable.klantId, naam: crmKlantenTable.naam })
     .from(crmContactpersonenTable)
+    .innerJoin(crmKlantenTable, eq(crmKlantenTable.id, crmContactpersonenTable.klantId))
     .where(ilike(crmContactpersonenTable.email, afzenderEmail))
-    .limit(2);
-  const contactIds = [...new Set(viaContact.map((r) => r.klantId).filter((v): v is number => v != null))];
-  if (contactIds.length === 1) {
-    const [k] = await db.select({ id: crmKlantenTable.id, naam: crmKlantenTable.naam }).from(crmKlantenTable).where(eq(crmKlantenTable.id, contactIds[0]));
-    if (k) return { klantId: k.id, klantNaam: k.naam, kandidaten: [] };
+    .limit(3);
+  for (const r of exactAfzender) {
+    if (r.klantId == null) continue;
+    const k = alleKandidaten.get(r.klantId) ?? { id: r.klantId, naam: r.naam, redenen: [], sterkte: "sterk" as const };
+    k.redenen.push(`exact afzendermail ${afzenderEmail}`);
+    k.sterkte = "sterk";
+    alleKandidaten.set(r.klantId, k);
   }
 
-  const kandidaten: { id: number; naam: string }[] = [];
+  // 2) Exact match op contact_email (AI-geëxtraheerd, kan afwijken van afzender) → sterk
+  if (contactEmail && contactEmail.toLowerCase() !== afzenderEmail.toLowerCase()) {
+    const exactContact = await db.select({ klantId: crmContactpersonenTable.klantId, naam: crmKlantenTable.naam })
+      .from(crmContactpersonenTable)
+      .innerJoin(crmKlantenTable, eq(crmKlantenTable.id, crmContactpersonenTable.klantId))
+      .where(ilike(crmContactpersonenTable.email, contactEmail))
+      .limit(3);
+    for (const r of exactContact) {
+      if (r.klantId == null) continue;
+      const k = alleKandidaten.get(r.klantId) ?? { id: r.klantId, naam: r.naam, redenen: [], sterkte: "sterk" as const };
+      k.redenen.push(`exact contactmail ${contactEmail}`);
+      k.sterkte = "sterk";
+      alleKandidaten.set(r.klantId, k);
+    }
+  }
+
+  // 3) Zakelijk maildomein / website match → altijd zwak (nooit sterk)
   const domein = emailDomein(afzenderEmail);
   if (domein && !PUBLIEKE_DOMEINEN.has(domein)) {
     const viaDomein = await db.select({ id: crmKlantenTable.id, naam: crmKlantenTable.naam })
       .from(crmKlantenTable)
       .where(or(ilike(crmKlantenTable.email, `%@${domein}`), ilike(crmKlantenTable.website, `%${domein}%`)))
-      .limit(3);
-    kandidaten.push(...viaDomein);
+      .limit(5);
+    for (const r of viaDomein) {
+      const bestaand = alleKandidaten.get(r.id);
+      if (!bestaand) {
+        alleKandidaten.set(r.id, { id: r.id, naam: r.naam, redenen: [`maildomein ${domein}`], sterkte: "zwak" });
+      } else {
+        // Reden toevoegen maar sterkte NOOIT verhogen via domein-match alleen
+        bestaand.redenen.push(`maildomein ${domein}`);
+      }
+    }
   }
-  if (kandidaten.length === 0 && klantNaamAi && klantNaamAi.length >= 3) {
+
+  // 4) Exacte organisatienaam match (case-insensitive) → D. sterk signaal
+  if (klantNaamAi && klantNaamAi.length >= 3) {
     const viaNaam = await db.select({ id: crmKlantenTable.id, naam: crmKlantenTable.naam })
       .from(crmKlantenTable)
       .where(ilike(crmKlantenTable.naam, klantNaamAi))
-      .limit(3);
-    kandidaten.push(...viaNaam);
+      .limit(5);
+    for (const r of viaNaam) {
+      const bestaand = alleKandidaten.get(r.id);
+      if (!bestaand) {
+        // D. Exact organisatienaam is sterk (net als exact e-mail)
+        alleKandidaten.set(r.id, { id: r.id, naam: r.naam, redenen: [`exacte organisatienaam "${klantNaamAi}"`], sterkte: "sterk" });
+      } else {
+        bestaand.redenen.push(`exacte organisatienaam "${klantNaamAi}"`);
+        // Als dit de enige reden was en nu ook organisatienaam klopt → al sterk of zwak blijft
+        // (kan via domein zwak zijn; naam-match maakt het sterk)
+        bestaand.sterkte = "sterk";
+      }
+    }
   }
-  const uniek = [...new Map(kandidaten.map((k) => [k.id, k])).values()];
-  if (uniek.length === 1) return { klantId: uniek[0].id, klantNaam: uniek[0].naam, kandidaten: [] };
-  return { klantId: null, klantNaam: null, kandidaten: uniek.map((k) => k.naam) };
+
+  const kandidaten = [...alleKandidaten.values()];
+  return _selecteer(kandidaten);
 }
 
 /** Zoek het gebouw op adres — alleen bij precies één match. */
@@ -194,12 +250,9 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
       } catch (err) {
         logger.warn({ err, naam: b.name }, "aanvraagstroom: bijlage opslaan mislukt");
       }
-      if (b.contentType === "application/pdf" || b.name.toLowerCase().endsWith(".pdf")) {
-        try {
-          const { tekst } = await extraheerPdfTekst(buffer);
-          if (tekst && tekst.trim().length > 40) bijlageTeksten.push({ naam: b.name, tekst });
-        } catch { /* scan zonder tekstlaag — mailtekst is leidend */ }
-      }
+      const extractie = await extraheerTekst(buffer, b.contentType, b.name);
+      const tekst = extractie.tekst?.trim() ?? "";
+      if (tekst.length >= 40) bijlageTeksten.push({ naam: b.name, tekst });
     }
   }
 
@@ -215,7 +268,7 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
   if (!analyse.is_aanvraag) return; // geen prijsaanvraag — stil overslaan is oké
 
   const v = analyse.velden;
-  const klant = await zoekKlant(mail.afzenderEmail, v.klant_naam);
+  const klant = await zoekKlant(mail.afzenderEmail, v.contact_email, v.klant_naam);
   const gebouw = await zoekGebouw(v);
   const project = await zoekLopendProject(v, klant.klantId, gebouw.gebouwId);
 
@@ -245,10 +298,14 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
       klant_onbekend: klant.klantId == null,
       klant_kandidaten: klant.kandidaten,
       contact_naam: v.contact_naam,
+      contact_email: v.contact_email,
+      contact_telefoon: v.contact_telefoon,
       gebouw_id: gebouw.gebouwId,
       gebouw_naam: gebouw.gebouwNaam ?? v.gebouw_naam,
       gebouw_adres: v.gebouw_adres,
       gebouw_stad: v.gebouw_stad,
+      gebouw_postcode: v.gebouw_postcode,
+      werkzaamheden: v.werkzaamheden,
       bv: v.bv,
       meerwerk_project_id: project.sterk?.id ?? null,
       meerwerk_project_naam: project.sterk ? `${project.sterk.naam}${project.sterk.werknummer ? ` (${project.sterk.werknummer})` : ""}` : null,
@@ -258,6 +315,7 @@ async function verwerkAanvraagmail(mail: MailRij, isPersoonlijk: boolean): Promi
       ontbrekende_stukken: v.ontbrekende_stukken,
       samenvatting: v.samenvatting,
       onzekere_velden: v.onzekere_velden,
+      bron_bewijs: v.bron_bewijs,
     },
     conceptAntwoord: concept.tekst,
     conceptVorm: concept.vorm,
