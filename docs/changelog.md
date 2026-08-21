@@ -1,3 +1,12 @@
+## 2026-08-21 — Projectproces en FPS One-publicatie vanuit één serverwaarheid
+
+- Projecten volgen voortaan overal dezelfde servergestuurde volgorde: **Concept → Intern akkoord → Offerte → Opdracht → Uitvoering → Oplevering**. Dashboard, gebouwgegevens en calculatiedetail tonen dezelfde actuele stap, vervolghandeling en gedempte toekomstige stappen; lokale concurrerende fasebadges zijn verwijderd.
+- De proceswaarheid is bewijsgebonden en fail-closed: een offerte telt alleen met status **ondertekend** én handtekeningbewijs, de opdracht moet aan zo’n offerte gekoppeld en afgerond zijn en oplevering vereist exact één actueel, definitief en bevroren rapport. Ontbrekend, vervangen, gearchiveerd of dubbel actueel rapportbewijs blokkeert zichtbaar.
+- De publicatiepreview benoemt vóór bevestiging exact **FPS One**, opdrachtgever, ontvangers, gebouwgegevens, rapport, bevroren bijlagen/tekeningen en de gevolgen. Een directe publicatieaanvraag herberekent dezelfde volledige keten binnen een serieel geïsoleerde transactie en retourneert bij blokkade exact dezelfde code, uitleg en herstelactie.
+- Proces-, preview- en publicatiestatusroutes respecteren naast het moduleniveau ook de bestaande gebouwtoewijzing. Publiceren en intrekken blijven expliciet, bevoegdheidsafhankelijk, transactioneel vergrendeld en geauditeerd.
+- Intrekken beëindigt alleen de lokale, eenrichtingsgerichte publicatie-intentie. Rapporten, bijlagen, tekeningen en overige brongegevens in FPS Connect worden nooit verwijderd.
+- Financiële blokken gebruiken op alle drie de schermen hetzelfde semantische accent met het woord **Financieel** en een euro-icoon. De gerichte browserproef bewijst desktop en 390px zonder brede overloop, preview/POST-blokkerpariteit, dubbel-rapportblokkade, publiceren, intrekken en bronbehoud; 131 serviceregressies en alle betrokken typechecks zijn groen.
+
 ## 2026-08-21 — Projectpagina’s compact en dossiergestuurd
 
 - De gedeelde gebouw-/projectdetailpagina heeft nog één compacte projectkop. Projectnaam, adres, werkmaatschappij, startdatum, projectstatus en actuele fase staan op desktop op één regel; de dubbele projectnaamkaart op het dashboard is vervallen.

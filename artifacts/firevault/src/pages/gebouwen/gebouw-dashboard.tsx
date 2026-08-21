@@ -34,11 +34,7 @@ import {
   FileText,
   Activity,
 } from "lucide-react";
-import {
-  leidProjectFasenAf,
-  type FaseStatus,
-  type ProjectFase,
-} from "./gebouw-projectfasen";
+import { GebouwProcessOverzicht } from "@/components/gebouw-process-overzicht";
 
 const EURO_FMT = new Intl.NumberFormat("nl-NL", {
   style: "currency",
@@ -81,101 +77,6 @@ interface DashboardProps {
   onNavigeer: (tab: string) => void;
   isBeheerder: boolean;
   heeftFinancieelInzicht: boolean;
-}
-
-function faseKleur(status: FaseStatus) {
-  switch (status) {
-    case "gereed":
-      return {
-        ring: "border-green-400 bg-green-50",
-        getal: "bg-green-500 text-white",
-        label: "text-green-800",
-        badge: "bg-green-100 text-green-700 border-green-300",
-      };
-    case "bezig":
-      return {
-        ring: "border-primary/40 bg-primary/5",
-        getal: "bg-primary text-white",
-        label: "text-primary",
-        badge: "bg-primary/10 text-primary border-primary/30",
-      };
-    case "aandacht":
-      return {
-        ring: "border-amber-400 bg-amber-50",
-        getal: "bg-amber-500 text-white",
-        label: "text-amber-800",
-        badge: "bg-amber-100 text-amber-700 border-amber-300",
-      };
-    default:
-      return {
-        ring: "border-slate-200 bg-slate-50",
-        getal: "bg-slate-200 text-slate-500",
-        label: "text-slate-400",
-        badge: "bg-slate-100 text-slate-500 border-slate-200",
-      };
-  }
-}
-
-function faseStatusUitleg(status: FaseStatus): string {
-  switch (status) {
-    case "gereed":
-      return "Gereed. Groen betekent dat deze fase is afgerond.";
-    case "bezig":
-      return "Bezig. De accentkleur betekent dat deze fase actief is.";
-    case "aandacht":
-      return "Aandacht nodig. Oranje betekent dat deze fase aandacht vraagt.";
-    default:
-      return "Nog niet gestart. Grijs betekent dat deze fase nog niet is begonnen.";
-  }
-}
-
-function FaseStap({
-  fase,
-  index,
-  isLaatste,
-  onClick,
-}: {
-  fase: ProjectFase;
-  index: number;
-  isLaatste: boolean;
-  onClick: () => void;
-}) {
-  const kl = faseKleur(fase.status);
-
-  return (
-    <div className="flex items-center gap-0 shrink-0">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={onClick}
-            aria-label={`${fase.label}: ${faseStatusUitleg(fase.status)}`}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-colors hover:bg-slate-100 ${kl.ring} whitespace-nowrap`}
-          >
-            <div
-              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${kl.getal}`}
-            >
-              {fase.status === "gereed" ? (
-                <CheckCircle2 className="h-3 w-3" />
-              ) : (
-                index + 1
-              )}
-            </div>
-            <span className={`text-xs font-medium leading-none ${kl.label}`}>
-              {fase.korteLabel}
-            </span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-64 text-xs">
-          <span className="font-medium">{fase.label}</span>
-          <span className="block text-muted-foreground">{faseStatusUitleg(fase.status)}</span>
-        </TooltipContent>
-      </Tooltip>
-      {!isLaatste && (
-        <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0 -mx-0.5" />
-      )}
-    </div>
-  );
 }
 
 function GezondheidBadge({ score }: { score: "groen" | "oranje" | "rood" | "grijs" }) {
@@ -343,14 +244,6 @@ export function GebouwDashboard({
   );
   const aantalSpots = gebouw.stats?.totaal ?? 0;
 
-  const fasen = leidProjectFasenAf(
-    gebouwCalcs,
-    gebouwOffertes,
-    gebouwOpnames,
-    gebouwFacturen,
-    gebouw,
-  );
-
   const gezondheidSignalen: Signaal[] = [];
   if (!projectleider)
     gezondheidSignalen.push({ tekst: "Geen projectleider toegewezen", ernst: "middel", tab: "project" });
@@ -368,12 +261,9 @@ export function GebouwDashboard({
       ernst: "middel",
       tab: "offertes",
     });
-  if (
-    heeftOpdracht &&
-    !fasen.find((f) => f.id === "planning")?.status.startsWith("g") // niet gereed
-  )
+  if (heeftOpdracht && gebouwOpdrachten.length === 0)
     gezondheidSignalen.push({
-      tekst: "Opdracht ontvangen maar uitvoering niet ingepland",
+      tekst: "Opdracht geaccepteerd, maar nog geen werkmap gestart",
       ernst: "middel",
       tab: "uitvoering",
     });
@@ -397,31 +287,25 @@ export function GebouwDashboard({
           ? "groen"
           : "grijs";
 
+  const financialMetrics = [
+    {
+      label: financien?.opdrachtsom != null ? "Opdrachtsom" : geaccepteerdeOfferte ? "Opdrachtsom" : "Offerte waarde",
+      value: financien?.opdrachtsom != null ? EURO_FMT.format(financien.opdrachtsom) : offerteWaarde != null ? EURO_FMT.format(offerteWaarde) : "—",
+      subtext: financien?.opdrachtsom != null ? "excl. BTW" : geaccepteerdeOfferte ? "geaccepteerd" : gebouwOffertes.length > 0 ? "in voorbereiding" : undefined
+    },
+    {
+      label: "Gefactureerd",
+      value: gefactureerd > 0 ? EURO_FMT.format(gefactureerd) : "—",
+      subtext: gebouwFacturen.length > 0 ? `${gebouwFacturen.length} facturen` : undefined
+    }
+  ];
+
   return (
     <div className="space-y-4">
-      {/* ── Compacte projectflow ───────────────────────────────── */}
-      <div
-        data-testid="projectflow"
-        className="rounded-lg border bg-card px-3 py-2"
-        aria-label="Projectflow"
-      >
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <span className="shrink-0 text-xs font-semibold text-muted-foreground">
-            Projectflow
-          </span>
-          <div className="flex items-center gap-0">
-            {fasen.map((fase, i) => (
-              <FaseStap
-                key={fase.id}
-                fase={fase}
-                index={i}
-                isLaatste={i === fasen.length - 1}
-                onClick={() => onNavigeer(fase.tab)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <GebouwProcessOverzicht
+        gebouwId={gebouw.id}
+        financialMetrics={financialMetrics}
+      />
 
       {/* ── Hoofdcontent: financieel + sidebar ─────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">

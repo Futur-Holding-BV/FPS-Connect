@@ -25,7 +25,7 @@ type Stap = {
   doelTab?: string;
 };
 
-type Fase = {
+type Onderdeel = {
   nummer: number;
   titel: string;
   stappen: Stap[];
@@ -145,7 +145,7 @@ function StappenplanInhoud({
   const heeftBouwlagen  = verdiepingen.length > 0;
   const heeftToewijzing = (toewijzingen ?? []).length > 0;
 
-  const fasen: Fase[] = [
+  const onderdelen: Onderdeel[] = [
     {
       nummer: 1,
       titel: "Project- en gebouwgegevens",
@@ -228,17 +228,21 @@ function StappenplanInhoud({
 
   return (
     <div className="space-y-5">
-      {/* Stappen per fase */}
+      <p className="text-sm text-slate-600 mb-4 bg-slate-50 border p-3 rounded-md">
+        Deze checklist controleert op ontbrekende projectdata die nodig is voor een correcte werking. Dit overzicht is <strong>geen</strong> processtatus en wijzigt niet in welke stap het project zich bevindt.
+      </p>
+
+      {/* Stappen per onderdeel */}
       <div className="max-h-[62vh] overflow-y-auto pr-1 space-y-5">
-        {fasen.map((fase) => (
-          <div key={fase.nummer}>
+        {onderdelen.map((onderdeel) => (
+          <div key={onderdeel.nummer}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Fase {fase.nummer} — {fase.titel}
+                Onderdeel {onderdeel.nummer} — {onderdeel.titel}
               </span>
             </div>
             <div className="space-y-2">
-              {fase.stappen.map((stap) => {
+              {onderdeel.stappen.map((stap) => {
                 volgnummer += 1;
                 return (
                   <StapRij
@@ -284,16 +288,16 @@ export default function GebouwStappenplan({
               variant="outline"
               size="icon"
               onClick={() => setOpen(true)}
-              aria-label="Stappenplan"
+              aria-label="Datacheck"
             >
               <HelpCircle className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left">Stappenplan</TooltipContent>
+          <TooltipContent side="left">Datacheck</TooltipContent>
         </Tooltip>
       ) : (
         <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          <HelpCircle className="h-4 w-4" /> Stappenplan
+          <HelpCircle className="h-4 w-4" /> Datacheck
         </Button>
       )}
 
@@ -302,7 +306,7 @@ export default function GebouwStappenplan({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-[hsl(12,90%,50%)]" />
-              Stappenplan — {gebouw?.naam ?? "Gebouw"}
+              Datacompleetheid — {gebouw?.naam ?? "Gebouw"}
             </DialogTitle>
           </DialogHeader>
           {open && (

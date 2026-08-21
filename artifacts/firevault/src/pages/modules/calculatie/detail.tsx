@@ -76,13 +76,13 @@ import {
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
   ChevronDown, ChevronUp, Building2, BookOpen, Search,
-  TrendingUp, TrendingDown, Minus, AlertTriangle, Layers, MapPin,
+  TrendingUp, TrendingDown, Minus, AlertTriangle, Layers, MapPin, Euro,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ProcesBalk } from "@/components/proces-balk";
+import { GebouwProcessOverzicht } from "@/components/gebouw-process-overzicht";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -2909,12 +2909,6 @@ export default function ModulesCalculatieDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
-          {/* Procesbalk: proces in plaats van knoppen (herbruikbaar patroon) */}
-          <ProcesBalk
-            stappen={PROCES_STAPPEN}
-            huidige={data.status === "gewonnen" ? "gewonnen" : data.status}
-            eindtoestand={data.status === "verloren" ? "Verloren" : null}
-          />
           {/* Eén knop voor de eerstvolgende stap (alleen met schrijfrecht) */}
           {kanSchrijven && data.status === "concept" && (
             <Button size="sm" onClick={() => handleStatusWijzigen("intern_akkoord")} data-testid="knop-volgende-stap">
@@ -3072,6 +3066,22 @@ export default function ModulesCalculatieDetail() {
               <span className="font-medium">{data.aangemaakt_door_naam}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {data.gebouw_id ? (
+        <div className="px-6 py-4">
+           <GebouwProcessOverzicht
+             gebouwId={data.gebouw_id}
+             financialMetrics={[
+               { label: "Totaal incl. BTW", value: formatBedragKort(totaalBtw) },
+               { label: "Marge", value: `${marge}%` }
+             ]}
+           />
+        </div>
+      ) : (
+        <div className="px-6 py-4">
+           <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border">Deze calculatie is niet gekoppeld aan een project. Er is geen projectproces actief.</div>
         </div>
       )}
 
@@ -3470,8 +3480,10 @@ export default function ModulesCalculatieDetail() {
             data-testid="kaart-financieel"
           >
             <div className="px-4 pt-3 pb-2 flex items-center gap-1.5">
-              <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: "hsl(var(--hoofdstuk-financieel))" }} />
-              <h3 className="text-sm font-semibold">Financieel</h3>
+              <span aria-hidden className="h-2 w-2 rounded-full shrink-0 flex" style={{ backgroundColor: "hsl(var(--hoofdstuk-financieel))" }} />
+              <h3 className="text-sm font-semibold flex items-center gap-1">
+                <Euro className="h-4 w-4" /> Financieel
+              </h3>
             </div>
             {/* Totaal incl. btw = grootste element; marge = tweede signaal */}
             <div className="px-4 pb-3">

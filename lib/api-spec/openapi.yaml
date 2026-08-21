@@ -607,6 +607,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GebouwPublicatieStatus"
+        "403":
+          description: Geen toegang tot dit gebouw
         "404":
           description: Niet gevonden
 
@@ -635,9 +637,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/GebouwPublicatieStatus"
         "403":
-          description: Geen toegang
+          description: Geen toegang tot dit gebouw
         "404":
           description: Niet gevonden
+        "409":
+          description: Gebouw is al gepubliceerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieConflict"
+        "422":
+          description: >-
+            Publicatie niet toegestaan; de geordende procesketen is niet volledig
+            afgerond. Bevat de vroegste ontbrekende fase als stabiele blocker.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieEligibiliteitFout"
 
   /gebouwen/{id}/publicatie/intrekken:
     post:
@@ -663,6 +679,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GebouwPublicatieStatus"
+        "403":
+          description: Geen toegang tot dit gebouw
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Gebouw is niet gepubliceerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieConflict"
+
+  /gebouwen/{id}/processtatus:
+    get:
+      operationId: getGebouwProcessStatus
+      tags: [gebouwen]
+      summary: Bouwprocesvoortgang van een gebouw ophalen (6 geordende fasen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwProcessStatus"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /gebouwen/{id}/publicatie/preview:
+    get:
+      operationId: getGebouwPublicatiePreview
+      tags: [gebouwen]
+      summary: Publicatiepreview voor een gebouw ophalen (server-gegenereerd)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatiePreview"
         "403":
           description: Geen toegang
         "404":
@@ -34514,6 +34582,159 @@ components:
         notitie:
           type: string
           nullable: true
+
+    GebouwProcessFase:
+      type: object
+      required:
+        - sleutel
+        - label
+        - toestand
+        - blocker_code
+        - blocker_message
+        - action_path
+        - action_label
+      properties:
+        sleutel:
+          type: string
+        label:
+          type: string
+        toestand:
+          type: string
+          enum: [afgerond, actief, toekomstig]
+        blocker_code:
+          type: ["string", "null"]
+        blocker_message:
+          type: ["string", "null"]
+        action_path:
+          type: ["string", "null"]
+        action_label:
+          type: ["string", "null"]
+
+    GebouwProcessStatus:
+      type: object
+      required:
+        - fasen
+        - huidige_stap
+        - all_afgerond
+      properties:
+        fasen:
+          type: array
+          items:
+            $ref: "#/components/schemas/GebouwProcessFase"
+        huidige_stap:
+          type: ["string", "null"]
+          description: Sleutel van de actieve fase; null als alle fasen afgerond zijn
+        all_afgerond:
+          type: boolean
+
+    GebouwPublicatieBlocker:
+      type: object
+      required:
+        - code
+        - message
+        - action_path
+        - action_label
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        action_path:
+          type: ["string", "null"]
+        action_label:
+          type: ["string", "null"]
+
+    GebouwPublicatieConflict:
+      type: object
+      description: Foutantwoord voor een lifecycle-conflict (HTTP 409), bv. al gepubliceerd of niet gepubliceerd.
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+    GebouwPublicatieEligibiliteitFout:
+      type: object
+      description: >-
+        Gestructureerd 422-antwoord wanneer publicatie niet is toegestaan omdat de
+        geordende procesketen niet volledig is afgerond. code, action_path en
+        action_label komen exact overeen met de vroegste ontbrekende fase in de
+        processtatus (UI/server-pariteit).
+      required:
+        - error
+        - code
+        - action_path
+        - action_label
+      properties:
+        error:
+          type: string
+        code:
+          type: ["string", "null"]
+        action_path:
+          type: ["string", "null"]
+        action_label:
+          type: ["string", "null"]
+
+    GebouwPublicatieContentItem:
+      type: object
+      required:
+        - type
+        - label
+        - bron_id
+      properties:
+        type:
+          type: string
+        label:
+          type: string
+        bron_id:
+          type: ["integer", "null"]
+          description: Interne bron-ID (rapport-id, document-id, …). Null voor generieke rijen.
+
+    GebouwPublicatiePreview:
+      type: object
+      required:
+        - mag_publiceren
+        - blocker
+        - bestemming
+        - opdrachtgever
+        - ontvangers
+        - content_items
+        - gevolg_tekst
+        - intrekking_gevolg_tekst
+        - process_status
+      properties:
+        mag_publiceren:
+          type: boolean
+        blocker:
+          oneOf:
+            - $ref: "#/components/schemas/GebouwPublicatieBlocker"
+            - type: "null"
+        bestemming:
+          type: string
+        opdrachtgever:
+          type: ["string", "null"]
+        ontvangers:
+          type: array
+          items:
+            type: object
+            required: [naam]
+            properties:
+              naam:
+                type: string
+              email:
+                type: ["string", "null"]
+              organisatie:
+                type: ["string", "null"]
+        content_items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GebouwPublicatieContentItem"
+        gevolg_tekst:
+          type: string
+        intrekking_gevolg_tekst:
+          type: string
+        process_status:
+          $ref: "#/components/schemas/GebouwProcessStatus"
 
     GebouwUpdate:
       type: object

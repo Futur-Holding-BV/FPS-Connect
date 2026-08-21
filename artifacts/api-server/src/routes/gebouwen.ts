@@ -17,7 +17,8 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
+import { effectieveContext, toegewezenGebouwIds, magBijGebouw } from "../utils/rol";
+import { metSerializableTransactie } from "../utils/serializableTx";
 import { logActiviteit } from "../lib/activiteit";
 import { prefixVoorGebouw, volgendeGWerknummer } from "../lib/kenmerk";
 import { mapDocument } from "../lib/documenten";
@@ -28,6 +29,12 @@ import {
   OpdrachtgeverFout,
   resolveerOpdrachtgever,
 } from "../services/opdrachtgever";
+import {
+  loadGebouwProcessData,
+  berekenProcessStatus,
+  berekenPublicatieReadiness,
+  stelPublicatiePreviewSamen,
+} from "../services/gebouwProcessStatus";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -60,6 +67,7 @@ function uniekeConstraintNaam(err: unknown): string | null {
   }
   return null;
 }
+
 
 function uniekFoutAntwoord(
   err: unknown,
@@ -1622,12 +1630,62 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
   }
 });
 
+// GET /gebouwen/:id/processtatus — bouwprocesvoortgang (6 fasen)
+router.get("/gebouwen/:id/processtatus", lezenGebouwen, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [gebouw] = await db.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    // Per-gebouw toegangsscope (impersonatie-bewust) vóór het laden van lifecycle-data
+    if (!(await magBijGebouw(req, id))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+
+    const data = await loadGebouwProcessData(id);
+    const status = berekenProcessStatus(data);
+    res.json(status);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/publicatie/preview — server-gegenereerde publicatiepreview
+router.get("/gebouwen/:id/publicatie/preview", lezenGebouwen, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [gebouw] = await db
+      .select({ id: gebouwenTable.id })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, id));
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    // Per-gebouw toegangsscope vóór het laden van lifecycle-/ontvangersdata
+    if (!(await magBijGebouw(req, id))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+
+    const data = await loadGebouwProcessData(id);
+    const preview = stelPublicatiePreviewSamen(data);
+    res.json(preview);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // GET /gebouwen/:id/publicatiestatus
 router.get("/gebouwen/:id/publicatiestatus", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [gebouw] = await db.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    // Per-gebouw toegangsscope: beperkte gebruikers mogen niet enumereren
+    if (!(await magBijGebouw(req, id))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
 
     const [record] = await db
       .select()
@@ -1665,7 +1723,7 @@ router.get("/gebouwen/:id/publicatiestatus", lezenGebouwen, async (req, res): Pr
   }
 });
 
-// POST /gebouwen/:id/publiceer — gebouw publiceren naar FPS One
+// POST /gebouwen/:id/publiceer — gebouw publiceren naar FPS One (transactioneel, eligibility-check)
 router.post("/gebouwen/:id/publiceer", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
@@ -1674,21 +1732,71 @@ router.post("/gebouwen/:id/publiceer", requireBevoegdheid("gebouwen", 2), async 
     const [gebouw] = await db.select({ id: gebouwenTable.id, naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
+    // Per-gebouw toegangsscope naast het niveau-2 mutatierecht: beperkte gebruikers
+    // mogen niet-toegewezen gebouwen niet muteren of enumereren.
+    if (!(await magBijGebouw(req, id))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+
     const nu = new Date();
-    await db.insert(gebouwPublicatiesTable).values({
-      gebouwId: id,
-      status: "gepubliceerd",
-      gepubliceerdDoor: req.session.userId,
-      gepubliceerdOp: nu,
-      notitie,
+
+    const result = await metSerializableTransactie(async (tx) => {
+      // Advisory lock per gebouw-id (64-bit: hoge 32 bits = 0x47504200 voor "GPB", lage 32 bits = gebouwId).
+      // De advisory lock serialiseert gelijktijdige publiceer/intrekken-oproepen; het
+      // serializable isolatieniveau beschermt daarbovenop tegen bron-schrijfacties
+      // (calculaties/offertes/opdrachten/rapporten) die de lock NIET delen.
+      const lockKey = BigInt(0x47504200) * BigInt(0x100000000) + BigInt(id);
+      await tx.execute(sql`select pg_advisory_xact_lock(${lockKey})`);
+
+      // Herbereken eligibility BINNEN de transactie — vertrouw nooit de preview/client-kant
+      const processData = await loadGebouwProcessData(id, tx as unknown as Pick<typeof db, "select">);
+      const readiness = berekenPublicatieReadiness(processData);
+      if (!readiness.mag_publiceren) {
+        return { ok: false as const, conflict: false as const, blocker: readiness.blocker };
+      }
+
+      // Geen dubbele actieve publicatie (409, geen lifecycle-422)
+      const [bestaande] = await tx
+        .select({ id: gebouwPublicatiesTable.id })
+        .from(gebouwPublicatiesTable)
+        .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
+        .limit(1);
+      if (bestaande) {
+        return { ok: false as const, conflict: true as const, blocker: null };
+      }
+
+      const [pub] = await tx.insert(gebouwPublicatiesTable).values({
+        gebouwId: id,
+        status: "gepubliceerd",
+        gepubliceerdDoor: req.session.userId,
+        gepubliceerdOp: nu,
+        notitie,
+      }).returning();
+
+      await logActiviteit(
+        {
+          type: "gebouw_gepubliceerd",
+          omschrijving: `Gebouw "${gebouw.naam}" gepubliceerd naar FPS One`,
+          gebouwId: id,
+          gebruikerId: req.session.userId,
+        },
+        tx as unknown as Pick<typeof db, "select" | "insert">,
+      );
+
+      return { ok: true as const, conflict: false as const, blocker: null };
     });
 
-    await logActiviteit({
-      type: "gebouw_gepubliceerd",
-      omschrijving: `Gebouw "${gebouw.naam}" gepubliceerd naar FPS One`,
-      gebouwId: id,
-      gebruikerId: req.session.userId,
-    });
+    if (!result.ok) {
+      if (result.conflict) {
+        return void res.status(409).json({ error: "Dit gebouw is al gepubliceerd." });
+      }
+      return void res.status(422).json({
+        error: result.blocker?.message ?? "Publicatie niet toegestaan.",
+        code: result.blocker?.code ?? null,
+        action_path: result.blocker?.action_path ?? null,
+        action_label: result.blocker?.action_label ?? null,
+      });
+    }
 
     let gepubliceerdDoorNaam: string | null = null;
     if (req.session.userId) {
@@ -1709,7 +1817,8 @@ router.post("/gebouwen/:id/publiceer", requireBevoegdheid("gebouwen", 2), async 
   }
 });
 
-// POST /gebouwen/:id/publicatie/intrekken — publicatie intrekken
+// POST /gebouwen/:id/publicatie/intrekken — publicatie intrekken (transactioneel, expliciet geauditeerd)
+// Brondocumenten worden NOOIT verwijderd — enkel de publicatie-intentie wordt ingetrokken.
 router.post("/gebouwen/:id/publicatie/intrekken", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
@@ -1718,39 +1827,60 @@ router.post("/gebouwen/:id/publicatie/intrekken", requireBevoegdheid("gebouwen",
     const [gebouw] = await db.select({ id: gebouwenTable.id, naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
-    const [huidig] = await db
-      .select()
-      .from(gebouwPublicatiesTable)
-      .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
-      .orderBy(desc(gebouwPublicatiesTable.gepubliceerdOp))
-      .limit(1);
-
-    if (!huidig) return void res.status(409).json({ error: "Gebouw is niet gepubliceerd" });
+    // Per-gebouw toegangsscope naast het niveau-2 mutatierecht
+    if (!(await magBijGebouw(req, id))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
 
     const nu = new Date();
-    await db
-      .update(gebouwPublicatiesTable)
-      .set({
-        status: "ingetrokken",
-        ingetrokkenDoor: req.session.userId,
-        ingetrokkenOp: nu,
-        notitie: notitie ?? huidig.notitie,
-      })
-      .where(eq(gebouwPublicatiesTable.id, huidig.id));
 
-    await logActiviteit({
-      type: "gebouw_publicatie_ingetrokken",
-      omschrijving: `Publicatie van gebouw "${gebouw.naam}" ingetrokken uit FPS One`,
-      gebouwId: id,
-      gebruikerId: req.session.userId,
+    const result = await metSerializableTransactie(async (tx) => {
+      // Advisory lock — zelfde sleutel als bij publiceer; serializable snapshot erbovenop.
+      const lockKey = BigInt(0x47504200) * BigInt(0x100000000) + BigInt(id);
+      await tx.execute(sql`select pg_advisory_xact_lock(${lockKey})`);
+
+      const [huidig] = await tx
+        .select()
+        .from(gebouwPublicatiesTable)
+        .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
+        .orderBy(desc(gebouwPublicatiesTable.gepubliceerdOp))
+        .limit(1);
+
+      if (!huidig) return { ok: false as const };
+
+      await tx
+        .update(gebouwPublicatiesTable)
+        .set({
+          status: "ingetrokken",
+          ingetrokkenDoor: req.session.userId,
+          ingetrokkenOp: nu,
+          notitie: notitie ?? huidig.notitie,
+        })
+        .where(eq(gebouwPublicatiesTable.id, huidig.id));
+
+      await logActiviteit(
+        {
+          type: "gebouw_publicatie_ingetrokken",
+          omschrijving: `Publicatie van gebouw "${gebouw.naam}" ingetrokken uit FPS One`,
+          gebouwId: id,
+          gebruikerId: req.session.userId,
+        },
+        tx as unknown as Pick<typeof db, "select" | "insert">,
+      );
+
+      return { ok: true as const, notitie: notitie ?? huidig.notitie };
     });
+
+    if (!result.ok) {
+      return void res.status(409).json({ error: "Gebouw is niet gepubliceerd" });
+    }
 
     res.json({
       gepubliceerd: false,
       gepubliceerd_op: null,
       gepubliceerd_door_naam: null,
       ingetrokken_op: nu.toISOString(),
-      notitie: notitie ?? huidig.notitie,
+      notitie: result.notitie,
     });
   } catch (err) {
     req.log.error(err);

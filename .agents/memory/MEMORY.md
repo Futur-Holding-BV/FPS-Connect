@@ -22,6 +22,7 @@
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [AKKOORD_01 akkoordpoort](akkoordpoort.md) — één heeftAkkoord()-poort onder uren+inkoop; fail-closed incl. DB-CHECK; grond B eist echt opdrachtbevestiging-doc; onbekend bedrag = boven €10k-band; tx doorgeven.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
+- [Projectprocesstatus & FPS One-publicatie](project-processtatus.md) — één serverfase; publicatie vereist volledige bewijsketen + exact één actueel definitief bevroren rapport; intrekken bewaart bronnen.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen & picker-endpoint](toewijzingen-velden.md) — Toewijzing heeft naam/rol (niet gebruiker_naam); keuzelijsten via GET /toewijsbare-gebruikers (zie toewijsbare-gebruikers.md), NIET /gebruikers.
 - [Stale gegenereerde exports](stale-lib-declarations.md) — nieuwe API-exports kunnen door composite- en dev-servercaches onzichtbaar blijven terwijl de broncode al klopt.

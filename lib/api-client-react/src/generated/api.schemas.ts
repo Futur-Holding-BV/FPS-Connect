@@ -3414,6 +3414,99 @@ export interface PubliceerInput {
   notitie?: string | null;
 }
 
+export type GebouwProcessFaseToestand = typeof GebouwProcessFaseToestand[keyof typeof GebouwProcessFaseToestand];
+
+
+export const GebouwProcessFaseToestand = {
+  afgerond: 'afgerond',
+  actief: 'actief',
+  toekomstig: 'toekomstig',
+} as const;
+
+export interface GebouwProcessFase {
+  sleutel: string;
+  label: string;
+  toestand: GebouwProcessFaseToestand;
+  /** @nullable */
+  blocker_code: string | null;
+  /** @nullable */
+  blocker_message: string | null;
+  /** @nullable */
+  action_path: string | null;
+  /** @nullable */
+  action_label: string | null;
+}
+
+export interface GebouwProcessStatus {
+  fasen: GebouwProcessFase[];
+  /**
+     * Sleutel van de actieve fase; null als alle fasen afgerond zijn
+     * @nullable
+     */
+  huidige_stap: string | null;
+  all_afgerond: boolean;
+}
+
+export interface GebouwPublicatieBlocker {
+  code: string;
+  message: string;
+  /** @nullable */
+  action_path: string | null;
+  /** @nullable */
+  action_label: string | null;
+}
+
+/**
+ * Foutantwoord voor een lifecycle-conflict (HTTP 409), bv. al gepubliceerd of niet gepubliceerd.
+ */
+export interface GebouwPublicatieConflict {
+  error: string;
+}
+
+/**
+ * Gestructureerd 422-antwoord wanneer publicatie niet is toegestaan omdat de geordende procesketen niet volledig is afgerond. code, action_path en action_label komen exact overeen met de vroegste ontbrekende fase in de processtatus (UI/server-pariteit).
+ */
+export interface GebouwPublicatieEligibiliteitFout {
+  error: string;
+  /** @nullable */
+  code: string | null;
+  /** @nullable */
+  action_path: string | null;
+  /** @nullable */
+  action_label: string | null;
+}
+
+export interface GebouwPublicatieContentItem {
+  type: string;
+  label: string;
+  /**
+     * Interne bron-ID (rapport-id, document-id, …). Null voor generieke rijen.
+     * @nullable
+     */
+  bron_id: number | null;
+}
+
+export type GebouwPublicatiePreviewOntvangersItem = {
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  organisatie?: string | null;
+};
+
+export interface GebouwPublicatiePreview {
+  mag_publiceren: boolean;
+  blocker: GebouwPublicatieBlocker | null;
+  bestemming: string;
+  /** @nullable */
+  opdrachtgever: string | null;
+  ontvangers: GebouwPublicatiePreviewOntvangersItem[];
+  content_items: GebouwPublicatieContentItem[];
+  gevolg_tekst: string;
+  intrekking_gevolg_tekst: string;
+  process_status: GebouwProcessStatus;
+}
+
 export interface GebouwUpdate {
   werknummer?: string | null;
   projectnummer?: string | null;

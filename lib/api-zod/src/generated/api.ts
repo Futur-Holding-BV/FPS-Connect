@@ -736,6 +736,73 @@ export const IntrekkenGebouwPublicatieResponse = zod.object({
 
 
 /**
+ * @summary Bouwprocesvoortgang van een gebouw ophalen (6 geordende fasen)
+ */
+export const GetGebouwProcessStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwProcessStatusResponse = zod.object({
+  "fasen": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "toestand": zod.enum(['afgerond', 'actief', 'toekomstig']),
+  "blocker_code": zod.string().nullable(),
+  "blocker_message": zod.string().nullable(),
+  "action_path": zod.string().nullable(),
+  "action_label": zod.string().nullable()
+})),
+  "huidige_stap": zod.string().nullable().describe('Sleutel van de actieve fase; null als alle fasen afgerond zijn'),
+  "all_afgerond": zod.boolean()
+})
+
+
+/**
+ * @summary Publicatiepreview voor een gebouw ophalen (server-gegenereerd)
+ */
+export const GetGebouwPublicatiePreviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwPublicatiePreviewResponse = zod.object({
+  "mag_publiceren": zod.boolean(),
+  "blocker": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string(),
+  "action_path": zod.string().nullable(),
+  "action_label": zod.string().nullable()
+}),zod.null()]),
+  "bestemming": zod.string(),
+  "opdrachtgever": zod.string().nullable(),
+  "ontvangers": zod.array(zod.object({
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "organisatie": zod.string().nullish()
+})),
+  "content_items": zod.array(zod.object({
+  "type": zod.string(),
+  "label": zod.string(),
+  "bron_id": zod.number().nullable().describe('Interne bron-ID (rapport-id, document-id, …). Null voor generieke rijen.')
+})),
+  "gevolg_tekst": zod.string(),
+  "intrekking_gevolg_tekst": zod.string(),
+  "process_status": zod.object({
+  "fasen": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "toestand": zod.enum(['afgerond', 'actief', 'toekomstig']),
+  "blocker_code": zod.string().nullable(),
+  "blocker_message": zod.string().nullable(),
+  "action_path": zod.string().nullable(),
+  "action_label": zod.string().nullable()
+})),
+  "huidige_stap": zod.string().nullable().describe('Sleutel van de actieve fase; null als alle fasen afgerond zijn'),
+  "all_afgerond": zod.boolean()
+})
+})
+
+
+/**
  * @summary Verdiepingen van een gebouw
  */
 export const ListVerdiepingenParams = zod.object({
@@ -37769,6 +37836,8 @@ export const ExporteerBankmutatieAccountViewResponse = zod.object({
   "foutmelding": zod.string().nullish(),
   "testmodus": zod.boolean().nullish()
 })
+
+
 /**
  * @summary Onzekere AccountView-bankexport na externe controle herstellen
  */

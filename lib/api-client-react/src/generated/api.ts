@@ -405,6 +405,10 @@ import type {
   GebouwPartijInput,
   GebouwPartijOptie,
   GebouwPartijUpdate,
+  GebouwProcessStatus,
+  GebouwPublicatieConflict,
+  GebouwPublicatieEligibiliteitFout,
+  GebouwPublicatiePreview,
   GebouwPublicatieStatus,
   GebouwUpdate,
   Gebruiker,
@@ -3129,7 +3133,7 @@ export const publiceerGebouw = async (id: number,
 
 
 
-export const getPubliceerGebouwMutationOptions = <TError = ErrorType<void>,
+export const getPubliceerGebouwMutationOptions = <TError = ErrorType<void | GebouwPublicatieConflict | GebouwPublicatieEligibiliteitFout>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext> => {
 
@@ -3158,12 +3162,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PubliceerGebouwMutationResult = NonNullable<Awaited<ReturnType<typeof publiceerGebouw>>>
     export type PubliceerGebouwMutationBody = BodyType<PubliceerInput> | undefined
-    export type PubliceerGebouwMutationError = ErrorType<void>
+    export type PubliceerGebouwMutationError = ErrorType<void | GebouwPublicatieConflict | GebouwPublicatieEligibiliteitFout>
 
     /**
  * @summary Gebouw publiceren naar FPS One
  */
-export const usePubliceerGebouw = <TError = ErrorType<void>,
+export const usePubliceerGebouw = <TError = ErrorType<void | GebouwPublicatieConflict | GebouwPublicatieEligibiliteitFout>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof publiceerGebouw>>,
@@ -3200,7 +3204,7 @@ export const intrekkenGebouwPublicatie = async (id: number,
 
 
 
-export const getIntrekkenGebouwPublicatieMutationOptions = <TError = ErrorType<void>,
+export const getIntrekkenGebouwPublicatieMutationOptions = <TError = ErrorType<void | GebouwPublicatieConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext> => {
 
@@ -3229,12 +3233,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type IntrekkenGebouwPublicatieMutationResult = NonNullable<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>>
     export type IntrekkenGebouwPublicatieMutationBody = BodyType<PubliceerInput> | undefined
-    export type IntrekkenGebouwPublicatieMutationError = ErrorType<void>
+    export type IntrekkenGebouwPublicatieMutationError = ErrorType<void | GebouwPublicatieConflict>
 
     /**
  * @summary Publicatie van een gebouw intrekken
  */
-export const useIntrekkenGebouwPublicatie = <TError = ErrorType<void>,
+export const useIntrekkenGebouwPublicatie = <TError = ErrorType<void | GebouwPublicatieConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>,
@@ -3244,6 +3248,160 @@ export const useIntrekkenGebouwPublicatie = <TError = ErrorType<void>,
       > => {
       return useMutation(getIntrekkenGebouwPublicatieMutationOptions(options));
     }
+
+export const getGetGebouwProcessStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/processtatus`
+}
+
+/**
+ * @summary Bouwprocesvoortgang van een gebouw ophalen (6 geordende fasen)
+ */
+export const getGebouwProcessStatus = async (id: number, options?: RequestInit): Promise<GebouwProcessStatus> => {
+
+  return customFetch<GebouwProcessStatus>(getGetGebouwProcessStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwProcessStatusQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/processtatus`
+    ] as const;
+    }
+
+
+export const getGetGebouwProcessStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwProcessStatus>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwProcessStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwProcessStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwProcessStatus>>> = ({ signal }) => getGebouwProcessStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwProcessStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwProcessStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwProcessStatus>>>
+export type GetGebouwProcessStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Bouwprocesvoortgang van een gebouw ophalen (6 geordende fasen)
+ */
+
+export function useGetGebouwProcessStatus<TData = Awaited<ReturnType<typeof getGebouwProcessStatus>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwProcessStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwProcessStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetGebouwPublicatiePreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/publicatie/preview`
+}
+
+/**
+ * @summary Publicatiepreview voor een gebouw ophalen (server-gegenereerd)
+ */
+export const getGebouwPublicatiePreview = async (id: number, options?: RequestInit): Promise<GebouwPublicatiePreview> => {
+
+  return customFetch<GebouwPublicatiePreview>(getGetGebouwPublicatiePreviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwPublicatiePreviewQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/publicatie/preview`
+    ] as const;
+    }
+
+
+export const getGetGebouwPublicatiePreviewQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwPublicatiePreview>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatiePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwPublicatiePreviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwPublicatiePreview>>> = ({ signal }) => getGebouwPublicatiePreview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatiePreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwPublicatiePreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwPublicatiePreview>>>
+export type GetGebouwPublicatiePreviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Publicatiepreview voor een gebouw ophalen (server-gegenereerd)
+ */
+
+export function useGetGebouwPublicatiePreview<TData = Awaited<ReturnType<typeof getGebouwPublicatiePreview>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatiePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwPublicatiePreviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListVerdiepingenUrl = (id: number,) => {
 

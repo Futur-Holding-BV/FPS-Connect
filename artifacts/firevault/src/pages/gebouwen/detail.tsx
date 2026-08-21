@@ -25,6 +25,7 @@ import {
   useListInboxItems,
   getListInboxItemsQueryKey,
   getListOfferteUitgangspuntenQueryOptions,
+  useGetGebouwProcessStatus,
   type Document,
   type OfferteUitgangspunt,
 } from "@workspace/api-client-react";
@@ -116,10 +117,14 @@ import GebouwActiviteit from "./gebouw-activiteit";
 import GebouwStappenplan from "./gebouw-stappenplan";
 import GebouwRapporten from "./gebouw-rapporten";
 import { GebouwDashboard } from "./gebouw-dashboard";
-import {
-  bepaalActueleProjectFase,
-  leidProjectFasenAf,
-} from "./gebouw-projectfasen";
+import { GebouwProcessOverzicht } from "@/components/gebouw-process-overzicht";
+
+const EURO_FMT = new Intl.NumberFormat("nl-NL", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const PROJECT_ROLLEN = [
@@ -153,51 +158,6 @@ const OFFERTE_STATUS_LABEL: Record<string, string> = {
   afgewezen: "Afgewezen",
   vervallen: "Vervallen",
 };
-
-const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  nieuw_project: {
-    label: "Nieuw project",
-    className: "bg-slate-100 text-slate-700 border-slate-300",
-  },
-  offerte_aanvraag: {
-    label: "Offerte-aanvraag",
-    className: "bg-amber-100 text-amber-800 border-amber-300",
-  },
-  offerte_ingediend: {
-    label: "Offerte-ingediend",
-    className: "bg-blue-100 text-blue-800 border-blue-300",
-  },
-  opdracht_in_uitvoering: {
-    label: "Opdracht in uitvoering",
-    className: "bg-primary/10 text-primary border-primary/30",
-  },
-};
-
-function bepaalAfgeleidStatus(calcs: any[], offertes: any[]): string | null {
-  if (offertes.some((o) => o.status === "geaccepteerd") || calcs.some((c) => c.status === "gewonnen")) {
-    return "opdracht_in_uitvoering";
-  }
-  if (
-    offertes.some((o) => o.status === "verzonden") ||
-    calcs.some((c) => c.status === "aangeboden" || c.status === "intern_akkoord")
-  ) {
-    return "offerte_ingediend";
-  }
-  const heeftActieveCalc = calcs.some((c) => c.status !== "verloren");
-  const heeftActieveOfferte = offertes.some((o) => !["afgewezen", "vervallen"].includes(o.status));
-  if (heeftActieveCalc || heeftActieveOfferte) return "offerte_aanvraag";
-  return null;
-}
-
-function ProjectStatusBadge({ status }: { status: string }) {
-  const cfg = PROJECT_STATUS_CONFIG[status];
-  if (!cfg) return null;
-  return (
-    <Badge variant="outline" className={`shrink-0 text-xs font-medium ${cfg.className}`}>
-      {cfg.label}
-    </Badge>
-  );
-}
 
 function rolLabelVan(g: { rol?: string | null }): string {
   return ROL_DISPLAY[g.rol ?? ""] ?? g.rol ?? "";
@@ -473,6 +433,7 @@ export default function GebouwDetail() {
   const isBeheerder = heeftNiveau("gebouwen", 2);
 
   const { data: gebouw, isLoading } = useGetGebouw(gebouwId);
+  const { data: processStatus } = useGetGebouwProcessStatus(gebouwId);
   useZetAssistentLabel(gebouw?.naam ? `gebouw ${gebouw.naam}` : null);
   const { data: kaartData } = useGetGebouwKaart(gebouwId);
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
@@ -579,7 +540,31 @@ export default function GebouwDetail() {
           };
         })()
       : null;
-  const afgeleidStatus = bepaalAfgeleidStatus(gebouwCalcs, gebouwOffertes);
+  const geaccepteerdeOfferte = gebouwOffertes.find((o: any) => o.status === "geaccepteerd");
+  const offerteWaarde: number | null =
+    geaccepteerdeOfferte?.bedrag_excl_btw != null
+      ? Number(geaccepteerdeOfferte.bedrag_excl_btw)
+      : gebouwOffertes.length > 0
+        ? gebouwOffertes.reduce((s: number, o: any) => s + (Number(o.bedrag_excl_btw) || 0), 0)
+        : null;
+
+  const gefactureerd = gebouwFacturen.reduce(
+    (s: number, f: any) => s + (Number(f.bedrag_incl_btw) || 0),
+    0,
+  );
+
+  const financialMetrics = [
+    {
+      label: financien?.opdrachtsom != null ? "Opdrachtsom" : geaccepteerdeOfferte ? "Opdrachtsom" : "Offerte waarde",
+      value: financien?.opdrachtsom != null ? EURO_FMT.format(financien.opdrachtsom) : offerteWaarde != null ? EURO_FMT.format(offerteWaarde) : "—",
+      subtext: financien?.opdrachtsom != null ? "excl. BTW" : geaccepteerdeOfferte ? "geaccepteerd" : gebouwOffertes.length > 0 ? "in voorbereiding" : undefined
+    },
+    {
+      label: "Gefactureerd",
+      value: gefactureerd > 0 ? EURO_FMT.format(gefactureerd) : "—",
+      subtext: gebouwFacturen.length > 0 ? `${gebouwFacturen.length} facturen` : undefined
+    }
+  ];
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
@@ -596,15 +581,12 @@ export default function GebouwDetail() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
-  const actueleProjectFase = bepaalActueleProjectFase(
-    leidProjectFasenAf(
-      gebouwCalcs,
-      gebouwOffertes,
-      gebouwOpnames,
-      gebouwFacturen,
-      gebouw,
-    ),
+  const huidigeProcessFase = processStatus?.fasen.find(
+    (fase) => fase.sleutel === processStatus.huidige_stap,
   );
+  const processStatusLabel = processStatus?.all_afgerond
+    ? "Proces afgerond"
+    : huidigeProcessFase?.label;
   const beschikbareGebruikers = gebruikers ?? [];
 
   // Toewijzen vereist het wijzig-/aanmaakniveau op gebouwen (zelfde drempel als
@@ -819,17 +801,13 @@ export default function GebouwDetail() {
               ).toLocaleDateString("nl-NL")}
             </span>
           )}
-          {!gebouw.gereed_op && (
-            <ProjectStatusBadge status={afgeleidStatus ?? "nieuw_project"} />
-          )}
-          {gebouw.gereed_op && (
-            <Badge className="shrink-0 gap-1 bg-green-600 text-white">
-              <CheckCircle className="h-3 w-3" /> Gereed
-            </Badge>
-          )}
-          {actueleProjectFase && (
-            <Badge variant="outline" className="shrink-0 text-xs">
-              Fase: {actueleProjectFase.label}
+          {processStatusLabel && (
+            <Badge
+              data-testid="header-process-status"
+              variant="outline"
+              className="shrink-0 text-xs font-medium"
+            >
+              Proces: {processStatusLabel}
             </Badge>
           )}
           <ImportBadge
@@ -1042,6 +1020,8 @@ export default function GebouwDetail() {
       </TabsContent>
 
       <TabsContent value="project" className="mt-4 space-y-4" data-testid="project-segment-project">
+        <GebouwProcessOverzicht gebouwId={gebouwId} financialMetrics={financialMetrics} />
+
         <SegmentKop
           icoon={<Building2 className="h-5 w-5" />}
           titel="Gebouwgegevens"
