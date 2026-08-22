@@ -1,7 +1,8 @@
 ## 2026-08-22 — Integratieproeven krijgen een productiegelijke wegwerpdatabase
 
 - De taak **Typecheck & build** start in CI een tijdelijke PostgreSQL 16-container, gelijk aan de productiestack, en wacht expliciet tot die verbindingen accepteert.
-- De database wordt opgebouwd via het bestaande SCHEMA_01-nulpunt, de bestaande profielseed en de genummerde migratierunner. De aanvraag-uploadrace en haar bestaande ketenproeven krijgen hetzelfde geïsoleerde database-adres via `AANVRAAG_TEST_DATABASE_URL`.
+- De database wordt opgebouwd via het bestaande SCHEMA_01-nulpunt, de bestaande profiel- en testaccountseed en de genummerde migratierunner. De aanvraag-uploadrace en overige tests krijgen alleen in de bestaande teststap hetzelfde geïsoleerde database-adres via `AANVRAAG_TEST_DATABASE_URL`.
+- Het acceptatieregister kiest bij gelijk gedateerde opdrachtdocumenten het hoogste numerieke revisienummer. Daardoor is voor UREN_01 revisie 3 met alle 18 acceptatiepunten leidend in plaats van de oude basisversie met 10 punten.
 
 ## 2026-08-21 — Vaste hiërarchische navigatie en veilig stoppen met onboarding
 

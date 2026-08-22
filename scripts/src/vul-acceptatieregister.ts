@@ -7,7 +7,7 @@
  *
  * - Opdrachtcode uit de bestandsnaam (bv. APP_01, NP_INKOOP_01); bestanden
  *   zonder code (Pasted-...) krijgen een leesbare slug-code.
- * - Per opdrachtcode wint bij meerdere bronnen de leesbare hoofdnaam.
+ * - Per opdrachtcode wint bij meerdere bronnen de nieuwste timestamp/revisie.
  * - Idempotent: bestaande regels behouden hun stand/bewijs; alleen de
  *   omschrijving en bron worden ververst. Nieuwe punten komen erbij als
  *   "onbewezen" (het bestaan van code is niet het door de opdracht geëiste bewijs).
@@ -45,6 +45,27 @@ function slugCode(naam: string, inhoud: string): string {
 function timestampUitNaam(naam: string): number {
   const m = naam.match(/_(\d{13})/);
   return m ? Number(m[1]) : 0;
+}
+
+/**
+ * Documenten zonder timestamp gebruiken een afsluitend revisienummer:
+ * `opdracht.md` = 0, `opdracht-2.md` = 2. Vergelijk dit numeriek; een
+ * lexicografische vergelijking liet juist de ongenummerde basisversie winnen.
+ */
+export function revisieUitNaam(naam: string): number {
+  const m = naam.match(/-(\d+)\.(?:md|txt)$/i);
+  return m ? Number(m[1]) : 0;
+}
+
+export function isNieuwereBron(
+  kandidaat: Pick<Opdracht, "bestand" | "ts">,
+  bestaand: Pick<Opdracht, "bestand" | "ts">,
+): boolean {
+  if (kandidaat.ts !== bestaand.ts) return kandidaat.ts > bestaand.ts;
+  const kandidaatRevisie = revisieUitNaam(kandidaat.bestand);
+  const bestaandeRevisie = revisieUitNaam(bestaand.bestand);
+  if (kandidaatRevisie !== bestaandeRevisie) return kandidaatRevisie > bestaandeRevisie;
+  return kandidaat.bestand.localeCompare(bestaand.bestand) > 0;
 }
 
 /** Zoek de Acceptatie-paragraaf en parse genummerde punten. */
@@ -94,12 +115,9 @@ function verzamel(): Map<string, Opdracht> {
     const code = opdrachtCodeUitNaam(naam) ?? slugCode(naam, inhoud);
     const ts = timestampUitNaam(naam);
     const bestaand = perCode.get(code);
-    if (
-      !bestaand
-      || ts > bestaand.ts
-      || (ts === bestaand.ts && naam.localeCompare(bestaand.bestand) > 0)
-    ) {
-      perCode.set(code, { code, bestand: naam, ts, punten });
+    const kandidaat = { code, bestand: naam, ts, punten };
+    if (!bestaand || isNieuwereBron(kandidaat, bestaand)) {
+      perCode.set(code, kandidaat);
     }
   }
   return perCode;
