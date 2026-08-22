@@ -13,7 +13,6 @@ import {
   offerteBijlagenTable,
   offerteVersiesTable,
   offerteRegelsTable,
-  projectenTable,
   gebruikersTable,
   gebouwenTable,
   crmCommunicatieTable,
@@ -25,6 +24,7 @@ import { stuurKlantvraagNotificatie, stuurKlantvraagBevestiging, stuurOnderteken
 import { logActiviteit } from "../lib/activiteit";
 import { magMailSturen } from "../lib/mailVoorkeuren";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { maakProject } from "../services/projectService";
 
 const router = Router();
 
@@ -560,9 +560,11 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
         const werknummer = offerte.offertenummer
           ? `PRJ-${offerte.offertenummer}`
           : `PRJ-${offerte.id}-${datum.replace(/-/g, "")}`;
-        const [project] = await tx
-          .insert(projectenTable)
-          .values({
+
+        // PROJ_1200 §7: gebruik de centrale projectservice (automatische modus).
+        // Behoudt auto_project_id als expliciete offerte→project-binding.
+        const { projectId: projectIdNieuw } = await maakProject(
+          {
             naam: offerte.titel,
             werknummer,
             status: "actief",
@@ -570,15 +572,19 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
             crmKlantId: offerte.klantId ?? null,
             gebouwId: offerte.gebouwId ?? null,
             aangemaaktDoorId: null,
-          })
-          .returning();
+          },
+          "automatisch",
+          null,
+          null,
+          tx as Parameters<typeof maakProject>[4],
+        );
 
         await tx
           .update(offertesTable)
-          .set({ autoProjectId: project.id, bijgewerktOp: new Date() })
+          .set({ autoProjectId: projectIdNieuw, bijgewerktOp: new Date() })
           .where(and(eq(offertesTable.id, offerte.id), isNull(offertesTable.autoProjectId)));
 
-        return project.id;
+        return projectIdNieuw;
       });
     } catch (txErr: unknown) {
       if (reeds_ondertekend) {

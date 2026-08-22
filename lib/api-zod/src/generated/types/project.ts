@@ -23,4 +23,8 @@ export interface Project {
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: Date;
   bijgewerkt_op: Date;
+  projectleider_medewerker_id?: number | null;
+  projectleider_naam?: string | null;
+  /** Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven. */
+  project_id?: number | null;
 }

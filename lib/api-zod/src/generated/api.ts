@@ -197,7 +197,8 @@ export const ListGebouwenResponseItem = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
-  "galerij_upload_toegestaan": zod.boolean().optional()
+  "galerij_upload_toegestaan": zod.boolean().optional(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.\n')
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -232,7 +233,8 @@ export const CreateGebouwBody = zod.object({
   "longitude": zod.number().optional(),
   "werkgever_id": zod.number().optional(),
   "project_status": zod.string().optional(),
-  "galerij_upload_toegestaan": zod.boolean().optional()
+  "galerij_upload_toegestaan": zod.boolean().optional(),
+  "projectleider_medewerker_id": zod.number().optional().describe('Verplicht bij handmatige projectdossieraanmaak (POST \/gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd \'Projectleider\'.\n')
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -483,7 +485,8 @@ export const UpdateGebouwResponse = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
-  "galerij_upload_toegestaan": zod.boolean().optional()
+  "galerij_upload_toegestaan": zod.boolean().optional(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.\n')
 })
 
 
@@ -545,7 +548,8 @@ export const MeldGebouwGereedResponse = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
-  "galerij_upload_toegestaan": zod.boolean().optional()
+  "galerij_upload_toegestaan": zod.boolean().optional(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.\n')
 })
 
 
@@ -593,7 +597,8 @@ export const HerstelGebouwActiefResponse = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
-  "galerij_upload_toegestaan": zod.boolean().optional()
+  "galerij_upload_toegestaan": zod.boolean().optional(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.\n')
 })
 
 
@@ -22984,9 +22989,58 @@ export const ListProjectenResponseItem = zod.object({
   "eind_datum": zod.string().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.coerce.date(),
-  "bijgewerkt_op": zod.coerce.date()
+  "bijgewerkt_op": zod.coerce.date(),
+  "projectleider_medewerker_id": zod.number().nullish(),
+  "projectleider_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven.')
 })
 export const ListProjectenResponse = zod.array(ListProjectenResponseItem)
+
+
+/**
+ * @summary Actieve medewerkers geschikt als projectleider
+ */
+export const ListProjectleiderKandidatenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "gebruiker_id": zod.number().nullish()
+})
+export const ListProjectleiderKandidatenResponse = zod.array(ListProjectleiderKandidatenResponseItem)
+
+
+/**
+ * @summary Projecten zonder projectleider (beheer-achterstand)
+ */
+export const ListProjectenBeheerBacklogResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "totaal": zod.number()
+})
+
+
+/**
+ * @summary Meerdere projectleider-toewijzingen in één atomaire transactie. Vereist expliciete {project_id, projectleider_medewerker_id} per rij. Beheer-bevoegdheid (gebouwen niveau 2) vereist.
+
+ */
+export const BulkToewijzingProjectleiderBody = zod.object({
+  "toewijzingen": zod.array(zod.object({
+  "project_id": zod.number(),
+  "projectleider_medewerker_id": zod.number()
+})),
+  "reden": zod.string().nullish()
+})
+
+export const BulkToewijzingProjectleiderResponse = zod.object({
+  "geslaagd": zod.number(),
+  "mislukt": zod.number(),
+  "resterend_zonder_projectleider": zod.number()
+})
 
 
 /**
@@ -23011,12 +23065,15 @@ export const GetProjectResponse = zod.object({
   "eind_datum": zod.string().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.coerce.date(),
-  "bijgewerkt_op": zod.coerce.date()
+  "bijgewerkt_op": zod.coerce.date(),
+  "projectleider_medewerker_id": zod.number().nullish(),
+  "projectleider_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven.')
 })
 
 
 /**
- * @summary Project bijwerken
+ * @summary Project bijwerken (inclusief optionele projectleider-wijziging)
  */
 export const UpdateProjectParams = zod.object({
   "id": zod.coerce.number()
@@ -23031,7 +23088,8 @@ export const UpdateProjectBody = zod.object({
   "crm_klant_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "start_datum": zod.string().nullish(),
-  "eind_datum": zod.string().nullish()
+  "eind_datum": zod.string().nullish(),
+  "projectleider_medewerker_id": zod.number().nullish().describe('Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn.\n')
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -23049,7 +23107,10 @@ export const UpdateProjectResponse = zod.object({
   "eind_datum": zod.string().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.coerce.date(),
-  "bijgewerkt_op": zod.coerce.date()
+  "bijgewerkt_op": zod.coerce.date(),
+  "projectleider_medewerker_id": zod.number().nullish(),
+  "projectleider_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish().describe('Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven.')
 })
 
 
@@ -23061,6 +23122,28 @@ export const DeleteProjectParams = zod.object({
 })
 
 export const DeleteProjectResponse = zod.void()
+
+
+/**
+ * @summary Auditlog van projectleider-toewijzingen voor een project
+ */
+export const GetProjectleiderGeschiedenisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetProjectleiderGeschiedenisResponseItem = zod.object({
+  "id": zod.number(),
+  "project_id": zod.number(),
+  "oude_medewerker_id": zod.number().nullish(),
+  "oude_medewerker_naam": zod.string().nullish(),
+  "nieuwe_medewerker_id": zod.number().nullish(),
+  "nieuwe_medewerker_naam": zod.string().nullish(),
+  "actor_gebruiker_id": zod.number().nullish(),
+  "actor_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "tijdstip": zod.coerce.date()
+})
+export const GetProjectleiderGeschiedenisResponse = zod.array(GetProjectleiderGeschiedenisResponseItem)
 
 
 /**

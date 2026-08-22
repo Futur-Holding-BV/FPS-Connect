@@ -124,13 +124,20 @@ export const WERKBAK_BRONNEN = [
   // REGISTER_01: ieder punt dat op een besluit van de hoofdbeheerder wacht.
   // De database-trigger synchroniseert dit ook bij script- en directe DB-wijzigingen.
   "acceptatieregister",
+  // PROJ_1200: geen projectleider toegewezen aan een project (0 of >1 kandidaten
+  // bij automatische aanmaak). Gaat naar de hoofdbeheerder totdat een medewerker
+  // expliciet is aangewezen.
+  "projectleider_toewijzing",
 ] as const;
 
-export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
+// Minimale DB-executor interface die zowel de globale `db` als een Drizzle-transactie dekt.
+export type DbExecutor = Pick<typeof db, "insert" | "update" | "select">;
+
+export async function meldWerkbakItem(invoer: WerkbakInvoer, uitvoerder: DbExecutor = db): Promise<boolean> {
   if (!(WERKBAK_BRONNEN as readonly string[]).includes(invoer.bron)) {
     throw new Error(`Onbekende werkbak-bron: ${invoer.bron} — uitbreiden vereist een besluit (WERKBAK_01 §5)`);
   }
-  const rijen = await db
+  const rijen = await uitvoerder
     .insert(werkbakItemsTable)
     .values({
       soort: invoer.soort,
@@ -157,8 +164,8 @@ export async function meldWerkbakItem(invoer: WerkbakInvoer): Promise<boolean> {
 }
 
 // Bron opgelost → open item(s) met deze sleutel afgehandeld markeren (systeem).
-export async function handelBronAf(dedupSleutel: string): Promise<void> {
-  await db
+export async function handelBronAf(dedupSleutel: string, uitvoerder: DbExecutor = db): Promise<void> {
+  await uitvoerder
     .update(werkbakItemsTable)
     .set({ status: "afgehandeld", afgehandeldOp: new Date(), bijgewerktOp: new Date() })
     .where(and(eq(werkbakItemsTable.dedupSleutel, dedupSleutel), eq(werkbakItemsTable.status, "open")));

@@ -29,6 +29,7 @@ import {
   OpdrachtgeverFout,
   resolveerOpdrachtgever,
 } from "../services/opdrachtgever";
+import { maakProject, ProjectService422Error } from "../services/projectService";
 import {
   loadGebouwProcessData,
   berekenProcessStatus,
@@ -265,6 +266,8 @@ router.get("/gebouwen", lezenGebouwen, async (req, res): Promise<void> => {
 });
 
 // POST /gebouwen
+// PROJ_1200 §6: vereist projectleider_medewerker_id; maakt atomisch gebouw,
+// partij en één concept-project aan via de centrale projectservice.
 router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
     const invoer = CreateGebouwBody.safeParse(req.body);
@@ -294,6 +297,7 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
       longitude,
       werkgever_id,
       nieuwe_klant,
+      projectleider_medewerker_id,
     } = invoer.data;
     if (
       !naam.trim() ||
@@ -312,6 +316,13 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
         error: "Kies een bestaande opdrachtgever of maak een nieuwe aan.",
       });
     }
+    // PROJ_1200 §6: projectleider_medewerker_id is verplicht
+    if (!projectleider_medewerker_id) {
+      return void res.status(422).json({
+        error: "projectleider_medewerker_id is verplicht bij het aanmaken van een project-dossier.",
+      });
+    }
+    const actorGebruikerId = (req.session as { userId?: number }).userId ?? null;
     // NUMMER_01 besluit 7: het systeem geeft het G-nummer zelf uit (seq_nummer_g);
     // handmatige invoer blijft alleen mogelijk voor bestaande externe nummers.
     const werknummerWaarde =
@@ -320,7 +331,7 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
         : await volgendeGWerknummer();
     const projectnummerWaarde =
       typeof projectnummer === "string" && projectnummer.trim() ? projectnummer.trim() : null;
-    const { gebouw, opdrachtgever } = await db.transaction(async (tx) => {
+    const { gebouw, opdrachtgever, projectId } = await db.transaction(async (tx) => {
       const relatie = await resolveerOpdrachtgever(tx, {
         klantId: klant_id,
         nieuweKlant: nieuwe_klant,
@@ -358,15 +369,29 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
         email: relatie.email,
         klantId: relatie.id,
       });
-      return { gebouw: nieuwGebouw, opdrachtgever: relatie };
+      // PROJ_1200 §6: aanmaak van concept-project via centrale service (handmatige modus)
+      const { projectId: newProjectId } = await maakProject(
+        {
+          naam: nieuwGebouw.naam,
+          status: "concept",
+          omschrijving: `Project-dossier aangemaakt bij gebouw ${nieuwGebouw.naam}.`,
+          gebouwId: nieuwGebouw.id,
+          aangemaaktDoorId: actorGebruikerId,
+        },
+        "handmatig",
+        projectleider_medewerker_id,
+        actorGebruikerId,
+        tx as Parameters<typeof maakProject>[4],
+      );
+      return { gebouw: nieuwGebouw, opdrachtgever: relatie, projectId: newProjectId };
     });
     const wgNaam = gebouw.werkgeverId
       ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
       : null;
     invalideerContext("gebouw", gebouw.id);
     invalideerContext("klant", opdrachtgever.id);
-    res.status(201).json(
-      gebouwRij(
+    res.status(201).json({
+      ...gebouwRij(
         gebouw,
         0,
         opdrachtgever.naam,
@@ -374,10 +399,15 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
         null,
         wgNaam,
       ),
-    );
+      project_id: projectId,
+    });
   } catch (err) {
     if (err instanceof OpdrachtgeverFout) {
       res.status(err.status).json({ error: err.message });
+      return;
+    }
+    if (err instanceof ProjectService422Error) {
+      res.status(422).json({ error: err.message });
       return;
     }
     if (uniekFoutAntwoord(err, res)) {

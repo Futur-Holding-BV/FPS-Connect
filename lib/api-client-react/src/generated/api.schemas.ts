@@ -3021,6 +3021,11 @@ export interface Gebouw {
   /** @nullable */
   project_status?: string | null;
   galerij_upload_toegestaan?: boolean;
+  /**
+     * Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.
+     * @nullable
+     */
+  project_id?: number | null;
 }
 
 export interface Verdieping {
@@ -3400,6 +3405,8 @@ export interface GebouwInput {
   werkgever_id?: number;
   project_status?: string;
   galerij_upload_toegestaan?: boolean;
+  /** Verplicht bij handmatige projectdossieraanmaak (POST /gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd 'Projectleider'. */
+  projectleider_medewerker_id?: number;
 }
 
 export interface GebouwPublicatieStatus {
@@ -12580,6 +12587,10 @@ export interface Project {
   aangemaakt_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+  projectleider_medewerker_id?: number | null;
+  projectleider_naam?: string | null;
+  /** Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven. */
+  project_id?: number | null;
 }
 
 export interface ProjectInput {
@@ -12604,6 +12615,52 @@ export interface ProjectPatchInput {
   gebouw_id?: number | null;
   start_datum?: string | null;
   eind_datum?: string | null;
+  /** Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. */
+  projectleider_medewerker_id?: number | null;
+}
+
+export interface ProjectleiderKandidaat {
+  id: number;
+  naam: string;
+  gebruiker_id?: number | null;
+}
+
+export interface ProjectleiderGeschiedenisRegel {
+  id: number;
+  project_id: number;
+  oude_medewerker_id?: number | null;
+  oude_medewerker_naam?: string | null;
+  nieuwe_medewerker_id?: number | null;
+  nieuwe_medewerker_naam?: string | null;
+  actor_gebruiker_id?: number | null;
+  actor_naam?: string | null;
+  reden?: string | null;
+  tijdstip: string;
+}
+
+export interface ProjectBulkToewijzingItem {
+  project_id: number;
+  projectleider_medewerker_id: number;
+}
+
+export interface ProjectBulkToewijzingBody {
+  toewijzingen: ProjectBulkToewijzingItem[];
+  reden?: string | null;
+}
+
+export interface ProjectBulkToewijzingResponse {
+  geslaagd: number;
+  mislukt: number;
+  resterend_zonder_projectleider: number;
+}
+
+export interface ProjectBeheerBacklogItem {
+  id: number;
+  naam: string;
+  status: string;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  aangemaakt_op: string;
 }
 
 export interface OpnameSamenvatting {
@@ -20490,6 +20547,11 @@ export type ListProjectenParams = {
 crm_klant_id?: number;
 gebouw_id?: number;
 status?: string;
+};
+
+export type ListProjectenBeheerBacklog200 = {
+  items: ProjectBeheerBacklogItem[];
+  totaal: number;
 };
 
 export type ListOpnamesParams = {

@@ -68,4 +68,9 @@ export interface Gebouw {
   /** @nullable */
   project_status?: string | null;
   galerij_upload_toegestaan?: boolean;
+  /**
+     * Alleen aanwezig in de createGebouw-response: id van het automatisch aangemaakte concept-project.
+     * @nullable
+     */
+  project_id?: number | null;
 }

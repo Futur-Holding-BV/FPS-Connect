@@ -681,6 +681,7 @@ import type {
   ListPlanningMeerwerkParams,
   ListPrijsafsprakenParams,
   ListProjectBegrotingenParams,
+  ListProjectenBeheerBacklog200,
   ListProjectenParams,
   ListRapportenParams,
   ListReserveringenParams,
@@ -997,7 +998,11 @@ import type {
   Project,
   ProjectBegroting,
   ProjectBegrotingInput,
+  ProjectBulkToewijzingBody,
+  ProjectBulkToewijzingResponse,
   ProjectPatchInput,
+  ProjectleiderGeschiedenisRegel,
+  ProjectleiderKandidaat,
   PubliceerInput,
   Rapport,
   RapportDefinitief,
@@ -64548,6 +64553,232 @@ export function useListProjecten<TData = Awaited<ReturnType<typeof listProjecten
 
 
 
+export const getListProjectleiderKandidatenUrl = () => {
+
+
+
+
+  return `/api/projecten/projectleider-kandidaten`
+}
+
+/**
+ * @summary Actieve medewerkers geschikt als projectleider
+ */
+export const listProjectleiderKandidaten = async ( options?: RequestInit): Promise<ProjectleiderKandidaat[]> => {
+
+  return customFetch<ProjectleiderKandidaat[]>(getListProjectleiderKandidatenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectleiderKandidatenQueryKey = () => {
+    return [
+    `/api/projecten/projectleider-kandidaten`
+    ] as const;
+    }
+
+
+export const getListProjectleiderKandidatenQueryOptions = <TData = Awaited<ReturnType<typeof listProjectleiderKandidaten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectleiderKandidaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectleiderKandidatenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectleiderKandidaten>>> = ({ signal }) => listProjectleiderKandidaten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectleiderKandidaten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectleiderKandidatenQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectleiderKandidaten>>>
+export type ListProjectleiderKandidatenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Actieve medewerkers geschikt als projectleider
+ */
+
+export function useListProjectleiderKandidaten<TData = Awaited<ReturnType<typeof listProjectleiderKandidaten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectleiderKandidaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectleiderKandidatenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListProjectenBeheerBacklogUrl = () => {
+
+
+
+
+  return `/api/projecten/beheer-backlog`
+}
+
+/**
+ * @summary Projecten zonder projectleider (beheer-achterstand)
+ */
+export const listProjectenBeheerBacklog = async ( options?: RequestInit): Promise<ListProjectenBeheerBacklog200> => {
+
+  return customFetch<ListProjectenBeheerBacklog200>(getListProjectenBeheerBacklogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectenBeheerBacklogQueryKey = () => {
+    return [
+    `/api/projecten/beheer-backlog`
+    ] as const;
+    }
+
+
+export const getListProjectenBeheerBacklogQueryOptions = <TData = Awaited<ReturnType<typeof listProjectenBeheerBacklog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectenBeheerBacklog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectenBeheerBacklogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectenBeheerBacklog>>> = ({ signal }) => listProjectenBeheerBacklog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectenBeheerBacklog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectenBeheerBacklogQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectenBeheerBacklog>>>
+export type ListProjectenBeheerBacklogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Projecten zonder projectleider (beheer-achterstand)
+ */
+
+export function useListProjectenBeheerBacklog<TData = Awaited<ReturnType<typeof listProjectenBeheerBacklog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectenBeheerBacklog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectenBeheerBacklogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBulkToewijzingProjectleiderUrl = () => {
+
+
+
+
+  return `/api/projecten/bulk-toewijzing`
+}
+
+/**
+ * @summary Meerdere projectleider-toewijzingen in één atomaire transactie. Vereist expliciete {project_id, projectleider_medewerker_id} per rij. Beheer-bevoegdheid (gebouwen niveau 2) vereist.
+
+ */
+export const bulkToewijzingProjectleider = async (projectBulkToewijzingBody: ProjectBulkToewijzingBody, options?: RequestInit): Promise<ProjectBulkToewijzingResponse> => {
+
+  return customFetch<ProjectBulkToewijzingResponse>(getBulkToewijzingProjectleiderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectBulkToewijzingBody)
+  }
+);}
+
+
+
+
+export const getBulkToewijzingProjectleiderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkToewijzingProjectleider>>, TError,{data: BodyType<ProjectBulkToewijzingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkToewijzingProjectleider>>, TError,{data: BodyType<ProjectBulkToewijzingBody>}, TContext> => {
+
+const mutationKey = ['bulkToewijzingProjectleider'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkToewijzingProjectleider>>, {data: BodyType<ProjectBulkToewijzingBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkToewijzingProjectleider(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkToewijzingProjectleiderMutationResult = NonNullable<Awaited<ReturnType<typeof bulkToewijzingProjectleider>>>
+    export type BulkToewijzingProjectleiderMutationBody = BodyType<ProjectBulkToewijzingBody>
+    export type BulkToewijzingProjectleiderMutationError = ErrorType<void>
+
+    /**
+ * @summary Meerdere projectleider-toewijzingen in één atomaire transactie. Vereist expliciete {project_id, projectleider_medewerker_id} per rij. Beheer-bevoegdheid (gebouwen niveau 2) vereist.
+
+ */
+export const useBulkToewijzingProjectleider = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkToewijzingProjectleider>>, TError,{data: BodyType<ProjectBulkToewijzingBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkToewijzingProjectleider>>,
+        TError,
+        {data: BodyType<ProjectBulkToewijzingBody>},
+        TContext
+      > => {
+      return useMutation(getBulkToewijzingProjectleiderMutationOptions(options));
+    }
+
 export const getGetProjectUrl = (id: number,) => {
 
 
@@ -64634,7 +64865,7 @@ export const getUpdateProjectUrl = (id: number,) => {
 }
 
 /**
- * @summary Project bijwerken
+ * @summary Project bijwerken (inclusief optionele projectleider-wijziging)
  */
 export const updateProject = async (id: number,
     projectPatchInput: ProjectPatchInput, options?: RequestInit): Promise<Project> => {
@@ -64683,7 +64914,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateProjectMutationError = ErrorType<void>
 
     /**
- * @summary Project bijwerken
+ * @summary Project bijwerken (inclusief optionele projectleider-wijziging)
  */
 export const useUpdateProject = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: number;data: BodyType<ProjectPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -64765,6 +64996,83 @@ export const useDeleteProject = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteProjectMutationOptions(options));
     }
+
+export const getGetProjectleiderGeschiedenisUrl = (id: number,) => {
+
+
+
+
+  return `/api/projecten/${id}/projectleider-geschiedenis`
+}
+
+/**
+ * @summary Auditlog van projectleider-toewijzingen voor een project
+ */
+export const getProjectleiderGeschiedenis = async (id: number, options?: RequestInit): Promise<ProjectleiderGeschiedenisRegel[]> => {
+
+  return customFetch<ProjectleiderGeschiedenisRegel[]>(getGetProjectleiderGeschiedenisUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProjectleiderGeschiedenisQueryKey = (id: number,) => {
+    return [
+    `/api/projecten/${id}/projectleider-geschiedenis`
+    ] as const;
+    }
+
+
+export const getGetProjectleiderGeschiedenisQueryOptions = <TData = Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectleiderGeschiedenisQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>> = ({ signal }) => getProjectleiderGeschiedenis(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProjectleiderGeschiedenisQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>>
+export type GetProjectleiderGeschiedenisQueryError = ErrorType<void>
+
+
+/**
+ * @summary Auditlog van projectleider-toewijzingen voor een project
+ */
+
+export function useGetProjectleiderGeschiedenis<TData = Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectleiderGeschiedenis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProjectleiderGeschiedenisQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListOpnamesUrl = (params?: ListOpnamesParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -18982,6 +18982,67 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Project'
+
+  /projecten/projectleider-kandidaten:
+    get:
+      operationId: listProjectleiderKandidaten
+      summary: Actieve medewerkers geschikt als projectleider
+      tags: [projecten]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectleiderKandidaat'
+
+  /projecten/beheer-backlog:
+    get:
+      operationId: listProjectenBeheerBacklog
+      summary: Projecten zonder projectleider (beheer-achterstand)
+      tags: [projecten]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, totaal]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectBeheerBacklogItem'
+                  totaal:
+                    type: integer
+
+  /projecten/bulk-toewijzing:
+    post:
+      operationId: bulkToewijzingProjectleider
+      summary: >
+        Meerdere projectleider-toewijzingen in één atomaire transactie.
+        Vereist expliciete {project_id, projectleider_medewerker_id} per rij.
+        Beheer-bevoegdheid (gebouwen niveau 2) vereist.
+      tags: [projecten]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectBulkToewijzingBody'
+      responses:
+        '200':
+          description: Resultaat van de bulk-toewijzing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectBulkToewijzingResponse'
+        '422':
+          description: Ongeldige invoer of een kandidaat ongeldig
+
   /projecten/{id}:
     get:
       operationId: getProject
@@ -19004,7 +19065,7 @@ paths:
           description: Niet gevonden
     patch:
       operationId: updateProject
-      summary: Project bijwerken
+      summary: Project bijwerken (inclusief optionele projectleider-wijziging)
       tags: [projecten]
       parameters:
         - in: path
@@ -19027,6 +19088,8 @@ paths:
                 $ref: '#/components/schemas/Project'
         '404':
           description: Niet gevonden
+        '422':
+          description: Ongeldige projectleider-kandidaat
     delete:
       operationId: deleteProject
       summary: Project verwijderen
@@ -19040,6 +19103,29 @@ paths:
       responses:
         '204':
           description: Verwijderd
+
+  /projecten/{id}/projectleider-geschiedenis:
+    get:
+      operationId: getProjectleiderGeschiedenis
+      summary: Auditlog van projectleider-toewijzingen voor een project
+      tags: [projecten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectleiderGeschiedenisRegel'
+        '404':
+          description: Niet gevonden
 
   /opname:
     get:
@@ -34129,6 +34215,11 @@ components:
           type: ["string", "null"]
         galerij_upload_toegestaan:
           type: boolean
+        project_id:
+          type: ["integer", "null"]
+          description: >
+            Alleen aanwezig in de createGebouw-response: id van het automatisch
+            aangemaakte concept-project.
 
     GebouwDetail:
       type: object
@@ -34647,6 +34738,12 @@ components:
           type: string
         galerij_upload_toegestaan:
           type: boolean
+        projectleider_medewerker_id:
+          type: integer
+          description: >
+            Verplicht bij handmatige projectdossieraanmaak (POST /gebouwen).
+            Medewerker-id van de toe te wijzen projectleider; moet een actieve
+            medewerker zijn met een actieve functie genaamd 'Projectleider'.
 
     GebouwPublicatieStatus:
       type: object
@@ -47051,6 +47148,16 @@ components:
         bijgewerkt_op:
           type: string
           format: date-time
+        projectleider_medewerker_id:
+          type: integer
+          nullable: true
+        projectleider_naam:
+          type: string
+          nullable: true
+        project_id:
+          type: integer
+          nullable: true
+          description: Alleen aanwezig in de createGebouw-response om het aangemaakte project-id terug te geven.
 
     ProjectInput:
       type: object
@@ -47112,6 +47219,109 @@ components:
         eind_datum:
           type: string
           nullable: true
+        projectleider_medewerker_id:
+          type: integer
+          nullable: true
+          description: >
+            Wijzig de projectleider via de centrale toewijzingsservice.
+            Medewerker-id moet een geldige actieve projectleider-kandidaat zijn.
+
+    ProjectleiderKandidaat:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        gebruiker_id:
+          type: integer
+          nullable: true
+
+    ProjectleiderGeschiedenisRegel:
+      type: object
+      required: [id, project_id, tijdstip]
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        oude_medewerker_id:
+          type: integer
+          nullable: true
+        oude_medewerker_naam:
+          type: string
+          nullable: true
+        nieuwe_medewerker_id:
+          type: integer
+          nullable: true
+        nieuwe_medewerker_naam:
+          type: string
+          nullable: true
+        actor_gebruiker_id:
+          type: integer
+          nullable: true
+        actor_naam:
+          type: string
+          nullable: true
+        reden:
+          type: string
+          nullable: true
+        tijdstip:
+          type: string
+          format: date-time
+
+    ProjectBulkToewijzingItem:
+      type: object
+      required: [project_id, projectleider_medewerker_id]
+      properties:
+        project_id:
+          type: integer
+        projectleider_medewerker_id:
+          type: integer
+
+    ProjectBulkToewijzingBody:
+      type: object
+      required: [toewijzingen]
+      properties:
+        toewijzingen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectBulkToewijzingItem'
+        reden:
+          type: string
+          nullable: true
+
+    ProjectBulkToewijzingResponse:
+      type: object
+      required: [geslaagd, mislukt, resterend_zonder_projectleider]
+      properties:
+        geslaagd:
+          type: integer
+        mislukt:
+          type: integer
+        resterend_zonder_projectleider:
+          type: integer
+
+    ProjectBeheerBacklogItem:
+      type: object
+      required: [id, naam, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        status:
+          type: string
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
 
     OpnameSamenvatting:
       type: object
