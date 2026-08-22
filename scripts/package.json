@@ -48,6 +48,7 @@
     "smoketest-wizard-endpoints": "tsx ./src/smoketest-wizard-endpoints.ts",
     "bewijs-calc-kern-offerte": "tsx src/bewijs-calc-kern-offerte.ts",
     "herbeoordeel-acceptatieregister": "tsx ./src/herbeoordeel-acceptatieregister.ts",
+    "export-acceptatieregister": "tsx ./src/export-acceptatieregister.ts",
     "controle-acceptatieregister-hergrading": "tsx ./src/controle-acceptatieregister-hergrading.ts",
     "verificatie-register01": "tsx ./src/verificatie-register01.ts",
     "verificatie-snagstream-archief": "tsx ./src/verificatie-snagstream-archief.ts",
