@@ -34695,7 +34695,7 @@ components:
 
     GebouwInput:
       type: object
-      required: [naam, adres, stad, postcode, omschrijving]
+      required: [naam, adres, stad, postcode, omschrijving, projectleider_medewerker_id]
       properties:
         werknummer:
           type: string
@@ -47221,10 +47221,10 @@ components:
           nullable: true
         projectleider_medewerker_id:
           type: integer
-          nullable: true
           description: >
             Wijzig de projectleider via de centrale toewijzingsservice.
             Medewerker-id moet een geldige actieve projectleider-kandidaat zijn.
+            Leegmaken met null is niet toegestaan.
 
     ProjectleiderKandidaat:
       type: object
@@ -47286,6 +47286,8 @@ components:
       properties:
         toewijzingen:
           type: array
+          minItems: 1
+          maxItems: 100
           items:
             $ref: '#/components/schemas/ProjectBulkToewijzingItem'
         reden:
@@ -47294,11 +47296,13 @@ components:
 
     ProjectBulkToewijzingResponse:
       type: object
-      required: [geslaagd, mislukt, resterend_zonder_projectleider]
+      required: [verwerkt, gewijzigd, ongewijzigd, resterend_zonder_projectleider]
       properties:
-        geslaagd:
+        verwerkt:
           type: integer
-        mislukt:
+        gewijzigd:
+          type: integer
+        ongewijzigd:
           type: integer
         resterend_zonder_projectleider:
           type: integer

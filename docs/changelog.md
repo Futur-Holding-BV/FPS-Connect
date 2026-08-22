@@ -1,3 +1,14 @@
+## 2026-08-22 — Projectleider verplicht en auditbaar bij projectaanmaak
+
+- Handmatige projectaanmaak vereist voortaan een gekozen actieve medewerker met een actief dienstverband en de exact actieve functie **Projectleider**, als hoofdfunctie of aanstelling. Een gebruikersaccount is voor deze kandidaatselectie niet vereist.
+- Automatische projectaanmaak wijst alleen automatisch toe wanneer precies één geldige kandidaat bestaat. Bij nul of meerdere kandidaten blijft de projectleider bewust leeg en ontstaat gededupliceerd één herstelitem in de Werkbak.
+- Eén centrale projectservice beheert aanmaak, enkele toewijzing en atomaire bulktoewijzing. Kandidaatcontrole, projectmutatie, append-only audit en Werkbakafhandeling vallen binnen dezelfde transactie; enkele wijzigingen vergrendelen de projectrij en bulkverwerking gebruikt een stabiele volgorde en een maximum van honderd projecten.
+- Historische audit-ID's blijven onveranderlijk en referentieloos bewaard. De actuele projectleiderkoppeling blokkeert het verwijderen van een nog toegewezen medewerker met een duidelijke `409`, in plaats van de toewijzing stil te wissen.
+- De aanmaakdialoog en kandidatenlijst volgen beide `gebouwen:3`, tonen alleen geldige projectleiders en blokkeren zichtbaar als die ontbreken. Beheerders met `gebouwen:2` krijgen daarnaast een achterstandskaart om projecten zonder projectleider expliciet en atomair toe te wijzen.
+- Kandidaatresolutie en alle mutaties op medewerkers, functies en aanstellingen delen één transactionele databasevergrendeling. Daardoor kunnen ook gelijktijdige activaties, functiewijzigingen en nieuwe kandidaten niet tussen controle en project- of bulkcommit verschijnen.
+- Het projectdashboard leest uitsluitend de actuele projectleiderkoppeling op het project, toont de gekozen medewerker bij het team en leidt de gezondheidsmelding niet meer af uit oude gebouwtoewijzingen.
+- Verificatie: volledige monorepo-typecheck, API- en Firevault-productiebundels, migratiebewakers, 19 projectleider-unitproeven, 8 echte PostgreSQL-integratieproeven, de volledige suite met 73 testbestanden/1.249 geslaagde tests/2 bestaande skips en de gerichte browserflow met `201`, exacte DB-koppeling, zichtbare naam, dossiernavigatie, lijstterugkeer en fixtureopruiming zijn groen. Onafhankelijke eindreview: **PASS**.
+
 ## 2026-08-22 — Integratieproeven krijgen een productiegelijke wegwerpdatabase
 
 - De taak **Typecheck & build** start in CI een tijdelijke PostgreSQL 16-container, gelijk aan de productiestack, en wacht expliciet tot die verbindingen accepteert.

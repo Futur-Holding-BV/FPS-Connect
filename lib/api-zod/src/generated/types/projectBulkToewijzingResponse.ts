@@ -7,7 +7,8 @@
  */
 
 export interface ProjectBulkToewijzingResponse {
-  geslaagd: number;
-  mislukt: number;
+  verwerkt: number;
+  gewijzigd: number;
+  ongewijzigd: number;
   resterend_zonder_projectleider: number;
 }

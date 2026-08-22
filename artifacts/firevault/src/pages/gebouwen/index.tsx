@@ -32,10 +32,9 @@ import { useAuth } from "@/context/auth-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
+import { ProjectleiderBacklogKaart } from "./projectleider-backlog-kaart";
 import { OfferteAanvraagWizard } from "@/components/offerte-aanvraag-wizard";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-
-const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
 const PROJECT_STATUS_LABELS: Record<string, string> = {
   offerte_aanvraag: "Offerte-aanvraag",
@@ -350,6 +349,8 @@ export default function Gebouwen() {
   // Zelfde beleidsbron als POST /inbox/offerte-aanvraag: crm-schrijfrecht (niveau 2).
   const { heeftNiveau } = useBevoegdheid();
   const magAanvraagVerwerken = heeftNiveau("crm", 2);
+  const magProjectleidersBeheren = heeftNiveau("gebouwen", 2);
+  const magGebouwAanmaken = heeftNiveau("gebouwen", 3);
   const [partijType, setPartijType] = useVoorkeur<string>("gebouwen_partij_type", ALLE);
   const [partijNaam, setPartijNaam] = useVoorkeur<string>("gebouwen_partij_naam", ALLE);
   const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");
@@ -381,8 +382,6 @@ export default function Gebouwen() {
     ...(partijNaam !== ALLE ? { partij_naam: partijNaam } : {}),
     ...(inclusiefGearchiveerd ? { inclusief_gearchiveerd: true } : {}),
   });
-  const isBeheerder =
-    !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
   const isHoofdBeheerder = gebruiker?.rol === "hoofdbeheerder";
 
   const filterActief = partijType !== ALLE || partijNaam !== ALLE || filterStatus !== ALLE || filterWerkmaatschappij !== ALLE;
@@ -436,11 +435,12 @@ export default function Gebouwen() {
               <Mail className="h-4 w-4" /> Nieuwe aanvraag (e-mail)
             </Button>
           )}
-          {isBeheerder && <GebouwAanmakenDialog />}
+          {magGebouwAanmaken && <GebouwAanmakenDialog />}
         </div>
       </div>
 
       <OfferteAanvraagWizard open={aanvraagOpen} onOpenChange={setAanvraagOpen} />
+      {magProjectleidersBeheren && <ProjectleiderBacklogKaart />}
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <Select

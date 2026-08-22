@@ -17,6 +17,7 @@ const {
   selectQueue,
   insertQueue,
   mockDb,
+  maakProjectMock,
   magMailSturenMock,
   stuurKlantvraagNotificatieMock,
   stuurKlantvraagBevestigingMock,
@@ -85,6 +86,11 @@ const {
     },
   };
 
+  const maakProjectMock = vi.fn().mockResolvedValue({
+    projectId: 7,
+    projectleiderMedewerkerId: null,
+    werkbakItemAangemaakt: true,
+  });
   const magMailSturenMock             = vi.fn<(..._a: unknown[]) => Promise<boolean>>();
   const stuurKlantvraagNotificatieMock  = vi.fn<(..._a: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
   const stuurKlantvraagBevestigingMock  = vi.fn<(..._a: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
@@ -97,6 +103,7 @@ const {
     selectQueue,
     insertQueue,
     mockDb,
+    maakProjectMock,
     magMailSturenMock,
     stuurKlantvraagNotificatieMock,
     stuurKlantvraagBevestigingMock,
@@ -145,6 +152,10 @@ vi.mock("../services/email", () => ({
   stuurOpdrachtbevestiging:     (...a: unknown[]) => stuurOpdrachtbevestigingMock(...a),
   stuurAfwijzingNotificatie:    (...a: unknown[]) => stuurAfwijzingNotificatieMock(...a),
   stuurAfwijzingBevestiging:    (...a: unknown[]) => stuurAfwijzingBevestigingMock(...a),
+}));
+
+vi.mock("../services/projectService", () => ({
+  maakProject: (...a: unknown[]) => maakProjectMock(...a),
 }));
 
 vi.mock("../lib/mailVoorkeuren", () => ({
@@ -331,8 +342,6 @@ describe("POST /portaal/:token/ondertekenen — e-mailvoorkeur notificatie", () 
       [beheerder],                                 // IIFE: beheerder
       [{ opdrachtbevestigingAutoVerzenden: false }], // IIFE: appInstellingen (optioneel)
     );
-    insertQueue.push([{ id: 7 }]); // project insert in tx
-
     magMailSturenMock.mockResolvedValue(false);
 
     const res = await fetch(`${baseUrl}/portaal/${TEST_TOKEN}/ondertekenen`, {
@@ -360,8 +369,6 @@ describe("POST /portaal/:token/ondertekenen — e-mailvoorkeur notificatie", () 
       [beheerder],
       [{ opdrachtbevestigingAutoVerzenden: false }],
     );
-    insertQueue.push([{ id: 8 }]);
-
     magMailSturenMock.mockResolvedValue(true);
 
     const res = await fetch(`${baseUrl}/portaal/${TEST_TOKEN}/ondertekenen`, {

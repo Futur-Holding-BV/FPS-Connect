@@ -19,7 +19,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
-import { crmKlantenTable, db, gebouwenTable } from "@workspace/db";
+import {
+  crmKlantenTable,
+  db,
+  functiesTable,
+  gebouwenTable,
+  medewerkersTable,
+  projectenTable,
+} from "@workspace/db";
 import { programmatischInloggen } from "./web-api-proxy";
 
 import {
@@ -37,6 +44,9 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 const GEBOUW_NAAM = `E2E Testgebouw ${Date.now()}`;
 const GEBOUW_ADRES = "Teststraat 1";
 const OPDRACHTGEVER_NAAM = `E2E Opdrachtgever ${Date.now()}`;
+const PROJECTLEIDER_NAAM = `E2E Projectleider ${Date.now()}`;
+let projectleiderMedewerkerId: number | null = null;
+let projectleiderFunctieId: number | null = null;
 
 // ── Login ────────────────────────────────────────────────────────────────────
 async function logIn(page: Page): Promise<void> {
@@ -52,6 +62,26 @@ async function logIn(page: Page): Promise<void> {
 // ── Setup & opruiming ─────────────────────────────────────────────────────────
 test.beforeAll(async () => {
   await setupE2eWebAdminAccount();
+  const [functie] = await db
+    .insert(functiesTable)
+    .values({
+      naam: "Projectleider",
+      werkmaatschappij: "FPS Brandpreventie",
+      actief: true,
+    })
+    .returning({ id: functiesTable.id });
+  projectleiderFunctieId = functie!.id;
+  const [medewerker] = await db
+    .insert(medewerkersTable)
+    .values({
+      naam: PROJECTLEIDER_NAAM,
+      email: `e2e-projectleider-${Date.now()}@example.invalid`,
+      functieId: projectleiderFunctieId,
+      werkmaatschappij: "FPS Brandpreventie",
+      actief: true,
+    })
+    .returning({ id: medewerkersTable.id });
+  projectleiderMedewerkerId = medewerker!.id;
 });
 
 // Id van het aangemaakte testgebouw; wordt in afterEach opgeruimd zodat de
@@ -59,11 +89,20 @@ test.beforeAll(async () => {
 let aangemaaktGebouwId: number | null = null;
 
 test.afterEach(async () => {
-  if (aangemaaktGebouwId == null) return;
   try {
+    const gebouwen = await db
+      .select({ id: gebouwenTable.id })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.naam, GEBOUW_NAAM));
+    const gebouwIds = gebouwen.map((gebouw) => gebouw.id);
+    for (const gebouwId of gebouwIds) {
+      await db
+        .delete(projectenTable)
+        .where(eq(projectenTable.gebouwId, gebouwId));
+    }
     await db
       .delete(gebouwenTable)
-      .where(eq(gebouwenTable.id, aangemaaktGebouwId));
+      .where(eq(gebouwenTable.naam, GEBOUW_NAAM));
   } catch (err) {
     // Niet fataal voor de test zelf, maar wel zichtbaar in de output.
     console.warn(
@@ -76,6 +115,19 @@ test.afterEach(async () => {
     .where(eq(crmKlantenTable.naam, OPDRACHTGEVER_NAAM));
 });
 
+test.afterAll(async () => {
+  if (projectleiderMedewerkerId !== null) {
+    await db
+      .delete(medewerkersTable)
+      .where(eq(medewerkersTable.id, projectleiderMedewerkerId));
+  }
+  if (projectleiderFunctieId !== null) {
+    await db
+      .delete(functiesTable)
+      .where(eq(functiesTable.id, projectleiderFunctieId));
+  }
+});
+
 // ── Spec ──────────────────────────────────────────────────────────────────────
 test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst", async ({
   page,
@@ -83,11 +135,16 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
   // ── Stap 1: Inloggen ───────────────────────────────────────────────────────
   await test.step("login met verplichte TOTP", async () => {
     await logIn(page);
+    const resetPaneelindeling = await page.request.delete(
+      "/api/mijn/voorkeuren/paneel.indeling",
+    );
+    expect(resetPaneelindeling.status()).toBe(204);
   });
 
   // ── Stap 2: Dialoog openen ────────────────────────────────────────────────
   await test.step("gebouwenlijst: dialoog 'Nieuw gebouw' openen", async () => {
     await page.goto("/gebouwen");
+    await expect(page).toHaveURL(/\/gebouwen(?:[?#]|$)/);
     await expect(page.getByPlaceholder(/Zoek op gebouw/i)).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -107,6 +164,8 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
     await page.locator("#g-klant-postcode").fill("1234 AB");
     await page.locator("#g-klant-stad").fill("Testdam");
     await page.locator("#g-naam").fill(GEBOUW_NAAM);
+    await page.getByTestId("select-project-projectleider").click();
+    await page.getByRole("option", { name: PROJECTLEIDER_NAAM, exact: true }).click();
     await page.locator("#g-omschrijving").fill("Brandwerende voorzieningen controleren");
     await page.locator("#g-adres").fill(GEBOUW_ADRES);
     await page.locator("#g-postcode").fill("5678 CD");
@@ -122,6 +181,15 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
     const match = page.url().match(/\/gebouwen\/(\d+)/);
     expect(match).not.toBeNull();
     aangemaaktGebouwId = Number(match![1]);
+    const [aangemaaktProject] = await db
+      .select({
+        projectleiderMedewerkerId: projectenTable.projectleiderMedewerkerId,
+      })
+      .from(projectenTable)
+      .where(eq(projectenTable.gebouwId, aangemaaktGebouwId));
+    expect(aangemaaktProject?.projectleiderMedewerkerId).toBe(
+      projectleiderMedewerkerId,
+    );
 
     // De dialoog is gesloten na het opslaan.
     await expect(
@@ -134,11 +202,18 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
     const projectkop = page.getByTestId("projectkop");
     const paginatitel = projectkop.locator("[data-paginatitel]");
     const hoofdTabs = page.getByTestId("project-hoofdtabs");
-    const projectflow = page.getByTestId("projectflow");
+    const projectflow = page.getByTestId("proces-balk").first();
 
     await expect(projectkop).toBeVisible({ timeout: INHOUD_TIMEOUT });
     await expect(paginatitel).toContainText(GEBOUW_NAAM);
     await expect(page.locator("[data-paginatitel]")).toHaveCount(1);
+    await expect(page.getByTestId("projectleider-actueel")).toContainText(
+      PROJECTLEIDER_NAAM,
+      { timeout: INHOUD_TIMEOUT },
+    );
+    await expect(
+      page.getByText("Geen projectleider toegewezen", { exact: true }),
+    ).toHaveCount(0);
 
     await expect(hoofdTabs.getByRole("tab")).toHaveCount(5);
     for (const tab of ["Dashboard", "Gebouw", "Uitvoering", "Beheer", "Documenten"]) {
@@ -159,16 +234,15 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
     }
 
     await expect(projectflow).toBeVisible();
-    const maten = await projectflow.evaluate((element) => {
+    const hoogte = await projectflow.evaluate((element) => {
       const rect = element.getBoundingClientRect();
-      return { top: rect.top, height: rect.height };
+      return rect.height;
     });
-    expect(maten.top).toBeLessThanOrEqual(200);
-    expect(maten.height).toBeLessThanOrEqual(48);
-
-    const eersteFase = projectflow.getByRole("button").first();
-    await eersteFase.hover();
-    await expect(page.getByRole("tooltip")).toContainText(/betekent/i);
+    expect(hoogte).toBeLessThanOrEqual(48);
+    await expect(projectflow).toHaveAttribute("aria-label", "Processtatus");
+    await expect(projectflow.locator('[aria-current="step"]')).toContainText(
+      "Concept",
+    );
   });
 
   await test.step("oude projectbestemmingen blijven binnen twee klikken bereikbaar", async () => {
@@ -197,33 +271,6 @@ test("Web: nieuw gebouw opent direct de detailpagina en verschijnt in de lijst",
     await expect(page.getByTestId("project-segment-calculaties")).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
-  });
-
-  await test.step("stappenplan toont alleen stapgebonden ontbrekende gegevens en navigeert", async () => {
-    await page.getByRole("tab", { name: "Dashboard", exact: true }).click();
-    await page.getByRole("tab", { name: "Gebouw", exact: true }).click();
-    const stappenplanKnop = page.getByRole("button", { name: "Stappenplan" }).first();
-    await expect(stappenplanKnop).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await stappenplanKnop.click();
-    const dialoog = page.getByRole("dialog").filter({ hasText: `Stappenplan — ${GEBOUW_NAAM}` });
-    await expect(dialoog).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await expect(dialoog.getByText("Project/gebouw aanmaken")).toBeVisible();
-    await expect(dialoog.getByText("Gebouw-/projectadres controleren")).toBeVisible();
-    await expect(dialoog.getByText("Opdrachtgever controleren")).toBeVisible();
-    await expect(dialoog.getByText(/Nog niet administratief gereed/i)).toHaveCount(0);
-
-    const bouwlagenStap = dialoog
-      .getByText("Vul in deze stap aan: minimaal één bouwlaag.", { exact: true })
-      .locator("..");
-    await bouwlagenStap.getByRole("button", { name: "Naar deze stap" }).click();
-    await expect(page.getByRole("tab", { name: /Uitvoering/i }).first()).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(page.getByText("Uitvoeringsstap — nog nodig", { exact: true })).toBeVisible();
-    await expect(
-      page.getByText("Mogelijk onvoldoende informatie voor de monteur", { exact: true }),
-    ).toHaveCount(0);
   });
 
   // ── Stap 5: Terug naar de lijst — gebouw verschijnt ───────────────────────

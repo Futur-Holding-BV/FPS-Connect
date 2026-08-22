@@ -4,7 +4,6 @@ import {
   db,
   projectenTable,
   projectleiderGeschiedenisTable,
-  werkbakItemsTable,
   crmKlantenTable,
   gebouwenTable,
   gebruikersTable,
@@ -15,6 +14,7 @@ import { requireAuth, requireBevoegdheid, requireEnigeBevoegdheid } from "../mid
 import { haalProjectleiderKandidaten } from "../lib/projectleiderKandidaten.js";
 import {
   wijzigProjectleider,
+  wijzigProjectleidersBulk,
   ProjectService422Error,
   ProjectServiceNietGevonden,
 } from "../services/projectService.js";
@@ -115,8 +115,7 @@ router.get("/projecten", requireAuth, requireEnigeBevoegdheid([["gebouwen", 1], 
 
 router.get(
   "/projecten/projectleider-kandidaten",
-  requireAuth,
-  requireEnigeBevoegdheid([["gebouwen", 1]]),
+  requireBevoegdheid("gebouwen", 3),
   async (_req, res): Promise<void> => {
     const kandidaten = await haalProjectleiderKandidaten();
     res.json(kandidaten.map((k) => ({
@@ -164,8 +163,17 @@ const BulkToewijzingBody = z.object({
       project_id:               z.number().int().positive(),
       projectleider_medewerker_id: z.number().int().positive(),
     }),
-  ).min(1),
+  ).min(1).max(100),
   reden: z.string().nullable().optional(),
+}).superRefine((body, ctx) => {
+  const projectIds = body.toewijzingen.map((toewijzing) => toewijzing.project_id);
+  if (new Set(projectIds).size !== projectIds.length) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["toewijzingen"],
+      message: "Een project mag maar één keer in dezelfde bulktoewijzing voorkomen.",
+    });
+  }
 });
 
 router.post(
@@ -184,70 +192,24 @@ router.post(
     const { toewijzingen, reden } = parsed.data;
     const actorGebruikerId = (req.session as { userId?: number }).userId ?? null;
 
-    let geslaagd = 0;
-    let mislukt  = 0;
-
-    // Atomisch: alles in één transactie. Bij één fout rolt alles terug.
     try {
-      await db.transaction(async (tx) => {
-        for (const rij of toewijzingen) {
-          // Gebruik de centrale service, maar meegeven van tx is niet direct
-          // mogelijk via wijzigProjectleider (die start zijn eigen tx).
-          // Doe hier de operaties direct in de al-bestaande tx.
-          const [huidig] = await tx
-            .select({
-              id: projectenTable.id,
-              projectleiderMedewerkerId: projectenTable.projectleiderMedewerkerId,
-            })
-            .from(projectenTable)
-            .where(eq(projectenTable.id, rij.project_id));
+      const resultaat = await wijzigProjectleidersBulk(
+        toewijzingen.map((toewijzing) => ({
+          projectId: toewijzing.project_id,
+          projectleiderMedewerkerId: toewijzing.projectleider_medewerker_id,
+        })),
+        actorGebruikerId,
+        reden,
+      );
 
-          if (!huidig) {
-            throw new ProjectServiceNietGevonden(`Project ${rij.project_id} niet gevonden.`);
-          }
+      const [telling] = await db
+        .select({ totaal: count() })
+        .from(projectenTable)
+        .where(isNull(projectenTable.projectleiderMedewerkerId));
 
-          // Valideer kandidaat inline
-          const kandidaten = await haalProjectleiderKandidaten(tx as Parameters<typeof haalProjectleiderKandidaten>[0]);
-          const kandidaat = kandidaten.find((k) => k.id === rij.projectleider_medewerker_id);
-          if (!kandidaat) {
-            throw new ProjectService422Error(
-              `Medewerker ${rij.projectleider_medewerker_id} is geen geldige projectleider-kandidaat voor project ${rij.project_id}.`,
-            );
-          }
-
-          const oud = huidig.projectleiderMedewerkerId;
-          if (oud === rij.projectleider_medewerker_id) {
-            // Idempotent: zelfde toewijzing, geen duplicaat
-            geslaagd++;
-            continue;
-          }
-
-          await tx
-            .update(projectenTable)
-            .set({ projectleiderMedewerkerId: rij.projectleider_medewerker_id, bijgewerktOp: new Date() })
-            .where(eq(projectenTable.id, rij.project_id));
-
-          await tx.insert(projectleiderGeschiedenisTable).values({
-            projectId:           rij.project_id,
-            oudeMedewerkerId:    oud,
-            nieuweMedewerkerId:  rij.projectleider_medewerker_id,
-            actorGebruikerId,
-            reden:               reden ?? null,
-          });
-
-          // Sluit eventueel open werkbak-item
-          await tx
-            .update(werkbakItemsTable)
-            .set({ status: "afgehandeld", afgehandeldOp: new Date(), bijgewerktOp: new Date() })
-            .where(
-              and(
-                eq(werkbakItemsTable.dedupSleutel, `projectleider-ontbreekt:${rij.project_id}`),
-                eq(werkbakItemsTable.status, "open"),
-              ),
-            );
-
-          geslaagd++;
-        }
+      res.json({
+        ...resultaat,
+        resterend_zonder_projectleider: Number(telling?.totaal ?? 0),
       });
     } catch (err) {
       if (err instanceof ProjectService422Error) {
@@ -260,18 +222,6 @@ router.post(
       }
       throw err;
     }
-
-    // Tel resterend zonder projectleider
-    const [telling] = await db
-      .select({ totaal: count() })
-      .from(projectenTable)
-      .where(isNull(projectenTable.projectleiderMedewerkerId));
-
-    res.json({
-      geslaagd,
-      mislukt,
-      resterend_zonder_projectleider: Number(telling?.totaal ?? 0),
-    });
   },
 );
 
@@ -296,7 +246,7 @@ const PatchProjectBody = z.object({
   gebouw_id:        z.number().int().nullable().optional(),
   start_datum:      z.string().nullable().optional(),
   eind_datum:       z.string().nullable().optional(),
-  projectleider_medewerker_id: z.number().int().positive().nullable().optional(),
+  projectleider_medewerker_id: z.number().int().positive().optional(),
 });
 
 router.patch("/projecten/:id", requireAuth, requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
@@ -314,7 +264,7 @@ router.patch("/projecten/:id", requireAuth, requireBevoegdheid("gebouwen", 2), a
 
   try {
     // Behandel projectleider-wijziging apart via centrale service
-    if (body.projectleider_medewerker_id !== undefined && body.projectleider_medewerker_id !== null) {
+    if (body.projectleider_medewerker_id !== undefined) {
       await wijzigProjectleider(id, body.projectleider_medewerker_id, actorGebruikerId);
     }
 

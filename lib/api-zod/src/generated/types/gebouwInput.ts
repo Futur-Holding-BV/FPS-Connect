@@ -30,5 +30,5 @@ export interface GebouwInput {
   project_status?: string;
   galerij_upload_toegestaan?: boolean;
   /** Verplicht bij handmatige projectdossieraanmaak (POST /gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd 'Projectleider'. */
-  projectleider_medewerker_id?: number;
+  projectleider_medewerker_id: number;
 }

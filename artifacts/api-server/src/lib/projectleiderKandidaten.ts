@@ -13,7 +13,7 @@
 // kandidaatquery binnen hun eigen transactie kunnen draaien.
 
 import { db, medewerkersTable, medewerkerAanstellingenTable, functiesTable } from "@workspace/db";
-import { eq, inArray, and, isNotNull, isNull, or } from "drizzle-orm";
+import { eq, inArray, and, isNotNull } from "drizzle-orm";
 import { medewerkerActiefOp } from "./functieNamen";
 
 export type ProjectleiderKandidaat = {
@@ -26,6 +26,11 @@ export type DbLeezer = Pick<typeof db, "select">;
 
 const FUNCTIENAAM = "Projectleider";
 
+export type ProjectleiderKandidaatOpties = {
+  vergrendel?: boolean;
+  medewerkerIds?: readonly number[];
+};
+
 function alsIsoDatum(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -37,11 +42,19 @@ function alsIsoDatum(d: Date): string {
 export async function haalProjectleiderKandidaten(
   uitvoerder: DbLeezer = db,
   peildatum: Date = new Date(),
+  opties: ProjectleiderKandidaatOpties = {},
 ): Promise<ProjectleiderKandidaat[]> {
   const peil = alsIsoDatum(peildatum);
 
   // Stap 1: alle actieve medewerkers (actief = true)
-  const medewerkers = await uitvoerder
+  if (opties.medewerkerIds?.length === 0) return [];
+  const medewerkerFilter = opties.medewerkerIds
+    ? and(
+        eq(medewerkersTable.actief, true),
+        inArray(medewerkersTable.id, [...opties.medewerkerIds]),
+      )
+    : eq(medewerkersTable.actief, true);
+  const medewerkersQuery = uitvoerder
     .select({
       id: medewerkersTable.id,
       naam: medewerkersTable.naam,
@@ -51,7 +64,10 @@ export async function haalProjectleiderKandidaten(
       uitDienstPer: medewerkersTable.uitDienstPer,
     })
     .from(medewerkersTable)
-    .where(eq(medewerkersTable.actief, true));
+    .where(medewerkerFilter);
+  const medewerkers = await (opties.vergrendel
+    ? medewerkersQuery.for("update")
+    : medewerkersQuery);
 
   // Filter op dienstverbanddatums
   const actiefVandaag = medewerkers.filter((m) =>
@@ -67,7 +83,7 @@ export async function haalProjectleiderKandidaten(
   );
 
   // Aanstellingen ophalen
-  const aanstellingen = await uitvoerder
+  const aanstellingenQuery = uitvoerder
     .select({
       medewerkerId: medewerkerAanstellingenTable.medewerkerId,
       functieId: medewerkerAanstellingenTable.functieId,
@@ -79,6 +95,9 @@ export async function haalProjectleiderKandidaten(
         isNotNull(medewerkerAanstellingenTable.functieId),
       ),
     );
+  const aanstellingen = await (opties.vergrendel
+    ? aanstellingenQuery.for("update")
+    : aanstellingenQuery);
 
   // Bouw een map: medewerkerId → set van functie-id's (hoofd + aanstellingen)
   const functiesPerMedewerker = new Map<number, Set<number>>();
@@ -101,19 +120,27 @@ export async function haalProjectleiderKandidaten(
 
   if (alleFunctieIds.size === 0) return [];
 
-  // Stap 3: welke van deze functies heten exact "Projectleider" en zijn actief?
-  const trefferFuncties = await uitvoerder
-    .select({ id: functiesTable.id })
+  // Stap 3: vergrendel eerst álle betrokken functies en bepaal daarna welke
+  // exact actief "Projectleider" heten. Daardoor kan een functie niet tussen
+  // kandidaatcontrole en projectcommit worden geactiveerd, gedeactiveerd of
+  // hernoemd.
+  const functiesQuery = uitvoerder
+    .select({
+      id: functiesTable.id,
+      naam: functiesTable.naam,
+      actief: functiesTable.actief,
+    })
     .from(functiesTable)
-    .where(
-      and(
-        inArray(functiesTable.id, [...alleFunctieIds]),
-        eq(functiesTable.naam, FUNCTIENAAM),
-        eq(functiesTable.actief, true),
-      ),
-    );
+    .where(inArray(functiesTable.id, [...alleFunctieIds]));
+  const functies = await (opties.vergrendel
+    ? functiesQuery.for("update")
+    : functiesQuery);
 
-  const trefferIds = new Set(trefferFuncties.map((f) => f.id));
+  const trefferIds = new Set(
+    functies
+      .filter((functie) => functie.naam === FUNCTIENAAM && functie.actief)
+      .map((functie) => functie.id),
+  );
   if (trefferIds.size === 0) return [];
 
   // Stap 4: filter medewerkers waarvan minstens één functie-id in trefferIds zit
@@ -139,7 +166,11 @@ export async function valideerProjectleiderKandidaat(
   medewerkerId: number,
   uitvoerder: DbLeezer = db,
   peildatum: Date = new Date(),
+  opties: Omit<ProjectleiderKandidaatOpties, "medewerkerIds"> = {},
 ): Promise<ProjectleiderKandidaat | null> {
-  const kandidaten = await haalProjectleiderKandidaten(uitvoerder, peildatum);
+  const kandidaten = await haalProjectleiderKandidaten(uitvoerder, peildatum, {
+    ...opties,
+    medewerkerIds: [medewerkerId],
+  });
   return kandidaten.find((k) => k.id === medewerkerId) ?? null;
 }

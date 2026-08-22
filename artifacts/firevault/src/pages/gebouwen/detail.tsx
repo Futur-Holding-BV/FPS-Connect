@@ -24,6 +24,7 @@ import {
   useListPlanningItems,
   useListPlanningMeerwerk,
   useListInboxItems,
+  useListProjecten,
   getListInboxItemsQueryKey,
   getListOfferteUitgangspuntenQueryOptions,
   useGetGebouwProcessStatus,
@@ -438,6 +439,21 @@ export default function GebouwDetail() {
   const { data: kaartData } = useGetGebouwKaart(gebouwId);
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
     useListGebouwToewijzingen(gebouwId);
+  const { data: gebouwProjecten = [], isLoading: projectenLaden } = useListProjecten(
+    { gebouw_id: gebouwId },
+    {
+      query: {
+        enabled: Number.isFinite(gebouwId) && gebouwId > 0,
+        queryKey: ["projecten", "gebouw", gebouwId],
+      },
+    },
+  );
+  const projectMetProjectleider = gebouwProjecten
+    .filter((project) => project.projectleider_medewerker_id != null)
+    .sort(
+      (a, b) =>
+        b.bijgewerkt_op.localeCompare(a.bijgewerkt_op) || b.id - a.id,
+    )[0];
   const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: openActiepunten } = useListOnderhoud({
     gebouw_id: gebouwId,
@@ -1000,6 +1016,17 @@ export default function GebouwDetail() {
         <GebouwDashboard
           gebouw={gebouw}
           toewijzingen={toewijzingen ?? []}
+          canoniekeProjectleider={
+            projectMetProjectleider?.projectleider_medewerker_id != null
+              ? {
+                  medewerkerId: projectMetProjectleider.projectleider_medewerker_id,
+                  naam:
+                    projectMetProjectleider.projectleider_naam ??
+                    `Medewerker #${projectMetProjectleider.projectleider_medewerker_id}`,
+                }
+              : null
+          }
+          projectleiderLaden={projectenLaden}
           gebouwCalcs={gebouwCalcs}
           gebouwOffertes={gebouwOffertes}
           gebouwOpnames={gebouwOpnames}

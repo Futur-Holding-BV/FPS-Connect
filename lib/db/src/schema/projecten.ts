@@ -20,7 +20,7 @@ export const projectenTable = pgTable("projecten", {
   bijgewerktOp:     timestamp("bijgewerkt_op").notNull().defaultNow(),
   // PROJ_1200: projectleider-toewijzing. Canonical FK naar medewerkers.id.
   // Nullable: geen projectleider (nog) toegewezen.
-  projectleiderMedewerkerId: integer("projectleider_medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
+  projectleiderMedewerkerId: integer("projectleider_medewerker_id").references(() => medewerkersTable.id, { onDelete: "restrict" }),
 });
 
 export type Project       = typeof projectenTable.$inferSelect;
@@ -32,10 +32,12 @@ export const projectleiderGeschiedenisTable = pgTable(
   "projectleider_geschiedenis",
   {
     id:                  serial("id").primaryKey(),
-    projectId:           integer("project_id").notNull().references(() => projectenTable.id, { onDelete: "cascade" }),
-    oudeMedewerkerId:    integer("oude_medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
-    nieuweMedewerkerId:  integer("nieuwe_medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
-    actorGebruikerId:    integer("actor_gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+    // Bewust zonder FK's: een append-only auditrij mag nooit via CASCADE of
+    // SET NULL alsnog worden gewijzigd/verwijderd wanneer een bronrij verdwijnt.
+    projectId:           integer("project_id").notNull(),
+    oudeMedewerkerId:    integer("oude_medewerker_id"),
+    nieuweMedewerkerId:  integer("nieuwe_medewerker_id"),
+    actorGebruikerId:    integer("actor_gebruiker_id"),
     reden:               text("reden"),
     tijdstip:            timestamp("tijdstip").notNull().defaultNow(),
   },

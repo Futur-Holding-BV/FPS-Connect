@@ -16,6 +16,6 @@ export interface ProjectPatchInput {
   gebouw_id?: number | null;
   start_datum?: string | null;
   eind_datum?: string | null;
-  /** Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. */
-  projectleider_medewerker_id?: number | null;
+  /** Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. Leegmaken met null is niet toegestaan. */
+  projectleider_medewerker_id?: number;
 }

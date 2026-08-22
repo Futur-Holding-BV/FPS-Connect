@@ -65,6 +65,8 @@ interface ProjectFinancien {
 interface DashboardProps {
   gebouw: any;
   toewijzingen: any[];
+  canoniekeProjectleider?: { medewerkerId: number; naam: string } | null;
+  projectleiderLaden?: boolean;
   gebouwCalcs: any[];
   gebouwOffertes: any[];
   gebouwOpnames: any[];
@@ -205,6 +207,8 @@ function DossierRegel({
 export function GebouwDashboard({
   gebouw,
   toewijzingen = [],
+  canoniekeProjectleider = null,
+  projectleiderLaden = false,
   gebouwCalcs = [],
   gebouwOffertes = [],
   gebouwOpnames = [],
@@ -218,7 +222,10 @@ export function GebouwDashboard({
   isBeheerder,
   heeftFinancieelInzicht,
 }: DashboardProps) {
-  const projectleider = toewijzingen.find((t) => t.project_rol === "Projectleider");
+  const projectleider = canoniekeProjectleider;
+  const overigeToewijzingen = toewijzingen.filter(
+    (toewijzing) => toewijzing.project_rol !== "Projectleider",
+  );
 
   const geaccepteerdeOfferte = gebouwOffertes.find((o) => o.status === "geaccepteerd");
   const gewonnenCalc = gebouwCalcs.find((c) => c.status === "gewonnen");
@@ -245,7 +252,7 @@ export function GebouwDashboard({
   const aantalSpots = gebouw.stats?.totaal ?? 0;
 
   const gezondheidSignalen: Signaal[] = [];
-  if (!projectleider)
+  if (!projectleiderLaden && !projectleider)
     gezondheidSignalen.push({ tekst: "Geen projectleider toegewezen", ernst: "middel", tab: "project" });
   if (!gebouw.adres)
     gezondheidSignalen.push({ tekst: "Gebouwadres ontbreekt", ernst: "laag", tab: "project" });
@@ -661,14 +668,27 @@ export function GebouwDashboard({
                 Team
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {toewijzingen.length === 0 ? (
+            <CardContent className="space-y-2">
+              {projectleider && (
+                <div
+                  data-testid="projectleider-actueel"
+                  className="flex items-center justify-between gap-2 text-sm"
+                >
+                  <span className="font-medium text-slate-800">{projectleider.naam}</span>
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    Projectleider
+                  </Badge>
+                </div>
+              )}
+              {overigeToewijzingen.length === 0 ? (
+                projectleider ? null : (
                 <p className="text-sm text-muted-foreground">
                   Nog geen teamleden toegewezen.
                 </p>
+                )
               ) : (
                 <ul className="space-y-1.5">
-                  {toewijzingen.slice(0, 6).map((t: any) => (
+                  {overigeToewijzingen.slice(0, 6).map((t: any) => (
                     <li key={t.id ?? t.gebruiker_id} className="flex items-center justify-between text-sm">
                       <span className="text-slate-800">{t.naam}</span>
                       {t.project_rol && (
@@ -678,9 +698,9 @@ export function GebouwDashboard({
                       )}
                     </li>
                   ))}
-                  {toewijzingen.length > 6 && (
+                  {overigeToewijzingen.length > 6 && (
                     <li className="text-xs text-muted-foreground pt-1">
-                      +{toewijzingen.length - 6} meer
+                      +{overigeToewijzingen.length - 6} meer
                     </li>
                   )}
                 </ul>

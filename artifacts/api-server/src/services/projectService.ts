@@ -19,19 +19,33 @@ import {
   projectleiderGeschiedenisTable,
   werkbakItemsTable,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { meldWerkbakItem, handelBronAf, type DbExecutor } from "../lib/werkbakService";
 import {
   haalProjectleiderKandidaten,
   valideerProjectleiderKandidaat,
 } from "../lib/projectleiderKandidaten";
 import type { DbLeezer } from "../lib/projectleiderKandidaten";
-// Drizzle-transactie heeft hetzelfde type als db maar is meer beperkt.
-// We gebruiken een union-achtig type dat zowel de db-instantie als een Drizzle-tx dekt.
-type Tx = Pick<typeof db, "insert" | "update" | "select" | "delete">;
+type ProjectTransactie = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type FullExecutor = Pick<ProjectTransactie, "insert" | "update" | "select" | "delete" | "execute">;
 
-// Hulptype voor een executor die zowel lees- als schrijfoperaties heeft
-type FullExecutor = Tx;
+// Dezelfde transactionele advisory lock wordt via migratie 0139 vóór iedere
+// mutatie op medewerkers, functies en medewerker_aanstellingen genomen. Zo kan
+// ook een nieuwe of opnieuw geactiveerde kandidaat niet als phantom tussen
+// kandidaatresolutie en projectcommit verschijnen.
+const PROJECTLEIDER_SLOT_NAMESPACE = 1200;
+const PROJECTLEIDER_SLOT_SLEUTEL = 1;
+
+async function vergrendelProjectleiderKandidaatset(
+  executor: Pick<ProjectTransactie, "execute">,
+): Promise<void> {
+  await executor.execute(sql`
+    SELECT pg_advisory_xact_lock(
+      ${PROJECTLEIDER_SLOT_NAMESPACE},
+      ${PROJECTLEIDER_SLOT_SLEUTEL}
+    )
+  `);
+}
 
 export type ProjectAanmaakInvoer = {
   naam: string;
@@ -52,6 +66,17 @@ export type MaakProjectResultaat = {
   projectId: number;
   projectleiderMedewerkerId: number | null;
   werkbakItemAangemaakt: boolean;
+};
+
+export type ProjectleiderToewijzing = {
+  projectId: number;
+  projectleiderMedewerkerId: number;
+};
+
+export type BulkToewijzingResultaat = {
+  verwerkt: number;
+  gewijzigd: number;
+  ongewijzigd: number;
 };
 
 /**
@@ -76,29 +101,32 @@ export function projectleiderOntbreektSleutel(projectId: number): string {
  * @param actorGebruikerId Gebruiker die de actie uitvoert (voor audit)
  * @param tx Optionele Drizzle-transactie (als al in een transactie)
  */
-export async function maakProject(
+async function maakProjectInTransactie(
   invoer: ProjectAanmaakInvoer,
   modus: ProjectleiderModus,
   projectleiderMedewerkerId: number | null | undefined,
   actorGebruikerId: number | null | undefined,
-  tx?: FullExecutor,
+  executor: FullExecutor,
 ): Promise<MaakProjectResultaat> {
-  const executor = tx ?? db;
+  if (modus === "handmatig" && !projectleiderMedewerkerId) {
+    throw new ProjectService422Error(
+      "projectleider_medewerker_id is verplicht bij handmatige projectaanmaak.",
+    );
+  }
+
+  await vergrendelProjectleiderKandidaatset(executor);
 
   if (modus === "handmatig") {
-    // Valideer verplichte projectleider
-    if (!projectleiderMedewerkerId) {
-      throw new ProjectService422Error(
-        "projectleider_medewerker_id is verplicht bij handmatige projectaanmaak.",
-      );
-    }
+    const toegewezenId = projectleiderMedewerkerId as number;
     const kandidaat = await valideerProjectleiderKandidaat(
-      projectleiderMedewerkerId,
+      toegewezenId,
       executor as DbLeezer,
+      new Date(),
+      { vergrendel: true },
     );
     if (!kandidaat) {
       throw new ProjectService422Error(
-        `Medewerker ${projectleiderMedewerkerId} is geen geldige projectleider-kandidaat (niet actief of heeft geen actieve functie 'Projectleider').`,
+        `Medewerker ${toegewezenId} is geen geldige projectleider-kandidaat (niet actief of heeft geen actieve functie 'Projectleider').`,
       );
     }
 
@@ -107,7 +135,7 @@ export async function maakProject(
       .values({
         ...invoer,
         status: invoer.status ?? "concept",
-        projectleiderMedewerkerId,
+        projectleiderMedewerkerId: toegewezenId,
       })
       .returning({ id: projectenTable.id });
 
@@ -117,20 +145,24 @@ export async function maakProject(
     await executor.insert(projectleiderGeschiedenisTable).values({
       projectId: project.id,
       oudeMedewerkerId: null,
-      nieuweMedewerkerId: projectleiderMedewerkerId,
+      nieuweMedewerkerId: toegewezenId,
       actorGebruikerId: actorGebruikerId ?? null,
       reden: "initiële toewijzing bij aanmaak (handmatig)",
     });
 
     return {
       projectId: project.id,
-      projectleiderMedewerkerId,
+      projectleiderMedewerkerId: toegewezenId,
       werkbakItemAangemaakt: false,
     };
   }
 
   // Automatische modus — kandidatenresolutie binnen de transactie
-  const kandidaten = await haalProjectleiderKandidaten(executor as DbLeezer);
+  const kandidaten = await haalProjectleiderKandidaten(
+    executor as DbLeezer,
+    new Date(),
+    { vergrendel: true },
+  );
   let toegewezenId: number | null = null;
   let werkbakItemAangemaakt = false;
 
@@ -195,6 +227,32 @@ export async function maakProject(
   };
 }
 
+export async function maakProject(
+  invoer: ProjectAanmaakInvoer,
+  modus: ProjectleiderModus,
+  projectleiderMedewerkerId: number | null | undefined,
+  actorGebruikerId: number | null | undefined,
+  tx?: ProjectTransactie,
+): Promise<MaakProjectResultaat> {
+  if (tx) {
+    return maakProjectInTransactie(
+      invoer,
+      modus,
+      projectleiderMedewerkerId,
+      actorGebruikerId,
+      tx,
+    );
+  }
+
+  return db.transaction((nieuweTransactie) => maakProjectInTransactie(
+    invoer,
+    modus,
+    projectleiderMedewerkerId,
+    actorGebruikerId,
+    nieuweTransactie,
+  ));
+}
+
 /**
  * Wijzigt de projectleider van een bestaand project.
  *
@@ -206,58 +264,123 @@ export async function maakProject(
  *
  * Altijd in een transactie uitgevoerd.
  */
+async function wijzigProjectleiderInTransactie(
+  tx: ProjectTransactie,
+  projectId: number,
+  nieuweMedewerkerId: number,
+  actorGebruikerId: number | null | undefined,
+  reden?: string | null,
+  geldigeKandidaatIds?: ReadonlySet<number>,
+): Promise<{ gewijzigd: boolean; oudeMedewerkerId: number | null }> {
+  await vergrendelProjectleiderKandidaatset(tx);
+
+  const [huidig] = await tx
+    .select({
+      id: projectenTable.id,
+      projectleiderMedewerkerId: projectenTable.projectleiderMedewerkerId,
+    })
+    .from(projectenTable)
+    .where(eq(projectenTable.id, projectId))
+    .for("update")
+    .limit(1);
+
+  if (!huidig) throw new ProjectServiceNietGevonden(`Project ${projectId} niet gevonden.`);
+
+  const kandidaatIsGeldig = geldigeKandidaatIds
+    ? geldigeKandidaatIds.has(nieuweMedewerkerId)
+    : Boolean(await valideerProjectleiderKandidaat(
+      nieuweMedewerkerId,
+      tx as unknown as DbLeezer,
+      new Date(),
+      { vergrendel: true },
+    ));
+  if (!kandidaatIsGeldig) {
+    throw new ProjectService422Error(
+      `Medewerker ${nieuweMedewerkerId} is geen geldige projectleider-kandidaat.`,
+    );
+  }
+
+  const oud = huidig.projectleiderMedewerkerId;
+
+  // Idempotentie: zelfde toewijzing schrijft geen duplicaat, maar ruimt een
+  // eventueel achtergebleven werkbakitem wel op.
+  if (oud === nieuweMedewerkerId) {
+    await handelBronAf(projectleiderOntbreektSleutel(projectId), tx as unknown as DbExecutor);
+    return { gewijzigd: false, oudeMedewerkerId: oud };
+  }
+
+  await tx
+    .update(projectenTable)
+    .set({ projectleiderMedewerkerId: nieuweMedewerkerId, bijgewerktOp: new Date() })
+    .where(eq(projectenTable.id, projectId));
+
+  await tx.insert(projectleiderGeschiedenisTable).values({
+    projectId,
+    oudeMedewerkerId: oud,
+    nieuweMedewerkerId,
+    actorGebruikerId: actorGebruikerId ?? null,
+    reden: reden ?? null,
+  });
+
+  await handelBronAf(projectleiderOntbreektSleutel(projectId), tx as unknown as DbExecutor);
+
+  return { gewijzigd: true, oudeMedewerkerId: oud };
+}
+
 export async function wijzigProjectleider(
   projectId: number,
   nieuweMedewerkerId: number,
   actorGebruikerId: number | null | undefined,
   reden?: string | null,
 ): Promise<{ gewijzigd: boolean; oudeMedewerkerId: number | null }> {
+  return db.transaction((tx) => wijzigProjectleiderInTransactie(
+    tx,
+    projectId,
+    nieuweMedewerkerId,
+    actorGebruikerId,
+    reden,
+  ));
+}
+
+/**
+ * Atomische bulktoewijzing via dezelfde centrale logica als de enkelvoudige
+ * wijziging. Projectrijen worden in vaste volgorde vergrendeld, zodat
+ * overlappende batches niet ieder een andere lockvolgorde kiezen.
+ */
+export async function wijzigProjectleidersBulk(
+  toewijzingen: readonly ProjectleiderToewijzing[],
+  actorGebruikerId: number | null | undefined,
+  reden?: string | null,
+): Promise<BulkToewijzingResultaat> {
+  const gesorteerd = [...toewijzingen].sort((a, b) => a.projectId - b.projectId);
+
   return db.transaction(async (tx) => {
-    // Vergrendel de rij
-    const [huidig] = await tx
-      .select({
-        id: projectenTable.id,
-        projectleiderMedewerkerId: projectenTable.projectleiderMedewerkerId,
-      })
-      .from(projectenTable)
-      .where(eq(projectenTable.id, projectId));
+    await vergrendelProjectleiderKandidaatset(tx);
+    const kandidaten = await haalProjectleiderKandidaten(
+      tx as unknown as DbLeezer,
+      new Date(),
+      { vergrendel: true },
+    );
+    const geldigeKandidaatIds = new Set(kandidaten.map((kandidaat) => kandidaat.id));
+    let gewijzigd = 0;
 
-    if (!huidig) throw new ProjectServiceNietGevonden(`Project ${projectId} niet gevonden.`);
-
-    // Valideer kandidaat
-    const kandidaat = await valideerProjectleiderKandidaat(nieuweMedewerkerId, tx as unknown as DbLeezer);
-    if (!kandidaat) {
-      throw new ProjectService422Error(
-        `Medewerker ${nieuweMedewerkerId} is geen geldige projectleider-kandidaat.`,
+    for (const toewijzing of gesorteerd) {
+      const resultaat = await wijzigProjectleiderInTransactie(
+        tx,
+        toewijzing.projectId,
+        toewijzing.projectleiderMedewerkerId,
+        actorGebruikerId,
+        reden,
+        geldigeKandidaatIds,
       );
+      if (resultaat.gewijzigd) gewijzigd += 1;
     }
 
-    const oud = huidig.projectleiderMedewerkerId;
-
-    // Idempotentie: zelfde toewijzing → geen duplicaat
-    if (oud === nieuweMedewerkerId) {
-      return { gewijzigd: false, oudeMedewerkerId: oud };
-    }
-
-    // Update
-    await tx
-      .update(projectenTable)
-      .set({ projectleiderMedewerkerId: nieuweMedewerkerId, bijgewerktOp: new Date() })
-      .where(eq(projectenTable.id, projectId));
-
-    // Schrijf geschiedenis
-    await tx.insert(projectleiderGeschiedenisTable).values({
-      projectId,
-      oudeMedewerkerId: oud,
-      nieuweMedewerkerId,
-      actorGebruikerId: actorGebruikerId ?? null,
-      reden: reden ?? null,
-    });
-
-    // Sluit het werkbak-item als het open staat
-    await handelBronAf(projectleiderOntbreektSleutel(projectId), tx as unknown as DbExecutor);
-
-    return { gewijzigd: true, oudeMedewerkerId: oud };
+    return {
+      verwerkt: gesorteerd.length,
+      gewijzigd,
+      ongewijzigd: gesorteerd.length - gewijzigd,
+    };
   });
 }
 

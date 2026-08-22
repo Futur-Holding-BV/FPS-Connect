@@ -3406,7 +3406,7 @@ export interface GebouwInput {
   project_status?: string;
   galerij_upload_toegestaan?: boolean;
   /** Verplicht bij handmatige projectdossieraanmaak (POST /gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd 'Projectleider'. */
-  projectleider_medewerker_id?: number;
+  projectleider_medewerker_id: number;
 }
 
 export interface GebouwPublicatieStatus {
@@ -12615,8 +12615,8 @@ export interface ProjectPatchInput {
   gebouw_id?: number | null;
   start_datum?: string | null;
   eind_datum?: string | null;
-  /** Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. */
-  projectleider_medewerker_id?: number | null;
+  /** Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. Leegmaken met null is niet toegestaan. */
+  projectleider_medewerker_id?: number;
 }
 
 export interface ProjectleiderKandidaat {
@@ -12644,13 +12644,18 @@ export interface ProjectBulkToewijzingItem {
 }
 
 export interface ProjectBulkToewijzingBody {
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
   toewijzingen: ProjectBulkToewijzingItem[];
   reden?: string | null;
 }
 
 export interface ProjectBulkToewijzingResponse {
-  geslaagd: number;
-  mislukt: number;
+  verwerkt: number;
+  gewijzigd: number;
+  ongewijzigd: number;
   resterend_zonder_projectleider: number;
 }
 

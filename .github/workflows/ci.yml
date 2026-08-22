@@ -138,6 +138,7 @@ jobs:
           pnpm test
         env:
           AANVRAAG_TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+          PROJECTLEIDER_TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
 
       # CI_SIGNAAL_01 — meld de conclusie van deze run terug aan Connect zodat
       # een rode bouwcontrole op main automatisch een actiepunt bij de

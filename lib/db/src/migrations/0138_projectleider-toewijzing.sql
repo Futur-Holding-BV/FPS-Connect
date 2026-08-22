@@ -1,6 +1,6 @@
 -- PROJ_1200 §2 — projectleider-toewijzing + append-only geschiedenis
 --
--- 1. Voeg projectleider_medewerker_id toe aan projecten (nullable FK → medewerkers.id SET NULL).
+-- 1. Voeg projectleider_medewerker_id toe aan projecten (nullable FK → medewerkers.id RESTRICT).
 -- 2. Maak een dedicated history-tabel (projectleider_geschiedenis) aan.
 -- 3. DB-trigger op de history-tabel: weigert UPDATE en DELETE → append-only.
 -- 4. Voeg "projectleider_toewijzing" toe aan de werkbak bronnen-allowlist
@@ -13,7 +13,7 @@
 ALTER TABLE projecten
   ADD COLUMN IF NOT EXISTS projectleider_medewerker_id INTEGER
     REFERENCES medewerkers(id)
-    ON DELETE SET NULL;
+    ON DELETE RESTRICT;
 
 CREATE INDEX IF NOT EXISTS projecten_projectleider_idx
   ON projecten (projectleider_medewerker_id)
@@ -22,10 +22,13 @@ CREATE INDEX IF NOT EXISTS projecten_projectleider_idx
 -- ── 2. Geschiedenis-tabel ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS projectleider_geschiedenis (
   id                    SERIAL PRIMARY KEY,
-  project_id            INTEGER NOT NULL REFERENCES projecten(id) ON DELETE CASCADE,
-  oude_medewerker_id    INTEGER REFERENCES medewerkers(id) ON DELETE SET NULL,
-  nieuwe_medewerker_id  INTEGER REFERENCES medewerkers(id) ON DELETE SET NULL,
-  actor_gebruiker_id    INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+  -- Bewust zonder FK's: CASCADE en SET NULL zijn zelf DELETE/UPDATE-acties
+  -- en zouden de append-only trigger activeren. Historische ID's blijven dus
+  -- onveranderd bewaard, ook als de actuele bronrij later verdwijnt.
+  project_id            INTEGER NOT NULL,
+  oude_medewerker_id    INTEGER,
+  nieuwe_medewerker_id  INTEGER,
+  actor_gebruiker_id    INTEGER,
   reden                 TEXT,
   tijdstip              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

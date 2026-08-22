@@ -2420,6 +2420,22 @@ router.delete("/medewerkers/:id", schrijven, async (req, res): Promise<void> => 
     invalideerContext("medewerker", id);
     res.status(204).send();
   } catch (err) {
+    const buitensteFout = err as {
+      code?: string;
+      constraint?: string;
+      cause?: { code?: string; constraint?: string };
+    };
+    const databaseFout = buitensteFout.cause ?? buitensteFout;
+    if (
+      databaseFout.code === "23503" &&
+      databaseFout.constraint === "projecten_projectleider_medewerker_id_fkey"
+    ) {
+      return void res.status(409).json({
+        error:
+          "Deze medewerker is nog als projectleider aan een project toegewezen. Wijs die projecten eerst aan een andere projectleider toe.",
+        code: "PROJECTLEIDER_NOG_TOEGEWEZEN",
+      });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

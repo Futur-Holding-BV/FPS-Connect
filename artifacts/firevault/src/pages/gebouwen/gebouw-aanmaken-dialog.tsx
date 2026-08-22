@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateGebouw,
+  getListProjectleiderKandidatenQueryKey,
   useListCrmKlanten,
+  useListProjectleiderKandidaten,
   type ErrorType,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -65,8 +67,19 @@ export function GebouwAanmakenDialog() {
   const maakGebouw = useCreateGebouw();
   const { data: klanten = [], isLoading: klantenLaden } = useListCrmKlanten();
   const [open, setOpen] = useState(false);
+  const {
+    data: projectleiders = [],
+    isLoading: projectleidersLaden,
+    isError: projectleidersFout,
+  } = useListProjectleiderKandidaten({
+    query: {
+      enabled: open,
+      queryKey: getListProjectleiderKandidatenQueryKey(),
+    },
+  });
   const [velden, setVelden] = useState<Velden>(LEEG);
   const [klantKeuze, setKlantKeuze] = useState("");
+  const [projectleiderKeuze, setProjectleiderKeuze] = useState("");
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
   const gekozenKlant =
     klantKeuze && klantKeuze !== "nieuw"
@@ -86,6 +99,7 @@ export function GebouwAanmakenDialog() {
   function herstel() {
     setVelden(LEEG);
     setKlantKeuze("");
+    setProjectleiderKeuze("");
     setFoutmelding(null);
   }
 
@@ -105,6 +119,10 @@ export function GebouwAanmakenDialog() {
     }
     if (!klantKeuze) {
       setFoutmelding("Kies een bestaande opdrachtgever of maak een nieuwe aan.");
+      return;
+    }
+    if (!projectleiderKeuze) {
+      setFoutmelding("Kies de projectleider die verantwoordelijk wordt voor dit project.");
       return;
     }
     if (gekozenKlantMistNaw) {
@@ -134,6 +152,7 @@ export function GebouwAanmakenDialog() {
           adres: metHoofdletters(velden.adres.trim()),
           postcode: velden.postcode.trim().toUpperCase(),
           stad: metHoofdletters(velden.stad.trim()),
+          projectleider_medewerker_id: Number(projectleiderKeuze),
           ...(klantKeuze === "nieuw"
             ? {
                 nieuwe_klant: {
@@ -175,8 +194,8 @@ export function GebouwAanmakenDialog() {
         <DialogHeader>
           <DialogTitle>Nieuw gebouw aanmaken</DialogTitle>
           <DialogDescription>
-            Leg alleen de vier startgegevens vast. Aanvullende gegevens worden gevraagd
-            in de processtap die ze nodig heeft.
+            Leg de startgegevens en verantwoordelijke projectleider vast. Aanvullende
+            gegevens worden gevraagd in de processtap die ze nodig heeft.
           </DialogDescription>
         </DialogHeader>
 
@@ -261,7 +280,41 @@ export function GebouwAanmakenDialog() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="g-omschrijving">3. Opdrachtomschrijving *</Label>
+            <Label htmlFor="g-projectleider">3. Projectleider *</Label>
+            <Select
+              value={projectleiderKeuze}
+              onValueChange={setProjectleiderKeuze}
+              disabled={projectleidersLaden || projectleiders.length === 0}
+            >
+              <SelectTrigger id="g-projectleider" data-testid="select-project-projectleider">
+                <SelectValue
+                  placeholder={
+                    projectleidersLaden ? "Projectleiders laden..." : "Kies een projectleider"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {projectleiders.map((projectleider) => (
+                  <SelectItem key={projectleider.id} value={String(projectleider.id)}>
+                    {projectleider.naam}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!projectleidersLaden && projectleiders.length === 0 && (
+              <div className="flex items-start gap-2 text-xs font-medium text-destructive">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p>
+                  {projectleidersFout
+                    ? "Projectleiders konden niet worden geladen."
+                    : "Er is geen actieve medewerker met de exacte actieve functie Projectleider. Richt eerst de functie of aanstelling in."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="g-omschrijving">4. Opdrachtomschrijving *</Label>
             <Textarea
               id="g-omschrijving"
               rows={4}
@@ -271,7 +324,7 @@ export function GebouwAanmakenDialog() {
           </div>
 
           <section className="space-y-3">
-            <p className="text-sm font-semibold">4. Gebouw-/projectadres</p>
+            <p className="text-sm font-semibold">5. Gebouw-/projectadres</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="g-adres">Adres *</Label>
@@ -316,7 +369,14 @@ export function GebouwAanmakenDialog() {
           >
             Annuleren
           </Button>
-          <Button onClick={bewaar} disabled={maakGebouw.isPending}>
+          <Button
+            onClick={bewaar}
+            disabled={
+              maakGebouw.isPending ||
+              projectleidersLaden ||
+              projectleiders.length === 0
+            }
+          >
             {maakGebouw.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Opslaan...

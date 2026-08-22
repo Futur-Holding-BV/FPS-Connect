@@ -8,6 +8,10 @@
 import type { ProjectBulkToewijzingItem } from './projectBulkToewijzingItem';
 
 export interface ProjectBulkToewijzingBody {
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
   toewijzingen: ProjectBulkToewijzingItem[];
   reden?: string | null;
 }

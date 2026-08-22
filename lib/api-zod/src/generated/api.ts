@@ -234,7 +234,7 @@ export const CreateGebouwBody = zod.object({
   "werkgever_id": zod.number().optional(),
   "project_status": zod.string().optional(),
   "galerij_upload_toegestaan": zod.boolean().optional(),
-  "projectleider_medewerker_id": zod.number().optional().describe('Verplicht bij handmatige projectdossieraanmaak (POST \/gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd \'Projectleider\'.\n')
+  "projectleider_medewerker_id": zod.number().describe('Verplicht bij handmatige projectdossieraanmaak (POST \/gebouwen). Medewerker-id van de toe te wijzen projectleider; moet een actieve medewerker zijn met een actieve functie genaamd \'Projectleider\'.\n')
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -23028,17 +23028,22 @@ export const ListProjectenBeheerBacklogResponse = zod.object({
  * @summary Meerdere projectleider-toewijzingen in één atomaire transactie. Vereist expliciete {project_id, projectleider_medewerker_id} per rij. Beheer-bevoegdheid (gebouwen niveau 2) vereist.
 
  */
+export const bulkToewijzingProjectleiderBodyToewijzingenMax = 100;
+
+
+
 export const BulkToewijzingProjectleiderBody = zod.object({
   "toewijzingen": zod.array(zod.object({
   "project_id": zod.number(),
   "projectleider_medewerker_id": zod.number()
-})),
+})).min(1).max(bulkToewijzingProjectleiderBodyToewijzingenMax),
   "reden": zod.string().nullish()
 })
 
 export const BulkToewijzingProjectleiderResponse = zod.object({
-  "geslaagd": zod.number(),
-  "mislukt": zod.number(),
+  "verwerkt": zod.number(),
+  "gewijzigd": zod.number(),
+  "ongewijzigd": zod.number(),
   "resterend_zonder_projectleider": zod.number()
 })
 
@@ -23089,7 +23094,7 @@ export const UpdateProjectBody = zod.object({
   "gebouw_id": zod.number().nullish(),
   "start_datum": zod.string().nullish(),
   "eind_datum": zod.string().nullish(),
-  "projectleider_medewerker_id": zod.number().nullish().describe('Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn.\n')
+  "projectleider_medewerker_id": zod.number().optional().describe('Wijzig de projectleider via de centrale toewijzingsservice. Medewerker-id moet een geldige actieve projectleider-kandidaat zijn. Leegmaken met null is niet toegestaan.\n')
 })
 
 export const UpdateProjectResponse = zod.object({
