@@ -259,6 +259,10 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:8080/api/healthz >/dev/null
+          # V6 controleert een daadwerkelijk door de bestaande generator
+          # geschreven rapport. Genereer de beginstand vóór de verificatie;
+          # na V7 wordt het rapport hieronder opnieuw uit de eindstand gemaakt.
+          pnpm --filter @workspace/scripts exec tsx src/genereer-statusrapport.ts
           pnpm --filter @workspace/scripts run verificatie-register01
           pnpm --filter @workspace/scripts exec tsx src/genereer-statusrapport.ts
           TWEEDE_RUN="$(
