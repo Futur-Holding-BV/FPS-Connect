@@ -15,13 +15,17 @@ type OpslaanFn = (() => void | Promise<void>) | null | undefined;
  */
 export function useMeldDirty(dirty: boolean, onSave?: OpslaanFn) {
   const { meldDirty } = useNavigatieBewaking();
+  const heeftOpslaanFn = typeof onSave === "function";
 
   const opslaanRef = useRef<OpslaanFn>(onSave);
-  useEffect(() => { opslaanRef.current = onSave; });
+  useEffect(() => { opslaanRef.current = onSave; }, [onSave]);
 
   useEffect(() => {
-    const fn: OpslaanFn = dirty ? (() => opslaanRef.current?.()) : null;
+    const fn: OpslaanFn =
+      dirty && heeftOpslaanFn
+        ? (() => opslaanRef.current?.())
+        : null;
     meldDirty(dirty, fn);
     return () => { meldDirty(false, null); };
-  }, [dirty, meldDirty]);
+  }, [dirty, heeftOpslaanFn, meldDirty]);
 }

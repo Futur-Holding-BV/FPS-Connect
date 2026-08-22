@@ -89,7 +89,7 @@ function PwaInstalleerKnop() {
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   return (
-    <NavigatieBewakingProvider>
+    <NavigatieBewakingProvider bewaakBrowserHistorie>
       <PaneelProvider>
         <BeheerderLayoutInhoud>{children}</BeheerderLayoutInhoud>
       </PaneelProvider>

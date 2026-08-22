@@ -80,10 +80,66 @@ export default function GebouwNotities({ gebouwId }: { gebouwId: number }) {
     (bewerkteNotitie !== undefined &&
       bewerkteNotitie !== null &&
       bewerkTekst.trim() !== bewerkteNotitie.tekst.trim());
-  useMeldDirty(heeftOnopgeslagenWijzigingen);
+  const heeftOpslaanbareWijzigingen =
+    tekst.trim() !== "" ||
+    (bewerkteNotitie !== undefined &&
+      bewerkteNotitie !== null &&
+      bewerkTekst.trim() !== "" &&
+      bewerkTekst.trim() !== bewerkteNotitie.tekst.trim());
+  useMeldDirty(
+    heeftOnopgeslagenWijzigingen,
+    heeftOpslaanbareWijzigingen ? bewaarVoorNavigatie : null,
+  );
 
   function ververs() {
     void queryClient.invalidateQueries({ queryKey: getListGebouwNotitiesQueryKey(gebouwId) });
+  }
+
+  async function bewaarVoorNavigatie() {
+    const nieuweTekst = tekst.trim();
+    const gewijzigdeTekst = bewerkTekst.trim();
+    try {
+      if (nieuweTekst !== "") {
+        await aanmaken.mutateAsync({
+          id: gebouwId,
+          data: {
+            tekst: nieuweTekst,
+            type: type as "telefoon" | "bezoek" | "mail" | "algemeen",
+            beller_naam:
+              type === "telefoon" && bellerNaam.trim() !== ""
+                ? bellerNaam.trim()
+                : null,
+          },
+        });
+      }
+      if (
+        bewerkteNotitie &&
+        gewijzigdeTekst !== "" &&
+        gewijzigdeTekst !== bewerkteNotitie.tekst.trim()
+      ) {
+        await bijwerken.mutateAsync({
+          notitieId: bewerkteNotitie.id,
+          data: { tekst: gewijzigdeTekst },
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: getListGebouwNotitiesQueryKey(gebouwId),
+      });
+      setTekst("");
+      setBellerNaam("");
+      setType("algemeen");
+      setBewerkId(null);
+      setBewerkTekst("");
+    } catch (fout) {
+      toast({
+        title: "Aantekening niet opgeslagen",
+        description:
+          (fout as { message?: string })?.message ??
+          "Probeer het opnieuw voordat u deze pagina verlaat.",
+        variant: "destructive",
+      });
+      throw fout;
+    }
   }
 
   function verstuur() {

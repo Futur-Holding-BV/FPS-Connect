@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useId, useMemo, useRef } from "react";
 import { Router as WouterRouter, useLocation } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import { X, Copy } from "lucide-react";
@@ -119,6 +119,7 @@ export function Baan({
 
   const [schermnaam, setSchermnaam] = React.useState(startPad || "/");
   const laatstGemeld = useRef(normaliseerPad(startPad || "/"));
+  const navigatieScopeId = useId();
 
   const meldPad = (i: number, pad: string) => {
     if (pad === laatstGemeld.current) return;
@@ -127,7 +128,10 @@ export function Baan({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      data-navigatie-geheugen-scope={navigatieScopeId}
+    >
       <BaanKop
         index={index}
         padWeergave={schermnaam}
@@ -136,7 +140,7 @@ export function Baan({
       />
       <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
         <WouterRouter hook={loc.hook}>
-          <NavigatieBewakingProvider>
+          <NavigatieBewakingProvider klikScopeId={navigatieScopeId}>
             <BaanBewaker
               index={index}
               onPadWijzig={meldPad}

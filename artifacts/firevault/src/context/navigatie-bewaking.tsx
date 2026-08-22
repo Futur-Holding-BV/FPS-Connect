@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect } f
 import { useLocation } from "wouter";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { isVeiligInternNavigatiepad } from "@/lib/navigatie-register";
@@ -73,6 +73,36 @@ function maakVroegPopstateRegister(): PopstateRegister | null {
 // dat de doelroute het formulier al unmount.
 const VROEG_POPSTATE_REGISTER = maakVroegPopstateRegister();
 
+interface VuileNavigatieRegistratie {
+  isDirty: () => boolean;
+  openVoorExterneActie: (actie: () => void) => void;
+}
+
+const VUILE_NAVIGATIE_REGISTRATIES = new Map<symbol, VuileNavigatieRegistratie>();
+
+function heeftVuileNavigatieRegistratie(): boolean {
+  return [...VUILE_NAVIGATIE_REGISTRATIES.values()].some(
+    (registratie) => registratie.isDirty(),
+  );
+}
+
+/**
+ * Laat elke vuile router zijn eigen dialoog/savefunctie afhandelen. Pas als
+ * alle providers schoon zijn, wordt de ene browseractie uitgevoerd.
+ */
+function bewaakGlobaleBrowserActie(actie: () => void): void {
+  const vuileRegistratie = [...VUILE_NAVIGATIE_REGISTRATIES.values()].find(
+    (registratie) => registratie.isDirty(),
+  );
+  if (!vuileRegistratie) {
+    actie();
+    return;
+  }
+  vuileRegistratie.openVoorExterneActie(() => {
+    bewaakGlobaleBrowserActie(actie);
+  });
+}
+
 function leesHistorieIndex(state: unknown): number | null {
   if (!state || typeof state !== "object") return null;
   const waarde = (state as Record<string, unknown>)[HISTORIE_INDEX_SLEUTEL];
@@ -108,7 +138,17 @@ function internPadVanUrl(url: string | URL | null | undefined): string | null {
   return isVeiligInternNavigatiepad(internPad) ? internPad : null;
 }
 
-export function NavigatieBewakingProvider({ children }: { children: React.ReactNode }) {
+interface NavigatieBewakingProviderProps {
+  children: React.ReactNode;
+  bewaakBrowserHistorie?: boolean;
+  klikScopeId?: string;
+}
+
+export function NavigatieBewakingProvider({
+  children,
+  bewaakBrowserHistorie = false,
+  klikScopeId,
+}: NavigatieBewakingProviderProps) {
   const [location, navigeer] = useLocation();
   const [isDirty, setIsDirty] = useState(false);
   const [heeftOpslaanFn, setHeeftOpslaanFn] = useState(false);
@@ -118,6 +158,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
   const [instroom, setInstroom] = useState<NavigatieInstroom | null>(null);
   const instroomBestemmingRef = useRef<string | null>(null);
   const pendingRef = useRef<{ pad: string; opties: RequestNavigatieOpties } | null>(null);
+  const pendingExterneActieRef = useRef<(() => void) | null>(null);
   const pendingHistorieDeltaRef = useRef<number | null>(null);
   const herstelHistorieRef = useRef<{
     delta: number;
@@ -140,9 +181,24 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
   locationRef.current = location;
 
   const meldDirty = useCallback((dirty: boolean, onSave?: OpslaanFn) => {
+    isDirtyRef.current = dirty;
     setIsDirty(dirty);
     setHeeftOpslaanFn(dirty && !!onSave);
     opslaanRef.current = dirty ? (onSave ?? null) : null;
+  }, []);
+
+  useEffect(() => {
+    const id = Symbol("navigatie-bewaking");
+    VUILE_NAVIGATIE_REGISTRATIES.set(id, {
+      isDirty: () => isDirtyRef.current,
+      openVoorExterneActie: (actie) => {
+        pendingExterneActieRef.current = actie;
+        setDialoogOpen(true);
+      },
+    });
+    return () => {
+      VUILE_NAVIGATIE_REGISTRATIES.delete(id);
+    };
   }, []);
 
   useEffect(() => {
@@ -192,6 +248,8 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
   }, [isDirty, voerNavigatieUit]);
 
   useEffect(() => {
+    if (!bewaakBrowserHistorie) return undefined;
+
     const originelePushState = window.history.pushState;
     const origineleReplaceState = window.history.replaceState;
     const bestaandeIndex = leesHistorieIndex(window.history.state);
@@ -211,11 +269,17 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
       url: string | URL | null | undefined,
       vervang: boolean,
     ): boolean {
-      if (!isDirtyRef.current || interneNavigatieRef.current) return false;
+      if (
+        !heeftVuileNavigatieRegistratie() ||
+        interneNavigatieRef.current
+      ) {
+        return false;
+      }
       const pad = internPadVanUrl(url);
       if (!pad || pad === locationRef.current) return false;
-      pendingRef.current = { pad, opties: { vervang } };
-      setDialoogOpen(true);
+      bewaakGlobaleBrowserActie(() => {
+        voerNavigatieUit(pad, { vervang });
+      });
       return true;
     }
 
@@ -271,9 +335,11 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
         event.stopImmediatePropagation();
         historieIndexRef.current = herstel.huidigeIndex;
         browserHistorieIndexRef.current = herstel.huidigeBrowserIndex;
-        pendingHistorieDeltaRef.current = herstel.delta;
         herstelHistorieRef.current = null;
-        setDialoogOpen(true);
+        bewaakGlobaleBrowserActie(() => {
+          historieBypassRef.current = true;
+          window.history.go(herstel.delta);
+        });
         return;
       }
 
@@ -289,10 +355,12 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
           historieIndexRef.current = onbekendHerstel.huidigeIndex;
           browserHistorieIndexRef.current =
             onbekendHerstel.huidigeBrowserIndex;
-          pendingHistorieDeltaRef.current =
-            -onbekendHerstel.stappenVooruit;
+          const delta = -onbekendHerstel.stappenVooruit;
           zoekOnbekendHistorieHerstelRef.current = null;
-          setDialoogOpen(true);
+          bewaakGlobaleBrowserActie(() => {
+            historieBypassRef.current = true;
+            window.history.go(delta);
+          });
           return;
         }
         window.history.forward();
@@ -305,7 +373,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
         doelBrowserIndex !== null && huidigeBrowserIndex !== null
           ? doelBrowserIndex - huidigeBrowserIndex
           : (doelIndex === null ? null : doelIndex - huidigeIndex);
-      if (!isDirtyRef.current || delta === 0) {
+      if (!heeftVuileNavigatieRegistratie() || delta === 0) {
         if (doelIndex !== null) historieIndexRef.current = doelIndex;
         browserHistorieIndexRef.current = doelBrowserIndex;
         return;
@@ -336,7 +404,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
     }
 
     function bewaakPaginaVerlaten(event: BeforeUnloadEvent) {
-      if (!isDirtyRef.current) return;
+      if (!heeftVuileNavigatieRegistratie()) return;
       event.preventDefault();
       event.returnValue = "";
     }
@@ -357,7 +425,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
         window.history.replaceState = origineleReplaceState;
       }
     };
-  }, []);
+  }, [bewaakBrowserHistorie, voerNavigatieUit]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -376,6 +444,16 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
       }
 
       const link = event.target.closest<HTMLAnchorElement>("a[href]");
+      const geheugenScope = event.target.closest<HTMLElement>(
+        "[data-navigatie-geheugen-scope]",
+      );
+      if (
+        klikScopeId
+          ? geheugenScope?.dataset.navigatieGeheugenScope !== klikScopeId
+          : geheugenScope
+      ) {
+        return;
+      }
       if (
         !link ||
         link.hasAttribute("download") ||
@@ -420,7 +498,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
     return () => {
       document.removeEventListener("click", bewaakInterneLink, true);
     };
-  }, [isDirty, location, requestNavigatie]);
+  }, [isDirty, klikScopeId, location, requestNavigatie]);
 
   const requestTerug = useCallback((pad: string) => {
     requestNavigatie(pad);
@@ -429,8 +507,11 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
   function voltooiPendingNavigatie() {
     const pending = pendingRef.current;
     const historieDelta = pendingHistorieDeltaRef.current;
+    const externeActie = pendingExterneActieRef.current;
     pendingRef.current = null;
     pendingHistorieDeltaRef.current = null;
+    pendingExterneActieRef.current = null;
+    isDirtyRef.current = false;
     setIsDirty(false);
     setHeeftOpslaanFn(false);
     opslaanRef.current = null;
@@ -438,6 +519,10 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
     if (historieDelta !== null) {
       historieBypassRef.current = true;
       window.history.go(historieDelta);
+      return;
+    }
+    if (externeActie) {
+      externeActie();
       return;
     }
     if (pending) voerNavigatieUit(pending.pad, pending.opties);
@@ -473,6 +558,7 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
           if (!open) {
             pendingRef.current = null;
             pendingHistorieDeltaRef.current = null;
+            pendingExterneActieRef.current = null;
           }
           setDialoogOpen(open);
         }}
@@ -492,9 +578,9 @@ export function NavigatieBewakingProvider({ children }: { children: React.ReactN
               Verlaten
             </Button>
             {heeftOpslaanFn && (
-              <AlertDialogAction onClick={handleOpslaanEnVerlaten} disabled={bezig}>
+              <Button onClick={() => void handleOpslaanEnVerlaten()} disabled={bezig}>
                 {bezig ? "Opslaan..." : "Opslaan en verlaten"}
-              </AlertDialogAction>
+              </Button>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>
