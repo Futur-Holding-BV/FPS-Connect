@@ -103,6 +103,22 @@
       "verwijderd": 80,
       "blob": "13b031a7d091a47f929b9add356d748de68d561a",
       "reden": "Door Orval gegenereerde validators voor exact dezelfde beoordeelde LOON_02A-contractuitbreiding; geen dubbele exports of opmaakschade."
+    },
+    {
+      "commit": "fd4606c21fe4ed3afdde883abba7540c7837f6b2",
+      "pad": "artifacts/api-server/src/routes/adviseur.ts",
+      "toegevoegd": 743,
+      "verwijderd": 92,
+      "blob": "5ee459f4e8a4423f6bf412dd99aad0e2d6b9634c",
+      "reden": "Inhoudelijk beoordeelde, samenhangende autorisatie-, bronbewijs- en persistentie-uitbreiding van de Connect-assistent; geen merge- of opmaakschade."
+    },
+    {
+      "commit": "b266ad6af3870e2469d2126be08faac1ac126295",
+      "pad": "artifacts/firevault/src/context/navigatie-bewaking.tsx",
+      "toegevoegd": 427,
+      "verwijderd": 13,
+      "blob": "6dfd91f4dcc44e0b098e6cd417654a5655fa6e4d",
+      "reden": "Samenhangende centrale navigatiebewaking zonder merge- of opmaakschade; de inhoudelijke save- en multi-providergebreken uit deze oorspronkelijke blob zijn in de directe herstelcommit gecorrigeerd en browsermatig herbewezen."
     }
   ]
 }
